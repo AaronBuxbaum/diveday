@@ -91,7 +91,7 @@ describe("StageStrip", () => {
       forms.map(
         (form) => form?.querySelector('[aria-hidden="true"]:last-child')?.textContent ?? "",
       ),
-    ).toEqual(["›", "↔", "›", "›", ""]);
+    ).toEqual(["→", "↔", "→", "→", ""]);
     for (const tap of copy.taps) {
       expect(screen.getByRole("button", { name: tap.label })).toBeEnabled();
     }

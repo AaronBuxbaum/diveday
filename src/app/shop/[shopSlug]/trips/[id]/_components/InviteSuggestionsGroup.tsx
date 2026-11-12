@@ -64,7 +64,7 @@ export function InviteSuggestionsGroup({
       </ul>
       {more > 0 ? (
         <details className="group/invite-more">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium text-primary focus-visible:focus-ring-inset sm:px-5 [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 text-base font-medium text-primary focus-visible:focus-ring-inset sm:px-5 [&::-webkit-details-marker]:hidden">
             <DisclosureCaret className="group-open/invite-more:rotate-90" />
             {t("trips.inviteSuggestions.more", { count: more })}
           </summary>

@@ -13,6 +13,7 @@ test("reveals the remaining past divers and their invitation actions", async ({
   const disclosure = initial.locator("+ details");
   const summary = disclosure.locator("summary");
   await expect(summary).toContainText(/and \d+ more/);
+  await expect(summary).toHaveCSS("font-size", "16px");
   const bounds = await summary.boundingBox();
   expect(bounds?.height ?? 0).toBeGreaterThanOrEqual(44);
   const people = disclosure.locator("li");
@@ -20,6 +21,7 @@ test("reveals the remaining past divers and their invitation actions", async ({
   await expect(people.first()).toBeHidden();
   await summary.focus();
   await expect(summary).toHaveCSS("outline-offset", "-3px");
+  await summary.screenshot({ path: testInfo.outputPath("invite-focus.png") });
   await page.keyboard.press("Enter");
   await expect(people.first()).toBeVisible();
   await expect(people.first().getByRole("button", { name: /offer .* a seat/i })).toBeVisible();
