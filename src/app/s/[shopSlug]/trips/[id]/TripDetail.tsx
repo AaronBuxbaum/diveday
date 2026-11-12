@@ -19,8 +19,9 @@ import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
-import { publicTripPath } from "@/lib/public-routes";
+import { publicGroupRequestPath, publicTripPath } from "@/lib/public-routes";
 import { unionRequirements } from "@/lib/requirement";
+import { shopDayOf } from "@/lib/shop-day";
 import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
@@ -379,6 +380,13 @@ export async function TripDetailPage({
                   withAnchor: false,
                   tripRef,
                   remaining,
+                  groupRequestHref: shop.dateRequestsEnabled
+                    ? publicGroupRequestPath(shop.slug, {
+                        title: trip.title,
+                        date: shopDayOf(trip.startsAt, shop.timezone),
+                        count: remaining + 1,
+                      })
+                    : undefined,
                   errorMessage,
                   payAtBooking: payAtBooking && checkoutMode(stripeAccount),
                   offerCodeField,

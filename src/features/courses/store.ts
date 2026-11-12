@@ -14,6 +14,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { liveTrip } from "@/db/trips";
+import { type CoursePersonalGear, toCoursePersonalGear } from "@/lib/course-personal-gear";
 import {
   courseTemplateSnapshot,
   getCourseTemplate,
@@ -54,6 +55,7 @@ export type NewCourse = {
   nitroxCompatible?: boolean;
   /** The rental kinds the course fee includes — see the column's own note. */
   includedRentalKinds?: RentableItemKind[];
+  includedPersonalGear?: CoursePersonalGear[];
 } & Partial<CourseContent>;
 
 /**
@@ -70,6 +72,7 @@ export type CoursePatch = Pick<
   | "privatePriceCents"
   | "nitroxCompatible"
   | "includedRentalKinds"
+  | "includedPersonalGear"
 >;
 
 /**
@@ -491,6 +494,9 @@ export async function editCourse(db: AppDb, shopId: string, courseId: string, in
       ...(input.includedRentalKinds === undefined
         ? {}
         : { includedRentalKinds: toIncludedRentalKinds(input.includedRentalKinds) }),
+      ...(input.includedPersonalGear === undefined
+        ? {}
+        : { includedPersonalGear: toCoursePersonalGear(input.includedPersonalGear) }),
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();

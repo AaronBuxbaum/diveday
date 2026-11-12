@@ -240,6 +240,17 @@ describe("a private charter ask", () => {
     return rows.find((row) => row.email === email)?.charter;
   }
 
+  it("accepts the full public group size as a request without holding seats", async () => {
+    const email = "large-group@example.com";
+    const form = charterForm(email);
+    form.set("divers", "20");
+    expect(await submit(form)).toEqual({ success: true });
+    const { rows } = await listOpenDateInterests(db, ctx.shop.id);
+    expect(rows.find((row) => row.email === email)?.partySize).toBe(20);
+    form.set("divers", "21");
+    expect(await submit(form)).not.toEqual({ success: true });
+  });
+
   it("records the ask as a charter for a boat shop with charters on", async () => {
     const email = "charter-on@example.com";
     expect(await submit(charterForm(email))).toEqual({ success: true });

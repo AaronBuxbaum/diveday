@@ -19,7 +19,13 @@ import {
   OFFLINE_MANIFEST_RECORD_VERSION,
 } from "../src/lib/offline-manifests";
 import { expect, makeActivitySafe, test } from "./fixtures";
-import { offlineCopySaved, openTripFromBoard, openTripTab, seededTripId } from "./helpers";
+import {
+  choosePartySize,
+  offlineCopySaved,
+  openTripFromBoard,
+  openTripTab,
+  seededTripId,
+} from "./helpers";
 import { assertPrintInk } from "./print-ink";
 import { capturePrintPdfs } from "./print-pdf";
 import { E2E_FROZEN_CLOCK } from "./servers";
@@ -2586,4 +2592,23 @@ export async function savedOfflineRecordFor(page: Page): Promise<string> {
   // throw somewhere less obvious.
   await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
   return tripId;
+}
+
+/** A real three-seat booking with companions left unnamed; returns the narrow group door. */
+export async function bookUnnamedVisualGroup(page: Page) {
+  await page.goto("/s/blue-mantis");
+  await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+  await choosePartySize(page, 3);
+  await page.getByLabel("Name", { exact: true }).fill("Group Organizer");
+  await page.getByLabel("Email", { exact: true }).fill("group-organizer@example.com");
+  await page.getByRole("button", { name: "Book 3 seats" }).click();
+  await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
+  const share = page.getByTestId("group-share");
+  await expect(
+    share.getByRole("button", { name: diverCopy("seatClaim.shareGroup") }),
+  ).toBeVisible();
+  const text = await share.locator("p.font-mono").textContent();
+  const path = text?.match(/\/claim\/[^\s/?#]+\/group/)?.[0];
+  if (!path) throw new Error("group share path missing");
+  return path;
 }

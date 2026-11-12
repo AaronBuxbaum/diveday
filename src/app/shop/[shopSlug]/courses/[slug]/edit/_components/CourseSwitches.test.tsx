@@ -30,7 +30,7 @@ describe("CourseSwitches — the gear the fee includes", () => {
       />,
     );
     expect(
-      screen.getByRole("checkbox", { name: "Rental gear is part of the course fee" }),
+      screen.getByRole("checkbox", { name: "Gear is part of the course fee" }),
     ).not.toBeChecked();
     // Every kind the shop rents, nitrox (a fill) never among them.
     expect(kindBoxes()).toEqual([
@@ -41,6 +41,8 @@ describe("CourseSwitches — the gear the fee includes", () => {
       { kind: "fins", ticked: false },
       { kind: "weights", ticked: true },
       { kind: "gopro", ticked: false },
+      { kind: "snorkel", ticked: false },
+      { kind: "boots", ticked: false },
     ]);
   });
 
@@ -52,14 +54,28 @@ describe("CourseSwitches — the gear the fee includes", () => {
         t={t}
       />,
     );
-    expect(
-      screen.getByRole("checkbox", { name: "Rental gear is part of the course fee" }),
-    ).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Gear is part of the course fee" })).toBeChecked();
     expect(
       kindBoxes()
         .filter((box) => box.ticked)
         .map((box) => box.kind),
     ).toEqual(["wetsuit", "mask"]);
+  });
+
+  it("keeps a personal-kit-only inclusion without adding the scuba preset", () => {
+    render(
+      <CourseSwitches
+        course={{
+          nitroxCompatible: false,
+          includedRentalKinds: [],
+          includedPersonalGear: ["boots"],
+        }}
+        rentalItems={CATALOG}
+        t={t}
+      />,
+    );
+    expect(screen.getByRole("checkbox", { name: "Gear is part of the course fee" })).toBeChecked();
+    expect(kindBoxes().filter((box) => box.ticked)).toEqual([{ kind: "boots", ticked: true }]);
   });
 
   it("keeps an included kind the shop has since stopped renting, so a save does not drop it", () => {
@@ -73,6 +89,8 @@ describe("CourseSwitches — the gear the fee includes", () => {
     expect(kindBoxes()).toEqual([
       { kind: "bcd", ticked: false },
       { kind: "hood", ticked: true },
+      { kind: "snorkel", ticked: false },
+      { kind: "boots", ticked: false },
     ]);
   });
 });

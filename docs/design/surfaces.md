@@ -1134,3 +1134,11 @@ balance after a partial return, including the balance's computed type size.
 - **Composition:** a short strip under the current-role row, wrapping each action whole on a
   phone. A modal would hide the product the visitor came to try, and three cards would compete
   with Today. Dismissal lasts for the tab's demo session.
+
+### The group seat picker — `/claim/[token]/group`
+
+The arriving question is “Which seat is mine?” One list of remaining companion seats opens each
+seat’s existing claim form. The organizer shares one group link beside the retained individual
+links. Unnamed seats read Guest 2, Guest 3 and so on until claimed. Payment due at the shop says
+so without presenting an unpaid seat as already paid. Medical, payment and organizer prep facts
+stay off this invitation. The empty state says every seat has been claimed.

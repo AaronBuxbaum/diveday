@@ -29,7 +29,13 @@ import { seatNotCancelled } from "./trips-queries";
  * refuses an `eq(bookingCapabilities.id, …)` anywhere else.
  */
 
-export type CapabilityPurpose = "readiness" | "confirm" | "claim" | "handoff" | "course_forms";
+export type CapabilityPurpose =
+  | "readiness"
+  | "confirm"
+  | "claim"
+  | "group_claim"
+  | "handoff"
+  | "course_forms";
 
 export type IssuedCapability = { token: string; expiresAt: Date };
 

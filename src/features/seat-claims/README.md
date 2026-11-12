@@ -5,6 +5,7 @@ This module owns the seat claims use case and publishes its contract through `in
 ## Owns
 
 - `store.ts`: scoped readers and recorded transitions.
+- `group.ts`: the organizer’s narrower group invitation and public seat-picker projection.
 
 ## Does not own
 

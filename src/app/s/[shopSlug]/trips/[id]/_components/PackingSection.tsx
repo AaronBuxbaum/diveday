@@ -238,6 +238,7 @@ export function PackingLists({
     offeredRentableItems(shop.rentalItems)
       .filter((item) => shop.rentalPricing.perItemCents[item.kind] !== 0)
       .map((item) => item.kind),
+    trip.course?.includedPersonalGear ?? [],
   );
   const logbook = packsLogbook({
     shopSuggests: shop.packingLogbook,
@@ -283,6 +284,9 @@ export function PackingLists({
             ))}
             {packing.providedKinds.map((kind) => (
               <li key={kind}>{t(RENTAL_ITEM_KEYS[kind])}</li>
+            ))}
+            {packing.providedPersonal.map((kind) => (
+              <li key={kind}>{t(PERSONAL_GEAR_KEYS[kind])}</li>
             ))}
           </ul>
         </div>

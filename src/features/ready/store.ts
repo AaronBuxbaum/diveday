@@ -3,6 +3,7 @@ import { type CarriedPreparation, carriedPreparation } from "@/features/carried-
 import { courseMaterialsDoneByPerson } from "@/features/course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "@/features/courses";
 import { getHelpRequestForBooking, type HelpRequest } from "@/features/help-requests";
+import type { CoursePersonalGear } from "@/lib/course-personal-gear";
 import { heldAtTheDoor } from "../../db/aboard-at-sea";
 import { seatCheckedIn } from "../../db/arrival-provenance";
 import type { AppDb } from "../../db/client";
@@ -229,7 +230,11 @@ export type ReadyPageData = {
      * the sizes form asks about with no price (issue #2796). Null on an ordinary
      * charter, which the gate reads as "the shop's answer is the whole answer".
      */
-    course: { nitroxCompatible: boolean; includedRentalKinds: RentableItemKind[] } | null;
+    course: {
+      nitroxCompatible: boolean;
+      includedRentalKinds: RentableItemKind[];
+      includedPersonalGear: CoursePersonalGear[];
+    } | null;
     /**
      * What this seat costs on this departure (`seatListPriceCents`): the fare
      * for its participant type, or null on an unpriced trip. The thread's
@@ -358,6 +363,8 @@ export type ReadyPageData = {
   helpRequestsOn: boolean;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
+  /** This shop currently takes payment at the desk instead of online. */
+  paymentsAtShop: boolean;
   /** The shop runs hotel pickups, so Day-of details asks about one (fourth UX review, item 8). */
   offersHotelPickup: boolean;
   /** Lunch is served aboard, so Day-of details asks for a lunch preference (ideas item 56). */
@@ -814,6 +821,7 @@ export async function getReadyPageData(
         ? {
             nitroxCompatible: trip.course.nitroxCompatible,
             includedRentalKinds: trip.course.includedRentalKinds,
+            includedPersonalGear: trip.course.includedPersonalGear,
           }
         : null,
       seatPriceCents: perDiverPriceCents,
@@ -861,6 +869,7 @@ export async function getReadyPageData(
     hotelPickupLocation: row.hotelPickupLocation,
     pickupTime: row.pickupTime,
     canPay,
+    paymentsAtShop: !canAcceptPayments(stripeAccount) || !publicAppUrl(),
     offersHotelPickup: row.offersHotelPickup,
     helpRequestsOn: row.helpRequestsOn,
     lunchAboard: row.tripLunchAboard,

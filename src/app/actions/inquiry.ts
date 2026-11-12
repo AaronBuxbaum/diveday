@@ -16,6 +16,7 @@ import { COURSE_INQUIRY_EXPERIENCE, type InquiryFormState } from "@/lib/course-i
 import { deliverableShopContactEmail } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 
 /** A `<input type="date">` value, refused unless it is a date that exists. */
 const calendarDate = z.string().refine(isValidCalendarDate);
@@ -29,7 +30,7 @@ const inquirySchema = z.object({
   alternateDate: blankAsAbsent(calendarDate),
   dateFlexible: formValue().transform(Boolean),
   timing: blankAsAbsent(z.string().trim().max(200)),
-  divers: blankAsAbsent(z.coerce.number().int().min(1).max(12)),
+  divers: blankAsAbsent(z.coerce.number().int().min(1).max(MAX_PUBLIC_PARTY_SIZE)),
   experience: blankAsAbsent(z.enum(COURSE_INQUIRY_EXPERIENCE)),
   message: blankAsAbsent(z.string().trim().max(1500)),
   charter: formValue().transform((value) => value === "true"),

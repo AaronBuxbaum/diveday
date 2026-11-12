@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "0114375b-04bd-4b34-bc97-c4becdc6e099",
+  "prevIds": [
+    "e3a82147-1607-4384-b4e8-3a179a76625b"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "courses",
+        "included_personal_gear"
+      ],
+      "writes": [
+        "s|col|public.courses.included_personal_gear",
+        "n|col|public.courses.included_personal_gear",
+        "e|col|public.courses.included_personal_gear"
+      ],
+      "reads": [
+        "n|tbl|public.courses",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "courses",
+        "name": "included_personal_gear",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

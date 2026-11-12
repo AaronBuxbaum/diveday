@@ -26,6 +26,17 @@ afterEach(() => {
 });
 
 describe("BookingPartyFields", () => {
+  it("requires the organizer name but lets companions name themselves later", () => {
+    renderDiver(<BookingPartyFields maxPartySize={3} />);
+    fireEvent.click(screen.getByRole("radio", { name: "3 people" }));
+    expect(screen.getByRole("textbox", { name: "Name" })).toBeRequired();
+    expect(screen.getByRole("textbox", { name: "Diver 2 name" })).not.toBeRequired();
+    expect(screen.getByRole("textbox", { name: "Diver 2 name" })).toHaveAttribute(
+      "placeholder",
+      "Guest 2",
+    );
+  });
+
   it("scopes name/email autofill per diver rather than turning it off (task 22)", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} />);
 
@@ -367,4 +378,16 @@ describe("BookingPartyFields — SMS consent", () => {
     fireEvent.change(phone, { target: { value: "+1 305 555 0142" } });
     expect(screen.getByText(consent)).toBeInTheDocument();
   });
+});
+
+it("links a larger group to the trip-prefilled request", () => {
+  renderDiver(
+    <BookingPartyFields
+      maxPartySize={3}
+      groupRequestHref="/s/reef?groupTrip=Reef#request-a-date"
+    />,
+  );
+  expect(
+    screen.getByRole("link", { name: "Bringing more than 3? Ask about a group trip." }),
+  ).toHaveAttribute("href", "/s/reef?groupTrip=Reef#request-a-date");
 });

@@ -116,6 +116,7 @@ describe("seeded gear-included courses", () => {
     ]);
     for (const course of completeGear) {
       expect(course.includedRentalKinds, course.slug).toEqual([...CORE_RENTAL_KINDS]);
+      expect(course.includedPersonalGear, course.slug).toEqual(["snorkel", "boots"]);
     }
     expect(
       rows.filter((row) => !completeGear.includes(row) && row.includedRentalKinds.length),

@@ -483,3 +483,37 @@ describe("the partner-link credit", () => {
     expect(await bookWithPartnerCookie(false)).toBeNull();
   });
 });
+
+describe("unnamed companion seats", () => {
+  it("holds blank companions as distinct unconfirmed guests without adopting supplied emails", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const tripId = await freeDeparture(db, shop.id);
+    const form = submission([
+      { email: "organizer4334@example.com" },
+      { email: "companion4334@example.com" },
+      { email: "companion4334@example.com" },
+    ]);
+    form.set("fullName-1", "");
+    form.set("fullName-2", " ");
+    expect(await post(shop.slug, tripId, form)).toBeNull();
+    const rows = await db
+      .select({
+        name: people.fullName,
+        email: people.email,
+        held: bookings.identityUnconfirmedAt,
+        bookedAs: bookings.identityBookedAs,
+      })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(eq(bookings.tripId, tripId));
+    expect(rows).toHaveLength(3);
+    for (const number of [2, 3]) {
+      expect(rows.find((row) => row.name === `Guest ${number}`)).toMatchObject({
+        email: null,
+        held: expect.any(Date),
+        bookedAs: `Guest ${number}`,
+      });
+    }
+  });
+});

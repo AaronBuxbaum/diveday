@@ -347,6 +347,7 @@ const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-fiv
 
 /** Everything `BookSpotSection` draws, assembled once by its caller and handed over as one object. */
 export type BookSpotSectionContext = {
+  groupRequestHref?: string;
   trip: BookingFormTrip;
   tripRef: TripRef;
   remaining: number;
@@ -635,6 +636,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         ) : null}
         <BookingPartyFields
           maxPartySize={remaining}
+          groupRequestHref={context.groupRequestHref}
           leadPhone
           fieldErrors={state.fieldErrors}
           rememberForShop={!tripRef.embed ? tripRef.shopSlug : null}

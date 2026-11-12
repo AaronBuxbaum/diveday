@@ -6,6 +6,7 @@ import {
   standardFormAgeBounds,
 } from "@/content/course-templates";
 import { nowDate } from "@/lib/clock";
+import { COURSE_PERSONAL_GEAR } from "@/lib/course-personal-gear";
 import { courseSlug } from "@/lib/courses";
 import { CORE_RENTAL_KINDS } from "@/lib/rentals";
 import type { DbExecutor } from "./client";
@@ -295,6 +296,11 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
           // default, and a shop turns one off on the course page.
           nitroxCompatible: !(isIntroCourse || minimumCertificationLevel === null),
           // These demo courses promise complete rental gear, not only the scuba unit.
+          includedPersonalGear:
+            template &&
+            ["discover-scuba-diving", "open-water-diver", "scuba-refresher"].includes(template.slug)
+              ? [...COURSE_PERSONAL_GEAR]
+              : [],
           includedRentalKinds:
             template &&
             ["discover-scuba-diving", "open-water-diver", "scuba-refresher"].includes(template.slug)

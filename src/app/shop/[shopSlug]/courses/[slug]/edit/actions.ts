@@ -17,6 +17,7 @@ import {
 import { checkbox, formValue, readForm, text, trimmedText } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { requireShopSurface, requireStaffSession } from "@/features/session";
+import { toCoursePersonalGear } from "@/lib/course-personal-gear";
 import {
   COURSE_CONTENT_LIMITS,
   courseDepthPlaceholderIssues,
@@ -322,6 +323,9 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     // hides the boxes, and a hidden tick is not the shop's answer.
     includedRentalKinds: extras.gearIncluded
       ? toIncludedRentalKinds(formData.getAll("includedRentalKind"))
+      : [],
+    includedPersonalGear: extras.gearIncluded
+      ? toCoursePersonalGear(formData.getAll("includedPersonalGear"))
       : [],
   });
 

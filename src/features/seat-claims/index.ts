@@ -1,4 +1,6 @@
 /** seat-claims public contract. Internals are imported only within this module. */
+
+export { getGroupClaimPageData, issueGroupSeatClaim } from "./group";
 export type {
   ClaimPageData,
   ClaimPageState,

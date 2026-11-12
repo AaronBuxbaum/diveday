@@ -11,6 +11,7 @@ import {
   postgresTestDb,
   waitForLockWaiters,
 } from "../../test/postgres";
+import { getGroupClaimPageData, issueGroupSeatClaim } from "./group";
 import { claimPartySeat, issuePartySeatClaims } from "./store";
 
 /**
@@ -30,7 +31,7 @@ import { claimPartySeat, issuePartySeatClaims } from "./store";
 
 const HOUR_MS = 60 * 60 * 1000;
 
-async function partySeat(db: AppDb) {
+async function partySeat(db: AppDb, throughGroup: boolean) {
   const suffix = randomBytes(4).toString("hex");
   const [shop] = await db
     .insert(shops)
@@ -57,7 +58,7 @@ async function partySeat(db: AppDb) {
       fullName: "Orla Organizer",
       email: `orla-${suffix}@example.com`,
     },
-    { actor: "public", shopId: shop.id, tripId: trip.id, fullName: "Milo Member" },
+    { actor: "public", shopId: shop.id, tripId: trip.id, fullName: "Guest 2", unnamedGuest: true },
   ]);
   if (!party.ok) throw new Error(`party booking failed: ${party.reason}`);
   const [lead, member] = party.bookings;
@@ -66,43 +67,51 @@ async function partySeat(db: AppDb) {
     shopId: shop.id,
     leadBookingId: lead.bookingId,
   });
-  const token = seats.find((seat) => seat.bookingId === member.bookingId)?.claim?.token;
+  const group = throughGroup
+    ? await issueGroupSeatClaim(db, { shopId: shop.id, leadBookingId: lead.bookingId })
+    : null;
+  const token = throughGroup
+    ? group && (await getGroupClaimPageData(db, group.token))?.seats[0]?.claim.token
+    : seats.find((seat) => seat.bookingId === member.bookingId)?.claim?.token;
   if (!token) throw new Error("expected a claim link for the member seat");
   return { bookingId: member.bookingId, token };
 }
 
 describePostgres("claimPartySeat under real concurrency", () => {
-  it("gives one seat to exactly one of two people claiming it at once", async () => {
-    const pg = await postgresTestDb();
-    const { bookingId, token } = await partySeat(pg.db);
-    const emails = ["ana@example.com", "ben@example.com"];
+  it.each([false, true])(
+    "gives one seat to exactly one of two people claiming it at once (group=%s)",
+    async (throughGroup) => {
+      const pg = await postgresTestDb();
+      const { bookingId, token } = await partySeat(pg.db, throughGroup);
+      const emails = ["ana@example.com", "ben@example.com"];
 
-    const gate = await holdRowLock(
-      pg,
-      sql`select id from bookings where id = ${bookingId} for update`,
-    );
-    const claims = [
-      claimPartySeat(pg.connect(), { token, fullName: "Ana Diver", email: emails[0] ?? "" }),
-      claimPartySeat(pg.connect(), { token, fullName: "Ben Diver", email: emails[1] ?? "" }),
-    ];
-    await waitForLockWaiters(pg.db, 2);
-    await gate.release();
-    const outcomes = await Promise.all(claims);
+      const gate = await holdRowLock(
+        pg,
+        sql`select id from bookings where id = ${bookingId} for update`,
+      );
+      const claims = [
+        claimPartySeat(pg.connect(), { token, fullName: "Ana Diver", email: emails[0] ?? "" }),
+        claimPartySeat(pg.connect(), { token, fullName: "Ben Diver", email: emails[1] ?? "" }),
+      ];
+      await waitForLockWaiters(pg.db, 2);
+      await gate.release();
+      const outcomes = await Promise.all(claims);
 
-    const won = outcomes.filter((outcome) => outcome.ok);
-    expect(won).toHaveLength(1);
-    expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([{ ok: false, reason: "invalid" }]);
-    const [seat] = await pg.db
-      .select({ personId: bookings.personId, claimedAt: bookings.claimedAt })
-      .from(bookings)
-      .where(eq(bookings.id, bookingId));
-    expect(seat?.claimedAt).not.toBeNull();
-    const claimants = await pg.db
-      .select({ id: people.id, email: people.email })
-      .from(people)
-      .where(inArray(people.email, emails));
-    // The winner's row, and nobody else's: a refused claim creates no person.
-    expect(claimants).toHaveLength(1);
-    expect(seat?.personId).toBe(claimants[0]?.id);
-  });
+      const won = outcomes.filter((outcome) => outcome.ok);
+      expect(won).toHaveLength(1);
+      expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([{ ok: false, reason: "invalid" }]);
+      const [seat] = await pg.db
+        .select({ personId: bookings.personId, claimedAt: bookings.claimedAt })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId));
+      expect(seat?.claimedAt).not.toBeNull();
+      const claimants = await pg.db
+        .select({ id: people.id, email: people.email })
+        .from(people)
+        .where(inArray(people.email, emails));
+      // The winner's row, and nobody else's: a refused claim creates no person.
+      expect(claimants).toHaveLength(1);
+      expect(seat?.personId).toBe(claimants[0]?.id);
+    },
+  );
 });

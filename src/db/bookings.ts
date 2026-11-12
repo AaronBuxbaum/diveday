@@ -184,7 +184,13 @@ export type BookingPerson =
        */
       fromNameMatch?: { typedName: string };
     }
-  | { fullName: string; email?: string; phone?: string; freshPerson?: FreshPersonDetails };
+  | {
+      fullName: string;
+      email?: string;
+      phone?: string;
+      freshPerson?: FreshPersonDetails;
+      unnamedGuest?: boolean;
+    };
 
 /**
  * What a door knows about somebody it is seating for the first time, written
@@ -1568,6 +1574,11 @@ async function resolveBookingPerson(
     if (identityUnconfirmed && req.fromNameMatch) {
       identityClaim = { bookedAs: req.fromNameMatch.typedName.trim() };
     }
+  } else if (req.unnamedGuest) {
+    // A count is not an identity. Never resolve a placeholder against a supplied email.
+    pendingInsert = { fullName: req.fullName.trim(), email: null };
+    identityUnconfirmed = true;
+    identityClaim = { bookedAs: req.fullName.trim() };
   } else {
     const email = req.email?.trim().toLowerCase() || null;
     if (email) {

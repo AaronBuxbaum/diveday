@@ -81,19 +81,21 @@ export type RentalSizeValues = {
  */
 export function RentalSizeFields({
   offers,
+  includedBoots = false,
   rentalFit,
   suit,
   sizes,
   onSize,
 }: {
   offers: ReadonlySet<RentableItemKind>;
+  includedBoots?: boolean;
   rentalFit: RentalFit;
   suit: SuitChoice;
   sizes: RentalSizeValues;
   onSize: (field: keyof RentalSizeValues, value: string) => void;
 }) {
   const t = useTranslations();
-  const sizesOffered = SIZED_KINDS.some((kind) => offers.has(kind));
+  const sizesOffered = includedBoots || SIZED_KINDS.some((kind) => offers.has(kind));
   const bcdSize = sizes.bcd;
   const wetsuitSize = sizes.wetsuit;
   const drysuitSize = sizes.drysuit;
@@ -206,7 +208,7 @@ export function RentalSizeFields({
               />
             </Field>
           ) : null}
-          {offers.has("wetsuit") ? (
+          {offers.has("wetsuit") || includedBoots ? (
             <Field label={t("rental.bootSize")} hint={t("common.optional")}>
               <input
                 name="bootSize"

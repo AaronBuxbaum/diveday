@@ -588,6 +588,7 @@ export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<
 /** One party seat as the organizer's claim panel shows it. */
 export type PartySeatClaim = {
   paymentStatus: string | null;
+  seatPriceCents: number | null;
   groupHoldUntil: Date | null;
   groupHoldExpired: boolean;
   bookingId: string;
@@ -819,6 +820,7 @@ export async function issuePartySeatClaims(
     seats.push({
       bookingId: row.booking.id,
       paymentStatus: row.paymentStatus,
+      seatPriceCents: seatListPriceCents(row.trip, row.course, row.booking.participantType),
       groupHoldUntil: row.booking.groupHoldUntil,
       groupHoldExpired: row.booking.groupHoldExpiredAt !== null,
       differentDeparture: row.booking.tripId !== row.leadTripId,

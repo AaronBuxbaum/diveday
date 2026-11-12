@@ -81,6 +81,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
     data.rentalFit,
     (fullShop?.briefingMinutes ?? 15) > 0,
     data.trip.course?.includedRentalKinds ?? [],
+    [],
+    data.trip.course?.includedPersonalGear ?? [],
   );
   const snapshot = buildReadySnapshot({
     locale: await requestLocale(shop.defaultLocale),
