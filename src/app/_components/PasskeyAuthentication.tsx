@@ -1,6 +1,5 @@
 "use client";
 
-import { startAuthentication } from "@simplewebauthn/browser";
 import { useEffect, useState, useTransition } from "react";
 import {
   beginPasskeySignInAction,
@@ -48,6 +47,7 @@ export function PasskeyAuthentication({
                 setFailed(true);
                 return;
               }
+              const { startAuthentication } = await import("@simplewebauthn/browser");
               const response = await startAuthentication({ optionsJSON: options });
               const result = stepUp
                 ? await completePasskeyStepUpAction(
