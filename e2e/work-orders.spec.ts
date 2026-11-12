@@ -103,7 +103,7 @@ test.describe("staff", () => {
     // first: the two are one pillar.
     await page.goto("/shop/blue-mantis/gear");
     await page.getByRole("link", { name: "Work orders", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Work orders" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Gear" })).toBeVisible();
 
     await page.getByRole("link", { name: "New work order" }).first().click();
     // The diver comes from the same person search the rest of the staff

@@ -51,7 +51,7 @@ for (const scheme of ["light", "dark"] as const) {
       // their late and ready badges, and the collected tail under them.
       test(`the work-order board renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear/work-orders");
-        await page.getByRole("heading", { level: 1, name: "Work orders" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
         // The last seeded group's row — the board below the fold has settled.
         await page
           .getByRole("link", { name: /Battery hatch leaked/ })
