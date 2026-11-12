@@ -25,6 +25,14 @@ import {
 // or a boat's signal drops, which push alone can never cover.
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
+/** The reads (`trip:epoch:revision`) this tab already saved as an offline copy. */
+const savedReads = new Set<string>();
+
+/** Forget which reads this tab saved (a sign-out, or a test starting clean). */
+export function forgetSavedOfflineReads() {
+  savedReads.clear();
+}
+
 function noteDispositionCount(
   envelope: OfflineManifestEnvelope | null | undefined,
   disposition: "discarded_erasure_cutoff" | "discarded_unverified_snapshot",
@@ -256,6 +264,24 @@ export function useOfflineManifestSync(
         // (they may name an erased diver or miss a newly seated one), so they
         // are not saved; the re-read page lands as a new payload and is saved
         // by the effect below.
+        // Rows this device already saved from this very read are not claimed
+        // twice: the first claim moved the trip's revision, so a second one for
+        // the same read always reads as superseded, and the re-read that
+        // follows would refetch the page on every back or forward. Nothing is
+        // written here, so an erasure that purged the copy since still gets
+        // its fence below: no copy on the device, no skip.
+        const readKey = currentPayload.readAt
+          ? `${tripId}:${currentPayload.readAt.erasureEpoch}:${currentPayload.readAt.snapshotRevision}`
+          : null;
+        if (readKey && savedReads.has(readKey)) {
+          const existing = await loadOfflineManifest(tripId).catch(() => null);
+          if (existing) {
+            setSaved(existing);
+            setMessage("");
+            return;
+          }
+          savedReads.delete(readKey);
+        }
         const claimed = await claimOfflineManifestSnapshot(currentPayload);
         if (claimed === OFFLINE_MANIFEST_STALE_READ) {
           // The copy already on this device stands: drop "Saving…" rather
@@ -278,6 +304,7 @@ export function useOfflineManifestSync(
         if (!claimed) throw new Error(copy.saveErrorFallback);
         const envelope = await saveOfflineManifest(claimed, { tenantRound });
         setSaved(envelope);
+        if (readKey) savedReads.add(readKey);
         lastPendingCount.current = envelope.events.filter(
           (event) => event.syncStatus === "pending",
         ).length;

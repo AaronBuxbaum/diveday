@@ -101,7 +101,10 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
       if (/_next\/static|\.(png|woff2?)/.test(url)) return;
       const frames = (event.initiator.stack?.callFrames ?? [])
         .slice(0, 6)
-        .map((frame) => `${frame.functionName || "anon"}@${frame.url.split("/").pop()}:${frame.lineNumber}`)
+        .map(
+          (frame) =>
+            `${frame.functionName || "anon"}@${frame.url.split("/").pop()}:${frame.lineNumber}`,
+        )
         .join(" < ");
       console.log(
         `DIAG ${diagMode} ${event.request.method} ${url} type=${event.initiator.type} rsc=${event.request.headers.RSC ?? ""} prefetch=${event.request.headers["Next-Router-Prefetch"] ?? ""} ${frames}`,
