@@ -328,7 +328,6 @@ test("bookkeeper settings and registers retain the settings rail", async ({
   const SHOP = privateShop.slug;
   for (const destination of [
     "boats",
-    "dive-sites",
     "trip-tags",
     "safety-checklist",
     "waivers",

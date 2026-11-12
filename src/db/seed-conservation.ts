@@ -4,46 +4,82 @@ import type { DbExecutor } from "./client";
 import { tripConservation, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
 
-/** One recorded cleanup on a returned reef departure; no readiness or boarding rows change. */
+/**
+ * What the crew picked up, cut or removed on past departures, so the shop's
+ * conservation history reads as a season of work and not a single afternoon.
+ * Each entry lands on its own returned departure, newest first.
+ */
+const HISTORY = [
+  {
+    kind: "litter_kg",
+    quantity: 1.8,
+    location: "Molasses Reef",
+    note: "Discarded fishing gear and plastic collected by the crew.",
+  },
+  {
+    kind: "lionfish_count",
+    quantity: 7,
+    location: "Benwood Wreck",
+    note: "Spearfishing-certified crew removed seven lionfish under the permit.",
+  },
+  {
+    kind: "line_m",
+    quantity: 42,
+    location: "French Reef",
+    note: "Monofilament cut from the fire coral and sponges on the reef edge.",
+  },
+  {
+    kind: "litter_items",
+    quantity: 23,
+    location: "Christ of the Abyss",
+    note: "Cans, a tarp and rope from the mooring field.",
+  },
+  {
+    kind: "lionfish_count",
+    quantity: 4,
+    location: "Spiegel Grove",
+    note: "Four lionfish from the bow and the deck rails.",
+  },
+  {
+    kind: "litter_kg",
+    quantity: 3.2,
+    location: "Pickles Reef",
+    note: "Lobster-trap debris and plastic sheeting lifted onto the boat.",
+  },
+] as const;
+
+/** Recorded cleanups on returned departures; no readiness or boarding rows change. */
 export async function seedConservation(db: DbExecutor, shopId: string, recorderId: string) {
-  const [trip] = await db
+  const [existing] = await db
+    .select({ id: tripConservation.id })
+    .from(tripConservation)
+    .where(and(eq(tripConservation.shopId, shopId), isNull(tripConservation.deletedAt)))
+    .limit(1);
+  if (existing) return;
+  const past = await db
     .select({ id: trips.id, endsAt: trips.endsAt })
     .from(trips)
     .where(
       and(
         eq(trips.shopId, shopId),
-        eq(trips.title, "Two-Tank Reef — Molasses & French"),
         eq(trips.status, "scheduled"),
         lt(trips.endsAt, new Date(nowDate().getTime() - DAY_MS)),
         notRehearsal(),
         liveTrip(),
       ),
     )
-    // diveday:allow-time-id-order: seed selects one matching history departure; no ordered list is shown.
+    // diveday:allow-time-id-order: seed picks the latest returned departures; no ordered list is shown.
     .orderBy(desc(trips.endsAt), desc(trips.id))
-    .limit(1);
-  if (!trip) return;
-  const [existing] = await db
-    .select({ id: tripConservation.id })
-    .from(tripConservation)
-    .where(
-      and(
-        eq(tripConservation.shopId, shopId),
-        eq(tripConservation.tripId, trip.id),
-        isNull(tripConservation.deletedAt),
-      ),
-    )
-    .limit(1);
-  if (existing) return;
-  await db.insert(tripConservation).values({
-    shopId,
-    tripId: trip.id,
-    kind: "litter_kg",
-    quantity: 1.8,
-    location: "Molasses Reef",
-    note: "Discarded fishing gear and plastic collected by the crew.",
-    recordedByPersonId: recorderId,
-    recordedAt: trip.endsAt,
-    updatedAt: trip.endsAt,
-  });
+    .limit(HISTORY.length);
+  if (past.length === 0) return;
+  await db.insert(tripConservation).values(
+    past.map((trip, i) => ({
+      shopId,
+      tripId: trip.id,
+      ...HISTORY[i],
+      recordedByPersonId: recorderId,
+      recordedAt: trip.endsAt,
+      updatedAt: trip.endsAt,
+    })),
+  );
 }
