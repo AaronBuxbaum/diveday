@@ -6,7 +6,7 @@ import { seedFacts } from "./shop-facts";
 /**
  * The gear register (ADR 20260815-minimal-gear-register): the fleet on the
  * wall, the per-departure assignments, and the check-out/return loop. Every
- * write here lands on blue-mantis on purpose — the gear tables are
+ * gear-table write here lands on blue-mantis on purpose — the gear tables are
  * reset-owned (deleted and re-seeded by `/api/test/reset`, src/db/seed.ts),
  * so nothing a test adds, deletes, or reserves leaks into the next spec.
  */
@@ -364,40 +364,6 @@ test.describe("staff", () => {
     await expect(assignments.getByRole("button", { name: "All good" })).toHaveCount(0);
   });
 
-  test("prints a diver their own rental ticket from the departure", async ({ page }) => {
-    const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
-    await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
-    const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
-    // The door only exists on a row that has units on it, which is the whole
-    // rule: a slip listing nothing is a wrong slip, not a short one.
-    const withUnits = assignments.locator("li").filter({ hasText: "Rental ticket" }).first();
-    const diverName = ((await withUnits.locator("p").first().textContent()) ?? "").trim();
-    const firstTag = (
-      (await withUnits.locator("span.font-mono").first().textContent()) ?? ""
-    ).trim();
-    expect(firstTag.length).toBeGreaterThan(0);
-
-    await withUnits.getByRole("link", { name: "Rental ticket" }).click();
-    await expect(page.getByRole("heading", { name: diverName, level: 1 })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "What you have" })).toBeVisible();
-    await expect(page.getByText(firstTag, { exact: true })).toBeVisible();
-    // A receipt for gear: the diver signs that they took these units, on a
-    // "Received by" line with a printed name and a date (Aaron, 2026-10-08;
-    // the ADR's amendment of that date). Still never a waiver and never a bill
-    // (ADR 20260815-minimal-gear-register, CR-015). Scoped to the slip itself
-    // — the staff shell around it carries its own forms on every route, and
-    // they are not what this is about.
-    const slip = page.locator("#rental-ticket");
-    await expect(slip.getByText("Received by", { exact: true })).toBeVisible();
-    await expect(slip.getByText("Printed name", { exact: true })).toBeVisible();
-    await expect(slip.getByText("Date", { exact: true })).toBeVisible();
-    // The blue-mantis seed writes no rental terms, so the slip prints none.
-    await expect(slip.getByRole("heading", { name: "Rental terms" })).toHaveCount(0);
-    await expect(slip.getByText("$")).toHaveCount(0);
-    await expect(slip.getByText(/i agree|waive|liabilit|total|deposit/i)).toHaveCount(0);
-    await expect(slip.locator("form")).toHaveCount(0);
-  });
-
   test("logs a service on a unit and the clock appears in its history", async ({ page }) => {
     await page.goto("/shop/blue-mantis/gear");
     await page.getByRole("link", { name: "Reg #1", exact: true }).click();
@@ -588,5 +554,53 @@ test.describe("staff", () => {
         .getByRole("link", { name: "Gear history" }),
     ).toHaveAttribute("aria-current", "page");
     await expect(page.getByRole("link", { name: "Download gear CSV template" })).toBeVisible();
+  });
+});
+
+// This settings-writing test owns its shop and signs in through privateShop;
+// it cannot inherit the shared owner's storage state from the describe above.
+test.describe("private shop staff", () => {
+  test("prints a diver their own rental ticket from the departure", async ({
+    page,
+    privateShop,
+  }) => {
+    // Rental terms are shop configuration, so establish the no-terms state
+    // on an isolated shop rather than relying on the shared demo's profile.
+    await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
+    await page.getByRole("textbox", { name: /^Rental terms/ }).fill("");
+    await page.getByRole("button", { name: "Save rentals" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Rentals saved" })).toBeVisible();
+
+    const tripId = await seededTripId(page, privateShop.slug, "Wreck Trip — Spiegel Grove");
+    await page.goto(`/shop/${privateShop.slug}/trips/${tripId}/prep`);
+    const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
+    // The door only exists on a row that has units on it, which is the whole
+    // rule: a slip listing nothing is a wrong slip, not a short one.
+    const withUnits = assignments.locator("li").filter({ hasText: "Rental ticket" }).first();
+    const diverName = ((await withUnits.locator("p").first().textContent()) ?? "").trim();
+    const firstTag = (
+      (await withUnits.locator("span.font-mono").first().textContent()) ?? ""
+    ).trim();
+    expect(firstTag.length).toBeGreaterThan(0);
+
+    await withUnits.getByRole("link", { name: "Rental ticket" }).click();
+    await expect(page.getByRole("heading", { name: diverName, level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What you have" })).toBeVisible();
+    await expect(page.getByText(firstTag, { exact: true })).toBeVisible();
+    // A receipt for gear: the diver signs that they took these units, on a
+    // "Received by" line with a printed name and a date (Aaron, 2026-10-08;
+    // the ADR's amendment of that date). Still never a waiver and never a bill
+    // (ADR 20260815-minimal-gear-register, CR-015). Scoped to the slip itself
+    // — the staff shell around it carries its own forms on every route, and
+    // they are not what this is about.
+    const slip = page.locator("#rental-ticket");
+    await expect(slip.getByText("Received by", { exact: true })).toBeVisible();
+    await expect(slip.getByText("Printed name", { exact: true })).toBeVisible();
+    await expect(slip.getByText("Date", { exact: true })).toBeVisible();
+    // This shop has explicitly cleared its terms, so the slip prints none.
+    await expect(slip.getByRole("heading", { name: "Rental terms" })).toHaveCount(0);
+    await expect(slip.getByText("$")).toHaveCount(0);
+    await expect(slip.getByText(/i agree|waive|liabilit|total|deposit/i)).toHaveCount(0);
+    await expect(slip.locator("form")).toHaveCount(0);
   });
 });
