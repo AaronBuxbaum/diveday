@@ -8,8 +8,8 @@ type Lens = { id: string; slug: string; name: string };
 /**
  * The filter form directly before the departure list, with the shop's lens chips inside it. The
  * URL carries the filters and the list re-renders server-side (ADR 20260812-javascript-is-required).
- * On phones the disclosure holds the lens chips as well as the advanced controls (public audit P3,
- * #3140), which must stay directly before the list: `e2e/schedule-filters.spec.ts` and
+ * The lens chips stay visible on phones; the disclosure holds the advanced controls.
+ * The form must stay directly before the list: `e2e/schedule-filters.spec.ts` and
  * `e2e/trip-admission.spec.ts` address the departures as `form + ul`. None of it renders in the
  * frame (issue #805): `FilterChips` is a `<nav>` landmark and the frame promises the host page none.
  */
@@ -65,7 +65,6 @@ export function ScheduleFilterBar({
           />
         ) : null
       }
-      activeLensLabel={activeLens?.name ?? null}
     />
   );
 }
