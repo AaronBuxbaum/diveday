@@ -99,8 +99,8 @@ export function StageStrip({
           word would be wrong half the time on exactly the boats that use it
           most. */}
       <div className={`mt-2 ${BOAT_SEGMENT_TRACK_CLASS}`}>
-        {copy.taps.map((tap) => (
-          <form action={formAction} key={tap.stage} className="flex">
+        {copy.taps.map((tap, index) => (
+          <form action={formAction} key={tap.stage} className="relative flex">
             <input type="hidden" name="stage" value={tap.stage} />
             <button
               type={tap.stage === "home" && homeConfirm ? "button" : "submit"}
@@ -118,6 +118,14 @@ export function StageStrip({
               </span>
               <span className="max-sm:sr-only">{tap.label}</span>
             </button>
+            {index < copy.taps.length - 1 ? (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 -end-1 z-10 -translate-y-1/2 rounded-sm bg-surface px-0.5 text-xs font-bold text-foreground"
+              >
+                {tap.stage === "underway" ? "↔" : "›"}
+              </span>
+            ) : null}
           </form>
         ))}
       </div>

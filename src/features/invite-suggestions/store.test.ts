@@ -338,6 +338,14 @@ describe("listInviteSuggestions", () => {
     const got = await listInviteSuggestions(db, { shopId: shop.id, tripId: target.id, now });
     expect(got?.shown).toHaveLength(INVITE_SUGGESTIONS_SHOWN);
     expect(got?.total).toBe(INVITE_SUGGESTIONS_SHOWN + 3);
+    expect(got?.remaining).toHaveLength(3);
+    if (!got) throw new Error("expected suggestions");
+    expect([...got.shown, ...got.remaining].map((person) => person.fullName)).toEqual(
+      Array.from(
+        { length: INVITE_SUGGESTIONS_SHOWN + 3 },
+        (_, i) => `Past Diver ${String(i).padStart(2, "0")}`,
+      ),
+    );
   });
 
   it("never suggests a rider, a snorkeler, or someone who only did a try-dive", async () => {

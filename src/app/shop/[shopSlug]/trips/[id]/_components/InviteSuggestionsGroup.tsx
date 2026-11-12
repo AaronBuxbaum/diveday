@@ -27,6 +27,29 @@ export function InviteSuggestionsGroup({
   const t = staffTranslator(locale);
   const now = nowDate();
   const more = suggestions.total - suggestions.shown.length;
+  const renderPerson = (person: InviteSuggestions["shown"][number]) => (
+    <li
+      key={person.personId}
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
+    >
+      <p className="min-w-0">
+        <span className="font-medium text-base">{person.fullName}</span>{" "}
+        <span className="text-muted">
+          {formatPastMonth(person.lastDivedAt, locale, timeZone, now)}
+        </span>
+      </p>
+      <form action={action}>
+        <input type="hidden" name="personId" value={person.personId} />
+        <SubmitButton
+          pendingLabel={t("trips.addDiver.offerSeating")}
+          ariaLabel={t("trips.addDiver.offerSeatAria", { name: person.fullName })}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("trips.addDiver.offerSeat")}
+        </SubmitButton>
+      </form>
+    </li>
+  );
   return (
     <>
       <RosterGroupBand
@@ -36,34 +59,15 @@ export function InviteSuggestionsGroup({
         <p className="text-xs text-muted">{t("trips.inviteSuggestions.description")}</p>
       </RosterGroupBand>
       <ul className="divide-y divide-border" data-testid="invite-suggestions">
-        {suggestions.shown.map((person) => (
-          <li
-            key={person.personId}
-            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
-          >
-            <p className="min-w-0">
-              <span className="font-medium text-base">{person.fullName}</span>{" "}
-              <span className="text-muted">
-                {formatPastMonth(person.lastDivedAt, locale, timeZone, now)}
-              </span>
-            </p>
-            <form action={action}>
-              <input type="hidden" name="personId" value={person.personId} />
-              <SubmitButton
-                pendingLabel={t("trips.addDiver.offerSeating")}
-                ariaLabel={t("trips.addDiver.offerSeatAria", { name: person.fullName })}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("trips.addDiver.offerSeat")}
-              </SubmitButton>
-            </form>
-          </li>
-        ))}
+        {suggestions.shown.map(renderPerson)}
       </ul>
       {more > 0 ? (
-        <p className="px-4 pb-2 text-sm text-muted sm:px-5">
-          {t("trips.inviteSuggestions.more", { count: more })}
-        </p>
+        <details>
+          <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-primary sm:px-5">
+            {t("trips.inviteSuggestions.more", { count: more })}
+          </summary>
+          <ul className="divide-y divide-border">{suggestions.remaining.map(renderPerson)}</ul>
+        </details>
       ) : null}
     </>
   );

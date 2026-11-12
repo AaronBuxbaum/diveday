@@ -18,6 +18,24 @@ test.describe("owner", () => {
   test.describe("phone navigation with enlarged text", () => {
     test.use({ locale: "es-ES", viewport: { width: 390, height: 844 } });
 
+    test("spaces the Spanish labels evenly at normal text size", async ({ page }, testInfo) => {
+      await page.goto("/shop/blue-mantis/inbox");
+      const nav = page.getByRole("navigation", { name: "Principal", exact: true });
+      await expect(nav).toHaveAttribute("data-hydrated", "true");
+      const centers = await nav
+        .locator("[data-staff-tab-scroll] a, :scope > div > div > button")
+        .evaluateAll((targets) =>
+          targets.map((target) => {
+            const box = target.getBoundingClientRect();
+            return box.left + box.width / 2;
+          }),
+        );
+      expect(centers).toHaveLength(5);
+      const gaps = centers.slice(1).map((center, index) => center - centers[index]);
+      expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(2);
+      await nav.screenshot({ path: testInfo.outputPath("navigation-es.png") });
+    });
+
     test("keeps full labels keyboard-visible without widening the page", async ({ page }) => {
       await page.goto("/shop/blue-mantis/safety-checklist");
       const nav = page.getByRole("navigation", { name: "Principal", exact: true });
@@ -535,6 +553,23 @@ test.describe("the phone", () => {
       "aria-current",
       "page",
     );
+  });
+
+  test("spaces phone navigation targets evenly at normal text size", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/inbox");
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    await expect(nav).toHaveAttribute("data-hydrated", "true");
+    const centers = await nav
+      .locator("[data-staff-tab-scroll] a, :scope > div > div > button")
+      .evaluateAll((targets) =>
+        targets.map((target) => {
+          const box = target.getBoundingClientRect();
+          return box.left + box.width / 2;
+        }),
+      );
+    expect(centers).toHaveLength(5);
+    const gaps = centers.slice(1).map((center, index) => center - centers[index]);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(2);
   });
 
   test("keeps the rest one tap behind More, and lights More when you are there", async ({
