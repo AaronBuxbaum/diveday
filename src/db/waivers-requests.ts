@@ -23,6 +23,7 @@ import { isTransactionExecutor } from "./query-helpers";
 import { bookings, capabilities, people, trips, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
+import { seatMinorDeclared } from "./waiver-signing";
 import { threadWaiverKey, type WaiverKey, waiverLinkDoor } from "./waivers-completion";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
@@ -266,8 +267,13 @@ async function openRelease(
     // signed" instead supersedes it and mints a link that asks for both.
     const signer: GuardianSigner = {
       dateOfBirth,
-      // The seat's booker's "Under 18", when a seat is what this link is for.
-      minorDeclared: booking ? booking.minorDeclaredAt !== null : false,
+      // The seat's booker's "Under 18", or any seat of theirs still ahead: the
+      // question the signing page and readiness ask (`seatMinorDeclared`).
+      minorDeclared: await seatMinorDeclared(
+        tx,
+        { shopId: input.shopId, personId, bookingId: booking?.id ?? null },
+        input.now ?? nowDate(),
+      ),
       timezone: await shopTimezone(tx, input.shopId),
     };
 
