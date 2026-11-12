@@ -704,7 +704,33 @@ export const ROLL_CALL_EVENTS_CSV = sharedFile<ShopRow<"rollCallRows">>({
       value: (row, { bookingPerson, personName }) =>
         nameOf(personName, bookingPerson.get(row.bookingId)),
     },
-    { header: "status", in: "both", value: (row) => row.status },
+    { header: "status", in: "both", value: (row) => row.statementStatus ?? row.status },
+    { header: "statement_status", in: "both", value: (row) => row.statementStatus ?? row.status },
+    {
+      header: "capture_context",
+      in: "both",
+      value: (row) => (row.captureContext === null ? null : JSON.stringify(row.captureContext)),
+    },
+    { header: "effective_status", in: "both", value: (row) => row.status },
+    {
+      header: "observed_evidence_ids",
+      in: "both",
+      value: (row) =>
+        row.observedEvidenceIds === null ? null : JSON.stringify(row.observedEvidenceIds),
+    },
+    { header: "reconciles_evidence", in: "both", value: (row) => row.reconcilesEvidence },
+    { header: "meeting_day", in: "both", value: (row) => row.meetingDay },
+    {
+      header: "causal_frontier",
+      in: "both",
+      value: (row) => (row.causalFrontier === null ? null : JSON.stringify(row.causalFrontier)),
+    },
+    { header: "evidence_conflict", in: "both", value: (row) => row.evidenceConflict },
+    {
+      header: "evidence_ordering_unknown",
+      in: "both",
+      value: (row) => row.evidenceOrderingUnknown,
+    },
     { header: "checkpoint", in: "both", value: (row) => row.checkpoint },
     { header: "source", in: "shop", value: (row) => row.source },
     { header: "client_event_id", in: "shop", value: (row) => row.clientEventId },

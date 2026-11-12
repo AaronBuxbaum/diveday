@@ -1,12 +1,12 @@
-import { type AnyColumn, and, asc, desc, eq, gt, or } from "drizzle-orm";
+import { type AnyColumn, asc, desc, gt, sql } from "drizzle-orm";
 import { rollCallEvents } from "./schema";
 
 /**
- * The order of roll-call marks, in one place. Newest wins on `occurred_at`,
- * then `created_at`, then `seq` (ADR 20260815-roll-call-order-is-a-property-of-the-data):
- * two taps in the same millisecond, or an offline batch replayed with one
- * `occurred_at`, are still told apart. Forgetting `seq` once left every test green
- * and a diver reading as back aboard. `scripts/check-roll-call-subject.mjs`
+ * Storage order selects the row carrying the materialized causal projection;
+ * neither receipt sequence nor capture clocks establish observation or decide
+ * which original statement wins (ADR 20261112-roll-call-observes-evidence).
+ * Capture clocks are retained separately for audit presentation. The earlier
+ * timestamp-order policy is superseded. `scripts/check-roll-call-subject.mjs`
  * refuses a hand-written sort or newer-than comparison anywhere but here; it
  * reads text, so it catches the usual shapes, not every one.
  *
@@ -14,25 +14,29 @@ import { rollCallEvents } from "./schema";
  */
 type OrderedMarks = { occurredAt: AnyColumn; createdAt: AnyColumn; seq: AnyColumn };
 
-/** `orderBy(...newestMarkFirst())`: the first row per subject and checkpoint is its standing mark. */
+/** Latest stored projection row; its original statement need not be the effective result. */
 export function newestMarkFirst(table: OrderedMarks = rollCallEvents) {
-  return [desc(table.occurredAt), desc(table.createdAt), desc(table.seq)] as const;
+  return [desc(table.seq)] as const;
 }
 
 /** `orderBy(...oldestMarkFirst())`: the timeline order, as the export and the incident pack read it. */
 export function oldestMarkFirst(table: OrderedMarks = rollCallEvents) {
-  return [asc(table.occurredAt), asc(table.createdAt), asc(table.seq)] as const;
+  return [asc(table.seq)] as const;
 }
 
 /** True where `newer` was recorded after `older`, for a "no newer mark exists" anti-join. */
 export function isNewerMark(newer: OrderedMarks, older: OrderedMarks) {
-  return or(
-    gt(newer.occurredAt, older.occurredAt),
-    and(eq(newer.occurredAt, older.occurredAt), gt(newer.createdAt, older.createdAt)),
-    and(
-      eq(newer.occurredAt, older.occurredAt),
-      eq(newer.createdAt, older.createdAt),
-      gt(newer.seq, older.seq),
-    ),
-  );
+  return gt(newer.seq, older.seq);
+}
+
+/** Original crew intent for a timeline or audit export, separate from risk projection. */
+export function originalRollCallStatus() {
+  return sql<
+    (typeof rollCallEvents.$inferSelect)["status"]
+  >`coalesce(${rollCallEvents.statementStatus}, ${rollCallEvents.status})`;
+}
+
+/** Capture timestamps order an audit trail only, never evidence supersession. */
+export function auditMarkFirst(table: OrderedMarks = rollCallEvents) {
+  return [asc(table.occurredAt), asc(table.createdAt), asc(table.seq)] as const;
 }

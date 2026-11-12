@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canRecordOfflineCrewStatus, type OfflineRollCallEvent } from "@/lib/offline-manifests";
+import { identifySavedRollCall } from "@/test/identified-offline-roll-call";
 import { diver, savedCopy, view } from "./section-fixtures";
 import { offlineTripView } from "./trip-view";
 import { richEnvelope } from "./view-fixtures";
@@ -65,13 +66,35 @@ describe("offlineTripView — certified total persons", () => {
     expect(offlineTripView(fullBoat(null), "departure")?.overTotalPersons).toBeNull();
   });
 
+  it("keeps an opaque opposing ashore tap in the aboard risk count", () => {
+    const copy = fullBoat();
+    copy.events = [
+      {
+        clientEventId: crypto.randomUUID(),
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        crewPersonId: "crew-0",
+        checkpoint: "departure",
+        status: "not_boarded",
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending",
+      },
+    ];
+    const counted = offlineTripView(copy, "departure");
+    expect(counted?.overTotalPersons).toEqual({ aboard: 13, limit: 12 });
+    expect(counted?.rollCallComplete).toBe(false);
+  });
+
   it("recounts queued crew and passenger changes, leaving offboard people out", () => {
     const copy = fullBoat();
     const ashore = (
       subject: { bookingId: string } | { crewPersonId: string },
     ): OfflineRollCallEvent => ({
       ...subject,
-      clientEventId: JSON.stringify(subject),
+      clientEventId: crypto.randomUUID(),
+      observedEvidenceIds: [identifySavedRollCall(copy.snapshot, subject, "departure", 0)],
+      meetingDay: 0,
       snapshotId: copy.snapshot.snapshotId,
       snapshotSavedAt: copy.snapshot.savedAt,
       tripId: "trip-1",

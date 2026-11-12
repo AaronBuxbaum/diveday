@@ -2,6 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
@@ -13,15 +14,7 @@ import { createBookingParty } from "./bookings";
 import { listDiveSites } from "./dive-sites";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { crewSubject } from "./roll-call-subject";
-import {
-  bookings,
-  courses,
-  people,
-  rollCallEvents,
-  tripRequirements,
-  tripSeries,
-  trips,
-} from "./schema";
+import { bookings, courses, people, tripRequirements, tripSeries, trips } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   applyDetailsToFutureSeries,
@@ -540,7 +533,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
       .values({ bookedAs: "diver", shopId: shop.id, tripId: sailed.id, personId: p1.id })
       .returning();
     if (!booked) throw new Error("booking insert failed");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: sailed.id,
       bookingId: booked.id,
@@ -589,7 +582,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     if (!source || !sailed) throw new Error("expected two instances");
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seed staff missing");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: sailed.id,
       ...crewSubject(staff.person.id),
@@ -834,7 +827,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
       const first = await blownOutAndReinstated(run);
       const [staff] = await listStaff(run.db, run.shop.id);
       if (!staff) throw new Error("seed staff missing");
-      await run.db.insert(rollCallEvents).values({
+      await seedRollCallEvidence(run.db, {
         shopId: run.shop.id,
         tripId: first.id,
         bookingId: run.paidBooking,

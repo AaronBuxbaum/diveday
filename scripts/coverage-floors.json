@@ -182,5 +182,10 @@
   "src/features/check-in/rules.ts": 100,
   "src/features/check-in/arrival-elsewhere.store.ts": 80,
   "src/features/requirement-form/store.ts": 100,
-  "src/features/waiver-guardian-copy/store.ts": 80
+  "src/features/waiver-guardian-copy/store.ts": 80,
+  "src/db/roll-call-causal-store.ts": 74,
+  "src/lib/roll-call-causality.ts": 90.14,
+  "src/lib/roll-call-offline-causality.ts": 84.54,
+  "src/lib/roll-call-protocol.ts": 100,
+  "src/features/offline-manifest-snapshots/payload.ts": 72.22
 }

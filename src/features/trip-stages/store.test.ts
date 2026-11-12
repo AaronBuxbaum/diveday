@@ -1,13 +1,13 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import type { AppDb } from "../../db/client";
 import {
   bookings,
   diveSites,
   people,
   personRoles,
-  rollCallEvents,
   shops,
   tripDives,
   tripStageEvents,
@@ -291,7 +291,7 @@ describe("recordTripStage on the way home", () => {
       .values({ bookedAs: "diver", shopId, tripId, personId: person })
       .returning();
     if (!booking) throw new Error("test booking insert failed");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId,
       tripId,
       bookingId: booking.id,
@@ -344,7 +344,7 @@ describe("recordTripStage on the way home", () => {
       }),
     ).toMatchObject({ ok: true, rollCallOpen: null });
 
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId,
       tripId: trip.id,
       bookingId,
@@ -370,7 +370,7 @@ describe("recordTripStage on the way home", () => {
     const trip = await aDeparture(db, shopId);
     const staffer = await aStaffer(db, shopId);
     const bookingId = await aBoardedDiver(db, shopId, trip.id, staffer);
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId,
       tripId: trip.id,
       bookingId,

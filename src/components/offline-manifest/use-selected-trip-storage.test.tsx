@@ -13,6 +13,7 @@ import {
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
 import { useSelectedTripEnvelopeHandler } from "./selected-trip-envelope";
 import { type SelectedTripStorageState, useSelectedTripStorage } from "./use-selected-trip-storage";
 import { richPayload } from "./view-fixtures";
@@ -171,14 +172,26 @@ describe("selected-trip storage invalidation", () => {
     const subscriberOnMessage = subscriber?.onmessage ?? null;
     if (subscriber) subscriber.onmessage = null;
     const restoreLocalEvent = suppressSameDocumentManifestEvent();
+    const serverState = await loadOfflineManifest(tripId);
+    if (!serverState) throw new Error("expected queued roster");
     vi.stubGlobal(
       "fetch",
       vi.fn(
         async () =>
           new Response(
-            JSON.stringify({
-              results: [{ clientEventId: firstEventId, status: "applied" }],
-            }),
+            JSON.stringify(
+              withRefreshedSyncFrame(
+                serverState.snapshot,
+                {
+                  results: [{ clientEventId: firstEventId, status: "applied" }],
+                },
+                {
+                  events: serverState.events.filter(
+                    (event) => event.clientEventId === firstEventId,
+                  ),
+                },
+              ),
+            ),
             { status: 200, headers: { "content-type": "application/json" } },
           ),
       ),

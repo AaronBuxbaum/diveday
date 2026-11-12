@@ -179,7 +179,9 @@ export function OfflineCrewRollCall({
                               ? t("manifest.crewAboardCheckAriaLabel")
                               : t("manifest.crewMarkAboard")
                           }
-                          busy={busyBooking === crewPersonId}
+                          busy={
+                            busyBooking === crewPersonId || member.state?.evidenceConflict === true
+                          }
                           onTap={() =>
                             void record(
                               { crewPersonId },

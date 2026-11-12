@@ -15,6 +15,7 @@ import {
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import type { OfflineMedicalAlertsResponse } from "@/lib/offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
@@ -92,7 +93,7 @@ const call = (tripId: string, headers: Record<string, string> = {}) =>
   POST(
     new Request(`https://diveday.test/api/offline-manifests/${tripId}/medical-alerts`, {
       method: "POST",
-      headers,
+      headers: { ...ROLL_CALL_CAUSAL_HEADERS, ...headers },
     }),
     { params: Promise.resolve({ tripId }) },
   );

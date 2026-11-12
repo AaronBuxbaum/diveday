@@ -32,12 +32,9 @@ import { boats, trips } from "./trips";
  * checklist, counter arrivals, buddy teams, and blow-outs.
  */
 
-/**
- * `cleared` is an append-only "undo": staff tapped the current status again to
- * reset a diver to awaiting after a mistake. It is stored as its own event so
- * the correction stays in the audit trail; the derivation collapses a latest
- * `cleared` back to "no roll call yet" (src/db/manifests.ts).
- */
+/** Append-only original statements. Ordinary withdrawal names one target;
+ * deliberate conflict reconciliation separately names the observed frontier. */
+
 export const rollCallStatus = pgEnum("roll_call_status", ROLL_CALL_EVENT_STATUSES);
 
 export const rollCallSource = pgEnum("roll_call_source", ["live", "offline"]);
@@ -94,12 +91,31 @@ export const rollCallEvents = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
-    status: rollCallStatus("status").notNull(),
+    status: rollCallStatus("effective_status").notNull(),
+    /** Original crew intent; status above is the separately maintained risk projection. */
+    statementStatus: rollCallStatus("statement_status").notNull(),
+    /** Raw tap intent for replay validation; null on retained opaque evidence. */
+    captureContext: jsonb("capture_context").$type<{
+      occurredAt?: string;
+      meetingDay?: number;
+      retractsEventId?: string;
+      retractsClientEventId?: string;
+    }>(),
+    /** Stable evidence IDs actually observed when the crew tapped; null proves no basis. */
+    observedEvidenceIds: jsonb("observed_evidence_ids").$type<string[]>(),
+    reconcilesEvidence: boolean("reconciles_evidence").notNull().default(false),
+    /** Effective day scope; -1 is unknown. Raw selected day stays in captureContext. */
+    meetingDay: integer("meeting_day"),
+    /** Materialized frontier for the subject/checkpoint/day, never the global sequence. */
+    causalFrontier: jsonb("causal_frontier").$type<string[]>().notNull(),
+    evidenceConflict: boolean("evidence_conflict").notNull().default(false),
+    evidenceOrderingUnknown: boolean("evidence_ordering_unknown").notNull().default(false),
+
     /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
     checkpoint: text("checkpoint").notNull().default("departure"),
     source: rollCallSource("source").notNull().default("live"),
     /**
-     * Device-generated idempotency key. Live events leave this null. Seat and
+     * Tap-generated idempotency key for live and offline statements. Seat and
      * crew keys share one namespace, so a replayed sync is idempotent across
      * both halves; the sync reader still checks the stored row's subject
      * before treating a key as already applied.
@@ -228,7 +244,7 @@ export const rollCallEvents = pgTable(
     ),
     check(
       "roll_call_events_retracts_only_cleared",
-      sql`${table.retractsEventId} is null or ${table.status} = 'cleared'`,
+      sql`${table.retractsEventId} is null or coalesce(${table.statementStatus}, ${table.status}) = 'cleared'`,
     ),
     check(
       "roll_call_events_offline_snapshot_seat_only",
@@ -236,15 +252,15 @@ export const rollCallEvents = pgTable(
     ),
     check(
       "roll_call_events_certification_snapshot_shape",
-      sql`(${table.certificationSnapshot} is null and ${table.certificationSnapshotStartedAt} is null and ${table.certificationSnapshotCapturedAt} is null) or (${table.certificationSnapshot} is not null and ${table.certificationSnapshotStartedAt} is not null and ${table.certificationSnapshotCapturedAt} is not null and ${table.certificationSnapshotStartedAt} <= ${table.certificationSnapshotCapturedAt} and ${table.subjectKind} = 'seat' and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.certificationSnapshot}) = 'array')`,
+      sql`(${table.certificationSnapshot} is null and ${table.certificationSnapshotStartedAt} is null and ${table.certificationSnapshotCapturedAt} is null) or (${table.certificationSnapshot} is not null and ${table.certificationSnapshotStartedAt} is not null and ${table.certificationSnapshotCapturedAt} is not null and ${table.certificationSnapshotStartedAt} <= ${table.certificationSnapshotCapturedAt} and ${table.subjectKind} = 'seat' and coalesce(${table.statementStatus}, ${table.status}) = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.certificationSnapshot}) = 'array')`,
     ),
     check(
       "roll_call_events_readiness_snapshot_shape",
-      sql`(${table.readinessStatus} is null and ${table.readinessBlockers} is null) or (${table.subjectKind} = 'seat' and ${table.status} = 'boarded' and ${table.readinessStatus} in ('ready', 'blocked'))`,
+      sql`(${table.readinessStatus} is null and ${table.readinessBlockers} is null) or (${table.subjectKind} = 'seat' and coalesce(${table.statementStatus}, ${table.status}) = 'boarded' and ${table.readinessStatus} in ('ready', 'blocked'))`,
     ),
     check(
       "roll_call_events_credential_snapshot_shape",
-      sql`(${table.credentialSnapshot} is null and ${table.credentialSnapshotStartedAt} is null and ${table.credentialSnapshotCapturedAt} is null) or (${table.credentialSnapshot} is not null and ${table.credentialSnapshotStartedAt} is not null and ${table.credentialSnapshotCapturedAt} is not null and ${table.credentialSnapshotStartedAt} <= ${table.credentialSnapshotCapturedAt} and ${table.subjectKind} = 'crew' and ${table.status} = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.credentialSnapshot}) = 'array')`,
+      sql`(${table.credentialSnapshot} is null and ${table.credentialSnapshotStartedAt} is null and ${table.credentialSnapshotCapturedAt} is null) or (${table.credentialSnapshot} is not null and ${table.credentialSnapshotStartedAt} is not null and ${table.credentialSnapshotCapturedAt} is not null and ${table.credentialSnapshotStartedAt} <= ${table.credentialSnapshotCapturedAt} and ${table.subjectKind} = 'crew' and coalesce(${table.statementStatus}, ${table.status}) = 'boarded' and ${table.checkpoint} = 'departure' and ${table.source} = 'live' and jsonb_typeof(${table.credentialSnapshot}) = 'array')`,
     ),
   ],
 );
@@ -393,7 +409,7 @@ export const preDepartureCheckEvents = pgTable(
     status: preDepartureCheckStatus("status").notNull(),
     /** Same offline contract as `rollCallEvents.source` — rides the same queue. */
     source: rollCallSource("source").notNull().default("live"),
-    /** Device-generated idempotency key. Live events leave this null. */
+    /** Tap-generated idempotency key for live and offline statements. */
     clientEventId: uuid("client_event_id"),
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),

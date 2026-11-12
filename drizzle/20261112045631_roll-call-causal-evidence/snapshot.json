@@ -1,0 +1,388 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "fbbee05d-3182-4c8e-a539-05d07f1e3af4",
+  "prevIds": [
+    "63eff9b2-4025-4cd2-bede-5e53b3706968"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "statement_status"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.statement_status",
+        "n|col|public.roll_call_events.statement_status",
+        "e|col|public.roll_call_events.statement_status"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|enum|public.roll_call_status"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "observed_evidence_ids"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.observed_evidence_ids",
+        "n|col|public.roll_call_events.observed_evidence_ids",
+        "e|col|public.roll_call_events.observed_evidence_ids"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "reconciles_evidence"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.reconciles_evidence",
+        "n|col|public.roll_call_events.reconciles_evidence",
+        "e|col|public.roll_call_events.reconciles_evidence"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "meeting_day"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.meeting_day",
+        "n|col|public.roll_call_events.meeting_day",
+        "e|col|public.roll_call_events.meeting_day"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "causal_frontier"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.causal_frontier",
+        "n|col|public.roll_call_events.causal_frontier",
+        "e|col|public.roll_call_events.causal_frontier"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "evidence_conflict"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.evidence_conflict",
+        "n|col|public.roll_call_events.evidence_conflict",
+        "e|col|public.roll_call_events.evidence_conflict"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "evidence_ordering_unknown"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.evidence_ordering_unknown",
+        "n|col|public.roll_call_events.evidence_ordering_unknown",
+        "e|col|public.roll_call_events.evidence_ordering_unknown"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_events"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_events.roll_call_events_readiness_snapshot_shape"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_events.readiness_status",
+        "n|col|public.roll_call_events.readiness_blockers",
+        "n|col|public.roll_call_events.subject_kind",
+        "n|col|public.roll_call_events.statement_status",
+        "n|col|public.roll_call_events.status",
+        "e|col|public.roll_call_events.readiness_status",
+        "e|col|public.roll_call_events.readiness_blockers",
+        "e|col|public.roll_call_events.subject_kind",
+        "e|col|public.roll_call_events.status"
+      ],
+      "sqlHash": "072877eb6c06dc26"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_events"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_events.roll_call_events_certification_snapshot_shape"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_events.certification_snapshot",
+        "n|col|public.roll_call_events.certification_snapshot_started_at",
+        "n|col|public.roll_call_events.certification_snapshot_captured_at",
+        "n|col|public.roll_call_events.subject_kind",
+        "n|col|public.roll_call_events.statement_status",
+        "n|col|public.roll_call_events.status",
+        "n|col|public.roll_call_events.checkpoint",
+        "n|col|public.roll_call_events.source",
+        "e|col|public.roll_call_events.certification_snapshot",
+        "e|col|public.roll_call_events.certification_snapshot_started_at",
+        "e|col|public.roll_call_events.certification_snapshot_captured_at",
+        "e|col|public.roll_call_events.subject_kind",
+        "e|col|public.roll_call_events.status",
+        "e|col|public.roll_call_events.checkpoint",
+        "e|col|public.roll_call_events.source"
+      ],
+      "sqlHash": "e19d3f488a499c85"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_events"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_events.roll_call_events_credential_snapshot_shape"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_events.credential_snapshot",
+        "n|col|public.roll_call_events.credential_snapshot_started_at",
+        "n|col|public.roll_call_events.credential_snapshot_captured_at",
+        "n|col|public.roll_call_events.subject_kind",
+        "n|col|public.roll_call_events.statement_status",
+        "n|col|public.roll_call_events.status",
+        "n|col|public.roll_call_events.checkpoint",
+        "n|col|public.roll_call_events.source",
+        "e|col|public.roll_call_events.credential_snapshot",
+        "e|col|public.roll_call_events.credential_snapshot_started_at",
+        "e|col|public.roll_call_events.credential_snapshot_captured_at",
+        "e|col|public.roll_call_events.subject_kind",
+        "e|col|public.roll_call_events.status",
+        "e|col|public.roll_call_events.checkpoint",
+        "e|col|public.roll_call_events.source"
+      ],
+      "sqlHash": "6a4342fb4c1d77e7"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_events"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_events.roll_call_events_retracts_only_cleared"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_events.retracts_event_id",
+        "n|col|public.roll_call_events.statement_status",
+        "n|col|public.roll_call_events.status",
+        "e|col|public.roll_call_events.retracts_event_id",
+        "e|col|public.roll_call_events.status"
+      ],
+      "sqlHash": "2c33102601bf3b6e"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "statement_status",
+        "type": "roll_call_status",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "observed_evidence_ids",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "reconciles_evidence",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "meeting_day",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "causal_frontier",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "evidence_conflict",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "evidence_ordering_unknown",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"roll_call_events\",\"roll_call_events_readiness_snapshot_shape\"]",
+      "set": {
+        "value": "(\"readiness_status\" is null and \"readiness_blockers\" is null) or (\"subject_kind\" = 'seat' and coalesce(\"statement_status\", \"status\") = 'boarded' and \"readiness_status\" in ('ready', 'blocked'))"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"roll_call_events\",\"roll_call_events_certification_snapshot_shape\"]",
+      "set": {
+        "value": "(\"certification_snapshot\" is null and \"certification_snapshot_started_at\" is null and \"certification_snapshot_captured_at\" is null) or (\"certification_snapshot\" is not null and \"certification_snapshot_started_at\" is not null and \"certification_snapshot_captured_at\" is not null and \"certification_snapshot_started_at\" <= \"certification_snapshot_captured_at\" and \"subject_kind\" = 'seat' and coalesce(\"statement_status\", \"status\") = 'boarded' and \"checkpoint\" = 'departure' and \"source\" = 'live' and jsonb_typeof(\"certification_snapshot\") = 'array')"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"roll_call_events\",\"roll_call_events_credential_snapshot_shape\"]",
+      "set": {
+        "value": "(\"credential_snapshot\" is null and \"credential_snapshot_started_at\" is null and \"credential_snapshot_captured_at\" is null) or (\"credential_snapshot\" is not null and \"credential_snapshot_started_at\" is not null and \"credential_snapshot_captured_at\" is not null and \"credential_snapshot_started_at\" <= \"credential_snapshot_captured_at\" and \"subject_kind\" = 'crew' and coalesce(\"statement_status\", \"status\") = 'boarded' and \"checkpoint\" = 'departure' and \"source\" = 'live' and jsonb_typeof(\"credential_snapshot\") = 'array')"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"roll_call_events\",\"roll_call_events_retracts_only_cleared\"]",
+      "set": {
+        "value": "\"retracts_event_id\" is null or coalesce(\"statement_status\", \"status\") = 'cleared'"
+      }
+    }
+  ]
+}

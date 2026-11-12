@@ -2,13 +2,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
-import {
-  activityEvents,
-  bookings,
-  notificationDeliveries,
-  rollCallEvents,
-  trips,
-} from "@/db/schema";
+import { activityEvents, bookings, notificationDeliveries, trips } from "@/db/schema";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -71,7 +66,7 @@ async function paidSeatAboardAtSea(db: AppDb, shopId: string, recorder: string) 
     .update(trips)
     .set({ startsAt: departed, endsAt: new Date(departed.getTime() + 4 * 60 * 60 * 1000) })
     .where(eq(trips.id, seat.tripId));
-  await db.insert(rollCallEvents).values({
+  await seedRollCallEvidence(db, {
     shopId,
     tripId: seat.tripId,
     bookingId: seat.id,

@@ -133,7 +133,9 @@ describe("Found sends the all-clear to exactly the reached set (#2828)", () => {
   it("clears the owner a partial alarm reached, and nobody it did not", async () => {
     const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
     const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const clear = recorder();
     const found = await markMissingDiverFound(db, {
       ...input,
@@ -151,7 +153,9 @@ describe("Found sends the all-clear to exactly the reached set (#2828)", () => {
     const ownerEmail = await emailOf(db, f.owner.id);
     const reportId = await raise(db, input, f.crew.id, recorder().provider);
     await db.insert(personRoles).values({ personId: f.crew.id, role: "owner" });
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const clear = recorder();
     await markMissingDiverFound(db, {
       ...input,
@@ -166,7 +170,9 @@ describe("Found sends the all-clear to exactly the reached set (#2828)", () => {
     const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
     const reportId = await raise(db, input, f.crew.id, recorder().provider);
     await demoteOwnerToManager(db, f.owner.id);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const clear = recorder();
     const found = await markMissingDiverFound(db, {
       ...input,
@@ -183,7 +189,9 @@ describe("Found sends the all-clear to exactly the reached set (#2828)", () => {
   it("sends at most one all-clear per owner: a second tap and a retry send nothing", async () => {
     const { db, f, input, secondEmail } = await twoOwners();
     const reportId = await raise(db, input, f.crew.id, failingFor([secondEmail]).provider);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const clear = recorder();
     const target = { ...input, reportId, provider: clear.provider };
     await markMissingDiverFound(db, { ...target, actorPersonId: f.crew.id });
@@ -201,7 +209,9 @@ describe("Found sends the all-clear to exactly the reached set (#2828)", () => {
   it("says partial, never sent, when a reached owner's all-clear fails", async () => {
     const { db, f, input, ownerEmail } = await twoOwners();
     const reportId = await raise(db, input, f.crew.id, recorder().provider);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const half = failingFor([ownerEmail]);
     const found = await markMissingDiverFound(db, {
       ...input,
@@ -216,7 +226,9 @@ describe("Found sends the all-clear to exactly the reached set (#2828)", () => {
   it("skips the all-clear when the alarm reached nobody: there is nothing to clear", async () => {
     const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
     const reportId = await raise(db, input, f.crew.id, recorder("failed").provider);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const clear = recorder();
     const found = await markMissingDiverFound(db, {
       ...input,
@@ -264,7 +276,9 @@ describe("who the all-clear may reach (#2828, security review)", () => {
       .update(userAccounts)
       .set({ status: "disabled" })
       .where(eq(userAccounts.personId, f.owner.id));
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const clear = recorder();
     const found = await markMissingDiverFound(db, {
       ...input,
@@ -301,7 +315,9 @@ describe("the backfill for alarms sent before the column (#2828)", () => {
     expect((await stateOf(db, reportId)).sentAt).toBeInstanceOf(Date);
     await db.execute(sql.raw(backfill));
     expect(await reachedOf(db, reportId)).toEqual([f.owner.id]);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const clear = recorder();
     await markMissingDiverFound(db, {
       ...input,
@@ -354,7 +370,9 @@ describe("the edges the adversarial review found (#2828)", () => {
       .update(incidentReports)
       .set({ missingAlertReachedPersonIds: [] })
       .where(eq(incidentReports.id, reportId));
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const clear = recorder();
     const found = await markMissingDiverFound(db, {
       ...input,
@@ -381,7 +399,9 @@ describe("the edges the adversarial review found (#2828)", () => {
       .update(incidentReports)
       .set({ missingAlertAttemptingPersonIds: [f.crew.id] })
       .where(eq(incidentReports.id, reportId));
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const clear = recorder();
     await markMissingDiverFound(db, {
       ...input,
@@ -397,7 +417,9 @@ describe("the edges the adversarial review found (#2828)", () => {
   it("retries a failed all-clear on a second Found tap, once per owner", async () => {
     const { db, f, input, ownerEmail, secondEmail } = await twoOwners();
     const reportId = await raise(db, input, f.crew.id, recorder().provider);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     const target = { ...input, reportId, actorPersonId: f.crew.id };
     const first = failingFor([secondEmail]);
     expect(await markMissingDiverFound(db, { ...target, provider: first.provider })).toMatchObject({
@@ -418,7 +440,9 @@ describe("the edges the adversarial review found (#2828)", () => {
   it("retries a failed all-clear from the hourly pass", async () => {
     const { db, f, input, secondEmail } = await twoOwners();
     const reportId = await raise(db, input, f.crew.id, recorder().provider);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt, "live", {
+      observesPrevious: true,
+    });
     await markMissingDiverFound(db, {
       ...input,
       reportId,

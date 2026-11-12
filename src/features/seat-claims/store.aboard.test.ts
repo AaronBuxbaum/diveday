@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { createBookingParty, previewPartyCancel } from "../../db/bookings";
-import { rollCallEvents } from "../../db/schema/index";
 import { listStaff, upcomingTripsWithCounts } from "../../db/trips";
 import { fileScopedShopContext } from "../../test/db";
 import { issuePartySeatClaims } from "./store";
@@ -43,7 +43,7 @@ describe("issuePartySeatClaims and a seat counted aboard", () => {
     const { db, shop, open, lead, memberOne, memberTwo } = await party();
     const [recorder] = await listStaff(db, shop.id);
     if (!recorder) throw new Error("seeded staff missing");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: open.id,
       bookingId: memberOne.bookingId,
@@ -66,7 +66,7 @@ describe("issuePartySeatClaims and a seat counted aboard", () => {
     const { db, shop, open, lead, memberOne } = await party();
     const [recorder] = await listStaff(db, shop.id);
     if (!recorder) throw new Error("seeded staff missing");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: open.id,
       bookingId: memberOne.bookingId,

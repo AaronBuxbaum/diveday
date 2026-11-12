@@ -1,11 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import {
-  bookings as bookingsTable,
-  people,
-  rollCallEvents,
-  trips as tripsTable,
-} from "@/db/schema";
+import { bookings as bookingsTable, people, trips as tripsTable } from "@/db/schema";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { nowMs } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
@@ -77,12 +73,10 @@ describe("an open after-dive count at sea (issue #2925)", () => {
     // Both aboard at the dock; one of two marked back after dive 1, five
     // minutes ago, and nobody since.
     const markedAt = new Date(now.getTime() - 5 * 60 * 1000);
-    await db
-      .insert(rollCallEvents)
-      .values([
-        ...seats.map((booking) => mark(booking.id, "departure", trip.startsAt)),
-        mark(seats[0]?.id ?? "", afterDiveOne, markedAt),
-      ]);
+    await seedRollCallEvidence(db, [
+      ...seats.map((booking) => mark(booking.id, "departure", trip.startsAt)),
+      mark(seats[0]?.id ?? "", afterDiveOne, markedAt),
+    ]);
 
     const statusAt = async (at: Date) =>
       (await getDayCloseout(db, shop.id, shop.timezone, at)).departures.find(

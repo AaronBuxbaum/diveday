@@ -1,4 +1,5 @@
 import type { Page, Route } from "@playwright/test";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import {
   DEMO_MEDICAL_ALERT,
   DEMO_MEDICAL_ALERT_DIVER,
@@ -266,9 +267,11 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   page,
   context,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripTab(page, "Manifest");
+  // This journey exercises the device copy; the booking smoke covers board navigation.
+  await page.goto(`/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest`);
+  await expect(
+    page.getByRole("heading", { name: DEMO_TODAY_TRIP_TITLE, exact: true }),
+  ).toBeVisible();
 
   // The device copy now saves itself automatically once the page has signal —
   // no tap required. Wait for that to land (the offline link only appears

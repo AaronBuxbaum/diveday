@@ -2,8 +2,13 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import type { RollCallCausalContext } from "@/lib/roll-call-causality";
 import { fileScopedShopContext } from "@/test/db";
-import { loadBuddyContext } from "../test/substrate-fixtures/db/buddy-teams-test-fixtures";
+import {
+  assignCrew,
+  loadBuddyContext,
+  buddyStateOf as stateOf,
+} from "../test/substrate-fixtures/db/buddy-teams-test-fixtures";
 import {
   addBuddyTeamMember,
   dissolveBuddyTeam,
@@ -31,22 +36,6 @@ import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 const ctx = fileScopedShopContext();
 
 const buddyContext = () => loadBuddyContext(ctx);
-
-/** Put a named staff member on this trip's crew list, so they can join a team. */
-async function assignCrew(
-  db: Awaited<ReturnType<typeof buddyContext>>["db"],
-  tripId: string,
-  personId: string,
-) {
-  const existing = await db
-    .select({ personId: tripAssignments.personId })
-    .from(tripAssignments)
-    .where(and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, personId)))
-    .limit(1);
-  if (existing.length === 0) {
-    await db.insert(tripAssignments).values({ tripId, personId });
-  }
-}
 
 const diver = (bookingId: string) => ({ kind: "diver" as const, bookingId });
 const crew = (personId: string) => ({ kind: "crew" as const, personId });
@@ -698,7 +687,11 @@ describe("buddy teams (in-memory PGlite)", () => {
       members: [diver(a.booking.id), diver(b.booking.id), diver(c.booking.id)],
       recordedByPersonId: staff.id,
     });
-    const board = (bookingId: string, status: "boarded" | "not_boarded" = "boarded") =>
+    const board = (
+      bookingId: string,
+      status: "boarded" | "not_boarded" = "boarded",
+      context?: Pick<RollCallCausalContext, "observedEvidenceIds" | "meetingDay">,
+    ) =>
       recordRollCall(db, {
         shopId: shop.id,
         tripId: trip.id,
@@ -706,6 +699,8 @@ describe("buddy teams (in-memory PGlite)", () => {
         recordedByPersonId: staff.id,
         status,
         checkpoint: "after_dive_1",
+        observedEvidenceIds: context?.observedEvidenceIds,
+        meetingDay: context?.meetingDay,
       });
 
     // Two of three back and nothing said about the third: **quiet**. An alarm
@@ -730,8 +725,12 @@ describe("buddy teams (in-memory PGlite)", () => {
     );
     expect(manifest?.divers.find((e) => e.bookingId === c.booking.id)?.buddyAlert).toBeNull();
 
-    // She climbs the ladder, and the whole team settles.
-    await board(c.booking.id);
+    // She climbs the ladder; the crew corrects the missing mark they just saw.
+    const observed = manifest?.divers.find(
+      (entry) => entry.bookingId === c.booking.id,
+    )?.rollCallContext;
+    if (!observed) throw new Error("missing sender-visible roll-call context");
+    await board(c.booking.id, "boarded", observed);
     manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
     expect(manifest?.divers.map((entry) => entry.buddyAlert)).toEqual([null, null, null]);
   });
@@ -801,6 +800,8 @@ describe("buddy teams (in-memory PGlite)", () => {
       "separated_after_dive",
     );
 
+    const observed = manifest?.crew.find((entry) => entry.id === staff.id)?.rollCallContext;
+    if (!observed) throw new Error("missing sender-visible crew roll-call context");
     await recordCrewRollCall(db, {
       shopId: shop.id,
       tripId: trip.id,
@@ -808,6 +809,8 @@ describe("buddy teams (in-memory PGlite)", () => {
       recordedByPersonId: staff.id,
       status: "boarded",
       checkpoint: "after_dive_1",
+      observedEvidenceIds: observed.observedEvidenceIds,
+      meetingDay: observed.meetingDay,
     });
     manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
     expect(manifest?.divers.find((e) => e.bookingId === a.booking.id)?.buddyAlert).toBeNull();
@@ -837,17 +840,6 @@ describe("buddy teams (in-memory PGlite)", () => {
  * the manifest page already words.
  */
 describe("the buddy-team recorder must be live staff (defense in depth)", () => {
-  async function stateOf(
-    db: Awaited<ReturnType<typeof buddyContext>>["db"],
-    shopId: string,
-    tripId: string,
-  ) {
-    return {
-      teams: await listTripBuddyTeams(db, shopId, tripId),
-      trail: await listTripBuddyTeamEvents(db, shopId, tripId),
-    };
-  }
-
   it("refuses a deleted person, and forms no team and no trail entry", async () => {
     const { db, shop, trip, a, b, staff } = await buddyContext();
     // `deleteDiver`'s soft delete, which touches nothing but this column — the

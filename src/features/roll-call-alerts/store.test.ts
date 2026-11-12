@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { crewSubject } from "../../db/roll-call-subject";
 import type { Notification, NotificationProvider } from "../../lib/notifications/index";
 import { fileScopedShopContext } from "../../test/db";
@@ -26,7 +27,6 @@ import {
   bookings,
   people,
   personRoles,
-  rollCallEvents,
   shops,
   tripAssignments,
   trips,
@@ -91,7 +91,7 @@ async function departure(endedAgo: number, opts: { rehearsal?: boolean; title?: 
     .returning();
   if (!booking) throw new Error("booking insert failed");
   const mark = async (checkpoint: string, status: "boarded" | "not_boarded") =>
-    db.insert(rollCallEvents).values({
+    seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip.id,
       bookingId: booking.id,
@@ -176,7 +176,7 @@ describe("sendStaleRollCallAlerts", () => {
       .returning();
     if (!seat) throw new Error("booking insert failed");
     const boardedAt = new Date(trip.endsAt.getTime() - 3 * HOUR);
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip.id,
       bookingId: seat.id,
@@ -186,7 +186,7 @@ describe("sendStaleRollCallAlerts", () => {
       occurredAt: boardedAt,
     });
     await db.insert(tripAssignments).values({ tripId: trip.id, personId: crewMember.person.id });
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip.id,
       ...crewSubject(crewMember.person.id),

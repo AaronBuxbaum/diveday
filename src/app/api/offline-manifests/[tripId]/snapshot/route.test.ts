@@ -6,6 +6,7 @@ import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import type { OfflineManifestSnapshotResponse } from "@/lib/offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
@@ -41,7 +42,7 @@ function request(tripId: string, body: unknown, headers: Record<string, string> 
   return POST(
     new Request(`http://localhost/api/offline-manifests/${tripId}/snapshot`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...headers },
+      headers: { ...ROLL_CALL_CAUSAL_HEADERS, "Content-Type": "application/json", ...headers },
       body: JSON.stringify(body),
     }),
     { params: Promise.resolve({ tripId }) },

@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-// Browser-side store: exercises navigator.onLine, IndexedDB, and fetch paths.
 import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
@@ -7,6 +6,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import { purgeAsVerifiedShop } from "@/test/offline-manifest-purge";
+import { rawStoredRecord } from "@/test/offline-raw-record";
+import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
 import { RETENTION_DAYS } from "../features/retention/rules";
 import {
   acknowledgeDiscardedOfflineRecords,
@@ -22,17 +23,13 @@ import {
 import {
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
   type OfflineManifestPayload,
+  type OfflineRollCallEvent,
 } from "./offline-manifests";
 
 const FROZEN_MS = Date.parse(TEST_FROZEN_CLOCK);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * An expiry in the past but still inside the pending-event grace window — the
- * state the preserved-because-pending exception exists for. A day inside the
- * ceiling rather than a hair, so the assertion is about the rule and not about
- * millisecond rounding.
- */
+// Expired one day inside the pending grace boundary, avoiding rounding ambiguity.
 const EXPIRED_WITHIN_GRACE = new Date(
   FROZEN_MS - OFFLINE_MANIFEST_PENDING_GRACE_MS + DAY_MS,
 ).toISOString();
@@ -191,25 +188,6 @@ function patchStoredExpiresAt(tripId: string, expiresAt: string): Promise<void> 
 }
 
 /** The raw stored row, to tell "deleted" apart from "not returned to a reader". */
-function rawStoredRecord(tripId: string): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("diveday-offline-manifests", 1);
-    request.onsuccess = () => {
-      const db = request.result;
-      const getRequest = db
-        .transaction("manifests", "readonly")
-        .objectStore("manifests")
-        .get(tripId);
-      getRequest.onsuccess = () => {
-        db.close();
-        resolve(getRequest.result);
-      };
-      getRequest.onerror = () => reject(getRequest.error);
-    };
-    request.onerror = () => reject(request.error);
-  });
-}
-
 const server = setupServer();
 beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
 afterEach(() => server.resetHandlers());
@@ -591,12 +569,7 @@ describe("purgeOfflineManifestsExceptShop", () => {
   });
 });
 
-/**
- * The window itself, asserted rather than commented — the same discipline
- * `retentionWindowsOutlastStripeRetries` (src/features/retention/rules.ts) applies to the
- * Stripe webhook window. An unbounded exception to a retention rule was the
- * finding; a bound nobody checks is the same finding one edit later.
- */
+// Both ends of the device-held evidence retention window are checked.
 describe("OFFLINE_MANIFEST_PENDING_GRACE_MS", () => {
   it("outlasts the longest a copy is meant to live, so real trips get their chance to sync", async () => {
     expect(OFFLINE_MANIFEST_PENDING_GRACE_MS).toBeGreaterThanOrEqual(
@@ -828,12 +801,18 @@ describe("syncOfflineManifest", () => {
 
     server.use(
       http.post("/api/offline-manifests/sync", async ({ request }) => {
-        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
+        const body = (await request.json()) as { events: OfflineRollCallEvent[] };
         expect(body.events).toHaveLength(1);
         expect(body.events[0].clientEventId).toBe(pendingEvent.clientEventId);
-        return HttpResponse.json({
-          results: [{ clientEventId: pendingEvent.clientEventId, status: "applied" }],
-        });
+        return HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: [{ clientEventId: pendingEvent.clientEventId, status: "applied" }],
+            },
+            { events: envelope.events },
+          ),
+        );
       }),
     );
 
@@ -855,15 +834,21 @@ describe("syncOfflineManifest", () => {
 
     server.use(
       http.post("/api/offline-manifests/sync", () =>
-        HttpResponse.json({
-          results: [
+        HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
             {
-              clientEventId: pendingEvent.clientEventId,
-              status: "rejected",
-              reason: "stale_readiness",
+              results: [
+                {
+                  clientEventId: pendingEvent.clientEventId,
+                  status: "rejected",
+                  reason: "stale_readiness",
+                },
+              ],
             },
-          ],
-        }),
+            { events: envelope.events },
+          ),
+        ),
       ),
     );
 
@@ -893,11 +878,7 @@ describe("syncOfflineManifest", () => {
   });
 });
 
-/**
- * The counter's queue on the device (ADR 20260907-the-counter-survives-offline)
- * — the same lock, the same encrypted record and the same round trip roll call
- * uses, in a third array beside it.
- */
+// ADR 20260907-the-counter-survives-offline: arrivals share encryption and transport, not queues.
 describe("appendOfflineArrival", () => {
   const tripId = payload.manifests[0].trip.id;
   const bookingId = payload.manifests[0].divers[0].bookingId;
@@ -929,12 +910,7 @@ describe("appendOfflineArrival", () => {
     ).rejects.toMatchObject({ code: "not_allowed" });
   });
 
-  /**
-   * The H-20260724-product-now-uses-explicit stop rule: a copy kept alive past its own window only because it
-   * still holds unsynced evidence is readable so that evidence can reconcile,
-   * and records nothing new — the counter takes the same rule the two
-   * recorders beside it take.
-   */
+  // A copy retained only for unsent evidence remains readable but accepts no new taps.
   it("refuses to record against a copy kept alive past its own expiry", async () => {
     // The *embedded* expiry, not the stored plaintext one: `appendOfflineArrival`
     // reads `snapshot.expiresAt` from inside the encrypted envelope, so this
@@ -972,23 +948,30 @@ describe("appendOfflineArrival", () => {
     const withArrival = await appendOfflineArrival(tripId, { bookingId, status: "arrived" });
     const rollCallId = withRollCall.events[0].clientEventId;
     const arrivalId = withArrival.arrivalEvents?.[0]?.clientEventId;
+    if (!arrivalId) throw new Error("fixture arrival missing");
 
     server.use(
       http.post("/api/offline-manifests/sync", async ({ request }) => {
         const body = (await request.json()) as {
-          events: Array<{ clientEventId: string }>;
+          events: OfflineRollCallEvent[];
           arrivalEvents: Array<{ clientEventId: string; status: string }>;
         };
         // One POST, three arrays, and the counter's tap is in its own.
         expect(body.events).toHaveLength(1);
         expect(body.arrivalEvents).toHaveLength(1);
         expect(body.arrivalEvents[0].status).toBe("arrived");
-        return HttpResponse.json({
-          results: [
-            { clientEventId: rollCallId, status: "applied" },
-            { clientEventId: arrivalId, status: "rejected", reason: "not_ready" },
-          ],
-        });
+        return HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: [
+                { clientEventId: rollCallId, status: "applied" },
+                { clientEventId: arrivalId, status: "rejected", reason: "not_ready" },
+              ],
+            },
+            { events: withRollCall.events },
+          ),
+        );
       }),
     );
 

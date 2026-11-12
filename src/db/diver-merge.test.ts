@@ -1,5 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import {
   computeWaiverIntegrityHash,
@@ -34,7 +35,6 @@ import {
   priorVisits,
   recapPulses,
   rentalFitProfiles,
-  rollCallEvents,
   shops,
   trips,
   waiverRecords,
@@ -501,7 +501,7 @@ describe("diver record merge, a seat that is already over", () => {
     await f.db.update(people).set({ fullName: "Maya R." }).where(eq(people.id, f.source.id));
     const { sourceSeat } = await seatBoth(f, "cancelled", "booked");
     // The seat was counted at the dock before it was cancelled.
-    await f.db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(f.db, {
       shopId: f.shop.id,
       tripId: f.trip.id,
       bookingId: sourceSeat.id,
@@ -530,7 +530,7 @@ describe("diver record merge, a seat that is already over", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Marisol Reyes" })
       .where(eq(bookings.id, sourceSeat.id));
-    await f.db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(f.db, {
       shopId: f.shop.id,
       tripId: f.trip.id,
       bookingId: sourceSeat.id,

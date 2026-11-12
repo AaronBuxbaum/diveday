@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createBookingParty } from "@/db/bookings";
-import { rollCallEvents } from "@/db/schema";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { createTripSeries, getTripSeriesById } from "@/db/trips";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -84,7 +84,7 @@ describe("cancelling a run whose only upcoming date is underway", () => {
     ]);
     if (!party.ok) throw new Error("could not book the date");
     // Boarding has begun: the date is underway and cannot be called off.
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: only.id,
       bookingId: party.bookings[0]?.bookingId as string,

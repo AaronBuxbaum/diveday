@@ -1,4 +1,5 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
 import { paymentEntries } from "./payments";
@@ -17,7 +18,6 @@ import {
   personRoles,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
-  rollCallEvents,
   type TripAssignmentRole,
   tripAssignments,
   tripDives,
@@ -932,7 +932,7 @@ async function seedDawnBoatRecord(
       occurredAt: dawnCheckpointAt(trip, index),
     })),
   );
-  if (crewRows.length > 0) await db.insert(rollCallEvents).values(crewRows);
+  if (crewRows.length > 0) await seedRollCallEvidence(db, crewRows, { observesPrevious: false });
 
   // Both tanks logged at the reef's ordinary depth, each dive ending a few
   // minutes before the after-dive count that closes it.
@@ -999,7 +999,7 @@ async function seedCompletedRollCall(
         )
       : [mark(booking.id, "not_boarded", "departure", 0)],
   );
-  if (rows.length > 0) await db.insert(rollCallEvents).values(rows);
+  if (rows.length > 0) await seedRollCallEvidence(db, rows, { observesPrevious: false });
 }
 
 /** The dawn boat's divers all came through the desk: the arrival trail (#2702). */

@@ -27,10 +27,15 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
-import { offlineEventInstant, offlineEventOutOfBounds } from "@/lib/offline-events";
+import { offlineEventInstant } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
 import type { RollCallEventStatus, RollCallSubjectKind } from "@/lib/roll-call";
+import {
+  foldRollCallEvidence,
+  type RollCallIntent,
+  rollCallIntentKey,
+} from "@/lib/roll-call-causality";
 import { type DayMark, manifestRollCallView, unaccountedSubjects } from "@/lib/roll-call-days";
 import {
   type CountedAboardBlocked,
@@ -64,6 +69,12 @@ import {
 import { queryAll } from "./query-helpers";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
+import {
+  causalRetractionTarget,
+  manifestCausalContexts,
+  prepareCausalRollCall,
+  refreshCausalRollCall,
+} from "./roll-call-causal-store";
 import { newestMarkFirst } from "./roll-call-order";
 import {
   asSeatMark,
@@ -89,7 +100,6 @@ import { resolveTrainingMarks } from "./training-mark-resolve";
 import { invalidateTrainingPlansForCrewChange } from "./training-plan-crew";
 import {
   currentMeetingDayMarks,
-  onSameMeetingDayAs,
   rollCallCurrentDayIndex,
   rollCallDayIndex,
 } from "./trip-meeting-windows";
@@ -241,6 +251,7 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
         subject: row.event.crewPersonId ?? "",
         checkpoint: row.event.checkpoint,
         status: row.event.status,
+        evidenceConflict: row.event.evidenceConflict,
         id: row.event.id,
         retracts: row.event.retractsEventId,
       }))
@@ -314,6 +325,7 @@ async function listLatestRollCallsByCheckpoint(
         subject: row.event.bookingId ?? "",
         checkpoint: row.event.checkpoint,
         status: row.event.status,
+        evidenceConflict: row.event.evidenceConflict,
         id: row.event.id,
         retracts: row.event.retractsEventId,
       }))
@@ -560,6 +572,7 @@ async function seatRollCallRows(
       bookingId: markBookingId(),
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
+      evidenceConflict: rollCallEvents.evidenceConflict,
       day: rollCallDayIndex(),
       id: rollCallEvents.id,
       retracts: rollCallEvents.retractsEventId,
@@ -878,7 +891,11 @@ export async function onTheWaterByRollCall(
   bookingId: string,
 ): Promise<OnTheWater> {
   const rows = await db
-    .select({ checkpoint: rollCallEvents.checkpoint, status: rollCallEvents.status })
+    .select({
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      day: rollCallDayIndex(),
+    })
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
     .where(
@@ -910,7 +927,11 @@ export async function onTheWaterByRollCall(
   // guard above — somebody taken off the roster keeps their event rows and must
   // not answer for a crew list they are no longer on.
   const crewRows = await db
-    .select({ checkpoint: rollCallEvents.checkpoint, status: rollCallEvents.status })
+    .select({
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      day: rollCallDayIndex(),
+    })
     .from(rollCallEvents)
     .innerJoin(
       bookings,
@@ -960,13 +981,14 @@ export type OnTheWater = "boarded" | "missing_after_dive" | null;
  * person back, and the checkpoints do not arrive in order here.
  */
 function standingRowMeansSailed(
-  rows: readonly { checkpoint: string; status: RollCallEventStatus }[],
+  rows: readonly { checkpoint: string; status: RollCallEventStatus; day: number }[],
 ): OnTheWater {
   const seen = new Set<string>();
   let missing = false;
   for (const row of rows) {
-    if (seen.has(row.checkpoint)) continue;
-    seen.add(row.checkpoint);
+    const key = `${row.checkpoint}/${row.day}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     if (!standingResultMeansSailed(row.checkpoint, row.status)) continue;
     if (row.status === "boarded") return "boarded";
     missing = true;
@@ -1122,6 +1144,7 @@ export async function getTripManifests(
   const trip = await getTripWithBooked(db, shopId, tripId);
   if (!trip) return null;
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
+  const causal = await manifestCausalContexts(db, shopId, tripId);
   const [
     shop,
     roster,
@@ -1469,13 +1492,27 @@ export async function getTripManifests(
       checkpoint,
       crew: crew.map((member) => ({
         ...member,
-        rollCall: crewEffective.get(member.id)?.[index],
+        rollCall: causalRecord(
+          crewEffective.get(member.id)?.[index],
+          causal.contexts.get(`crew:${member.id}/${checkpoint}`),
+          checkpoint,
+        ),
+        rollCallContext:
+          causal.contexts.get(`crew:${member.id}/${checkpoint}`) ??
+          emptyCausalContext(causal.meetingDay),
         buddyTeams: teamsByCrewId.get(member.id) ?? [],
         clashes: clashesByCrewId.get(member.id) ?? [],
       })),
       divers: diverInputs.map((diver) => ({
         ...diver,
-        rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
+        rollCall: causalRecord(
+          effectiveByBooking.get(diver.bookingId)?.[index],
+          causal.contexts.get(`seat:${diver.bookingId}/${checkpoint}`),
+          checkpoint,
+        ),
+        rollCallContext:
+          causal.contexts.get(`seat:${diver.bookingId}/${checkpoint}`) ??
+          emptyCausalContext(causal.meetingDay),
         boardedEarlier: boardedBefore(
           (effectiveByBooking.get(diver.bookingId) ?? []).slice(0, index),
         ),
@@ -1492,161 +1529,6 @@ export async function getTripManifest(
 ): Promise<TripManifest | null> {
   const manifests = await getTripManifests(db, shopId, tripId);
   return manifests ? manifestAtCheckpoint(manifests, checkpoint) : null;
-}
-
-/**
- * The compare-and-set an offline **retraction** is subject to, shared by both
- * writers (ADR 20260815-an-offline-retraction-names-its-target).
- *
- * `newest.occurredAt > occurredAt` — the refusal directly above both call sites
- * — is a timestamp comparison, and `appendOfflineRollCall` stamps `occurredAt`
- * at tap time, so a retraction tapped *now* beats everything recorded before
- * now. That is fine for a statement (a later opinion supersedes an earlier one)
- * and wrong for a retraction, which is not an opinion about the diver at all:
- * it says "the thing I said is not a thing anybody said". A device holding a
- * copy up to a fortnight old could therefore unsay a *different* device's "did
- * not come back from the dive", and `src/features/today/today-reader.ts` would drop that diver
- * from its `notBackAboard` count with it.
- *
- * So a retraction names the event it undoes and applies only while that event
- * is still the newest one standing at this subject and checkpoint.
- *
- * **The identifier is the target's `client_event_id`, not its row id or `seq`.**
- * The device mints it at queue time (`crypto.randomUUID()` in
- * `appendOfflineRollCall`) — which is the only identity that exists for an
- * event the server has never seen, and the whole point is that a crew member
- * may retract a mark that is still sitting in the queue behind it. A row id or
- * `seq` is assigned here, on a boat with no radio, and a status-plus-timestamp
- * pair is not an identity at all: two taps share a millisecond under a coarse
- * or frozen clock, which is exactly the tie `latestQueuedAttempt` exists to
- * break.
- *
- * **A retraction naming nothing is refused after a dive** (issue #3951). An
- * after-dive `cleared` reaches back across meeting days to an earlier day's
- * stated missing diver (`standingByDay`, ADR 20261104-roll-call-by-meeting-day),
- * while `newest` above reads only the retraction's own day, so a bare one met
- * nothing, applied, and silenced a "did not come back" it never named. Every
- * current control names its target (`reTap`), so the only senders are a build
- * from before 2026-08-15 and a forged event. The refusal is
- * `retraction_superseded`, which the device already reads as "undo it there,
- * not here" and under which a stated alarm stays on screen.
- *
- * **At `departure` a bare retraction still applies.** A dock `cleared` never
- * reaches back (`standingByDay` reaches only after a dive), so it can touch
- * nothing but its own day's newest mark under the timestamp rule above, and no
- * missing-diver alarm lives at the dock. Refusing it would only cost an old
- * build's honest dock correction.
- *
- * **The live manifest's undo is held to the same rule** (issue #3995). It names
- * the stored event it takes back (`retractsEventId`, the row id the manifest
- * rendered), and applies only while that event is the mark the manifest shows
- * for this subject and checkpoint ({@link shownMarkId}): its own day's newest,
- * or, when its own day has nothing standing there, an earlier day's carried
- * "did not come back". So a double tap or a lost response repeats an undo of a
- * mark already taken back, and is refused instead of reaching the carried
- * alarm; and an undo of the carried row is written naming it, which is what
- * lets it reach that earlier day (`standingByDay`). Live and offline compare
- * different ids (a row id, a device id) through this one predicate.
- *
- * Read only for `cleared`. An event carrying the field with any other status is
- * a device bug, and it is *ignored* rather than refused: refusing would cost the
- * whole batch (the route answers non-2xx and the device keeps every event
- * pending) to punish a claim that grants no authority.
- */
-function retractionSuperseded(input: {
-  status: RollCallEventStatus;
-  checkpoint: RollCallCheckpoint;
-  /** The id the retraction names: a `client_event_id` offline, a row id live. */
-  named: string | undefined;
-  /** The same kind of id, of the statement standing now; undefined when nothing stands. */
-  standing: string | null | undefined;
-}): boolean {
-  if (input.status !== "cleared") return false;
-  if (!input.named) return input.checkpoint !== "departure";
-  // Case-folded on both sides, because the sibling dedup lookup a few lines
-  // above compares the same value *inside* Postgres against a `uuid` column,
-  // where `AAAA…` and `aaaa…` are one value. Compared here as raw JavaScript
-  // strings they are two, so one id would mean "the same event" for idempotency
-  // and "a different event" for this check — and the disagreement would surface
-  // as a silently refused correction on a missing-diver row (security review,
-  // 2026-08-15). No producer sends uppercase today (`crypto.randomUUID()` is
-  // lowercase); this is so the next client is not the one that finds out.
-  //
-  // `standing` undefined — nothing recorded here — mismatches too: the
-  // statement this retraction is about is not standing, so there is nothing
-  // for it to take back.
-  return input.standing?.toLowerCase() !== input.named.toLowerCase();
-}
-
-/**
- * The id of the mark the live manifest shows for one person at one checkpoint
- * on the meeting day of `at` (`manifestRollCallView`, the fold the manifest
- * reads through), or undefined when it shows nothing. What a live undo is
- * compared with ({@link retractionSuperseded}). Read under the writer's lock on
- * the subject (the seat, or the trip for crew), so no other mark lands between
- * this read and the insert.
- */
-async function shownMarkId(
-  tx: AppTransaction,
-  keys: { shopId: string; tripId: string; checkpoint: RollCallCheckpoint; at: Date } & (
-    | { bookingId: string }
-    | { personId: string }
-  ),
-): Promise<string | undefined> {
-  const rows = await tx
-    .select({
-      id: rollCallEvents.id,
-      checkpoint: rollCallEvents.checkpoint,
-      status: rollCallEvents.status,
-      retracts: rollCallEvents.retractsEventId,
-      day: rollCallDayIndex(),
-      currentDay: rollCallCurrentDayIndex(keys.at),
-    })
-    .from(rollCallEvents)
-    .where(
-      and(
-        eq(rollCallEvents.shopId, keys.shopId),
-        eq(rollCallEvents.tripId, keys.tripId),
-        "bookingId" in keys
-          ? and(seatMarks(), eq(rollCallEvents.bookingId, keys.bookingId))
-          : and(crewMarks(), eq(rollCallEvents.crewPersonId, keys.personId)),
-      ),
-    )
-    .orderBy(...newestMarkFirst());
-  const view = manifestRollCallView(
-    rows.map((row) => ({ ...row, subject: "subject" })).reverse(),
-    rows[0]?.currentDay ?? 0,
-  );
-  return [...view.values()].find((mark) => mark.checkpoint === keys.checkpoint)?.id;
-}
-
-/**
- * The live undo's compare-and-set (#3995), shared by both writers: the event
- * a live `cleared` names must be the mark the manifest shows. Answers the
- * target to store (undefined on any other status, or a bare dock undo), or
- * {@link RETRACTION_SUPERSEDED}. Call under the writer's lock on the subject.
- */
-async function liveRetraction(
-  tx: AppTransaction,
-  input: { shopId: string; tripId: string; status: RollCallEventStatus; retractsEventId?: string },
-  subject: { bookingId: string } | { personId: string },
-  checkpoint: RollCallCheckpoint,
-  at: Date,
-): Promise<string | undefined | typeof RETRACTION_SUPERSEDED> {
-  if (input.status !== "cleared") return undefined;
-  const named = input.retractsEventId?.toLowerCase();
-  const standing = named
-    ? await shownMarkId(tx, {
-        shopId: input.shopId,
-        tripId: input.tripId,
-        checkpoint,
-        at,
-        ...subject,
-      })
-    : undefined;
-  return retractionSuperseded({ status: input.status, checkpoint, named, standing })
-    ? RETRACTION_SUPERSEDED
-    : named;
 }
 
 /** Count offline retraction outcomes without putting person data in logs. */
@@ -1699,7 +1581,7 @@ export type RecordRollCallOutcome =
         | "newer_event_exists"
         /**
          * The statement being retracted no longer stands — see
-         * {@link retractionSuperseded}. Spelled through
+         * {@link causalRetractionTarget}. Spelled through
          * {@link RETRACTION_SUPERSEDED} at the two `return`s, because the
          * device reads this exact code back and reads a row down to awaiting
          * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
@@ -2076,21 +1958,59 @@ async function storedRollCallEvent(
       subjectKind: rollCallEvents.subjectKind,
       bookingId: rollCallEvents.bookingId,
       crewPersonId: rollCallEvents.crewPersonId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: sql<RollCallEventStatus>`coalesce(${rollCallEvents.statementStatus}, ${rollCallEvents.status})`,
+      observedEvidenceIds: rollCallEvents.observedEvidenceIds,
+      reconcilesEvidence: rollCallEvents.reconcilesEvidence,
+      captureContext: rollCallEvents.captureContext,
+      retractsEventId: rollCallEvents.retractsEventId,
+      source: rollCallEvents.source,
     })
     // diveday:roll-call-both-subjects: one id namespace; the kind read here decides duplicate or conflict.
     .from(rollCallEvents)
     .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.clientEventId, clientEventId)))
     .limit(1);
   if (!existing) return undefined;
+  let captured = existing.captureContext;
+  if (captured === null && existing.source === "offline" && existing.retractsEventId) {
+    // Retained queues named client IDs. The validated exact FK can recover
+    // that relation, never a meeting day or observation from a clock.
+    const [target] = await tx
+      .select({ clientEventId: rollCallEvents.clientEventId })
+      .from(rollCallEvents)
+      .where(
+        and(
+          eq(rollCallEvents.id, existing.retractsEventId),
+          eq(rollCallEvents.shopId, shopId),
+          eq(rollCallEvents.tripId, existing.tripId),
+          eq(rollCallEvents.checkpoint, existing.checkpoint),
+          existing.subjectKind === "seat"
+            ? and(seatMarks(), eq(rollCallEvents.bookingId, existing.bookingId as string))
+            : and(crewMarks(), eq(rollCallEvents.crewPersonId, existing.crewPersonId as string)),
+        ),
+      )
+      .limit(1);
+    captured = { retractsClientEventId: target?.clientEventId ?? undefined };
+  }
   return {
     id: existing.id,
-    subject: rollCallReplaySubject(existing.subjectKind, existing.tripId, markSubjectId(existing)),
+    subject: rollCallReplaySubject(existing.subjectKind, existing.tripId, markSubjectId(existing), {
+      ...existing,
+      meetingDay: captured?.meetingDay,
+      retractsEventId: captured?.retractsEventId,
+      retractsClientEventId: captured?.retractsClientEventId,
+    }),
   };
 }
 
 /** The replay subject both a stored row and an incoming event are compared by. */
-function rollCallReplaySubject(kind: RollCallSubjectKind, tripId: string, subjectId: string) {
-  return `${kind}:${tripId}/${subjectId}`;
+function rollCallReplaySubject(
+  kind: RollCallSubjectKind,
+  tripId: string,
+  subjectId: string,
+  event: RollCallIntent,
+) {
+  return `${kind}:${tripId}/${subjectId}/${rollCallIntentKey(event)}`;
 }
 
 export async function recordRollCall(
@@ -2104,9 +2024,12 @@ export async function recordRollCall(
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;
-    /** The `clientEventId` an offline `cleared` undoes — see {@link retractionSuperseded}. */
+    observedEvidenceIds?: string[];
+    reconcilesEvidence?: boolean;
+    meetingDay?: number;
+    /** The `clientEventId` an offline `cleared` undoes — see {@link causalRetractionTarget}. */
     retractsClientEventId?: string;
-    /** The stored event id a live `cleared` undoes — see {@link retractionSuperseded}. */
+    /** The stored event id a live `cleared` undoes — see {@link causalRetractionTarget}. */
     retractsEventId?: string;
     offlineSnapshotSavedAt?: Date;
     offlineSnapshotId?: string;
@@ -2133,8 +2056,8 @@ export async function recordRollCall(
     {
       indexName: "roll_call_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
-      source: input.source,
-      subject: rollCallReplaySubject("seat", input.tripId, input.bookingId),
+      source: input.clientEventId ? "offline" : input.source,
+      subject: rollCallReplaySubject("seat", input.tripId, input.bookingId, input),
       stored: (clientEventId) => storedRollCallEvent(db, input.shopId, clientEventId),
     },
   );
@@ -2190,10 +2113,10 @@ async function writeRollCall(
     ...(noteDisposition ? { noteDisposition } : {}),
   });
 
-  if (source === "offline" && input.clientEventId) {
+  if (input.clientEventId) {
     const replayed = replayVerdict(
       await storedRollCallEvent(tx, input.shopId, input.clientEventId),
-      rollCallReplaySubject("seat", input.tripId, input.bookingId),
+      rollCallReplaySubject("seat", input.tripId, input.bookingId, input),
       "roll_call_events",
     );
     if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
@@ -2217,10 +2140,10 @@ async function writeRollCall(
   // commit. Without this the replay of a `cleared` reads its own first copy
   // as the newest row and is refused as `retraction_superseded`, and a
   // replayed mark reaches the insert and fails on the unique index.
-  if (source === "offline" && input.clientEventId) {
+  if (input.clientEventId) {
     const replayed = replayVerdict(
       await storedRollCallEvent(tx, input.shopId, input.clientEventId),
-      rollCallReplaySubject("seat", input.tripId, input.bookingId),
+      rollCallReplaySubject("seat", input.tripId, input.bookingId, input),
       "roll_call_events",
     );
     if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
@@ -2260,61 +2183,36 @@ async function writeRollCall(
 
   /** The event a `cleared` takes back, once proved standing (`retracts_event_id`). */
   let retractsEventId: string | undefined;
-  if (source === "offline") {
-    if (
-      offlineEventOutOfBounds({
-        clientEventId: input.clientEventId,
-        offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-        // The device's own reading, beside its own `savedAt`.
-        occurredAt: input.occurredAt ?? occurredAt,
-      })
-    ) {
-      return refuse("snapshot_invalid");
-    }
-    const [newest] = await tx
-      .select({
-        id: rollCallEvents.id,
-        occurredAt: rollCallEvents.occurredAt,
-        clientEventId: rollCallEvents.clientEventId,
-      })
-      .from(rollCallEvents)
-      .where(
-        and(
-          eq(rollCallEvents.shopId, input.shopId),
-          seatMarks(),
-          eq(rollCallEvents.tripId, input.tripId),
-          eq(rollCallEvents.bookingId, booking.id),
-          eq(rollCallEvents.checkpoint, checkpoint),
-          onSameMeetingDayAs(occurredAt),
-        ),
-      )
-      .orderBy(...newestMarkFirst())
-      .limit(1);
-    if (newest && newest.occurredAt > occurredAt) {
-      return refuse("newer_event_exists");
-    }
-    // Second, and narrower: a retraction must still be about the statement
-    // that is standing. Refusing leaves that statement in place, which is the
-    // only direction that is safe here — the row this can be wrong about is a
-    // diver somebody said did not come back from a dive, and the device turns
-    // a refusal into an alarm that stays on screen rather than one that
-    // quietly clears (ADR 20260815-a-rejected-correction-may-not-silence-a-missing-diver).
-    if (
-      retractionSuperseded({
-        status: input.status,
-        checkpoint,
-        named: input.retractsClientEventId,
-        standing: newest?.clientEventId,
-      })
-    ) {
-      return refuse(RETRACTION_SUPERSEDED);
-    }
-    if (input.status === "cleared" && input.retractsClientEventId) retractsEventId = newest?.id;
-  } else {
-    // Under the seat lock taken above.
-    const live = await liveRetraction(tx, input, { bookingId: booking.id }, checkpoint, occurredAt);
-    if (live === RETRACTION_SUPERSEDED) return refuse(RETRACTION_SUPERSEDED);
-    retractsEventId = live;
+  // A device may change its clock after saving, including an older queue
+  // without observed context. Clocks cannot invalidate its evidence; the
+  // snapshot/erasure/readiness checks below remain independent gates.
+  if (source === "offline" && (!input.clientEventId || !input.offlineSnapshotSavedAt)) {
+    return refuse("snapshot_invalid");
+  }
+
+  if (
+    input.status === "cleared" &&
+    checkpoint !== "departure" &&
+    input.observedEvidenceIds === undefined &&
+    !input.retractsEventId &&
+    !input.retractsClientEventId
+  ) {
+    return refuse(RETRACTION_SUPERSEDED);
+  }
+
+  if (
+    input.status === "cleared" &&
+    (input.observedEvidenceIds !== undefined ||
+      !!input.retractsEventId ||
+      !!input.retractsClientEventId) &&
+    !input.reconcilesEvidence
+  ) {
+    retractsEventId = await causalRetractionTarget(
+      tx,
+      { shopId: input.shopId, tripId: input.tripId, bookingId: input.bookingId, checkpoint },
+      input,
+    );
+    if (!retractsEventId) return refuse(RETRACTION_SUPERSEDED);
   }
 
   // Readiness gates boarding at departure only. An after-dive checkpoint is a
@@ -2365,6 +2263,11 @@ async function writeRollCall(
 
   const capturesCard = captureCards && booking.identityUnconfirmedAt === null;
   const capturedAt = capturesCard ? nowDate() : null;
+  const projection = await prepareCausalRollCall(
+    tx,
+    { shopId: input.shopId, tripId: input.tripId, bookingId: input.bookingId, checkpoint },
+    { ...input, retractsEventId },
+  );
   const [event] = await tx
     .insert(rollCallEvents)
     .values({
@@ -2373,10 +2276,14 @@ async function writeRollCall(
       subjectKind: "seat",
       bookingId: booking.id,
       recordedByPersonId: staffId,
-      status: input.status,
+      ...projection,
       checkpoint,
       source,
-      clientEventId: source === "offline" ? input.clientEventId : null,
+      clientEventId: input.clientEventId ?? null,
+      statementStatus: input.status,
+      captureContext: rawRollCallCapture(input),
+      observedEvidenceIds: input.observedEvidenceIds ?? null,
+      reconcilesEvidence: input.reconcilesEvidence ?? false,
       retractsEventId: retractsEventId ?? null,
       offlineSnapshotSavedAt: source === "offline" ? input.offlineSnapshotSavedAt : null,
       note: await acceptedRollCallNote(noteInput, checkpoint, input.status, () =>
@@ -2399,6 +2306,12 @@ async function writeRollCall(
     })
     .returning({ id: rollCallEvents.id });
   if (!event) throw new Error("recordRollCall: insert returned no row");
+  await refreshCausalRollCall(tx, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    bookingId: input.bookingId,
+    checkpoint,
+  });
   if (capturesCard && capturedAt) {
     // The statement can wait before it completes. A clock adjustment must not
     // make completion precede the start or reject an otherwise valid count.
@@ -2445,6 +2358,20 @@ async function writeRollCall(
   return { ok: true, eventId: event.id, ...(noteDisposition ? { noteDisposition } : {}) };
 }
 
+function rawRollCallCapture(input: {
+  occurredAt?: Date;
+  meetingDay?: number;
+  retractsEventId?: string;
+  retractsClientEventId?: string;
+}) {
+  return {
+    occurredAt: input.occurredAt?.toISOString(),
+    meetingDay: input.meetingDay,
+    retractsEventId: input.retractsEventId,
+    retractsClientEventId: input.retractsClientEventId,
+  };
+}
+
 export type RecordCrewRollCallOutcome =
   | {
       ok: true;
@@ -2463,7 +2390,7 @@ export type RecordCrewRollCallOutcome =
         | "newer_event_exists"
         /**
          * The statement being retracted no longer stands — see
-         * {@link retractionSuperseded}. Spelled through
+         * {@link causalRetractionTarget}. Spelled through
          * {@link RETRACTION_SUPERSEDED} at the two `return`s, because the
          * device reads this exact code back and reads a row down to awaiting
          * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
@@ -2475,9 +2402,9 @@ export type RecordCrewRollCallOutcome =
 
 /**
  * Record one **assigned crew member's** result at one checkpoint. Append-only
- * history, the same shape `recordRollCall` writes for a diver: a later event
- * supersedes an earlier one and a `cleared` event is an explicit undo that
- * returns them to awaiting (ADR 20260803-per-person-crew-roll-call).
+ * history, the same causal projection `recordRollCall` writes for a diver.
+ * Observed corrections supersede their basis; a named `cleared` withdraws only
+ * its target (ADR 20261112-roll-call-observes-evidence).
  *
  * The subject must be on *this* trip's crew list, proven inside the
  * transaction through `trips` — `trip_assignments` carries no `shop_id` of its
@@ -2498,8 +2425,8 @@ export type RecordCrewRollCallOutcome =
  *
  * **The `source === "offline"` branch is `recordRollCall`'s, mirrored.** Read
  * the two side by side: dedup on `clientEventId` before any other work and
- * again under the trip lock, the shared `offlineEventOutOfBounds` staleness bound, then newest-wins against
- * this subject's own history at this checkpoint. They agree because a
+ * again under the trip lock, the shared capture-validity bound, and the
+ * scoped causal projection. They agree because a
  * crew-specific interpretation of any of the three is how a device retry
  * double-writes, or an out-of-order one overwrites, the record of who came back
  * from a dive — and this half exists so a captain offshore can close an
@@ -2516,9 +2443,12 @@ export async function recordCrewRollCall(
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;
-    /** The `clientEventId` an offline `cleared` undoes — see {@link retractionSuperseded}. */
+    observedEvidenceIds?: string[];
+    reconcilesEvidence?: boolean;
+    meetingDay?: number;
+    /** The `clientEventId` an offline `cleared` undoes — see {@link causalRetractionTarget}. */
     retractsClientEventId?: string;
-    /** The stored event id a live `cleared` undoes — see {@link retractionSuperseded}. */
+    /** The stored event id a live `cleared` undoes — see {@link causalRetractionTarget}. */
     retractsEventId?: string;
     offlineSnapshotSavedAt?: Date;
     offlineSnapshotId?: string;
@@ -2607,10 +2537,10 @@ export async function recordCrewRollCall(
         // not append a second row, and answering `duplicate` before any subject
         // lookup means a replay costs nothing and cannot be refused by a roster
         // that has changed since.
-        if (source === "offline" && input.clientEventId) {
+        if (input.clientEventId) {
           const replayed = replayVerdict(
             await storedRollCallEvent(tx, input.shopId, input.clientEventId),
-            rollCallReplaySubject("crew", input.tripId, input.personId),
+            rollCallReplaySubject("crew", input.tripId, input.personId, input),
             "roll_call_events",
           );
           if (replayed) {
@@ -2645,10 +2575,10 @@ export async function recordCrewRollCall(
         // Asked again under the trip lock, for `recordRollCall`'s reason: a resent
         // sync can overlap the request it replaced, and only now does that
         // request's commit show.
-        if (source === "offline" && input.clientEventId) {
+        if (input.clientEventId) {
           const replayed = replayVerdict(
             await storedRollCallEvent(tx, input.shopId, input.clientEventId),
-            rollCallReplaySubject("crew", input.tripId, input.personId),
+            rollCallReplaySubject("crew", input.tripId, input.personId, input),
             "roll_call_events",
           );
           if (replayed) {
@@ -2694,61 +2624,36 @@ export async function recordCrewRollCall(
 
         /** The event a `cleared` takes back, once proved standing (`retracts_event_id`). */
         let retractsEventId: string | undefined;
-        if (source === "offline") {
-          if (
-            offlineEventOutOfBounds({
-              clientEventId: input.clientEventId,
-              offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-              // The device's own reading, beside its own `savedAt`.
-              occurredAt: input.occurredAt ?? occurredAt,
-            })
-          ) {
-            return refuse("snapshot_invalid");
-          }
-          const [newest] = await tx
-            .select({
-              id: rollCallEvents.id,
-              occurredAt: rollCallEvents.occurredAt,
-              clientEventId: rollCallEvents.clientEventId,
-            })
-            .from(rollCallEvents)
-            .where(
-              and(
-                eq(rollCallEvents.shopId, input.shopId),
-                crewMarks(),
-                eq(rollCallEvents.tripId, input.tripId),
-                eq(rollCallEvents.crewPersonId, assigned.personId),
-                eq(rollCallEvents.checkpoint, checkpoint),
-                onSameMeetingDayAs(occurredAt),
-              ),
-            )
-            .orderBy(...newestMarkFirst())
-            .limit(1);
-          if (newest && newest.occurredAt > occurredAt) {
-            return refuse("newer_event_exists");
-          }
-          // The same compare-and-set the diver path applies, through the same
-          // predicate — a crew-specific reading of when a retraction is still about
-          // the statement standing is how the two halves of one head count start
-          // disagreeing about whether a divemaster is still in the water.
-          if (
-            retractionSuperseded({
-              status: input.status,
-              checkpoint,
-              named: input.retractsClientEventId,
-              standing: newest?.clientEventId,
-            })
-          ) {
-            return refuse(RETRACTION_SUPERSEDED);
-          }
-          if (input.status === "cleared" && input.retractsClientEventId)
-            retractsEventId = newest?.id;
-        } else {
-          // Under the trip lock every crew mark takes.
-          const subject = { personId: assigned.personId };
-          const live = await liveRetraction(tx, input, subject, checkpoint, occurredAt);
-          if (live === RETRACTION_SUPERSEDED) return refuse(RETRACTION_SUPERSEDED);
-          retractsEventId = live;
+        // A device may change its clock after saving, including an older queue
+        // without observed context. Clocks cannot invalidate its evidence; the
+        // snapshot/erasure/readiness checks below remain independent gates.
+        if (source === "offline" && (!input.clientEventId || !input.offlineSnapshotSavedAt)) {
+          return refuse("snapshot_invalid");
+        }
+
+        if (
+          input.status === "cleared" &&
+          checkpoint !== "departure" &&
+          input.observedEvidenceIds === undefined &&
+          !input.retractsEventId &&
+          !input.retractsClientEventId
+        ) {
+          return refuse(RETRACTION_SUPERSEDED);
+        }
+
+        if (
+          input.status === "cleared" &&
+          (input.observedEvidenceIds !== undefined ||
+            !!input.retractsEventId ||
+            !!input.retractsClientEventId) &&
+          !input.reconcilesEvidence
+        ) {
+          retractsEventId = await causalRetractionTarget(
+            tx,
+            { shopId: input.shopId, tripId: input.tripId, personId: input.personId, checkpoint },
+            input,
+          );
+          if (!retractsEventId) return refuse(RETRACTION_SUPERSEDED);
         }
 
         // **The other half of the head count takes the seat back too**
@@ -2763,43 +2668,10 @@ export async function recordCrewRollCall(
         // often the only place a boarding for them can be written at all. Marked
         // absent at 08:20 because they went straight to the boat, boarded at the
         // rail at 08:25, and the release stood — the seat sellable to a walk-in
-        // while its holder was on the water, and struck from every reader that
-        // counts a **dive day**, which hands a divemaster diving five days running
-        // the single-day flying wait.
-        //
-        // **Read here, before the insert, and with a `where` that does not narrow
-        // to `no_show`.** Not because the reclaim needs the row early — it does not
-        // — but because nothing else on this path touches a booking at all, so
-        // without this read the desk and the rail share no lock object and decide
-        // against the same pre-state *every* time rather than under a race. The
-        // `where` is the other half: narrowing it to `no_show` locks nothing until
-        // the desk's mark is already visible, which is the same gap wearing a
-        // `FOR UPDATE`. So the row is taken whole and the status it read decides
-        // whether there is anything to undo. `roll-call.postgres.test.ts` is red on
-        // either shortcut, at the gate rather than at the assertions.
-        //
-        // The branch that does *not* mean the person sailed — a dock `not_boarded`,
-        // a `cleared` — takes no lock, and needs none: it can only ever leave a
-        // release standing, never create one. Racing the desk there, the desk
-        // either still sees the boarding this event is superseding and refuses, or
-        // sees it gone and marks; what it cannot do is release a seat over a
-        // standing sailed result, because that is the read it makes under its own
-        // lock.
-        //
-        // **The reclaim hangs off the insert, not off this read**, which is why the
-        // two are apart. Moving the read earlier is harmless; moving the *reclaim*
-        // to any path that returns without writing is not. An older `boarded`
-        // losing newest-wins to a standing `cleared` answers `newer_event_exists`,
-        // so nothing stands that means the person sailed — taking their seat back
-        // there would leave the booking out of `no_show` with
-        // `onTheWaterByRollCall` still answering null about the same human, and a
-        // walk-in possibly already holding it. `manifests.test.ts` pins that
-        // ordering; nothing else in the file does.
-        //
-        // The lookup is a probe of `bookings_trip_person_unique`, so the ordinary
-        // crew member — who holds no seat — pays one index miss and locks nothing.
-        // The trip is already held (`for no key update`, above), so this takes
-        // the seat second, in the counter's own order (`lockSeatDeparture`).
+        // Lock a passenger seat before writing crew evidence that means its
+        // holder sailed. This shares the counter's trip-then-seat lock order.
+        // The projection and insert must commit before reclaiming a released
+        // seat; a refused event never changes the counter's decision.
         const seat = standingResultMeansSailed(checkpoint, input.status)
           ? ((
               await tx
@@ -2833,6 +2705,11 @@ export async function recordCrewRollCall(
         // first and sweeps its note before committing.
         const captureAssignedCredentials = captureCredentials && assigned.anonymizedAt === null;
         const credentialSnapshotStartedAt = captureAssignedCredentials ? nowDate() : null;
+        const projection = await prepareCausalRollCall(
+          tx,
+          { shopId: input.shopId, tripId: input.tripId, personId: input.personId, checkpoint },
+          { ...input, retractsEventId },
+        );
         const [event] = await tx
           .insert(rollCallEvents)
           .values({
@@ -2841,10 +2718,14 @@ export async function recordCrewRollCall(
             subjectKind: "crew",
             crewPersonId: assigned.personId,
             recordedByPersonId: staffId,
-            status: input.status,
+            ...projection,
             checkpoint,
             source,
-            clientEventId: source === "offline" ? input.clientEventId : null,
+            clientEventId: input.clientEventId ?? null,
+            statementStatus: input.status,
+            captureContext: rawRollCallCapture(input),
+            observedEvidenceIds: input.observedEvidenceIds ?? null,
+            reconcilesEvidence: input.reconcilesEvidence ?? false,
             retractsEventId: retractsEventId ?? null,
             // No `offlineSnapshotSavedAt`: a seat row keeps it as evidence of
             // which snapshot supplied the *readiness* it boarded on, and a crew
@@ -2861,6 +2742,12 @@ export async function recordCrewRollCall(
           })
           .returning({ id: rollCallEvents.id });
         if (!event) throw new Error("recordCrewRollCall: insert returned no row");
+        await refreshCausalRollCall(tx, {
+          shopId: input.shopId,
+          tripId: input.tripId,
+          personId: input.personId,
+          checkpoint,
+        });
         if (checkpoint === "departure" && input.status === "not_boarded")
           await invalidateTrainingPlansForCrewChange(tx, input.shopId, input.tripId, [
             assigned.personId,
@@ -2906,8 +2793,8 @@ export async function recordCrewRollCall(
     {
       indexName: "roll_call_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
-      source: input.source,
-      subject: rollCallReplaySubject("crew", input.tripId, input.personId),
+      source: input.clientEventId ? "offline" : input.source,
+      subject: rollCallReplaySubject("crew", input.tripId, input.personId, input),
       stored: (clientEventId) => storedRollCallEvent(db, input.shopId, clientEventId),
     },
   );
@@ -2926,4 +2813,44 @@ export async function recordCrewRollCall(
   }
   logOfflineRetractionSignals(input, outcome);
   return outcome;
+}
+
+function emptyCausalContext(
+  meetingDay: number,
+): import("@/lib/roll-call-causality").RollCallCausalContext {
+  return {
+    meetingDay,
+    observedEvidenceIds: [],
+    conflict: false,
+    orderingUnknown: false,
+    unknownMeetingDay: false,
+    evidence: [],
+  };
+}
+
+function causalRecord(
+  record: RollCallRecord | undefined,
+  context: import("@/lib/roll-call-causality").RollCallCausalContext | undefined,
+  checkpoint: string,
+): RollCallRecord | undefined {
+  if (!context) return record;
+  const projection = foldRollCallEvidence(
+    context.ancestry ?? context.evidence.map((item) => ({ id: item.id, status: item.status })),
+    checkpoint,
+    new Set(context.observedEvidenceIds),
+  );
+  if (!projection.status || projection.status === "cleared") return undefined;
+  const shown = context.evidence.find((item) => item.status === projection.status);
+  if (!shown) return undefined;
+  // The storage projection may supersede its own immutable statement;
+  // attribute and undo the actual frontier fact.
+  return {
+    ...record,
+    state: projection.status,
+    occurredAt: new Date(shown.occurredAt),
+    recordedByName: shown.recordedByName,
+    note: shown.note,
+    eventId: shown.eventId,
+    evidenceConflict: context.conflict,
+  };
 }

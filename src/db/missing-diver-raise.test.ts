@@ -211,7 +211,9 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
       }),
     ).toEqual({ ok: false, reason: "not_missing" });
     // Marked back aboard since: the tap was read off a stale screen.
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", minutesAfterMark(1));
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", minutesAfterMark(1), "live", {
+      observesPrevious: true,
+    });
     expect(
       await raiseMissingDiverAlert(db, { ...input, actorPersonId: f.crew.id, provider }),
     ).toEqual({ ok: false, reason: "not_missing" });
@@ -230,7 +232,9 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
   it("opens a new report and alerts again for a diver missing again after Found", async () => {
     const { db, f, input } = await seat();
     const first = await raised(db, input, f.crew.id, recorder().provider);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", minutesAfterMark(1));
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", minutesAfterMark(1), "live", {
+      observesPrevious: true,
+    });
     expect(
       await markMissingDiverFound(db, {
         shopId: input.shopId,
@@ -241,7 +245,9 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
       }),
     ).toMatchObject({ ok: true, changed: true });
     // Gone again at the next look.
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "not_boarded", minutesAfterMark(2));
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "not_boarded", minutesAfterMark(2), "live", {
+      observesPrevious: true,
+    });
     const { provider, kinds } = recorder();
     const again = await raiseMissingDiverAlert(db, {
       ...input,
@@ -257,7 +263,9 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
     const { db, f, input } = await seat();
     // The tap's send reached nobody, so the report waits for the pass.
     const reportId = await raised(db, input, f.crew.id, recorder("failed").provider);
-    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", minutesAfterMark(1));
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", minutesAfterMark(1), "live", {
+      observesPrevious: true,
+    });
     const { provider, sent } = recorder();
     await sendMissingDiverAlerts(db, { provider });
     expect(sent).toEqual([]);

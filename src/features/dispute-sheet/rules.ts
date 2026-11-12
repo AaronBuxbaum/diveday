@@ -1,4 +1,5 @@
 import {
+  compareAuditMarkOrder,
   compareMarkOrder,
   type RollCallCheckpoint,
   rollCallCheckpoints,
@@ -42,7 +43,7 @@ import {
 export type DisputeSignatureMethod = "online" | "counter" | "imported";
 
 /** One roll-call checkpoint's standing result on this seat. */
-export type DisputeRollCallResult = "boarded" | "not_boarded" | "not_recorded";
+export type DisputeRollCallResult = "boarded" | "not_boarded" | "not_recorded" | "conflicting";
 
 /**
  * The activity codes that may appear on the sheet: only those a writer ties to
@@ -117,6 +118,8 @@ export type DisputeWaiverInput = {
 };
 
 export type DisputeRollCallEventInput = {
+  evidenceConflict?: boolean;
+  statementStatus: "boarded" | "not_boarded" | "cleared";
   checkpoint: string;
   status: "boarded" | "not_boarded" | "cleared";
   occurredAt: Date;
@@ -211,7 +214,7 @@ export type DisputeSheet = {
 function newestFirst<T extends { occurredAt: Date; createdAt: Date; seq: number }>(
   rows: readonly T[],
 ): T[] {
-  return [...rows].sort((a, b) => compareMarkOrder(b, a));
+  return [...rows].sort((a, b) => compareAuditMarkOrder(b, a));
 }
 
 function signatureMethodOf(method: string | null): DisputeSignatureMethod {
@@ -267,13 +270,21 @@ export function assembleDisputeSheet(input: DisputeSheetInput): DisputeSheet {
         }
       : null;
 
-  // One row per checkpoint the departure plans. The newest event at each wins;
-  // a newest `cleared` drops it back to not recorded. Nothing is carried
-  // forward from an earlier checkpoint: this sheet states what a person wrote.
+  // The latest materialization carries the effective causal result. Its raw
+  // reporter/time describe only its original statement, never a different
+  // result projected from another device’s standing evidence.
   const rollCall = rollCallCheckpoints(trip.plannedDives).map((checkpoint) => {
-    const [standing] = newestFirst(
-      input.rollCallEvents.filter((event) => event.checkpoint === checkpoint),
-    );
+    const [standing] = input.rollCallEvents
+      .filter((event) => event.checkpoint === checkpoint)
+      .sort((a, b) => compareMarkOrder(b, a));
+    if (standing?.evidenceConflict)
+      return {
+        checkpoint,
+        result: "conflicting" as const,
+        at: null,
+        recordedByName: null,
+        offline: false,
+      };
     if (!standing || standing.status === "cleared") {
       return {
         checkpoint,
@@ -286,9 +297,9 @@ export function assembleDisputeSheet(input: DisputeSheetInput): DisputeSheet {
     return {
       checkpoint,
       result: standing.status,
-      at: standing.occurredAt,
-      recordedByName: standing.recordedByName,
-      offline: standing.source === "offline",
+      at: standing.status === standing.statementStatus ? standing.occurredAt : null,
+      recordedByName: standing.status === standing.statementStatus ? standing.recordedByName : null,
+      offline: standing.status === standing.statementStatus && standing.source === "offline",
     };
   });
 

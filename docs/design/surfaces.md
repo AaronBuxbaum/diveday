@@ -262,6 +262,18 @@ Existing team actions remain beside their member chips, with no warning-specific
 Each caution earns its place because course, age, clearance, and a buddy staying ashore carry
 different consequences. The team ledger stays the composition, and its caution opens with the team.
 
+**In review 2026-11-12, conflicting saved marks** (#4418): the one idea is a head count
+whose conflicting reports stay visible until crew check the person. The arriving question is
+which marks disagree and who needs checking, answered beside that person's live or saved roll
+call with both original statements rather than an apparently settled count. Compatible marks
+need no new control; only an actual conflict exposes the three possible crew decisions beside
+its evidence, with confirmation before the selected decision is recorded. Removing the original
+statements or the explicit decision would hide uncertainty, so both stay; repeated sync machinery
+does not earn a separate panel. The composition extends the existing name-and-count ledger with
+an evidence list at the affected person, keeping ordinary roll call quiet instead of adding a
+second dashboard. Phone and desktop, live and saved-copy states are captured separately; these
+browser simulations do not establish physical-device or at-sea usability.
+
 ### The departure log — `/shop/[shopSlug]/trips/[id]/log`
 
 **Reviewed 2026-10-21, preserved boat identity** (#2727): the one idea is a departure record whose

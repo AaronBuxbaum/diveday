@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { seededShopContext } from "@/test/db";
 import {
@@ -173,7 +174,7 @@ describe("the seeded dawn boat's record", () => {
     if (!turnedAway || !undone) throw new Error("expected boarded divers on the dawn boat");
     // A boarded the crew took back: one turned away, one tap undone.
     const later = new Date(turnedAway.occurredAt.getTime() + 60_000);
-    await db.insert(rollCallEvents).values([
+    await seedRollCallEvidence(db, [
       { ...turnedAway, id: undefined, seq: undefined, status: "not_boarded", occurredAt: later },
       { ...undone, id: undefined, seq: undefined, status: "cleared", occurredAt: later },
     ]);

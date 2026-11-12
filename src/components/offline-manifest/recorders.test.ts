@@ -15,7 +15,11 @@ vi.mock("@/lib/offline-manifest-store", async (original) => ({
 const t = offlineManifestTranslator("en-US");
 const append = vi.mocked(appendOfflineRollCall);
 
-function recorders({ expired = false, checkpoint = "after_dive_1" as const } = {}) {
+function recorders({
+  expired = false,
+  checkpoint = "after_dive_1" as const,
+  envelope = savedCopy(),
+} = {}) {
   const spies = {
     setNoteDrafts: vi.fn(),
     setBusyBooking: vi.fn(),
@@ -28,7 +32,7 @@ function recorders({ expired = false, checkpoint = "after_dive_1" as const } = {
   const taps = offlineRecorders({
     t,
     tripId: "trip-1",
-    envelope: savedCopy(),
+    envelope,
     checkpoint,
     expired,
     noteDrafts: { "b-priya": "  surfaced north  " },
@@ -118,4 +122,88 @@ describe("offlineRecorders on a link that answers nothing", () => {
 
     expect(busyAfterTap(spies.setBusyBooking, "b-ben")).toBe("b-ben");
   });
+});
+
+it("captures known queued predecessors even beside an unnameable older saved statement", async () => {
+  const envelope = savedCopy();
+  envelope.snapshot.manifests[0].checkpoint = "after_dive_1";
+  const row = envelope.snapshot.manifests
+    .find((item) => item.checkpoint === "after_dive_1")
+    ?.divers.find((item) => item.bookingId === "b-priya");
+  if (!row) throw new Error("fixture missing diver");
+  row.rollCall = {
+    state: "boarded",
+    occurredAt: envelope.snapshot.savedAt,
+    recordedByName: "Older crew",
+  };
+  const clientEventId = "10000000-0000-4000-8000-000000000001";
+  envelope.events.push({
+    clientEventId,
+    snapshotId: envelope.snapshot.snapshotId,
+    snapshotSavedAt: envelope.snapshot.savedAt,
+    tripId: "trip-1",
+    bookingId: "b-priya",
+    checkpoint: "after_dive_1",
+    status: "boarded",
+    meetingDay: 0,
+    occurredAt: envelope.snapshot.savedAt,
+    syncStatus: "pending",
+    observedEvidenceIds: [],
+  });
+  append.mockResolvedValue(envelope);
+  const { taps } = recorders({ envelope });
+  await taps.record({ bookingId: "b-priya" }, { status: "boarded" });
+  expect(append).toHaveBeenCalledWith(
+    "trip-1",
+    expect.objectContaining({
+      observedEvidenceIds: [`client:${clientEventId}`],
+      meetingDay: undefined,
+    }),
+  );
+});
+
+it("does not invent day zero for an older multi-day copy without a captured server day", async () => {
+  const envelope = savedCopy();
+  envelope.snapshot.manifests[0].checkpoint = "after_dive_1";
+  envelope.snapshot.rollCallDayBoundaries = ["2026-08-02T00:00:00.000Z"];
+  append.mockResolvedValue(envelope);
+  const { taps } = recorders({ envelope });
+  await taps.record({ bookingId: "b-priya" }, { status: "not_boarded" });
+  expect(append).toHaveBeenCalledWith(
+    "trip-1",
+    expect.objectContaining({ meetingDay: undefined, observedEvidenceIds: [] }),
+  );
+});
+
+it("captures the displayed selected day without reusing the previous day's positive evidence", async () => {
+  const envelope = savedCopy();
+  envelope.snapshot.manifests[0].checkpoint = "after_dive_1";
+  envelope.snapshot.rollCallDayBoundaries = ["2026-08-02T00:00:00.000Z"];
+  envelope.snapshot.rollCallMeetingDay = 0;
+  envelope.snapshot.selectedRollCallMeetingDay = 1;
+  const row = envelope.snapshot.manifests[0].divers[0];
+  row.rollCallContext = {
+    meetingDay: 0,
+    conflict: false,
+    orderingUnknown: false,
+    unknownMeetingDay: false,
+    observedEvidenceIds: ["server:10000000-0000-4000-8000-000000000001"],
+    evidence: [
+      {
+        id: "server:10000000-0000-4000-8000-000000000001",
+        status: "boarded",
+        recordedByName: "Earlier crew",
+        occurredAt: envelope.snapshot.savedAt,
+        note: null,
+        meetingDay: 0,
+      },
+    ],
+  };
+  append.mockResolvedValue(envelope);
+  const { taps } = recorders({ envelope });
+  await taps.record({ bookingId: row.bookingId }, { status: "not_boarded" });
+  expect(append).toHaveBeenCalledWith(
+    "trip-1",
+    expect.objectContaining({ meetingDay: 1, observedEvidenceIds: [] }),
+  );
 });

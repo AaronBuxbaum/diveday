@@ -188,7 +188,10 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   );
   const countedDivers = offBoat.filter((off) => !off).length;
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
-  const awaiting = localStates.filter((state, index) => !state && !offBoat[index]).length;
+  const awaiting = localStates.filter(
+    (state, index) =>
+      (!state || (checkpoint === "departure" && state.evidenceConflict)) && !offBoat[index],
+  ).length;
   // The dock copy splits `not_boarded` exactly the way the live manifest does
   // (`isNotBackAboard`, src/lib/manifests.ts): at departure it means the diver
   // never left, after a dive it means they have not come back. Offline and

@@ -7,3 +7,22 @@ export function saved(result: Awaited<ReturnType<typeof editDiver>>) {
 }
 
 export const DATE_INTEREST = { scope: "date", askedBy: "diver" } as const;
+
+/** Statements for the diver history fixture; observation is authored by its caller. */
+export function standingSeatEvidence(shopId: string, recordedByPersonId: string) {
+  return (
+    bookingId: string,
+    tripId: string,
+    status: "boarded" | "not_boarded" | "cleared",
+    checkpoint: string,
+    at: number,
+  ) => ({
+    shopId,
+    tripId,
+    bookingId,
+    recordedByPersonId,
+    status,
+    checkpoint,
+    occurredAt: new Date(Date.UTC(2026, 0, 1, 8, at)),
+  });
+}

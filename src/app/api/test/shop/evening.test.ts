@@ -4,6 +4,7 @@ import { listFitAdjustedReturns } from "@/db/gear";
 import { getTripManifest } from "@/db/manifests";
 import { bookings, rollCallEvents, type Shop, trips } from "@/db/schema";
 import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "@/db/seed-boat-at-sea";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { assembleEveningClose, getDayCloseout } from "@/features/today";
 import { nowDate } from "@/lib/clock";
@@ -121,7 +122,7 @@ async function onlyResult(
   const shopId = existing?.shopId ?? seat?.shopId;
   if (!shopId) throw new Error("booking not found");
   await db.delete(rollCallEvents).where(eq(rollCallEvents.bookingId, bookingId));
-  await db.insert(rollCallEvents).values({
+  await seedRollCallEvidence(db, {
     shopId,
     tripId: row.trip,
     bookingId,
@@ -347,7 +348,7 @@ describe("the evening fact", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     const { trip, seat, staffId } = await aSeatToday(db, shop);
     await onlyResult(db, seat, { trip, staffId, checkpoint: "departure", status: "boarded" });
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip,
       bookingId: seat,

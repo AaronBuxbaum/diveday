@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -11,15 +12,7 @@ import {
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
 import { crewSubject } from "./roll-call-subject";
-import {
-  bookings,
-  people,
-  rollCallEvents,
-  shops,
-  tripChangeEvents,
-  trips,
-  userAccounts,
-} from "./schema";
+import { bookings, people, shops, tripChangeEvents, trips, userAccounts } from "./schema";
 import { listTripChangeEvents } from "./trip-change-events";
 import { basePatch, revisionOf } from "./trip-revision.test-support";
 import {
@@ -346,7 +339,7 @@ describe("trip records (in-memory PGlite)", () => {
     if (!entry) throw new Error("expected a booking to record a roll call against");
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("expected seeded staff missing");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: reef.id,
       bookingId: entry.booking.id,
@@ -392,7 +385,7 @@ describe("trip records (in-memory PGlite)", () => {
     if (!reef) throw new Error("expected seeded reef trip missing");
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("expected seeded staff missing");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: reef.id,
       ...crewSubject(staff.person.id),
@@ -417,7 +410,7 @@ describe("trip records (in-memory PGlite)", () => {
     expect((await getTripWithBooked(db, shop.id, reef.id))?.plannedDives).toBe(reef.plannedDives);
 
     // A crew result that was undone is no history: the floor lifts.
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: reef.id,
       ...crewSubject(staff.person.id),

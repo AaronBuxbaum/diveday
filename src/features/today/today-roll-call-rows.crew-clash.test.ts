@@ -5,9 +5,9 @@ import {
   bookings as bookingsTable,
   people,
   personRoles as personRolesTable,
-  rollCallEvents as rollCallEventsTable,
   trips as tripsTable,
 } from "@/db/schema";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { createTrip, listStaff, moveTrip, setTripCrew, setTripStatus } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -326,7 +326,7 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
       recordedByPersonId: staff.person.id,
       occurredAt: new Date(now.getTime() - 3 * HOUR),
     });
-    await db.insert(rollCallEventsTable).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: later.id,
       bookingId: booking.id,

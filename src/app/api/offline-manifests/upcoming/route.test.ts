@@ -21,6 +21,7 @@ import {
   offlineManifestMayHoldMedicalAlertWords,
   offlineManifestViewerPersonId,
 } from "@/lib/offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -126,7 +127,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     // at all must never reach the pool. Only an authenticated caller whose token
     // *might* be stale pays for the lookup.
     vi.mocked(auth).mockResolvedValue(null);
-    const response = await GET();
+    const response = await GET(causalRequest());
     expect(response.status).toBe(401);
     expect(getDb).not.toHaveBeenCalled();
   });
@@ -145,7 +146,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
       },
     } as DiveDaySession);
 
-    const response = await GET();
+    const response = await GET(causalRequest());
     expect(response.status).toBe(401);
     // Same short-circuit: the token itself never claimed staff, so there is
     // nothing for a live re-check to disagree with.
@@ -157,7 +158,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
-    const response = await GET();
+    const response = await GET(causalRequest());
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       payloads: Array<{
@@ -200,7 +201,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     );
     expect(expected.length).toBeGreaterThan(1);
 
-    const body = (await (await GET()).json()) as {
+    const body = (await (await GET(causalRequest())).json()) as {
       payloads: Array<{ manifests: Array<{ trip: { id: string } }> }>;
     };
     expect(body.payloads.map((payload) => payload.manifests[0]?.trip.id)).toEqual(expected);
@@ -225,7 +226,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
-    const response = await GET();
+    const response = await GET(causalRequest());
     const body = (await response.json()) as {
       payloads: Array<{ manifests: Array<{ trip: { title: string } }> }>;
     };
@@ -238,7 +239,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
-    const response = await GET();
+    const response = await GET(causalRequest());
     const body = (await response.json()) as {
       payloads: Array<{ shop: { slug: string } }>;
     };
@@ -258,7 +259,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
-    const response = await GET();
+    const response = await GET(causalRequest());
     const body = (await response.json()) as { shop: { slug: string } };
     expect(body.shop.slug).toBe("blue-mantis");
   });
@@ -273,7 +274,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
 
-    const body = (await (await GET()).json()) as Record<string, unknown>;
+    const body = (await (await GET(causalRequest())).json()) as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual([
       "mayHoldMedicalAlertWords",
       "payloads",
@@ -292,10 +293,10 @@ describe("GET /api/offline-manifests/upcoming", () => {
     const { db, shop, personId } = await staffContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
-    expect((await GET()).headers.get("Cache-Control")).toBe("private, no-store");
+    expect((await GET(causalRequest())).headers.get("Cache-Control")).toBe("private, no-store");
 
     vi.mocked(auth).mockResolvedValue(null);
-    expect((await GET()).headers.get("Cache-Control")).toBe("private, no-store");
+    expect((await GET(causalRequest())).headers.get("Cache-Control")).toBe("private, no-store");
 
     // The live-roles refusal is a new branch out of this handler and needs the
     // header just as much: still an authenticated, per-session answer on the
@@ -303,7 +304,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     // refusal they did not earn.
     const stripped = await makeStaff(db, shop.id, []);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, stripped));
-    const refusal = await GET();
+    const refusal = await GET(causalRequest());
     expect(refusal.status).toBe(401);
     expect(refusal.headers.get("Cache-Control")).toBe("private, no-store");
   });
@@ -326,7 +327,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
       vi.mocked(getDb).mockResolvedValue(db);
       vi.mocked(auth).mockResolvedValue(staffSession(shop.id, stripped));
 
-      const response = await GET();
+      const response = await GET(causalRequest());
       expect(response.status).toBe(401);
       // Not merely "no payloads" — nothing about the board comes back at all.
       const body = (await response.json()) as Record<string, unknown>;
@@ -342,12 +343,12 @@ describe("GET /api/offline-manifests/upcoming", () => {
       const { db, shop, personId } = await staffContext();
       vi.mocked(getDb).mockResolvedValue(db);
       vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
-      const allowed = await (await GET()).text();
+      const allowed = await (await GET(causalRequest())).text();
       expect(allowed).toContain("emergencyContact");
 
       const demoted = await makeStaff(db, shop.id, ["diver"]);
       vi.mocked(auth).mockResolvedValue(staffSession(shop.id, demoted));
-      const refused = await GET();
+      const refused = await GET(causalRequest());
       expect(refused.status).toBe(401);
       const refusedBody = await refused.text();
       for (const term of ["emergencyContact", "blockers", "manifests", "divers", "payloads"]) {
@@ -363,7 +364,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
 
       for (const person of [disabled, deleted]) {
         vi.mocked(auth).mockResolvedValue(staffSession(shop.id, person));
-        expect((await GET()).status).toBe(401);
+        expect((await GET(causalRequest())).status).toBe(401);
       }
     });
 
@@ -382,7 +383,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
       vi.mocked(getDb).mockResolvedValue(db);
       vi.mocked(auth).mockResolvedValue(staffSession(shop.id, foreign));
 
-      expect((await GET()).status).toBe(401);
+      expect((await GET(causalRequest())).status).toBe(401);
     });
 
     it("refuses on the next request after the role is revoked, without a re-issued token", async () => {
@@ -394,10 +395,10 @@ describe("GET /api/offline-manifests/upcoming", () => {
       const session = staffSession(shop.id, person, ["captain"]);
       vi.mocked(getDb).mockResolvedValue(db);
       vi.mocked(auth).mockResolvedValue(session);
-      expect((await GET()).status).toBe(200);
+      expect((await GET(causalRequest())).status).toBe(200);
 
       await db.delete(personRoles).where(eq(personRoles.personId, person));
-      expect((await GET()).status).toBe(401);
+      expect((await GET(causalRequest())).status).toBe(401);
     });
   });
 });
@@ -438,7 +439,7 @@ describe("GET /api/offline-manifests/upcoming — the medical alert for the crew
   }
 
   async function seatOnCopy(bookingId: string) {
-    const response = await GET();
+    const response = await GET(causalRequest());
     expect(response.status).toBe(200);
     const body = (await response.json()) as Body;
     const manifest = body.payloads
@@ -477,12 +478,12 @@ describe("GET /api/offline-manifests/upcoming — the medical alert for the crew
     const divemaster = await makeStaff(db, shop.id, ["divemaster"]);
     vi.mocked(getDb).mockResolvedValue(db);
     const answer = async () => {
-      const body: unknown = await (await GET()).json();
+      const body: unknown = await (await GET(causalRequest())).json();
       return offlineManifestMayHoldMedicalAlertWords(body, tripId);
     };
     // The owner, on every departure on the board.
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
-    const ownerBody = (await (await GET()).json()) as Body;
+    const ownerBody = (await (await GET(causalRequest())).json()) as Body;
     for (const payload of ownerBody.payloads) {
       const id = payload.manifests[0]?.trip.id;
       expect(offlineManifestMayHoldMedicalAlertWords(ownerBody, id), id).toBe(true);
@@ -505,8 +506,34 @@ describe("GET /api/offline-manifests/upcoming — the medical alert for the crew
     const { db, shop, personId } = await staffContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
-    const response = await GET();
+    const response = await GET(causalRequest());
     const body: unknown = await response.json();
     expect(offlineManifestViewerPersonId(body)).toBe(personId);
   });
 });
+
+it("does not provide a fresh roster to a reader without the causal protocol", async () => {
+  const { db, shop } = ctx;
+  const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+  vi.mocked(getDb).mockResolvedValue(db);
+  vi.mocked(auth).mockResolvedValue({
+    user: {
+      personId,
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      name: "Staff",
+      email: "staff@demo.invalid",
+      roles: ["owner"],
+    },
+  } as DiveDaySession);
+  const response = await GET(new Request("http://localhost/api/offline-manifests/upcoming"));
+  expect(response.status).toBe(426);
+  const body = (await response.json()) as Record<string, unknown>;
+  expect(body).toEqual({ error: "offline_update_required" });
+});
+
+function causalRequest() {
+  return new Request("http://localhost/api/offline-manifests/upcoming", {
+    headers: ROLL_CALL_CAUSAL_HEADERS,
+  });
+}

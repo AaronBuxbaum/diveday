@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { identifySavedRollCall } from "@/test/identified-offline-roll-call";
 import { crewSnapshot, snapshot } from "../test/substrate-fixtures/lib/offline-manifests-fixtures";
 import { latestOfflineCrewRollCall, latestOfflineRollCall } from "./offline-manifests";
 
 /**
  * **A course's later meeting day starts empty on the device too** (issue #3904,
  * ADR 20261104-roll-call-by-meeting-day). The copy is the server's manifest at
- * save time and knows nothing of the day boundary; it carries the boundary
- * (`rollCallDayBoundaries`) so a device past it reads what the server would.
+ * save time. The crew selects a meeting day explicitly; a changed device clock
+ * cannot move evidence or choose that day on their behalf.
  */
 describe("an offline copy of a course that meets on two days", () => {
   const DAY_ONE = new Date("2026-07-20T15:00:00.000Z");
@@ -14,14 +15,17 @@ describe("an offline copy of a course that meets on two days", () => {
   const DAY_TWO = new Date("2026-07-21T14:00:00.000Z");
 
   type SavedResult = { state: "boarded" | "not_boarded"; occurredAt: string };
-  /** The day-one copy, with each diver's saved result per checkpoint. */
+  /** An identified day-one server copy, with each saved statement declared on day zero. */
   function courseCopy(saved: Record<string, Record<string, SavedResult>>) {
     const copy = snapshot();
     copy.rollCallDayBoundaries = [BOUNDARY];
     for (const manifest of copy.manifests) {
       for (const diver of manifest.divers) {
         const result = saved[diver.bookingId]?.[manifest.checkpoint];
-        if (result) diver.rollCall = { ...result, recordedByName: "Sal", implied: false };
+        if (result) {
+          diver.rollCall = { ...result, recordedByName: "Sal", implied: false };
+          identifySavedRollCall(copy, { bookingId: diver.bookingId }, manifest.checkpoint, 0);
+        }
       }
     }
     return copy;
@@ -37,7 +41,7 @@ describe("an offline copy of a course that meets on two days", () => {
     },
   } satisfies Record<string, Record<string, SavedResult>>;
   const event = (
-    over: Partial<import("./offline-manifests").OfflineRollCallEvent>,
+    over: Partial<import("./offline-manifests").OfflineRollCallEvent> & { meetingDay: number },
   ): import("./offline-manifests").OfflineRollCallEvent => ({
     clientEventId: "e1",
     snapshotId: "snapshot-1",
@@ -51,18 +55,21 @@ describe("an offline copy of a course that meets on two days", () => {
     ...over,
   });
 
-  it("a snapshot saved on day one shows day two's checkpoints empty once the device clock passes the boundary", () => {
+  it("a day-one copy starts day two empty only when crew select that meeting day", () => {
     const copy = courseCopy(dockAndDive);
     expect(latestOfflineRollCall(copy, [], "ready", "departure", DAY_ONE)?.state).toBe("boarded");
     expect(latestOfflineRollCall(copy, [], "ready", "after_dive_1", DAY_ONE)?.state).toBe(
       "boarded",
     );
+    expect(latestOfflineRollCall(copy, [], "ready", "departure", DAY_TWO)?.state).toBe("boarded");
+    copy.selectedRollCallMeetingDay = 1;
     expect(latestOfflineRollCall(copy, [], "ready", "departure", DAY_TWO)).toBeUndefined();
     expect(latestOfflineRollCall(copy, [], "ready", "after_dive_1", DAY_TWO)).toBeUndefined();
   });
 
   it("keeps an earlier day's stated missing diver at its checkpoint, not as this device's to undo", () => {
     const copy = courseCopy(dockAndDive);
+    copy.selectedRollCallMeetingDay = 1;
     expect(latestOfflineRollCall(copy, [], "blocked", "after_dive_1", DAY_TWO)).toMatchObject({
       state: "not_boarded",
       local: false,
@@ -72,6 +79,35 @@ describe("an offline copy of a course that meets on two days", () => {
     expect(latestOfflineRollCall(copy, [], "blocked", "departure", DAY_TWO)).toBeUndefined();
   });
 
+  it("keeps unidentified legacy missing evidence despite later capture clocks", () => {
+    const copy = snapshot();
+    copy.rollCallDayBoundaries = [BOUNDARY];
+    copy.selectedRollCallMeetingDay = 1;
+    const first = copy.manifests
+      .find((item) => item.checkpoint === "after_dive_1")
+      ?.divers.find((item) => item.bookingId === "blocked");
+    const later = copy.manifests
+      .find((item) => item.checkpoint === "after_dive_2")
+      ?.divers.find((item) => item.bookingId === "blocked");
+    if (!first || !later) throw new Error("fixture lost its saved rows");
+    first.rollCall = {
+      state: "not_boarded",
+      occurredAt: "2026-07-20T13:01:00.000Z",
+      recordedByName: "Sal",
+      implied: false,
+    };
+    later.rollCall = {
+      state: "boarded",
+      occurredAt: "2026-07-20T14:30:00.000Z",
+      recordedByName: "Sal",
+      implied: false,
+    };
+    expect(latestOfflineRollCall(copy, [], "blocked", "after_dive_1", DAY_TWO)).toMatchObject({
+      state: "not_boarded",
+      causalContext: { unknownMeetingDay: true },
+    });
+  });
+
   it("does not carry a missing diver that was back aboard after a later dive that day", () => {
     const copy = courseCopy({
       blocked: {
@@ -79,12 +115,22 @@ describe("an offline copy of a course that meets on two days", () => {
         after_dive_2: { state: "boarded", occurredAt: "2026-07-20T14:30:00.000Z" },
       },
     });
+    copy.selectedRollCallMeetingDay = 1;
     expect(latestOfflineRollCall(copy, [], "blocked", "after_dive_1", DAY_TWO)).toBeUndefined();
   });
 
   it("lets a sighting on the new day settle the earlier day's missing diver", () => {
     const copy = courseCopy(dockAndDive);
-    const events = [event({ bookingId: "blocked", checkpoint: "departure", status: "boarded" })];
+    copy.selectedRollCallMeetingDay = 1;
+    const events = [
+      event({
+        bookingId: "blocked",
+        checkpoint: "departure",
+        status: "boarded",
+        meetingDay: 1,
+        observedEvidenceIds: [],
+      }),
+    ];
     expect(latestOfflineRollCall(copy, events, "blocked", "departure", DAY_TWO)).toMatchObject({
       state: "boarded",
       local: true,
@@ -96,7 +142,10 @@ describe("an offline copy of a course that meets on two days", () => {
     // The server refuses it: an offline undo is compared with its own day's
     // marks only, and the earlier day's word is the live manifest's to take back.
     const copy = courseCopy(dockAndDive);
-    const events = [event({ bookingId: "blocked", checkpoint: "after_dive_1", status: "cleared" })];
+    copy.selectedRollCallMeetingDay = 1;
+    const events = [
+      event({ bookingId: "blocked", checkpoint: "after_dive_1", status: "cleared", meetingDay: 1 }),
+    ];
     expect(latestOfflineRollCall(copy, events, "blocked", "after_dive_1", DAY_TWO)).toMatchObject({
       state: "not_boarded",
       local: false,
@@ -112,10 +161,17 @@ describe("an offline copy of a course that meets on two days", () => {
         status: "boarded",
         bookingId: "blocked",
         occurredAt: "2026-07-20T13:30:00.000Z",
+        meetingDay: 0,
+        observedEvidenceIds: copy.manifests
+          .find((item) => item.checkpoint === "after_dive_1")
+          ?.divers.find((item) => item.bookingId === "blocked")?.rollCallContext
+          ?.observedEvidenceIds,
       }),
     ];
     // Day one's queued "back aboard" settles day one's missing diver for good.
+    copy.selectedRollCallMeetingDay = 1;
     expect(latestOfflineRollCall(copy, events, "blocked", "after_dive_1", DAY_TWO)).toBeUndefined();
+    copy.selectedRollCallMeetingDay = 0;
     expect(latestOfflineRollCall(copy, events, "blocked", "after_dive_1", DAY_ONE)?.state).toBe(
       "boarded",
     );
@@ -133,11 +189,13 @@ describe("an offline copy of a course that meets on two days", () => {
           recordedByName: "Sal",
           implied: false,
         };
+        identifySavedRollCall(copy, { crewPersonId: "crew-dana" }, "departure", 0);
       }
     }
     expect(latestOfflineCrewRollCall(copy, [], "crew-dana", "departure", DAY_ONE)?.state).toBe(
       "boarded",
     );
+    copy.selectedRollCallMeetingDay = 1;
     expect(latestOfflineCrewRollCall(copy, [], "crew-dana", "departure", DAY_TWO)).toBeUndefined();
   });
 
@@ -170,6 +228,8 @@ describe("an offline copy of a course that meets on two days", () => {
     it("does not read day one's queued taps as day two's count", () => {
       const copy = courseCopy({});
       copy.savedAt = SUNDAY_SAVE;
+      copy.rollCallMeetingDay = 1;
+      copy.selectedRollCallMeetingDay = 1;
       const events = [
         event({
           bookingId: "ready",
@@ -177,6 +237,7 @@ describe("an offline copy of a course that meets on two days", () => {
           status: "boarded",
           occurredAt: "2026-07-20T13:00:00.000Z",
           syncStatus: "applied",
+          meetingDay: 0,
         }),
         event({
           clientEventId: "e2",
@@ -185,6 +246,7 @@ describe("an offline copy of a course that meets on two days", () => {
           status: "boarded",
           occurredAt: "2026-07-20T11:00:00.000Z",
           syncStatus: "applied",
+          meetingDay: 0,
         }),
       ];
       expect(latestOfflineRollCall(copy, events, "ready", "after_dive_1", DAY_TWO)).toBeUndefined();
@@ -195,6 +257,8 @@ describe("an offline copy of a course that meets on two days", () => {
       const copy = crewSnapshot();
       copy.rollCallDayBoundaries = [BOUNDARY];
       copy.savedAt = SUNDAY_SAVE;
+      copy.rollCallMeetingDay = 1;
+      copy.selectedRollCallMeetingDay = 1;
       const events = [
         event({
           bookingId: undefined,
@@ -203,6 +267,7 @@ describe("an offline copy of a course that meets on two days", () => {
           status: "boarded",
           occurredAt: "2026-07-20T13:00:00.000Z",
           syncStatus: "applied",
+          meetingDay: 0,
         }),
       ];
       expect(
@@ -213,6 +278,8 @@ describe("an offline copy of a course that meets on two days", () => {
     it("does not let day one's retraction hide a missing diver the copy brought home", () => {
       const copy = courseCopy({});
       copy.savedAt = SUNDAY_SAVE;
+      copy.rollCallMeetingDay = 1;
+      copy.selectedRollCallMeetingDay = 1;
       for (const manifest of copy.manifests) {
         const diver = manifest.divers.find((entry) => entry.bookingId === "ready");
         if (diver && manifest.checkpoint === "after_dive_1") {
@@ -222,6 +289,7 @@ describe("an offline copy of a course that meets on two days", () => {
             recordedByName: "Sal",
             implied: false,
           };
+          identifySavedRollCall(copy, { bookingId: "ready" }, "after_dive_1", 1);
         }
       }
       const events = [
@@ -231,6 +299,7 @@ describe("an offline copy of a course that meets on two days", () => {
           status: "cleared",
           occurredAt: "2026-07-20T13:30:00.000Z",
           syncStatus: "applied",
+          meetingDay: 0,
         }),
       ];
       expect(latestOfflineRollCall(copy, events, "ready", "after_dive_1", DAY_TWO)?.state).toBe(
@@ -240,13 +309,14 @@ describe("an offline copy of a course that meets on two days", () => {
   });
 
   describe("an undo of a new day's own mark leaves the earlier day's missing diver missing (#3981)", () => {
-    const restateAndUndo = (status: "boarded" | "not_boarded", day: string) => [
+    const restateAndUndo = (status: "boarded" | "not_boarded", day: string, meetingDay: number) => [
       event({
         clientEventId: "r1",
         bookingId: "blocked",
         checkpoint: "after_dive_1",
         status,
         occurredAt: `${day}T13:00:00.000Z`,
+        meetingDay,
       }),
       event({
         clientEventId: "r2",
@@ -255,16 +325,18 @@ describe("an offline copy of a course that meets on two days", () => {
         status: "cleared",
         retractsClientEventId: "r1",
         occurredAt: `${day}T13:05:00.000Z`,
+        meetingDay,
       }),
     ];
 
     it("on a copy saved on day one", () => {
       const copy = courseCopy(dockAndDive);
+      copy.selectedRollCallMeetingDay = 1;
       for (const status of ["boarded", "not_boarded"] as const) {
         expect(
           latestOfflineRollCall(
             copy,
-            restateAndUndo(status, "2026-07-21"),
+            restateAndUndo(status, "2026-07-21", 1),
             "blocked",
             "after_dive_1",
             DAY_TWO,
@@ -276,10 +348,12 @@ describe("an offline copy of a course that meets on two days", () => {
     it("on a copy refreshed on day two that brought day one's word home", () => {
       const copy = courseCopy(dockAndDive);
       copy.savedAt = "2026-07-21T07:00:00.000Z";
+      copy.rollCallMeetingDay = 1;
+      copy.selectedRollCallMeetingDay = 1;
       expect(
         latestOfflineRollCall(
           copy,
-          restateAndUndo("not_boarded", "2026-07-21"),
+          restateAndUndo("not_boarded", "2026-07-21", 1),
           "blocked",
           "after_dive_1",
           DAY_TWO,
@@ -290,11 +364,13 @@ describe("an offline copy of a course that meets on two days", () => {
     it("on day three, after day two's undo, on a copy saved on day two", () => {
       const copy = courseCopy(dockAndDive);
       copy.savedAt = "2026-07-21T07:00:00.000Z";
+      copy.rollCallMeetingDay = 1;
+      copy.selectedRollCallMeetingDay = 2;
       copy.rollCallDayBoundaries = [BOUNDARY, "2026-07-22T00:00:00.000Z"];
       expect(
         latestOfflineRollCall(
           copy,
-          restateAndUndo("not_boarded", "2026-07-21"),
+          restateAndUndo("not_boarded", "2026-07-21", 1),
           "blocked",
           "after_dive_1",
           new Date("2026-07-22T14:00:00.000Z"),
@@ -307,9 +383,16 @@ describe("an offline copy of a course that meets on two days", () => {
     const copy = courseCopy(dockAndDive);
     copy.rollCallDayBoundaries = [BOUNDARY, "2026-07-22T00:00:00.000Z"];
     const DAY_THREE = new Date("2026-07-22T14:00:00.000Z");
+    copy.selectedRollCallMeetingDay = 2;
     const events = [
       // Day two's dock count, tapped on this phone: ordinal 0, not "a later dive".
-      event({ bookingId: "blocked", checkpoint: "departure", status: "boarded" }),
+      event({
+        bookingId: "blocked",
+        checkpoint: "departure",
+        status: "boarded",
+        meetingDay: 1,
+        observedEvidenceIds: [],
+      }),
     ];
     expect(latestOfflineRollCall(copy, [], "blocked", "after_dive_1", DAY_THREE)?.state).toBe(
       "not_boarded",

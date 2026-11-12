@@ -61,10 +61,7 @@ export async function meetingWindowsByTrip(
  * (`listRollCallGaps`, `listUnaccountedForByTrip`).
  */
 export function currentMeetingDayMarks(now: Date = nowDate()): SQL {
-  return sql`"roll_call_events"."occurred_at" >= coalesce((
-    select max(day_start.boundary) from ${dayBoundaries()} day_start
-    where day_start.boundary <= ${now.toISOString()}::timestamptz
-  ), '-infinity'::timestamptz)`;
+  return sql`${rollCallDayIndex()} = ${rollCallCurrentDayIndex(now)}`;
 }
 
 /**
@@ -87,14 +84,13 @@ function dayBoundaries(): SQL {
 
 /**
  * **The meeting day a roll-call result belongs to** (0-based, `rollCallDayOf`
- * in SQL): how many day boundaries its `occurred_at` has passed. 0 for every
- * result on a one-day departure.
+ * in SQL): the day selected at capture. Absent retained multi-day context
+ * remains -1; capture timestamps never assign it. One-day departures use 0.
  */
 export function rollCallDayIndex(): SQL<number> {
-  return sql<number>`(
-    select count(*)::int from ${dayBoundaries()} b
-    where b.boundary <= "roll_call_events"."occurred_at"
-  )`;
+  return sql<number>`coalesce("roll_call_events"."meeting_day", case when
+    (select count(*) from ${tripScheduleDays} d where d.trip_id = "roll_call_events"."trip_id") > 1
+    then -1 else 0 end)`;
 }
 
 /**

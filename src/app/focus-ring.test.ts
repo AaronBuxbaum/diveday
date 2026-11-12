@@ -472,7 +472,7 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
   // as a ledger door's would, so it is drawn inside.
   [
     "app/s/[shopSlug]/courses/page.tsx",
-    "group flex gap-4 px-2",
+    "group flex gap-4 py-5",
     ["focus-visible:focus-ring-inset"],
   ],
   // The settings rail's one row. Its box is `RAIL_ROW_BOX`, which the settings

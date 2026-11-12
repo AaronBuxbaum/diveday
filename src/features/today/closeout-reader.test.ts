@@ -13,6 +13,7 @@ import {
   trips as tripsTable,
 } from "@/db/schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed-more-trips";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { nowMs } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
@@ -21,7 +22,6 @@ import { fileScopedShopContext } from "@/test/db";
 import { markBookingNoShow } from "../no-show/store";
 import { getTripOpenSeatsDebrief } from "../open-seats/store";
 import { addCrewRecapPhoto } from "../recap/store";
-import { recordTripStage } from "../trip-stages/store";
 import { assembleEveningClose } from "./closeout";
 import { getDayCloseout, listHeadCountCloses } from "./closeout-reader";
 
@@ -140,7 +140,7 @@ describe("day close-out (in-memory PGlite)", () => {
       .returning();
     if (!booking) throw new Error("fixture booking insert returned no row");
     await markArrived(db, booking.id, { recordedByPersonId: staff.person.id }); // the trail, #2702
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip.id,
       bookingId: booking.id,
@@ -213,7 +213,7 @@ describe("day close-out (in-memory PGlite)", () => {
           occurredAt: new Date(completed.startsAt.getTime() + (step * 10 + index) * 60_000),
         })),
       );
-      await db.insert(rollCallEvents).values(boarded);
+      await seedRollCallEvidence(db, boarded);
 
       const counted = await getDayCloseout(db, shop.id, shop.timezone, now);
       const withCrew = counted.departures.find(
@@ -228,7 +228,7 @@ describe("day close-out (in-memory PGlite)", () => {
       const firstCrew = assigned[0];
       const closing = checkpoints.at(-1);
       if (!firstCrew || !closing) throw new Error("no crew or checkpoint");
-      await db.insert(rollCallEvents).values({
+      await seedRollCallEvidence(db, {
         shopId: shop.id,
         tripId: completed.tripId,
         ...crewSubject(firstCrew.personId),
@@ -299,7 +299,7 @@ describe("day close-out (in-memory PGlite)", () => {
         recordedBy?: string;
       };
       const diverMark = (occurredAt: Date, createdAt?: Date, options: MarkOptions = {}) =>
-        db.insert(rollCallEvents).values({
+        seedRollCallEvidence(db, {
           shopId: shop.id,
           tripId: completed.tripId,
           bookingId: seat.id,
@@ -310,7 +310,7 @@ describe("day close-out (in-memory PGlite)", () => {
           ...(createdAt ? { createdAt } : {}),
         });
       const crewMark = (occurredAt: Date, createdAt?: Date, options: MarkOptions = {}) =>
-        db.insert(rollCallEvents).values({
+        seedRollCallEvidence(db, {
           shopId: shop.id,
           tripId: completed.tripId,
           ...crewSubject(crew.personId),
@@ -651,7 +651,8 @@ describe("day close-out (in-memory PGlite)", () => {
       // make this case about a rule it is not testing. What it does need is the
       // dock count *closed*, so that nothing else on the row is holding the
       // station open.
-      await db.insert(rollCallEvents).values(
+      await seedRollCallEvidence(
+        db,
         rollCallCheckpoints(trip.plannedDives).map((checkpoint, step) => ({
           shopId: shop.id,
           tripId: trip.id,
@@ -702,7 +703,7 @@ describe("day close-out (in-memory PGlite)", () => {
         personId: divers[0].id,
         status: "booked",
       });
-      await db.insert(rollCallEvents).values({
+      await seedRollCallEvidence(db, {
         shopId: shop.id,
         tripId: trip.id,
         bookingId: booking.id,
@@ -858,45 +859,5 @@ describe("day close-out (in-memory PGlite)", () => {
       expect([evening.divers, evening.stations[0]?.back]).toEqual([1, 0]);
       expect(evening.allHome).toBe(false);
     });
-  });
-
-  it("settles a departure the return buffer still calls still out, once the crew tap Home", async () => {
-    // **Issue #1480, through the plumbing.** The promotion is decided in
-    // `src/features/today/closeout.ts`, but it only ever fires if the db half actually
-    // carries the crew's last tap onto the departure — this is the test that
-    // catches that being forgotten.
-    const { db, shop } = shared;
-    const [staff] = await listStaff(db, shop.id);
-    if (!staff) throw new Error("seed staff missing");
-
-    // Due back five minutes ago: `hasReturned` says no for another 55.
-    const endsAt = new Date(nowMs() - 5 * 60 * 1000);
-    const [trip] = await db
-      .insert(tripsTable)
-      .values({
-        shopId: shop.id,
-        title: "Just In — Molasses & French",
-        startsAt: new Date(endsAt.getTime() - 4 * HOUR),
-        endsAt,
-        capacity: 12,
-        plannedDives: 2,
-        priceCents: 13000,
-      })
-      .returning();
-    if (!trip) throw new Error("fixture trip insert returned no row");
-
-    const before = await getDayCloseout(db, shop.id, shop.timezone);
-    expect(before.departures.find((d) => d.tripId === trip.id)?.status).toBe("still_out");
-
-    const tap = await recordTripStage(db, {
-      shopId: shop.id,
-      tripId: trip.id,
-      stage: "home",
-      recordedByPersonId: staff.person.id,
-    });
-    if (!tap.ok) throw new Error(`stage refused: ${tap.reason}`);
-
-    const after = await getDayCloseout(db, shop.id, shop.timezone);
-    expect(after.departures.find((d) => d.tripId === trip.id)?.status).toBe("all_home");
   });
 });

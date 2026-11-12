@@ -43,12 +43,19 @@ export const ROLL_CALL_SUBJECT_KINDS = ["seat", "crew"] as const;
 export type RollCallSubjectKind = (typeof ROLL_CALL_SUBJECT_KINDS)[number];
 
 /**
- * Oldest first on `occurredAt`, then `createdAt`, then `seq`: the one order of roll-call marks
- * (ADR 20260815-roll-call-order-is-a-property-of-the-data). The SQL twin is
- * `src/db/roll-call-order.ts`. `seq` is required: a reader that did not select it would tie
- * two same-transaction taps and let the first one seen win.
+ * Oldest projection revision first. A sequence selects a materialized row;
+ * it never establishes observation between original statements. Audit clocks
+ * have their separate comparator below; SQL uses the same sequence rule.
  */
 export function compareMarkOrder(
+  a: { occurredAt: Date; createdAt: Date; seq: number },
+  b: { occurredAt: Date; createdAt: Date; seq: number },
+): number {
+  return a.seq - b.seq;
+}
+
+/** Capture-time order for audit and non-roll-call timelines, never supersession. */
+export function compareAuditMarkOrder(
   a: { occurredAt: Date; createdAt: Date; seq: number },
   b: { occurredAt: Date; createdAt: Date; seq: number },
 ): number {
@@ -62,21 +69,12 @@ export function compareMarkOrder(
 export type RollCallState = "awaiting" | "boarded" | "not_boarded";
 
 /**
- * The refusal an offline **retraction** gets when the statement it names is no
- * longer the one standing (ADR 20260815-an-offline-retraction-names-its-target).
- *
- * A shared constant rather than the same string literal at both ends, because
- * the two ends are a database writer and a service-worker-bundled reader, and
- * they mean different things by it: `recordRollCall`/`recordCrewRollCall`
- * *produce* it, and `explicitResultAt` (`src/lib/offline-manifests.ts`) treats
- * it as the one rejection that says something specific — *the server holds a
- * statement newer than anything this device can see* — and reads the row down
- * to awaiting on the strength of it. Spelled twice, a rename on the writer side
- * would leave the reader silently believing a stale value forever, with every
- * test on both sides green. Here it is a `tsc` failure.
- *
- * It lives in this dependency-free leaf for the usual reason: the reader is
- * compiled into the service worker, so it cannot reach `src/db`.
+ * A named retraction cannot be applied to its exact target: it may no longer
+ * stand, be unavailable in this scope, or have no validated target relation.
+ * Both server writers and saved-copy readers use this refusal. A rejected
+ * dock undo invalidates that device's old ashore exemption without inventing
+ * an accepted aboard statement or superseding actual missing evidence.
+ * This dependency-free leaf is also bundled into the service worker.
  */
 export const RETRACTION_SUPERSEDED = "retraction_superseded";
 
@@ -109,6 +107,7 @@ export function isRollCallCheckpoint(
 
 export type RollCallRecord = {
   state: Exclude<RollCallState, "awaiting">;
+  evidenceConflict?: boolean;
   occurredAt: Date;
   recordedByName: string;
   /**
@@ -193,7 +192,7 @@ export const ROLL_CALL_NOTE_MAX = 300;
 export function rollCallNoteAllowed(
   checkpoint: RollCallCheckpoint,
   status: RollCallEventStatus,
-  standing: Pick<RollCallRecord, "state" | "implied"> | undefined,
+  standing: Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined,
 ): boolean {
   if (checkpoint === "departure") return false;
   // Raising it: this event *is* the statement that somebody is unaccounted for.
@@ -246,7 +245,7 @@ export function standingResultMeansSailed(
 
 export function isNotBackAboard(
   checkpoint: RollCallCheckpoint,
-  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+  rollCall: Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined,
 ): boolean {
   if (checkpoint === "departure") return false;
   if (rollCall?.state !== "not_boarded") return false;
@@ -289,13 +288,16 @@ export function isNotBackAboard(
  * only offline control that would take a result for them then is "Mark not back
  * aboard", which after a dive means *did not come back from a dive*.
  */
-export function carryForwardNotBoarded<T extends Pick<RollCallRecord, "state" | "implied">>(
-  perCheckpoint: readonly (T | undefined)[],
-): (T | undefined)[] {
+export function carryForwardNotBoarded<
+  T extends Pick<RollCallRecord, "state" | "implied" | "evidenceConflict">,
+>(perCheckpoint: readonly (T | undefined)[]): (T | undefined)[] {
   let carried: T | undefined;
   return perCheckpoint.map((result, index) => {
     if (result) {
-      carried = index === 0 && result.state === "not_boarded" ? result : undefined;
+      carried =
+        index === 0 && result.state === "not_boarded" && !result.evidenceConflict
+          ? result
+          : undefined;
       return result;
     }
     // The cast is the one TypeScript cannot see through: spreading a generic

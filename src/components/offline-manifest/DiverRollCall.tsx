@@ -342,7 +342,7 @@ function OfflineDiverRow({
                     ? t("manifest.boardedCheckAriaLabel")
                     : t("shared.offlineManifest.single.markBoarded")
                 }
-                busy={busyBooking === diver.bookingId}
+                busy={busyBooking === diver.bookingId || state?.evidenceConflict === true}
                 onTap={() =>
                   void record(
                     { bookingId: diver.bookingId },

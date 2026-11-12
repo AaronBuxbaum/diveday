@@ -33,6 +33,7 @@ import { savedCopyReducer } from "./saved-copy";
 import { useSelectedTripEnvelopeHandler } from "./selected-trip-envelope";
 import { initialTripStatusMessage } from "./trip-status";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
+import { useDeviceOnline } from "./use-device-online";
 import { useOfflineTenant } from "./use-offline-tenant";
 import {
   foreignPendingTrip,
@@ -645,7 +646,9 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     }
     try {
       const changeRevisionAtSync = selectedTripStorageRef.current.changeRevision,
-        next = await syncOfflineManifest(tripId, slug, getTenantRound() ?? undefined);
+        next = await syncOfflineManifest(tripId, slug, getTenantRound() ?? undefined, {
+          refreshWhenQuiet: true,
+        });
       if (!next) return;
       // The request may have been answered under the previous session just as
       // the device verified a different tenant. Never paint that response on
@@ -881,19 +884,4 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     servedWithoutAnswer,
     copyCaveat,
   };
-}
-
-/** `navigator.onLine`, kept current. This view renders only on the device. */
-function useDeviceOnline(): boolean {
-  const [online, setOnline] = useState(() => navigator.onLine);
-  useEffect(() => {
-    const sync = () => setOnline(navigator.onLine);
-    window.addEventListener("online", sync);
-    window.addEventListener("offline", sync);
-    return () => {
-      window.removeEventListener("online", sync);
-      window.removeEventListener("offline", sync);
-    };
-  }, []);
-  return online;
 }

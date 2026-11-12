@@ -3,11 +3,8 @@ import { describe, expect, it } from "vitest";
 import { cancelBooking } from "@/db/bookings";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { crewSubject } from "@/db/roll-call-subject";
-import {
-  rollCallEvents as rollCallEventsTable,
-  rollCallEvents as rollCallMarksTable,
-  tripAssignments,
-} from "@/db/schema";
+import { rollCallEvents as rollCallEventsTable, tripAssignments } from "@/db/schema";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowMs } from "@/lib/clock";
@@ -390,7 +387,7 @@ describe("unclosed roll call (DOM-H3)", () => {
 
       const occurredAt = new Date(nowMs() - 30 * 60 * 1000);
       await db.transaction(async (tx) => {
-        await tx.insert(rollCallEventsTable).values([
+        await seedRollCallEvidence(tx, [
           {
             shopId: shop.id,
             tripId: trip.id,
@@ -464,7 +461,8 @@ describe("unclosed roll call (DOM-H3)", () => {
       await db
         .insert(tripAssignments)
         .values(personIds.map((personId) => ({ tripId: input.tripId, personId })));
-      await db.insert(rollCallMarksTable).values(
+      await seedRollCallEvidence(
+        db,
         personIds.map((personId) => ({
           shopId: input.shopId,
           tripId: input.tripId,

@@ -161,7 +161,10 @@ export function translatorForThisDevice() {
  * "did this diver come back from the dive", and the pair being separable is how
  * one of the four controls below would end up sending the retraction without it.
  */
-export type OfflineStatement = Pick<OfflineRollCallEvent, "status" | "retractsClientEventId">;
+export type OfflineStatement = Pick<
+  OfflineRollCallEvent,
+  "status" | "retractsClientEventId" | "reconcilesEvidence"
+>;
 
 /**
  * What re-tapping a control that already carries its own state should queue: the

@@ -17,6 +17,7 @@ import {
 import { lineKindKey, STATUS_KEYS } from "../../../order-detail-keys";
 
 const RESULT_KEYS: Record<DisputeRollCallResult, StaffMessageKey> = {
+  conflicting: "manifest.conflicts.summary",
   boarded: "disputeSheet.resultBoarded",
   not_boarded: "disputeSheet.resultNotBoarded",
   not_recorded: "disputeSheet.resultNotRecorded",

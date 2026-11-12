@@ -65,6 +65,7 @@ export async function subjectRollCallEvents(
       retracts: rollCallEvents.retractsEventId,
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
+      evidenceConflict: rollCallEvents.evidenceConflict,
       occurredAt: rollCallEvents.occurredAt,
       day: rollCallDayIndex(),
       currentDay: rollCallCurrentDayIndex(),

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
 import {
   appendOfflineChecklistCheck,
   beginOfflineTenantVerificationRound,
@@ -160,14 +161,20 @@ describe("overlapping verified-tenant purge rounds", () => {
         signalRequest();
         await responseGate;
         return new Response(
-          JSON.stringify({
-            results: [
+          JSON.stringify(
+            withRefreshedSyncFrame(
+              reefRunners,
               {
-                clientEventId: queued.checklistEvents[0].clientEventId,
-                status: "applied",
+                results: [
+                  {
+                    clientEventId: queued.checklistEvents[0].clientEventId,
+                    status: "applied",
+                  },
+                ],
               },
-            ],
-          }),
+              { checklistEvents: queued.checklistEvents },
+            ),
+          ),
           { status: 200, headers: { "content-type": "application/json" } },
         );
       }),

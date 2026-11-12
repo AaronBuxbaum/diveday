@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { advanceClock } from "@/test/clock";
@@ -45,7 +46,7 @@ describe("departure-log certification captures", () => {
       status: "verified",
       reviewedByPersonId: staff.id,
     });
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: reef.id,
       bookingId: first.booking.id,
@@ -187,36 +188,33 @@ describe("departure-log certification captures", () => {
       .values({ shopId: shop.id, fullName: "Former reviewer" })
       .returning();
     if (!reviewer) throw new Error("reviewer missing");
-    const [event] = await db
-      .insert(rollCallEvents)
-      .values({
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: first.booking.id,
-        recordedByPersonId: staff.id,
-        status: "boarded",
-        checkpoint: "departure",
-        source: "live",
-        occurredAt: nowDate(),
-        certificationSnapshotStartedAt: nowDate(),
-        certificationSnapshotCapturedAt: nowDate(),
-        certificationSnapshot: [
-          {
-            kind: "level",
-            agency: "padi",
-            level: "rescue",
-            specialty: null,
-            identifier: "PRIVATE-CARD",
-            status: "verified",
-            reviewedAt: nowDate().toISOString(),
-            reviewedByName: reviewer.fullName,
-            reviewedByPersonId: reviewer.id,
-            imported: false,
-            selfDeclared: false,
-          },
-        ],
-      })
-      .returning();
+    const [event] = await seedRollCallEvidence(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: first.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+      checkpoint: "departure",
+      source: "live",
+      occurredAt: nowDate(),
+      certificationSnapshotStartedAt: nowDate(),
+      certificationSnapshotCapturedAt: nowDate(),
+      certificationSnapshot: [
+        {
+          kind: "level",
+          agency: "padi",
+          level: "rescue",
+          specialty: null,
+          identifier: "PRIVATE-CARD",
+          status: "verified",
+          reviewedAt: nowDate().toISOString(),
+          reviewedByName: reviewer.fullName,
+          reviewedByPersonId: reviewer.id,
+          imported: false,
+          selfDeclared: false,
+        },
+      ],
+    });
     if (!event) throw new Error("event missing");
     expect(
       await anonymizeDiver(db, { shopId: shop.id, personId: reviewer.id, actorPersonId: staff.id }),

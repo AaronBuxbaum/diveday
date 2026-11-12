@@ -1,5 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import {
   addIncidentAddendum,
   fileIncidentReport,
@@ -14,13 +15,7 @@ import {
   recordPreDepartureCheck,
 } from "../../db/pre-departure-check";
 import { createCertification, reviewCertification } from "../../db/readiness";
-import {
-  activityEvents,
-  rollCallEvents,
-  shops,
-  waiverRecords,
-  waiverTemplates,
-} from "../../db/schema/index";
+import { activityEvents, shops, waiverRecords, waiverTemplates } from "../../db/schema/index";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "../../db/trips";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
 import { nowDate } from "../../lib/clock";
@@ -490,7 +485,7 @@ describe("the departure log's roster changes and incident reports", () => {
       unmarked?.roster.find((entry) => entry.bookingId === unsent.bookingId)?.waiver?.state,
     ).toBe("not_sent");
 
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: reef.id,
       bookingId: unsent.bookingId,

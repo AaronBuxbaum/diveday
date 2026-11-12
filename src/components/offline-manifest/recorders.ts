@@ -16,6 +16,7 @@ import {
   offlineArrivalEvents,
 } from "@/lib/offline-manifests";
 import type { PreDepartureCheckStatus } from "@/lib/pre-departure-check";
+import { offlineCausalContext } from "@/lib/roll-call-offline-causality";
 import type { SavedCopyAction } from "./saved-copy";
 import type { OfflineStatement } from "./shared";
 
@@ -105,12 +106,33 @@ export function offlineRecorders({
     const sentNote = rollCallNoteAllowed(checkpoint, statement.status, standing)
       ? noteDrafts[subjectId]?.trim() || undefined
       : undefined;
+    const causal = offlineCausalContext(envelope.snapshot, envelope.events, subject, checkpoint);
+    const displayed = envelope.snapshot.manifests.find((item) => item.checkpoint === checkpoint);
+    const savedDay =
+      "bookingId" in subject
+        ? displayed?.divers.find((item) => item.bookingId === subject.bookingId)?.rollCallContext
+            ?.meetingDay
+        : displayed?.crew.find((item) => item.id === subject.crewPersonId)?.rollCallContext
+            ?.meetingDay;
+    // An old copy's projection fallback is not a captured calendar-day choice.
+    // The server knows whether absent context means one day or an unknown day.
+    const capturedDay =
+      envelope.snapshot.selectedRollCallMeetingDay ??
+      envelope.snapshot.rollCallMeetingDay ??
+      savedDay;
     setBusyBooking(subjectId);
     try {
       const next = await appendOfflineRollCall(tripId, {
         ...subject,
         ...statement,
         checkpoint,
+        meetingDay: capturedDay,
+        snapshotId: envelope.snapshot.snapshotId,
+        snapshotSavedAt: envelope.snapshot.savedAt,
+        erasureEpochToken: envelope.snapshot.erasureEpochToken,
+        // A synthetic old-copy label cannot name server evidence. It must not
+        // discard the real queued predecessors the crew have just observed.
+        observedEvidenceIds: causal.observedEvidenceIds.filter((id) => !id.startsWith("legacy:")),
         // The sentence rides the same queued event as the mark, so there is no
         // second write to lose offshore.
         note: sentNote,

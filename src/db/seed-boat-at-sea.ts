@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, isNull, lte, notInArray } from "drizzle-orm";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters } from "@/lib/depth-units";
 import { shopDayBounds } from "@/lib/zoned";
@@ -558,7 +559,7 @@ async function writeTheRecord(
       ...(back ? [mark("after_dive_2", back)] : []),
     ];
   });
-  await db.insert(rollCallEvents).values(diverRows);
+  await seedRollCallEvidence(db, diverRows, { observesPrevious: false });
 
   // The crew counted at the same checkpoints. The skipper never left the
   // boat and the first guide came up with the last of her six; the second
@@ -569,7 +570,8 @@ async function writeTheRecord(
       ? new Date(plan.finishedAt.getTime() - 30_000)
       : new Date(now.getTime() - (SURFACED_BEFORE_NOW_MIN[FIRST_GUIDE_TEAMS - 1] ?? 6) * minute);
   const lastGuideId = crew.filter((member) => member.tripRole === "divemaster").at(-1)?.personId;
-  await db.insert(rollCallEvents).values(
+  await seedRollCallEvidence(
+    db,
     crew.flatMap((member, index) =>
       [
         { checkpoint: "departure", occurredAt: plan.startsAt },
@@ -597,6 +599,7 @@ async function writeTheRecord(
         occurredAt: new Date(occurredAt.getTime() + (divers.length + index) * 1_000),
       })),
     ),
+    { observesPrevious: false },
   );
 
   // Dive 1 is logged in both versions. A finished dusk departure also has the
@@ -774,7 +777,8 @@ async function bringBoatHome(
       !countedBack(crew.filter((row) => row.personId === personId)),
   );
   if (stillDown.length > 0) {
-    await db.insert(rollCallEvents).values(
+    await seedRollCallEvidence(
+      db,
       stillDown.map((bookingId, index) => ({
         shopId: trip.shopId,
         tripId: trip.id,
@@ -785,10 +789,12 @@ async function bringBoatHome(
         source: "live" as const,
         occurredAt: new Date(upAt.getTime() - (stillDown.length - index) * 1_000),
       })),
+      { observesPrevious: true },
     );
   }
   if (crewDown.length > 0) {
-    await db.insert(rollCallEvents).values(
+    await seedRollCallEvidence(
+      db,
       crewDown.map((personId) => ({
         shopId: trip.shopId,
         tripId: trip.id,
@@ -800,6 +806,7 @@ async function bringBoatHome(
         source: "live" as const,
         occurredAt: upAt,
       })),
+      { observesPrevious: true },
     );
   }
 

@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -9,7 +10,7 @@ import {
 } from "../test/substrate-fixtures/db/roll-call-test-fixtures";
 import { cancelBooking } from "./bookings";
 import { listUnaccountedForByTrip } from "./manifests";
-import { bookings as bookingsTable, rollCallEvents } from "./schema";
+import { bookings as bookingsTable } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -32,24 +33,29 @@ async function boat(divers = 3, plannedDives = 2) {
     bookingIds: made.bookingIds,
   });
   let minute = 0;
-  /** One roll-call event, each a minute after the last so the newest is the one written last. */
+  /** Audit instants are spaced; observation is explicitly opted into by the author. */
   const say = async (
     bookingId: string,
     checkpoint: "departure" | "after_dive_1" | "after_dive_2" | (string & {}),
     status: "boarded" | "not_boarded" | "cleared",
     tripId = made.trip.id,
+    observesPrevious = false,
   ) => {
     minute += 1;
-    await db.insert(rollCallEvents).values({
-      shopId: shop.id,
-      tripId,
-      bookingId,
-      recordedByPersonId: made.staffId,
-      status,
-      checkpoint,
-      source: "live",
-      occurredAt: new Date(nowMs() - HOUR + minute * 60_000),
-    });
+    await seedRollCallEvidence(
+      db,
+      {
+        shopId: shop.id,
+        tripId,
+        bookingId,
+        recordedByPersonId: made.staffId,
+        status,
+        checkpoint,
+        source: "live",
+        occurredAt: new Date(nowMs() - HOUR + minute * 60_000),
+      },
+      { observesPrevious },
+    );
   };
   const unaccounted = async () =>
     [...((await listUnaccountedForByTrip(db, shop.id, [made.trip.id])).get(made.trip.id) ?? [])]
@@ -85,27 +91,34 @@ describe("listUnaccountedForByTrip", () => {
     expect(await unaccounted()).toEqual([1]);
   });
 
-  it("is cleared by a correction at the same checkpoint, newest word wins", async () => {
+  it("is cleared by an observed correction at the same checkpoint", async () => {
     const { bookingIds, say, unaccounted } = await boat();
     await say(bookingIds[0] as string, "after_dive_1", "not_boarded");
-    await say(bookingIds[0] as string, "after_dive_1", "boarded");
+    await say(bookingIds[0] as string, "after_dive_1", "boarded", undefined, true);
     expect(await unaccounted()).toEqual([]);
     // And the other way round: a diver counted aboard then found not to be is missing.
     await say(bookingIds[1] as string, "after_dive_1", "boarded");
-    await say(bookingIds[1] as string, "after_dive_1", "not_boarded");
+    await say(bookingIds[1] as string, "after_dive_1", "not_boarded", undefined, true);
     expect(await unaccounted()).toEqual([1]);
   });
 
   it("is cleared by a retraction of a mis-tapped not-back, and not by the retraction of an older word", async () => {
     const { bookingIds, say, unaccounted } = await boat();
     await say(bookingIds[0] as string, "after_dive_1", "not_boarded");
-    await say(bookingIds[0] as string, "after_dive_1", "cleared");
+    await say(bookingIds[0] as string, "after_dive_1", "cleared", undefined, true);
     expect(await unaccounted()).toEqual([]);
     // A retraction at dive 2 drops dive 2 out; the dive 1 word still stands.
     await say(bookingIds[1] as string, "after_dive_1", "not_boarded");
     await say(bookingIds[1] as string, "after_dive_2", "boarded");
-    await say(bookingIds[1] as string, "after_dive_2", "cleared");
+    await say(bookingIds[1] as string, "after_dive_2", "cleared", undefined, true);
     expect(await unaccounted()).toEqual([1]);
+  });
+
+  it("retains an unobserved opposing report instead of treating its later audit clock as correction", async () => {
+    const { bookingIds, say, unaccounted } = await boat();
+    await say(bookingIds[0] as string, "after_dive_1", "not_boarded");
+    await say(bookingIds[0] as string, "after_dive_1", "boarded");
+    expect(await unaccounted()).toEqual([0]);
   });
 
   it("reads two spellings of one checkpoint as one, newest word standing", async () => {

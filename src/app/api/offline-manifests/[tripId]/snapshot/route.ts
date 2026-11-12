@@ -5,6 +5,7 @@ import type {
   OfflineManifestSnapshotRequest,
   OfflineManifestSnapshotResponse,
 } from "@/lib/offline-manifests";
+import { supportsCausalRollCall } from "@/lib/roll-call-protocol";
 import { uuidParam } from "@/lib/uuid";
 import { authorizeOfflineManifestStaff, OFFLINE_MANIFEST_NO_STORE } from "../../staff-context";
 
@@ -37,6 +38,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   }
   const access = await authorizeOfflineManifestStaff();
   if (!access.ok) return access.response;
+  if (!supportsCausalRollCall(request))
+    return Response.json(
+      { error: "offline_update_required" },
+      { status: 426, headers: OFFLINE_MANIFEST_NO_STORE },
+    );
   const tripId = uuidParam((await params).tripId);
   if (!tripId) {
     return Response.json(

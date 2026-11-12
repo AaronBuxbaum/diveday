@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { HOUR_MS } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
@@ -19,7 +20,6 @@ import {
   incidentReports,
   people,
   personRoles,
-  rollCallEvents,
   shops,
   trips,
 } from "./schema";
@@ -98,13 +98,11 @@ describe("rehearsalsWithEvidence", () => {
       status,
       checkpoint,
     });
-    await db
-      .insert(rollCallEvents)
-      .values([
-        event(boarded, "boarded", "departure"),
-        event(counted, "not_boarded", "after_dive_1"),
-        event(dockside, "not_boarded", "departure"),
-      ]);
+    await seedRollCallEvidence(db, [
+      event(boarded, "boarded", "departure"),
+      event(counted, "not_boarded", "after_dive_1"),
+      event(dockside, "not_boarded", "departure"),
+    ]);
     await db.insert(executedDives).values([
       { shopId: shop.id, tripId: logged.trip.id, diveNumber: 1 },
       { shopId: shop.id, tripId: unlogged.trip.id, diveNumber: 1, deletedAt: NOW },
@@ -121,7 +119,7 @@ describe("rehearsalsWithEvidence", () => {
     const other = await otherShop(db);
     const ownerId = await ownerOf(db, shop.id);
     const { trip, bookingId } = await rehearsal(db, shop.id);
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: other.id,
       tripId: trip.id,
       bookingId,
@@ -146,7 +144,7 @@ describe("clearFinishedRehearsals", () => {
     const ownerId = await ownerOf(db, shop.id);
     const kept = await rehearsal(db, shop.id);
     const cleared = await rehearsal(db, shop.id);
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: kept.trip.id,
       bookingId: kept.bookingId,
@@ -183,7 +181,7 @@ describe("clearFinishedRehearsals", () => {
     const { db, shop } = ctx;
     const ownerId = await ownerOf(db, shop.id);
     const { trip } = await rehearsal(db, shop.id);
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip.id,
       ...crewSubject(ownerId),
@@ -199,7 +197,7 @@ describe("clearFinishedRehearsals", () => {
     const { db, shop } = ctx;
     const ownerId = await ownerOf(db, shop.id);
     const { trip } = await rehearsal(db, shop.id);
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip.id,
       ...crewSubject(ownerId),
@@ -245,7 +243,7 @@ describe("clearFinishedRehearsals", () => {
     const other = await otherShop(db);
     const ownerId = await ownerOf(db, shop.id);
     const { trip } = await rehearsal(db, shop.id);
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: other.id,
       tripId: trip.id,
       ...crewSubject(ownerId),

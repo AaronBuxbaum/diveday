@@ -1,12 +1,9 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listDepartureBoardedByTrip, listUnaccountedForByTrip } from "../../db/manifests";
 import { listTripsReadiness } from "../../db/readiness";
-import {
-  bookings as bookingsTable,
-  rollCallEvents,
-  trips as tripsTable,
-} from "../../db/schema/index";
+import { bookings as bookingsTable, trips as tripsTable } from "../../db/schema/index";
 import { nowMs } from "../../lib/clock";
 import type { ReadinessResult } from "../../lib/readiness";
 import { fileScopedShopContext } from "../../test/db";
@@ -39,7 +36,7 @@ async function boat(divers: number, plannedDives = 2) {
     tripId = made.trip.id,
   ) => {
     minute += 1;
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId,
       bookingId: made.bookingIds[seat] as string,

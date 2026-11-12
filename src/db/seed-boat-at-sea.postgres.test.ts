@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { crewSubject } from "./roll-call-subject";
@@ -79,13 +80,11 @@ describePostgres("the demo boat at sea under a doubled pass", () => {
       occurredAt: new Date(now.getTime() - hoursAgo * 3_600_000),
     });
     // The captain is counted back after dive 2; the guide is still down.
-    await pg.db
-      .insert(rollCallEvents)
-      .values([
-        mark(captain.id, "after_dive_1", 4),
-        mark(guide.id, "after_dive_1", 4),
-        mark(captain.id, "after_dive_2", 2),
-      ]);
+    await seedRollCallEvidence(pg.db, [
+      mark(captain.id, "after_dive_1", 4),
+      mark(guide.id, "after_dive_1", 4),
+      mark(captain.id, "after_dive_2", 2),
+    ]);
 
     const gate = await holdRowLock(pg, sql`select id from trips where id = ${trip.id} for update`);
     const first = bringDemoBoatsAtSeaHome(pg.connect(), now);

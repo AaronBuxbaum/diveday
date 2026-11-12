@@ -1,3 +1,6 @@
+import { and, eq } from "drizzle-orm";
+import { listTripBuddyTeamEvents, listTripBuddyTeams } from "../../../db/buddy-teams";
+import { tripAssignments } from "../../../db/schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../../db/trips";
 import type { fileScopedShopContext } from "../../db";
 
@@ -17,4 +20,31 @@ export async function loadBuddyContext(ctx: ReturnType<typeof fileScopedShopCont
   const [staff] = await listStaff(db, shop.id);
   if (!staff) throw new Error("demo staff missing");
   return { db, shop, trip, a, b, c, staff: staff.person };
+}
+
+/** Put a named fixture staff member on the same trip's crew list. */
+export async function assignCrew(
+  db: Awaited<ReturnType<typeof loadBuddyContext>>["db"],
+  tripId: string,
+  personId: string,
+) {
+  const existing = await db
+    .select({ personId: tripAssignments.personId })
+    .from(tripAssignments)
+    .where(and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, personId)))
+    .limit(1);
+  if (existing.length === 0) {
+    await db.insert(tripAssignments).values({ tripId, personId });
+  }
+}
+
+export async function buddyStateOf(
+  db: Awaited<ReturnType<typeof loadBuddyContext>>["db"],
+  shopId: string,
+  tripId: string,
+) {
+  return {
+    teams: await listTripBuddyTeams(db, shopId, tripId),
+    trail: await listTripBuddyTeamEvents(db, shopId, tripId),
+  };
 }

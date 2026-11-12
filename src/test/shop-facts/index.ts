@@ -15,6 +15,10 @@ import { bringEveryBoatHome, eveningArgs } from "./bring-every-boat-home";
 import { cancelADepartureSomebodyPaidFor } from "./cancel-a-departure-somebody-paid-for";
 import { carrySomebodyWhoIsNotDiving } from "./carry-somebody-who-is-not-diving";
 import {
+  causalRollCallConflictArgs,
+  seedCausalRollCallConflict,
+} from "./causal-roll-call-conflict";
+import {
   seedCashReceipt,
   seedCollectionBilling,
   seedMixedCashReceipt,
@@ -228,6 +232,11 @@ const FACTS = {
   gearUncollected: ({ db, shop, now }) => leaveTwoUnitsUncollected(db, shop.id, now, shop.timezone),
   boatClash: ({ db, shop, now }) => slideOneDepartureOntoAnotherHull(db, shop.id, now),
   mergeCandidates: ({ db, shop, now }) => mergeCandidatesState(db, shop.id, now),
+  causalRollCallConflict: withArgs(
+    causalRollCallConflictArgs,
+    ({ db, shop, now }, args) => seedCausalRollCallConflict(db, shop, args, now),
+    { privateOnly: true },
+  ),
   dualRoleManifest: privateOnly(({ db, shop, now }) => seedDualRoleManifest(db, shop, now)),
   manifestOverCapacity: ({ db, shop, now }) => seedManifestOverCapacityState(db, shop.id, now),
   operationalTrust: withArgs(operationalTrustArgs, ({ db, shop, now }, args) =>

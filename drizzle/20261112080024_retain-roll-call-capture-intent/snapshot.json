@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "0be513e0-155e-441d-9230-25f0122a0fdd",
+  "prevIds": [
+    "b084d011-fa16-421b-ae09-fb4ffe775201"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "capture_context"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.capture_context",
+        "n|col|public.roll_call_events.capture_context",
+        "e|col|public.roll_call_events.capture_context"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "capture_context",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

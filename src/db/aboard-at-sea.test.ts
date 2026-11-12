@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { and, asc, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { aboardAtSeaBookingIds } from "./aboard-at-sea";
@@ -68,16 +69,21 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-20261015-aboard-
     status: "boarded" | "not_boarded" | "cleared",
     minutesAgo: number,
     checkpoint = "departure",
+    observesPrevious = false,
   ) {
     const [recorder] = await listStaff(db, seat.shopId);
     if (!recorder) throw new Error("seeded staff missing");
-    await db.insert(rollCallEvents).values({
-      ...seat,
-      recordedByPersonId: recorder.person.id,
-      status,
-      checkpoint,
-      occurredAt: new Date(nowMs() - minutesAgo * 60 * 1000),
-    });
+    await seedRollCallEvidence(
+      db,
+      {
+        ...seat,
+        recordedByPersonId: recorder.person.id,
+        status,
+        checkpoint,
+        occurredAt: new Date(nowMs() - minutesAgo * 60 * 1000),
+      },
+      { observesPrevious },
+    );
   }
 
   async function aboardSeat() {
@@ -354,7 +360,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-20261015-aboard-
     await mark(db, seat, "boarded", 90);
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toMatchObject({ ok: false });
 
-    await mark(db, seat, "not_boarded", 5);
+    await mark(db, seat, "not_boarded", 5, "departure", true);
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toMatchObject({ ok: true });
 
     const otherSeat = { ...seat, bookingId: other.bookingId };
@@ -463,7 +469,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-20261015-aboard-
     minutesAgo: number,
     checkpoint = "departure",
   ) {
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: crew.shopId,
       tripId: crew.tripId,
       ...crewSubject(crew.personId),
@@ -555,7 +561,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-20261015-aboard-
     await untouched(db, seat.bookingId);
 
     // The dock's own "not boarded" after the undo lets it go.
-    await mark(db, seat, "not_boarded", 5);
+    await mark(db, seat, "not_boarded", 5, "departure", true);
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toMatchObject({ ok: true });
   });
 

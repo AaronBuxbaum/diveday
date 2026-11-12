@@ -8,7 +8,9 @@ import { ScreenNotPrinted } from "@/components/paper/ScreenNotPrinted";
 import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { SkipLink } from "@/components/SkipLink";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field } from "@/components/ui/form";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
+import { cachedFormatter } from "@/lib/intl-cache";
 import { OfflineChecklist, OfflineSnags } from "./Checklist";
 import { OfflineCheckpointNav } from "./CheckpointNav";
 import { OfflineCounter } from "./Counter";
@@ -98,6 +100,25 @@ export function OfflineTripScreen({
               level="page"
             />
             <OfflineTripHeader view={view} controls={controls} />
+            {(envelope.snapshot.rollCallMeetingDays?.length ?? 0) > 1 ? (
+              <Field label={t("manifest.conflicts.meetingDay")} htmlFor="offline-meeting-day">
+                <select
+                  id="offline-meeting-day"
+                  className={controlClass}
+                  value={controls.selectedMeetingDay ?? 0}
+                  onChange={(event) => controls.setMeetingDay?.(Number(event.target.value))}
+                >
+                  {envelope.snapshot.rollCallMeetingDays?.map((day, index) => (
+                    <option key={day.startsAt} value={index}>
+                      {cachedFormatter("date", Intl.DateTimeFormat, controls.locale, {
+                        dateStyle: "full",
+                        timeZone: envelope.snapshot.shop.timezone,
+                      }).format(new Date(day.startsAt))}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
             {noteLossMessage ? (
               <p
                 className={`${OFFLINE_NOTICE_CLASS} mt-3 border-warning/40 bg-warning/10 text-pretty`}

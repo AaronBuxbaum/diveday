@@ -1,16 +1,10 @@
 /**
  * The one staleness bound every offline recorder applies before it writes.
  *
- * Three writers reconcile events a device queued with no signal — roll call
- * (`recordRollCall`/`recordCrewRollCall`), the pre-departure checklist
- * (`recordPreDepartureCheck`), and the counter
- * (`checkInBooking`/`undoCheckInBooking`) — and the rule that decides whether
- * a queued event is plausible at all, and when it is taken to have happened,
- * has to be the same one in all of them.
- * It was written out three times before this module existed, which is three
- * chances for one of them to drift: two halves of one head count disagreeing
- * about what makes an offline event stale is precisely the class of bug that
- * outlives the week somebody re-reads only one of them.
+ * Arrival and checklist recorders apply the capture/copy plausibility bound.
+ * Roll-call writers retain the stored-instant cap, but validate identity and
+ * snapshot authorization independently of clocks: even an older queued missing
+ * mark must survive a clock adjustment. Its observed evidence decides risk.
  *
  * Framework-free and dependency-free, like `roll-call.ts` beside it: nothing
  * here but the arithmetic and the reason for it.
@@ -60,12 +54,9 @@ export function offlineEventOutOfBounds(input: {
  * moment it reached the server when the device's is later.** A tap cannot have
  * been made after its own sync, so a later reading is a clock running fast.
  *
- * Every trail is read newest first by this instant. Stored as the device wrote
- * it, a mark from a tablet four minutes fast outranks whatever anybody records
- * live in those four minutes: a second crew member's "did not come back" is
- * written, answered as saved, and never shown, and the diver reads as aboard.
- * The counter learned this first (#2702); all four offline writers apply it
- * through here.
+ * Arrival and checklist trails retain their time ordering. Roll-call trails
+ * keep this instant for audit only; their effective result follows captured
+ * causal context, so even a capped instant cannot establish observation.
  *
  * A clock running slow is not corrected: nothing the server holds says by how
  * much.
@@ -74,7 +65,7 @@ export function offlineEventInstant(occurredAt: Date | undefined, now: Date): Da
   return occurredAt && occurredAt.getTime() < now.getTime() ? occurredAt : now;
 }
 
-/** Keep the raw capture clock for local queue order; compare stored marks in server time. */
+/** The first stored instant for audit, falling back to the retained device reading. */
 export function offlineStoredInstant(event: {
   occurredAt: string;
   storedOccurredAt?: string;

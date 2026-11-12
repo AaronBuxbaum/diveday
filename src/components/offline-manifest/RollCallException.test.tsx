@@ -6,8 +6,25 @@ import {
   loadOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
+import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
+import { identifySavedRollCall } from "@/test/identified-offline-roll-call";
 import { OfflineManifestView } from "../OfflineManifestView";
 import { FROZEN_MS, identityResponse, richEnvelope, setOnline } from "./view-fixtures";
+
+function renderedTapFields(
+  saved: OfflineManifestEnvelope,
+  observedEvidenceIds: string[],
+  meetingDay?: number,
+) {
+  return {
+    snapshotId: saved.snapshot.snapshotId,
+    snapshotSavedAt: saved.snapshot.savedAt,
+    erasureEpochToken: saved.snapshot.erasureEpochToken,
+    observedEvidenceIds,
+    meetingDay,
+    note: undefined,
+  };
+}
 
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -91,25 +108,29 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
   describe("a missing diver can be unsaid, and asserting them aboard cannot be a slip", () => {
     /** Priya, recorded not back aboard after dive 1 on this device. */
     function missingAfterDive() {
-      return richEnvelope(
+      const saved = richEnvelope(
         "trip-1",
         {},
         {
           events: [
             {
-              clientEventId: "evt-missing",
+              clientEventId: "10000000-0000-4000-8000-000000000001",
               snapshotId: "snap-trip-1",
               snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
               tripId: "trip-1",
               bookingId: "diver-priya",
               checkpoint: "after_dive_1",
               status: "not_boarded",
+              meetingDay: 0,
+              observedEvidenceIds: [],
               occurredAt: new Date(FROZEN_MS).toISOString(),
               syncStatus: "pending",
             },
           ],
         },
       );
+      saved.snapshot.rollCallMeetingDay = 0;
+      return saved;
     }
 
     /**
@@ -204,6 +225,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       fireEvent.click(confirm);
       await waitFor(() =>
         expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+          ...renderedTapFields(saved, ["client:10000000-0000-4000-8000-000000000001"], 0),
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
           status: "boarded",
@@ -313,6 +335,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Not back aboard" }));
       await waitFor(() =>
         expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+          ...renderedTapFields(saved, ["client:10000000-0000-4000-8000-000000000001"], 0),
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
           status: "cleared",
@@ -321,7 +344,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
           // everything recorded before now, including another device's "did not
           // come back from the dive" (ADR
           // 20260815-an-offline-retraction-names-its-target).
-          retractsClientEventId: "evt-missing",
+          retractsClientEventId: "10000000-0000-4000-8000-000000000001",
         }),
       );
     });
@@ -352,12 +375,17 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         {},
         {
           events: [
-            { ...base, clientEventId: "evt-missing", status: "not_boarded", syncStatus: "applied" },
+            {
+              ...base,
+              clientEventId: "10000000-0000-4000-8000-000000000001",
+              status: "not_boarded",
+              syncStatus: "applied",
+            },
             {
               ...base,
               clientEventId: "evt-undo",
               status: "cleared",
-              retractsClientEventId: "evt-missing",
+              retractsClientEventId: "10000000-0000-4000-8000-000000000001",
               syncStatus: "rejected",
               rejectionReason: "retraction_superseded",
             },
@@ -410,6 +438,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Not back aboard" }));
       await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
       expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+        ...renderedTapFields(saved, [], undefined),
         bookingId: "diver-priya",
         checkpoint: "after_dive_1",
         status: "not_boarded",
@@ -427,19 +456,22 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         {
           events: [
             {
-              clientEventId: "evt-aboard",
+              clientEventId: "10000000-0000-4000-8000-000000000002",
               snapshotId: "snap-trip-1",
               snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
               tripId: "trip-1",
               bookingId: "diver-priya",
               checkpoint: "after_dive_1",
               status: "boarded",
+              meetingDay: 0,
+              observedEvidenceIds: [],
               occurredAt: new Date(FROZEN_MS).toISOString(),
               syncStatus: "pending",
             },
           ],
         },
       );
+      saved.snapshot.rollCallMeetingDay = 0;
       vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
@@ -453,10 +485,11 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Boarded — tap again to undo" }));
       await waitFor(() =>
         expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+          ...renderedTapFields(saved, ["client:10000000-0000-4000-8000-000000000002"], 0),
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
           status: "cleared",
-          retractsClientEventId: "evt-aboard",
+          retractsClientEventId: "10000000-0000-4000-8000-000000000002",
         }),
       );
     });
@@ -476,20 +509,28 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         {
           events: [
             {
-              clientEventId: "evt-crew-missing",
+              clientEventId: "10000000-0000-4000-8000-000000000003",
               snapshotId: "snap-trip-1",
               snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
               tripId: "trip-1",
               crewPersonId: "crew-dana",
               checkpoint: "after_dive_1",
               status: "not_boarded",
-              // After the saved copy's own 12:55 result: the newer statement stands.
+              // Capture time is audit only; the explicit observed basis below establishes correction.
               occurredAt: "2026-08-01T14:30:00.000Z",
               syncStatus: "pending",
             },
           ],
         },
       );
+      const prior = identifySavedRollCall(
+        saved.snapshot,
+        { crewPersonId: "crew-dana" },
+        "after_dive_1",
+        0,
+      );
+      saved.events[0].observedEvidenceIds = [prior];
+      saved.events[0].meetingDay = 0;
       vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
@@ -502,10 +543,11 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       fireEvent.click(within(crewList).getByRole("button", { name: "Not back aboard" }));
       await waitFor(() =>
         expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+          ...renderedTapFields(saved, ["client:10000000-0000-4000-8000-000000000003"], 0),
           crewPersonId: "crew-dana",
           checkpoint: "after_dive_1",
           status: "cleared",
-          retractsClientEventId: "evt-crew-missing",
+          retractsClientEventId: "10000000-0000-4000-8000-000000000003",
         }),
       );
     });
@@ -519,20 +561,28 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         {
           events: [
             {
-              clientEventId: "evt-crew-missing",
+              clientEventId: "10000000-0000-4000-8000-000000000003",
               snapshotId: "snap-trip-1",
               snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
               tripId: "trip-1",
               crewPersonId: "crew-dana",
               checkpoint: "after_dive_1",
               status: "not_boarded",
-              // After the saved copy's own 12:55 result: the newer statement stands.
+              // Capture time is audit only; the explicit observed basis below establishes correction.
               occurredAt: "2026-08-01T14:30:00.000Z",
               syncStatus: "pending",
             },
           ],
         },
       );
+      const prior = identifySavedRollCall(
+        saved.snapshot,
+        { crewPersonId: "crew-dana" },
+        "after_dive_1",
+        0,
+      );
+      saved.events[0].observedEvidenceIds = [prior];
+      saved.events[0].meetingDay = 0;
       vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
@@ -549,6 +599,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       fireEvent.click(confirm);
       await waitFor(() =>
         expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+          ...renderedTapFields(saved, ["client:10000000-0000-4000-8000-000000000003"], 0),
           crewPersonId: "crew-dana",
           checkpoint: "after_dive_1",
           status: "boarded",

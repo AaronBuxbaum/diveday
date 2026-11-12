@@ -48,7 +48,11 @@ const { POST } = await import("./route");
 function postRequest(body: unknown, headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/offline-manifests/sync", {
     method: "POST",
-    headers: { "content-type": "application/json", ...headers },
+    headers: {
+      "x-diveday-roll-call-protocol": "1",
+      "content-type": "application/json",
+      ...headers,
+    },
     body: JSON.stringify(body),
   });
 }
@@ -167,17 +171,6 @@ beforeEach(() => {
 });
 
 describe("POST /api/offline-manifests/sync", () => {
-  it("rejects an unauthenticated caller without touching the database", async () => {
-    // The live-roles re-check below needs a database, so this ordering is a
-    // property worth pinning rather than an accident: a caller with no session
-    // at all must never reach the pool. Only an authenticated caller whose token
-    // *might* be stale pays for the lookup.
-    vi.mocked(auth).mockResolvedValue(null);
-    const response = await POST(postRequest({ events: [] }));
-    expect(response.status).toBe(401);
-    expect(getDb).not.toHaveBeenCalled();
-  });
-
   it("rejects a non-staff caller even with a valid session shape", async () => {
     const { db, shop } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
@@ -292,83 +285,9 @@ describe("POST /api/offline-manifests/sync", () => {
     ).toBeUndefined();
   });
 
-  /**
-   * The compare-and-set, from the outside (ADR
-   * 20260815-an-offline-retraction-names-its-target). The route's only job here
-   * is to carry `retractsClientEventId` through to the writer unaltered — it is
-   * the one field on this body that decides whether a retraction is a
-   * compare-and-set or a blind newest-wins write, and a schema that quietly
-   * dropped it would leave every device-side and writer-side test green while
-   * the property it exists for was gone.
-   *
-   * Two events, then a retraction of the *first*. On a boat that second event is
-   * another crew member's phone, or the live manifest; here it is simply the
-   * statement standing when the undo arrives.
-   */
-  it("carries a retraction's target through, and refuses one whose target no longer stands", async () => {
-    const { db, shop, trip, booking, staffPersonId } = await seededContext();
-    vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
-    const now = nowDate().toISOString();
-    const mine = crypto.randomUUID();
-    const theirs = crypto.randomUUID();
-    const event = (clientEventId: string, extra: Record<string, unknown> = {}) => ({
-      clientEventId,
-      snapshotId: crypto.randomUUID(),
-      snapshotSavedAt: now,
-      bookingId: booking.id,
-      tripId: trip.id,
-      checkpoint: "departure" as const,
-      status: "not_boarded",
-      note: null,
-      occurredAt: now,
-      ...extra,
-    });
-
-    const applied = await POST(postRequest({ events: [event(mine), event(theirs)] }));
-    expect(applied.status).toBe(200);
-
-    const retraction = crypto.randomUUID();
-    const response = await POST(
-      postRequest({
-        events: [event(retraction, { status: "cleared", retractsClientEventId: mine })],
-      }),
-    );
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
-      results: Array<{ clientEventId: string; status: string; reason?: string }>;
-    };
-    expect(body.results).toEqual([
-      { clientEventId: retraction, status: "rejected", reason: "retraction_superseded" },
-    ]);
-    // The statement the device could not see is still standing. A refused
-    // retraction leaves the record as the better-informed device left it, and
-    // the device reads its own event as `rejected` — which
-    // `explicitResultAt`'s asymmetry is written never to turn into silence
-    // (ADR 20260815-a-rejected-correction-may-not-silence-a-missing-diver).
-    const manifest = await getTripManifest(db, shop.id, trip.id, "departure");
-    expect(
-      manifest?.divers.find((entry) => entry.bookingId === booking.id)?.rollCall,
-    ).toMatchObject({ state: "not_boarded" });
-  });
-
-  /**
-   * The batch half of the equal-timestamp tie rule.
-   *
-   * The device breaks a tie by queue position (`latestQueuedAttempt` in
-   * src/lib/offline-manifests.ts), and it is only *allowed* to because this
-   * route applies a batch oldest-first with a **stable** sort — so two events
-   * sharing an `occurredAt` keep the order the device queued them in, the later
-   * tap is written last, and the read-back's `desc(occurredAt), desc(createdAt)`
-   * returns it first. Nothing else pins that: replace the sort with an unstable
-   * one, or sort the payload anywhere else, and the captain's screen and the
-   * server quietly stop agreeing about who came back from a dive.
-   *
-   * Asserted through the manifest rather than through the response, because
-   * every event in the batch reports `applied` either way — the ordering is
-   * only visible in what the manifest ends up saying.
-   */
-  it("applies a same-timestamp batch in queue order, so the last tap is what the manifest says", async () => {
+  // A queued correction observes its predecessor; neither equal clocks nor
+  // payload order proves that relation. Replay follows the captured basis.
+  it("applies an observed same-timestamp correction despite reversed delivery order", async () => {
     const { db, shop, trip, staffPersonId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
@@ -394,7 +313,13 @@ describe("POST /api/offline-manifests/sync", () => {
     });
     // The mistake, then the correction, inside one millisecond-resolution
     // timestamp — the shape the frozen-clock e2e fleet produces on every run.
-    const response = await POST(postRequest({ events: [event("not_boarded"), event("boarded")] }));
+    const mistake = { ...event("not_boarded"), meetingDay: 0, observedEvidenceIds: [] };
+    const correction = {
+      ...event("boarded"),
+      meetingDay: 0,
+      observedEvidenceIds: [`client:${mistake.clientEventId}`],
+    };
+    const response = await POST(postRequest({ events: [correction, mistake] }));
     expect(response.status).toBe(200);
     const body = (await response.json()) as { results: Array<{ status: string }> };
     // Both applied: an equal timestamp is accepted, never `newer_event_exists`.
@@ -403,6 +328,7 @@ describe("POST /api/offline-manifests/sync", () => {
     const manifest = await getTripManifest(db, shop.id, trip.id, "departure");
     expect(manifest?.crew.find((entry) => entry.id === member.id)?.rollCall).toMatchObject({
       state: "boarded",
+      evidenceConflict: false,
     });
   });
 

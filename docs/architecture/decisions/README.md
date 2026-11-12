@@ -465,5 +465,6 @@ script again.
 | 20261110-whatsapp-delivered-usage | Count verified deliveries by sending… |
 | 20261111-recorded-purchases-not-pos | Record a received purchase, not… |
 | 20261111-square-receipt-evidence | Square is read-only receipt evidence,… |
+| 20261112-roll-call-observes-evidence | Resolve roll-call conflicts from observed… (proposed) |
 
 <!-- adr-index:end -->

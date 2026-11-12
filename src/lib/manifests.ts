@@ -10,6 +10,7 @@ import {
 import type { ReadinessResult } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
 import { compareMarkOrder, isNotBackAboard, isRollCallCheckpoint } from "./roll-call";
+import type { RollCallCausalContext } from "./roll-call-causality";
 import type { TurnAwayReason } from "./turn-away";
 import type { MedicalWaiverMark, RiderMedicalHold } from "./waivers";
 import type { WelcomeCue } from "./welcome-cue";
@@ -91,11 +92,12 @@ export function maxRecordedDiveNumber(
      * between a dive count that can be shrunk and one that cannot.
      */
     seq: number;
+    day?: number;
   }[],
 ): number {
   const latestByKey = new Map<string, (typeof events)[number]>();
   for (const event of events) {
-    const key = `${event.bookingId}\u0000${event.checkpoint}`;
+    const key = `${event.bookingId}\u0000${event.checkpoint}\u0000${event.day ?? 0}`;
     const current = latestByKey.get(key);
     if (!current || compareMarkOrder(event, current) > 0) {
       latestByKey.set(key, event);
@@ -284,6 +286,7 @@ export type ManifestDiverInput = {
    */
   runningLateAt?: Date | null;
   rollCall?: RollCallRecord;
+  rollCallContext?: RollCallCausalContext;
   /**
    * The buddy team staff put this diver on, when they did
    * (ADR 20260804-buddy-teams). Teammates are only ever people who are
@@ -398,6 +401,7 @@ export type ManifestCrewMember = {
    * nobody has said, which keeps the checkpoint open.
    */
   rollCall?: RollCallRecord;
+  rollCallContext?: RollCallCausalContext;
   /**
    * The buddy teams this crew member leads or dives on
    * (ADR 20260804-buddy-teams). Crew hold no booking, so before that model a
@@ -470,9 +474,9 @@ export type CrewAttestation = {
  */
 export function isRollCallAccountedFor(
   checkpoint: RollCallCheckpoint,
-  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+  rollCall: Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined,
 ): boolean {
-  if (!rollCall) return false;
+  if (!rollCall || rollCall.evidenceConflict) return false;
   return !isNotBackAboard(checkpoint, rollCall);
 }
 
@@ -490,9 +494,9 @@ export function isRollCallAccountedFor(
  */
 export function isRecordedAshore(
   checkpoint: RollCallCheckpoint,
-  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+  rollCall: Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined,
 ): boolean {
-  if (rollCall?.state !== "not_boarded") return false;
+  if (rollCall?.evidenceConflict || rollCall?.state !== "not_boarded") return false;
   return !isNotBackAboard(checkpoint, rollCall);
 }
 
@@ -547,7 +551,7 @@ export type RollCallRecordedTone = "notBackAboard" | "boarded" | "notBoarded" | 
 
 export function rollCallRowState(
   checkpoint: RollCallCheckpoint,
-  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+  rollCall: Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined,
 ): RollCallRowState {
   const rc = rollCall;
   const recordedNotBoarded = rc?.state === "not_boarded" && rc.implied !== true;
@@ -659,8 +663,10 @@ export type BuddyAlert = "separated_dock" | "separated_after_dive" | "teammate_a
 
 export function buddyAlertFor(
   checkpoint: RollCallCheckpoint,
-  self: Pick<RollCallRecord, "state" | "implied"> | undefined,
-  teammates: ReadonlyArray<Pick<RollCallRecord, "state" | "implied"> | undefined>,
+  self: Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined,
+  teammates: ReadonlyArray<
+    Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined
+  >,
 ): BuddyAlert | null {
   // Only someone who is themselves aboard can be "back without their team".
   if (self?.state !== "boarded") return null;
@@ -717,7 +723,7 @@ function buddyMissingNamesIn(
 
 /** One crew member, reduced to the only field a head count reads. */
 export type CrewRollCallSubject = {
-  rollCall?: Pick<RollCallRecord, "state" | "implied">;
+  rollCall?: Pick<RollCallRecord, "state" | "implied" | "evidenceConflict">;
 };
 
 export type CrewRollCallCounts = {
@@ -752,7 +758,8 @@ export function crewRollCallCounts(
   const crewAshore = crew.filter((member) => isRecordedAshore(checkpoint, member.rollCall)).length;
   return {
     crewAssigned: crew.length,
-    crewAwaiting: crew.filter((member) => !member.rollCall).length,
+    crewAwaiting: crew.filter((member) => !member.rollCall || member.rollCall.evidenceConflict)
+      .length,
     crewNotBackAboard: crew.filter((member) => isNotBackAboard(checkpoint, member.rollCall)).length,
     crewAshore,
   };
@@ -1154,7 +1161,7 @@ export type TripManifest = {
   };
 };
 
-type MaybeRollCall = Pick<RollCallRecord, "state" | "implied"> | undefined;
+type MaybeRollCall = Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined;
 
 /**
  * Every teammate's roll-call record, across however many teams a row is on.
@@ -1285,7 +1292,9 @@ export function buildTripManifest(input: {
   // the desk turned away that nobody at the boat has answered for
   // (`isTurnedAwayOffBoat`, issue #2907). The row itself stays on the list.
   const counted = divers.filter((diver) => !isTurnedAwayOffBoat(diver));
-  const awaiting = counted.filter((diver) => !diver.rollCall).length;
+  const awaiting = counted.filter(
+    (diver) => !diver.rollCall || (checkpoint === "departure" && diver.rollCall.evidenceConflict),
+  ).length;
   const notBackAboard = counted.filter((diver) =>
     isNotBackAboard(checkpoint, diver.rollCall),
   ).length;
@@ -1359,7 +1368,7 @@ export function rollCallLabel(
   // Only the state and the carried-forward flag decide the word, so the offline
   // copy — whose `occurredAt` is an ISO string, not a Date — resolves through
   // this same function rather than keeping a second word list of its own.
-  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+  rollCall: Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined,
 ): RollCallLabel {
   if (!rollCall) return "awaiting";
   if (rollCall.state === "boarded") return "boarded";

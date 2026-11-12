@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rollCallEvents } from "../../db/schema/index";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate, nowMs } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import {
@@ -48,7 +48,7 @@ async function boat(options: { endedHoursAgo: number; divers?: number; board?: b
     status: "boarded" | "not_boarded",
   ) => {
     minute += 1;
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: made.trip.id,
       bookingId,

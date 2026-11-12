@@ -20,6 +20,7 @@ import {
   offlineManifestViewerPersonId,
   pendingOfflineEventCount,
 } from "@/lib/offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { cacheOfflineShell as cacheShell } from "./offline-shell-cache";
 import {
   beginReadyPageRequest,
@@ -376,7 +377,7 @@ async function refreshSavedManifests(): Promise<void> {
       // is worthless without the staff session, and a silent 401 here would
       // look identical to "nothing to save".
       credentials: "same-origin",
-      headers: { accept: "application/json" },
+      headers: { ...ROLL_CALL_CAUSAL_HEADERS, accept: "application/json" },
     });
     if (!response.ok) return;
     // `payloads`, not `manifests`. The route answers `{ shop, payloads }`;

@@ -71,7 +71,9 @@ type GapManifest = Pick<TripManifest, "checkpoint"> & {
 };
 
 type NamedResult = {
-  /** Booking or crew id; a name stands in for a hand-built row. */
+  /** The stable row identity carried by the real diver manifest. */
+  bookingId?: string;
+  /** Alternate booking or crew key; a name stands in only for hand-built rows. */
   key?: string;
   fullName: string;
   rollCall?: Parameters<typeof isNotBackAboard>[1];
@@ -228,7 +230,7 @@ export function laterCheckpointMissing(
     for (const manifest of later) {
       for (const person of people(manifest)) {
         if (!person.rollCall || person.rollCall.implied) continue;
-        last.set(person.key ?? person.fullName, {
+        last.set(person.bookingId ?? person.key ?? person.fullName, {
           fullName: person.fullName,
           missing: isNotBackAboard(manifest.checkpoint, person.rollCall),
         });

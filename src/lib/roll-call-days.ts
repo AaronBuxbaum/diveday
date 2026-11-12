@@ -31,6 +31,7 @@ export type DayMark = {
   checkpoint: string;
   status: RollCallStatus;
   day: number;
+  evidenceConflict?: boolean;
   /** The stored event's id, which a later `cleared` may name. */
   id?: string;
   /** On a `cleared`: the id of the event it takes back (`retracts_event_id`). */
@@ -138,7 +139,11 @@ function stillOpenEarlier<M extends DayMark>(
           isAfterDive(other.checkpoint) &&
           ordinalOf(other.checkpoint) > dive,
       );
-      if (settledThatDay || seenAfter(standing, mark.subject, day, mark.checkpoint, currentDay)) {
+      if (
+        day >= 0 &&
+        !mark.evidenceConflict &&
+        (settledThatDay || seenAfter(standing, mark.subject, day, mark.checkpoint, currentDay))
+      ) {
         continue;
       }
       open.push(mark);
@@ -165,6 +170,9 @@ export function manifestRollCallView<M extends DayMark>(
   // A standing `cleared` today is nothing today: an earlier day's stated
   // missing person it did not reach back to stays on the view (#3981).
   for (const [key, mark] of standing.get(currentDay) ?? new Map<string, M>()) {
+    const carried = view.get(key);
+    if (carried?.status === "not_boarded" && (carried.day < 0 || carried.evidenceConflict))
+      continue;
     if (mark.status !== "cleared") view.set(key, mark);
   }
   return view;

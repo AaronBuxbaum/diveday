@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, people, rollCallEvents } from "./schema";
+import { bookings, people } from "./schema";
 import { createTrip, editTripSection, listStaff, listTripScheduleDays } from "./trips";
 
 /**
@@ -43,7 +44,7 @@ async function course(windows = SATS.slice(0, 2)) {
     .returning();
   if (!booking) throw new Error("booking insert failed");
   const countOn = (window: { startsAt: Date }) =>
-    db.insert(rollCallEvents).values({
+    seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip.id,
       bookingId: booking.id,
