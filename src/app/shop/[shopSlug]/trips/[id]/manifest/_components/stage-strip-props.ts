@@ -78,12 +78,15 @@ export function stageStripProps(
     cancelled: false,
     meetingWindows: input.meetingWindows,
   });
-  // A tap said before the departure's own day is kept but not shown (`boatStageOf`), so the
-  // strip says it was saved and when it will show, instead of looking as if nothing happened
-  // (#4457). The write is never refused: the crew's word is final.
+  // A tap said before the departure's own day is kept but never shown (`boatStageOf`), so until
+  // that day the strip says so and when boat words begin, instead of looking as if nothing
+  // happened (#4457). The write is never refused: the crew's word is final.
   const departureDay = shopDayBounds(trip.startsAt, input.timeZone);
   const early =
-    !shown && input.stage && input.stage.recordedAt.getTime() < departureDay.from.getTime()
+    !shown &&
+    input.stage &&
+    input.now.getTime() < departureDay.from.getTime() &&
+    input.stage.recordedAt.getTime() < departureDay.from.getTime()
       ? input.stage
       : null;
   return {

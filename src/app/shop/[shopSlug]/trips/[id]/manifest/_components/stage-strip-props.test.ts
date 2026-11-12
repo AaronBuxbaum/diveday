@@ -55,7 +55,7 @@ describe("stageStripProps", () => {
     expect(props.current).toBeNull();
     expect(props.copy.recordedLine).toBeUndefined();
     expect(props.copy.earlyLine?.replace(/\s/g, " ")).toBe(
-      "Underway saved at 11:00 AM. It shows from Sat, Oct 10.",
+      "Underway saved at 11:00 AM. Boat words start Sat, Oct 10; tap again that day.",
     );
     expect(read(early, "2026-10-10T20:00:00Z").copy.earlyLine).toBeUndefined();
   });

@@ -12,7 +12,7 @@
     "shortHeadingIn": "Regreso",
     "shortHome": "Puerto",
     "recordedLine": "{name} · {time}",
-    "earlyLine": "{stage} guardado a las {time}. Se mostrará desde el {date}.",
+    "earlyLine": "{stage} guardado a las {time}. Las etapas del barco empiezan el {date}; vuelve a tocar ese día.",
     "errorRefusal": "No se guardó. Revisa tu conexión y vuelve a tocar.",
     "openRollCall": "Abrir pase de lista",
     "homeConfirmQuestion": "¿Marcar el barco en puerto igualmente?",
