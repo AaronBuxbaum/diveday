@@ -357,6 +357,8 @@ export type OfflineManifestPayload = {
         Pick<
           TripManifest["divers"][number],
           | "bookingId"
+          /** Stable identity for physical totals; additive, never a purge of queued events. */
+          | "personId"
           | "fullName"
           | "emergencyContactName"
           | "emergencyContactPhone"
@@ -1359,6 +1361,7 @@ export function serializeManifests(
       // facts are missing.
       divers: manifest.divers.map(withholdHeldSeatParticulars).map((diver) => ({
         bookingId: diver.bookingId,
+        ...(diver.personId && !diver.identityWithheld ? { personId: diver.personId } : {}),
         fullName: diver.fullName,
         ...(diver.identityWithheld ? { identityWithheld: true as const } : {}),
         ...(diver.identityWithheld && diver.heldEmergencyContact

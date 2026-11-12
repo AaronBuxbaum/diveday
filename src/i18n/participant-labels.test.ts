@@ -24,3 +24,12 @@ describe("the passenger split on staff surfaces", () => {
     );
   });
 });
+
+it("names overlapping roles beside the unique physical total in both languages", () => {
+  expect(staffSoulsOnBoardLine(t, { totalDivers: 2 }, 1, 2)).toBe(
+    "Passengers 2 · Crew 1 · Souls on board 2 · 1 person has both roles",
+  );
+  expect(staffSoulsOnBoardLine(staffTranslator("es-ES"), { totalDivers: 2 }, 1, 2)).toContain(
+    "1 persona tiene ambos roles",
+  );
+});

@@ -586,7 +586,12 @@ function foldStandingAfterDive(rows: readonly AfterDiveRow[]) {
   // Newest first, so the first row seen per booking *and* checkpoint is that
   // checkpoint's standing result.
   const seen = new Set<string>();
-  const standing: { tripId: string; bookingId: string; status: "boarded" | "not_boarded" }[] = [];
+  const standing: {
+    tripId: string;
+    bookingId: string;
+    checkpoint: string;
+    status: "boarded" | "not_boarded";
+  }[] = [];
   for (const row of rows) {
     if (row.checkpoint === "departure") continue;
     const key = `${row.bookingId}:${row.checkpoint}`;
@@ -594,7 +599,12 @@ function foldStandingAfterDive(rows: readonly AfterDiveRow[]) {
     seen.add(key);
     if (!standingResultMeansSailed(row.checkpoint, row.status)) continue;
     if (row.status === "cleared") continue;
-    standing.push({ tripId: row.tripId, bookingId: row.bookingId, status: row.status });
+    standing.push({
+      tripId: row.tripId,
+      bookingId: row.bookingId,
+      checkpoint: row.checkpoint,
+      status: row.status,
+    });
   }
   return standing;
 }
@@ -626,9 +636,22 @@ export async function readAfterDiveRollCallByTrip(
 ): Promise<{
   afterDive: Map<string, Map<string, "boarded" | "missing_after_dive">>;
   unaccounted: Map<string, Set<string>>;
+  checkpoints: Map<string, Map<string, Map<string, "boarded" | "not_boarded">>>;
 }> {
   const rows = await seatRollCallRows(db, shopId, tripIds);
-  return { afterDive: foldAfterDiveByTrip(rows), unaccounted: foldUnaccountedByTrip(rows) };
+  const checkpoints = new Map<string, Map<string, Map<string, "boarded" | "not_boarded">>>();
+  for (const row of foldStandingAfterDive(rows)) {
+    const trip = checkpoints.get(row.tripId) ?? new Map();
+    const checkpoint = trip.get(row.checkpoint) ?? new Map();
+    checkpoint.set(row.bookingId, row.status);
+    trip.set(row.checkpoint, checkpoint);
+    checkpoints.set(row.tripId, trip);
+  }
+  return {
+    afterDive: foldAfterDiveByTrip(rows),
+    unaccounted: foldUnaccountedByTrip(rows),
+    checkpoints,
+  };
 }
 
 /**
@@ -1312,6 +1335,7 @@ export async function getTripManifests(
   const diverInputs = roster.map(({ booking, person, checkedIn }) => {
     return {
       bookingId: booking.id,
+      ...(!booking.identityUnconfirmedAt && !person.anonymizedAt ? { personId: person.id } : {}),
       // A held seat is named as booked here, once, so the alarm, the buddy
       // builder and every copy downstream inherit it (issue #1690).
       fullName: seatName(person.fullName, booking),

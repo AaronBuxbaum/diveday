@@ -30,6 +30,7 @@
   "summaryNotBackAboard": "Sin regresar a bordo",
   "summaryAshore": "En tierra",
   "summaryAwaiting": "Pendientes",
+  "soulsOnBoardOverlap": "{count, plural, one {# persona tiene ambos roles} other {# personas tienen ambos roles}}",
   "soulsOnBoardLine": "Pasajeros {passengers} · Tripulación {crew} · Personas a bordo {souls}",
   "soulsOnBoardLineSplit": "Pasajeros {passengers} ({split}) · Tripulación {crew} · Personas a bordo {souls}",
   "passengerDivers": "{count, plural, one {# buceador} other {# buceadores}}",

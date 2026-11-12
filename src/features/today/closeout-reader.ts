@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
-import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "@/db/manifests";
+import { listDepartureRollCallByTrip, readAfterDiveRollCallByTrip } from "@/db/manifests";
 import { newestMarkFirst, oldestMarkFirst } from "@/db/roll-call-order";
 import { crewMarks, markCrewPersonId, seatMarks } from "@/db/roll-call-subject";
 import {
@@ -27,7 +27,7 @@ import { latestTripStagesByTrip } from "@/features/trip-stages";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DayLoadOut } from "@/lib/closeout-kinds";
-import type { CrewRollCallSubject } from "@/lib/manifests";
+import { type CrewRollCallSubject, isRecordedAshore } from "@/lib/manifests";
 import { carryForwardNotBoarded, compareMarkOrder, rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds, shopDaysBounds } from "@/lib/zoned";
 import {
@@ -38,6 +38,7 @@ import {
   loadOutDue,
   tomorrowNoon,
 } from "./closeout";
+import { closeoutRoleOverlap } from "./closeout-role-overlap";
 
 /**
  * The db half of the day's closing state (the shop home's evening, ADR
@@ -120,7 +121,7 @@ async function dayTrips(
   const [
     roster,
     dockResults,
-    afterDiveSpoken,
+    afterDiveReads,
     photos,
     crewPhotos,
     recapDeliveries,
@@ -147,7 +148,13 @@ async function dayTrips(
     // capacity, which is the same population `listRollCallGaps` already walks
     // per booking over a thirty-day residue window.
     db
-      .select({ tripId: bookings.tripId, bookingId: bookings.id, status: bookings.status })
+      .select({
+        tripId: bookings.tripId,
+        bookingId: bookings.id,
+        personId: bookings.personId,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+        status: bookings.status,
+      })
       .from(bookings)
       .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled)),
     // **The crew's own word on who got on the boat**, which outranks the desk's
@@ -165,7 +172,7 @@ async function dayTrips(
     // The other half of the crew's evidence: a seat spoken for at sea. Read
     // beside the dock rather than instead of it, because the two words mean
     // opposite things at the two checkpoints ({@link seatSailed}, issue #1704).
-    listAfterDiveRollCallByTrip(db, shopId, tripIds),
+    readAfterDiveRollCallByTrip(db, shopId, tripIds),
     listRecapPhotosForTrips(
       db,
       shopId,
@@ -294,6 +301,7 @@ async function dayTrips(
   // **The roster, and the subset of it the boat carried** (issue #1689). One
   // walk, one rule per seat, so the two numbers can never be derived by
   // different readings of the same rows.
+  const afterDiveSpoken = afterDiveReads.afterDive;
   const bookedByTrip = new Map<string, number>();
   const sailedByTrip = new Map<string, number>();
   for (const seat of roster) {
@@ -368,39 +376,65 @@ async function dayTrips(
     planChangesByTrip.set(change.tripId, list);
   }
 
-  return rows.map((row) => ({
-    tripId: row.id,
-    title: row.title,
-    startsAt: row.startsAt,
-    endsAt: row.endsAt,
-    booked: bookedByTrip.get(row.id) ?? 0,
-    sailed: sailedByTrip.get(row.id) ?? 0,
-    capacity: row.capacity,
-    plannedDives: row.plannedDives,
-    stage: stagesByTrip.get(row.id) ?? null,
-    meetingWindows: meetingWindows.get(row.id),
-    crew: crewSubjectsAtClose(
+  return rows.map((row) => {
+    const crew = crewSubjectsAtClose(
       row.plannedDives,
       crewByTrip.get(row.id) ?? [],
       (personId, checkpoint) => standingCrewResult.get(`${row.id}\0${personId}\0${checkpoint}`),
-    ),
-    loggedDives: loggedDivesByTrip.get(row.id) ?? 0,
-    planChanges: (planChangesByTrip.get(row.id) ?? []).map((change) => ({
-      diveNumber: change.diveNumber,
-      siteName: change.siteName,
-      reasonCode: change.reasonCode,
-    })),
-    recapShoutout: row.recapShoutout,
-    recapAutoSendPaused: row.recapAutoSendPaused,
-    recapAutoSendAt: row.recapAutoSendAt,
-    recapFailed: (recapStateByTrip.get(row.id)?.failed ?? 0) > 0,
-    recapSentAt:
-      recapStateByTrip.get(row.id)?.total === recapStateByTrip.get(row.id)?.sent
-        ? (recapStateByTrip.get(row.id)?.latest ?? null)
-        : null,
-    photos: photosByTrip.get(row.id) ?? [],
-    crewPhotos: crewPhotosByTrip.get(row.id) ?? [],
-  }));
+    );
+    const closing = rollCallCheckpoints(row.plannedDives).at(-1) ?? "departure";
+    const crewIds = crewByTrip.get(row.id) ?? [];
+    const physicalOverlap = closeoutRoleOverlap(
+      roster
+        .filter((seat) => seat.tripId === row.id)
+        .map((seat) => ({
+          personId: seat.personId,
+          confirmed: seat.identityUnconfirmedAt === null,
+          sailed: seatSailed({
+            noShow: seat.status === "no_show",
+            dockResult: dockResults.get(row.id)?.get(seat.bookingId) ?? null,
+            afterDiveResultStands: afterDiveSpoken.get(row.id)?.has(seat.bookingId) === true,
+          }),
+          back:
+            afterDiveReads.checkpoints.get(row.id)?.get(closing)?.get(seat.bookingId) === "boarded",
+        })),
+      crew.map((member, index) => ({
+        personId: crewIds[index] ?? "",
+        ashore: isRecordedAshore(closing, member.rollCall),
+        back: member.rollCall?.state === "boarded",
+      })),
+    );
+    return {
+      tripId: row.id,
+      title: row.title,
+      startsAt: row.startsAt,
+      endsAt: row.endsAt,
+      booked: bookedByTrip.get(row.id) ?? 0,
+      sailed: sailedByTrip.get(row.id) ?? 0,
+      capacity: row.capacity,
+      plannedDives: row.plannedDives,
+      stage: stagesByTrip.get(row.id) ?? null,
+      meetingWindows: meetingWindows.get(row.id),
+      crew,
+      physicalOverlap,
+      loggedDives: loggedDivesByTrip.get(row.id) ?? 0,
+      planChanges: (planChangesByTrip.get(row.id) ?? []).map((change) => ({
+        diveNumber: change.diveNumber,
+        siteName: change.siteName,
+        reasonCode: change.reasonCode,
+      })),
+      recapShoutout: row.recapShoutout,
+      recapAutoSendPaused: row.recapAutoSendPaused,
+      recapAutoSendAt: row.recapAutoSendAt,
+      recapFailed: (recapStateByTrip.get(row.id)?.failed ?? 0) > 0,
+      recapSentAt:
+        recapStateByTrip.get(row.id)?.total === recapStateByTrip.get(row.id)?.sent
+          ? (recapStateByTrip.get(row.id)?.latest ?? null)
+          : null,
+      photos: photosByTrip.get(row.id) ?? [],
+      crewPhotos: crewPhotosByTrip.get(row.id) ?? [],
+    };
+  });
 }
 
 /**

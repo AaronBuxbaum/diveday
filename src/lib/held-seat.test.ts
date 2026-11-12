@@ -15,6 +15,7 @@ type ManifestDiver = TripManifest["divers"][number];
 const matchedPerson: ManifestDiver = {
   bookingId: "00000000-0000-4000-8000-000000000001",
   fullName: "Maria Santos",
+  personId: "matched-person",
   email: "maria@example.com",
   emergencyContactName: "Luis Santos",
   emergencyContactPhone: "+1-305-555-0199",
@@ -78,6 +79,7 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
     );
     expect(shown).toMatchObject({
       identityWithheld: true,
+      personId: undefined,
       email: null,
       emergencyContactName: null,
       emergencyContactPhone: null,

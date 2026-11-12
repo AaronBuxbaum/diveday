@@ -109,6 +109,7 @@ export async function departureBoatSafety(
   input: {
     boatId: string | null;
     passengers: { booked: number; boarded: number };
+    persons?: { booked: number; boarded: number };
     /** The departure's named crew, and how many are recorded aboard (#2302). */
     crew: { assigned: number; boarded: number };
     onDate: CalendarDate;
@@ -137,6 +138,7 @@ export async function departureBoatSafety(
       kit: kit.filter((unit) => unit.aboardBoatId === boat.id),
       kindsOnRegister: kindsOf(kit),
       passengers: input.passengers,
+      persons: input.persons,
       crew: input.crew,
       onDate: input.onDate,
       today: input.today,
@@ -270,6 +272,7 @@ export async function departureBoatSafetyFor(
     timeZone: string;
     now: Date;
     passengers: { booked: number; boarded: number };
+    persons?: { booked: number; boarded: number };
     crew: { assigned: number; boarded: number };
   },
 ): Promise<DepartureBoatSafety | null> {
@@ -279,6 +282,7 @@ export async function departureBoatSafetyFor(
     boatId:
       input.boatId !== undefined ? input.boatId : await departureBoatId(db, shopId, input.tripId),
     passengers: input.passengers,
+    persons: input.persons,
     crew: input.crew,
     onDate,
     today: calendarDateInTimezone(input.now, input.timeZone),

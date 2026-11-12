@@ -140,14 +140,20 @@ export function staffSoulsOnBoardLine(
   t: StaffTranslator,
   summary: { totalDivers: number; byType?: ParticipantCounts },
   crew: number,
+  physicalTotal: number = summary.totalDivers + crew,
 ): string {
-  const counts = { passengers: summary.totalDivers, crew, souls: summary.totalDivers + crew };
-  return summary.byType && hasNonDivers(summary.byType)
-    ? t("manifest.soulsOnBoardLineSplit", {
-        ...counts,
-        split: staffPassengerSplit(t, summary.byType),
-      })
-    : t("manifest.soulsOnBoardLine", counts);
+  const counts = { passengers: summary.totalDivers, crew, souls: physicalTotal };
+  const overlap = summary.totalDivers + crew - physicalTotal;
+  const qualifier =
+    overlap > 0 ? ` · ${t("manifest.soulsOnBoardOverlap", { count: overlap })}` : "";
+  return (
+    (summary.byType && hasNonDivers(summary.byType)
+      ? t("manifest.soulsOnBoardLineSplit", {
+          ...counts,
+          split: staffPassengerSplit(t, summary.byType),
+        })
+      : t("manifest.soulsOnBoardLine", counts)) + qualifier
+  );
 }
 
 /**

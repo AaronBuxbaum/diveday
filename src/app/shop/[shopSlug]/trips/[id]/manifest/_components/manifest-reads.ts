@@ -21,6 +21,7 @@ import { listShopPickedSpecies, listTripSightings } from "@/features/trip-sighti
 import { latestTripStage } from "@/features/trip-stages";
 import { departureCrewCount } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
+import { manifestPhysicalCounts } from "@/lib/manifests";
 import { cancelledRollCall } from "@/lib/roll-call";
 
 /**
@@ -81,6 +82,7 @@ export async function readManifestPage(
           timeZone: shop.timezone,
           now: nowDate(),
           passengers: { booked: departure.summary.totalDivers, boarded: departure.summary.boarded },
+          persons: manifestPhysicalCounts(departure),
           crew: departureCrewCount(departure.crew),
         })
       : null;

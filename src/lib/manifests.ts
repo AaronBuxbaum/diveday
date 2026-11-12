@@ -1,6 +1,7 @@
 import type { BirthdayCallout } from "./age";
 import type { RentalFitLine } from "./dive-prep";
 import type { BookingAdvisory } from "./findings";
+import { physicalPeople } from "./manifest-person-counts";
 import {
   countParticipants,
   type ParticipantCounts,
@@ -114,6 +115,8 @@ export function maxRecordedDiveNumber(
 
 export type ManifestDiverInput = {
   bookingId: string;
+  /** Confirmed identity for physical totals only; absent on older saved copies. */
+  personId?: string;
   fullName: string;
   /**
    * **What this person is doing on the boat** — diver, snorkeler or rider
@@ -1287,7 +1290,10 @@ export function buildTripManifest(input: {
     isNotBackAboard(checkpoint, diver.rollCall),
   ).length;
   const boarded = counted.filter((diver) => diver.rollCall?.state === "boarded").length;
-  const boardedCrew = input.crew.filter((member) => member.rollCall?.state === "boarded").length;
+  const aboardPeople = physicalPeople(
+    counted.filter((diver) => diver.rollCall?.state === "boarded"),
+    input.crew.filter((member) => member.rollCall?.state === "boarded"),
+  );
   const capacity = input.trip.capacity;
   const boatCapacity = input.trip.boatCapacity;
   const summary = {
@@ -1309,7 +1315,7 @@ export function buildTripManifest(input: {
     overBoatCapacity:
       boatCapacity === undefined || boatCapacity === null
         ? 0
-        : Math.max(0, boarded + boardedCrew - boatCapacity),
+        : Math.max(0, aboardPeople - boatCapacity),
     // `!rollCall` is what keeps this disjoint from every other entry: the
     // moment anybody at the boat states a result — boarded, which takes the
     // released seat back, or not boarded — that result is the row's answer and
@@ -1398,3 +1404,19 @@ export type TrainingMarkCleared = {
   byName: string | null;
   reason: "forms_owed" | "mark_invalid";
 };
+
+/** Physical totals preserve both role records; any missing statement stays independent. */
+export function manifestPhysicalCounts(
+  manifest: Pick<TripManifest, "divers" | "crew" | "checkpoint">,
+) {
+  const passengers = manifest.divers.filter((diver) => !isTurnedAwayOffBoat(diver));
+  return {
+    booked: physicalPeople(passengers, manifest.crew),
+    boarded: physicalPeople(
+      passengers.filter((diver) => rollCallRowState(manifest.checkpoint, diver.rollCall).boarded),
+      manifest.crew.filter(
+        (member) => rollCallRowState(manifest.checkpoint, member.rollCall).boarded,
+      ),
+    ),
+  };
+}

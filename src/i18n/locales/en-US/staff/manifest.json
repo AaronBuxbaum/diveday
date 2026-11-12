@@ -30,6 +30,7 @@
   "summaryNotBackAboard": "Not back aboard",
   "summaryAshore": "Ashore",
   "summaryAwaiting": "Awaiting",
+  "soulsOnBoardOverlap": "{count, plural, one {# person has both roles} other {# people have both roles}}",
   "soulsOnBoardLine": "Passengers {passengers} · Crew {crew} · Souls on board {souls}",
   "soulsOnBoardLineSplit": "Passengers {passengers} ({split}) · Crew {crew} · Souls on board {souls}",
   "passengerDivers": "{count, plural, one {# diver} other {# divers}}",

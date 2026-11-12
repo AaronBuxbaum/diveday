@@ -93,6 +93,7 @@
   "src/features/guardian-erasure/store.ts": 95.65,
   "src/db/manifest-events.ts": 75.92,
   "src/db/manifests.ts": 88.59,
+  "src/lib/manifest-person-counts.ts": 100,
   "src/db/medical-alerts.ts": 93.65,
   "src/db/nitrox.ts": 83.6,
   "src/features/offline-manifest-snapshots/store.ts": 70,

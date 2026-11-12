@@ -22,6 +22,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { departureCrewCount } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
+import { manifestPhysicalCounts } from "@/lib/manifests";
 import { mapWithLimit } from "@/lib/map-limit";
 import { withE2EApiTiming } from "@/lib/observability/query-timing";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
@@ -138,6 +139,7 @@ async function getUpcomingManifests() {
                   boarded: departure.summary.boarded,
                 },
                 crew: departureCrewCount(departure.crew),
+                persons: manifestPhysicalCounts(departure),
               }),
             )
           : null;

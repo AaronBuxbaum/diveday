@@ -32,6 +32,7 @@ import {
   putSomebodyOnTheLastMinuteList,
   returningDiverArgs,
 } from "./diver-states";
+import { seedDualRoleManifest } from "./dual-role-manifest";
 import { emptyTheBoard, offSeasonArgs } from "./empty-the-board";
 import { executedDepthArgs, seedExecutedDepth } from "./executed-depth";
 import { expireThePendingSignIn } from "./expire-the-pending-sign-in";
@@ -227,6 +228,7 @@ const FACTS = {
   gearUncollected: ({ db, shop, now }) => leaveTwoUnitsUncollected(db, shop.id, now, shop.timezone),
   boatClash: ({ db, shop, now }) => slideOneDepartureOntoAnotherHull(db, shop.id, now),
   mergeCandidates: ({ db, shop, now }) => mergeCandidatesState(db, shop.id, now),
+  dualRoleManifest: privateOnly(({ db, shop, now }) => seedDualRoleManifest(db, shop, now)),
   manifestOverCapacity: ({ db, shop, now }) => seedManifestOverCapacityState(db, shop.id, now),
   operationalTrust: withArgs(operationalTrustArgs, ({ db, shop, now }, args) =>
     seedOperationalTrustFact(db, shop, args, now),
