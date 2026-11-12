@@ -730,28 +730,28 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
-    module: "participant-labels.ts",
+    module: "staff-participant-labels.ts",
     map: "STAFF_PARTICIPANT_TYPE_KEYS",
     rows: codeRows(keysOf(STAFF_PARTICIPANT_TYPE_KEYS), (locale, type) =>
       staffParticipantTypeLabel(staffTranslator(locale), type),
     ),
   },
   {
-    module: "participant-labels.ts",
+    module: "staff-participant-labels.ts",
     map: "STAFF_LEFT_DIVING_KEYS",
     rows: codeRows(keysOf(STAFF_LEFT_DIVING_KEYS), (locale, type) =>
       staffLeftDivingLabel(staffTranslator(locale), type),
     ),
   },
   {
-    module: "participant-labels.ts",
+    module: "staff-participant-labels.ts",
     map: "STAFF_JOINED_DIVING_KEYS",
     rows: codeRows(keysOf(STAFF_JOINED_DIVING_KEYS), (locale, type) =>
       staffJoinedDivingLabel(staffTranslator(locale), type),
     ),
   },
   {
-    module: "participant-labels.ts",
+    module: "staff-participant-labels.ts",
     map: "STAFF_PASSENGER_COUNT_KEYS",
     rows: codeRows(keysOf(STAFF_PASSENGER_COUNT_KEYS), (locale, type) =>
       staffTranslator(locale)(STAFF_PASSENGER_COUNT_KEYS[type], { count: 2 }),

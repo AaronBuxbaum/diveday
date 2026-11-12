@@ -9,7 +9,7 @@ import { anonymizeDiver } from "../features/anonymize/store";
 import { getIncidentExport } from "../features/incident-export/store";
 import { cancelBooking } from "./bookings";
 import { mergeDiverRecords } from "./diver-merge";
-import { recordRollCall } from "./manifests";
+import { getTripManifest, recordRollCall } from "./manifests";
 import { createCertification, reviewCertification } from "./readiness";
 import { bookings, cards, people, personRoles, rollCallEvents } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -25,6 +25,24 @@ async function exportContext() {
   const owner = (await listStaff(db, shop.id)).find((row) => row.roles.includes("owner"));
   if (!reef || !owner) throw new Error("demo reef trip or owner missing");
   return { db, shop, reef, staff: owner.person };
+}
+
+/** A real live tap carries the rendered frontier; wall clocks never imply observation. */
+async function recordLiveTap(
+  db: Parameters<typeof recordRollCall>[0],
+  input: Parameters<typeof recordRollCall>[1],
+) {
+  if (input.source === "offline") throw new Error("offline fixtures must retain their saved basis");
+  const manifest = await getTripManifest(db, input.shopId, input.tripId, input.checkpoint);
+  const row = manifest?.divers.find((diver) => diver.bookingId === input.bookingId);
+  const context = row?.rollCallContext;
+  if (!context) throw new Error("rendered roll-call context missing");
+  return recordRollCall(db, {
+    ...input,
+    observedEvidenceIds: context.observedEvidenceIds,
+    meetingDay: context.meetingDay,
+    ...(input.status === "cleared" ? { retractsEventId: row.rollCall?.eventId } : {}),
+  });
 }
 
 describe("departure-log certification captures", () => {
@@ -91,7 +109,7 @@ describe("departure-log certification captures", () => {
       medicalAnswers: clearAnswers,
     });
     expect(
-      await recordRollCall(db, {
+      await recordLiveTap(db, {
         shopId: shop.id,
         tripId: reef.id,
         bookingId: first.booking.id,
@@ -114,7 +132,7 @@ describe("departure-log certification captures", () => {
     });
     expect(after?.contentHash).toBe(before?.contentHash);
     expect(
-      await recordRollCall(db, {
+      await recordLiveTap(db, {
         shopId: shop.id,
         tripId: reef.id,
         bookingId: first.booking.id,
@@ -128,7 +146,7 @@ describe("departure-log certification captures", () => {
     ).toBeNull();
     advanceClock();
     expect(
-      await recordRollCall(db, {
+      await recordLiveTap(db, {
         shopId: shop.id,
         tripId: reef.id,
         bookingId: first.booking.id,
@@ -163,7 +181,7 @@ describe("departure-log certification captures", () => {
     ).toBeNull();
     advanceClock();
     expect(
-      await recordRollCall(db, {
+      await recordLiveTap(db, {
         shopId: shop.id,
         tripId: reef.id,
         bookingId: first.booking.id,
@@ -304,7 +322,7 @@ describe("departure-log certification captures", () => {
       agreed: true,
       medicalAnswers: clearAnswers,
     });
-    const board = await recordRollCall(db, {
+    const board = await recordLiveTap(db, {
       shopId: shop.id,
       tripId: reef.id,
       bookingId: first.booking.id,
@@ -330,7 +348,7 @@ describe("departure-log certification captures", () => {
       after?.certificationSnapshot?.find((card) => card.identifier === "MERGED-REVIEWER-CARD"),
     ).toMatchObject({ reviewedByPersonId: null, reviewedByName: null });
     advanceClock();
-    const later = await recordRollCall(db, {
+    const later = await recordLiveTap(db, {
       shopId: shop.id,
       tripId: reef.id,
       bookingId: first.booking.id,
@@ -379,7 +397,7 @@ describe("departure-log certification captures", () => {
       agreed: true,
       medicalAnswers: clearAnswers,
     });
-    const boarded = await recordRollCall(db, {
+    const boarded = await recordLiveTap(db, {
       shopId: shop.id,
       tripId: reef.id,
       bookingId: first.booking.id,
@@ -391,7 +409,7 @@ describe("departure-log certification captures", () => {
     // event and its snapshot remain in the append-only history.
     advanceClock();
     expect(
-      await recordRollCall(db, {
+      await recordLiveTap(db, {
         shopId: shop.id,
         tripId: reef.id,
         bookingId: first.booking.id,

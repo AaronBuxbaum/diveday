@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { rollCallCheckpoints } from "@/lib/roll-call";
+import { canonicalRollCallEvidenceId } from "@/lib/roll-call-causality";
 import { seededShopContext } from "@/test/db";
 import {
   boats,
@@ -175,8 +176,23 @@ describe("the seeded dawn boat's record", () => {
     // A boarded the crew took back: one turned away, one tap undone.
     const later = new Date(turnedAway.occurredAt.getTime() + 60_000);
     await seedRollCallEvidence(db, [
-      { ...turnedAway, id: undefined, seq: undefined, status: "not_boarded", occurredAt: later },
-      { ...undone, id: undefined, seq: undefined, status: "cleared", occurredAt: later },
+      {
+        ...turnedAway,
+        id: undefined,
+        seq: undefined,
+        status: "not_boarded",
+        occurredAt: later,
+        observedEvidenceIds: [canonicalRollCallEvidenceId(turnedAway)],
+      },
+      {
+        ...undone,
+        id: undefined,
+        seq: undefined,
+        status: "cleared",
+        occurredAt: later,
+        observedEvidenceIds: [canonicalRollCallEvidenceId(undone)],
+        retractsEventId: undone.id,
+      },
     ]);
     await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.tripId, dawn.id));
     await db.delete(buddyTeamMembers).where(eq(buddyTeamMembers.tripId, dawn.id));
