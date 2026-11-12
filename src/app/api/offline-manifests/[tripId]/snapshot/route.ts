@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { issueOfflineManifestSnapshot } from "@/features/offline-manifest-snapshots";
-import { isCrossSiteRequest } from "@/features/same-origin";
+import { isCrossSiteHeaders } from "@/features/same-origin";
 import type {
   OfflineManifestSnapshotRequest,
   OfflineManifestSnapshotResponse,
@@ -23,10 +23,13 @@ const bodySchema = z.object({ erasureEpoch: counter, snapshotRevision: counter }
  * are newer). The device re-reads the page instead.
  *
  * POST: it writes the revision, and nothing should prefetch or replay it. A
- * request from another site is refused before anything is read.
+ * request from another site is refused before anything is read, judged
+ * against the host the request was sent to (`isCrossSiteHeaders`): behind a
+ * proxy the handler's own `request.url` need not carry the page's origin, and
+ * the page's own save sends an `Origin`.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
-  if (isCrossSiteRequest(request)) {
+  if (isCrossSiteHeaders(request.headers)) {
     return Response.json(
       { error: "forbidden" },
       { status: 403, headers: OFFLINE_MANIFEST_NO_STORE },

@@ -140,6 +140,21 @@ describe("POST /api/offline-manifests/[tripId]/snapshot (issue #4391)", () => {
     expect(auth).not.toHaveBeenCalled();
   });
 
+  it("serves the app's own page when the handler's URL names another host", async () => {
+    // Behind a proxy, or `next start` reached at 127.0.0.1, the handler's
+    // `request.url` says `localhost` while the page's Origin and the Host it
+    // was sent to say 127.0.0.1. Judged by `request.url`, every save from the
+    // manifest page was refused 403 and the device kept no copy (CI run
+    // 43120376056).
+    const { tripId, readAt } = await departure();
+    const response = await request(tripId, readAt, {
+      Origin: "http://127.0.0.1:3100",
+      Host: "127.0.0.1:3100",
+      "Sec-Fetch-Site": "same-origin",
+    });
+    expect(response.status).toBe(200);
+  });
+
   it("refuses a signed-out caller", async () => {
     const { tripId, readAt } = await departure();
     auth.mockResolvedValue(null);
