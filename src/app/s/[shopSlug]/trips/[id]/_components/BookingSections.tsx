@@ -18,7 +18,7 @@ import {
 } from "@/i18n/participant-labels";
 import type { DeskPayment } from "@/lib/desk-payment";
 import { embedCalendarPath } from "@/lib/embed-routes";
-import { formatMoneyScanned } from "@/lib/format";
+import { formatDateTimeTz, formatMoneyScanned } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import { type ParticipantType, rentsGear } from "@/lib/participant-types";
 import type { PassThroughFee } from "@/lib/pass-through-fee";
@@ -456,12 +456,11 @@ export type BookSpotSectionContext = {
  *   of one sheet. The card is the only edge; every bordered fieldset inside it
  *   read as a second frame around a third.
  * - **One figure.** `MoneyBlock` owns every amount this card states, and it
- *   states exactly one at or above `text-lg`. The card description that quoted
- *   the price under the heading is gone with the party total, the running
- *   checkout total, the fee line and the tax line — the hero says the price
- *   once, this block says the total once, and nothing in between says it again.
+ *   states exactly one at or above `text-lg`, inside the live people/date/total
+ *   summary. The hero states the per-diver price; this block states the booking
+ *   total and preserves the itemized fees, gear, deposit and balance.
  * - **Nothing under the button but fine print.** The free-cancellation sentence
- *   (`TripTerms`) is the only copy below the action. The requirement note is the
+ *   (`TripTerms`) and the counter-payment reassurance sit below the action. The requirement note is the
  *   form's first line, one sentence with no box around it: a sunken box here
  *   was a box inside a box, and a line above the card floated free of the
  *   party-size control it governs (UX audit #25).
@@ -572,7 +571,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
       : payAtBooking
         ? remaining === 1
           ? t("bookAndPayLastSeat")
-          : t("bookAndPay")
+          : t("bookAndPaySeats", { count: partySize })
         : remaining === 1
           ? t("bookLastSeat")
           : t("bookSeats", { count: partySize });
@@ -636,6 +635,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         ) : null}
         <BookingPartyFields
           maxPartySize={remaining}
+          countControl="stepper"
           groupRequestHref={context.groupRequestHref}
           leadPhone
           fieldErrors={state.fieldErrors}
@@ -750,6 +750,11 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         ) : null}
         {perDiverPriceCents === null || groupHold ? null : (
           <MoneyBlock
+            summary={
+              balanceDueAt
+                ? { people: partySize, when: formatDateTimeTz(balanceDueAt, locale, timeZone) }
+                : undefined
+            }
             context={{
               fareCents: perDiverPriceCents,
               partySize: diverCount,
@@ -792,7 +797,8 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
               {t(payAtBooking === "test-mode" ? "stripeTestModeHint" : "stripeHint")}
             </p>
           ) : null}
-          {/* The one sentence still ahead of a diver who has decided. */}
+          {!payAtBooking ? <p className="mt-2 text-sm text-muted">{t("payLater")}</p> : null}
+          {/* The cancellation window stays directly beside the booking action. */}
           {terms}
           {/* Keep a booking refusal beside the action that produced it. */}
           <ErrorNotice message={state.error ?? errorMessage} />

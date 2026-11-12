@@ -31,8 +31,8 @@ export type ScheduleFiltersCopy = {
  * or two checkboxes and a sentence — on a conversion surface whose one job is
  * to get somebody onto a boat (principle 8: collapse the rare path; principle
  * 10: remove until it breaks). The chips are the shop's trip tags and
- * stay out on desktop; on a phone the same disclosure holds the whole row.
- * A closed row summarizes the active selection (public audit P3, issue #3140).
+ * stay visible as one scrolling row on phones and wrap from `sm`.
+ * A closed panel summarizes only its non-lens selection.
  *
  * **Open when the reader is already filtering.** A URL carrying any of the
  * four parameters — a shared link, a reload, a step back — opens the
@@ -80,7 +80,6 @@ export function ScheduleFilters({
   copy,
   chips = null,
   monthRail = null,
-  activeLensLabel = null,
 }: {
   month: string | null;
   /**
@@ -105,8 +104,6 @@ export function ScheduleFilters({
   chips?: ReactNode;
   /** The month link, at the row's end. */
   monthRail?: ReactNode;
-  /** The operator-authored active lens, summarized while the phone row is closed. */
-  activeLensLabel?: string | null;
 }) {
   const panelId = useId();
   const formRef = useRef<HTMLFormElement>(null);
@@ -123,7 +120,6 @@ export function ScheduleFilters({
   );
   const submit = () => formRef.current?.requestSubmit();
   const activeSummary = [
-    activeLensLabel,
     tripTypeFilter === "course" ? copy.course : tripTypeFilter === "fun_dive" ? copy.funDive : null,
     hasSpaceFilter ? copy.hasSpace : null,
     copy.canDiveLevels.find((level) => level.value === canDiveFilter)?.label,
@@ -147,7 +143,7 @@ export function ScheduleFilters({
         {chips ? (
           <div
             id={`${panelId}-chips`}
-            className={`min-w-0 max-w-full max-sm:order-3 max-sm:w-full ${open ? "" : "max-sm:hidden"}`}
+            className="min-w-0 max-w-full max-sm:order-first max-sm:w-full"
           >
             {chips}
           </div>
@@ -155,7 +151,7 @@ export function ScheduleFilters({
         <button
           type="button"
           aria-expanded={open}
-          aria-controls={chips ? `${panelId} ${panelId}-chips` : panelId}
+          aria-controls={panelId}
           onClick={() => setOpen((was) => !was)}
           className="group/filters inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted transition-brand hover:text-primary focus-visible:focus-ring"
         >

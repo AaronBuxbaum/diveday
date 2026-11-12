@@ -199,7 +199,7 @@ describe("BookSpotSection — the money says itself once", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Grab a seat" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "1 person" })).toBeChecked();
+    expect(screen.getByRole("group", { name: "People" })).toHaveTextContent("1 person");
   });
 
   it("no longer quotes the per-diver price under its own heading", () => {
@@ -733,4 +733,34 @@ describe("course enrollment wording", () => {
       ).toBeVisible();
     },
   );
+});
+
+describe("the booking decision beside its button", () => {
+  it("updates the summary and submit label with the stepper without charging now", () => {
+    renderDiver(
+      <BookSpotSection
+        context={{
+          trip: trip(),
+          tripRef,
+          remaining: 6,
+          payAtBooking: false,
+          perDiverPriceCents: 9500,
+          currency: "usd",
+          locale: "en-US",
+          timeZone: "America/New_York",
+          balanceDueAt: new Date("2026-11-18T16:30:00Z"),
+          rentalItems: [],
+          rentalPricing: EMPTY_RENTAL_PRICING,
+        }}
+      />,
+    );
+    expect(screen.getByRole("status", { name: "Booking summary" })).toHaveTextContent("1 person");
+    fireEvent.click(screen.getByRole("button", { name: "More people" }));
+    expect(screen.getByRole("status", { name: "Booking summary" })).toHaveTextContent("2 people");
+    expect(screen.getByRole("status", { name: "Booking summary" })).toHaveTextContent(
+      "$190 due at the shop",
+    );
+    expect(screen.getByRole("button", { name: "Book 2 seats" })).toBeInTheDocument();
+    expect(screen.getByText("Nothing is charged now.")).toBeInTheDocument();
+  });
 });

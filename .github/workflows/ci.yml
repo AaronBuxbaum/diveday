@@ -76,6 +76,7 @@ jobs:
       run: ${{ steps.gate.outputs.run }}
       # Where a stacked pull request's stack left the default branch; empty otherwise.
       diff_base: ${{ steps.gate.outputs.diff_base }}
+      force_full: ${{ steps.gate.outputs.force_full }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: gate
@@ -1268,6 +1269,8 @@ jobs:
           # In a stack, the bottom layer's base sha (stack-gate), so this layer's diff
           # holds every layer under it: only the top layer runs CI.
           STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
+          # A missing gate output is uncertain too: never narrow a chained PR silently.
+          FORCE_FULL: ${{ github.event_name == 'pull_request' && needs.stack-gate.outputs.force_full != 'false' }}
           IS_PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           # A push to main compares against the commit that was there before.
@@ -1294,14 +1297,15 @@ jobs:
           # `origin/main...${{ github.sha }}` is empty, so nothing would run,
           # main would publish no visual baseline, and every branch cut from
           # that commit would resolve none (issue #1277).
-          if ! git rev-parse --verify -q "${base}^{commit}" > /dev/null 2>&1 \
+          if [ "${FORCE_FULL}" = "true" ] \
+            || ! git rev-parse --verify -q "${base}^{commit}" > /dev/null 2>&1 \
             || ! git rev-parse --verify -q "${head}^{commit}" > /dev/null 2>&1; then
             echo "db=true" >> "$GITHUB_OUTPUT"
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "pixel_probe=true" >> "$GITHUB_OUTPUT"
             echo "safety=true" >> "$GITHUB_OUTPUT"
             echo "browser=true" >> "$GITHUB_OUTPUT"
-            echo "Diff range '${base}...${head}' is unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
+            echo "Diff range '${base}...${head}' is uncertain or unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           # `pixel_probe` — did this change touch what e2e/pixel-probe.spec.ts

@@ -234,3 +234,44 @@ describe("MoneyBlock — how the desk takes money (ideas item 21)", () => {
     expect(screen.queryByText("Pay by card when you arrive.")).toBeNull();
   });
 });
+
+describe("the running booking summary", () => {
+  it("uses the same total including gear and fees and updates with the party", () => {
+    renderDiver(
+      <MoneyBlock
+        context={props({ partySize: 2, gearCents: 4500, dueNow: "at_shop" })}
+        summary={{ people: 2, when: "Nov 18, 11:30 AM EST" }}
+      />,
+    );
+    expect(screen.getByRole("status", { name: "Booking summary" })).toHaveTextContent(
+      "2 people, Nov 18, 11:30 AM EST, $235 due at the shop",
+    );
+    cleanup();
+    renderDiver(
+      <MoneyBlock
+        context={props({ partySize: 3, gearCents: 4500, dueNow: "at_shop" })}
+        summary={{ people: 3, when: "Nov 18, 11:30 AM EST" }}
+      />,
+    );
+    expect(screen.getByRole("status", { name: "Booking summary" })).toHaveTextContent(
+      "3 people, Nov 18, 11:30 AM EST, $330 due at the shop",
+    );
+  });
+
+  it("names only the deposit due now while retaining the balance", () => {
+    renderDiver(
+      <MoneyBlock
+        context={props({
+          partySize: 2,
+          depositCents: 2000,
+          balanceDueAt: new Date("2026-11-18T16:30:00Z"),
+        })}
+        summary={{ people: 2, when: "Nov 18, 11:30 AM EST" }}
+      />,
+    );
+    expect(screen.getByRole("status", { name: "Booking summary" })).toHaveTextContent(
+      "$40 due now",
+    );
+    expect(screen.getByText(/\$150.*at the dock/)).toBeInTheDocument();
+  });
+});

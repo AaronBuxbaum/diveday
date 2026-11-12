@@ -334,7 +334,8 @@ test("phone schedule filters reveal the trip tags and summarize a closed selecti
   const copy = diverTranslator("en-US");
   await expect(page.getByRole("heading", { level: 1, name: copy("schedule.title") })).toBeVisible();
   const tags = page.getByRole("navigation", { name: copy("schedule.lenses.railLabel") });
-  await expect(tags).toHaveCount(0);
+  // Lens chips stay visible while only the advanced filter controls collapse.
+  await expect(tags).toBeVisible();
   await openFilters(page);
   await expect(tags).toBeVisible();
   await page.getByLabel(copy("schedule.filters.tripType")).selectOption("course");
@@ -342,6 +343,7 @@ test("phone schedule filters reveal the trip tags and summarize a closed selecti
   const toggle = page.locator('form:has(select[name="tripType"]) button[aria-expanded]');
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(tags).toBeVisible();
   await expect(
     page
       .locator('form:has(select[name="tripType"])')

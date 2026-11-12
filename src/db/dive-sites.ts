@@ -150,6 +150,15 @@ export async function listDiveSites(db: AppDb, shopId: string) {
     .orderBy(asc(diveSites.name));
 }
 
+/** Live site names for the manifest's executed-dive picker, without briefing payloads. */
+export async function listDiveSiteNames(db: AppDb, shopId: string) {
+  return db
+    .select({ id: diveSites.id, name: diveSites.name })
+    .from(diveSites)
+    .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
+    .orderBy(asc(diveSites.name));
+}
+
 /**
  * The sites that answer "how long is a dive here?" for themselves, name and
  * minutes, alphabetically.
@@ -235,9 +244,9 @@ export type DiveSiteListFilter = {
  * years holds far more sites than fit on a page, and the library rendered every
  * one of them as a card with no way to find anything except scrolling.
  *
- * The library page reads through here; every other caller keeps using
- * `listDiveSites`, which deliberately still returns the lot because the trip
- * editor's `<select>` of sites cannot page.
+ * The library page reads through here. Editors needing briefing fields keep
+ * `listDiveSites`; name-only pickers use `listDiveSiteNames`. Both unpaged
+ * readers return every live site because a site select cannot page.
  *
  * The name half of the search rides `dive_sites_name_trgm_idx` (the GIN
  * trigram index the command palette added); the location half is a scan

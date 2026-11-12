@@ -17,3 +17,6 @@ export const COMPANY_POSTAL_ADDRESS = "12851 Capital St, Suite 100, Oak Park, MI
 
 /** The founder, who signs `/about`. */
 export const FOUNDER_NAME = "Aaron Buxbaum"; // i18n-exempt: a person's name
+
+/** Governing law confirmed by Aaron on #4323, 2026-11-11. */
+export const COMPANY_GOVERNING_LAW = "Massachusetts"; // i18n-exempt: a jurisdiction name

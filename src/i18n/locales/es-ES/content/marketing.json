@@ -998,7 +998,7 @@
     "contact": {
       "heading": "Preguntarnos algo",
       "body": "Escribe a <email>{address}</email>. Si eres un buceador y no un centro, tu centro tiene tu registro y puede responder más rápido; si no puede, le ayudaremos.",
-      "operator": "DiveDay es un servicio de {company}, que opera con el nombre comercial DiveDay, con domicilio en {postalAddress}."
+      "operator": "DiveDay es un servicio de {company}, que opera con el nombre comercial DiveDay, con domicilio en {postalAddress}. Estas condiciones se rigen por las leyes de {governingLaw}."
     },
     "open": {
       "heading": "Lo que esta página todavía no dice",
@@ -1085,7 +1085,7 @@
     "contact": {
       "heading": "Preguntarnos algo",
       "body": "Escribe a <email>{address}</email>.",
-      "operator": "DiveDay es un servicio de {company}, que opera con el nombre comercial DiveDay, con domicilio en {postalAddress}."
+      "operator": "DiveDay es un servicio de {company}, que opera con el nombre comercial DiveDay, con domicilio en {postalAddress}. Estas condiciones se rigen por las leyes de {governingLaw}."
     }
   },
   "featureChrome": {

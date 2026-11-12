@@ -98,12 +98,11 @@ describe("the More filters toggle", () => {
 });
 
 describe("the collapsed filter selection", () => {
-  it("keeps the active lens and field selections available while the controls are closed", () => {
+  it("summarizes only the non-lens selections while the controls are closed", () => {
     render(
       <ScheduleFilters
         month={null}
         lens="wrecks"
-        activeLensLabel="Wrecks"
         tripTypeFilter="fun_dive"
         hasSpaceFilter
         canDiveFilter={null}
@@ -114,7 +113,8 @@ describe("the collapsed filter selection", () => {
     const toggle = screen.getByRole("button", { name: "More filters" });
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText("Wrecks · Fun dive · Has space")).toBeInTheDocument();
+    expect(screen.getByText("Fun dive · Has space")).toBeInTheDocument();
+    expect(screen.queryByText("Wrecks · Fun dive · Has space")).not.toBeInTheDocument();
     const form = toggle.closest("form");
     expect(form).not.toBeNull();
     expect(new FormData(form ?? undefined).get("lens")).toBe("wrecks");

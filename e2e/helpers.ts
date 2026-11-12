@@ -57,14 +57,25 @@ export async function acceptAgeAttestation(page: Page) {
 }
 
 /**
- * Set party size after hydration; remaining capacity renders radios through six
- * seats and a select above six.
+ * Set party size after hydration. Booking uses a bounded stepper; waitlists
+ * keep their existing radio/select control.
  */
 export async function choosePartySize(page: Page, count: number) {
   const control = page.getByLabel("People", { exact: true });
   await expect(control).toHaveAttribute("data-hydrated", "true");
   if ((await control.evaluate((node: Element) => node.tagName)) === "SELECT") {
     await control.selectOption(String(count));
+    return;
+  }
+  if ((await control.evaluate((node: Element) => node.tagName)) === "FIELDSET") {
+    const field = control.locator('input[name="partySize"]');
+    const current = Number(await field.inputValue());
+    const button = control.getByRole("button", {
+      name: count > current ? "More people" : "Fewer people",
+      exact: true,
+    });
+    for (let step = 0; step < Math.abs(count - current); step += 1) await button.click();
+    await expect(field).toHaveValue(String(count));
     return;
   }
   const label = count === 1 ? "1 person" : `${count} people`;

@@ -5,7 +5,11 @@ import { LegalDocument, LegalSection, LegalTermList } from "@/components/LegalDo
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { proseLinkClass } from "@/components/ui/button";
 import { planCopyParams } from "@/features/billing";
-import { COMPANY_LEGAL_NAME, COMPANY_POSTAL_ADDRESS } from "@/features/company-identity";
+import {
+  COMPANY_GOVERNING_LAW,
+  COMPANY_LEGAL_NAME,
+  COMPANY_POSTAL_ADDRESS,
+} from "@/features/company-identity";
 import { pricingConfig } from "@/features/pricing-flags";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -43,7 +47,8 @@ export const metadata: Metadata = {
  *
  * Written under the same two constraints as its sibling, for the same reasons:
  * **the operating company is named once, in the contact section** (Aaron,
- * 2026-11-11; `src/features/company-identity`), with no governing law stated, and every promise is one the
+ * 2026-11-11; `src/features/company-identity`), with Massachusetts law as confirmed on #4323.
+ * Every promise is one the
  * product already keeps. That second rule is why the "what we do not promise"
  * section exists and says there is no uptime guarantee — printing an SLA
  * before there is a track record to back it would be exactly the unprovable
@@ -176,6 +181,7 @@ async function TermsBody({ locale, percentPlan }: { locale: DiverLocale; percent
           {t("marketing.terms.contact.operator", {
             company: COMPANY_LEGAL_NAME,
             postalAddress: COMPANY_POSTAL_ADDRESS,
+            governingLaw: COMPANY_GOVERNING_LAW,
           })}
         </p>
       </LegalSection>

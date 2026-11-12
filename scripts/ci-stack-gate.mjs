@@ -11,7 +11,9 @@
 // is where the stack left the default branch. Change detection and the pull-request body check
 // diff against it instead of against the layer below, because only the top layer runs CI and a
 // diff against the layer below would never see infra, migration or safety changes in the layers
-// under it. Empty for a pull request in no stack, which keeps its own event-pinned base.
+// under it. Empty for a standalone pull request, which keeps its event-pinned base.
+// Uncertain stack membership or an invalid bottom-base lookup emits `force_full=true`: a
+// blank diff base must never silently narrow coverage to only the top layer.
 //
 // A stacked PR's base is another PR's head branch, so a PR with a non-default base that is in no
 // stack yet is waiting on registration (`gh stack submit` opens the PRs, then links them); it is
@@ -62,12 +64,30 @@ export async function gate(env, fetchStacks, wait = sleep, fetchLabels = async (
       const stacks = await fetchStacks();
       last = decide({ number, baseIsDefault, stacks, labels: await fetchLabels() });
     } catch (error) {
-      return { run: true, why: `stacks API unavailable (${error.message})` };
+      return { run: true, forceFull: true, why: `stacks API unavailable (${error.message})` };
     }
     if (last.run !== null) return last;
     await wait(10_000);
   }
-  return { run: true, why: `${last.why}; ran it rather than wait` };
+  return { run: true, forceFull: true, why: `${last.why}; ran it rather than wait` };
+}
+
+/** An uncertain stack must run all checks, never just the last layer's diff. */
+export async function resolveDiffScope(result, env, pull) {
+  let diffBase = "";
+  let forceFull = result.forceFull === true;
+  if (result.run && result.bottom) {
+    try {
+      const base = (await pull(result.bottom)).base;
+      if (!/^[0-9a-f]{40}$/.test(base?.sha ?? "") || base.ref !== env.DEFAULT_BRANCH) {
+        throw new Error("bottom base is not a valid default-branch commit");
+      }
+      diffBase = base.sha;
+    } catch {
+      forceFull = true;
+    }
+  }
+  return { ...result, diffBase, forceFull };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -90,17 +110,14 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     sleep,
     async () => (await api(`issues/${process.env.PR_NUMBER}/labels`)).map((l) => l.name),
   );
-  let diffBase = "";
-  if (result.run && result.bottom) {
-    try {
-      const sha = (await pull(result.bottom)).base?.sha ?? "";
-      if (/^[0-9a-f]{40}$/.test(sha)) diffBase = sha;
-    } catch {}
-  }
-  const line = `CI ${result.run ? "runs" : "is skipped"}: ${result.why}.${diffBase ? ` Diffs against the stack's base ${diffBase.slice(0, 9)}.` : ""}`;
+  const { diffBase, forceFull } = await resolveDiffScope(result, process.env, pull);
+  const line = `CI ${result.run ? "runs" : "is skipped"}: ${result.why}.${forceFull ? " Stack scope is uncertain; change detection runs everything." : ""}${diffBase ? ` Diffs against the stack's base ${diffBase.slice(0, 9)}.` : ""}`;
   console.log(line);
   if (process.env.GITHUB_OUTPUT) {
-    await appendFile(process.env.GITHUB_OUTPUT, `run=${result.run}\ndiff_base=${diffBase}\n`);
+    await appendFile(
+      process.env.GITHUB_OUTPUT,
+      `run=${result.run}\ndiff_base=${diffBase}\nforce_full=${forceFull}\n`,
+    );
   }
   if (process.env.GITHUB_STEP_SUMMARY) {
     await appendFile(process.env.GITHUB_STEP_SUMMARY, `${line}\n`);

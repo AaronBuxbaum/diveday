@@ -374,6 +374,9 @@
       "notYou": "¿No eres {name}? <a>Empieza con un formulario en blanco</a>"
     },
     "money": {
+      "summaryLabel": "Resumen de la reserva",
+      "summaryAtShop": "{count, plural, one {# persona} other {# personas}}, {when}, <amount>{total}</amount> a pagar en el centro",
+      "summaryCheckout": "{count, plural, one {# persona} other {# personas}}, {when}, <amount>{total}</amount> a pagar ahora",
       "fare": "{price} × {count, plural, one {# buceador} other {# buceadores}}",
       "courseFee": "Curso",
       "eLearning": "Materiales del curso en línea",
@@ -403,6 +406,8 @@
     "bookAndPay": "Reservar y pagar",
     "bookAndPayLastSeat": "Reservar y pagar la última plaza",
     "bookLastSeat": "Reservar la última plaza",
+    "payLater": "No se cobra nada ahora.",
+    "bookAndPaySeats": "{count, plural, one {Reservar y pagar} other {Reservar # plazas y pagar}}",
     "bookSeats": "{count, plural, one {Reservar esta plaza} other {Reservar # plazas}}",
     "bookVerb": "Reservar",
     "headingToPayment": "Vamos al pago…",
@@ -1497,6 +1502,8 @@
     "estimatedRentalFullSet": "Alquiler estimado: {price} por persona, precio del equipo completo."
   },
   "party": {
+    "fewerPeople": "Menos personas",
+    "morePeople": "Más personas",
     "numberOfDivers": "Personas",
     "yourDetails": "Tus datos",
     "diverN": "Buceador {number}",

@@ -29,7 +29,7 @@ const nextBoat = (page: Page) => page.getByRole("region", { name: "Next boat wit
 const list = (page: Page) => page.locator("form + ul");
 
 /**
- * **The filters live behind one quiet "More filters" disclosure** (2026-09-17;
+ * **The filters live behind one quiet "Filter trips" disclosure** (2026-09-17;
  * one row with the chips and the month link since 2026-10-24). The rail at
  * rest is the shop's own lens chips; the trip-type select, the "what can you
  * dive?" select and the two checkboxes are the advanced ask and sit in the
@@ -158,4 +158,38 @@ test("the lens survives a month step and a 'Has space' tap", { tag: READ_ONLY },
     "aria-current",
     "true",
   );
+});
+
+// #4380: the tags remain available while the less common controls are closed.
+test("phone lenses stay in one scrolling row with the filters closed", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/s/blue-mantis");
+  const toggle = page.getByRole("button", { name: "Filter trips" });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(rail(page)).toBeVisible();
+  await expect(page.locator('select[name="tripType"]')).toBeHidden();
+  const chips = rail(page).getByRole("link");
+  const geometry = await chips.evaluateAll((links) => {
+    const row = links[0].parentElement;
+    const bodyWidth = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth);
+    return {
+      tops: links.map((link) => link.getBoundingClientRect().top),
+      scrollWidth: row?.scrollWidth ?? 0,
+      clientWidth: row?.clientWidth ?? 0,
+      bodyWidth,
+    };
+  });
+  expect(new Set(geometry.tops).size).toBe(1);
+  expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
+  expect(geometry.bodyWidth).toBeLessThanOrEqual(390);
+  await expect(page.locator('select[name="tripType"]')).toHaveAttribute("data-hydrated", "true");
+  const afterDark = rail(page).getByRole("link", { name: "After dark" });
+  await afterDark.scrollIntoViewIfNeeded();
+  await expect(afterDark).toBeInViewport();
+  await afterDark.click();
+  await expect(page).toHaveURL(/[?&]lens=after-dark/);
+  await expect(afterDark).toHaveAttribute("aria-current", "true");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
 });

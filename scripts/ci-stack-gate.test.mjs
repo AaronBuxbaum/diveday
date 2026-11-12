@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decide, gate } from "./ci-stack-gate.mjs";
+import { decide, gate, resolveDiffScope } from "./ci-stack-gate.mjs";
 
 const stack = (number, ...prs) => ({ number, pull_requests: prs.map((n) => ({ number: n })) });
 
@@ -65,5 +65,68 @@ describe("gate", () => {
       throw new Error("HTTP 500");
     });
     expect(result.run).toBe(true);
+  });
+});
+
+describe("change-detection scope", () => {
+  const env = { DEFAULT_BRANCH: "main" };
+  const sha = "a".repeat(40);
+  it("forces every check after unregistered-base timeout or API failure", async () => {
+    const input = {
+      GITHUB_EVENT_NAME: "pull_request",
+      PR_NUMBER: "2",
+      PR_BASE_REF: "layer",
+      ...env,
+    };
+    for (const fetchStacks of [
+      async () => [],
+      async () => {
+        throw new Error("HTTP 500");
+      },
+    ]) {
+      const decision = await gate(input, fetchStacks, async () => {});
+      expect(
+        await resolveDiffScope(decision, env, async () => {
+          throw new Error("unexpected lookup");
+        }),
+      ).toMatchObject({ run: true, forceFull: true, diffBase: "" });
+    }
+  });
+  it("keeps an ordinary standalone PR and skipped lower layer scoped", async () => {
+    for (const decision of [
+      decide({ number: 5, baseIsDefault: true, stacks: [] }),
+      decide({ number: 2, stacks: [stack(9, 1, 2, 3)] }),
+    ]) {
+      expect(
+        await resolveDiffScope(decision, env, async () => {
+          throw new Error("unexpected lookup");
+        }),
+      ).toMatchObject({ forceFull: false, diffBase: "" });
+    }
+  });
+  it("uses the validated registered bottom's default-branch base", async () => {
+    const decision = decide({ number: 3, stacks: [stack(9, 1, 2, 3)] });
+    expect(
+      await resolveDiffScope(decision, env, async (number) => {
+        expect(number).toBe(1);
+        return { base: { sha, ref: "main" } };
+      }),
+    ).toMatchObject({ forceFull: false, diffBase: sha });
+  });
+  it("forces full scope for failed, malformed or nondefault bottom-base lookups", async () => {
+    const decision = decide({ number: 3, stacks: [stack(9, 1, 2, 3)] });
+    for (const read of [
+      async () => {
+        throw new Error("HTTP 500");
+      },
+      async () => ({ base: { sha: "", ref: "main" } }),
+      async () => ({ base: { sha, ref: "layer" } }),
+    ]) {
+      expect(await resolveDiffScope(decision, env, read)).toMatchObject({
+        run: true,
+        forceFull: true,
+        diffBase: "",
+      });
+    }
   });
 });
