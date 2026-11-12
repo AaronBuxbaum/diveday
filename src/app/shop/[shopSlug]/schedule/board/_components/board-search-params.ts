@@ -3,6 +3,9 @@
  * inline in its signature, so the route file stays a page.
  */
 export type BoardSearchParams = {
+  view?: string;
+  day?: string;
+  notice?: string;
   after?: string;
   builder?: string;
   count?: string; // the number a builder notice names (`builderNoticeMessage`)
@@ -12,6 +15,9 @@ export type BoardSearchParams = {
   created?: string;
   /** Short-lived signed marker for a real move result, removed after the notice is read. */
   result?: string;
+  clashTrip?: string;
+  clashDay?: string;
+  clashResult?: string;
   /** The reschedule notice a move held, and how many seats it tells. */
   held?: string;
   tell?: string;
@@ -46,6 +52,9 @@ export const BOARD_RESULT_PARAMS = [
   "created",
   "on",
   "result",
+  "clashTrip",
+  "clashDay",
+  "clashResult",
   "series",
 ] as const;
 

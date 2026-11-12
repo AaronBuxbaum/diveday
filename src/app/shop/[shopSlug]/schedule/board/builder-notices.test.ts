@@ -39,6 +39,21 @@ describe("builderNoticeMessage", () => {
 describe("builderNoticeFor", () => {
   const none = { count: undefined, created: undefined, series: undefined, locale: "en-US", st };
 
+  it("says an add was already committed when crew assignment timed out", () => {
+    const result = builderNoticeFor({ ...none, builder: "added-crew-busy" });
+    expect(result?.tone).toBe("warning");
+    expect(result?.message).toContain("was created");
+    expect(result?.message).toContain("do not add it again");
+    const es = builderNoticeFor({
+      ...none,
+      locale: "es-ES",
+      st: staffTranslator("es-ES"),
+      builder: "added-crew-busy",
+    });
+    expect(es?.message).toContain("se creó");
+    expect(es?.message).toContain("no la agregues otra vez");
+  });
+
   it("says nothing for an unknown or missing outcome", () => {
     expect(builderNoticeFor({ ...none, builder: undefined })).toBeUndefined();
     expect(builderNoticeFor({ ...none, builder: "nope" })).toBeUndefined();

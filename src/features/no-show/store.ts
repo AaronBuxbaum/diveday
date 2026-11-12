@@ -14,6 +14,7 @@ import { departureOpenToDiver } from "../../db/interest-offers";
 import { listDepartureInterests } from "../../db/interests";
 import { publishManifestEvent } from "../../db/manifest-events";
 import { onTheWaterByRollCall } from "../../db/manifests";
+import { lockShopScheduleShared } from "../../db/person-schedule-lock";
 import { activityEvents, bookings, people, trips } from "../../db/schema/index";
 import { lockSeatDeparture } from "../../db/seat-locks";
 import { shopHasFeatureOn } from "../../db/shops";
@@ -278,6 +279,7 @@ export async function undoBookingNoShow(
 ): Promise<UndoNoShowOutcome> {
   const now = input.now ?? nowDate();
   const result = await db.transaction(async (tx): Promise<UndoNoShowOutcome> => {
+    await lockShopScheduleShared(tx, input.shopId);
     const recorder = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!recorder) return { ok: false, reason: "staff_not_found" };
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { offerDepartureToDiver } from "@/db/interest-offers";
+import { isLockWaitRefusal } from "@/db/lock-bounds";
 import { checkInBooking, undoCheckInBooking } from "@/features/check-in";
 import { parseForm } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
@@ -227,6 +228,9 @@ export async function undoNoShowAction(
     shopId: session.user.shopId,
     bookingId,
     recordedByPersonId: session.user.personId,
+  }).catch((error: unknown) => {
+    if (isLockWaitRefusal(error)) redirect(noticeUrl(back, "schedule-busy"));
+    throw error;
   });
   if (outcome.ok) {
     revalidatePath(back);

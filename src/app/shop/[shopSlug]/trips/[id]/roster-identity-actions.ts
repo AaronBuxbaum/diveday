@@ -76,6 +76,8 @@ export async function confirmDiverIdentityAction(
     actorPersonId: s.user.personId,
     heldContact,
   });
+  if (confirmed === "busy")
+    revalidateAndRedirect(back, noticeUrl(back, "schedule-roster-busy", { bid: bookingId }));
   if (confirmed === "contact_differs")
     revalidateAndRedirect(back, noticeUrl(back, "identity-contact-differs", { bid: bookingId }));
   if (!confirmed) revalidateAndRedirect(back, noticeUrl(back, "invalid", { bid: bookingId }));
@@ -203,6 +205,7 @@ export async function repointDiverIdentityAction(
 
 /** Which notice each refused re-point lands on (`repointHeldBooking`). */
 const REPOINT_REFUSAL_NOTICE = {
+  busy: "schedule-roster-busy",
   not_held: "invalid",
   person_unavailable: "identity-repoint-unavailable",
   medical_hold: "identity-repoint-medical-hold",
@@ -235,6 +238,7 @@ const IDENTITY_RELEASE_NOTICE = {
 
 /** Which notice each refused split lands on (`splitBookingIdentity`). */
 const SPLIT_REFUSAL_NOTICE = {
+  busy: "schedule-roster-busy",
   not_held: "invalid",
   name_required: "invalid",
   medical_hold: "identity-medical-hold",

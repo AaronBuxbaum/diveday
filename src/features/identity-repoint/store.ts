@@ -5,7 +5,9 @@ import { lockBoardingCertificationEvidence } from "../../db/boarding-certificati
 import { revokeBookingCapabilities } from "../../db/booking-capabilities";
 import { movableSameNameSeats } from "../../db/bookings";
 import type { AppDb, DbExecutor } from "../../db/client";
+import { isLockWaitRefusal } from "../../db/lock-bounds";
 import { recordDiverActivity, recordTripActivity } from "../../db/operations";
+import { lockShopSchedule } from "../../db/person-schedule-lock";
 import { violatesUniqueIndex } from "../../db/query-helpers";
 import {
   bookings,
@@ -107,7 +109,8 @@ export type RepointHeldBookingResult =
         /** The chosen person already has a seat on a departure that would move. */
         | "already_on_departure"
         /** The seat's departure is deleted, cancelled or back (security review Y4). */
-        | "departure_closed";
+        | "departure_closed"
+        | "busy";
     };
 
 export type RepointHeldBookingInput = {
@@ -162,6 +165,7 @@ export async function repointHeldBooking(
   try {
     outcome = await db.transaction((tx) => repointInTransaction(tx, input));
   } catch (error) {
+    if (isLockWaitRefusal(error)) return { ok: false, reason: "busy" };
     // A seat of theirs that landed on a moving departure after the check
     // below read it (agency review G8): the same refusal, not a thrown 500.
     if (violatesUniqueIndex(error, "bookings_trip_person_unique")) {
@@ -215,6 +219,7 @@ async function repointInTransaction(
   input: RepointHeldBookingInput,
 ): Promise<RepointOutcome> {
   const now = nowDate();
+  await lockShopSchedule(tx, input.shopId);
   await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
   // Only a seat on a departure still to come (security review Y4): one that
   // is deleted, cancelled or back has nobody left to re-point.

@@ -4,6 +4,8 @@
  */
 export type TripPageSearchParams = {
   notice?: string;
+  clashResult?: string;
+  clashes?: string;
   bid?: string;
   diverq?: string;
   inviteq?: string;
@@ -68,6 +70,7 @@ export type TripPageSearchParams = {
 /** Transient outcomes cleared after this route has shown them once. */
 export const TRIP_FLASH_PARAMS = [
   "notice",
+  "clashResult",
   "add",
   "count",
   "form",

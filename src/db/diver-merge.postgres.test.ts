@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import type { AppDb } from "./client";
 import { mergeDiverRecords } from "./diver-merge";
+import { lockShopSchedule } from "./person-schedule-lock";
 import { people, personRoles, shops, userAccounts } from "./schema";
 
 /**
@@ -51,6 +52,39 @@ async function pair(db: AppDb) {
 }
 
 describePostgres("mergeDiverRecords under real concurrency", () => {
+  it("takes the schedule fence before repointing booked identities", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, ownerId, a, b } = await pair(pg.db);
+    let ready!: () => void;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const proceed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const holder = pg.connect().transaction(async (tx) => {
+      await lockShopSchedule(tx, shopId);
+      ready();
+      await proceed;
+    });
+    await held;
+    const merging = mergeDiverRecords({
+      db: pg.connect(),
+      shopId,
+      personId: a,
+      survivorId: b,
+      actorPersonId: ownerId,
+    });
+    try {
+      await waitForLockWaiters(pg.db, 1);
+    } finally {
+      release();
+    }
+    await holder;
+    expect((await merging).ok).toBe(true);
+  });
+
   it("lets one of two opposite merges win and never leaves a cycle", async () => {
     const pg = await postgresTestDb();
     const { shopId, ownerId, a, b } = await pair(pg.db);
