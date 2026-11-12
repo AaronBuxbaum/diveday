@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
   addPartySeat,
@@ -19,6 +19,7 @@ import { getRentalFit, toDiverRentalFit } from "../../db/rental-fit";
 import {
   bookings,
   cards,
+  courses,
   people,
   priorVisits,
   rollCallEvents,
@@ -872,4 +873,34 @@ describe("getReadyPageData — the nitrox card behind the planning line", () => 
     await db.update(cards).set({ reviewedAt: nowDate() }).where(eq(cards.id, cardId));
     expect((await getReadyPageData(db, bookingId))?.nitroxCardVerified).toBe(true);
   });
+});
+
+it("the immediate booked card pairs authored places only with the full meeting plan", async () => {
+  const { db, shop, bookingId, open: trip } = await unpaidBooking();
+  const [course] = await db.select().from(courses).where(eq(courses.shopId, shop.id)).limit(1);
+  if (!course) throw new Error("seeded course missing");
+  await db.update(tripTable).set({ courseId: course.id }).where(eq(tripTable.id, trip.id));
+  const before = await getBookedCard(db, { shopId: shop.id, bookingId });
+  if (!before?.days?.length) throw new Error("seeded meeting day missing");
+  const plan = before.days.map((_, i) => ({
+    title: `Day ${i + 1}`,
+    meetingPlace: `Authored place ${i + 1}`,
+    items: [],
+  }));
+  await db
+    .update(courses)
+    .set({ scheduleDays: plan })
+    .where(and(eq(courses.id, course.id), eq(courses.shopId, shop.id)));
+  const matched = await getBookedCard(db, { shopId: shop.id, bookingId });
+  expect(matched?.days?.map((day) => day.meetingPlace)).toEqual(
+    plan.map((day) => day.meetingPlace),
+  );
+  await db
+    .update(courses)
+    .set({
+      scheduleDays: [...plan, { title: "Extra day", meetingPlace: "Do not guess", items: [] }],
+    })
+    .where(eq(courses.id, course.id));
+  const partial = await getBookedCard(db, { shopId: shop.id, bookingId });
+  expect(partial?.days?.every((day) => day.meetingPlace === undefined)).toBe(true);
 });

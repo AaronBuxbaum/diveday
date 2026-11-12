@@ -372,7 +372,7 @@
     "money": {
       "fare": "{price} × {count, plural, one {# diver} other {# divers}}",
       "courseFee": "Course fee",
-      "eLearning": "E-learning",
+      "eLearning": "Online course materials",
       "gear": "Rental gear",
       "tax": "Tax",
       "taxAtCheckout": "added at checkout",

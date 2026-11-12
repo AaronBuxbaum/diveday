@@ -81,6 +81,57 @@ describe("buildReadySnapshot", () => {
     expect(saved).not.toContain("Aim to be at the dock");
   });
 
+  it("saves a course's actual meetings and explicit places without a sailing instruction", () => {
+    const source = facts();
+    const saved = plain(
+      buildReadySnapshot(
+        facts({
+          courseSession: true,
+          courseMeetings: [
+            {
+              startsAt: source.trip.startsAt,
+              endsAt: source.trip.endsAt,
+              meetingPlace: "Shop classroom",
+            },
+            {
+              startsAt: new Date(Date.UTC(2026, 10, 3, 14)),
+              endsAt: new Date(Date.UTC(2026, 10, 3, 18)),
+              meetingPlace: "Training pool entrance",
+            },
+          ],
+        }),
+      ).saved,
+    );
+    expect(saved).toContain("Your course starts at");
+    expect(saved).not.toContain("before we sail");
+    expect(saved).not.toContain("Aim to be at the dock");
+    expect(saved).toContain("Mon, Nov 2");
+    expect(saved).toContain("Tue, Nov 3");
+    expect(saved).toContain("Shop classroom");
+    expect(saved).toContain("Training pool entrance");
+  });
+
+  it("keeps a promised pickup ahead of a course start and escapes authored places", () => {
+    const source = facts();
+    const snapshot = buildReadySnapshot(
+      facts({
+        courseSession: true,
+        pickup: { time: "06:45", location: "Hotel Playa" },
+        courseMeetings: [
+          {
+            startsAt: source.trip.startsAt,
+            endsAt: source.trip.endsAt,
+            meetingPlace: "<script>bad()</script>",
+          },
+        ],
+      }),
+    );
+    expect(snapshot.saved).toContain("06:45 pickup at Hotel Playa");
+    expect(snapshot.saved).not.toContain("Your course starts at");
+    expect(snapshot.saved).toContain("&lt;script&gt;bad()&lt;/script&gt;");
+    expect(snapshot.saved).not.toContain("<script>");
+  });
+
   it("expires a day after the boat is due back, by the server's own rule", () => {
     const f = facts();
     expect(buildReadySnapshot(f).keepUntil).toBe(readyCopyKeepUntil(f.trip));
@@ -235,3 +286,22 @@ function plainSnapshot(f: ReadySnapshotFacts) {
   const s = buildReadySnapshot(f);
   return { ...s, saved: plain(s.saved) };
 }
+
+it("uses the first course meeting's own hours above the dated list", () => {
+  const source = facts();
+  const saved = buildReadySnapshot(
+    facts({
+      courseSession: true,
+      trip: { ...source.trip, endsAt: new Date(Date.UTC(2026, 10, 3, 19)) },
+      courseMeetings: [
+        { startsAt: source.trip.startsAt, endsAt: source.trip.endsAt },
+        {
+          startsAt: new Date(Date.UTC(2026, 10, 3, 14)),
+          endsAt: new Date(Date.UTC(2026, 10, 3, 19)),
+        },
+      ],
+    }),
+  ).saved;
+  expect(plain(saved)).toContain("Mon, Nov 2 · 8:00 AM – 12:00 PM EST");
+  expect(plain(saved)).not.toContain("Mon, Nov 2 · 8:00 AM – 2:00 PM EST");
+});

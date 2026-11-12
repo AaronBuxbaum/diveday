@@ -38,6 +38,9 @@ export function SessionDayPlan({
             <div key={day.title}>
               {multiple ? <h3 className="text-base font-semibold">{day.title}</h3> : null}
               {time ? <p className="mt-1 text-sm text-muted tabular-nums">{time}</p> : null}
+              {day.meetingPlace ? (
+                <p className="mt-1 text-sm font-medium">{day.meetingPlace}</p>
+              ) : null}
               {day.items.length > 0 ? (
                 <ul className="mt-2 list-disc space-y-1 ps-5 text-sm text-muted">
                   {day.items.map((item) => (

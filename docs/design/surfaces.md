@@ -1134,3 +1134,5 @@ balance after a partial return, including the balance's computed type size.
 - **Composition:** a short strip under the current-role row, wrapping each action whole on a
   phone. A modal would hide the product the visitor came to try, and three cards would compete
   with Today. Dismissal lasts for the tab's demo session.
+
+**Amended 2026-11-11 (#4332, authored course meeting places):** the course editor accepts an optional meeting place per plan day and prompts for learning-material access instructions. The public and printable course plans show that authored place; the enrolled student's actual dated meetings pair it only when the session covers the complete plan. Saved arrival cards retain those dates and places, use course-start wording, and preserve scheduled hotel pickup precedence. Partial sessions do not infer a place from activity prose. The separate online course materials fee keeps its own price line.

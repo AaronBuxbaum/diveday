@@ -174,7 +174,9 @@
     "itemsOverMaxOther": "Up to {max} items a day. Take a line out before saving.",
     "daysMaxOne": "{max} day max",
     "daysMaxOther": "{max} days max",
-    "addDay": "Add day"
+    "addDay": "Add day",
+    "meetingPlaceLabel": "Day {number} meeting place (optional)",
+    "meetingPlacePlaceholder": "Shop classroom"
   },
   "faq": {
     "questionLabel": "Question {number}",
@@ -191,9 +193,9 @@
     "nameLabel": "Material {number}",
     "namePlaceholder": "Open Water eLearning",
     "linkLabel": "Link",
-    "linkHint": "Optional. Starts with https://. If the fee includes the eLearning, leave the agency’s store off: the agency emails the student their access.",
-    "noteLabel": "Note",
-    "notePlaceholder": "Finish before day 1",
+    "linkHint": "Optional. Starts with https://. Use the learning portal, not a store page when access is included.",
+    "noteLabel": "Access and preparation",
+    "notePlaceholder": "Explain how to get access and when to finish",
     "remove": "Remove material {number}",
     "add": "Add a material",
     "max": "A course holds up to {max, plural, one {# material} other {# materials}}.",

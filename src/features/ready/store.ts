@@ -18,14 +18,26 @@ import {
   type RentalFitItem,
   toDiverRentalFit,
 } from "../../db/rental-fit";
-import { bookings, cards, people, shops, tripScheduleDays, trips } from "../../db/schema/index";
+import {
+  bookings,
+  cards,
+  courses,
+  people,
+  shops,
+  tripScheduleDays,
+  trips,
+} from "../../db/schema/index";
 import { canAcceptPayments, getShopStripeAccount } from "../../db/stripe-accounts";
 import { getTripWithBookedOnce } from "../../db/trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "../../db/waivers";
 import { diveDayCountForSeat, welcomeCueInputsByBooking } from "../../db/welcome-cues";
 import { asLevelCard } from "../../lib/card-ledger";
 import { nowDate } from "../../lib/clock";
-import { type CourseLearningMaterial, readLearningMaterials } from "../../lib/courses";
+import {
+  type CourseLearningMaterial,
+  courseDaysForMeetings,
+  readLearningMaterials,
+} from "../../lib/courses";
 import { seatListPriceCents, withinCancellationWindow } from "../../lib/deposits";
 import type { DeskPayment } from "../../lib/desk-payment";
 import type { DiveIntent } from "../../lib/dive-intent";
@@ -86,7 +98,7 @@ const meetingDayRows = sql<{ startsAt: string; endsAt: string }[] | null>`(
 
 export type BookedCard = {
   courseSession?: boolean;
-  days?: { startsAt: Date; endsAt: Date }[];
+  days?: { startsAt: Date; endsAt: Date; meetingPlace?: string }[];
   shop: {
     name: string;
     slug: string;
@@ -119,6 +131,7 @@ export async function getBookedCard(
       tripId: trips.id,
       tripTitle: trips.title,
       tripCourseId: trips.courseId,
+      courseScheduleDays: courses.scheduleDays,
       meetingDayRows,
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
@@ -134,11 +147,16 @@ export async function getBookedCard(
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, bookings.shopId)))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
   // A seat the desk released is not one the card may claim (layer 3 review,
   // dde-1 F2): no card, and the full path answers with its own.
   if (!row || row.status === "no_show") return null;
+  const courseDays = courseDaysForMeetings(
+    row.courseScheduleDays ?? [],
+    row.meetingDayRows?.length ?? 0,
+  );
   const identityHeld = row.identityUnconfirmedAt !== null;
   // A held seat speaks for a record staff have not matched to whoever booked
   // (#2082): it is told no count. Every other link is, the page right after
@@ -157,9 +175,10 @@ export async function getBookedCard(
     },
     trip: { id: row.tripId, title: row.tripTitle, startsAt: row.startsAt, endsAt: row.endsAt },
     courseSession: row.tripCourseId !== null,
-    days: (row.meetingDayRows ?? []).map((day) => ({
+    days: (row.meetingDayRows ?? []).map((day, index) => ({
       startsAt: new Date(day.startsAt),
       endsAt: new Date(day.endsAt),
+      meetingPlace: courseDays[index]?.meetingPlace,
     })),
     greetingName: identityHeld ? row.identityBookedAs?.trim() || "" : row.personName,
     // Said even after the shop stops offering hotel pickups (the Features

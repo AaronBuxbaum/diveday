@@ -792,6 +792,7 @@
   it covers. The immediate booking confirmation carries the same meeting dates as the full prep
   page. Course arrival copy states the start time without assuming a dock or boat; a material's
   access instructions remain shop-authored, with a contact link when the student needs help.
+  Each authored course-plan day can name an optional meeting place (plain text, up to 240 characters). A full-plan session pairs these places with its actual meeting dates and hours on the prep page and saved arrival card; a partial session never guesses a place from the plan or its prose. The saved card keeps the same course-start wording and scheduled pickup precedence as the online page.
 - **Course page** — the diver-facing page for one course: subhead, overview, photos, spec chips
   (duration, group size, minimum age, prerequisite), a day-by-day plan, what the fee covers, an
   FAQ, and the upcoming sessions it can be booked through. There is no separate draft/publish

@@ -527,3 +527,17 @@ describe("setCourseVisibilityAction", () => {
     expect(setCourseVisibility).not.toHaveBeenCalled();
   });
 });
+
+it("saves authored course-day meeting places through the normal content action", async () => {
+  const form = coursePage();
+  form.set(
+    "scheduleDaysJson",
+    JSON.stringify([
+      { title: "Pool day", meetingPlace: "  Training pool entrance  ", items: ["Skills"] },
+    ]),
+  );
+  expect(await savedTo(form)).toContain("notice=saved");
+  expect(vi.mocked(editCourseContent).mock.calls[0]?.[3]?.scheduleDays).toEqual([
+    { title: "Pool day", meetingPlace: "Training pool entrance", items: ["Skills"] },
+  ]);
+});

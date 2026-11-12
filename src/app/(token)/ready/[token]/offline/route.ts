@@ -7,6 +7,7 @@ import { listTripDives } from "@/db/trips";
 import { getReadyPageData } from "@/features/ready";
 import { requestLocale } from "@/i18n/request";
 import { nowMs } from "@/lib/clock";
+import { courseDaysForMeetings } from "@/lib/courses";
 import { packingConfidence } from "@/lib/diver-planning";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { buildDiverChecklist } from "@/lib/readiness-summary";
@@ -82,7 +83,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
     (fullShop?.briefingMinutes ?? 15) > 0,
     data.trip.course?.includedRentalKinds ?? [],
   );
+  const courseDays = data.courseSession
+    ? courseDaysForMeetings(data.trip.course?.scheduleDays ?? [], data.meetingDays.length)
+    : [];
   const snapshot = buildReadySnapshot({
+    courseSession: data.courseSession,
+    courseMeetings: data.courseSession
+      ? data.meetingDays.map((day, index) => ({
+          startsAt: day.startsAt,
+          endsAt: day.endsAt,
+          meetingPlace: courseDays[index]?.meetingPlace,
+        }))
+      : [],
     locale: await requestLocale(shop.defaultLocale),
     generatedAt: nowMs(),
     shop: {

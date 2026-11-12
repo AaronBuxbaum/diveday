@@ -372,7 +372,7 @@
     "money": {
       "fare": "{price} × {count, plural, one {# buceador} other {# buceadores}}",
       "courseFee": "Curso",
-      "eLearning": "E-learning",
+      "eLearning": "Materiales del curso en línea",
       "gear": "Equipo de alquiler",
       "tax": "Impuesto",
       "taxAtCheckout": "se suma al pagar",

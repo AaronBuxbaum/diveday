@@ -366,3 +366,28 @@ describe("the native Wallet convenience", () => {
     );
   });
 });
+
+it("pairs each actual dated meeting with its authored place, even a one-day course", () => {
+  const days = [
+    { startsAt: FACTS.trip.startsAt, endsAt: FACTS.trip.endsAt, meetingPlace: "Shop classroom" },
+    {
+      startsAt: new Date("2026-10-12T13:00:00Z"),
+      endsAt: new Date("2026-10-12T17:00:00Z"),
+      meetingPlace: "Training pool entrance",
+    },
+  ];
+  const { rerender } = render(
+    <MastheadDays facts={{ ...FACTS, days }} locale="en-US" t={diverTranslator("en-US")} />,
+  );
+  const lines = screen.getAllByRole("listitem");
+  expect(lines[0]).toHaveTextContent(/Oct\s11.*7:00.*Shop classroom/);
+  expect(lines[1]).toHaveTextContent(/Oct\s12.*9:00.*Training pool entrance/);
+  rerender(
+    <MastheadDays
+      facts={{ ...FACTS, days: days.slice(0, 1) }}
+      locale="en-US"
+      t={diverTranslator("en-US")}
+    />,
+  );
+  expect(screen.getByText("Shop classroom")).toBeVisible();
+});

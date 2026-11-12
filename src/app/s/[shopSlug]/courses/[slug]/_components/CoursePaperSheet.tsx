@@ -152,6 +152,7 @@ export function CoursePaperSheet({
                 <li key={day.title} className="text-sm">
                   <span className="font-semibold">{day.title}</span>
                   {time ? ` · ${time}` : null}
+                  {day.meetingPlace ? <span className="block">{day.meetingPlace}</span> : null}
                   {day.items.length > 0 ? (
                     <span className="block">{day.items.join(" · ")}</span>
                   ) : null}
