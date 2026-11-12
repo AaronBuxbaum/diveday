@@ -30,6 +30,7 @@ describe("LazyDemoBanner", () => {
         roles={[{ id: "owner", name: "Dana Reyes", title: "Owner", switchAriaLabel: "" }]}
         copy={COPY}
         switchRole={async () => {}}
+        dismissStarts={async () => {}}
       />,
     );
     expect(await screen.findByText("Demo shop")).toBeInTheDocument();
