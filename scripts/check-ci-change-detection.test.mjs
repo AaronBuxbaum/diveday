@@ -148,3 +148,40 @@ describe("a base that advances during the run (issue #3259)", () => {
     expect(git("diff", "--name-only", `${baseSha}...${headSha}`)).toBe("settings.tsx");
   });
 });
+
+describe("uncertain stack scope", () => {
+  it("executes every coverage output even when this layer alone changes no guarded paths", async () => {
+    const contents = await workflow();
+    expect(contents).toContain("force_full: ${{ steps.gate.outputs.force_full }}");
+    const step = filterStep(contents);
+    expect(step).toContain(
+      "FORCE_FULL: ${{ github.event_name == 'pull_request' && needs.stack-gate.outputs.force_full != 'false' }}",
+    );
+    const script = step
+      .split("        run: |\n")[1]
+      .split("\n")
+      .map((line) => line.replace(/^ {10}/, ""))
+      .join("\n");
+    const dir = mkdtempSync(path.join(os.tmpdir(), "ci-full-scope-"));
+    const sha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    for (const forceFull of ["true", "false"]) {
+      const output = path.join(dir, `outputs-${forceFull}`);
+      execFileSync("bash", ["-c", script], {
+        env: {
+          ...process.env,
+          FORCE_FULL: forceFull,
+          IS_PR: "4441",
+          STACK_BASE_SHA: "",
+          BASE_SHA: sha,
+          HEAD_SHA: sha,
+          BEFORE_SHA: "",
+          GITHUB_OUTPUT: output,
+          GITHUB_STEP_SUMMARY: path.join(dir, "summary"),
+        },
+      });
+      expect((await readFile(output, "utf8")).trim().split("\n").sort()).toEqual(
+        ["browser", "code", "db", "pixel_probe", "safety"].map((key) => `${key}=${forceFull}`),
+      );
+    }
+  });
+});
