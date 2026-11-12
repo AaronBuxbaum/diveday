@@ -14,7 +14,7 @@ The sections below preserve the original question and rationale, not a second un
 
 ## Named on the public pages — 2026-11-11
 
-Aaron, in the project thread: “The company is Pseudorandom LLC dba DiveDay, located at 12851 Capital St, Suite 100, Oak Park, MI 48237.” `/terms` and `/privacy` now say who operates DiveDay, from `src/features/company-identity` (#4323). This records what the pages state. Counsel review before the first paid contract is still the open task above, and neither page states a governing law.
+Aaron, in the project thread: “The company is Pseudorandom LLC dba DiveDay, located at 12851 Capital St, Suite 100, Oak Park, MI 48237.” `/terms` and `/privacy` now say who operates DiveDay, from `src/features/company-identity` (#4323). This records what the pages state. Counsel review before the first paid contract is still the open task above, and the confirmed governing law is Massachusetts ([Aaron’s confirmation on #4323](https://github.com/AaronBuxbaum/diveday/issues/4323#issuecomment-6810182238)). Both pages state that law in English and Spanish. This does not add an uptime promise or settle counsel review.
 
 ## Original question
 
