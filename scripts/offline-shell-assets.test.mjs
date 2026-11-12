@@ -71,14 +71,13 @@ describe("normalizeAsset", () => {
 });
 
 describe("collectOfflineShellAssets", () => {
-  it("unions the page, layout, css, lazy client-module and root chunks, sorted and unique", () => {
+  it("unions the page, layout, css, lazy client-module and root chunks, sorted and unique, without the noModule polyfills", () => {
     build(GOOD);
     expect(collectOfflineShellAssets(dist)).toEqual([
       "/_next/static/chunks/layout.js",
       "/_next/static/chunks/lazy-es.js",
       "/_next/static/chunks/main-app.js",
       "/_next/static/chunks/page.js",
-      "/_next/static/chunks/poly.js",
       "/_next/static/chunks/shared.js",
       "/_next/static/css/app.css",
     ]);
