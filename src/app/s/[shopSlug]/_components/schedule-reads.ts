@@ -2,10 +2,10 @@ import type { AppDb } from "@/db/client";
 import { tripRequirementSummaries } from "@/db/readiness";
 import {
   countShopTrips,
-  nextSessionStartByCourse,
   pagedUpcomingTripsWithCounts,
   tripDiveSiteSummaries,
   upcomingScheduleRange,
+  upcomingSessionsByCourse,
 } from "@/db/trips";
 import { listBoats } from "@/features/boats";
 import { listShelfCourses } from "@/features/courses";
@@ -155,7 +155,7 @@ export async function readSchedulePage(
       ),
     ),
     // The shelf's next starts: a diver reads it, so only storefront sessions count.
-    shelfIds.then((ids) => nextSessionStartByCourse(db, shop.id, ids, "storefront")),
+    shelfIds.then((ids) => upcomingSessionsByCourse(db, shop.id, ids)),
   ]);
   return {
     lenses,

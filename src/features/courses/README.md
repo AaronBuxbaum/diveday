@@ -5,6 +5,7 @@ This module owns the courses use case and publishes its contract through `index.
 ## Owns
 
 - `store.ts`: scoped readers and recorded transitions.
+- `doors.ts`: the first shop-catalog match for trying diving, entry certification, and a refresher.
 
 ## Does not own
 

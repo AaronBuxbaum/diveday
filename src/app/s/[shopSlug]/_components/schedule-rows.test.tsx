@@ -142,7 +142,9 @@ describe("shelfCourseCards", () => {
     });
     const cards = shelfCourseCards({
       activeCourses: ["a", "b", "c", "d"].map(course),
-      shelfNextStarts: new Map([["a", new Date("2026-08-01T12:00:00Z")]]),
+      shelfNextStarts: new Map([
+        ["a", [{ id: "session-a", startsAt: new Date("2026-08-01T12:00:00Z"), seatsLeft: 4 }]],
+      ]),
       shop: { depthUnit: "meters", timezone: TZ },
       shopSlug: "blue-mantis",
       currency: "usd",
@@ -150,8 +152,10 @@ describe("shelfCourseCards", () => {
       t,
     });
     expect(cards.map((card) => card.id)).toEqual(["a", "b", "c"]);
-    expect(cards[0]?.nextStart).toMatch(/^Next Sat,\sAug\s1$/);
-    expect(cards[1]?.nextStart).toBeNull();
+    expect(cards[0]?.sessions).toEqual([
+      { id: "session-a", startsAt: new Date("2026-08-01T12:00:00Z"), seatsLeft: 4 },
+    ]);
+    expect(cards[1]?.sessions).toEqual([]);
     expect(cards[0]?.href).toBe("/s/blue-mantis/courses/a");
     // Depth markers resolve into the shop's own unit before anything reads them.
     expect(cards[0]?.summary).toBe("Down to 18 meters");

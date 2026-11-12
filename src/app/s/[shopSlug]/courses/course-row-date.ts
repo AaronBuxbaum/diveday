@@ -1,4 +1,5 @@
 import type { DiverTranslator } from "@/i18n/messages";
+import { formatShortDate } from "@/lib/format";
 import { courseNextStartLabel } from "../course-date-label";
 
 /**
@@ -21,4 +22,17 @@ export function courseRowDate(input: {
     };
   }
   return input.canAsk ? { kind: "ask", text: t("courses.index.askForADate") } : null;
+}
+
+/** Date links share the shelf's locale and shop zone, with a bounded set per course. */
+export function courseRowDates(input: {
+  sessions: readonly { id: string; startsAt: Date; seatsLeft: number }[];
+  locale: string;
+  timeZone: string;
+  t: DiverTranslator;
+}) {
+  return input.sessions.slice(0, 3).map((session) => ({
+    ...session,
+    text: formatShortDate(session.startsAt, input.locale, input.timeZone),
+  }));
 }

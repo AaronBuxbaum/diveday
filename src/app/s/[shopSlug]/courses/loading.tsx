@@ -46,6 +46,15 @@ export default function PublicCoursesLoading() {
           descriptionWidth="w-full max-w-2xl"
           descriptionLines={{ base: 2, sm: 1 }}
         />
+        <div className="mb-8 grid gap-6 sm:grid-cols-3">
+          {[0, 1, 2].map((door) => (
+            <div key={door} className="border-t border-border pt-4">
+              <Bone className="my-2 h-7 w-40 max-w-full" />
+              <Bone className="h-6 w-44 max-w-full" />
+              <Bone className="my-3 h-5 w-48 max-w-full" />
+            </div>
+          ))}
+        </div>
         <div className={`${segmentedTrackClass} mt-6 w-fit`}>
           {[0, 1, 2].map((tab) => (
             <div key={tab} className="h-11 w-12" />

@@ -662,7 +662,14 @@
       "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point.",
       "requires": "Requires {level} or higher",
       "groupStart": "Start here",
-      "askForADate": "Ask for a date"
+      "askForADate": "Ask for a date",
+      "doorsLabel": "Find your course",
+      "doors": {
+        "try": "Try it for a day",
+        "certify": "Get certified",
+        "refresh": "It’s been a while"
+      },
+      "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}"
     },
     "shelf": {
       "allCourses": "All courses",

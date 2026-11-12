@@ -455,7 +455,7 @@ export default async function SchedulePage({
         courses={shelfCourses}
         allCoursesHref={publicCoursesPath(shopSlug)}
         className={SECTION_GAP}
-        t={t}
+        dates={{ shopSlug, locale, timeZone: shop.timezone, t }}
       />
       <ShopfrontStory
         shop={shop}

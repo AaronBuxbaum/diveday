@@ -1182,3 +1182,14 @@ stay off this invitation. The empty state says every seat has been claimed.
 ## Public staff introductions (#4383)
 
 The buying pages introduce the people who choose to appear, in their own words. Divers arrive asking who leads the day, which languages they speak, and whether the person feels familiar; the first name, chosen role, diving year, languages and description answer those questions together. An inline introduction beside its picture keeps the person and their words together; a separate profile page would make the diver leave the booking, so the inline composition is used. The shopfront shows the team; course and trip details show only assigned people available for those dates, with the trip's introductions inside its existing detail disclosure. The editor lives beside the person's existing name visibility control, with an explicit separate publication choice, optional fields, bounded pictures and immediate withdrawal; the shop can hide the display through Features.
+
+
+## Public course catalog: a first step before an agency (#4384)
+
+The catalog’s one idea is to help a visitor choose the kind of course they need, then choose a date.
+A newcomer asks whether they can try diving, earn their first certification, or return after a break;
+the shop’s matching offers and up to three bookable dates answer that before agency tabs.
+Each date is its own link on the course, with seats left, rather than a detached booking button.
+The first thing to remove is an explanatory caption: the three plain door labels already do that work.
+A boxed three-card introduction was considered; the chosen open three-column list uses type and top
+rules so it introduces the catalog without competing with the shop’s course titles or date links.

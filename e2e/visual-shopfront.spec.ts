@@ -627,6 +627,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await expect(page.getByRole("list", { name: "Find your course" })).toBeVisible();
         await capture(page, "public-courses", scheme);
       });
     });

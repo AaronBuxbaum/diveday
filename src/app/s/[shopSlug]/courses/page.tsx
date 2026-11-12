@@ -8,10 +8,11 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { GroupLabel } from "@/components/ui/group-label";
+import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
-import { nextSessionStartByCourse } from "@/db/trips";
-import { activeCourseAgencies, listActiveCourses } from "@/features/courses";
+import { upcomingSessionsByCourse } from "@/db/trips";
+import { activeCourseAgencies, courseDoors, listActiveCourses } from "@/features/courses";
 import { shopBySlugCached } from "@/features/shops-cached";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
@@ -22,6 +23,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
 import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
+import { CourseDates } from "./CourseDates";
 import { courseRowDate } from "./course-row-date";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -111,17 +113,18 @@ export default async function PublicCoursesPage({
   // before anything on this page reads a field — the same one-shot pass the
   // course page itself makes (src/lib/courses.ts).
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
-  const courseList = (
-    await listActiveCourses(db, shop.id, {
-      ...(selectedAgency ? { agency: selectedAgency } : {}),
-    })
-  ).map((course) => resolveCourseContentDepths(course, depthFormat));
+  const catalog = (await listActiveCourses(db, shop.id)).map((course) =>
+    resolveCourseContentDepths(course, depthFormat),
+  );
+  const doors = courseDoors(catalog);
+  const courseList = catalog.filter(
+    (course) => !selectedAgency || course.agency.trim().toLowerCase() === selectedAgency,
+  );
   // When each course next runs, the shelf's own read (fourth review, item 33).
-  const nextStarts = await nextSessionStartByCourse(
+  const nextStarts = await upcomingSessionsByCourse(
     db,
     shop.id,
-    courseList.map((course) => course.id),
-    "storefront",
+    catalog.map((course) => course.id),
   );
   // The course page's date request stands only with a shop email behind it.
   const canAsk = Boolean(shop.contactEmail);
@@ -141,6 +144,29 @@ export default async function PublicCoursesPage({
         description={t("courses.index.description")}
         descriptionIsCaption
       />
+
+      {doors.length > 0 ? (
+        <ul aria-label={t("courses.index.doorsLabel")} className="mb-8 grid gap-6 sm:grid-cols-3">
+          {doors.map(({ kind, course }) => (
+            <li key={kind} className="border-t border-border pt-4">
+              <Link
+                href={publicCoursePath(shopSlug, course.slug)}
+                className={`inline-flex min-h-11 items-center ${ITEM_TITLE_CLASS} text-primary`}
+              >
+                {t(`courses.index.doors.${kind}`)}
+              </Link>
+              <p className="text-base">{course.title}</p>
+              <CourseDates
+                sessions={nextStarts.get(course.id) ?? []}
+                shopSlug={shopSlug}
+                locale={locale}
+                timeZone={shop.timezone}
+                t={t}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {/* Which ladder a diver is reading. It replaces the per-row agency pill
           below, for the reason the staff roster dropped its own: a badge on
@@ -181,7 +207,7 @@ export default async function PublicCoursesPage({
               {courses.map((course) => {
                 const totalCents = courseTotalCents(course);
                 const when = courseRowDate({
-                  nextStart: nextStarts.get(course.id) ?? null,
+                  nextStart: nextStarts.get(course.id)?.[0]?.startsAt ?? null,
                   canAsk,
                   locale,
                   timeZone: shop.timezone,
@@ -190,62 +216,65 @@ export default async function PublicCoursesPage({
                 const coursePath = publicCoursePath(shopSlug, course.slug);
                 return (
                   <li key={course.id}>
-                    <Link
-                      // "Ask for a date" lands on the course's own request form.
-                      href={when?.kind === "ask" ? `${coursePath}#get-in-touch` : coursePath}
-                      className="group flex gap-4 px-2 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset"
-                    >
-                      {/* The course's own face, decorative (`alt=""` — the
+                    <div className="px-2">
+                      <Link
+                        // "Ask for a date" lands on the course's own request form.
+                        href={when?.kind === "ask" ? `${coursePath}#get-in-touch` : coursePath}
+                        className={`${ledgerRowRoomClass} group flex gap-4 py-5 transition-colors hover:bg-surface-sunken focus-visible:focus-ring-inset`}
+                      >
+                        {/* The course's own face, decorative (`alt=""` — the
                           title beside it names the course). A course with no
-                          photo wears the same drawn swell the storefront shelf
+                          photo keeps the plain tile the storefront shelf
                           uses, so the ladder keeps one left edge instead of a
                           ragged mix of indented and flush rows. */}
-                      {course.heroImageUrl ? (
-                        <StoredPhoto
-                          src={course.heroImageUrl}
-                          alt=""
-                          className="size-16 shrink-0 rounded-inset"
-                          sizes="64px"
-                        />
-                      ) : (
-                        <div
-                          aria-hidden="true"
-                          className="size-16 shrink-0 rounded-inset bg-surface-sunken"
-                        />
-                      )}
-                      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
-                        <div className="min-w-0">
-                          <h3 className={`${ITEM_TITLE_CLASS} group-hover:text-primary`}>
-                            {course.title}
-                          </h3>
-                          {course.summary ? (
-                            <p className="mt-1 max-w-xl text-sm text-muted">{course.summary}</p>
-                          ) : null}
-                          {course.durationText || when ? (
-                            <p className="mt-2 text-sm text-muted">
-                              {course.durationText}
-                              {course.durationText && when ? " · " : null}
-                              {when ? (
-                                <span
-                                  className={
-                                    when.kind === "next"
-                                      ? "font-medium text-foreground"
-                                      : "font-medium text-primary"
-                                  }
-                                >
-                                  {when.text}
-                                </span>
-                              ) : null}
+                        {course.heroImageUrl ? (
+                          <StoredPhoto
+                            src={course.heroImageUrl}
+                            alt=""
+                            className="size-16 shrink-0 rounded-inset"
+                            sizes="64px"
+                          />
+                        ) : (
+                          <div
+                            aria-hidden="true"
+                            className="size-16 shrink-0 rounded-inset bg-surface-sunken"
+                          />
+                        )}
+                        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+                          <div className="min-w-0">
+                            <h3 className={`${ITEM_TITLE_CLASS} group-hover:text-primary`}>
+                              {course.title}
+                            </h3>
+                            {course.summary ? (
+                              <p className="mt-1 max-w-xl text-sm text-muted">{course.summary}</p>
+                            ) : null}
+                            {course.durationText || when?.kind === "ask" ? (
+                              <p className="mt-2 text-sm text-muted">
+                                {course.durationText}
+                                {course.durationText && when?.kind === "ask" ? " · " : null}
+                                {when?.kind === "ask" ? (
+                                  <span className="font-medium text-primary">{when.text}</span>
+                                ) : null}
+                              </p>
+                            ) : null}
+                          </div>
+                          {totalCents !== null ? (
+                            <p className="shrink-0 text-base font-semibold tabular-nums">
+                              {formatMoneyScanned(totalCents, currency, locale)}
                             </p>
                           ) : null}
                         </div>
-                        {totalCents !== null ? (
-                          <p className="shrink-0 text-base font-semibold tabular-nums">
-                            {formatMoneyScanned(totalCents, currency, locale)}
-                          </p>
-                        ) : null}
-                      </div>
-                    </Link>
+                      </Link>
+                    </div>
+                    <div className="px-2">
+                      <CourseDates
+                        sessions={nextStarts.get(course.id) ?? []}
+                        shopSlug={shopSlug}
+                        locale={locale}
+                        timeZone={shop.timezone}
+                        t={t}
+                      />
+                    </div>
                   </li>
                 );
               })}

@@ -4,6 +4,7 @@ import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
+import { CourseDates } from "../courses/CourseDates";
 
 /**
  * **What the shop teaches, as a shelf** — ADR
@@ -30,7 +31,7 @@ export function CoursesShelf({
   courses,
   allCoursesHref,
   className = "",
-  t,
+  dates,
 }: {
   courses: readonly {
     id: string;
@@ -44,17 +45,18 @@ export function CoursesShelf({
     price: string | null;
     /** `courses.durationText`, the shop's own words ("4 days"), or nothing. */
     duration: string | null;
-    /** The next scheduled session, already formatted, or nothing when none is on the board. */
-    nextStart: string | null;
+    /** Up to three public sessions with places still available. */
+    sessions: readonly { id: string; startsAt: Date; seatsLeft: number }[];
   }[];
   allCoursesHref: string;
+  dates: { shopSlug: string; locale: string; timeZone: string; t: DiverTranslator };
   /**
    * The page's rhythm, carried *inside* the section rather than on a wrapper —
    * a shelf that renders nothing must leave no gap behind it either.
    */
   className?: string;
-  t: DiverTranslator;
 }) {
+  const { shopSlug, locale, timeZone, t } = dates;
   if (courses.length === 0) return null;
   return (
     <section aria-labelledby="courses-shelf" className={className || undefined}>
@@ -85,10 +87,10 @@ export function CoursesShelf({
           // and paints over the link's own outline. Clipped at the card's
           // radius, the link rounds the photo exactly as the card did, and an
           // element's overflow never clips its own outline.
-          <SectionCard as="li" key={course.id} padding="none">
+          <SectionCard as="li" key={course.id} padding="none" className="flex flex-col">
             <Link
               href={course.href}
-              className="group flex h-full flex-col overflow-hidden rounded-[inherit]"
+              className="group flex flex-1 flex-col overflow-hidden rounded-[inherit]"
             >
               {course.heroImageUrl ? (
                 <StoredPhoto
@@ -110,10 +112,8 @@ export function CoursesShelf({
                 {/* The two facts the board draws under a card — how long, and
                     when next — each only when the shop has it; a card says
                     nothing it does not know. */}
-                {course.duration || course.nextStart ? (
-                  <p className="mt-1 text-sm text-muted tabular-nums">
-                    {[course.duration, course.nextStart].filter(Boolean).join(" · ")}
-                  </p>
+                {course.duration ? (
+                  <p className="mt-1 text-sm text-muted tabular-nums">{course.duration}</p>
                 ) : null}
                 {course.price ? (
                   <p className="mt-auto pt-2 text-base font-semibold tabular-nums">
@@ -122,6 +122,17 @@ export function CoursesShelf({
                 ) : null}
               </div>
             </Link>
+            {course.sessions.length > 0 ? (
+              <div className="px-4 sm:px-5">
+                <CourseDates
+                  sessions={course.sessions}
+                  shopSlug={shopSlug}
+                  locale={locale}
+                  timeZone={timeZone}
+                  t={t}
+                />
+              </div>
+            ) : null}
           </SectionCard>
         ))}
       </ul>

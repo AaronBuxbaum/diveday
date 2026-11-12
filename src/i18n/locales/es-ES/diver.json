@@ -662,7 +662,14 @@
       "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
       "requires": "Requiere {level} o superior",
       "groupStart": "Empieza aquí",
-      "askForADate": "Pide una fecha"
+      "askForADate": "Pide una fecha",
+      "doorsLabel": "Encuentra tu curso",
+      "doors": {
+        "try": "Pruébalo por un día",
+        "certify": "Obtén tu certificación",
+        "refresh": "Hace tiempo que no buceo"
+      },
+      "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}"
     },
     "shelf": {
       "allCourses": "Todos los cursos",

@@ -1,4 +1,4 @@
-import type { nextSessionStartByCourse } from "@/db/trips";
+import type { upcomingSessionsByCourse } from "@/db/trips";
 import { type listShelfCourses, SHELF_COURSE_COUNT } from "@/features/courses";
 import type { listTripLenses } from "@/features/trip-lenses";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -15,7 +15,6 @@ import { formatDayParts, formatMoneyScanned, formatShortDate, formatTimeRange } 
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicTripPath } from "@/lib/public-routes";
-import { courseNextStartLabel } from "../course-date-label";
 import type { listedDepartureSummaries } from "./schedule-reads";
 import { type RequirementsByTrip, scheduleSeatState, type UpcomingTrips } from "./schedule-view";
 import type { WeekLedgerRow } from "./WeekLedger";
@@ -157,7 +156,7 @@ export function shelfCourseCards({
   t,
 }: {
   activeCourses: Awaited<ReturnType<typeof listShelfCourses>>;
-  shelfNextStarts: Awaited<ReturnType<typeof nextSessionStartByCourse>>;
+  shelfNextStarts: Awaited<ReturnType<typeof upcomingSessionsByCourse>>;
   shop: { depthUnit: Parameters<typeof courseDepthFormat>[1]; timezone: string };
   shopSlug: string;
   currency: ShopCurrency;
@@ -169,10 +168,9 @@ export function shelfCourseCards({
     text === null ? null : resolveCourseDepths(text, depthFormat);
   return activeCourses.slice(0, SHELF_COURSE_COUNT).map((course) => {
     const total = courseTotalCents(course);
-    const nextStart = shelfNextStarts.get(course.id) ?? null;
     return {
+      sessions: shelfNextStarts.get(course.id) ?? [],
       duration: resolve(course.durationText),
-      nextStart: nextStart ? courseNextStartLabel(nextStart, locale, shop.timezone, t) : null,
       id: course.id,
       title: course.title,
       summary: resolve(course.summary),
