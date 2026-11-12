@@ -831,6 +831,7 @@ async function seedShopCertified(
   // Safety tab listed a hull that sailed with nobody counted.
   const counts = rollCallCheckpoints(trip.plannedDives).map((checkpoint, index) => ({
     checkpoint,
+    meetingDay: index === 0 ? 0 : SHOP_CERTIFIED_DIVES[index - 1]?.day,
     occurredAt:
       index === 0
         ? new Date(window.startsAt.getTime() + 20 * 60_000)
@@ -840,13 +841,14 @@ async function seedShopCertified(
     await seedRollCallEvidence(
       db,
       seated.flatMap((bookingId, seat) =>
-        counts.map(({ checkpoint, occurredAt }) => ({
+        counts.map(({ checkpoint, meetingDay, occurredAt }) => ({
           shopId,
           tripId: trip.id,
           bookingId,
           recordedByPersonId: ctx.instructorId,
           status: "boarded" as const,
           checkpoint,
+          meetingDay,
           source: "live" as const,
           occurredAt: new Date(occurredAt.getTime() + seat * 1_000),
         })),
@@ -856,7 +858,7 @@ async function seedShopCertified(
   }
   await seedRollCallEvidence(
     db,
-    counts.map(({ checkpoint, occurredAt }) => ({
+    counts.map(({ checkpoint, meetingDay, occurredAt }) => ({
       shopId,
       tripId: trip.id,
       subjectKind: "crew" as const,
@@ -864,6 +866,7 @@ async function seedShopCertified(
       recordedByPersonId: ctx.instructorId,
       status: "boarded" as const,
       checkpoint,
+      meetingDay,
       source: "live" as const,
       occurredAt: new Date(occurredAt.getTime() + seated.length * 1_000),
     })),

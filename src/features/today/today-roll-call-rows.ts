@@ -98,7 +98,16 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
       // (H-20261014-stale-roll-call-recipients; dive-domain re-review #7): said on the row the alert was
       // about, with its time in the shop's zone, so whoever opens Today knows
       // who has heard and when.
-      detail: [rollCallGapDetailText(t, gap), rollCallAlertedText(t, gap, locale, timeZone)]
+      detail: [
+        gap.dayNumber === undefined
+          ? rollCallGapDetailText(t, gap)
+          : t("today.detail.rollCallMeetingDay", {
+              day: gap.dayNumber,
+              date: formatDateTimeTz(gap.endsAt, locale, timeZone),
+              detail: rollCallGapDetailText(t, gap),
+            }),
+        rollCallAlertedText(t, gap, locale, timeZone),
+      ]
         .filter(Boolean)
         .join(" "),
       actionLabel: openRollCallActionText(t),

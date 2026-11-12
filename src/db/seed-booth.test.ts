@@ -26,6 +26,7 @@ import {
   executedDives,
   interests,
   orders,
+  rollCallEvents,
   tripBlowouts,
   trips,
 } from "./schema";
@@ -237,6 +238,32 @@ describe("the demo's booth stories", () => {
       expect(safety.openRollCalls).toEqual([]);
       expect(safety.rollCallsClosed).toBe(safety.departuresBack);
       expect(safety.unmarkedAtDock).toBe(0);
+    }
+  });
+
+  it("retains the authored Rescue counts on their explicit meeting days", async () => {
+    const { db, shop } = context;
+    const [session] = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, SHOP_CERTIFIED_TITLE)));
+    if (!session) throw new Error("expected Rescue course");
+    const marks = await db
+      .select()
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.tripId, session.id));
+    for (const subjectKind of ["seat", "crew"] as const) {
+      const rows = marks.filter((mark) => mark.subjectKind === subjectKind);
+      expect(rows).toHaveLength(subjectKind === "seat" ? 10 : 5);
+      for (const row of rows) {
+        expect(row.statementStatus).toBe("boarded");
+        expect(row.meetingDay).toBe(
+          ["after_dive_3", "after_dive_4"].includes(row.checkpoint) ? 1 : 0,
+        );
+      }
+      expect(rows.some((row) => row.checkpoint === "departure" && row.meetingDay === 1)).toBe(
+        false,
+      );
     }
   });
 
