@@ -394,6 +394,23 @@ describe("saveCourseContentAction, with the forms a course asks for", () => {
 /** **What the course fee includes** (issue #2796): a set of rental kinds, behind one box. */
 describe("saveCourseContentAction, with the gear the fee includes", () => {
   const includedSaved = () => vi.mocked(editCourse).mock.calls[0]?.[3]?.includedRentalKinds;
+  it("saves only known personal kit while gear is included, and clears it when unticked", async () => {
+    await savedTo(
+      coursePage([
+        ["gearIncluded", "true"],
+        ["includedPersonalGear", "boots"],
+        ["includedPersonalGear", "snorkel"],
+        ["includedPersonalGear", "nitrox"],
+      ]),
+    );
+    expect(vi.mocked(editCourse).mock.calls[0]?.[3]?.includedPersonalGear).toEqual([
+      "snorkel",
+      "boots",
+    ]);
+    vi.mocked(editCourse).mockClear();
+    await savedTo(coursePage([["includedPersonalGear", "boots"]]));
+    expect(vi.mocked(editCourse).mock.calls[0]?.[3]?.includedPersonalGear).toEqual([]);
+  });
 
   it("saves the ticked kinds while gear included is ticked", async () => {
     await savedTo(

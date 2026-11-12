@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { CoursePersonalGear } from "@/lib/course-personal-gear";
 import type { CourseTemplateSnapshot } from "@/lib/course-template-sync";
 import type {
   CourseFaq,
@@ -216,6 +217,11 @@ export const courses = pgTable(
      */
     includedRentalKinds: jsonb("included_rental_kinds")
       .$type<RentableItemKind[]>()
+      .notNull()
+      .default([]),
+    /** Snorkel/boots explicitly provided with the course fee; neither is a rental kind. */
+    includedPersonalGear: jsonb("included_personal_gear")
+      .$type<CoursePersonalGear[]>()
       .notNull()
       .default([]),
     /**

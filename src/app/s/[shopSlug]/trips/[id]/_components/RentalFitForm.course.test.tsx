@@ -160,3 +160,27 @@ describe("RentalFitForm on a course that includes a set of kinds", () => {
     expect(screen.queryByText(/Estimated rental/)).toBeNull();
   });
 });
+
+it("names personal-only inclusions and asks boot size without adding a rental charge", () => {
+  renderDiver(
+    <RentalFitForm
+      action={mockAction}
+      rentalFit={null}
+      rentalItems={[]}
+      course={{
+        nitroxCompatible: false,
+        includedRentalKinds: [],
+        includedPersonalGear: ["snorkel", "boots"],
+      }}
+      pricing={defaultPricing}
+      wantsNitrox={false}
+      nitroxCardVerified={false}
+      plannedDives={1}
+      saved={false}
+      currency="usd"
+    />,
+  );
+  expect(screen.getByText(/^Included with the course: Snorkel and Boots/)).toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: /Boot size/ })).toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/\$\d/);
+});

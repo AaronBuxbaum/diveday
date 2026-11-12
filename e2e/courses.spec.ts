@@ -68,6 +68,8 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
     "trip.rentalItems.wetsuit",
     "trip.rentalItems.fins",
     "trip.rentalItems.diveComputer",
+    "trip.personalGear.snorkel",
+    "trip.personalGear.boots",
   ] as const) {
     await expect(facts.getByText(copy(key), { exact: true })).toBeVisible();
   }
@@ -1470,7 +1472,7 @@ test("a course that includes its gear asks the student for sizes, not money", as
   const slug = privateShop.slug;
   await page.goto(`/shop/${slug}/courses/open-water-diver/edit`);
   await expect(editorHydrated(page)).toBeVisible();
-  await page.getByRole("checkbox", { name: "Rental gear is part of the course fee" }).check();
+  await page.getByRole("checkbox", { name: "Gear is part of the course fee" }).check();
   // Exercise a deliberately partial kit, independently of the demo full-kit default.
   const includedKinds = page.getByTestId("course-included-kinds");
   await expect(includedKinds.getByRole("checkbox")).not.toHaveCount(0);
@@ -1484,7 +1486,7 @@ test("a course that includes its gear asks the student for sizes, not money", as
   await expect(page.getByRole("status")).toContainText("Course page saved");
   await page.reload();
   await expect(
-    page.getByRole("checkbox", { name: "Rental gear is part of the course fee" }),
+    page.getByRole("checkbox", { name: "Gear is part of the course fee" }),
   ).toBeChecked();
 
   const diverContext = await browser.newContext({ baseURL: workerBaseURL });

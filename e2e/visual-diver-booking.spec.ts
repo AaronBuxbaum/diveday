@@ -59,6 +59,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-before-booking-facts", scheme);
       });
 
+      test(`a course student's personal kit renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
+        await page.getByRole("link", { name: "Book this date" }).first().click();
+        await bookASeatAndOpenThread(page, "Personal Kit Student");
+        const gear = await openThreadStep(page, "gear");
+        await expect(gear.getByText(/^Included with the course:/)).toContainText("Snorkel");
+        await capture(page, "ready-course-personal-kit", scheme);
+      });
+
       /**
        * The moment the whole public funnel exists for: `/ready` as it looks in
        * the seconds after a seat is taken — the "You've got a seat" earned

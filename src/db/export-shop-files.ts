@@ -2476,6 +2476,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "is_intro_course",
       "nitrox_compatible",
       "included_rental_kinds",
+      "included_personal_gear",
       "created_at",
     ],
     rows: ({ courseRows }) =>
@@ -2511,6 +2512,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.isIntroCourse,
         row.nitroxCompatible,
         JSON.stringify(row.includedRentalKinds),
+        JSON.stringify(row.includedPersonalGear),
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["courses.csv"],

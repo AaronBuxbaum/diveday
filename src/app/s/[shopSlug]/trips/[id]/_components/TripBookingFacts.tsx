@@ -29,6 +29,7 @@ export function TripBookingFacts({
     shop.briefingMinutes > 0,
     included,
     offered.filter((kind) => shop.rentalPricing.perItemCents[kind] !== 0),
+    trip.course?.includedPersonalGear ?? [],
   );
   const rentable = offered.filter((kind) => !included.includes(kind));
   const quote = (kinds: typeof rentable) =>
@@ -57,6 +58,7 @@ export function TripBookingFacts({
   const provided = [
     ...packing.provided.map((code) => t(PROVIDED_ITEM_KEYS[code])),
     ...packing.providedKinds.map((kind) => t(RENTAL_ITEM_KEYS[kind])),
+    ...packing.providedPersonal.map((code) => t(PERSONAL_GEAR_KEYS[code])),
   ];
   return (
     <section className="mt-10 lg:mt-0" aria-labelledby="trip-booking-facts">

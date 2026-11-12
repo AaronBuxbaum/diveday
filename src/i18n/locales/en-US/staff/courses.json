@@ -75,7 +75,7 @@
     "groupSizePlaceholder": "Max 5 students per instructor",
     "nitroxCompatibleLabel": "We can run this course on nitrox",
     "nitroxCompatibleHint": "When it is off, sessions of this course never offer divers the enriched-air box. A diver still needs verified nitrox certification before any fill.",
-    "gearIncludedLabel": "Rental gear is part of the course fee",
+    "gearIncludedLabel": "Gear is part of the course fee",
     "gearIncludedHint": "Students give their sizes before a session, and bring their own mask and fins unless the fee includes them.",
     "includedKindsLegend": "Included in the fee",
     "enrollLegend": "Who can enroll",
@@ -155,7 +155,9 @@
       "removeNotSaved": "That didn’t save.",
       "displayOrder": "Display order"
     },
-    "summarySpanishLabel": "Course summary in Spanish"
+    "summarySpanishLabel": "Course summary in Spanish",
+    "personalGearSnorkel": "Snorkel",
+    "personalGearBoots": "Boots"
   },
   "dayByDay": {
     "dayLabel": "Day {number}",

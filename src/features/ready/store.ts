@@ -3,6 +3,7 @@ import { type CarriedPreparation, carriedPreparation } from "@/features/carried-
 import { courseMaterialsDoneByPerson } from "@/features/course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "@/features/courses";
 import { getHelpRequestForBooking, type HelpRequest } from "@/features/help-requests";
+import type { CoursePersonalGear } from "@/lib/course-personal-gear";
 import { heldAtTheDoor } from "../../db/aboard-at-sea";
 import { seatCheckedIn } from "../../db/arrival-provenance";
 import type { AppDb } from "../../db/client";
@@ -229,7 +230,11 @@ export type ReadyPageData = {
      * the sizes form asks about with no price (issue #2796). Null on an ordinary
      * charter, which the gate reads as "the shop's answer is the whole answer".
      */
-    course: { nitroxCompatible: boolean; includedRentalKinds: RentableItemKind[] } | null;
+    course: {
+      nitroxCompatible: boolean;
+      includedRentalKinds: RentableItemKind[];
+      includedPersonalGear: CoursePersonalGear[];
+    } | null;
     /**
      * What this seat costs on this departure (`seatListPriceCents`): the fare
      * for its participant type, or null on an unpriced trip. The thread's
@@ -814,6 +819,7 @@ export async function getReadyPageData(
         ? {
             nitroxCompatible: trip.course.nitroxCompatible,
             includedRentalKinds: trip.course.includedRentalKinds,
+            includedPersonalGear: trip.course.includedPersonalGear,
           }
         : null,
       seatPriceCents: perDiverPriceCents,

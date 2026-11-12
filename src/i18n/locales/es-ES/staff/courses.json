@@ -75,7 +75,7 @@
     "groupSizePlaceholder": "Máx. 5 estudiantes por instructor",
     "nitroxCompatibleLabel": "Podemos impartir este curso con nitrox",
     "nitroxCompatibleHint": "Cuando está desactivado, las sesiones de este curso nunca ofrecen la casilla de aire enriquecido; además, para cualquier llenado el buceador necesita una titulación de nitrox verificada.",
-    "gearIncludedLabel": "El equipo de alquiler va incluido en el precio del curso",
+    "gearIncludedLabel": "El equipo está incluido en el precio del curso",
     "gearIncludedHint": "Los alumnos nos dan sus tallas antes de cada sesión, y traen su propia máscara y aletas si el precio no las incluye.",
     "includedKindsLegend": "Incluido en el precio",
     "enrollLegend": "Quién puede inscribirse",
@@ -155,7 +155,9 @@
       "removeNotSaved": "No se guardó.",
       "displayOrder": "Orden de presentación"
     },
-    "summarySpanishLabel": "Resumen del curso en español"
+    "summarySpanishLabel": "Resumen del curso en español",
+    "personalGearSnorkel": "Tubo de snorkel",
+    "personalGearBoots": "Botines"
   },
   "dayByDay": {
     "dayLabel": "Día {number}",

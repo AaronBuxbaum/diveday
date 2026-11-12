@@ -75,6 +75,7 @@ const course: Course = {
   isIntroCourse: false,
   nitroxCompatible: false,
   includedRentalKinds: [],
+  includedPersonalGear: [],
   rowVersion: 0,
   sourceTemplateSlug: null,
   sourceTemplateVersion: null,
