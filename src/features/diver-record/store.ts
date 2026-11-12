@@ -322,6 +322,7 @@ export async function getDiverRecord(
       timezone: shop.timezone,
       now,
       recorded: diver.person.lastDiveOn,
+      reportedOn: diver.person.lastDiveReportedOn,
     }),
   ]);
   return {

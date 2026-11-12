@@ -86,14 +86,30 @@ describe("the conversation with the shop's assists on", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("opens the call form when the message asks for a booking", async () => {
+  it("keeps the page where it is when the message asks for a booking, and offers the form", async () => {
     const user = userEvent.setup();
     renderSection(
-      assist({ run: vi.fn(async () => ({ kind: "request" as const, href: "/shop/x?call=1" })) }),
+      assist({
+        run: vi.fn(async () => ({
+          kind: "request" as const,
+          href: "/shop/x?call=1",
+          text: "Yes, we have room Saturday.",
+        })),
+      }),
     );
     await user.click(screen.getByRole("button", { name: "Draft with AI" }));
-    expect(push).toHaveBeenCalledWith("/shop/x?call=1");
-    expect(screen.getByRole("textbox")).toHaveValue("");
+    expect(await screen.findByDisplayValue("Yes, we have room Saturday.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Review the booking request" })).toHaveAttribute(
+      "href",
+      "/shop/x?call=1",
+    );
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("sits on the Send row", () => {
+    renderSection(assist());
+    const row = screen.getByRole("button", { name: "Send" }).parentElement;
+    expect(row).toContainElement(screen.getByRole("button", { name: "Draft with AI" }));
   });
 
   it("says why in a toast when nothing came back, and leaves the box alone", async () => {

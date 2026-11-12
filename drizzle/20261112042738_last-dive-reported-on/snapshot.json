@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ea837bfb-3cf3-484d-8b36-360272dbea7c",
+  "prevIds": [
+    "297cc90a-9890-412a-b6c4-21f2eedae558"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "people",
+        "last_dive_reported_on"
+      ],
+      "writes": [
+        "s|col|public.people.last_dive_reported_on",
+        "n|col|public.people.last_dive_reported_on",
+        "e|col|public.people.last_dive_reported_on"
+      ],
+      "reads": [
+        "n|tbl|public.people",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "people",
+        "name": "last_dive_reported_on",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

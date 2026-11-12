@@ -28,7 +28,7 @@ async function composerContext(shopSlug: string, rawPersonId: string) {
 /** What the one Draft button did with the diver's latest message. */
 export type ConversationAssistResult =
   | { kind: "reply"; text: string }
-  | { kind: "request"; href: string }
+  | { kind: "request"; href: string; text: string | null }
   | {
       kind: "none";
       reason: "unavailable" | "declined" | "nothing-to-answer" | "draft-exists";
@@ -36,9 +36,9 @@ export type ConversationAssistResult =
 
 /**
  * **The conversation's one assist.** Reads the diver's latest message: when it
- * asks for a booking, the Took-a-call form is filled from it and the staffer
- * is sent there to check it; otherwise a reply is drafted into the reply box.
- * Neither records anything. A request that cannot be kept (an unfinished call
+ * asks for a booking, the Took-a-call form is filled from it and a link to it
+ * comes back beside a drafted reply, so the staffer stays where they are;
+ * otherwise a reply is drafted into the reply box. Neither records anything. A request that cannot be kept (an unfinished call
  * form is already open) falls back to a reply, and says nothing is lost.
  */
 export async function assistConversationAction(
@@ -64,9 +64,11 @@ export async function assistConversationAction(
         fields,
       });
       if (saved === "saved") {
+        const reply = await draftReplyOutcome(db, { shopId, personId: context.personId });
         return {
           kind: "request",
           href: callPanelHref(shopSlug, { outcome: "date-request" }, "call"),
+          text: "reason" in reply ? null : reply.text,
         };
       }
       draftExists = saved === "exists";

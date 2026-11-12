@@ -63,7 +63,14 @@ async function seat(
 }
 
 function known(db: AppDb, shopId: string, personId: string, recorded: string | null = null) {
-  return lastKnownDive(db, { shopId, personId, timezone: TIMEZONE, now: NOW, recorded });
+  return lastKnownDive(db, {
+    shopId,
+    personId,
+    timezone: TIMEZONE,
+    now: NOW,
+    recorded,
+    reportedOn: recorded ? "2031-10-14" : null,
+  });
 }
 
 function record(db: AppDb, shopId: string, personId: string, on: string | null) {
@@ -193,13 +200,23 @@ describe("recordLastDive", () => {
     const stored = async () =>
       (await db.select({ on: people.lastDiveOn }).from(people).where(eq(people.id, personId)))[0]
         ?.on;
+    const reportedOn = async () =>
+      (
+        await db
+          .select({ on: people.lastDiveReportedOn })
+          .from(people)
+          .where(eq(people.id, personId))
+      )[0]?.on;
     expect(await record(db, shopId, personId, "2031-04-02")).toEqual({ ok: true });
     expect(await stored()).toBe("2031-04-02");
+    // The day it was said, in the shop's zone (NOW is 12:00 on the 14th in New York).
+    expect(await reportedOn()).toBe("2031-10-14");
     // A typo put right: earlier than the recorded day, and nothing of the shop's says later.
     expect(await record(db, shopId, personId, "2030-04-02")).toEqual({ ok: true });
     expect(await stored()).toBe("2030-04-02");
     expect(await record(db, shopId, personId, null)).toEqual({ ok: true });
     expect(await stored()).toBeNull();
+    expect(await reportedOn()).toBeNull();
   });
 
   it("keeps a day before the shop's own evidence, and says the later day still shows", async () => {

@@ -1117,6 +1117,12 @@ export const people = pgTable(
      */
     lastDiveOn: date("last_dive_on", { mode: "string" }),
     /**
+     * The day `last_dive_on` was reported (in the shop's zone): the record
+     * shows both, "last dived Mar 14, 2024, reported Oct 20, 2026", so a reader
+     * can weigh an old word. Set and cleared with `last_dive_on`, never alone.
+     */
+    lastDiveReportedOn: date("last_dive_reported_on", { mode: "string" }),
+    /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and
      * preferred over the shop's `default_locale` when DiveDay emails or texts
