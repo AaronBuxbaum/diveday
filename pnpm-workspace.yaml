@@ -53,3 +53,13 @@ permissions:
     skills: true
 
 virtualStoreType: global
+
+# Next's declarations import React types from its real global-store location.
+# Declare the type peer so strict callback inference does not rely on project hoisting.
+packageExtensions:
+  next@16.4.5:
+    peerDependencies:
+      '@types/react': '^19.0.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true

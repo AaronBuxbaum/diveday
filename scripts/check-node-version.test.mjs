@@ -1,10 +1,10 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 // Hoisted deliberately (`publicHoistPattern` in pnpm-workspace.yaml), and the
 // right tool here: hand-rolling `||`/`^`/`>=` range logic to check a version
 // range would be a subtler bug than the one this test exists to catch.
-import { compare as compareVersions, satisfies, validRange } from "semver";
+import { compare as compareVersions, satisfies } from "semver";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -15,6 +15,7 @@ import {
   NODE_FLOOR,
   NODE_MAJOR,
 } from "./check-node-version.mjs";
+import { installedNodeRanges } from "./installed-node-ranges.mjs";
 import { GUARDS } from "./rules-registry.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -43,43 +44,6 @@ function repoFiles() {
 }
 
 const readerFor = (files) => (file) => files.get(file);
-
-/**
- * Every installed package's `engines.node`, read off the pnpm store.
- *
- * The store is the honest place to look: `package.json`'s own dependency list
- * says what we asked for, and the floor is set by whatever those resolved to,
- * transitively.
- */
-function installedNodeRanges() {
-  const store = path.join(ROOT, "node_modules/.pnpm");
-  const ranges = new Map();
-  const collect = (directory, insideScope) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      if (!insideScope && entry.name.startsWith("@")) {
-        collect(path.join(directory, entry.name), true);
-        continue;
-      }
-      const manifest = path.join(directory, entry.name, "package.json");
-      if (!existsSync(manifest)) continue;
-      let read;
-      try {
-        read = JSON.parse(readFileSync(manifest, "utf8"));
-      } catch {
-        continue;
-      }
-      if (read.engines?.node && validRange(read.engines.node)) {
-        ranges.set(`${read.name}@${read.version}`, read.engines.node);
-      }
-    }
-  };
-  for (const packageDirectory of readdirSync(store)) {
-    const base = path.join(store, packageDirectory, "node_modules");
-    if (existsSync(base)) collect(base, false);
-  }
-  return ranges;
-}
 
 describe("findNodeVersionDrift", () => {
   it("is silent on the tree as it stands", () => {
@@ -263,8 +227,9 @@ describe("the numbers themselves", () => {
     // set it today: reading `jsdom` alone would stay green while some other
     // dependency raised the bar underneath it, which is the invariant this
     // test's name claims and the reason `engines` was wrong to begin with.
-    // 733 of 1169 installed manifests declare a range; the scan costs ~0.15s.
-    const ranges = installedNodeRanges();
+    // Follow the installed graph, including peers; unrelated shared-store entries are excluded.
+    const ranges = installedNodeRanges(ROOT);
+    expect(ranges.size).toBeGreaterThan(0);
     const offenders = [...ranges].filter(([, range]) => !satisfies(NODE_FLOOR, range));
     expect(offenders.map(([name, range]) => `${name} wants ${range}`)).toEqual([]);
 
