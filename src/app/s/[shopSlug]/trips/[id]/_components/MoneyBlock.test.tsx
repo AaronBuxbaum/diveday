@@ -81,7 +81,7 @@ describe("MoneyBlock — the lines that do not render", () => {
   it("hides the course-fee and e-learning lines on an ordinary charter", () => {
     renderDiver(<MoneyBlock context={props({ partySize: 2 })} />);
     expect(screen.queryByText("Course fee")).not.toBeInTheDocument();
-    expect(screen.queryByText("E-learning")).not.toBeInTheDocument();
+    expect(screen.queryByText("Online course materials")).not.toBeInTheDocument();
     // …and states the fare instead, which the two of them would otherwise
     // double.
     expect(screen.getByText("$95 × 2 divers")).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe("MoneyBlock — the lines that do not render", () => {
       <MoneyBlock context={props({ courseFeeCents: 40_000, eLearningFeeCents: 9_000 })} />,
     );
     expect(screen.getByText("Course fee")).toBeInTheDocument();
-    expect(screen.getByText("E-learning")).toBeInTheDocument();
+    expect(screen.getByText("Online course materials")).toBeInTheDocument();
     expect(screen.queryByText(/× 1 diver/)).not.toBeInTheDocument();
   });
 
@@ -123,7 +123,7 @@ describe("MoneyBlock — the lines that do not render", () => {
       <MoneyBlock context={props({ courseFeeCents: 40_000, eLearningFeeCents: null })} />,
     );
     expect(screen.getByText("Course fee")).toBeInTheDocument();
-    expect(screen.queryByText("E-learning")).not.toBeInTheDocument();
+    expect(screen.queryByText("Online course materials")).not.toBeInTheDocument();
   });
 
   it("hides the third-party fee line when the shop charges none", () => {

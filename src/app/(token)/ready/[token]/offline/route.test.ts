@@ -200,3 +200,32 @@ describe("GET /ready/[token]/offline", () => {
     expect(checkRateLimit).toHaveBeenCalledWith("ready-offline:203.0.113.9", expect.anything());
   });
 });
+
+it.each([true, false])(
+  "projects actual course meetings and only count-matched authored places (full plan: %s)",
+  async (fullPlan) => {
+    const data = pageData();
+    getReadyPageData.mockResolvedValue(
+      pageData({
+        courseSession: true,
+        meetingDays: [{ startsAt: data.detail.trip.startsAt, endsAt: data.detail.trip.endsAt }],
+        trip: {
+          ...data.trip,
+          course: {
+            scheduleDays: [
+              { title: "Pool day", meetingPlace: "Training pool entrance", items: [] },
+              ...(!fullPlan ? [{ title: "Ocean day", meetingPlace: "Shop dock", items: [] }] : []),
+            ],
+          },
+        },
+      }),
+    );
+    const response = await call();
+    expect(response.status).toBe(200);
+    const snapshot = await response.json();
+    expect(snapshot.saved).toContain("Your course starts at");
+    expect(snapshot.saved).not.toMatch(/sail|dock by/);
+    expect(snapshot.saved.includes("Training pool entrance")).toBe(fullPlan);
+    expect(snapshot.saved).not.toContain("Shop dock");
+  },
+);

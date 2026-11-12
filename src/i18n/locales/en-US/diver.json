@@ -140,6 +140,7 @@
     "boatCapacity": "{count, plural, one {# person aboard, including crew} other {# people aboard, including crew}}"
   },
   "trip": {
+    "coursePlanHeading": "Your course plan",
     "boatLabel": "Boat",
     "courseSession": "Course session",
     "privateCharter": "Private charter",
@@ -352,6 +353,9 @@
     "changedByCrew": "Changed by the crew on {when}"
   },
   "booking": {
+    "enrollAndPay": "Enroll and pay",
+    "enroll": "Enroll",
+    "courseHeading": "Enroll in this course",
     "heading": "Grab a seat",
     "knownDiver": {
       "heading": "Booking as {name}",
@@ -365,7 +369,7 @@
     "money": {
       "fare": "{price} × {count, plural, one {# diver} other {# divers}}",
       "courseFee": "Course fee",
-      "eLearning": "E-learning",
+      "eLearning": "Online course materials",
       "gear": "Rental gear",
       "tax": "Tax",
       "taxAtCheckout": "added at checkout",
@@ -884,6 +888,8 @@
     "introWithScope": "{intro} {scope}."
   },
   "ready": {
+    "materialsAccess": "Ask the shop about access",
+    "courseStartLine": "Your course starts at {time}.",
     "estimatedOwnRental": "Your estimated rental: {amount}.",
     "estimatedAtShopTotal": "Estimated total at the shop: {amount}. The crew confirms the rental at the dock.",
     "rentalEstimateOwnOnly": "This estimate includes your gear only; other divers’ rentals are extra.",
@@ -978,7 +984,7 @@
       "guardianSignatureMissing": "A parent or legal guardian also has to sign the waiver. Open it here and sign it together.",
       "certificationMissing": "Add your certification details to your record.",
       "certificationPending": "Your certification details are being verified.",
-      "certificationSelfDeclared": "Your certification level has not been verified yet.",
+      "certificationSelfDeclared": "Bring your certification card to check-in so the shop can verify it.",
       "certificationInsufficient": "This trip needs a higher certification level. Your shop can talk through the options.",
       "certificationInTraining": "You’re booked on a course that finishes before this trip. Once you complete it and your instructor certifies you, this step is done.",
       "certificationNotYet": "You told the shop you’re not certified yet, so the shop will get in touch about your options before the day.",
@@ -1024,6 +1030,7 @@
     "nitroxCertHeading": "Add your nitrox card",
     "certAgency": "Training agency",
     "certLevel": "Level",
+    "certAtCheckIn": "I’ll show my card at check-in",
     "certNumber": "Certification number",
     "certChoose": "Choose one",
     "certSubmit": "Add my certification",

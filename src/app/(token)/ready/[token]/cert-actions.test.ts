@@ -1,9 +1,10 @@
 import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
-import { createCertification } from "@/db/readiness";
+import { createCertification, reviewCertification } from "@/db/readiness";
 import { bookings, cards, people, trips } from "@/db/schema";
 import { DAY_MS, nowDate } from "@/lib/clock";
+import { buildDiverChecklist } from "@/lib/readiness-summary";
 import { fileScopedShopContext } from "@/test/db";
 import { firstActiveIntroCourse } from "../../../../features/courses/store";
 import { getReadyPageData } from "../../../../features/ready/store";
@@ -38,7 +39,9 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { declareNoCertificationFromReady } = await import("./cert-actions");
+const { declareNoCertificationFromReady, showCertificationAtCheckInFromReady } = await import(
+  "./cert-actions"
+);
 
 afterEach(() => vi.clearAllMocks());
 
@@ -161,5 +164,97 @@ describe("declareNoCertificationFromReady", () => {
       .where(eq(bookings.id, bookingId));
     expect(await declare(token)).toBe(`/ready/${token}`);
     expect(await stamp(personId)).toBeNull();
+  });
+});
+
+describe("showCertificationAtCheckInFromReady", () => {
+  async function answer(token: string, fields = { agency: "padi", level: "open_water" }) {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) form.set(key, value);
+    try {
+      await showCertificationAtCheckInFromReady(token, form);
+    } catch (error) {
+      return (error as Error).message.replace("REDIRECT:", "");
+    }
+    throw new Error("expected a redirect");
+  }
+
+  it("accepts an unknown number, waits for the shop and never clears boarding", async () => {
+    const { db, shop, bookingId, personId, token } = await seat();
+    expect(await answer(token)).toBe(`/ready/${token}?saved=cert`);
+    const live = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.shopId, shop.id), eq(cards.personId, personId), isNull(cards.deletedAt)));
+    expect(live).toHaveLength(1);
+    expect(live[0]).toMatchObject({
+      agency: "padi",
+      level: "open_water",
+      identifier: null,
+      status: "pending",
+    });
+    expect(live[0].selfDeclaredAt).not.toBeNull();
+    const data = await getReadyPageData(db, bookingId);
+    expect(
+      data &&
+        buildDiverChecklist(data.detail.requirement, data.detail.readiness).find(
+          (item) => item.category === "certification",
+        ),
+    ).toMatchObject({ state: "waiting", code: "certification_self_declared" });
+    expect(data?.detail.readiness.status).not.toBe("ready");
+    expect(
+      await reviewCertification(db, {
+        shopId: shop.id,
+        certificationId: live[0].id,
+        status: "verified",
+      }),
+    ).toEqual({ ok: false, reason: "card_sighting_required" });
+    // Repeated taps update the same unsighted claim, never mint duplicate cards.
+    expect(await answer(token)).toBe(`/ready/${token}?saved=cert`);
+    expect(
+      await db
+        .select()
+        .from(cards)
+        .where(and(eq(cards.personId, personId), isNull(cards.deletedAt))),
+    ).toHaveLength(1);
+  });
+
+  it("refuses invalid agency/level and a seat held for identity confirmation", async () => {
+    const { db, bookingId, personId, token } = await seat();
+    expect(await answer(token, { agency: "unknown", level: "open_water" })).toBe(
+      `/ready/${token}?error=cert`,
+    );
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate() })
+      .where(eq(bookings.id, bookingId));
+    expect(await answer(token)).toBe(`/ready/${token}`);
+    expect(
+      await db
+        .select()
+        .from(cards)
+        .where(and(eq(cards.personId, personId), isNull(cards.deletedAt))),
+    ).toEqual([]);
+  });
+
+  it("cannot replace a card the shop already holds", async () => {
+    const { db, shop, personId, token } = await seat();
+    const existing = await createCertification(db, {
+      shopId: shop.id,
+      personId,
+      agency: "ssi",
+      level: "open_water",
+      identifier: "KNOWN-4335",
+    });
+    expect(await answer(token, { agency: "padi", level: "instructor" })).toBe(
+      `/ready/${token}?saved=cert-known`,
+    );
+    const live = await db
+      .select()
+      .from(cards)
+      .where(and(eq(cards.personId, personId), isNull(cards.deletedAt)));
+    expect(live).toHaveLength(1);
+    expect(live[0].id).toBe(existing?.id);
+    expect(live[0].identifier).toBe("KNOWN-4335");
   });
 });

@@ -12,6 +12,7 @@ vi.mock("../cert-actions", () => {
     saveCertificationFromReady: action,
     saveNitroxCertificationFromReady: action,
     saveSpecialtyFromReady: action,
+    showCertificationAtCheckInFromReady: action,
   };
 });
 
@@ -49,6 +50,7 @@ describe("CertificationEntries", () => {
     );
     expect(summaries(container)).toEqual([
       t("ready.certHeading"),
+      t("ready.certAtCheckIn"),
       t("ready.specialtyHeading", { specialty: "Deep" }),
       t("ready.nitroxCertHeading"),
     ]);
@@ -271,4 +273,35 @@ describe("CertificationEntries", () => {
     const [card] = [...container.querySelectorAll("summary")];
     expect(card).toHaveClass("bg-primary");
   });
+});
+
+it("offers a number-free check-in answer while retaining the numbered card form", () => {
+  const { container } = render(
+    <CertificationEntries
+      token="tok"
+      item={item([{ code: "certification_missing" }])}
+      offerNitrox={false}
+      notYet={null}
+      t={t}
+    />,
+  );
+  const forms = [...container.querySelectorAll("form")];
+  const checkIn = forms.find((form) => form.textContent?.includes(t("ready.certAtCheckIn")));
+  expect(checkIn?.querySelector('[name="agency"]')).toBeRequired();
+  expect(checkIn?.querySelector('[name="level"]')).toBeRequired();
+  expect(checkIn?.querySelector('[name="identifier"]')).toBeNull();
+  expect(container.querySelector('[name="identifier"]')).toBeRequired();
+});
+
+it("keeps number entry optional when an unsighted card is with the shop", () => {
+  const waiting = {
+    ...item([]),
+    code: "certification_self_declared",
+    state: "waiting",
+  } as DiverChecklistItem;
+  const { container } = render(
+    <CertificationEntries token="tok" item={waiting} offerNitrox={false} notYet={null} t={t} />,
+  );
+  expect(summaries(container)).toEqual([t("ready.certHeading")]);
+  expect(container.querySelector("details")).not.toHaveAttribute("open");
 });

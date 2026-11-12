@@ -424,6 +424,12 @@ routes took the display-scale h1 only.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
 
+**Course booking, 2026-11-11 (#4332):** a complete course run presents its authored day plan and an
+Enroll action in the existing booking composition. The arriving question is what the student will do
+across the course, so the full plan replaces charter dive slots when the meeting count matches. A
+partial session never guesses its place in the course outline. No new control is needed beyond the
+existing booking form; extra explanatory copy is the first thing to remove.
+
 **Composition, 2026-10-27 (#3140) — rendered review pending**
 
 - **One idea:** understand the selected day and book in one place.
@@ -589,6 +595,13 @@ against each redraw.
   line of the invoice and says why it is what it is.
 
 ### The thread — `/ready/[token]` (and every state after booking)
+
+**Course prep and an unknown card number, 2026-11-11 (#4332, #4335):** the same next-step spine
+answers what to do before arrival. Course students see all dated meetings and the authored course
+plan, with a start-time line that assumes no boat or dock. A certified diver can choose “I’ll show
+my card at check-in” inside the certification step; that answer waits with the shop, retains
+optional number entry, and asks them to bring the card. The existing disclosure owns the action, so
+no extra panel or explanatory banner competes with it. Boarding still needs verified evidence.
 
 **Shipped dark 2026-11-10** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), slice 18f, [spec](canvases/20260907-nothing-from-nowhere/SPEC.md)):
 one line beside Add to calendar, *Add to Wallet*, on every state after booking; the pass wears the shop's brand, carries the top card's facts, the diver's name and the crew-set stage, surfaces on the lock screen from the dock call, and updates when the plan moves. Never the thread's URL, a barcode, a price or a medical fact. Rendered only when a platform is configured and the shop offers Wallet passes; otherwise the thread stays unchanged. The saved arrival card remains available.
@@ -1102,3 +1115,6 @@ return; refunded and still-held totals use a separate current balance and the 16
 Read-only labels no longer say optional, and absent action menus leave no header gap. The final
 18 probes reported no flags; the focused browser regression checks the original tax and remaining
 balance after a partial return, including the balance's computed type size.
+
+
+**Amended 2026-11-11 (#4332, authored course meeting places):** the course editor accepts an optional meeting place per plan day and prompts for learning-material access instructions. The public and printable course plans show that authored place; the enrolled student's actual dated meetings pair it only when the session covers the complete plan. Saved arrival cards retain those dates and places, use course-start wording, and preserve scheduled hotel pickup precedence. Partial sessions do not infer a place from activity prose. The separate online course materials fee keeps its own price line.

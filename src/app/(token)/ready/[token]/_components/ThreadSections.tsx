@@ -153,7 +153,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
         <TripChangeLedger events={changeEvents} locale={locale} timeZone={detail.shop.timezone} />
         {/* A course's learning materials, the same list the confirmation
                 email carried (ADR 20261008-course-learning-materials). */}
-        <CourseMaterials data={data} t={t} />
+        <CourseMaterials data={data} contactEmail={data.shop.contactEmail} t={t} />
         {/* A chosen hold needs a payment door even when the trip's boarding
             checklist does not require payment. Keep that safety checklist unchanged. */}
         {data.groupHoldUntil &&

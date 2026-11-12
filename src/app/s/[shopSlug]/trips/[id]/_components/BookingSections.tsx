@@ -566,13 +566,15 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
   // "Book this seat", never "these spots" (fourth UX review item 7, H-20261014-seat-is-the-word).
   const bookLabel = groupHold
     ? t("holdSeats")
-    : payAtBooking
-      ? remaining === 1
-        ? t("bookAndPayLastSeat")
-        : t("bookAndPay")
-      : remaining === 1
-        ? t("bookLastSeat")
-        : t("bookSeats", { count: partySize });
+    : trip.course
+      ? t(payAtBooking ? "enrollAndPay" : "enroll")
+      : payAtBooking
+        ? remaining === 1
+          ? t("bookAndPayLastSeat")
+          : t("bookAndPay")
+        : remaining === 1
+          ? t("bookLastSeat")
+          : t("bookSeats", { count: partySize });
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
     capacityLabelValue.kind === "full"
@@ -594,7 +596,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
       // page's `space-y-10` sets the distance above (pixel-craft class 4,
       // K-162), where each state used to carry a top margin of its own.
       className="scroll-mt-4"
-      title={t("heading")}
+      title={t(trip.course ? "courseHeading" : "heading")}
       actions={
         <span className="text-sm font-medium text-primary tabular-nums">{capacityText}</span>
       }

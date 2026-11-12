@@ -174,7 +174,9 @@
     "itemsOverMaxOther": "Máximo {max} elementos por día. Quita una línea antes de guardar.",
     "daysMaxOne": "Máximo {max} día",
     "daysMaxOther": "Máximo {max} días",
-    "addDay": "Agregar día"
+    "addDay": "Agregar día",
+    "meetingPlaceLabel": "Punto de encuentro del día {number} (opcional)",
+    "meetingPlacePlaceholder": "Aula del centro"
   },
   "faq": {
     "questionLabel": "Pregunta {number}",
@@ -191,9 +193,9 @@
     "nameLabel": "Material n.º {number}",
     "namePlaceholder": "eLearning de Open Water",
     "linkLabel": "Enlace",
-    "linkHint": "Opcional. Empieza por https://. Si el precio incluye el eLearning, no enlaces la página de compra de la agencia: la agencia envía el acceso al alumno por correo.",
-    "noteLabel": "Nota",
-    "notePlaceholder": "Termínalo antes del día 1",
+    "linkHint": "Opcional. Empieza por https://. Usa el portal de aprendizaje, no una página de compra si el acceso está incluido.",
+    "noteLabel": "Acceso y preparación",
+    "notePlaceholder": "Explica cómo acceder al material y cuándo terminarlo",
     "remove": "Eliminar el material {number}",
     "add": "Agregar un material",
     "max": "Un curso admite hasta {max, plural, one {# material} other {# materiales}}.",

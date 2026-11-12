@@ -6,6 +6,7 @@ import type { ReadyPageData } from "@/features/ready";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { courseDaysForMeetings } from "@/lib/courses";
 import { nowDate } from "@/lib/clock";
 import {
   bindTitleDash,
@@ -30,6 +31,7 @@ import type { DiveDayMilestone } from "@/lib/visit-milestones";
  * 2026-10-10, item 7).
  */
 export type MastheadFacts = {
+  courseSession?: boolean;
   walletUrl?: string;
   shop: { name: string; slug: string; timezone: string; dockCallMinutes: number };
   trip: { id: string; title: string; startsAt: Date; endsAt: Date };
@@ -37,7 +39,7 @@ export type MastheadFacts = {
    * The departure's meeting days when it meets on more than one (#2558): the
    * when line says day one's own hours, and each day is listed with its own.
    */
-  days?: readonly { startsAt: Date; endsAt: Date }[];
+  days?: readonly { startsAt: Date; endsAt: Date; meetingPlace?: string }[];
   /** A scheduled hotel pickup replaces the dock call: the diver is told where they are collected. */
   pickup: { time: string | null; location: string | null };
 };
@@ -76,7 +78,7 @@ export function MastheadDays({
   t: DiverTranslator;
 }) {
   const days = facts.days ?? [];
-  if (days.length < 2) return null;
+  if (days.length < 2 && !days[0]?.meetingPlace) return null;
   return (
     <ul className="mt-2 space-y-1 text-sm text-muted tabular-nums" data-testid="ready-meeting-days">
       {days.map((day, index) => (
@@ -86,6 +88,9 @@ export function MastheadDays({
             date: formatShortDate(day.startsAt, locale, facts.shop.timezone),
             hours: formatTimeRangeTz(day.startsAt, day.endsAt, locale, facts.shop.timezone),
           })}
+          {day.meetingPlace ? (
+            <span className="block font-medium text-foreground">{day.meetingPlace}</span>
+          ) : null}
         </li>
       ))}
     </ul>
@@ -106,6 +111,11 @@ export function mastheadArrivalLine(
     return t("ready.hotelPickupHeaderLine", {
       time: facts.pickup.time,
       location: facts.pickup.location ?? t("ready.hotelPickupLocationNotSet"),
+    });
+  }
+  if (facts.courseSession) {
+    return t("ready.courseStartLine", {
+      time: formatTime(facts.trip.startsAt, locale, facts.shop.timezone),
     });
   }
   const dockCallAt = new Date(facts.trip.startsAt.getTime() - facts.shop.dockCallMinutes * 60_000);
@@ -228,6 +238,7 @@ export function ReadyBookedHeader({
       >
         <p className="font-semibold text-foreground">{bindTitleDash(facts.trip.title)}</p>
         <BookedWhen facts={facts} locale={locale} now={now} />
+        <MastheadDays facts={facts} locale={locale} t={t} />
         {dateActions}
         <p className="mt-1 font-medium text-foreground">{mastheadArrivalLine(facts, locale, t)}</p>
         {milestone ? (
@@ -336,6 +347,9 @@ export function ReadyBookedPage({
 
 /** The masthead's facts as the full loader reads them; the day sheet states the same ones. */
 export function readyMastheadFacts(data: ReadyPageData): MastheadFacts {
+  const courseDays = data.courseSession
+    ? courseDaysForMeetings(data.trip.course?.scheduleDays ?? [], data.meetingDays.length)
+    : [];
   return {
     shop: {
       name: data.detail.shop.name,
@@ -344,7 +358,11 @@ export function readyMastheadFacts(data: ReadyPageData): MastheadFacts {
       dockCallMinutes: data.shop.dockCallMinutes,
     },
     trip: data.detail.trip,
-    days: data.meetingDays,
+    days: data.meetingDays.map((day, index) => ({
+      ...day,
+      meetingPlace: courseDays[index]?.meetingPlace,
+    })),
+    courseSession: data.courseSession,
     pickup: { time: data.pickupTime, location: data.hotelPickupLocation },
   };
 }

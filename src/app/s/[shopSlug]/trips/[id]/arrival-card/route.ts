@@ -4,11 +4,12 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingPickupTime } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
-import { getTripWithBooked } from "@/db/trips";
+import { getTripWithBooked, listTripScheduleDays } from "@/db/trips";
 import { arrivalCardDocument, escapeHtml } from "@/features/arrival-card-document";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { courseDaysForMeetings } from "@/lib/courses";
+import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -102,18 +103,35 @@ export async function GET(
   // the dock (issue #2034) — omitted, as there, for a diver being collected
   // from their hotel, and when the shop asks for no lead time.
   const pickupTime = await getBookingPickupTime(db, shop.id, capability.bookingId);
+  const courseSession = trip.courseId !== null;
+  const meetingDays = courseSession ? await listTripScheduleDays(db, shop.id, id) : [];
+  const courseDays = courseDaysForMeetings(trip.course?.scheduleDays ?? [], meetingDays.length);
+  const firstWindow = meetingDays[0] ?? trip;
   const dockCallLine = pickupTime
     ? null
-    : arrivalDockCallLine(t, trip.startsAt, shop.dockCallMinutes, locale, shop.timezone);
+    : courseSession
+      ? t("ready.courseStartLine", {
+          time: formatTime(firstWindow.startsAt, locale, shop.timezone),
+        })
+      : arrivalDockCallLine(t, trip.startsAt, shop.dockCallMinutes, locale, shop.timezone);
   const filename = `${shopSlug.replace(/[^a-z0-9_-]/gi, "-")}-arrival-card.html`;
   const html = arrivalCardDocument({
     locale,
     title: `${t("trip.arrivalHeading")} · ${trip.title}`,
     shopName: shop.name,
     tripTitle: trip.title,
-    when: `${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}`,
+    when: `${formatShortDate(firstWindow.startsAt, locale, shop.timezone)} · ${formatTimeRangeTz(firstWindow.startsAt, firstWindow.endsAt, locale, shop.timezone)}`,
     dockCallLine,
     fields: [
+      ...meetingDays.map((day, index) => ({
+        label: formatShortDate(day.startsAt, locale, shop.timezone),
+        value: [
+          formatTimeRangeTz(day.startsAt, day.endsAt, locale, shop.timezone),
+          courseDays[index]?.meetingPlace,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      })),
       { label: t("trip.arrivalAtShop"), value: label },
       { label: t("trip.arrivalAddress"), value: addressText },
       { label: t("trip.arrivalLandmark"), value: trip.arrivalLandmark },

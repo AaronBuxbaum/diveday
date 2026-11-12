@@ -83,3 +83,19 @@ describe("CourseMaterials", () => {
     expect(screen.queryByRole("heading", { name: "Before your first day" })).toBeNull();
   });
 });
+
+it("offers the shop's real contact for access without promising a delivery method or date", () => {
+  render(
+    <CourseMaterials
+      data={data({
+        learningMaterials: [{ name: "PADI Open Water eLearning", note: "Finish before day 1" }],
+      })}
+      contactEmail="courses@example.com"
+      t={t}
+    />,
+  );
+  expect(screen.getByRole("link", { name: "Ask the shop about access" })).toHaveAttribute(
+    "href",
+    "mailto:courses@example.com",
+  );
+});

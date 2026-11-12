@@ -311,3 +311,16 @@ describe("reminderReadiness", () => {
     expect(from(ready)).toEqual({ outstanding: [], medicalReview: false });
   });
 });
+
+it("leaves an existing self-declaration with the shop while reminding the diver to bring the card", () => {
+  const items = buildDiverChecklist(requirement(), {
+    status: "blocked",
+    blockers: [{ code: "certification_self_declared" }],
+  });
+  expect(items.find((item) => item.category === "certification")).toMatchObject({
+    state: "waiting",
+    actionable: [],
+    code: "certification_self_declared",
+  });
+  expect(reminderReadiness(items).outstanding).toContain("certification_self_declared");
+});

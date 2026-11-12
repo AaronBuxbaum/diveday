@@ -65,6 +65,30 @@ export async function saveCertificationFromReady(token: string, formData: FormDa
   revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
 }
 
+/** A card the diver will bring: an unsighted claim, never boarding clearance. */
+export async function showCertificationAtCheckInFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
+  if (!isDiver(ctx.data.participantType)) redirect(base(token));
+  const parsed = certificationSchema
+    .omit({ identifier: true })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=cert`);
+  const outcome = await ctx.db.transaction((tx) =>
+    recordSelfDeclaredCards(tx, {
+      shopId: ctx.data.shop.id,
+      personId: ctx.data.person.id,
+      agency: parsed.data.agency,
+      level: parsed.data.level,
+    }),
+  );
+  revalidateAndRedirect(
+    base(token),
+    `${base(token)}?saved=${outcome.level === "recorded" ? "cert" : "cert-known"}`,
+  );
+}
+
 /**
  * A specialty card the trip demands — Deep, Wreck, Night, Drysuit.
  *

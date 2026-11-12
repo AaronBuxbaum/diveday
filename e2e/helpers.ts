@@ -95,7 +95,7 @@ export async function bookASeatAndOpenThread(page: Page, name: string, email?: s
       email ?? `${name.toLowerCase().replace(/[^a-z]+/g, "-")}-${e2eNow().getTime()}@example.com`,
     );
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book/ }).click();
+  await page.getByRole("button", { name: /^(Book|Enroll)/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
 }
 
@@ -1102,7 +1102,7 @@ export async function bookOpenWaterSession(
   await page.getByLabel("Name", { exact: true }).fill(name);
   await page.getByLabel("Email", { exact: true }).fill(email);
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book/ }).click();
+  await page.getByRole("button", { name: /^(Book|Enroll)/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
   return new URL(page.url()).pathname;
 }
