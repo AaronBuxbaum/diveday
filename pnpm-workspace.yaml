@@ -51,3 +51,5 @@ auditConfig:
 permissions:
   drizzle-kit:
     skills: true
+
+virtualStoreType: global
