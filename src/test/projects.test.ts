@@ -54,6 +54,11 @@ describe("classifyTestFile", () => {
       ["v", "i.spyOn(console, 'log');"].join(""),
       ["process", ".env.X = '1';"].join(""),
       ["global", "This.fetch = f;"].join(""),
+      ["v", "i . doMock('./x');"].join(""),
+      ["v", "i['stubGlobal']('fetch', f);"].join(""),
+      ["import { v", "i as fake } from 'vitest'; fake.useFakeTimers();"].join(""),
+      "import * as runner from 'vitest'; runner.vi.mock('./x');",
+      ["process", "['env'].X = '1';"].join(""),
     ]) {
       expect(classifyTestFile("src/db/x.test.ts", fixture + trace)).toBe("db");
     }

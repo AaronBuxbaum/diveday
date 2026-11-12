@@ -389,8 +389,9 @@ The #4421 final-head run's latest successful unit jobs took 629.04, 748.32, 845.
 in Vitest on Ubuntu 24.04 with V8 coverage. Test bodies were 64–66% and imports 26–27%; setup,
 transform and worker startup made up the remainder. Those timings include a second attempt of
 shard 3, so they describe the latest successful fleet, not a controlled before/after trial.
-Sharing database workers (#4416) changes the isolation requirement and needs a separate explicit
-policy decision plus its shuffled CI trial; a mock-free file can still hold module-level state.
+Aaron approved building the database-worker trial (#4416) on 2026-11-12. Its three shuffled CI
+trials and paired baseline evidence remain required; a mock-free file can still hold module-level
+state. The acceptance and revert criteria are recorded below.
 
 ### Coverage floors
 
@@ -718,19 +719,31 @@ from another branch. Every pre-existing job in that workflow carries
 load-bearing. What the job does *not* prove — anything involving production data volumes — is in
 [deploy-and-migrations-runbook.md](deploy-and-migrations-runbook.md#what-ci-rehearses-and-what-it-still-doesnt).
 
-`vitest.config.ts` sets `pool: "threads"` (Vitest 4 otherwise defaults to `forks`, one child process
-per test file): reusing one process across files skips Node's startup and the module-graph re-import
-(Next, Drizzle, PGlite's WASM) that every fresh fork repays, without weakening per-file isolation —
-`isolate` still gives each file its own module registry regardless of pool. Measured ~13% faster on
-the full suite locally with identical pass counts across repeated runs.
+`vitest.config.ts` uses `pool: "forks"` to keep PGlite WASM out of the shared V8 page-table
+failure seen with worker threads. Isolated projects retain a separate module registry per file;
+`dbShared`, `lib` and `guards` explicitly share registries within their workers.
 
-Database test files that touch no process-wide state (no `vi.` call, no `process.env`, no
+Database test files with no directly detected process-wide state (no `vi.` call, no `process.env`, no
 `globalThis`) run in the `dbShared` project, which shares a fork and its module cache between files
 (`isolate: false`); each test still gets its own PGlite. `src/test/projects.ts` selects the files,
 so a file that later adds a mock or a stub moves back to `db` by itself. Locally the 669 files ran
 in 196 s shuffled against 403 s isolated, all passing (issue #4416). A one-week trial from
-2026-11-12: a file that fails only when shared goes back to `db`, and the project is reverted if
-that happens more than once.
+2026-11-12. Revert the shared project on **any** shared-only or order-dependent failure, as the
+original issue requires; neither a repeated failure nor multiple failing files are prerequisites.
+Aaron's approval to build #4416 does not approve the weaker threshold previously written here.
+The source scan cannot prove freedom from mutable imported singletons.
+
+The local numbers above are exploratory evidence, not acceptance. PR #4425's final-head CI
+43161708330 skipped the unit suite. Acceptance remains pending until three shuffled full CI
+trials have complete comparable isolated/shared shard timings and passing coverage floors.
+`vitest.db-isolated.config.ts` provides a same-commit baseline changing only `dbShared.isolate`.
+The `Database shared-worker trial` workflow runs three paired seeds over all six unit shards,
+with coverage enabled in both modes and unchanged test/hook/job deadlines. It runs only when
+explicitly dispatched or when the `db-shared-trial` label is added to a PR, after coordinating
+the runner window with the active stack owner. Preserve the artifacts and publish each shard's
+elapsed time, all-file/test counts and the slowest-shard comparison in the PR. A missing,
+failed, cancelled or mismatched fleet is inconclusive, never a speedup. Keep #4416 open until
+the acceptance evidence is reviewed and the trial lands (or is reverted for failure/no gain).
 
 ## Conventions
 

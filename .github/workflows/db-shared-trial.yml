@@ -1,0 +1,120 @@
+name: Database shared-worker trial
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+# A separate lane never cancels the stack's ordinary CI or an earlier trial.
+concurrency:
+  group: db-shared-trial-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  trial:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'db-shared-trial'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        seed: [441601, 441602, 441603]
+        mode: [isolated, shared]
+        shard: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/setup
+      # Deliberately cold templates in both modes: no cache-warmth confound.
+      # All projects run, including guards. Same seeds, files, shard weights,
+      # runner class, coverage and deadlines; only dbShared.isolate changes.
+      - name: Run measured full-suite shard
+        env:
+          TRIAL_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TRIAL_MODE: ${{ matrix.mode }}
+          TRIAL_SEED: ${{ matrix.seed }}
+          TRIAL_SHARD: ${{ matrix.shard }}
+          DIVEDAY_TEST_DURATIONS_OUT: trial/durations.json
+          DIVEDAY_TEMPLATE_CACHE_HIT: 'false'
+        shell: bash
+        run: |
+          mkdir -p trial
+          config=vitest.config.ts
+          if [[ "$TRIAL_MODE" == isolated ]]; then config=vitest.db-isolated.config.ts; fi
+          start=$SECONDS
+          set +e
+          pnpm exec vitest run --config "$config" --sequence.shuffle.files --sequence.seed="$TRIAL_SEED" --shard="$TRIAL_SHARD/6" --coverage.enabled --reporter=dot --reporter=json --outputFile.json=trial/results.json --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --reporter=blob
+          status=$?
+          elapsed=$((SECONDS - start))
+          set -e
+          TRIAL_STATUS="$status" TRIAL_ELAPSED="$elapsed" node --input-type=module <<'JS'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const profile = JSON.parse(readFileSync('trial/durations.json', 'utf8'));
+          const result = JSON.parse(readFileSync('trial/results.json', 'utf8'));
+          const m = profile.metadata;
+          writeFileSync('trial/receipt.json', JSON.stringify({
+            ...m, mode: process.env.TRIAL_MODE, seed: Number(process.env.TRIAL_SEED),
+            sha: process.env.TRIAL_SHA, files: Object.keys(profile.durations),
+            tests: result.numTotalTests, passedTests: result.numPassedTests, pendingTests: result.numPendingTests, success: m.success && result.success,
+            exitCode: Number(process.env.TRIAL_STATUS), elapsedSeconds: Number(process.env.TRIAL_ELAPSED)
+          }, null, 2));
+          JS
+          exit "$status"
+        # GITHUB_SHA on pull_request is the merge ref; record the tested head.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: trial-${{ matrix.seed }}-${{ matrix.mode }}-${{ matrix.shard }}
+          path: trial/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: trial-blob-${{ matrix.seed }}-${{ matrix.mode }}-${{ matrix.shard }}
+          path: .vitest/blob/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+  floors:
+    needs: trial
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [441601, 441602, 441603]
+        mode: [isolated, shared]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: trial-blob-${{ matrix.seed }}-${{ matrix.mode }}-*
+          path: .vitest/blob
+          merge-multiple: true
+      - run: pnpm exec vitest run --merge-reports --reporter=dot --coverage.enabled
+      - run: node scripts/coverage-floors.mjs coverage/coverage-summary.json
+
+  compare:
+    needs: [trial, floors]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: trial-*
+          path: trial-artifacts
+      - run: node scripts/db-shared-trial.mjs trial-artifacts | tee -a "$GITHUB_STEP_SUMMARY"

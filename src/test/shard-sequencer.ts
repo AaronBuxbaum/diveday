@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { appendFileSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { BaseSequencer, type TestSpecification } from "vitest/node";
@@ -235,7 +236,44 @@ export function readDurations(root: string, coverage = false): Durations {
   }
 }
 
+/** Seeded file order independent of discovery order and Vitest's timing cache. */
+export function shuffledFileOrder<T>(
+  files: readonly T[],
+  seed: number,
+  key: (file: T) => string,
+): T[] {
+  return files
+    .map((file) => ({
+      file,
+      key: key(file),
+      rank: createHash("sha256")
+        .update(`${seed}\0${key(file)}`)
+        .digest("hex"),
+    }))
+    .sort((a, b) => a.rank.localeCompare(b.rank) || a.key.localeCompare(b.key))
+    .map(({ file }) => file);
+}
+
 export class CostWeightedSequencer extends BaseSequencer {
+  override async sort(files: TestSpecification[]): Promise<TestSpecification[]> {
+    // A custom sequencer replaces Vitest's RandomSequencer, so the CLI flag
+    // alone never shuffled files when we inherited BaseSequencer.sort.
+    const { sequence, root } = this.ctx.config;
+    const shuffle: unknown = sequence.shuffle;
+    if (
+      shuffle === true ||
+      (typeof shuffle === "object" &&
+        shuffle !== null &&
+        "files" in shuffle &&
+        shuffle.files === true)
+    ) {
+      return shuffledFileOrder(files, sequence.seed ?? 0, (file) =>
+        path.relative(root, file.moduleId).split(path.sep).join("/"),
+      );
+    }
+    return super.sort(files);
+  }
+
   override async shard(files: TestSpecification[]): Promise<TestSpecification[]> {
     const { config } = this.ctx;
     const { index, count } = config.shard ?? { index: 1, count: 1 };
