@@ -29,24 +29,18 @@ export function ShopPhotoStrip({
 }) {
   if (urls.length === 0) return null;
   return (
-    <ul
-      aria-label={label}
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: a horizontal scroll region must be reachable by keyboard
-      tabIndex={0}
-      className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 focus-visible:focus-ring-inset sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4"
-    >
-      <PhotoLightbox
-        photos={urls.map((src) => ({ src, alt: "" }))}
-        words={lightboxWords(t)}
-        sizes="(min-width: 1024px) 17rem, (min-width: 640px) 30vw, 72vw"
-        thumbClassName="aspect-[4/3] w-full rounded-inset"
-        renderThumb={(thumb, index) => (
-          <li key={urls[index]} className="w-[78%] shrink-0 snap-start sm:w-auto">
-            {thumb}
-          </li>
-        )}
-      />
-    </ul>
+    <PhotoLightbox
+      photos={urls.map((src) => ({ src, alt: "" }))}
+      words={lightboxWords(t)}
+      sizes="(min-width: 1024px) 17rem, (min-width: 640px) 30vw, 72vw"
+      thumbClassName="aspect-[4/3] w-full rounded-inset"
+      thumbnailList={{
+        label,
+        className:
+          "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 focus-visible:focus-ring-inset sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4",
+        itemClassName: "w-[78%] shrink-0 snap-start sm:w-auto",
+      }}
+    />
   );
 }
 
@@ -87,7 +81,6 @@ export function BoatsShelf({
                 words={lightboxWords(t)}
                 sizes="(min-width: 1152px) 315px, (min-width: 1024px) calc(33.333vw - 66px), (min-width: 640px) calc(50vw - 72px), calc(100vw - 64px)"
                 thumbClassName="mb-3 aspect-video w-full rounded-md"
-                renderThumb={(thumb) => thumb}
               />
             ) : null}
             <div className="flex items-baseline justify-between gap-3">

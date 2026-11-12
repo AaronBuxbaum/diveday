@@ -24,13 +24,7 @@ afterEach(cleanup);
 
 function lightbox(list = photos) {
   return render(
-    <PhotoLightbox
-      photos={list}
-      words={words}
-      sizes="100vw"
-      thumbClassName="aspect-video"
-      renderThumb={(thumb, i) => <div key={list[i].src}>{thumb}</div>}
-    />,
+    <PhotoLightbox photos={list} words={words} sizes="100vw" thumbClassName="aspect-video" />,
   );
 }
 
@@ -57,4 +51,21 @@ it("offers no next or previous for a single photo", () => {
   fireEvent.click(screen.getByRole("button", { name: "Mantis II" }));
   expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
   expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
+});
+
+it("keeps only list items in the thumbnail list and the dialog beside it", () => {
+  render(
+    <PhotoLightbox
+      photos={photos}
+      words={words}
+      sizes="100vw"
+      thumbClassName="aspect-video"
+      thumbnailList={{ label: "Shop photos", className: "", itemClassName: "" }}
+    />,
+  );
+  const list = screen.getByRole("list", { name: "Shop photos" });
+  expect(Array.from(list.children).map((child) => child.tagName)).toEqual(["LI", "LI"]);
+  fireEvent.click(screen.getByRole("button", { name: "The reef" }));
+  const dialog = screen.getByRole("dialog", { name: words.label });
+  expect(list.contains(dialog)).toBe(false);
 });

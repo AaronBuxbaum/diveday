@@ -30,15 +30,28 @@ for (const scheme of ["light", "dark"] as const) {
         trip: { id: string };
       };
       await page.goto(`/s/${privateShop.slug}`);
-      const photo = page.getByRole("img", { name: boat.name });
+      const opener = page.getByRole("button", { name: boat.name, exact: true });
+      const photo = opener.locator("img");
       await expect(photo).toBeVisible();
       await photo.scrollIntoViewIfNeeded();
       await expect
         .poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth))
         .toBeGreaterThan(0);
       await capture(page, "boat-photo-storefront", scheme);
+      await opener.click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toBeVisible();
+      const enlarged = dialog.getByRole("img", { name: boat.name });
+      await expect(enlarged).toBeVisible();
+      await expect
+        .poll(() => enlarged.evaluate((image: HTMLImageElement) => image.naturalWidth))
+        .toBeGreaterThan(0);
+      await capture(page, "boat-photo-enlarged", scheme);
+      await page.keyboard.press("Escape");
+      await expect(dialog).not.toBeVisible();
+      await expect(opener).toBeFocused();
       await page.goto(`/s/${privateShop.slug}/trips/${trip.id}`);
-      const tripPhoto = page.getByRole("img", { name: boat.name });
+      const tripPhoto = page.getByRole("button", { name: boat.name, exact: true }).locator("img");
       await expect(tripPhoto).toBeVisible();
       await tripPhoto.scrollIntoViewIfNeeded();
       await expect

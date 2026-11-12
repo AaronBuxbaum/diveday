@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { StoredPhoto } from "@/components/StoredPhoto";
 
@@ -29,15 +29,15 @@ export function PhotoLightbox({
   words,
   sizes,
   thumbClassName,
-  renderThumb,
+  thumbnailList,
 }: {
   photos: readonly LightboxPhoto[];
   words: LightboxWords;
   sizes: string;
   /** Sizes the box around each thumbnail (aspect, width, rounding). */
   thumbClassName: string;
-  /** Wraps the thumbnails: a list for a strip, a bare fragment for one photo. */
-  renderThumb: (thumb: React.ReactNode, index: number) => React.ReactNode;
+  /** Serializable list layout; the dialog remains outside the list. */
+  thumbnailList?: { label: string; className: string; itemClassName: string };
 }) {
   const [open, setOpen] = useState<number | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -73,9 +73,30 @@ export function PhotoLightbox({
     </button>
   );
 
+  const thumbnails = photos.map((p, index) =>
+    thumbnailList ? (
+      <li key={p.src} className={thumbnailList.itemClassName}>
+        {thumbButton(p, index)}
+      </li>
+    ) : (
+      <Fragment key={p.src}>{thumbButton(p, index)}</Fragment>
+    ),
+  );
+
   return (
     <>
-      {photos.map((p, index) => renderThumb(thumbButton(p, index), index))}
+      {thumbnailList ? (
+        <ul
+          aria-label={thumbnailList.label}
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: a horizontal scroll region must be reachable by keyboard
+          tabIndex={0}
+          className={thumbnailList.className}
+        >
+          {thumbnails}
+        </ul>
+      ) : (
+        thumbnails
+      )}
       <dialog
         ref={dialog}
         aria-label={words.label}

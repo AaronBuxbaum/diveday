@@ -142,7 +142,6 @@ export async function TripBoatPhoto({
           words={lightboxWords(t)}
           sizes="96px"
           thumbClassName="size-24 rounded-lg"
-          renderThumb={(thumb) => thumb}
         />
       </div>
       <figcaption>
