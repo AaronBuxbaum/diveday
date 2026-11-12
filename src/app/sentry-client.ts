@@ -1,8 +1,4 @@
-import {
-  redactBreadcrumb,
-  redactEvent,
-  SENTRY_DATA_COLLECTION,
-} from "@/app/observability";
+import { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION } from "@/app/observability";
 import { deferSentry } from "@/features/sentry-browser";
 import { SENTRY_DSN } from "@/features/sentry-dsn";
 

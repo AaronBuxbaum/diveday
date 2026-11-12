@@ -38,9 +38,7 @@ describe("the RUM client's data plane", () => {
     });
 
     const { config } = rum as unknown as { config: { endpoint: string } };
-    expect(config.endpoint).toBe(
-      "https://dataplane.rum.eu-central-1.amazonaws.com",
-    );
+    expect(config.endpoint).toBe("https://dataplane.rum.eu-central-1.amazonaws.com");
   });
 });
 
@@ -75,15 +73,12 @@ describe("the RUM session sample rate", () => {
 });
 
 describe("which visitors RUM ignores", () => {
-  const ua = (userAgent: string, webdriver = false) =>
-    looksAutomated({ userAgent, webdriver });
+  const ua = (userAgent: string, webdriver = false) => looksAutomated({ userAgent, webdriver });
 
   it("skips crawlers, headless browsers and audit tools", () => {
-    expect(
-      ua(
-        "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-      ),
-    ).toBe(true);
+    expect(ua("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")).toBe(
+      true,
+    );
     expect(ua("Mozilla/5.0 (compatible; bingbot/2.0)")).toBe(true);
     expect(ua("Mozilla/5.0 HeadlessChrome/120.0 Safari/537.36")).toBe(true);
     expect(ua("Mozilla/5.0 Chrome-Lighthouse")).toBe(true);
@@ -96,8 +91,6 @@ describe("which visitors RUM ignores", () => {
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1",
       ),
     ).toBe(false);
-    expect(
-      ua("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120 Safari/537.36"),
-    ).toBe(false);
+    expect(ua("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120 Safari/537.36")).toBe(false);
   });
 });
