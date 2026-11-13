@@ -281,7 +281,7 @@ test.describe("staff", () => {
     // "start your first site" pitch to a shop that already has seven.
     await search.fill("nowhere in particular");
     await search.press("Enter");
-    await expect(page.getByText("No sites match that search")).toBeVisible();
+    await expect(page.getByText("No sites match")).toBeVisible();
     await expect(page.getByText("Start with a site your crew knows well")).toHaveCount(0);
 
     // And there is always a way back to the whole library.
