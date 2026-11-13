@@ -288,7 +288,9 @@ for (const scheme of ["light", "dark"] as const) {
         // the old one, so the save answers with its warning variant ("8 booked
         // divers no longer meet them") rather than the plain confirmation.
         // Matching the stem keeps this test about the deal panel.
-        await expect(page.getByRole("status")).toContainText("Requirements updated.");
+        await expect(
+          page.getByRole("alert").filter({ hasText: "Requirements updated." }),
+        ).toContainText("Requirements updated.");
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
@@ -372,7 +374,9 @@ for (const scheme of ["light", "dark"] as const) {
         // Raising the bar on a seated charter answers with the warning variant
         // ("… booked divers no longer meet them"); matching the stem keeps this
         // test about the wait list.
-        await expect(page.getByRole("status")).toContainText("Requirements updated.");
+        await expect(
+          page.getByRole("alert").filter({ hasText: "Requirements updated." }),
+        ).toContainText("Requirements updated.");
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");

@@ -225,9 +225,11 @@ test("applying a series' standing crew reaches later dates, and spares one a cre
   await more.getByRole("checkbox", { name: /^Crew every upcoming date with/ }).check();
   await more.getByRole("button", { name: "Yes, apply to every date" }).click();
   // One date kept its own crew: the one Marcus is busy on.
-  await expect(page.getByRole("status")).toContainText(
-    staff("tripSeries.notices.seriesAppliedCrewPartialCount", { count: 1 }),
-  );
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: staff("tripSeries.notices.seriesAppliedCrewPartialCount", { count: 1 }),
+    }),
+  ).toContainText(staff("tripSeries.notices.seriesAppliedCrewPartialCount", { count: 1 }));
 
   // The panel names the standing crew.
   await openTripAbout(page);
