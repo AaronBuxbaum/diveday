@@ -6,7 +6,7 @@ import { manifestRow } from "./helpers";
 
 signedInAsOwner();
 
-type ReadCounts = { total: number; previous: number; newChallenge: number };
+type ReadCounts = { total: number; previous: number; newChallenge: number; distinctNew: number };
 
 async function expectOneRead(counts: ReadCounts) {
   try {
@@ -51,7 +51,8 @@ for (const width of [390, 1280]) {
       const held = new Promise<void>((resolve) => {
         release = resolve;
       });
-      const requests: ReadCounts = { total: 0, previous: 0, newChallenge: 0 };
+      const requests: ReadCounts = { total: 0, previous: 0, newChallenge: 0, distinctNew: 0 };
+      const newTokens = new Set<string>();
       await page.route("**/*", async (route) => {
         const request = route.request();
         const url = new URL(request.url());
@@ -65,7 +66,11 @@ for (const width of [390, 1280]) {
         if (token) {
           requests.total += 1;
           if (token === previousToken) requests.previous += 1;
-          else requests.newChallenge += 1;
+          else {
+            requests.newChallenge += 1;
+            newTokens.add(token);
+            requests.distinctNew = newTokens.size;
+          }
           await held;
           await route.continue();
           return;
@@ -109,7 +114,8 @@ test("a roster refresh preserves an open person sheet without a document navigat
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const reads: ReadCounts = { total: 0, previous: 0, newChallenge: 0 };
+  const reads: ReadCounts = { total: 0, previous: 0, newChallenge: 0, distinctNew: 0 };
+  const newTokens = new Set<string>();
   let documentNavigations = 0;
   page.on("request", (request) => {
     if (request.isNavigationRequest() && request.frame() === page.mainFrame())
@@ -125,7 +131,11 @@ test("a roster refresh preserves an open person sheet without a document navigat
     if (token) {
       reads.total += 1;
       if (token === previousToken) reads.previous += 1;
-      else reads.newChallenge += 1;
+      else {
+        reads.newChallenge += 1;
+        newTokens.add(token);
+        reads.distinctNew = newTokens.size;
+      }
       await held;
       await route.continue();
       return;
