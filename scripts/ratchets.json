@@ -931,7 +931,7 @@
     "src/components/MarketingFeatureScreens.tsx": 948,
     "src/components/search/CommandPalette.tsx": 913,
     "src/components/ui/button.test.ts": 971,
-    "src/components/ui/form.test.tsx": 1464,
+    "src/components/ui/form.test.tsx": 1436,
     "src/components/ui/form.tsx": 1153,
     "src/db/bookings.test.ts": 3514,
     "src/db/buddy-teams.test.ts": 967,
@@ -994,7 +994,6 @@
     "src/db/seed-history.ts#seedHistory": 632,
     "src/db/seed-more-trips.ts#seedMoreTrips": 607,
     "src/db/seed-trips.ts#seedTrips": 327,
-    "src/features/reporting/store.ts#getMonthlyReport": 308,
     "src/lib/import.ts#prepareContactImport": 430
   },
   "live-people": {
@@ -1054,9 +1053,9 @@
     "src/app/shop/[shopSlug]/orders/page.tsx": 565,
     "src/app/shop/[shopSlug]/page.tsx": 576,
     "src/app/shop/[shopSlug]/promos/page.tsx": 407,
-    "src/app/shop/[shopSlug]/reports/page.tsx": 467,
+    "src/app/shop/[shopSlug]/reports/page.tsx": 412,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 569,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 422,
+    "src/app/shop/[shopSlug]/staffing/page.tsx": 407,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 407
   },
   "tokens": {

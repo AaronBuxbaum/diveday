@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { ErrorToast, SAFETY_TOAST_MS } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { fill } from "@/i18n/fill";
 import { loadOfflineManifest } from "@/lib/offline-manifest-store";
@@ -135,7 +136,14 @@ export function MedicalAlertReveal({
   const [revealed, setRevealed] = useState<Revealed | null>(() =>
     keepAs ? (revealedThisVisit.get(keepAs) ?? null) : null,
   );
-  const [problem, setProblem] = useState<"failed" | "no_signal" | null>(null);
+  const [problem, setProblem] = useState<{
+    reason: "failed" | "no_signal";
+    occurrence: number;
+  } | null>(null);
+  const problemOccurrence = useRef(0);
+  const reportProblem = (reason: "failed" | "no_signal") => {
+    setProblem({ reason, occurrence: ++problemOccurrence.current });
+  };
   const [pending, startTransition] = useTransition();
 
   if (revealed) {
@@ -180,7 +188,7 @@ export function MedicalAlertReveal({
   const fromThisPhone = async () => {
     const saved = savedCopy ? await savedWords(savedCopy) : null;
     if (saved) keep(saved);
-    else setProblem(savedCopy && copy.noSignal ? "no_signal" : "failed");
+    else reportProblem(savedCopy && copy.noSignal ? "no_signal" : "failed");
   };
   const reveal = () =>
     startTransition(async () => {
@@ -191,7 +199,7 @@ export function MedicalAlertReveal({
       try {
         const result = await show();
         if (result.ok) keep({ text: result.text });
-        else setProblem("failed");
+        else reportProblem("failed");
       } catch {
         // A server-action fetch that never reached the server: no signal.
         await fromThisPhone();
@@ -211,9 +219,11 @@ export function MedicalAlertReveal({
       </button>
       <p className="text-xs text-muted">{copy.showHint}</p>
       {problem ? (
-        <p role="alert" className="text-xs font-medium text-danger">
-          {problem === "no_signal" ? copy.noSignal : copy.failed}
-        </p>
+        <ErrorToast
+          occurrenceKey={problem.occurrence}
+          message={problem.reason === "no_signal" ? copy.noSignal : copy.failed}
+          durationMs={SAFETY_TOAST_MS}
+        />
       ) : null}
     </div>
   );
@@ -246,7 +256,14 @@ function EmergencyRead({
   onRead: (text: string) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
-  const [problem, setProblem] = useState<"not_yet" | "closed" | "no_signal" | null>(null);
+  const [problem, setProblem] = useState<{
+    reason: "not_yet" | "closed" | "no_signal";
+    occurrence: number;
+  } | null>(null);
+  const problemOccurrence = useRef(0);
+  const reportProblem = (reason: "not_yet" | "closed" | "no_signal") => {
+    setProblem({ reason, occurrence: ++problemOccurrence.current });
+  };
   const [pending, setPending] = useState(false);
   // Each confirm's number: a late answer to an earlier one, cancelled or timed
   // out, finds a newer number here and is dropped.
@@ -260,14 +277,14 @@ function EmergencyRead({
   const confirm = () => {
     setProblem(null);
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      setProblem("no_signal");
+      reportProblem("no_signal");
       return;
     }
     attempt.current += 1;
     const mine = attempt.current;
     setPending(true);
     const timer = setTimeout(
-      () => settle(mine, () => setProblem("no_signal")),
+      () => settle(mine, () => reportProblem("no_signal")),
       EMERGENCY_READ_TIMEOUT_MS,
     );
     show().then(
@@ -275,13 +292,13 @@ function EmergencyRead({
         clearTimeout(timer);
         settle(mine, () => {
           if (result.ok) onRead(result.text);
-          else setProblem(result.reason === "not_yet" ? "not_yet" : "closed");
+          else reportProblem(result.reason === "not_yet" ? "not_yet" : "closed");
         });
       },
       () => {
         // A server-action fetch that never reached the server.
         clearTimeout(timer);
-        settle(mine, () => setProblem("no_signal"));
+        settle(mine, () => reportProblem("no_signal"));
       },
     );
   };
@@ -292,11 +309,11 @@ function EmergencyRead({
     setProblem(null);
   };
   const problemText =
-    problem === "no_signal"
+    problem?.reason === "no_signal"
       ? copy.noSignal
-      : problem === "not_yet"
+      : problem?.reason === "not_yet"
         ? copy.notYet
-        : problem === "closed"
+        : problem?.reason === "closed"
           ? copy.closed
           : null;
   return (
@@ -334,9 +351,11 @@ function EmergencyRead({
         </button>
       )}
       {problemText ? (
-        <p role="alert" className="text-xs font-medium text-danger">
-          {problemText}
-        </p>
+        <ErrorToast
+          occurrenceKey={problem?.occurrence}
+          message={problemText}
+          durationMs={SAFETY_TOAST_MS}
+        />
       ) : null}
     </div>
   );

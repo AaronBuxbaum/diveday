@@ -1,9 +1,8 @@
 {
   "list": {
-    "title": "Dive Sites",
+    "title": "Dive sites",
     "createSite": "Add a dive site",
     "browseTemplates": "Browse the DiveDay catalog",
-    "catalogSiteCount": "{count, plural, one {# published site} other {# published sites}}",
     "siteDeletedNotice": "Site deleted",
     "emptyHeading": "Start with a site your crew knows well",
     "emptyBody": "Add a location, a map or route image, and the life divers may encounter.",
@@ -12,7 +11,7 @@
     "searchLabel": "Find a site",
     "searchPlaceholder": "Name or location",
     "searchClear": "Clear search",
-    "noMatchHeading": "No sites match that search",
+    "noMatchHeading": "No sites match",
     "templateUpdateReady": "Newer site details available",
     "nitroxBadge": "Nitrox",
     "groups": {
@@ -20,7 +19,18 @@
     },
     "pagination": {
       "total": "{count, plural, one {# site} other {# sites}}"
-    }
+    },
+    "viewsLabel": "Which dive sites",
+    "viewLibrary": "Your sites",
+    "viewCatalog": "DiveDay catalog",
+    "followMap": "Only sites in this map area",
+    "areaNote": "{count, plural, one {# site} other {# sites}} in this map area. Move or zoom the map to change it.",
+    "areaClear": "Show all sites",
+    "filterDifficultyLabel": "Filter by difficulty",
+    "filterNeedLabel": "Filter by dive type",
+    "filterAll": "All",
+    "clearFilters": "Clear filters",
+    "noMatchFilteredBody": "Try a different filter, or clear them to see every site."
   },
   "map": {
     "loadingDetails": "Loading site details…",

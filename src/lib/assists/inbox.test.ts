@@ -3,7 +3,7 @@ import { buildStructuredRequest, callStructured } from "@/lib/claude/structured"
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import {
   checkedTranslation,
-  groundedReply,
+  draftedReply,
   inboundTriageCall,
   replyDraftCall,
   replyTranslationCall,
@@ -143,7 +143,7 @@ describe("replyDraftCall", () => {
 });
 
 describe("what the prompts tell the model", () => {
-  it("forbids a reply draft from judging a card, a depth, a prerequisite or an agency's equivalent", () => {
+  it("keeps a reply draft from clearing this diver, while it may state published requirements", () => {
     const request = buildStructuredRequest(
       replyDraftCall({
         window: "",
@@ -153,9 +153,8 @@ describe("what the prompts tell the model", () => {
     );
     const system = JSON.stringify(request.system);
     expect(system).toContain(
-      "Never say whether a certification, experience, age or nitrox card qualifies anyone for a dive or course, and never state a depth, a limit, a prerequisite or that one agency's card equals another's. Say a staff member will check their card against that dive.",
+      "Do not tell this particular diver that they are qualified or cleared; say a staff member will check their card.",
     );
-    expect(system).toContain("eligibility: true when");
   });
 
   it("tells a reply draft the facts are a window, never the whole schedule", () => {
@@ -163,7 +162,7 @@ describe("what the prompts tell the model", () => {
       buildStructuredRequest(replyDraftCall({ window: "", facts: [], thread: [] })).system,
     );
     expect(system).toContain(
-      "<window> says today's date and which departures <facts> covers. For a date outside it, or a departure <facts> does not list, say a staff member will confirm: never say there is no trip.",
+      "<window> says today's date and which departures <facts> covers. For a date outside it, or a departure <facts> does not list, say a staff member will confirm; never say there is no trip.",
     );
   });
 
@@ -181,129 +180,29 @@ describe("what the prompts tell the model", () => {
   });
 });
 
-describe("groundedReply", () => {
-  const facts = ["Sat 26 Oct 8:00 AM, Two-tank reef: 4 seats open, $95"];
-  const thread = [{ from: "diver" as const, text: "Is there room for 2 on Saturday?" }];
-
-  it("passes a draft whose every number is quoted from the facts", () => {
-    expect(
-      groundedReply(
-        {
-          reply: "Yes, the Two-tank reef has 4 seats open on Sat 26 Oct at 8:00 for $95.",
-          medical: false,
-          eligibility: false,
-          confidence: 1,
-        },
-        { facts, thread },
-      ),
-    ).toBe("Yes, the Two-tank reef has 4 seats open on Sat 26 Oct at 8:00 for $95.");
+describe("draftedReply", () => {
+  it("takes the model's words as written, numbers and all: staff read every draft", () => {
+    expect(draftedReply({ reply: " Sure, it's $85. ", medical: false })).toBe("Sure, it's $85.");
   });
 
-  const reply = (text: string) => ({
-    reply: text,
-    medical: false,
-    eligibility: false,
-    confidence: 1,
-  });
-
-  it("never takes a number from the diver's own words as known", () => {
-    const asked = [{ from: "diver" as const, text: "Is it $40?" }];
-    expect(groundedReply(reply("Yes, it is $40."), { facts, thread: asked })).toBeNull();
-  });
-
-  it("refuses a number stitched from parts of the facts' dates and times", () => {
-    // "8" and "95" are both in the facts; "$8.95" is not.
-    expect(groundedReply(reply("It is $8.95."), { facts, thread })).toBeNull();
-  });
-
-  it("refuses a number quoted more often than the facts give it", () => {
-    expect(
-      groundedReply(reply("4 seats on Saturday and 4 on Sunday."), { facts, thread }),
-    ).toBeNull();
-  });
-
-  it("refuses a count written in words the facts never used", () => {
-    expect(groundedReply(reply("Three seats left on Saturday."), { facts, thread })).toBeNull();
-  });
-
-  it("throws away a draft that names a price or a seat count nobody gave it", () => {
-    expect(
-      groundedReply(
-        { reply: "Sure, it's $85.", medical: false, eligibility: false, confidence: 1 },
-        { facts, thread },
-      ),
-    ).toBeNull();
-    expect(
-      groundedReply(
-        { reply: "We have 6 seats.", medical: false, eligibility: false, confidence: 1 },
-        { facts, thread },
-      ),
-    ).toBeNull();
-  });
-
-  it("never drafts an answer to a medical question, whatever the reply says", () => {
-    expect(
-      groundedReply(
-        { reply: "You should be fine.", medical: true, eligibility: false, confidence: 1 },
-        { facts, thread },
-      ),
-    ).toBeNull();
-  });
-
-  it("never drafts a judgment of whether the diver may join, however well it quotes the facts", () => {
-    expect(
-      groundedReply(
-        {
-          reply: "Yes, your Open Water card is fine for Sat 26 Oct at 8:00. 4 seats open.",
-          medical: false,
-          eligibility: true,
-          confidence: 1,
-        },
-        { facts, thread },
-      ),
-    ).toBeNull();
-  });
-
-  describe("numbers are matched by kind, as whole tokens (dive-domain review)", () => {
-    const reviewFacts = [
-      "- Sat, Oct 24 8:00 AM, Reef: 3 seats open, $95.00",
-      "- Sat, Oct 24 1:30 PM, Wreck: full, $120.00",
-    ];
-    const sources = { facts: reviewFacts, thread };
-
-    it("refuses a time stitched from another departure's minutes", () => {
-      expect(groundedReply(reply("The reef leaves at 8:30."), sources)).toBeNull();
-    });
-
-    it("refuses a seat count borrowed from a time or a date", () => {
-      const one = { facts: ["- Oct 24 8:00 AM, Reef: 2 seats open, $85.00"], thread };
-      expect(
-        groundedReply(reply("Good news, there are 8 seats open on the 24th."), one),
-      ).toBeNull();
-      expect(groundedReply(reply("We have 24 seats."), one)).toBeNull();
-      expect(groundedReply(reply("There are 2 seats open on the 24th at 8:00 AM."), one)).toBe(
-        "There are 2 seats open on the 24th at 8:00 AM.",
-      );
-    });
-
-    it("refuses a price borrowed from a count", () => {
-      expect(groundedReply(reply("It is $3."), sources)).toBeNull();
-    });
-
-    it("passes a draft that quotes each number as the facts give it", () => {
-      expect(
-        groundedReply(reply("The Sat, Oct 24 reef at 8:00 AM has 3 seats open, $95.00."), sources),
-      ).toBe("The Sat, Oct 24 reef at 8:00 AM has 3 seats open, $95.00.");
-    });
+  it("still answers a health question, with the kind reply the prompt asks for", () => {
+    expect(draftedReply({ reply: "A physician's sign-off may be needed.", medical: true })).toBe(
+      "A physician's sign-off may be needed.",
+    );
   });
 
   it("is null for an empty draft", () => {
-    expect(
-      groundedReply(
-        { reply: "  ", medical: false, eligibility: false, confidence: 1 },
-        { facts, thread },
-      ),
-    ).toBeNull();
+    expect(draftedReply({ reply: "  ", medical: false })).toBeNull();
+  });
+});
+
+describe("the reply prompt", () => {
+  it("teaches the dive shop's concerns and never refuses a question outright", () => {
+    const { system } = replyDraftCall({ window: "", facts: [], thread: [] });
+    expect(system).toContain("Open Water");
+    expect(system).toContain("nitrox");
+    expect(system).toContain("nearly every message deserves a real attempt");
+    expect(system).toContain("do not give any medical opinion");
   });
 });
 

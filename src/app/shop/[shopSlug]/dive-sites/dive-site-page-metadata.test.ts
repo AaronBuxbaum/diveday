@@ -36,7 +36,7 @@ describe("dive site page titles", () => {
     });
   });
   it("keeps the destination’s title on the list", async () => {
-    expect(await catalogPageMetadata("blue-mantis", {})).toEqual({ title: "Dive Sites — DiveDay" });
+    expect(await catalogPageMetadata("blue-mantis", {})).toEqual({ title: "Dive sites — DiveDay" });
     expect(getTemplate).not.toHaveBeenCalled();
   });
   it("uses a library site's name only from the authorized shop", async () => {

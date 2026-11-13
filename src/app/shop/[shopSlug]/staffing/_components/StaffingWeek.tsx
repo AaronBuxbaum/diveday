@@ -19,6 +19,7 @@ import { formatTimeRangeTz } from "@/lib/format";
 import { StaffingDepartureCrew } from "./StaffingDepartureCrew";
 import { StaffingPersonalRows } from "./StaffingPersonalRows";
 import { StaffingWeekHeader } from "./StaffingWeekHeader";
+import { StaffingWeekStrip } from "./StaffingWeekStrip";
 import { weekDayFaces } from "./staffing-day-faces";
 import type { GapWords, StaffingWeekLinks, StaffingWeekWords } from "./staffing-week-types";
 
@@ -380,6 +381,7 @@ export function StaffingWeek({
   deleteShiftAction,
   requestAction,
   decideRequestAction,
+  dayParam,
 }: {
   week: StaffWeek;
   gapWords: GapWords;
@@ -394,23 +396,44 @@ export function StaffingWeek({
   deleteShiftAction: (formData: FormData) => void;
   requestAction: (formData: FormData) => void;
   decideRequestAction: (formData: FormData) => void;
+  /** The raw `?day=`: the day opened under the phone calendar. */
+  dayParam?: string;
 }) {
   // Preserve calendar-day labels; shift instants are formatted in shop time.
   const dayFaces = weekDayFaces(week.days, locale);
-  // Mobile omits days with no shifts, crew, away time or staffing gaps.
-  const listDays = dayFaces
-    .map((day, index) => ({
+  // Below desktop the week is a calendar strip with one day opened under it. The open day is the
+  // reader's `?day=`, else today, else the first day with anything on it.
+  const perDay = dayFaces.map((day, index) => {
+    const rows = week.people
+      .map((person) => ({ person, cell: person.days[index] }))
+      .filter(
+        ({ cell }) =>
+          cell && (cell.shifts.length > 0 || cell.crewing.length > 0 || cell.away.length > 0),
+      );
+    const gaps = week.gapDays[index]?.gaps ?? [];
+    const count = (pick: (cell: (typeof rows)[number]["cell"]) => number) =>
+      rows.reduce((sum, { cell }) => sum + pick(cell), 0);
+    return {
       day,
-      rows: week.people
-        .map((person) => ({ person, cell: person.days[index] }))
-        .filter(
-          ({ cell }) =>
-            cell && (cell.shifts.length > 0 || cell.crewing.length > 0 || cell.away.length > 0),
-        ),
-      gaps: week.gapDays[index]?.gaps ?? [],
-      departures: mobileDepartureGroups(week.people, index, week.gapDays[index]?.gaps ?? []),
-    }))
-    .filter(({ rows, gaps }) => rows.length > 0 || gaps.length > 0);
+      rows,
+      gaps,
+      departures: mobileDepartureGroups(week.people, index, gaps),
+      strip: {
+        ...day,
+        shifts: count((cell) => cell.shifts.length),
+        crewing: count((cell) => cell.crewing.length),
+        away: count((cell) => cell.away.length),
+        gaps: gaps.length,
+      },
+    };
+  });
+  const open =
+    perDay.find(({ day }) => day.date === dayParam) ??
+    perDay.find(({ day }) => day.isToday) ??
+    perDay.find(({ rows, gaps }) => rows.length > 0 || gaps.length > 0) ??
+    perDay[0];
+  const listDays = open && (open.rows.length > 0 || open.gaps.length > 0) ? [open] : [];
+  const weekIsEmpty = perDay.every(({ rows, gaps }) => rows.length === 0 && gaps.length === 0);
 
   return (
     <section aria-label={words.ariaLabel}>
@@ -507,7 +530,13 @@ export function StaffingWeek({
       {/* Mobile presents the same work and actions as a day list; empty days
           are omitted, while away-only days remain visible (ADR
           20260902-crew-requests-and-blackouts). */}
-      <div className="mt-4 xl:hidden">
+      <StaffingWeekStrip
+        days={perDay.map(({ strip }) => strip)}
+        selected={open?.day.date ?? ""}
+        hrefPrefix={links.dayHrefPrefix}
+        words={words}
+      />
+      <div className="mt-6 xl:hidden">
         {listDays.map(({ day, rows, departures }) => {
           return (
             <div key={day.date} className="mt-6 first:mt-0">
@@ -629,10 +658,10 @@ export function StaffingWeek({
             </div>
           );
         })}
-        {/* Show an explicit empty state when no mobile day has content. */}
+        {/* The open day says so when it holds nothing. */}
         {listDays.length === 0 ? (
           <LedgerRow as="div">
-            <p className="text-base text-muted">{words.empty}</p>
+            <p className="text-base text-muted">{weekIsEmpty ? words.empty : words.emptyDay}</p>
           </LedgerRow>
         ) : null}
       </div>

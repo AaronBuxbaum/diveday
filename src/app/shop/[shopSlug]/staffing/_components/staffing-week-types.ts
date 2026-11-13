@@ -14,6 +14,10 @@ export type StaffingWeekWords = {
   /** The gap row's own label. */
   needsCrew: string;
   shiftsAndAway: string;
+  /** "Shift" — the calendar legend's word for a rostered shift. */
+  shift: string;
+  /** The open day on the phone calendar, with nothing on it. */
+  emptyDay: string;
   /** "Assign", the gap's one act. */
   assign: string;
   /** "Assign crew to {trip}" — what that link is called out of context. */
@@ -79,6 +83,8 @@ export type StaffingWeekLinks = {
   nextHref: string;
   /** Null while the week on screen is the one the shop is in. */
   thisWeekHref: string | null;
+  /** The week's URL up to and including `day=`; the phone calendar's cells append a date. */
+  dayHrefPrefix: string;
 };
 
 /** The one word a gap code renders as, resolved by the page. */

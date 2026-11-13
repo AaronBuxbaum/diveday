@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useId, useState } from "react";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { textareaClassFor } from "@/components/ui/form";
 import {
@@ -191,11 +192,7 @@ export function SavePostcard({
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         {recordedBy}
         <span className="flex flex-wrap items-center gap-2">
-          {state === "failed" ? (
-            <span role="alert" className="text-xs text-danger">
-              {copy.failed}
-            </span>
-          ) : null}
+          {state === "failed" ? <ErrorToast message={copy.failed} /> : null}
           <button
             type="button"
             onClick={save}

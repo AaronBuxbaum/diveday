@@ -20,10 +20,13 @@ the rest of the build plan) land in the layers above that ADR; each keeps the gu
 - **Inbox sort and translate**: an intent and urgency tag and a translation, stored on the message
   (`inbound_messages.assist_*`) by the inbound webhooks and the inbox view; the diver's words stay
   in view, and a cancellation still goes through the reply keyword's confirm.
-- **Reply draft and translation**: Draft and Translate beside the diver record's reply box; a draft
-  is thrown away when it quotes a number, in digits or words, the shop's facts did not give it (a
-  number only the diver wrote does not count), or the diver asked a medical question; a translation
-  is thrown away when its numbers are not the staffer's. Staff send.
+- **Reply draft and translation**: Draft and Translate beside the diver record's reply box. A draft
+  is a real attempt at almost any question, written from the shop's own facts (hours, address,
+  departures, courses, rental gear, what to bring, notes) and a prompt that explains how a dive shop
+  works. It is never thrown away for a number or a certification mention: staff read every draft.
+  A health question still gets a kind reply with no medical opinion, and its text is not kept
+  (`keepUnlessHealth`). A translation is thrown away when its numbers are not the staffer's.
+  Staff send.
 - **Request and call note**: "Make a request" reads a message, and the Took-a-call scribble box
   reads a call, into the Took-a-call form's own fields for a staffer to log; admission decides
   after that. The scribble lands in the note as typed.

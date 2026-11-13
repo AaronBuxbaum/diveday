@@ -1,7 +1,8 @@
 "use client";
 
-import { type ChangeEvent, useEffect, useId, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
+import { ErrorToast } from "@/components/Toast";
 import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES } from "@/lib/storage/limits";
 
 export const IMAGE_ACCEPT = ALLOWED_IMAGE_CONTENT_TYPES.join(",");
@@ -118,7 +119,6 @@ export function ImageFileInput({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [picked, setPicked] = useState<{ name: string; preview: string | null }[]>([]);
-  const errorId = useId();
 
   // The previews are the reader's own files, held as object URLs only while
   // they are on screen: a new pick, or leaving the page, lets the last go.
@@ -203,15 +203,10 @@ export function ImageFileInput({
             required={required}
             accept={IMAGE_ACCEPT}
             onChange={handleChange}
-            aria-describedby={error ? errorId : undefined}
             className="sr-only"
           />
         </label>
-        {error ? (
-          <p id={errorId} role="alert" className="mt-2 text-xs font-normal text-danger">
-            {error}
-          </p>
-        ) : null}
+        {error ? <ErrorToast message={error} /> : null}
       </div>
     </>
   );

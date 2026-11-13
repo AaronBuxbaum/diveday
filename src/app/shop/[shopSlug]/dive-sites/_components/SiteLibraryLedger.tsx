@@ -1,4 +1,3 @@
-import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { SiteLibraryGroup } from "@/db/dive-sites";
@@ -16,9 +15,7 @@ import { type SiteFitTone, siteFit } from "@/lib/diver-planning";
 /**
  * **The dive-site library as one ledger** — ADR 20260827-the-shops-shelves,
  * the library pattern: "a search/filter toolbar, grouped rows (by the
- * collection's own shared fact), exceptional badges only, the row as the door",
- * with the DiveDay catalog as a quiet door above the rows rather than a second
- * surface style.
+ * collection's own shared fact), exceptional badges only, the row as the door".
  *
  * What this replaced was a three-column table beside a card grid one query
  * param away — two renderings of one noun. It is now the same rows the day
@@ -225,46 +222,5 @@ function SiteRow({
         ) : null}
       </div>
     </LedgerRow>
-  );
-}
-
-/**
- * **The catalog, as a door rather than a destination.** DiveDay's published
- * site catalog was a second surface style — a two-column card grid behind a
- * header button — for a thing a shop opens once or twice a year. It is now above the library it feeds, in the same grammar as the rows below it.
- *
- * The count is the whole catalog's, never a fetched page's total, and it never
- * claims to be near anybody: the catalog's *ordering* leans on the shop's
- * coordinates, its size does not, so the door renders the same line for a shop
- * that has not set an address yet.
- */
-export function CatalogDoor({
-  href,
-  count,
-  t,
-}: {
-  href: string;
-  count: number;
-  t: StaffTranslator;
-}) {
-  const title = t("diveSites.list.browseTemplates");
-  return (
-    <div>
-      <LedgerRow
-        as="div"
-        href={href}
-        linkLabel={title}
-        // Trimmed and sized by height: the pin's ink starts on the column the
-        // row's words start on, 12px (the row's gap) before them.
-        leading={<StaffDestinationIcon id="diveSites" trim className="h-5 w-auto text-muted" />}
-      >
-        <div className="min-w-0">
-          <p className="font-medium">{title}</p>
-          <p className="mt-0.5 text-sm text-muted tabular-nums">
-            {t("diveSites.list.catalogSiteCount", { count })}
-          </p>
-        </div>
-      </LedgerRow>
-    </div>
   );
 }

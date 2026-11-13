@@ -7,6 +7,7 @@ import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovableP
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import {
@@ -96,8 +97,7 @@ export default async function BoatsSettingsPage({
       : null;
   const editorError = certificateError ?? knownValidationError;
   const banner = knownValidationError ? undefined : noticeFromParam(notice, boatNoticeMessages(t));
-  const errorFor = (boat: string) =>
-    editorError?.boat === boat ? { id: `${boatRowId(boat)}-error`, text: editorError.text } : null;
+  const errorFor = (boat: string) => (editorError?.boat === boat ? editorError : null);
   const certificateInvalid = (boat: string) => certificateError?.boat === boat;
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
 
@@ -143,15 +143,17 @@ export default async function BoatsSettingsPage({
                       className={controlClass}
                     />
                   </Field>
-                  <Field label={t("boats.capacityLabel")}>
+                  <Field
+                    label={t("boats.capacityLabel")}
+                    error={certificateInvalid(boat.id) ? error?.text : undefined}
+                  >
                     <input
                       name="capacity"
+                      aria-invalid={certificateInvalid(boat.id) || undefined}
                       type="number"
                       required
                       min={1}
                       defaultValue={boat.capacity}
-                      aria-invalid={certificateInvalid(boat.id) || undefined}
-                      aria-describedby={certificateInvalid(boat.id) ? error?.id : undefined}
                       className={`${controlClass} tabular-nums`}
                     />
                   </Field>
@@ -192,17 +194,9 @@ export default async function BoatsSettingsPage({
                   invalid={certificateInvalid(boat.id)}
                   radioInvalid={Boolean(error) && notice === "boat-radio-invalid"}
                   channelInvalid={Boolean(error) && notice === "boat-channel-distress"}
-                  describedBy={error?.id}
+                  error={error?.text}
                 />
-                {error ? (
-                  <p
-                    id={error.id}
-                    role="alert"
-                    className="w-full text-sm font-medium text-danger sm:basis-full"
-                  >
-                    {error.text}
-                  </p>
-                ) : null}
+                {error ? <ErrorToast message={error.text} /> : null}
                 {/* Keep Save and Delete in the update form's action row. Delete's `formAction`
                     submits the hidden boat ID; Save comes first so Enter submits the update.
                     Wrapping gives an armed confirmation message its own line. */}
@@ -278,14 +272,16 @@ export default async function BoatsSettingsPage({
             <Field label={t("boats.nameLabel")}>
               <input name="name" type="text" required className={controlClass} />
             </Field>
-            <Field label={t("boats.capacityLabel")}>
+            <Field
+              label={t("boats.capacityLabel")}
+              error={certificateInvalid("new") ? errorFor("new")?.text : undefined}
+            >
               <input
                 name="capacity"
+                aria-invalid={certificateInvalid("new") || undefined}
                 type="number"
                 required
                 min={1}
-                aria-invalid={certificateInvalid("new") || undefined}
-                aria-describedby={certificateInvalid("new") ? errorFor("new")?.id : undefined}
                 className={`${controlClass} tabular-nums`}
               />
             </Field>
@@ -303,17 +299,9 @@ export default async function BoatsSettingsPage({
               invalid={certificateInvalid("new")}
               radioInvalid={Boolean(errorFor("new")) && notice === "boat-radio-invalid"}
               channelInvalid={Boolean(errorFor("new")) && notice === "boat-channel-distress"}
-              describedBy={errorFor("new")?.id}
+              error={errorFor("new")?.text}
             />
-            {errorFor("new") ? (
-              <p
-                id={errorFor("new")?.id}
-                role="alert"
-                className="text-sm font-medium text-danger sm:col-span-2"
-              >
-                {errorFor("new")?.text}
-              </p>
-            ) : null}
+            {errorFor("new") ? <ErrorToast message={errorFor("new")?.text} /> : null}
             <FieldActions>
               <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("boats.addBoat")}

@@ -17,7 +17,6 @@
     "note": "Nota",
     "notePlaceholder": "Algo que el centro deba saber",
     "person": "Miembro del personal",
-    "remove": "Quitar",
     "save": "Guardar",
     "to": "Hasta"
   },
@@ -121,7 +120,9 @@
     "shiftAria": "Turno de {person} el {day}",
     "thisWeek": "Esta semana",
     "today": "Hoy",
-    "shiftsAndAway": "Turnos y días libres"
+    "shiftsAndAway": "Turnos y días libres",
+    "shift": "Turno",
+    "emptyDay": "Nada programado este día"
   },
   "working": {
     "remove": "Quitar",

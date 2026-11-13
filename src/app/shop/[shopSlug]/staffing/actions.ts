@@ -96,7 +96,8 @@ const tripIdForm = z.object({ tripId: text() });
 const crewDecisionForm = z.object({ requestId: text(), decision: text() });
 
 export async function deleteShiftAction(week: string, formData: FormData) {
-  const at = weekExtra(week);
+  // A Remove on the Shifts tab lands back on it; one on the week stays on the week.
+  const at = { ...weekExtra(week), ...(formData.get("view") === "plan" ? { view: "plan" } : {}) };
   const session = await requireStaffingManager(at);
   const path = shopPath(session.user.shopSlug, "staffing");
   const { shiftId } = readForm(shiftIdForm, formData);

@@ -52,7 +52,11 @@ schedule builder, date requests, site briefings, bearer-token routes). What they
 - **Semantic tokens only**, no raw hex or palette classes: `pnpm check:tokens` (ADR-0004).
 - **Fields, buttons, controls and panels go through the wrappers**; never a `text-<colour>` into
   `buttonClass()` (`button.test.ts`); sections space with `space-y-10`.
-- **A form's outcome sits beside the form** (`Field`'s `error`, `FormStatus`), routed by
+- **An error is a toast, never a component left on the page** (Aaron, 2026-11-13): `ErrorToast`
+  (`src/components/Toast.tsx`), reached through `FormStatus`, a `danger` `ShopNotice` or directly; a
+  `role="alert"` element in `src/app`/`src/components` fails `pnpm check:error-toasts`. Only a
+  field's own validation hint stays beside its control (`Field`'s `error`).
+- **A form's outcome** (`FormStatus`) is routed by
   `noticeForForm`, brought on screen by `StatusInView`; scroll-preservation guard.
 - **A new page ships with `loading.tsx` and `export const instant = true`; no `await` above
   `{children}` in a layout**: loading-skeleton guard and `next build`.

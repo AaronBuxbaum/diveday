@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -10,7 +10,10 @@ import {
 import type { RollCallAction, RollCallButtonCopy, RollCallResult } from "./RollCallButton";
 import { RollCallButton } from "./RollCallButton";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 function mockAction(result: RollCallResult) {
   return vi.fn<RollCallAction>(async () => result);
@@ -36,6 +39,29 @@ function setup(action: RollCallAction, copy: RollCallButtonCopy = DEFAULT_COPY) 
 }
 
 describe("RollCallButton", () => {
+  it("announces a repeated refusal after the previous safety toast expires", async () => {
+    vi.useFakeTimers();
+    const action = mockAction({ ok: false, reason: "not_ready" });
+    setup(action);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(DEFAULT_COPY.blockedMessage as string);
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    });
+    expect(action).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("alert")).toHaveTextContent(DEFAULT_COPY.blockedMessage as string);
+    expect(screen.getByRole("button", { name: "Board" })).toBeEnabled();
+  });
+
   it("rolls back with the worded reason and vibrates with warning pattern when the server refuses, keeping the label", async () => {
     const vibrateMock = vi.fn();
     vi.stubGlobal("navigator", { vibrate: vibrateMock });

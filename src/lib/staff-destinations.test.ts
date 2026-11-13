@@ -180,10 +180,11 @@ describe("permission gating", () => {
       "reports",
       "promoCodes",
       "safety",
+      "drills",
+      "waivers",
       "boats",
       "tripTags",
       "safetyChecklist",
-      "waivers",
       "team",
       "activity",
       "settings",
@@ -291,7 +292,7 @@ describe("what each consumer derives", () => {
     expect(bySection("divers")).toEqual(["divers"]);
     expect(bySection("inbox")).toEqual(["inbox", "requests", "reviews"]);
     expect(bySection("money")).toEqual(["orders", "reports", "promoCodes"]);
-    expect(bySection("safety")).toEqual(["safety"]);
+    expect(bySection("safety")).toEqual(["safety", "drills", "waivers"]);
     expect(bySection("courses")).toEqual(["courses", "certifications"]);
     expect(bySection("diveSites")).toEqual(["diveSites"]);
     expect(bySection("gear")).toEqual(["gear", "workOrders", "newWorkOrder", "rentOut"]);
@@ -299,7 +300,6 @@ describe("what each consumer derives", () => {
       "boats",
       "tripTags",
       "safetyChecklist",
-      "waivers",
       "team",
       "calendarFeed",
       "emailSettings",
@@ -485,8 +485,12 @@ describe("currentStaffDestination and the section it lights", () => {
   });
 
   it("lights Settings for what a shop sets up, and Money for what it earns", () => {
-    for (const suffix of ["/waivers", "/settings", "/settings/team"]) {
+    for (const suffix of ["/settings", "/settings/team"]) {
       expect(section(`${root}${suffix}`), suffix).toBe("settings");
+    }
+    // Waivers and drills are Safety's tabs, not settings.
+    for (const suffix of ["/waivers", "/safety/drills"]) {
+      expect(section(`${root}${suffix}`), suffix).toBe("safety");
     }
     for (const suffix of ["/orders", "/reports", "/promos"]) {
       expect(section(`${root}${suffix}`), suffix).toBe("money");

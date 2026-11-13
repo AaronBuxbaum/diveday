@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
 
@@ -13,6 +13,7 @@ type Copy = import("./MedicalAlertReveal").MedicalAlertRevealCopy;
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   forgetRevealedMedicalAlerts();
   vi.mocked(loadOfflineManifest).mockReset();
   vi.mocked(loadOfflineManifest).mockResolvedValue(null);
@@ -46,6 +47,71 @@ function savedCopyWith(text: string | undefined): OfflineManifestEnvelope {
 
 /** Issue #2960: the words are read on purpose, never at rest. */
 describe("MedicalAlertReveal", () => {
+  it("repeats an offline emergency refusal after its safety toast expires without calling the server", async () => {
+    vi.useFakeTimers();
+    const onLine = vi.spyOn(window.navigator, "onLine", "get").mockReturnValue(false);
+    const show = vi.fn(async () => ({ ok: false as const, reason: "closed" as const }));
+    try {
+      render(
+        <MedicalAlertReveal
+          unreadable={UNREADABLE}
+          copy={copy}
+          emergency={{
+            show,
+            copy: {
+              offer: "Emergency read",
+              confirmBody: "This read is recorded.",
+              confirm: "Show now",
+              cancel: "Cancel",
+              noSignal: "No signal right now",
+              notYet: "Not yet",
+              closed: "Closed",
+            },
+          }}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Emergency read" }));
+      fireEvent.click(screen.getByRole("button", { name: "Show now" }));
+      expect(screen.getByRole("alert")).toHaveTextContent("No signal right now");
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.queryByRole("alert")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Show now" }));
+      expect(screen.getByRole("alert")).toHaveTextContent("No signal right now");
+      expect(show).not.toHaveBeenCalled();
+      expect(screen.queryByText(ALERT)).toBeNull();
+    } finally {
+      onLine.mockRestore();
+    }
+  });
+
+  it("shows another identical refusal after the first safety toast expires", async () => {
+    vi.useFakeTimers();
+    const show = vi.fn(async () => ({ ok: false as const }));
+    render(<MedicalAlertReveal show={show} unreadable={UNREADABLE} copy={copy} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: copy.show }));
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(copy.failed);
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: copy.show }));
+    });
+    expect(show).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("alert")).toHaveTextContent(copy.failed);
+    expect(screen.queryByText(ALERT)).toBeNull();
+  });
+
   it("shows nothing of the alert until the tap, then the diver's words and that nobody reviewed them", async () => {
     const show = vi.fn(async () => ({ ok: true as const, text: ALERT }));
     render(<MedicalAlertReveal show={show} unreadable={UNREADABLE} copy={copy} />);

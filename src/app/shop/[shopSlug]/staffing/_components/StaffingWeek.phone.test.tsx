@@ -6,7 +6,8 @@ import { KEIKO, renderWeek, THURSDAY } from "./staffing-week-test-fixtures";
 afterEach(cleanup);
 describe("the phone staffing day", () => {
   function branches(container: HTMLElement) {
-    const list = container.querySelector<HTMLElement>('[class~="xl:hidden"]');
+    // The calendar strip is the first `xl:hidden` block; the open day's list is the last.
+    const list = [...container.querySelectorAll<HTMLElement>('[class~="xl:hidden"]')].at(-1);
     if (!list) throw new Error("the week should render a day list");
     return { list };
   }

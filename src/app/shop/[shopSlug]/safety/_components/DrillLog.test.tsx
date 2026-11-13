@@ -14,7 +14,17 @@ const view: DrillLogView = {
     { kind: "oxygen", never: false, text: "Emergency oxygen: last drill 94 days ago" },
     { kind: "fire", never: true, text: "Fire: no drill on record" },
   ] as DrillLogView["since"],
+  tiles: [
+    {
+      kind: "oxygen",
+      label: "Emergency oxygen",
+      days: 94,
+      caption: "days since the last drill",
+    },
+    { kind: "fire", label: "Fire", days: null, caption: "No drill on record" },
+  ] as DrillLogView["tiles"],
   heldTitle: "Drills held",
+  heldSummary: "1 in the last year",
   held: [
     {
       id: "d1",
@@ -25,7 +35,6 @@ const view: DrillLogView = {
     },
   ],
   form: {
-    month: "2026-11",
     earliest: "2025-11-04",
     today: "2026-11-04",
     noteMax: 500,
@@ -48,10 +57,14 @@ const view: DrillLogView = {
 };
 
 describe("DrillLog", () => {
-  it("says how long since each drill, lists the month's, and offers the form", () => {
+  it("draws a tile per drill with its days, keeps the held drills closed, and offers the form", () => {
     const html = renderToStaticMarkup(<DrillLog view={view} />);
-    expect(html).toContain("Emergency oxygen: last drill 94 days ago");
-    expect(html).toContain("Fire: no drill on record");
+    expect(html).toContain("Emergency oxygen");
+    expect(html).toContain(">94<");
+    expect(html).toContain("days since the last drill");
+    expect(html).toContain("No drill on record");
+    // The held drills sit in a disclosure that starts shut.
+    expect(html).toMatch(/<details(?![^>]*\sopen)[^>]*id="drills-held"/);
     expect(html).toContain("Keiko and Omar");
     expect(html).toContain("Log a drill");
     expect(html).toContain("Delete");
