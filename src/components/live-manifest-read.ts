@@ -74,10 +74,32 @@ const writeListeners = new Map<string, Set<(started: boolean) => void>>();
 const staleListeners = new Map<string, Set<() => void>>();
 const shopPrivacyGenerations = new Map<string, number>();
 const privacyListeners = new Map<string, Set<(cause: "erasure" | "purge") => void>>();
+const sessionGenerations = new Map<string, number>();
+const sessionListeners = new Map<string, Set<() => void>>();
+const invalidatedSessions = new Set<string>();
 
 /** A cached projection must retain the generation captured when it was read. */
 export function manifestPrivacyGeneration(shopId: string): number {
   return shopPrivacyGenerations.get(shopId) ?? 0;
+}
+
+/** A cached projection must also retain its originating session generation. */
+export function manifestSessionGeneration(sessionId: string): number {
+  return sessionGenerations.get(sessionId) ?? 0;
+}
+
+/** Signout/replacement may arrive after the initiating owner was disposed. */
+export function reportManifestSessionInvalidation(sessionId: string): void {
+  if (!sessionId) return;
+  invalidatedSessions.add(sessionId);
+  sessionGenerations.set(sessionId, manifestSessionGeneration(sessionId) + 1);
+  for (const listener of sessionListeners.get(sessionId) ?? []) {
+    try {
+      listener();
+    } catch {
+      // A broken consumer cannot leave other owners showing old-session data.
+    }
+  }
 }
 
 function invalidateShopPrivacy(shopId: string, cause: "erasure" | "purge"): void {
@@ -119,6 +141,11 @@ function notifyStale(trip: string): void {
       // Every owner must withdraw confirmation even if a consumer fails.
     }
   }
+}
+
+/** Report a superseded copy against the trip captured when its claim began. */
+export function reportManifestStale(shopId: string, tripId: string): void {
+  if (shopId && tripId) notifyStale(JSON.stringify([shopId, tripId]));
 }
 
 /** Copy a JSON projection so the payload verified cannot be mutated in place. */
@@ -164,11 +191,18 @@ function immutableProjection<T>(view: T): T {
 
 class ManifestReadTimeout extends Error {}
 
-async function bounded<T>(controller: AbortController, work: () => Promise<T>): Promise<T> {
+async function bounded<T>(
+  controller: AbortController,
+  work: () => Promise<T>,
+  observe?: (result: T) => void,
+): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      work(),
+      work().then((result) => {
+        observe?.(result);
+        return result;
+      }),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
           controller.abort();
@@ -186,11 +220,14 @@ export class LiveManifestCoordinator<T> {
   private active: AbortController | null = null;
   private scope: string;
   private shop: string;
+  private sessionId: string;
   private privacyGeneration: number;
+  private sessionGeneration: number;
   private trip: string;
   private readonly usedNonces = new Set<string>();
   private stopWatchingWrites: (() => void) | null = null;
   private stopWatchingPrivacy: (() => void) | null = null;
+  private stopWatchingSession: (() => void) | null = null;
   private stopWatchingStale: (() => void) | null = null;
   private readOwed = false;
   private available = false;
@@ -206,24 +243,38 @@ export class LiveManifestCoordinator<T> {
     startedWall: number;
   } | null = null;
   private current: LiveManifestState<T>;
+  private readonly redacted: LiveManifestState<T> = Object.freeze({
+    view: null,
+    status: "unconfirmed",
+    commitId: null,
+  });
   private committedView: T | null;
   private readonly listeners = new Set<(state: LiveManifestState<T>) => void>();
 
   constructor(
     scope: LiveManifestScope,
-    cached: { scope: LiveManifestScope; view: T; privacyGeneration: number } | null,
+    cached: {
+      scope: LiveManifestScope;
+      view: T;
+      privacyGeneration: number;
+      sessionGeneration: number;
+    } | null,
     private readonly transport: LiveManifestTransport<T>,
   ) {
     this.scope = scopeKey(scope);
     this.shop = scope.shopId;
+    this.sessionId = scope.sessionId;
     this.privacyGeneration = manifestPrivacyGeneration(this.shop);
+    this.sessionGeneration = manifestSessionGeneration(this.sessionId);
     this.trip = tripKey(scope);
     let view: T | null = null;
     if (
       this.scope &&
       cached &&
+      !invalidatedSessions.has(this.sessionId) &&
       scopeKey(cached.scope) === this.scope &&
-      cached.privacyGeneration === manifestPrivacyGeneration(this.shop)
+      cached.privacyGeneration === manifestPrivacyGeneration(this.shop) &&
+      cached.sessionGeneration === manifestSessionGeneration(this.sessionId)
     ) {
       try {
         view = immutableProjection(cached.view);
@@ -236,6 +287,14 @@ export class LiveManifestCoordinator<T> {
   }
 
   get state(): LiveManifestState<T> {
+    // A concurrent React render may have constructed this owner before a
+    // shop/session invalidation and not activated its subscriptions yet.
+    if (
+      this.privacyGeneration !== manifestPrivacyGeneration(this.shop) ||
+      this.sessionGeneration !== manifestSessionGeneration(this.sessionId) ||
+      invalidatedSessions.has(this.sessionId)
+    )
+      return this.redacted;
     return this.current;
   }
 
@@ -263,10 +322,34 @@ export class LiveManifestCoordinator<T> {
       this.privacyGeneration = manifestPrivacyGeneration(this.shop);
       this.invalidate(true);
     }
+    if (this.sessionGeneration !== manifestSessionGeneration(this.sessionId)) {
+      this.sessionGeneration = manifestSessionGeneration(this.sessionId);
+      this.invalidate(true);
+    }
     if (!this.stopWatchingWrites) this.watchWrites();
     if (!this.stopWatchingPrivacy) this.watchPrivacy();
+    if (!this.stopWatchingSession) this.watchSession();
     if (!this.stopWatchingStale) this.watchStale();
     this.available = true;
+  }
+
+  private watchSession(): void {
+    this.stopWatchingSession?.();
+    const sessionId = this.sessionId;
+    const listeners = sessionListeners.get(sessionId) ?? new Set();
+    const listener = () => {
+      if (this.sessionId === sessionId) {
+        this.sessionGeneration = manifestSessionGeneration(sessionId);
+        this.readOwed = false;
+        this.invalidate(true);
+      }
+    };
+    listeners.add(listener);
+    sessionListeners.set(sessionId, listeners);
+    this.stopWatchingSession = () => {
+      listeners.delete(listener);
+      if (listeners.size === 0) sessionListeners.delete(sessionId);
+    };
   }
 
   private watchStale(): void {
@@ -354,10 +437,13 @@ export class LiveManifestCoordinator<T> {
     const nextTrip = tripKey(scope);
     this.scope = next;
     this.shop = scope.shopId;
+    this.sessionId = scope.sessionId;
     this.privacyGeneration = manifestPrivacyGeneration(this.shop);
+    this.sessionGeneration = manifestSessionGeneration(this.sessionId);
     this.trip = nextTrip;
     if (this.stopWatchingWrites) this.watchWrites();
     if (this.stopWatchingPrivacy) this.watchPrivacy();
+    if (this.stopWatchingSession) this.watchSession();
     if (this.stopWatchingStale) this.watchStale();
     this.readOwed = false;
     this.staleRetryAvailable = true;
@@ -381,6 +467,8 @@ export class LiveManifestCoordinator<T> {
     this.stopWatchingWrites = null;
     this.stopWatchingPrivacy?.();
     this.stopWatchingPrivacy = null;
+    this.stopWatchingSession?.();
+    this.stopWatchingSession = null;
     this.stopWatchingStale?.();
     this.stopWatchingStale = null;
     this.invalidate(true);
@@ -471,7 +559,7 @@ export class LiveManifestCoordinator<T> {
 
   async read(): Promise<void> {
     if (this.disposed) return;
-    if (!this.available || !this.scope) return;
+    if (!this.available || !this.scope || invalidatedSessions.has(this.sessionId)) return;
     if (pendingWrites.has(this.trip)) {
       this.readOwed = true;
       return;
@@ -487,6 +575,8 @@ export class LiveManifestCoordinator<T> {
     const controller = new AbortController();
     this.active = controller;
     const scope = this.scope;
+    const shopId = this.shop;
+    const sessionId = this.sessionId;
     const startedAt = performance.now();
     const startedWall = Date.now();
     this.publish({ ...this.current, status: "checking", commitId: null });
@@ -507,14 +597,33 @@ export class LiveManifestCoordinator<T> {
         this.publish({ ...this.current, status: "unconfirmed", commitId: null });
         return;
       }
-      if (controller.signal.aborted || sequence !== this.sequence || scope !== this.scope) return;
-      const outcome = await bounded(controller, () =>
-        this.transport.read(nonce, controller.signal),
+      if (
+        controller.signal.aborted ||
+        sequence !== this.sequence ||
+        scope !== this.scope ||
+        invalidatedSessions.has(sessionId)
+      )
+        return;
+      // A definitive privacy refusal belongs to the scope captured by the
+      // request, even after timeout, hiding, or disposal. Late success is ignored.
+      const observeRefusal = (result: "possible-erasure" | "unauthorized" | string) => {
+        if (result === "possible-erasure") reportPossibleManifestErasure(shopId);
+        else if (result === "unauthorized") reportManifestSessionInvalidation(sessionId);
+      };
+      const outcome = await bounded(
+        controller,
+        () => this.transport.read(nonce, controller.signal),
+        (result) => observeRefusal(result.kind),
       );
-      if (controller.signal.aborted || sequence !== this.sequence || scope !== this.scope) return;
+      if (
+        controller.signal.aborted ||
+        sequence !== this.sequence ||
+        scope !== this.scope ||
+        invalidatedSessions.has(sessionId)
+      )
+        return;
       if (outcome.kind !== "ready") {
-        if (outcome.kind === "possible-erasure") this.stale(true);
-        else this.invalidate(outcome.kind !== "unavailable");
+        this.invalidate(outcome.kind !== "unavailable");
         return;
       }
       const result = Object.freeze({
@@ -522,21 +631,43 @@ export class LiveManifestCoordinator<T> {
         scope: Object.freeze({ ...outcome.read.scope }),
         view: immutableProjection(outcome.read.view),
       });
-      if (scopeKey(result.scope) !== scope) {
-        this.invalidate(true);
-        return;
-      }
       if (result.nonce !== nonce) {
         this.invalidate(false);
         return;
       }
-      const verified = await bounded(controller, () =>
-        this.transport.verify(result, controller.signal),
+      if (scopeKey(result.scope) !== scope) {
+        if (
+          result.scope.sessionId !== sessionId &&
+          scopeKey({ ...result.scope, sessionId }) === scope
+        ) {
+          // A response is not authoritative until the current-cookie proof
+          // validates it. A malformed response must not tombstone peers.
+          await bounded(
+            controller,
+            () => this.transport.verify(result, controller.signal),
+            (verification) => {
+              if (verification === "verified") reportManifestSessionInvalidation(sessionId);
+              else observeRefusal(verification);
+            },
+          );
+        }
+        if (sequence === this.sequence && scope === this.scope) this.invalidate(true);
+        return;
+      }
+      const verified = await bounded(
+        controller,
+        () => this.transport.verify(result, controller.signal),
+        observeRefusal,
       );
-      if (controller.signal.aborted || sequence !== this.sequence || scope !== this.scope) return;
+      if (
+        controller.signal.aborted ||
+        sequence !== this.sequence ||
+        scope !== this.scope ||
+        invalidatedSessions.has(sessionId)
+      )
+        return;
       if (verified !== "verified") {
-        if (verified === "possible-erasure") this.stale(true);
-        else this.invalidate(verified !== "unavailable");
+        this.invalidate(verified !== "unavailable");
         return;
       }
       if (pendingWrites.has(this.trip)) {
@@ -561,6 +692,7 @@ export class LiveManifestCoordinator<T> {
 
   async acknowledgeCommit(commitId: number): Promise<void> {
     if (this.disposed) return;
+    if (invalidatedSessions.has(this.sessionId)) return;
     const candidate = this.candidate;
     if (!candidate || commitId !== this.sequence || commitId !== this.current.commitId) return;
     const age = () => {
@@ -584,18 +716,25 @@ export class LiveManifestCoordinator<T> {
     try {
       // Recheck the current session and erasure fence after the UI commits.
       // This is a recent check, not a promise of continuous validity.
-      const verified = await bounded(controller, () =>
-        this.transport.verify(candidate.read, controller.signal),
+      const verified = await bounded(
+        controller,
+        () => this.transport.verify(candidate.read, controller.signal),
+        (result) => {
+          if (result === "possible-erasure")
+            reportPossibleManifestErasure(candidate.read.scope.shopId);
+          else if (result === "unauthorized")
+            reportManifestSessionInvalidation(candidate.read.scope.sessionId);
+        },
       );
       if (
         controller.signal.aborted ||
         candidate.sequence !== this.sequence ||
-        candidate.scope !== this.scope
+        candidate.scope !== this.scope ||
+        invalidatedSessions.has(candidate.read.scope.sessionId)
       )
         return;
       if (verified !== "verified") {
-        if (verified === "possible-erasure") this.stale(true);
-        else this.invalidate(verified !== "unavailable");
+        this.invalidate(verified !== "unavailable");
         return;
       }
       if (pendingWrites.has(this.trip)) {
