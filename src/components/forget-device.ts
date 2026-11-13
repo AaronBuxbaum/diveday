@@ -3,6 +3,7 @@ import { forgetReadyPageCopy } from "@/lib/ready-offline";
 import { forgetAllKeptTyped } from "./KeepTypedOnRefusal";
 import { forgetRevealedMedicalAlerts } from "./MedicalAlertReveal";
 import { forgetAllRecents } from "./search/palette-recents";
+import { announceSessionInvalidation } from "./session-invalidation";
 
 /** How long a sign-out waits for the offline wipes before it goes on regardless. */
 const WIPE_WAIT_MS = 2_000;
@@ -25,6 +26,7 @@ const WIPE_WAIT_MS = 2_000;
  * copy expires or the next sign-in (ADR 20260718 amendment, H-20261023-medical-alert-for-the).
  */
 export async function forgetThisDevice(): Promise<void> {
+  announceSessionInvalidation();
   forgetAllRecents();
   forgetAllKeptTyped();
   forgetRevealedMedicalAlerts();

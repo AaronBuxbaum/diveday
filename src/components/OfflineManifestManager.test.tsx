@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cardSummaryClass, PANEL_INNER_RADIUS } from "@/components/ui/card";
+import { nowMs } from "@/lib/clock";
 import {
   loadOfflineManifest,
   primeOfflineManifestShell,
@@ -47,9 +48,10 @@ const copy: OfflineManifestManagerCopy = {
   connectivityOnline: "Online",
   connectivityOnlineTitle: "This device is online.",
   connectivityOfflineTitle: "This device has no connection right now.",
-  freshnessCurrent: "Fresh copy",
+  freshnessCurrent: "Recently saved copy",
   freshnessAging: "Aging copy",
   freshnessStale: "Stale copy",
+  freshnessExpired: "Expired copy",
   savedSummary: "Saved {date} · {pending} waiting to send · {rejected} need a look",
   refreshingLabel: "Refreshing…",
   refreshNowLabel: "Refresh now",
@@ -485,11 +487,11 @@ describe("OfflineManifestManager", () => {
       "[data-offline-copy]",
     );
     expect(card).toHaveAttribute("data-offline-copy", "pending");
-    expect(screen.queryByText("Fresh copy")).toBeNull();
+    expect(screen.queryByText("Recently saved copy")).toBeNull();
 
     save.resolve(envelope());
     await waitFor(() => expect(card).toHaveAttribute("data-offline-copy", "settled"));
-    expect(screen.getByText("Fresh copy")).toBeVisible();
+    expect(screen.getByText("Recently saved copy")).toBeVisible();
   });
 
   it("settles at once when there is no signal to save over", async () => {
@@ -500,5 +502,15 @@ describe("OfflineManifestManager", () => {
       "[data-offline-copy]",
     );
     await waitFor(() => expect(card).toHaveAttribute("data-offline-copy", "settled"));
+  });
+
+  it("labels an expired copy retained for pending work as expired", async () => {
+    setOnline(false);
+    const saved = envelope();
+    saved.snapshot.expiresAt = new Date(nowMs() - 1).toISOString();
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+    expect(await screen.findByText("Expired copy")).toBeVisible();
+    expect(screen.queryByText("Recently saved copy")).toBeNull();
   });
 });

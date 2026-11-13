@@ -38,6 +38,7 @@ import { manifestSpecies } from "./_components/manifest-species";
 import { readManifestView } from "./_components/manifest-view";
 import { offlineManifestPayload } from "./_components/offline-payload";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
+import { RosterFreshness } from "./_components/RosterFreshness";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
@@ -70,7 +71,7 @@ export default async function TripManifestPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { checkpoint: requestedCheckpoint, buddyError, buddies } = await searchParams;
+  const { checkpoint: requestedCheckpoint, buddyError, buddies, rosterRead } = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
@@ -281,6 +282,13 @@ export default async function TripManifestPage({
               t={t}
               locale={locale}
               timeZone={shop.timezone}
+            />
+            <RosterFreshness
+              tripId={tripId}
+              shopId={shop.id}
+              sessionId={session.user.sessionId}
+              rosterRead={rosterRead}
+              t={t}
             />
             <DiverRollCall context={rollCall.divers} />
 

@@ -24,6 +24,8 @@
   "cancelledRollCallClosed": "This departure is canceled and nobody has been counted aboard, so roll call is closed. If anyone is aboard, reinstate the trip to count them.",
   "cancelledRollCallStillCounting": "This departure is canceled. Roll call stays open because the count had started.",
   "skipToRollCall": "Skip to roll call",
+  "rosterConfirmed": "Roster checked",
+  "rosterUnconfirmed": "Roster not freshly confirmed",
   "stillToBoardHeading": "Still to board: {count}",
   "notCountedBackHeading": "Not yet counted back aboard: {count}",
   "summaryBoarded": "Boarded",
