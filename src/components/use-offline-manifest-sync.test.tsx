@@ -305,6 +305,38 @@ describe("useOfflineManifestSync on a network that stops answering", () => {
     vi.unstubAllGlobals();
   });
 
+  it("hands worker sync rereads to the mounted freshness owner", async () => {
+    const channels: Array<{ name: string; onmessage: ((event: MessageEvent) => void) | null }> = [];
+    class TestChannel {
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      constructor(public name: string) {
+        channels.push(this);
+      }
+      close() {}
+      postMessage() {}
+    }
+    vi.stubGlobal("BroadcastChannel", TestChannel);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    const owner = vi.fn(() => true);
+    const unsubscribe = subscribeManifestReread(TRIP_ID, owner);
+    const { result } = renderHook(() => useOfflineManifestSync(payload, copy));
+    await waitFor(() => expect(result.current.saved).not.toBeNull());
+    mockRouter.refresh.mockClear();
+    const channel = channels.find((item) => item.name === "diveday-offline-manifest-changes-v1");
+    expect(channel).toBeDefined();
+    act(() =>
+      channel?.onmessage?.(
+        new MessageEvent("message", {
+          data: { tripId: TRIP_ID, sourceId: "worker", reason: "sync" },
+        }),
+      ),
+    );
+    await waitFor(() => expect(owner).toHaveBeenCalledTimes(1));
+    expect(mockRouter.refresh).not.toHaveBeenCalled();
+    unsubscribe();
+    vi.unstubAllGlobals();
+  });
+
   it("reloads the device queue on focus when a worker message was missed", async () => {
     Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
     const initial = envelope();

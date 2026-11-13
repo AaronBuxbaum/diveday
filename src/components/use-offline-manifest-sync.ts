@@ -150,7 +150,10 @@ export function useOfflineManifestSync(
     tripId,
     copy,
     setMessage,
-    () => router.refresh(),
+    () => {
+      if (hasManifestRereadOwner(tripId)) requestManifestReread(tripId);
+      else router.refresh();
+    },
   );
   // Set right before a manual "Refresh now" (or router.refresh() call below)
   // whose resulting save should show the loud confirmation instead of
