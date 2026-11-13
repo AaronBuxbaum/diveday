@@ -247,7 +247,12 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
           expect(decodedRscBytes, "uncached navigation must fetch its target RSC").toBeGreaterThan(
             0,
           );
-        else expect(decodedRscBytes, "cached history navigation must reuse target RSC").toBe(0);
+        // #4465: roll call keeps cached rows visible but refreshes once on
+        // history return to include new seats and erasures. Only the manifest
+        // is exempt from zero target RSC bytes; every route budget and other
+        // cached-route assertion remains in force.
+        else if (name !== "manifest")
+          expect(decodedRscBytes, "cached history navigation must reuse target RSC").toBe(0);
       }
       // Client transitions retain source document script tags; those are not target RSC bytes.
       if (mode.includes("navigation")) Object.assign(browser, { inlineRscCarrierUtf8Bytes: null });

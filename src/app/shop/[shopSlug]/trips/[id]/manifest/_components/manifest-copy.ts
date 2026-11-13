@@ -56,6 +56,7 @@ export function offlineManifestManagerCopy(t: StaffTranslator): OfflineManifestM
     connectivityOnline: t("trips.offlineManifestManager.connectivityOnline"),
     connectivityOnlineTitle: t("trips.offlineManifestManager.connectivityOnlineTitle"),
     connectivityOfflineTitle: t("trips.offlineManifestManager.connectivityOfflineTitle"),
+    freshnessUnconfirmed: t("trips.offlineManifestManager.freshnessUnconfirmed"),
     freshnessCurrent: t("trips.offlineManifestManager.freshnessCurrent"),
     freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
     freshnessStale: t("trips.offlineManifestManager.freshnessStale"),

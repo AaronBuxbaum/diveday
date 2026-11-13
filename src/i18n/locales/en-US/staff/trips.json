@@ -772,6 +772,7 @@
     "connectivityOnline": "Online",
     "connectivityOnlineTitle": "This device is online.",
     "connectivityOfflineTitle": "This device has no connection right now.",
+    "freshnessUnconfirmed": "Freshness unconfirmed",
     "freshnessCurrent": "Fresh copy",
     "freshnessAging": "Aging copy",
     "freshnessStale": "Stale copy",

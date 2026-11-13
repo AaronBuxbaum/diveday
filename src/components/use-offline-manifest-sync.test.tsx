@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { Activity, createElement, StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   beginOfflineTenantVerificationRound,
@@ -243,7 +244,7 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
     expect(JSON.parse(String(claim?.[1]?.body))).toEqual({ erasureEpoch: 4, snapshotRevision: 9 });
   });
 
-  it("does not claim the same read twice when the page mounts again on a cached payload", async () => {
+  it("refreshes once without claiming the same cached read twice on return", async () => {
     const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => issued());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -257,8 +258,211 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
     renderPage(pagePayload);
     await waitFor(() => expect(loadOfflineManifest).toHaveBeenCalled());
     expect(claims()).toBe(1);
+    expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
+    expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps freshness unconfirmed when a cached return refresh never delivers, then confirms a new payload", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => issued()),
+    );
+    const first = renderPage(pagePayload);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    first.unmount();
+    const { result, rerender } = renderPage(pagePayload);
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+    expect(result.current.freshnessUnconfirmed).toBe(true);
+    await waitFor(() => expect(result.current.saved).toEqual(envelope()));
+    // A failed refresh has no new prop: re-rendering cached data is no confirmation.
+    rerender({ page: pagePayload });
+    expect(result.current.freshnessUnconfirmed).toBe(true);
+    rerender({ page: reread });
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.freshnessUnconfirmed).toBe(false));
+    expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the cached copy offline and requests its return refresh on reconnect", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => issued()),
+    );
+    const first = renderPage(pagePayload);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    first.unmount();
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const { result } = renderPage(pagePayload);
+    await waitFor(() => expect(result.current.saved).toEqual(envelope()));
+    expect(result.current.freshnessUnconfirmed).toBe(true);
     expect(mockRouter.refresh).not.toHaveBeenCalled();
     expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+    expect(result.current.freshnessUnconfirmed).toBe(true);
+  });
+
+  it("refreshes once per Activity reactivation, including Back and Forward with preserved hook state", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => issued()),
+    );
+    let mode: "visible" | "hidden" = "visible";
+    const { result, rerender } = renderHook(() => useOfflineManifestSync(pagePayload, copy), {
+      wrapper: ({ children }) => createElement(Activity, { mode, children }),
+    });
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    expect(mockRouter.refresh).not.toHaveBeenCalled();
+    for (const count of [1, 2]) {
+      mode = "hidden";
+      rerender();
+      mode = "visible";
+      rerender();
+      await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(count));
+      expect(result.current.freshnessUnconfirmed).toBe(true);
+      expect(result.current.saved).toEqual(envelope());
+    }
+    expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not confirm freshness when identity verification fails after return", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => issued()),
+    );
+    const first = renderPage(pagePayload);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    first.unmount();
+    vi.mocked(fetchOfflineManifestShopSlug).mockResolvedValue("another-shop");
+    const { result, rerender } = renderPage(pagePayload);
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+    rerender({ page: reread });
+    await waitFor(() => expect(result.current.message).toBe("could not reach"));
+    expect(result.current.freshnessUnconfirmed).toBe(true);
+    expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["added", "erased"] as const)(
+    "replaces the cached roster after a person is %s while away, preserving pending work",
+    async (change) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => issued()),
+      );
+      const diver = {
+        bookingId: "22222222-2222-4222-8222-222222222222",
+        fullName: "Nora Quinn",
+        email: null,
+        emergencyContactName: null,
+        emergencyContactPhone: null,
+        readiness: { status: "ready" as const, blockers: [] },
+        rentalFit: { state: "not_recorded" as const },
+        nitroxRequested: false,
+      };
+      const before = {
+        ...pagePayload,
+        manifests: pagePayload.manifests.map((m) => ({
+          ...m,
+          divers: change === "added" ? [] : [diver],
+        })),
+      };
+      const after = {
+        ...reread,
+        manifests: reread.manifests.map((m) => ({
+          ...m,
+          divers: change === "added" ? [diver] : [],
+        })),
+      };
+      const pending: OfflineManifestEnvelope["events"] = [
+        {
+          clientEventId: "33333333-3333-4333-8333-333333333333",
+          snapshotId: "snapshot-1",
+          snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+          tripId: TRIP_ID,
+          bookingId: diver.bookingId,
+          checkpoint: "departure",
+          status: "boarded",
+          occurredAt: "2026-08-01T09:10:00.000Z",
+          syncStatus: "pending",
+          note: null,
+        },
+      ];
+      let stored: OfflineManifestEnvelope = {
+        ...envelope(),
+        snapshot: { ...envelope().snapshot, ...before },
+        events: pending,
+      };
+      vi.mocked(loadOfflineManifest).mockImplementation(async () => stored);
+      vi.mocked(saveOfflineManifest).mockImplementation(async (claimed) => {
+        stored = { ...stored, snapshot: { ...stored.snapshot, ...claimed } };
+        return stored;
+      });
+      vi.mocked(syncOfflineManifest).mockImplementation(async () => stored);
+      const first = renderPage(before);
+      await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+      first.unmount();
+      mockRouter.refresh.mockClear();
+      const { result, rerender } = renderPage(before);
+      await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(result.current.saved?.snapshot.manifests).toEqual(before.manifests),
+      );
+      expect(result.current.saved?.events).toEqual(pending);
+      await act(async () => {});
+      expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
+      rerender({ page: after });
+      await waitFor(() =>
+        expect(result.current.saved?.snapshot.manifests).toEqual(after.manifests),
+      );
+      expect(result.current.saved?.events).toEqual(pending);
+      expect(result.current.freshnessUnconfirmed).toBe(false);
+    },
+  );
+
+  it("keeps a newer same-shop copy written by another tab without reclaiming the cached read", async () => {
+    const fetchMock = vi.fn(async () => issued());
+    vi.stubGlobal("fetch", fetchMock);
+    const first = renderPage(pagePayload);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    first.unmount();
+    const crossTab = {
+      ...envelope(),
+      snapshot: { ...envelope().snapshot, snapshotId: "newer-other-tab" },
+    };
+    vi.mocked(loadOfflineManifest).mockResolvedValue(crossTab);
+    const { result } = renderPage(pagePayload);
+    await waitFor(() => expect(result.current.saved).toEqual(crossTab));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
+    expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
+    expect(result.current.freshnessUnconfirmed).toBe(true);
+  });
+
+  it("does not mistake Strict Mode's initial effect replay for a history return", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => issued()),
+    );
+    renderHook(() => useOfflineManifestSync(pagePayload, copy), {
+      wrapper: ({ children }) => createElement(StrictMode, null, children),
+    });
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(mockRouter.refresh).not.toHaveBeenCalled();
+  });
+
+  it("refreshes on return even if the previous visit could not save its read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ error: "x" }, { status: 500 })),
+    );
+    const first = renderPage(pagePayload);
+    await waitFor(() => expect(first.result.current.message).toBe("save failed"));
+    first.unmount();
+    const { result } = renderPage(pagePayload);
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+    expect(result.current.freshnessUnconfirmed).toBe(true);
   });
 
   it("claims again when the saved copy is gone, and re-reads the page if that claim is stale", async () => {

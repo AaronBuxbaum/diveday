@@ -27,10 +27,14 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
 /** The reads (`trip:epoch:revision`) this tab already saved as an offline copy. */
 const savedReads = new Set<string>();
+// Seeing a read and saving it are distinct: a failed first save must not
+// suppress the next history return's freshness check.
+const shownReads = new Set<string>();
 
 /** Forget which reads this tab saved (a test starting clean). */
 export function forgetSavedOfflineReads() {
   savedReads.clear();
+  shownReads.clear();
 }
 
 function noteDispositionCount(
@@ -42,6 +46,29 @@ function noteDispositionCount(
         (event) => event.noteDisposition === disposition,
       ).length
     : 0;
+}
+
+/** Network recovery, visibility and timer fallback share the scoped refresh. */
+function useManifestNetworkRefresh(tripId: string, refresh: (opts: { manual: boolean }) => void) {
+  useEffect(() => {
+    if (!tripId) return;
+    const onOnline = () => {
+      if (navigator.onLine) refresh({ manual: false });
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && navigator.onLine) refresh({ manual: false });
+    };
+    const interval = setInterval(() => {
+      if (navigator.onLine) refresh({ manual: false });
+    }, AUTO_REFRESH_MS);
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(interval);
+    };
+  }, [tripId, refresh]);
 }
 
 /** The words the save, sync and reconcile narration uses, resolved server-side. */
@@ -75,6 +102,8 @@ export function useOfflineManifestSync(
   const [message, setMessage] = useState(copy.checkingDevice);
   const [busy, setBusy] = useState(false);
   const [settled, setSettled] = useState(false);
+  const [freshnessUnconfirmed, setFreshnessUnconfirmed] = useState(false);
+  const awaitingPayload = useRef<OfflineManifestPayload | null>(null);
   // saveOfflineManifest/syncOfflineManifest overlap easily across the mount
   // effect, the reconnect listener, and the interval — this keeps them from
   // racing each other into IndexedDB. Cross-tab/cross-view races (this page
@@ -173,7 +202,11 @@ export function useOfflineManifestSync(
                 ? ""
                 : copy.reconcileCaughtUp,
           );
-          router.refresh();
+          // Still-pending work needs narration, not another roster request
+          // alongside the history-return refresh already in progress.
+          if (pending < pendingBefore || rejected > rejectedBefore || noteWasDiscarded) {
+            router.refresh();
+          }
         }
       }
     } catch {
@@ -270,15 +303,14 @@ export function useOfflineManifestSync(
         // follows would refetch the page on every back or forward. Nothing is
         // written here, so an erasure that purged the copy since still gets
         // its fence below: no copy on the device, no skip.
-        // An erasure since the first save reaches the device through the next
-        // refresh trigger (push, interval, reconnect), a new read, not through
-        // a back or forward.
+        // History return has its own refresh below; skipping this claim must
+        // neither suppress that request nor confirm the cached roster.
         const readKey = currentPayload.readAt
           ? `${tripId}:${currentPayload.readAt.erasureEpoch}:${currentPayload.readAt.snapshotRevision}`
           : null;
         if (readKey && savedReads.has(readKey)) {
           const existing = await loadOfflineManifest(tripId).catch(() => null);
-          if (existing) {
+          if (existing?.snapshot.shop.slug === currentPayload.shop.slug) {
             setSaved(existing);
             setMessage("");
             return;
@@ -307,6 +339,10 @@ export function useOfflineManifestSync(
         if (!claimed) throw new Error(copy.saveErrorFallback);
         const envelope = await saveOfflineManifest(claimed, { tenantRound });
         setSaved(envelope);
+        if (currentPayload === payloadRef.current && awaitingPayload.current !== currentPayload) {
+          awaitingPayload.current = null;
+          setFreshnessUnconfirmed(false);
+        }
         if (readKey) savedReads.add(readKey);
         lastPendingCount.current = envelope.events.filter(
           (event) => event.syncStatus === "pending",
@@ -380,6 +416,11 @@ export function useOfflineManifestSync(
     (async () => {
       const envelope = await loadOfflineManifest(tripId).catch(() => null);
       if (cancelled) return;
+      if (payload.readAt) {
+        shownReads.add(
+          `${tripId}:${payload.readAt.erasureEpoch}:${payload.readAt.snapshotRevision}`,
+        );
+      }
       setSaved(envelope);
       // The pills and the saved-summary line take over the moment there is an
       // envelope for them to describe — "Checking this device…" only stands in
@@ -425,6 +466,8 @@ export function useOfflineManifestSync(
   // roll-call events) doesn't need fresh manifest data, so it runs directly.
   const refresh = useCallback(
     (opts: { manual: boolean }) => {
+      awaitingPayload.current = payloadRef.current;
+      setFreshnessUnconfirmed(true);
       if (!navigator.onLine) {
         // router.refresh() can't fetch anything with no network, so it would
         // never deliver the new payload the effect above is waiting for —
@@ -443,25 +486,23 @@ export function useOfflineManifestSync(
     [router, reconcile, copy],
   );
 
+  // Next's cached history entries reactivate effects when shown again. Keep
+  // their rows on screen and request one new server render, without claiming
+  // the old read a second time. The load effect records a shown read only
+  // after its cancellation check, so Strict Mode's initial replay is not a return. A request alone is never freshness evidence:
+  // only saving a different payload can clear the unconfirmed flag above.
   useEffect(() => {
-    if (!tripId) return;
-    const onOnline = () => {
-      if (navigator.onLine) refresh({ manual: false });
-    };
-    const onVisible = () => {
-      if (document.visibilityState === "visible" && navigator.onLine) refresh({ manual: false });
-    };
-    const interval = setInterval(() => {
-      if (navigator.onLine) refresh({ manual: false });
-    }, AUTO_REFRESH_MS);
-    window.addEventListener("online", onOnline);
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      window.removeEventListener("online", onOnline);
-      document.removeEventListener("visibilitychange", onVisible);
-      clearInterval(interval);
-    };
+    const current = payloadRef.current;
+    const readKey = current.readAt
+      ? `${tripId}:${current.readAt.erasureEpoch}:${current.readAt.snapshotRevision}`
+      : null;
+    if (readKey && shownReads.has(readKey)) {
+      staleReread.current = true;
+      refresh({ manual: false });
+    }
   }, [tripId, refresh]);
+
+  useManifestNetworkRefresh(tripId, refresh);
 
   // Primary trigger — see ADR 20260726-manifest-push-refresh. `EventSource`
   // reconnects on its own when the stream drops, and the route deliberately
@@ -503,5 +544,5 @@ export function useOfflineManifestSync(
     navigator.serviceWorker.addEventListener("message", onMessage);
     return () => navigator.serviceWorker.removeEventListener("message", onMessage);
   }, [tripId, refresh]);
-  return { tripId, saved, message, busy, settled, refresh };
+  return { tripId, saved, message, busy, settled, freshnessUnconfirmed, refresh };
 }

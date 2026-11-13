@@ -42,6 +42,7 @@ export interface OfflineManifestManagerCopy extends OfflineManifestSyncCopy {
   connectivityOnlineTitle: string;
   connectivityOfflineTitle: string;
   freshnessCurrent: string;
+  freshnessUnconfirmed: string;
   freshnessAging: string;
   freshnessStale: string;
   /** `{date}`, `{pending}`, `{rejected}` placeholders. */
@@ -90,7 +91,8 @@ export function OfflineManifestManager({
    */
   children?: ReactNode;
 }) {
-  const { tripId, saved, message, busy, settled, refresh } = useOfflineManifestSync(payload, copy);
+  const { tripId, saved, message, busy, settled, freshnessUnconfirmed, refresh } =
+    useOfflineManifestSync(payload, copy);
 
   const pending = saved?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
   const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
@@ -126,8 +128,9 @@ export function OfflineManifestManager({
     return fill(copy.reconcileNoteEntry, { subject, checkpoint, result });
   };
   const freshness = saved ? offlineManifestFreshness(new Date(saved.snapshot.savedAt)) : null;
-  const freshnessLabel =
-    freshness === "current"
+  const freshnessLabel = freshnessUnconfirmed
+    ? copy.freshnessUnconfirmed
+    : freshness === "current"
       ? copy.freshnessCurrent
       : freshness === "aging"
         ? copy.freshnessAging
@@ -246,8 +249,10 @@ export function OfflineManifestManager({
                     offlineTitle: copy.connectivityOfflineTitle,
                   }}
                 />
-                {freshness ? (
-                  <OfflineFreshnessPill freshness={freshness}>
+                {freshness || freshnessUnconfirmed ? (
+                  <OfflineFreshnessPill
+                    freshness={freshnessUnconfirmed ? "stale" : (freshness ?? "stale")}
+                  >
                     {freshnessLabel}
                   </OfflineFreshnessPill>
                 ) : null}

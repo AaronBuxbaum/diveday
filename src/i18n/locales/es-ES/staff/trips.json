@@ -772,6 +772,7 @@
     "connectivityOnline": "En línea",
     "connectivityOnlineTitle": "Este dispositivo está en línea.",
     "connectivityOfflineTitle": "Este dispositivo no tiene conexión en este momento.",
+    "freshnessUnconfirmed": "Actualización sin confirmar",
     "freshnessCurrent": "Copia actualizada",
     "freshnessAging": "Copia envejeciendo",
     "freshnessStale": "Copia desactualizada",

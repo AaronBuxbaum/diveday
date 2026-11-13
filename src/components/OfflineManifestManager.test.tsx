@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cardSummaryClass, PANEL_INNER_RADIUS } from "@/components/ui/card";
 import {
@@ -47,6 +47,7 @@ const copy: OfflineManifestManagerCopy = {
   connectivityOnline: "Online",
   connectivityOnlineTitle: "This device is online.",
   connectivityOfflineTitle: "This device has no connection right now.",
+  freshnessUnconfirmed: "Freshness unconfirmed",
   freshnessCurrent: "Fresh copy",
   freshnessAging: "Aging copy",
   freshnessStale: "Stale copy",
@@ -214,6 +215,33 @@ describe("OfflineManifestManager", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(syncOfflineManifest).toHaveBeenCalledTimes(3);
+  });
+
+  it("replaces Fresh copy with unconfirmed while a refresh has no response", async () => {
+    setOnline(true);
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope());
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockResolvedValue(envelope());
+    vi.mocked(syncOfflineManifest).mockResolvedValue(envelope());
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+    await waitFor(() => expect(screen.getByText(copy.freshnessCurrent)).toBeVisible());
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(screen.getByText(copy.freshnessUnconfirmed)).toBeVisible());
+    expect(screen.queryByText(copy.freshnessCurrent)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: copy.refreshNowLabel })).toBeEnabled();
+  });
+
+  it("shows unconfirmed freshness even when the cached page has no saved device copy", async () => {
+    setOnline(true);
+    vi.mocked(loadOfflineManifest).mockResolvedValue(null);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(saveOfflineManifest).mockRejectedValue(new Error(copy.saveErrorFallback));
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(screen.getByText(copy.freshnessUnconfirmed)).toBeVisible());
+    expect(screen.queryByText(copy.freshnessCurrent)).not.toBeInTheDocument();
   });
 
   // A rejected event is a tap somebody made on a deck that never entered the
