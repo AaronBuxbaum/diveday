@@ -22,7 +22,7 @@ const params = Promise.resolve({ tripId });
 const request = (proof: string | null) =>
   new Request("http://localhost/confirmation", {
     method: "POST",
-    body: JSON.stringify({ nonce, renderId, proof }),
+    body: JSON.stringify({ nonce, renderId, proof, checkpoint: "departure" }),
   });
 
 beforeEach(() => {
@@ -51,6 +51,7 @@ it("refuses an old roster after same-shop session replacement, signout, or staff
     nonce,
     renderId,
     erasureEpoch: shop.offlineErasureEpoch,
+    checkpoint: "departure",
   });
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(auth).mockResolvedValue(session);

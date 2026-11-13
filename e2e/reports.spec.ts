@@ -376,9 +376,10 @@ test.describe("owner, the Safety page", () => {
 test.describe("owner, Safety's tabs", () => {
   signedInAsOwner();
 
-  // Drills and Waivers sit beside the month's record as tabs of Safety, and the
-  // Drills tab draws one tile per kind of drill with the days since it was run.
-  test("moves between Overview, Drills and Waivers, with four drill tiles", {
+  // Drills sits beside the month's record as a tab of Safety and draws one tile
+  // per kind of drill with the days since it was run. Waivers are not here:
+  // setup is in Settings, signatures are read in Divers (Aaron, 2026-11-13).
+  test("moves between Overview and Drills, with four drill tiles", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/safety");
@@ -389,9 +390,7 @@ test.describe("owner, Safety's tabs", () => {
     for (const kind of ["Emergency oxygen", "Missing diver", "Person overboard", "Fire"]) {
       await expect(page.getByText(kind, { exact: true }).first()).toBeVisible();
     }
-    await tabs.getByRole("link", { name: "Waivers" }).click();
-    await expect(page).toHaveURL(/\/waivers/);
-    await expect(page.getByRole("heading", { level: 1, name: "Safety" })).toBeVisible();
+    await expect(tabs.getByRole("link", { name: "Waivers" })).toHaveCount(0);
   });
 });
 

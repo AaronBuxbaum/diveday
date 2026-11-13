@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { signRosterConfirmation } from "@/features/offline-manifest-snapshots";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ManifestRosterFreshness } from "./ManifestRosterFreshness";
@@ -10,6 +9,8 @@ export function RosterFreshness({
   sessionId,
   erasureEpoch,
   rosterRead,
+  renderId,
+  checkpoint,
   t,
 }: {
   tripId: string;
@@ -17,9 +18,10 @@ export function RosterFreshness({
   sessionId?: string;
   erasureEpoch: number;
   rosterRead?: string;
+  renderId: string;
+  checkpoint: string;
   t: StaffTranslator;
 }) {
-  const renderId = randomUUID();
   const renderProof =
     rosterRead && sessionId
       ? (signRosterConfirmation({
@@ -29,6 +31,7 @@ export function RosterFreshness({
           nonce: rosterRead,
           renderId,
           erasureEpoch,
+          checkpoint,
         }) ?? undefined)
       : undefined;
   return (
@@ -37,6 +40,8 @@ export function RosterFreshness({
       renderId={renderId}
       renderToken={rosterRead}
       renderProof={renderProof}
+      checkpoint={checkpoint}
+      requireCommit
       copy={{
         confirmed: t("manifest.rosterConfirmed"),
         unconfirmed: t("manifest.rosterUnconfirmed"),

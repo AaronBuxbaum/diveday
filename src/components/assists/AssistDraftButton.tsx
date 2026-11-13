@@ -65,6 +65,7 @@ export function AssistDraftButton({
   pendingLabel,
   emptyLabel,
   className,
+  variant = "ghost",
 }: {
   /** A server action answering the draft, or null when the assist is dark or failed. */
   draft: () => Promise<string | null>;
@@ -77,6 +78,8 @@ export function AssistDraftButton({
   /** Said in a toast when the answer came back empty. */
   emptyLabel?: string;
   className?: string;
+  /** A draft that is the row's one obvious act asks for `primary`. */
+  variant?: "ghost" | "primary";
 }) {
   const [pending, startTransition] = useTransition();
   const [empty, setEmpty] = useState<number | null>(null);
@@ -108,7 +111,7 @@ export function AssistDraftButton({
         onClick={run}
         disabled={pending}
         aria-busy={pending || undefined}
-        className={buttonClass({ variant: "ghost", size: "sm", busy: pending, className })}
+        className={buttonClass({ variant, size: "sm", busy: pending, className })}
       >
         {pending ? pendingLabel : label}
       </button>

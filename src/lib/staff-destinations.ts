@@ -153,6 +153,7 @@ export type StaffDestinationId =
   | "inbox"
   | "orders"
   | "waivers"
+  | "signedWaivers"
   | "reports"
   | "safety"
   | "drills"
@@ -221,6 +222,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   inbox: "shared.shopNavLinks.inbox",
   orders: "shared.shopNavLinks.orders",
   waivers: "shared.shopNavLinks.waivers",
+  signedWaivers: "shared.shopNavLinks.signedWaivers",
   reports: "shared.shopNavLinks.reports",
   safety: "shared.shopNavLinks.safety",
   drills: "shared.shopNavLinks.drills",
@@ -288,6 +290,8 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // 20260827-clearwater-surface-language, decision 4).
   { id: "today", suffix: "", section: "today", badge: "blockers" },
   { id: "divers", suffix: "/divers", section: "divers" },
+  // The evidence trail of who has signed, read beside the divers it is about.
+  { id: "signedWaivers", suffix: "/divers/waivers", section: "divers", gate: "waivers" },
   // A departure is the board's detail view, so `/trips/**` lights Schedule; so
   // does a past day (`/schedule/day/<date>`, issue #2662).
   {
@@ -325,11 +329,8 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // are a place of their own, not a tab of Money: incidents are not money. The
   // same owner/manager gate as Reports, since it reads the same record.
   { id: "safety", suffix: "/safety", section: "safety", gate: "reports" },
-  // Safety's other two tabs: the drills the crew has run, and the waivers the
-  // shop publishes and its divers sign. Waivers is a safety record, not a
-  // setting, so it sits here with its own gate.
+  // Safety's other tab: the drills the crew has run.
   { id: "drills", suffix: "/safety/drills", section: "safety", gate: "reports" },
-  { id: "waivers", suffix: "/waivers", section: "safety", gate: "waivers" },
   { id: "courses", suffix: "/courses", section: "courses" },
   { id: "certifications", suffix: "/certifications", section: "courses" },
   // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
@@ -359,6 +360,10 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     gate: "safetyChecklist",
   },
   { id: "team", suffix: "/settings/team", section: "settings", gate: "team" },
+  // Setup, not a record (Aaron, 2026-11-13): the release, the shop's own
+  // questions and the course forms are written here a few times in a shop's
+  // life. Who has signed is read in Divers, `signedWaivers` below.
+  { id: "waivers", suffix: "/settings/waivers", section: "settings", gate: "waivers" },
   // A staffer's own calendar subscription, at `/me`: the reader, not the shop.
   // It lights the `settings` section in the nav, and is ungated, so the roles
   // that most want it keep a door when Settings is gated away.
@@ -400,7 +405,7 @@ export const STAFF_SECTION_TABS = {
   gear: ["gear", "workOrders"],
   inbox: ["inbox", "requests", "reviews"],
   money: ["orders", "promoCodes", "reports"],
-  safety: ["safety", "drills", "waivers"],
+  safety: ["safety", "drills"],
 } as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;
 
 export type TabbedStaffSection = keyof typeof STAFF_SECTION_TABS;

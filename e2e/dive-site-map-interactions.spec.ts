@@ -259,7 +259,9 @@ async function previewFirstTemplate(page: Page) {
   const siteName = await preview.getAttribute("aria-label");
   if (!siteName) throw new Error("Template preview has no name");
   await preview.click();
-  await page.waitForURL(/page=2&template=/);
+  await page.waitForURL(
+    (url) => url.searchParams.get("page") === "2" && url.searchParams.has("template"),
+  );
   await expect(page).toHaveTitle(`${siteName} — DiveDay`);
   await expect(
     page.getByRole("button", { name: staff("diveSites.catalog.importToLibrary") }),

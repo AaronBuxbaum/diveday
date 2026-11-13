@@ -1055,7 +1055,6 @@
     "src/app/shop/[shopSlug]/promos/page.tsx": 407,
     "src/app/shop/[shopSlug]/reports/page.tsx": 412,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 569,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 407,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 407
   },
   "tokens": {

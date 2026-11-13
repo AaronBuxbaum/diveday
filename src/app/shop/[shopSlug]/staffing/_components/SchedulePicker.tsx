@@ -19,7 +19,7 @@ export function SchedulePicker({
   options: { value: string; label: string }[];
 }) {
   return (
-    <QueryForm keep={{ week }} className="mb-6">
+    <QueryForm keep={{ week }}>
       <select
         key={value}
         name="person"

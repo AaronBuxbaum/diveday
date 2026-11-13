@@ -21,12 +21,13 @@ const proof = signRosterConfirmation({
   nonce,
   renderId,
   erasureEpoch: 4,
+  checkpoint: "departure",
 });
 const params = Promise.resolve({ tripId });
 const request = (value: unknown) =>
   new Request("http://localhost/api/offline-manifests/test/roster-confirmation", {
     method: "POST",
-    body: JSON.stringify(value),
+    body: JSON.stringify({ checkpoint: "departure", ...(value as object) }),
   });
 
 beforeEach(() => {
@@ -52,6 +53,42 @@ it("confirms only a binding for the live authorized session", async () => {
   expect(response.headers.get("cache-control")).toBe("private, no-store");
   expect(await response.text()).toBe("");
 });
+
+it("refuses a valid proof for a different or missing checkpoint", async () => {
+  expect(
+    (await POST(request({ nonce, proof, renderId, checkpoint: "after_dive_1" }), { params }))
+      .status,
+  ).toBe(403);
+  expect(
+    (await POST(request({ nonce, proof, renderId, checkpoint: null }), { params })).status,
+  ).toBe(403);
+});
+
+it.each(["after_dive_1", "after_dive_5"])(
+  "accepts a live proof for %s only at that checkpoint",
+  async (checkpoint) => {
+    const diveProof = signRosterConfirmation({
+      tripId,
+      shopId,
+      sessionId,
+      nonce,
+      renderId,
+      erasureEpoch: 4,
+      checkpoint,
+    });
+    expect(diveProof).toBeTruthy();
+    expect(
+      (await POST(request({ nonce, proof: diveProof, renderId, checkpoint }), { params })).status,
+    ).toBe(204);
+    expect(
+      (
+        await POST(request({ nonce, proof: diveProof, renderId, checkpoint: "departure" }), {
+          params,
+        })
+      ).status,
+    ).toBe(403);
+  },
+);
 
 it("refuses a different session in the same shop", async () => {
   vi.mocked(authorizeOfflineManifestStaff).mockResolvedValue({
@@ -85,4 +122,26 @@ it("refuses tampered challenges and missing session identity", async () => {
     user: {},
   } as never);
   expect((await POST(request({ nonce, proof, renderId }), { params })).status).toBe(403);
+});
+
+it("refuses an oversized streaming confirmation before consuming the rest of its body", async () => {
+  let cancelled = false;
+  let chunks = 0;
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      chunks += 1;
+      if (chunks > 2) controller.close();
+      else controller.enqueue(new Uint8Array(1_025));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const streaming = new Request("http://localhost/api/offline-manifests/test/roster-confirmation", {
+    method: "POST",
+    body,
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+  expect((await POST(streaming, { params })).status).toBe(413);
+  expect(cancelled).toBe(true);
 });

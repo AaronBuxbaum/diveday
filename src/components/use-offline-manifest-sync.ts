@@ -2,7 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { invalidateManifestRead } from "@/components/manifest-stale-generation";
+import {
+  invalidateManifestRead,
+  requestManifestReread,
+} from "@/components/manifest-stale-generation";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
 import {
@@ -286,11 +289,10 @@ export function useOfflineManifestSync(
           }
           savedReads.delete(readKey);
         }
-        const claimed = await claimOfflineManifestSnapshot(currentPayload);
+        const claimed = await claimOfflineManifestSnapshot(currentPayload, {
+          onStale: () => invalidateManifestRead(tripId),
+        });
         if (claimed === OFFLINE_MANIFEST_STALE_READ) {
-          // Even the second refusal in the one-reread fence invalidates any
-          // in-flight or previously confirmed view. Do this before any await.
-          invalidateManifestRead(tripId);
           // The copy already on this device stands: drop "Saving…" rather
           // than leave it up if the re-read never lands.
           if (!opts.silent) {
@@ -302,8 +304,7 @@ export function useOfflineManifestSync(
           if (staleReread.current) {
             staleReread.current = false;
           } else {
-            staleReread.current = true;
-            router.refresh();
+            staleReread.current = requestManifestReread(tripId);
           }
           return;
         }
@@ -337,7 +338,7 @@ export function useOfflineManifestSync(
         if (!opts.silent) setBusy(false);
       }
     },
-    [copy, tripId, router],
+    [copy, tripId],
   );
 
   const save = useCallback(

@@ -48,7 +48,14 @@ const SEEDED_SHIFT = "1:30 PM – 7:00 PM";
  * The Add-a-shift form, scoped by its section's own id — the days-away form
  * below it also has a staff selector and date fields.
  */
-const addShiftForm = (page: Page) => page.locator("#add-shift");
+/** The Shifts tab's inline add on one day, opened. */
+const addShiftForm = async (page: Page, day: string) => {
+  const form = page.locator("details", {
+    has: page.locator(`input[name="date"][value="${day}"]`),
+  });
+  await form.locator("> summary").click();
+  return form;
+};
 
 /** The week grid, named by its own region. */
 const weekOf = (page: Page) => page.getByRole("region", { name: "Who’s working" });
@@ -89,12 +96,12 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
 
   await page.getByRole("link", { name: t("schedule.views.plan"), exact: true }).click();
   await expect(page).toHaveURL(/view=plan/);
-  await addShiftForm(page).getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
-  await addShiftForm(page).getByLabel("Date").fill(shiftDay);
-  await addShiftForm(page).getByLabel("Starts").fill("06:30");
-  await addShiftForm(page).getByLabel("Ends").fill("14:45");
-  await addShiftForm(page).getByLabel("Note").fill(note);
-  await addShiftForm(page).getByRole("button", { name: "Add shift" }).click();
+  const form = await addShiftForm(page, shiftDay);
+  await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
+  await form.getByLabel("Starts").fill("06:30");
+  await form.getByLabel("Ends").fill("14:45");
+  await form.getByLabel("Note").fill(note);
+  await form.getByRole("button", { name: "Add shift" }).click();
 
   // The form answers for itself — the outcome lands in its own action row
   // rather than in a banner a screen above it.
@@ -147,10 +154,10 @@ test("a shift added on another week comes back to that week", async ({ page, pri
   await page.getByRole("link", { name: t("schedule.views.plan"), exact: true }).click();
   await expect(page).toHaveURL(/view=plan/);
   await expect(page).toHaveURL(new RegExp(`week=${new URL(nextWeekUrl).searchParams.get("week")}`));
-  const form = addShiftForm(page);
+  const nextWeekMonday = new URL(nextWeekUrl).searchParams.get("week") ?? "";
+  // The day is the row it is added on, so it is inside the week on screen by construction.
+  const form = await addShiftForm(page, nextWeekMonday);
   await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
-  // The date the form offers is inside the week on screen, so a save needs
-  // no correction — filling only the note proves it.
   await form.getByLabel("Note").fill(note);
   await form.getByRole("button", { name: "Add shift" }).click();
 
@@ -251,14 +258,12 @@ test.describe("staffing, as the daily crew", () => {
 
     // No door, and no act inside a chip — a control that refuses is worse than
     // a control that is not there.
-    await expect(page.getByText("Add a shift")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Remove" })).toHaveCount(0);
     await expect(page.getByText("Add a credential")).toHaveCount(0);
     await page.getByRole("link", { name: t("schedule.views.plan"), exact: true }).click();
-    await expect(page.getByRole("heading", { name: t("staffing.away.heading") })).toBeVisible();
-    await expect(page.getByRole("heading", { name: t("staffing.addShift.heading") })).toHaveCount(
-      0,
-    );
+    // Anyone adds their own shift; only a manager picks whose it is.
+    await expect(page.getByRole("heading", { name: t("staffing.mine.heading") })).toBeVisible();
+    await expect(page.getByLabel("Staff member")).toHaveCount(0);
   });
 
   /**
@@ -279,15 +284,18 @@ test.describe("staffing, as the daily crew", () => {
 
     await page.getByRole("link", { name: t("schedule.views.plan"), exact: true }).click();
     await expect(page).toHaveURL(/view=plan/);
-    const away = page.locator("#add-away");
-    await away.getByLabel("From").fill(daysFromNow(2));
-    await away.getByLabel("To").fill(daysFromNow(3));
+    await addShiftForm(page, daysFromNow(2));
+    // The shift form's hidden date leaves with the tab, so hold the open day by its state.
+    const away = page.locator("details[open]");
+    await away.getByRole("button", { name: t("staffing.mine.tabDayOff") }).click();
+    await away.getByLabel("To", { exact: true }).fill(daysFromNow(3));
     await away.getByLabel("Note").fill("Family trip");
     await away.getByRole("button", { name: "Save", exact: true }).click();
 
     // The plan lists the saved block, and the Crew tab draws it in their row.
     await expect(page.getByText("Family trip").first()).toBeVisible();
-    await expect(page.getByText("Saved. The shop can see those days")).toBeVisible();
+    await expect(page.getByText(t("staffing.notice.awayRequested"))).toBeVisible();
+    await expect(page.getByText(t("staffing.mine.statusPending")).first()).toBeVisible();
     await expect(page).toHaveURL(/view=plan/);
     await page.getByRole("link", { name: t("schedule.views.crew"), exact: true }).click();
     // The two-day block appears once in each day's cell on the visible grid.
@@ -374,12 +382,15 @@ test.describe("schedule views", () => {
   }) => {
     await page.goto("/shop/blue-mantis/schedule/board?week=2026-08-03");
     const views = page.getByRole("navigation", { name: "Schedule views" });
-    await expect(views.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "page");
+    await expect(views.getByRole("link", { name: "Trips" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     await views.getByRole("link", { name: "Crew" }).click();
     await page.waitForURL(/\/staffing\?week=2026-08-03$/);
     await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
     await expect(views.getByRole("link", { name: "Crew" })).toHaveAttribute("aria-current", "page");
-    await views.getByRole("link", { name: "Week" }).click();
+    await views.getByRole("link", { name: "Trips" }).click();
     await page.waitForURL(/\/schedule\/board\?week=2026-08-03$/);
   });
 });

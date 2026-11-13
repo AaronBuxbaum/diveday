@@ -1,15 +1,32 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
+  isManifestRereadRunning,
+  manifestRosterIsCommitted,
   manifestStaleGeneration,
+  satisfyPendingManifestReread,
   subscribeManifestInvalidation,
+  subscribeManifestReread,
+  subscribeManifestRosterCommit,
 } from "@/components/manifest-stale-generation";
-import { subscribeSessionInvalidation } from "@/components/session-invalidation";
+import {
+  sessionInvalidationGeneration,
+  subscribeSessionInvalidation,
+} from "@/components/session-invalidation";
+import { nowMs } from "@/lib/clock";
+import { manifestHistoryCookieName, readManifestHistoryCookie } from "./manifest-history-cookie";
 
-const READ_PARAM = "rosterRead";
 const CONFIRMATION_MS = 5 * 60 * 1000;
+const READ_DEADLINE_MS = 10_000;
+type ReadStarted = { wall: number; monotonic: number };
+function withinDeadline(start: ReadStarted | null, limit: number): boolean {
+  if (!start) return false;
+  const wall = nowMs() - start.wall;
+  const monotonic = performance.now() - start.monotonic;
+  return wall >= 0 && wall < limit && monotonic >= 0 && monotonic < limit;
+}
 
 /** Confirms the rendered roster, independently of the age of the offline copy. */
 export function ManifestRosterFreshness({
@@ -17,16 +34,19 @@ export function ManifestRosterFreshness({
   renderProof,
   renderId,
   tripId,
+  checkpoint = "departure",
+  requireCommit = false,
   copy,
 }: {
   renderToken?: string;
   renderProof?: string;
   renderId: string;
   tripId: string;
+  checkpoint?: string;
+  requireCommit?: boolean;
   copy: { unconfirmed: string; confirmed: string };
 }) {
   const router = useRouter();
-  const queryToken = useSearchParams().get(READ_PARAM);
   const [requestToken, setRequestToken] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const requested = useRef<string | null>(null);
@@ -35,6 +55,8 @@ export function ManifestRosterFreshness({
   const sessionInvalidated = useRef(false);
   const acceptedRender = useRef<{ token: string; id: string } | null>(null);
   const readGeneration = useRef(0);
+  const readStarted = useRef<ReadStarted | null>(null);
+  const readCheckpoint = useRef(checkpoint);
 
   const requestRead = useCallback(() => {
     confirmedRef.current = false;
@@ -44,16 +66,31 @@ export function ManifestRosterFreshness({
     if (!navigator.onLine || sessionInvalidated.current) {
       activeToken.current = null;
       setRequestToken(null);
-      return;
+      return false;
     }
     const token = crypto.randomUUID();
+    readStarted.current = { wall: nowMs(), monotonic: performance.now() };
+    readCheckpoint.current = checkpoint;
     readGeneration.current = manifestStaleGeneration(tripId);
     activeToken.current = token;
-    const url = new URL(window.location.href);
-    url.searchParams.set(READ_PARAM, token);
-    window.history.replaceState(null, "", url);
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    try {
+      // The nonce is a non-authorizing challenge and contains no user data.
+      // biome-ignore lint/suspicious/noDocumentCookie: the Cookie Store API is not available on all supported devices.
+      document.cookie = `${manifestHistoryCookieName(tripId)}=${token}; Path=/; Max-Age=60; SameSite=Lax${secure}`;
+      if (readManifestHistoryCookie(document.cookie, tripId) !== token)
+        throw new Error("cookie unavailable");
+    } catch {
+      activeToken.current = null;
+      setRequestToken(null);
+      router.refresh();
+      return false;
+    }
+    requested.current = token;
     setRequestToken(token);
-  }, [tripId]);
+    router.refresh();
+    return true;
+  }, [tripId, checkpoint, router]);
 
   // React Activity tears down effects when a cached page is hidden and runs
   // them again when history returns to it. Each activation gets a new token.
@@ -61,7 +98,8 @@ export function ManifestRosterFreshness({
     // A later activation may belong to a newly signed-in session. Its roster
     // must pass the live post-render session check before confirmation.
     sessionInvalidated.current = false;
-    requestRead();
+    const unsubscribeReread = subscribeManifestReread(tripId, requestRead);
+    if (!isManifestRereadRunning(tripId, requestRead)) requestRead();
     window.addEventListener("online", requestRead);
     const offline = () => {
       confirmedRef.current = false;
@@ -84,21 +122,9 @@ export function ManifestRosterFreshness({
       window.removeEventListener("offline", offline);
       unsubscribe();
       unsubscribeStale();
+      unsubscribeReread();
     };
   }, [requestRead, tripId]);
-
-  // Wait until Next's router has observed replaceState before refreshing.
-  useEffect(() => {
-    if (
-      !requestToken ||
-      activeToken.current !== requestToken ||
-      queryToken !== requestToken ||
-      requested.current === requestToken
-    )
-      return;
-    requested.current = requestToken;
-    router.refresh();
-  }, [queryToken, requestToken, router]);
 
   useLayoutEffect(() => {
     if (
@@ -107,6 +133,8 @@ export function ManifestRosterFreshness({
       requested.current !== requestToken ||
       renderToken !== requestToken ||
       !renderProof ||
+      readCheckpoint.current !== checkpoint ||
+      !withinDeadline(readStarted.current, READ_DEADLINE_MS) ||
       readGeneration.current !== manifestStaleGeneration(tripId) ||
       !navigator.onLine
     ) {
@@ -128,13 +156,15 @@ export function ManifestRosterFreshness({
     // replaced while it was in flight. Check the live session *after* the
     // roster commits before calling it checked. Abort on replacement/unmount.
     const controller = new AbortController();
+    const sessionGeneration = sessionInvalidationGeneration();
+    let unsubscribeCommit = () => {};
     const timeout = setTimeout(() => controller.abort(), 10_000);
     void fetch(`/api/offline-manifests/${tripId}/roster-confirmation`, {
       method: "POST",
       cache: "no-store",
       credentials: "same-origin",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ nonce: requestToken, renderId, proof: renderProof }),
+      body: JSON.stringify({ nonce: requestToken, renderId, proof: renderProof, checkpoint }),
       signal: controller.signal,
     })
       .then((response) => {
@@ -142,35 +172,80 @@ export function ManifestRosterFreshness({
           response.status !== 204 ||
           response.redirected ||
           controller.signal.aborted ||
+          !withinDeadline(readStarted.current, READ_DEADLINE_MS) ||
+          sessionGeneration !== sessionInvalidationGeneration() ||
           !navigator.onLine ||
           readGeneration.current !== manifestStaleGeneration(tripId) ||
           activeToken.current !== requestToken ||
           requested.current !== requestToken
         )
           return;
-        confirmedRef.current = true;
-        setConfirmed(true);
-        const url = new URL(window.location.href);
-        if (url.searchParams.get(READ_PARAM) === requestToken) {
-          url.searchParams.delete(READ_PARAM);
-          window.history.replaceState(null, "", url);
-        }
+        const finish = () => {
+          if (
+            controller.signal.aborted ||
+            sessionGeneration !== sessionInvalidationGeneration() ||
+            !navigator.onLine ||
+            !withinDeadline(readStarted.current, READ_DEADLINE_MS) ||
+            readGeneration.current !== manifestStaleGeneration(tripId) ||
+            activeToken.current !== requestToken ||
+            requested.current !== requestToken
+          )
+            return;
+          if (
+            requireCommit &&
+            !manifestRosterIsCommitted(
+              tripId,
+              readGeneration.current,
+              renderId,
+              requestToken,
+              checkpoint,
+            )
+          )
+            return;
+          clearTimeout(timeout);
+          unsubscribeCommit();
+          satisfyPendingManifestReread(tripId, readGeneration.current);
+          confirmedRef.current = true;
+          setConfirmed(true);
+        };
+        if (requireCommit) unsubscribeCommit = subscribeManifestRosterCommit(tripId, finish);
+        finish();
       })
-      .catch(() => {})
-      .finally(() => clearTimeout(timeout));
+      .catch(() => {});
     return () => {
       controller.abort();
+      unsubscribeCommit();
       clearTimeout(timeout);
     };
-  }, [renderToken, renderProof, renderId, tripId, requestToken, requestRead]);
+  }, [
+    renderToken,
+    renderProof,
+    renderId,
+    tripId,
+    checkpoint,
+    requireCommit,
+    requestToken,
+    requestRead,
+  ]);
 
   useEffect(() => {
     if (!confirmed) return;
-    const expiry = setTimeout(() => {
+    const withdrawIfExpired = () => {
+      if (withinDeadline(readStarted.current, CONFIRMATION_MS)) return;
       confirmedRef.current = false;
       setConfirmed(false);
-    }, CONFIRMATION_MS);
-    return () => clearTimeout(expiry);
+    };
+    const age = readStarted.current
+      ? Math.max(0, nowMs() - readStarted.current.wall)
+      : CONFIRMATION_MS;
+    const expiry = setTimeout(withdrawIfExpired, Math.max(0, CONFIRMATION_MS - age));
+    window.addEventListener("focus", withdrawIfExpired);
+    document.addEventListener("visibilitychange", withdrawIfExpired);
+    return () => {
+      clearTimeout(expiry);
+      window.removeEventListener("focus", withdrawIfExpired);
+      document.removeEventListener("visibilitychange", withdrawIfExpired);
+    };
   }, [confirmed]);
 
   return (

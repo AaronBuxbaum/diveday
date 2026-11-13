@@ -76,7 +76,8 @@ function installScrollSpy() {
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 
 const FOLLOW = {
-  followLabel: "Only sites in this map area",
+  followLabel: "Filter by map",
+  areaCount: "12 sites",
   scoped: false,
   baseHref: "/shop/blue-mantis/dive-sites",
 };
@@ -84,13 +85,7 @@ const FOLLOW = {
 describe("dive-site map layouts", () => {
   it("places the map before the library rows", () => {
     render(
-      <SiteLibraryLayout
-        {...FOLLOW}
-        shopAnchor={null}
-        pins={pins}
-        clusterLabel="dive sites"
-        catalog={<a href="/catalog">Catalog</a>}
-      >
+      <SiteLibraryLayout {...FOLLOW} shopAnchor={null} pins={pins} clusterLabel="dive sites">
         <div>Library rows</div>
       </SiteLibraryLayout>,
     );
@@ -121,6 +116,7 @@ describe("dive-site map layouts", () => {
     const scrollSpy = installScrollSpy();
     render(
       <CatalogMapLayout
+        {...FOLLOW}
         shopAnchor={null}
         pins={pins.map((pin) => ({ ...pin, slug: "north-reef" }))}
         catalogPageHref="/shop/demo/dive-sites?view=catalog"
@@ -138,5 +134,37 @@ describe("dive-site map layouts", () => {
     expect(screen.getByTestId("selected-pin").textContent).toBe("reef-1");
     expect(scrollSpy.scrollIntoView).not.toHaveBeenCalled();
     scrollSpy.restore();
+  });
+
+  it.each([
+    [
+      "library",
+      () => (
+        <SiteLibraryLayout {...FOLLOW} shopAnchor={null} pins={pins} clusterLabel="dive sites">
+          <div>Rows</div>
+        </SiteLibraryLayout>
+      ),
+    ],
+    [
+      "catalog",
+      () => (
+        <CatalogMapLayout
+          {...FOLLOW}
+          shopAnchor={null}
+          pins={pins.map((pin) => ({ ...pin, slug: "north-reef" }))}
+          catalogPageHref="/shop/demo/dive-sites?view=catalog"
+          openSiteLabel="Open site"
+          loadDetails={async () => null}
+          detailWords={{ loading: "Loading", unavailable: "Unavailable" }}
+          clusterLabel="dive sites"
+        >
+          <div>Rows</div>
+        </CatalogMapLayout>
+      ),
+    ],
+  ])("draws Filter by map on the %s map, not under it", (_view, layout) => {
+    render(layout());
+    const map = screen.getByRole("button", { name: "Select map pin" }).parentElement?.parentElement;
+    expect(map?.contains(screen.getByRole("switch", { name: /Filter by map/ }))).toBe(true);
   });
 });

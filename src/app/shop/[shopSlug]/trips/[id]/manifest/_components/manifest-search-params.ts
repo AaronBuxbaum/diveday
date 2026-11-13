@@ -3,5 +3,4 @@ export type ManifestSearchParams = {
   checkpoint?: string;
   buddyError?: string;
   buddies?: string;
-  rosterRead?: string;
 };

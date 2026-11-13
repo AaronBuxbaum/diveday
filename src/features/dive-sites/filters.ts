@@ -71,9 +71,18 @@ export function parseSiteFilters(search: {
 /** The library's URL for a set of choices; empty choices stay out of it. */
 export function siteListHref(
   base: string,
-  choices: { q?: string; page?: number } & SiteListFilters,
+  choices: {
+    q?: string;
+    page?: number;
+    /** `catalog`: DiveDay's published sites rather than the shop's own. */
+    view?: "catalog";
+    /** A catalog template opened in full. */
+    template?: string;
+  } & SiteListFilters,
 ): string {
   const params = new URLSearchParams();
+  if (choices.view) params.set("view", choices.view);
+  if (choices.template) params.set("template", choices.template);
   if (choices.q) params.set("q", choices.q);
   if (choices.difficulty) params.set("difficulty", choices.difficulty);
   if (choices.need) params.set("need", choices.need);

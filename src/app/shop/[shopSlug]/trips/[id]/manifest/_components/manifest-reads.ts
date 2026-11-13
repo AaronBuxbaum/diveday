@@ -26,8 +26,8 @@ import { cancelledRollCall } from "@/lib/roll-call";
 
 /**
  * **Everything the boat manifest reads, in the waves the page awaits them**:
- * independent reads start together; each dependent starts when its own inputs
- * resolve, including the boat safety read beside the roster-dependent reads.
+ * the roster establishes the erasure epoch first, then independent reads start
+ * together, including the boat safety read beside the roster-dependent reads.
  * Nothing here depends on which checkpoint is open, so the page settles that
  * after the reads resolve.
  */
@@ -38,15 +38,19 @@ export async function readManifestPage(
   /** The staffer reading: the catch-up strip is "since *you* last looked", and who may report. */
   personId: string,
 ) {
-  // The manifest rows, the raw team membership, and the desk's own notes don't
-  // depend on one another — resolve them together instead of serially.
+  // Start buddy membership and notes only after the roster's erasure epoch is
+  // known, so the render proof cannot certify identity reads from before it.
   // The manifests and the erasure epoch they were read at, on the pool and
   // writing nothing (issue #4391). The page shows these rows and the device
   // saves these same rows, so the screen and the copy cannot differ; the
   // save trades the epoch for a signed token, refused if an erasure landed
   // since (`issueOfflineManifestSnapshot`, `/api/offline-manifests/[tripId]/snapshot`).
   const shopId = shop.id;
-  const roster = readOfflineManifestRoster(db, shopId, tripId);
+  // All the other identity-bearing reads start after the roster has captured
+  // its epoch. A later roster epoch cannot certify earlier buddy or note reads.
+  const rosterResult = await readOfflineManifestRoster(db, shopId, tripId);
+  const renderErasureEpoch = rosterResult?.erasureEpoch ?? null;
+  const roster = Promise.resolve(rosterResult);
   const sites = listDiveSiteNames(db, shopId);
   const dives = listTripDives(db, shopId, tripId);
   const vesselRows = departureVessels(db, shopId, [tripId]);
@@ -187,6 +191,7 @@ export async function readManifestPage(
   const completeManifests = offlineRoster?.manifests ?? null;
   const dockTrip = completeManifests?.[0]?.trip;
   return {
+    renderErasureEpoch,
     completeManifests,
     boatSafety,
     offlineRoster,

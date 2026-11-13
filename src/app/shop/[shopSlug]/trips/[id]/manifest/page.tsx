@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
@@ -32,7 +34,9 @@ import { LiveRollCallConflicts } from "./_components/LiveRollCallConflicts";
 import { ManifestDeviceSettings } from "./_components/ManifestDeviceSettings";
 import { ManifestMilestones } from "./_components/ManifestMilestones";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
+import { ManifestRosterCommit } from "./_components/ManifestRosterCommit";
 import { catchUpStripView, offlineManifestManagerCopy } from "./_components/manifest-copy";
+import { readManifestHistoryCookie } from "./_components/manifest-history-cookie";
 import type { ManifestSearchParams } from "./_components/manifest-search-params";
 import { manifestSpecies } from "./_components/manifest-species";
 import { readManifestView } from "./_components/manifest-view";
@@ -71,7 +75,8 @@ export default async function TripManifestPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { checkpoint: requestedCheckpoint, buddyError, buddies, rosterRead } = await searchParams;
+  const { checkpoint: requestedCheckpoint, buddyError, buddies } = await searchParams;
+  const rosterRead = readManifestHistoryCookie((await headers()).get("cookie"), tripId);
   const { db, shop, session } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
@@ -162,6 +167,7 @@ export default async function TripManifestPage({
         t,
       });
 
+  const renderId = randomUUID();
   return (
     <RollCallCausalProvider
       contexts={Object.fromEntries([
@@ -287,7 +293,9 @@ export default async function TripManifestPage({
               tripId={tripId}
               shopId={shop.id}
               sessionId={session.user.sessionId}
-              erasureEpoch={offlineRoster.erasureEpoch}
+              erasureEpoch={view.renderErasureEpoch}
+              checkpoint={checkpoint}
+              renderId={renderId}
               rosterRead={rosterRead}
               t={t}
             />
@@ -341,18 +349,7 @@ export default async function TripManifestPage({
               t={t}
             />
 
-            {/* Everything this *device* does, in **one line** at the foot of the
-            page: hold an offline copy, wake itself for a refresh, ignore spray on
-            the glass, buzz. All four are per-phone preferences rather than
-            anything about this departure, and decision 2 of ADR
-            20260827-the-departure-is-two-working-surfaces puts device settings in
-            the "ashore, not here" tier.
-
-            The disclosure belongs to `OfflineManifestManager` rather than to a wrapper here, and
-            that is load-bearing: the summary line keeps the connectivity chip and the freshness
-            pill on screen, because a stale copy that looks current is the failure mode this whole
-            mechanism exists to prevent — and the component that computes that state is the only
-            thing that can render it. The rest of the group rides in as its children. */}
+            {/* Keep connectivity and copy freshness together in the device disclosure. */}
             <OfflineManifestManager
               locale={locale}
               payload={offlineManifestPayload({
@@ -392,6 +389,12 @@ export default async function TripManifestPage({
           />
         </div>
       </DeparturePaperIdentity>
+      <ManifestRosterCommit
+        tripId={tripId}
+        renderId={renderId}
+        renderToken={rosterRead}
+        checkpoint={checkpoint}
+      />
     </RollCallCausalProvider>
   );
 }

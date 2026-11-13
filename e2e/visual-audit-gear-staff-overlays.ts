@@ -69,9 +69,11 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
     }) => {
       await page.goto(`/shop/${privateShop.slug}/staffing?view=plan`);
       await page.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
-      const form = page.locator("#add-shift");
+      const form = page.locator("details", {
+        has: page.locator(`input[name="date"][value="${daysFromNow(2)}"]`),
+      });
+      await form.locator("> summary").click();
       await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
-      await form.getByLabel("Date").fill(daysFromNow(2));
       await form.getByLabel("Starts").fill("06:30");
       await form.getByLabel("Ends").fill("14:45");
       await form.getByLabel("Note").fill("Boat 2");

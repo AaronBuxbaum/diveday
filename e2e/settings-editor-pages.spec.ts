@@ -326,7 +326,13 @@ test("bookkeeper settings and registers retain the settings rail", async ({
   privateShop,
 }) => {
   const SHOP = privateShop.slug;
-  for (const destination of ["boats", "trip-tags", "safety-checklist", "settings/bookkeeper"]) {
+  for (const destination of [
+    "boats",
+    "trip-tags",
+    "safety-checklist",
+    "settings/waivers",
+    "settings/bookkeeper",
+  ]) {
     await page.goto(`/shop/${SHOP}/${destination}`);
     await expect(
       page.getByRole("navigation", { name: staff("settings.main.rail.ariaLabel") }),

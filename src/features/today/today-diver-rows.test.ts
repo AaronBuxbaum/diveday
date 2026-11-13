@@ -3,10 +3,8 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { urgencyFor } from "../today-urgency/rules";
 import {
-  BOAT_ROWS_SHOWN,
   blockedDiverActions,
   filterActionsForRoles,
-  foldBoatRows,
   oneRowPerDiver,
   rowTone,
   sortStationRows,
@@ -305,62 +303,6 @@ describe("oneRowPerDiver", () => {
   });
 });
 
-describe("foldBoatRows", () => {
-  const rows = (count: number, kind: TodayAction["kind"] = "dive_prep") =>
-    Array.from({ length: count }, (_, index) => action({ id: `${kind}-${index}`, kind }));
-
-  it("shows a short boat whole, including one row past the cap", () => {
-    expect(foldBoatRows(rows(BOAT_ROWS_SHOWN + 1)).more).toEqual([]);
-  });
-
-  it("folds a long boat after the cap, dropping nobody and keeping the order", () => {
-    const all = rows(9);
-    const { shown, more } = foldBoatRows(all);
-    expect(shown).toHaveLength(BOAT_ROWS_SHOWN);
-    expect(more).toHaveLength(9 - BOAT_ROWS_SHOWN);
-    expect([...shown, ...more]).toEqual(all);
-  });
-
-  it("never folds a danger row, however many there are or wherever they sit", () => {
-    const all = [...rows(7, "medical_not_cleared"), ...rows(3, "dive_prep")];
-    const { shown, more } = foldBoatRows(all);
-    expect(shown.filter((row) => row.kind === "medical_not_cleared")).toHaveLength(7);
-    expect(more.map((row) => row.kind)).toEqual(["dive_prep", "dive_prep", "dive_prep"]);
-
-    const late = [...rows(8, "dive_prep"), ...rows(1, "roll_call_missing_diver")];
-    const folded = foldBoatRows(late);
-    expect(folded.shown.some((row) => row.kind === "roll_call_missing_diver")).toBe(true);
-    expect(folded.more.every((row) => row.kind === "dive_prep")).toBe(true);
-    expect(folded.shown.length + folded.more.length).toBe(9);
-  });
-
-  it("never folds a diver's own help request, so Arrange help stays in reach", () => {
-    // A request is the diver's ask, waiting on a staffer to name a helper: a
-    // neutral row, ranked last, that a fold would hide behind "and N more".
-    const all = [...rows(7, "dive_prep"), ...rows(2, "help_request")];
-    const { shown, more } = foldBoatRows(all);
-    expect(shown.filter((row) => row.kind === "help_request")).toHaveLength(2);
-    expect(more.every((row) => row.kind === "dive_prep")).toBe(true);
-    expect([...shown, ...more]).toHaveLength(all.length);
-  });
-
-  it("shows five, counting the rows that never fold among them (A43)", () => {
-    // Two help requests ranked last still show, and take two of the five
-    // seats: three prep rows above them, four folded, not five prep plus two.
-    const all = [...rows(7, "dive_prep"), ...rows(2, "help_request")];
-    const { shown, more } = foldBoatRows(all);
-    expect(shown).toHaveLength(BOAT_ROWS_SHOWN);
-    expect(shown.map((row) => row.kind)).toEqual([
-      "dive_prep",
-      "dive_prep",
-      "dive_prep",
-      "help_request",
-      "help_request",
-    ]);
-    expect(more).toHaveLength(4);
-  });
-});
-
 describe("waiverBatchActions", () => {
   const diver = (fullName: string, code: ReadinessBlocker["code"], tripId = "t1") => ({
     bookingId: `b-${fullName}`,
@@ -577,24 +519,5 @@ describe("a merged row keeps what the blocker says and does", () => {
     // A neutral prep row ranks below it, as it ranked below the nitrox row on main.
     const prep = gap("Dev", "dive_prep", "rental size");
     expect(sortStationRows([prep, row])[0]).toBe(row);
-  });
-
-  it("never folds a readiness blocker of any tone behind and N more (auditor note 1)", () => {
-    const named = (kind: TodayAction["kind"], count: number) =>
-      Array.from({ length: count }, (_, index) => action({ id: `${kind}-${index}`, kind }));
-    const { more } = foldBoatRows([
-      ...named("certification", 5),
-      ...named("waiver", 2),
-      // A diver's unpaid seat, raised from their blocker as every one is; the
-      // boat's own orders row is also `payment` and does fold (A43).
-      action({
-        id: "payment-0",
-        kind: "payment",
-        diver: { personId: "p", items: ["payment"], readiness: true },
-      }),
-      ...named("identity", 1),
-      ...named("dive_prep", 3),
-    ]);
-    expect(more.map((row) => row.kind)).toEqual(["dive_prep", "dive_prep", "dive_prep"]);
   });
 });

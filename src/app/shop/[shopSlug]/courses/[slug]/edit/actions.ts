@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonConfigureTrips } from "@/db/authz";
+import { canPersonEditCourseTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
@@ -115,6 +115,9 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const staff = (await requireShopSurface(shopSlug)).session;
 
   const db = await getDb();
+  if (!(await canPersonEditCourseTemplates(db, staff.user.shopId, staff.user.personId))) {
+    redirect(`${base}?error=not-authorized`);
+  }
   const course = await getCourseBySlug(db, staff.user.shopId, slug);
   if (!course) redirect(noticeUrl(courses, "invalid"));
   // Loaded before parsing, not after: the shop's own currency is what decides
@@ -374,6 +377,9 @@ export async function pullCourseTemplateUpdatesAction(
   const base = shopPath(shopSlug, "courses", slug, "edit");
   const staff = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
+  if (!(await canPersonEditCourseTemplates(db, staff.user.shopId, staff.user.personId))) {
+    redirect(`${base}?error=not-authorized`);
+  }
   const course = await getCourseBySlug(db, staff.user.shopId, slug);
   if (!course) redirect(noticeUrl(shopPath(shopSlug, "courses"), "invalid"));
 
@@ -415,9 +421,9 @@ export async function pullCourseTemplateUpdatesAction(
  * session's `shopId` as well, which is the layer that must never be the only one
  * (ADR-0006).
  *
- * **"Is this course for sale" is trip-definition work** (what the dive is and
- * who it admits; H-20260724-staff-role-reach, ADR 20260724-role-authorization), so the action re-checks
- * live roles rather than settling for "is staff". The page draws the control on
+ * **"Is this course for sale" is template work**, an owner's or manager's
+ * (`canEditCourseTemplates`; instructors schedule from a template, they do not
+ * rewrite it), so the action re-checks live roles rather than settling for "is staff". The page draws the control on
  * the same answer, but the gate is here: a form that is not rendered is not a
  * form that cannot be posted.
  *
@@ -430,7 +436,7 @@ export async function setCourseVisibilityAction(slug: string, courseId: string) 
   const staff = await requireStaffSession();
   const db = await getDb();
   const refusal = `${shopPath(staff.user.shopSlug, "courses", slug, "edit")}?error=not-authorized`;
-  if (!(await canPersonConfigureTrips(db, staff.user.shopId, staff.user.personId))) {
+  if (!(await canPersonEditCourseTemplates(db, staff.user.shopId, staff.user.personId))) {
     redirect(refusal);
   }
   const live = await getCourseBySlug(db, staff.user.shopId, slug);

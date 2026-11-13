@@ -175,6 +175,29 @@ for (const scheme of ["light", "dark"] as const) {
         });
       });
 
+      // The toolbar at rest and with a chip on: search, one Filters button, the
+      // pill for what is on, and "Filter by map" on the map itself. The pins
+      // are the sites the chip leaves.
+      test(`the dive-site filters narrow the list and the map (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/dive-sites?difficulty=advanced");
+        await page.getByRole("heading", { level: 1, name: "Dive sites" }).waitFor();
+        await waitForSiteMap(page);
+        await expect(page.getByRole("switch", { name: /Filter by map/ })).toBeVisible();
+        await expect(page.getByRole("link", { name: /^Advanced: / })).toBeVisible();
+        await capture(page, "dive-sites-library-filtered", scheme);
+      });
+
+      // Search and filters stay on the catalog view: same toolbar, same map switch.
+      test(`the dive-site catalog keeps its search and filters (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/dive-sites?view=catalog&difficulty=beginner");
+        await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
+        await waitForSiteMap(page);
+        await expect(page.getByRole("searchbox", { name: "Find a site" })).toBeVisible();
+        await expect(page.locator("summary", { hasText: "Filters" })).toBeVisible();
+        await expect(page.getByRole("switch", { name: /Filter by map/ })).toBeVisible();
+        await capture(page, "dive-sites-catalog-filtered", scheme);
+      });
+
       // DiveDay's published dive-site templates, in the same ledger grammar as
       // the library they feed (ADR 20260827-the-shops-shelves): the row is the
       // preview door; import lives on the preview itself. It is the

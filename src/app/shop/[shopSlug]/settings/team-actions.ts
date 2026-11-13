@@ -1,7 +1,7 @@
 "use server";
 import { z } from "zod";
 import { setShopDiversPerDivemaster } from "@/db/shops";
-import { formValue } from "@/features/form-parse";
+import { checkbox, formValue } from "@/features/form-parse";
 import { defineAction, land } from "@/features/server-action";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
@@ -10,7 +10,10 @@ import {
 } from "@/lib/divemaster-ratio";
 import { SETTINGS_GATE } from "./action-gates";
 
-const crewScheduleForm = z.object({ diversPerDivemaster: formValue() });
+const crewScheduleForm = z.object({
+  diversPerDivemaster: formValue(),
+  timeOffApproval: checkbox(),
+});
 
 /**
  * Saves the divemaster target the crew schedule's nudges read
@@ -26,7 +29,7 @@ export const saveCrewScheduleAction = defineAction({
     if (diversPerDivemaster === "invalid") {
       return land(settings, "crew-schedule-ratio-invalid", { extra: { form: "crewSchedule" } });
     }
-    await setShopDiversPerDivemaster(db, shopId, diversPerDivemaster);
+    await setShopDiversPerDivemaster(db, shopId, diversPerDivemaster, form.timeOffApproval);
     return land(settings, "crew-schedule-saved", { extra: { saved: "crewSchedule" } });
   },
 });

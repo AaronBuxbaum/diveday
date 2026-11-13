@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AddPanel } from "@/components/AddPanel";
-import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import type { MapPin } from "@/components/map/SiteMap";
@@ -11,8 +10,6 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { buttonClass } from "@/components/ui/button";
-import { SearchField } from "@/components/ui/form";
-import { QueryForm } from "@/components/ui/QueryForm";
 import type { NoticeTone } from "@/components/ui/tone";
 import {
   countGlobalDiveSiteTemplates,
@@ -30,13 +27,14 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
+import { canEditDiveSites } from "@/lib/authz";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { CatalogView } from "./_components/CatalogView";
 import { NewSitePanel } from "./_components/NewSitePanel";
-import { SiteFilterChips } from "./_components/SiteFilterChips";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
 import { SiteLibraryViews } from "./_components/SiteLibraryViews";
+import { SiteToolbar } from "./_components/SiteToolbar";
 import { catalogPageMetadata } from "./dive-site-page-metadata";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
@@ -99,12 +97,18 @@ export default async function DiveSitesPage({
   // through the diver bundle -- in the staffer's own language, same locale.
   const diverT = diverTranslator(locale);
 
-  // The published site catalog re-sorts nothing of the library's own evidence
-  // — it is DiveDay's own dataset — but it was reachable from exactly two
-  // buttons on this page and nowhere else, so it earns the same treatment as
-  // Not ready (ADR 20260803-not-ready-is-a-view / 20260806-dive-site-catalog-is-a-view):
-  // one route and a `?view=` switch for the published site catalog.
-  if (view === "catalog") {
+  // Editing the library, and so importing from DiveDay's catalog, is owner and
+  // manager work (`canEditDiveSites`, read off the session for what is drawn;
+  // every action re-asks the database): a crew member reads the sites and
+  // schedules trips at them, and is never shown a door that is not theirs.
+  const mayEdit = canEditDiveSites(surface.session.user.roles);
+  const requestedPage = Number.parseInt(page ?? "", 10);
+  const query = q?.trim() ? q.trim() : "";
+  const filters = parseSiteFilters(search);
+  // The published site catalog is one route and a `?view=catalog` switch
+  // (ADR 20260803-not-ready-is-a-view / 20260806-dive-site-catalog-is-a-view),
+  // and it answers the same search and chips the library does.
+  if (view === "catalog" && mayEdit) {
     return (
       <CatalogView
         shopSlug={shopSlug}
@@ -114,14 +118,13 @@ export default async function DiveSitesPage({
         diverT={diverT}
         page={page}
         slug={template}
+        query={query}
+        filters={filters}
       />
     );
   }
 
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
-  const requestedPage = Number.parseInt(page ?? "", 10);
-  const query = q?.trim() ?? "";
-  const filters = parseSiteFilters(search);
   const narrowed = Boolean(filters.difficulty || filters.need || filters.area);
   const [sitePage, librarySize, catalogSize, mapRows] = await Promise.all([
     listDiveSitesPage(
@@ -136,8 +139,14 @@ export default async function DiveSitesPage({
     diveSiteLibrarySize(db, shop.id),
     // The catalog door's number, over the whole published catalog — never the
     // `total` of a page nobody has fetched yet (ADR 20260827-the-shops-shelves).
-    countGlobalDiveSiteTemplates(db),
-    listDiveSiteMapRows(db, shop.id),
+    mayEdit ? countGlobalDiveSiteTemplates(db) : Promise.resolve(0),
+    // The pins answer the search and chips the list does; the map's own area is
+    // what it draws, so it never narrows them.
+    listDiveSiteMapRows(db, shop.id, {
+      query: query || undefined,
+      difficulty: filters.difficulty,
+      need: filters.need,
+    }),
   ]);
   const sites = sitePage.rows;
   const banner = noticeFromParam(notice, NOTICES);
@@ -196,7 +205,7 @@ export default async function DiveSitesPage({
         // owns them until there is a library to act on.
         //
         actions={
-          librarySize === 0 || adding ? undefined : (
+          !mayEdit || librarySize === 0 || adding ? undefined : (
             <Link href={addHref} className={buttonClass()}>
               {t("diveSites.list.createSite")}
             </Link>
@@ -205,13 +214,18 @@ export default async function DiveSitesPage({
       />
 
       {librarySize > 0 && catalogSize > 0 ? (
-        <SiteLibraryViews shopSlug={shopSlug} current="library" t={t} />
+        <SiteLibraryViews
+          shopSlug={shopSlug}
+          current="library"
+          carry={{ q: query, difficulty: filters.difficulty, need: filters.need }}
+          t={t}
+        />
       ) : null}
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
       <AddPanel
-        open={adding}
+        open={adding && mayEdit}
         title={t("diveSites.new.title")}
         description={t("diveSites.new.description")}
         closeHref={addPanelCloseHref(libraryPath, search)}
@@ -221,62 +235,10 @@ export default async function DiveSitesPage({
       </AddPanel>
 
       {/* Unconditional once there is anything to search: a library that hid
-        its search box below some size would teach staff to scroll, and the
-        one shop that grows past a screenful is exactly the one that never
-        learned the box exists. Hidden only when the library is empty, where
-        the empty state has the single thing to do. */}
+        its search box below some size would teach staff to scroll. Hidden only
+        when the library is empty, where the empty state has the one thing to do. */}
       {librarySize > 0 ? (
-        <QueryForm
-          aria-label={t("diveSites.list.searchAriaLabel")}
-          // A toolbar, not a card: the one search box every staff list wears
-          // (`SearchField`), and beside it only the way back out. The bordered
-          // band with a "Find a site" caption and a Search button that stood
-          // here was the third grammar for the same control in the app.
-          className="mb-6 flex items-center gap-2"
-        >
-          <SearchField
-            key={query}
-            id="site-search"
-            name="q"
-            label={t("diveSites.list.searchLabel")}
-            defaultValue={query}
-            placeholder={t("diveSites.list.searchPlaceholder")}
-            className="w-full min-w-0 sm:w-80"
-          />
-          {query ? (
-            // The drawn cross every remove control shares (the crew row's
-            // unassign, the builder's crew chip), through the shared
-            // `size: "icon"` box rather than a hand-spelled square — 48px,
-            // the same construction as the report navigator's arrows, the
-            // mark at the field's 16px. The words survive as the accessible
-            // name, so nothing is lost to a screen reader or to the e2e spec
-            // that clicks it by name.
-            <Link
-              href={siteListHref(libraryPath, { ...filters })}
-              scroll={false}
-              aria-label={t("diveSites.list.searchClear")}
-              title={t("diveSites.list.searchClear")}
-              className={buttonClass({ variant: "ghost", size: "icon" })}
-            >
-              <DiveDayIcon name="close" className="size-4" />
-            </Link>
-          ) : null}
-          {/* The choices the box does not own ride along when it submits. */}
-          {filters.difficulty ? (
-            <input type="hidden" name="difficulty" value={filters.difficulty} />
-          ) : null}
-          {filters.need ? <input type="hidden" name="need" value={filters.need} /> : null}
-        </QueryForm>
-      ) : null}
-
-      {librarySize > 0 ? (
-        <SiteFilterChips
-          libraryPath={libraryPath}
-          query={query}
-          filters={filters}
-          t={t}
-          diverT={diverT}
-        />
+        <SiteToolbar base={libraryPath} query={query} filters={filters} t={t} diverT={diverT} />
       ) : null}
 
       {librarySize === 0 ? (
@@ -284,7 +246,7 @@ export default async function DiveSitesPage({
           title={query ? t("diveSites.list.noMatchHeading") : t("diveSites.list.emptyHeading")}
           body={t("diveSites.list.emptyBody")}
           action={
-            query || librarySize > 0 || adding ? null : (
+            !mayEdit || query || librarySize > 0 || adding ? null : (
               // The only place these two doors exist on an empty library: the
               // header drops its actions when the library is empty precisely so
               // this card owns them, and a shop reading "start with a site your
@@ -315,22 +277,10 @@ export default async function DiveSitesPage({
           pins={pins}
           clusterLabel={t("diveSites.map.clusterLabel")}
           followLabel={t("diveSites.list.followMap")}
+          areaCount={t("diveSites.list.areaCount", { count: sitePage.total })}
           scoped={Boolean(filters.area)}
           baseHref={withoutArea}
         >
-          {filters.area ? (
-            // The list is narrowed by where the map is looking; say so here,
-            // beside the rows it changed, with the way back to all of them.
-            <p
-              role="status"
-              className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-primary bg-primary-tint px-4 py-3 text-sm text-primary"
-            >
-              <span>{t("diveSites.list.areaNote", { count: sitePage.total })}</span>
-              <Link href={withoutArea} scroll={false} className="font-medium underline">
-                {t("diveSites.list.areaClear")}
-              </Link>
-            </p>
-          ) : null}
           {sites.length === 0 ? (
             <EmptyState
               title={t("diveSites.list.noMatchHeading")}

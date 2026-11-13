@@ -62,6 +62,7 @@ export async function readStaffingWeek({
     blocks,
     canManageStaffAccounts: canManage,
     crewRequests,
+    pendingTimeOff,
   } = await getStaffingPage(
     db,
     shop,
@@ -70,12 +71,14 @@ export async function readStaffingWeek({
       to: wallTimeToUtc(toWall, shop.timezone),
       firstDay: weekStart,
       lastDay: weekEnd,
+      today,
     },
     session.user.personId,
   );
 
   const week = staffWeek({
-    blocks,
+    // A declined ask counts as nothing on the grid; it is only on its owner's Shifts tab.
+    blocks: blocks.filter((block) => block.status !== "declined"),
     requests: crewRequests,
     // Who is reading. `isCrew` is deliberately every staff role: a captain
     // asking to run Saturday's boat is the ordinary case, and narrowing it to
@@ -120,6 +123,7 @@ export async function readStaffingWeek({
     weekEnd,
     view,
     blocks,
+    pendingTimeOff,
     canManage,
     week: filterStaffWeek(week, selectedPerson),
     selectedPerson,

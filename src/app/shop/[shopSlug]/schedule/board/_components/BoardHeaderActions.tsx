@@ -43,7 +43,7 @@ export function BoardHeaderActions({
           {st("schedule.addBooking")}
         </Link>
       )}
-      <div className="flex gap-3 max-md:hidden">
+      <div className="hidden md:contents">
         {canConfigure ? (
           <Link href={callPanelHref(shopSlug)} className={buttonClass({ variant: "secondary" })}>
             {st("schedule.addBooking")}

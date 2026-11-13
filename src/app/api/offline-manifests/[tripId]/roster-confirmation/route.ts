@@ -16,20 +16,38 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
     const length = Number(request.headers.get("content-length") ?? "0");
     if (length > 1024)
       return new Response(null, { status: 413, headers: OFFLINE_MANIFEST_NO_STORE });
-    const raw = await request.text();
-    if (new TextEncoder().encode(raw).byteLength > 1024)
-      return new Response(null, { status: 413, headers: OFFLINE_MANIFEST_NO_STORE });
-    body = JSON.parse(raw);
+    const reader = request.body?.getReader();
+    if (!reader) return new Response(null, { status: 400, headers: OFFLINE_MANIFEST_NO_STORE });
+    const decoder = new TextDecoder();
+    let size = 0;
+    let raw = "";
+    for (;;) {
+      const part = await reader.read();
+      if (part.done) break;
+      size += part.value.byteLength;
+      if (size > 1024) {
+        void reader.cancel().catch(() => {});
+        return new Response(null, { status: 413, headers: OFFLINE_MANIFEST_NO_STORE });
+      }
+      raw += decoder.decode(part.value, { stream: true });
+    }
+    body = JSON.parse(raw + decoder.decode());
   } catch {
     return new Response(null, { status: 400, headers: OFFLINE_MANIFEST_NO_STORE });
   }
-  const input = body as { nonce?: unknown; proof?: unknown; renderId?: unknown } | null;
+  const input = body as {
+    nonce?: unknown;
+    proof?: unknown;
+    renderId?: unknown;
+    checkpoint?: unknown;
+  } | null;
   const erasureEpoch = await getShopOfflineErasureEpoch(access.db, access.shop.id);
   const valid =
     uuidParam(tripId) &&
     typeof input?.nonce === "string" &&
     typeof input.renderId === "string" &&
     typeof input.proof === "string" &&
+    typeof input.checkpoint === "string" &&
     access.user.sessionId &&
     erasureEpoch !== null &&
     verifyRosterConfirmation(
@@ -40,6 +58,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
         nonce: input.nonce,
         renderId: input.renderId,
         erasureEpoch,
+        checkpoint: input.checkpoint,
       },
       input.proof,
     );

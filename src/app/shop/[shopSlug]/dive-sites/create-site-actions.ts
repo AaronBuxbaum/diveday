@@ -11,6 +11,7 @@ import { uploadDiveSitePhotos } from "@/features/storage";
 import { shopPath } from "@/lib/staff-notices";
 import type { SiteFormState } from "./_components/SiteFormShell";
 import { siteFormExtras } from "./site-forms";
+import { requireSiteEditor } from "./site-gate";
 
 /**
  * Create a dive site from the new-site form, in the session's own shop, and open
@@ -23,6 +24,7 @@ export async function createDiveSiteAction(
   formData: FormData,
 ): Promise<SiteFormState> {
   const activeSession = await requireStaffSession();
+  await requireSiteEditor(activeSession);
   const back = shopPath(activeSession.user.shopSlug, "dive-sites");
   // Every refusal carries the whole submission back to the form, which is
   // what lets a staffer fix the one field that was wrong instead of retyping

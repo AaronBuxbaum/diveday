@@ -5,6 +5,7 @@ import { LazySiteMap } from "@/components/map/LazySiteMap";
 import type { MapPin, MapPinDetails, ShopAnchor } from "@/components/map/SiteMap";
 
 import type { CatalogMapPin } from "../catalog-map-pins";
+import { FilterByMapSwitch, useMapFollow } from "./useMapFollow";
 
 export function CatalogMapLayout({
   shopAnchor,
@@ -15,6 +16,10 @@ export function CatalogMapLayout({
   loadDetails,
   detailWords,
   clusterLabel,
+  followLabel,
+  areaCount,
+  scoped,
+  baseHref,
   children,
 }: {
   shopAnchor: ShopAnchor | null;
@@ -25,9 +30,15 @@ export function CatalogMapLayout({
   loadDetails: (slug: string) => Promise<MapPinDetails | null>;
   detailWords: { loading: string; unavailable: string };
   clusterLabel: string;
+  /** The words on the map's switch, and the count it shows while on. */
+  followLabel: string;
+  areaCount: string;
+  scoped: boolean;
+  baseHref: string;
   children: ReactNode;
 }) {
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
+  const follow = useMapFollow({ scoped, baseHref });
 
   const pins = useMemo(
     () =>
@@ -71,26 +82,28 @@ export function CatalogMapLayout({
       : { latitude: 25.0117, longitude: -80.4223 };
 
   return (
-    <div className="mt-8 flex flex-col gap-8">
-      {/* Primary Map View */}
-      <div className="w-full">
-        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-          <div className="h-[440px] w-full sm:h-[540px] lg:h-[620px]">
-            <LazySiteMap
-              viewportStorageKey={viewportStorageKey}
-              center={defaultCenter}
-              zoom={10}
-              shopAnchor={shopAnchor}
-              pins={pins}
-              loadPinDetails={loadPinDetails}
-              pinDetailsWords={detailWords}
-              clusterLabel={clusterLabel}
-              selectedPinId={selectedPinId}
-              onSelectPin={setSelectedPinId}
-              className="h-full w-full"
-            />
-          </div>
-        </div>
+    <div className="mt-6 flex flex-col gap-8">
+      <div className="relative isolate h-[440px] w-full overflow-hidden rounded-xl border border-border bg-surface shadow-sm sm:h-[540px] lg:h-[620px]">
+        <LazySiteMap
+          viewportStorageKey={viewportStorageKey}
+          center={defaultCenter}
+          zoom={10}
+          shopAnchor={shopAnchor}
+          pins={pins}
+          loadPinDetails={loadPinDetails}
+          pinDetailsWords={detailWords}
+          clusterLabel={clusterLabel}
+          selectedPinId={selectedPinId}
+          onSelectPin={setSelectedPinId}
+          onViewChange={follow.onViewChange}
+          className="h-full w-full"
+        />
+        <FilterByMapSwitch
+          following={follow.following}
+          onToggle={follow.toggle}
+          label={followLabel}
+          count={areaCount}
+        />
       </div>
 
       {/* Companion Ledger */}

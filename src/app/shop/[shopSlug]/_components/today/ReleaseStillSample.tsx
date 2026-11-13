@@ -37,7 +37,7 @@ export async function ReleaseStillSample({
   return (
     <ul className="mt-6">
       <LedgerRow
-        href={`${shopPath(shop.slug, "waivers")}#release`}
+        href={`${shopPath(shop.slug, "settings", "waivers")}#release`}
         linkLabel={t("shopHome.firstRun.releaseAction")}
       >
         <div className="min-w-0">

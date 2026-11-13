@@ -1220,6 +1220,7 @@ function offlineManifestSnapshotIssued(body: unknown): OfflineManifestSnapshotRe
  */
 export async function claimOfflineManifestSnapshot(
   payload: OfflineManifestPayload,
+  options?: { onStale?: () => void },
 ): Promise<OfflineManifestPayload | typeof OFFLINE_MANIFEST_STALE_READ | null> {
   const { readAt, ...rest } = payload;
   if (readAt === undefined) return payload;
@@ -1240,7 +1241,10 @@ export async function claimOfflineManifestSnapshot(
       body: JSON.stringify(body),
       signal: controller.signal,
     });
-    if (response.status === 409) return OFFLINE_MANIFEST_STALE_READ;
+    if (response.status === 409) {
+      options?.onStale?.();
+      return OFFLINE_MANIFEST_STALE_READ;
+    }
     if (!response.ok) return null;
     const issued = offlineManifestSnapshotIssued(await response.json());
     return issued ? { ...rest, ...issued } : null;

@@ -31,7 +31,7 @@ test.describe("the front-of-house assists, dark", () => {
     await page.goto("/shop/blue-mantis/settings/import?what=website");
     await expect(page.getByRole("heading", { name: "Set up from your website" })).toHaveCount(0);
 
-    await page.goto("/shop/blue-mantis/waivers#release");
+    await page.goto("/shop/blue-mantis/settings/waivers#release");
     await expect(page.getByRole("button", { name: "Draft from PDF" })).toHaveCount(0);
   });
 });

@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { manifestStaleGeneration } from "@/components/manifest-stale-generation";
+import { ManifestRosterFreshness } from "@/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestRosterFreshness";
+import { readManifestHistoryCookie } from "@/app/shop/[shopSlug]/trips/[id]/manifest/_components/manifest-history-cookie";
+import {
+  manifestStaleGeneration,
+  resetManifestRereadForTests,
+  subscribeManifestReread,
+} from "@/components/manifest-stale-generation";
 import {
   beginOfflineTenantVerificationRound,
   loadOfflineManifest,
@@ -116,6 +122,7 @@ function deferred<T>() {
 
 beforeEach(() => {
   forgetSavedOfflineReads();
+  resetManifestRereadForTests(TRIP_ID);
   vi.resetAllMocks();
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   // A browser with service workers but none registered for this page (a
@@ -215,15 +222,58 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
   const stale = () => Response.json({ error: "snapshot_superseded" }, { status: 409 });
   const issued = () => Response.json({ snapshotId: SNAPSHOT_ID, erasureEpochToken: "4.10.signed" });
 
+  let releaseRereadOwner: (() => void) | undefined;
   afterEach(() => {
+    releaseRereadOwner?.();
+    releaseRereadOwner = undefined;
     vi.unstubAllGlobals();
   });
+
+  function mountRereadOwner() {
+    releaseRereadOwner = subscribeManifestReread(TRIP_ID, () => {
+      mockRouter.refresh();
+      return true;
+    });
+  }
 
   function renderPage(initial: OfflineManifestPayload) {
     return renderHook(({ page }) => useOfflineManifestSync(page, copy), {
       initialProps: { page: initial },
     });
   }
+
+  it("hands a stale snapshot to the mounted owner for one correlated reread", async () => {
+    window.history.replaceState(null, "", "/manifest");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        url === SNAPSHOT_URL ? stale() : new Response(null, { status: 204 }),
+      ),
+    );
+    const status = { unconfirmed: "Not checked", confirmed: "Checked" };
+    const freshness = render(
+      <ManifestRosterFreshness tripId={TRIP_ID} renderId="first" copy={status} />,
+    );
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+    const first = readManifestHistoryCookie(document.cookie, TRIP_ID);
+    renderPage(pagePayload);
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(2));
+    const second = readManifestHistoryCookie(document.cookie, TRIP_ID);
+    expect(second).toBeDefined();
+    expect(second).not.toBe(first);
+    expect(screen.getByText(status.unconfirmed)).toBeVisible();
+    freshness.rerender(
+      <ManifestRosterFreshness
+        tripId={TRIP_ID}
+        renderId="second"
+        renderToken={second}
+        renderProof="proof"
+        copy={status}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText(status.confirmed)).toBeVisible());
+    expect(mockRouter.refresh).toHaveBeenCalledTimes(2);
+  });
 
   it("saves the rows under the snapshot the server issues for the epoch and revision they were read at", async () => {
     const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => issued());
@@ -263,6 +313,7 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
   });
 
   it("claims again when the saved copy is gone, and re-reads the page if that claim is stale", async () => {
+    mountRereadOwner();
     const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => issued());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -282,6 +333,7 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
   });
 
   it("saves nothing and re-reads the page once when the read is stale, then saves the re-read", async () => {
+    mountRereadOwner();
     const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
       JSON.parse(String(init?.body)).snapshotRevision === 9 ? stale() : issued(),
     );
@@ -297,6 +349,7 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
   });
 
   it("asks for one re-read per stale claim, never a loop", async () => {
+    mountRereadOwner();
     const generation = manifestStaleGeneration(TRIP_ID);
     const fetchMock = vi.fn(async () => stale());
     vi.stubGlobal("fetch", fetchMock);
@@ -315,6 +368,7 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
   });
 
   it("does not stay on Saving… after a manual refresh whose claim is stale and whose re-read never lands", async () => {
+    mountRereadOwner();
     let claims = 0;
     vi.stubGlobal(
       "fetch",

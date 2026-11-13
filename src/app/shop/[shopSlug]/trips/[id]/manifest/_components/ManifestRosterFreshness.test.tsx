@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invalidateManifestRead } from "@/components/manifest-stale-generation";
 import { announceSessionInvalidation } from "@/components/session-invalidation";
 import { ManifestRosterFreshness } from "./ManifestRosterFreshness";
+import { manifestHistoryCookieName, readManifestHistoryCookie } from "./manifest-history-cookie";
 
 const router = { refresh: vi.fn() };
 vi.mock("next/navigation", () => ({
@@ -16,6 +17,8 @@ const copy = { unconfirmed: "Roster not freshly confirmed", confirmed: "Roster c
 
 beforeEach(() => {
   router.refresh.mockClear();
+  // biome-ignore lint/suspicious/noDocumentCookie: exercise the real cookie-backed challenge.
+  document.cookie = `${manifestHistoryCookieName("trip-1")}=; Path=/; Max-Age=0`;
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
   window.history.replaceState(null, "", "/manifest");
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
@@ -30,7 +33,7 @@ it("withdraws confirmation on every stale claim without accepting an old verifie
   );
   const page = render(<ManifestRosterFreshness tripId="trip-1" renderId="first" copy={copy} />);
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
       tripId="trip-1"
@@ -52,7 +55,7 @@ it("withdraws confirmation on every stale claim without accepting an old verifie
 it("requires a later verified read after a confirmed roster becomes stale", async () => {
   const page = render(<ManifestRosterFreshness tripId="trip-1" renderId="first" copy={copy} />);
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const first = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const first = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
       tripId="trip-1"
@@ -70,7 +73,7 @@ it("requires a later verified read after a confirmed roster becomes stale", asyn
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   act(() => window.dispatchEvent(new Event("online")));
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(2));
-  const second = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const second = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   expect(second).not.toBe(first);
   page.rerender(
     <ManifestRosterFreshness
@@ -104,7 +107,7 @@ it("keeps an old verifier invalid across a hidden page, stale claim and return",
   );
   const page = render(view("visible"));
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const first = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const first = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(view("visible", first));
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
   page.rerender(view("hidden", first));
@@ -129,7 +132,7 @@ it("does not confirm an old-session render when live verification refuses it", a
     />,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
       renderId="render-one"
@@ -156,7 +159,7 @@ it("does not mistake an HTML success response for confirmation", async () => {
     />,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
       renderId="render-one"
@@ -189,7 +192,7 @@ it("ignores an older verification response after a new return", async () => {
     </Activity>,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const first = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const first = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <Activity mode="visible">
       <ManifestRosterFreshness
@@ -240,7 +243,7 @@ it("withdraws confirmation when a different render arrives with the same request
     />,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
       tripId="trip-1"
@@ -302,7 +305,7 @@ it("allows a fresh activation after a session invalidation only after live verif
     </Activity>,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(2));
-  const next = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const next = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   expect(screen.getByText(copy.unconfirmed)).toBeVisible();
   page.rerender(
     <Activity mode="visible">
@@ -335,8 +338,8 @@ it("does not confirm a verifier that answers after its deadline", async () => {
     />,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
-  vi.useFakeTimers();
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
   try {
     page.rerender(
       <ManifestRosterFreshness
@@ -375,7 +378,7 @@ it("keeps the cached rows unconfirmed until the requested server render replaces
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
   expect(screen.getByText("Erased diver")).toBeVisible();
   expect(screen.getByText(copy.unconfirmed)).toBeVisible();
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   expect(token).toBeTruthy();
   page.rerender(
     <>
@@ -463,7 +466,7 @@ it("does not confirm a response that arrives after the device goes offline", asy
     />,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
   act(() => window.dispatchEvent(new Event("offline")));
   page.rerender(
@@ -489,7 +492,7 @@ it("does not confirm an in-flight response after this device changes session", a
     />,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   act(() => announceSessionInvalidation());
   act(() => window.dispatchEvent(new Event("online")));
   page.rerender(
@@ -524,7 +527,7 @@ it("invalidates an in-flight response when another tab changes session", async (
     />,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   act(() => receiver?.(new MessageEvent("message", { data: "invalidate" })));
   page.rerender(
     <ManifestRosterFreshness
@@ -549,7 +552,7 @@ it("withdraws confirmation if a different server render replaces the roster", as
     />,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
       renderId="render-one"
@@ -573,19 +576,19 @@ it("withdraws confirmation if a different server render replaces the roster", as
 });
 
 it("expires confirmation even if no further render arrives", async () => {
-  const page = render(
-    <ManifestRosterFreshness
-      renderId="render-one"
-      tripId="trip-1"
-      renderProof="proof"
-      renderToken={undefined}
-      copy={copy}
-    />,
-  );
-  await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const token = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
   vi.useFakeTimers();
   try {
+    const page = render(
+      <ManifestRosterFreshness
+        renderId="render-one"
+        tripId="trip-1"
+        renderProof="proof"
+        renderToken={undefined}
+        copy={copy}
+      />,
+    );
+    expect(router.refresh).toHaveBeenCalledTimes(1);
+    const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
     page.rerender(
       <ManifestRosterFreshness
         renderId="render-one"
@@ -615,7 +618,7 @@ it("requests confirmation again when reconciliation replaces a checked roster", 
     />,
   );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
-  const first = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const first = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
       renderId="render-one"
@@ -637,7 +640,7 @@ it("requests confirmation again when reconciliation replaces a checked roster", 
   );
   expect(screen.getByText(copy.unconfirmed)).toBeVisible();
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(2));
-  const second = new URLSearchParams(window.location.search).get("rosterRead") ?? undefined;
+  const second = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   expect(second).not.toBe(first);
   page.rerender(
     <ManifestRosterFreshness

@@ -1,3 +1,4 @@
+import { readManifestHistoryCookie } from "../src/app/shop/[shopSlug]/trips/[id]/manifest/_components/manifest-history-cookie";
 import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
@@ -42,8 +43,8 @@ for (const width of [390, 1280]) {
         const url = new URL(request.url());
         if (
           url.pathname === manifest &&
-          url.searchParams.has("rosterRead") &&
-          request.headers().rsc === "1"
+          request.headers().rsc === "1" &&
+          readManifestHistoryCookie((await request.allHeaders()).cookie ?? null, DEMO_TODAY_TRIP_ID)
         ) {
           requests += 1;
           await held;
@@ -96,8 +97,8 @@ test("a roster refresh preserves an open person sheet without a document navigat
     const url = new URL(request.url());
     if (
       url.pathname === manifest &&
-      url.searchParams.has("rosterRead") &&
-      request.headers().rsc === "1"
+      request.headers().rsc === "1" &&
+      readManifestHistoryCookie((await request.allHeaders()).cookie ?? null, DEMO_TODAY_TRIP_ID)
     ) {
       reads++;
       await held;
@@ -160,8 +161,8 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
     }
     if (
       url.pathname === manifest &&
-      url.searchParams.has("rosterRead") &&
       request.headers().rsc === "1" &&
+      readManifestHistoryCookie((await request.allHeaders()).cookie ?? null, DEMO_TODAY_TRIP_ID) &&
       holdReturnRead
     ) {
       reads++;

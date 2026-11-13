@@ -270,12 +270,9 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The waiver surface as one page (ADR 20260827-people-not-lists,
-       * decision 4): the signature log as a day-grouped ledger, under one
-       * "Edit the release" door. The editor used to stand open above it — a
-       * full-height textarea of the legal text, a radio pair and a Publish, on
-       * top of 519 signed records — and editing a release is rare where reading
-       * who signed is daily (slice E3-7). The log is paginated
+       * The signed waivers, read in Divers (Aaron, 2026-11-13; the release and
+       * course forms are set up in Settings): the signature log as a
+       * day-grouped ledger. The log is paginated
        * (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`) so the demo
        * shop's 150+ signed records are one bounded page under the shared pager
        * rather than a 17,000px capture — the page is what is bounded, not the
@@ -285,10 +282,17 @@ for (const scheme of ["light", "dark"] as const) {
        * door, and a capture taken before it lands photographs half a page.
        */
       test(`the waiver surface renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/waivers");
-        await page.getByRole("heading", { level: 1, name: "Safety" }).waitFor();
+        await page.goto("/shop/blue-mantis/divers/waivers");
+        await page.getByRole("heading", { level: 1, name: "Signed waivers" }).waitFor();
         await page.getByRole("navigation", { name: "Pages" }).waitFor();
         await capture(page, "staff-waivers", scheme);
+      });
+
+      test(`the waiver and form setup renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/waivers");
+        await page.getByRole("heading", { level: 1, name: "Waivers and forms" }).waitFor();
+        await page.getByRole("textbox", { name: "Release text" }).waitFor();
+        await capture(page, "settings-waivers", scheme);
       });
 
       /**
@@ -297,7 +301,7 @@ for (const scheme of ["light", "dark"] as const) {
        * the shop's questions, signature lines. Print is light only, on Letter.
        */
       test(`the blank release renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/waivers/print");
+        await page.goto("/shop/blue-mantis/settings/waivers/print");
         await page.locator("[data-blank-release]").waitFor();
         await capture(page, "staff-waivers-blank", scheme);
         if (scheme === "light") {
@@ -329,8 +333,8 @@ for (const scheme of ["light", "dark"] as const) {
         // Straight to the open editor: `#release` is the fragment the door
         // answers to, and `AutoOpenDetails` opens it on a hard load as well as
         // on a client transition.
-        await page.goto("/shop/blue-mantis/waivers#release");
-        await page.getByRole("heading", { level: 1, name: "Safety" }).waitFor();
+        await page.goto("/shop/blue-mantis/settings/waivers#release");
+        await page.getByRole("heading", { level: 1, name: "Waivers and forms" }).waitFor();
         await page.getByRole("radio", { name: /A material change/ }).check();
         await page.getByRole("button", { name: "Publish", exact: true }).click();
         await page.getByRole("button", { name: /Publish: \d+ signs? again/ }).waitFor();
@@ -345,11 +349,11 @@ for (const scheme of ["light", "dark"] as const) {
        * medical prompt — so without it nothing has ever looked at it.
        */
       test(`a pinned signed record renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/waivers");
+        await page.goto("/shop/blue-mantis/divers/waivers");
         const rows = page.locator('details[id^="waiver-record-"]');
         await rows.first().waitFor();
         const record = (await rows.first().getAttribute("id"))?.replace("waiver-record-", "");
-        await page.goto(`/shop/blue-mantis/waivers?record=${record}`);
+        await page.goto(`/shop/blue-mantis/divers/waivers?record=${record}`);
         await page.locator('details[id^="waiver-record-"][open]').first().waitFor();
         await capture(page, "staff-waivers-record", scheme);
       });

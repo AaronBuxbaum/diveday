@@ -58,9 +58,14 @@ export async function readManifestView({
   t: StaffTranslator;
 }) {
   const read = await readManifestPage(db, shop, tripId, session.user.personId);
-  const { completeManifests, boatCheck } = read;
+  const { completeManifests, boatCheck, renderErasureEpoch } = read;
   const departureManifest = completeManifests?.[0];
-  if (!departureManifest || !completeManifests || !boatCheck.offlineRoster)
+  if (
+    !departureManifest ||
+    !completeManifests ||
+    !boatCheck.offlineRoster ||
+    renderErasureEpoch === null
+  )
     return { status: "missing" as const };
   const offlineRoster = boatCheck.offlineRoster;
   const boatSafety = boatSafetySection(t, locale, read.boatSafety);
@@ -150,6 +155,7 @@ export async function readManifestView({
   return {
     status: "ready" as const,
     ...read,
+    renderErasureEpoch,
     completeManifests,
     offlineRoster,
     departureManifest,
