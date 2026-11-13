@@ -1003,7 +1003,7 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // it is about to cost.
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: /Publish: \d+ signs? again/ }).click();
-  await expect(page.getByRole("status")).toContainText("sign again before boarding");
+  await expect(page.getByRole("alert").first()).toContainText("sign again before boarding");
   // The shop now owes those divers a link, and the batch send is one tap away
   // rather than a hunt.
   await expect(page.getByRole("link", { name: "Send them by departure" })).toHaveAttribute(
@@ -1353,7 +1353,9 @@ test("a refused physician evaluation stops the chase without lifting the hold", 
   await page.getByLabel("Date of the physician’s evaluation").fill("2026-07-21");
   await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
   await confirm.click();
-  await expect(page.getByRole("status")).toContainText("The physician did not clear this diver");
+  await expect(page.getByRole("alert").first()).toContainText(
+    "The physician did not clear this diver",
+  );
 
   // The standing changed and the block did not: the group says the answer
   // arrived, and offers no second form to record another one.

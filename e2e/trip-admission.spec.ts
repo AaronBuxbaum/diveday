@@ -353,7 +353,7 @@ test.describe("as owner", () => {
     // tightened the gate finds out who it caught instead of learning it from a
     // diver at the dock. Asserted on the rendered sentence — the trip page's
     // `FlashParams` strips both `notice`, `count`, and `form`.
-    const outcome = page.getByRole("status").filter({ hasText: "Requirements updated." });
+    const outcome = page.getByRole("alert").filter({ hasText: "Requirements updated." });
     await expect(outcome).toContainText(
       "Requirements updated. 1 booked diver no longer meets them",
     );
