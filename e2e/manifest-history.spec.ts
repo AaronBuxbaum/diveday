@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { readManifestHistoryCookie } from "../src/app/shop/[shopSlug]/trips/[id]/manifest/_components/manifest-history-cookie";
 import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
@@ -12,6 +13,8 @@ type ReadCounts = {
   previous: number;
   newChallenge: number;
   distinctNew: number;
+  missingChallenge: number;
+  prefetchInFlight: number;
   shapes: ReadShape[];
 };
 
@@ -28,10 +31,76 @@ function readShape(url: URL, headers: Record<string, string>, keys: string[]): R
 
 async function expectOneRead(counts: ReadCounts) {
   try {
-    await expect.poll(() => counts.total).toBe(1);
+    await expect.poll(() => challengedRefreshes(counts)).toBe(1);
   } catch (error) {
     throw new Error(`Manifest RSC request counts: ${JSON.stringify(counts)}`, { cause: error });
   }
+}
+
+function challengedRefreshes(counts: ReadCounts): number {
+  return counts.shapes.filter((shape) => !shape.prefetch && !shape.segmentPrefetch).length;
+}
+
+async function manifestReadCounter(page: Page, action: "reset" | "read" | "clear") {
+  const response = await page.request.post("/api/test/manifest-reads", {
+    data: { tripId: DEMO_TODAY_TRIP_ID, action },
+  });
+  expect(response.ok()).toBe(true);
+  return (await response.json()) as { count: number | null };
+}
+
+async function holdManifestRefresh(
+  page: Page,
+  manifest: string,
+  previousToken: string | undefined,
+  held: Promise<void>,
+): Promise<ReadCounts> {
+  const counts: ReadCounts = {
+    total: 0,
+    previous: 0,
+    newChallenge: 0,
+    distinctNew: 0,
+    missingChallenge: 0,
+    prefetchInFlight: 0,
+    shapes: [],
+  };
+  const newTokens = new Set<string>();
+  const keys: string[] = [];
+  await page.route("**/*", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname !== manifest || request.headers().rsc !== "1") {
+      await route.fallback();
+      return;
+    }
+    const shape = readShape(url, request.headers(), keys);
+    counts.total++;
+    counts.shapes.push(shape);
+    if (shape.prefetch || shape.segmentPrefetch) {
+      counts.prefetchInFlight++;
+      try {
+        const response = await route.fetch();
+        await route.fulfill({ response });
+      } finally {
+        counts.prefetchInFlight--;
+      }
+      return;
+    }
+    const token = readManifestHistoryCookie(
+      (await request.allHeaders()).cookie ?? null,
+      DEMO_TODAY_TRIP_ID,
+    );
+    if (!token) counts.missingChallenge++;
+    else if (token === previousToken) counts.previous++;
+    else {
+      counts.newChallenge++;
+      newTokens.add(token);
+      counts.distinctNew = newTokens.size;
+    }
+    await held;
+    await route.continue();
+  });
+  return counts;
 }
 
 for (const width of [390, 1280]) {
@@ -49,73 +118,60 @@ for (const width of [390, 1280]) {
         .locator(`nav[data-trip-tabs] a[href="${manifest}"]`)
         .filter({ visible: true });
       const copy = staffTranslator("en-US");
-      if (direction === "forward") {
-        await page.goto(trip);
-        await manifestTab.click();
-      } else {
-        await page.goto(manifest);
-      }
-      await expect(manifestRow(page, "Priya Sharma")).toBeVisible();
-      await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
-      if (direction === "forward") await page.goBack();
-      else await tripTab.click();
-      await expect(tripTab).toHaveAttribute("aria-current", "page");
-
-      const previousToken = readManifestHistoryCookie(
-        await page.evaluate(() => document.cookie),
-        DEMO_TODAY_TRIP_ID,
-      );
-      let release!: () => void;
-      const held = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      const requests: ReadCounts = {
-        total: 0,
-        previous: 0,
-        newChallenge: 0,
-        distinctNew: 0,
-        shapes: [],
-      };
-      const newTokens = new Set<string>();
-      const rscKeys: string[] = [];
-      await page.route("**/*", async (route) => {
-        const request = route.request();
-        const url = new URL(request.url());
-        const token =
-          url.pathname === manifest && request.headers().rsc === "1"
-            ? readManifestHistoryCookie(
-                (await request.allHeaders()).cookie ?? null,
-                DEMO_TODAY_TRIP_ID,
-              )
-            : undefined;
-        if (token) {
-          requests.total += 1;
-          requests.shapes.push(readShape(url, request.headers(), rscKeys));
-          if (token === previousToken) requests.previous += 1;
-          else {
-            requests.newChallenge += 1;
-            newTokens.add(token);
-            requests.distinctNew = newTokens.size;
-          }
-          await held;
-          await route.continue();
-          return;
-        }
-        await route.fallback();
-      });
+      await manifestReadCounter(page, "reset");
       try {
-        if (direction === "forward") await page.goForward();
-        else await page.goBack();
-        await expectOneRead(requests);
+        if (direction === "forward") {
+          await page.goto(trip);
+          await manifestTab.click();
+        } else {
+          await page.goto(manifest);
+        }
         await expect(manifestRow(page, "Priya Sharma")).toBeVisible();
         await expect(
-          page.getByText(copy("manifest.rosterUnconfirmed"), { exact: true }),
+          page.getByText(copy("manifest.rosterConfirmed"), { exact: true }),
         ).toBeVisible();
+        await expect
+          .poll(async () => (await manifestReadCounter(page, "read")).count)
+          .toBeGreaterThan(0);
+        if (direction === "forward") await page.goBack();
+        else await tripTab.click();
+        await expect(tripTab).toHaveAttribute("aria-current", "page");
+
+        const previousToken = readManifestHistoryCookie(
+          await page.evaluate(() => document.cookie),
+          DEMO_TODAY_TRIP_ID,
+        );
+        await manifestReadCounter(page, "reset");
+        let release!: () => void;
+        const held = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const requests = await holdManifestRefresh(page, manifest, previousToken, held);
+        try {
+          if (direction === "forward") await page.goForward();
+          else await page.goBack();
+          await expectOneRead(requests);
+          await expect(manifestRow(page, "Priya Sharma")).toBeVisible();
+          await expect(
+            page.getByText(copy("manifest.rosterUnconfirmed"), { exact: true }),
+          ).toBeVisible();
+          await expect.poll(() => requests.prefetchInFlight).toBe(0);
+          expect(await manifestReadCounter(page, "read")).toEqual({ count: 0 });
+        } finally {
+          release();
+        }
+        await expect(
+          page.getByText(copy("manifest.rosterConfirmed"), { exact: true }),
+        ).toBeVisible();
+        await expect.poll(() => requests.prefetchInFlight).toBe(0);
+        expect(challengedRefreshes(requests), JSON.stringify(requests)).toBe(1);
+        expect(requests.missingChallenge).toBe(0);
+        expect(requests.previous).toBe(0);
+        expect(requests.distinctNew).toBe(1);
+        expect(await manifestReadCounter(page, "read")).toEqual({ count: 1 });
       } finally {
-        release();
+        await manifestReadCounter(page, "clear");
       }
-      await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
-      expect(requests.total).toBe(1);
     });
   }
 }
@@ -126,63 +182,59 @@ test("a roster refresh preserves an open person sheet without a document navigat
   const trip = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}`;
   const manifest = `${trip}/manifest`;
   const copy = staffTranslator("en-US");
-  await page.goto(manifest);
-  await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
-  const tripTab = page.locator(`nav[data-trip-tabs] a[href="${trip}"]`).filter({ visible: true });
-  await tripTab.click();
-  await expect(tripTab).toHaveAttribute("aria-current", "page");
-
-  const previousToken = readManifestHistoryCookie(
-    await page.evaluate(() => document.cookie),
-    DEMO_TODAY_TRIP_ID,
-  );
-  let release!: () => void;
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const reads: ReadCounts = { total: 0, previous: 0, newChallenge: 0, distinctNew: 0, shapes: [] };
-  const newTokens = new Set<string>();
-  const rscKeys: string[] = [];
-  let documentNavigations = 0;
-  page.on("request", (request) => {
-    if (request.isNavigationRequest() && request.frame() === page.mainFrame())
-      documentNavigations++;
-  });
-  await page.route("**/*", async (route) => {
-    const request = route.request();
-    const url = new URL(request.url());
-    const token =
-      url.pathname === manifest && request.headers().rsc === "1"
-        ? readManifestHistoryCookie((await request.allHeaders()).cookie ?? null, DEMO_TODAY_TRIP_ID)
-        : undefined;
-    if (token) {
-      reads.total += 1;
-      reads.shapes.push(readShape(url, request.headers(), rscKeys));
-      if (token === previousToken) reads.previous += 1;
-      else {
-        reads.newChallenge += 1;
-        newTokens.add(token);
-        reads.distinctNew = newTokens.size;
-      }
-      await held;
-      await route.continue();
-      return;
-    }
-    await route.fallback();
-  });
+  await manifestReadCounter(page, "reset");
   try {
-    await page.goBack();
-    await expectOneRead(reads);
-    const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
-    await expect(trigger).toHaveAttribute("data-hydrated", "true");
-    await trigger.click();
+    await page.goto(manifest);
+    await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
+    await expect
+      .poll(async () => (await manifestReadCounter(page, "read")).count)
+      .toBeGreaterThan(0);
+    const tripTab = page.locator(`nav[data-trip-tabs] a[href="${trip}"]`).filter({ visible: true });
+    await tripTab.click();
+    await expect(tripTab).toHaveAttribute("aria-current", "page");
+
+    const previousToken = readManifestHistoryCookie(
+      await page.evaluate(() => document.cookie),
+      DEMO_TODAY_TRIP_ID,
+    );
+    await manifestReadCounter(page, "reset");
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let documentNavigations = 0;
+    page.on("request", (request) => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame())
+        documentNavigations++;
+    });
+    const reads = await holdManifestRefresh(page, manifest, previousToken, held);
+    try {
+      await page.goBack();
+      await expectOneRead(reads);
+      await expect(
+        page.getByText(copy("manifest.rosterUnconfirmed"), { exact: true }),
+      ).toBeVisible();
+      await expect.poll(() => reads.prefetchInFlight).toBe(0);
+      expect(await manifestReadCounter(page, "read")).toEqual({ count: 0 });
+      const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
+      await expect(trigger).toHaveAttribute("data-hydrated", "true");
+      await trigger.click();
+      await expect(page.getByRole("dialog", { name: "Priya Sharma", exact: true })).toBeVisible();
+    } finally {
+      release();
+    }
+    await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
     await expect(page.getByRole("dialog", { name: "Priya Sharma", exact: true })).toBeVisible();
+    await expect.poll(() => reads.prefetchInFlight).toBe(0);
+    expect(challengedRefreshes(reads), JSON.stringify(reads)).toBe(1);
+    expect(reads.missingChallenge).toBe(0);
+    expect(reads.previous).toBe(0);
+    expect(reads.distinctNew).toBe(1);
+    expect(await manifestReadCounter(page, "read")).toEqual({ count: 1 });
+    expect(documentNavigations).toBe(0);
   } finally {
-    release();
+    await manifestReadCounter(page, "clear");
   }
-  await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "Priya Sharma", exact: true })).toBeVisible();
-  expect(documentNavigations).toBe(0);
 });
 
 test("a superseded snapshot and roster refresh preserve an open person sheet", async ({ page }) => {
