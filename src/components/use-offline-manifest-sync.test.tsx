@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { manifestStaleGeneration } from "@/components/manifest-stale-generation";
 import {
   beginOfflineTenantVerificationRound,
   loadOfflineManifest,
@@ -296,6 +297,7 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
   });
 
   it("asks for one re-read per stale claim, never a loop", async () => {
+    const generation = manifestStaleGeneration(TRIP_ID);
     const fetchMock = vi.fn(async () => stale());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -308,6 +310,7 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
     await act(async () => {});
 
     expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
+    expect(manifestStaleGeneration(TRIP_ID)).toBe(generation + 2);
     expect(saveOfflineManifest).not.toHaveBeenCalled();
   });
 
