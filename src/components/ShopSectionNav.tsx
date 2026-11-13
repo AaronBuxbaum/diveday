@@ -161,7 +161,7 @@ export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
 }
 
 const tabClass =
-  "flex h-full min-w-11 flex-1 flex-col items-center justify-center gap-0.5 px-3 text-xs transition-colors focus-visible:focus-ring-inset";
+  "flex h-full min-w-11 flex-1 flex-col items-center justify-center gap-0.5 px-1.5 text-xs transition-colors focus-visible:focus-ring-inset";
 
 /**
  * The phone's tab bar, below `lg`: Today, Schedule, Divers and Inbox, then
@@ -242,13 +242,14 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
           key={hydratedKey}
           ref={tabScrollRef}
           data-staff-tab-scroll=""
-          className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain"
+          className="min-w-0 overflow-x-auto overscroll-x-contain"
+          style={{ flex: `${tabs.length} 1 0%` }}
         >
           <ul className="flex h-full w-max min-w-full items-stretch">
             {tabs.map((item) => {
               const active = item.section === current;
               return (
-                <li key={item.section} className="flex flex-auto">
+                <li key={item.section} className="flex min-w-max flex-1">
                   <Link
                     href={staffDestinationHref(root, item.destination)}
                     // Native focus already scrolls a tab into view; this only
@@ -340,7 +341,7 @@ function MoreMenu({
   // Matches .animate-scale-out in globals.css — the two must move together.
   const { mounted, closing } = useExitAnimation(open, motionMs("base"));
   return (
-    <div ref={rootRef} className="relative flex flex-none">
+    <div ref={rootRef} className="relative flex min-w-max flex-1 basis-0">
       <button
         type="button"
         ref={triggerRef}

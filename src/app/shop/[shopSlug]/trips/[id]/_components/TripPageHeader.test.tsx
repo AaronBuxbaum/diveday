@@ -78,6 +78,22 @@ describe("TripPageHeader", () => {
     expect(screen.queryByRole("link", { name: "Today" })).toBeNull();
   });
 
+  it("omits the parent link when the Trip page relies on the global navigation", () => {
+    render(
+      <TripPageHeader
+        trip={{
+          title: "Two-Tank Reef",
+          startsAt: new Date("2026-07-21T18:30:00Z"),
+          endsAt: new Date("2026-07-21T22:00:00Z"),
+        }}
+        locale="en-US"
+        timeZone="America/New_York"
+      />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Two-Tank Reef");
+  });
+
   it("gives the title its row alone when the surface has no actions", () => {
     renderHeader();
 
@@ -194,6 +210,13 @@ describe("TripPageHeaderSkeleton", () => {
     expect(skeleton?.firstElementChild).toHaveClass("h-4");
     expect(loaded.querySelector("header")).toHaveClass("mb-8");
     expect(skeleton).toHaveClass("mb-8");
+  });
+
+  it("omits the eyebrow space when the loaded Trip page has no backlink", () => {
+    const skeleton = render(<TripPageHeaderSkeleton showBack={false} />).container
+      .firstElementChild;
+    expect(skeleton?.children).toHaveLength(2);
+    expect(skeleton?.firstElementChild).not.toHaveClass("h-4");
   });
 
   it("draws the title's lines in the h1's own line box, spaced as the h1 is", () => {

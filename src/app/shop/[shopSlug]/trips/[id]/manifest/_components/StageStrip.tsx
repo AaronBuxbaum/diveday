@@ -100,8 +100,8 @@ export function StageStrip({
           word would be wrong half the time on exactly the boats that use it
           most. */}
       <div className={`mt-2 ${BOAT_SEGMENT_TRACK_CLASS}`}>
-        {copy.taps.map((tap) => (
-          <form action={formAction} key={tap.stage} className="flex">
+        {copy.taps.map((tap, index) => (
+          <form action={formAction} key={tap.stage} className="group/stage relative flex pt-5">
             <input type="hidden" name="stage" value={tap.stage} />
             <button
               type={tap.stage === "home" && homeConfirm ? "button" : "submit"}
@@ -112,13 +112,21 @@ export function StageStrip({
               aria-busy={isPending}
               aria-pressed={current === tap.stage}
               aria-expanded={tap.stage === "home" && homeConfirm ? confirmingHome : undefined}
-              className={`w-full ${boatSegmentClass(current === tap.stage)}`}
+              className={`w-full tracking-tight ${boatSegmentClass(current === tap.stage)}`}
             >
               <span aria-hidden="true" className="sm:hidden">
                 {tap.shortLabel}
               </span>
               <span className="max-sm:sr-only">{tap.label}</span>
             </button>
+            {index < copy.taps.length - 1 ? (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-0 -end-2 z-10 rounded-sm bg-surface px-0.5 text-base font-bold text-foreground group-focus-within/stage:invisible"
+              >
+                {tap.stage === "underway" ? "↔" : "→"}
+              </span>
+            ) : null}
           </form>
         ))}
       </div>

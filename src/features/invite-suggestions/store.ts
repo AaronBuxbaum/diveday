@@ -71,6 +71,8 @@ export type InviteSuggestion = { personId: string; fullName: string; lastDivedAt
 export type InviteSuggestions = {
   siteName: string;
   shown: InviteSuggestion[];
+  /** The same eligible people after the initial handful. */
+  remaining: InviteSuggestion[];
   /** Everyone who qualifies, `shown` included. */
   total: number;
 };
@@ -271,6 +273,7 @@ export async function listInviteSuggestions(
   return {
     siteName: trip.siteName,
     shown: everyone.slice(0, INVITE_SUGGESTIONS_SHOWN),
+    remaining: everyone.slice(INVITE_SUGGESTIONS_SHOWN),
     total: everyone.length,
   };
 }

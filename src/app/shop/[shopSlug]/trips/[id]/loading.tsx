@@ -18,7 +18,7 @@ import { TripPageHeaderSkeleton } from "./_components/TripPageHeader";
 export default function TripSurfaceLoading() {
   return (
     <Pending data-trip-loading="" className="space-y-10">
-      <TripPageHeaderSkeleton className="" />
+      <TripPageHeaderSkeleton className="" showBack={false} />
       <div>
         <SectionCard as="div" pending padding="none" className="h-80" />
         <Bone className="mt-6 h-11 w-44" />

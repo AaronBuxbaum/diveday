@@ -82,6 +82,21 @@ describe("StageStrip", () => {
     expect(screen.getByRole("button", { name: "Home" })).not.toHaveClass("bg-primary");
   });
 
+  it("shows that Out and Surface can repeat without locking any stage", () => {
+    render(<StageStrip action={noop} copy={copy} current="surface" />);
+    const forms = copy.taps.map((tap) =>
+      screen.getByRole("button", { name: tap.label }).closest("form"),
+    );
+    expect(
+      forms.map(
+        (form) => form?.querySelector('[aria-hidden="true"]:last-child')?.textContent ?? "",
+      ),
+    ).toEqual(["→", "↔", "→", "→", ""]);
+    for (const tap of copy.taps) {
+      expect(screen.getByRole("button", { name: tap.label })).toBeEnabled();
+    }
+  });
+
   it("carries no drawing, no coral and no motion", () => {
     // The path walk in `illustration.test.ts` covers the import; this covers
     // the tokens and the animation class, which no import would show.

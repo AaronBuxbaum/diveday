@@ -1225,3 +1225,11 @@ Neither image nor fact creates another control, and a row without evidence keeps
 Descriptions and badges are the first things to remove: they turn the list into repeated pitches.
 A card grid was considered; the retained ledger keeps day scanning, seat counts, and the single row
 link together while evidence remains subordinate to the departure’s title.
+
+## Staff navigation and departure controls — UI cleanup, 2026-11-12
+
+- **One idea:** the staff navigation names each destination; the departure roster helps the desk choose whom to invite; the manifest records the crew's own current word.
+- **Arriving question:** the main Trip page already has Schedule in global navigation, so its extra parent link can go. Boat mode hides that navigation, so its manifest retains the Schedule escape. The past-diver disclosure answers who else is eligible on request, with the same last-dive context and offer action as the visible rows.
+- **Dissolve controls:** the existing native disclosure owns its summary and the rows retain their own actions; a separate page or another navigation link would split the task. The stage words remain independent controls, not an automatic next step.
+- **Remove until it breaks:** removing the main Trip backlink does not remove Schedule from the shell; removing it from boat mode would leave a crew member without the same immediate escape. Removing stage separators makes the time relationship look like a tab switch; making all arrows one-way conceals the Out ↔ Surface loop on a two-dive trip.
+- **Phone geometry:** the equal navigation targets preserve full names and a 44px minimum; at enlarged text the rail scrolls rather than widening the document. Stage targets remain 56px, and neither the sequence marks nor the disclosure assert that a roll call is complete.

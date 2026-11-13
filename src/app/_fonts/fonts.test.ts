@@ -64,7 +64,7 @@ it("loads only the product symbols and keeps source and locale symbols pinned", 
   expect(symbolsCall).toContain(`"${productRange}"`);
   // The math face supplies arrows; circled information and pictographic emoji
   // already used platform fallback and must keep that existing rendering.
-  const existingOtherFaces = "←↑→↓↗↵−≈≤⋯⏳ⓘ✅❌";
+  const existingOtherFaces = "←↑→↓↔↗↵−≈≤⋯⏳ⓘ✅❌";
   for (const file of globSync(["src/i18n/locales/**/*.json", "src/**/*.tsx"])) {
     const raw = readFileSync(file, "utf8");
     const text = file.endsWith(".json")

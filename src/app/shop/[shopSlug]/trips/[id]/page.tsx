@@ -7,7 +7,6 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { finalHomeSaid, tripPhaseOf } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
@@ -236,7 +235,6 @@ export default async function ManageTripPage({
             name, the crew and boat in a line under it — so every tab change
             redrew the top of the page. */}
         <TripPageHeader
-          backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
           trip={trip}
           locale={locale}
           timeZone={shop.timezone}
