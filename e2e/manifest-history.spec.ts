@@ -122,7 +122,8 @@ test("a roster refresh preserves an open person sheet without a document navigat
 });
 
 test("a superseded snapshot and roster refresh preserve an open person sheet", async ({ page }) => {
-  const manifest = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest`;
+  const trip = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}`;
+  const manifest = `${trip}/manifest`;
   const copy = staffTranslator("en-US");
   let releaseClaim!: () => void;
   let releaseRead!: () => void;
@@ -134,6 +135,7 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
   });
   let claims = 0;
   let reads = 0;
+  let holdReturnRead = false;
   let documentNavigations = 0;
   await page.route("**/*", async (route) => {
     const request = route.request();
@@ -149,7 +151,8 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
     if (
       url.pathname === manifest &&
       url.searchParams.has("rosterRead") &&
-      request.headers().rsc === "1"
+      request.headers().rsc === "1" &&
+      holdReturnRead
     ) {
       reads++;
       if (reads === 1) await readHeld;
@@ -159,11 +162,17 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
   try {
     await page.goto(manifest);
     await expect.poll(() => claims).toBeGreaterThanOrEqual(1);
-    await expect.poll(() => reads).toBeGreaterThanOrEqual(1);
+    await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
+    const tripTab = page.locator(`nav[data-trip-tabs] a[href="${trip}"]`).filter({ visible: true });
+    await tripTab.click();
+    await expect(tripTab).toHaveAttribute("aria-current", "page");
+    holdReturnRead = true;
     page.on("request", (request) => {
       if (request.isNavigationRequest() && request.frame() === page.mainFrame())
         documentNavigations++;
     });
+    await page.goBack();
+    await expect.poll(() => reads).toBeGreaterThanOrEqual(1);
     const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
     await expect(trigger).toHaveAttribute("data-hydrated", "true");
     await trigger.click();
