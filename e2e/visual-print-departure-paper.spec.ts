@@ -233,6 +233,7 @@ test("a paused session prints no departure information and retry restores the do
   await page.unroute("**/api/staff-activity");
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: REEF_TRIP })).toBeVisible();
   const restored = info.outputPath("restored-manifest.pdf");
   await page.pdf({ path: restored, format: "Letter", printBackground: true });
   const restoredText = poppler("pdftotext", ["-layout", restored, "-"]);

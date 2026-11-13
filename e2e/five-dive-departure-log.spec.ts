@@ -67,6 +67,7 @@ test("five-dive departure log keeps the final head count on screen and paper", a
   await page.unroute("**/api/staff-activity");
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(0);
+  await expect(page.getByRole("columnheader", { name: "After dive 5" }).first()).toBeVisible();
   const retryPath = testInfo.outputPath("retry.pdf");
   await page.pdf({ path: retryPath, format: "Letter", printBackground: true });
   const retryText = pdfText(retryPath);
