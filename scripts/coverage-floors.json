@@ -188,5 +188,9 @@
   "src/lib/roll-call-causality.ts": 90.14,
   "src/lib/roll-call-offline-causality.ts": 84.54,
   "src/lib/roll-call-protocol.ts": 100,
-  "src/features/offline-manifest-snapshots/payload.ts": 72.22
+  "src/features/offline-manifest-snapshots/payload.ts": 72.22,
+  "src/features/live-manifest/cache.ts": 91.14,
+  "src/features/live-manifest/projection-proof.ts": 97.14,
+  "src/features/live-manifest/recovery-proof.ts": 96.55,
+  "src/features/live-manifest/session-handle.ts": 100
 }

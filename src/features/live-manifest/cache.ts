@@ -13,10 +13,18 @@ const KEY = "key-v1";
 const PRUNE_CURSOR = "prune-cursor-v1";
 const PRUNE_BATCH = 64;
 
-type Scope = { shop: string; trip: string; checkpoint: string; session: string };
+export type LiveManifestCacheScope = {
+  shop: string;
+  trip: string;
+  checkpoint: string;
+  session: string;
+};
+type Scope = LiveManifestCacheScope;
 type Fence = { shop: string; session: string; request: string; key: string; writes: string };
 type StoredKey = { id: string; key: CryptoKey };
 type Writes = { generation: string; pending: string[] };
+type Tombstone = { revoked: string; reason: "erasure" | "purge" | "session" };
+type Recovery = { tombstone: string; session: string; nonce: string };
 type Ciphertext = {
   iv: Uint8Array<ArrayBuffer>;
   ciphertext: ArrayBuffer;
@@ -28,6 +36,8 @@ type Ciphertext = {
 
 const shopKey = (shop: string) => JSON.stringify(["shop", shop]);
 const sessionKey = (session: string) => JSON.stringify(["session", session]);
+const recoveryKey = (scope: Pick<Scope, "shop" | "session">) =>
+  JSON.stringify(["recovery", scope.shop, scope.session]);
 const requestKey = (scope: Scope) =>
   JSON.stringify(["request", scope.shop, scope.trip, scope.checkpoint, scope.session]);
 const writesKey = (scope: Pick<Scope, "shop" | "trip">) =>
@@ -123,6 +133,17 @@ function validFence(value: unknown): value is string {
   );
 }
 
+function isTombstone(value: unknown): value is Tombstone {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "revoked" in value &&
+    validFence(value.revoked) &&
+    "reason" in value &&
+    (value.reason === "erasure" || value.reason === "purge" || value.reason === "session")
+  );
+}
+
 function validWrites(value: unknown): value is Writes {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<Writes>;
@@ -135,6 +156,7 @@ function validWrites(value: unknown): value is Writes {
 
 /** Capture before starting an authorized read, never after it completes. */
 export async function captureLiveManifestFence(scope: Scope): Promise<Fence> {
+  scope = { ...scope };
   const candidateKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
     "encrypt",
     "decrypt",
@@ -156,7 +178,7 @@ export async function captureLiveManifestFence(scope: Scope): Promise<Fence> {
       request(store.get(sessionKey(scope.session))),
       request(store.get(writesKey(scope))),
     ]);
-    if (shop === "revoked-v1" || session === "revoked-v1") {
+    if (isTombstone(shop) || isTombstone(session)) {
       await complete;
       throw new Error("live-manifest-cache-invalidated");
     }
@@ -197,13 +219,23 @@ export async function captureLiveManifestFence(scope: Scope): Promise<Fence> {
   }
 }
 
-async function invalidate(key: string, part: "shop" | "session", id: string): Promise<void> {
+async function invalidate(
+  key: string,
+  part: "shop" | "session",
+  id: string,
+  reason: Tombstone["reason"],
+): Promise<void> {
   const db = await open();
   try {
     const tx = db.transaction(STORE, "readwrite");
     const complete = done(tx);
     const store = tx.objectStore(STORE);
-    store.put("revoked-v1", key);
+    const previous = await request(store.get(key));
+    const effectiveReason =
+      reason === "erasure" && isTombstone(previous) && previous.reason === "purge"
+        ? "purge"
+        : reason;
+    store.put({ revoked: crypto.randomUUID(), reason: effectiveReason } satisfies Tombstone, key);
     const cursor = store.openKeyCursor();
     cursor.onsuccess = () => {
       const entry = cursor.result;
@@ -228,11 +260,109 @@ async function invalidate(key: string, part: "shop" | "session", id: string): Pr
 }
 
 export const invalidateLiveManifestSession = (session: string) =>
-  invalidate(sessionKey(session), "session", session);
-export const invalidateLiveManifestShop = (shop: string) => invalidate(shopKey(shop), "shop", shop);
+  invalidate(sessionKey(session), "session", session, "session");
+export const invalidateLiveManifestShop = (shop: string) =>
+  invalidate(shopKey(shop), "shop", shop, "erasure");
+export const purgeLiveManifestShop = (shop: string) =>
+  invalidate(shopKey(shop), "shop", shop, "purge");
+
+/** Captures an erasure tombstone before a new server-authorized recovery request. */
+export async function beginLiveManifestShopRecovery(
+  scope: Pick<Scope, "shop" | "session">,
+): Promise<Recovery> {
+  scope = { ...scope };
+  const db = await open();
+  try {
+    const tx = db.transaction(STORE, "readwrite");
+    const complete = done(tx);
+    const store = tx.objectStore(STORE);
+    const [shop, session] = await Promise.all([
+      request(store.get(shopKey(scope.shop))),
+      request(store.get(sessionKey(scope.session))),
+    ]);
+    if (
+      !isTombstone(shop) ||
+      shop.reason !== "erasure" ||
+      (session !== undefined && !validFence(session))
+    ) {
+      await complete;
+      throw new Error("live-manifest-cache-invalidated");
+    }
+    const sessionFence = validFence(session) ? session : crypto.randomUUID();
+    if (session === undefined) store.put(sessionFence, sessionKey(scope.session));
+    const recovery = { tombstone: shop.revoked, session: sessionFence, nonce: crypto.randomUUID() };
+    store.put(recovery, recoveryKey(scope));
+    await complete;
+    return recovery;
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * WIP: the verifier must authenticate this exact shop, current session and
+ * erasure epoch on the server. No production verifier is wired yet.
+ */
+export async function completeLiveManifestShopRecovery(
+  scope: Pick<Scope, "shop" | "session">,
+  recovery: Recovery,
+  verify: (challenge: {
+    shop: string;
+    session: string;
+    tombstone: string;
+    nonce: string;
+  }) => Promise<boolean>,
+): Promise<boolean> {
+  const { shop, session } = scope;
+  const { tombstone, session: sessionFence, nonce } = recovery;
+  if (
+    !shop ||
+    !session ||
+    !validFence(tombstone) ||
+    !validFence(sessionFence) ||
+    !validFence(nonce)
+  )
+    return false;
+  let verified = false;
+  try {
+    verified = await verify({ shop, session, tombstone, nonce });
+  } catch {
+    return false;
+  }
+  if (!verified) return false;
+  const db = await open();
+  try {
+    const tx = db.transaction(STORE, "readwrite");
+    const complete = done(tx);
+    const store = tx.objectStore(STORE);
+    const [storedShop, storedSession, active] = await Promise.all([
+      request(store.get(shopKey(shop))),
+      request(store.get(sessionKey(session))),
+      request(store.get(recoveryKey({ shop, session }))),
+    ]);
+    const current = active as Recovery | undefined;
+    const accepted =
+      isTombstone(storedShop) &&
+      storedShop.reason === "erasure" &&
+      storedShop.revoked === tombstone &&
+      storedSession === sessionFence &&
+      current?.tombstone === tombstone &&
+      current.session === sessionFence &&
+      current.nonce === nonce;
+    if (accepted) {
+      store.put(crypto.randomUUID(), shopKey(shop));
+      store.delete(recoveryKey({ shop, session }));
+    }
+    await complete;
+    return accepted;
+  } finally {
+    db.close();
+  }
+}
 
 /** Record before issuing a mutation; a lost response leaves the barrier pending. */
 export async function beginLiveManifestWrite(scope: Pick<Scope, "shop" | "trip">): Promise<string> {
+  scope = { ...scope };
   const operation = crypto.randomUUID();
   const db = await open();
   try {
@@ -263,6 +393,7 @@ export async function settleLiveManifestWrite(
   scope: Pick<Scope, "shop" | "trip">,
   operation: string,
 ): Promise<boolean> {
+  scope = { ...scope };
   const db = await open();
   try {
     const tx = db.transaction(STORE, "readwrite");
@@ -297,6 +428,8 @@ export async function writeLiveManifestCache(
   value: unknown,
   expiresAt: number,
 ): Promise<boolean> {
+  scope = { ...scope };
+  fence = { ...fence };
   if (
     !validFence(fence.shop) ||
     !validFence(fence.session) ||
@@ -367,6 +500,7 @@ export async function writeLiveManifestCache(
 export async function readLiveManifestCache(
   scope: Scope,
 ): Promise<{ view: unknown; pendingWrites: boolean; changedSinceCache: boolean } | null> {
+  scope = { ...scope };
   const db = await open();
   try {
     const tx = db.transaction(STORE, "readonly");

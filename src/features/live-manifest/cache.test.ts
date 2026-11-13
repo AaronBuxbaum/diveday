@@ -5,11 +5,14 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as clock from "@/lib/clock";
 import { OFFLINE_MANIFEST_MAX_RETENTION_MS } from "@/lib/offline-manifests";
 import {
+  beginLiveManifestShopRecovery,
   beginLiveManifestWrite,
   captureLiveManifestFence,
+  completeLiveManifestShopRecovery,
   invalidateLiveManifestSession,
   invalidateLiveManifestShop,
   writeLiveManifestCache as persist,
+  purgeLiveManifestShop,
   readLiveManifestCache,
   settleLiveManifestWrite,
 } from "./cache";
@@ -235,5 +238,175 @@ describe("live manifest cache fencing", () => {
       changedSinceCache: false,
     });
     expect(await writeLiveManifestCache(scope, first, { roster: ["old"] })).toBe(false);
+  });
+
+  it("does not let an old recovery clear a newer erasure", async () => {
+    await captureLiveManifestFence(scope);
+    await invalidateLiveManifestShop(scope.shop);
+    const first = await beginLiveManifestShopRecovery(scope);
+    await invalidateLiveManifestShop(scope.shop);
+    expect(await completeLiveManifestShopRecovery(scope, first, async () => true)).toBe(false);
+    await expect(captureLiveManifestFence(scope)).rejects.toThrow(
+      "live-manifest-cache-invalidated",
+    );
+    const second = await beginLiveManifestShopRecovery(scope);
+    expect(await completeLiveManifestShopRecovery(scope, second, async () => true)).toBe(true);
+    expect(await captureLiveManifestFence(scope)).toBeDefined();
+  });
+
+  it("rejects recovery after signout or failed verification", async () => {
+    await captureLiveManifestFence(scope);
+    await invalidateLiveManifestShop(scope.shop);
+    const proof = await beginLiveManifestShopRecovery(scope);
+    expect(await completeLiveManifestShopRecovery(scope, proof, async () => false)).toBe(false);
+    await invalidateLiveManifestSession(scope.session);
+    expect(await completeLiveManifestShopRecovery(scope, proof, async () => true)).toBe(false);
+    await expect(captureLiveManifestFence(scope)).rejects.toThrow(
+      "live-manifest-cache-invalidated",
+    );
+  });
+
+  it("does not reopen a shop when erasure arrives during verification", async () => {
+    await captureLiveManifestFence(scope);
+    await invalidateLiveManifestShop(scope.shop);
+    const proof = await beginLiveManifestShopRecovery(scope);
+    let resolve!: (verified: boolean) => void;
+    const verification = new Promise<boolean>((done) => {
+      resolve = done;
+    });
+    const pending = completeLiveManifestShopRecovery(scope, proof, () => verification);
+    await invalidateLiveManifestShop(scope.shop);
+    resolve(true);
+    expect(await pending).toBe(false);
+    await expect(captureLiveManifestFence(scope)).rejects.toThrow(
+      "live-manifest-cache-invalidated",
+    );
+  });
+
+  it("passes a fresh recovery challenge instead of accepting an earlier proof", async () => {
+    await captureLiveManifestFence(scope);
+    await invalidateLiveManifestShop(scope.shop);
+    const first = await beginLiveManifestShopRecovery(scope);
+    const second = await beginLiveManifestShopRecovery(scope);
+    expect(second.nonce).not.toBe(first.nonce);
+    const staleProof = {
+      shop: scope.shop,
+      session: scope.session,
+      tombstone: first.tombstone,
+      nonce: first.nonce,
+    };
+    expect(
+      await completeLiveManifestShopRecovery(
+        scope,
+        second,
+        async (challenge) => JSON.stringify(challenge) === JSON.stringify(staleProof),
+      ),
+    ).toBe(false);
+    await expect(captureLiveManifestFence(scope)).rejects.toThrow(
+      "live-manifest-cache-invalidated",
+    );
+  });
+
+  it("consumes only the active recovery attempt", async () => {
+    await captureLiveManifestFence(scope);
+    await invalidateLiveManifestShop(scope.shop);
+    const first = await beginLiveManifestShopRecovery(scope);
+    const second = await beginLiveManifestShopRecovery(scope);
+    expect(await completeLiveManifestShopRecovery(scope, first, async () => true)).toBe(false);
+    expect(await completeLiveManifestShopRecovery(scope, second, async () => true)).toBe(true);
+    expect(await completeLiveManifestShopRecovery(scope, second, async () => true)).toBe(false);
+  });
+
+  it("keeps the recovery scope and token fixed while verification is pending", async () => {
+    const other = { ...scope, shop: `${scope.shop}-other`, session: `${scope.session}-other` };
+    await captureLiveManifestFence(scope);
+    await captureLiveManifestFence(other);
+    await invalidateLiveManifestShop(scope.shop);
+    await invalidateLiveManifestShop(other.shop);
+    const first = await beginLiveManifestShopRecovery(scope);
+    const second = await beginLiveManifestShopRecovery(other);
+    const mutableScope = { ...scope };
+    const mutableRecovery = { ...first };
+    let resolve!: (result: boolean) => void;
+    const held = new Promise<boolean>((done) => {
+      resolve = done;
+    });
+    const pending = completeLiveManifestShopRecovery(mutableScope, mutableRecovery, () => held);
+    Object.assign(mutableScope, other);
+    Object.assign(mutableRecovery, second);
+    resolve(true);
+    expect(await pending).toBe(true);
+    await expect(captureLiveManifestFence(other)).rejects.toThrow(
+      "live-manifest-cache-invalidated",
+    );
+  });
+
+  it("does not let changed arguments redirect an encryption in flight", async () => {
+    const other = { ...scope, trip: "other-trip" };
+    const first = await captureLiveManifestFence(scope);
+    const second = await captureLiveManifestFence(other);
+    expect(await writeLiveManifestCache(other, second, { roster: ["other"] })).toBe(true);
+    const mutableScope = { ...scope };
+    const mutableFence = { ...first };
+    let release!: () => void;
+    let started!: () => void;
+    const held = new Promise<void>((done) => {
+      release = done;
+    });
+    const entered = new Promise<void>((done) => {
+      started = done;
+    });
+    const encrypt = crypto.subtle.encrypt.bind(crypto.subtle);
+    const spy = vi.spyOn(crypto.subtle, "encrypt").mockImplementation(async (...args) => {
+      started();
+      await held;
+      return encrypt(...args);
+    });
+    try {
+      const pending = writeLiveManifestCache(mutableScope, mutableFence, { roster: ["first"] });
+      await entered;
+      Object.assign(mutableScope, other);
+      Object.assign(mutableFence, second);
+      release();
+      expect(await pending).toBe(true);
+      expect(await readLiveManifestCache(other)).toEqual({
+        view: { roster: ["other"] },
+        pendingWrites: false,
+        changedSinceCache: false,
+      });
+    } finally {
+      release();
+      spy.mockRestore();
+    }
+  });
+
+  it("does not reopen an explicit purge as erasure recovery", async () => {
+    await captureLiveManifestFence(scope);
+    await purgeLiveManifestShop(scope.shop);
+    await expect(beginLiveManifestShopRecovery(scope)).rejects.toThrow(
+      "live-manifest-cache-invalidated",
+    );
+    await invalidateLiveManifestShop(scope.shop);
+    await expect(beginLiveManifestShopRecovery(scope)).rejects.toThrow(
+      "live-manifest-cache-invalidated",
+    );
+  });
+
+  it("does not reopen an erasure recovery after an intervening purge", async () => {
+    await captureLiveManifestFence(scope);
+    await invalidateLiveManifestShop(scope.shop);
+    const recovery = await beginLiveManifestShopRecovery(scope);
+    let resolve!: (verified: boolean) => void;
+    const held = new Promise<boolean>((done) => {
+      resolve = done;
+    });
+    const pending = completeLiveManifestShopRecovery(scope, recovery, () => held);
+    await purgeLiveManifestShop(scope.shop);
+    await invalidateLiveManifestShop(scope.shop);
+    resolve(true);
+    expect(await pending).toBe(false);
+    await expect(beginLiveManifestShopRecovery(scope)).rejects.toThrow(
+      "live-manifest-cache-invalidated",
+    );
   });
 });
