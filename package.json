@@ -46,6 +46,7 @@
     "check:architecture": "node scripts/check-architecture.mjs",
     "check:tokens": "node scripts/check-tokens.mjs",
     "check:tinted-ink": "node scripts/check-tinted-ink.mjs",
+    "check:error-toasts": "node scripts/check-error-toasts.mjs",
     "check:type-ramp": "node scripts/check-type-ramp.mjs",
     "check:page-length": "node scripts/check-page-length.mjs",
     "check:form-controls": "node scripts/check-form-controls.mjs",

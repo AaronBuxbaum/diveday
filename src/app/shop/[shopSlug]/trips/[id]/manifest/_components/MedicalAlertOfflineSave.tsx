@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { fill } from "@/i18n/fill";
 import {
@@ -121,11 +122,7 @@ export function MedicalAlertOfflineSave({
       <p className="mt-2 text-sm font-medium" aria-live="polite">
         {savedBy && !problem ? fill(copy.done, { name: savedBy }) : null}
       </p>
-      {problem ? (
-        <p role="alert" className="mt-1 text-sm font-medium text-danger">
-          {problem}
-        </p>
-      ) : null}
+      {problem ? <ErrorToast message={problem} /> : null}
     </div>
   );
 }

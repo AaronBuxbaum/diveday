@@ -288,7 +288,7 @@ export default async function OrdersIndexPage({
           panel; an empty queue adds no panel. */}
       {stuckPaymentOperations.length > 0 ? (
         <section aria-label={t("orders.index.paymentOps.sectionLabel")} className="mb-6">
-          <ShopNotice tone="danger" role="status">
+          <ShopNotice tone="danger" role="status" persistent>
             <p className="font-medium">
               {t("orders.index.paymentOps.heading", { count: stuckPaymentOperations.length })}
             </p>

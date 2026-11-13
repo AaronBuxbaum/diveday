@@ -189,7 +189,7 @@ describe("NoticeBanner", () => {
   describe("payment-not-connected", () => {
     it("explains why the invoice door refused, beside the door", () => {
       renderStatus("payment-not-connected");
-      expect(screen.getByRole("status")).toHaveTextContent(/Payments aren’t connected yet/i);
+      expect(screen.getByRole("alert")).toHaveTextContent(/Payments aren’t connected yet/i);
       // The story is where the invoice door lives now — the `payments`
       // section it used to sit beside folded into it (ADR
       // 20260827-people-not-lists).

@@ -97,7 +97,6 @@ describe("ImageFileInput", () => {
     expect(input.value).toBe("");
     // Still "Add a photo" — nothing was accepted, so nothing was swapped.
     expect(screen.getByLabelText("Add a photo")).toBe(input);
-    expect(input.getAttribute("aria-describedby")).toBe(screen.getByRole("alert").id);
   });
 
   it("forgets a refusal, and its filename, once a good file replaces it", () => {

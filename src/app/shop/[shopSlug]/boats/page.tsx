@@ -7,6 +7,7 @@ import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovableP
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import {
@@ -194,15 +195,7 @@ export default async function BoatsSettingsPage({
                   channelInvalid={Boolean(error) && notice === "boat-channel-distress"}
                   describedBy={error?.id}
                 />
-                {error ? (
-                  <p
-                    id={error.id}
-                    role="alert"
-                    className="w-full text-sm font-medium text-danger sm:basis-full"
-                  >
-                    {error.text}
-                  </p>
-                ) : null}
+                {error ? <ErrorToast message={error.text} /> : null}
                 {/* Keep Save and Delete in the update form's action row. Delete's `formAction`
                     submits the hidden boat ID; Save comes first so Enter submits the update.
                     Wrapping gives an armed confirmation message its own line. */}
@@ -305,15 +298,7 @@ export default async function BoatsSettingsPage({
               channelInvalid={Boolean(errorFor("new")) && notice === "boat-channel-distress"}
               describedBy={errorFor("new")?.id}
             />
-            {errorFor("new") ? (
-              <p
-                id={errorFor("new")?.id}
-                role="alert"
-                className="text-sm font-medium text-danger sm:col-span-2"
-              >
-                {errorFor("new")?.text}
-              </p>
-            ) : null}
+            {errorFor("new") ? <ErrorToast message={errorFor("new")?.text} /> : null}
             <FieldActions>
               <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
                 {t("boats.addBoat")}

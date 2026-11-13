@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ConnectivityStatus, type ConnectivityStatusCopy } from "@/components/ConnectivityStatus";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { scopedId } from "@/lib/element-id";
@@ -262,11 +263,7 @@ export function SeenGroup({
           and that they are read outside the shop. Both are consequences the
           chips cannot show on their own. */}
       <p className="mt-2 text-sm text-muted">{copy.consequence}</p>
-      {refused ? (
-        <p role="alert" className="mt-2 text-sm text-danger">
-          {copy.refusal}
-        </p>
-      ) : null}
+      {refused ? <ErrorToast message={copy.refusal} /> : null}
     </section>
   );
 }

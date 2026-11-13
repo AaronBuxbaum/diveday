@@ -1,5 +1,5 @@
 import type { Key, ReactNode } from "react";
-import { Toast } from "@/components/Toast";
+import { ErrorToast, Toast } from "@/components/Toast";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
 import type { NoticeTone } from "@/components/ui/tone";
 import { type ToneName, toneMark } from "@/components/ui/tone";
@@ -31,6 +31,10 @@ export function ShopNotice({
 }) {
   if (tone === "success" && !persistent)
     return <Toast message={children} pausable occurrenceKey={occurrenceKey} />;
+  // An error is a toast, never a component that stays on the page. A `danger`
+  // block that is a standing queue (a list of owed work) says `persistent`.
+  if (tone === "danger" && !persistent)
+    return <ErrorToast message={children} occurrenceKey={occurrenceKey} />;
   // `-strong` on the success tint: the raw hue on its own 10% fill is 4.39:1 in
   // the light palette, under AA (docs/design/forms-and-controls.md). `danger`
   // needs no nudge and `warning` already reads as body text on its tint.

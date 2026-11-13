@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { BOAT_SEGMENT_TRACK_CLASS, boatSegmentClass } from "@/components/boat-segments";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { isHomewardStage } from "@/lib/checkpoint-gaps";
@@ -123,9 +124,7 @@ export function StageStrip({
       </div>
       {homeConfirm && confirmingHome ? (
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <p role="alert" className="text-base font-bold text-danger">
-            {homeConfirm.question}
-          </p>
+          <ErrorToast message={homeConfirm.question} />
           <form action={formAction} onSubmit={() => setConfirmingHome(false)} className="flex">
             <input type="hidden" name="stage" value="home" />
             <button
@@ -178,11 +177,7 @@ export function StageStrip({
           ) : null}
         </div>
       ) : null}
-      {result && !result.ok ? (
-        <p role="alert" className="mt-2 text-sm text-danger">
-          {copy.errorRefusal}
-        </p>
-      ) : null}
+      {result && !result.ok ? <ErrorToast message={copy.errorRefusal} /> : null}
     </section>
   );
 }
