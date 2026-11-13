@@ -140,6 +140,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // crewing against its own number rather than the default.
       "divers_per_divemaster",
       "crew_schedule_enabled",
+      // Whether a crew member's own days off wait for an OK: a restore must not
+      // start holding (or stop holding) days off the shop chose otherwise on.
+      "time_off_approval_enabled",
       // Which optional features the shop switched off (ADR
       // 20261005-optional-shop-features): a restore must not quietly
       // turn reviews or tips back on for a shop that chose not to ask.
@@ -288,6 +291,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.hasPoolDiving,
         shop.diversPerDivemaster,
         shop.crewScheduleEnabled,
+        shop.timeOffApprovalEnabled,
         shop.walletPassesEnabled,
         shop.reviewsEnabled,
         shop.dateRequestsEnabled,
@@ -1086,6 +1090,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "starts_on",
       "ends_on",
       "note",
+      "status",
+      "decided_by_person_id",
+      "decided_at",
+      "decision_note",
       "created_by_person_id",
       "created_by_name",
       "created_at",
@@ -1098,6 +1106,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.startsOn,
         row.endsOn,
         awayNoteFor(row, EXPORT_AWAY_NOTE_READER),
+        row.status,
+        row.decidedByPersonId,
+        row.decidedAt,
+        row.decisionNote,
         row.createdByPersonId,
         personName.get(row.createdByPersonId),
         row.createdAt,
