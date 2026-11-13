@@ -96,3 +96,17 @@ it("does not auto-seat standing crew until every meeting has shift coverage", as
   await db.insert(staffShifts).values({ shopId: shop.id, personId, ...days[1] });
   expect(await db.transaction((tx) => seatStandingCrew(tx, input))).toEqual([personId]);
 });
+
+it("keeps assigned crew and exposes the gap after their last shift is deleted", async () => {
+  const { db, shop, personId, trip } = await fixture();
+  const { crewShiftCoverage } = await import("@/features/staffing/store");
+  await db
+    .insert(staffShifts)
+    .values({ shopId: shop.id, personId, startsAt: trip.startsAt, endsAt: trip.endsAt });
+  expect(await setTripCrew(db, shop.id, trip.id, [personId], { requireScheduledShift: true })).toBe(
+    true,
+  );
+  await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
+  expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([personId]);
+  expect(await crewShiftCoverage(db, shop.id, trip, [personId])).toEqual(new Set());
+});

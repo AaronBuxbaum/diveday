@@ -968,7 +968,7 @@
     "src/features/reviews/store.test.ts": 997,
     "src/features/seat-claims/store.test.ts": 1524,
     "src/features/staffing-week/rules.test.ts": 1125,
-    "src/features/staffing/store.test.ts": 942,
+    "src/features/staffing/store.test.ts": 939,
     "src/features/today/today.test.ts": 1274,
     "src/features/work-order-follow-up/store.test.ts": 1177,
     "src/features/work-orders/store.test.ts": 1408,

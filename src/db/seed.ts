@@ -133,6 +133,7 @@ import { seedPackages } from "./seed-packages";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { type SeedShape, seedDemoSchedule, shapeHas } from "./seed-schedule";
 import { DEMO_SHOP_BRAND, DEMO_SHOP_DESK } from "./seed-shop-brand";
+import { seedStaffPortraits } from "./seed-staff-portraits";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 
 const DEMO_BOAT_CAPACITIES = {
@@ -526,6 +527,11 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
   const accounts = await Promise.all(accountRows); // diveday:allow-db-concurrency: bcrypt, not queries
   await db.insert(userAccounts).values(accounts);
 
+  await seedStaffPortraits(
+    db,
+    shop.id,
+    staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
+  );
   await seedStaffShifts(
     db,
     shop.id,
@@ -800,6 +806,11 @@ export async function createDemoShop(
   // demo's rostering surface was empty — the cast was there, nobody was ever
   // working — and an e2e spec could not take a shop of its own to write a
   // shift into (ADR 20260815-per-test-private-shops).
+  await seedStaffPortraits(
+    db,
+    shop.id,
+    staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
+  );
   await seedStaffShifts(
     db,
     shop.id,

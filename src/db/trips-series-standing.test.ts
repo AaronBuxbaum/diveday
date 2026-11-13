@@ -148,6 +148,39 @@ describe("a run's standing crew (2026-10-12): applied per date, never assumed", 
     expect(await crewOn(run.db, run.shop.id, clashing.id)).toEqual([]);
   });
 
+  it("leaves skipped dates for explicit resolution after shifts are added", async () => {
+    const run = await runWithCrew();
+    const target = run.result.trips[1];
+    if (!target) throw new Error("expected a future date");
+    await run.db.delete(staffShifts).where(eq(staffShifts.shopId, run.shop.id));
+    const outcome = await setSeriesStandingCrew(run.db, {
+      shopId: run.shop.id,
+      seriesId: run.result.series.id,
+      sourceTripId: run.source.id,
+      standing: true,
+      actorPersonId: null,
+      now: run.now,
+    });
+    expect(outcome?.skipped).toBeGreaterThan(0);
+    expect(await crewOn(run.db, run.shop.id, target.id)).toEqual([]);
+    await run.db.insert(staffShifts).values(
+      [run.crew.captain, run.crew.other].map((personId) => ({
+        shopId: run.shop.id,
+        personId,
+        startsAt: target.startsAt,
+        endsAt: target.endsAt,
+      })),
+    );
+    // Adding availability is not consent to mutate an existing departure's crew.
+    expect(await crewOn(run.db, run.shop.id, target.id)).toEqual([]);
+    expect(
+      await setTripCrew(run.db, run.shop.id, target.id, [run.crew.captain, run.crew.other], {
+        requireScheduledShift: true,
+      }),
+    ).toBe(true);
+    expect((await crewOn(run.db, run.shop.id, target.id)).length).toBe(2);
+  });
+
   it("seats the crew on every date the horizon roll adds, each date asked again", async () => {
     const run = await runWithCrew();
     await setSeriesStandingCrew(run.db, {

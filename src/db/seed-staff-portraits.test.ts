@@ -52,10 +52,41 @@ it("does not assign demo photos in a real shop", async () => {
   const { db, shop } = await seededShopContext();
   await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
   await db.update(people).set({ staffPhotoPath: null }).where(eq(people.shopId, shop.id));
-  await seedStaffPortraits(db, shop.id);
+  const [person] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(eq(people.shopId, shop.id));
+  await seedStaffPortraits(db, shop.id, [{ id: person.id, local: "dana" }]);
   const rows = await db
     .select({ path: people.staffPhotoPath })
     .from(people)
     .where(eq(people.shopId, shop.id));
   expect(rows.every((row) => row.path === null)).toBe(true);
+});
+
+it("addresses seeded IDs across renames without assigning a namesake's portrait", async () => {
+  const { seededShopContext } = await import("@/test/db");
+  const { and, eq } = await import("drizzle-orm");
+  const { people } = await import("./schema");
+  const { seedStaffPortraits, DEMO_STAFF_PORTRAIT_PATHS } = await import("./seed-staff-portraits");
+  const { db, shop } = await seededShopContext();
+  const [castPerson] = await db
+    .select()
+    .from(people)
+    .where(
+      and(eq(people.shopId, shop.id), eq(people.staffPhotoPath, DEMO_STAFF_PORTRAIT_PATHS.dana)),
+    );
+  await db
+    .update(people)
+    .set({ fullName: "Renamed staff member", staffPhotoPath: null })
+    .where(eq(people.id, castPerson.id));
+  const [namesake] = await db
+    .insert(people)
+    .values({ shopId: shop.id, fullName: castPerson.fullName })
+    .returning();
+  await seedStaffPortraits(db, shop.id, [{ id: castPerson.id, local: "dana" }]);
+  const [renamed] = await db.select().from(people).where(eq(people.id, castPerson.id));
+  const [unrelated] = await db.select().from(people).where(eq(people.id, namesake.id));
+  expect(renamed.staffPhotoPath).toBe(DEMO_STAFF_PORTRAIT_PATHS.dana);
+  expect(unrelated.staffPhotoPath).toBeNull();
 });
