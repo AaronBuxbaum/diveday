@@ -1035,6 +1035,9 @@ test.describe("a site whose station is nowhere near it", () => {
 
     // A different station is a different pairing, so the answer does not carry
     // over and the question is put again.
+    // The last save's toast has to leave first, or the wait below is satisfied
+    // by it and the section is opened before the new save's refresh closes it.
+    await expect(page.getByText("Dive site saved")).toHaveCount(0);
     await page.getByLabel("NOAA tide station").fill("8723583");
     await saveSite();
     await page.getByText("Dive site saved").waitFor();
