@@ -16,8 +16,10 @@ import { numbersCameFrom, sameNumberWords } from "./facts";
  * half).
  *
  * A diver's message is untrusted text. It arrives in its own tagged block,
- * the instructions say to treat it as data, and the answer is constrained to
- * a schema, so the most a hostile message can do is mislabel itself.
+ * the instructions say to treat it as data, and a schema constrains the answer's
+ * shape. Those are not guarantees of factual accuracy or prompt-injection
+ * resistance. Reply drafts remain editable and require staff review; they do
+ * not perform booking or sending actions.
  */
 
 /**

@@ -40,7 +40,7 @@ import { seatsOnSale, spotsRemaining } from "../../lib/trips";
 /** How many waiting messages one page view may sort, so a backlog costs a few calls a view, not a hundred. */
 export const TRIAGE_PER_VIEW = 5;
 
-/** The departures a draft may quote: the next two weeks, as many as a desk would read out. */
+/** The bounded public departure window and maximum number a desk would read out. */
 const FACT_DEPARTURES = 40;
 const FACT_HORIZON_DAYS = 45;
 
@@ -259,11 +259,13 @@ export async function replyFacts(
     lines.push(
       `- ${formatShortDate(trip.startsAt, shop.locale, shop.timezone)} ${formatTime(trip.startsAt, shop.locale, shop.timezone)}, ${trip.title}: ${seats === 0 ? "full" : `${seats} seats open`}, ${money(trip.priceCents ?? trip.course?.priceCents)}`,
     );
-    const where = [trip.meetingPointLabel, trip.meetingPointAddress].filter(Boolean).join(", ");
-    if (where) lines.push(`  Meet at: ${where}`);
+    // This shop-wide context has no booked-recipient authorization. The public
+    // trip hero withholds exact arrival destinations; drafts for unmatched or
+    // prebooking senders must not receive those structured fields either.
     if (trip.description?.trim()) lines.push(`  ${trip.description.trim().slice(0, 400)}`);
   }
-  if (upcoming.trips.length === 0) lines.push("- none scheduled in the next two weeks");
+  if (upcoming.trips.length === 0)
+    lines.push(`- No public departures are listed in this ${FACT_HORIZON_DAYS}-day window.`);
   if (courses.length > 0) {
     lines.push("Courses:");
     for (const course of courses) {
@@ -304,8 +306,7 @@ export async function draftReplyFor(
 /**
  * Why a reply draft came back empty, so the screen can say so: `unavailable`
  * (dark, over the cap, a provider error: asking again may work), `declined`
- * (Claude answered and the answer could not be used: refused, unsure, a
- * health question, a figure the shop's facts do not hold), `nothing-to-answer`
+ * (Claude answered but its text was empty or its schema could not be read), `nothing-to-answer`
  * (the thread holds no message from the diver).
  */
 export type DraftReplyOutcome =
