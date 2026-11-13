@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { ErrorToast } from "@/components/Toast";
+import { ErrorToast, SAFETY_TOAST_MS } from "@/components/Toast";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -110,7 +110,9 @@ function PreDepartureCheckRow({
           {armed ? copy.confirmClear : ""}
         </span>
       </form>
-      {result && !result.ok ? <ErrorToast message={copy.errorRefusal} /> : null}
+      {result && !result.ok ? (
+        <ErrorToast message={copy.errorRefusal} durationMs={SAFETY_TOAST_MS} />
+      ) : null}
       {/* What this crew wrote against the line, until somebody fixes it. */}
       {(item.snags ?? []).map((snag) => (
         <div key={snag.id} className="mx-4 mb-3 border-s-2 border-warning ps-3 text-sm">
