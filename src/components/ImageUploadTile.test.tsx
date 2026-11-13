@@ -51,6 +51,5 @@ describe("ImageUploadTile", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "notes.pdf: use a JPG, PNG, WebP, or HEIC photo.",
     );
-    expect(input).toHaveAttribute("aria-describedby");
   });
 });

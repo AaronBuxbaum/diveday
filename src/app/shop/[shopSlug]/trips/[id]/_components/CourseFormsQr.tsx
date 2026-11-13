@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { LiveRefresh } from "@/components/LiveRefresh";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/layer";
 import { fill } from "@/i18n/fill";
@@ -137,9 +138,7 @@ function CourseFormsQrDialog({
           </button>
         </div>
       ) : (
-        <p role="alert" className="mt-4">
-          {copy.failed}
-        </p>
+        <ErrorToast message={copy.failed} />
       )}
       <button
         type="button"

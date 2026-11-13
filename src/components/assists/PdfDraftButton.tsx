@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { fillField } from "./AssistDraftButton";
 
@@ -72,11 +73,7 @@ export function PdfDraftButton({
           {pending ? words.drafting : words.draft}
         </button>
       </div>
-      {failed ? (
-        <p className="text-sm text-danger" role="alert">
-          {words.failed}
-        </p>
-      ) : null}
+      {failed ? <ErrorToast message={words.failed} /> : null}
     </div>
   );
 }

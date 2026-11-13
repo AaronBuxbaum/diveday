@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 
 type RecordPrintAction = (formData: FormData) => void | Promise<void>;
@@ -45,11 +46,7 @@ export function PrintTripBundleButton({
       >
         {label}
       </SubmitButton>
-      {popupBlocked ? (
-        <p className="mt-2 max-w-xs text-sm text-danger" role="alert">
-          {popupBlockedLabel}
-        </p>
-      ) : null}
+      {popupBlocked ? <ErrorToast message={popupBlockedLabel} /> : null}
     </form>
   );
 }

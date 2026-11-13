@@ -4,6 +4,7 @@ import { unstable_rethrow } from "next/navigation";
 import { useCallback, useRef, useState, useTransition } from "react";
 import { type DemoStartCopy, DemoStartStrip } from "@/components/DemoStartStrip";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
+import { ErrorToast } from "@/components/Toast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { MENU_PANEL } from "@/components/ui/menu";
@@ -237,11 +238,7 @@ export function DemoBanner({
           />
         ) : null}
 
-        {switchFailed ? (
-          <p role="alert" className="mt-2 text-sm font-medium text-danger">
-            {copy.switchFailed}
-          </p>
-        ) : null}
+        {switchFailed ? <ErrorToast message={copy.switchFailed} /> : null}
 
         {isMintedDemo ? (
           <div className="mt-2 text-xs text-muted">

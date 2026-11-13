@@ -39,18 +39,15 @@ function renderCard(roles: Role[], credentials: CardCredential[], status?: FormN
 }
 
 describe("StaffCardCredentials", () => {
-  it("uses FormStatus's warning reveal without adding another sentinel", () => {
+  it("says a credential warning as a toast, not a line left on the card", () => {
     const { container } = renderCard(["owner"], [], {
       form: TEAM_FORMS.credential("p1"),
       tone: "warning",
       text: "Needs review.",
     });
-    const paragraph = screen.getByText("Needs review.").closest("p");
-    if (!(paragraph instanceof HTMLElement)) throw new Error("Missing credential outcome");
-    const sentinels = [...container.querySelectorAll<HTMLElement>("span[hidden]")];
 
-    expect(sentinels).toHaveLength(1);
-    expect(sentinels[0]?.previousElementSibling).toBe(paragraph);
+    expect(screen.getByRole("alert")).toHaveTextContent("Needs review.");
+    expect(container.querySelectorAll("span[hidden]")).toHaveLength(0);
   });
 
   it("keeps success in the fixed toast without adding a reveal helper", () => {

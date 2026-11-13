@@ -11,6 +11,7 @@ import {
 } from "react";
 import { type HelpRequestActionResult, helpRequestAction } from "@/app/shop/[shopSlug]/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ErrorToast } from "@/components/Toast";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
@@ -64,11 +65,7 @@ export function HelpRequestProvider({
       : null;
   return (
     <HelpRequestContext.Provider value={{ result, run, copy }}>
-      {refusedUndo ? (
-        <p role="alert" className="text-sm font-medium text-danger">
-          {refusedUndo}
-        </p>
-      ) : null}
+      {refusedUndo ? <ErrorToast message={refusedUndo} /> : null}
       {completed ? (
         <UndoToast
           message={copy.completed}
@@ -281,11 +278,7 @@ export function HelpRequestControl({
           {success}
         </p>
       ) : null}
-      {error ? (
-        <p role="alert" className="text-sm font-medium text-danger">
-          {error}
-        </p>
-      ) : null}{" "}
+      {error ? <ErrorToast message={error} /> : null}{" "}
     </>
   );
   return row ? (
