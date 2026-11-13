@@ -6,6 +6,16 @@ import { manifestRow } from "./helpers";
 
 signedInAsOwner();
 
+type ReadCounts = { total: number; previous: number; newChallenge: number };
+
+async function expectOneRead(counts: ReadCounts) {
+  try {
+    await expect.poll(() => counts.total).toBe(1);
+  } catch (error) {
+    throw new Error(`Manifest RSC request counts: ${JSON.stringify(counts)}`, { cause: error });
+  }
+}
+
 for (const width of [390, 1280]) {
   for (const direction of ["back", "forward"] as const) {
     test(`${direction} keeps the cached manifest until the server confirms it at ${width}px`, async ({
@@ -33,20 +43,29 @@ for (const width of [390, 1280]) {
       else await tripTab.click();
       await expect(tripTab).toHaveAttribute("aria-current", "page");
 
+      const previousToken = readManifestHistoryCookie(
+        await page.evaluate(() => document.cookie),
+        DEMO_TODAY_TRIP_ID,
+      );
       let release!: () => void;
       const held = new Promise<void>((resolve) => {
         release = resolve;
       });
-      let requests = 0;
+      const requests: ReadCounts = { total: 0, previous: 0, newChallenge: 0 };
       await page.route("**/*", async (route) => {
         const request = route.request();
         const url = new URL(request.url());
-        if (
-          url.pathname === manifest &&
-          request.headers().rsc === "1" &&
-          readManifestHistoryCookie((await request.allHeaders()).cookie ?? null, DEMO_TODAY_TRIP_ID)
-        ) {
-          requests += 1;
+        const token =
+          url.pathname === manifest && request.headers().rsc === "1"
+            ? readManifestHistoryCookie(
+                (await request.allHeaders()).cookie ?? null,
+                DEMO_TODAY_TRIP_ID,
+              )
+            : undefined;
+        if (token) {
+          requests.total += 1;
+          if (token === previousToken) requests.previous += 1;
+          else requests.newChallenge += 1;
           await held;
           await route.continue();
           return;
@@ -56,7 +75,7 @@ for (const width of [390, 1280]) {
       try {
         if (direction === "forward") await page.goForward();
         else await page.goBack();
-        await expect.poll(() => requests).toBe(1);
+        await expectOneRead(requests);
         await expect(manifestRow(page, "Priya Sharma")).toBeVisible();
         await expect(
           page.getByText(copy("manifest.rosterUnconfirmed"), { exact: true }),
@@ -65,7 +84,7 @@ for (const width of [390, 1280]) {
         release();
       }
       await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
-      expect(requests).toBe(1);
+      expect(requests.total).toBe(1);
     });
   }
 }
@@ -82,11 +101,15 @@ test("a roster refresh preserves an open person sheet without a document navigat
   await tripTab.click();
   await expect(tripTab).toHaveAttribute("aria-current", "page");
 
+  const previousToken = readManifestHistoryCookie(
+    await page.evaluate(() => document.cookie),
+    DEMO_TODAY_TRIP_ID,
+  );
   let release!: () => void;
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  let reads = 0;
+  const reads: ReadCounts = { total: 0, previous: 0, newChallenge: 0 };
   let documentNavigations = 0;
   page.on("request", (request) => {
     if (request.isNavigationRequest() && request.frame() === page.mainFrame())
@@ -95,12 +118,14 @@ test("a roster refresh preserves an open person sheet without a document navigat
   await page.route("**/*", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (
-      url.pathname === manifest &&
-      request.headers().rsc === "1" &&
-      readManifestHistoryCookie((await request.allHeaders()).cookie ?? null, DEMO_TODAY_TRIP_ID)
-    ) {
-      reads++;
+    const token =
+      url.pathname === manifest && request.headers().rsc === "1"
+        ? readManifestHistoryCookie((await request.allHeaders()).cookie ?? null, DEMO_TODAY_TRIP_ID)
+        : undefined;
+    if (token) {
+      reads.total += 1;
+      if (token === previousToken) reads.previous += 1;
+      else reads.newChallenge += 1;
       await held;
       await route.continue();
       return;
@@ -109,7 +134,7 @@ test("a roster refresh preserves an open person sheet without a document navigat
   });
   try {
     await page.goBack();
-    await expect.poll(() => reads).toBe(1);
+    await expectOneRead(reads);
     const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
     await expect(trigger).toHaveAttribute("data-hydrated", "true");
     await trigger.click();
