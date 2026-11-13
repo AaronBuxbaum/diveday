@@ -234,6 +234,7 @@ export const SERVER_ONLY_MODULES = [
   "src/features/payments/webhook.ts",
 ];
 const SERVER_ONLY_PACKAGE = /^libphonenumber-js(?:\/|$)/;
+const SERVER_ONLY_PREFIXES = ["src/features/live-manifest-server/"];
 
 const MODULE_ROOTS = ["src/lib", "src/db"];
 
@@ -302,7 +303,11 @@ async function clientReachViolations(root, record) {
       }
       const target = await resolveFile(root, file, specifier);
       if (!target) continue;
-      if (SERVER_ONLY_MODULES.includes(target.replaceAll(path.sep, "/"))) {
+      const normalizedTarget = target.replaceAll(path.sep, "/");
+      if (
+        SERVER_ONLY_MODULES.includes(normalizedTarget) ||
+        SERVER_ONLY_PREFIXES.some((prefix) => normalizedTarget.startsWith(prefix))
+      ) {
         found = target;
         break;
       }

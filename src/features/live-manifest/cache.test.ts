@@ -283,6 +283,23 @@ describe("live manifest cache fencing", () => {
     );
   });
 
+  it("does not consume recovery after its caller's deadline", async () => {
+    await captureLiveManifestFence(scope);
+    await invalidateLiveManifestShop(scope.shop);
+    const recovery = await beginLiveManifestShopRecovery(scope);
+    expect(
+      await completeLiveManifestShopRecovery(
+        scope,
+        recovery,
+        async () => true,
+        () => false,
+      ),
+    ).toBe(false);
+    await expect(captureLiveManifestFence(scope)).rejects.toThrow(
+      "live-manifest-cache-invalidated",
+    );
+  });
+
   it("passes a fresh recovery challenge instead of accepting an earlier proof", async () => {
     await captureLiveManifestFence(scope);
     await invalidateLiveManifestShop(scope.shop);

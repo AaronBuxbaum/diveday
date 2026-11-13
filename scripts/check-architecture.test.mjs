@@ -281,6 +281,28 @@ describe("the ratchet", () => {
 describe("server-only modules stay out of client bundles", () => {
   const phone = 'import { parsePhoneNumberFromString } from "libphonenumber-js/mobile";\n';
 
+  it("refuses client imports of the live-manifest server barrel and direct leaves", async () => {
+    const root = await fixture({
+      "src/features/live-manifest-server/index.ts": 'export { proof } from "./proof";',
+      "src/features/live-manifest-server/proof.ts":
+        "export const proof = 1; export type Proof = string;",
+      "src/features/live-manifest-server/README.md": "Server-only fixture.",
+      "src/app/Barrel.tsx":
+        '"use client";\nimport { proof } from "@/features/live-manifest-server";',
+      "src/app/Leaf.tsx":
+        '"use client";\nimport { proof } from "@/features/live-manifest-server/proof";',
+      "src/app/Type.tsx":
+        '"use client";\nimport type { Proof } from "@/features/live-manifest-server";',
+    });
+    const violations = await collectViolations(root);
+    expect([...violations.keys()].sort()).toEqual(["src/app/Barrel.tsx", "src/app/Leaf.tsx"]);
+    expect(
+      flat(violations).filter((line) =>
+        line.includes("reaches server-only src/features/live-manifest-server/"),
+      ),
+    ).toHaveLength(2);
+  });
+
   for (const [feature, file] of [
     ["phone-line-type", "rules.ts"],
     ["payments", "webhook.ts"],

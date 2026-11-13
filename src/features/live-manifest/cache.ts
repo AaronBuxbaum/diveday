@@ -312,6 +312,7 @@ export async function completeLiveManifestShopRecovery(
     tombstone: string;
     nonce: string;
   }) => Promise<boolean>,
+  isCurrent: () => boolean = () => true,
 ): Promise<boolean> {
   const { shop, session } = scope;
   const { tombstone, session: sessionFence, nonce } = recovery;
@@ -329,7 +330,7 @@ export async function completeLiveManifestShopRecovery(
   } catch {
     return false;
   }
-  if (!verified) return false;
+  if (!verified || !isCurrent()) return false;
   const db = await open();
   try {
     const tx = db.transaction(STORE, "readwrite");
@@ -342,6 +343,7 @@ export async function completeLiveManifestShopRecovery(
     ]);
     const current = active as Recovery | undefined;
     const accepted =
+      isCurrent() &&
       isTombstone(storedShop) &&
       storedShop.reason === "erasure" &&
       storedShop.revoked === tombstone &&
