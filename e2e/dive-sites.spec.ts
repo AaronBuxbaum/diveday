@@ -976,7 +976,7 @@ test.describe("a site whose station is nowhere near it", () => {
     page,
     request,
   }) => {
-    // Four saves, each its own navigation and status wait — the same
+    // Two saves, each its own navigation and settled result — the same
     // aggregate-cost reasoning as the long test at the top of this file.
     test.setTimeout(30_000);
     const seeded = await seedFacts(request, ["troublePanels", "farStation"]);
@@ -985,38 +985,62 @@ test.describe("a site whose station is nowhere near it", () => {
     };
     if (!farStation) throw new Error("the fact seeded no far-station site");
     const siteUrl = `/shop/blue-mantis/dive-sites/${farStation.siteId}`;
+    const edit = page
+      .locator("form")
+      .filter({ has: page.locator('input[name="expectedVersion"]') })
+      .filter({ visible: true });
+    const version = edit.locator('input[name="expectedVersion"]');
+    const saveSite = async () => {
+      const before = await version.inputValue();
+      const save = edit.getByRole("button", { name: "Save", exact: true });
+      await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === "POST" &&
+            new URL(response.url()).pathname === siteUrl &&
+            Boolean(response.request().headers()["next-action"]) &&
+            response.headers()["x-action-redirect"]?.includes("notice=saved") === true,
+        ),
+        save.click(),
+      ]);
+      await expect(save).toBeEnabled();
+      // The previous success toast can still be visible while this response
+      // replaces the editor. Open Forecast only on the new saved generation.
+      await expect(version).not.toHaveValue(before);
+    };
+    const stationWarning = page.getByText(/so the turn it predicts can reach this water/);
+    const stationChoice = page.getByRole("checkbox", {
+      name: "This is the right station for this site",
+    });
 
     // The advisory, on a real row rather than a handed-in echo object.
     await page.goto(siteUrl);
+    await expect(edit).toHaveAttribute("data-hydrated", "true");
     await openSection(page, "forecast");
     await expect(page.getByLabel("NOAA tide station")).toHaveValue("8771450");
-    await expect(page.getByText(/so the turn it predicts can reach this water/)).toBeVisible();
+    await expect(stationWarning).toBeVisible();
 
     // The shop says it meant that station. The id is unchanged, so the answer
     // is about the pairing the row already holds.
-    await page.getByRole("checkbox", { name: "This is the right station for this site" }).check();
-    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await stationChoice.check();
+    await saveSite();
     await page.getByText("Dive site saved").waitFor();
     await openSection(page, "forecast");
 
     // Gone — and the box stays on the page, ticked, so the shop can take the
     // answer back. A tick that hides its own control is an answer nobody can
     // revise.
-    await expect(page.getByText(/so the turn it predicts can reach this water/)).toHaveCount(0);
-    await expect(
-      page.getByRole("checkbox", { name: "This is the right station for this site" }),
-    ).toBeChecked();
+    await expect(stationWarning).toHaveCount(0);
+    await expect(stationChoice).toBeChecked();
 
     // A different station is a different pairing, so the answer does not carry
     // over and the question is put again.
     await page.getByLabel("NOAA tide station").fill("8723583");
-    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await saveSite();
     await page.getByText("Dive site saved").waitFor();
     await openSection(page, "forecast");
-    await expect(page.getByText(/so the turn it predicts can reach this water/)).toBeVisible();
-    await expect(
-      page.getByRole("checkbox", { name: "This is the right station for this site" }),
-    ).not.toBeChecked();
+    await expect(stationWarning).toBeVisible();
+    await expect(stationChoice).not.toBeChecked();
   });
 });
 
