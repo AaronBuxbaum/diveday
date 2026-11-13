@@ -576,12 +576,10 @@ test.describe("staff", () => {
     // from — that is the site page's line, not the library's.
     await expect(library.getByText(/DiveDay template v/)).toHaveCount(0);
 
-    // The catalog is a door above the library, carrying the size of what
-    // sits behind it; the header's secondary action retired with its arrival,
-    // so there is exactly one way in from here.
+    // The catalog is the other half of the Your sites / DiveDay catalog
+    // toggle, so there is exactly one way in from here.
     const catalogDoor = page.getByRole("link", { name: "DiveDay catalog", exact: true });
     await expect(catalogDoor).toHaveCount(1);
-    await expect(page.getByText(/\d+ published sites/)).toBeVisible();
     await catalogDoor.click();
     await expect(
       page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
