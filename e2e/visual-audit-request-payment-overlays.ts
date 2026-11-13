@@ -106,7 +106,7 @@ export function registerRequestPaymentOverlayAuditCaptures(
       await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
       await expect(
         page
-          .getByRole("status")
+          .getByRole("alert")
           .filter({ hasText: staffCopy("trips.notices.diverAddedIdentityUnconfirmed") }),
       ).toBeVisible();
       await openRosterRow(page, NAMESAKE);
