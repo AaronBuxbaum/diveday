@@ -397,7 +397,19 @@ function countStillBeingTaken(
   if (historical) return false;
   if (!hasSailed(trip.startsAt, now)) return false;
   if (now.getTime() >= trip.endsAt.getTime()) return false;
-  if (liveStageOf(trip.stage ?? null, trip.endsAt, now)?.stage === "home") return false;
+  if (
+    liveStageOf(
+      trip.stage ?? null,
+      {
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        timeZone,
+        meetingWindows: trip.meetingWindows,
+      },
+      now,
+    )?.stage === "home"
+  )
+    return false;
   const today = shopDayOf(now, timeZone);
   if (shopDayOf(trip.startsAt, timeZone) !== today) return false;
   if (shopDayOf(trip.endsAt, timeZone) !== today) return false;
