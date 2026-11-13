@@ -46,6 +46,11 @@ function drain(tripId: string): boolean {
   return started;
 }
 
+/** The mounted freshness owner handles the browser's online event itself. */
+export function hasManifestRereadOwner(tripId: string): boolean {
+  return owners.get(tripId)?.size === 1;
+}
+
 export function requestManifestReread(tripId: string): boolean {
   pending.set(tripId, manifestStaleGeneration(tripId));
   running.delete(tripId);

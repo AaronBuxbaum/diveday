@@ -25,7 +25,16 @@ afterEach(() => {
 
 it("requests a correlated refresh without modifying the URL or browser history", async () => {
   const replace = vi.spyOn(window.history, "replaceState");
-  render(<ManifestRosterFreshness tripId={trip} renderId="initial" copy={copy} />);
+  render(
+    <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
+      tripId={trip}
+      renderId="initial"
+      copy={copy}
+    />,
+  );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledOnce());
   expect(replace).not.toHaveBeenCalled();
   expect(window.location.search).toBe("?checkpoint=departure");
@@ -34,7 +43,16 @@ it("requests a correlated refresh without modifying the URL or browser history",
 
 it("refreshes but remains unconfirmed if the device refuses the challenge cookie", async () => {
   vi.spyOn(document, "cookie", "set").mockImplementation(() => {});
-  render(<ManifestRosterFreshness tripId={trip} renderId="initial" copy={copy} />);
+  render(
+    <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
+      tripId={trip}
+      renderId="initial"
+      copy={copy}
+    />,
+  );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledOnce());
   expect(readManifestHistoryCookie(document.cookie, trip)).toBeUndefined();
   expect(screen.getByText(copy.unconfirmed)).toBeVisible();
@@ -44,12 +62,24 @@ it("does not call a delayed server render freshly checked after the read deadlin
   const clock = vi.spyOn(performance, "now").mockReturnValue(100);
   const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
   vi.stubGlobal("fetch", fetcher);
-  const page = render(<ManifestRosterFreshness tripId={trip} renderId="initial" copy={copy} />);
+  const page = render(
+    <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
+      tripId={trip}
+      renderId="initial"
+      copy={copy}
+    />,
+  );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledOnce());
   const token = readManifestHistoryCookie(document.cookie, trip);
   clock.mockReturnValue(10_101);
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       tripId={trip}
       renderId="new"
       renderToken={token}
@@ -73,11 +103,23 @@ it("keeps an abort-ignoring verifier unconfirmed after the device sleeps past th
         }),
     ),
   );
-  const page = render(<ManifestRosterFreshness tripId={trip} renderId="initial" copy={copy} />);
+  const page = render(
+    <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
+      tripId={trip}
+      renderId="initial"
+      copy={copy}
+    />,
+  );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledOnce());
   const token = readManifestHistoryCookie(document.cookie, trip);
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       tripId={trip}
       renderId="new"
       renderToken={token}

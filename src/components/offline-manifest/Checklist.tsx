@@ -49,7 +49,9 @@ export function OfflineChecklist({
 }) {
   const { envelope, expired } = view;
   const { t, busyChecklistItem, recordChecklistCheck } = controls;
-  return envelope.snapshot.checklist && envelope.snapshot.checklist.items.length > 0 ? (
+  const items = envelope.snapshot.checklist?.items ?? [];
+  const rejected = envelope.checklistEvents.filter((event) => event.syncStatus === "rejected");
+  return items.length > 0 || rejected.length > 0 ? (
     <section
       className={sectionCardClass({ padding: "none", className: "mt-6" })}
       aria-labelledby="pre-departure-check-heading"
@@ -57,9 +59,30 @@ export function OfflineChecklist({
       <h2 id="pre-departure-check-heading" className="px-4 py-4 text-base font-semibold text-ink">
         {t("shared.offlineManifest.single.checklist.heading")}
       </h2>
+      {rejected.length > 0 ? (
+        <div
+          className="border-t border-border px-4 py-3 text-sm font-medium text-danger"
+          role="status"
+        >
+          <ul>
+            {rejected.map((event) => {
+              const label =
+                items.find((item) => item.id === event.checklistItemId)?.label ??
+                t("shared.offlineManifest.reconcile.noteChecklistReference", {
+                  reference: event.checklistItemId.slice(-8),
+                });
+              return (
+                <li key={event.clientEventId}>
+                  {t("shared.offlineManifest.single.checklist.rejectedItem", { item: label })}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
       {/* Flat rows under one divider, the live check's shape (B07). */}
       <ul className="divide-y divide-border border-t border-border">
-        {envelope.snapshot.checklist.items.map((item) => {
+        {items.map((item) => {
           const check = latestOfflineChecklistCheck(
             envelope.snapshot,
             item.id,

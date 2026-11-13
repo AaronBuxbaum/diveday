@@ -24,6 +24,7 @@
   "cancelledRollCallClosed": "Esta salida está cancelada y no se ha contado a nadie a bordo, así que el pase de lista está cerrado. Si hay alguien a bordo, reactiva la salida para contarlo.",
   "cancelledRollCallStillCounting": "Esta salida está cancelada. El pase de lista sigue abierto porque el conteo ya había empezado.",
   "skipToRollCall": "Ir al pase de lista",
+  "rosterReadCompletedAt": "última lectura de la lista completada {date}",
   "rosterConfirmed": "Listado verificado",
   "rosterUnconfirmed": "Listado sin confirmar recientemente",
   "stillToBoardHeading": "Por embarcar: {count}",

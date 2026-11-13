@@ -71,6 +71,7 @@ it("refuses to confirm a manifest assembled across an erasure", async () => {
     renderId: "33333333-3333-4333-8333-333333333333",
     erasureEpoch: mixed.renderErasureEpoch,
     checkpoint: "departure",
+    readCompletedAt: 1_794_581_040_000,
   };
   const proof = signRosterConfirmation(binding);
   if (!proof) throw new Error("proof was not signed");

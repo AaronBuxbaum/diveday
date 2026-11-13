@@ -31,11 +31,23 @@ it("withdraws confirmation on every stale claim without accepting an old verifie
       resolveProof = resolve;
     }),
   );
-  const page = render(<ManifestRosterFreshness tripId="trip-1" renderId="first" copy={copy} />);
+  const page = render(
+    <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
+      tripId="trip-1"
+      renderId="first"
+      copy={copy}
+    />,
+  );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
   const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       tripId="trip-1"
       renderId="first"
       renderToken={token}
@@ -53,11 +65,23 @@ it("withdraws confirmation on every stale claim without accepting an old verifie
 });
 
 it("requires a later verified read after a confirmed roster becomes stale", async () => {
-  const page = render(<ManifestRosterFreshness tripId="trip-1" renderId="first" copy={copy} />);
+  const page = render(
+    <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
+      tripId="trip-1"
+      renderId="first"
+      copy={copy}
+    />,
+  );
   await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
   const first = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       tripId="trip-1"
       renderId="first"
       renderToken={first}
@@ -77,6 +101,9 @@ it("requires a later verified read after a confirmed roster becomes stale", asyn
   expect(second).not.toBe(first);
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       tripId="trip-1"
       renderId="second"
       renderToken={second}
@@ -97,6 +124,9 @@ it("keeps an old verifier invalid across a hidden page, stale claim and return",
   const view = (mode: "visible" | "hidden", token?: string) => (
     <Activity mode={mode}>
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         tripId="trip-1"
         renderId="render-one"
         renderToken={token}
@@ -124,6 +154,9 @@ it("does not confirm an old-session render when live verification refuses it", a
   vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 401 }));
   const page = render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderToken={undefined}
@@ -135,6 +168,9 @@ it("does not confirm an old-session render when live verification refuses it", a
   const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderToken={token}
@@ -151,6 +187,9 @@ it("does not mistake an HTML success response for confirmation", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response("sign in", { status: 200 }));
   const page = render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -162,6 +201,9 @@ it("does not mistake an HTML success response for confirmation", async () => {
   const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -183,6 +225,9 @@ it("ignores an older verification response after a new return", async () => {
   const page = render(
     <Activity mode="visible">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -196,6 +241,9 @@ it("ignores an older verification response after a new return", async () => {
   page.rerender(
     <Activity mode="visible">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -208,6 +256,9 @@ it("ignores an older verification response after a new return", async () => {
   page.rerender(
     <Activity mode="hidden">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -219,6 +270,9 @@ it("ignores an older verification response after a new return", async () => {
   page.rerender(
     <Activity mode="visible">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -235,6 +289,9 @@ it("ignores an older verification response after a new return", async () => {
 it("withdraws confirmation when a different render arrives with the same request marker", async () => {
   const page = render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       tripId="trip-1"
       renderProof="proof"
       renderId="first"
@@ -246,6 +303,9 @@ it("withdraws confirmation when a different render arrives with the same request
   const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       tripId="trip-1"
       renderProof="proof"
       renderId="first"
@@ -256,6 +316,9 @@ it("withdraws confirmation when a different render arrives with the same request
   await waitFor(() => expect(screen.getByText(copy.confirmed)).toBeVisible());
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       tripId="trip-1"
       renderProof="proof"
       renderId="second"
@@ -272,6 +335,9 @@ it("allows a fresh activation after a session invalidation only after live verif
   const page = render(
     <Activity mode="visible">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -285,6 +351,9 @@ it("allows a fresh activation after a session invalidation only after live verif
   page.rerender(
     <Activity mode="hidden">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -296,6 +365,9 @@ it("allows a fresh activation after a session invalidation only after live verif
   page.rerender(
     <Activity mode="visible">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -310,6 +382,9 @@ it("allows a fresh activation after a session invalidation only after live verif
   page.rerender(
     <Activity mode="visible">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -330,6 +405,9 @@ it("does not confirm a verifier that answers after its deadline", async () => {
   );
   const page = render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -343,6 +421,9 @@ it("does not confirm a verifier that answers after its deadline", async () => {
   try {
     page.rerender(
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -366,6 +447,9 @@ it("keeps the cached rows unconfirmed until the requested server render replaces
   const page = render(
     <>
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -383,6 +467,9 @@ it("keeps the cached rows unconfirmed until the requested server render replaces
   page.rerender(
     <>
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -401,6 +488,9 @@ it("keeps an interrupted return unconfirmed and requests one read on each return
   const page = render(
     <Activity mode="visible">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -413,6 +503,9 @@ it("keeps an interrupted return unconfirmed and requests one read on each return
   page.rerender(
     <Activity mode="hidden">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -424,6 +517,9 @@ it("keeps an interrupted return unconfirmed and requests one read on each return
   page.rerender(
     <Activity mode="visible">
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -440,6 +536,9 @@ it("stays unconfirmed offline and retries on reconnect", async () => {
   Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
   render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -458,6 +557,9 @@ it("stays unconfirmed offline and retries on reconnect", async () => {
 it("does not confirm a response that arrives after the device goes offline", async () => {
   const page = render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -471,6 +573,9 @@ it("does not confirm a response that arrives after the device goes offline", asy
   act(() => window.dispatchEvent(new Event("offline")));
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -484,6 +589,9 @@ it("does not confirm a response that arrives after the device goes offline", asy
 it("does not confirm an in-flight response after this device changes session", async () => {
   const page = render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -497,6 +605,9 @@ it("does not confirm an in-flight response after this device changes session", a
   act(() => window.dispatchEvent(new Event("online")));
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -519,6 +630,9 @@ it("invalidates an in-flight response when another tab changes session", async (
   vi.stubGlobal("BroadcastChannel", TestChannel);
   const page = render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -531,6 +645,9 @@ it("invalidates an in-flight response when another tab changes session", async (
   act(() => receiver?.(new MessageEvent("message", { data: "invalidate" })));
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -544,6 +661,9 @@ it("invalidates an in-flight response when another tab changes session", async (
 it("withdraws confirmation if a different server render replaces the roster", async () => {
   const page = render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -555,6 +675,9 @@ it("withdraws confirmation if a different server render replaces the roster", as
   const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -565,6 +688,9 @@ it("withdraws confirmation if a different server render replaces the roster", as
   await waitFor(() => expect(screen.getByText(copy.confirmed)).toBeVisible());
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -580,6 +706,9 @@ it("expires confirmation even if no further render arrives", async () => {
   try {
     const page = render(
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -591,6 +720,9 @@ it("expires confirmation even if no further render arrives", async () => {
     const token = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
     page.rerender(
       <ManifestRosterFreshness
+        historyScope="scope-one"
+        readCompletedAt={1_794_581_040_000}
+        readCompletedLabel="read completed"
         renderId="render-one"
         tripId="trip-1"
         renderProof="proof"
@@ -610,6 +742,9 @@ it("expires confirmation even if no further render arrives", async () => {
 it("requests confirmation again when reconciliation replaces a checked roster", async () => {
   const page = render(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -621,6 +756,9 @@ it("requests confirmation again when reconciliation replaces a checked roster", 
   const first = readManifestHistoryCookie(document.cookie, "trip-1") ?? undefined;
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -631,6 +769,9 @@ it("requests confirmation again when reconciliation replaces a checked roster", 
   await waitFor(() => expect(screen.getByText(copy.confirmed)).toBeVisible());
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"
@@ -644,6 +785,9 @@ it("requests confirmation again when reconciliation replaces a checked roster", 
   expect(second).not.toBe(first);
   page.rerender(
     <ManifestRosterFreshness
+      historyScope="scope-one"
+      readCompletedAt={1_794_581_040_000}
+      readCompletedLabel="read completed"
       renderId="render-one"
       tripId="trip-1"
       renderProof="proof"

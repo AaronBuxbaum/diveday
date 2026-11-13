@@ -60,6 +60,8 @@ export function offlineManifestManagerCopy(t: StaffTranslator): OfflineManifestM
     freshnessAging: t("trips.offlineManifestManager.freshnessAging"),
     freshnessStale: t("trips.offlineManifestManager.freshnessStale"),
     freshnessExpired: t("trips.offlineManifestManager.freshnessExpired"),
+    pendingSummaryOne: t("trips.offlineManifestManager.pendingSummaryOne"),
+    pendingSummaryOther: t.raw("trips.offlineManifestManager.pendingSummaryOther"),
     savedSummary: t.raw("trips.offlineManifestManager.savedSummary"),
     refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
     refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),

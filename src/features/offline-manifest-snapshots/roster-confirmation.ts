@@ -11,6 +11,7 @@ type Binding = {
   renderId: string;
   erasureEpoch: number;
   checkpoint: string;
+  readCompletedAt: number;
 };
 
 /** Binds a rendered roster's challenge to its server-side authenticated session. */
@@ -21,6 +22,9 @@ export function signRosterConfirmation(binding: Binding): string | null {
     !isRollCallCheckpoint(binding.checkpoint, 5) ||
     !Number.isSafeInteger(binding.erasureEpoch) ||
     binding.erasureEpoch < 0 ||
+    !Number.isSafeInteger(binding.readCompletedAt) ||
+    binding.readCompletedAt <= 0 ||
+    binding.readCompletedAt > 8_640_000_000_000_000 ||
     !nonceShape.test(binding.nonce) ||
     !nonceShape.test(binding.renderId)
   )
@@ -36,7 +40,27 @@ export function signRosterConfirmation(binding: Binding): string | null {
       binding.renderId,
       binding.erasureEpoch,
       binding.checkpoint,
+      binding.readCompletedAt,
     ]),
+  );
+}
+
+/** Opaque, stable scope for historical labels; it grants no access. */
+export function signRosterHistoryScope(
+  binding: Pick<Binding, "shopId" | "tripId" | "sessionId" | "checkpoint">,
+): string | null {
+  if (
+    !authSecret ||
+    !binding.shopId ||
+    !binding.tripId ||
+    !binding.sessionId ||
+    !isRollCallCheckpoint(binding.checkpoint, 5)
+  )
+    return null;
+  const key = deriveLabelKey(authSecret, "diveday-manifest-roster-history-scope-v1");
+  return signPayload(
+    key,
+    JSON.stringify([binding.shopId, binding.tripId, binding.sessionId, binding.checkpoint]),
   );
 }
 

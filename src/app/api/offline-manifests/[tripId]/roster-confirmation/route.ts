@@ -40,6 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
     proof?: unknown;
     renderId?: unknown;
     checkpoint?: unknown;
+    readCompletedAt?: unknown;
   } | null;
   const erasureEpoch = await getShopOfflineErasureEpoch(access.db, access.shop.id);
   const valid =
@@ -48,6 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
     typeof input.renderId === "string" &&
     typeof input.proof === "string" &&
     typeof input.checkpoint === "string" &&
+    typeof input.readCompletedAt === "number" &&
     access.user.sessionId &&
     erasureEpoch !== null &&
     verifyRosterConfirmation(
@@ -59,6 +61,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
         renderId: input.renderId,
         erasureEpoch,
         checkpoint: input.checkpoint,
+        readCompletedAt: input.readCompletedAt,
       },
       input.proof,
     );

@@ -290,10 +290,10 @@ export default async function TripManifestPage({
               timeZone={shop.timezone}
             />
             <RosterFreshness
-              tripId={tripId}
-              shopId={shop.id}
+              {...{ tripId, locale }}
+              shop={shop}
               sessionId={session.user.sessionId}
-              erasureEpoch={view.renderErasureEpoch}
+              read={view}
               checkpoint={checkpoint}
               renderId={renderId}
               rosterRead={rosterRead}

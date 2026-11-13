@@ -15,6 +15,60 @@ describe("OfflineChecklist", () => {
     expect(container.innerHTML).toBe("");
   });
 
+  it("identifies a rejected checklist change without treating it as checked", () => {
+    const envelope = savedCopy();
+    envelope.snapshot.checklist = {
+      items: [{ id: "oxygen", label: "Emergency oxygen kit aboard" }],
+    };
+    envelope.checklistEvents = [
+      {
+        clientEventId: "rejected-check",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: "trip-1",
+        checklistItemId: "oxygen",
+        status: "checked",
+        note: null,
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "rejected",
+      },
+    ];
+    const found = offlineTripView(envelope, "departure");
+    if (!found) throw new Error("missing manifest");
+    render(<OfflineChecklist view={found} controls={controls()} />);
+    expect(
+      screen.getByText(/Emergency oxygen kit aboard: this offline change was not accepted/),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /Emergency oxygen kit aboard/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("still identifies a rejected change when the checklist item is no longer in the copy", () => {
+    const envelope = savedCopy();
+    envelope.snapshot.checklist = undefined;
+    envelope.checklistEvents = [
+      {
+        clientEventId: "rejected-check",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: "trip-1",
+        checklistItemId: "item-12345678",
+        status: "checked",
+        note: null,
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "rejected",
+      },
+    ];
+    const found = offlineTripView(envelope, "departure");
+    if (!found) throw new Error("missing manifest");
+    render(<OfflineChecklist view={found} controls={controls()} />);
+    expect(
+      screen.getByText(/Checklist item 12345678: this offline change was not accepted/),
+    ).toBeVisible();
+  });
+
   it("draws the boat's open snags as saved, with nothing to press", () => {
     const saved = view();
     saved.envelope.snapshot.snags = {

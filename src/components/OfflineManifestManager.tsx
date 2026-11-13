@@ -16,6 +16,8 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
   offlineManifestFreshness,
+  pendingOfflineEventCount,
+  rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
 import { type OfflineManifestSyncCopy, useOfflineManifestSync } from "./use-offline-manifest-sync";
 
@@ -46,6 +48,8 @@ export interface OfflineManifestManagerCopy extends OfflineManifestSyncCopy {
   freshnessAging: string;
   freshnessStale: string;
   freshnessExpired: string;
+  pendingSummaryOne: string;
+  pendingSummaryOther: string;
   /** `{date}`, `{pending}`, `{rejected}` placeholders. */
   savedSummary: string;
   refreshingLabel: string;
@@ -111,8 +115,8 @@ export function OfflineManifestManager({
     return () => clearTimeout(timer);
   }, [expiresAt]);
 
-  const pending = saved?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
-  const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
+  const pending = saved ? pendingOfflineEventCount(saved) : 0;
+  const rejected = saved ? rejectedOfflineEventCount(saved) : 0;
   const noteEvents = saved ? [...saved.events, ...saved.checklistEvents] : [];
   const cutoffNoteEvents = noteEvents.filter(
     (event) => event.noteDisposition === "discarded_erasure_cutoff",
@@ -193,7 +197,10 @@ export function OfflineManifestManager({
             role="alert"
             className="pointer-events-auto max-w-2xl rounded-inset border border-danger/30 bg-danger-tint px-4 py-3 text-base font-semibold text-danger shadow-lg backdrop-blur"
           >
-            {rejectedNotice}
+            {rejectedNotice}{" "}
+            <a href={`/offline-manifest?trip=${tripId}`} className="underline">
+              {copy.openOfflineRollCall}
+            </a>
           </div>
         </div>
       ) : null}
@@ -272,6 +279,17 @@ export function OfflineManifestManager({
                     offlineTitle: copy.connectivityOfflineTitle,
                   }}
                 />
+                {pending > 0 ? (
+                  <span role="status" className="text-sm font-medium text-foreground">
+                    {fill(
+                      pluralForm(pending, {
+                        one: copy.pendingSummaryOne,
+                        other: copy.pendingSummaryOther,
+                      }),
+                      { count: pending },
+                    )}
+                  </span>
+                ) : null}
                 {freshness ? (
                   <OfflineFreshnessPill freshness={freshness}>
                     {freshnessLabel}

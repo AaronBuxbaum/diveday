@@ -18,11 +18,12 @@ const { POST } = await import("./route");
 const tripId = "11111111-1111-4111-8111-111111111111";
 const nonce = "22222222-2222-4222-8222-222222222222";
 const renderId = "33333333-3333-4333-8333-333333333333";
+const readCompletedAt = 1_794_581_040_000;
 const params = Promise.resolve({ tripId });
 const request = (proof: string | null) =>
   new Request("http://localhost/confirmation", {
     method: "POST",
-    body: JSON.stringify({ nonce, renderId, proof, checkpoint: "departure" }),
+    body: JSON.stringify({ nonce, renderId, proof, checkpoint: "departure", readCompletedAt }),
   });
 
 beforeEach(() => {
@@ -52,6 +53,7 @@ it("refuses an old roster after same-shop session replacement, signout, or staff
     renderId,
     erasureEpoch: shop.offlineErasureEpoch,
     checkpoint: "departure",
+    readCompletedAt,
   });
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(auth).mockResolvedValue(session);

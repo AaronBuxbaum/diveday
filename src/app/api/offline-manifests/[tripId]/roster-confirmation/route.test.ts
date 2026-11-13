@@ -12,6 +12,7 @@ const { POST } = await import("./route");
 const tripId = "11111111-1111-4111-8111-111111111111";
 const nonce = "22222222-2222-4222-8222-222222222222";
 const renderId = "33333333-3333-4333-8333-333333333333";
+const readCompletedAt = 1_794_581_040_000;
 const sessionId = "session-one";
 const shopId = "shop-one";
 const proof = signRosterConfirmation({
@@ -22,12 +23,13 @@ const proof = signRosterConfirmation({
   renderId,
   erasureEpoch: 4,
   checkpoint: "departure",
+  readCompletedAt,
 });
 const params = Promise.resolve({ tripId });
 const request = (value: unknown) =>
   new Request("http://localhost/api/offline-manifests/test/roster-confirmation", {
     method: "POST",
-    body: JSON.stringify({ checkpoint: "departure", ...(value as object) }),
+    body: JSON.stringify({ checkpoint: "departure", readCompletedAt, ...(value as object) }),
   });
 
 beforeEach(() => {
@@ -75,6 +77,7 @@ it.each(["after_dive_1", "after_dive_5"])(
       renderId,
       erasureEpoch: 4,
       checkpoint,
+      readCompletedAt,
     });
     expect(diveProof).toBeTruthy();
     expect(
@@ -89,6 +92,19 @@ it.each(["after_dive_1", "after_dive_5"])(
     ).toBe(403);
   },
 );
+
+it("refuses a different or absent completed read time", async () => {
+  expect(
+    (
+      await POST(request({ nonce, proof, renderId, readCompletedAt: readCompletedAt + 1 }), {
+        params,
+      })
+    ).status,
+  ).toBe(403);
+  expect(
+    (await POST(request({ nonce, proof, renderId, readCompletedAt: null }), { params })).status,
+  ).toBe(403);
+});
 
 it("refuses a different session in the same shop", async () => {
   vi.mocked(authorizeOfflineManifestStaff).mockResolvedValue({

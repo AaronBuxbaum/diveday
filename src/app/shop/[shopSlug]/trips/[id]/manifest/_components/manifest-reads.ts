@@ -20,7 +20,7 @@ import { lastAtSites } from "@/features/site-history";
 import { listShopPickedSpecies, listTripSightings } from "@/features/trip-sightings";
 import { latestTripStage } from "@/features/trip-stages";
 import { departureCrewCount } from "@/lib/boat-safety";
-import { nowDate } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { manifestPhysicalCounts } from "@/lib/manifests";
 import { cancelledRollCall } from "@/lib/roll-call";
 
@@ -49,6 +49,7 @@ export async function readManifestPage(
   // All the other identity-bearing reads start after the roster has captured
   // its epoch. A later roster epoch cannot certify earlier buddy or note reads.
   const rosterResult = await readOfflineManifestRoster(db, shopId, tripId);
+  const readCompletedAt = nowMs();
   const renderErasureEpoch = rosterResult?.erasureEpoch ?? null;
   const roster = Promise.resolve(rosterResult);
   const sites = listDiveSiteNames(db, shopId);
@@ -191,6 +192,7 @@ export async function readManifestPage(
   const completeManifests = offlineRoster?.manifests ?? null;
   const dockTrip = completeManifests?.[0]?.trip;
   return {
+    readCompletedAt,
     renderErasureEpoch,
     completeManifests,
     boatSafety,

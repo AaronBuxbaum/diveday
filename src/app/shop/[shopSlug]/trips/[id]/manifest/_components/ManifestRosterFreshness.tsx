@@ -35,6 +35,9 @@ export function ManifestRosterFreshness({
   renderId,
   tripId,
   checkpoint = "departure",
+  historyScope,
+  readCompletedAt,
+  readCompletedLabel,
   requireCommit = false,
   copy,
 }: {
@@ -43,12 +46,20 @@ export function ManifestRosterFreshness({
   renderId: string;
   tripId: string;
   checkpoint?: string;
+  historyScope: string;
+  readCompletedAt: number;
+  readCompletedLabel: string;
   requireCommit?: boolean;
   copy: { unconfirmed: string; confirmed: string };
 }) {
   const router = useRouter();
   const [requestToken, setRequestToken] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [confirmedHistory, setConfirmedHistory] = useState<{
+    scope: string;
+    generation: number;
+    label: string;
+  } | null>(null);
   const requested = useRef<string | null>(null);
   const activeToken = useRef<string | null>(null);
   const confirmedRef = useRef(false);
@@ -66,6 +77,12 @@ export function ManifestRosterFreshness({
     if (!navigator.onLine || sessionInvalidated.current) {
       activeToken.current = null;
       setRequestToken(null);
+      return false;
+    }
+    if (!historyScope) {
+      activeToken.current = null;
+      setRequestToken(null);
+      router.refresh();
       return false;
     }
     const token = crypto.randomUUID();
@@ -90,7 +107,7 @@ export function ManifestRosterFreshness({
     setRequestToken(token);
     router.refresh();
     return true;
-  }, [tripId, checkpoint, router]);
+  }, [tripId, checkpoint, historyScope, router]);
 
   // React Activity tears down effects when a cached page is hidden and runs
   // them again when history returns to it. Each activation gets a new token.
@@ -111,6 +128,7 @@ export function ManifestRosterFreshness({
     window.addEventListener("offline", offline);
     const unsubscribe = subscribeSessionInvalidation(() => {
       sessionInvalidated.current = true;
+      setConfirmedHistory(null);
       offline();
     });
     const unsubscribeStale = subscribeManifestInvalidation(tripId, () => {
@@ -133,6 +151,11 @@ export function ManifestRosterFreshness({
       requested.current !== requestToken ||
       renderToken !== requestToken ||
       !renderProof ||
+      !historyScope ||
+      !Number.isSafeInteger(readCompletedAt) ||
+      readCompletedAt <= 0 ||
+      readCompletedAt > 8_640_000_000_000_000 ||
+      !readCompletedLabel ||
       readCheckpoint.current !== checkpoint ||
       !withinDeadline(readStarted.current, READ_DEADLINE_MS) ||
       readGeneration.current !== manifestStaleGeneration(tripId) ||
@@ -164,7 +187,13 @@ export function ManifestRosterFreshness({
       cache: "no-store",
       credentials: "same-origin",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ nonce: requestToken, renderId, proof: renderProof, checkpoint }),
+      body: JSON.stringify({
+        nonce: requestToken,
+        renderId,
+        proof: renderProof,
+        checkpoint,
+        readCompletedAt,
+      }),
       signal: controller.signal,
     })
       .then((response) => {
@@ -206,6 +235,11 @@ export function ManifestRosterFreshness({
           unsubscribeCommit();
           satisfyPendingManifestReread(tripId, readGeneration.current);
           confirmedRef.current = true;
+          setConfirmedHistory({
+            scope: historyScope,
+            generation: sessionGeneration,
+            label: readCompletedLabel,
+          });
           setConfirmed(true);
         };
         if (requireCommit) unsubscribeCommit = subscribeManifestRosterCommit(tripId, finish);
@@ -223,6 +257,9 @@ export function ManifestRosterFreshness({
     renderId,
     tripId,
     checkpoint,
+    historyScope,
+    readCompletedAt,
+    readCompletedLabel,
     requireCommit,
     requestToken,
     requestRead,
@@ -248,9 +285,20 @@ export function ManifestRosterFreshness({
     };
   }, [confirmed]);
 
+  const historicalLabel =
+    confirmedHistory?.scope === historyScope &&
+    confirmedHistory.generation === sessionInvalidationGeneration()
+      ? confirmedHistory.label
+      : "";
   return (
     <p role="status" className="text-sm font-medium text-muted">
-      {confirmed ? copy.confirmed : copy.unconfirmed}
+      <span>{confirmed && historicalLabel ? copy.confirmed : copy.unconfirmed}</span>
+      {historicalLabel ? (
+        <>
+          {" "}
+          · <span>{historicalLabel}</span>
+        </>
+      ) : null}
     </p>
   );
 }

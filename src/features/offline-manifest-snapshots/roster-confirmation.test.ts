@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { signRosterConfirmation, verifyRosterConfirmation } from "./roster-confirmation";
+import {
+  signRosterConfirmation,
+  signRosterHistoryScope,
+  verifyRosterConfirmation,
+} from "./roster-confirmation";
 
 const binding = {
   shopId: "shop-one",
@@ -9,6 +13,7 @@ const binding = {
   renderId: "33333333-3333-4333-8333-333333333333",
   erasureEpoch: 4,
   checkpoint: "departure",
+  readCompletedAt: 1_794_581_040_000,
 };
 
 describe("roster confirmation proof", () => {
@@ -29,6 +34,30 @@ describe("roster confirmation proof", () => {
     }
   });
 
+  it("binds the completed read time to the verified render", () => {
+    const timed = { ...binding, readCompletedAt: 1_794_581_040_000 };
+    const proof = signRosterConfirmation(timed);
+    if (!proof) throw new Error("proof was not signed");
+    expect(
+      verifyRosterConfirmation({ ...timed, readCompletedAt: timed.readCompletedAt + 1 }, proof),
+    ).toBe(false);
+  });
+
+  it("keeps historical labels scoped to the authenticated session and roster", () => {
+    const scope = signRosterHistoryScope(binding);
+    expect(scope).toBeTruthy();
+    expect(scope).not.toContain(binding.sessionId);
+    for (const changed of [
+      { shopId: "other" },
+      { tripId: "other" },
+      { sessionId: "other" },
+      { checkpoint: "after_dive_1" },
+    ]) {
+      expect(signRosterHistoryScope({ ...binding, ...changed })).not.toBe(scope);
+    }
+    expect(signRosterHistoryScope({ ...binding, sessionId: "" })).toBeNull();
+  });
+
   it("fails closed for missing session, malformed ids and malformed proofs", () => {
     expect(signRosterConfirmation({ ...binding, sessionId: "" })).toBeNull();
     expect(signRosterConfirmation({ ...binding, nonce: "bad" })).toBeNull();
@@ -36,6 +65,11 @@ describe("roster confirmation proof", () => {
     expect(signRosterConfirmation({ ...binding, erasureEpoch: -1 })).toBeNull();
     expect(signRosterConfirmation({ ...binding, erasureEpoch: 0.5 })).toBeNull();
     expect(signRosterConfirmation({ ...binding, checkpoint: "after_dive_0" })).toBeNull();
+    expect(signRosterConfirmation({ ...binding, readCompletedAt: -1 })).toBeNull();
+    expect(signRosterConfirmation({ ...binding, readCompletedAt: 0.5 })).toBeNull();
+    expect(
+      signRosterConfirmation({ ...binding, readCompletedAt: 8_640_000_000_000_001 }),
+    ).toBeNull();
     expect(verifyRosterConfirmation(binding, "")).toBe(false);
     expect(verifyRosterConfirmation(binding, "a".repeat(257))).toBe(false);
     expect(verifyRosterConfirmation(binding, "not-a-matching-proof")).toBe(false);
