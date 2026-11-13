@@ -59,7 +59,7 @@ export function SignedRecordsSection({
   // describe the whole log and stay untouched — the record has not gone
   // anywhere, it is one day group further up.
   const entries = auditPage.entries.filter((entry) => entry.id !== pinned?.id);
-  const base = shopPath(shopSlug, "waivers");
+  const base = shopPath(shopSlug, "divers", "waivers");
   // The `?record=` pin travels with the page rather than being dropped the
   // moment a reviewer turns one, and the anchor keeps a page turn landing on
   // the log instead of back at the release editor above it.
