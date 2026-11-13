@@ -72,7 +72,7 @@ export const COPY: BuilderCopy = {
   noPriceSetAll:
     "None of these departures has a price yet, and divers already see them on the schedule. Open a departure to set one.",
   rehearsal: "Rehearsal",
-  noBoats: "No boats",
+  noBoats: "No trips",
   quietDays: "{first} to {last}",
   asked: "Asked for",
   addDeparture: "Add a departure",

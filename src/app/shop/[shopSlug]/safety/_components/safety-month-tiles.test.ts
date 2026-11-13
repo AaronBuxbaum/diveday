@@ -32,6 +32,7 @@ function month(crew: Partial<SafetyMonth>): SafetyMonth {
     checkedSailings: 0,
     unrecordedSailings: 0,
     lapsedSailings: [],
+    openRollCalls: [],
     unrecordedCrew: [],
     noCrewDepartures: [],
     noCrewOnRecord: false,
@@ -152,4 +153,17 @@ describe("the month's crew tile", () => {
     expect(tile.value).toBe("0 of 4");
     expect(tile.href).toBeUndefined();
   });
+});
+
+it("never links empty roll-call and incident figures to missing lists", () => {
+  const figures = safetyMonthTiles({
+    t,
+    safety: month({}),
+    filed: 0,
+    drafts: 0,
+    activityHref: "/activity",
+    staffingHref: null,
+  });
+  expect(figures.find((figure) => figure.key === "rollCalls")?.href).toBeUndefined();
+  expect(figures.find((figure) => figure.key === "incidents")?.href).toBeUndefined();
 });

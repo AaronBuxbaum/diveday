@@ -1,22 +1,15 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
-import { MoreMenu } from "@/components/MoreMenu";
+import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
 import { menuRowClass } from "@/components/ui/menu";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { InboxSeat } from "@/features/inbox-seats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { InboxIntent } from "@/lib/assists/inbox";
 import { mailtoHref } from "@/lib/contact-links";
 import { InboxResponseDraft } from "./InboxResponseDraft";
-import { InboxRowView } from "./InboxRowOpen";
 
-/** An act in the row's open view: one weight for every act. */
-const ACT_CLASS = buttonClass({ variant: "secondary", size: "sm" });
-const PRIMARY_ACT_CLASS = buttonClass({ variant: "primary", size: "sm" });
-
-/** The open view of a message row: one primary act, Done, and a "More". */
+/** All message actions in one disclosure, with no nested menu. */
 export function InboxRowActs({
   message,
   name,
@@ -30,8 +23,6 @@ export function InboxRowActs({
   deleteAction,
   doneAction,
   draftAction,
-  recordHref,
-  intent,
   done,
   t,
   when,
@@ -49,18 +40,12 @@ export function InboxRowActs({
   deleteAction: (formData: FormData) => Promise<void>;
   doneAction: (formData: FormData) => Promise<void>;
   draftAction?: (messageId: string) => Promise<string | null>;
-  recordHref: string | null;
-  intent: Exclude<InboxIntent, "other"> | null;
   done: boolean;
   t: StaffTranslator;
   when: (seat: InboxSeat) => string;
   seatHref: (seat: InboxSeat) => string;
 }) {
-  // **One obvious act, Done, and a "More"** (Aaron, 2026-11-13). The open view
-  // used to lay out up to seven buttons of one weight. Now the act this message
-  // most likely wants is the one primary button (marking late or moving when
-  // that is what the words asked, else the reply), Done is always there, and
-  // every other door waits in the menu.
+  // Every action is available after one disclosure; the sender name opens the conversation.
   const lateRow = (seat: InboxSeat, className: string) => (
     <form key={seat.bookingId} action={lateAction}>
       <input type="hidden" name="messageId" value={message.id} />
@@ -98,26 +83,6 @@ export function InboxRowActs({
   // boat's lateness: its seat carries no late window.
   const lateOpen =
     lateAction && message.channel !== "page" ? lateSeats.filter((seat) => !seat.runningLateAt) : [];
-  const saidLate = message.keywordIntent === "late" || intent === "late";
-  const saidMove = message.keywordIntent === "move" || intent === "move";
-  const promoted: "late" | "move" | "reply" | "record" | null =
-    saidLate && lateOpen.length === 1
-      ? "late"
-      : saidMove && seats.length === 1
-        ? "move"
-        : draftAction || (!recordHref && email)
-          ? "reply"
-          : recordHref
-            ? "record"
-            : null;
-  const strangerMail = email ? (
-    <a
-      href={mailtoHref(email, { subject: replySubject, body: `\n\n${quoted}` })}
-      className={ACT_CLASS}
-    >
-      {t("inbox.replyByEmail")}
-    </a>
-  ) : null;
   const menuRow = (tone: "quiet" | "danger" = "quiet") => menuRowClass(tone, { gutter: false });
   const draftPanel = draftAction ? (
     <InboxResponseDraft
@@ -139,29 +104,12 @@ export function InboxRowActs({
       }}
     />
   ) : null;
-  const openRecord = (className: string) =>
-    recordHref ? (
-      <Link href={recordHref} aria-label={t("inbox.openRecord", { name })} className={className}>
-        {t("inbox.openRecordShort")}
-      </Link>
-    ) : null;
-  const primary =
-    promoted === "late"
-      ? lateRow(lateOpen[0], PRIMARY_ACT_CLASS)
-      : promoted === "move"
-        ? moveRow(seats[0], PRIMARY_ACT_CLASS)
-        : promoted === "reply"
-          ? (draftPanel ?? strangerMail)
-          : promoted === "record"
-            ? openRecord(PRIMARY_ACT_CLASS)
-            : null;
   type MenuAct = { key: string; node: ReactNode };
   const more: MenuAct[] = (
     [
-      promoted !== "record" && recordHref ? { key: "record", node: openRecord(menuRow()) } : null,
       // With a draft, the plain mail link is a door in the menu; the draft's own
       // "Reply by email" carries its text once there is one.
-      draftAction && email
+      email && !draftAction
         ? {
             key: "mail",
             node: (
@@ -174,15 +122,11 @@ export function InboxRowActs({
             ),
           }
         : null,
-      ...(promoted === "late"
-        ? []
-        : lateOpen.map((seat) => ({
-            key: `late-${seat.bookingId}`,
-            node: lateRow(seat, menuRow()),
-          }))),
-      ...(promoted === "move"
-        ? []
-        : seats.map((seat) => ({ key: `move-${seat.bookingId}`, node: moveRow(seat, menuRow()) }))),
+      ...lateOpen.map((seat) => ({
+        key: `late-${seat.bookingId}`,
+        node: lateRow(seat, menuRow()),
+      })),
+      ...seats.map((seat) => ({ key: `move-${seat.bookingId}`, node: moveRow(seat, menuRow()) })),
       message.personId
         ? null
         : {
@@ -206,25 +150,23 @@ export function InboxRowActs({
     ] as (MenuAct | null)[]
   ).filter((act): act is MenuAct => act !== null);
   return (
-    <InboxRowView>
-      {primary}
-      {/* A message that asked to move or run late promotes that act; the draft stays one tap away. */}
-      {promoted !== "reply" ? draftPanel : null}
+    <RowMenu label={t("inbox.menu.label", { name })} panelClassName="w-80" keepMounted>
+      {draftPanel}
       <form action={doneAction}>
         <input type="hidden" name="messageId" value={message.id} />
         <input type="hidden" name="receivedAt" value={message.receivedAt.toISOString()} />
         <input type="hidden" name="done" value={done ? "false" : "true"} />
-        <SubmitButton pendingLabel={t("words.busy.saving")} className={ACT_CLASS}>
+        <SubmitButton pendingLabel={t("words.busy.saving")} className={menuRow()}>
           {done ? t("inbox.done.reopen") : t("inbox.done.action")}
         </SubmitButton>
       </form>
       {more.length > 0 ? (
-        <MoreMenu label={t("inbox.more")} size="sm">
+        <div className="flex flex-col gap-1">
           {more.map((act) => (
             <Fragment key={act.key}>{act.node}</Fragment>
           ))}
-        </MoreMenu>
+        </div>
       ) : null}
-    </InboxRowView>
+    </RowMenu>
   );
 }

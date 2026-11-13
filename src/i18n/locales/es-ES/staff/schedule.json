@@ -191,7 +191,7 @@
     "nothingThisWeek": "Nada esta semana. La próxima salida es el {date}.",
     "seats": "{booked} de {capacity}",
     "seatTally": "{taken} de {total, plural, one {# plaza} other {# plazas}}",
-    "noBoats": "Sin barcos",
+    "noBoats": "Sin salidas",
     "quietDays": "{first} a {last}",
     "runsDays": "{days, plural, one {# día} other {# días}}",
     "sailed": "Zarpó",

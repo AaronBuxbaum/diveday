@@ -99,3 +99,58 @@ describe("RowMenu", () => {
     expect(document.querySelector("[data-row-menu]")).toBeNull();
   });
 });
+
+it("preserves an unfinished editor when keepMounted is requested", async () => {
+  render(
+    <RowMenu label="Actions" keepMounted>
+      <input aria-label="Draft" defaultValue="" />
+    </RowMenu>,
+  );
+  const trigger = screen.getByRole("button", { name: "Actions" });
+  expect(screen.queryByRole("textbox", { name: "Draft" })).toBeNull();
+  await userEvent.click(trigger);
+  await userEvent.type(screen.getByRole("textbox", { name: "Draft" }), "Unsent response");
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("textbox", { name: "Draft" })).toBeNull();
+  expect(trigger).toHaveFocus();
+  await userEvent.click(trigger);
+  expect(screen.getByRole("textbox", { name: "Draft" })).toHaveValue("Unsent response");
+});
+
+it("repositions and bounds an editor that grows asynchronously near the phone bar", async () => {
+  let resized = () => {};
+  let height = 40;
+  const previous = globalThis.ResizeObserver;
+  globalThis.ResizeObserver = class {
+    constructor(callback: () => void) {
+      resized = callback;
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as typeof ResizeObserver;
+  vi.spyOn(window, "innerHeight", "get").mockReturnValue(800);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.hasAttribute("data-row-menu") ? rect(0, height) : rect(600, 32);
+  });
+  document.documentElement.style.setProperty("--tabbar-h", "64px");
+  try {
+    render(
+      <RowMenu label="Actions" keepMounted>
+        <textarea aria-label="Draft" />
+      </RowMenu>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Actions" }));
+    const panel = document.querySelector("[data-row-menu]");
+    expect(panel).toHaveClass("top-full");
+    height = 1000;
+    act(() => resized());
+    expect(panel).toHaveClass("bottom-full", "overflow-y-auto");
+    expect(panel).toHaveStyle({ maxHeight: "576px" });
+  } finally {
+    globalThis.ResizeObserver = previous;
+    document.documentElement.style.removeProperty("--tabbar-h");
+  }
+});
