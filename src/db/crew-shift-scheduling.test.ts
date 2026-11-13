@@ -75,3 +75,24 @@ it("does not require shifts when the shop explicitly disables shift scheduling",
     true,
   );
 });
+
+it("does not auto-seat standing crew until every meeting has shift coverage", async () => {
+  const { db, shop, personId, trip } = await fixture();
+  const { seatStandingCrew } = await import("./trips-crew");
+  const days = [
+    { startsAt: trip.startsAt, endsAt: trip.endsAt },
+    { startsAt: new Date("2031-06-02T12:00:00Z"), endsAt: new Date("2031-06-02T16:00:00Z") },
+  ];
+  const input = {
+    shopId: shop.id,
+    tripId: trip.id,
+    courseSession: false,
+    days,
+    crew: [{ personId, tripRole: null }],
+  };
+  expect(await db.transaction((tx) => seatStandingCrew(tx, input))).toEqual([]);
+  await db.insert(staffShifts).values({ shopId: shop.id, personId, ...days[0] });
+  expect(await db.transaction((tx) => seatStandingCrew(tx, input))).toEqual([]);
+  await db.insert(staffShifts).values({ shopId: shop.id, personId, ...days[1] });
+  expect(await db.transaction((tx) => seatStandingCrew(tx, input))).toEqual([personId]);
+});

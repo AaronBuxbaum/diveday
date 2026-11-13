@@ -12,7 +12,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewNotices } from "./crew-notices";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
-import { crewHaveScheduledShifts } from "./crew-shift-scheduling";
+import { crewHaveScheduledShifts, crewWithScheduledShifts } from "./crew-shift-scheduling";
 import { publishManifestEvent } from "./manifest-events";
 import { crewMarks, markCrewPersonId } from "./roll-call-subject";
 import {
@@ -61,6 +61,7 @@ import { livePerson, liveTrip } from "./trips-live";
 const staffPersonColumns = {
   id: people.id,
   fullName: people.fullName,
+  staffPhotoPath: people.staffPhotoPath,
   spokenLanguages: people.spokenLanguages,
   crewPublicConsentAt: people.crewPublicConsentAt,
   crewPublicName: people.crewPublicName,
@@ -68,11 +69,17 @@ const staffPersonColumns = {
 
 /** One staff member as {@link listStaff} returns them. */
 export type StaffPerson = {
-  [K in keyof typeof staffPersonColumns]: (typeof people.$inferSelect)[K];
-};
+  [K in Exclude<
+    keyof typeof staffPersonColumns,
+    "staffPhotoPath"
+  >]: (typeof people.$inferSelect)[K];
+} & { staffPhotoPath?: string | null };
 
 /** All people holding at least one staff role in the shop, with their roles. */
-export async function listStaff(db: AppDb, shopId: string) {
+export async function listStaff(
+  db: AppDb,
+  shopId: string,
+): Promise<{ person: StaffPerson; roles: string[] }[]> {
   const rows = await db
     .select({ person: staffPersonColumns, role: personRoles.role })
     .from(people)
@@ -866,7 +873,15 @@ export async function seatStandingCrew(
     staff.map((member) => member.personId),
     input.days,
   );
-  const seated = staff.filter((member) => !busy.has(member.personId));
+  const onShift = await crewWithScheduledShifts(
+    tx,
+    input.shopId,
+    input.days,
+    staff.map((member) => member.personId),
+  );
+  const seated = staff.filter(
+    (member) => !busy.has(member.personId) && onShift.has(member.personId),
+  );
   if (seated.length === 0) return [];
   if (input.courseSession) {
     const proposedCrew = seated.map((member) => ({

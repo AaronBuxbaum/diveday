@@ -15,6 +15,7 @@ import {
   trips,
 } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
+import { seedStaffPortraits } from "./seed-staff-portraits";
 
 /**
  * Reset-owned fictional roster, after every departure scenario has been built.
@@ -23,6 +24,7 @@ import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
  * This is demo construction, never a repair of a real shop's audit history.
  */
 export async function seedStaffRoster(db: DbExecutor, shopId: string): Promise<void> {
+  await seedStaffPortraits(db, shopId);
   const staff = await db
     .selectDistinct({ id: people.id, fullName: people.fullName })
     .from(people)

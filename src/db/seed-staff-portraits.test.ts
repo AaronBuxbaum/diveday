@@ -12,7 +12,7 @@ describe("fictional demo staff portrait assets", () => {
     expect(Object.keys(DEMO_STAFF_PORTRAITS).sort()).toEqual(
       staffDefs.map((staff) => staff.local).sort(),
     );
-    expect(DEMO_STAFF_PORTRAITS.sal).toBeNull();
+    expect(DEMO_STAFF_PORTRAITS.sal?.url).toContain("sal-moretti.webp");
   });
 
   it("provides distinct bundled portraits with exact prompt records", () => {
@@ -26,6 +26,36 @@ describe("fictional demo staff portrait assets", () => {
       expect(urls.has(portrait.url)).toBe(false);
       urls.add(portrait.url);
     }
-    expect(urls.size).toBe(5);
+    expect(urls.size).toBe(6);
   });
+});
+
+it("persists a unique staff photo for each demo cast member without changing public consent", async () => {
+  const { seededShopContext } = await import("@/test/db");
+  const { listStaff } = await import("./trips");
+  const { db, shop } = await seededShopContext();
+  const staff = await listStaff(db, shop.id);
+  const paths = staff.map((row) => row.person.staffPhotoPath);
+  expect(paths).toHaveLength(6);
+  expect(new Set(paths).size).toBe(6);
+  expect(paths.every((path) => path?.startsWith("/demo-staff/") && path.endsWith(".webp"))).toBe(
+    true,
+  );
+  expect(staff.filter((row) => row.person.crewPublicConsentAt)).toHaveLength(2);
+});
+
+it("does not assign demo photos in a real shop", async () => {
+  const { seededShopContext } = await import("@/test/db");
+  const { eq } = await import("drizzle-orm");
+  const { people, shops } = await import("./schema");
+  const { seedStaffPortraits } = await import("./seed-staff-portraits");
+  const { db, shop } = await seededShopContext();
+  await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+  await db.update(people).set({ staffPhotoPath: null }).where(eq(people.shopId, shop.id));
+  await seedStaffPortraits(db, shop.id);
+  const rows = await db
+    .select({ path: people.staffPhotoPath })
+    .from(people)
+    .where(eq(people.shopId, shop.id));
+  expect(rows.every((row) => row.path === null)).toBe(true);
 });

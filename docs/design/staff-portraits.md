@@ -1,6 +1,6 @@
 # Fictional demo staff portraits
 
-Generated 2026-11-13 with the built-in image generation tool. These are invented adults, not photographs of real staff. No reference images supplied; opaque square PNG output. Do not treat their depicted traits as data about real people. Only map stable demo cast keys during seeding after a proper person-photo model exists. Do not change public crew visibility consent.
+Generated 2026-11-13 with the built-in image generation tool. These are invented adults, not photographs of real staff. No reference images supplied; opaque square originals, resized to 256-pixel WebP at quality 82 for delivery (about 60 KB total). Do not treat their depicted traits as data about real people. Map stable demo cast keys during seeding into the nullable people.staffPhotoPath field. Do not change public crew visibility consent.
 
 ## Shared style and regeneration
 
@@ -8,11 +8,11 @@ Each exact prompt below contains the same editorial staff-directory style: natur
 
 ## Integration status
 
-Five generated assets visually inspected at full resolution: centered unobscured faces, distinct fictional people, no visible text or logos. No actual Crew page render verified. The person schema has no photo field; the unused better-auth image adapter field must not be repurposed. Assets and mapping are prepared, not wired into production identity/UI. Sal's output was rejected by the generation tool; no image exists and its mapping is null for initials fallback.
+Six generated assets visually inspected: centered unobscured faces, distinct fictional people, no visible text or logos. The staff-only directory reader carries the persisted photo path to compact Crew chips; no public crew-consent behavior changes. Erasure clears the path. Actual Crew page review remains outstanding. Sal’s initial generation was filtered; the simpler replacement below succeeded.
 
 ## Dana Reyes (`dana`)
 
-Asset: `public/demo-staff/dana-reyes.png`
+Asset: `public/demo-staff/dana-reyes.webp`
 
 Exact prompt:
 
@@ -22,7 +22,7 @@ Use case: photorealistic-natural. Asset type: square staff profile portrait for 
 
 ## Marcus Webb (`marcus`)
 
-Asset: `public/demo-staff/marcus-webb.png`
+Asset: `public/demo-staff/marcus-webb.webp`
 
 Exact prompt:
 
@@ -32,7 +32,7 @@ Use case: photorealistic-natural. Asset type: square staff profile portrait for 
 
 ## Keiko Tanaka (`keiko`)
 
-Asset: `public/demo-staff/keiko-tanaka.png`
+Asset: `public/demo-staff/keiko-tanaka.webp`
 
 Exact prompt:
 
@@ -42,7 +42,7 @@ Use case: photorealistic-natural. Asset type: square staff profile portrait for 
 
 ## Talia Okonkwo (`talia`)
 
-Asset: `public/demo-staff/talia-okonkwo.png`
+Asset: `public/demo-staff/talia-okonkwo.webp`
 
 Exact prompt:
 
@@ -52,7 +52,7 @@ Use case: photorealistic-natural. Asset type: square staff profile portrait for 
 
 ## Yusra Idrissi (`yusra`)
 
-Asset: `public/demo-staff/yusra-idrissi.png`
+Asset: `public/demo-staff/yusra-idrissi.webp`
 
 Exact prompt:
 
@@ -62,5 +62,17 @@ Use case: photorealistic-natural. Asset type: square staff profile portrait for 
 
 ## Sal Moretti (sal)
 
-Generation unavailable: output moderation rejected the request; not retried. No asset claimed.
+Initial attempt produced no asset. A simpler replacement succeeded and is recorded below.
 
+
+## Sal replacement selected for integration
+
+Asset: `public/demo-staff/sal-moretti.webp`
+
+Exact selected prompt:
+
+```text
+Create a square editorial staff-directory portrait of an entirely fictional adult man around 55, salt-and-pepper short hair and a neat moustache, friendly relaxed expression, plain navy polo. Head and shoulders centered with room around the head for an avatar crop. Soft open-shade daylight, subtly blurred marina greenery behind him. Realistic natural skin texture. No text, logos, sunglasses, or hats. Invented person, not a likeness of any real individual.
+```
+
+Original high-resolution first-five assets remain in the preceding source-control checkpoint. Delivery derivatives preserve composition without cropping.

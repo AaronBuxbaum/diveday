@@ -969,6 +969,8 @@ export const people = pgTable(
      * PGlite and `name-collation.postgres.test.ts` on a real server.
      */
     fullName: text("full_name").notNull(),
+    /** Internal staff-directory image. Does not imply consent for public crew profiles. */
+    staffPhotoPath: text("staff_photo_path"),
     /** Nullable: walk-ups may not have one on file yet. */
     email: text("email"),
     phone: text("phone"),
