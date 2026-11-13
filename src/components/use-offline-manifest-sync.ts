@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { invalidateManifestRead } from "@/components/manifest-stale-generation";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
 import {
@@ -287,6 +288,9 @@ export function useOfflineManifestSync(
         }
         const claimed = await claimOfflineManifestSnapshot(currentPayload);
         if (claimed === OFFLINE_MANIFEST_STALE_READ) {
+          // Even the second refusal in the one-reread fence invalidates any
+          // in-flight or previously confirmed view. Do this before any await.
+          invalidateManifestRead(tripId);
           // The copy already on this device stands: drop "Saving…" rather
           // than leave it up if the re-read never lands.
           if (!opts.silent) {

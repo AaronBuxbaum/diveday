@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, expect, it, vi } from "vitest";
-import { personRoles } from "@/db/schema";
+import { personRoles, shops } from "@/db/schema";
 import { signRosterConfirmation } from "@/features/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
@@ -50,6 +50,7 @@ it("refuses an old roster after same-shop session replacement, signout, or staff
     sessionId: "old-session",
     nonce,
     renderId,
+    erasureEpoch: shop.offlineErasureEpoch,
   });
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(auth).mockResolvedValue(session);
@@ -62,6 +63,11 @@ it("refuses an old roster after same-shop session replacement, signout, or staff
   vi.mocked(auth).mockResolvedValue(null);
   expect((await POST(request(proof), { params })).status).toBe(401);
   vi.mocked(auth).mockResolvedValue(session);
+  await db
+    .update(shops)
+    .set({ offlineErasureEpoch: shop.offlineErasureEpoch + 1 })
+    .where(eq(shops.id, shop.id));
+  expect((await POST(request(proof), { params })).status).toBe(403);
   await db.delete(personRoles).where(eq(personRoles.personId, personId));
   expect((await POST(request(proof), { params })).status).toBe(401);
 });
