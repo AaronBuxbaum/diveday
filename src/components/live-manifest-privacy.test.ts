@@ -422,6 +422,76 @@ describe("live manifest identity and privacy coordination", () => {
     expect(peer.state.view).toEqual(cached);
   });
 
+  it("does not treat a different trip's replacement response as evidence about this session", async () => {
+    const verify = vi.fn(async () => "verified" as const);
+    const first = owner(
+      scope,
+      { scope, view: cached },
+      {
+        nonce: () => nonceA,
+        read: async () => ({
+          kind: "ready",
+          read: {
+            ...result(fresh),
+            scope: { ...scope, tripId: "other", sessionId: "replacement" },
+          },
+        }),
+        verify,
+      },
+    );
+    const peer = owner(
+      scope,
+      { scope, view: cached },
+      {
+        nonce: () => nonceB,
+        read: async () => ({ kind: "unavailable" }),
+        verify: async () => "unavailable",
+      },
+    );
+    await first.read();
+    expect(verify).not.toHaveBeenCalled();
+    expect(peer.state.view).toEqual(cached);
+  });
+
+  it("propagates a post-commit privacy refusal arriving after timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      const held = deferred<"possible-erasure">();
+      const verify = vi.fn().mockResolvedValueOnce("verified").mockReturnValueOnce(held.promise);
+      const first = owner(
+        scope,
+        { scope, view: cached },
+        {
+          nonce: () => nonceA,
+          read: async () => ({ kind: "ready", read: result(fresh) }),
+          verify,
+        },
+      );
+      await first.read();
+      const commitId = first.state.commitId;
+      if (commitId === null) throw new Error("missing commit");
+      const pending = first.acknowledgeCommit(commitId);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await pending;
+      first.dispose();
+      const peer = owner(
+        scope,
+        { scope, view: cached },
+        {
+          nonce: () => nonceB,
+          read: async () => ({ kind: "unavailable" }),
+          verify: async () => "unavailable",
+        },
+      );
+      held.resolve("possible-erasure");
+      await Promise.resolve();
+      expect(peer.state.view).toBeNull();
+      expect(peer.state.status).not.toBe("confirmed");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("hides an abandoned cached view if the shop is invalidated before activation", () => {
     const generation = manifestPrivacyGeneration(scope.shopId);
     const transport: LiveManifestTransport<View> = {
