@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, isNull, notExists } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { bookings, tripAssignments, trips } from "@/db/schema";
+import { bookings, staffShifts, tripAssignments, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
@@ -102,9 +102,27 @@ async function copyAWeekOn(
   db: AppDb,
   trip: { id: string; startsAt: Date },
   sameCrew: boolean,
+  scheduled = true,
 ) {
-  const [source] = await db.select({ title: trips.title }).from(trips).where(eq(trips.id, trip.id));
+  const [source] = await db
+    .select({ title: trips.title, endsAt: trips.endsAt, startsAt: trips.startsAt })
+    .from(trips)
+    .where(eq(trips.id, trip.id));
   const startsAt = new Date(trip.startsAt.getTime() + LATER_MS);
+  if (sameCrew && scheduled && source) {
+    const crew = await crewOf(db, trip.id);
+    if (crew.length)
+      await db.insert(staffShifts).values(
+        crew.map((personId) => ({
+          shopId: shop.id,
+          personId,
+          startsAt,
+          endsAt: new Date(
+            startsAt.getTime() + source.endsAt.getTime() - source.startsAt.getTime(),
+          ),
+        })),
+      );
+  }
   const target = utcToWallTime(startsAt, shop.timezone);
   const form = new FormData();
   form.set("tripId", trip.id);
@@ -172,4 +190,15 @@ describe("copying a departure with its crew", () => {
     expect(to).toContain("builder=copied-no-crew");
     expect(await crewOf(db, copyId)).toEqual([]);
   });
+});
+
+it("keeps the new departure but warns instead of copying off-shift crew", async () => {
+  const { db, shop, owner, captain } = await context();
+  const trip = await emptyFutureTrip(db, shop.id);
+  await db.delete(tripAssignments).where(eq(tripAssignments.tripId, trip.id));
+  await db.insert(tripAssignments).values({ tripId: trip.id, personId: captain });
+  signIn(shop, owner);
+  const copied = await copyAWeekOn(shop, db, trip, true, false);
+  expect(copied.to).toContain("copied-no-crew");
+  expect(await crewOf(db, copied.copyId)).toEqual([]);
 });

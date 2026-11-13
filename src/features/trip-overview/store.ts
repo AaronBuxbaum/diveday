@@ -1,3 +1,4 @@
+import { listCrewAvailabilityBlocks } from "@/db/crew-requests";
 import {
   boatClashes,
   bookedDiverLanguages,
@@ -110,6 +111,15 @@ export async function getTripOverview(
   // the series and the permission — chain off their own input inside the wave
   // rather than after the whole of it (issue #2353), and the two clash reads
   // need nothing but the departure.
+  const awayBlocksRead = listCrewAvailabilityBlocks(
+    db,
+    shop.id,
+    {
+      from: calendarDateInTimezone(trip.startsAt, shop.timezone),
+      to: calendarDateInTimezone(new Date(trip.endsAt.getTime() - 1), shop.timezone),
+    },
+    "dates_only",
+  );
   const crewAssignmentsRead = getTripCrewAssignments(db, shop.id, tripId);
   const canConfigureRead = canPersonConfigureTrips(db, shop.id, actorPersonId);
   const seriesRead = getTripSeriesSummary(db, shop.id, tripId);
@@ -215,6 +225,21 @@ export async function getTripOverview(
     })),
   );
 
+  const awayBlocks = await awayBlocksRead;
+  const awayPersonIds = [
+    ...new Set(
+      awayBlocks
+        .filter((block) =>
+          (scheduleDays.length ? scheduleDays : [trip]).some(
+            (day) =>
+              block.startsOn <=
+                calendarDateInTimezone(new Date(day.endsAt.getTime() - 1), shop.timezone) &&
+              block.endsOn >= calendarDateInTimezone(day.startsAt, shop.timezone),
+          ),
+        )
+        .map((block) => block.personId),
+    ),
+  ];
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   // Day one's window, not the trip's whole span: a multi-day departure ends on
   // its *last* day, and the details editor's Departs/Returns boxes describe one
@@ -367,6 +392,7 @@ export async function getTripOverview(
       onShiftIds: shiftCoverage === null ? null : [...shiftCoverage],
       clashes,
       awayWorking: crewAwayWorking,
+      awayPersonIds,
     },
   };
 }

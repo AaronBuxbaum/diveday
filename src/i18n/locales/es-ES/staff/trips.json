@@ -390,6 +390,7 @@
     "roleDivemaster": "Divemaster",
     "roleCaptain": "Patrón/patrona",
     "roleCrew": "Tripulación de cubierta",
+    "awayWarning": "Día libre durante esta salida: resolver con la tripulación",
     "assignLabel": "Asignar tripulante",
     "assignOption": "Asignar tripulante…",
     "unassignAria": "Quitar a {name}",

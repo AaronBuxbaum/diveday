@@ -158,3 +158,22 @@ describe("adding a departure from the demand banner", () => {
     ).toHaveLength(1);
   });
 });
+
+it("warns when off-shift crew are not assigned without losing a requested waitlist carry", async () => {
+  const { db, shop, source, diver } = await fullDepartureWithOneWaiting();
+  const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+  const form = addForm(shop, source.id, "Crew shift refusal");
+  form.set("date", dayFromNow(shop.timezone, 200));
+  form.append("crewPersonIds", owner);
+  const to = await redirectedTo(() => addDepartureAction(shop.slug, form));
+  expect(to).toContain("builder=added-no-crew");
+  const id = await addedTripId(db, shop.id, "Crew shift refusal");
+  if (!id) throw new Error("departure missing");
+  const { tripAssignments } = await import("@/db/schema");
+  expect(await db.select().from(tripAssignments).where(eq(tripAssignments.tripId, id))).toEqual([]);
+  const carried = await db
+    .select({ personId: interests.personId })
+    .from(interests)
+    .where(eq(interests.tripId, id));
+  expect(carried).toEqual([{ personId: diver.id }]);
+});

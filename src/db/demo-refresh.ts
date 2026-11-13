@@ -10,6 +10,7 @@ import { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 import { demoTodayDepartureStart } from "./seed-clock";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { syncDemoShopBrand, syncDemoShopPackingCopy } from "./seed-shop-brand";
+import { reconcileDemoTripStaffRoster } from "./seed-staff-roster";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { upcomingScheduleRange } from "./trips";
@@ -329,6 +330,7 @@ async function ensureDemoSailsTodayInTransaction(
       .set({ startsAt, endsAt, revision: sql`${trips.revision} + 1` })
       .where(and(eq(trips.shopId, shopId), eq(trips.id, current.id)));
     await rebindDepartureBoatSafetyTime(tx, shopId, current.id, current.startsAt, startsAt, now);
+    await reconcileDemoTripStaffRoster(tx, shopId, current.id, { startsAt, endsAt }, timeZone);
     return "moved";
   });
 }

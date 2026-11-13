@@ -14,6 +14,7 @@
     "moved": "Movida",
     "movedGearReleased": "Movida. Se {count, plural, one {liberó # asignación de equipo} other {liberaron # asignaciones de equipo}}. Vuelve a asignarlas en la página de preparación.",
     "copied": "Copiada",
+    "addedNoCrew": "Salida agregada, pero no se pudo asignar parte de la tripulación solicitada. Revisa sus turnos, otras salidas coincidentes y los requisitos de tripulación antes de zarpar.",
     "copiedNoCrew": "Copiada, sin la tripulación: alguien ya está en otra salida a esa hora, o el curso necesita un instructor. Agrégala en Turnos de la tripulación.",
     "removed": "Quitada del calendario",
     "invalid": "No se guardó. Revisa la fecha, las horas y las plazas, e inténtalo de nuevo.",

@@ -27,5 +27,5 @@ export async function copyCrewIfAsked(
   if (!form.sameCrew) return true;
   const crew = await getTripCrewAssignments(db, shopId, form.tripId);
   if (crew.length === 0) return true;
-  return setTripCrew(db, shopId, copyId, crew, { actorPersonId });
+  return setTripCrew(db, shopId, copyId, crew, { actorPersonId, requireScheduledShift: true });
 }

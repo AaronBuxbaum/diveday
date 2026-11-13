@@ -1,0 +1,23 @@
+{
+  "dana": {
+    "url": "/demo-staff/dana-reyes.png",
+    "alt": "Generated demo portrait of fictional Dana Reyes"
+  },
+  "marcus": {
+    "url": "/demo-staff/marcus-webb.png",
+    "alt": "Generated demo portrait of fictional Marcus Webb"
+  },
+  "keiko": {
+    "url": "/demo-staff/keiko-tanaka.png",
+    "alt": "Generated demo portrait of fictional Keiko Tanaka"
+  },
+  "talia": {
+    "url": "/demo-staff/talia-okonkwo.png",
+    "alt": "Generated demo portrait of fictional Talia Okonkwo"
+  },
+  "yusra": {
+    "url": "/demo-staff/yusra-idrissi.png",
+    "alt": "Generated demo portrait of fictional Yusra Idrissi"
+  },
+  "sal": null
+}

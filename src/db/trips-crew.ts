@@ -12,6 +12,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewNotices } from "./crew-notices";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
+import { crewHaveScheduledShifts } from "./crew-shift-scheduling";
 import { publishManifestEvent } from "./manifest-events";
 import { crewMarks, markCrewPersonId } from "./roll-call-subject";
 import {
@@ -599,6 +600,12 @@ export async function setTripCrew(
       .from(tripAssignments)
       .where(eq(tripAssignments.tripId, tripId));
     const existingRoles = new Map(existing.map((row) => [row.personId, row.tripRole] as const));
+    const newlyAssigned = valid.filter((personId) => !existingRoles.has(personId));
+    if (
+      options.requireScheduledShift &&
+      !(await crewHaveScheduledShifts(tx, shopId, trip, newlyAssigned))
+    )
+      return false;
     const existingAssigners = new Map(
       existing.map((row) => [row.personId, row.assignedByPersonId] as const),
     );
@@ -899,7 +906,12 @@ export async function seatStandingCrew(
  * made it does not (ADR 20261009-crew-hear-about-their-boats). Every staff
  * surface passes its session's person; omitted, nobody is excluded.
  */
-export type CrewChangeOptions = { actorPersonId?: string | null; now?: Date };
+export type CrewChangeOptions = {
+  actorPersonId?: string | null;
+  now?: Date;
+  /** Advance scheduling, not operational evidence. */
+  requireScheduledShift?: boolean;
+};
 
 export type TripCrewChange = {
   personId: string;
@@ -1022,12 +1034,23 @@ export async function changeTripCrewOutcome(
     if (!eligible) return { ok: false, refusal: "refused" };
 
     const [targetTrip] = await tx
-      .select({ courseId: trips.courseId })
+      .select({
+        id: trips.id,
+        startsAt: trips.startsAt,
+        endsAt: trips.endsAt,
+        courseId: trips.courseId,
+      })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!targetTrip) return { ok: false, refusal: "refused" };
+    if (
+      options.requireScheduledShift &&
+      change.operation === "assign" &&
+      !(await crewHaveScheduledShifts(tx, shopId, targetTrip, [change.personId]))
+    )
+      return { ok: false, refusal: "refused" };
     // Nobody with per-person roll-call history on this trip is removable — the
     // same guard `setTripCrew` applies, checked before the course rules so the
     // refusal reason cannot depend on whether the trip happens to be a course

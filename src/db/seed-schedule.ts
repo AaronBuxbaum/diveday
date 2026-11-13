@@ -51,6 +51,7 @@ import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSharedDemoRecapPhoto } from "./seed-shared-demo-recap-photo";
 import { seedShopVoice } from "./seed-shop-voice";
 import { seedSightings } from "./seed-sightings";
+import { seedStaffRoster } from "./seed-staff-roster";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
@@ -683,6 +684,7 @@ const THE_DAY: readonly SeedStep[] = [
   // Adds-only: the shop's replies under its reviews and one note to a departure's
   // divers (src/db/seed-shop-voice.ts). Writes no waiver row.
   demo((db, c) => seedShopVoice(db, c.shopId, c.staff.owner.id)),
+  demo((db, c) => seedStaffRoster(db, c.shopId)),
 ];
 
 /**

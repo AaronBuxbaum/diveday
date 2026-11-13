@@ -229,9 +229,9 @@ const DEMO_SHOP_UNIT_COLUMNS = {
  * Shared by all three places staff arrive in a demo shop — the canonical seed,
  * a shop minted by "Try the live demo", and `restoreMissingStableStaff`'s
  * repair — because a shop that has a cast and no shifts renders an empty
- * roster, which is what a minted demo did until 2026-08-15. Part of the
- * **stable** half: a schedule reset never re-seeds these, so a person who
- * already has one keeps it.
+ * roster, which is what a minted demo did until 2026-08-15. This provides an
+ * initial shift while the stable cast is restored. Once every departure has
+ * been seeded, seedStaffRoster replaces it with the coherent reset-owned rota.
  */
 async function seedStaffShifts(
   db: DbExecutor,

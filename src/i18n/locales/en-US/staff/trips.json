@@ -390,6 +390,7 @@
     "roleDivemaster": "Divemaster",
     "roleCaptain": "Captain",
     "roleCrew": "Deck crew",
+    "awayWarning": "Day off during this trip. Resolve with crew.",
     "assignLabel": "Assign crew",
     "assignOption": "Assign crew…",
     "unassignAria": "Unassign {name}",

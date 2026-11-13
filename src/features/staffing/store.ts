@@ -8,6 +8,7 @@ import {
   seatNotCancelled,
 } from "@/db/trips";
 import { crewGapFor, type StaffGapCode, type TripMeeting } from "@/features/staffing-week";
+import { shiftsCoverWindow } from "@/lib/shift-coverage";
 import type { AppDb } from "../../db/client";
 import { courseCrewCountsByTrip, NO_SUPERVISION } from "../../db/course-crew-counts";
 import {
@@ -25,7 +26,6 @@ import {
   tripScheduleDays,
   trips,
 } from "../../db/schema/index";
-
 import { STAFF_ROLES } from "../../lib/authz";
 import { HOUR_MS, nowDate } from "../../lib/clock";
 import type { InWaterCrewCount } from "../../lib/crew-roles";
@@ -482,9 +482,13 @@ export async function crewShiftCoverage(
     .limit(1);
   const covering =
     personIds.length === 0
-      ? Promise.resolve([] as Array<{ personId: string }>)
+      ? Promise.resolve([] as Array<{ personId: string; startsAt: Date; endsAt: Date }>)
       : db
-          .select({ personId: staffShifts.personId })
+          .select({
+            personId: staffShifts.personId,
+            startsAt: staffShifts.startsAt,
+            endsAt: staffShifts.endsAt,
+          })
           .from(staffShifts)
           .where(
             and(
@@ -496,7 +500,14 @@ export async function crewShiftCoverage(
           );
   const [usesShifts, rows] = await Promise.all([probe, covering]);
   if (usesShifts.length === 0) return null;
-  return new Set(rows.map((row) => row.personId));
+  return new Set(
+    personIds.filter((personId) =>
+      shiftsCoverWindow(
+        rows.filter((row) => row.personId === personId),
+        trip,
+      ),
+    ),
+  );
 }
 
 export type CreateStaffShiftOutcome =

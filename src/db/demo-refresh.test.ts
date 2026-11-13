@@ -841,3 +841,45 @@ describe("refreshCanonicalDemoSchedule", () => {
     });
   });
 });
+
+it("keeps the moved demo departure's crew on shift as the clock advances", async () => {
+  const { db, shop } = historyCtx;
+  const { crewAvailabilityBlocks } = await import("./schema");
+  const { calendarDateInTimezone, shiftCalendarDate } = await import("@/lib/calendar-date");
+  const { crewShiftCoverage } = await import("@/features/staffing/store");
+  await pushTheBoardLater(db, shop.id, 4);
+  const [candidate] = await upcoming(db, shop.id);
+  const [crew] = await db
+    .select()
+    .from(tripAssignments)
+    .where(eq(tripAssignments.tripId, candidate.id));
+  if (!crew) throw new Error("demo candidate crew missing");
+  const tomorrow = new Date(nowDate().getTime() + DAY_MS);
+  const day = calendarDateInTimezone(tomorrow, shop.timezone);
+  await db.insert(crewAvailabilityBlocks).values({
+    shopId: shop.id,
+    personId: crew.personId,
+    startsOn: shiftCalendarDate(day, -1),
+    endsOn: shiftCalendarDate(day, 1),
+    note: "Keeper test",
+    createdByPersonId: crew.personId,
+  });
+  expect(await ensureDemoSailsToday(db, shop.id, shop.timezone, tomorrow)).toBe("moved");
+  const [moved] = await db.select().from(trips).where(eq(trips.id, candidate.id));
+  expect((await crewShiftCoverage(db, shop.id, moved, [crew.personId]))?.has(crew.personId)).toBe(
+    true,
+  );
+  const blocks = await db
+    .select()
+    .from(crewAvailabilityBlocks)
+    .where(
+      and(
+        eq(crewAvailabilityBlocks.shopId, shop.id),
+        eq(crewAvailabilityBlocks.personId, crew.personId),
+        eq(crewAvailabilityBlocks.note, "Keeper test"),
+      ),
+    );
+  expect(blocks.some((block) => block.startsOn <= day && block.endsOn >= day)).toBe(false);
+  expect(blocks.some((block) => block.startsOn === shiftCalendarDate(day, -1))).toBe(true);
+  expect(blocks.some((block) => block.endsOn === shiftCalendarDate(day, 1))).toBe(true);
+});
