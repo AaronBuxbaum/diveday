@@ -3,6 +3,8 @@
  * inline in its signature, so the route file stays a page.
  */
 export type BoardSearchParams = {
+  view?: string;
+  day?: string;
   after?: string;
   builder?: string;
   count?: string; // the number a builder notice names (`builderNoticeMessage`)

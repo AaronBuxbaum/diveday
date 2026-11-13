@@ -1,5 +1,23 @@
 {
   "boardTitle": "Schedule",
+  "dayBoard": {
+    "day": "Day",
+    "week": "Week",
+    "chooseDay": "Choose a day",
+    "showDay": "Show day",
+    "empty": "No departures this day.",
+    "review": "Schedules can change. Review the departure before making changes.",
+    "crew": "Crew",
+    "divers": "Divers",
+    "noCrew": "No crew assigned",
+    "noDivers": "No divers booked",
+    "noBoat": "No boat assigned",
+    "standingClash": "{name} is also on {departure}.",
+    "absent": "Marked absent",
+    "identityHeld": "Identity needs confirmation.",
+    "hullClash": "{boat} is also on {departure}.",
+    "overCapacity": "Bookings exceed the places available with this crew."
+  },
   "views": {
     "label": "Schedule views",
     "week": "Week",

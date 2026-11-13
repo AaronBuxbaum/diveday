@@ -4,12 +4,15 @@ import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
-import { getScheduleBoardPage } from "@/features/schedule-board-page";
+import { getScheduleBoardPage, readScheduleDay } from "@/features/schedule-board-page";
 import { requireShopSurface } from "@/features/session";
+import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { isShopDayParam } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { serviceWindowFrom } from "@/lib/service-window";
 import { uuidParam } from "@/lib/uuid";
@@ -27,6 +30,7 @@ import {
 } from "./_components/builder-copy";
 import { builderCoursePriceLabel } from "./_components/builder-course-options";
 import { builderRequestPlan } from "./_components/builder-request-plan";
+import { DayBoard } from "./_components/DayBoard";
 import { ScheduleBoardNoticeView } from "./_components/ScheduleBoardNoticeView";
 import {
   type BuilderInitialCourse,
@@ -105,6 +109,49 @@ export default async function ScheduleBoardPage({
   const st = staffTranslator(locale);
   const now = nowDate();
   const todayIso = toDateInputValue(utcToWallTime(now, tz));
+
+  if (query.view === "day") {
+    const day = query.day && isShopDayParam(query.day) ? query.day : todayIso;
+    const rows = await readScheduleDay(db, shop.id, day, tz);
+    return (
+      <BoardPageShell hasUpcoming={false} canConfigure={false} shopSlug={shopSlug} st={st}>
+        <DayBoard
+          shopSlug={shopSlug}
+          day={day}
+          rows={rows.map((row) => ({
+            ...row,
+            totalPersonWarning: row.totalPersonNotice
+              ? boatSafetyNoticeText(st, locale, row.totalPersonNotice)
+              : null,
+            time: row.windows
+              .map((window) => formatTimeRangeTz(window.startsAt, window.endsAt, locale, tz))
+              .join(", "),
+          }))}
+          copy={{
+            day: st("schedule.dayBoard.day"),
+            week: st("schedule.dayBoard.week"),
+            chooseDay: st("schedule.dayBoard.chooseDay"),
+            showDay: st("schedule.dayBoard.showDay"),
+            empty: st("schedule.dayBoard.empty"),
+            review: st("schedule.dayBoard.review"),
+            crew: st("schedule.dayBoard.crew"),
+            divers: st("schedule.dayBoard.divers"),
+            noCrew: st("schedule.dayBoard.noCrew"),
+            noDivers: st("schedule.dayBoard.noDivers"),
+            noBoat: st("schedule.dayBoard.noBoat"),
+            standingClash: st.raw("schedule.dayBoard.standingClash"),
+            absent: st("schedule.dayBoard.absent"),
+            identityHeld: st("schedule.dayBoard.identityHeld"),
+            hullClash: st.raw("schedule.dayBoard.hullClash"),
+            overCapacity: st("schedule.dayBoard.overCapacity"),
+            shore: st("boats.modeShore"),
+            pool: st("boats.modePool"),
+          }}
+        />
+      </BoardPageShell>
+    );
+  }
+
   // Which week the desktop grid draws. Total by construction: a malformed or missing `?week=`
   // lands on the one the shop is in rather than refusing the page (`src/lib/week-board.ts`).
   const weekStartIso = resolveWeekStart(week, todayIso);
@@ -230,6 +277,12 @@ export default async function ScheduleBoardPage({
       returnWeek={returnWeek}
       st={st}
     >
+      <Link
+        href={`/shop/${shopSlug}/schedule/board?view=day&day=${week ? weekStartIso : todayIso}`}
+        className={buttonClass({ variant: "secondary", size: "sm" })}
+      >
+        {st("schedule.dayBoard.day")}
+      </Link>
       <ScheduleViews
         shopSlug={shopSlug}
         crewSchedule={shop.crewScheduleEnabled}
