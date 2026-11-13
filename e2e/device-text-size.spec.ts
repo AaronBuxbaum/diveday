@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody } from "./device-text-size-fixture";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { manifestRow, openTripFromBoard, openTripTab } from "./helpers";
@@ -232,6 +233,9 @@ test.describe("53px body capability input on the working manifest", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
     await openTripTab(page, "Manifest");
+    await expect(
+      page.getByText(staffTranslator("en-US")("manifest.rosterConfirmed"), { exact: true }),
+    ).toBeVisible();
     const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
     const url = page.url();
     await trigger.click();
