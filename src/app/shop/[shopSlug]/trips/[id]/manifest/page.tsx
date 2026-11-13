@@ -32,6 +32,7 @@ import { LiveRollCallConflicts } from "./_components/LiveRollCallConflicts";
 import { ManifestDeviceSettings } from "./_components/ManifestDeviceSettings";
 import { ManifestMilestones } from "./_components/ManifestMilestones";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
+import { manifestCausalContexts } from "./_components/manifest-causal-context";
 import { catchUpStripView, offlineManifestManagerCopy } from "./_components/manifest-copy";
 import type { ManifestSearchParams } from "./_components/manifest-search-params";
 import { manifestSpecies } from "./_components/manifest-species";
@@ -163,16 +164,7 @@ export default async function TripManifestPage({
       });
 
   return (
-    <RollCallCausalProvider
-      contexts={Object.fromEntries([
-        ...manifest.divers.flatMap((row) =>
-          row.rollCallContext ? [[`bookingId:${row.bookingId}`, row.rollCallContext]] : [],
-        ),
-        ...manifest.crew.flatMap((row) =>
-          row.rollCallContext ? [[`personId:${row.id}`, row.rollCallContext]] : [],
-        ),
-      ])}
-    >
+    <RollCallCausalProvider contexts={manifestCausalContexts(manifest)}>
       <DeparturePaperIdentity {...paperIdentity}>
         {/* On paper the Boat tab is this sheet alone, at the checkpoint on screen (#2745). */}
         <BoatTabPaper
