@@ -703,7 +703,6 @@ describe("the rail says there is more below", () => {
 describe("what the rail hides", () => {
   const gated: Record<string, SettingsRailGate> = {
     team: "team",
-    waivers: "waivers",
     whatsapp: "messaging",
     boats: "boats",
     stripe: "payments",
