@@ -73,7 +73,7 @@ describe("signed record paging", () => {
       expect(screen.getByText("Diver other")).toBeInTheDocument();
       expect(screen.getByRole("link", { name: t("shared.pager.next") })).toHaveAttribute(
         "href",
-        "/shop/blue-mantis/waivers?q=Diver&view=unchecked&page=3&record=pin#signed-records-heading",
+        "/shop/blue-mantis/divers/waivers?q=Diver&view=unchecked&page=3&record=pin#signed-records-heading",
       );
     },
   );
