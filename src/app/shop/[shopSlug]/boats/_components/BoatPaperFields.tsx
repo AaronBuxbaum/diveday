@@ -30,7 +30,7 @@ export function BoatPaperFields({
   invalid = false,
   radioInvalid = false,
   channelInvalid = false,
-  describedBy,
+  error,
 }: {
   boat?: Boat;
   t: StaffTranslator;
@@ -41,35 +41,33 @@ export function BoatPaperFields({
   radioInvalid?: boolean;
   /** A working channel reserved for distress/calling was refused. */
   channelInvalid?: boolean;
-  describedBy?: string;
+  error?: string;
 }) {
   return (
     <div
       className={`grid w-full grid-cols-1 gap-3 sm:basis-full sm:grid-cols-2 ${className}`.trim()}
     >
-      <Field label={t("boats.certifiedPassengersLabel")}>
+      <Field error={invalid ? error : undefined} label={t("boats.certifiedPassengersLabel")}>
         <input
           name="certifiedPassengers"
+          aria-invalid={invalid || undefined}
           type="number"
           min={1}
           max={999}
           inputMode="numeric"
           defaultValue={boat?.certifiedPassengers ?? ""}
-          aria-invalid={invalid || undefined}
-          aria-describedby={invalid ? describedBy : undefined}
           className={`${controlClass} tabular-nums`}
         />
       </Field>
-      <Field label={t("boats.certifiedTotalPersonsLabel")}>
+      <Field error={invalid ? error : undefined} label={t("boats.certifiedTotalPersonsLabel")}>
         <input
           name="certifiedTotalPersons"
+          aria-invalid={invalid || undefined}
           type="number"
           min={1}
           max={999}
           inputMode="numeric"
           defaultValue={boat?.certifiedTotalPersons ?? ""}
-          aria-invalid={invalid || undefined}
-          aria-describedby={invalid ? describedBy : undefined}
           className={`${controlClass} tabular-nums`}
         />
       </Field>
@@ -85,43 +83,48 @@ export function BoatPaperFields({
       <Field label={t("boats.insuranceExpiresLabel")}>
         <DateField name="insuranceExpiresOn" defaultValue={boat?.insuranceExpiresOn ?? ""} />
       </Field>
-      <Field label={t("boats.callSignLabel")}>
+      <Field error={radioInvalid ? error : undefined} label={t("boats.callSignLabel")}>
         <input
           name="callSign"
+          aria-invalid={radioInvalid || undefined}
           type="text"
           maxLength={MAX_CALL_SIGN_LENGTH}
           autoCapitalize="characters"
           autoComplete="off"
           spellCheck={false}
           defaultValue={boat?.callSign ?? ""}
-          aria-invalid={radioInvalid || undefined}
-          aria-describedby={radioInvalid ? describedBy : undefined}
           className={`${controlClass} font-mono uppercase`}
         />
       </Field>
-      <Field label={t("boats.mmsiLabel")} description={t("boats.mmsiHint")}>
+      <Field
+        error={radioInvalid ? error : undefined}
+        label={t("boats.mmsiLabel")}
+        description={t("boats.mmsiHint")}
+      >
         <input
           name="mmsi"
+          aria-invalid={radioInvalid || undefined}
           type="text"
           inputMode="numeric"
           maxLength={11}
           autoComplete="off"
           defaultValue={boat?.mmsi ?? ""}
-          aria-invalid={radioInvalid || undefined}
-          aria-describedby={radioInvalid ? describedBy : undefined}
           className={`${controlClass} font-mono tabular-nums`}
         />
       </Field>
-      <Field label={t("boats.workingChannelLabel")} description={t("boats.workingChannelHint")}>
+      <Field
+        error={radioInvalid || channelInvalid ? error : undefined}
+        label={t("boats.workingChannelLabel")}
+        description={t("boats.workingChannelHint")}
+      >
         <input
           name="workingChannel"
+          aria-invalid={radioInvalid || channelInvalid || undefined}
           type="text"
           maxLength={MAX_WORKING_CHANNEL_LENGTH}
           autoComplete="off"
           spellCheck={false}
           defaultValue={boat?.workingChannel ?? ""}
-          aria-invalid={radioInvalid || channelInvalid || undefined}
-          aria-describedby={radioInvalid || channelInvalid ? describedBy : undefined}
           className={`${controlClass} font-mono tabular-nums`}
         />
       </Field>

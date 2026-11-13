@@ -357,6 +357,12 @@ test.describe("as owner", () => {
     await expect(outcome).toContainText(
       "Requirements updated. 1 booked diver no longer meets them",
     );
+    // The warning stays associated with the requirements editor in the DOM;
+    // the shared timed toast pins it within reach of the viewport.
+    const requirements = page.locator("details#requirements");
+    await expect(
+      requirements.getByRole("alert").filter({ hasText: "Requirements updated." }),
+    ).toContainText("Requirements updated.");
     await openTripTab(page, "Trip");
     await expect(page.locator("#roster").getByText("Diego Alvarez").first()).toBeVisible();
   });

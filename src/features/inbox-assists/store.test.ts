@@ -232,6 +232,32 @@ describe("awaitsTriage", () => {
 });
 
 describe("replyFacts", () => {
+  it("describes an empty public departure window using the actual 45-day horizon", async () => {
+    await ctx.db.update(trips).set({ isPrivate: true }).where(eq(trips.shopId, ctx.shop.id));
+    const { window, lines } = await replyFacts(ctx.db, ctx.shop.id);
+    expect(window).toContain("the next 45 days");
+    expect(lines).toContain("- No public departures are listed in this 45-day window.");
+    expect(lines.join("\n")).not.toContain("two weeks");
+  });
+
+  it("keeps structured trip meeting destinations out of public draft facts while retaining the public shop address", async () => {
+    await ctx.db
+      .update(shops)
+      .set({ addressStreet: "40 Public Shop Road" })
+      .where(eq(shops.id, ctx.shop.id));
+    await ctx.db
+      .update(trips)
+      .set({
+        meetingPointLabel: "Private departure gate",
+        meetingPointAddress: "101 Restricted Pier",
+      })
+      .where(eq(trips.shopId, ctx.shop.id));
+    const facts = (await replyFacts(ctx.db, ctx.shop.id)).lines.join("\n");
+    expect(facts).toContain("Address: 40 Public Shop Road");
+    expect(facts).not.toContain("Private departure gate");
+    expect(facts).not.toContain("101 Restricted Pier");
+  });
+
   it("quotes the shop's departures with their open seats and prices from the database", async () => {
     const { lines: facts } = await replyFacts(ctx.db, ctx.shop.id);
     expect(facts[0]).toContain(ctx.shop.name);
@@ -440,6 +466,47 @@ describe("translateReplyFor", () => {
 });
 
 describe("draftReplyToMessage", () => {
+  it.each(["matched", "unmatched"] as const)(
+    "keeps structured meeting destinations out of a %s sender's provider context",
+    async (kind) => {
+      await ctx.db
+        .update(trips)
+        .set({
+          meetingPointLabel: "Private departure gate",
+          meetingPointAddress: "101 Restricted Pier",
+        })
+        .where(eq(trips.shopId, ctx.shop.id));
+      let messageId: string;
+      if (kind === "matched") {
+        ({ messageId } = await diverWithMessage("Where do we meet?"));
+      } else {
+        const recorded = await recordInboundMessage(ctx.db, {
+          shopId: ctx.shop.id,
+          channel: "email",
+          fromAddress: "unmatched@example.org",
+          body: "Where do we meet?",
+          receivedAt: nowDate(),
+          senderAuthenticated: true,
+          providerMessageId: "unmatched-private-location",
+        });
+        if (recorded.status !== "recorded") throw new Error("fixture message missing");
+        messageId = recorded.id;
+      }
+      const provider = answering({
+        reply: "Staff will confirm your arrival details.",
+        medical: false,
+      });
+      expect(
+        await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed, provider }),
+      ).toBe("Staff will confirm your arrival details.");
+      expect(provider.requests).toHaveLength(1);
+      const sent = JSON.stringify(provider.requests[0]);
+      expect(sent).not.toContain("Private departure gate");
+      expect(sent).not.toContain("101 Restricted Pier");
+      expect((await stored(messageId))?.answeredAt).toBeNull();
+    },
+  );
+
   it("answers a non-booking question from the selected message", async () => {
     await setShopReplyNotes(ctx.db, ctx.shop.id, "Park behind the shop.");
     const { messageId } = await diverWithMessage("Where do I park?");

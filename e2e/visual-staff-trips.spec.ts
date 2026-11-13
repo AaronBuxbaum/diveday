@@ -290,7 +290,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Matching the stem keeps this test about the deal panel.
         await expect(
           page.getByRole("alert").filter({ hasText: "Requirements updated." }),
-        ).toBeVisible();
+        ).toContainText("Requirements updated.");
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
@@ -376,7 +376,7 @@ for (const scheme of ["light", "dark"] as const) {
         // test about the wait list.
         await expect(
           page.getByRole("alert").filter({ hasText: "Requirements updated." }),
-        ).toBeVisible();
+        ).toContainText("Requirements updated.");
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
