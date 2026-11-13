@@ -120,3 +120,62 @@ test("a roster refresh preserves an open person sheet without a document navigat
   await expect(page.getByRole("dialog", { name: "Priya Sharma", exact: true })).toBeVisible();
   expect(documentNavigations).toBe(0);
 });
+
+test("a superseded snapshot and roster refresh preserve an open person sheet", async ({ page }) => {
+  const manifest = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest`;
+  const copy = staffTranslator("en-US");
+  let releaseClaim!: () => void;
+  let releaseRead!: () => void;
+  const claimHeld = new Promise<void>((resolve) => {
+    releaseClaim = resolve;
+  });
+  const readHeld = new Promise<void>((resolve) => {
+    releaseRead = resolve;
+  });
+  let claims = 0;
+  let reads = 0;
+  let documentNavigations = 0;
+  await page.route("**/*", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname.endsWith(`/offline-manifests/${DEMO_TODAY_TRIP_ID}/snapshot`)) {
+      claims++;
+      if (claims === 1) {
+        await claimHeld;
+        await route.fulfill({ status: 409, json: { error: "snapshot_superseded" } });
+        return;
+      }
+    }
+    if (
+      url.pathname === manifest &&
+      url.searchParams.has("rosterRead") &&
+      request.headers().rsc === "1"
+    ) {
+      reads++;
+      if (reads === 1) await readHeld;
+    }
+    await route.fallback();
+  });
+  try {
+    await page.goto(manifest);
+    await expect.poll(() => claims).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => reads).toBeGreaterThanOrEqual(1);
+    page.on("request", (request) => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame())
+        documentNavigations++;
+    });
+    const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
+    await expect(trigger).toHaveAttribute("data-hydrated", "true");
+    await trigger.click();
+    const dialog = page.getByRole("dialog", { name: "Priya Sharma", exact: true });
+    await expect(dialog).toBeVisible();
+    releaseClaim();
+    releaseRead();
+    await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
+    await expect(dialog).toBeVisible();
+    expect(documentNavigations).toBe(0);
+  } finally {
+    releaseClaim();
+    releaseRead();
+  }
+});
