@@ -7,6 +7,7 @@ import {
   wasMultiTouch,
   watchRollCallTouches,
 } from "@/components/roll-call-touch-guard";
+import { ErrorToast, SAFETY_TOAST_MS } from "@/components/Toast";
 import { textareaClassFor } from "@/components/ui/form";
 import { useRollCallCausalContext } from "./roll-call-causal-context";
 
@@ -303,15 +304,18 @@ export function RollCallButton({
         // — so a refusal drops to its own full-width line *below* both
         // controls instead of squeezing in as a third column or, at the
         // default order 0, jumping above them.
-        <p role="alert" className="order-3 mt-1 basis-full text-sm font-medium text-danger">
-          {result.reason === "not_ready"
-            ? copy.blockedMessage
-            : result.reason === "boat_full"
-              ? (copy.boatFull ?? copy.errorRefusal)
-              : result.reason === "superseded"
-                ? (copy.superseded ?? copy.errorRefusal)
-                : copy.errorRefusal}
-        </p>
+        <ErrorToast
+          durationMs={SAFETY_TOAST_MS}
+          message={
+            result.reason === "not_ready"
+              ? copy.blockedMessage
+              : result.reason === "boat_full"
+                ? (copy.boatFull ?? copy.errorRefusal)
+                : result.reason === "superseded"
+                  ? (copy.superseded ?? copy.errorRefusal)
+                  : copy.errorRefusal
+          }
+        />
       ) : null}
     </>
   );

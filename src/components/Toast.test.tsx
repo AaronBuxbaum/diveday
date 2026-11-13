@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Toast } from "./Toast";
+import { ErrorToast, Toast } from "./Toast";
 import { FormStatus } from "./ui/form";
 import { ShopNotice } from "./ui/outcome";
 
@@ -88,4 +88,33 @@ it("keeps a detailed success report and its link available after the toast inter
   });
   expect(screen.getByRole("status")).toHaveTextContent("2 credential rows need review");
   expect(screen.getByRole("link", { name: "Review divers" })).toBeVisible();
+});
+
+describe("ErrorToast", () => {
+  it("says an error as an alert, then leaves instead of staying on the page", async () => {
+    vi.useFakeTimers();
+    render(<ErrorToast message="Could not save" durationMs={1000} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Could not save");
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    await act(async () => {
+      vi.runAllTimers();
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("is where a form refusal and a danger notice go", () => {
+    render(
+      <>
+        <FormStatus tone="danger">Refused</FormStatus>
+        <ShopNotice tone="danger">Failed</ShopNotice>
+      </>,
+    );
+    expect(screen.getAllByRole("alert").map((node) => node.className)).toEqual(
+      [expect.stringContaining("toast"), expect.stringContaining("toast")].map(() =>
+        expect.stringContaining("rise-in"),
+      ),
+    );
+  });
 });

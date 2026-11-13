@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { useActionState, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { FormStatus, StickyFormActions } from "@/components/ui/form";
 import type { DiveSiteFormError, SubmittedFormValues } from "@/features/dive-sites";
 import { SITE_FORM_REFUSAL_SECTION } from "./site-form-sections";
@@ -128,12 +127,9 @@ export function SiteFormShell({
       <StickyFormActions>
         {actions}
         {state.errorCode ? (
-          <>
-            <FormStatus tone="danger" id={REFUSAL_ID}>
-              {errorMessages[state.errorCode]}
-            </FormStatus>
-            <FieldErrorFocus key={state.attempt} field={REFUSAL_ID} />
-          </>
+          <FormStatus tone="danger" occurrenceKey={state.attempt}>
+            {errorMessages[state.errorCode]}
+          </FormStatus>
         ) : savedMessage ? (
           <FormStatus tone="success">{savedMessage}</FormStatus>
         ) : null}
@@ -146,4 +142,3 @@ export function SiteFormShell({
  * The refusal line's own id, so `FieldErrorFocus` has something to name. The
  * two site forms are never on one page together, so one constant is enough.
  */
-const REFUSAL_ID = "site-form-refusal";

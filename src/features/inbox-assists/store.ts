@@ -14,7 +14,7 @@ import { offsetUpcomingTripsWithCounts } from "../../db/trips";
 import {
   checkedTranslation,
   DRAFT_THREAD_LINES,
-  groundedReply,
+  draftedReply,
   inboundTriageCall,
   languageOfLocale,
   replyDraftCall,
@@ -41,8 +41,8 @@ import { seatsOnSale, spotsRemaining } from "../../lib/trips";
 export const TRIAGE_PER_VIEW = 5;
 
 /** The departures a draft may quote: the next two weeks, as many as a desk would read out. */
-const FACT_DEPARTURES = 30;
-const FACT_HORIZON_DAYS = 14;
+const FACT_DEPARTURES = 40;
+const FACT_HORIZON_DAYS = 45;
 
 /**
  * **Whether triage would read this message**: the same rule as the `where` in
@@ -170,7 +170,7 @@ export type ReplyFacts = {
   /**
    * Today's date in the shop's zone and the span `lines` covers, so a draft
    * can tell "not listed" from "no trip". Its numbers are never a source a
-   * draft may quote (`groundedReply` reads `lines` only).
+   * draft may quote (`lines` only).
    */
   window: string;
   /** The shop's facts a reply may quote, one line each, in the shop's own words and currency. */
@@ -194,6 +194,19 @@ export async function replyFacts(
       phone: shops.contactPhone,
       rentalTerms: shops.rentalTerms,
       replyNotes: shops.replyNotes,
+      tagline: shops.tagline,
+      description: shops.description,
+      street: shops.addressStreet,
+      locality: shops.addressLocality,
+      region: shops.addressRegion,
+      packingList: shops.packingList,
+      rentalItems: shops.rentalItems,
+      rentalPricing: shops.rentalPricing,
+      hotelPickup: shops.offersHotelPickup,
+      nitroxFill: shops.nitroxFillMethod,
+      boat: shops.hasBoatDiving,
+      shore: shops.hasShoreDiving,
+      pool: shops.hasPoolDiving,
     })
     .from(shops)
     .where(eq(shops.id, shopId))
@@ -218,17 +231,46 @@ export async function replyFacts(
     `Desk hours: ${deskTimeValue(shop.opens)} to ${deskTimeValue(shop.closes)} daily.`,
   ];
   if (shop.phone) lines.push(`Phone: ${shop.phone}`);
+  const address = [shop.street, shop.locality, shop.region].filter(Boolean).join(", ");
+  if (address) lines.push(`Address: ${address}`);
+  const offers = [
+    shop.boat && "boat dives",
+    shop.shore && "shore dives",
+    shop.pool && "pool sessions",
+  ]
+    .filter(Boolean)
+    .join(", ");
+  if (offers) lines.push(`Offers: ${offers}.`);
+  if (shop.tagline?.trim()) lines.push(`About: ${shop.tagline.trim()}`);
+  if (shop.description?.trim()) lines.push(shop.description.trim());
+  if (shop.hotelPickup) lines.push("Hotel pickup is offered.");
+  if (shop.packingList.length > 0) lines.push(`What to bring: ${shop.packingList.join("; ")}.`);
+  if (shop.rentalItems.length > 0) lines.push(`Rental gear: ${shop.rentalItems.join(", ")}.`);
+  const pricing = shop.rentalPricing;
+  if (pricing.setCents != null)
+    lines.push(`Rental set (full core kit): ${money(pricing.setCents)}.`);
+  for (const [item, cents] of Object.entries(pricing.perItemCents)) {
+    lines.push(`Rental ${item}: ${money(cents)}.`);
+  }
+  if (pricing.nitroxCents != null) lines.push(`Nitrox: ${money(pricing.nitroxCents)} per dive.`);
   lines.push("Departures:");
   for (const trip of upcoming.trips) {
     const seats = spotsRemaining(seatsOnSale(trip));
     lines.push(
       `- ${formatShortDate(trip.startsAt, shop.locale, shop.timezone)} ${formatTime(trip.startsAt, shop.locale, shop.timezone)}, ${trip.title}: ${seats === 0 ? "full" : `${seats} seats open`}, ${money(trip.priceCents ?? trip.course?.priceCents)}`,
     );
+    const where = [trip.meetingPointLabel, trip.meetingPointAddress].filter(Boolean).join(", ");
+    if (where) lines.push(`  Meet at: ${where}`);
+    if (trip.description?.trim()) lines.push(`  ${trip.description.trim().slice(0, 400)}`);
   }
   if (upcoming.trips.length === 0) lines.push("- none scheduled in the next two weeks");
   if (courses.length > 0) {
     lines.push("Courses:");
-    for (const course of courses) lines.push(`- ${course.title}: ${money(course.priceCents)}`);
+    for (const course of courses) {
+      lines.push(`- ${course.title}: ${money(course.priceCents)}`);
+      const about = (course.summary ?? course.description ?? "").trim();
+      if (about) lines.push(`  ${about.slice(0, 400)}`);
+    }
   }
   if (shop.rentalTerms?.trim()) lines.push(`Rental terms: ${shop.rentalTerms.trim()}`);
   // The shop's own notes for replies: parking, rentals, what to bring.
@@ -297,12 +339,10 @@ export async function draftReplyOutcome(
     call: replyDraftCall({ window, facts, thread }),
   });
   if (status === "skipped") return { text: null, reason: "unavailable" };
-  const text = value ? groundedReply(value, { facts, thread }) : null;
+  const text = value ? draftedReply(value) : null;
   if (!text) {
     log("claude_assist.draft_unusable", "info", {
       answered: Boolean(value),
-      medical: value?.medical ?? false,
-      eligibility: value?.eligibility ?? false,
     });
     return { text: null, reason: "declined" };
   }
@@ -402,5 +442,5 @@ export async function draftReplyToMessage(
       ),
     )
     .limit(1);
-  return current ? groundedReply(value, { facts, thread }) : null;
+  return current ? draftedReply(value) : null;
 }

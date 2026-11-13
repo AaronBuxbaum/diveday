@@ -63,7 +63,7 @@ describe("AssistDraftButton", () => {
     }
   });
 
-  it("says so beside the button when the answer came back empty, and clears it on a good draft", async () => {
+  it("says so in a toast when the answer came back empty, and clears it on a good draft", async () => {
     const answers: (string | null)[] = [null, "Yes, two seats left."];
     render(
       <>

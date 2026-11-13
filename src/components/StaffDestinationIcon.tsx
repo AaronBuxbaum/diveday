@@ -215,6 +215,14 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="m8.8 12 2.2 2.2 4.2-4.4" />
     </>
   ),
+  // Drills: a whistle, for the practice a crew runs before it is needed.
+  drills: (
+    <>
+      <circle cx="9" cy="14.5" r="5" />
+      <path d="M13.2 11.6 21 8.5v4.2l-4.3 1.3" />
+      <path d="M9 12.2v2.6" />
+    </>
+  ),
   // Team: the people who work here.
   team: (
     <>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { Toast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
-import { FormStatus } from "@/components/ui/form";
 
 /**
  * **The one shape a Claude assist takes on screen** (ADR
@@ -11,7 +11,7 @@ import { FormStatus } from "@/components/ui/form";
  * and nothing is sent or saved until they do. The page renders it only while
  * the assist is lit, so a `null` answer means this one came back empty (a
  * refusal, a draft thrown away, the cap): the field stays as it was and
- * `emptyLabel` says so beside the button, so the tap never just stops.
+ * `emptyLabel` says so in a toast, so the tap never just stops.
  *
  * ## Using it
  *
@@ -74,15 +74,16 @@ export function AssistDraftButton({
   onDraft?: (text: string) => void;
   label: string;
   pendingLabel: string;
-  /** Said beside the button when the answer came back empty. */
+  /** Said in a toast when the answer came back empty. */
   emptyLabel?: string;
   className?: string;
 }) {
   const [pending, startTransition] = useTransition();
-  const [empty, setEmpty] = useState(false);
+  const [empty, setEmpty] = useState<number | null>(null);
+  const tries = useRef(0);
 
   function run() {
-    setEmpty(false);
+    setEmpty(null);
     startTransition(async () => {
       let text: string | null = null;
       try {
@@ -91,7 +92,8 @@ export function AssistDraftButton({
         // A failed action is an empty answer: the field stays as it was.
       }
       if (!text?.trim()) {
-        setEmpty(true);
+        tries.current += 1;
+        setEmpty(tries.current);
         return;
       }
       if (onDraft) onDraft(text);
@@ -110,7 +112,9 @@ export function AssistDraftButton({
       >
         {pending ? pendingLabel : label}
       </button>
-      <FormStatus tone="neutral">{empty && emptyLabel ? emptyLabel : null}</FormStatus>
+      {empty !== null && emptyLabel ? (
+        <Toast message={emptyLabel} occurrenceKey={empty} durationMs={6000} pausable />
+      ) : null}
     </>
   );
 }

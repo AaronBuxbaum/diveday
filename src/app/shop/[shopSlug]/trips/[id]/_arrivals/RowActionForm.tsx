@@ -2,6 +2,7 @@
 
 import { unstable_rethrow, useRouter } from "next/navigation";
 import { type ReactNode, useActionState, useEffect, useRef } from "react";
+import { ErrorToast } from "@/components/Toast";
 
 /** Whether a non-redirect action resolved or rejected; rejection does not reveal server outcome. */
 type RowActionResult = { ok: true } | { ok: false } | null;
@@ -18,7 +19,6 @@ export function RowActionForm({
   sendFailedLabel,
   onSubmitting,
   className,
-  sendFailedClassName = "mt-2 text-sm font-medium text-danger",
   children,
 }: {
   /**
@@ -36,12 +36,6 @@ export function RowActionForm({
    */
   onSubmitting?: () => void;
   className?: string;
-  /**
-   * Where the failure line sits. The default suits a control with its own
-   * margin; the row's check-in tap passes its own 8px of room, so the line
-   * sits on the column the tap's words start on.
-   */
-  sendFailedClassName?: string;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -82,14 +76,7 @@ export function RowActionForm({
       }}
     >
       {children}
-      {result?.ok === false ? (
-        // Inside the form, under the control it belongs to — `role="alert"`
-        // because the staffer's eyes are on the diver, not the screen, and this
-        // is the one thing on the page that just changed.
-        <p role="alert" className={sendFailedClassName}>
-          {sendFailedLabel}
-        </p>
-      ) : null}
+      {result?.ok === false ? <ErrorToast message={sendFailedLabel} /> : null}
     </form>
   );
 }

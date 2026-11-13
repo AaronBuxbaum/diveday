@@ -179,7 +179,7 @@ test.describe("capture harness", () => {
       {
         name: "library",
         path: "/shop/blue-mantis/dive-sites",
-        heading: "Dive Sites",
+        heading: "Dive sites",
         pins: 8,
         ready: waitForSiteLibrary,
       },
@@ -249,7 +249,7 @@ test.describe("capture harness", () => {
           await page.getByRole("heading", { level: 1, name: surface.heading }).waitFor();
           if (surface.name === "library") {
             await page.getByRole("link", { name: "Molasses Reef", exact: true }).waitFor();
-            await page.getByRole("link", { name: "Browse the DiveDay catalog" }).waitFor();
+            await page.getByRole("link", { name: "DiveDay catalog", exact: true }).waitFor();
           }
         };
         try {

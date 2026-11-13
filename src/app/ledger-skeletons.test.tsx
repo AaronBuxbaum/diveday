@@ -475,8 +475,8 @@ describe("the waivers skeleton", () => {
     );
     expect(cards).toHaveLength(0);
     const main = container.querySelector("main > div");
-    // The header, then the door, then the log.
-    const door = main?.children[1];
+    // The header, the Safety tabs, then the door, then the log.
+    const door = main?.children[2];
     expect(door).toHaveClass("h-12", "rounded-lg");
     expect(door?.children).toHaveLength(0);
   });

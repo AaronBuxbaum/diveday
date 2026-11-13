@@ -281,7 +281,7 @@ test.describe("staff", () => {
     // "start your first site" pitch to a shop that already has seven.
     await search.fill("nowhere in particular");
     await search.press("Enter");
-    await expect(page.getByText("No sites match that search")).toBeVisible();
+    await expect(page.getByText("No sites match")).toBeVisible();
     await expect(page.getByText("Start with a site your crew knows well")).toHaveCount(0);
 
     // And there is always a way back to the whole library.
@@ -302,7 +302,7 @@ test.describe("staff", () => {
     // what `offsetPage` exists to stop (ADR 20260803-one-pagination-model);
     // the library reads through it now like every other paged staff list.
     await page.goto("/shop/blue-mantis/dive-sites?page=99");
-    await expect(page.getByRole("heading", { level: 1, name: "Dive Sites" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Dive sites" })).toBeVisible();
     await expect(rows).toHaveCount(seededCount);
   });
 
@@ -576,12 +576,10 @@ test.describe("staff", () => {
     // from — that is the site page's line, not the library's.
     await expect(library.getByText(/DiveDay template v/)).toHaveCount(0);
 
-    // The catalog is a door above the library, carrying the size of what
-    // sits behind it; the header's secondary action retired with its arrival,
-    // so there is exactly one way in from here.
-    const catalogDoor = page.getByRole("link", { name: "Browse the DiveDay catalog" });
+    // The catalog is the other half of the Your sites / DiveDay catalog
+    // toggle, so there is exactly one way in from here.
+    const catalogDoor = page.getByRole("link", { name: "DiveDay catalog", exact: true });
     await expect(catalogDoor).toHaveCount(1);
-    await expect(page.getByText(/\d+ published sites/)).toBeVisible();
     await catalogDoor.click();
     await expect(
       page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
@@ -604,7 +602,7 @@ test.describe("staff", () => {
     ).toBeVisible();
 
     await expect(page).toHaveTitle("Molasses Reef 2 — DiveDay");
-    await page.getByRole("main").getByRole("link", { name: "Dive Sites", exact: true }).click();
+    await page.getByRole("main").getByRole("link", { name: "Dive sites", exact: true }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/dive-sites$/);
     // Both sites now: the new one states the version it came from, while the
     // shop's own tailored v1 copy is untouched and still offered the update.
@@ -679,7 +677,7 @@ test.describe("staff", () => {
 
     // And the library row now carries it.
     await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("heading", { level: 1, name: "Dive Sites" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Dive sites" }).waitFor();
     await expect(
       page.getByText("The mooring ball moved south. Brief the swim-through first."),
     ).toBeVisible();
@@ -713,7 +711,7 @@ test.describe("staff", () => {
     const library = await page.request.get("/shop/blue-mantis/dive-sites");
     expect(library.ok()).toBe(true);
     const libraryHtml = await library.text();
-    expect(libraryHtml).toContain("Dive Sites");
+    expect(libraryHtml).toContain("Dive sites");
     expect(libraryHtml).not.toContain("The mooring ball moved south");
   });
 
@@ -902,7 +900,7 @@ test.describe("an owner's own library", () => {
     // reached through the door at the library ledger's tail (ADR
     // 20260827-the-shops-shelves), never a peer destination.
     await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("link", { name: "Browse the DiveDay catalog" }).click();
+    await page.getByRole("link", { name: "DiveDay catalog", exact: true }).click();
     await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
     // The catalog pages, ordered by distance — this one is on the first page and
     // carries both of the things a one-tap import used to hand a shop sight
@@ -933,7 +931,7 @@ test.describe("an owner's own library", () => {
 
     // L5's last step: the site is now a row in her own ledger, filed under the
     // difficulty the template published, and its words are hers to edit.
-    await page.getByRole("main").getByRole("link", { name: "Dive Sites", exact: true }).click();
+    await page.getByRole("main").getByRole("link", { name: "Dive sites", exact: true }).click();
     await expect(page).toHaveURL(/\/dive-sites$/);
     const row = page.getByRole("link", { name: "Eagle Wreck", exact: true });
     await expect(row).toHaveCount(1);
@@ -1011,6 +1009,9 @@ test.describe("a site whose station is nowhere near it", () => {
 
     // A different station is a different pairing, so the answer does not carry
     // over and the question is put again.
+    // The last save's toast has to leave first, or the wait below is satisfied
+    // by it and the section is opened before the new save's refresh closes it.
+    await expect(page.getByText("Dive site saved")).toHaveCount(0);
     await page.getByLabel("NOAA tide station").fill("8723583");
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await page.getByText("Dive site saved").waitFor();

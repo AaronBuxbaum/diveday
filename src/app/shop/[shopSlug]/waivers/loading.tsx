@@ -1,4 +1,5 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { StaffSectionTabsSkeleton } from "@/app/shop/[shopSlug]/_components/StaffSectionTabs";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { Bone, Pending } from "@/components/ui/pending";
@@ -39,13 +40,14 @@ function LogRows({ count }: { count: number }) {
 
 export default function WaiversLoading() {
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <Pending>
         <ShopPageHeader
           pending
           description={false}
           meta={<Bone className="h-5 w-56 max-w-full" />}
         />
+        <StaffSectionTabsSkeleton section="safety" />
         {/* The release editor is a door at rest (`waivers/page.tsx`: "the
             ledger leads; the editor is a door"), one `md` secondary button.
             The open editor's card stood here, 426px of it, and the log landed

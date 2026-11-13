@@ -66,7 +66,9 @@ afterEach(() => {
 describe("an inline form outcome that lands where nobody can read it", () => {
   it("brings itself into view when it is below the fold", () => {
     const { container } = render(
-      <FormStatus tone="warning">Check the rental fit profile.</FormStatus>,
+      <FormStatus id="status" tone="warning">
+        Check the rental fit profile.
+      </FormStatus>,
     );
     reveal(container, { top: 750, bottom: 770 });
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
@@ -74,7 +76,11 @@ describe("an inline form outcome that lands where nobody can read it", () => {
 
   it("brings itself into view when it is above the fold", () => {
     // A warning from far down the page that would otherwise be left behind.
-    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
+    const { container } = render(
+      <FormStatus id="status" tone="warning">
+        Check this detail.
+      </FormStatus>,
+    );
     reveal(container, { top: -120, bottom: -100 });
     expect(scrollIntoView).toHaveBeenCalledOnce();
   });
@@ -85,7 +91,11 @@ describe("an inline form outcome that lands where nobody can read it", () => {
    * nothing at all.
    */
   it("leaves the page alone when it is already on screen", () => {
-    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
+    const { container } = render(
+      <FormStatus id="status" tone="warning">
+        Check this detail.
+      </FormStatus>,
+    );
     reveal(container, { top: 300, bottom: 320 });
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
@@ -96,7 +106,11 @@ describe("an inline form outcome that lands where nobody can read it", () => {
    * is where the usable viewport starts.
    */
   it("counts a status hidden behind the chrome bar as off screen", () => {
-    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
+    const { container } = render(
+      <FormStatus id="status" tone="warning">
+        Check this detail.
+      </FormStatus>,
+    );
     reveal(container, { top: 20, bottom: 40 });
     expect(scrollIntoView).toHaveBeenCalledOnce();
   });
@@ -105,7 +119,11 @@ describe("an inline form outcome that lands where nobody can read it", () => {
     // `FieldErrorFocus` scrolls the offending control into view and focuses
     // it. Two scrolls aimed at different elements in one frame is a page that
     // jumps twice, and the field is what the reader has to act on.
-    const { container } = render(<FormStatus tone="danger">That email is taken.</FormStatus>);
+    const { container } = render(
+      <FormStatus id="status" tone="danger">
+        That email is taken.
+      </FormStatus>,
+    );
     expect(container.querySelector("span[hidden]")).toBeNull();
     reveal(container, { top: 750, bottom: 770 });
     expect(scrollIntoView).not.toHaveBeenCalled();
@@ -120,7 +138,11 @@ describe("an inline form outcome that lands where nobody can read it", () => {
    */
   it("waits for the page to say where the viewport has settled", () => {
     document.documentElement.removeAttribute(SCROLL_SETTLED_ATTRIBUTE);
-    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
+    const { container } = render(
+      <FormStatus id="status" tone="warning">
+        Check this detail.
+      </FormStatus>,
+    );
     const status = statusElement(container);
     status.scrollIntoView = scrollIntoView;
     // On screen *now*, off screen once the restore has run — the exact trap.
@@ -144,7 +166,11 @@ describe("an inline form outcome that lands where nobody can read it", () => {
    * 138 while the page was still travelling, 748 once it had landed.
    */
   it("waits for the page to stop moving before it measures", () => {
-    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
+    const { container } = render(
+      <FormStatus id="status" tone="warning">
+        Check this detail.
+      </FormStatus>,
+    );
     const status = statusElement(container);
     status.scrollIntoView = scrollIntoView;
     // On screen at the offset the page is passing through, off screen at the

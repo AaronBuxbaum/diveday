@@ -66,7 +66,7 @@ describe("each settings group renders as its own component", () => {
     const rendered = [
       shopGroup(view),
       TeamGroup({ view, canManageTeam: true }),
-      BookingsGroup({ view, canManageWaivers: true, canPayments: true }),
+      BookingsGroup({ view, canPayments: true }),
       MoneyGroup({
         view,
         canPayments: true,
@@ -166,7 +166,7 @@ describe("each settings group renders as its own component", () => {
     expect(hrefsIn(team)).toEqual([`${base}/settings/activity`]);
 
     // The Rentals door is payment-settings work.
-    const noPayments = BookingsGroup({ view, canManageWaivers: false, canPayments: false });
+    const noPayments = BookingsGroup({ view, canPayments: false });
     expect(hrefsIn(noPayments)).not.toContain(`${base}/settings/rentals`);
 
     // Card checks is one row with its try-it inside (#2817): no page to link to.

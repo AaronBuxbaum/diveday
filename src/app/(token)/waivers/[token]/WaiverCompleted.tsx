@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
+import { ErrorToast } from "@/components/Toast";
 import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
-import { ShopNotice } from "@/components/ui/outcome";
 import type { TripSitePeek } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -67,11 +67,7 @@ export function WaiverCompleted({
           : "waiver.medicalShopReviewNext";
   return (
     <main className={THREAD_MEASURE_CLASS}>
-      {notSaved ? (
-        <ShopNotice tone="warning" role="alert" className="mb-6">
-          {t("waiver.counterAlreadySigned")}
-        </ShopNotice>
-      ) : null}
+      {notSaved ? <ErrorToast message={t("waiver.counterAlreadySigned")} tone="warning" /> : null}
       <EarnedMoment
         as="h1"
         eyebrow={shopName}

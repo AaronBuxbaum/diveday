@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { BOAT_SEGMENT_TRACK_CLASS, boatSegmentClass } from "@/components/boat-segments";
+import { ErrorToast, SAFETY_TOAST_MS } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { isHomewardStage } from "@/lib/checkpoint-gaps";
@@ -179,9 +180,7 @@ export function StageStrip({
         </div>
       ) : null}
       {result && !result.ok ? (
-        <p role="alert" className="mt-2 text-sm text-danger">
-          {copy.errorRefusal}
-        </p>
+        <ErrorToast message={copy.errorRefusal} durationMs={SAFETY_TOAST_MS} />
       ) : null}
     </section>
   );

@@ -214,7 +214,10 @@
       "logged": "Drill logged.",
       "deleted": "Drill deleted.",
       "loggedBy": "Logged by {name}, {date}",
-      "invalid": "That drill didn’t save. Check the date and who took part."
+      "invalid": "That drill didn’t save. Check the date and who took part.",
+      "tileDays": "{days, plural, one {day since the last drill} other {days since the last drill}}",
+      "tileNever": "No drill on record",
+      "heldSummary": "{count, plural, =0 {None in the last year} one {# in the last year} other {# in the last year}}"
     },
     "figuresLabel": "This month’s safety record",
     "rollCalls": "Roll calls closed",
@@ -247,7 +250,6 @@
     "unrecordedSailings": "{count, plural, one {# sailing} other {# sailings}} this month",
     "noDepartures": "No departures came back this month",
     "year": {
-      "open": "Year view",
       "print": "Print the year",
       "figuresLabel": "The year’s safety record",
       "noDepartures": "No departures came back this year",
@@ -258,15 +260,9 @@
       "rollCallsOpen": "{open, plural, one {# not closed} other {# not closed}} · {none, plural, one {# with no roll call taken} other {# with no roll call taken}}, listed on each month",
       "boardedDetail": "{count, plural, =0 {Every seat marked at the dock} one {# seat never marked at the dock, on a roll call listed as open on its month} other {# seats never marked at the dock, on roll calls listed as open on each month}}",
       "printedFor": "{shopName} · {start} to {end}, {year} · {zone}",
-      "printedOn": "Printed {date}",
-      "chooseYear": "Choose a year",
-      "previous": "Previous year",
-      "next": "Next year",
-      "earliestTitle": "This is your first year with departures",
-      "currentTitle": "You’re viewing the current year"
+      "printedOn": "Printed {date}"
     },
     "incidentsValue": "{filed} filed{drafts, plural, =0 {} one { · # draft} other { · # drafts}}",
-    "monthView": "Month view",
     "printMonth": "Print month",
     "preparation": {
       "title": "Crew and preparation",

@@ -353,16 +353,10 @@ test.describe("as owner", () => {
     // tightened the gate finds out who it caught instead of learning it from a
     // diver at the dock. Asserted on the rendered sentence — the trip page's
     // `FlashParams` strips both `notice`, `count`, and `form`.
-    const outcome = page.getByRole("status").filter({ hasText: "Requirements updated." });
+    const outcome = page.getByRole("alert").filter({ hasText: "Requirements updated." });
     await expect(outcome).toContainText(
       "Requirements updated. 1 booked diver no longer meets them",
     );
-    // And it lands *in the requirements row*, beside the button that was
-    // pressed. The About panel carries five independent editors; this one used
-    // to answer all of them in a single banner under the `<h1>`, which on a
-    // phone is several screens from the control that earned it.
-    const requirements = page.locator("details#requirements");
-    await expect(requirements.getByRole("status")).toContainText("Requirements updated.");
     await openTripTab(page, "Trip");
     await expect(page.locator("#roster").getByText("Diego Alvarez").first()).toBeVisible();
   });

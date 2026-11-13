@@ -288,7 +288,9 @@ for (const scheme of ["light", "dark"] as const) {
         // the old one, so the save answers with its warning variant ("8 booked
         // divers no longer meet them") rather than the plain confirmation.
         // Matching the stem keeps this test about the deal panel.
-        await expect(page.getByRole("status")).toContainText("Requirements updated.");
+        await expect(
+          page.getByRole("alert").filter({ hasText: "Requirements updated." }),
+        ).toBeVisible();
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
@@ -372,7 +374,9 @@ for (const scheme of ["light", "dark"] as const) {
         // Raising the bar on a seated charter answers with the warning variant
         // ("… booked divers no longer meet them"); matching the stem keeps this
         // test about the wait list.
-        await expect(page.getByRole("status")).toContainText("Requirements updated.");
+        await expect(
+          page.getByRole("alert").filter({ hasText: "Requirements updated." }),
+        ).toBeVisible();
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
@@ -721,7 +725,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the Safety year renders true to the design (${scheme})`, async ({ page }) => {
         // Reached by its own link, so the year is the server clock's, not the runner's.
         await page.goto("/shop/blue-mantis/safety");
-        await page.getByRole("link", { name: "Year view", exact: true }).click();
+        await page.getByRole("link", { name: "Year", exact: true }).click();
         await page.waitForURL(/\?year=\d{4}$/);
         await page.getByRole("link", { name: "Print the year" }).waitFor();
         await capture(page, "reports-safety-year", scheme);

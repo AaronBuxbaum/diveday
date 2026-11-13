@@ -119,10 +119,10 @@ export async function openStandaloneLibraryMapPin(page: Page) {
 }
 
 export async function waitForSiteLibrary(page: Page) {
-  await page.getByRole("heading", { level: 1, name: "Dive Sites" }).waitFor();
+  await page.getByRole("heading", { level: 1, name: "Dive sites" }).waitFor();
   // The ledger and its final catalog-count link can finish before the lazy map.
   await page.getByRole("link", { name: "Molasses Reef", exact: true }).waitFor();
-  await page.getByRole("link", { name: "Browse the DiveDay catalog" }).waitFor();
+  await page.getByRole("link", { name: "DiveDay catalog", exact: true }).waitFor();
   await waitForSiteMap(page);
 }
 

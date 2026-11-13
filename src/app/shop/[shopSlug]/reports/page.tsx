@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
+import { PeriodNav } from "@/components/PeriodNav";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { ShopNotice } from "@/components/ui/outcome";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   compareMonthlyReports,
   formatReportMoney,
@@ -36,6 +35,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatMonthDay } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { shopPath } from "@/lib/staff-notices";
 import { sameMomentYearBefore, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLedger";
@@ -54,7 +54,6 @@ import {
 import { LeadTimes, OwnerLines, readMonthOwner } from "./_components/MonthOwnerLines";
 import { monthFigureBasis, monthFigureList } from "./_components/month-figure-list";
 import { MonthReportActions } from "./_components/ReportExportMenu";
-import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { reportFloorMonth } from "./_components/report-floor-month";
 import { YearView } from "./_components/YearView";
 
@@ -269,21 +268,6 @@ export default async function ReportsPage({
     compareMonths(current, navigationFloor) > 0 ? monthKey(addMonths(current, -1)) : null;
   const nextMonthKey = isThisMonth ? null : monthKey(next);
 
-  // A square 44px target holding one glyph, through the shared `size: "icon"`
-  // rather than a hand-spelled `size-11` — this pair was one of the four
-  // spellings that size exists to end (see components/ui/button.ts). Plain
-  // `secondary`, with no `text-foreground` override: two `text-<color>`
-  // utilities resolve by stylesheet order rather than by the order they are
-  // written, and `globals.css` declares `--color-primary` after
-  // `--color-foreground`, so an override there is inert.
-  const navClass = buttonClass({ variant: "secondary", size: "icon" });
-  // The far edge of the range: decorative and `aria-hidden`, so it wears the
-  // same box and is made inert rather than merely restyled. `pointer-events-none`
-  // and not `cursor-default` — the shared base carries `cursor-pointer`, which
-  // wins by the same ordering rule, and this also stops the hover background
-  // lighting up an arrow that goes nowhere.
-  const navDisabledClass = `${navClass} pointer-events-none opacity-40`;
-
   const figures = monthFigureList({
     report,
     baselineReport,
@@ -329,60 +313,16 @@ export default async function ReportsPage({
         t={t}
       />
 
-      <ReportRangeTabs shopSlug={shopSlug} range="month" t={t} className="mb-6" />
-
-      {/*
-        Month navigator — the period between its two arrows, and nothing else
-        (UX review 2026-10-10, item 32). The arrows are links, so a tap is the
-        change; the month list that sat between them was a third control for
-        the same choice. The This month / This year switch above stays because
-        the year is its own report, not a further month. The arrows are 48px
-        `icon` squares.
-      */}
-      <nav aria-label={t("reports.chooseMonth")} className="mb-6 flex items-center gap-3">
-        {prevMonthKey ? (
-          <Link
-            href={`/shop/${shopSlug}/reports?month=${prevMonthKey}`}
-            aria-label={t("reports.previousMonth")}
-            className={`${navClass} shrink-0`}
-            scroll={false}
-          >
-            <DiveDayIcon name="arrow-left" className="size-4" />
-          </Link>
-        ) : (
-          <span
-            aria-hidden="true"
-            title={t("reports.earliestMonthTitle")}
-            className={`${navDisabledClass} shrink-0`}
-          >
-            <DiveDayIcon name="arrow-left" className="size-4" />
-          </span>
-        )}
-        <h2 className={`${SECTION_TITLE_CLASS} min-w-0 tabular-nums`}>
-          {monthLabel(current, locale)}
-          {isThisMonth ? (
-            <span className="ms-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>
-          ) : null}
-        </h2>
-        {nextMonthKey ? (
-          <Link
-            href={`/shop/${shopSlug}/reports?month=${nextMonthKey}`}
-            aria-label={t("reports.nextMonth")}
-            className={`${navClass} shrink-0`}
-            scroll={false}
-          >
-            <DiveDayIcon name="arrow-right" className="size-4" />
-          </Link>
-        ) : (
-          <span
-            aria-hidden="true"
-            title={t("reports.currentMonthTitle")}
-            className={`${navDisabledClass} shrink-0`}
-          >
-            <DiveDayIcon name="arrow-right" className="size-4" />
-          </span>
-        )}
-      </nav>
+      <PeriodNav
+        range="month"
+        monthHref={shopPath(shopSlug, "reports")}
+        yearHref={`${shopPath(shopSlug, "reports")}?range=year`}
+        title={monthLabel(current, locale)}
+        soFar={isThisMonth}
+        prevHref={prevMonthKey ? `/shop/${shopSlug}/reports?month=${prevMonthKey}` : null}
+        nextHref={nextMonthKey ? `/shop/${shopSlug}/reports?month=${nextMonthKey}` : null}
+        t={t}
+      />
 
       <MonthDays summary={monthSummary} locale={locale} t={t} month={current} />
       {!hasMonthlyActivity ? (
@@ -394,7 +334,12 @@ export default async function ReportsPage({
         />
       ) : (
         <>
-          <MonthFigures label={t("reports.numbersLabel")} figures={figures} caption={figureBasis} />
+          <MonthFigures
+            label={t("reports.numbersLabel")}
+            figures={figures}
+            caption={figureBasis}
+            columns={3}
+          />
 
           <MonthFootnotes
             taxCents={report.taxCents}

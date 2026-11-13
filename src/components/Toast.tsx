@@ -48,6 +48,7 @@ export function ToastShell({
   autoDismissMs,
   pausable = false,
   placement = "fixed",
+  role = "status",
   className,
   onSwipeAway,
   children,
@@ -56,6 +57,8 @@ export function ToastShell({
   pausable?: boolean;
   /** Action toasts attached to page content must not cover the controls they explain. */
   placement?: "fixed" | "inline";
+  /** `alert` for an error toast, so it is announced as it arrives. */
+  role?: "status" | "alert";
   /** The box's own layout and inset; the frame, fill and shadow are shared. */
   className: string;
   /**
@@ -152,8 +155,9 @@ export function ToastShell({
 
   if (!visible) return null;
   const toast = (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the swipe-away drag is a pointer nicety; the toast leaves by itself either way
     <div
-      role="status"
+      role={role}
       onPointerDown={onSwipeAway ? dragStart : undefined}
       onPointerMove={onSwipeAway ? dragMove : undefined}
       onPointerUp={onSwipeAway ? dragEnd : undefined}
@@ -183,7 +187,7 @@ export function ToastShell({
       onMouseLeave={pausable ? resume : undefined}
       onFocusCapture={pausable ? pause : undefined}
       onBlurCapture={pausable ? resume : undefined}
-      className={`${className} rounded-inset border border-border bg-surface shadow-2xl ${
+      className={`${className} pointer-events-auto rounded-inset border border-border bg-surface shadow-2xl ${
         onSwipeAway ? "touch-pan-y " : ""
       }${dismissing ? "toast-dismiss" : "rise-in"}`}
     >
@@ -193,7 +197,7 @@ export function ToastShell({
   return placement === "inline" ? (
     <div className="my-2 min-w-0">{toast}</div>
   ) : (
-    <div className="fixed inset-x-0 bottom-[calc(1rem+var(--tabbar-h))] z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(1rem+var(--tabbar-h))] z-50 flex justify-center px-4">
       {toast}
     </div>
   );
@@ -226,6 +230,46 @@ export function Toast({
       autoDismissMs={durationMs}
       pausable={pausable}
       className="px-4 py-3 text-sm font-medium"
+    >
+      {message}
+    </ToastShell>
+  );
+}
+
+/** Roll-call, checkpoint and medical-reveal refusals stay long enough for eyes on the water to come back. */
+export const SAFETY_TOAST_MS = 30_000;
+
+/**
+ * **The one error toast.** An error is never drawn as a component that stays on
+ * the page (Aaron, 2026-11-13): a refused save, a failed load or a failed
+ * assist is said here, in the same pinned slot as a confirmation, and leaves
+ * after a longer beat so it can be read. Hovering or focusing it holds it.
+ * `FormStatus` and `ShopNotice` route every non-success outcome here, so a
+ * form needs no error markup of its own. Field-level validation stays on the
+ * field (`Field`'s `error`).
+ *
+ * Mount it fresh (`key`/`occurrenceKey`) per occurrence.
+ */
+export function ErrorToast({
+  message,
+  tone = "danger",
+  durationMs = 8000,
+  occurrenceKey,
+}: {
+  message: ReactNode;
+  tone?: "danger" | "warning";
+  durationMs?: number;
+  occurrenceKey?: Key;
+}) {
+  return (
+    <ToastShell
+      key={occurrenceKey}
+      role="alert"
+      autoDismissMs={durationMs}
+      pausable
+      className={`px-4 py-3 text-sm font-medium ${
+        tone === "danger" ? "text-danger" : "text-warning-strong"
+      }`}
     >
       {message}
     </ToastShell>

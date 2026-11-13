@@ -45,7 +45,7 @@ import { MoneyBlock, type MoneyBlockSeatLine } from "./MoneyBlock";
 function ErrorNotice({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <ShopNotice tone="danger" role="alert" className="mt-4">
+    <ShopNotice tone="danger" className="mt-4">
       {message}
     </ShopNotice>
   );

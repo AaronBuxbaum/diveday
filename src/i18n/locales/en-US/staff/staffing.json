@@ -17,7 +17,6 @@
     "note": "Note",
     "notePlaceholder": "Anything the shop should know",
     "person": "Staff member",
-    "remove": "Remove",
     "save": "Save",
     "to": "To"
   },
@@ -121,7 +120,9 @@
     "shiftAria": "Shift for {person} on {day}",
     "thisWeek": "This week",
     "today": "Today",
-    "shiftsAndAway": "Shifts and days off"
+    "shiftsAndAway": "Shifts and days off",
+    "shift": "Shift",
+    "emptyDay": "Nothing scheduled this day"
   },
   "working": {
     "remove": "Remove",

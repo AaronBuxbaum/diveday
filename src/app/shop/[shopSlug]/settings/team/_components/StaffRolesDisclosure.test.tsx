@@ -155,11 +155,8 @@ describe("StaffRolesDisclosure", () => {
     expect(toggle()).toHaveAttribute("aria-expanded", "true");
     const refusal = screen.getByRole("alert");
     expect(refusal).toHaveTextContent("Check at least one role before saving.");
-    // Beside the boxes it is about: inside the row's own form, and named by
-    // the fieldset that holds them.
+    // An error toast, announced as an alert; it leaves rather than staying on the page.
     expect(refusal.closest("form")).not.toBeNull();
-    const fieldset = screen.getByRole("group", { name: "Roles" });
-    expect(fieldset.getAttribute("aria-describedby")).toBe(refusal.id);
   });
 
   it("posts the roles it was rendered with, so a stale close is refused rather than written", async () => {

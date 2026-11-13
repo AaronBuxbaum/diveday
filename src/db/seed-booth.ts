@@ -829,8 +829,15 @@ async function seedShopCertified(
   // students and herself counted aboard at the dock on the first morning, and
   // back aboard a few minutes after each session's exit. Without it the
   // Safety tab listed a hull that sailed with nobody counted.
+  //
+  // **Each count is on its own meeting day.** The course is two days, so a
+  // count with no `meetingDay` reads as "day unknown" and neither day owns it:
+  // Today then raised an unclosed roll call for both days of a shop that had
+  // only just been created. The dock count and dives 1 and 2 are Saturday's;
+  // dives 3 and 4 are Sunday's, which carries on the numbering.
   const counts = rollCallCheckpoints(trip.plannedDives).map((checkpoint, index) => ({
     checkpoint,
+    meetingDay: index === 0 ? 0 : (SHOP_CERTIFIED_DIVES[index - 1]?.day ?? 0),
     occurredAt:
       index === 0
         ? new Date(window.startsAt.getTime() + 20 * 60_000)
@@ -840,10 +847,11 @@ async function seedShopCertified(
     await seedRollCallEvidence(
       db,
       seated.flatMap((bookingId, seat) =>
-        counts.map(({ checkpoint, occurredAt }) => ({
+        counts.map(({ checkpoint, meetingDay, occurredAt }) => ({
           shopId,
           tripId: trip.id,
           bookingId,
+          meetingDay,
           recordedByPersonId: ctx.instructorId,
           status: "boarded" as const,
           checkpoint,
@@ -856,9 +864,10 @@ async function seedShopCertified(
   }
   await seedRollCallEvidence(
     db,
-    counts.map(({ checkpoint, occurredAt }) => ({
+    counts.map(({ checkpoint, meetingDay, occurredAt }) => ({
       shopId,
       tripId: trip.id,
+      meetingDay,
       subjectKind: "crew" as const,
       crewPersonId: ctx.instructorId,
       recordedByPersonId: ctx.instructorId,

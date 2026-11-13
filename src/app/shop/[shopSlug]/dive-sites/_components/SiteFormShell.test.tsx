@@ -154,15 +154,6 @@ describe("SiteFormShell", () => {
     expect(row?.textContent).toContain("Unsaved changes in The site");
   });
 
-  it("moves the cursor to the refusal", async () => {
-    setup(refusing("coordinatesIncomplete"));
-
-    await userEvent.click(screen.getByRole("button", { name: "Save dive site" }));
-
-    const alert = await screen.findByRole("alert");
-    expect(document.activeElement?.contains(alert)).toBe(true);
-  });
-
   /**
    * A refusal about a section closed behind its disclosure opens it (visual
    * review 2026-10-24, A11): the coordinates to fix are not left behind a

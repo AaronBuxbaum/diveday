@@ -1,9 +1,10 @@
 "use client";
 
-import { type ChangeEvent, useEffect, useId, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { describeImageProblem, IMAGE_ACCEPT } from "@/components/ImageFileInput";
+import { ErrorToast } from "@/components/Toast";
 
 /**
  * Every word the tile can show, resolved by the caller, for the reason
@@ -51,7 +52,6 @@ export function ImageUploadTile({
   const { pending } = useFormStatus();
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const errorId = useId();
 
   // The object URL lives exactly as long as the upload it previews: once the
   // form settles the saved photo has its own cell, so this one lets go.
@@ -105,15 +105,10 @@ export function ImageUploadTile({
           accept={IMAGE_ACCEPT}
           disabled={pending}
           onChange={handleChange}
-          aria-describedby={error ? errorId : undefined}
           className="sr-only"
         />
       </label>
-      {error ? (
-        <p id={errorId} role="alert" className="mt-2 text-xs font-normal text-danger">
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorToast message={error} /> : null}
     </div>
   );
 }

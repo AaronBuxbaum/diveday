@@ -9,7 +9,7 @@ import {
   type ReactNode,
   useId,
 } from "react";
-import { Toast } from "@/components/Toast";
+import { ErrorToast, Toast } from "@/components/Toast";
 import { StatusInView } from "@/components/ui/StatusInView";
 import { type NoticeTone, noticeRole } from "@/components/ui/tone";
 import { currencySymbol, minorToMajor } from "@/lib/money";
@@ -1022,7 +1022,7 @@ const STATUS_TONE: Record<NoticeTone, string> = {
  * A `?notice=` banner under the `<h1>` can be far from the action on a long
  * page, or scrolled off screen after a redirect.
  *
- * `FormStatus` keeps refusals beside their form and sends success to a toast.
+ * `FormStatus` sends every refusal (`ErrorToast`) and success (`Toast`) to a toast; only a neutral note stays beside the form.
  *
  * - a **form-level** refusal renders here, adjacent to the submit control;
  * - a successful submission uses the shared, auto-dismissing `Toast`;
@@ -1064,6 +1064,10 @@ export function FormStatus({
   // (found on the waiver editor, issue #790).
   if (Children.toArray(children).length === 0) return null;
   if (tone === "success") return <Toast message={children} occurrenceKey={occurrenceKey} />;
+  // A status wired to a control with `id` (`aria-describedby`) is that field's
+  // validation hint and stays beside it; every other refusal is a toast.
+  if ((tone === "danger" || tone === "warning") && !id)
+    return <ErrorToast message={children} tone={tone} occurrenceKey={occurrenceKey} />;
   const mark = toneMark(tone);
   return (
     <>
@@ -1079,10 +1083,6 @@ export function FormStatus({
         ) : null}
         <span>{children}</span>
       </p>
-      {/* An outcome that lands below the fold says nothing at all. Every tone
-          but `danger`, whose own `FieldErrorFocus` has a better destination —
-          see `StatusInView` for why two scrolls in one frame is worse than
-          one. */}
       {tone === "danger" ? null : <StatusInView />}
     </>
   );
