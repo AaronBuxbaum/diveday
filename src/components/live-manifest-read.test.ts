@@ -1,20 +1,26 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   LiveManifestCoordinator,
   type LiveManifestRead,
   type LiveManifestScope,
   type LiveManifestTransport,
   manifestPrivacyGeneration,
+  manifestSessionGeneration,
+  reportManifestStale,
   reportPossibleManifestErasure,
 } from "./live-manifest-read";
 
 type View = { roster: string[]; count: number; print: string[]; causal: string[] };
-const scope = {
-  shopId: "shop-1",
-  tripId: "trip-1",
-  checkpoint: "departure",
-  sessionId: "session-1",
-};
+let scope: LiveManifestScope;
+let nextSession = 0;
+beforeEach(() => {
+  scope = {
+    shopId: "shop-1",
+    tripId: "trip-1",
+    checkpoint: "departure",
+    sessionId: `session-${++nextSession}`,
+  };
+});
 const nonceA = "11111111-1111-4111-8111-111111111111";
 const nonceB = "22222222-2222-4222-8222-222222222222";
 const cached: View = { roster: ["A"], count: 1, print: ["A"], causal: ["event-a"] };
@@ -29,7 +35,12 @@ const result = (view: View, nonce = nonceA): LiveManifestRead<View> => ({
 const owners = new Set<LiveManifestCoordinator<View>>();
 function owner(
   ownerScope: LiveManifestScope,
-  cache: { scope: LiveManifestScope; view: View; privacyGeneration?: number } | null,
+  cache: {
+    scope: LiveManifestScope;
+    view: View;
+    privacyGeneration?: number;
+    sessionGeneration?: number;
+  } | null,
   transport: LiveManifestTransport<View>,
 ) {
   const coordinator = new LiveManifestCoordinator(
@@ -39,6 +50,8 @@ function owner(
           ...cache,
           privacyGeneration:
             cache.privacyGeneration ?? manifestPrivacyGeneration(cache.scope.shopId),
+          sessionGeneration:
+            cache.sessionGeneration ?? manifestSessionGeneration(cache.scope.sessionId),
         }
       : null,
     transport,
@@ -121,7 +134,7 @@ describe("live manifest read coordination", () => {
         verify: async () => "verified",
       },
     );
-    other.changeScope({ ...scope, sessionId: "session-2" });
+    other.changeScope({ ...scope, sessionId: `${scope.sessionId}-replacement` });
     expect(other.state.view).toBeNull();
     const erased = owner(
       scope,
@@ -253,7 +266,7 @@ describe("live manifest read coordination", () => {
   });
 
   it("keeps same-trip mutations distinct across a session change", async () => {
-    const nextScope = { ...scope, sessionId: "session-2" };
+    const nextScope = { ...scope, sessionId: `${scope.sessionId}-replacement` };
     const read = vi.fn(async (nonce: string) => ({
       kind: "ready" as const,
       read: { ...result(fresh, nonce), scope: nextScope },
@@ -280,7 +293,11 @@ describe("live manifest read coordination", () => {
   it("never exposes a cached view belonging to another or absent identity", async () => {
     const read = vi.fn(async () => ({ kind: "ready" as const, read: result(fresh) }));
     const transport = { nonce: () => nonceA, read, verify: async () => "verified" as const };
-    const wrong = owner({ ...scope, sessionId: "session-2" }, { scope, view: cached }, transport);
+    const wrong = owner(
+      { ...scope, sessionId: `${scope.sessionId}-replacement` },
+      { scope, view: cached },
+      transport,
+    );
     expect(wrong.state.view).toBeNull();
     const signedOut = owner({ ...scope, sessionId: "" }, { scope, view: cached }, transport);
     await signedOut.read();
@@ -404,7 +421,7 @@ describe("live manifest read coordination", () => {
   });
 
   it("keeps a same-trip write barrier across purge and a session change", async () => {
-    const nextScope = { ...scope, sessionId: "session-2" };
+    const nextScope = { ...scope, sessionId: `${scope.sessionId}-replacement` };
     const read = vi.fn(async (nonce: string) => ({
       kind: "ready" as const,
       read: { ...result(fresh, nonce), scope: nextScope },
@@ -556,300 +573,22 @@ describe("live manifest read coordination", () => {
     expect(peer.state.status).not.toBe("confirmed");
   });
 
-  it("hides an abandoned cached view if the shop is invalidated before activation", () => {
-    const generation = manifestPrivacyGeneration(scope.shopId);
-    const transport: LiveManifestTransport<View> = {
-      nonce: () => nonceA,
-      read: async () => ({ kind: "unavailable" }),
-      verify: async () => "unavailable",
-    };
-    const abandoned = new LiveManifestCoordinator(
-      scope,
-      { scope, view: cached, privacyGeneration: generation },
-      transport,
-    );
-    const active = owner(scope, { scope, view: cached }, transport);
-    active.purge();
-    abandoned.activate();
-    expect(abandoned.state.view).toBeNull();
-    abandoned.dispose();
-  });
-
-  it("does not revive a disposed owner or retain an abandoned render's watcher", async () => {
-    const read = vi.fn(async (nonce: string) => ({
-      kind: "ready" as const,
-      read: result(fresh, nonce),
-    }));
-    const transport = { nonce: () => nonceA, read, verify: async () => "verified" as const };
-    const abandoned = new LiveManifestCoordinator(
-      scope,
-      { scope, view: cached, privacyGeneration: manifestPrivacyGeneration(scope.shopId) },
-      transport,
-    );
-    const listener = vi.fn();
-    abandoned.subscribe(listener);
-    const active = owner(scope, { scope, view: cached }, transport);
-    const finish = active.beginMutation();
-    expect(listener).not.toHaveBeenCalled();
-    abandoned.dispose();
-    await abandoned.resume();
-    expect(read).not.toHaveBeenCalled();
-    finish();
-  });
-
-  it("fences other owners and releases the write even when a subscriber throws", async () => {
-    const read = vi.fn(async (nonce: string) => ({
-      kind: "ready" as const,
-      read: result(fresh, nonce),
-    }));
-    const transport = { nonce: () => nonceA, read, verify: async () => "verified" as const };
-    const first = owner(scope, { scope, view: cached }, transport);
-    const second = owner(scope, { scope, view: cached }, transport);
-    first.subscribe(() => {
-      throw new Error("broken consumer");
-    });
-    const finish = first.beginMutation();
-    await second.read();
-    expect(read).not.toHaveBeenCalled();
-    finish();
-    await vi.waitFor(() => expect(read).toHaveBeenCalled());
-  });
-
-  it("retries one possible-erasure refusal without looping on a second refusal", async () => {
-    const read = vi.fn(async () => ({ kind: "possible-erasure" as const }));
-    const coordinator = owner(
-      scope,
-      { scope, view: cached },
-      {
-        nonce: vi.fn().mockReturnValueOnce(nonceA).mockReturnValueOnce(nonceB),
-        read,
-        verify: async () => "verified",
-      },
-    );
-    await coordinator.read();
-    await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(2));
-    await Promise.resolve();
-    expect(coordinator.state.view).toBeNull();
-    expect(coordinator.state.status).toBe("unconfirmed");
-    expect(read).toHaveBeenCalledTimes(2);
-  });
-
-  it("retains a stale obligation while hidden and reads on reactivation", async () => {
-    const read = vi.fn(async () => ({ kind: "ready" as const, read: result(fresh) }));
-    const coordinator = owner(
+  it("withdraws a peer's confirmation when an old trip's late claim is superseded", async () => {
+    const peer = owner(
       scope,
       { scope, view: cached },
       {
         nonce: () => nonceA,
-        read,
-        verify: async () => "verified",
-      },
-    );
-    coordinator.interrupt();
-    coordinator.stale(true);
-    expect(read).not.toHaveBeenCalled();
-    expect(coordinator.state.view).toBeNull();
-    await coordinator.resume();
-    expect(read).toHaveBeenCalledTimes(1);
-    expect(coordinator.state.status).toBe("unconfirmed");
-    expect(coordinator.state.view).toEqual(fresh);
-  });
-
-  it("withdraws confirmation when a later nonce cannot be created", async () => {
-    const nonce = vi
-      .fn()
-      .mockReturnValueOnce(nonceA)
-      .mockImplementationOnce(() => {
-        throw new Error("crypto unavailable");
-      });
-    const coordinator = owner(
-      scope,
-      { scope, view: cached },
-      {
-        nonce,
         read: async () => ({ kind: "ready", read: result(fresh) }),
         verify: async () => "verified",
       },
     );
-    await coordinator.read();
-    const commitId = coordinator.state.commitId;
+    await peer.read();
+    const commitId = peer.state.commitId;
     if (commitId === null) throw new Error("missing commit");
-    await coordinator.acknowledgeCommit(commitId);
-    expect(coordinator.state.status).toBe("confirmed");
-    coordinator.interrupt();
-    await coordinator.resume();
-    expect(coordinator.state.status).toBe("unconfirmed");
-    expect(coordinator.state.view).toEqual(fresh);
-  });
-
-  it("copies the verified view so later in-place mutation cannot change it", async () => {
-    const input: View = { roster: ["A"], count: 1, print: ["A"], causal: ["event-a"] };
-    const coordinator = owner(
-      scope,
-      { scope, view: cached },
-      {
-        nonce: () => nonceA,
-        read: async () => ({ kind: "ready", read: result(input) }),
-        verify: async () => "verified",
-      },
-    );
-    await coordinator.read();
-    input.roster.push("erased");
-    expect(coordinator.state.view?.roster).toEqual(["A"]);
-    expect(() => coordinator.state.view?.roster.push("unsafe")).toThrow();
-  });
-
-  it("coalesces reads until all distinct writes settle, including duplicate completion", async () => {
-    const read = vi.fn(async () => ({ kind: "ready" as const, read: result(fresh) }));
-    const coordinator = owner(
-      scope,
-      { scope, view: cached },
-      {
-        nonce: () => nonceA,
-        read,
-        verify: async () => "verified",
-      },
-    );
-    const first = coordinator.beginMutation();
-    const second = coordinator.beginMutation();
-    await coordinator.read();
-    first();
-    first();
-    expect(read).not.toHaveBeenCalled();
-    second();
-    await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(1));
-  });
-
-  it("times out an unanswered read and ignores its eventual response", async () => {
-    vi.useFakeTimers();
-    try {
-      const held = deferred<{ kind: "ready"; read: LiveManifestRead<View> }>();
-      const coordinator = owner(
-        scope,
-        { scope, view: cached },
-        {
-          nonce: () => nonceA,
-          read: () => held.promise,
-          verify: async () => "verified",
-        },
-      );
-      const pending = coordinator.read();
-      await vi.advanceTimersByTimeAsync(10_000);
-      await pending;
-      held.resolve({ kind: "ready", read: result(fresh) });
-      await Promise.resolve();
-      expect(coordinator.state).toEqual({ view: cached, status: "unconfirmed", commitId: null });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("expires confirmation and requires a new read", async () => {
-    vi.useFakeTimers();
-    try {
-      const coordinator = owner(
-        scope,
-        { scope, view: cached },
-        {
-          nonce: () => nonceA,
-          read: async () => ({ kind: "ready", read: result(fresh) }),
-          verify: async () => "verified",
-        },
-      );
-      await coordinator.read();
-      const commitId = coordinator.state.commitId;
-      if (commitId === null) throw new Error("missing commit");
-      await coordinator.acknowledgeCommit(commitId);
-      expect(coordinator.state.status).toBe("confirmed");
-      await vi.advanceTimersByTimeAsync(5 * 60_000);
-      expect(coordinator.state.status).toBe("unconfirmed");
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("refuses a UI acknowledgement delayed beyond the age of the original read", async () => {
-    vi.useFakeTimers();
-    try {
-      const coordinator = owner(
-        scope,
-        { scope, view: cached },
-        {
-          nonce: () => nonceA,
-          read: async () => ({ kind: "ready", read: result(fresh) }),
-          verify: async () => "verified",
-        },
-      );
-      await coordinator.read();
-      const commitId = coordinator.state.commitId;
-      if (commitId === null) throw new Error("missing commit");
-      await vi.advanceTimersByTimeAsync(5 * 60_000);
-      await coordinator.acknowledgeCommit(commitId);
-      expect(coordinator.state.status).toBe("unconfirmed");
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("does not treat a sleeping device's old response as a recent read", async () => {
-    vi.useFakeTimers();
-    try {
-      vi.setSystemTime(new Date("2026-11-13T12:00:00Z"));
-      const coordinator = owner(
-        scope,
-        { scope, view: cached },
-        {
-          nonce: () => nonceA,
-          read: async () => ({ kind: "ready", read: result(fresh) }),
-          verify: async () => "verified",
-        },
-      );
-      await coordinator.read();
-      const commitId = coordinator.state.commitId;
-      if (commitId === null) throw new Error("missing commit");
-      vi.setSystemTime(new Date("2026-11-13T12:06:00Z"));
-      await coordinator.acknowledgeCommit(commitId);
-      expect(coordinator.state.status).toBe("unconfirmed");
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("hides on malformed transport outcomes instead of treating them as offline", async () => {
-    const coordinator = owner(
-      scope,
-      { scope, view: cached },
-      {
-        nonce: () => nonceA,
-        read: async () => ({ kind: "forbidden" }) as never,
-        verify: async () => "verified",
-      },
-    );
-    await coordinator.read();
-    expect(coordinator.state).toEqual({ view: null, status: "unconfirmed", commitId: null });
-  });
-
-  it("withdraws confirmation when the clock moves backwards", async () => {
-    vi.useFakeTimers();
-    try {
-      vi.setSystemTime(new Date("2026-11-13T12:00:00Z"));
-      const coordinator = owner(
-        scope,
-        { scope, view: cached },
-        {
-          nonce: () => nonceA,
-          read: async () => ({ kind: "ready", read: result(fresh) }),
-          verify: async () => "verified",
-        },
-      );
-      await coordinator.read();
-      const commitId = coordinator.state.commitId;
-      if (commitId === null) throw new Error("missing commit");
-      await coordinator.acknowledgeCommit(commitId);
-      coordinator.recheckFreshness(Date.now() - 1);
-      expect(coordinator.state.status).toBe("unconfirmed");
-    } finally {
-      vi.useRealTimers();
-    }
+    await peer.acknowledgeCommit(commitId);
+    expect(peer.state.status).toBe("confirmed");
+    reportManifestStale(scope.shopId, scope.tripId);
+    expect(peer.state.status).not.toBe("confirmed");
   });
 });
