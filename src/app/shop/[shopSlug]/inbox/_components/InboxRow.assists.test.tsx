@@ -131,13 +131,13 @@ describe("a message Claude has read, while the shop's assists are on", () => {
     expect(draft).not.toHaveBeenCalled();
   });
 
-  it("keeps a failed attempt visible without creating a booking", async () => {
+  it("says a failed attempt in a toast without creating a booking", async () => {
     renderRow(vi.fn().mockResolvedValue(null));
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Lena Vogel" }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Draft response" }));
-    expect(await screen.findByText(/Couldn’t draft a safe response/)).toBeInTheDocument();
+    expect(await screen.findByText(/Couldn’t reach AI just now/)).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 });

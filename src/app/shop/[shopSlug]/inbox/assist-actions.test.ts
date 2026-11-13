@@ -20,6 +20,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/features/inbox-assists", () => ({ draftReplyToMessage: vi.fn() }));
 const { draftReplyToMessage } = await import("@/features/inbox-assists");
 const { getDb } = await import("@/db/client");
@@ -46,6 +47,7 @@ describe("Draft response", () => {
     expect(draftReplyToMessage).toHaveBeenCalledWith(db, {
       shopId: shop.id,
       messageId: MESSAGE_ID,
+      fallback: expect.stringContaining("Thanks for your message"),
     });
     expect(await readFormDraft(db, shop.id, owner, "took_a_call")).toBeNull();
   });

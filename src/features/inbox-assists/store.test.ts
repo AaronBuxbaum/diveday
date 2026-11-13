@@ -492,6 +492,38 @@ describe("draftReplyToMessage", () => {
     });
     expect(draft).toBe("Park behind the shop.");
   });
+  it("asks once more when the first draft is thrown away, then takes the retry", async () => {
+    const { messageId } = await diverWithMessage("Where do I park?");
+    const answers = [
+      { reply: "Come at 7:45.", medical: false, eligibility: false, confidence: 0.9 },
+      {
+        reply: "A staff member will confirm.",
+        medical: false,
+        eligibility: false,
+        confidence: 0.9,
+      },
+    ];
+    const provider = fakeClaude({
+      reply: () => fakeClaudeMessage({ text: JSON.stringify(answers.shift()) }),
+    });
+    expect(
+      await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed, provider }),
+    ).toBe("A staff member will confirm.");
+    expect(provider.requests).toHaveLength(2);
+  });
+  it("answers the fallback when both attempts are unusable", async () => {
+    const { messageId } = await diverWithMessage("Am I fit to dive with asthma?");
+    const provider = answering({ reply: "", medical: true, eligibility: false, confidence: 0.9 });
+    expect(
+      await draftReplyToMessage(ctx.db, {
+        shopId: ctx.shop.id,
+        messageId,
+        env: keyed,
+        provider,
+        fallback: "Thanks! We will get back to you.",
+      }),
+    ).toBe("Thanks! We will get back to you.");
+  });
   it("does not send another shop’s message to the model", async () => {
     const { messageId } = await diverWithMessage("Where do I park?");
     expect(

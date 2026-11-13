@@ -354,53 +354,68 @@ export async function translateReplyFor(
   return value ? checkedTranslation(text, value.translation) : null;
 }
 
-/** A generic reply to exactly the selected message, including an unmatched sender. */
+/**
+ * A generic reply to exactly the selected message, including an unmatched
+ * sender. The tap should nearly always give staff something to edit: a draft
+ * the checks throw away (a medical or eligibility flag, a number the facts
+ * lack) or a provider hiccup is asked once more, and a second miss answers
+ * `fallback`, a plain acknowledgement the caller words, so no one is left
+ * with an empty box. Null only when there is nothing to answer (a deleted,
+ * untrusted or other shop's message) or the assists are dark.
+ */
 export async function draftReplyToMessage(
   db: AppDb,
-  input: { shopId: string; messageId: string; now?: Date } & AssistOptions,
+  input: { shopId: string; messageId: string; now?: Date; fallback?: string } & AssistOptions,
 ): Promise<string | null> {
+  const { fallback, ...options } = input;
+  const eligible = (message: { subject: string | null; body: string } | null) =>
+    and(
+      eq(inboundMessages.shopId, input.shopId),
+      eq(inboundMessages.id, input.messageId),
+      isNull(inboundMessages.deletedAt),
+      eq(inboundMessages.senderAuthenticated, true),
+      eq(inboundMessages.spamFlagged, false),
+      message ? eq(inboundMessages.body, message.body) : ne(inboundMessages.channel, "page"),
+      message
+        ? message.subject === null
+          ? isNull(inboundMessages.subject)
+          : eq(inboundMessages.subject, message.subject)
+        : undefined,
+    );
   const [message] = await db
     .select({ subject: inboundMessages.subject, body: inboundMessages.body })
     .from(inboundMessages)
-    .where(
-      and(
-        eq(inboundMessages.shopId, input.shopId),
-        eq(inboundMessages.id, input.messageId),
-        isNull(inboundMessages.deletedAt),
-        eq(inboundMessages.senderAuthenticated, true),
-        eq(inboundMessages.spamFlagged, false),
-        ne(inboundMessages.channel, "page"),
-      ),
-    )
+    .where(eligible(null))
     .limit(1);
-  if (!message?.body.trim() || !(await assistsAvailable(db, input.shopId, input))) return null;
+  if (!message?.body.trim() || !(await assistsAvailable(db, input.shopId, options))) return null;
   const thread: ThreadLine[] = [
     { from: "diver", text: [message.subject, message.body].filter(Boolean).join("\n\n") },
   ];
   const { window, lines: facts } = await replyFacts(db, input.shopId, input.now);
-  const value = await runAssist(db, {
-    ...input,
-    feature: "inbox_draft",
-    call: replyDraftCall({ window, facts, thread }),
-  });
-  if (!value) return null;
-  // Erasure or an edit while the model was answering must not resurrect old words.
-  const [current] = await db
-    .select({ id: inboundMessages.id })
-    .from(inboundMessages)
-    .where(
-      and(
-        eq(inboundMessages.shopId, input.shopId),
-        eq(inboundMessages.id, input.messageId),
-        isNull(inboundMessages.deletedAt),
-        eq(inboundMessages.body, message.body),
-        message.subject === null
-          ? isNull(inboundMessages.subject)
-          : eq(inboundMessages.subject, message.subject),
-        eq(inboundMessages.senderAuthenticated, true),
-        eq(inboundMessages.spamFlagged, false),
-      ),
-    )
-    .limit(1);
-  return current ? groundedReply(value, { facts, thread }) : null;
+  for (let attempt = 0; attempt < DRAFT_ATTEMPTS; attempt += 1) {
+    const { value } = await runAssistOutcome(db, {
+      ...options,
+      feature: "inbox_draft",
+      call: replyDraftCall({ window, facts, thread }),
+    });
+    // Erasure or an edit while the model was answering must not resurrect old words.
+    const [current] = await db
+      .select({ id: inboundMessages.id })
+      .from(inboundMessages)
+      .where(eligible(message))
+      .limit(1);
+    if (!current) return null;
+    const text = value ? groundedReply(value, { facts, thread }) : null;
+    if (text) return text;
+    log("claude_assist.draft_unusable", "info", {
+      attempt,
+      answered: Boolean(value),
+      medical: value?.medical ?? false,
+      eligibility: value?.eligibility ?? false,
+    });
+  }
+  return fallback?.trim() || null;
 }
+
+/** One try and one more: enough to ride out a hiccup without doubling a busy desk's bill. */
+const DRAFT_ATTEMPTS = 2;
