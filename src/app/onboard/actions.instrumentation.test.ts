@@ -158,6 +158,47 @@ afterEach(() => {
 });
 
 describe("onboardAction instrumentation", () => {
+  it("a deferred onboarding verification issuer supersedes only its own account's token", async () => {
+    const db = await useDb();
+    vi.stubEnv("APP_HOST", "https://e2e.diveday.example");
+    const { after } = await import("next/server");
+    const deferred: Array<() => unknown> = [];
+    vi.mocked(after).mockImplementation((task) => {
+      if (typeof task !== "function") throw new Error("expected a deferred callback");
+      deferred.push(task);
+    });
+    try {
+      await expect(onboardAction(onboardForm())).rejects.toThrow("REDIRECT:/shop/reef-runners");
+      const { mintAnAccountToken } = await import("@/test/shop-facts/mint-tokens");
+      const { checkAccountToken } = await import("@/db/account-tokens");
+      const { DEV_STAFF_LOGINS } = await import("@/db/dev-credentials");
+      const independent = await mintAnAccountToken(db, {
+        email: DEV_STAFF_LOGINS.owner.email,
+        purpose: "email_verification",
+      });
+      const issued = await mintAnAccountToken(db, {
+        email: "marisol@reefrunners.example",
+        purpose: "email_verification",
+      });
+      expect(
+        await checkAccountToken(db, { token: issued.token, purpose: "email_verification" }),
+      ).not.toBeNull();
+      expect(deferred).toHaveLength(2);
+      await Promise.all(deferred.map((task) => task()));
+      expect(
+        await checkAccountToken(db, { token: issued.token, purpose: "email_verification" }),
+      ).toBeNull();
+      expect(
+        await checkAccountToken(db, { token: independent.token, purpose: "email_verification" }),
+      ).not.toBeNull();
+    } finally {
+      vi.mocked(after).mockImplementation((task) => {
+        if (typeof task !== "function") throw new Error("expected a deferred callback");
+        hoisted.afterTasks.push(Promise.resolve().then(task));
+      });
+    }
+  });
+
   it("records which shop the link opened, in the same transaction", async () => {
     const db = await useDb();
     expect(await signUp()).toBe("/shop/reef-runners");
