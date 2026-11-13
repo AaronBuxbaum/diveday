@@ -289,7 +289,7 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     await page.getByLabel("Email").fill(`ageless-${stamp}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();
     await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-    await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+    await expect(page.getByRole("alert")).toContainText("Diver added to the trip");
   });
 
   test("refuses a diver once a date of birth on file makes them under age", async ({ page }) => {

@@ -235,7 +235,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await page.getByLabel("Email").fill(`contact-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+  await expect(page.getByRole("alert")).toContainText("Diver added to the trip");
 
   const card = rosterRow(page, diverName);
   await expect(
