@@ -55,7 +55,7 @@ export function FiltersPopover({
           if ((event.target as HTMLElement).closest("a") && ref.current) ref.current.open = false;
         }}
         onKeyDown={undefined}
-        className="absolute end-0 top-full z-30 mt-2 w-[min(24rem,calc(100vw-2rem))] space-y-4 rounded-xl border border-border bg-surface p-4 shadow-lg"
+        className="absolute end-0 top-full z-20 mt-2 w-[min(24rem,calc(100vw-2rem))] space-y-4 rounded-xl border border-border bg-surface p-4 shadow-lg"
       >
         {children}
       </div>
