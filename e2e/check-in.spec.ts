@@ -434,7 +434,7 @@ test("a full boat refuses another add with the wait-list nudge", async ({ page }
   await page.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  await expect(page.getByRole("alert")).toContainText(
+  await expect(page.getByRole("alert").first()).toContainText(
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
 

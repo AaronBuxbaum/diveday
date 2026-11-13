@@ -82,7 +82,7 @@ async function openNewTripWithWalkIn(page: Page, titlePrefix: string): Promise<s
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
-  await expect(page.getByRole("alert")).toContainText(
+  await expect(page.getByRole("alert").first()).toContainText(
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
   await expect(
@@ -228,7 +228,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   await expect(candidate).toBeVisible();
   await candidate.click();
 
-  await expect(page.getByRole("alert")).toContainText(
+  await expect(page.getByRole("alert").first()).toContainText(
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
   const roster = page.locator("#roster");
@@ -398,7 +398,9 @@ test("booking a diver from their record issues their waiver, like every other do
   // without depending on how an option label is formatted for the locale.
   await page.getByLabel("Departure", { exact: true }).selectOption(tripId);
   await page.getByRole("button", { name: "Book", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("Booked, but their waiver wasn’t emailed.");
+  await expect(page.getByRole("alert").first()).toContainText(
+    "Booked, but their waiver wasn’t emailed.",
+  );
 
   await page.goto(`/shop/blue-mantis/trips/${tripId}`);
   await expect(page.getByRole("link", { name: "Priya Sharma" }).first()).toBeVisible();
@@ -470,7 +472,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
 
   // Lands on the trip's Trip surface with the roster's usual success affordance.
   await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
-  await expect(page.getByRole("alert")).toContainText("Diver added to the trip");
+  await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
   await expect(
     rosterRow(page, "Phoned In Pat").getByRole("link", { name: "Phoned In Pat" }),
   ).toBeVisible();
@@ -498,7 +500,7 @@ test("a full boat's add band offers the wait list, never a seat", async ({ page 
   await page.getByLabel("Full name").fill("First Aboard Fay");
   await page.getByLabel("Email").fill("fay@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
-  await expect(page.getByRole("alert")).toContainText("Diver added to the trip");
+  await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
 
   // The stale band still offers the seat it was drawn with. The server is the
   // refusal of record: the boat is full, and nobody is seated past it.

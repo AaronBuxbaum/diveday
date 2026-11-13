@@ -410,7 +410,7 @@ test.describe("undoing a removal after the trip is canceled", () => {
     await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
     // Prefix match: with no email provider configured the fleet gets the
     // honest "…but their waiver wasn't emailed" variant of this notice.
-    await expect(page.getByRole("alert")).toContainText("Diver added to the trip");
+    await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
 
     // A cancel inside a refund window moves real money, so the removal keeps
     // its blocking two-tap confirm (InlineConfirm) rather than landing behind
