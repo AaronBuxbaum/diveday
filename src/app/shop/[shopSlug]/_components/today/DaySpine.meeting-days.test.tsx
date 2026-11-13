@@ -38,9 +38,14 @@ import { renderSpine } from "./day-spine-test-fixtures";
 
 afterEach(cleanup);
 
-it.each(["en-US", "es-ES"] as const)("distinguishes grouped meeting-day counts in %s", (locale) => {
+it.each([
+  ["en-US", [1, 2]],
+  ["es-ES", [1, 2]],
+  ["en-US", [1]],
+  ["es-ES", [1]],
+] as const)("keeps only necessary grouped meeting-day context in %s (%j)", (locale, days) => {
   const actions: TodayAction[] = [];
-  const gaps = [1, 2].flatMap((dayNumber) =>
+  const gaps = days.flatMap((dayNumber) =>
     (["after_dive_uncounted", "crew_uncounted"] as const).map((reason) => ({
       tripId: "rescue",
       title: "Rescue Diver",
@@ -77,13 +82,22 @@ it.each(["en-US", "es-ES"] as const)("distinguishes grouped meeting-day counts i
       { locale, t: staffTranslator(locale) },
     ),
   );
-  expect(new Set(actions.map(({ id }) => id)).size).toBe(4);
+  expect(new Set(actions.map(({ id }) => id)).size).toBe(days.length * 2);
   renderSpine({ actions });
-  for (const day of [1, 2]) {
+  for (const day of days) {
     const prefix = locale === "en-US" ? `Day ${day}` : `Día ${day}`;
     expect(
-      screen.getAllByText(new RegExp(`${prefix}.*${locale === "en-US" ? "EDT" : "GMT-4"}`)),
-    ).toHaveLength(2);
+      screen.queryAllByText(new RegExp(`${prefix}.*${locale === "en-US" ? "EDT" : "GMT-4"}`)),
+    ).toHaveLength(days.length === 1 ? 0 : 2);
   }
-  expect(new Set(actions.map(({ detail }) => detail)).size).toBe(4);
+  if (days.length === 1) {
+    // Both real warnings still render; only their repeated meeting prefix is removed.
+    for (const action of actions) {
+      expect(
+        screen.getByText((action.detailWithoutMeetingDay ?? "missing warning").replace(/\.$/, "")),
+      ).toBeVisible();
+    }
+    expect(screen.getByRole("link", { name: actions[0].departure?.label })).toBeVisible();
+  }
+  expect(new Set(actions.map(({ detail }) => detail)).size).toBe(days.length * 2);
 });
