@@ -1,22 +1,14 @@
 {
   "addShift": {
-    "heading": "Add a shift",
     "person": "Staff member",
-    "choosePerson": "Choose a person",
-    "date": "Date",
     "starts": "Starts",
     "ends": "Ends",
     "note": "Note",
-    "noteHint": "(optional)",
     "notePlaceholder": "Dock, classroom, boat 2",
     "submit": "Add shift"
   },
   "away": {
     "from": "From",
-    "heading": "Add days off",
-    "note": "Note",
-    "notePlaceholder": "Anything the shop should know",
-    "person": "Staff member",
     "save": "Save",
     "to": "To"
   },
@@ -88,7 +80,10 @@
     "staffNotFound": "That staff member is no longer on this shop’s team.",
     "tripNotFound": "That departure is no longer on the board.",
     "crewConsentSaved": "Saved. Divers will see your first name on the departures you crew.",
-    "crewConsentWithdrawn": "Saved. Your name comes off the departures you crew."
+    "crewConsentWithdrawn": "Saved. Your name comes off the departures you crew.",
+    "awayRequested": "Sent. An owner or manager will approve it or say why not.",
+    "awayApproved": "Approved",
+    "awayDeclined": "Declined, and they’ll see why"
   },
   "week": {
     "approve": "Approve",
@@ -158,5 +153,26 @@
     "removePhoto": "Delete picture {number}",
     "saved": "Your public introduction is saved.",
     "withdrawn": "Your public introduction is hidden and its pictures are being deleted."
+  },
+  "mine": {
+    "heading": "Your week",
+    "nothing": "Nothing yet",
+    "dayOff": "Day off",
+    "add": "Add",
+    "addTo": "Add to {day}",
+    "tabShift": "Shift",
+    "tabDayOff": "Day off",
+    "needsOk": "An owner or manager approves days off. You’ll see their answer here.",
+    "statusPending": "Waiting for an OK",
+    "statusApproved": "Approved",
+    "statusDeclined": "Declined",
+    "reason": "Why: {reason}",
+    "approvalsHeading": "Days off waiting for you",
+    "asked": "{person} asked for {dates}",
+    "approve": "Approve",
+    "decline": "Decline",
+    "reasonLabel": "Reason",
+    "reasonHint": "(optional, they’ll see it)",
+    "reasonPlaceholder": "Short-staffed that weekend"
   }
 }

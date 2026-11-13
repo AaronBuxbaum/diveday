@@ -10,9 +10,6 @@ export const NOTICE_KEYS: Record<string, StaffMessageKey> = {
   "template-replaced": "diveSites.edit.templateUpdates.replaced",
   "template-undone": "diveSites.edit.templateUpdates.undone",
   "template-update-unavailable": "diveSites.edit.templateUpdates.unavailable",
-  // Issue #3706: a template pull or undo by someone who may not change the
-  // site's admission fields, which both rewrite.
-  "admission-managers-only": "diveSites.edit.templateUpdates.admissionManagersOnly",
   // Loop 5, row 5: the closure form's outcome, said beside that form.
   "closure-saved": "diveSites.closure.saved",
   "closure-invalid": "diveSites.closure.invalid",

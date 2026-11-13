@@ -30,7 +30,6 @@ describe("required course form metadata", () => {
         required={["youth", "medical"]}
         notice={undefined}
         waiversPath="/shop/test/waivers"
-        canWriteForms
         addImpact={{ students: 0, sessions: 0 }}
         t={t}
       />,

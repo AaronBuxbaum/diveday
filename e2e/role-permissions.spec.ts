@@ -76,7 +76,7 @@ test.describe("H-20260724-staff-role-reach role permissions", () => {
 
       // Waiver — the legal instrument — has no use for the daily crew, so the
       // surface doesn't exist for them: bounced to Today, not shown read-only.
-      await page.goto(`/shop/${SHOP}/waivers`);
+      await page.goto(`/shop/${SHOP}/settings/waivers`);
       await expect(page).toHaveURL(`/shop/${SHOP}`);
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
 
@@ -265,11 +265,11 @@ test.describe("H-20260724-staff-role-reach role permissions", () => {
 
       // Money and the legal waiver are still owner/manager only — including
       // the signed-record ledger on the waiver page.
-      await page.goto(`/shop/${SHOP}/waivers`);
+      await page.goto(`/shop/${SHOP}/settings/waivers`);
       await expect(page).toHaveURL(`/shop/${SHOP}`);
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
 
-      await page.goto(`/shop/${SHOP}/waivers`);
+      await page.goto(`/shop/${SHOP}/divers/waivers`);
       await expect(page).toHaveURL(`/shop/${SHOP}`);
       await expect(page.locator('details[id^="waiver-record-"]')).toHaveCount(0);
 
@@ -309,15 +309,12 @@ test.describe("H-20260724-staff-role-reach role permissions", () => {
     signedInAs("owner");
 
     test("the owner reaches every gated surface", { tag: READ_ONLY }, async ({ page }) => {
-      await page.goto(`/shop/${SHOP}/waivers`);
-      // The signed-record ledger leads and the release editor is one control
-      // at rest (slice E3): editing the release happens a handful of times in
-      // a shop's life, reading who signed is daily.
-      await page.getByText("Edit the release").click();
+      // Setup is in Settings; who has signed is read in Divers.
+      await page.goto(`/shop/${SHOP}/settings/waivers`);
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toBeVisible();
 
-      await page.goto(`/shop/${SHOP}/waivers`);
-      await expect(page).toHaveURL(`/shop/${SHOP}/waivers`);
+      await page.goto(`/shop/${SHOP}/divers/waivers`);
+      await expect(page).toHaveURL(`/shop/${SHOP}/divers/waivers`);
       await expect(page.locator('details[id^="waiver-record-"]').first()).toBeVisible();
 
       // The catalog form is a page of its own off the settings hub (#1854).

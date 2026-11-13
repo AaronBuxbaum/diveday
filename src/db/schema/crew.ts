@@ -283,6 +283,21 @@ export const crewAvailabilityBlocks = pgTable(
     /** Inclusive: a single day is `starts_on = ends_on`. */
     endsOn: date("ends_on", { mode: "string" }).notNull(),
     note: text("note"),
+    /**
+     * Where the days off stand. `approved` is every row an owner or manager writes, and a crew
+     * member's own while the shop does not ask for an OK (`shops.time_off_approval_enabled`);
+     * `pending` waits for an owner; `declined` stays on the requester's own Shifts tab with
+     * `decision_note` and counts as nothing anywhere else.
+     */
+    status: text("status")
+      .$type<"pending" | "approved" | "declined">()
+      .notNull()
+      .default("approved"),
+    /** The owner or manager who answered; null while pending and for a row nobody had to answer. */
+    decidedByPersonId: uuid("decided_by_person_id").references(() => people.id),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    /** Why, in the owner's words, shown to the requester. */
+    decisionNote: text("decision_note"),
     /** Who wrote it — the crew member themselves, or an owner recording it for them. */
     createdByPersonId: uuid("created_by_person_id")
       .notNull()
@@ -291,6 +306,10 @@ export const crewAvailabilityBlocks = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
+    check(
+      "crew_availability_blocks_status_known",
+      sql`${table.status} in ('pending', 'approved', 'declined')`,
+    ),
     index("crew_availability_blocks_shop_person_idx")
       .on(table.shopId, table.personId, table.startsOn)
       .where(sql`deleted_at is null`),

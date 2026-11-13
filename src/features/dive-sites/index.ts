@@ -23,7 +23,6 @@ export {
   siteListHref,
 } from "./filters";
 export type {
-  DiveSiteAdmission,
   DiveSiteFormError,
   DiveSiteFormFields,
   DiveSiteFormParse,
@@ -31,7 +30,6 @@ export type {
   SubmittedFormValues,
 } from "./rules";
 export {
-  changedAdmissionFields,
   diveSiteFormSchema,
   MAX_SITE_IMAGES,
   parseDiveSiteForm,

@@ -101,7 +101,7 @@ test.describe("course-form disclosure anchors", () => {
   test("native and repeated client entries reveal the definitions, including a refused form", async ({
     page,
   }) => {
-    const path = "/shop/blue-mantis/waivers#course-form-new";
+    const path = "/shop/blue-mantis/settings/waivers#course-form-new";
     const parent = page.locator("details#course-forms").filter({ visible: true });
     const form = page.locator("details#course-form-new").filter({ visible: true });
     await page.goto(path);

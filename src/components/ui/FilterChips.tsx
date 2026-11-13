@@ -15,7 +15,7 @@ export interface FilterChip {
   label: string;
 }
 
-const chipClass = (active: boolean) =>
+export const filterChipClass = (active: boolean) =>
   `inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium whitespace-nowrap pressable ${
     active
       ? // Keep the selected view legible on both page and card backgrounds.
@@ -62,7 +62,7 @@ export function FilterChips({
             scroll={false}
             onClick={onNavigate}
             aria-current={chip.active ? "true" : undefined}
-            className={chipClass(chip.active)}
+            className={filterChipClass(chip.active)}
           >
             {chip.label}
           </Link>

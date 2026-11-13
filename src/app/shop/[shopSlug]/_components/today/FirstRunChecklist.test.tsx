@@ -371,7 +371,7 @@ describe("one primary, and the rest are the rows themselves", () => {
       ["Set up profile", "/shop/blue-mantis/settings/profile"],
       ["Check units", "/shop/blue-mantis/settings#units"],
       ["Add a dive site", "/shop/blue-mantis/dive-sites"],
-      ["Read the release", "/shop/blue-mantis/waivers#release"],
+      ["Read the release", "/shop/blue-mantis/settings/waivers#release"],
       ["Add a departure", "/shop/blue-mantis/schedule/board?add=1"],
     ] as const) {
       expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
@@ -481,7 +481,7 @@ describe("the release step", () => {
     expect(primaries).toHaveLength(1);
     expect(primaries[0]).toHaveTextContent("Read the release");
     // Lands on the editor open: the waivers page opens its `#release` door.
-    expect(primaries[0]).toHaveAttribute("href", "/shop/blue-mantis/waivers#release");
+    expect(primaries[0]).toHaveAttribute("href", "/shop/blue-mantis/settings/waivers#release");
     expect(
       screen.getByText("Divers sign DiveDay’s sample wording until you publish your own."),
     ).toBeInTheDocument();

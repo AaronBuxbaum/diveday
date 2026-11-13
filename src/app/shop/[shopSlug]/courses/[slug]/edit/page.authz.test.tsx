@@ -62,8 +62,7 @@ vi.mock("../../../../../../features/courses/store", () => ({
   getCourseTemplateUpdate: vi.fn(),
 }));
 vi.mock("@/db/authz", () => ({
-  canPersonConfigureTrips: vi.fn(),
-  canPersonManageWaiverTemplates: vi.fn(async () => false),
+  canPersonEditCourseTemplates: vi.fn(),
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("../../../../../../features/session/rules", () => ({
@@ -83,7 +82,7 @@ vi.mock("@/i18n/staff-messages", () => ({
     }),
 }));
 
-const { canPersonConfigureTrips } = await import("@/db/authz");
+const { canPersonEditCourseTemplates } = await import("@/db/authz");
 const { getCourseBySlug, getCourseTemplateUpdate } = await import(
   "../../../../../../features/courses/store"
 );
@@ -183,8 +182,8 @@ afterEach(() => {
 });
 
 describe("the course editor's visibility toggle", () => {
-  it("draws the control for a reader whose roles define trips", async () => {
-    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
+  it("draws the control for an owner or manager", async () => {
+    vi.mocked(canPersonEditCourseTemplates).mockResolvedValue(true);
     render(await renderPage());
     expect(
       screen.getByRole("button", { name: "courses.edit.hideFromCatalog" }),
@@ -192,19 +191,15 @@ describe("the course editor's visibility toggle", () => {
   });
 
   /**
-   * A crew member still edits the prose a diver reads — that is the rest of
-   * this page. Only the one act they cannot take goes away, rather than the
-   * whole editor.
+   * Anyone who runs a course may schedule it; only an owner or manager
+   * rewrites it. The editor is not drawn for anyone else: a published course
+   * lands them on the board with it preselected.
    */
-  it("draws no control for a reader whose roles do not", async () => {
-    vi.mocked(canPersonConfigureTrips).mockResolvedValue(false);
-    render(await renderPage());
-    expect(
-      screen.queryByRole("button", { name: "courses.edit.hideFromCatalog" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "courses.edit.showInCatalog" })).toBeNull();
-    // The editor itself is untouched.
-    expect(screen.getByRole("heading", { name: "Open Water Diver" })).toBeInTheDocument();
+  it("sends a reader who may not edit templates to the board with this course", async () => {
+    vi.mocked(canPersonEditCourseTemplates).mockResolvedValue(false);
+    await expect(renderPage()).rejects.toThrow(
+      `REDIRECT:/shop/blue-mantis/schedule/board?course=${COURSE_ID}`,
+    );
   });
 
   /**
@@ -213,7 +208,7 @@ describe("the course editor's visibility toggle", () => {
    * action with the slug and the id it rendered, and nothing the reader typed.
    */
   it("binds the toggle to this course's slug and id", async () => {
-    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
+    vi.mocked(canPersonEditCourseTemplates).mockResolvedValue(true);
     const action = visibilityActionOf(await renderPage());
     expect(action).toBeTruthy();
 

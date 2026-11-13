@@ -92,13 +92,12 @@ describe("pulling a template update", () => {
 });
 
 /**
- * **Only an owner or manager changes a site's admission fields** (Aaron,
- * 2026-11-03, issue #3706): the level, specialties, nitrox and max depth
- * decide who may buy a seat. The form shows them read-only to everyone else,
- * and a hidden control is not a gate, so these post straight to the action as
- * a captain and read the row back.
+ * **Only an owner or manager edits the dive-site library** (Aaron, 2026-11-13):
+ * the level, specialties, nitrox and max depth of a site decide who may buy a
+ * seat. A hidden control is not a gate, so these post straight to the actions
+ * as a captain and read the row back.
  */
-describe("a dive site's admission fields", () => {
+describe("who may edit a dive site", () => {
   async function asRole(email: string) {
     const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
@@ -183,54 +182,28 @@ describe("a dive site's admission fields", () => {
     return row;
   }
 
-  it("lets a captain save the rest of the briefing with the fields as shown", async () => {
-    const { db, siteId, row, depthUnit } = await asRole(SEEDED_CAPTAIN_EMAIL);
-    const form = briefing(row, depthUnit);
-    form.set("description", "A wreck in 30 m of clear water.");
-    await expect(saveDiveSiteAction(siteId, {}, form)).rejects.toThrow("REDIRECT:");
-    expect(await admissionOf(db, siteId)).toMatchObject({
-      level: "advanced_open_water",
-      specialties: ["wreck", "deep"],
-      nitrox: true,
-      maxDepth: 30,
-      description: "A wreck in 30 m of clear water.",
-    });
-  });
-
-  it.each([
-    ["drops the level", { level: "" }],
-    ["lowers the level", { level: "open_water" }],
-    ["drops a specialty", { specialties: ["wreck"] }],
-    ["clears the specialties", { specialties: [] }],
-    ["adds a specialty", { specialties: ["wreck", "deep", "night"] }],
-    ["turns nitrox off", { nitrox: false }],
-    ["clears the max depth", { maxDepth: "" }],
-    ["deepens the max depth", { maxDepth: "200" }],
-  ])("refuses a captain who %s, and leaves the site as it was", async (_label, change) => {
+  it("sends a captain back to the library from a save, and writes nothing", async () => {
     const { db, siteId, row, depthUnit } = await asRole(SEEDED_CAPTAIN_EMAIL);
     const before = await admissionOf(db, siteId);
-    const form = briefing(row, depthUnit, change);
-    form.set("description", "Changed in the same post.");
-    const state = await saveDiveSiteAction(siteId, {}, form);
-    expect(state.errorCode).toBe("admissionManagersOnly");
+    const form = briefing(row, depthUnit, { level: "", specialties: [], nitrox: false });
+    form.set("description", "Changed by a captain.");
+    expect(await redirectedTo(() => saveDiveSiteAction(siteId, {}, form))).toBe(
+      shopPath(ctx.shop.slug, "dive-sites"),
+    );
     expect(await admissionOf(db, siteId)).toEqual(before);
   });
 
-  // Security review of #3706: without the version, the write would put back
-  // admission values read before a manager's tightening landed.
-  it("refuses a captain's save that carries no version, and writes nothing", async () => {
-    const { db, siteId, row, depthUnit } = await asRole(SEEDED_CAPTAIN_EMAIL);
-    const before = await admissionOf(db, siteId);
-    const form = briefing(row, depthUnit);
-    form.delete("expectedVersion");
-    form.set("description", "Posted without a version.");
-    const state = await saveDiveSiteAction(siteId, {}, form);
-    expect(state.errorCode).toBe("conflict");
-    expect(await admissionOf(db, siteId)).toEqual(before);
+  it("refuses a captain the delete, and the site stays", async () => {
+    const { db, siteId } = await asRole(SEEDED_CAPTAIN_EMAIL);
+    expect(await redirectedTo(() => deleteDiveSiteAction(siteId))).toBe(
+      shopPath(ctx.shop.slug, "dive-sites"),
+    );
+    const [row] = await db.select().from(diveSites).where(eq(diveSites.id, siteId));
+    expect(row?.deletedAt).toBeNull();
   });
 
-  it("tells a captain whose tab is out of date that someone saved first", async () => {
-    const { db, siteId, row, depthUnit } = await asRole(SEEDED_CAPTAIN_EMAIL);
+  it("tells an owner whose tab is out of date that someone saved first", async () => {
+    const { db, siteId, row, depthUnit } = await asRole(SEEDED_OWNER_EMAIL);
     // A manager tightened the site after this tab rendered.
     await db
       .update(diveSites)
@@ -251,16 +224,15 @@ describe("a dive site's admission fields", () => {
     });
   });
 
-  it("refuses a captain the template pull and its undo, which rewrite them", async () => {
+  it("refuses a captain the template pull and its undo", async () => {
     const { siteId } = await asRole(SEEDED_CAPTAIN_EMAIL);
-    const back = `${shopPath(ctx.shop.slug, "dive-sites")}/${siteId}`;
     const form = new FormData();
     form.set("mode", "replace-template-copy");
     expect(await redirectedTo(() => pullDiveSiteTemplateAction(siteId, form))).toBe(
-      noticeUrl(back, "admission-managers-only"),
+      shopPath(ctx.shop.slug, "dive-sites"),
     );
     expect(await redirectedTo(() => undoDiveSiteTemplateAction(siteId))).toBe(
-      noticeUrl(back, "admission-managers-only"),
+      shopPath(ctx.shop.slug, "dive-sites"),
     );
   });
 });

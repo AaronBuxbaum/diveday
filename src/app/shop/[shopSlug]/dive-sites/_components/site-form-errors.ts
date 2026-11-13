@@ -27,6 +27,5 @@ export function siteFormErrorMessages(
     conflict: t("diveSites.form.errorConflict"),
     spanishStale: t("deskAssists.translate.staleSave"),
     spanishRefused: t("deskAssists.translate.error"),
-    admissionManagersOnly: t("diveSites.form.errorAdmissionManagersOnly"),
   };
 }

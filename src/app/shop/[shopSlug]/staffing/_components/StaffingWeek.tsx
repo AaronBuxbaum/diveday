@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -146,7 +147,7 @@ function CrewChip({
       <span className="font-semibold tabular-nums">
         {windowOnThisDay(trip, words, locale, timeZone, "range")}
       </span>
-      <span className="block truncate font-medium" title={trip.title}>
+      <span className="line-clamp-2 font-medium" title={trip.title}>
         {trip.title}
       </span>
       {/* Conflicting crew times are advisory; the blackout warning below is
@@ -359,9 +360,9 @@ export const WEEK_GRID = {
   personHead: "pe-2 py-2.5",
   dayHead: "border-s border-border px-1.5 py-2.5",
   person: "pe-2 py-3",
-  day: "flex flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+  day: "flex min-h-32 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
   // One person on screen: room to read their own week at a glance.
-  dayTall: "flex min-h-40 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+  dayTall: "flex min-h-56 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
   shiftChip: chipClass("shift"),
 } as const;
 
@@ -382,6 +383,7 @@ export function StaffingWeek({
   requestAction,
   decideRequestAction,
   dayParam,
+  picker,
 }: {
   week: StaffWeek;
   gapWords: GapWords;
@@ -398,6 +400,8 @@ export function StaffingWeek({
   decideRequestAction: (formData: FormData) => void;
   /** The raw `?day=`: the day opened under the phone calendar. */
   dayParam?: string;
+  /** The person scope control, on the pager's row so the week selector sits where every tab's does. */
+  picker?: ReactNode;
 }) {
   // Preserve calendar-day labels; shift instants are formatted in shop time.
   const dayFaces = weekDayFaces(week.days, locale);
@@ -445,6 +449,7 @@ export function StaffingWeek({
           thisWeekHref={links.thisWeekHref}
           words={words}
         />
+        {picker}
       </div>
 
       {/* Table semantics for the weekday and person headers; the rows lay

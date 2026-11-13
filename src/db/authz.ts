@@ -6,7 +6,8 @@ import {
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
-  canEditDiveSiteAdmission,
+  canEditCourseTemplates,
+  canEditDiveSites,
   canEmergencyReadMedicalAlert,
   canErasePersonalData,
   canExportDisputeSheet,
@@ -244,9 +245,9 @@ export const canPersonManageTripTags = (db: DbExecutor, shopId: string, personId
 export const canPersonManageSafetyChecklist = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageSafetyChecklist);
 
-/** Live DB-checked companion of the dive-site admission gate (src/lib/authz.ts, issue #3706). */
-export const canPersonEditDiveSiteAdmission = (db: DbExecutor, shopId: string, personId: string) =>
-  canPerson(db, shopId, personId, canEditDiveSiteAdmission);
+/** Live DB-checked companion of the dive-site editing gate (src/lib/authz.ts). */
+export const canPersonEditDiveSites = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canEditDiveSites);
 
 /**
  * The rental editors' gate (#1854): shop settings *and* payment settings, the
@@ -427,6 +428,10 @@ export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId
   canPerson(db, shopId, personId, canConfigureTrips);
 
 /** Live DB-checked companion of the day weather-call gate (src/lib/authz.ts). */
+/** Live DB-checked companion of the course-template gate (src/lib/authz.ts). */
+export const canPersonEditCourseTemplates = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canEditCourseTemplates);
+
 export const canPersonCallDayBlowout = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canCallDayBlowout);
 

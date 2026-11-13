@@ -1,5 +1,5 @@
 import { type CourseListView, coursesAwaitingFormText, pagedCourses } from "@/features/courses";
-import { canPersonConfigureTrips } from "../../db/authz";
+import { canPersonConfigureTrips, canPersonEditCourseTemplates } from "../../db/authz";
 import type { AppDb } from "../../db/client";
 import { nextSessionStartByCourse } from "../../db/trips";
 
@@ -21,9 +21,10 @@ export async function getCoursesPage(
   personId: string,
   options: { page: number; query: string; view: CourseListView | undefined },
 ) {
-  const [coursePage, canSchedule, formsAwaitingText] = await Promise.all([
+  const [coursePage, canSchedule, canEdit, formsAwaitingText] = await Promise.all([
     pagedCourses(db, shopId, options),
     canPersonConfigureTrips(db, shopId, personId),
+    canPersonEditCourseTemplates(db, shopId, personId),
     coursesAwaitingFormText(db, shopId),
   ]);
   const nextSessions = await nextSessionStartByCourse(
@@ -32,5 +33,10 @@ export async function getCoursesPage(
     coursePage.courses.map((course) => course.id),
     "shop",
   );
-  return { coursePage, can: { schedule: canSchedule }, nextSessions, formsAwaitingText };
+  return {
+    coursePage,
+    can: { schedule: canSchedule, edit: canEdit },
+    nextSessions,
+    formsAwaitingText,
+  };
 }

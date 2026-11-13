@@ -97,6 +97,7 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
 
   // Delete lives in the row's open view with the row's other acts.
   await page.getByRole("button", { name: "More for the message from Unknown sender" }).click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
   await page
     .getByRole("button", {
       name: "Delete the message from marta.keller@mail.example",
@@ -149,6 +150,7 @@ test("a message about a seat opens it, and its menu opens the seat's move", asyn
   await expect(seat).toHaveAttribute("href", /\/shop\/blue-mantis\/trips\/[^#]+#booking-/);
 
   await page.getByRole("button", { name: "More for the message from Priya Sharma" }).click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
   await page
     .getByRole("link", { name: /^Move Priya Sharma’s seat on Two-Tank Reef — Molasses & French/ })
     .first()

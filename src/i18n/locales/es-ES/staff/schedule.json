@@ -1,26 +1,8 @@
 {
   "boardTitle": "Agenda",
-  "dayBoard": {
-    "day": "Día",
-    "week": "Semana",
-    "chooseDay": "Elige un día",
-    "showDay": "Ver día",
-    "empty": "No hay salidas este día.",
-    "review": "La agenda puede cambiar. Revisa la salida antes de hacer cambios.",
-    "crew": "Tripulación",
-    "divers": "Buceadores",
-    "noCrew": "Sin tripulación asignada",
-    "noDivers": "Sin buceadores con reserva",
-    "noBoat": "Sin embarcación asignada",
-    "standingClash": "{name} también está en {departure}.",
-    "absent": "Marcado como ausente",
-    "identityHeld": "Identidad por confirmar.",
-    "hullClash": "{boat} también está en {departure}.",
-    "overCapacity": "Las reservas superan las plazas disponibles con esta tripulación."
-  },
   "views": {
     "label": "Vistas de la agenda",
-    "week": "Semana",
+    "week": "Salidas",
     "crew": "Tripulación",
     "plan": "Turnos"
   },

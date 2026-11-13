@@ -7,7 +7,7 @@ export function BlankReleaseLink({ shopSlug, t }: { shopSlug: string; t: StaffTr
   return (
     <p className="mb-4 text-sm">
       <Link
-        href={shopPath(shopSlug, "waivers", "print")}
+        href={shopPath(shopSlug, "settings", "waivers", "print")}
         className="font-medium text-primary hover:underline"
       >
         {t("waiversStaff.blank.link")}

@@ -825,7 +825,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(href);
         await page.getByText(staffCopy("waiversStaff.record.paperEvidence")).waitFor();
         await capture(page, "signed-paper-waiver-record", scheme);
-        await page.goto(`/shop/blue-mantis/waivers?record=${recordId}#signed-records-heading`);
+        await page.goto(
+          `/shop/blue-mantis/divers/waivers?record=${recordId}#signed-records-heading`,
+        );
         await page
           .locator(`#waiver-record-${recordId}`)
           .getByText(staffCopy("waiversStaff.signatures.paperRecorded"), { exact: true })

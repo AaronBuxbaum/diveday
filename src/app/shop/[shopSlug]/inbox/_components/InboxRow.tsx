@@ -2,19 +2,17 @@ import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { z } from "zod";
 import { languageName } from "@/components/assists/language-name";
-import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { InboxSeat } from "@/features/inbox-seats";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type InboxIntent, isInboxIntent } from "@/lib/assists/inbox";
-import { mailtoHref } from "@/lib/contact-links";
 import { formatNearDay, formatShortDate, formatTime, formatWeekdayTime } from "@/lib/format";
 import { type InboxChannel, inboxMessageAnchor } from "@/lib/inbox";
 import { shopPath } from "@/lib/staff-notices";
-import { InboxResponseDraft } from "./InboxResponseDraft";
-import { InboxRowOpen, InboxRowToggle, InboxRowView } from "./InboxRowOpen";
+import { InboxRowActs } from "./InboxRowActs";
+import { InboxRowOpen, InboxRowToggle } from "./InboxRowOpen";
 
 /**
  * The channel a message came in on, in staff words. `src/db` hands over the
@@ -55,10 +53,6 @@ const INTENT_KEYS: Record<Exclude<InboxIntent, "other">, StaffMessageKey> = {
   waiver: "assistsFront.inbox.intent.waiver",
   late: "assistsFront.inbox.intent.late",
 };
-
-/** An act in the row's open view: one weight for every act, Delete in its own hue. */
-const ACT_CLASS = buttonClass({ variant: "secondary", size: "sm" });
-const DANGER_ACT_CLASS = buttonClass({ variant: "danger", size: "sm" });
 
 /**
  * The first line of what a diver wrote, for a list that is scanned rather than
@@ -299,114 +293,26 @@ export function InboxRow({
                 ))}
               </p>
             ) : null}
-            <InboxRowView>
-              {recordHref ? (
-                <Link
-                  href={recordHref}
-                  aria-label={t("inbox.openRecord", { name })}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
-                >
-                  {t("inbox.openRecordShort")}
-                </Link>
-              ) : !draftAction && isEmailAddress(message.fromAddress) ? (
-                // A stranger has no record to write from, so the reply starts in
-                // the staffer's own mail app. A phone number stays words.
-                <a
-                  href={mailtoHref(email ?? "", { subject: replySubject, body: `\n\n${quoted}` })}
-                  className={ACT_CLASS}
-                >
-                  {t("inbox.replyByEmail")}
-                </a>
-              ) : null}
-              {/* An "Ask to move" (H-20261014-ask-to-move) is about another date, never this
-              boat's lateness: its seat carries no late window. */}
-              {lateAction && message.channel !== "page"
-                ? lateSeats
-                    .filter((seat) => !seat.runningLateAt)
-                    .map((seat) => (
-                      <form key={seat.bookingId} action={lateAction}>
-                        <input type="hidden" name="messageId" value={message.id} />
-                        <input type="hidden" name="bookingId" value={seat.bookingId} />
-                        <SubmitButton
-                          pendingLabel={t("words.busy.saving")}
-                          className={ACT_CLASS}
-                          ariaLabel={
-                            severalLate
-                              ? t("inbox.late.actionForSeat", {
-                                  name,
-                                  trip: seat.title,
-                                  when: when(seat),
-                                })
-                              : t("inbox.late.actionFor", { name, trip: seat.title })
-                          }
-                        >
-                          {severalLate
-                            ? t("inbox.late.actionTrip", { trip: seat.title })
-                            : t("inbox.late.action")}
-                        </SubmitButton>
-                      </form>
-                    ))
-                : null}
-              {seats.map((seat) => (
-                <Link
-                  key={seat.bookingId}
-                  href={`${seatHref(seat)}#move-booking-${seat.bookingId}`}
-                  className={ACT_CLASS}
-                  aria-label={
-                    seats.length > 1
-                      ? t("inbox.moveSeatFor", { name, trip: seat.title, when: when(seat) })
-                      : t("inbox.moveFor", { name, trip: seat.title })
-                  }
-                >
-                  {seats.length > 1
-                    ? t("inbox.moveSeat", { trip: seat.title, when: when(seat) })
-                    : t("inbox.move")}
-                </Link>
-              ))}
-              <form action={doneAction}>
-                <input type="hidden" name="messageId" value={message.id} />
-                <input type="hidden" name="receivedAt" value={message.receivedAt.toISOString()} />
-                <input type="hidden" name="done" value={done ? "false" : "true"} />
-                <SubmitButton pendingLabel={t("words.busy.saving")} className={ACT_CLASS}>
-                  {done ? t("inbox.done.reopen") : t("inbox.done.action")}
-                </SubmitButton>
-              </form>
-              {message.personId ? null : (
-                <form action={deleteAction}>
-                  <input type="hidden" name="messageId" value={message.id} />
-                  <SubmitButton
-                    pendingLabel={t("words.busy.deleting")}
-                    className={DANGER_ACT_CLASS}
-                    confirmMessage={t("inbox.delete.confirm")}
-                    // One "Delete" per row would name them all the same, so the
-                    // accessible name carries the address the row is about.
-                    ariaLabel={t("inbox.delete.actionFor", { address: message.fromAddress })}
-                  >
-                    {t("inbox.delete.action")}
-                  </SubmitButton>
-                </form>
-              )}
-              {draftAction ? (
-                <InboxResponseDraft
-                  draft={draftAction.bind(null, message.id)}
-                  email={email}
-                  subject={replySubject}
-                  quoted={quoted}
-                  copy={{
-                    draft: t("assistsFront.inbox.draftResponse"),
-                    pending: t("assistsFront.conversation.drafting"),
-                    empty: t("assistsFront.inbox.responseEmpty"),
-                    label: t("assistsFront.inbox.responseLabel"),
-                    review: t("assistsFront.inbox.responseReview"),
-                    email: t("inbox.replyByEmail"),
-                    copy: t("assistsFront.inbox.copyResponse"),
-                    copied: t("words.did.copied"),
-                    failed: t("assistsFront.inbox.responseCopyFailed"),
-                    changed: t("assistsFront.inbox.responseChanged"),
-                  }}
-                />
-              ) : null}
-            </InboxRowView>
+            <InboxRowActs
+              message={message}
+              name={name}
+              email={email}
+              replySubject={replySubject}
+              quoted={quoted}
+              seats={seats}
+              lateSeats={lateSeats}
+              severalLate={severalLate}
+              lateAction={lateAction}
+              deleteAction={deleteAction}
+              doneAction={doneAction}
+              draftAction={draftAction}
+              recordHref={recordHref}
+              intent={intent}
+              done={done}
+              t={t}
+              when={when}
+              seatHref={seatHref}
+            />
           </div>
         </div>
       </LedgerRow>

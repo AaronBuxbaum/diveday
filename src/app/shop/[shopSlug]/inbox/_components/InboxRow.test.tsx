@@ -151,6 +151,7 @@ describe("a message from a stranger", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Unknown sender" }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
     const remove = screen.getByRole("button", {
       name: "Delete the message from marta.keller@example.net",
     });
@@ -338,6 +339,7 @@ describe("a message from somebody with a boat to catch", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
     const mark = screen.getByRole("button", {
       name: "Mark Diego Alvarez running late for Night Dive",
     });
@@ -408,6 +410,7 @@ describe("a message from somebody with two boats to catch", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
     expect(screen.queryByRole("button", { name: "Mark running late" })).toBeNull();
     for (const seat of [NIGHT, DAWN]) {
       const mark = screen.getByRole("button", {
@@ -435,6 +438,7 @@ describe("a message from somebody with two boats to catch", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
     expect(screen.queryByRole("button", { name: /Night Dive/ })).toBeNull();
     expect(screen.getByRole("button", { name: /Dawn Reef/ })).toBeInTheDocument();
   });
@@ -468,6 +472,7 @@ describe("a message asking to move a seat", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
     const move = screen.getByRole("link", {
       name: "Move Priya Sharma’s seat on Two-Tank Reef to another departure",
     });
@@ -505,6 +510,7 @@ describe("a message asking to move a seat", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
     const wednesday = screen.getByRole("link", {
       name: /^Move Priya Sharma’s seat on Wreck Dive, Wednesday\s8:00\sAM, to another departure$/,
     });

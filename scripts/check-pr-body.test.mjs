@@ -66,7 +66,7 @@ describe("which reviewer a diff needs", () => {
     "src/app/shop/[shopSlug]/divers/[personId]/waivers/[recordId]/actions.ts",
     "src/app/shop/[shopSlug]/trips/[id]/roster-waiver-actions.ts",
     "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts",
-    "src/app/shop/[shopSlug]/waivers/actions.ts",
+    "src/app/shop/[shopSlug]/settings/waivers/actions.ts",
     "src/app/waivers/[token]/doctor/actions.ts",
     "src/features/party-waiver-queue/store.ts",
     "src/lib/paper-waiver-form.ts",
@@ -77,7 +77,7 @@ describe("which reviewer a diff needs", () => {
   it("asks dive-domain-expert for the doctor-referral form and a waiver page", () => {
     for (const file of [
       "src/app/waivers/[token]/doctor/referral-labels.ts",
-      "src/app/shop/[shopSlug]/waivers/page.tsx",
+      "src/app/shop/[shopSlug]/settings/waivers/page.tsx",
       "src/features/waiver-guardian-copy/store.ts",
     ]) {
       expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
@@ -301,7 +301,9 @@ describe("the whole check", () => {
   it("takes a reasoned 'not needed' for a UI-only waiver change", () => {
     const body =
       "## Reviews launched\n\n- `dive-domain-expert`: not needed because only a waiver page's layout moved\n\n## Seen filled in\n\nNo filled state because only the layout moved.\n";
-    expect(bodyProblems({ body, files: ["src/app/shop/[shopSlug]/waivers/page.tsx"] })).toEqual([]);
+    expect(
+      bodyProblems({ body, files: ["src/app/shop/[shopSlug]/settings/waivers/page.tsx"] }),
+    ).toEqual([]);
   });
 
   const pair = { dock: "launched, nothing found" };

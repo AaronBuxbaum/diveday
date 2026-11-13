@@ -4,16 +4,7 @@ import { redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import {
-  controlClass,
-  DateField,
-  Field,
-  FieldActions,
-  FieldGrid,
-  FormStatus,
-} from "@/components/ui/form";
 import { ShopNotice } from "@/components/ui/outcome";
 import { noticeRole } from "@/components/ui/tone";
 import { WeekPager } from "@/components/ui/week-pager";
@@ -26,15 +17,17 @@ import { shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 import { ScheduleViews } from "../schedule/_components/ScheduleViews";
 import { CrewPageHeader } from "./_components/CrewPageHeader";
 import { staffingGapWords } from "./_components/gap-words";
-import { PlanSection } from "./_components/PlanSection";
 import { SchedulePicker } from "./_components/SchedulePicker";
 import { StaffingMyWeek } from "./_components/StaffingMyWeek";
 import { StaffingWarnings } from "./_components/StaffingWarnings";
 import { StaffingWeek } from "./_components/StaffingWeek";
+import { weekDayFaces } from "./_components/staffing-day-faces";
 import { readStaffingWeek } from "./_components/staffing-week-read";
 import { staffingWeekWords } from "./_components/staffing-week-words";
+import { TimeOffApprovals } from "./_components/TimeOffApprovals";
 import {
   createShiftAction,
+  decideAwayAction,
   decideCrewRequestAction,
   deleteAwayAction,
   deleteShiftAction,
@@ -70,6 +63,9 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   // them to the kebab spelling this map holds.
   "away-saved": { tone: "success", key: "staffing.notice.awaySaved" },
   "away-deleted": { tone: "success", key: "staffing.notice.awayDeleted" },
+  "away-requested": { tone: "success", key: "staffing.notice.awayRequested" },
+  "away-approved": { tone: "success", key: "staffing.notice.awayApproved" },
+  "away-declined": { tone: "success", key: "staffing.notice.awayDeclined" },
   "request-sent": { tone: "success", key: "staffing.notice.requestSent" },
   "request-approved": { tone: "success", key: "staffing.notice.requestApproved" },
   // Loud on purpose: a shop that believes it has crewed a departure it has not
@@ -92,20 +88,6 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   "request-not-found": { tone: "danger", key: "staffing.notice.requestNotFound" },
   "invalid-range": { tone: "danger", key: "staffing.notice.invalidRange" },
 };
-
-/**
- * Everything the Add-a-shift door can answer for itself. Its outcome belongs
- * in its own action row rather than in a banner under the `<h1>` — and because
- * the door is now a disclosure, the same set decides whether it opens on
- * arrival: a refusal that closed the form it came from would leave the reader
- * a red banner and nothing to correct.
- *
- * `shift-deleted` is not one of them: it comes from a Remove inside the week
- * above, so it keeps the banner, which is the nearer of the two.
- * `not-authorized` stays there too — a staffer without the right never sees
- * the door at all.
- */
-const ADD_SHIFT_NOTICES = new Set(["shift-saved", "overlap", "staff-not-found", "invalid"]);
 
 export default async function StaffingPage({
   params,
@@ -140,22 +122,19 @@ export default async function StaffingPage({
   });
   if (!read) redirect(shopPath(shopSlug, "staffing"));
   const plan = query.view === "plan";
-  const { today, weekStart, weekEnd, view, blocks, canManage, week, selectedPerson } = read;
-  // **What the Add-a-shift form opens on: today, when the week on screen
-  // contains it.** Defaulting to `weekStart` unconditionally put a Friday
-  // afternoon's last-minute crew change — the busy-dock case this page exists
-  // for — on Monday, silently: `createStaffShift` validates only that a shift
-  // ends after it starts, so nothing refused the date, and the trip page then
-  // went on reporting that crew member as not on a shift for the coverage
-  // warning the manager believed they had just cleared. Paging to another week
-  // still opens on that week's Monday, which is the only honest answer there.
-  // Calendar dates are ISO `YYYY-MM-DD`, so the ordering is the string's.
-  const defaultShiftDate = today >= weekStart && today <= weekEnd ? today : weekStart;
+  const {
+    today,
+    weekStart,
+    weekEnd,
+    view,
+    blocks,
+    pendingTimeOff,
+    canManage,
+    week,
+    selectedPerson,
+  } = read;
   const notice = noticeFromParam(query.notice, notices);
-  const onShiftForm =
-    canManage && plan && query.notice !== undefined && ADD_SHIFT_NOTICES.has(query.notice);
-  const shiftStatus = onShiftForm ? notice : undefined;
-  const pageNotice = onShiftForm ? undefined : notice;
+  const pageNotice = notice;
 
   const gapWords = staffingGapWords(t);
 
@@ -182,6 +161,7 @@ export default async function StaffingPage({
   const decideRequest = decideCrewRequestAction.bind(null, weekStart);
   const saveAway = saveAwayAction.bind(null, weekStart);
   const deleteAway = deleteAwayAction.bind(null, weekStart);
+  const decideAway = decideAwayAction.bind(null, weekStart);
   return (
     <StaffPage width="full">
       {/* `week` is a reading of the page and stays in the URL; the rest is
@@ -204,23 +184,6 @@ export default async function StaffingPage({
           plan: t("schedule.views.plan"),
         }}
       />
-
-      {plan ? null : (
-        <SchedulePicker
-          week={weekStart}
-          value={selectedValue}
-          label={t("staffing.filter.person")}
-          options={[
-            { value: "all", label: t("staffing.filter.all") },
-            { value: "me", label: t("staffing.filter.me") },
-            ...(canManage
-              ? view.staff
-                  .filter((member) => member.person.id !== session.user.personId)
-                  .map((member) => ({ value: member.person.id, label: member.person.fullName }))
-              : []),
-          ]}
-        />
-      )}
 
       {pageNotice ? (
         <div className="mb-6">
@@ -263,113 +226,35 @@ export default async function StaffingPage({
             thisWeekHref={weekStart === weekStartOf(today) ? null : `${staffingPath}?view=plan`}
             words={weekWords}
           />
+          <TimeOffApprovals
+            pending={pendingTimeOff}
+            locale={locale}
+            t={t}
+            decideAction={decideAway}
+          />
           <StaffingMyWeek
+            days={weekDayFaces(week.days, locale)}
             shifts={myShifts}
             blocks={myBlocks}
             locale={locale}
             timeZone={shop.timezone}
-            canManage={canManage}
+            selfId={session.user.personId}
+            people={
+              canManage
+                ? view.staff.map((member) => ({
+                    id: member.person.id,
+                    name: member.person.fullName,
+                  }))
+                : undefined
+            }
+            approvalRequired={shop.timeOffApprovalEnabled && !canManage}
+            createShiftAction={createShift}
+            saveAwayAction={saveAway}
             deleteShiftAction={deleteShift}
             deleteAwayAction={deleteAway}
             t={t}
           />
           <StaffingWarnings shop={shop} shopSlug={shopSlug} view={view} locale={locale} />
-          {canManage ? (
-            <PlanSection id="add-shift" label={t("staffing.addShift.heading")}>
-              <FieldGrid as="form" action={createShift} columns={2}>
-                <Field label={t("staffing.addShift.person")}>
-                  <select
-                    name="personId"
-                    required
-                    defaultValue={session.user.personId}
-                    className={controlClass}
-                  >
-                    <option value="">{t("staffing.addShift.choosePerson")}</option>
-                    {view.staff.map((member) => (
-                      <option key={member.person.id} value={member.person.id}>
-                        {member.person.fullName}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label={t("staffing.addShift.date")}>
-                  <DateField name="date" required defaultValue={defaultShiftDate} />
-                </Field>
-                <Field label={t("staffing.addShift.starts")}>
-                  <DateField name="startTime" type="time" required defaultValue="07:00" />
-                </Field>
-                <Field label={t("staffing.addShift.ends")}>
-                  <DateField name="endTime" type="time" required defaultValue="15:00" />
-                </Field>
-                <Field label={t("staffing.addShift.note")} hint={t("staffing.addShift.noteHint")}>
-                  <input
-                    name="note"
-                    maxLength={120}
-                    className={controlClass}
-                    placeholder={t("staffing.addShift.notePlaceholder")}
-                  />
-                </Field>
-                <FieldActions>
-                  <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
-                    {t("staffing.addShift.submit")}
-                  </SubmitButton>
-                  <FormStatus tone={shiftStatus?.tone}>
-                    {shiftStatus ? t(shiftStatus.key) : undefined}
-                  </FormStatus>
-                </FieldActions>
-              </FieldGrid>
-            </PlanSection>
-          ) : null}
-
-          {/* **The crew member's own door** (issue #1235, ADR
-              20260902-crew-requests-and-blackouts). Every other write on this
-              page is behind `canManage`; this one is not, and that is the whole
-              point of the slice. A manager's `<select>` lets them record a
-              range for somebody who phoned on a Sunday; everyone else writes
-              their own row and the domain layer refuses anything else. */}
-          <PlanSection id="add-away" label={t("staffing.away.heading")}>
-            <FieldGrid as="form" action={saveAway} columns={2}>
-              {canManage ? (
-                <Field label={t("staffing.away.person")}>
-                  <select
-                    name="personId"
-                    required
-                    defaultValue={session.user.personId}
-                    className={controlClass}
-                  >
-                    {view.staff.map((member) => (
-                      <option key={member.person.id} value={member.person.id}>
-                        {member.person.fullName}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              ) : (
-                // Never a form field for a crew member: the person is the
-                // session's own, and the domain layer checks it again anyway.
-                <input type="hidden" name="personId" value={session.user.personId} />
-              )}
-              <Field label={t("staffing.away.from")}>
-                <DateField name="startsOn" required defaultValue={defaultShiftDate} />
-              </Field>
-              <Field label={t("staffing.away.to")}>
-                <DateField name="endsOn" required defaultValue={defaultShiftDate} />
-              </Field>
-              <Field label={t("staffing.away.note")}>
-                <input
-                  name="note"
-                  maxLength={120}
-                  className={controlClass}
-                  placeholder={t("staffing.away.notePlaceholder")}
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
-                  {t("staffing.away.save")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          </PlanSection>
         </>
       ) : (
         <>
@@ -388,6 +273,25 @@ export default async function StaffingPage({
             requestAction={requestCrew}
             decideRequestAction={decideRequest}
             dayParam={query.day}
+            picker={
+              <SchedulePicker
+                week={weekStart}
+                value={selectedValue}
+                label={t("staffing.filter.person")}
+                options={[
+                  { value: "all", label: t("staffing.filter.all") },
+                  { value: "me", label: t("staffing.filter.me") },
+                  ...(canManage
+                    ? view.staff
+                        .filter((member) => member.person.id !== session.user.personId)
+                        .map((member) => ({
+                          value: member.person.id,
+                          label: member.person.fullName,
+                        }))
+                    : []),
+                ]}
+              />
+            }
             links={{
               rangeLabel: formatCalendarDateRange(weekStart, weekEnd, locale),
               dayHrefPrefix: `${staffingPath}?${WEEK_PARAM}=${weekStart}${selectionQuery}&day=`,

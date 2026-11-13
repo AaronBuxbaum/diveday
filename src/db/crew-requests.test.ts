@@ -8,9 +8,11 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import {
   decideCrewAssignmentRequest,
+  decideCrewAvailabilityBlock,
   deleteCrewAvailabilityBlock,
   listCrewAssignmentRequests,
   listCrewAvailabilityBlocks,
+  listPendingTimeOff,
   recordCrewAvailabilityBlock,
   requestCrewAssignment,
   tripRatioGapNeedsInstructor,
@@ -62,6 +64,88 @@ async function diverPerson(db: Awaited<ReturnType<typeof context>>["db"], shopId
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
+
+describe("days off that wait for an owner", () => {
+  const range = { from: "2026-07-20", to: "2026-07-26" };
+  const reader = { personId: undefined, canReadCrewAwayNote: true };
+
+  it("holds a crew member's own ask, but never an owner's", async () => {
+    const { db, shop, owner, crew } = await context();
+    const own = await recordCrewAvailabilityBlock(db, {
+      shopId: shop.id,
+      personId: crew.id,
+      actorPersonId: crew.id,
+      canManageRoster: false,
+      startsOn: "2026-07-21",
+      endsOn: "2026-07-21",
+      approvalRequired: true,
+    });
+    const owners = await recordCrewAvailabilityBlock(db, {
+      shopId: shop.id,
+      personId: owner.id,
+      actorPersonId: owner.id,
+      canManageRoster: true,
+      startsOn: "2026-07-22",
+      endsOn: "2026-07-22",
+      approvalRequired: true,
+    });
+    expect(own.ok && owners.ok).toBe(true);
+    const rows = await db.select().from(crewAvailabilityBlocks);
+    const status = (id: string) => rows.find((row) => row.id === id)?.status;
+    expect(status(own.ok ? own.id : "")).toBe("pending");
+    expect(status(owners.ok ? owners.id : "")).toBe("approved");
+    const pending = await listPendingTimeOff(db, shop.id, "2026-07-18");
+    expect(pending.map((row) => row.id)).toEqual([own.ok ? own.id : ""]);
+  });
+
+  it("lets only a manager answer, once, and a declined ask counts as nothing but to its owner", async () => {
+    const { db, shop, owner, crew } = await context();
+    const ask = await recordCrewAvailabilityBlock(db, {
+      shopId: shop.id,
+      personId: crew.id,
+      actorPersonId: crew.id,
+      canManageRoster: false,
+      startsOn: "2026-07-21",
+      endsOn: "2026-07-21",
+      approvalRequired: true,
+    });
+    if (!ask.ok) throw new Error("ask refused");
+    const asCrew = await decideCrewAvailabilityBlock(db, {
+      shopId: shop.id,
+      blockId: ask.id,
+      decision: "approved",
+      decidedByPersonId: crew.id,
+      canManageRoster: false,
+    });
+    expect(asCrew).toEqual({ ok: false, reason: "not_allowed" });
+    const declined = await decideCrewAvailabilityBlock(db, {
+      shopId: shop.id,
+      blockId: ask.id,
+      decision: "declined",
+      reason: "Short-staffed",
+      decidedByPersonId: owner.id,
+      canManageRoster: true,
+    });
+    expect(declined.ok).toBe(true);
+    const again = await decideCrewAvailabilityBlock(db, {
+      shopId: shop.id,
+      blockId: ask.id,
+      decision: "approved",
+      decidedByPersonId: owner.id,
+      canManageRoster: true,
+    });
+    expect(again).toEqual({ ok: false, reason: "request_not_found" });
+    const shopWide = await listCrewAvailabilityBlocks(db, shop.id, range, reader);
+    expect(shopWide.some((block) => block.id === ask.id)).toBe(false);
+    const own = await listCrewAvailabilityBlocks(db, shop.id, range, reader, {
+      includeDeclinedOf: crew.id,
+    });
+    expect(own.find((block) => block.id === ask.id)).toMatchObject({
+      status: "declined",
+      decisionNote: "Short-staffed",
+    });
+  });
+});
 
 describe("crew availability blocks", () => {
   it("lets a crew member record their own days away", async () => {
