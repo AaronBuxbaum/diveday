@@ -5,7 +5,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { PACKET_PAPER } from "@/lib/print-sheets";
 import type { ShopQuestion } from "@/lib/waiver-questions";
-import { ShopSheet } from "../../print/_components/ShopSheet";
+import { ShopSheet } from "../../../print/_components/ShopSheet";
 import { BlankRelease, type BlankReleaseCopy } from "./BlankRelease";
 
 afterEach(cleanup);

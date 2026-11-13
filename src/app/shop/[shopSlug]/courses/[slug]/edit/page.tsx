@@ -331,7 +331,7 @@ export default async function EditCoursePage({
                 <CourseFormsRequirement
                   {...formsPanel}
                   {...formsSection}
-                  waiversPath={shopPath(shopSlug, "waivers")}
+                  waiversPath={shopPath(shopSlug, "settings", "waivers")}
                   t={t}
                 />
               </DisclosureRowList>

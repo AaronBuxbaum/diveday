@@ -1019,7 +1019,7 @@ export async function openPaperWaiverForm(scope: Page | Locator) {
  * fields render once its summary is clicked, with no hydration to wait on.
  */
 export async function writeCourseForm(page: Page, title: string, body: string): Promise<void> {
-  await page.goto("/shop/blue-mantis/waivers#course-form-new");
+  await page.goto("/shop/blue-mantis/settings/waivers#course-form-new");
   // The fragment reveals both disclosures. Toggling while the client reveal
   // is still arriving can close the destination that this journey needs open.
   const definitions = page.locator("#course-forms").filter({ visible: true });

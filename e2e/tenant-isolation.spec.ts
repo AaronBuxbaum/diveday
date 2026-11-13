@@ -35,7 +35,8 @@ const OTHER_SHOP_DIVER = "Priya Sharma";
 const STAFF_PATHS = [
   "",
   "/divers",
-  "/waivers",
+  "/settings/waivers",
+  "/divers/waivers",
   "/orders",
   "/schedule/board",
   "/reviews",

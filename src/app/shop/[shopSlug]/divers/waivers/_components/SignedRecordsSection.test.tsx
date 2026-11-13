@@ -7,7 +7,7 @@ import { SignedRecordsSection } from "./SignedRecordsSection";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
-  usePathname: () => "/shop/blue-mantis/waivers",
+  usePathname: () => "/shop/blue-mantis/divers/waivers",
 }));
 
 afterEach(cleanup);

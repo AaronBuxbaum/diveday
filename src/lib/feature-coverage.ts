@@ -57,6 +57,7 @@ export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCover
   tripTags: { core: "a register; empty until the shop adds a tag" },
   safetyChecklist: { core: "safety" },
   waivers: { core: "safety" },
+  signedWaivers: { core: "safety" },
   safety: { core: "safety: the month's incidents" },
   drills: { core: "safety: the drills the crew has run" },
   gear: { core: "a register shown by presence; fleet service clocks are safety" },

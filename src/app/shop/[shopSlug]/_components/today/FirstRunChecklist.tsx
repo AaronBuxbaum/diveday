@@ -293,7 +293,7 @@ export function FirstRunChecklist({
           done={releaseDone}
           doneLabel={copy.releaseDone}
           doneBadge={copy.doneBadge}
-          href={`${shopPath(shopSlug, "waivers")}#release`}
+          href={`${shopPath(shopSlug, "settings", "waivers")}#release`}
           actionLabel={copy.releaseAction}
           primary={nextStep === "release"}
         />

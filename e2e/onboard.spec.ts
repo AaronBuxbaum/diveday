@@ -117,7 +117,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   // the first departure lists, and the Waivers page says at rest that divers
   // are signing the sample, with the editor open on arrival.
   await page.getByRole("link", { name: "Read the release" }).click();
-  await expect(page).toHaveURL(new RegExp(`/shop/${unique}/waivers#release$`));
+  await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings/waivers#release$`));
   await expect(
     page.getByText("Divers are signing DiveDay’s sample wording.", { exact: false }),
   ).toBeVisible();

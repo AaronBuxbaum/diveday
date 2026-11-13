@@ -14,7 +14,7 @@ describe("the blank release page", () => {
     expect(CODE).toContain(
       'allow: canPersonManageWaiverTemplates,\n    refusal: { notice: "waivers-not-authorized" },',
     );
-    expect(CODE).toContain('if (!current) redirect(shopPath(shopSlug, "waivers"));');
+    expect(CODE).toContain('if (!current) redirect(shopPath(shopSlug, "settings", "waivers"));');
   });
 
   /** Issue #2745: one sheet behind `SheetDocument`, nothing forked for print. */

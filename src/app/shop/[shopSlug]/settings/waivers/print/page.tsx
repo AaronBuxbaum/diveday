@@ -8,8 +8,8 @@ import { nowDate } from "@/lib/clock";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { PACKET_PAPER } from "@/lib/print-sheets";
 import { shopPath } from "@/lib/staff-notices";
-import { SheetDocument } from "../../print/_components/SheetDocument";
-import { ShopSheet, sheetPrinted } from "../../print/_components/ShopSheet";
+import { SheetDocument } from "../../../print/_components/SheetDocument";
+import { ShopSheet, sheetPrinted } from "../../../print/_components/ShopSheet";
 import { BlankRelease } from "./BlankRelease";
 
 export const instant = true;
@@ -40,13 +40,13 @@ export default async function BlankReleasePage({
     refusal: { notice: "waivers-not-authorized" },
   });
   const current = await getCurrentWaiverTemplate(db, shop.id);
-  if (!current) redirect(shopPath(shopSlug, "waivers"));
+  if (!current) redirect(shopPath(shopSlug, "settings", "waivers"));
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
   return (
     <SheetDocument
-      backHref={shopPath(shopSlug, "waivers")}
+      backHref={shopPath(shopSlug, "settings", "waivers")}
       paper={PACKET_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
       backLabel={t("waiversStaff.title")}

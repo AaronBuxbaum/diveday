@@ -75,7 +75,7 @@ export async function saveWaiverAction(
   if (!(await canPersonManageWaiverTemplates(editor, staff.user.shopId, staff.user.personId))) {
     redirect(noticeUrl(shopPath(staff.user.shopSlug), "waivers-not-authorized"));
   }
-  const waivers = shopPath(staff.user.shopSlug, "waivers");
+  const waivers = shopPath(staff.user.shopSlug, "settings", "waivers");
   const materialValue = readForm(materialField, formData).material;
   const rawBody = formData.get("body");
   const refused = (refusal: ReleaseFormRefusal, questionNumber?: number): ReleaseFormState => ({
@@ -189,7 +189,7 @@ export async function saveCourseFormAction(formData: FormData) {
   if (!(await canPersonManageWaiverTemplates(db, staff.user.shopId, staff.user.personId))) {
     redirect(noticeUrl(shopPath(staff.user.shopSlug), "waivers-not-authorized"));
   }
-  const waivers = shopPath(staff.user.shopSlug, "waivers");
+  const waivers = shopPath(staff.user.shopSlug, "settings", "waivers");
   const postedId = readForm(formIdField, formData).formId;
   const anchorFor = (id: string) => `${waivers}#course-form-${id}`;
   const parsed = parseForm(courseFormSchema, formData);
@@ -239,7 +239,7 @@ export async function deleteCourseFormAction(formData: FormData) {
   if (!(await canPersonManageWaiverTemplates(db, staff.user.shopId, staff.user.personId))) {
     redirect(noticeUrl(shopPath(staff.user.shopSlug), "waivers-not-authorized"));
   }
-  const waivers = shopPath(staff.user.shopSlug, "waivers");
+  const waivers = shopPath(staff.user.shopSlug, "settings", "waivers");
   const formId = parseForm(z.object({ formId: single(z.uuid()) }), formData);
   const deleted = formId.ok
     ? await deleteCourseForm(db, { shopId: staff.user.shopId, formId: formId.data.formId })

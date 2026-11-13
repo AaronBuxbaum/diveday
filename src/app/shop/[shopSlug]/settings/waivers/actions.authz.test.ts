@@ -42,10 +42,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { deleteCourseFormAction, saveCourseFormAction, saveWaiverAction } = await import(
   "./actions"
 );
@@ -133,7 +133,7 @@ describe("publishing a waiver template", () => {
     // instant it lands. The staffer is told how many rather than walking away
     // believing nothing happened (issue #720).
     expect(to).toMatch(
-      new RegExp(`^/shop/${shop.slug}/waivers\\?notice=waiver-resigning&count=[1-9]\\d*$`),
+      new RegExp(`^/shop/${shop.slug}/settings/waivers\\?notice=waiver-resigning&count=[1-9]\\d*$`),
     );
     const after = await currentTemplate(db, shop.id);
     expect(after?.body).toBe(NEW_BODY);
@@ -153,7 +153,7 @@ describe("publishing a waiver template", () => {
       saveWaiverAction(RELEASE_FORM_IDLE, withBody(NEW_BODY, "non-material")),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=saved`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/waivers?notice=saved`);
     const after = await currentTemplate(db, shop.id);
     expect(after?.body).toBe(NEW_BODY);
     expect(after?.version).toBe((before?.version ?? 0) + 1);
@@ -169,7 +169,7 @@ describe("publishing a waiver template", () => {
       saveWaiverAction(RELEASE_FORM_IDLE, withBody(before?.body ?? "")),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=waiver-unchanged`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/waivers?notice=waiver-unchanged`);
     expect(await currentTemplate(db, shop.id)).toEqual(before);
   });
 
@@ -186,7 +186,7 @@ describe("publishing a waiver template", () => {
 
     const to = await redirectedTo(() => saveWaiverAction(RELEASE_FORM_IDLE, formData));
 
-    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=saved`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/waivers?notice=saved`);
     const after = await getCurrentWaiverTemplate(db, shop.id);
     expect(after?.version).toBe(before.version + 1);
     expect(after?.body).toBe(before.body);
@@ -370,7 +370,7 @@ describe("writing a course form", () => {
     const form = await formTitled(db, shop.id, "Course release");
     expect(form).toMatchObject({ title: "Course release", version: 1 });
     expect(to).toBe(
-      `/shop/${shop.slug}/waivers?notice=course-form-saved&form=${form?.id}#course-form-${form?.id}`,
+      `/shop/${shop.slug}/settings/waivers?notice=course-form-saved&form=${form?.id}#course-form-${form?.id}`,
     );
   });
 
@@ -439,7 +439,7 @@ describe("writing a course form", () => {
     );
 
     expect(to).toBe(
-      `/shop/${shop.slug}/waivers?notice=course-form-invalid&form=new#course-form-new`,
+      `/shop/${shop.slug}/settings/waivers?notice=course-form-invalid&form=new#course-form-new`,
     );
     expect(await formTitled(db, shop.id, "Course release")).toBeUndefined();
   });
@@ -491,7 +491,7 @@ describe("writing a course form", () => {
       deleteCourseFormAction(formPost({ formId: created.id })),
     );
     expect(deleted).toBe(
-      `/shop/${shop.slug}/waivers?notice=course-form-deleted&form=list#course-forms`,
+      `/shop/${shop.slug}/settings/waivers?notice=course-form-deleted&form=list#course-forms`,
     );
     expect(await formTitled(db, shop.id, "Course release")).toBeUndefined();
     const [row] = await db
