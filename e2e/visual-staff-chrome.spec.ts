@@ -7,7 +7,7 @@
 import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { manifestRow, openManifestPerson, openOnThisPhone } from "./helpers";
+import { manifestRow, offlineCopySaved, openManifestPerson, openOnThisPhone } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   capture,
@@ -273,9 +273,7 @@ for (const scheme of ["light", "dark"] as const) {
           test.setTimeout(FLOW_TIMEOUT_MS);
           await openReefTrip(page);
           await page.goto(`${new URL(page.url()).pathname}/manifest`);
-          await expect(
-            page.getByText(/Copia (actualizada|envejeciendo|desactualizada)/),
-          ).toBeVisible();
+          await offlineCopySaved(page, "es-ES");
           await page
             .getByRole("link", { name: "Después de la inmersión 1" })
             .evaluate((link: HTMLElement) => link.click());
