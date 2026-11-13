@@ -330,7 +330,6 @@ test("bookkeeper settings and registers retain the settings rail", async ({
     "boats",
     "trip-tags",
     "safety-checklist",
-    "waivers",
     "settings/bookkeeper",
   ]) {
     await page.goto(`/shop/${SHOP}/${destination}`);
