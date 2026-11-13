@@ -8,6 +8,7 @@ import {
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
+  canEditCourseTemplates,
   canEditDiveSiteAdmission,
   canEmergencyReadMedicalAlert,
   canErasePersonalData,
@@ -201,6 +202,17 @@ describe("canEmergencyReadMedicalAlert (any staffer, on the days of the trip, is
     expect(canEmergencyReadMedicalAlert(["diver"], today)).toBe(false);
     expect(canEmergencyReadMedicalAlert([], today)).toBe(false);
     expect(canEmergencyReadMedicalAlert(undefined, today)).toBe(false);
+  });
+});
+
+describe("canEditCourseTemplates (owner/manager)", () => {
+  it("admits owner and manager, and nobody who merely schedules a course", () => {
+    expect(canEditCourseTemplates(["owner"])).toBe(true);
+    expect(canEditCourseTemplates(["manager"])).toBe(true);
+    for (const role of ["instructor", "divemaster", "captain", "crew", "diver"] as const) {
+      expect(canEditCourseTemplates([role])).toBe(false);
+    }
+    expect(canEditCourseTemplates(undefined)).toBe(false);
   });
 });
 

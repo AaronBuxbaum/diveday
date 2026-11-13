@@ -109,6 +109,7 @@ export default async function CoursesPage({
   );
   const courseList = coursePage.courses;
   const canSchedule = can.schedule;
+  const canEdit = can.edit;
   const base = `/shop/${shopSlug}/courses`;
   // The search and the view travel with every page turn and chip.
   const listHref = ({
@@ -196,8 +197,14 @@ export default async function CoursesPage({
     id: course.id,
     agency: course.agency,
     title: course.title,
-    href: `/shop/${shop.slug}/courses/${course.slug}/edit`,
-    linkLabel: st("courses.list.editSrLabel", { title: course.title }),
+    // An owner or manager opens the course's editor; anyone else who runs a
+    // course opens the board's add panel with it preselected.
+    href: canEdit
+      ? `/shop/${shop.slug}/courses/${course.slug}/edit`
+      : `/shop/${shop.slug}/schedule/board?course=${course.id}`,
+    linkLabel: canEdit
+      ? st("courses.list.editSrLabel", { title: course.title })
+      : st("courses.list.scheduleSrLabel", { title: course.title }),
     // **A phone reads when it next runs and what it costs**; who it is for
     // and how long it takes are the desktop's scan, and on a phone they ran
     // every one of twenty rows onto a second and third line. The full line
@@ -244,11 +251,8 @@ export default async function CoursesPage({
       {formsAwaitingText[0] ? (
         <ShopNotice tone="warning" className="mt-6">
           {st("courses.list.formsAwaitingTextSummary", { count: formsAwaitingText.length })}
-          {/* The editor draws its Forms section only for a staffer who may
-              configure courses (`canSetVisibility` there, the same read as
-              `canSchedule` here), so the door is theirs alone: anyone else
-              would land on an editor with no Forms in it. */}
-          {canSchedule ? (
+          {/* The editor is an owner's or manager's, so the door is theirs alone. */}
+          {canEdit ? (
             <>
               {" "}
               <Link

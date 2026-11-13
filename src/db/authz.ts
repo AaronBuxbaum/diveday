@@ -6,6 +6,7 @@ import {
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
+  canEditCourseTemplates,
   canEditDiveSiteAdmission,
   canEmergencyReadMedicalAlert,
   canErasePersonalData,
@@ -427,6 +428,10 @@ export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId
   canPerson(db, shopId, personId, canConfigureTrips);
 
 /** Live DB-checked companion of the day weather-call gate (src/lib/authz.ts). */
+/** Live DB-checked companion of the course-template gate (src/lib/authz.ts). */
+export const canPersonEditCourseTemplates = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canEditCourseTemplates);
+
 export const canPersonCallDayBlowout = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canCallDayBlowout);
 

@@ -573,6 +573,17 @@ export function canConfigureTrips(roles: readonly Role[] | undefined): boolean {
 }
 
 /**
+ * Edit a course template: the words, prices, photos, forms and catalog standing
+ * of a course the shop teaches. Owners and managers only. Scheduling a session
+ * from the template stays `canConfigureTrips`, which opens to instructors too:
+ * anyone who runs a course may put it on the board, and nobody but the shop's
+ * managers rewrites what it says.
+ */
+export function canEditCourseTemplates(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * **The day's weather call** (ADR 20261009-day-weather-call): cancelling every
  * boat of a morning or a day in one act is the go/no-go of whoever runs the
  * operation — owner, manager, or captain (owner's decision, 2026-10-09). The
