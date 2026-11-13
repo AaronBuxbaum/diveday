@@ -156,7 +156,7 @@ export async function DataGroup({
           aria-label={t("settings.main.dataJobs.mediaDeletions.sectionLabel")}
           className="mb-6"
         >
-          <ShopNotice tone="danger" role="status">
+          <ShopNotice tone="danger" role="status" persistent>
             <p className="font-medium">
               {t("settings.main.dataJobs.mediaDeletions.heading", {
                 count: pendingMediaDeletions.length,
@@ -225,7 +225,7 @@ export async function DataGroup({
           aria-label={t("settings.main.dataJobs.processorErasures.sectionLabel")}
           className="mb-6"
         >
-          <ShopNotice tone="danger" role="status">
+          <ShopNotice tone="danger" role="status" persistent>
             <p className="font-medium">
               {t("settings.main.dataJobs.processorErasures.heading", {
                 count: owedProcessorErasures.length,

@@ -115,7 +115,6 @@ export function StaffRolesDisclosure({
   const toggleRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const panelId = useId();
-  const refusalId = useId();
 
   /**
    * What the server rendered: the roles Escape reverts to, what a close
@@ -288,7 +287,6 @@ export function StaffRolesDisclosure({
               what a reader on this group actually needs. */}
           <fieldset
             key={saved}
-            aria-describedby={refusal ? refusalId : undefined}
             onKeyDown={onEscape}
             onBlur={onFocusLeave}
             className="grid grid-cols-2 gap-2 sm:grid-cols-3"
@@ -305,9 +303,7 @@ export function StaffRolesDisclosure({
               </ChoicePill>
             ))}
           </fieldset>
-          <FormStatus id={refusalId} tone="danger">
-            {refusal}
-          </FormStatus>
+          <FormStatus tone="danger">{refusal}</FormStatus>
         </div>
       </form>
       {footer}

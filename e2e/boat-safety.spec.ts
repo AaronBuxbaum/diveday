@@ -8,6 +8,7 @@ const REEF = "Two-Tank Reef — Molasses & French";
 const BOAT = "Mantis I";
 /** The demo's departure on the other hull, Mantis II. */
 const WRECK = "Wreck Trip — Spiegel Grove";
+const literalPattern = (text: string) => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
 /** The fleet disclosure whose editor holds this boat's name. */
 function boatRow(page: Page, name: string) {
@@ -50,7 +51,9 @@ test("a distress-channel refusal reopens the new boat editor", async ({ page, pr
       submit.click(),
     ]);
     await expect(submit).toBeEnabled();
-    await expect(add.getByRole("alert")).toHaveText(t("boats.boatChannelDistress"));
+    await expect(add.getByLabel(t("boats.workingChannelLabel"))).toHaveAccessibleDescription(
+      literalPattern(t("boats.boatChannelDistress")),
+    );
     await expect(add).toHaveAttribute("open");
     await expect(add.getByLabel(t("boats.workingChannelLabel"))).toHaveAttribute(
       "aria-invalid",
@@ -90,7 +93,9 @@ test("an MMSI refusal reopens the existing boat editor", async ({ page, privateS
   await row.locator("summary").click();
   await row.getByLabel(t("boats.mmsiLabel"), { exact: true }).fill("123");
   await row.getByRole("button", { name: t("boats.submit"), exact: true }).click();
-  await expect(row.getByRole("alert")).toHaveText(t("boats.boatRadioInvalid"));
+  await expect(row.getByLabel(t("boats.mmsiLabel"), { exact: true })).toHaveAccessibleDescription(
+    literalPattern(t("boats.boatRadioInvalid")),
+  );
   await expect(row).toHaveAttribute("open");
   await expect(row.getByLabel(t("boats.mmsiLabel"), { exact: true })).toHaveAttribute(
     "aria-invalid",
@@ -131,8 +136,10 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await row.locator("summary").click();
   await row.getByLabel("Passengers allowed on the certificate (not crew)").fill("10");
   await row.getByRole("button", { name: "Save boat" }).click();
-  const refused = boatRow(page, BOAT).getByRole("alert");
-  await expect(refused).toHaveText(
+  const refused = boatRow(page, BOAT).getByLabel(
+    "Passengers allowed on the certificate (not crew)",
+  );
+  await expect(refused).toHaveAccessibleDescription(
     /The departure on .+ sells more seats than the certificate’s 10\. Lower its capacity first\./,
   );
   await expect(
@@ -147,7 +154,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
     .getByLabel("Passengers allowed on the certificate (not crew)")
     .fill("12");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
-  await expect(boatRow(page, BOAT).getByRole("alert")).toHaveText(
+  await expect(refused).toHaveAccessibleDescription(
     /sells? more seats than the certificate’s 12[.,]/,
   );
 

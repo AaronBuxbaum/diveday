@@ -12,13 +12,13 @@ import type { Shop } from "@/db/schema";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { joinFacts } from "@/lib/format";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { importDiveSiteTemplateAction } from "../actions";
 import { cachedCatalogMapRows } from "../catalog-map-cache";
 import { compactCatalogPins } from "../catalog-map-pins";
 import { catalogPinDetailsAction } from "../catalog-pin-actions";
 import { CatalogMapLayout } from "./CatalogMapLayout";
+import { SiteLibraryViews } from "./SiteLibraryViews";
 import { TemplatePreview } from "./TemplatePreview";
 
 /**
@@ -56,11 +56,8 @@ export async function CatalogView({
   if (!locationIsProvided) {
     return (
       <StaffPage width="full">
-        <ShopPageHeader
-          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
-          returnTo={back}
-          title={t("diveSites.catalog.title")}
-        />
+        <ShopPageHeader title={t("diveSites.catalog.title")} />
+        <SiteLibraryViews shopSlug={shopSlug} current="catalog" t={t} />
         <EmptyState
           title={t("diveSites.catalog.locationRequiredTitle")}
           body={t("diveSites.catalog.locationRequiredDescription")}
@@ -108,12 +105,11 @@ export async function CatalogView({
     <StaffPage width="full">
       <div>
         <ShopPageHeader
-          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
-          returnTo={back}
           title={t("diveSites.catalog.title")}
           description={t("diveSites.catalog.description")}
           descriptionIsCaption
         />
+        <SiteLibraryViews shopSlug={shopSlug} current="catalog" t={t} />
       </div>
       <CatalogMapLayout
         viewportStorageKey={`${shop.id}:catalog`}

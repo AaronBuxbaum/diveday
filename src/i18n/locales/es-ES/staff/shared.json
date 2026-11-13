@@ -310,7 +310,9 @@
     "emailSettings": "Ajustes de correo",
     "security": "Seguridad",
     "activity": "Actividad",
-    "certifications": "Seguimiento"
+    "certifications": "Seguimiento",
+    "drills": "Simulacros",
+    "safetyOverviewTab": "Resumen"
   },
   "shopSections": {
     "navAriaLabel": "Principal",

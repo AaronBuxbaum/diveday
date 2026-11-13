@@ -50,6 +50,11 @@ export type SiteMapProps = {
   shopLabel?: string;
   clusterLabel: string;
   viewportStorageKey?: string;
+  /**
+   * Called after the map settles on a new view, with the rectangle it shows
+   * (south, west, north, east). For a list that follows the map.
+   */
+  onViewChange?: (area: { south: number; west: number; north: number; east: number }) => void;
 };
 
 type FittedOverview = {
@@ -72,6 +77,7 @@ export default function SiteMap({
   shopLabel = "Dive shop",
   clusterLabel,
   viewportStorageKey,
+  onViewChange,
 }: SiteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -339,6 +345,7 @@ export default function SiteMap({
     };
 
     const handleViewEnd = () => {
+      onViewChange?.(viewArea(mapInstance));
       updateShop();
       scheduleRender();
     };
@@ -387,6 +394,7 @@ export default function SiteMap({
     clusterLabel,
     mapInstance,
     onSelectPin,
+    onViewChange,
     pins,
     shopAnchor,
     shopLabel,
@@ -402,6 +410,16 @@ export default function SiteMap({
   }, [activePinId, mapInstance, pins]);
 
   return <div ref={containerRef} className={className} />;
+}
+
+function viewArea(map: LeafletMap) {
+  const bounds = map.getBounds();
+  return {
+    south: bounds.getSouth(),
+    west: bounds.getWest(),
+    north: bounds.getNorth(),
+    east: bounds.getEast(),
+  };
 }
 
 function openMapCluster(

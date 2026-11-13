@@ -1,5 +1,9 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
+
+const staff = staffTranslator("en-US");
+
 import { tripPathByTitle } from "./helpers";
 
 const REEF = "Two-Tank Reef — Molasses & French";
@@ -33,13 +37,17 @@ test("a boat's call sign, MMSI and working channel reach the emergency card of t
   await boatRow(page, BOAT).locator("summary").click();
   await boatRow(page, BOAT).getByLabel("MMSI").fill("33801");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
-  await expect(page.getByText("Check the call sign")).toBeVisible();
+  await expect(boatRow(page, BOAT).getByLabel("MMSI")).toHaveAccessibleDescription(
+    new RegExp(staff("boats.boatRadioInvalid").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  );
   await expect(boatRow(page, BOAT)).toHaveAttribute("open");
 
   // 16 is every boat's distress channel, never its working one (dock review S4).
   await boatRow(page, BOAT).getByLabel("Working channel").fill("16");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
-  await expect(page.getByText("Channels 16 and 70")).toBeVisible();
+  await expect(boatRow(page, BOAT).getByLabel("Working channel")).toHaveAccessibleDescription(
+    new RegExp(staff("boats.boatChannelDistress").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  );
   await expect(boatRow(page, BOAT)).toHaveAttribute("open");
 
   // Typed the way it is read over the radio; stored the way it is printed.

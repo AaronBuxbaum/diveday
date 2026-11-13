@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useId } from "react";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { controlClass, textareaClassFor } from "@/components/ui/form";
@@ -80,11 +81,7 @@ export function SnagAnswer({
           {copy.snagStillThere}
         </button>
       ) : null}
-      {result && !result.ok ? (
-        <p role="alert" className="basis-full text-sm font-medium text-danger">
-          {copy.errorRefusal}
-        </p>
-      ) : null}
+      {result && !result.ok ? <ErrorToast message={copy.errorRefusal} /> : null}
     </form>
   );
 }
@@ -161,9 +158,9 @@ export function SnagNoteForm({
           className={textareaClassFor(2)}
         />
         {refused ? (
-          <p id={errorId} role="alert" className="text-sm font-medium text-danger">
-            {result.reason === "note_invalid" ? copy.noteRefused : copy.errorRefusal}
-          </p>
+          <ErrorToast
+            message={result.reason === "note_invalid" ? copy.noteRefused : copy.errorRefusal}
+          />
         ) : null}
         <div>
           <button

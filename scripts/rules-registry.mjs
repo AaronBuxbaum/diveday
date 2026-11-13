@@ -22,6 +22,7 @@ export const GUARDS = [
   ["architecture", "check-architecture.mjs"],
   ["tokens", "check-tokens.mjs"],
   ["tinted-ink", "check-tinted-ink.mjs"],
+  ["error-toasts", "check-error-toasts.mjs"],
   ["type-ramp", "check-type-ramp.mjs"],
   ["page-length", "check-page-length.mjs"],
   ["form-controls", "check-form-controls.mjs"],

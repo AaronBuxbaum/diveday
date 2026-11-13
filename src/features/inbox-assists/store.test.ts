@@ -232,6 +232,32 @@ describe("awaitsTriage", () => {
 });
 
 describe("replyFacts", () => {
+  it("describes an empty public departure window using the actual 45-day horizon", async () => {
+    await ctx.db.update(trips).set({ isPrivate: true }).where(eq(trips.shopId, ctx.shop.id));
+    const { window, lines } = await replyFacts(ctx.db, ctx.shop.id);
+    expect(window).toContain("the next 45 days");
+    expect(lines).toContain("- No public departures are listed in this 45-day window.");
+    expect(lines.join("\n")).not.toContain("two weeks");
+  });
+
+  it("keeps structured trip meeting destinations out of public draft facts while retaining the public shop address", async () => {
+    await ctx.db
+      .update(shops)
+      .set({ addressStreet: "40 Public Shop Road" })
+      .where(eq(shops.id, ctx.shop.id));
+    await ctx.db
+      .update(trips)
+      .set({
+        meetingPointLabel: "Private departure gate",
+        meetingPointAddress: "101 Restricted Pier",
+      })
+      .where(eq(trips.shopId, ctx.shop.id));
+    const facts = (await replyFacts(ctx.db, ctx.shop.id)).lines.join("\n");
+    expect(facts).toContain("Address: 40 Public Shop Road");
+    expect(facts).not.toContain("Private departure gate");
+    expect(facts).not.toContain("101 Restricted Pier");
+  });
+
   it("quotes the shop's departures with their open seats and prices from the database", async () => {
     const { lines: facts } = await replyFacts(ctx.db, ctx.shop.id);
     expect(facts[0]).toContain(ctx.shop.name);
@@ -248,8 +274,8 @@ describe("replyFacts", () => {
     const { window, lines } = await replyFacts(ctx.db, ctx.shop.id, now);
     expect(window).toContain(`Today is ${formatShortDate(now, shop.locale, shop.timezone)}`);
     expect(window).toContain(shop.timezone);
-    expect(window).toContain("the next 14 days");
-    expect(window).toContain("at most 30 departures");
+    expect(window).toContain("the next 45 days");
+    expect(window).toContain("at most 40 departures");
     expect(lines.join("\n")).not.toContain("Today is");
   });
 
@@ -344,8 +370,6 @@ describe("draftReplyFor", () => {
       provider: answering({
         reply: `Yes! ${quoted.replace(/^- /, "")}`,
         medical: false,
-        eligibility: false,
-        confidence: 0.9,
       }),
       env: keyed,
     });
@@ -361,60 +385,26 @@ describe("draftReplyFor", () => {
       provider: answering({
         reply: "Park behind the shop. The gate opens at 7:15.",
         medical: false,
-        eligibility: false,
-        confidence: 0.9,
       }),
       env: keyed,
     });
     expect(draft).toBe("Park behind the shop. The gate opens at 7:15.");
   });
 
-  it("throws a draft away when it names a price nobody gave it", async () => {
-    const { personId } = await diverWithMessage("How much is a dive?");
-    expect(
-      await draftReplyFor(ctx.db, {
-        shopId: ctx.shop.id,
-        personId,
-        provider: answering({
-          reply: "It is 987654 dollars.",
-          medical: false,
-          eligibility: false,
-          confidence: 0.9,
-        }),
-        env: keyed,
-      }),
-    ).toBeNull();
-  });
-
-  it("never drafts a reply that tells a diver they are qualified", async () => {
-    const { personId } = await diverWithMessage(
-      "I'm SSI Open Water. Can I do Saturday's wreck? It's 30 m right?",
-    );
-    expect(
-      await draftReplyFor(ctx.db, {
-        shopId: ctx.shop.id,
-        personId,
-        provider: answering({
-          reply: "Yes, your Open Water card is fine for the wreck at 30 m.",
-          medical: false,
-          eligibility: true,
-          confidence: 0.9,
-        }),
-        env: keyed,
-      }),
-    ).toBeNull();
-  });
-
-  it("never drafts an answer to a medical question", async () => {
+  it("answers a health question with a kind reply", async () => {
     const { personId } = await diverWithMessage("I have asthma, can I dive?");
     expect(
       await draftReplyFor(ctx.db, {
         shopId: ctx.shop.id,
         personId,
-        provider: answering({ reply: "Sure.", medical: true, eligibility: false, confidence: 0.9 }),
+        provider: answering({
+          reply:
+            "Thanks for telling us. A physician's sign-off may be needed; our staff will help.",
+          medical: true,
+        }),
         env: keyed,
       }),
-    ).toBeNull();
+    ).toContain("physician");
   });
 
   it("drafts nothing when the shop wrote last, and sends no address", async () => {
@@ -476,6 +466,47 @@ describe("translateReplyFor", () => {
 });
 
 describe("draftReplyToMessage", () => {
+  it.each(["matched", "unmatched"] as const)(
+    "keeps structured meeting destinations out of a %s sender's provider context",
+    async (kind) => {
+      await ctx.db
+        .update(trips)
+        .set({
+          meetingPointLabel: "Private departure gate",
+          meetingPointAddress: "101 Restricted Pier",
+        })
+        .where(eq(trips.shopId, ctx.shop.id));
+      let messageId: string;
+      if (kind === "matched") {
+        ({ messageId } = await diverWithMessage("Where do we meet?"));
+      } else {
+        const recorded = await recordInboundMessage(ctx.db, {
+          shopId: ctx.shop.id,
+          channel: "email",
+          fromAddress: "unmatched@example.org",
+          body: "Where do we meet?",
+          receivedAt: nowDate(),
+          senderAuthenticated: true,
+          providerMessageId: "unmatched-private-location",
+        });
+        if (recorded.status !== "recorded") throw new Error("fixture message missing");
+        messageId = recorded.id;
+      }
+      const provider = answering({
+        reply: "Staff will confirm your arrival details.",
+        medical: false,
+      });
+      expect(
+        await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed, provider }),
+      ).toBe("Staff will confirm your arrival details.");
+      expect(provider.requests).toHaveLength(1);
+      const sent = JSON.stringify(provider.requests[0]);
+      expect(sent).not.toContain("Private departure gate");
+      expect(sent).not.toContain("101 Restricted Pier");
+      expect((await stored(messageId))?.answeredAt).toBeNull();
+    },
+  );
+
   it("answers a non-booking question from the selected message", async () => {
     await setShopReplyNotes(ctx.db, ctx.shop.id, "Park behind the shop.");
     const { messageId } = await diverWithMessage("Where do I park?");
@@ -491,6 +522,23 @@ describe("draftReplyToMessage", () => {
       }),
     });
     expect(draft).toBe("Park behind the shop.");
+  });
+  it("hands staff the draft as written, a price the shop never listed included", async () => {
+    const { messageId } = await diverWithMessage("How much is a dive?");
+    expect(
+      await draftReplyToMessage(ctx.db, {
+        shopId: ctx.shop.id,
+        messageId,
+        env: keyed,
+        provider: answering({ reply: "Usually around $95; staff will confirm.", medical: false }),
+      }),
+    ).toBe("Usually around $95; staff will confirm.");
+  });
+  it("tells the model about the shop: what to bring and rental gear", async () => {
+    const { lines } = await replyFacts(ctx.db, ctx.shop.id);
+    const text = lines.join("\n");
+    expect(text).toContain("What to bring:");
+    expect(text).toContain("Rental gear:");
   });
   it("does not send another shop’s message to the model", async () => {
     const { messageId } = await diverWithMessage("Where do I park?");

@@ -23,8 +23,9 @@
     "revenueDetailWithImported": "Current-trip payments and deposits after Stripe Tax, plus {count, plural, one {# unverified imported source record} other {# unverified imported source records}}: {payments} payments and {refunds} refunds.",
     "bookingsLabel": "Seats",
     "seatFillLabel": "Fill",
-    "waiversLabel": "Waivers",
-    "tipsLabel": "Tips"
+    "tipsLabel": "Tips",
+    "billedLabel": "Billed",
+    "collectedLabel": "Collected"
   },
   "noTripsFuture": "Nothing on the books for this month yet",
   "noTripsPast": "No trips sailed this month",
@@ -90,7 +91,11 @@
     "stripMedium": "50–84% occupied",
     "stripLegend": "Departure occupancy",
     "stripFuture": "Upcoming day",
-    "stripFutureDay": "{day} · upcoming day"
+    "stripFutureDay": "{day} · upcoming day",
+    "previous": "Previous year",
+    "next": "Next year",
+    "earliestTitle": "This is your first year with departures",
+    "currentTitle": "You’re viewing the current year"
   },
   "buddySeats": "{count, plural, one {# seat} other {# seats}} arrived on a buddy’s link",
   "buddyReferrer": "{name} brought {count, plural, one {# friend} other {# friends}}",

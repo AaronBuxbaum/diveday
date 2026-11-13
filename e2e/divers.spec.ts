@@ -235,7 +235,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await page.getByLabel("Email").fill(`contact-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+  await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
 
   const card = rosterRow(page, diverName);
   await expect(
@@ -659,7 +659,7 @@ test("a section's outcome renders inside that section, not in a banner at the to
   // On the control (`Field`'s `error` wires `aria-invalid`/`aria-describedby`),
   // and inside the form — not in a banner two screens up.
   await expect(detailsForm.getByLabel("Email")).toHaveAttribute("aria-invalid", "true");
-  await expect(detailsForm.getByRole("alert")).toContainText(
+  await expect(detailsForm.getByRole("alert").first()).toContainText(
     "Another diver already uses that email",
   );
   // The disclosure this form lives in is reopened by its own refusal: rendering

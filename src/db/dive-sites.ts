@@ -10,6 +10,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  lte,
   ne,
   or,
   sql,
@@ -237,6 +238,12 @@ export const DIVE_SITE_PAGE_SIZE = PAGE_SIZE.list;
 export type DiveSiteListFilter = {
   /** Matched against the site name *and* its location — staff recall either. */
   query?: string;
+  /** One difficulty level, or `unrated` for the sites nobody has rated. */
+  difficulty?: "beginner" | "intermediate" | "advanced" | "unrated";
+  /** Sites that ask for nitrox, or for one specialty card. */
+  need?: "nitrox" | "deep" | "wreck" | "night" | "drysuit" | "cavern";
+  /** Only sites whose map point sits inside this rectangle. */
+  area?: { south: number; west: number; north: number; east: number };
 };
 
 /**
@@ -266,6 +273,24 @@ export async function listDiveSitesPage(
     // A null `locationName` simply never matches — `ilike` on NULL is NULL,
     // which `or` treats as "not this branch" rather than excluding the row.
     like ? or(ilike(diveSites.name, like), ilike(diveSites.locationName, like)) : undefined,
+    filter.difficulty === "unrated"
+      ? isNull(diveSites.difficultyLevel)
+      : filter.difficulty
+        ? eq(diveSites.difficultyLevel, filter.difficulty)
+        : undefined,
+    filter.need === "nitrox"
+      ? eq(diveSites.requiresNitrox, true)
+      : filter.need
+        ? sql`${diveSites.requiredSpecialties} @> ${JSON.stringify([filter.need])}::jsonb`
+        : undefined,
+    filter.area
+      ? and(
+          gte(diveSites.forecastLatitude, filter.area.south),
+          lte(diveSites.forecastLatitude, filter.area.north),
+          gte(diveSites.forecastLongitude, filter.area.west),
+          lte(diveSites.forecastLongitude, filter.area.east),
+        )
+      : undefined,
   );
   // Through the shared `offsetPage` rather than its own arithmetic: this used
   // to clamp `?page=0`/`-3`/`abc` itself but had no answer for a page *past*

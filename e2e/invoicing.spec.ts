@@ -280,8 +280,11 @@ test.describe("as owner", () => {
     await page
       .getByLabel(staffCopy("orders.new.addressLine1"), { exact: true })
       .fill("12 Test Street");
-    for (let index = 1; index < 20; index++)
-      await page.getByRole("button", { name: staffCopy("orders.new.addItem") }).click();
+    const addItem = page.getByRole("button", { name: staffCopy("orders.new.addItem") });
+    await addItem.click();
+    // Keep keyboard entry on the add control as the growing list moves it.
+    // All twenty lines and both provider refusals retain their assertions.
+    for (let index = 2; index < 20; index++) await addItem.press("Enter");
     for (let index = 0; index < 20; index++) {
       await page
         .locator(`input[name="description-${index}"]`)

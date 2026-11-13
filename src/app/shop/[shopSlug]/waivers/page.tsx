@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { StaffSectionTabs } from "@/app/shop/[shopSlug]/_components/StaffSectionTabs";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -124,7 +125,7 @@ export default async function WaiversPage({
   // Refused staff are bounced to Today with an explanatory notice rather than
   // teleported silently (task 82, UX persona 11 "Kai"): Today already renders
   // `shopHome.notice.*` codes.
-  const { db, shop } = await requireShopSurface(shopSlug, {
+  const { session, db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManageWaiverTemplates,
     refusal: { notice: "waivers-not-authorized" },
   });
@@ -207,11 +208,10 @@ export default async function WaiversPage({
   };
 
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <FlashParams params={["notice", "count", "form"]} />
       <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        title={t("waiversStaff.title")}
+        title={t("shared.shopSections.safety")}
         // The version line is a fact about the release the page is named
         // after, so it rides under the title where a reader meets it before
         // the text — rather than as a second heading inside the card, which is
@@ -242,6 +242,13 @@ export default async function WaiversPage({
             ) : null}
           </>
         }
+      />
+      <StaffSectionTabs
+        section="safety"
+        current="waivers"
+        roles={session.user.roles}
+        shop={shop}
+        t={t}
       />
 
       <SignedRecordsSection

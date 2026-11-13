@@ -102,7 +102,6 @@ describe("RentalUnitPicker", () => {
     // Back to what it held — the row never claims a reservation the database
     // refused.
     expect(select.value).toBe("unit-1");
-    expect(select).toHaveAttribute("aria-describedby", "assign-1-refusal");
   });
 
   /**

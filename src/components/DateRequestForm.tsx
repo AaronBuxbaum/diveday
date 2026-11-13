@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
@@ -216,11 +217,7 @@ export function DateRequestForm({
   ) : (
     <>
       <p className="mt-3 max-w-2xl text-muted">{copy.intro}</p>
-      {state.error ? (
-        <p role="alert" className="mt-3 text-sm text-danger">
-          {state.error}
-        </p>
-      ) : null}
+      {state.error ? <ErrorToast message={state.error} /> : null}
 
       <div className="mt-6 max-w-3xl">
         <FieldGrid columns={2} className="content-start gap-y-5">

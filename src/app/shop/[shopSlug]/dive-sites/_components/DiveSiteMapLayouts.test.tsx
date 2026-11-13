@@ -73,10 +73,19 @@ function installScrollSpy() {
   };
 }
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
+
+const FOLLOW = {
+  followLabel: "Only sites in this map area",
+  scoped: false,
+  baseHref: "/shop/blue-mantis/dive-sites",
+};
+
 describe("dive-site map layouts", () => {
   it("places the map before the library rows", () => {
     render(
       <SiteLibraryLayout
+        {...FOLLOW}
         shopAnchor={null}
         pins={pins}
         clusterLabel="dive sites"
@@ -96,7 +105,7 @@ describe("dive-site map layouts", () => {
   it("selects a library pin without scrolling the page to its ledger row", () => {
     const scrollSpy = installScrollSpy();
     render(
-      <SiteLibraryLayout shopAnchor={null} pins={pins} clusterLabel="dive sites">
+      <SiteLibraryLayout {...FOLLOW} shopAnchor={null} pins={pins} clusterLabel="dive sites">
         <div id="site-row-reef-1">North Reef row</div>
       </SiteLibraryLayout>,
     );

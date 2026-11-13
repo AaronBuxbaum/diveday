@@ -31,6 +31,10 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = body.partyWaiverCapacity?.tripId;
         if (!tripId) throw new Error("the fact found no party waiver departure");
         await page.goto(addDiverFormPath("blue-mantis", tripId));
+        await expect(page.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await page.getByRole("button", { name: "Add another person" }).click();
         const child = page.getByRole("group", { name: "Person 2" });
         const childName = scheme === "light" ? "Sky Light" : "Sky Dark";
@@ -58,6 +62,10 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = body.partyWaiverCapacity?.tripId;
         if (!tripId) throw new Error("the fact found no party waiver departure");
         await page.goto(addDiverFormPath("blue-mantis", tripId));
+        await expect(page.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await page.getByRole("button", { name: "Add another person" }).click();
         await page
           .getByRole("group", { name: "Person 2" })
@@ -68,6 +76,11 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Add to trip" }).click();
         await expect(page.getByText(t("divers.page.partyOnFile"))).toBeVisible();
         await page.getByRole("radio", { name: /Use the record on file/ }).check();
+        await expect(page.getByLabel("Full name").first()).toHaveValue(leadName);
+        await expect(
+          page.getByRole("group", { name: "Person 2" }).getByLabel("Full name"),
+        ).toHaveValue("Zoe Bennet");
+        await expect(page.getByRole("radio", { name: /Use the record on file/ })).toBeChecked();
         await page.getByRole("button", { name: "Add to trip" }).click();
         await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers$/);
         await expect(page.getByText("Identity needs confirmation")).toBeVisible();

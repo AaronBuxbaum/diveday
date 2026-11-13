@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import type { AnsweredMedicalQuestion } from "@/lib/medical";
 import type { ShowMedicalAnswersResult } from "../actions";
@@ -74,11 +75,7 @@ export function MedicalAnswers({
             {copy.show}
           </SubmitButton>
           <p className="text-xs text-muted">{copy.showHint}</p>
-          {result && !result.ok ? (
-            <p role="alert" className="text-xs font-medium text-danger">
-              {copy.failed}
-            </p>
-          ) : null}
+          {result && !result.ok ? <ErrorToast message={copy.failed} /> : null}
         </form>
       ) : null}
     </div>

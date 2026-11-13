@@ -41,6 +41,21 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   // side, all inside this test's own budget.
   test.setTimeout(60_000);
   const SHOP = privateShop.slug;
+  const saveDockDay = async () => {
+    const save = page.getByRole("button", { name: "Save", exact: true });
+    // A previous identical toast and a just-typed value do not establish that
+    // this submission has settled. Wait before changing the next setting.
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === `/shop/${SHOP}/settings/dock-day` &&
+          response.headers()["x-action-redirect"]?.includes("notice=dock-day-saved") === true,
+      ),
+      save.click(),
+    ]);
+    await expect(save).toBeEnabled();
+  };
 
   await page.goto(`/shop/${SHOP}/settings/dock-day`);
 
@@ -51,7 +66,7 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   await page.getByLabel("Time in the water per dive").fill("40");
   await page.getByLabel("Surface interval between dives").fill("50");
   // One form, one Save for the whole dock day (visual review 2026-10-24, A01).
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await saveDockDay();
   await expect(page.getByRole("status")).toContainText("Dock day saved");
 
   // The strip under the form is the same arithmetic the booking page runs,
@@ -121,7 +136,7 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   await page.goto(`/shop/${SHOP}/settings/dock-day`);
   await expect(page.getByRole("radio", { name: "Don’t say" })).toBeChecked();
   await page.getByRole("radio", { name: "Cash", exact: true }).check();
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await saveDockDay();
   await expect(page.getByRole("status")).toContainText("Dock day saved");
   await expect(page.getByRole("radio", { name: "Cash", exact: true })).toBeChecked();
 
@@ -130,13 +145,18 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   // clears it so crew read the divers' time.
   const crewLead = page.getByLabel("Crew arrive before divers");
   await expect(crewLead).toHaveValue("30");
+  // Each save's toast leaves before the next save, so a wait on "saved" is the new one.
+  await expect(page.getByText("Dock day saved")).toHaveCount(0);
   await crewLead.fill("45");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await saveDockDay();
   await expect(page.getByRole("status")).toContainText("Dock day saved");
   await expect(page.getByLabel("Crew arrive before divers")).toHaveValue("45");
+  await expect(page.getByText("Dock day saved")).toHaveCount(0);
   await page.getByLabel("Crew arrive before divers").fill("");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await saveDockDay();
   await expect(page.getByRole("status")).toContainText("Dock day saved");
+  await expect(page.getByLabel("Crew arrive before divers")).toHaveValue("");
+  await page.reload();
   await expect(page.getByLabel("Crew arrive before divers")).toHaveValue("");
 });
 

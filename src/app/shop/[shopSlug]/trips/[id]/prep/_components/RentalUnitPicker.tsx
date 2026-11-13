@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { AssignGearUnitResult } from "../actions";
@@ -115,7 +116,6 @@ export function RentalUnitPicker({
         // `aria-describedby` only while there is something to describe: a
         // permanently-referenced empty node is a screen reader announcing a
         // blank after every pick.
-        aria-describedby={refusal ? `${id}-refusal` : undefined}
         className={controlClass}
       >
         {value ? null : (
@@ -139,17 +139,7 @@ export function RentalUnitPicker({
           {copy.assigning}
         </p>
       ) : null}
-      {refusal ? (
-        // `role="alert"` and on the row: the staffer's eyes are on the pick
-        // they just made, and this is the one thing that changed.
-        <p
-          id={`${id}-refusal`}
-          role="alert"
-          className="mt-1 text-xs font-medium text-warning-strong"
-        >
-          {refusal}
-        </p>
-      ) : null}
+      {refusal ? <ErrorToast message={refusal} tone="warning" /> : null}
       {confirming && !isPending ? (
         <button
           type="button"
