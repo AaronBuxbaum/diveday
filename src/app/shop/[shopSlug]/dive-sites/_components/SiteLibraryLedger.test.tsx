@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { SiteLibraryGroup } from "@/db/dive-sites";
 import { diverTranslator } from "@/i18n/messages";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { CatalogDoor, SiteLibraryLedger } from "./SiteLibraryLedger";
+import { SiteLibraryLedger } from "./SiteLibraryLedger";
 
 afterEach(cleanup);
 
@@ -189,17 +189,6 @@ describe("the template provenance", () => {
     expect(container.querySelector(".rounded-full")?.textContent).toBe(
       t("diveSites.list.templateUpdateReady"),
     );
-  });
-});
-
-describe("the catalog door", () => {
-  it("carries the whole catalog's count", () => {
-    render(<CatalogDoor href="/catalog" count={34} t={t} />);
-    expect(screen.getByRole("link", { name: "Browse the DiveDay catalog" })).toHaveAttribute(
-      "href",
-      "/catalog",
-    );
-    expect(screen.getByText("34 published sites")).toBeInTheDocument();
   });
 });
 
