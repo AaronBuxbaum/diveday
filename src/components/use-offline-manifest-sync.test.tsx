@@ -326,6 +326,36 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
     expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
   });
 
+  it("does not repeat the history refresh when an overlapping initial save fails and its queued claim is stale", async () => {
+    const claim = deferred<Response>();
+    const fetchMock = vi.fn().mockReturnValueOnce(claim.promise).mockResolvedValue(stale());
+    vi.stubGlobal("fetch", fetchMock);
+    vi.mocked(saveOfflineManifest).mockRejectedValueOnce(new Error("save failed"));
+    let mode: "visible" | "hidden" = "visible";
+    const { result, rerender } = renderHook(() => useOfflineManifestSync(pagePayload, copy), {
+      wrapper: ({ children }) => createElement(Activity, { mode, children }),
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    mode = "hidden";
+    rerender();
+    mode = "visible";
+    rerender();
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+    await act(async () => claim.resolve(issued()));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
+    expect(result.current.freshnessUnconfirmed).toBe(true);
+    expect(result.current.saved).toEqual(envelope());
+    // A later return is a new attempt even when the first request never answered.
+    mode = "hidden";
+    rerender();
+    mode = "visible";
+    rerender();
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(2));
+    expect(result.current.freshnessUnconfirmed).toBe(true);
+  });
+
   it("does not confirm freshness when identity verification fails after return", async () => {
     vi.stubGlobal(
       "fetch",

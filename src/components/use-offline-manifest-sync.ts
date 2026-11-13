@@ -325,6 +325,10 @@ export function useOfflineManifestSync(
             const existing = await loadOfflineManifest(tripId).catch(() => null);
             setMessage(existing ? "" : copy.saveErrorFallback);
           }
+          // A save started before history returned can finish after its refresh
+          // began. Its stale claim must join that request, even if an earlier
+          // overlapping claim reset staleReread before failing to save.
+          if (awaitingPayload.current === currentPayload) return;
           // One re-read per stale claim, never a loop: if the re-read's own
           // claim is stale too, stop and leave it to the next refresh trigger.
           if (staleReread.current) {
