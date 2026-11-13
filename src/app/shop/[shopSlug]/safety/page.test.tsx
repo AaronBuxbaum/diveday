@@ -49,6 +49,30 @@ function textIn(node: unknown, found: string[] = []): string[] {
   return found;
 }
 
+/** The props handed to the shared `PeriodNav`, wherever it sits in the tree. */
+type PeriodProps = {
+  range: "month" | "year";
+  title: string;
+  monthHref: string;
+  yearHref: string;
+  prevHref: string | null;
+  nextHref: string | null;
+};
+function periodIn(node: unknown): PeriodProps | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = periodIn(child);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!isValidElement<{ children?: unknown; range?: unknown }>(node)) return null;
+  if (node.props.range === "month" || node.props.range === "year") {
+    return node.props as unknown as PeriodProps;
+  }
+  return periodIn(node.props.children);
+}
+
 /** The figures handed to `MonthFigures`, label and value, wherever they sit in the tree. */
 function figuresIn(node: unknown): { label: string; value: string }[] {
   if (Array.isArray(node)) return node.flatMap((child) => figuresIn(child));
@@ -110,7 +134,10 @@ describe("the Safety page", () => {
     expect(text).toContain("Review status and renewal dates.");
     expect(text).not.toContain("Money");
     expect(text).toContain("Print month");
-    expect(text).toContain("Year view");
+    // The month is one reading of the shared Month | Year control.
+    const period = periodIn(await renderTree([role]));
+    expect(period?.range).toBe("month");
+    expect(period?.yearHref).toMatch(/\/safety\?year=\d{4}$/);
   });
 
   it("opens current crew records and the actual checklist route", async () => {
@@ -162,7 +189,7 @@ describe("the Safety year", () => {
     const year = String(nowDate().getUTCFullYear());
     const text = await renderAs(["owner"], { year });
     expect(text).toContain(year);
-    expect(text).toContain("Month view");
+    expect(periodIn(await renderTree(["owner"], { year }))?.range).toBe("year");
     // The year shows the figures alone, so no figure may point at a list below it.
     expect(text).not.toContain("listed below");
     expect(text).not.toContain("this month");
@@ -180,15 +207,16 @@ describe("the Safety year", () => {
 
   it("says year, not month, on its arrows (review S1)", async () => {
     const year = String(nowDate().getUTCFullYear());
-    const text = await renderAs(["owner"], { year });
-    expect(text).toContain("Choose a year");
-    expect(text).not.toContain("Previous month");
-    expect(text).not.toContain("Choose month");
+    const period = periodIn(await renderTree(["owner"], { year }));
+    // The year steps by years: the arrows carry `?year=`, never `?month=`.
+    expect(period?.range).toBe("year");
+    for (const href of [period?.prevHref, period?.nextHref]) {
+      if (href) expect(href).toMatch(/\?year=\d{4}$/);
+    }
   });
 
   it("reads a year it cannot have as the month", async () => {
-    const text = await renderAs(["owner"], { year: "1999" });
-    expect(text).toContain("Year view");
-    expect(text).not.toContain("Month view");
+    const period = periodIn(await renderTree(["owner"], { year: "1999" }));
+    expect(period?.range).toBe("month");
   });
 });

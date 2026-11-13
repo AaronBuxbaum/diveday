@@ -90,7 +90,7 @@ export function monthFigureList({
   // comparison month with a report — a baseline month with zero seats
   // offered has nothing to measure fill against, and that absence must stay
   // absent rather than render as a manufactured "0%" (docs/design/principles.md).
-  const ratioLine = (key: "fillRate" | "waiverCompletion") => {
+  const ratioLine = (key: "fillRate") => {
     const ratio = comparison?.[key];
     return ratio && ratio.baseline !== null
       ? comparisonLine(
@@ -106,7 +106,7 @@ export function monthFigureList({
   // the basis is the row's one caption (`monthFigureBasis`), the shares are
   // the crew sheet's, and each departure row names its own waivers to collect.
   //
-  // The two percentages still render only over a denominator that exists
+  // The percentage still renders only over a denominator that exists
   // (`formatPercent` answers an em dash for a null ratio, which is what
   // `summarizeMonth` returns when a month offered no seat and took no booking).
   return [
@@ -115,6 +115,16 @@ export function monthFigureList({
       label: t("reports.metrics.revenueLabel"),
       value: formatReportMoney(report.revenueCents, currency, locale),
       comparison: moneyLine("revenueCents"),
+    },
+    {
+      key: "billed",
+      label: t("reports.metrics.billedLabel"),
+      value: formatReportMoney(report.billedCents, currency, locale),
+    },
+    {
+      key: "collected",
+      label: t("reports.metrics.collectedLabel"),
+      value: formatReportMoney(report.collectedCents, currency, locale),
     },
     {
       key: "tips",
@@ -133,12 +143,6 @@ export function monthFigureList({
       label: t("reports.metrics.seatFillLabel"),
       value: formatPercent(report.fillRate),
       comparison: ratioLine("fillRate"),
-    },
-    {
-      key: "waivers",
-      label: t("reports.metrics.waiversLabel"),
-      value: formatPercent(report.waiverCompletion),
-      comparison: ratioLine("waiverCompletion"),
     },
   ];
 }

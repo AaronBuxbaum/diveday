@@ -24,16 +24,17 @@ test.describe("owner", () => {
 
     await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
 
-    // The five headline figures the buyer asks about — unboxed since slice 9f
+    // The six headline figures the buyer asks about — unboxed since slice 9f
     // of ADR 20260827-the-shops-shelves, which is why these are exact matches:
     // "Seats" is a figure's own label, and the rows below it say "9 of 12
     // seats" without being one.
     const metrics = page.getByRole("region", { name: "This month’s numbers" });
     await expect(metrics.getByText("Net revenue", { exact: true })).toBeVisible();
+    await expect(metrics.getByText("Billed", { exact: true })).toBeVisible();
+    await expect(metrics.getByText("Collected", { exact: true })).toBeVisible();
     await expect(metrics.getByText("Tips", { exact: true })).toBeVisible();
     await expect(metrics.getByText("Seats", { exact: true })).toBeVisible();
     await expect(metrics.getByText("Fill", { exact: true })).toBeVisible();
-    await expect(metrics.getByText("Waivers", { exact: true })).toBeVisible();
 
     // Two "this month" totals on one page say which month each one means
     // (third review, item 1): the headline by departure, the by-line table by
@@ -357,10 +358,10 @@ test.describe("owner, the Safety page", () => {
     await expect(sheet.getByRole("link")).toHaveCount(0);
     await expect(sheet.getByRole("button")).toHaveCount(0);
     await page.goto("/shop/blue-mantis/safety");
-    await page.getByRole("link", { name: "Year view", exact: true }).click();
+    await page.getByRole("link", { name: "Year", exact: true }).click();
     await expect(page).toHaveURL(/\/safety\?year=\d{4}/);
     await expect(page.getByRole("link", { name: "Print the year" })).toBeVisible();
-    await page.getByRole("link", { name: "Month view", exact: true }).click();
+    await page.getByRole("link", { name: "Month", exact: true }).click();
     await expect(page).toHaveURL(/\/safety\?month=\d{4}-\d{2}/);
     const chooser = page.getByRole("navigation", { name: "Choose month" });
     await chooser.getByRole("link", { name: "Previous month" }).click();
@@ -368,6 +369,28 @@ test.describe("owner, the Safety page", () => {
     // Safety is a place of its own (not a Money tab) and wears its own name.
     // The manager's way in is pinned in safety/page.test.tsx; the demo shop has
     // no manager login to sign in with here.
+    await expect(page.getByRole("heading", { level: 1, name: "Safety" })).toBeVisible();
+  });
+});
+
+test.describe("owner, Safety's tabs", () => {
+  signedInAsOwner();
+
+  // Drills and Waivers sit beside the month's record as tabs of Safety, and the
+  // Drills tab draws one tile per kind of drill with the days since it was run.
+  test("moves between Overview, Drills and Waivers, with four drill tiles", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/safety");
+    const tabs = page.getByRole("navigation", { name: "Safety" });
+    await tabs.getByRole("link", { name: "Drills" }).click();
+    await expect(page).toHaveURL(/\/safety\/drills/);
+    await expect(page.getByRole("heading", { level: 1, name: "Safety" })).toBeVisible();
+    for (const kind of ["Emergency oxygen", "Missing diver", "Person overboard", "Fire"]) {
+      await expect(page.getByText(kind, { exact: true }).first()).toBeVisible();
+    }
+    await tabs.getByRole("link", { name: "Waivers" }).click();
+    await expect(page).toHaveURL(/\/waivers/);
     await expect(page.getByRole("heading", { level: 1, name: "Safety" })).toBeVisible();
   });
 });

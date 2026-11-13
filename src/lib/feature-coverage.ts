@@ -58,6 +58,7 @@ export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCover
   safetyChecklist: { core: "safety" },
   waivers: { core: "safety" },
   safety: { core: "safety: the month's incidents" },
+  drills: { core: "safety: the drills the crew has run" },
   gear: { core: "a register shown by presence; fleet service clocks are safety" },
   workOrders: "workOrders",
   newWorkOrder: "workOrders",

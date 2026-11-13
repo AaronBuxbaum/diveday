@@ -310,7 +310,9 @@
     "emailSettings": "Email settings",
     "security": "Security",
     "activity": "Activity",
-    "certifications": "Follow-up"
+    "certifications": "Follow-up",
+    "drills": "Drills",
+    "safetyOverviewTab": "Overview"
   },
   "shopSections": {
     "navAriaLabel": "Main",

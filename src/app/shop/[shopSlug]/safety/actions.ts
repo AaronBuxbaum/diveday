@@ -9,23 +9,18 @@ import { uuidParam } from "@/lib/uuid";
 
 /**
  * **The drill log's two acts** (loop 5, row 2): log a drill, delete one
- * (softly). Each lands back on the Safety tab with its notice, at the month
- * the staffer was reading. The writer re-checks the Safety tab's gate, the
+ * (softly). Each lands back on the Drills tab with its notice. The writer re-checks the Safety tab's gate, the
  * date, the kind and every person named; nothing posted is believed.
  */
 
-/** The month the form was posted from, kept only when it is a month key. */
-function safetyPage(slug: string, formData: FormData): string {
-  const month = formData.get("month");
-  const page = shopPath(slug, "safety");
-  return typeof month === "string" && /^\d{4}-\d{2}$/.test(month)
-    ? `${page}?month=${month}#drills`
-    : `${page}#drills`;
+/** Both acts land on the Drills tab, where the form and the log are. */
+function drillsPage(slug: string): string {
+  return `${shopPath(slug, "safety", "drills")}#drills`;
 }
 
 export async function recordSafetyDrillAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = safetyPage(session.user.shopSlug, formData);
+  const page = drillsPage(session.user.shopSlug);
   const participantIds = formData
     .getAll("participant")
     .flatMap((value) => (typeof value === "string" && uuidParam(value) ? [value] : []));
@@ -39,14 +34,14 @@ export async function recordSafetyDrillAction(formData: FormData) {
     participantIds,
   });
   revalidateAndRedirect(
-    shopPath(session.user.shopSlug, "safety"),
+    shopPath(session.user.shopSlug, "safety", "drills"),
     noticeUrl(page, outcome.ok ? "drill-logged" : "drill-invalid"),
   );
 }
 
 export async function deleteSafetyDrillAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = safetyPage(session.user.shopSlug, formData);
+  const page = drillsPage(session.user.shopSlug);
   const drillId = uuidParam(String(formData.get("drillId") ?? ""));
   const deleted = drillId
     ? await deleteSafetyDrill(await getDb(), {
@@ -56,7 +51,7 @@ export async function deleteSafetyDrillAction(formData: FormData) {
       })
     : false;
   revalidateAndRedirect(
-    shopPath(session.user.shopSlug, "safety"),
+    shopPath(session.user.shopSlug, "safety", "drills"),
     noticeUrl(page, deleted ? "drill-deleted" : "drill-invalid"),
   );
 }

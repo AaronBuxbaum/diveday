@@ -721,7 +721,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the Safety year renders true to the design (${scheme})`, async ({ page }) => {
         // Reached by its own link, so the year is the server clock's, not the runner's.
         await page.goto("/shop/blue-mantis/safety");
-        await page.getByRole("link", { name: "Year view", exact: true }).click();
+        await page.getByRole("link", { name: "Year", exact: true }).click();
         await page.waitForURL(/\?year=\d{4}$/);
         await page.getByRole("link", { name: "Print the year" }).waitFor();
         await capture(page, "reports-safety-year", scheme);

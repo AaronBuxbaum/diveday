@@ -155,6 +155,7 @@ export type StaffDestinationId =
   | "waivers"
   | "reports"
   | "safety"
+  | "drills"
   | "promoCodes"
   | "settings"
   | "team"
@@ -222,6 +223,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   waivers: "shared.shopNavLinks.waivers",
   reports: "shared.shopNavLinks.reports",
   safety: "shared.shopNavLinks.safety",
+  drills: "shared.shopNavLinks.drills",
   promoCodes: "shared.shopNavLinks.promoCodes",
   settings: "shared.shopNavLinks.settings",
   team: "shared.shopNavLinks.team",
@@ -323,6 +325,11 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // are a place of their own, not a tab of Money: incidents are not money. The
   // same owner/manager gate as Reports, since it reads the same record.
   { id: "safety", suffix: "/safety", section: "safety", gate: "reports" },
+  // Safety's other two tabs: the drills the crew has run, and the waivers the
+  // shop publishes and its divers sign. Waivers is a safety record, not a
+  // setting, so it sits here with its own gate.
+  { id: "drills", suffix: "/safety/drills", section: "safety", gate: "reports" },
+  { id: "waivers", suffix: "/waivers", section: "safety", gate: "waivers" },
   { id: "courses", suffix: "/courses", section: "courses" },
   { id: "certifications", suffix: "/certifications", section: "courses" },
   // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
@@ -351,7 +358,6 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     section: "settings",
     gate: "safetyChecklist",
   },
-  { id: "waivers", suffix: "/waivers", section: "settings", gate: "waivers" },
   { id: "team", suffix: "/settings/team", section: "settings", gate: "team" },
   // A staffer's own calendar subscription, at `/me`: the reader, not the shop.
   // It lights the `settings` section in the nav, and is ungated, so the roles
@@ -394,6 +400,7 @@ export const STAFF_SECTION_TABS = {
   gear: ["gear", "workOrders"],
   inbox: ["inbox", "requests", "reviews"],
   money: ["orders", "promoCodes", "reports"],
+  safety: ["safety", "drills", "waivers"],
 } as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;
 
 export type TabbedStaffSection = keyof typeof STAFF_SECTION_TABS;
@@ -405,6 +412,8 @@ export type TabbedStaffSection = keyof typeof STAFF_SECTION_TABS;
  */
 export const STAFF_SECTION_TAB_LABEL_KEYS: Partial<Record<StaffDestinationId, StaffMessageKey>> = {
   gear: "shared.shopNavLinks.registerTab",
+  // Safety's lead tab is the month's record; its name on the nav stays Safety.
+  safety: "shared.shopNavLinks.safetyOverviewTab",
 };
 
 /**

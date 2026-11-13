@@ -34,6 +34,7 @@ import {
   bookingPayments,
   bookings,
   cards,
+  courses,
   diveSites,
   importedPaymentHistory,
   orders,
@@ -50,6 +51,7 @@ import { type CalendarDate, calendarDateInTimezone } from "../../lib/calendar-da
 import type { CertificationLevel } from "../../lib/certification-levels";
 import { nowDate } from "../../lib/clock";
 import { DEPARTURE_BUFFER_MS } from "../../lib/departure-clock";
+import { seatListPriceCents } from "../../lib/deposits";
 import { emptyParticipantCounts } from "../../lib/participant-types";
 import { shopDaysBounds, shopMonthBounds, wallTimeToUtc } from "../../lib/zoned";
 import type { MonthlyReportInput, ReportTrip } from "./rules";
@@ -321,6 +323,86 @@ async function monthlyBaseRevenue(db: DbExecutor, shopId: string, inWindow: SQL 
       ),
     )
     .groupBy(trips.id);
+}
+
+/**
+ * **The same seats, by what each person did aboard** (ADR
+ * 20261007-participant-types). Same basis as `seatsBooked` — active bookings
+ * on this month's live trips — so the split always sums to it.
+ */
+async function monthlySeatsByType(db: DbExecutor, shopId: string, inWindow: SQL | undefined) {
+  const rows = await db
+    .select({ participantType: bookings.participantType, seats: count(bookings.id) })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        inWindow,
+        liveTrip(),
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
+    )
+    .groupBy(bookings.participantType);
+  const seatsByType = emptyParticipantCounts();
+  for (const row of rows) seatsByType[row.participantType] += Number(row.seats);
+  return seatsByType;
+}
+
+/**
+ * **What the month's seats were priced at** — the "Billed" figure: each active
+ * seat's list price on its departure (a course seat is the course's), before
+ * any discount, deposit or refund. Collected sits beside it.
+ */
+async function monthlyBilledCents(db: DbExecutor, shopId: string, inWindow: SQL | undefined) {
+  const rows = await db
+    .select({
+      participantType: bookings.participantType,
+      priceCents: trips.priceCents,
+      snorkelerPriceCents: trips.snorkelerPriceCents,
+      riderPriceCents: trips.riderPriceCents,
+      courseTitle: courses.title,
+      coursePriceCents: courses.priceCents,
+      courseELearningPriceCents: courses.eLearningPriceCents,
+      seats: count(bookings.id),
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(courses, eq(courses.id, trips.courseId))
+    .where(
+      and(
+        inWindow,
+        liveTrip(),
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
+    )
+    .groupBy(
+      bookings.participantType,
+      trips.priceCents,
+      trips.snorkelerPriceCents,
+      trips.riderPriceCents,
+      courses.title,
+      courses.priceCents,
+      courses.eLearningPriceCents,
+    );
+  return rows.reduce(
+    (sum, row) =>
+      sum +
+      Number(row.seats) *
+        (seatListPriceCents(
+          row,
+          row.courseTitle === null
+            ? null
+            : {
+                title: row.courseTitle,
+                priceCents: row.coursePriceCents,
+                eLearningPriceCents: row.courseELearningPriceCents,
+              },
+          row.participantType,
+        ) ?? 0),
+    0,
+  );
 }
 
 /**
@@ -689,23 +771,6 @@ export async function getMonthlyReport(
   const readBuddyReferredSeats = async () =>
     buddyReferredSeatsForWindow(db, shopId, startUtc, endUtc);
 
-  // **The same seats, by what each person did aboard** (ADR
-  // 20261007-participant-types). Same basis as `seatsBooked` — active bookings
-  // on this month's live trips — so the split always sums to it.
-  const readTypeRows = async () =>
-    db
-      .select({ participantType: bookings.participantType, seats: count(bookings.id) })
-      .from(bookings)
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .where(
-        and(
-          inWindow,
-          liveTrip(),
-          eq(bookings.shopId, shopId),
-          inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
-        ),
-      )
-      .groupBy(bookings.participantType);
   // Four independent reads per pool wave; queryAll serializes each wave
   // on a pinned transaction. No aggregate depends on another aggregate.
   const [tripRows, waiverRows, baseRevenue, recoveredDeposits] = await queryAll(db, [
@@ -728,9 +793,11 @@ export async function getMonthlyReport(
       readTipTotals,
       readReferredTotals,
     ]);
-  const [buddyReferredSeats, typeRows] = await queryAll(db, [readBuddyReferredSeats, readTypeRows]);
-  const seatsByType = emptyParticipantCounts();
-  for (const row of typeRows) seatsByType[row.participantType] += Number(row.seats);
+  const [buddyReferredSeats, seatsByType, billedCents] = await queryAll(db, [
+    readBuddyReferredSeats,
+    () => monthlySeatsByType(db, shopId, inWindow),
+    () => monthlyBilledCents(db, shopId, inWindow),
+  ]);
 
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
@@ -777,6 +844,7 @@ export async function getMonthlyReport(
     passThroughCents,
     taxCents,
     counterCents,
+    billedCents,
     importedPaymentCents,
     importedRefundCents,
     importedFinancialRecordCount: Number(importedFinancialTotals?.count ?? 0),

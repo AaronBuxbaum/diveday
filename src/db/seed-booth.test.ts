@@ -12,6 +12,7 @@ import {
   getMonthlyReport,
   getShopYear,
 } from "../features/reporting/store";
+import { listRollCallGaps } from "../features/roll-call-gaps";
 import { getSafetyMonth } from "../features/safety-report/store";
 import { summarizeShopYear } from "../features/shop-year/rules";
 import { seatCheckedIn } from "./arrival-provenance";
@@ -238,6 +239,21 @@ describe("the demo's booth stories", () => {
       expect(safety.rollCallsClosed).toBe(safety.departuresBack);
       expect(safety.unmarkedAtDock).toBe(0);
     }
+  });
+
+  /**
+   * **A new shop's Today is not red** (Aaron, 2026-11-12): the two-day course
+   * counted its dives with no meeting day, so each day read as never counted
+   * and Today raised an unclosed roll call, divers and crew, for both.
+   */
+  it("leaves no unclosed roll call on Today for the course session", async () => {
+    const { db, shop } = context;
+    const [session] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, SHOP_CERTIFIED_TITLE)));
+    if (!session) throw new Error("expected the certified course session");
+    expect(await listRollCallGaps(db, shop.id, nowDate(), [session.id])).toEqual([]);
   });
 
   it("holds a mask for a diver who is back tomorrow", async () => {
