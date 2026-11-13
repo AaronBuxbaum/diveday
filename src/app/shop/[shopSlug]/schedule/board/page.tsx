@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
-import { PersonClashNotice } from "@/app/shop/[shopSlug]/_components/PersonClashNotice";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { getScheduleBoardPage, readScheduleDay } from "@/features/schedule-board-page";
@@ -15,7 +14,6 @@ import { isShopDayParam } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { signDayWindows } from "@/lib/schedule-day-proof";
 import { serviceWindowFrom } from "@/lib/service-window";
 import { uuidParam } from "@/lib/uuid";
 import { resolveWeekStart } from "@/lib/week-board";
@@ -120,10 +118,8 @@ export default async function ScheduleBoardPage({
         <DayBoard
           shopSlug={shopSlug}
           day={day}
-          notice={query.notice}
           rows={rows.map((row) => ({
             ...row,
-            proof: signDayWindows(shop.id, row.tripId, day, tz, row.allWindows),
             totalPersonWarning: row.totalPersonNotice
               ? boatSafetyNoticeText(st, locale, row.totalPersonNotice)
               : null,
@@ -137,29 +133,16 @@ export default async function ScheduleBoardPage({
             chooseDay: st("schedule.dayBoard.chooseDay"),
             showDay: st("schedule.dayBoard.showDay"),
             empty: st("schedule.dayBoard.empty"),
+            review: st("schedule.dayBoard.review"),
             crew: st("schedule.dayBoard.crew"),
             divers: st("schedule.dayBoard.divers"),
             noCrew: st("schedule.dayBoard.noCrew"),
             noDivers: st("schedule.dayBoard.noDivers"),
-            move: st("schedule.dayBoard.move"),
-            moveTo: st("schedule.dayBoard.moveTo"),
-            choose: st("schedule.dayBoard.choose"),
-            submit: st("schedule.dayBoard.submit"),
-            cancel: st("schedule.dayBoard.cancel"),
-            previewClash: st("schedule.dayBoard.previewClash"),
-            moved: st("schedule.dayBoard.moved"),
-            refused: st("schedule.dayBoard.refused"),
-            busy: st("schedule.dayBoard.busy"),
-            clash: st("schedule.dayBoard.clash"),
-            attention: st("schedule.dayBoard.attention"),
             noBoat: st("schedule.dayBoard.noBoat"),
-            pending: st("schedule.dayBoard.pending"),
-            party: st("schedule.dayBoard.party"),
-            standingClash: st("schedule.dayBoard.standingClash"),
+            standingClash: st.raw("schedule.dayBoard.standingClash"),
             absent: st("schedule.dayBoard.absent"),
             identityHeld: st("schedule.dayBoard.identityHeld"),
-            partyIdentityHeld: st("schedule.dayBoard.partyIdentityHeld"),
-            hullClash: st("schedule.dayBoard.hullClash"),
+            hullClash: st.raw("schedule.dayBoard.hullClash"),
             overCapacity: st("schedule.dayBoard.overCapacity"),
             shore: st("boats.modeShore"),
             pool: st("boats.modePool"),
@@ -324,14 +307,6 @@ export default async function ScheduleBoardPage({
         gearMessage={gearNotice?.message}
         resultId={gearNotice?.id}
         resultKey={actionResultKey}
-      />
-      <PersonClashNotice
-        token={query.clashResult}
-        shopId={shop.id}
-        tripId={query.clashTrip}
-        shopSlug={shopSlug}
-        day={query.clashDay}
-        locale={locale}
       />
 
       {!hasUpcoming ? (

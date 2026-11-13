@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, not, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, not, sql } from "drizzle-orm";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { sellableSeats } from "@/lib/boat-safety";
@@ -71,10 +71,9 @@ import {
   moveDateRequestOfferBooking,
   recordDateRequestOfferBooking,
 } from "./date-request-offer-bookings";
-import { departureOccupiesDay } from "./departure-day";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
-import { boundLockWaits, isLockWaitRefusal } from "./lock-bounds";
+import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
 import {
   recordDeskLine,
@@ -85,7 +84,6 @@ import {
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { type CreatePersonInput, createPerson, findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
-import { lockPartySchedule, lockPersonSchedule, lockShopSchedule } from "./person-schedule-lock";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
 import { rearmTripReminders } from "./reminder-rearm";
@@ -110,7 +108,6 @@ import {
   shops,
   tripAssignments,
   tripHelpRequests,
-  tripScheduleDays,
   trips,
   waiverRecords,
 } from "./schema";
@@ -120,7 +117,6 @@ import { getShopCurrency } from "./stripe-accounts";
 import { markableTrainingDives, trainingDiveReachOn } from "./training-mark-resolve";
 import { dropTrainingMarkWithin } from "./training-marks";
 import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
-import { legWindow, windowsOverlap } from "./trips-clashes";
 import { liveTrip } from "./trips-live";
 import {
   heldSeatCounts,
@@ -466,7 +462,6 @@ export type BookingPartyOutcome =
  */
 export async function createBooking(db: AppDb, req: BookingRequest): Promise<BookingOutcome> {
   return db.transaction(async (tx) => {
-    await lockShopSchedule(tx, req.shopId);
     const pending: PendingDeclaration[] = [];
     const outcome = await createBookingRecord(tx, req, pending);
     if (outcome.ok) await flushDeclarations(tx, pending);
@@ -483,11 +478,6 @@ export async function createBookingParty(
   if (requests.length === 0) return { ok: false, reason: "trip_unavailable", failedIndex: -1 };
   return db
     .transaction(async (tx) => {
-      const shopIds = [...new Set(requests.map((request) => request.shopId))].sort();
-      for (const shopId of shopIds) await lockShopSchedule(tx, shopId);
-      for (const shopId of shopIds) {
-        await lockPartySchedule(tx, shopId);
-      }
       const created: Array<{
         bookingId: string;
         personId: string;
@@ -614,7 +604,6 @@ export async function addPartySeat(
   input: { shopId: string; leadBookingId: string; seatName: string },
 ): Promise<AddPartySeatOutcome> {
   return db.transaction(async (tx): Promise<AddPartySeatOutcome> => {
-    await lockShopSchedule(tx, input.shopId);
     const [departure] = await tx
       .select({ tripId: bookings.tripId })
       .from(bookings)
@@ -1325,7 +1314,6 @@ async function writeSeat(
 ): Promise<BookingOutcome> {
   const { req, trip, person, participantType, identityUnconfirmed, identityClaim } = input;
   const { admissionAdvisory, pending } = input;
-  await lockPersonSchedule(tx, req.shopId, person.id);
   const [existing] = await tx
     .select()
     .from(bookings)
@@ -1998,7 +1986,6 @@ export async function restoreBooking(
   trail?: { actorPersonId: string },
 ): Promise<RestoreBookingOutcome> {
   return db.transaction(async (tx) => {
-    await lockShopSchedule(tx, shopId);
     const [booking] = await tx
       .select()
       .from(bookings)
@@ -2119,8 +2106,6 @@ export type MoveBookingRefusal =
   | "course_mismatch"
   /** The diver already holds a seat there. */
   | "already_booked"
-  /** Another live departure occupies this diver at the target time. */
-  | "schedule_clash"
   /** The diver had a seat there once; seating them there reactivates it. */
   | "earlier_seat"
   /** Other live seats name this one as their party lead. */
@@ -2227,57 +2212,6 @@ async function moveAdmissionRefusal(
   return null;
 }
 
-async function diverScheduleClashes(
-  tx: DbExecutor,
-  shopId: string,
-  personId: string,
-  fromTripId: string,
-  target: typeof trips.$inferSelect,
-): Promise<boolean> {
-  const days = await tx
-    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
-    .from(tripScheduleDays)
-    .where(eq(tripScheduleDays.tripId, target.id));
-  const windows = days.length > 0 ? days : [{ startsAt: target.startsAt, endsAt: target.endsAt }];
-  const rows = await tx
-    .select({ id: bookings.id })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.personId, personId),
-        seatHeld,
-        eq(trips.shopId, shopId),
-        liveTrip(),
-        eq(trips.status, "scheduled"),
-        ne(trips.id, fromTripId),
-        ne(trips.id, target.id),
-        or(...windows.map((window) => windowsOverlap(legWindow(tripScheduleDays, trips), window))),
-      ),
-    )
-    .limit(1);
-  if (rows.length > 0) return true;
-  const crew = await tx
-    .select({ personId: tripAssignments.personId })
-    .from(tripAssignments)
-    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
-    .where(
-      and(
-        eq(tripAssignments.personId, personId),
-        eq(trips.shopId, shopId),
-        liveTrip(),
-        eq(trips.status, "scheduled"),
-        ne(trips.id, target.id),
-        or(...windows.map((window) => windowsOverlap(legWindow(tripScheduleDays, trips), window))),
-      ),
-    )
-    .limit(1);
-  return crew.length > 0;
-}
-
 export async function moveBooking(
   db: AppDb,
   input: {
@@ -2288,15 +2222,10 @@ export async function moveBooking(
     now?: Date;
     /** Who moved it: both departures' trail lines are written with the move. */
     actorPersonId?: string;
-    rejectScheduleClashes?: boolean;
-    expectedDay?: { day: string; timeZone: string; fromProof?: string; toProof?: string };
   },
 ): Promise<MoveBookingOutcome> {
   if (input.fromTripId === input.toTripId) return { ok: false, reason: "target_unavailable" };
-  return db.transaction(async (tx) => {
-    await lockShopSchedule(tx, input.shopId);
-    return moveBookingIn(tx, input);
-  });
+  return db.transaction((tx) => moveBookingIn(tx, input));
 }
 
 /**
@@ -2315,8 +2244,6 @@ async function moveBookingIn(
     bookingId: string;
     now?: Date;
     actorPersonId?: string;
-    rejectScheduleClashes?: boolean;
-    expectedDay?: { day: string; timeZone: string; fromProof?: string; toProof?: string };
     keepParty?: boolean;
   },
 ): Promise<MoveBookingOutcome> {
@@ -2345,25 +2272,6 @@ async function moveBookingIn(
   }
   if (!source) return { ok: false, reason: "not_found" };
   if (!target) return { ok: false, reason: "target_unavailable" };
-  if (
-    input.expectedDay &&
-    (!(await departureOccupiesDay(
-      tx,
-      source,
-      input.expectedDay,
-      shopId,
-      input.expectedDay.fromProof,
-    )) ||
-      !(await departureOccupiesDay(
-        tx,
-        target,
-        input.expectedDay,
-        shopId,
-        input.expectedDay.toProof,
-      )))
-  ) {
-    return { ok: false, reason: "target_unavailable" };
-  }
   const dateRequestLink = await dateRequestOfferBookingFor(tx, { shopId, bookingId });
   const dateRequestOffer =
     dateRequestLink?.scope === "departure" && dateRequestLink.requestId
@@ -2384,15 +2292,6 @@ async function moveBookingIn(
     .limit(1)
     .for("update");
   if (!booking || booking.status === "cancelled") return { ok: false, reason: "not_found" };
-  if (input.rejectScheduleClashes && booking.identityUnconfirmedAt !== null) {
-    return { ok: false, reason: "not_movable" };
-  }
-  await lockPersonSchedule(tx, shopId, booking.personId);
-  if (input.rejectScheduleClashes) {
-    if (await diverScheduleClashes(tx, shopId, booking.personId, fromTripId, target)) {
-      return { ok: false, reason: "schedule_clash" };
-    }
-  }
   // **A seat the desk turned away moves too** (layer 3 review, dde-2 #3):
   // the desk's money line sends staff here before the boat leaves. It lands booked on
   // the new departure; the turn-away was about the old one and stays on its
@@ -2688,8 +2587,6 @@ export async function moveParty(
     leadBookingId: string;
     now?: Date;
     actorPersonId?: string;
-    rejectScheduleClashes?: boolean;
-    expectedDay?: { day: string; timeZone: string; fromProof?: string; toProof?: string };
   },
 ): Promise<MovePartyOutcome> {
   const { shopId, fromTripId, toTripId, leadBookingId } = input;
@@ -2702,8 +2599,6 @@ export async function moveParty(
   }
   try {
     return await db.transaction(async (tx): Promise<MovePartyOutcome> => {
-      await lockShopSchedule(tx, shopId);
-      await lockPartySchedule(tx, shopId);
       // Both trips, in id order, before any seat (the lock order `moveBookingIn` keeps).
       const lock = (id: string, mode: "update" | "no key update") =>
         tx
@@ -2765,8 +2660,6 @@ export async function moveParty(
           bookingId: id,
           now: input.now,
           actorPersonId: input.actorPersonId,
-          rejectScheduleClashes: input.rejectScheduleClashes,
-          expectedDay: input.expectedDay,
           keepParty: true,
         });
         if (!outcome.ok) throw new PartyMoveRefused(id, outcome);
@@ -3825,74 +3718,64 @@ export async function confirmBookingIdentity(
     heldContact?: HeldContactChoice;
   },
   notices: SendRescheduleNoticesOptions = {},
-): Promise<boolean | "contact_differs" | "busy"> {
-  const booking = await db
-    .transaction(async (tx) => {
-      await lockShopSchedule(tx, input.shopId);
-      // **The held seat's contact is never dropped silently** (issue #2145,
-      // dive-domain review H3). Once the staffer says "Same person", the desk's
-      // note of who to call is that person's: onto a record with no contact it
-      // goes as it is; beside a different one, the staffer picks which stands.
-      const [held] = await tx
-        .select({
-          personId: bookings.personId,
-          heldName: bookings.heldEmergencyContactName,
-          heldPhone: bookings.heldEmergencyContactPhone,
-          recordName: people.emergencyContactName,
-          recordPhone: people.emergencyContactPhone,
-        })
-        .from(bookings)
-        .innerJoin(
-          people,
-          and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)),
-        )
-        .where(
-          and(
-            eq(bookings.id, input.bookingId),
-            eq(bookings.shopId, input.shopId),
-            isNotNull(bookings.identityUnconfirmedAt),
-          ),
-        )
-        .for("update")
-        .limit(1);
-      if (!held) return null;
-      const carry = heldContactCarry(held, input.heldContact);
-      if (carry === "differs") return "contact_differs" as const;
-      const [row] = await tx
-        .update(bookings)
-        .set({
-          identityUnconfirmedAt: null,
-          identityBookedAs: null,
-          heldEmergencyContactName: null,
-          heldEmergencyContactPhone: null,
-        })
-        .where(
-          and(
-            eq(bookings.id, input.bookingId),
-            eq(bookings.shopId, input.shopId),
-            isNotNull(bookings.identityUnconfirmedAt),
-          ),
-        )
-        .returning({ tripId: bookings.tripId, personId: bookings.personId });
-      if (!row) return null;
-      if (carry) {
-        await tx
-          .update(people)
-          .set({ emergencyContactName: carry.name, emergencyContactPhone: carry.phone })
-          .where(and(eq(people.id, row.personId), eq(people.shopId, input.shopId)));
-      }
-      await settleConfirmedPackageCoverage(tx, {
-        shopId: input.shopId,
-        bookingId: input.bookingId,
-        personId: row.personId,
-      });
-      return row;
-    })
-    .catch((error: unknown) => {
-      if (isLockWaitRefusal(error)) return "busy" as const;
-      throw error;
+): Promise<boolean | "contact_differs"> {
+  const booking = await db.transaction(async (tx) => {
+    // **The held seat's contact is never dropped silently** (issue #2145,
+    // dive-domain review H3). Once the staffer says "Same person", the desk's
+    // note of who to call is that person's: onto a record with no contact it
+    // goes as it is; beside a different one, the staffer picks which stands.
+    const [held] = await tx
+      .select({
+        personId: bookings.personId,
+        heldName: bookings.heldEmergencyContactName,
+        heldPhone: bookings.heldEmergencyContactPhone,
+        recordName: people.emergencyContactName,
+        recordPhone: people.emergencyContactPhone,
+      })
+      .from(bookings)
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!held) return null;
+    const carry = heldContactCarry(held, input.heldContact);
+    if (carry === "differs") return "contact_differs" as const;
+    const [row] = await tx
+      .update(bookings)
+      .set({
+        identityUnconfirmedAt: null,
+        identityBookedAs: null,
+        heldEmergencyContactName: null,
+        heldEmergencyContactPhone: null,
+      })
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .returning({ tripId: bookings.tripId, personId: bookings.personId });
+    if (!row) return null;
+    if (carry) {
+      await tx
+        .update(people)
+        .set({ emergencyContactName: carry.name, emergencyContactPhone: carry.phone })
+        .where(and(eq(people.id, row.personId), eq(people.shopId, input.shopId)));
+    }
+    await settleConfirmedPackageCoverage(tx, {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      personId: row.personId,
     });
-  if (booking === "busy") return booking;
+    return row;
+  });
   if (!booking) return false;
   if (booking === "contact_differs") return booking;
   const code = "identity_confirmed";
@@ -3945,8 +3828,7 @@ export type SplitBookingIdentityResult =
         /** Two moving seats hold different emergency contacts (issue #2145). */
         | "held_contact_conflict"
         /** The seat's departure is deleted, cancelled or back (security review Y4). */
-        | "departure_closed"
-        | "busy";
+        | "departure_closed";
     };
 
 /** What the staffer told a split about the new diver, beyond a name (issue #2081). */
@@ -4184,7 +4066,6 @@ export async function splitBookingIdentity(
   let split: Split;
   try {
     split = await db.transaction(async (tx): Promise<Split> => {
-      await lockShopSchedule(tx, input.shopId);
       const now = nowDate();
       const [booking] = await tx
         .select({
@@ -4461,7 +4342,6 @@ export async function splitBookingIdentity(
       };
     });
   } catch (error) {
-    if (isLockWaitRefusal(error)) return { ok: false, reason: "busy" };
     // Two splits racing for the same address: the loser is told it is taken,
     // the same as if it had lost the read above.
     if (email && isUniqueConstraintViolation(error)) return { ok: false, reason: "email_in_use" };

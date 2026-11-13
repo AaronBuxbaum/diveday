@@ -45,8 +45,6 @@ import { correctFlySafeForTripChange, type FlySafeCorrectionOutcome } from "./fl
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { recordDeskLine } from "./operations";
-import { type PersonScheduleClash, personScheduleClashes } from "./person-schedule-clashes";
-import { lockShopSchedule } from "./person-schedule-lock";
 import { rearmTripReminders } from "./reminder-rearm";
 import { recordedRollCallRows } from "./roll-call-history";
 import type { Trip } from "./schema";
@@ -584,7 +582,6 @@ export type UpdateTripOutcome =
        * the same line the schedule builder's move writes (issue #2313).
        */
       startMoved: boolean;
-      scheduleClashes?: PersonScheduleClash[];
       /**
        * The fly-safe corrections this save sent (#2927), present whenever the
        * departure is marked as decompression diving after it; `"failed"` when
@@ -912,7 +909,6 @@ async function updateTripRecord(
   let timeMoved = false;
   let timesChanged = false;
   const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
-    await lockShopSchedule(tx, shopId);
     // Match the send path's lock order: a reschedule dispatch owns the shared
     // fence while it uses the trip row. Take the exclusive fence before the
     // row lock so a writer waiting for an in-flight send never blocks that
@@ -1237,14 +1233,7 @@ async function updateTripRecord(
         write: { code: "departure_moved", tripId },
       });
     }
-    return {
-      ok: true,
-      trip,
-      startMoved,
-      ...((timesMoved || scheduleDaysMoved) && existing.status === "scheduled"
-        ? { scheduleClashes: await personScheduleClashes(tx, shopId, tripId) }
-        : {}),
-    };
+    return { ok: true, trip, startMoved };
   });
   // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
   if (timeMoved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId] });

@@ -1,10 +1,7 @@
 import { and, eq, gt, isNull, notExists } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { createBooking } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { activityEvents, bookings, trips } from "@/db/schema";
-import { createTrip } from "@/db/trips";
-import { openPersonClashResult } from "@/features/person-clash-result";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
@@ -95,62 +92,6 @@ async function linesOn(db: AppDb, tripId: string, code: string) {
 const pad = (value: number) => String(value).padStart(2, "0");
 
 describe("the board's acts in the activity log", () => {
-  it("carries named transaction collisions in the move result", async () => {
-    const { db, shop, owner } = await context();
-    const other = await createTrip(db, {
-      shopId: shop.id,
-      title: "Other departure",
-      startsAt: new Date("2035-08-04T08:00:00Z"),
-      endsAt: new Date("2035-08-04T10:00:00Z"),
-      capacity: 8,
-    });
-    const moving = await createTrip(db, {
-      shopId: shop.id,
-      title: "Moving",
-      startsAt: new Date("2035-08-04T12:00:00Z"),
-      endsAt: new Date("2035-08-04T14:00:00Z"),
-      capacity: 8,
-    });
-    if (!other || !moving) throw new Error("expected trips");
-    const person = await createBooking(db, {
-      shopId: shop.id,
-      tripId: other.id,
-      actor: "staff",
-      fullName: "Test Diver",
-      email: "clash@example.test",
-    });
-    if (!person.ok) throw new Error(person.reason);
-    const seat = await createBooking(db, {
-      shopId: shop.id,
-      tripId: moving.id,
-      actor: "staff",
-      personId: person.personId,
-    });
-    if (!seat.ok) throw new Error(seat.reason);
-    const target = utcToWallTime(new Date("2035-08-04T09:00:00Z"), shop.timezone);
-    const form = new FormData();
-    form.set("tripId", moving.id);
-    form.set("date", `${target.year}-${pad(target.month)}-${pad(target.day)}`);
-    form.set("startTime", `${pad(target.hour)}:${pad(target.minute)}`);
-    signIn(shop, owner);
-    const location = new URL(
-      await redirectedTo(() => moveDepartureAction(shop.slug, form)),
-      "https://example.test",
-    );
-    expect(
-      openPersonClashResult(
-        location.searchParams.get("clashResult") ?? undefined,
-        shop.id,
-        moving.id,
-      ),
-    ).toMatchObject({
-      clashes: [
-        expect.objectContaining({ personName: "Test Diver", otherTitle: "Other departure" }),
-      ],
-      omitted: 0,
-    });
-  });
-
   it("names the staffer who moved a departure", async () => {
     const { db, shop, owner } = await context();
     const trip = await emptyFutureTrip(db, shop.id);

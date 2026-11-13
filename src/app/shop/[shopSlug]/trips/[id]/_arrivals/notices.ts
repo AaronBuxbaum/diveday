@@ -37,7 +37,6 @@ type DeskNoticeMap = Record<string, DeskNotice> & Record<DeskNoticeCode, DeskNot
  * 9). Every code here is a refusal or an outcome with no row state to land on.
  */
 export const DESK_NOTICES: DeskNoticeMap = {
-  "schedule-busy": { tone: "warning", key: "schedule.dayBoard.writeBusy" },
   "not-ready": { tone: "warning", key: "checkIn.notice.notReady" },
   "not-bookable": { tone: "danger", key: "checkIn.notice.notBookable" },
   // Idempotent outcome: the diver is already in the requested state.

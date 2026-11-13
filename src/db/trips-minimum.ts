@@ -8,8 +8,6 @@ import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { recordSystemTripActivity } from "./operations";
-import { type PersonScheduleClash, personScheduleClashes } from "./person-schedule-clashes";
-import { lockShopSchedule } from "./person-schedule-lock";
 import { bookings, people, shops, type Trip, tripScheduleDays, trips } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
@@ -301,7 +299,6 @@ export async function reinstateTrip(
   tripId: string,
 ): Promise<ReinstateTripOutcome> {
   return db.transaction(async (tx) => {
-    await lockShopSchedule(tx, shopId);
     await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
     const [existing] = await tx
       .select({ trip: trips, timeZone: shops.timezone })
@@ -341,14 +338,12 @@ export async function reinstateTrip(
       })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
-    return trip
-      ? { ok: true, trip, scheduleClashes: await personScheduleClashes(tx, shopId, tripId) }
-      : { ok: false, reason: "not_found" };
+    return trip ? { ok: true, trip } : { ok: false, reason: "not_found" };
   });
 }
 
 /** What {@link reinstateTrip} did: the departure is back, or why it is not. */
 export type ReinstateTripOutcome =
-  | { ok: true; trip: Trip; scheduleClashes?: PersonScheduleClash[] }
+  | { ok: true; trip: Trip }
   | { ok: false; reason: "not_found" }
   | { ok: false; reason: "boat_out_of_service"; on: CalendarDate };

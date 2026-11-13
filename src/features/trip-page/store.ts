@@ -9,8 +9,6 @@ import { loadTripSharedReads } from "@/features/trip-shared-reads";
 import { latestTripStage } from "@/features/trip-stages";
 import { canPersonRefund, canPersonRetireMedicalRefusal } from "../../db/authz";
 import type { AppDb } from "../../db/client";
-import { personScheduleClashes } from "../../db/person-schedule-clashes";
-import { lockShopSchedule } from "../../db/person-schedule-lock";
 import type { Role } from "../../lib/authz";
 
 export type TripManifestShop = TripOverviewShop &
@@ -85,12 +83,4 @@ export function readTripPage(
     details: () => getTripDetails(db, shop, tripId, input.session.user.personId),
     departureNeeds: () => getDepartureNeeds(db, shop, tripId, input),
   };
-}
-
-/** A fresh all-leg review, serialized with the same schedule writers as the result. */
-export function getTripPersonClashes(db: AppDb, shopId: string, tripId: string) {
-  return db.transaction(async (tx) => {
-    await lockShopSchedule(tx, shopId);
-    return personScheduleClashes(tx, shopId, tripId);
-  });
 }

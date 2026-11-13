@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { redirectOnScheduleBusy } from "@/app/actions/schedule-busy";
 import { canPersonOverrideCertBlock, canPersonRefund } from "@/db/authz";
 import {
   type RestoreBookingOutcome,
@@ -408,7 +407,6 @@ const MOVE_SEAT_NOTICE: Record<Exclude<MoveSeatRefusal, "not_found">, string> = 
   target_unavailable: "seat-move-unavailable",
   course_mismatch: "seat-move-course",
   already_booked: "seat-move-already",
-  schedule_clash: "seat-move-schedule-clash",
   earlier_seat: "seat-move-earlier",
   leads_party: "seat-move-party",
   on_buddy_team: "seat-move-buddy",
@@ -442,9 +440,7 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
     toTripId,
     bookingId,
     actorPersonId: s.user.personId,
-  }).catch((error: unknown) =>
-    redirectOnScheduleBusy(error, noticeUrl(back, "schedule-roster-busy", { bid: bookingId })),
-  );
+  });
   if (!moved.ok) {
     if (moved.reason === "not_found") redirect(back);
     revalidateAndRedirect(
@@ -489,9 +485,7 @@ async function moveWholeParty(
     toTripId,
     leadBookingId,
     actorPersonId: s.user.personId,
-  }).catch((error: unknown) =>
-    redirectOnScheduleBusy(error, noticeUrl(back, "schedule-roster-busy", { bid: leadBookingId })),
-  );
+  });
   if (!moved.ok) {
     if (moved.outcome.reason === "not_found") redirect(back);
     revalidateAndRedirect(
@@ -582,9 +576,7 @@ export async function undoRemoveBookingAction(
   // back on the boat.
   const outcome = await restoreBooking(dbi, s.user.shopId, bookingId, {
     actorPersonId: s.user.personId,
-  }).catch((error: unknown) =>
-    redirectOnScheduleBusy(error, noticeUrl(back, "schedule-roster-busy", { bid: bookingId })),
-  );
+  });
   if (outcome === "not_found") redirect(back);
   // Each refusal needs a different thing done about it: the boat's capacity,
   // a course session's own gates (its ratio, its instructor, the student's

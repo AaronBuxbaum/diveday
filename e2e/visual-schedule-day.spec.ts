@@ -14,7 +14,7 @@ signedInAsOwner();
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
-    test(`day schedule with a move open (${scheme})`, async ({ page }) => {
+    test(`day schedule with a roster open (${scheme})`, async ({ page }) => {
       const day = daysFromNow(0);
       await createTrip(page, {
         title: "Afternoon day view",
@@ -27,9 +27,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto(`/shop/blue-mantis/schedule/board?view=day&day=${day}`);
       await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
       await page.locator("summary").filter({ hasText: /^Crew/ }).first().click();
-      await page.locator("summary").filter({ hasText: "Move" }).first().click();
-      await expect(page.getByLabel("Move to").first()).toBeVisible();
-      await capture(page, "schedule-day-move", scheme);
+      await capture(page, "schedule-day-roster", scheme);
     });
   });
 }

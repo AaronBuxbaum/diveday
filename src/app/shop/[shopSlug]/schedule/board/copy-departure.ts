@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { AppDb } from "@/db/client";
-import { isLockWaitRefusal } from "@/db/lock-bounds";
 import { getTripCrewAssignments, setTripCrew } from "@/db/trips";
 
 /** The board's "Copy" form: which departure, the new day and time, and whether its crew comes. */
@@ -24,12 +23,9 @@ export async function copyCrewIfAsked(
   form: { tripId: string; sameCrew?: "on" },
   copyId: string,
   actorPersonId: string,
-): Promise<boolean | "busy"> {
+): Promise<boolean> {
   if (!form.sameCrew) return true;
   const crew = await getTripCrewAssignments(db, shopId, form.tripId);
   if (crew.length === 0) return true;
-  return setTripCrew(db, shopId, copyId, crew, { actorPersonId }).catch((error: unknown) => {
-    if (isLockWaitRefusal(error)) return "busy" as const;
-    throw error;
-  });
+  return setTripCrew(db, shopId, copyId, crew, { actorPersonId });
 }

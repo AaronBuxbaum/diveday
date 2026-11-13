@@ -44,13 +44,6 @@ const NOTICE_KEYS: Record<
     onKey?: StaffMessageKey;
   }
 > = {
-  "schedule-edit-busy": { form: "details", tone: "warning", key: "schedule.dayBoard.writeBusy" },
-  "schedule-lifecycle-busy": {
-    form: "lifecycle",
-    tone: "warning",
-    key: "schedule.dayBoard.writeBusy",
-  },
-  "schedule-roster-busy": { form: "roster", tone: "warning", key: "schedule.dayBoard.writeBusy" },
   ...TRIP_UNDO_NOTICES,
   saved: { form: "details", tone: "success", key: "trips.notices.saved" },
   "saved-fly-safe-unreached": {
@@ -175,11 +168,6 @@ const NOTICE_KEYS: Record<
   },
   "seat-move-course": { form: "roster", tone: "danger", key: "trips.notices.seatMoveCourse" },
   "seat-move-already": { form: "roster", tone: "danger", key: "trips.notices.seatMoveAlready" },
-  "seat-move-schedule-clash": {
-    form: "roster",
-    tone: "danger",
-    key: "trips.notices.seatMoveScheduleClash",
-  },
   "seat-move-earlier": { form: "roster", tone: "danger", key: "trips.notices.seatMoveEarlier" },
   "seat-move-party": { form: "roster", tone: "danger", key: "trips.notices.seatMoveParty" },
   "seat-move-buddy": { form: "roster", tone: "danger", key: "trips.notices.seatMoveBuddy" },

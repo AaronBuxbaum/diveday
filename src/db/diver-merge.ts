@@ -41,7 +41,6 @@ import {
 } from "./boarding-certification-snapshot";
 import { contactReplaced, revokeLinksSentToOldContact } from "./contact-change";
 import { refileCourseFormRecords } from "./course-forms";
-import { lockShopSchedule } from "./person-schedule-lock";
 import { retireRecapLinks } from "./recap-links";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -979,7 +978,6 @@ export async function mergeDiverRecords(input: {
         return { ok: false, reason: "not_found" };
       }
 
-      await lockShopSchedule(tx, input.shopId);
       await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
       const lockedIds = [input.personId, input.survivorId].sort();
       const locked = await tx

@@ -10,7 +10,6 @@
  */
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { redirectOnScheduleBusy } from "@/app/actions/schedule-busy";
 import { cancelDeparture } from "@/db/aboard-at-sea";
 import { getDb } from "@/db/client";
 import { flushUrgentCrewNotices } from "@/db/crew-notices";
@@ -32,7 +31,6 @@ import {
 import { getBoatById } from "@/features/boats";
 import { checkbox, formValue, readForm } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
-import { sealPersonClashResult } from "@/features/person-clash-result";
 import { requireShopSurface } from "@/features/session";
 import { getTripLens } from "@/features/trip-lenses";
 import { nowDate } from "@/lib/clock";
@@ -469,17 +467,11 @@ async function saveDepartureDetails(
     dives,
   };
   if (section && !formData.has("lensId")) delete patch.lensId;
-  const outcome = await (section
-    ? editTripSection(dbi, s.user.shopId, tripId, departureSectionPatch(section, patch), {
+  const outcome = section
+    ? await editTripSection(dbi, s.user.shopId, tripId, departureSectionPatch(section, patch), {
         captureRescheduleStart: true,
       })
-    : editTrip(dbi, s.user.shopId, tripId, patch, { captureRescheduleStart: true })
-  ).catch((error: unknown) =>
-    redirectOnScheduleBusy(
-      error,
-      noticeUrl(back, "schedule-edit-busy", { form: section ?? "details" }),
-    ),
-  );
+    : await editTrip(dbi, s.user.shopId, tripId, patch, { captureRescheduleStart: true });
   if (!outcome.ok) {
     await photo.discardUpload();
     redirectUpdateRefusal(back, outcome, section);
@@ -538,9 +530,6 @@ async function saveDepartureDetails(
       view: "details",
       ...(section ? { form: section } : {}),
       ...(notice ? { held: notice.id, tell: notice.told } : {}),
-      ...(outcome.scheduleClashes?.length
-        ? { clashResult: sealPersonClashResult(s.user.shopId, tripId, outcome.scheduleClashes) }
-        : {}),
       ...(savedNotice === "saved-fly-safe-unreached" && flySafe && flySafe !== "failed"
         ? { count: flySafe.unreached.length }
         : {}),
@@ -694,22 +683,11 @@ export async function reinstateTripAction(shopSlug: string, tripId: string) {
   // 20260813-minimum-head-count-departures). A trip reinstated after an
   // ordinary cancellation had no minimum to clear, so this is the same
   // statement either way rather than a branch.
-  const outcome = await reinstateTrip(await getDb(), s.user.shopId, tripId).catch(
-    (error: unknown) => redirectOnScheduleBusy(error, noticeUrl(back, "schedule-lifecycle-busy")),
-  );
+  const outcome = await reinstateTrip(await getDb(), s.user.shopId, tripId);
   // Its hull went to the yard meanwhile (issue #4027): the notice names the
   // day, so the desk moves the departure or swaps the boat first.
   if (!outcome.ok && outcome.reason === "boat_out_of_service") {
     redirect(noticeUrl(back, "reinstate-boat-out-of-service", { on: outcome.on }));
   }
-  revalidateAndRedirect(
-    back,
-    noticeUrl(
-      back,
-      "reinstated",
-      outcome.ok && outcome.scheduleClashes?.length
-        ? { clashResult: sealPersonClashResult(s.user.shopId, tripId, outcome.scheduleClashes) }
-        : undefined,
-    ),
-  );
+  revalidateAndRedirect(back, noticeUrl(back, "reinstated"));
 }

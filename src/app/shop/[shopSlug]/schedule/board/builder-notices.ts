@@ -16,14 +16,11 @@ export const BUILDER_NOTICE_KEYS: Record<
   string,
   { tone: "success" | "danger" | "warning"; key: StaffMessageKey }
 > = {
-  "schedule-busy": { tone: "warning", key: "schedule.dayBoard.writeBusy" },
   added: { tone: "success", key: "schedule.notices.added" },
-  "added-crew-busy": { tone: "warning", key: "schedule.notices.addedCrewBusy" },
   moved: { tone: "success", key: "schedule.notices.moved" },
   copied: { tone: "success", key: "schedule.notices.copied" },
   // Item 53: the departure copied, its crew refused as a whole.
   "copied-no-crew": { tone: "warning", key: "schedule.notices.copiedNoCrew" },
-  "copied-crew-busy": { tone: "warning", key: "schedule.notices.copiedCrewBusy" },
   // Last year's week, copied onto an empty one (fifth loop, item 30).
   "week-copied": { tone: "success", key: "schedule.notices.weekCopied" },
   "week-not-empty": { tone: "warning", key: "schedule.notices.weekNotEmpty" },

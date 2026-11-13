@@ -6,6 +6,58 @@ import { readScheduleDay } from "./store";
 const ctx = fileScopedShopContext();
 
 describe("readScheduleDay", () => {
+  it("shows cross-role overlaps but not adjacent legs or unconfirmed identities", async () => {
+    const { db, shop } = ctx;
+    const { createBooking } = await import("@/db/bookings");
+    const { bookings } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const person = (await listStaff(db, shop.id))[0]?.person;
+    if (!person) throw new Error("expected staff");
+    const make = (title: string, start: string, end: string) =>
+      createTrip(db, {
+        shopId: shop.id,
+        title,
+        startsAt: new Date(`2035-08-04T${start}:00Z`),
+        endsAt: new Date(`2035-08-04T${end}:00Z`),
+        capacity: 8,
+      });
+    const first = await make("Crew boat", "08:00", "12:00");
+    const overlap = await make("Diver boat", "10:00", "11:00");
+    const adjacent = await make("Later boat", "12:00", "14:00");
+    if (!first || !overlap || !adjacent) throw new Error("expected trips");
+    expect(await setTripCrew(db, shop.id, first.id, [person.id])).toBe(true);
+    const seat = await createBooking(db, {
+      shopId: shop.id,
+      tripId: overlap.id,
+      actor: "staff",
+      personId: person.id,
+    });
+    const later = await createBooking(db, {
+      shopId: shop.id,
+      tripId: adjacent.id,
+      actor: "staff",
+      personId: person.id,
+    });
+    if (!seat.ok || !later.ok) throw new Error("expected bookings");
+    let rows = await readScheduleDay(db, shop.id, "2035-08-04", "UTC");
+    expect(rows.find((row) => row.tripId === first.id)?.collisions).toEqual([
+      { personId: person.id, otherTripId: overlap.id, otherTitle: "Diver boat" },
+    ]);
+    await db
+      .update(bookings)
+      .set({
+        identityUnconfirmedAt: new Date("2035-08-01T00:00:00Z"),
+        identityBookedAs: "Unconfirmed Diver",
+      })
+      .where(eq(bookings.id, seat.bookingId));
+    rows = await readScheduleDay(db, shop.id, "2035-08-04", "UTC");
+    expect(rows.find((row) => row.tripId === first.id)?.collisions).toEqual([]);
+    expect(rows.find((row) => row.tripId === overlap.id)?.divers[0]).toMatchObject({
+      name: "Unconfirmed Diver",
+      personId: null,
+    });
+  });
+
   it("names the other departure when a later schedule move creates a crew clash", async () => {
     const { db, shop } = ctx;
     const person = (await listStaff(db, shop.id))[0]?.person;

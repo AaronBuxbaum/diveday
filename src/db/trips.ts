@@ -66,7 +66,6 @@ export {
   getTripCrewAssignments,
   getTripCrewIds,
   listStaff,
-  moveTripCrew,
   type StaffPerson,
   setTripCrew,
   type TripCrewChange,

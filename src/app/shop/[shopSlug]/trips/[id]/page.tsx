@@ -8,13 +8,13 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { shopPath } from "@/lib/staff-notices";
+import { finalHomeSaid, tripPhaseOf } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
 import { CoursePulse } from "./_components/CoursePulse";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
-import { departureEditability } from "./_components/departure-editability";
 import { departureStateOf } from "./_components/departure-states";
 import { detailsReadRows } from "./_components/details-rows";
 import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
@@ -29,8 +29,8 @@ import { TripDetailsPanel } from "./_components/TripDetailsPanel";
 import { TripHeaderBadges } from "./_components/TripHeaderBadges";
 import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { TripMoreActions } from "./_components/TripMoreActions";
+import { TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripPageHeader } from "./_components/TripPageHeader";
-import { TripPageResultNotices } from "./_components/TripPageResultNotices";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames } from "./_components/trip-about-rows";
@@ -169,14 +169,16 @@ export default async function ManageTripPage({
     t,
   });
 
-  const { detailsEditable, mayChangeDeparture } = departureEditability(
-    trip,
+  const lifecycle = {
+    ...trip,
     now,
-    shop.timezone,
-    stageReading,
-    scheduleDays,
-    cancelled,
-  );
+    timeZone: shop.timezone,
+    stage: stageReading,
+    cancelled: false,
+    meetingWindows: scheduleDays,
+  };
+  const detailsEditable = tripPhaseOf(lifecycle) !== "back";
+  const mayChangeDeparture = !cancelled && !finalHomeSaid(lifecycle);
   const acceptsDivers = acceptsNewDivers(trip, now);
   // The desk while arrivals are open, or a finished departure's record; the stage is read with
   // it, since a diver counted out and not back keeps the departure open (`readDepartureStage`).
@@ -264,7 +266,7 @@ export default async function ManageTripPage({
           copy={tabsCopy}
         />
 
-        <TripPageResultNotices {...{ rootPageNotice, rest, db, shop, trip, shopSlug, locale }} />
+        <TripNoticeBanner notice={rootPageNotice} locale={locale} />
         <FlySafeFollowUps {...{ db, shop, shopSlug, tripId, now, locale }} />
 
         <TripCancellation

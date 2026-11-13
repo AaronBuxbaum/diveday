@@ -431,7 +431,6 @@ export const NOTICE_KEYS: DiverNoticeMap = {
     key: "divers.notices.notAuthorizedMerge",
   },
   "merge-invalid": { form: "merge", tone: "danger", key: "divers.notices.mergeInvalid" },
-  "merge-schedule-busy": { form: "merge", tone: "warning", key: "schedule.dayBoard.writeBusy" },
   "merge-anonymized": {
     form: "merge",
     tone: "danger",
