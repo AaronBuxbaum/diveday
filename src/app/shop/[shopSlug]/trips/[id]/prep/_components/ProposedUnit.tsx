@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useState, useTransition } from "react";
+import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import type { ConfirmProposalsResult } from "../proposal-actions";
 
@@ -102,11 +103,7 @@ export function ConfirmProposals({
       >
         {isPending ? copy.pending : copy.action}
       </button>
-      {message ? (
-        <p role="alert" className="text-sm font-medium text-warning-strong">
-          {message}
-        </p>
-      ) : null}
+      {message ? <ErrorToast message={message} tone="warning" /> : null}
     </div>
   );
 }

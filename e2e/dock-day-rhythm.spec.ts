@@ -130,10 +130,13 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   // clears it so crew read the divers' time.
   const crewLead = page.getByLabel("Crew arrive before divers");
   await expect(crewLead).toHaveValue("30");
+  // Each save's toast leaves before the next save, so a wait on "saved" is the new one.
+  await expect(page.getByText("Dock day saved")).toHaveCount(0);
   await crewLead.fill("45");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Dock day saved");
   await expect(page.getByLabel("Crew arrive before divers")).toHaveValue("45");
+  await expect(page.getByText("Dock day saved")).toHaveCount(0);
   await page.getByLabel("Crew arrive before divers").fill("");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Dock day saved");

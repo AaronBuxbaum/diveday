@@ -1,7 +1,7 @@
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { PeriodNav } from "@/components/PeriodNav";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { weatherCallsInWindow } from "@/db/blowouts";
 import type { DbExecutor } from "@/db/client";
 import { counterTaxIncluded } from "@/features/report-lines";
@@ -24,7 +24,6 @@ import { shopPath } from "@/lib/staff-notices";
 import { sameMomentYearBefore, shopDaysBounds } from "@/lib/zoned";
 import { StaffSectionTabs } from "../../_components/StaffSectionTabs";
 import { ReportExportMenu } from "./ReportExportMenu";
-import { ReportRangeTabs } from "./ReportRangeTabs";
 import { YearReport } from "./YearReport";
 
 /**
@@ -137,7 +136,8 @@ export async function YearView({
       : null,
   ].filter((line): line is string => line !== null);
   const reports = shopPath(shopSlug, "reports");
-  const years = Array.from({ length: thisYear - firstYear + 1 }, (_, index) => thisYear - index);
+  const yearHref = (option: number) =>
+    option === thisYear ? `${reports}?range=year` : `${reports}?range=year&year=${option}`;
   return (
     <StaffPage width="full">
       <ShopPageHeader
@@ -157,26 +157,17 @@ export async function YearView({
         }
       />
       <StaffSectionTabs section="money" current="reports" roles={roles} shop={shop} t={t} />
-      <div className="mb-8 flex flex-wrap items-center gap-3">
-        <ReportRangeTabs shopSlug={shopSlug} range="year" t={t} />
-        {years.length > 1 ? (
-          <SegmentedControl
-            ariaLabel={t("reports.year.chooseYear")}
-            currentKey={String(yearNumber)}
-            currentIsLink
-            ariaCurrentValue="true"
-            scroll={false}
-            items={years.map((option) => ({
-              key: String(option),
-              label: shopSeasonLabel(shopSeasonOf(option, seasonStart)),
-              href:
-                option === thisYear
-                  ? `${reports}?range=year`
-                  : `${reports}?range=year&year=${option}`,
-            }))}
-          />
-        ) : null}
-      </div>
+      <PeriodNav
+        range="year"
+        monthHref={reports}
+        yearHref={`${reports}?range=year`}
+        title={shopSeasonLabel(season)}
+        soFar={isThisYear}
+        prevHref={yearNumber > firstYear ? yearHref(yearNumber - 1) : null}
+        nextHref={isThisYear ? null : yearHref(yearNumber + 1)}
+        t={t}
+        className="mb-8"
+      />
       <YearReport
         year={year}
         lastYear={

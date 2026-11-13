@@ -20,6 +20,8 @@ export const WORDS: StaffingWeekWords = {
   person: "Person",
   needsCrew: "Needs crew",
   shiftsAndAway: "Shifts and days off",
+  shift: "Shift",
+  emptyDay: "Nothing scheduled this day",
   assign: "Assign",
   assignAria: "Assign crew to {trip}",
   crewing: "Crewing",
@@ -81,6 +83,7 @@ export function renderWeek({
   blocks = [],
   requests = [],
   viewer,
+  dayParam,
 }: {
   people?: WeekPerson[];
   gaps?: WeekGap[];
@@ -89,6 +92,8 @@ export function renderWeek({
   blocks?: AvailabilityBlock[];
   requests?: CrewAssignmentRequest[];
   viewer?: { personId: string; isCrew: boolean; holdsInstructorRole: boolean };
+  /** The day opened under the phone calendar; today when omitted. */
+  dayParam?: string;
 } = {}) {
   const week = staffWeek({
     people,
@@ -109,6 +114,7 @@ export function renderWeek({
       words={WORDS}
       links={{
         rangeLabel: "Aug 24 – 30, 2026",
+        dayHrefPrefix: "/shop/blue-mantis/staffing?week=2026-08-24&day=",
         previousHref: "/shop/blue-mantis/staffing?week=2026-08-17",
         nextHref: "/shop/blue-mantis/staffing?week=2026-08-31",
         thisWeekHref: null,
@@ -119,6 +125,7 @@ export function renderWeek({
       shopSlug="blue-mantis"
       canManage={canManage}
       canDecide={canDecide}
+      dayParam={dayParam}
       deleteShiftAction={vi.fn()}
       requestAction={vi.fn()}
       decideRequestAction={vi.fn()}

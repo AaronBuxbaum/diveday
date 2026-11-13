@@ -2,7 +2,7 @@ import type { AppDb } from "@/db/client";
 import { listStaff } from "@/db/trips";
 import { lastSafetyDrills, listSafetyDrills } from "@/features/safety-drills";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { isoDate, type MonthRef, monthKey } from "@/lib/calendar";
+import { isoDate, type MonthRef } from "@/lib/calendar";
 import {
   calendarDateInTimezone,
   calendarDateToUtcMidnight,
@@ -35,35 +35,53 @@ export async function readDrillLog({
   shopId,
   timeZone,
   month,
+  recent = false,
   locale,
   t,
 }: {
   db: AppDb;
   shopId: string;
   timeZone: string;
-  /** The month being read, or null for the year view, which lists no drills. */
-  month: MonthRef | null;
+  /** The month a printed sheet is read for, or null for the year view, which lists no drills. */
+  month?: MonthRef | null;
+  /** The Drills tab: the drills held in the last year, whatever the month. */
+  recent?: boolean;
   locale: string;
   t: StaffTranslator;
 }) {
   const today = calendarDateInTimezone(nowDate(), timeZone);
-  const [last, held, staff] = await Promise.all([
-    lastSafetyDrills(db, shopId),
-    month
-      ? listSafetyDrills(db, shopId, {
+  const range = recent
+    ? { from: shiftCalendarDateMonths(today, -12), to: today }
+    : month
+      ? {
           from: isoDate(month.year, month.month, 1),
           to: isoDate(
             month.year,
             month.month,
             new Date(Date.UTC(month.year, month.month, 0)).getUTCDate(),
           ),
-        })
-      : [],
+        }
+      : null;
+  const [last, held, staff] = await Promise.all([
+    lastSafetyDrills(db, shopId),
+    range ? listSafetyDrills(db, shopId, range) : [],
     listStaff(db, shopId),
   ]);
   const names = cachedListFormat(locale, { type: "conjunction" });
   return {
     title: t("incidents.safety.drills.title"),
+    // The four tiles: a big number of days, or none when the drill was never held.
+    tiles: DRILL_KINDS.map((kind) => {
+      const heldOn = last.get(kind);
+      return {
+        kind,
+        label: drillKindLabel(t, kind),
+        days: heldOn ? calendarDaysBetween(heldOn, today) : null,
+        caption: heldOn
+          ? t("incidents.safety.drills.tileDays", { days: calendarDaysBetween(heldOn, today) })
+          : t("incidents.safety.drills.tileNever"),
+      };
+    }),
     since: DRILL_KINDS.map((kind) => {
       const heldOn = last.get(kind);
       const label = drillKindLabel(t, kind);
@@ -79,6 +97,7 @@ export async function readDrillLog({
       };
     }),
     heldTitle: t("incidents.safety.drills.heldTitle"),
+    heldSummary: t("incidents.safety.drills.heldSummary", { count: held.length }),
     held: held.map((drill) => ({
       id: drill.id,
       line: `${formatShortDate(calendarDateToUtcMidnight(drill.heldOn), locale, "UTC")} · ${drillKindLabel(t, drill.kind)}`,
@@ -90,7 +109,6 @@ export async function readDrillLog({
       }),
     })),
     form: {
-      month: month ? monthKey(month) : null,
       today,
       earliest: shiftCalendarDateMonths(today, -DRILL_BACKDATE_MONTHS),
       noteMax: DRILL_NOTE_MAX,

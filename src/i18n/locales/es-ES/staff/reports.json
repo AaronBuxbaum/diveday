@@ -23,8 +23,9 @@
     "revenueDetailWithImported": "Pagos y depósitos de salidas actuales después del impuesto de Stripe, más {count, plural, one {# registro importado del origen sin verificar} other {# registros importados del origen sin verificar}}: {payments} en pagos y {refunds} en reembolsos.",
     "bookingsLabel": "Plazas",
     "seatFillLabel": "Ocupación",
-    "waiversLabel": "Exenciones",
-    "tipsLabel": "Propinas"
+    "tipsLabel": "Propinas",
+    "billedLabel": "Facturado",
+    "collectedLabel": "Cobrado"
   },
   "noTripsFuture": "Todavía no hay nada reservado para este mes",
   "noTripsPast": "Ninguna salida zarpó este mes",
@@ -90,7 +91,11 @@
     "stripMedium": "50–84% de ocupación",
     "stripLegend": "Ocupación de las salidas",
     "stripFuture": "Día futuro",
-    "stripFutureDay": "{day} · día futuro"
+    "stripFutureDay": "{day} · día futuro",
+    "previous": "Año anterior",
+    "next": "Año siguiente",
+    "earliestTitle": "Este es tu primer año con salidas",
+    "currentTitle": "Estás viendo el año actual"
   },
   "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador",
   "buddyReferrer": "{name} trajo {count, plural, one {# amigo} other {# amigos}}",

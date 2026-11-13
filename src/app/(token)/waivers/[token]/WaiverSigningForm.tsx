@@ -253,7 +253,7 @@ export async function waiverSigningForm({
         {errorText || saved || locale !== DEFAULT_DIVER_LOCALE ? (
           <div className="mt-6 flex flex-col gap-3">
             {errorText ? (
-              <ShopNotice tone="danger" role="alert">
+              <ShopNotice tone="danger">
                 {errorText}{" "}
                 {fieldError ? (
                   <a href={`#${fieldError.anchor}`} className="underline underline-offset-2">

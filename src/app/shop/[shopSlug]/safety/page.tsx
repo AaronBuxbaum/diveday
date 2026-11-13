@@ -1,23 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { StaffSectionTabs } from "@/app/shop/[shopSlug]/_components/StaffSectionTabs";
 import { CREDENTIAL_KIND_KEYS } from "@/app/shop/[shopSlug]/settings/team/credential-kinds";
-import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { EmptyState } from "@/components/EmptyState";
-import { FlashParams } from "@/components/FlashParams";
+import { PeriodNav } from "@/components/PeriodNav";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonViewShopReports, listStaffCredentials } from "@/features/safety-report";
 import { requireShopSurface } from "@/features/session";
 import { monthKey, monthLabel } from "@/lib/calendar";
-import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { shopPath } from "@/lib/staff-notices";
 import { MonthFigures } from "../reports/_components/MonthFigures";
-import { DrillLog } from "./_components/DrillLog";
-import { readDrillLog } from "./_components/drill-log-read";
-import { drillNoticeMessages } from "./_components/drill-notices";
 import { SafetyLists } from "./_components/SafetyLists";
 import { readSafetyReport } from "./_components/safety-read";
 
@@ -34,10 +30,10 @@ export default async function SafetyReportPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string; year?: string; notice?: string }>;
+  searchParams: Promise<{ month?: string; year?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { month, year: yearParam, notice } = await searchParams;
+  const { month, year: yearParam } = await searchParams;
   // The Reports gate, re-read against the database; a refusal lands on Today
   // with its reason, as Reports' own does.
   const { session, db, shop } = await requireShopSurface(shopSlug, {
@@ -58,21 +54,8 @@ export default async function SafetyReportPage({
     figures,
     monthTiles,
   } = await readSafetyReport({ shopSlug, session, db, shop, month, year: yearParam });
-  // The drill log (loop 5, row 2): every kind's last drill, and the month's drills.
-  const drills = await readDrillLog({
-    db,
-    shopId: shop.id,
-    timeZone: tz,
-    month: year ? null : current,
-    locale,
-    t,
-  });
   const credentials = await listStaffCredentials(db, shop.id);
   const credentialPeople = new Set(credentials.map(({ person }) => person.id)).size;
-  const banner = noticeFromParam(notice, drillNoticeMessages(t));
-
-  const navClass = buttonClass({ variant: "secondary", size: "icon" });
-  const navDisabledClass = `${navClass} pointer-events-none opacity-40`;
   const safetyPath = shopPath(shopSlug, "safety");
 
   return (
@@ -80,77 +63,31 @@ export default async function SafetyReportPage({
       <ShopPageHeader
         title={t("shared.shopSections.safety")}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={
-                year
-                  ? `${safetyPath}?month=${monthKey(current)}`
-                  : `${safetyPath}?year=${current.year}`
-              }
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t(year ? "incidents.safety.monthView" : "incidents.safety.year.open")}
-            </Link>
-            <Link
-              href={`${shopPath(shopSlug, "safety", "print")}?${year ? `year=${year.number}` : `month=${monthKey(current)}`}`}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t(year ? "incidents.safety.year.print" : "incidents.safety.printMonth")}
-            </Link>
-          </div>
+          <Link
+            href={`${shopPath(shopSlug, "safety", "print")}?${year ? `year=${year.number}` : `month=${monthKey(current)}`}`}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t(year ? "incidents.safety.year.print" : "incidents.safety.printMonth")}
+          </Link>
         }
       />
-      <FlashParams params={["notice"]} />
-      {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h2 className={SECTION_TITLE_CLASS}>
-          {year ? String(year.number) : monthLabel(current, locale)}
-          {(year ? year.isThisYear : isThisMonth) ? (
-            <span className="ms-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>
-          ) : null}
-        </h2>
-        <nav
-          aria-label={t(year ? "incidents.safety.year.chooseYear" : "reports.chooseMonth")}
-          className="flex flex-wrap items-center gap-2"
-        >
-          {prevKey ? (
-            <Link
-              href={`${safetyPath}?${prevKey}`}
-              aria-label={t(year ? "incidents.safety.year.previous" : "reports.previousMonth")}
-              className={navClass}
-              scroll={false}
-            >
-              <DiveDayIcon name="arrow-left" className="size-4" />
-            </Link>
-          ) : (
-            <span
-              aria-hidden="true"
-              title={t(year ? "incidents.safety.year.earliestTitle" : "reports.earliestMonthTitle")}
-              className={navDisabledClass}
-            >
-              <DiveDayIcon name="arrow-left" className="size-4" />
-            </span>
-          )}
-          {nextKey ? (
-            <Link
-              href={`${safetyPath}?${nextKey}`}
-              aria-label={t(year ? "incidents.safety.year.next" : "reports.nextMonth")}
-              className={navClass}
-              scroll={false}
-            >
-              <DiveDayIcon name="arrow-right" className="size-4" />
-            </Link>
-          ) : (
-            <span
-              aria-hidden="true"
-              title={t(year ? "incidents.safety.year.currentTitle" : "reports.currentMonthTitle")}
-              className={navDisabledClass}
-            >
-              <DiveDayIcon name="arrow-right" className="size-4" />
-            </span>
-          )}
-        </nav>
-      </div>
+      <StaffSectionTabs
+        section="safety"
+        current="safety"
+        roles={session.user.roles}
+        shop={shop}
+        t={t}
+      />
+      <PeriodNav
+        range={year ? "year" : "month"}
+        monthHref={`${safetyPath}?month=${monthKey(current)}`}
+        yearHref={`${safetyPath}?year=${year ? year.number : current.year}`}
+        title={year ? String(year.number) : monthLabel(current, locale)}
+        soFar={year ? year.isThisYear : isThisMonth}
+        prevHref={prevKey ? `${safetyPath}?${prevKey}` : null}
+        nextHref={nextKey ? `${safetyPath}?${nextKey}` : null}
+        t={t}
+      />
 
       {safety.departuresBack === 0 && incidents.length === 0 ? (
         <EmptyState
@@ -206,9 +143,6 @@ export default async function SafetyReportPage({
           </Link>
         </div>
       </section>
-      <div className="mt-10">
-        <DrillLog view={drills} />
-      </div>
     </StaffPage>
   );
 }

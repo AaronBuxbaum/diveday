@@ -25,6 +25,10 @@ export type DiveDaySharedIconName =
   | "warning"
   | "boat"
   | "badge"
+  | "drill-oxygen"
+  | "drill-missing-diver"
+  | "drill-overboard"
+  | "drill-fire"
   | `waiver-action-${WaiverActionIconName}`
   | `waiver-mark-${WaiverDeliveryMarkName}`;
 
@@ -86,6 +90,36 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
       <path d="M12 2.25 19.5 5.25v6c0 4.8-3.15 8.4-7.5 10.2-4.35-1.8-7.5-5.4-7.5-10.2v-6z" />
       <path d="m8.7 12 2.4 2.4L15.6 9.75" />
     </>
+  ),
+  // The four drills' marks, one per kind a shop practices (`DrillLog`): a
+  // cylinder with its valve, a swimmer's head and shoulders with a search ring
+  // beside it, a figure in the waves, and a flame.
+  "drill-oxygen": (
+    <>
+      <rect x="8" y="8" width="8" height="13" rx="3" />
+      <path d="M10.5 8V5.5h3V8" />
+      <path d="M13.5 6.2h3.5" />
+      <path d="M8 13h8" />
+    </>
+  ),
+  "drill-missing-diver": (
+    <>
+      <circle cx="9" cy="8.5" r="2.5" />
+      <path d="M4.5 19c0-3 2-5 4.5-5s4.5 2 4.5 5" />
+      <circle cx="17" cy="14" r="3" />
+      <path d="m19.2 16.2 2 2" />
+    </>
+  ),
+  "drill-overboard": (
+    <>
+      <circle cx="12" cy="6.5" r="2.5" />
+      <path d="M9 12.5c1-.8 2-1.2 3-1.2s2 .4 3 1.2" />
+      <path d="M3 16c1.5-1.4 3-1.4 4.5 0s3 1.4 4.5 0 3-1.4 4.5 0 3 1.4 4.5 0" />
+      <path d="M3 20c1.5-1.4 3-1.4 4.5 0s3 1.4 4.5 0 3-1.4 4.5 0 3 1.4 4.5 0" />
+    </>
+  ),
+  "drill-fire": (
+    <path d="M12 3c.5 3 4.5 5 4.5 10a4.5 4.5 0 0 1-9 0c0-2 1-3.2 2-4 .2 1.2.8 1.8 1.5 2C11 8.5 11 5.5 12 3Z" />
   ),
   "arrow-right": (
     <>

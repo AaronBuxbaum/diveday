@@ -2,6 +2,7 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
 import { Bone, Pending } from "@/components/ui/pending";
+import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 import { figureCellClass } from "../reports/_components/MonthFigures";
 
 /**
@@ -17,13 +18,12 @@ export default function SafetyReportLoading() {
         <div className="mb-6">
           <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-6" width="w-160 max-w-full" />
         </div>
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <StaffSectionTabsSkeleton section="safety" />
+        <Bone shape="control" className="mb-6 h-11 w-44" />
+        <div className="mb-6 flex items-center gap-3">
+          <Bone shape="control" className="size-12" />
           <Bone className="h-7 w-40" />
-          <div className="flex flex-wrap items-center gap-2">
-            <Bone shape="control" className="size-12" />
-            <Bone shape="control" className="h-12 w-44" />
-            <Bone shape="control" className="size-12" />
-          </div>
+          <Bone shape="control" className="size-12" />
         </div>
         <div className="-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5">
           {[0, 1, 2, 3, 4].map((index) => (

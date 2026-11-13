@@ -22,6 +22,7 @@ import {
   listDiveSiteMapRows,
   listDiveSitesPage,
 } from "@/db/dive-sites";
+import { parseSiteFilters, siteListHref } from "@/features/dive-sites";
 import { requireShopSurface } from "@/features/session";
 import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
@@ -32,8 +33,10 @@ import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { CatalogView } from "./_components/CatalogView";
 import { NewSitePanel } from "./_components/NewSitePanel";
+import { SiteFilterChips } from "./_components/SiteFilterChips";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
-import { CatalogDoor, SiteLibraryLedger } from "./_components/SiteLibraryLedger";
+import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
+import { SiteLibraryViews } from "./_components/SiteLibraryViews";
 import { catalogPageMetadata } from "./dive-site-page-metadata";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
@@ -76,6 +79,10 @@ export default async function DiveSitesPage({
     page?: string;
     view?: string;
     template?: string;
+    difficulty?: string;
+    need?: string;
+    /** `south,west,north,east`: only sites inside the map's rectangle. */
+    area?: string;
   }>;
 }) {
   const { shopSlug } = await params;
@@ -114,11 +121,13 @@ export default async function DiveSitesPage({
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
   const requestedPage = Number.parseInt(page ?? "", 10);
   const query = q?.trim() ?? "";
+  const filters = parseSiteFilters(search);
+  const narrowed = Boolean(filters.difficulty || filters.need || filters.area);
   const [sitePage, librarySize, catalogSize, mapRows] = await Promise.all([
     listDiveSitesPage(
       db,
       shop.id,
-      { query: query || undefined },
+      { query: query || undefined, ...filters },
       { page: Number.isFinite(requestedPage) ? requestedPage : 1 },
     ),
     // Shop-wide, never page- or search-scoped. It answers one question — does
@@ -169,13 +178,11 @@ export default async function DiveSitesPage({
     }));
 
   /** This page's URL with the search kept and only `page` swapped. */
-  const pageHref = (target: number) => {
-    const search = new URLSearchParams();
-    if (query) search.set("q", query);
-    if (target > 1) search.set("page", String(target));
-    const encoded = search.toString();
-    return encoded ? `/shop/${shopSlug}/dive-sites?${encoded}` : `/shop/${shopSlug}/dive-sites`;
-  };
+  const pageHref = (target: number) =>
+    siteListHref(libraryPath, { q: query, ...filters, page: target });
+  /** Every choice but the map's area: what the map switch builds on. */
+  const withoutArea = siteListHref(libraryPath, { q: query, ...filters, area: undefined });
+  const clearFiltersHref = siteListHref(libraryPath, { q: query });
   const catalogHref = `/shop/${shopSlug}/dive-sites?view=catalog`;
 
   return (
@@ -196,6 +203,10 @@ export default async function DiveSitesPage({
           )
         }
       />
+
+      {librarySize > 0 && catalogSize > 0 ? (
+        <SiteLibraryViews shopSlug={shopSlug} current="library" t={t} />
+      ) : null}
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
@@ -241,7 +252,7 @@ export default async function DiveSitesPage({
             // name, so nothing is lost to a screen reader or to the e2e spec
             // that clicks it by name.
             <Link
-              href={`/shop/${shopSlug}/dive-sites`}
+              href={siteListHref(libraryPath, { ...filters })}
               scroll={false}
               aria-label={t("diveSites.list.searchClear")}
               title={t("diveSites.list.searchClear")}
@@ -250,7 +261,22 @@ export default async function DiveSitesPage({
               <DiveDayIcon name="close" className="size-4" />
             </Link>
           ) : null}
+          {/* The choices the box does not own ride along when it submits. */}
+          {filters.difficulty ? (
+            <input type="hidden" name="difficulty" value={filters.difficulty} />
+          ) : null}
+          {filters.need ? <input type="hidden" name="need" value={filters.need} /> : null}
         </QueryForm>
+      ) : null}
+
+      {librarySize > 0 ? (
+        <SiteFilterChips
+          libraryPath={libraryPath}
+          query={query}
+          filters={filters}
+          t={t}
+          diverT={diverT}
+        />
       ) : null}
 
       {librarySize === 0 ? (
@@ -288,14 +314,38 @@ export default async function DiveSitesPage({
           shopAnchor={shopAnchor}
           pins={pins}
           clusterLabel={t("diveSites.map.clusterLabel")}
-          catalog={
-            catalogSize > 0 ? <CatalogDoor href={catalogHref} count={catalogSize} t={t} /> : null
-          }
+          followLabel={t("diveSites.list.followMap")}
+          scoped={Boolean(filters.area)}
+          baseHref={withoutArea}
         >
+          {filters.area ? (
+            // The list is narrowed by where the map is looking; say so here,
+            // beside the rows it changed, with the way back to all of them.
+            <p
+              role="status"
+              className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-primary bg-primary-tint px-4 py-3 text-sm text-primary"
+            >
+              <span>{t("diveSites.list.areaNote", { count: sitePage.total })}</span>
+              <Link href={withoutArea} scroll={false} className="font-medium underline">
+                {t("diveSites.list.areaClear")}
+              </Link>
+            </p>
+          ) : null}
           {sites.length === 0 ? (
             <EmptyState
               title={t("diveSites.list.noMatchHeading")}
-              body={t("diveSites.list.emptyBody")}
+              body={t(narrowed ? "diveSites.list.noMatchFilteredBody" : "diveSites.list.emptyBody")}
+              action={
+                narrowed ? (
+                  <Link
+                    href={clearFiltersHref}
+                    scroll={false}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("diveSites.list.clearFilters")}
+                  </Link>
+                ) : null
+              }
               className="mt-4"
             />
           ) : (

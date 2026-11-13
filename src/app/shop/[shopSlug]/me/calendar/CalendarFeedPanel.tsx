@@ -132,7 +132,7 @@ export function CalendarFeedPanel({
       ) : null}
 
       {denied ? (
-        <ShopNotice tone="danger" role="alert" className="mt-4">
+        <ShopNotice tone="danger" className="mt-4">
           {t("notice.denied")}
         </ShopNotice>
       ) : null}

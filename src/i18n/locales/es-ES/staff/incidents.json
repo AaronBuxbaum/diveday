@@ -214,7 +214,10 @@
       "logged": "Simulacro registrado.",
       "deleted": "Simulacro eliminado.",
       "loggedBy": "Registrado por {name}, {date}",
-      "invalid": "El simulacro no se guardó. Revisa la fecha y quién participó."
+      "invalid": "El simulacro no se guardó. Revisa la fecha y quién participó.",
+      "tileDays": "{days, plural, one {día desde el último simulacro} other {días desde el último simulacro}}",
+      "tileNever": "Ningún simulacro registrado",
+      "heldSummary": "{count, plural, =0 {Ninguno en el último año} one {# en el último año} other {# en el último año}}"
     },
     "figuresLabel": "Registro de seguridad del mes",
     "rollCalls": "Recuentos cerrados",
@@ -247,7 +250,6 @@
     "unrecordedSailings": "{count, plural, one {# salida} other {# salidas}} este mes",
     "noDepartures": "Ninguna salida volvió este mes",
     "year": {
-      "open": "Vista anual",
       "print": "Imprimir el año",
       "figuresLabel": "Registro de seguridad del año",
       "noDepartures": "Ninguna salida volvió este año",
@@ -258,15 +260,9 @@
       "rollCallsOpen": "{open, plural, one {# sin cerrar} other {# sin cerrar}} · {none, plural, one {# sin recuento} other {# sin recuento}}, en la lista de cada mes",
       "boardedDetail": "{count, plural, =0 {Todas las plazas marcadas en el muelle} one {# plaza sin marcar en el muelle, en un recuento sin cerrar de su mes} other {# plazas sin marcar en el muelle, en recuentos sin cerrar de cada mes}}",
       "printedFor": "{shopName} · del {start} al {end} de {year} · {zone}",
-      "printedOn": "Impreso el {date}",
-      "chooseYear": "Elegir un año",
-      "previous": "Año anterior",
-      "next": "Año siguiente",
-      "earliestTitle": "Este es tu primer año con salidas",
-      "currentTitle": "Estás viendo el año actual"
+      "printedOn": "Impreso el {date}"
     },
     "incidentsValue": "{filed, plural, one {# presentado} other {# presentados}}{drafts, plural, =0 {} one { · # borrador} other { · # borradores}}",
-    "monthView": "Vista mensual",
     "printMonth": "Imprimir mes",
     "preparation": {
       "title": "Tripulación y preparación",

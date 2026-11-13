@@ -153,10 +153,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/safety");
         await page.getByRole("link", { name: "Print month" }).waitFor();
         await capture(page, "safety-month", scheme);
-        await page.getByRole("link", { name: "Year view", exact: true }).click();
+        await page.getByRole("link", { name: "Year", exact: true }).click();
         await expect(page).toHaveURL(/\/safety\?year=\d{4}/);
-        await page.getByRole("link", { name: "Month view", exact: true }).waitFor();
+        await page.getByRole("link", { name: "Month", exact: true }).waitFor();
         await capture(page, "safety-year", scheme);
+      });
+
+      // The Drills tab: four tiles with the days since each drill, and the
+      // drills held shut behind one row.
+      test(`Safety drills render four tiles and a closed list (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/safety/drills");
+        await page.getByRole("heading", { level: 2, name: "Drills" }).waitFor();
+        await capture(page, "safety-drills", scheme);
       });
 
       test(`bookkeeper settings keep the settings rail (${scheme})`, async ({ page }) => {
@@ -278,7 +286,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the waiver surface renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/waivers");
-        await page.getByRole("heading", { level: 1, name: "Waivers and signed records" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Safety" }).waitFor();
         await page.getByRole("navigation", { name: "Pages" }).waitFor();
         await capture(page, "staff-waivers", scheme);
       });
@@ -322,7 +330,7 @@ for (const scheme of ["light", "dark"] as const) {
         // answers to, and `AutoOpenDetails` opens it on a hard load as well as
         // on a client transition.
         await page.goto("/shop/blue-mantis/waivers#release");
-        await page.getByRole("heading", { level: 1, name: "Waivers and signed records" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Safety" }).waitFor();
         await page.getByRole("radio", { name: /A material change/ }).check();
         await page.getByRole("button", { name: "Publish", exact: true }).click();
         await page.getByRole("button", { name: /Publish: \d+ signs? again/ }).waitFor();

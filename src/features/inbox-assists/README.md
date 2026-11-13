@@ -14,4 +14,4 @@ Schema definitions, shared primitives, routes, and UI stay in their existing lay
 
 Imports from other features use their published index. Database reads and mutations retain their existing tenant and authorization checks. This move changes ownership, not behavior.
 
-`draftReplyToMessage` answers the selected authenticated, nonspam message in the session’s shop, including unmatched senders. It reuses public reply facts, grounding, health/eligibility refusals and the existing assist budget. Drafting creates no booking or outbound message; staff review the text before copying or opening email.
+`draftReplyToMessage` answers the selected authenticated, nonspam message in the session’s shop, including unmatched senders. It reuses the shop's public facts (hours, address, departures, courses, rental gear, what to bring, notes) and the existing assist budget. A health question still gets a kind reply with no medical opinion. Drafting creates no booking or outbound message; staff review the text before copying or opening email.

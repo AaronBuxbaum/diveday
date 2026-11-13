@@ -54,7 +54,7 @@ async function fullDeparture(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(`call-fills-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+  await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
   return title;
 }
 
