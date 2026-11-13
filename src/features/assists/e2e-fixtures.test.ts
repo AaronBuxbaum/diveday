@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { importMappingCall } from "../../lib/assists/import-mapping";
-import { groundedReply, inboundTriageCall, replyDraftCall } from "../../lib/assists/inbox";
+import { draftedReply, inboundTriageCall, replyDraftCall } from "../../lib/assists/inbox";
 import { callStructured } from "../../lib/claude/structured";
 import { benchNoteCall } from "../bench-note/rules";
 import { websiteReadingCall } from "../website-reading/rules";
@@ -58,7 +58,7 @@ describe("e2eClaudeFixtureProvider", () => {
     const facts = ["Morning two-tank: 4 seats open"];
     const thread = [{ from: "diver" as const, text: "Can we move to tomorrow?" }];
     const draft = await callStructured(provider, replyDraftCall({ window: "", facts, thread }));
-    expect(draft.value && groundedReply(draft.value, { facts, thread })).toBeTruthy();
+    expect(draft.value && draftedReply(draft.value)).toBeTruthy();
     const mapping = await callStructured(
       provider,
       importMappingCall({

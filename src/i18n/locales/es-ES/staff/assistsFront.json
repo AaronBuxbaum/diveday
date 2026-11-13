@@ -13,7 +13,6 @@
     "requestDraftExists": "Completa o borra tu formulario de llamada sin terminar en Agregar una reserva, en Hoy, antes de preparar otra solicitud.",
     "draftResponse": "Redactar respuesta",
     "responseEmpty": "No pudimos contactar con la IA ahora mismo. Inténtalo de nuevo en un momento o responde con tus propias palabras.",
-    "responseFallback": "¡Gracias por tu mensaje! Alguien de nuestro equipo lo revisará y te responderá pronto.",
     "responseLabel": "Borrador de respuesta",
     "responseReview": "Revisa antes de enviar. Este borrador no modifica ninguna reserva.",
     "copyResponse": "Copiar respuesta",

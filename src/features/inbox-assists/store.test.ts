@@ -248,8 +248,8 @@ describe("replyFacts", () => {
     const { window, lines } = await replyFacts(ctx.db, ctx.shop.id, now);
     expect(window).toContain(`Today is ${formatShortDate(now, shop.locale, shop.timezone)}`);
     expect(window).toContain(shop.timezone);
-    expect(window).toContain("the next 14 days");
-    expect(window).toContain("at most 30 departures");
+    expect(window).toContain("the next 45 days");
+    expect(window).toContain("at most 40 departures");
     expect(lines.join("\n")).not.toContain("Today is");
   });
 
@@ -344,8 +344,6 @@ describe("draftReplyFor", () => {
       provider: answering({
         reply: `Yes! ${quoted.replace(/^- /, "")}`,
         medical: false,
-        eligibility: false,
-        confidence: 0.9,
       }),
       env: keyed,
     });
@@ -361,60 +359,26 @@ describe("draftReplyFor", () => {
       provider: answering({
         reply: "Park behind the shop. The gate opens at 7:15.",
         medical: false,
-        eligibility: false,
-        confidence: 0.9,
       }),
       env: keyed,
     });
     expect(draft).toBe("Park behind the shop. The gate opens at 7:15.");
   });
 
-  it("throws a draft away when it names a price nobody gave it", async () => {
-    const { personId } = await diverWithMessage("How much is a dive?");
-    expect(
-      await draftReplyFor(ctx.db, {
-        shopId: ctx.shop.id,
-        personId,
-        provider: answering({
-          reply: "It is 987654 dollars.",
-          medical: false,
-          eligibility: false,
-          confidence: 0.9,
-        }),
-        env: keyed,
-      }),
-    ).toBeNull();
-  });
-
-  it("never drafts a reply that tells a diver they are qualified", async () => {
-    const { personId } = await diverWithMessage(
-      "I'm SSI Open Water. Can I do Saturday's wreck? It's 30 m right?",
-    );
-    expect(
-      await draftReplyFor(ctx.db, {
-        shopId: ctx.shop.id,
-        personId,
-        provider: answering({
-          reply: "Yes, your Open Water card is fine for the wreck at 30 m.",
-          medical: false,
-          eligibility: true,
-          confidence: 0.9,
-        }),
-        env: keyed,
-      }),
-    ).toBeNull();
-  });
-
-  it("never drafts an answer to a medical question", async () => {
+  it("answers a health question with a kind reply", async () => {
     const { personId } = await diverWithMessage("I have asthma, can I dive?");
     expect(
       await draftReplyFor(ctx.db, {
         shopId: ctx.shop.id,
         personId,
-        provider: answering({ reply: "Sure.", medical: true, eligibility: false, confidence: 0.9 }),
+        provider: answering({
+          reply:
+            "Thanks for telling us. A physician's sign-off may be needed; our staff will help.",
+          medical: true,
+        }),
         env: keyed,
       }),
-    ).toBeNull();
+    ).toContain("physician");
   });
 
   it("drafts nothing when the shop wrote last, and sends no address", async () => {
@@ -492,37 +456,22 @@ describe("draftReplyToMessage", () => {
     });
     expect(draft).toBe("Park behind the shop.");
   });
-  it("asks once more when the first draft is thrown away, then takes the retry", async () => {
-    const { messageId } = await diverWithMessage("Where do I park?");
-    const answers = [
-      { reply: "Come at 7:45.", medical: false, eligibility: false, confidence: 0.9 },
-      {
-        reply: "A staff member will confirm.",
-        medical: false,
-        eligibility: false,
-        confidence: 0.9,
-      },
-    ];
-    const provider = fakeClaude({
-      reply: () => fakeClaudeMessage({ text: JSON.stringify(answers.shift()) }),
-    });
-    expect(
-      await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed, provider }),
-    ).toBe("A staff member will confirm.");
-    expect(provider.requests).toHaveLength(2);
-  });
-  it("answers the fallback when both attempts are unusable", async () => {
-    const { messageId } = await diverWithMessage("Am I fit to dive with asthma?");
-    const provider = answering({ reply: "", medical: true, eligibility: false, confidence: 0.9 });
+  it("hands staff the draft as written, a price the shop never listed included", async () => {
+    const { messageId } = await diverWithMessage("How much is a dive?");
     expect(
       await draftReplyToMessage(ctx.db, {
         shopId: ctx.shop.id,
         messageId,
         env: keyed,
-        provider,
-        fallback: "Thanks! We will get back to you.",
+        provider: answering({ reply: "Usually around $95; staff will confirm.", medical: false }),
       }),
-    ).toBe("Thanks! We will get back to you.");
+    ).toBe("Usually around $95; staff will confirm.");
+  });
+  it("tells the model about the shop: what to bring and rental gear", async () => {
+    const { lines } = await replyFacts(ctx.db, ctx.shop.id);
+    const text = lines.join("\n");
+    expect(text).toContain("What to bring:");
+    expect(text).toContain("Rental gear:");
   });
   it("does not send another shop’s message to the model", async () => {
     const { messageId } = await diverWithMessage("Where do I park?");
