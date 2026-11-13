@@ -104,9 +104,6 @@ export function TripTabs({
               <li key={tab} className="flex">
                 <Link
                   href={tripTabHref(shopSlug, tripId, tab)}
-                  // The current Boat page is already present; its active
-                  // link does not need another segment prefetch.
-                  prefetch={active && tab === "boat" ? false : undefined}
                   aria-current={active ? "page" : undefined}
                   className={`grow ${sectionTabClass(active, { wrap: true })}`}
                 >
