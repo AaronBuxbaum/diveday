@@ -208,6 +208,8 @@ export function InboxRowActs({
   return (
     <InboxRowView>
       {primary}
+      {/* A message that asked to move or run late promotes that act; the draft stays one tap away. */}
+      {promoted !== "reply" ? draftPanel : null}
       <form action={doneAction}>
         <input type="hidden" name="messageId" value={message.id} />
         <input type="hidden" name="receivedAt" value={message.receivedAt.toISOString()} />

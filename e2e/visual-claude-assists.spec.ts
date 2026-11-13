@@ -106,8 +106,8 @@ test.describe("light mode — Claude's assists, lit", () => {
       await expect(row.getByText(/^In Spanish: /)).toBeVisible();
       await capture(page, "assist-inbox-row", "light");
 
-      // The row opens in place (visual review A15); with a message to answer,
-      // the draft is its one primary act.
+      // The row opens in place (visual review A15); the draft is always one tap away,
+      // beside the primary act.
       await row.getByRole("button", { name: "Draft response", exact: true }).click();
       const response = row.getByRole("textbox", { name: "Response draft", exact: true });
       await expect(response).toHaveValue(/Thanks for getting in touch/);
