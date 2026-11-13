@@ -13,21 +13,24 @@ for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 844 });
       const trip = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}`;
       const manifest = `${trip}/manifest`;
+      const tripTab = page
+        .locator(`nav[data-trip-tabs] a[href="${trip}"]`)
+        .filter({ visible: true });
+      const manifestTab = page
+        .locator(`nav[data-trip-tabs] a[href="${manifest}"]`)
+        .filter({ visible: true });
       const copy = staffTranslator("en-US");
       if (direction === "forward") {
         await page.goto(trip);
-        await page.locator(`nav[data-trip-tabs] a[href="${manifest}"]`).click();
+        await manifestTab.click();
       } else {
         await page.goto(manifest);
       }
       await expect(manifestRow(page, "Priya Sharma")).toBeVisible();
       await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
       if (direction === "forward") await page.goBack();
-      else await page.locator(`nav[data-trip-tabs] a[href="${trip}"]`).click();
-      await expect(page.locator(`nav[data-trip-tabs] a[href="${trip}"]`)).toHaveAttribute(
-        "aria-current",
-        "page",
-      );
+      else await tripTab.click();
+      await expect(tripTab).toHaveAttribute("aria-current", "page");
 
       let release!: () => void;
       const held = new Promise<void>((resolve) => {

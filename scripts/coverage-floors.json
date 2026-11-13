@@ -97,6 +97,7 @@
   "src/db/medical-alerts.ts": 93.65,
   "src/db/nitrox.ts": 83.6,
   "src/features/offline-manifest-snapshots/store.ts": 70,
+  "src/features/offline-manifest-snapshots/roster-confirmation.ts": 100,
   "src/features/offline-manifest-snapshots/sync-instants.ts": 75,
   "src/features/party-waiver-queue/store.ts": 100,
   "src/db/pre-departure-check.ts": 84.88,
