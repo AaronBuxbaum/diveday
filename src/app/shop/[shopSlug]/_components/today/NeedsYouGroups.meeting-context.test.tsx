@@ -7,6 +7,8 @@ import { afterEach, expect, it, vi } from "vitest";
 vi.mock("@/features/today", async () => import("@/features/today/today"));
 
 import type { TodayAction } from "@/features/today";
+import { pushRollCallRows } from "@/features/today/today-roll-call-rows";
+import { rowsContext } from "@/features/today/today-rows-test-fixtures";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { NeedsYouGroups } from "./NeedsYouGroups";
 
@@ -52,3 +54,54 @@ it("retains row context when the same trip has multiple meetings or moments", ()
   show(rows);
   for (const item of rows) expect(screen.getByText(item.detail)).toBeVisible();
 });
+
+it.each([
+  [true, false, "Owners alerted"],
+  [false, true, "Shore contact alerted"],
+  [true, true, "Owners and shore contact alerted"],
+] as const)(
+  "preserves alert recipients and timestamp while compacting (%s, %s)",
+  (owners, shore, label) => {
+    const rows: TodayAction[] = [];
+    const sentAt = new Date("2026-07-21T16:40:00Z");
+    pushRollCallRows(
+      rows,
+      rowsContext({
+        boatsOut: { out: [], blocked: [] },
+        rollCallGaps: [
+          {
+            tripId: "reef",
+            title: "Reef trip",
+            dayNumber: 1,
+            startsAt: new Date("2026-07-21T12:00:00Z"),
+            endsAt: new Date("2026-07-21T16:00:00Z"),
+            capacity: 12,
+            priceCents: null,
+            reason: "after_dive_uncounted",
+            diveNumber: 2,
+            uncounted: 2,
+            total: 11,
+            rosterSize: 11,
+            underway: false,
+            stale: true,
+            alertedAt: owners ? sentAt : null,
+            shoreAlertedAt: shore ? sentAt : null,
+          },
+        ],
+        crewClashState: {
+          departures: [],
+          clashes: new Map(),
+          boatClashes: new Map(),
+          crew: new Map(),
+          divers: new Map(),
+        },
+      }),
+    );
+    show(rows);
+    const displayed = screen.getByRole("listitem").textContent?.replace(/\s+/gu, " ");
+    expect(displayed).toContain(`${label}: Jul 21, 12:40 PM EDT.`);
+    expect(displayed).toContain("2 of 11");
+    expect(displayed).not.toContain("Day 1");
+    expect(rows[0].detail).toContain("Day 1");
+  },
+);
