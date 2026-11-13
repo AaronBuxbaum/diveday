@@ -192,8 +192,8 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
     releaseRead();
     await expect.poll(() => staleResponses).toBe(1);
     await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
-    await expect(dialog).toBeVisible();
     expect(documentNavigations).toBe(0);
+    await expect(dialog).toBeVisible();
   } finally {
     releaseClaim();
     releaseRead();
