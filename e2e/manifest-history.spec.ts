@@ -77,7 +77,9 @@ test("a roster refresh preserves an open person sheet without a document navigat
   const copy = staffTranslator("en-US");
   await page.goto(manifest);
   await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
-  await page.locator(`nav[data-trip-tabs] a[href="${trip}"]`).filter({ visible: true }).click();
+  const tripTab = page.locator(`nav[data-trip-tabs] a[href="${trip}"]`).filter({ visible: true });
+  await tripTab.click();
+  await expect(tripTab).toHaveAttribute("aria-current", "page");
 
   let release!: () => void;
   const held = new Promise<void>((resolve) => {
