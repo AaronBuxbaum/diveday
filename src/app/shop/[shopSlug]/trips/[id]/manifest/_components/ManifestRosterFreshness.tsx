@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { subscribeSessionInvalidation } from "./session-invalidation";
+import { subscribeSessionInvalidation } from "@/components/session-invalidation";
 
 const READ_PARAM = "rosterRead";
 const CONFIRMATION_MS = 5 * 60 * 1000;

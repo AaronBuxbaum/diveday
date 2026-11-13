@@ -2,8 +2,8 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { Activity } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { announceSessionInvalidation } from "@/components/session-invalidation";
 import { ManifestRosterFreshness } from "./ManifestRosterFreshness";
-import { announceSessionInvalidation } from "./session-invalidation";
 
 const router = { refresh: vi.fn() };
 vi.mock("next/navigation", () => ({

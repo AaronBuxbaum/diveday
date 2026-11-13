@@ -287,7 +287,9 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // "Saved … · 0 waiting to send" line already say it, and the card used to
   // carry all three at once (see OfflineManifestManager).
   await expect(page.getByRole("button", { name: "Refresh now" })).toBeVisible();
-  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await expect(
+    page.getByText(staff("trips.offlineManifestManager.freshnessCurrent")),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
@@ -1237,7 +1239,9 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
   await offlineCopySaved(page);
   await openOnThisPhone(page);
   await page.getByRole("button", { name: "Refresh now" }).click();
-  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await expect(
+    page.getByText(staff("trips.offlineManifestManager.freshnessCurrent")),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
 
@@ -1420,7 +1424,9 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await offlineCopySaved(page);
   await openOnThisPhone(page);
   await page.getByRole("button", { name: "Refresh now" }).click();
-  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await expect(
+    page.getByText(staff("trips.offlineManifestManager.freshnessCurrent")),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
 
