@@ -350,11 +350,20 @@ async function monthlySeatsByType(db: DbExecutor, shopId: string, inWindow: SQL 
 }
 
 /**
- * **What the month's seats were priced at** — the "Billed" figure: each active
- * seat's list price on its departure (a course seat is the course's), before
- * any discount, deposit or refund. Collected sits beside it.
+ * **What the month's seats were billed at** — the "Billed" figure: each active
+ * seat's list price on its departure (a course seat is the course's), less the
+ * percent off its completed checkout carried, before any deposit or refund. A
+ * fixed-amount code is not taken off: the seat does not record its share.
  */
 async function monthlyBilledCents(db: DbExecutor, shopId: string, inWindow: SQL | undefined) {
+  // The biggest percent off any completed checkout gave this seat.
+  const percentOff = sql<number | null>`(
+    select max(${bookingCheckouts.appliedDiscountPercent})
+    from ${bookingCheckoutBookings}
+    join ${bookingCheckouts} on ${bookingCheckouts.id} = ${bookingCheckoutBookings.checkoutId}
+    where ${bookingCheckoutBookings.bookingId} = ${bookings.id}
+      and ${bookingCheckouts.status} = 'completed'
+  )`.mapWith(Number);
   const rows = await db
     .select({
       participantType: bookings.participantType,
@@ -365,6 +374,7 @@ async function monthlyBilledCents(db: DbExecutor, shopId: string, inWindow: SQL 
       coursePriceCents: courses.priceCents,
       courseELearningPriceCents: courses.eLearningPriceCents,
       seats: count(bookings.id),
+      percentOff,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -385,11 +395,13 @@ async function monthlyBilledCents(db: DbExecutor, shopId: string, inWindow: SQL 
       courses.title,
       courses.priceCents,
       courses.eLearningPriceCents,
+      percentOff,
     );
   return rows.reduce(
     (sum, row) =>
       sum +
       Number(row.seats) *
+        (1 - (row.percentOff ?? 0) / 100) *
         (seatListPriceCents(
           row,
           row.courseTitle === null
@@ -845,6 +857,7 @@ export async function getMonthlyReport(
     taxCents,
     counterCents,
     billedCents,
+    collectedCents: monthMoney.gross - monthMoney.tax - monthMoney.passThrough - counterCents,
     importedPaymentCents,
     importedRefundCents,
     importedFinancialRecordCount: Number(importedFinancialTotals?.count ?? 0),
