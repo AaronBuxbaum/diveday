@@ -83,7 +83,9 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
       // of one tree disagreed at vw-390). The shift is the subject.
       await expect(page.getByText("Shift saved")).toBeHidden();
       // The form lives on the Shifts tab; the week it adds to is the Crew tab.
-      await page.goto(`/shop/${privateShop.slug}/staffing`);
+      // The phone calendar opens one day, so open the day the shift is on.
+      const shiftDay = daysFromNow(2);
+      await page.goto(`/shop/${privateShop.slug}/staffing?week=${shiftDay}&day=${shiftDay}`);
       const week = page.getByRole("region", { name: "Who’s working" });
       await week.getByText("Boat 2", { exact: true }).first().waitFor();
       await capture(page, "staffing-shift-remove-disclosure", "light", {
