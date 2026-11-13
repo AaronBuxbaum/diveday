@@ -219,7 +219,7 @@ export function ToastShell({
             }
           : undefined
       }
-      className={`${className} rounded-inset border border-border bg-surface shadow-2xl ${
+      className={`${className} pointer-events-auto rounded-inset border border-border bg-surface shadow-2xl ${
         onSwipeAway ? "touch-pan-y " : ""
       }${
         pausable ? "focus-visible:focus-ring-inset " : ""
@@ -231,7 +231,7 @@ export function ToastShell({
   return placement === "inline" ? (
     <div className="my-2 min-w-0">{toast}</div>
   ) : (
-    <div className="fixed inset-x-0 bottom-[calc(1rem+var(--tabbar-h))] z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(1rem+var(--tabbar-h))] z-50 flex justify-center px-4">
       {toast}
     </div>
   );
