@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { ShopNotice } from "@/components/ui/outcome";
 import { noticeRole } from "@/components/ui/tone";
+import { WeekPager } from "@/components/ui/week-pager";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -25,7 +26,9 @@ import { shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 import { ScheduleViews } from "../schedule/_components/ScheduleViews";
 import { CrewPageHeader } from "./_components/CrewPageHeader";
 import { staffingGapWords } from "./_components/gap-words";
+import { PlanSection } from "./_components/PlanSection";
 import { SchedulePicker } from "./_components/SchedulePicker";
+import { StaffingMyWeek } from "./_components/StaffingMyWeek";
 import { StaffingWarnings } from "./_components/StaffingWarnings";
 import { StaffingWeek } from "./_components/StaffingWeek";
 import { readStaffingWeek } from "./_components/staffing-week-read";
@@ -109,7 +112,13 @@ export default async function StaffingPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ week?: string; notice?: string; person?: string; view?: string }>;
+  searchParams: Promise<{
+    week?: string;
+    day?: string;
+    notice?: string;
+    person?: string;
+    view?: string;
+  }>;
 }) {
   const { shopSlug } = await params;
   const query = await searchParams;
@@ -151,6 +160,9 @@ export default async function StaffingPage({
   const gapWords = staffingGapWords(t);
 
   const myBlocks = blocks.filter((block) => block.personId === session.user.personId);
+  const myShifts =
+    view.staff.find((member) => member.person.id === session.user.personId)?.shifts ?? [];
+  const weekWords = staffingWeekWords(t, week);
   const selectedValue = selectedPerson === session.user.personId ? "me" : (selectedPerson ?? "all");
   const selectionQuery = `&person=${encodeURIComponent(selectedValue)}`;
   const staffingPath = shopPath(shopSlug, "staffing");
@@ -243,6 +255,24 @@ export default async function StaffingPage({
         />
       ) : plan ? (
         <>
+          <WeekPager
+            className="mb-6"
+            rangeLabel={formatCalendarDateRange(weekStart, weekEnd, locale)}
+            previousHref={`${staffingPath}?view=plan&${WEEK_PARAM}=${shiftWeek(weekStart, -1)}`}
+            nextHref={`${staffingPath}?view=plan&${WEEK_PARAM}=${shiftWeek(weekStart, 1)}`}
+            thisWeekHref={weekStart === weekStartOf(today) ? null : `${staffingPath}?view=plan`}
+            words={weekWords}
+          />
+          <StaffingMyWeek
+            shifts={myShifts}
+            blocks={myBlocks}
+            locale={locale}
+            timeZone={shop.timezone}
+            canManage={canManage}
+            deleteShiftAction={deleteShift}
+            deleteAwayAction={deleteAway}
+            t={t}
+          />
           <StaffingWarnings shop={shop} shopSlug={shopSlug} view={view} locale={locale} />
           {canManage ? (
             <PlanSection id="add-shift" label={t("staffing.addShift.heading")}>
@@ -339,30 +369,6 @@ export default async function StaffingPage({
                 </SubmitButton>
               </FieldActions>
             </FieldGrid>
-            {/* Their own rows for the week on screen, each with its one act.
-                Somebody else's are visible on the grid above as quiet chips
-                and are not removable here — the row belongs to its person. */}
-            {myBlocks.length > 0 ? (
-              <ul className="mt-4 flex flex-col gap-2">
-                {myBlocks.map((block) => (
-                  <li key={block.id} className="flex items-center justify-between gap-3 text-sm">
-                    <span>
-                      {formatCalendarDateRange(block.startsOn, block.endsOn, locale)}
-                      {block.note ? ` · ${block.note}` : ""}
-                    </span>
-                    <form action={deleteAway}>
-                      <input type="hidden" name="blockId" value={block.id} />
-                      <SubmitButton
-                        pendingLabel={t("words.busy.removing")}
-                        className={buttonClass({ variant: "ghost", size: "sm" })}
-                      >
-                        {t("staffing.away.remove")}
-                      </SubmitButton>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
           </PlanSection>
         </>
       ) : (
@@ -381,8 +387,10 @@ export default async function StaffingPage({
             deleteShiftAction={deleteShift}
             requestAction={requestCrew}
             decideRequestAction={decideRequest}
+            dayParam={query.day}
             links={{
               rangeLabel: formatCalendarDateRange(weekStart, weekEnd, locale),
+              dayHrefPrefix: `${staffingPath}?${WEEK_PARAM}=${weekStart}${selectionQuery}&day=`,
               previousHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, -1)}${selectionQuery}`,
               nextHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, 1)}${selectionQuery}`,
               thisWeekHref:
@@ -390,33 +398,10 @@ export default async function StaffingPage({
                   ? null
                   : `${staffingPath}?person=${encodeURIComponent(selectedValue)}`,
             }}
-            words={staffingWeekWords(t, week)}
+            words={weekWords}
           />
         </>
       )}
     </StaffPage>
-  );
-}
-
-/**
- * One of the Shifts tab's two forms: a heading over the form, always
- * open, because the tab exists to fill them in.
- */
-function PlanSection({
-  id,
-  label,
-  children,
-}: {
-  id: string;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section aria-labelledby={`${id}-heading`} id={id} className="scroll-mt-8 pt-2 pb-8">
-      <h2 id={`${id}-heading`} className="mb-4 font-semibold">
-        {label}
-      </h2>
-      {children}
-    </section>
   );
 }

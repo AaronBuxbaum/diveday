@@ -83,11 +83,13 @@ describe("StaffingWeek", () => {
   });
 
   it("says nothing about crew when every departure has some", () => {
-    renderWeek();
+    const { container } = renderWeek();
 
     // The gap row is absent rather than empty: seven blank cells under
     // "Needs crew" is the page saying nothing at the volume of something.
-    expect(screen.queryByText("Needs crew")).toBeNull();
+    expect(
+      within(container.querySelector("table") as HTMLElement).queryByText("Needs crew"),
+    ).toBeNull();
     expect(screen.queryByRole("link", { name: /^Assign crew to/ })).toBeNull();
   });
 
@@ -160,6 +162,7 @@ describe("StaffingWeek", () => {
       ],
     };
     renderWeek({
+      dayParam: "2026-08-25",
       people: [{ ...KEIKO, shifts: [], crewingTrips: [night] }],
       gaps: [{ ...night, tripId: "trip-night-gap", gap: "uncrewed_departure" }],
     });
@@ -450,7 +453,8 @@ describe("StaffingWeek standing crew clash", () => {
    */
   function branches(container: HTMLElement) {
     const grid = container.querySelector<HTMLElement>('[class~="xl:block"]');
-    const list = container.querySelector<HTMLElement>('[class~="xl:hidden"]');
+    // The calendar strip is the first `xl:hidden` block; the open day's list is the last.
+    const list = [...container.querySelectorAll<HTMLElement>('[class~="xl:hidden"]')].at(-1);
     if (!grid || !list) throw new Error("the week should render a grid and a day list");
     return { grid, list };
   }
@@ -514,7 +518,8 @@ describe("StaffingWeek standing crew clash", () => {
 describe("StaffingWeek geometry", () => {
   function branches(container: HTMLElement) {
     const grid = container.querySelector<HTMLElement>('[class~="xl:block"]');
-    const list = container.querySelector<HTMLElement>('[class~="xl:hidden"]');
+    // The calendar strip is the first `xl:hidden` block; the open day's list is the last.
+    const list = [...container.querySelectorAll<HTMLElement>('[class~="xl:hidden"]')].at(-1);
     if (!grid || !list) throw new Error("the week should render a grid and a day list");
     return { grid, list };
   }
