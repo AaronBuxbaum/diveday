@@ -2,6 +2,10 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  manifestStaleGeneration,
+  subscribeManifestInvalidation,
+} from "@/components/manifest-stale-generation";
 import { subscribeSessionInvalidation } from "@/components/session-invalidation";
 
 const READ_PARAM = "rosterRead";
@@ -30,6 +34,7 @@ export function ManifestRosterFreshness({
   const confirmedRef = useRef(false);
   const sessionInvalidated = useRef(false);
   const acceptedRender = useRef<{ token: string; id: string } | null>(null);
+  const readGeneration = useRef(0);
 
   const requestRead = useCallback(() => {
     confirmedRef.current = false;
@@ -42,12 +47,13 @@ export function ManifestRosterFreshness({
       return;
     }
     const token = crypto.randomUUID();
+    readGeneration.current = manifestStaleGeneration(tripId);
     activeToken.current = token;
     const url = new URL(window.location.href);
     url.searchParams.set(READ_PARAM, token);
     window.history.replaceState(null, "", url);
     setRequestToken(token);
-  }, []);
+  }, [tripId]);
 
   // React Activity tears down effects when a cached page is hidden and runs
   // them again when history returns to it. Each activation gets a new token.
@@ -69,12 +75,17 @@ export function ManifestRosterFreshness({
       sessionInvalidated.current = true;
       offline();
     });
+    const unsubscribeStale = subscribeManifestInvalidation(tripId, () => {
+      offline();
+      acceptedRender.current = null;
+    });
     return () => {
       window.removeEventListener("online", requestRead);
       window.removeEventListener("offline", offline);
       unsubscribe();
+      unsubscribeStale();
     };
-  }, [requestRead]);
+  }, [requestRead, tripId]);
 
   // Wait until Next's router has observed replaceState before refreshing.
   useEffect(() => {
@@ -96,6 +107,7 @@ export function ManifestRosterFreshness({
       requested.current !== requestToken ||
       renderToken !== requestToken ||
       !renderProof ||
+      readGeneration.current !== manifestStaleGeneration(tripId) ||
       !navigator.onLine
     ) {
       const wasConfirmed = confirmedRef.current;
@@ -131,6 +143,7 @@ export function ManifestRosterFreshness({
           response.redirected ||
           controller.signal.aborted ||
           !navigator.onLine ||
+          readGeneration.current !== manifestStaleGeneration(tripId) ||
           activeToken.current !== requestToken ||
           requested.current !== requestToken
         )
