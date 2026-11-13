@@ -266,14 +266,14 @@ export function canManageSafetyChecklist(roles: readonly Role[] | undefined): bo
 }
 
 /**
- * **Change a dive site's admission fields** (Aaron, 2026-11-03, issue #3706):
- * the level it asks for, its required specialties, its nitrox requirement and
- * its maximum depth. The first three decide who may buy a seat on a departure
- * that dives the site (`src/lib/trip-admission.ts`) and the depth sets the
- * depth advisory, so loosening any of them is owner/manager work. Every staff
- * role still edits the rest of the briefing: names, notes, maps and photos.
+ * **Edit the dive-site library** (Aaron, 2026-11-13, replacing the admission-only
+ * gate of issue #3706): create, change, copy, delete or import a site, and pull
+ * a template update. Every staff role still reads a site and schedules a trip at
+ * it. The level a site asks for, its specialties, nitrox and depth decide who may
+ * buy a seat on a departure that dives it (`src/lib/trip-admission.ts`), so the
+ * whole briefing is owner/manager work.
  */
-export function canEditDiveSiteAdmission(roles: readonly Role[] | undefined): boolean {
+export function canEditDiveSites(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);
 }
 

@@ -247,29 +247,12 @@ export type DiveSiteListFilter = {
 };
 
 /**
- * One screenful of the library, searchable. A shop that has been running for
- * years holds far more sites than fit on a page, and the library rendered every
- * one of them as a card with no way to find anything except scrolling.
- *
- * The library page reads through here. Editors needing briefing fields keep
- * `listDiveSites`; name-only pickers use `listDiveSiteNames`. Both unpaged
- * readers return every live site because a site select cannot page.
- *
- * The name half of the search rides `dive_sites_name_trgm_idx` (the GIN
- * trigram index the command palette added); the location half is a scan
- * within one shop's rows, which is the right trade at a library's scale —
- * a second trigram index would cost every write to buy nothing measurable.
+ * The conditions a search and its chips put on the shop's own sites, shared by
+ * the list and the map so a chip that narrows the rows narrows the pins too.
  */
-export async function listDiveSitesPage(
-  db: AppDb,
-  shopId: string,
-  filter: DiveSiteListFilter = {},
-  page: { page?: number; pageSize?: number } = {},
-) {
+function siteFilterConditions(filter: DiveSiteListFilter) {
   const like = filter.query?.trim() ? `%${filter.query.trim()}%` : undefined;
-  const where = and(
-    eq(diveSites.shopId, shopId),
-    isNull(diveSites.deletedAt),
+  return [
     // A null `locationName` simply never matches — `ilike` on NULL is NULL,
     // which `or` treats as "not this branch" rather than excluding the row.
     like ? or(ilike(diveSites.name, like), ilike(diveSites.locationName, like)) : undefined,
@@ -291,6 +274,33 @@ export async function listDiveSitesPage(
           lte(diveSites.forecastLongitude, filter.area.east),
         )
       : undefined,
+  ];
+}
+
+/**
+ * One screenful of the library, searchable. A shop that has been running for
+ * years holds far more sites than fit on a page, and the library rendered every
+ * one of them as a card with no way to find anything except scrolling.
+ *
+ * The library page reads through here. Editors needing briefing fields keep
+ * `listDiveSites`; name-only pickers use `listDiveSiteNames`. Both unpaged
+ * readers return every live site because a site select cannot page.
+ *
+ * The name half of the search rides `dive_sites_name_trgm_idx` (the GIN
+ * trigram index the command palette added); the location half is a scan
+ * within one shop's rows, which is the right trade at a library's scale —
+ * a second trigram index would cost every write to buy nothing measurable.
+ */
+export async function listDiveSitesPage(
+  db: AppDb,
+  shopId: string,
+  filter: DiveSiteListFilter = {},
+  page: { page?: number; pageSize?: number } = {},
+) {
+  const where = and(
+    eq(diveSites.shopId, shopId),
+    isNull(diveSites.deletedAt),
+    ...siteFilterConditions(filter),
   );
   // Through the shared `offsetPage` rather than its own arithmetic: this used
   // to clamp `?page=0`/`-3`/`abc` itself but had no answer for a page *past*
@@ -335,12 +345,16 @@ export async function listDiveSitesPage(
 
 /**
  * Small, shop-scoped map records for every live site with coordinates. This
- * intentionally ignores the library's search and page: the map is a view of
- * the shop's locations, not a second rendering of the current ledger slice.
+ * ignores the library's page and the map's own area, but follows its search
+ * and chips: the pins are the sites the list could show, not a second reading.
  * Long free-text copy is capped so a large library does not ship every full
  * briefing just to draw pins.
  */
-export async function listDiveSiteMapRows(db: AppDb, shopId: string) {
+export async function listDiveSiteMapRows(
+  db: AppDb,
+  shopId: string,
+  filter: Omit<DiveSiteListFilter, "area"> = {},
+) {
   return db
     .select({
       id: diveSites.id,
@@ -363,6 +377,7 @@ export async function listDiveSiteMapRows(db: AppDb, shopId: string) {
         isNull(diveSites.deletedAt),
         isNotNull(diveSites.forecastLatitude),
         isNotNull(diveSites.forecastLongitude),
+        ...siteFilterConditions(filter),
       ),
     )
     .orderBy(asc(diveSites.name), asc(diveSites.id));
@@ -1013,6 +1028,8 @@ export async function listGlobalDiveSiteTemplates(
   options: {
     page?: number;
     limit?: number;
+    /** The search, chips and map area the catalog narrows by, as the library's do. */
+    filter?: DiveSiteListFilter;
     /**
      * The reading shop: the nearest templates first when it has a location,
      * and every measure in its own depth unit (fourth review, item 46), as the
@@ -1030,6 +1047,7 @@ export async function listGlobalDiveSiteTemplates(
     eq(globalDiveSiteVersions.version, globalDiveSites.currentVersion),
   );
 
+  const matching = globalTemplateMatch(options.filter ?? {});
   let mapRevision = "";
   const paged = await offsetPage({
     page: options.page,
@@ -1037,7 +1055,7 @@ export async function listGlobalDiveSiteTemplates(
     countRows: async () => {
       const [counted] = await db
         .select({
-          total: count(),
+          total: sql<number>`count(*) filter (where ${matching})`.mapWith(Number),
           // Published briefings are immutable: changing a briefing publishes
           // a new version. Hash only their small identities, not every JSON
           // briefing. The pager already needs this complete-catalog scan, so
@@ -1065,6 +1083,7 @@ export async function listGlobalDiveSiteTemplates(
         .select({ template: globalDiveSites, version: globalDiveSiteVersions })
         .from(globalDiveSites)
         .innerJoin(globalDiveSiteVersions, currentVersionJoin)
+        .where(matching)
         .orderBy(order)
         .limit(limit)
         .offset(offset);
@@ -1082,8 +1101,42 @@ export async function listGlobalDiveSiteTemplates(
   };
 }
 
+/**
+ * The library's search and chips, read off a published briefing, so the catalog
+ * answers the same words the shop's own sites do. Always a condition, never
+ * `undefined`: it also sits inside a `count(*) filter`.
+ */
+export function globalTemplateMatch(filter: DiveSiteListFilter) {
+  const briefing = globalDiveSiteVersions.briefing;
+  const like = filter.query?.trim() ? `%${filter.query.trim()}%` : undefined;
+  const latitude = sql`(${briefing}->>'forecastLatitude')::double precision`;
+  const longitude = sql`(${briefing}->>'forecastLongitude')::double precision`;
+  const conditions = and(
+    like
+      ? or(sql`${briefing}->>'name' ilike ${like}`, sql`${briefing}->>'locationName' ilike ${like}`)
+      : undefined,
+    filter.difficulty === "unrated"
+      ? sql`${briefing}->>'difficultyLevel' is null`
+      : filter.difficulty
+        ? sql`${briefing}->>'difficultyLevel' = ${filter.difficulty}`
+        : undefined,
+    filter.need === "nitrox"
+      ? sql`(${briefing}->>'requiresNitrox')::boolean is true`
+      : filter.need
+        ? sql`${briefing}->'requiredSpecialties' @> ${JSON.stringify([filter.need])}::jsonb`
+        : undefined,
+    filter.area
+      ? sql`${latitude} between ${filter.area.south} and ${filter.area.north} and ${longitude} between ${filter.area.west} and ${filter.area.east}`
+      : undefined,
+  );
+  return conditions ?? sql`true`;
+}
+
 /** Every current published template with coordinates, projected to map fields. */
-export async function listGlobalDiveSiteMapRows(db: AppDb) {
+export async function listGlobalDiveSiteMapRows(
+  db: AppDb,
+  filter: Omit<DiveSiteListFilter, "area"> = {},
+) {
   const briefing = globalDiveSiteVersions.briefing;
   return db
     .select({
@@ -1114,6 +1167,7 @@ export async function listGlobalDiveSiteMapRows(db: AppDb) {
       and(
         isNotNull(sql`${briefing}->>'forecastLatitude'`),
         isNotNull(sql`${briefing}->>'forecastLongitude'`),
+        globalTemplateMatch(filter),
       ),
     )
     .orderBy(asc(globalDiveSites.slug));

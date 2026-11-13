@@ -28,6 +28,7 @@ import { loadSiteAssists, siteBriefAssist, siteSpanishFields } from "../_compone
 import { SiteClosureForm } from "../_components/SiteClosureForm";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell } from "../_components/SiteFormShell";
+import { SiteReadOnly } from "../_components/SiteReadOnly";
 import { ERROR_KEYS, NOTICE_KEYS } from "../_components/site-edit-notices";
 import {
   fieldGuideEditorCopy,
@@ -86,7 +87,7 @@ export default async function EditDiveSitePage({
     personId: session.user.personId,
   });
   if (!page) notFound();
-  const { site, upcomingTrips, creatures, templateUpdate, tideDives, mayEditAdmission } = page;
+  const { site, upcomingTrips, creatures, templateUpdate, tideDives, mayEdit } = page;
   const assists = await loadSiteAssists(db, shop, site);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -187,7 +188,7 @@ export default async function EditDiveSitePage({
         <ShopPageHeader
           eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
           title={site.name}
-          description={t("diveSites.edit.description")}
+          description={mayEdit ? t("diveSites.edit.description") : undefined}
           descriptionIsCaption
           // The default `end`: a static door sits at the foot of the title
           // block, as on every records header; `start` is for actions that
@@ -208,16 +209,11 @@ export default async function EditDiveSitePage({
         notice === "template-updated" ||
         notice === "template-replaced" ||
         notice === "template-undone" ||
-        notice === "template-update-unavailable" ||
-        notice === "admission-managers-only") ? (
+        notice === "template-update-unavailable") ? (
         <p
-          role={
-            notice === "template-update-unavailable" || notice === "admission-managers-only"
-              ? "alert"
-              : "status"
-          }
+          role={notice === "template-update-unavailable" ? "alert" : "status"}
           className={`mt-6 rounded-lg px-3 py-2 text-sm font-medium ${
-            notice === "template-update-unavailable" || notice === "admission-managers-only"
+            notice === "template-update-unavailable"
               ? "bg-danger-tint text-danger"
               : "bg-success-tint text-success-strong"
           }`}
@@ -243,64 +239,65 @@ export default async function EditDiveSitePage({
         timeZone={shop.timezone}
         t={t}
       />
-      <div className="mt-8">
-        <SiteFormShell
-          action={saveDiveSiteAction.bind(null, id)}
-          errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
-          savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
-          actions={
-            <>
-              <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
-                {t("diveSites.form.save")}
-              </SubmitButton>
-              <UnsavedSections
-                sections={sections}
-                copy={siteFormUnsavedCopy(t, shop.fieldGuideEnabled)}
-              />
-            </>
-          }
-        >
-          {/* The row's edit generation as this render saw it, posted back so
+      {mayEdit ? (
+        <div className="mt-8">
+          <SiteFormShell
+            action={saveDiveSiteAction.bind(null, id)}
+            errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
+            savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
+            actions={
+              <>
+                <SubmitButton pendingLabel={t("words.busy.saving")} className={buttonClass()}>
+                  {t("diveSites.form.save")}
+                </SubmitButton>
+                <UnsavedSections
+                  sections={sections}
+                  copy={siteFormUnsavedCopy(t, shop.fieldGuideEnabled)}
+                />
+              </>
+            }
+          >
+            {/* The row's edit generation as this render saw it, posted back so
                 the save can refuse rather than quietly overwrite a colleague's
                 briefing (issue #820). A site nobody has saved since the column
                 arrived has a null `updated_at`, and `created_at` stands in for
                 it — those are the rows two people are most likely to open at
                 once. */}
-          <input type="hidden" name="expectedVersion" value={String(site.rowVersion)} />
-          <SiteFields
-            fieldGuideOn={shop.fieldGuideEnabled}
-            t={t}
-            depthUnit={depthUnit}
-            tideStation={tideStationEcho(station, site)}
-            values={{
-              ...site,
-              // Both lists are normalised for the editors rather than handed
-              // over raw: a row written before landmarks carried notes holds
-              // plain strings, and the guide lives in its own table.
-              landmarks: parseDiveSiteLandmarks(site.landmarks),
-              creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(Boolean),
-            }}
-            routeCopy={routeEditorCopy(t)}
-            landmarkCopy={landmarkEditorCopy(t)}
-            fieldGuideCopy={fieldGuideEditorCopy(t)}
-            marineLifeCatalog={marineLifeCatalogEntries(diverT)}
-            locale={locale}
-            timezone={shop.timezone}
-            siteId={site.id}
-            certificationDescription={t("diveSites.edit.certificationDescription")}
-            requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
-            admissionLocked={
-              mayEditAdmission ? undefined : t("diveSites.form.admissionManagersOnlyNote")
-            }
-            briefAssist={siteBriefAssist(shopSlug, assists.canAssist, t)}
-            spanish={siteSpanishFields(shopSlug, assists, t)}
-          />
-        </SiteFormShell>
-      </div>
+            <input type="hidden" name="expectedVersion" value={String(site.rowVersion)} />
+            <SiteFields
+              fieldGuideOn={shop.fieldGuideEnabled}
+              t={t}
+              depthUnit={depthUnit}
+              tideStation={tideStationEcho(station, site)}
+              values={{
+                ...site,
+                // Both lists are normalised for the editors rather than handed
+                // over raw: a row written before landmarks carried notes holds
+                // plain strings, and the guide lives in its own table.
+                landmarks: parseDiveSiteLandmarks(site.landmarks),
+                creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(Boolean),
+              }}
+              routeCopy={routeEditorCopy(t)}
+              landmarkCopy={landmarkEditorCopy(t)}
+              fieldGuideCopy={fieldGuideEditorCopy(t)}
+              marineLifeCatalog={marineLifeCatalogEntries(diverT)}
+              locale={locale}
+              timezone={shop.timezone}
+              siteId={site.id}
+              certificationDescription={t("diveSites.edit.certificationDescription")}
+              requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
+              briefAssist={siteBriefAssist(shopSlug, assists.canAssist, t)}
+              spanish={siteSpanishFields(shopSlug, assists, t)}
+            />
+          </SiteFormShell>
+        </div>
+      ) : (
+        <SiteReadOnly site={site} shopDepthUnit={depthUnit} t={t} diverT={diverT} />
+      )}
       {/* A newer DiveDay template for this site: closed behind its name under
           the briefing, because pulling one is rare and its own act (visual
           review 2026-10-24, A11). Outside the briefing form: forms cannot nest. */}
-      {templateUpdate && mayEditAdmission ? (
+      {templateUpdate && mayEdit ? (
         <DisclosureRowList className="mt-8">
           <DisclosureRow id="briefing-template" heading={t("diveSites.edit.templateUpdates.title")}>
             <p className="text-sm text-muted">
@@ -359,25 +356,27 @@ export default async function EditDiveSitePage({
             : null
         }
       />
-      <DangerDisclosure
-        open={Boolean(error)}
-        className="mt-10"
-        summary={t("diveSites.edit.deleteSite")}
-      >
-        <h2 className="font-semibold">{t("diveSites.edit.deleteConfirmTitle")}</h2>
-        <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.deleteConfirmBody")}</p>
-        <form action={deleteDiveSiteAction.bind(null, id)} className="mt-4">
-          <SubmitButton
-            pendingLabel={t("words.busy.deleting")}
-            className={buttonClass({ variant: "danger-solid" })}
-          >
-            {t("diveSites.edit.deleteSite")}
-          </SubmitButton>
-          <FormStatus tone="danger" className="mt-2">
-            {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
-          </FormStatus>
-        </form>
-      </DangerDisclosure>
+      {mayEdit ? (
+        <DangerDisclosure
+          open={Boolean(error)}
+          className="mt-10"
+          summary={t("diveSites.edit.deleteSite")}
+        >
+          <h2 className="font-semibold">{t("diveSites.edit.deleteConfirmTitle")}</h2>
+          <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.deleteConfirmBody")}</p>
+          <form action={deleteDiveSiteAction.bind(null, id)} className="mt-4">
+            <SubmitButton
+              pendingLabel={t("words.busy.deleting")}
+              className={buttonClass({ variant: "danger-solid" })}
+            >
+              {t("diveSites.edit.deleteSite")}
+            </SubmitButton>
+            <FormStatus tone="danger" className="mt-2">
+              {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
+            </FormStatus>
+          </form>
+        </DangerDisclosure>
+      ) : null}
     </StaffPage>
   );
 }

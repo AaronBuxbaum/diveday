@@ -2,12 +2,7 @@ import { z } from "zod";
 import { MAX_PLANNING_NOTE_LENGTH } from "@/features/dive-site-memory";
 import type { MarineLifeSlug } from "../../db/marine-life-catalog";
 import type { DiveSpecialty } from "../../db/schema/index";
-import {
-  type DepthUnit,
-  depthInUnit,
-  depthToMeters,
-  MAX_ENTERED_DEPTH_METERS,
-} from "../../lib/depth-units";
+import { type DepthUnit, depthToMeters, MAX_ENTERED_DEPTH_METERS } from "../../lib/depth-units";
 import {
   type DiveSiteDifficulty,
   parseDiveSiteDifficulty,
@@ -371,46 +366,4 @@ export function siteFitCutsAgainstGroup(group: SiteLibraryGroupLabel, tone: Site
   if (tone === "unknown") return false;
   if (group === "unrated") return true;
   return tone === "demanding" ? group !== "advanced" : group === "advanced";
-}
-
-/**
- * **A dive site's admission fields** (issue #3706): what decides who may buy a
- * seat on a departure that dives it, and the depth its advisory reads. Only an
- * owner or manager changes them (`canEditDiveSiteAdmission`).
- */
-export type DiveSiteAdmission = {
-  minimumCertificationLevel: CertificationLevel | null;
-  requiredSpecialties: readonly DiveSpecialty[];
-  requiresNitrox: boolean;
-  maxDepthMeters: number | null;
-};
-
-/**
- * Which admission fields a submission would change on the stored site; empty
- * when none. Depth is compared as the form shows it (whole units of the shop's
- * own unit, `depthInUnit`), so a briefing posted back untouched never reads
- * as a change through a feet-to-metres round trip. Specialties compare as a
- * set: their order is the form's, not a fact.
- */
-export function changedAdmissionFields(
-  stored: DiveSiteAdmission,
-  submitted: DiveSiteAdmission,
-  depthUnit: DepthUnit,
-): (keyof DiveSiteAdmission)[] {
-  const shown = (meters: number | null) => (meters == null ? null : depthInUnit(meters, depthUnit));
-  const sameSpecialties =
-    new Set(stored.requiredSpecialties).size === new Set(submitted.requiredSpecialties).size &&
-    submitted.requiredSpecialties.every((specialty) =>
-      stored.requiredSpecialties.includes(specialty),
-    );
-  const changed: (keyof DiveSiteAdmission)[] = [];
-  if (stored.minimumCertificationLevel !== submitted.minimumCertificationLevel) {
-    changed.push("minimumCertificationLevel");
-  }
-  if (!sameSpecialties) changed.push("requiredSpecialties");
-  if (stored.requiresNitrox !== submitted.requiresNitrox) changed.push("requiresNitrox");
-  if (shown(stored.maxDepthMeters) !== shown(submitted.maxDepthMeters)) {
-    changed.push("maxDepthMeters");
-  }
-  return changed;
 }
