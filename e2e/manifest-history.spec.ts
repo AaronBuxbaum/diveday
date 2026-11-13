@@ -6,7 +6,25 @@ import { manifestRow } from "./helpers";
 
 signedInAsOwner();
 
-type ReadCounts = { total: number; previous: number; newChallenge: number; distinctNew: number };
+type ReadShape = { rscKey: number; prefetch: boolean; segmentPrefetch: boolean; nextUrl: boolean };
+type ReadCounts = {
+  total: number;
+  previous: number;
+  newChallenge: number;
+  distinctNew: number;
+  shapes: ReadShape[];
+};
+
+function readShape(url: URL, headers: Record<string, string>, keys: string[]): ReadShape {
+  const key = url.searchParams.get("_rsc") ?? "";
+  if (!keys.includes(key)) keys.push(key);
+  return {
+    rscKey: keys.indexOf(key) + 1,
+    prefetch: Boolean(headers["next-router-prefetch"]),
+    segmentPrefetch: Boolean(headers["next-router-segment-prefetch"]),
+    nextUrl: Boolean(headers["next-url"]),
+  };
+}
 
 async function expectOneRead(counts: ReadCounts) {
   try {
@@ -51,8 +69,15 @@ for (const width of [390, 1280]) {
       const held = new Promise<void>((resolve) => {
         release = resolve;
       });
-      const requests: ReadCounts = { total: 0, previous: 0, newChallenge: 0, distinctNew: 0 };
+      const requests: ReadCounts = {
+        total: 0,
+        previous: 0,
+        newChallenge: 0,
+        distinctNew: 0,
+        shapes: [],
+      };
       const newTokens = new Set<string>();
+      const rscKeys: string[] = [];
       await page.route("**/*", async (route) => {
         const request = route.request();
         const url = new URL(request.url());
@@ -65,6 +90,7 @@ for (const width of [390, 1280]) {
             : undefined;
         if (token) {
           requests.total += 1;
+          requests.shapes.push(readShape(url, request.headers(), rscKeys));
           if (token === previousToken) requests.previous += 1;
           else {
             requests.newChallenge += 1;
@@ -114,8 +140,9 @@ test("a roster refresh preserves an open person sheet without a document navigat
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const reads: ReadCounts = { total: 0, previous: 0, newChallenge: 0, distinctNew: 0 };
+  const reads: ReadCounts = { total: 0, previous: 0, newChallenge: 0, distinctNew: 0, shapes: [] };
   const newTokens = new Set<string>();
+  const rscKeys: string[] = [];
   let documentNavigations = 0;
   page.on("request", (request) => {
     if (request.isNavigationRequest() && request.frame() === page.mainFrame())
@@ -130,6 +157,7 @@ test("a roster refresh preserves an open person sheet without a document navigat
         : undefined;
     if (token) {
       reads.total += 1;
+      reads.shapes.push(readShape(url, request.headers(), rscKeys));
       if (token === previousToken) reads.previous += 1;
       else {
         reads.newChallenge += 1;
