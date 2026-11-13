@@ -8,6 +8,7 @@ type Binding = {
   sessionId: string;
   nonce: string;
   renderId: string;
+  erasureEpoch: number;
 };
 
 /** Binds a rendered roster's challenge to its server-side authenticated session. */
@@ -15,6 +16,8 @@ export function signRosterConfirmation(binding: Binding): string | null {
   if (
     !authSecret ||
     !binding.sessionId ||
+    !Number.isSafeInteger(binding.erasureEpoch) ||
+    binding.erasureEpoch < 0 ||
     !nonceShape.test(binding.nonce) ||
     !nonceShape.test(binding.renderId)
   )
@@ -28,6 +31,7 @@ export function signRosterConfirmation(binding: Binding): string | null {
       binding.sessionId,
       binding.nonce,
       binding.renderId,
+      binding.erasureEpoch,
     ]),
   );
 }

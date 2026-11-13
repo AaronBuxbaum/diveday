@@ -287,6 +287,7 @@ export default async function TripManifestPage({
               tripId={tripId}
               shopId={shop.id}
               sessionId={session.user.sessionId}
+              erasureEpoch={offlineRoster.erasureEpoch}
               rosterRead={rosterRead}
               t={t}
             />

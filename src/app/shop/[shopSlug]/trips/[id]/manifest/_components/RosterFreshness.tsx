@@ -8,20 +8,28 @@ export function RosterFreshness({
   tripId,
   shopId,
   sessionId,
+  erasureEpoch,
   rosterRead,
   t,
 }: {
   tripId: string;
   shopId: string;
   sessionId?: string;
+  erasureEpoch: number;
   rosterRead?: string;
   t: StaffTranslator;
 }) {
   const renderId = randomUUID();
   const renderProof =
     rosterRead && sessionId
-      ? (signRosterConfirmation({ shopId, tripId, sessionId, nonce: rosterRead, renderId }) ??
-        undefined)
+      ? (signRosterConfirmation({
+          shopId,
+          tripId,
+          sessionId,
+          nonce: rosterRead,
+          renderId,
+          erasureEpoch,
+        }) ?? undefined)
       : undefined;
   return (
     <ManifestRosterFreshness

@@ -2,6 +2,7 @@ import {
   authorizeOfflineManifestStaff,
   OFFLINE_MANIFEST_NO_STORE,
 } from "@/app/api/offline-manifests/staff-context";
+import { getShopOfflineErasureEpoch } from "@/db/shops";
 import { verifyRosterConfirmation } from "@/features/offline-manifest-snapshots";
 import { uuidParam } from "@/lib/uuid";
 
@@ -23,12 +24,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
     return new Response(null, { status: 400, headers: OFFLINE_MANIFEST_NO_STORE });
   }
   const input = body as { nonce?: unknown; proof?: unknown; renderId?: unknown } | null;
+  const erasureEpoch = await getShopOfflineErasureEpoch(access.db, access.shop.id);
   const valid =
     uuidParam(tripId) &&
     typeof input?.nonce === "string" &&
     typeof input.renderId === "string" &&
     typeof input.proof === "string" &&
     access.user.sessionId &&
+    erasureEpoch !== null &&
     verifyRosterConfirmation(
       {
         shopId: access.shop.id,
@@ -36,6 +39,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
         sessionId: access.user.sessionId,
         nonce: input.nonce,
         renderId: input.renderId,
+        erasureEpoch,
       },
       input.proof,
     );

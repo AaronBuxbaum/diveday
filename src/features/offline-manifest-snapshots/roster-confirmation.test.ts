@@ -7,6 +7,7 @@ const binding = {
   sessionId: "session-one",
   nonce: "22222222-2222-4222-8222-222222222222",
   renderId: "33333333-3333-4333-8333-333333333333",
+  erasureEpoch: 4,
 };
 
 describe("roster confirmation proof", () => {
@@ -20,6 +21,7 @@ describe("roster confirmation proof", () => {
       { sessionId: "replacement-session" },
       { nonce: "55555555-5555-4555-8555-555555555555" },
       { renderId: "66666666-6666-4666-8666-666666666666" },
+      { erasureEpoch: 5 },
     ]) {
       expect(verifyRosterConfirmation({ ...binding, ...changed }, proof)).toBe(false);
     }
@@ -29,6 +31,8 @@ describe("roster confirmation proof", () => {
     expect(signRosterConfirmation({ ...binding, sessionId: "" })).toBeNull();
     expect(signRosterConfirmation({ ...binding, nonce: "bad" })).toBeNull();
     expect(signRosterConfirmation({ ...binding, renderId: "bad" })).toBeNull();
+    expect(signRosterConfirmation({ ...binding, erasureEpoch: -1 })).toBeNull();
+    expect(signRosterConfirmation({ ...binding, erasureEpoch: 0.5 })).toBeNull();
     expect(verifyRosterConfirmation(binding, "")).toBe(false);
     expect(verifyRosterConfirmation(binding, "a".repeat(257))).toBe(false);
     expect(verifyRosterConfirmation(binding, "not-a-matching-proof")).toBe(false);
