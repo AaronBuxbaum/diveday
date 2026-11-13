@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
-import { boats, bookings, people, tripScheduleDays, trips } from "@/db/schema";
-import { boatClashesByTrip, liveTrip, seatNotCancelled, tripCrewByTrip } from "@/db/trips";
+import { boats, bookings, people, tripAssignments, tripScheduleDays, trips } from "@/db/schema";
+import { boatClashesByTrip, liveTrip, seatNotCancelled } from "@/db/trips";
 import { sellableSeats } from "@/lib/boat-safety";
 import { seatName } from "@/lib/held-seat";
 import { physicalPeople } from "@/lib/manifest-person-counts";
@@ -74,8 +74,15 @@ export async function readScheduleDay(db: AppDb, shopId: string, day: string, ti
   }
   const departures = [...grouped.values()];
   const ids = departures.map((row) => row.tripId);
-  const [crew, divers, hullClashes, allLegs] = await Promise.all([
-    tripCrewByTrip(db, shopId, ids),
+  const [crewRows, divers, hullClashes, allLegs] = await Promise.all([
+    ids.length === 0
+      ? []
+      : db
+          .select({ tripId: tripAssignments.tripId, id: people.id, name: people.fullName })
+          .from(tripAssignments)
+          .innerJoin(people, eq(people.id, tripAssignments.personId))
+          .where(and(inArray(tripAssignments.tripId, ids), eq(people.shopId, shopId)))
+          .orderBy(asc(people.fullName)),
     ids.length === 0
       ? []
       : db
@@ -112,6 +119,12 @@ export async function readScheduleDay(db: AppDb, shopId: string, day: string, ti
           .from(tripScheduleDays)
           .where(inArray(tripScheduleDays.tripId, ids)),
   ]);
+  const crew = new Map<string, { id: string; name: string }[]>();
+  for (const member of crewRows) {
+    const members = crew.get(member.tripId) ?? [];
+    members.push({ id: member.id, name: member.name });
+    crew.set(member.tripId, members);
+  }
   const rows = departures.flatMap((row) => {
     const legs = allLegs.filter((leg) => leg.tripId === row.tripId);
     const allWindows = legs.length ? legs : row.windows;

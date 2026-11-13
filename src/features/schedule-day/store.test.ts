@@ -6,6 +6,34 @@ import { readScheduleDay } from "./store";
 const ctx = fileScopedShopContext();
 
 describe("readScheduleDay", () => {
+  it("does not expose a crew assignment to a person from another shop", async () => {
+    const { db, shop } = ctx;
+    const { people, shops, tripAssignments } = await import("@/db/schema");
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Tenant boat",
+      startsAt: new Date("2035-08-04T08:00:00Z"),
+      endsAt: new Date("2035-08-04T12:00:00Z"),
+      capacity: 8,
+    });
+    if (!trip) throw new Error("expected trip");
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other shop", slug: "day-other-shop", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("expected other shop");
+    const [foreignPerson] = await db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Foreign crew" })
+      .returning();
+    if (!foreignPerson) throw new Error("expected foreign person");
+    // Model a bad historical assignment: the schema's individual foreign keys
+    // alone do not prove that the person and the departure share a shop.
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: foreignPerson.id });
+    const rows = await readScheduleDay(db, shop.id, "2035-08-04", "UTC");
+    expect(rows.find((row) => row.tripId === trip.id)?.crew).toEqual([]);
+  });
+
   it("shows cross-role overlaps but not adjacent legs or unconfirmed identities", async () => {
     const { db, shop } = ctx;
     const { createBooking } = await import("@/db/bookings");
