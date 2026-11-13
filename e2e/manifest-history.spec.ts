@@ -134,9 +134,19 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
     releaseRead = resolve;
   });
   let claims = 0;
+  let staleResponses = 0;
   let reads = 0;
   let holdReturnRead = false;
   let documentNavigations = 0;
+  page.on("response", (response) => {
+    if (
+      new URL(response.url()).pathname.endsWith(
+        `/offline-manifests/${DEMO_TODAY_TRIP_ID}/snapshot`,
+      ) &&
+      response.status() === 409
+    )
+      staleResponses++;
+  });
   await page.route("**/*", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -180,6 +190,7 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
     await expect(dialog).toBeVisible();
     releaseClaim();
     releaseRead();
+    await expect.poll(() => staleResponses).toBe(1);
     await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
     await expect(dialog).toBeVisible();
     expect(documentNavigations).toBe(0);
