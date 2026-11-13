@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   canPersonManageStaffAccounts: vi.fn(),
   requireStaffSession: vi.fn(),
   createStaffShift: vi.fn(),
+  getShopById: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -16,7 +17,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/db/authz", () => ({
   canPersonManageStaffAccounts: mocks.canPersonManageStaffAccounts,
 }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: mocks.getDb }));
+vi.mock("@/db/shops", () => ({ getShopById: mocks.getShopById }));
 vi.mock("../../../../features/staffing/store", () => ({
   createStaffShift: mocks.createStaffShift,
   deleteStaffShift: vi.fn(),
@@ -34,6 +37,7 @@ const week = "2026-11-02";
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.getDb.mockResolvedValue({});
+  mocks.getShopById.mockResolvedValue({ timezone: "America/New_York" });
   mocks.canPersonManageStaffAccounts.mockResolvedValue(false);
   mocks.requireStaffSession.mockResolvedValue(
     staffSession({ shopId, shopSlug, personId, roles: ["owner"] }),
@@ -41,9 +45,9 @@ beforeEach(() => {
 });
 
 describe("staffing shift action authorization", () => {
-  it("rejects stale owner claims when the live manager check refuses", async () => {
+  it("refuses a shift for somebody else when the live manager check refuses", async () => {
     const form = new FormData();
-    form.set("personId", personId);
+    form.set("personId", "33333333-3333-4333-8333-333333333333");
     form.set("date", week);
     form.set("startTime", "07:00");
     form.set("endTime", "15:00");
@@ -56,5 +60,20 @@ describe("staffing shift action authorization", () => {
     );
     expect(mocks.canPersonManageStaffAccounts).toHaveBeenCalledWith({}, shopId, personId);
     expect(mocks.createStaffShift).not.toHaveBeenCalled();
+  });
+
+  it("lets a crew member add their own shift", async () => {
+    mocks.createStaffShift.mockResolvedValue({ ok: true });
+    mocks.getShopById.mockResolvedValue({ timezone: "America/New_York" });
+    const form = new FormData();
+    form.set("personId", personId);
+    form.set("date", week);
+    form.set("startTime", "07:00");
+    form.set("endTime", "15:00");
+    form.set("note", "");
+
+    await redirectedTo(() => createShiftAction(week, form));
+
+    expect(mocks.createStaffShift).toHaveBeenCalled();
   });
 });

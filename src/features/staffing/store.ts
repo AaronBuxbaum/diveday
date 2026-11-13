@@ -10,7 +10,11 @@ import {
 import { crewGapFor, type StaffGapCode, type TripMeeting } from "@/features/staffing-week";
 import type { AppDb } from "../../db/client";
 import { courseCrewCountsByTrip, NO_SUPERVISION } from "../../db/course-crew-counts";
-import { listCrewAssignmentRequests, readStaffingWeekAway } from "../../db/crew-requests";
+import {
+  listCrewAssignmentRequests,
+  listPendingTimeOff,
+  readStaffingWeekAway,
+} from "../../db/crew-requests";
 import {
   bookings,
   courses,
@@ -559,10 +563,18 @@ export async function deleteStaffShift(
   db: AppDb,
   shopId: string,
   shiftId: string,
+  /** A crew member removes only their own shift; a manager passes nothing. */
+  onlyPersonId?: string,
 ): Promise<boolean> {
   const deleted = await db
     .delete(staffShifts)
-    .where(and(eq(staffShifts.id, shiftId), eq(staffShifts.shopId, shopId)))
+    .where(
+      and(
+        eq(staffShifts.id, shiftId),
+        eq(staffShifts.shopId, shopId),
+        onlyPersonId ? eq(staffShifts.personId, onlyPersonId) : undefined,
+      ),
+    )
     .returning({ id: staffShifts.id });
   return deleted.length > 0;
 }
@@ -577,7 +589,7 @@ export async function deleteStaffShift(
 export async function getStaffingPage(
   db: AppDb,
   shop: { id: string; diversPerDivemaster: number },
-  week: { from: Date; to: Date; firstDay: string; lastDay: string },
+  week: { from: Date; to: Date; firstDay: string; lastDay: string; today?: string },
   personId: string,
 ) {
   const [view, { blocks, canManageStaffAccounts }] = await Promise.all([
@@ -596,5 +608,8 @@ export async function getStaffingPage(
     shop.id,
     view.gapTrips.map((trip) => trip.tripId),
   );
-  return { view, blocks, canManageStaffAccounts, crewRequests };
+  // The approval box: every pending ask from today on, whatever week is on screen.
+  const pendingTimeOff =
+    canManageStaffAccounts && week.today ? await listPendingTimeOff(db, shop.id, week.today) : [];
+  return { view, blocks, canManageStaffAccounts, crewRequests, pendingTimeOff };
 }

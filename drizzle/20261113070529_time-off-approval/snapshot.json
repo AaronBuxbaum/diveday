@@ -1,0 +1,255 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "5d57ba9b-51f7-466c-8b1a-8b978e974a20",
+  "prevIds": [
+    "1b11076a-ccb9-41c5-b3d5-6b49fa9710eb"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "time_off_approval_enabled"
+      ],
+      "writes": [
+        "s|col|public.shops.time_off_approval_enabled",
+        "n|col|public.shops.time_off_approval_enabled",
+        "e|col|public.shops.time_off_approval_enabled"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "crew_availability_blocks",
+        "status"
+      ],
+      "writes": [
+        "s|col|public.crew_availability_blocks.status",
+        "n|col|public.crew_availability_blocks.status",
+        "e|col|public.crew_availability_blocks.status"
+      ],
+      "reads": [
+        "n|tbl|public.crew_availability_blocks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "crew_availability_blocks",
+        "decided_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.crew_availability_blocks.decided_by_person_id",
+        "n|col|public.crew_availability_blocks.decided_by_person_id",
+        "e|col|public.crew_availability_blocks.decided_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.crew_availability_blocks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "crew_availability_blocks",
+        "decided_at"
+      ],
+      "writes": [
+        "s|col|public.crew_availability_blocks.decided_at",
+        "n|col|public.crew_availability_blocks.decided_at",
+        "e|col|public.crew_availability_blocks.decided_at"
+      ],
+      "reads": [
+        "n|tbl|public.crew_availability_blocks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "crew_availability_blocks",
+        "decision_note"
+      ],
+      "writes": [
+        "s|col|public.crew_availability_blocks.decision_note",
+        "n|col|public.crew_availability_blocks.decision_note",
+        "e|col|public.crew_availability_blocks.decision_note"
+      ],
+      "reads": [
+        "n|tbl|public.crew_availability_blocks",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "crew_availability_blocks"
+      ],
+      "writes": [
+        "s|fk|public.crew_availability_blocks.crew_availability_blocks_decided_by_person_id_people_id_fkey",
+        "n|fk|public.crew_availability_blocks.crew_availability_blocks_decided_by_person_id_people_id_fkey",
+        "e|fk|public.crew_availability_blocks.crew_availability_blocks_decided_by_person_id_people_id_fkey",
+        "n|con|public.crew_availability_blocks.crew_availability_blocks_decided_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.crew_availability_blocks",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.crew_availability_blocks.decided_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "crew_availability_blocks"
+      ],
+      "writes": [
+        "s|ck|public.crew_availability_blocks.crew_availability_blocks_status_known",
+        "n|ck|public.crew_availability_blocks.crew_availability_blocks_status_known",
+        "e|ck|public.crew_availability_blocks.crew_availability_blocks_status_known",
+        "n|con|public.crew_availability_blocks.crew_availability_blocks_status_known"
+      ],
+      "reads": [
+        "n|tbl|public.crew_availability_blocks",
+        "n|sch|public",
+        "n|col|public.crew_availability_blocks.status"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "time_off_approval_enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "crew_availability_blocks",
+        "name": "status",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'approved'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "crew_availability_blocks",
+        "name": "decided_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "crew_availability_blocks",
+        "name": "decided_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "crew_availability_blocks",
+        "name": "decision_note",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "crew_availability_blocks",
+        "name": "crew_availability_blocks_decided_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "decided_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "crew_availability_blocks",
+        "name": "crew_availability_blocks_status_known",
+        "value": "\"status\" in ('pending', 'approved', 'declined')",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

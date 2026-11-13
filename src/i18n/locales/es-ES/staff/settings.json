@@ -575,7 +575,9 @@
       "description": "Turnos, días libres y quién trabaja en cada salida.",
       "save": "Guardar turnos",
       "saved": "Turnos de la tripulación guardados",
-      "turnOn": "Activar en Funciones"
+      "turnOn": "Activar en Funciones",
+      "approval": "Los días libres del equipo necesitan el visto bueno de un propietario o gerente",
+      "approvalHint": "Los propietarios y gerentes agregan los suyos sin pedir permiso."
     },
     "team": {
       "heading": "Equipo"

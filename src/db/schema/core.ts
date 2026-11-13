@@ -176,6 +176,13 @@ export const shops = pgTable(
      */
     crewScheduleEnabled: boolean("crew_schedule_enabled").notNull().default(true),
     /**
+     * Whether a crew member's own days off wait for an owner or manager to approve them
+     * (Aaron, 2026-11-13). On for a new shop; off, a crew member's days off are simply approved.
+     * Days an owner or manager writes are never held. Set beside the divemaster target in
+     * Settings → Team.
+     */
+    timeOffApprovalEnabled: boolean("time_off_approval_enabled").notNull().default(true),
+    /**
      * **Optional features a shop can switch off** (ADR
      * 20261005-optional-shop-features). Each defaults on, so a new shop sees
      * what every shop saw before the switch existed; off hides the feature on

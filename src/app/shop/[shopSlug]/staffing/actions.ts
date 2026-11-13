@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import { flushUrgentCrewNotices, recordCrewNotices } from "@/db/crew-notices";
 import {
   decideCrewAssignmentRequest,
+  decideCrewAvailabilityBlock,
   deleteCrewAvailabilityBlock,
   recordCrewAvailabilityBlock,
   requestCrewAssignment,
@@ -65,13 +66,28 @@ async function requireStaffingManager(week: Record<string, string | undefined>) 
   return session;
 }
 
+/** Staff of any role; whether they may manage the roster decides whose shifts they may write. */
+async function requireStaffingActor() {
+  const session = await requireStaffSession();
+  const canManage = await canPersonManageStaffAccounts(
+    await getDb(),
+    session.user.shopId,
+    session.user.personId,
+  );
+  return { session, canManage };
+}
+
 export async function createShiftAction(week: string, formData: FormData) {
   const at = { ...weekExtra(week), view: "plan" };
-  const session = await requireStaffingManager(at);
+  // Anyone on the team adds their own shift; adding one for somebody else is the manager's.
+  const { session, canManage } = await requireStaffingActor();
   const path = shopPath(session.user.shopSlug, "staffing");
   const parsed = shiftSchema.safeParse(Object.fromEntries(formData));
   const shop = await getShopById(await getDb(), session.user.shopId);
   if (!parsed.success || !shop) redirect(noticeUrl(path, "invalid", at));
+  if (!canManage && parsed.data.personId !== session.user.personId) {
+    redirect(noticeUrl(path, "not-authorized", at));
+  }
   const starts = parseWallTime(parsed.data.date, parsed.data.startTime);
   const ends = parseWallTime(parsed.data.date, parsed.data.endTime);
   if (!starts || !ends) redirect(noticeUrl(path, "invalid", at));
@@ -98,11 +114,16 @@ const crewDecisionForm = z.object({ requestId: text(), decision: text() });
 export async function deleteShiftAction(week: string, formData: FormData) {
   // A Remove on the Shifts tab lands back on it; one on the week stays on the week.
   const at = { ...weekExtra(week), ...(formData.get("view") === "plan" ? { view: "plan" } : {}) };
-  const session = await requireStaffingManager(at);
+  const { session, canManage } = await requireStaffingActor();
   const path = shopPath(session.user.shopSlug, "staffing");
   const { shiftId } = readForm(shiftIdForm, formData);
   if (!z.string().uuid().safeParse(shiftId).success) redirect(noticeUrl(path, "invalid", at));
-  const deleted = await deleteStaffShift(await getDb(), session.user.shopId, shiftId);
+  const deleted = await deleteStaffShift(
+    await getDb(),
+    session.user.shopId,
+    shiftId,
+    canManage ? undefined : session.user.personId,
+  );
   revalidateAndRedirect(path, noticeUrl(path, deleted ? "shift-deleted" : "invalid", at));
 }
 
@@ -130,20 +151,50 @@ export async function saveAwayAction(week: string, formData: FormData) {
   const parsed = awaySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(path, "invalid", at));
   const db = await getDb();
+  const canManageRoster = await canPersonManageStaffAccounts(
+    db,
+    session.user.shopId,
+    session.user.personId,
+  );
+  const shop = await getShopById(db, session.user.shopId);
+  const approvalRequired = shop?.timeOffApprovalEnabled ?? false;
   const outcome = await recordCrewAvailabilityBlock(db, {
     shopId: session.user.shopId,
     personId: parsed.data.personId,
     actorPersonId: session.user.personId,
-    canManageRoster: await canPersonManageStaffAccounts(
-      db,
-      session.user.shopId,
-      session.user.personId,
-    ),
+    canManageRoster,
     startsOn: parsed.data.startsOn,
     endsOn: parsed.data.endsOn,
     note: parsed.data.note,
+    approvalRequired,
   });
-  revalidateAndRedirect(path, noticeUrl(path, outcome.ok ? "away-saved" : outcome.reason, at));
+  // A held ask says it is waiting; an owner's own days, or a shop that asks nobody, just save.
+  const saved = approvalRequired && !canManageRoster ? "away-requested" : "away-saved";
+  revalidateAndRedirect(path, noticeUrl(path, outcome.ok ? saved : outcome.reason, at));
+}
+
+const awayDecisionForm = z.object({ blockId: text(), decision: text(), reason: text() });
+
+/** The owner's answer to a crew member's days off, with an optional reason the asker reads. */
+export async function decideAwayAction(week: string, formData: FormData) {
+  const at = { ...weekExtra(week), view: "plan" };
+  const session = await requireStaffingManager(at);
+  const path = shopPath(session.user.shopSlug, "staffing");
+  const { blockId, decision, reason } = readForm(awayDecisionForm, formData);
+  if (!z.string().uuid().safeParse(blockId).success) redirect(noticeUrl(path, "invalid", at));
+  if (decision !== "approved" && decision !== "declined") {
+    redirect(noticeUrl(path, "invalid", at));
+  }
+  const outcome = await decideCrewAvailabilityBlock(await getDb(), {
+    shopId: session.user.shopId,
+    blockId,
+    decision,
+    reason: reason.slice(0, 200),
+    decidedByPersonId: session.user.personId,
+    canManageRoster: true,
+  });
+  const done = decision === "approved" ? "away-approved" : "away-declined";
+  revalidateAndRedirect(path, noticeUrl(path, outcome.ok ? done : outcome.reason, at));
 }
 
 export async function deleteAwayAction(week: string, formData: FormData) {

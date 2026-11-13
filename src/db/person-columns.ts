@@ -926,6 +926,13 @@ const rows = [
   },
   {
     table: "crew_availability_blocks",
+    column: "decided_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who approved or declined the days off",
+  },
+  {
+    table: "crew_availability_blocks",
     column: "created_by_person_id",
     kind: "actor",
     merge: "leave",

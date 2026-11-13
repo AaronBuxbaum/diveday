@@ -91,6 +91,9 @@ export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
   hasShoreDiving: "divingOptions",
   hasPoolDiving: "divingOptions",
   crewScheduleEnabled: "crewSchedule",
+  timeOffApprovalEnabled: {
+    core: "a rule of the crew schedule, set beside its target in Settings → Team",
+  },
   reviewsEnabled: "reviews",
   conservationEnabled: "conservation",
   coursePulseEnabled: "coursePulse",
