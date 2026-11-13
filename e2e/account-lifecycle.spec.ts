@@ -4,6 +4,8 @@ import { expect, test } from "./fixtures";
 import { mintOnboardFormPath } from "./setup-link";
 import { seedFacts } from "./shop-facts";
 
+test.use({ privateShopSignIn: false });
+
 // Real verify/reset links only ever exist inside a real email — there is no
 // staff-facing screen that displays them (unlike a waiver or readiness
 // link), and the token is a hashed DB row rather than something this spec
@@ -36,8 +38,12 @@ async function onboardFreshOwner(page: Page, slug: string) {
 test("a valid email-verification link confirms the account through the real page and action", async ({
   page,
   request,
+  privateShop,
 }) => {
-  const email = await onboardFreshOwner(page, "verify-e2e");
+  // This fixture's owner starts unverified and has no deferred welcome issuer.
+  // A just-onboarded account can issue its initial verification token after
+  // the redirect, superseding the fact's token before the verify page reads it.
+  const email = privateShop.ownerEmail;
   const { accountToken } = await seedFacts(request, [
     { name: "accountToken", email, purpose: "email_verification" },
   ]);
@@ -90,8 +96,8 @@ test("a valid password-reset link sets a new password and signs the owner in", a
  * four permanent staff keep theirs for the rest of the worker's run. Here the
  * token dies with the shop.
  *
- * The fixture also signs `page` in, which this flow neither needs nor reads:
- * `/forgot-password` looks at no session.
+ * The fixture's staff sign-in is disabled for this file: these token and
+ * recovery flows begin without a session.
  */
 test("forgot-password gives the same generic response whether or not the email is registered", async ({
   page,

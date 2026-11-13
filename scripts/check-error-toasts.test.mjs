@@ -9,6 +9,15 @@ describe("check-error-toasts", () => {
     );
     expect(found).toHaveLength(1);
   });
+  it("keeps persistent day-board safety conflicts while refusing ordinary page errors", () => {
+    const alert = '<p role="alert">Boat departures overlap</p>';
+    expect(
+      findInlineErrors("src/app/shop/[shopSlug]/schedule/board/_components/DayBoard.tsx", alert),
+    ).toEqual([]);
+    expect(
+      findInlineErrors("src/app/shop/[shopSlug]/schedule/board/_components/Other.tsx", alert),
+    ).toHaveLength(1);
+  });
   it("lets the toast, comments and listed files through", () => {
     expect(findInlineErrors("src/components/Toast.tsx", 'role="alert"')).toEqual([]);
     expect(findInlineErrors("src/components/X.tsx", ' * `role="alert"` is the toast')).toEqual([]);

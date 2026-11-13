@@ -13,6 +13,7 @@ import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
+import { formatDateTimeTz } from "@/lib/format";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -702,7 +703,11 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
       const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const [row] = rollCallRows(work, trip.id);
       expect(row?.kind).toBe("roll_call_missing_diver");
-      expect(row?.detail).toMatch(/^1 of 3 people is not back aboard after dive 1\./);
+      const prefix = `Day 1 · ${formatDateTimeTz(trip.endsAt, "en-US", shop.timezone)}: `;
+      expect(row?.detail?.startsWith(prefix), row?.detail).toBe(true);
+      expect(row?.detail?.slice(prefix.length)).toMatch(
+        /^1 of 3 people is not back aboard after dive 1\./,
+      );
     });
 
     it("counts people on a mixed boat with no roll call at all", async () => {
@@ -717,7 +722,9 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
 
       const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
       const [row] = rollCallRows(work, trip.id);
-      expect(row?.detail).toBe("No roll call recorded for 2 people.");
+      expect(row?.detail).toBe(
+        `Day 1 · ${formatDateTimeTz(trip.endsAt, "en-US", shop.timezone)}: No roll call recorded for 2 people.`,
+      );
     });
 
     it("stops chasing the dock count once the trip is older than the lookback", async () => {

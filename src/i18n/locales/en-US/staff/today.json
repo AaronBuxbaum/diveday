@@ -207,6 +207,7 @@
     "missingDiverStale": "{uncounted, plural, one {# of {total, plural, one {# person} other {# people}} is} other {# of {total, plural, one {# person} other {# people}} are}} still marked not back aboard after dive {dive}. Reconstruct it from the manifest. Recaps are held until the roll call is corrected.",
     "openRollCall": "Boat is back with dive {dive} uncounted: {uncounted, plural, one {# of {total, plural, one {# person} other {# people}} has} other {# of {total, plural, one {# person} other {# people}} have}} no result.",
     "openRollCallUnderway": "Boat is out, dive {dive} count still open: {uncounted, plural, one {# of {total, plural, one {# person} other {# people}} has} other {# of {total, plural, one {# person} other {# people}} have}} no result.",
+    "rollCallMeetingDay": "Day {day} · {date}: {detail}",
     "openRollCallStale": "Dive {dive} roll call never closed: {uncounted, plural, one {# of {total, plural, one {# person} other {# people}} has} other {# of {total, plural, one {# person} other {# people}} have}} no result. Reconstruct it from the manifest.",
     "missingCrew": "{uncounted, plural, one {# of {total} crew is} other {# of {total} crew are}} not back aboard after dive {dive}. Recaps are held until the roll call is corrected.",
     "missingCrewStale": "{uncounted, plural, one {# of {total} crew is} other {# of {total} crew are}} still marked not back aboard after dive {dive}. Reconstruct it from the manifest. Recaps are held until the roll call is corrected.",

@@ -46,6 +46,10 @@ export const ALLOWED = new Map([
     "an edit conflict carrying its Reload action",
   ],
   [
+    "src/app/shop/[shopSlug]/schedule/board/_components/DayBoard.tsx",
+    "persistent allocation, hull and capacity safety conflicts, not failed actions",
+  ],
+  [
     "src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx",
     "a removal confirmation and a live move preview, not a failure",
   ],
