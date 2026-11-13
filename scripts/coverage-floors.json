@@ -84,6 +84,7 @@
   "src/features/check-in/store.ts": 91.71,
   "src/db/checkouts.ts": 88.14,
   "src/features/course-certified/store.ts": 70.21,
+  "src/features/e2e-test-routes/manifest-read-counter.ts": 100,
   "src/db/erasure-coordinated-send.ts": 90.19,
   "src/db/export-crew-roll-call.ts": 50,
   "src/test/shop-facts/manifest-overcapacity-state.ts": 0,

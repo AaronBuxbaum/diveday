@@ -14,6 +14,7 @@ import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
 import { openSnagsForTrip } from "@/features/boat-snags";
 import { departureVessels } from "@/features/boats";
 import { diveIntentTallyForTrip } from "@/features/dive-intent";
+import { recordManifestRead } from "@/features/e2e-test-routes";
 import { readOfflineManifestRoster } from "@/features/offline-manifest-snapshots";
 import type { SiteHistory } from "@/features/site-history";
 import { lastAtSites } from "@/features/site-history";
@@ -23,6 +24,7 @@ import { departureCrewCount } from "@/lib/boat-safety";
 import { nowDate, nowMs } from "@/lib/clock";
 import { manifestPhysicalCounts } from "@/lib/manifests";
 import { cancelledRollCall } from "@/lib/roll-call";
+import { runtimeMode } from "@/lib/runtime-mode";
 
 /**
  * **Everything the boat manifest reads, in the waves the page awaits them**:
@@ -48,6 +50,7 @@ export async function readManifestPage(
   const shopId = shop.id;
   // All the other identity-bearing reads start after the roster has captured
   // its epoch. A later roster epoch cannot certify earlier buddy or note reads.
+  if (runtimeMode().e2eHarness) recordManifestRead(tripId);
   const rosterResult = await readOfflineManifestRoster(db, shopId, tripId);
   const readCompletedAt = nowMs();
   const renderErasureEpoch = rosterResult?.erasureEpoch ?? null;

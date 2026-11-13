@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { GroupLabel } from "@/components/ui/group-label";
@@ -198,7 +198,7 @@ export function OfflineManifestManager({
             className="pointer-events-auto max-w-2xl rounded-inset border border-danger/30 bg-danger-tint px-4 py-3 text-base font-semibold text-danger shadow-lg backdrop-blur"
           >
             {rejectedNotice}{" "}
-            <a href={`/offline-manifest?trip=${tripId}`} className="underline">
+            <a href={`/offline-manifest?trip=${tripId}`} className={proseLinkClass}>
               {copy.openOfflineRollCall}
             </a>
           </div>
