@@ -314,6 +314,7 @@ export const test = base.extend<
     privateShopSlug: string | null;
     privateShopBrand: boolean;
     privateShopDemo: boolean;
+    privateShopSignIn: boolean;
     privateShopFacts: FactRequest[];
   },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
@@ -630,6 +631,9 @@ export const test = base.extend<
    */
   privateShopDemo: [true, { option: true }],
 
+  /** Token-only account flows need an isolated owner, without a staff session or its prefetches. */
+  privateShopSignIn: [true, { option: true }],
+
   /**
    * **The minted shop's state, as named facts** (issue #2759), written in the
    * same request that mints it, before the owner signs in; each fact's answer
@@ -680,6 +684,7 @@ export const test = base.extend<
       privateShopSlug,
       privateShopBrand,
       privateShopDemo,
+      privateShopSignIn,
       privateShopFacts,
     },
     use,
@@ -707,7 +712,9 @@ export const test = base.extend<
       password: string;
       values: Record<string, unknown>;
     };
-    await signInAs(page, { email: minted.ownerEmail, password: minted.password });
+    if (privateShopSignIn) {
+      await signInAs(page, { email: minted.ownerEmail, password: minted.password });
+    }
     await use({ slug: minted.slug, ownerEmail: minted.ownerEmail, values: minted.values });
     // Best-effort: a teardown failure must not turn a passing test red. But it
     // says so here: a cascade that cannot finish leaves the minted shop for
