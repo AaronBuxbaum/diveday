@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ErrorToast, Toast } from "./Toast";
 import { FormStatus } from "./ui/form";
@@ -91,6 +92,60 @@ it("keeps a detailed success report and its link available after the toast inter
 });
 
 describe("ErrorToast", () => {
+  it("keeps expiry paused when keyboard focus moves from the toast to its recovery link", async () => {
+    vi.useFakeTimers();
+    render(
+      <ErrorToast
+        durationMs={1000}
+        message={
+          <>
+            Could not save. <a href="/retry">Review</a>
+          </>
+        }
+      />,
+    );
+    const alert = screen.getByRole("alert");
+    const link = screen.getByRole("link", { name: "Review" });
+    fireEvent.focus(alert);
+    fireEvent.blur(alert, { relatedTarget: link });
+    fireEvent.focus(link);
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(alert).not.toHaveClass("toast-dismiss");
+    expect(link).toBeVisible();
+  });
+
+  it("puts a text-only error in the keyboard tab order without moving focus on arrival", async () => {
+    render(<ErrorToast message="Could not save" />);
+    const alert = screen.getByRole("alert");
+    expect(alert).not.toHaveFocus();
+    await userEvent.tab();
+    expect(alert).toHaveFocus();
+  });
+
+  it("keeps a keyboard-focused error paused when the pointer leaves, then resumes its remaining time", async () => {
+    vi.useFakeTimers();
+    render(<ErrorToast message="Could not save" durationMs={1000} />);
+    const alert = screen.getByRole("alert");
+    fireEvent.focus(alert);
+    fireEvent.mouseEnter(alert);
+    fireEvent.mouseLeave(alert);
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(alert).toBeVisible();
+    expect(alert).not.toHaveClass("toast-dismiss");
+    fireEvent.blur(alert);
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("says an error as an alert, then leaves instead of staying on the page", async () => {
     vi.useFakeTimers();
     render(<ErrorToast message="Could not save" durationMs={1000} />);

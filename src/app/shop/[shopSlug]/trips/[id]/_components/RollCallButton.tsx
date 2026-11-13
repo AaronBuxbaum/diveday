@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useActionState, useEffect, useRef } from "react";
+import { type ReactNode, useActionState, useEffect, useRef, useState } from "react";
 import { vibrate } from "@/components/haptics";
 import {
   refusePress,
@@ -177,6 +177,7 @@ export function RollCallButton({
   const causal = useRollCallCausalContext(subject.field, subject.id);
   const eventIdInput = useRef<HTMLInputElement>(null);
   const [result, formAction, isPending] = useActionState(action, null);
+  const [occurrence, setOccurrence] = useState(0);
   const startedAt = useRef<number | null>(null);
   const sawPending = useRef(false);
 
@@ -216,6 +217,7 @@ export function RollCallButton({
         className={formClassName}
         onSubmit={() => {
           if (eventIdInput.current) eventIdInput.current.value = crypto.randomUUID();
+          setOccurrence((previous) => previous + 1);
         }}
       >
         <input ref={eventIdInput} type="hidden" name="clientEventId" defaultValue="" />
@@ -298,13 +300,9 @@ export function RollCallButton({
           )}
         </button>
       </form>
-      {result && !result.ok ? (
-        // `basis-full order-3`: the cluster is a flex-wrap row at every width
-        // now, and its controls are visually ordered with `order-1`/`order-2`
-        // — so a refusal drops to its own full-width line *below* both
-        // controls instead of squeezing in as a third column or, at the
-        // default order 0, jumping above them.
+      {result && !result.ok && !isPending ? (
         <ErrorToast
+          occurrenceKey={occurrence}
           durationMs={SAFETY_TOAST_MS}
           message={
             result.reason === "not_ready"

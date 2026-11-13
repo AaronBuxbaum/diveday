@@ -75,6 +75,8 @@ export function ToastShell({
   const [dragX, setDragX] = useState(0);
   const dragRef = useRef<{ x: number; y: number; at: number; sideways: boolean } | null>(null);
   const justSwiped = useRef(false);
+  const hovered = useRef(false);
+  const focused = useRef(false);
   const [dismissing, setDismissing] = useState(false);
 
   // Pending auto-dismiss timer, or null while paused (hover/focus) or once
@@ -158,6 +160,7 @@ export function ToastShell({
     // biome-ignore lint/a11y/noStaticElementInteractions: the swipe-away drag is a pointer nicety; the toast leaves by itself either way
     <div
       role={role}
+      tabIndex={pausable ? 0 : undefined}
       onPointerDown={onSwipeAway ? dragStart : undefined}
       onPointerMove={onSwipeAway ? dragMove : undefined}
       onPointerUp={onSwipeAway ? dragEnd : undefined}
@@ -183,12 +186,43 @@ export function ToastShell({
             }
           : undefined
       }
-      onMouseEnter={pausable ? pause : undefined}
-      onMouseLeave={pausable ? resume : undefined}
-      onFocusCapture={pausable ? pause : undefined}
-      onBlurCapture={pausable ? resume : undefined}
+      onMouseEnter={
+        pausable
+          ? () => {
+              hovered.current = true;
+              pause();
+            }
+          : undefined
+      }
+      onMouseLeave={
+        pausable
+          ? () => {
+              hovered.current = false;
+              if (!focused.current) resume();
+            }
+          : undefined
+      }
+      onFocusCapture={
+        pausable
+          ? () => {
+              focused.current = true;
+              pause();
+            }
+          : undefined
+      }
+      onBlurCapture={
+        pausable
+          ? (event) => {
+              if (event.currentTarget.contains(event.relatedTarget)) return;
+              focused.current = false;
+              if (!hovered.current) resume();
+            }
+          : undefined
+      }
       className={`${className} rounded-inset border border-border bg-surface shadow-2xl ${
         onSwipeAway ? "touch-pan-y " : ""
+      }${
+        pausable ? "focus-visible:focus-ring-inset " : ""
       }${dismissing ? "toast-dismiss" : "rise-in"}`}
     >
       {children}
@@ -206,8 +240,8 @@ export function ToastShell({
 /**
  * The shared immediate success confirmation. `FormStatus` and `ShopNotice`
  * route successful action outcomes here, so acknowledgements leave after a
- * beat instead of becoming permanent page content. Refusals remain beside
- * their form, and reversible actions offering Undo use `UndoToast`.
+ * beat instead of becoming permanent page content. Refusals use `ErrorToast`,
+ * and reversible actions offering Undo use `UndoToast`.
  *
  * Mount it fresh (`key`) per occurrence — an identical message twice in a row
  * still needs to visibly land twice.
