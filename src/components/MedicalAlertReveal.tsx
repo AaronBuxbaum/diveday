@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ErrorToast } from "@/components/Toast";
+import { ErrorToast, SAFETY_TOAST_MS } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { fill } from "@/i18n/fill";
 import { loadOfflineManifest } from "@/lib/offline-manifest-store";
@@ -212,7 +212,10 @@ export function MedicalAlertReveal({
       </button>
       <p className="text-xs text-muted">{copy.showHint}</p>
       {problem ? (
-        <ErrorToast message={problem === "no_signal" ? copy.noSignal : copy.failed} />
+        <ErrorToast
+          message={problem === "no_signal" ? copy.noSignal : copy.failed}
+          durationMs={SAFETY_TOAST_MS}
+        />
       ) : null}
     </div>
   );
@@ -332,7 +335,7 @@ function EmergencyRead({
           {copy.offer}
         </button>
       )}
-      {problemText ? <ErrorToast message={problemText} /> : null}
+      {problemText ? <ErrorToast message={problemText} durationMs={SAFETY_TOAST_MS} /> : null}
     </div>
   );
 }

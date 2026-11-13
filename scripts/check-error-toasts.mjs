@@ -36,6 +36,10 @@ export const ALLOWED = new Map([
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CheckpointGapGuard.tsx",
     "a blocking roll-call prompt that takes focus",
   ],
+  [
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/StageStrip.tsx",
+    "the send-everyone-home confirmation the crew must answer",
+  ],
   ["src/components/OfflineManifestManager.tsx", "already a fixed, auto-leaving notice"],
   [
     "src/app/shop/[shopSlug]/courses/[slug]/edit/_components/ConflictGuardedForm.tsx",

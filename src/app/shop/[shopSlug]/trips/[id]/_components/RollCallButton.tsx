@@ -7,7 +7,7 @@ import {
   wasMultiTouch,
   watchRollCallTouches,
 } from "@/components/roll-call-touch-guard";
-import { ErrorToast } from "@/components/Toast";
+import { ErrorToast, SAFETY_TOAST_MS } from "@/components/Toast";
 import { textareaClassFor } from "@/components/ui/form";
 import { useRollCallCausalContext } from "./roll-call-causal-context";
 
@@ -305,6 +305,7 @@ export function RollCallButton({
         // controls instead of squeezing in as a third column or, at the
         // default order 0, jumping above them.
         <ErrorToast
+          durationMs={SAFETY_TOAST_MS}
           message={
             result.reason === "not_ready"
               ? copy.blockedMessage

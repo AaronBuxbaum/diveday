@@ -236,6 +236,9 @@ export function Toast({
   );
 }
 
+/** Roll-call, checkpoint and medical-reveal refusals stay long enough for eyes on the water to come back. */
+export const SAFETY_TOAST_MS = 30_000;
+
 /**
  * **The one error toast.** An error is never drawn as a component that stays on
  * the page (Aaron, 2026-11-13): a refused save, a failed load or a failed
