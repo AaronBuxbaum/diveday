@@ -32,7 +32,13 @@ export async function withDemoCrewEvidence(
         isNull(staffCredentials.deletedAt),
       ),
     )
-    .orderBy(asc(staffCredentials.id));
+    // Generated row IDs differ across demo resets. Order by the facts copied
+    // into evidence so a reset does not change the same fictional snapshot.
+    .orderBy(
+      asc(staffCredentials.kind),
+      asc(staffCredentials.issuedAt),
+      asc(staffCredentials.renewsAt),
+    );
   return events.map((event) => {
     if (
       event.subjectKind !== "crew" ||
