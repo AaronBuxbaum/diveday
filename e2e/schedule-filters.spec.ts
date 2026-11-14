@@ -72,9 +72,9 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
   // Combine with "has space": the seed has a sold-out course session, so this
   // narrows further still.
   await openFilters(page);
-  await page.getByLabel("Has space").check();
+  await page.getByLabel("How many of you?").selectOption("2");
   await expect(page).toHaveURL(/tripType=course/);
-  await expect(page).toHaveURL(/hasSpace=1/);
+  await expect(page).toHaveURL(/partySize=2/);
 });
 
 test("no control comes or goes from the filter row while it hydrates", { tag: READ_ONLY }, async ({
@@ -199,7 +199,7 @@ test("paging and month arrows keep the filters a diver applied", { tag: READ_ONL
   // back the full unfiltered list with the checkbox silently reset.
   await page.goto("/s/blue-mantis?hasSpace=1");
   const later = page.getByRole("link", { name: "Show later departures" });
-  await expect(later).toHaveAttribute("href", /hasSpace=1/);
+  await expect(later).toHaveAttribute("href", /partySize=2/);
 
   // Deeper pages offer the way back — earlier, and straight to the start —
   // and both of those keep the view too.
@@ -207,11 +207,11 @@ test("paging and month arrows keep the filters a diver applied", { tag: READ_ONL
   await expect(page).toHaveURL(/after=/);
   await expect(page.getByRole("link", { name: "Show earlier departures" })).toHaveAttribute(
     "href",
-    /hasSpace=1/,
+    /partySize=2/,
   );
   await expect(page.getByRole("link", { name: "← Back to the next departure" })).toHaveAttribute(
     "href",
-    /hasSpace=1/,
+    /partySize=2/,
   );
 
   // Going back is a cursor of its own (`before`), not a stack of history in
@@ -225,7 +225,7 @@ test("paging and month arrows keep the filters a diver applied", { tag: READ_ONL
   // the filters), so they carry the whole view as well.
   await page.goto("/s/blue-mantis?hasSpace=1&tripType=fun_dive");
   const nextMonth = page.getByRole("link", { name: "Next month" });
-  await expect(nextMonth).toHaveAttribute("href", /hasSpace=1/);
+  await expect(nextMonth).toHaveAttribute("href", /partySize=2/);
   await expect(nextMonth).toHaveAttribute("href", /tripType=fun_dive/);
 });
 
@@ -261,7 +261,7 @@ test("stating a certification level marks the departures above it without removi
   await expect(page.getByText("Above your level")).toHaveCount(0);
 
   await openFilters(page);
-  await page.getByLabel("What can you dive?").selectOption("open_water");
+  await page.getByLabel("Existing certification").selectOption("open_water");
   await expect(page).toHaveURL(/canDive=open_water/);
 
   // Still on the list, and now saying why it is dimmed. The reef charter, which
@@ -277,13 +277,13 @@ test("stating a certification level marks the departures above it without removi
   await expect(page.getByText(/asks? for more than Open Water/)).toHaveCount(0);
 
   // Saying a higher level opens them: the same page, nothing marked.
-  await page.getByLabel("What can you dive?").selectOption("advanced_open_water");
+  await page.getByLabel("Existing certification").selectOption("advanced_open_water");
   await expect(page).toHaveURL(/canDive=advanced_open_water/);
   await expect(advanced).toHaveCount(1);
   await expect(page.getByText("Above your level")).toHaveCount(0);
 
   // The shorter list is opt-in, and only offered once a level is stated.
-  await page.getByLabel("What can you dive?").selectOption("open_water");
+  await page.getByLabel("Existing certification").selectOption("open_water");
   await expect(page).toHaveURL(/canDive=open_water/);
   await page.getByLabel("Hide what needs more").check();
   await expect(page).toHaveURL(/hideAbove=1/);
@@ -292,7 +292,7 @@ test("stating a certification level marks the departures above it without removi
 
   // A full reload keeps both -- they are query params, not client state.
   await page.reload();
-  await expect(page.getByLabel("What can you dive?")).toHaveValue("open_water");
+  await expect(page.getByLabel("Existing certification")).toHaveValue("open_water");
   await expect(page.getByLabel("Hide what needs more")).toBeChecked();
 });
 
@@ -318,7 +318,7 @@ test("stating a certification level marks the departures above it without removi
 test("the stated level never reaches the booking form", { tag: READ_ONLY }, async ({ page }) => {
   await page.goto("/s/blue-mantis");
   await openFilters(page);
-  await page.getByLabel("What can you dive?").selectOption("rescue");
+  await page.getByLabel("Existing certification").selectOption("rescue");
   await expect(page).toHaveURL(/canDive=rescue/);
 
   await page

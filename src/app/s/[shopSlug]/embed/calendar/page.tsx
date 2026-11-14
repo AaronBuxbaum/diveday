@@ -96,6 +96,7 @@ export default async function EmbeddedSchedulePage({
   const { dayKeyOf } = scheduleDayWords(now, locale, tz);
   const rows = weekLedgerRows({
     listedTrips,
+    facts: { now, shop, sightings: new Map() },
     lenses: [],
     diveSitesByTrip,
     requirementsByTrip,

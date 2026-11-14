@@ -64,7 +64,7 @@ export function scheduleViewLinks(view: ScheduleView) {
     activeLens,
   } = view;
   const withViewParams = (params: URLSearchParams) => {
-    if ((view.partySize ?? 1) > 1) params.set("partySize", String(view.partySize));
+    if (view.partySize !== undefined) params.set("partySize", String(view.partySize));
     if (month) params.set("month", month);
     if (hasSpaceFilter) params.set("hasSpace", "1");
     if (tripTypeFilter) params.set("tripType", tripTypeFilter);
@@ -205,6 +205,7 @@ export function scheduleSeatState(t: DiverTranslator, trip: { capacity: number; 
 export function scheduleFilterCopy(t: DiverTranslator) {
   return {
     partySize: t("schedule.filters.partySize"),
+    anyPartySize: t("schedule.filters.anyPartySize"),
     fewerPeople: t("party.fewerPeople"),
     morePeople: t("party.morePeople"),
     disclosure: t("schedule.filters.disclosure"),
@@ -256,7 +257,7 @@ export function schedulePagerHrefs({
   // departure", so it keeps the filters but deliberately drops
   // both the cursor and any month bound.
   const params = new URLSearchParams();
-  if ((view.partySize ?? 1) > 1) params.set("partySize", String(view.partySize));
+  if (view.partySize !== undefined) params.set("partySize", String(view.partySize));
   if (hasSpaceFilter) params.set("hasSpace", "1");
   if (tripTypeFilter) params.set("tripType", tripTypeFilter);
   if (canDiveFilter) params.set("canDive", canDiveFilter);

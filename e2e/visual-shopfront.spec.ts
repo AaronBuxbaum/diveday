@@ -49,12 +49,8 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the schedule shows room for a party (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis?partySize=4");
-        await page.getByRole("group", { name: "How many of you?" }).waitFor();
-        await page
-          .locator("form + ul")
-          .getByText(/party of 4/)
-          .first()
-          .waitFor();
+        await page.getByRole("combobox", { name: "How many of you?" }).waitFor();
+        await page.locator("form + ul").getByRole("listitem").first().waitFor();
         await capture(page, "schedule-party-size", scheme);
       });
 
