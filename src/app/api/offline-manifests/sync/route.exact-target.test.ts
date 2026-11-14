@@ -4,6 +4,7 @@ import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { capturedMeeting } from "@/test/offline-meeting-test-support";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
 const fileCtx = fileScopedShopContext();
@@ -66,11 +67,13 @@ describe("sync exact undo preserves independent evidence", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
     const now = nowDate().toISOString();
+    const meeting = await capturedMeeting(db, shop.id, trip.id, 0);
     const mine = crypto.randomUUID();
     const theirs = crypto.randomUUID();
     const event = (clientEventId: string, extra: Record<string, unknown> = {}) => ({
       clientEventId,
-      snapshotId: crypto.randomUUID(),
+      snapshotId: meeting.offlineSnapshotId,
+      meetingIdentityProof: meeting.offlineMeetingIdentityProof,
       snapshotSavedAt: now,
       bookingId: booking.id,
       tripId: trip.id,
@@ -107,28 +110,33 @@ describe("sync exact undo preserves independent evidence", () => {
       results: Array<{ clientEventId: string; status: string; reason?: string }>;
     };
     expect(body.results).toEqual([{ clientEventId: retraction, status: "applied" }]);
-    // The exact target was withdrawn; the independent same-result statement
-    // survives. An arbitrary nonexistent target is still refused visibly.
+    // The exact target was withdrawn; the independent same-result statement survives.
+    const expectIndependentEvidence = async () => {
+      const manifest = await getTripManifest(db, shop.id, trip.id, "departure");
+      const standing = manifest?.divers.find((entry) => entry.bookingId === booking.id);
+      expect(standing?.rollCallContext).toMatchObject({
+        meetingDay: 0,
+        evidence: expect.arrayContaining([
+          expect.objectContaining({ id: `client:${theirs}`, status: "not_boarded" }),
+        ]),
+      });
+      expect(standing).toMatchObject({ rollCall: { state: "not_boarded" } });
+      expect(standing?.rollCallContext?.conflict).toBe(false);
+      expect(standing?.rollCallContext?.observedEvidenceIds).toContain(`client:${theirs}`);
+      expect(standing?.rollCallContext?.observedEvidenceIds).not.toContain(`client:${mine}`);
+    };
+    await expectIndependentEvidence();
+
+    // An arbitrary nonexistent target is still refused visibly.
     const unknown = crypto.randomUUID();
     const refused = await POST(
       postRequest({
         events: [event(unknown, { status: "cleared", retractsClientEventId: crypto.randomUUID() })],
       }),
     );
+    await expectIndependentEvidence();
     expect((await refused.json()).results).toEqual([
       { clientEventId: unknown, status: "rejected", reason: "retraction_superseded" },
     ]);
-    const manifest = await getTripManifest(db, shop.id, trip.id, "departure");
-    const standing = manifest?.divers.find((entry) => entry.bookingId === booking.id);
-    expect(standing?.rollCallContext).toMatchObject({
-      meetingDay: 0,
-      evidence: expect.arrayContaining([
-        expect.objectContaining({ id: `client:${theirs}`, status: "not_boarded" }),
-      ]),
-    });
-    expect(standing).toMatchObject({ rollCall: { state: "not_boarded" } });
-    expect(standing?.rollCallContext?.conflict).toBe(false);
-    expect(standing?.rollCallContext?.observedEvidenceIds).toContain(`client:${theirs}`);
-    expect(standing?.rollCallContext?.observedEvidenceIds).not.toContain(`client:${mine}`);
   });
 });
