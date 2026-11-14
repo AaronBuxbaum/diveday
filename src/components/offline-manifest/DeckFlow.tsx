@@ -97,7 +97,11 @@ function DeckFind({
             <li key={item.id}>
               <button
                 type="button"
-                aria-label={item.name}
+                aria-label={
+                  people.some((other) => other.id !== item.id && other.name === item.name)
+                    ? `${item.name} · ${item.role}`
+                    : item.name
+                }
                 className={`${navigationClass} my-1 justify-start text-start`}
                 onClick={() => openPerson(item.id)}
               >

@@ -210,9 +210,11 @@ for (const scheme of ["light", "dark"] as const) {
         await openDeckPerson(page, "Priya Sharma");
         // The status line reads "ready" until the first sync answers; photograph the settled one.
         await expect(
-          page.locator('[data-deck-screen] > [role="status"]').getByText("Everything’s sent", {
-            exact: true,
-          }),
+          page
+            .locator('[data-deck-screen] > [role="status"]')
+            .getByText(staffTranslator("en-US")("shared.offlineManifest.reconcile.allCaughtUp"), {
+              exact: true,
+            }),
         ).toBeVisible();
         await capture(page, "offline-manifest-after-dive", scheme);
       });

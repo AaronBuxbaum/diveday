@@ -4,6 +4,7 @@ import { ErrorToast, SAFETY_TOAST_MS } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { formatDateTimeTz } from "@/lib/format";
+import { physicalPeople } from "@/lib/manifest-person-counts";
 import { isNotBackAboard, rollCallLabel } from "@/lib/manifests";
 import { offlineCausalContext } from "@/lib/roll-call-offline-causality";
 import { OfflineCrewRollCall } from "./CrewRollCall";
@@ -180,167 +181,173 @@ export function OfflineDeckRollCall({
 }) {
   const { t } = controls;
   const timeZone = view.envelope.snapshot.shop.timezone;
-  const people: DeckPerson[] = [
-    ...view.manifest.divers.map((diver, index) => {
-      const facts = offlineDiverRowFacts(diver, index, view, controls);
-      const state = view.localStates[index];
-      const subject = { bookingId: diver.bookingId };
-      const conflict = offlineCausalContext(
-        view.envelope.snapshot,
-        view.envelope.events,
-        subject,
-        view.checkpoint,
-      ).conflict;
-      const problem = facts.missing || conflict;
-      const record = problem ? (
-        <p key={diver.bookingId} className="font-semibold text-danger">
-          {t("manifest.deck.missing")}
-        </p>
-      ) : facts.showBoardControl ? (
-        <SavedPersonButton
-          key={diver.bookingId}
-          id={diver.bookingId}
-          subject={subject}
-          statement={{ status: "boarded" }}
-          controls={controls}
-          disabled={view.expired}
-          label={t("manifest.deck.record", { name: diver.fullName })}
-        />
-      ) : (
-        <p key={diver.bookingId} className="font-semibold text-danger">
-          {facts.statusLine}
-        </p>
+  const guestPeople: DeckPerson[] = view.manifest.divers.map((diver, index) => {
+    const facts = offlineDiverRowFacts(diver, index, view, controls);
+    const state = view.localStates[index];
+    const subject = { bookingId: diver.bookingId };
+    const conflict = offlineCausalContext(
+      view.envelope.snapshot,
+      view.envelope.events,
+      subject,
+      view.checkpoint,
+    ).conflict;
+    const problem = facts.missing || conflict;
+    const record = problem ? (
+      <p key={diver.bookingId} className="font-semibold text-danger">
+        {t("manifest.deck.missing")}
+      </p>
+    ) : facts.showBoardControl ? (
+      <SavedPersonButton
+        key={diver.bookingId}
+        id={diver.bookingId}
+        subject={subject}
+        statement={{ status: "boarded" }}
+        controls={controls}
+        disabled={view.expired}
+        label={t("manifest.deck.record", { name: diver.fullName })}
+      />
+    ) : (
+      <p key={diver.bookingId} className="font-semibold text-danger">
+        {facts.statusLine}
+      </p>
+    );
+    const undo = !problem ? (
+      <SavedPersonButton
+        key={diver.bookingId}
+        id={diver.bookingId}
+        subject={subject}
+        statement={{
+          status: "cleared",
+          retractsClientEventId: state?.local ? state.clientEventId : undefined,
+        }}
+        controls={controls}
+        disabled={view.expired}
+        undo
+        label={t("manifest.deck.undo", { name: diver.fullName })}
+      />
+    ) : undefined;
+    const personDetails = (
+      <>
+        {view.isDeparture &&
+        facts.blockedAtDock &&
+        !problem &&
+        !diver.notHere &&
+        !diver.turnedAway ? (
+          <div className="space-y-3">
+            <p>{t("manifest.deck.physicalHint")}</p>
+            <SavedPersonButton
+              key={diver.bookingId}
+              id={diver.bookingId}
+              subject={subject}
+              statement={{ status: "boarded", physicalPresenceOnly: true }}
+              controls={controls}
+              disabled={view.expired}
+              label={t("manifest.deck.physical", { name: diver.fullName })}
+            />
+          </div>
+        ) : null}
+        <OfflineDeckDetails view={view} controls={controls} index={index} />
+      </>
+    );
+    return {
+      id: diver.bookingId,
+      name: diver.fullName,
+      role: t("manifest.deck.guest"),
+      outstanding: !state || problem,
+      attention: problem || facts.blockedAtDock,
+      requiresReview: problem,
+      eventId: receiptEvidenceId(state),
+      pending: state?.pending,
+      status: state
+        ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, state))}${state.pending ? ` · ${t("manifest.deck.pendingReceipt")}` : ""}`
+        : undefined,
+      observed: state
+        ? t("manifest.deck.observed", {
+            time: formatDateTimeTz(new Date(state.occurredAt), controls.locale, timeZone),
+          })
+        : undefined,
+      record,
+      undo,
+      details: personDetails,
+    };
+  });
+  const crewPeople: DeckPerson[] = view.crewWithKeys.map((member, index) => {
+    const state = member.state;
+    const subject = { crewPersonId: member.id ?? "" };
+    const problem =
+      isNotBackAboard(view.checkpoint, state) ||
+      Boolean(
+        member.id &&
+          offlineCausalContext(
+            view.envelope.snapshot,
+            view.envelope.events,
+            subject,
+            view.checkpoint,
+          ).conflict,
       );
-      const undo = !problem ? (
-        <SavedPersonButton
-          key={diver.bookingId}
-          id={diver.bookingId}
-          subject={subject}
-          statement={{
-            status: "cleared",
-            retractsClientEventId: state?.local ? state.clientEventId : undefined,
-          }}
-          controls={controls}
-          disabled={view.expired}
-          undo
-          label={t("manifest.deck.undo", { name: diver.fullName })}
-        />
-      ) : undefined;
-      const personDetails = (
-        <>
-          {view.isDeparture &&
-          facts.blockedAtDock &&
-          !problem &&
-          !diver.notHere &&
-          !diver.turnedAway ? (
-            <div className="space-y-3">
-              <p>{t("manifest.deck.physicalHint")}</p>
-              <SavedPersonButton
-                key={diver.bookingId}
-                id={diver.bookingId}
-                subject={subject}
-                statement={{ status: "boarded", physicalPresenceOnly: true }}
-                controls={controls}
-                disabled={view.expired}
-                label={t("manifest.deck.physical", { name: diver.fullName })}
-              />
-            </div>
-          ) : null}
-          <OfflineDeckDetails view={view} controls={controls} index={index} />
-        </>
-      );
-      return {
-        id: diver.bookingId,
-        name: diver.fullName,
-        role: t("manifest.deck.guest"),
-        outstanding: !state || problem,
-        attention: problem || facts.blockedAtDock,
-        requiresReview: problem,
-        eventId: receiptEvidenceId(state),
-        pending: state?.pending,
-        status: state
-          ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, state))}${state.pending ? ` · ${t("manifest.deck.pendingReceipt")}` : ""}`
-          : undefined,
-        observed: state
-          ? t("manifest.deck.observed", {
-              time: formatDateTimeTz(new Date(state.occurredAt), controls.locale, timeZone),
-            })
-          : undefined,
-        record,
-        undo,
-        details: personDetails,
-      };
-    }),
-    ...view.crewWithKeys.map((member, index) => {
-      const state = member.state;
-      const subject = { crewPersonId: member.id ?? "" };
-      const problem =
-        isNotBackAboard(view.checkpoint, state) ||
-        Boolean(
-          member.id &&
-            offlineCausalContext(
-              view.envelope.snapshot,
-              view.envelope.events,
-              subject,
-              view.checkpoint,
-            ).conflict,
-        );
-      const record = problem ? (
-        <p key={member.key} className="font-semibold text-danger">
-          {t("manifest.deck.missing")}
-        </p>
-      ) : (
-        <SavedPersonButton
-          key={member.key}
-          id={member.id ?? member.key}
-          subject={subject}
-          statement={{ status: "boarded" }}
-          controls={controls}
-          disabled={view.expired || !member.id}
-          label={t("manifest.deck.record", { name: member.fullName })}
-        />
-      );
-      const undo = !problem ? (
-        <SavedPersonButton
-          key={member.key}
-          id={member.id ?? member.key}
-          subject={subject}
-          statement={{
-            status: "cleared",
-            retractsClientEventId: state?.local ? state.clientEventId : undefined,
-          }}
-          controls={controls}
-          disabled={view.expired}
-          undo
-          label={t("manifest.deck.undo", { name: member.fullName })}
-        />
-      ) : undefined;
-      const personDetails = (
-        <OfflineDeckDetails key={member.key} view={view} controls={controls} index={index} crew />
-      );
-      return {
-        id: member.id ?? member.key,
-        name: member.fullName,
-        role: t("manifest.deck.crew"),
-        outstanding: !state || problem,
-        attention: problem || !member.id,
-        requiresReview: problem,
-        eventId: receiptEvidenceId(state),
-        pending: state?.pending,
-        status: state
-          ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, state))}${state.pending ? ` · ${t("manifest.deck.pendingReceipt")}` : ""}`
-          : undefined,
-        observed: state
-          ? t("manifest.deck.observed", {
-              time: formatDateTimeTz(new Date(state.occurredAt), controls.locale, timeZone),
-            })
-          : undefined,
-        record,
-        undo,
-        details: personDetails,
-      };
-    }),
-  ];
+    const record = problem ? (
+      <p key={member.key} className="font-semibold text-danger">
+        {t("manifest.deck.missing")}
+      </p>
+    ) : (
+      <SavedPersonButton
+        key={member.key}
+        id={member.id ?? member.key}
+        subject={subject}
+        statement={{ status: "boarded" }}
+        controls={controls}
+        disabled={view.expired || !member.id}
+        label={t("manifest.deck.record", { name: member.fullName })}
+      />
+    );
+    const undo = !problem ? (
+      <SavedPersonButton
+        key={member.key}
+        id={member.id ?? member.key}
+        subject={subject}
+        statement={{
+          status: "cleared",
+          retractsClientEventId: state?.local ? state.clientEventId : undefined,
+        }}
+        controls={controls}
+        disabled={view.expired}
+        undo
+        label={t("manifest.deck.undo", { name: member.fullName })}
+      />
+    ) : undefined;
+    const personDetails = (
+      <OfflineDeckDetails key={member.key} view={view} controls={controls} index={index} crew />
+    );
+    return {
+      id: member.id ?? member.key,
+      name: member.fullName,
+      role: t("manifest.deck.crew"),
+      outstanding: !state || problem,
+      attention: problem || !member.id,
+      requiresReview: problem,
+      eventId: receiptEvidenceId(state),
+      pending: state?.pending,
+      status: state
+        ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, state))}${state.pending ? ` · ${t("manifest.deck.pendingReceipt")}` : ""}`
+        : undefined,
+      observed: state
+        ? t("manifest.deck.observed", {
+            time: formatDateTimeTz(new Date(state.occurredAt), controls.locale, timeZone),
+          })
+        : undefined,
+      record,
+      undo,
+      details: personDetails,
+    };
+  });
+  const people = [...guestPeople, ...crewPeople];
+  const totalPeople = physicalPeople(view.manifest.divers, view.crewWithKeys);
+  // Every role still needs its own evidence. A missing/conflicting role keeps
+  // that physical person unresolved even when their other role is aboard.
+  const outstandingPeople = physicalPeople(
+    view.manifest.divers.filter((_diver, index) => guestPeople[index].outstanding),
+    view.crewWithKeys.filter((_member, index) => crewPeople[index].outstanding),
+  );
   return (
     <DeckFlow
       key={`${view.manifest.trip.id}:${view.checkpoint}:${controls.selectedMeetingDay ?? 0}`}
@@ -352,8 +359,8 @@ export function OfflineDeckRollCall({
         </p>
       }
       progress={t("manifest.deck.progress", {
-        count: people.filter((person) => !person.outstanding).length,
-        total: people.length,
+        count: totalPeople - outstandingPeople,
+        total: totalPeople,
       })}
       complete={view.rollCallComplete}
       timeZone={timeZone}

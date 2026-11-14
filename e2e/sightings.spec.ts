@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openTripTab } from "./helpers";
+import { openDeckDetails, openTripTab } from "./helpers";
 
 /**
  * **The living reef, end to end**: a crew taps a species chip at the rail after
@@ -30,6 +30,7 @@ async function openReefManifest(page: import("@playwright/test").Page) {
   await page.getByRole("link", { name: SAILED_TRIP, exact: true }).first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   // The after-dive checkpoint is where the crew records the day: the Seen
   // group sits under the dive log there and is deliberately absent at the dock,
   // where there is nothing yet to have seen.
@@ -37,6 +38,7 @@ async function openReefManifest(page: import("@playwright/test").Page) {
     .getByRole("link", { name: "After dive 1" })
     .evaluate((link: HTMLElement) => link.click());
   await page.waitForURL(/checkpoint=after_dive_1/);
+  await openDeckDetails(page);
 }
 
 test("the crew taps what they saw and the tally counts it", async ({ page }) => {
@@ -139,6 +141,7 @@ test("full-catalog autocomplete and custom words survive reload without becoming
   await input.press("Enter");
   await expect(seen.getByRole("listitem").filter({ hasText: "seahome" })).toBeVisible();
   await page.reload();
+  await openDeckDetails(page);
   await expect(seen.getByRole("listitem").filter({ hasText: "seahome" })).toBeVisible();
   await expect(seen.getByRole("button", { name: "seahome", exact: true })).toHaveCount(0);
   await input.fill("seaho");
