@@ -63,3 +63,46 @@ it("includes the shop-local day and filters capacity before paging", async () =>
   expect(page.trips.map((trip) => trip.id)).not.toContain(small.id);
   expect(page.trips.map((trip) => trip.id)).not.toContain(yesterday.id);
 });
+
+it("filters diver-only trips by their remaining diver seats while retaining mixed trips", async () => {
+  const { db, shop } = ctx;
+  const startsAt = new Date("2030-09-15T12:00:00Z");
+  const endsAt = new Date("2030-09-15T16:00:00Z");
+  const only = await createTrip(db, {
+    shopId: shop.id,
+    title: "Divers only",
+    startsAt,
+    endsAt,
+    capacity: 10,
+  });
+  const mixed = await createTrip(db, {
+    shopId: shop.id,
+    title: "Mixed",
+    startsAt,
+    endsAt,
+    capacity: 10,
+  });
+  if (!only || !mixed) throw new Error("trip creation failed");
+  await db.update(trips).set({ diverCapacity: 1 }).where(eq(trips.id, only.id));
+  await db
+    .update(trips)
+    .set({ diverCapacity: 1, snorkelerPriceCents: 0 })
+    .where(eq(trips.id, mixed.id));
+  for (const trip of [only, mixed]) {
+    const result = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: `Diver ${trip.id}`,
+      email: `${trip.id}@example.com`,
+    });
+    expect(result.ok).toBe(true);
+  }
+  const page = await pagedUpcomingTripsWithCounts(db, shop.id, {
+    now: new Date("2030-09-15T00:00:00Z"),
+    monthEnd: new Date("2030-09-16T00:00:00Z"),
+    minSeats: 1,
+  });
+  expect(page.trips.map((trip) => trip.id)).not.toContain(only.id);
+  expect(page.trips.map((trip) => trip.id)).toContain(mixed.id);
+});

@@ -804,7 +804,10 @@ export async function pagedUpcomingTripsWithCounts(
     .groupBy(trips.id, courses.id, diveSites.id)
     .having(
       options.minSeats
-        ? sql`count(${bookings.id}) + ${options.minSeats} <= ${tripSellableSeatsSql()}`
+        ? sql`count(${bookings.id}) + ${options.minSeats} <= ${tripSellableSeatsSql()}
+            and (${trips.snorkelerPriceCents} is not null or ${trips.riderPriceCents} is not null
+              or ${trips.diverCapacity} is null
+              or ${bookedDiversCount()} + ${options.minSeats} <= ${trips.diverCapacity})`
         : hasSpaceHaving(options.hasSpace),
     )
     // The keyset cursor carries all three keys (`src/db/cursor.ts`, issue
