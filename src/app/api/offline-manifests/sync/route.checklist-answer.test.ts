@@ -5,6 +5,7 @@ import {
   preDepartureChecklistItems,
   shops,
   tripAssignments,
+  tripScheduleDays,
   trips,
 } from "@/db/schema";
 import type { DiveDaySession } from "@/lib/auth";
@@ -12,6 +13,7 @@ import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
+import { capturedRouteMeeting } from "@/test/offline-meeting-test-support";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { createBoat } from "../../../../features/boats/store";
 import { getIncidentExport } from "../../../../features/incident-export/store";
@@ -94,6 +96,12 @@ describe("POST /api/offline-manifests/sync — the checklist answer on the depar
       })
       .returning();
     if (!trip) throw new Error("trip insert failed");
+    await db.insert(tripScheduleDays).values({
+      tripId: trip.id,
+      dayNumber: 1,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+    });
     await db.insert(tripAssignments).values({ tripId: trip.id, personId: staffPersonId });
     const [oxygen, flares, radio] = await db
       .insert(preDepartureChecklistItems)
@@ -120,7 +128,8 @@ describe("POST /api/offline-manifests/sync — the checklist answer on the depar
     });
 
     const savedAt = at(65).toISOString();
-    const offline = { snapshotId: crypto.randomUUID(), snapshotSavedAt: savedAt, tripId: trip.id };
+    const meeting = await capturedRouteMeeting(db, shop.id, trip.id, 0);
+    const offline = { snapshotId: meeting.snapshotId, snapshotSavedAt: savedAt, tripId: trip.id };
     const tap = (checklistItemId: string, status: "checked" | "cleared", minutesAgo: number) => ({
       ...offline,
       clientEventId: crypto.randomUUID(),
@@ -134,6 +143,8 @@ describe("POST /api/offline-manifests/sync — the checklist answer on the depar
         events: [
           {
             ...offline,
+            meetingDay: meeting.meetingDay,
+            meetingIdentityProof: meeting.meetingIdentityProof,
             clientEventId: crypto.randomUUID(),
             crewPersonId: staffPersonId,
             checkpoint: "departure",

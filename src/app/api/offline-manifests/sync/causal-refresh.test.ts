@@ -10,6 +10,7 @@ import type { OfflineManifestUpcomingResponse } from "@/lib/offline-manifests";
 import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+import { capturedRouteMeeting } from "@/test/offline-meeting-test-support";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
 const fileCtx = fileScopedShopContext();
@@ -63,9 +64,11 @@ for (const role of ["diver", "crew"] as const) {
       auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
       const crewId = (await getTripManifest(db, shop.id, trip.id, "after_dive_1"))?.crew[0]?.id;
       if (!crewId) throw new Error("fixture crew missing");
-      const event = (status: "boarded" | "not_boarded") => ({
+      const remoteMeeting = await capturedRouteMeeting(db, shop.id, trip.id, 0);
+      const queuedMeeting = await capturedRouteMeeting(db, shop.id, trip.id, 0);
+      const event = (status: "boarded" | "not_boarded", meeting: typeof remoteMeeting) => ({
         clientEventId: crypto.randomUUID(),
-        snapshotId: crypto.randomUUID(),
+        ...meeting,
         snapshotSavedAt: nowDate().toISOString(),
         occurredAt: nowDate().toISOString(),
         tripId: trip.id,
@@ -73,10 +76,9 @@ for (const role of ["diver", "crew"] as const) {
         checkpoint: "after_dive_1",
         status,
         observedEvidenceIds: [],
-        meetingDay: 0,
       });
-      const remote = event(remoteStatus),
-        queued = event("boarded");
+      const remote = event(remoteStatus, remoteMeeting),
+        queued = event("boarded", queuedMeeting);
       expect((await POST(postRequest({ events: [remote] }))).status).toBe(200);
       const response = await POST(
         postRequest({ events: [queued], includeCausalSnapshots: true, refreshTripId: trip.id }),
