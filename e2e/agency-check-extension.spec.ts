@@ -221,16 +221,6 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
       const url = new URL(request.url ?? "/", `https://${request.headers.host}`);
       pages.requests.push(`${request.method} ${url.href}`);
       pages.ledger.push([Date.now(), `agency:${request.method} ${redactedAddress(url.href)}`]);
-      response.once("finish", () =>
-        pages.ledger.push([Date.now(), `agency:response-finished ${redactedAddress(url.href)}`]),
-      );
-      response.once("close", () => {
-        if (!response.writableFinished)
-          pages.ledger.push([Date.now(), `agency:response-closed ${redactedAddress(url.href)}`]);
-      });
-      request.once("aborted", () =>
-        pages.ledger.push([Date.now(), `agency:request-aborted ${redactedAddress(url.href)}`]),
-      );
       const send = (status: number, body = "", headers: Record<string, string> = {}) => {
         response.writeHead(status, { "content-type": "text/html; charset=utf-8", ...headers });
         response.end(body);
@@ -366,44 +356,6 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
     });
     context.on("page", (opened) => {
       agencyPages.ledger.push([Date.now(), `tab:opened ${redactedAddress(opened.url())}`]);
-      const isAgency = (url: string) => {
-        try {
-          return AGENCY_HOSTS.includes(new URL(url).hostname);
-        } catch {
-          return false;
-        }
-      };
-      opened.on("response", (response) => {
-        if (isAgency(response.url()))
-          agencyPages.ledger.push([
-            Date.now(),
-            `tab:response ${response.status()} ${redactedAddress(response.url())}`,
-          ]);
-      });
-      opened.on("requestfinished", (request) => {
-        if (isAgency(request.url()))
-          agencyPages.ledger.push([
-            Date.now(),
-            `tab:request-finished ${redactedAddress(request.url())}`,
-          ]);
-      });
-      opened.on("requestfailed", (request) => {
-        if (isAgency(request.url())) {
-          const reason = request.failure()?.errorText ?? "";
-          agencyPages.ledger.push([
-            Date.now(),
-            `tab:request-failed ${redactedAddress(request.url())} ${/^net::ERR_[A-Z_]+$/.test(reason) ? reason : "unknown"}`,
-          ]);
-        }
-      });
-      opened.on("framenavigated", (frame) => {
-        if (isAgency(frame.url()))
-          agencyPages.ledger.push([
-            Date.now(),
-            `tab:frame-navigated ${redactedAddress(frame.url())}`,
-          ]);
-      });
-      opened.on("crash", () => agencyPages.ledger.push([Date.now(), "tab:crashed"]));
       opened.on("domcontentloaded", () =>
         agencyPages.ledger.push([
           Date.now(),
@@ -451,53 +403,9 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
           )
           .catch(() => [] as [number, string][])
       : [];
-    let tabProbeTimer: ReturnType<typeof setTimeout> | undefined;
-    const tabs = current
-      ? await Promise.race([
-          current
-            .evaluate(async () => {
-              const api = (
-                globalThis as unknown as {
-                  chrome: {
-                    tabs: {
-                      query: (
-                        query: object,
-                      ) => Promise<Array<{ url?: string; status?: string; discarded?: boolean }>>;
-                    };
-                  };
-                }
-              ).chrome;
-              return (await api.tabs.query({})).flatMap((tab) => {
-                try {
-                  const url = new URL(tab.url ?? "");
-                  return url.hostname === "my.divessi.com" && url.pathname === "/online_diver_check"
-                    ? [
-                        {
-                          address: "my.divessi.com/online_diver_check",
-                          status: tab.status,
-                          discarded: tab.discarded,
-                        },
-                      ]
-                    : [];
-                } catch {
-                  return [];
-                }
-              });
-            })
-            .catch(() => []),
-          // Bound failure telemetry even if the extension worker is unresponsive.
-          new Promise<never[]>((resolve) => {
-            tabProbeTimer = setTimeout(() => resolve([]), 2_000);
-          }),
-        ]).finally(() => clearTimeout(tabProbeTimer))
-      : [];
     const events = [
       ...agencyPages.ledger,
       ...phases.map(([at, name]): [number, string] => [at, `worker:${name}`]),
-      ...tabs.map((tab): [number, string] => [
-        Date.now(),
-        `worker:tab-status ${tab.address} ${tab.status ?? "unknown"} discarded=${tab.discarded ?? "unknown"}`,
-      ]),
       ...(current === worker ? [] : [[Date.now(), "worker:restarted"] as [number, string]]),
     ].sort(([a], [b]) => a - b);
     const start = events[0]?.[0] ?? 0;
