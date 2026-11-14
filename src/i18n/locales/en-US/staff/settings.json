@@ -216,6 +216,7 @@
       "valueListed": "Listed",
       "valueHidden": "Hidden",
       "detail": "Being listed also puts your shop on DiveDay’s page for your town. Untick this and anything already indexed can take a few weeks to disappear, and a page someone has linked to stays reachable by that link.",
+      "demoDetail": "Demo shops are hidden from search engines. Their pages are still available by direct link.",
       "label": "List my public pages in search engines",
       "submit": "Save"
     },
