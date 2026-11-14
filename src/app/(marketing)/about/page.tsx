@@ -131,9 +131,10 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
         </div>
       </section>
 
-      {/* Who is behind it comes straight after why. The band speaks for the
-          company in generalities: people who build software for a living and
-          dive, and what each of those puts into the product. */}
+      {/* Who is behind it comes straight after why. This band is the one place
+          the page speaks in the founder's first person (Aaron, 2026-11-14):
+          his own years on software that must never lose a person, and why
+          that makes him trust a roll call by name. */}
       <section className="border-b border-border bg-surface">
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
           {/* Two grid items, so below `lg` the row gap is the heading-to-body
@@ -149,8 +150,10 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
               <p>{t("marketing.about.peopleP1")}</p>
               <p>{t("marketing.about.peopleP2")}</p>
-              {/* The page speaks as "we" and is signed by the one person it
-                  names (Aaron, 2026-11-11; #4316). */}
+              <p>{t("marketing.about.peopleP3")}</p>
+              <p>{t("marketing.about.peopleP4")}</p>
+              {/* The band is in the first person and signed by the one person
+                  the page names (Aaron, 2026-11-11; #4316). */}
               <p className="text-base leading-7 text-foreground">
                 <span className="font-medium">{FOUNDER_NAME}</span>
                 <span className="text-muted">, {t("marketing.about.founderRole")}</span>
