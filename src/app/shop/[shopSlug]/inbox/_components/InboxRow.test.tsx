@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
@@ -66,16 +66,84 @@ function renderRow(
 }
 
 describe("a message on file", () => {
-  it("opens the diver's record on this very message, from the row's open view", async () => {
-    renderRow();
-    expect(screen.queryByRole("link", { name: "Open the record for Priya Sharma" })).toBeNull();
+  it("drops a kept draft when the source message changes", async () => {
+    const view = (body: string) => (
+      <ul>
+        <InboxRow
+          row={{ message: { ...MESSAGE, body }, personName: "Priya Sharma" }}
+          shopSlug="blue-mantis"
+          locale="en-US"
+          timezone="America/Cancun"
+          now={new Date("2026-07-01T12:00:00.000Z")}
+          t={t}
+          deleteAction={vi.fn()}
+          doneAction={vi.fn()}
+          seats={[]}
+          lateAction={vi.fn()}
+          responseAction={async () => "Old draft"}
+        />
+      </ul>
+    );
+    const { rerender } = render(view("First question"));
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
     );
-    expect(screen.getByRole("link", { name: "Open the record for Priya Sharma" })).toHaveAttribute(
+    await userEvent.click(screen.getByRole("button", { name: "Draft response" }));
+    expect(await screen.findByRole("textbox", { name: "Response draft" })).toHaveValue("Old draft");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
+    expect(screen.getByRole("textbox", { name: "Response draft" })).toHaveValue("Old draft");
+    rerender(view("Corrected question"));
+    expect(screen.queryByRole("textbox", { name: "Response draft" })).toBeNull();
+  });
+  it("does not show an in-flight draft after the source changes", async () => {
+    let finish!: (value: string) => void;
+    const pending = new Promise<string>((resolve) => {
+      finish = resolve;
+    });
+    const view = (body: string) => (
+      <ul>
+        <InboxRow
+          row={{ message: { ...MESSAGE, body }, personName: "Priya Sharma" }}
+          shopSlug="blue-mantis"
+          locale="en-US"
+          timezone="America/Cancun"
+          now={new Date("2026-07-01T12:00:00.000Z")}
+          t={t}
+          deleteAction={vi.fn()}
+          doneAction={vi.fn()}
+          seats={[]}
+          lateAction={vi.fn()}
+          responseAction={() => pending}
+        />
+      </ul>
+    );
+    const { rerender } = render(view("First question"));
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Draft response" }));
+    rerender(view("Corrected question"));
+    await act(async () => {
+      finish("Old response");
+      await pending;
+    });
+    expect(screen.queryByRole("textbox", { name: "Response draft" })).toBeNull();
+  });
+  it("opens the conversation directly from the sender name, without nested actions", async () => {
+    renderRow();
+    expect(screen.getByRole("link", { name: "Priya Sharma" })).toHaveAttribute(
       "href",
       `/shop/blue-mantis/divers/af000000-1111-4222-8333-444444444444#message-${MESSAGE.id}`,
     );
+    expect(screen.queryByText("Open the record")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
+    expect(screen.queryByRole("button", { name: "More" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Mark done" })).toBeVisible();
   });
 
   it("says the channel, since that is where the answer goes", () => {
@@ -151,7 +219,6 @@ describe("a message from a stranger", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Unknown sender" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
     const remove = screen.getByRole("button", {
       name: "Delete the message from marta.keller@example.net",
     });
@@ -159,7 +226,7 @@ describe("a message from a stranger", () => {
     expect(remove.closest("form")?.querySelector('input[name="messageId"]')).toHaveValue(
       MESSAGE.id,
     );
-    expect(container.querySelector("[data-inbox-open-view]")).toContainElement(remove);
+    expect(container.querySelector("[data-row-menu]")).toContainElement(remove);
   });
 });
 
@@ -195,7 +262,9 @@ describe("where the row sets its date and its one control", () => {
     expect(trailing).toContainElement(
       screen.getByRole("button", { name: `More for the message from ${name ?? "Unknown sender"}` }),
     );
-    expect(trailing.querySelectorAll("button, a")).toHaveLength(1);
+    expect(
+      [...trailing.querySelectorAll("button, a")].filter((node) => !node.closest("[hidden]")),
+    ).toHaveLength(1);
     expect(trailing.nextElementSibling).toBeNull();
     expect(trailing.textContent).not.toMatch(/EDT|EST|CDT|CST/);
   });
@@ -228,6 +297,12 @@ describe("marking a message done", () => {
 /** A stranger has no record to open, so their complete excerpt wraps here. */
 describe("a stranger's message, which has no record to be read on", () => {
   const WORDS = "Hello, do you run night dives in October? Two of us, both AOW.";
+
+  it("shows the full long message when there is no conversation to open", () => {
+    const longMessage = `${"Please help with my booking. ".repeat(7)}The last detail matters.`;
+    renderRow({ personId: null, channel: "whatsapp", subject: null, body: longMessage }, null);
+    expect(screen.getByText(longMessage)).toBeInTheDocument();
+  });
 
   it("wraps the stranger's words whole instead of cutting them at a line", () => {
     renderRow({ personId: null, fromAddress: "marta.keller@example.net", body: WORDS }, null);
@@ -339,7 +414,6 @@ describe("a message from somebody with a boat to catch", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
     const mark = screen.getByRole("button", {
       name: "Mark Diego Alvarez running late for Night Dive",
     });
@@ -410,7 +484,6 @@ describe("a message from somebody with two boats to catch", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
     expect(screen.queryByRole("button", { name: "Mark running late" })).toBeNull();
     for (const seat of [NIGHT, DAWN]) {
       const mark = screen.getByRole("button", {
@@ -438,7 +511,6 @@ describe("a message from somebody with two boats to catch", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
     expect(screen.queryByRole("button", { name: /Night Dive/ })).toBeNull();
     expect(screen.getByRole("button", { name: /Dawn Reef/ })).toBeInTheDocument();
   });
@@ -472,7 +544,6 @@ describe("a message asking to move a seat", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
     const move = screen.getByRole("link", {
       name: "Move Priya Sharma’s seat on Two-Tank Reef to another departure",
     });
@@ -510,7 +581,6 @@ describe("a message asking to move a seat", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
     const wednesday = screen.getByRole("link", {
       name: /^Move Priya Sharma’s seat on Wreck Dive, Wednesday\s8:00\sAM, to another departure$/,
     });

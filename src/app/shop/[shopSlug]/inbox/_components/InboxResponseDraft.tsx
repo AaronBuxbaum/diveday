@@ -60,6 +60,14 @@ export function InboxResponseDraft({
         pendingLabel={copy.pending}
         emptyLabel={changed ? copy.changed : copy.empty}
       />
+      {text === null && email ? (
+        <a
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+          href={mailtoHref(email, { subject, body: `\n\n${quoted}` })}
+        >
+          {copy.email}
+        </a>
+      ) : null}
       {text !== null ? (
         <>
           <Field label={copy.label} description={copy.review}>

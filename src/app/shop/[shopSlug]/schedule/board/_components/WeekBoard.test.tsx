@@ -37,7 +37,7 @@ const COPY: WeekBoardCopy = {
   rehearsal: "Rehearsal",
   rollCallOpen: "Roll call · {count} not counted",
   rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
-  noBoats: "No boats",
+  noBoats: "No trips",
   quietDays: "{first} to {last}",
   asked: "Asked for",
   addDeparture: "Add a departure",
@@ -262,15 +262,15 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     expect(screen.getByText("27")).toHaveClass("size-8", "shrink-0");
   });
 
-  it("centers the weekday, a departure's first line and 'No boats' on one 32px line, 8px down the day", () => {
+  it("centers the weekday, a departure's first line and 'No trips' on one 32px line, 8px down the day", () => {
     // The weekday's cap sat 9px above the first departure's time at 1280, and
-    // 4px above "No boats" on an empty day. Then "No boats" read 6px high:
+    // 4px above "No trips" on an empty day. Then "No trips" read 6px high:
     // `min-h-8` and `py-2` on one border-box <p> left a 16px floor under its
     // 20px line, so the floor did nothing and the words centred at 8 + 10.
     board(week({}, [entry()]));
     const weekday = screen.getByText("Thu");
     const time = screen.getByText("7:00 AM");
-    const empty = screen.getAllByText("No boats").map((none) => none.parentElement as HTMLElement);
+    const empty = screen.getAllByText("No trips").map((none) => none.parentElement as HTMLElement);
     // Three empty days ahead, and Mon–Wed folded into one row that sits on
     // the same line (UX review 2026-10-10, item 24).
     expect(empty).toHaveLength(4);
@@ -290,10 +290,10 @@ describe("the day rail (K-326, K-327, K-328)", () => {
   });
 
   it("offers an empty day's add on the line that says it is empty", () => {
-    // "No boats" and "+ Add" were two lines; a week with four empty days
+    // "No trips" and "+ Add" were two lines; a week with four empty days
     // spent four extra rows on them.
     board(week());
-    const line = screen.getAllByText("No boats").at(-1)?.parentElement as HTMLElement;
+    const line = screen.getAllByText("No trips").at(-1)?.parentElement as HTMLElement;
     expect(within(line).getByRole("link", { name: /^Add a departure on / })).toBeTruthy();
   });
 
@@ -580,7 +580,7 @@ describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {
       "Day 24 to Day 26",
     );
     expect(quiet[0]).toHaveTextContent("Mon–Wed");
-    expect(within(quiet[0] as HTMLElement).getByText("No boats")).toBeInTheDocument();
+    expect(within(quiet[0] as HTMLElement).getByText("No trips")).toBeInTheDocument();
     // No add on days gone by, folded or not.
     expect(within(quiet[0] as HTMLElement).queryByRole("button")).toBeNull();
     // The days that each keep a row: today, and every day still ahead.
