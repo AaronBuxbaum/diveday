@@ -5,6 +5,7 @@ import {
   personRoles,
   rollCallEventClaims,
   shops,
+  trips,
   unresolvedSafetyAlertDeliveries,
   unresolvedSafetyAlertOutbox,
   userAccounts,
@@ -75,6 +76,25 @@ it("does not send when the retained generation no longer matches", async () => {
     .where(eq(rollCallEventClaims.id, claim.id));
   const result = await dispatchUnresolvedSafetyReview(db, outbox.id, provider);
   expect(result).toMatchObject({ status: "attempted", delivered: 0 });
+  expect(sendNotification).not.toHaveBeenCalled();
+});
+
+it("does not send a safety review notice for a rehearsal", async () => {
+  const { db, trip, outbox } = await obligation();
+  await db
+    .update(trips)
+    .set({ isRehearsal: true, isPrivate: true })
+    .where(and(eq(trips.id, trip.id), eq(trips.shopId, trip.shopId)));
+  const result = await dispatchUnresolvedSafetyReview(db, outbox.id, provider);
+  expect(result).toMatchObject({ status: "attempted", delivered: 0, pending: expect.any(Number) });
+  if (result.status !== "attempted") throw new Error("worker did not attempt");
+  expect(result.pending).toBeGreaterThan(0);
+  const deliveries = await db
+    .select({ status: unresolvedSafetyAlertDeliveries.status })
+    .from(unresolvedSafetyAlertDeliveries)
+    .where(eq(unresolvedSafetyAlertDeliveries.outboxId, outbox.id));
+  expect(deliveries).toHaveLength(result.pending);
+  expect(deliveries.every((delivery) => delivery.status === "pending")).toBe(true);
   expect(sendNotification).not.toHaveBeenCalled();
 });
 

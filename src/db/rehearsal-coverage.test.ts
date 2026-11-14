@@ -286,6 +286,8 @@ const SENDERS: Record<string, string> = {
     "`pushManifestChanged` reads the departure with `notRehearsal()`; `pushTripAlert`'s one caller is roll-call-alerts",
   "src/features/roll-call-alerts/store.ts":
     "the candidate scan carries `notRehearsal()`, so no email or push",
+  "src/features/unresolved-roll-call/delivery-worker.ts":
+    "the worker rechecks that the live trip is not a rehearsal under lock before calling sendNotification",
   "src/db/manifest-events.ts": "calls `pushManifestChanged`, which reads with `notRehearsal()`",
   "src/features/reminders/store.ts":
     "the candidate scan carries `notRehearsal()`, so no email or text",
