@@ -114,7 +114,12 @@ export {
   type ShopSenderSource,
   shopSenderOf,
 } from "./sender";
-export { type SesEmailClient, type SesProviderOptions, sesNotificationProvider } from "./ses";
+export {
+  type SesConfig,
+  type SesEmailClient,
+  type SesProviderOptions,
+  sesNotificationProvider,
+} from "./ses";
 export { SES_KIND_TAG, SES_PURPOSE_TAG, SES_SENDER_TAG, SES_SHOP_TAG } from "./ses-tags";
 export { type SmsProvider, smsProviderFromEnvironment, smsRecipient } from "./sms";
 export {

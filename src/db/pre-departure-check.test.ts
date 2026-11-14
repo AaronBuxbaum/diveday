@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
+import * as receiptSecrets from "@/lib/offline-receipt-secrets";
 import { PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED } from "@/lib/pre-departure-check";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -284,6 +285,7 @@ describe("recordPreDepartureCheck (in-memory PGlite)", () => {
       clientEventId,
       offlineSnapshotSavedAt: now,
       occurredAt: now,
+      note: "First observation",
     };
     const first = await recordPreDepartureCheck(db, input);
     expect(first.ok).toBe(true);
@@ -291,6 +293,65 @@ describe("recordPreDepartureCheck (in-memory PGlite)", () => {
     const replay = await recordPreDepartureCheck(db, input);
     expect(replay.ok).toBe(true);
     expect(replay.ok && replay.duplicate).toBe(true);
+    expect(await recordPreDepartureCheck(db, { ...input, status: "cleared" })).toMatchObject({
+      ok: false,
+      reason: "client_event_conflict",
+    });
+    expect(
+      await recordPreDepartureCheck(db, { ...input, note: "Different observation" }),
+    ).toMatchObject({
+      ok: false,
+      reason: "client_event_conflict",
+    });
+    expect(await recordPreDepartureCheck(db, { ...input, note: undefined })).toMatchObject({
+      ok: true,
+      duplicate: true,
+      noteDisposition: "discarded_unverified_snapshot",
+    });
+    expect(
+      await recordPreDepartureCheck(db, {
+        ...input,
+        note: undefined,
+        offlineSnapshotId: crypto.randomUUID(),
+      }),
+    ).toMatchObject({ ok: false, reason: "client_event_conflict" });
+  });
+
+  it("replays a receipt after rotation only while its original verification key remains available", async () => {
+    const { db, shop, reef, owner } = await checklistContext();
+    const created = await createChecklistItem(db, {
+      shopId: shop.id,
+      personId: owner.id,
+      label: "Rotation oxygen check",
+    });
+    if (!created.ok) throw new Error("setup: expected item to be created");
+    const now = nowDate();
+    const input = {
+      shopId: shop.id,
+      tripId: reef.id,
+      checklistItemId: created.id,
+      recordedByPersonId: owner.id,
+      status: "checked" as const,
+      source: "offline" as const,
+      clientEventId: crypto.randomUUID(),
+      offlineSnapshotSavedAt: now,
+      occurredAt: now,
+      note: "Original observation",
+    };
+    const keys = vi
+      .spyOn(receiptSecrets, "offlineReceiptSecrets")
+      .mockReturnValue(["old receipt key"]);
+    try {
+      expect(await recordPreDepartureCheck(db, input)).toMatchObject({ ok: true });
+      keys.mockReturnValue(["new receipt key", "old receipt key"]);
+      expect(await recordPreDepartureCheck(db, input)).toMatchObject({ ok: true, duplicate: true });
+      keys.mockReturnValue(["new receipt key"]);
+      await expect(recordPreDepartureCheck(db, input)).rejects.toThrow(
+        "Offline checklist receipt unavailable",
+      );
+    } finally {
+      keys.mockRestore();
+    }
   });
 
   it("keeps an offline event dated in the server's future, at the time it arrived", async () => {

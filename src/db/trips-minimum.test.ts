@@ -5,7 +5,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { MINIMUM_SEATS_DECISION_HOURS_DEFAULT, minimumSeatsDecisionAt } from "@/lib/minimum-seats";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { activityEvents, crewNotices } from "./schema";
+import { activityEvents, crewNotices, rollCallEventClaims, trips } from "./schema";
 import { pagedShopActivity } from "./shop-activity";
 import { getTripWithBooked, listStaff, setTripCrew } from "./trips";
 import { createTrip } from "./trips-create";
@@ -15,6 +15,7 @@ import {
   listMinimumNotMetRecipients,
   reinstateTrip,
 } from "./trips-minimum";
+import { deleteTrip } from "./trips-schedule";
 
 /**
  * The sweep that makes a minimum head count real (ADR
@@ -190,6 +191,57 @@ describe("listDeparturesAwaitingMinimumDecision", () => {
 });
 
 describe("cancelDeparturesBelowMinimum", () => {
+  it("keeps a no-bookings departure with retained crew evidence while sweeping another", async () => {
+    const { db, shop } = ctx;
+    const protectedTrip = await departure(db, shop.id, {
+      startsAt: TOMORROW,
+      title: "Crew evidence awaiting review",
+    });
+    const ordinaryTrip = await departure(db, shop.id, {
+      startsAt: TOMORROW,
+      title: "Ordinary short departure",
+    });
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("staff fixture missing");
+    await db.insert(rollCallEventClaims).values({
+      shopId: shop.id,
+      tripId: protectedTrip.id,
+      clientEventId: crypto.randomUUID(),
+      state: "unresolved",
+      subjectKind: "crew",
+      crewPersonId: staff.person.id,
+      intentFingerprint: "test-intent",
+      proofFingerprint: "test-proof",
+      keyFingerprint: "test-key",
+      unresolvedReason: "meeting_identity_unverified",
+      retainedSafetyEvidence: {
+        version: 1,
+        receiptId: crypto.randomUUID(),
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        occurredAt: NOW.toISOString(),
+        meetingDay: null,
+        observedEvidenceIds: [],
+        retractsEventId: null,
+        retractsClientEventId: null,
+        reconcilesEvidence: false,
+        noteRetained: false,
+      },
+    });
+    expect(await deleteTrip(db, shop.id, protectedTrip.id)).toEqual({
+      ok: false,
+      reason: "unresolved_safety_evidence",
+    });
+    const due = await listDeparturesAwaitingMinimumDecision(db, { now: NOW });
+    expect(due.map((trip) => trip.tripId)).toEqual(
+      expect.arrayContaining([protectedTrip.id, ordinaryTrip.id]),
+    );
+    const swept = await cancelDeparturesBelowMinimum(db, { now: NOW });
+    expect(swept.cancelled.map((trip) => trip.tripId)).toContain(ordinaryTrip.id);
+    expect(swept.cancelled.map((trip) => trip.tripId)).not.toContain(protectedTrip.id);
+    const [retained] = await db.select().from(trips).where(eq(trips.id, protectedTrip.id));
+    expect(retained).toMatchObject({ status: "scheduled", deletedAt: null });
+  });
   it("cancels the short departure and reports what it was short by", async () => {
     const { db, shop } = ctx;
     const trip = await departure(db, shop.id, {

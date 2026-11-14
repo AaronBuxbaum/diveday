@@ -1,0 +1,76 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "23cd7f00-719b-4ecf-8f7e-de2f1a1477d7",
+  "prevIds": [
+    "b0ceab76-fccb-4496-979e-2f9db1b56bc4"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_event_claims",
+        "retained_safety_evidence"
+      ],
+      "writes": [
+        "s|col|public.roll_call_event_claims.retained_safety_evidence",
+        "n|col|public.roll_call_event_claims.retained_safety_evidence",
+        "e|col|public.roll_call_event_claims.retained_safety_evidence"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_event_claims.roll_call_event_claims_safety_keys",
+        "n|ck|public.roll_call_event_claims.roll_call_event_claims_safety_keys",
+        "e|ck|public.roll_call_event_claims.roll_call_event_claims_safety_keys",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_safety_keys"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.retained_safety_evidence"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "retained_safety_evidence",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_safety_keys",
+        "value": "\"retained_safety_evidence\" is null or (jsonb_typeof(\"retained_safety_evidence\") = 'object' and (\"retained_safety_evidence\" - ARRAY['version','receiptId','checkpoint','status','occurredAt','meetingDay','observedEvidenceIds','retractsEventId','retractsClientEventId','reconcilesEvidence','noteRetained']) = '{}'::jsonb)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

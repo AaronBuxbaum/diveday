@@ -46,6 +46,7 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "name_flagged_at",
     "name_cleared_at",
     "offline_erasure_epoch",
+    "offline_dataset_incarnation", // reset fence, never restored from a portable shop export
   ], // DiveDay-side config, not shop records
   people: [
     "shop_id",
@@ -72,6 +73,9 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // A re-imported bundle mints new trip ids and so new UIDs, and no subscriber
     // holds a revision to compare. Same class as `pending_checkout_intent_id`.
     "revision",
+    // Offline proofs are bound to this installation's trip and snapshot IDs;
+    // imported trips receive new IDs and cannot reuse those proofs.
+    "meeting_schedule_generation",
     // A pending "the divers still have the old time" between a move and its
     // notice: in-flight messaging state on this installation, cleared by the
     // send, and a re-imported departure has no divers who were told anything.

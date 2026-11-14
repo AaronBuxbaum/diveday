@@ -145,7 +145,11 @@ export function OfflineManifestList({
               {t("shared.notFound.backToToday")}
             </a>
             {/* The store's own word, for a reader who needs it announced. */}
-            <p className="sr-only" role="status" aria-live="polite">
+            <p
+              className={readFailed ? "mt-2 text-warning-strong" : "sr-only"}
+              role="status"
+              aria-live="polite"
+            >
               <StatusMessage message={message} />
             </p>
           </section>

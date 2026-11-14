@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2a18c715-89b8-42b9-a71b-7d5f88c4a287",
+  "prevIds": [
+    "2111fe09-9d43-4189-ab7b-1116c83b0b84"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trips",
+        "meeting_schedule_generation"
+      ],
+      "writes": [
+        "s|col|public.trips.meeting_schedule_generation",
+        "n|col|public.trips.meeting_schedule_generation",
+        "e|col|public.trips.meeting_schedule_generation"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "meeting_schedule_generation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

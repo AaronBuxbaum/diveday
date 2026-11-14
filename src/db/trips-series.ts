@@ -49,6 +49,7 @@ import { departureMayBeAtSea } from "./aboard-at-sea";
 import { type BlowoutRefundMode, callDayBlowout } from "./blowouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
+import { retainedSafetyTripIds } from "./retained-safety";
 import { recordedRollCallRows } from "./roll-call-history";
 import {
   boats,
@@ -1258,8 +1259,14 @@ export async function listOffCadenceSeriesTrips(
       row.occurrenceDate !== null && !seriesFiresOn(cadence, row.occurrenceDate),
   );
   const ashore: OffCadenceSeriesTrip[] = [];
+  const retained = await retainedSafetyTripIds(
+    db,
+    shopId,
+    offCadence.map((row) => row.id),
+  );
   for (const row of offCadence) {
     const tripId = row.id;
+    if (retained.has(tripId)) continue;
     if (await departureMayBeAtSea(db, { shopId, tripId, startsAt: row.startsAt, now })) continue;
     ashore.push({ ...row });
   }

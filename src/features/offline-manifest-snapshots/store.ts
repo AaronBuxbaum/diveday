@@ -1,13 +1,54 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray, sql } from "drizzle-orm";
-import { queryAll } from "@/db/query-helpers";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { liveTrip } from "@/db/trips";
 import { lockBoardingCertificationEvidence } from "../../db/boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "../../db/client";
 import { getTripManifests } from "../../db/manifests";
-import { offlineManifestSnapshotRevisions, trips } from "../../db/schema/index";
-import { getShopOfflineErasureEpoch } from "../../db/shops";
+import { offlineManifestSnapshotRevisions, tripScheduleDays, trips } from "../../db/schema/index";
+import { getShopOfflineDatasetIncarnation, getShopOfflineErasureEpoch } from "../../db/shops";
 import { signOfflineErasureEpoch } from "../../lib/offline-erasure-epoch";
+import { signOfflineMeetingIdentity } from "../../lib/offline-meeting-identity";
+
+export async function meetingDaysAtLock(db: DbExecutor, tripId: string) {
+  const days = await db
+    .select({
+      id: tripScheduleDays.id,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+      scheduleGeneration: trips.meetingScheduleGeneration,
+    })
+    .from(tripScheduleDays)
+    .innerJoin(trips, eq(trips.id, tripScheduleDays.tripId))
+    .where(and(eq(tripScheduleDays.tripId, tripId), liveTrip()))
+    .orderBy(asc(tripScheduleDays.dayNumber));
+  if (days.length) return days;
+  const [trip] = await db
+    .select({
+      id: trips.id,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      scheduleGeneration: trips.meetingScheduleGeneration,
+    })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), liveTrip()))
+    .limit(1);
+  return trip ? [trip] : [];
+}
+
+function meetingScheduleVersion(
+  days: Awaited<ReturnType<typeof meetingDaysAtLock>>,
+  datasetIncarnation: string,
+): string {
+  return JSON.stringify([
+    datasetIncarnation,
+    days.map((day) => [
+      day.id,
+      day.startsAt.toISOString(),
+      day.endsAt.toISOString(),
+      day.scheduleGeneration,
+    ]),
+  ]);
+}
 
 /**
  * Validate and lock the tenant-owned trip before touching its snapshot
@@ -19,7 +60,7 @@ async function lockOwnedTrip(db: DbExecutor, shopId: string, tripId: string): Pr
     .select({ id: trips.id })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-    .for("key share")
+    .for("update")
     .limit(1);
   return ownedTrip !== undefined;
 }
@@ -143,21 +184,42 @@ async function claimOfflineManifestSnapshotRevision(
  * (`issueOfflineManifestSnapshot`), refused once either has moved.
  */
 export async function readOfflineManifestRoster(db: AppDb, shopId: string, tripId: string) {
-  const [erasureEpoch, snapshotRevision] = await queryAll(db, [
-    () => getShopOfflineErasureEpoch(db, shopId),
-    () => currentOfflineManifestSnapshotRevision(db, shopId, tripId),
-  ]);
-  if (erasureEpoch === null) return null;
-  const manifests = await getTripManifests(db, shopId, tripId);
-  if (!manifests) return null;
-  return { manifests, erasureEpoch, snapshotRevision };
+  return db.transaction(async (tx) => {
+    await lockBoardingCertificationEvidence(tx, shopId, "boarding");
+    if (!(await lockOwnedTrip(tx, shopId, tripId))) return null;
+    const erasureEpoch = await getShopOfflineErasureEpoch(tx, shopId);
+    if (erasureEpoch === null) return null;
+    const datasetIncarnation = await getShopOfflineDatasetIncarnation(tx, shopId);
+    if (!datasetIncarnation) return null;
+    const snapshotRevision = await currentOfflineManifestSnapshotRevision(tx, shopId, tripId);
+    const meetingDays = await meetingDaysAtLock(tx, tripId);
+    const manifests = await getTripManifests(tx as unknown as AppDb, shopId, tripId);
+    if (!manifests) return null;
+    return {
+      manifests,
+      erasureEpoch,
+      snapshotRevision,
+      meetingDays,
+      scheduleVersion: meetingScheduleVersion(meetingDays, datasetIncarnation),
+    };
+  });
 }
 
 /** What a page read was taken at: `readOfflineManifestRoster`'s epoch and revision. */
-export type OfflineManifestReadAt = { erasureEpoch: number; snapshotRevision: number };
+export type OfflineManifestReadAt = {
+  erasureEpoch: number;
+  snapshotRevision: number;
+  scheduleVersion: string;
+};
 
 export type IssuedOfflineManifestSnapshot =
-  | { ok: true; snapshotId: string; erasureEpochToken: string; snapshotRevision: number }
+  | {
+      ok: true;
+      snapshotId: string;
+      erasureEpochToken: string;
+      snapshotRevision: number;
+      meetingIdentityProofs: string[];
+    }
   | { ok: false; reason: "not_found" | "erasure_epoch_moved" | "snapshot_superseded" };
 
 /**
@@ -188,6 +250,11 @@ export async function issueOfflineManifestSnapshot(
     if (epoch !== readAt.erasureEpoch) return { ok: false, reason: "erasure_epoch_moved" } as const;
     if (!(await lockOwnedTrip(tx, shopId, tripId)))
       return { ok: false, reason: "not_found" } as const;
+    const datasetIncarnation = await getShopOfflineDatasetIncarnation(tx, shopId);
+    if (!datasetIncarnation) return { ok: false, reason: "not_found" } as const;
+    const meetingDays = await meetingDaysAtLock(tx, tripId);
+    if (meetingScheduleVersion(meetingDays, datasetIncarnation) !== readAt.scheduleVersion)
+      return { ok: false, reason: "snapshot_superseded" } as const;
     const snapshotRevision = await claimOfflineManifestSnapshotRevision(
       tx,
       shopId,
@@ -207,6 +274,19 @@ export async function issueOfflineManifestSnapshot(
         snapshotRevision,
       }),
       snapshotRevision,
+      meetingIdentityProofs: meetingDays.map((day, meetingDay) =>
+        signOfflineMeetingIdentity({
+          shopId,
+          tripId,
+          snapshotId,
+          meetingId: day.id,
+          meetingDay,
+          scheduleGeneration: day.scheduleGeneration,
+          datasetIncarnation,
+          startsAt: day.startsAt,
+          endsAt: day.endsAt,
+        }),
+      ),
     } as const;
   });
 }

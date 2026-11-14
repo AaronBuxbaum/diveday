@@ -181,24 +181,26 @@ export function SummaryPanel({
       ? t("manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
       : null;
   const mutedText =
-    diversNotBackAboard || completeness.reason === "divers_awaiting"
-      ? crewAwaitingText
-      : completeness.reason === "crew_not_back_aboard"
-        ? null
-        : completeness.reason === "crew_none_assigned"
-          ? t("manifest.crewNoneAssignedYet")
-          : completeness.reason === "crew_none_aboard"
-            ? t("manifest.crewNoneAboard")
-            : completeness.reason === "crew_awaiting"
-              ? t("manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
-              : completeness.reason === "no_divers"
-                ? // An empty roster keeps the checkpoint open (the completeness
-                  // rule refuses it), and the sentence here must not read as an
-                  // all-clear over a manifest that counts nobody — the same
-                  // never-an-all-clear rule the glossary sets for shops that
-                  // skip roll call (dive-domain review 20260810).
-                  t("manifest.noDiversLine")
-                : t("manifest.allAccountedFor");
+    completeness.reason === "retained_safety_unresolved"
+      ? null
+      : diversNotBackAboard || completeness.reason === "divers_awaiting"
+        ? crewAwaitingText
+        : completeness.reason === "crew_not_back_aboard"
+          ? null
+          : completeness.reason === "crew_none_assigned"
+            ? t("manifest.crewNoneAssignedYet")
+            : completeness.reason === "crew_none_aboard"
+              ? t("manifest.crewNoneAboard")
+              : completeness.reason === "crew_awaiting"
+                ? t("manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
+                : completeness.reason === "no_divers"
+                  ? // An empty roster keeps the checkpoint open (the completeness
+                    // rule refuses it), and the sentence here must not read as an
+                    // all-clear over a manifest that counts nobody — the same
+                    // never-an-all-clear rule the glossary sets for shops that
+                    // skip roll call (dive-domain review 20260810).
+                    t("manifest.noDiversLine")
+                  : t("manifest.allAccountedFor");
   // The count row waits for the first diver result to land.
   const rollCallStarted = summary.awaiting < summary.totalDivers;
   // Who the two danger lines are about. One list for both halves, for the same
@@ -336,6 +338,16 @@ export function SummaryPanel({
         {/* Everything below stays *pinned*: each of these lines says a person
             is unaccounted for, and a captain scrolling the roster must not be
             able to push that off the top of the screen. */}
+        {completeness.retainedSafetyUnresolved ? (
+          <p role="status" className="mt-3 text-base font-bold text-danger">
+            {t("manifest.retainedSafetyWarning")}
+          </p>
+        ) : null}
+        {completeness.retainedSafetyAlertNeedsReview ? (
+          <p role="status" className="mt-3 text-base font-bold text-danger">
+            {t("manifest.retainedSafetyAlertWarning")}
+          </p>
+        ) : null}
         {diversNotBackAboard ? (
           <p className="mt-2 text-base font-bold text-danger" role="status">
             {t("manifest.notBackAboardOpen", { count: summary.notBackAboard })}

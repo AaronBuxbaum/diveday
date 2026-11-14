@@ -48,6 +48,7 @@ import {
   refundBookingOnShopCancellation,
   shopCancellationPaymentStory,
 } from "./refunds";
+import { retainedSafetyTripIds } from "./retained-safety";
 import type { BlowoutCause, BlowoutMessageStatus, PaymentStatus } from "./schema";
 import {
   bookingPayments,
@@ -115,7 +116,7 @@ export type CallBlowoutOutcome =
        * (`departureUnderway`). `failed`: a day call's setup for this departure
        * threw; it was not cancelled (`callDayBlowout`).
        */
-      reason: "not_found" | "trip_departed" | "failed";
+      reason: "not_found" | "trip_departed" | "unresolved_safety_evidence" | "failed";
     };
 
 /**
@@ -195,6 +196,8 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
     // it is asked the same question (security review D2, 2026-10-12).
     const freshCall = !existing || trip.status === "scheduled";
     if (freshCall) {
+      if ((await retainedSafetyTripIds(tx, input.shopId, [input.tripId])).has(input.tripId))
+        return { ok: false as const, reason: "unresolved_safety_evidence" as const };
       const [started] = await tx
         // The id as a value, not the column: in a single-table select the
         // column renders unqualified and would bind inside the subquery.

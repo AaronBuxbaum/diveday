@@ -1,13 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { nowMs } from "@/lib/clock";
-import { log } from "@/lib/log";
-import { manifestContext } from "../test/substrate-fixtures/db/manifests-test-fixtures";
-import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
-import { rollCallEvents, tripAssignments, tripScheduleDays } from "./schema";
-
-vi.mock("@/lib/log", () => ({ log: vi.fn() }));
-
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
+import * as receiptSecrets from "@/lib/offline-receipt-secrets";
 /**
  * **Causal evidence is scoped to the explicitly selected meeting day** (issue #3905,
  * ADR 20261104-roll-call-by-meeting-day). A checkpoint such as `after_dive_1`
@@ -17,61 +11,309 @@ vi.mock("@/lib/log", () => ({ log: vi.fn() }));
  * Two meeting days: day one ended 22 hours ago, day two began 2 hours ago, so
  * the roll-call boundary between them sits 12 hours ago.
  */
-const HOUR = 60 * 60 * 1000;
-
-async function shownContext(
-  db: Parameters<typeof getTripManifest>[0],
-  shopId: string,
-  tripId: string,
-  bookingId: string,
-) {
-  const context = (await getTripManifest(db, shopId, tripId, "after_dive_1"))?.divers.find(
-    (row) => row.bookingId === bookingId,
-  )?.rollCallContext;
-  if (!context) throw new Error("expected displayed diver context");
-  return context;
-}
-
-async function shownCrewContext(
-  db: Parameters<typeof getTripManifest>[0],
-  shopId: string,
-  tripId: string,
-  personId: string,
-) {
-  const context = (await getTripManifest(db, shopId, tripId, "after_dive_1"))?.crew.find(
-    (row) => row.id === personId,
-  )?.rollCallContext;
-  if (!context) throw new Error("expected displayed crew context");
-  return context;
-}
-
-async function twoDayCourse() {
-  const ctx = await manifestContext();
-  const { db, reef, staff } = ctx;
-  const now = nowMs();
-  await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, reef.id));
-  await db.insert(tripScheduleDays).values([
-    {
-      tripId: reef.id,
-      dayNumber: 1,
-      startsAt: new Date(now - 26 * HOUR),
-      endsAt: new Date(now - 22 * HOUR),
-    },
-    {
-      tripId: reef.id,
-      dayNumber: 2,
-      startsAt: new Date(now - 2 * HOUR),
-      endsAt: new Date(now + 2 * HOUR),
-    },
-  ]);
-  await db
-    .insert(tripAssignments)
-    .values({ tripId: reef.id, personId: staff.id })
-    .onConflictDoNothing();
-  return { ...ctx, now };
-}
+import {
+  capturedMeeting,
+  HOUR,
+  meetingGeneration,
+  meetingIncarnation,
+  shownContext,
+  shownCrewContext,
+  twoDayCourse,
+} from "@/test/offline-meeting-test-support";
+import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
+import { offlineMeetingStillMatches } from "./offline-meeting-proof";
+import { rollCallEvents, tripScheduleDays, trips } from "./schema";
+import { editTripSection } from "./trips-record";
 
 describe("offline roll call across meeting days", () => {
+  it("does not accept an explicit meeting from another shop even with a scoped valid signature", async () => {
+    const { db, reef } = await twoDayCourse();
+    const [day] = await db
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, reef.id));
+    if (!day) throw new Error("fixture meeting missing");
+    const shopId = crypto.randomUUID();
+    const snapshotId = crypto.randomUUID();
+    const proof = signOfflineMeetingIdentity({
+      scheduleGeneration: await meetingGeneration(db, reef.id),
+      datasetIncarnation: await meetingIncarnation(db, reef.id),
+      shopId,
+      tripId: reef.id,
+      snapshotId,
+      meetingId: day.id,
+      startsAt: day.startsAt,
+      endsAt: day.endsAt,
+      meetingDay: 0,
+    });
+    expect(
+      await offlineMeetingStillMatches(db, {
+        shopId,
+        tripId: reef.id,
+        snapshotId,
+        meetingDay: 0,
+        proof,
+      }),
+    ).toBe(false);
+  });
+  it("does not accept an explicit meeting after its trip is deleted", async () => {
+    const { db, shop, reef, now } = await twoDayCourse();
+    const captured = await capturedMeeting(db, shop.id, reef.id, 0);
+    await db
+      .update(trips)
+      .set({ deletedAt: new Date(now) })
+      .where(eq(trips.id, reef.id));
+    expect(
+      await offlineMeetingStillMatches(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        snapshotId: captured.offlineSnapshotId,
+        meetingDay: 0,
+        proof: captured.offlineMeetingIdentityProof,
+      }),
+    ).toBe(false);
+  });
+  it("accepts a captured implicit single meeting, but not after explicit days replace it", async () => {
+    const { db, shop, reef, booking, staff, now } = await twoDayCourse();
+    await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, reef.id));
+    const [trip] = await db.select().from(trips).where(eq(trips.id, reef.id));
+    if (!trip) throw new Error("fixture trip missing");
+    const snapshotId = crypto.randomUUID();
+    const input = {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "departure" as const,
+      status: "not_boarded" as const,
+      source: "offline" as const,
+      clientEventId: crypto.randomUUID(),
+      meetingDay: 0,
+      offlineSnapshotId: snapshotId,
+      offlineMeetingIdentityProof: signOfflineMeetingIdentity({
+        scheduleGeneration: await meetingGeneration(db, reef.id),
+        datasetIncarnation: await meetingIncarnation(db, reef.id),
+        shopId: shop.id,
+        tripId: reef.id,
+        snapshotId,
+        meetingId: reef.id,
+        meetingDay: 0,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+      }),
+      offlineSnapshotSavedAt: new Date(now - HOUR),
+      occurredAt: new Date(now),
+    };
+    expect(await recordRollCall(db, input)).toMatchObject({ ok: true });
+    await db
+      .insert(tripScheduleDays)
+      .values({ tripId: reef.id, dayNumber: 1, startsAt: trip.startsAt, endsAt: trip.endsAt });
+    expect(
+      await recordRollCall(db, { ...input, clientEventId: crypto.randomUUID() }),
+    ).toMatchObject({ ok: false, reason: "meeting_identity_unverified" });
+  });
+  it("does not resurrect an implicit proof after explicit days are inserted and removed", async () => {
+    const { db, shop, reef } = await twoDayCourse();
+    await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, reef.id));
+    const [trip] = await db.select().from(trips).where(eq(trips.id, reef.id));
+    if (!trip) throw new Error("fixture trip missing");
+    const snapshotId = crypto.randomUUID();
+    const proof = signOfflineMeetingIdentity({
+      scheduleGeneration: await meetingGeneration(db, reef.id),
+      datasetIncarnation: await meetingIncarnation(db, reef.id),
+      shopId: shop.id,
+      tripId: reef.id,
+      snapshotId,
+      meetingId: reef.id,
+      meetingDay: 0,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+    });
+    expect(
+      await editTripSection(db, shop.id, reef.id, {
+        scheduleDays: [{ dayNumber: 1, startsAt: trip.startsAt, endsAt: trip.endsAt }],
+        expectedScheduleDayIds: [],
+        expectedScheduleVersion: "[]",
+      }),
+    ).toMatchObject({ ok: true });
+    const [explicit] = await db
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, reef.id));
+    if (!explicit) throw new Error("explicit meeting missing");
+    expect(
+      await editTripSection(db, shop.id, reef.id, {
+        scheduleDays: [],
+        expectedScheduleDayIds: [explicit.id],
+        expectedScheduleVersion: JSON.stringify([
+          [explicit.id, explicit.startsAt.toISOString(), explicit.endsAt.toISOString()],
+        ]),
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await offlineMeetingStillMatches(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        snapshotId,
+        meetingDay: 0,
+        proof,
+      }),
+    ).toBe(false);
+  });
+  it("does not apply a queued mark to the same meeting moved to a different window", async () => {
+    const { db, shop, reef, booking, staff, now } = await twoDayCourse();
+    const proof = await capturedMeeting(db, shop.id, reef.id, 1);
+    const [day] = await db
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, reef.id));
+    const days = await db
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, reef.id));
+    const second = days.find((item) => item.dayNumber === 2);
+    if (!day || !second) throw new Error("fixture meetings missing");
+    await db
+      .update(tripScheduleDays)
+      .set({ startsAt: new Date(now + 24 * HOUR), endsAt: new Date(now + 28 * HOUR) })
+      .where(eq(tripScheduleDays.id, second.id));
+    const result = await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "departure",
+      status: "not_boarded",
+      source: "offline",
+      clientEventId: crypto.randomUUID(),
+      meetingDay: 1,
+      ...proof,
+      offlineSnapshotSavedAt: new Date(now - HOUR),
+      occurredAt: new Date(now),
+    });
+    expect(result).toMatchObject({ ok: false, reason: "meeting_identity_unverified" });
+  });
+  it("accepts a bound meeting proof and preserves duplicate replay", async () => {
+    const { db, shop, reef, booking, staff, now } = await twoDayCourse();
+    const days = await db
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, reef.id));
+    const second = days.find((day) => day.dayNumber === 2);
+    if (!second) throw new Error("second meeting missing");
+    const snapshotId = crypto.randomUUID();
+    const proof = signOfflineMeetingIdentity({
+      scheduleGeneration: await meetingGeneration(db, reef.id),
+      datasetIncarnation: await meetingIncarnation(db, reef.id),
+      shopId: shop.id,
+      tripId: reef.id,
+      snapshotId,
+      meetingId: second.id,
+      startsAt: second.startsAt,
+      endsAt: second.endsAt,
+      meetingDay: 1,
+    });
+    const input = {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "departure" as const,
+      status: "not_boarded" as const,
+      source: "offline" as const,
+      clientEventId: crypto.randomUUID(),
+      meetingDay: 1,
+      offlineSnapshotId: snapshotId,
+      offlineMeetingIdentityProof: proof,
+      offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
+      occurredAt: new Date(now - HOUR),
+      note: "First observation",
+    };
+    expect(await recordRollCall(db, input)).toMatchObject({ ok: true });
+    expect(await recordRollCall(db, input)).toMatchObject({ ok: true, duplicate: true });
+    expect(await recordRollCall(db, { ...input, note: "Different observation" })).toMatchObject({
+      ok: false,
+      reason: "client_event_conflict",
+    });
+    expect(await recordRollCall(db, { ...input, note: undefined })).toMatchObject({
+      ok: true,
+      duplicate: true,
+      noteDisposition: "discarded_unverified_snapshot",
+    });
+    const priorKeys = receiptSecrets.offlineReceiptSecrets();
+    const keys = vi
+      .spyOn(receiptSecrets, "offlineReceiptSecrets")
+      .mockReturnValue(["replacement receipt key", ...priorKeys]);
+    try {
+      expect(await recordRollCall(db, input)).toMatchObject({ ok: true, duplicate: true });
+      keys.mockReturnValue(["replacement receipt key"]);
+      expect(await recordRollCall(db, input)).toMatchObject({
+        ok: false,
+        reason: "claim_key_unavailable",
+      });
+    } finally {
+      keys.mockRestore();
+    }
+    expect(
+      await recordRollCall(db, {
+        ...input,
+        clientEventId: crypto.randomUUID(),
+        offlineMeetingIdentityProof: `${proof}x`,
+      }),
+    ).toMatchObject({ ok: false, reason: "meeting_identity_unverified" });
+  });
+  it("does not file a queued day-two event on a newly inserted day two", async () => {
+    const { db, shop, reef, booking, staff, now } = await twoDayCourse();
+    const prior = await db
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, reef.id));
+    const second = prior.find((day) => day.dayNumber === 2);
+    if (!second) throw new Error("second meeting missing");
+    const snapshotId = crypto.randomUUID();
+    const proof = signOfflineMeetingIdentity({
+      scheduleGeneration: await meetingGeneration(db, reef.id),
+      datasetIncarnation: await meetingIncarnation(db, reef.id),
+      shopId: shop.id,
+      tripId: reef.id,
+      snapshotId,
+      meetingId: second.id,
+      startsAt: second.startsAt,
+      endsAt: second.endsAt,
+      meetingDay: 1,
+    });
+    // The device captured ordinal 1 before a day was inserted ahead of it.
+    await db
+      .update(tripScheduleDays)
+      .set({ dayNumber: 3 })
+      .where(eq(tripScheduleDays.id, second.id));
+    await db.insert(tripScheduleDays).values({
+      tripId: reef.id,
+      dayNumber: 2,
+      startsAt: new Date(now - 12 * HOUR),
+      endsAt: new Date(now - 10 * HOUR),
+    });
+    const clientEventId = "11111111-2222-4333-8444-555555555555";
+    const outcome = await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "departure",
+      status: "not_boarded",
+      source: "offline",
+      clientEventId,
+      meetingDay: 1,
+      offlineSnapshotId: snapshotId,
+      offlineMeetingIdentityProof: proof,
+      offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
+      occurredAt: new Date(now - HOUR),
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "meeting_identity_unverified" });
+    expect(
+      await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, clientEventId)),
+    ).toEqual([]);
+  });
   it("does not refuse a day-one offline mark synced on day two because day two's mark is newer", async () => {
     const { db, shop, reef, booking, staff, now } = await twoDayCourse();
     const base = {
@@ -94,6 +336,7 @@ describe("offline roll call across meeting days", () => {
         meetingDay: 0,
         ...base,
         status: "boarded",
+        ...(await capturedMeeting(db, shop.id, reef.id, 0)),
         source: "offline",
         clientEventId: "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa",
         offlineSnapshotSavedAt: new Date(now - 25 * HOUR),
@@ -133,6 +376,7 @@ describe("offline roll call across meeting days", () => {
         meetingDay: 1,
         ...base,
         status: "boarded",
+        ...(await capturedMeeting(db, shop.id, reef.id, 1)),
         source: "offline",
         clientEventId: "bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb",
         offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
@@ -173,6 +417,7 @@ describe("offline roll call across meeting days", () => {
         meetingDay: 0,
         ...base,
         status: "boarded",
+        ...(await capturedMeeting(db, shop.id, reef.id, 0)),
         source: "offline",
         clientEventId: "cccccccc-2222-4222-8222-cccccccccccc",
         offlineSnapshotSavedAt: new Date(now - 25 * HOUR),
@@ -184,6 +429,7 @@ describe("offline roll call across meeting days", () => {
         meetingDay: 1,
         ...base,
         status: "boarded",
+        ...(await capturedMeeting(db, shop.id, reef.id, 1)),
         source: "offline",
         clientEventId: "dddddddd-2222-4222-8222-dddddddddddd",
         offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
@@ -415,243 +661,5 @@ describe("a live undo across meeting days", () => {
       }),
     ).resolves.toMatchObject({ ok: true });
     expect(await shown()).toBeUndefined();
-  });
-});
-
-/**
- * An unnamed offline undo supplies no target proof, including when a selected
- * later meeting day is declared. It cannot erase a carried missing report.
- * Retain the legacy absent-basis controls and their refusal/log assertions.
- */
-describe("an unnamed offline retraction after a dive", () => {
-  it("is refused on day two, and day one's missing diver stays on the manifest", async () => {
-    vi.mocked(log).mockClear();
-    const { db, shop, reef, booking, staff, now } = await twoDayCourse();
-    const base = {
-      shopId: shop.id,
-      tripId: reef.id,
-      bookingId: booking.booking.id,
-      recordedByPersonId: staff.id,
-      checkpoint: "after_dive_1" as const,
-    };
-    // Day one: the diver did not come back from dive 1.
-    await recordRollCall(db, {
-      meetingDay: 0,
-      ...base,
-      status: "not_boarded",
-      occurredAt: new Date(now - 23 * HOUR),
-    });
-    // Day two: a phone queues a bare `cleared` at the same checkpoint.
-    await expect(
-      recordRollCall(db, {
-        meetingDay: 1,
-        ...base,
-        status: "cleared",
-        source: "offline",
-        clientEventId: "eeeeeeee-3333-4333-8333-eeeeeeeeeeee",
-        offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
-        occurredAt: new Date(now - 1 * HOUR),
-      }),
-    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
-    expect(log).toHaveBeenCalledWith("manifest.offline_retraction_superseded", "warn", {
-      shopId: shop.id,
-      tripId: reef.id,
-    });
-    expect(
-      (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.divers.find(
-        (diver) => diver.bookingId === booking.booking.id,
-      )?.rollCall,
-    ).toMatchObject({ state: "not_boarded" });
-  });
-
-  it("is refused for the crew's own roll call too", async () => {
-    const { db, shop, reef, staff, now } = await twoDayCourse();
-    const base = {
-      shopId: shop.id,
-      tripId: reef.id,
-      personId: staff.id,
-      recordedByPersonId: staff.id,
-      checkpoint: "after_dive_1" as const,
-    };
-    await recordCrewRollCall(db, {
-      meetingDay: 0,
-      ...base,
-      status: "not_boarded",
-      occurredAt: new Date(now - 23 * HOUR),
-    });
-    await expect(
-      recordCrewRollCall(db, {
-        meetingDay: 1,
-        ...base,
-        status: "cleared",
-        source: "offline",
-        clientEventId: "ffffffff-3333-4333-8333-ffffffffffff",
-        offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
-        occurredAt: new Date(now - 1 * HOUR),
-      }),
-    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
-    expect(
-      (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.find(
-        (entry) => entry.id === staff.id,
-      )?.rollCall,
-    ).toMatchObject({ state: "not_boarded" });
-  });
-
-  it("treats an empty retractsClientEventId as naming nothing, and refuses it", async () => {
-    const { db, shop, reef, booking, staff, now } = await twoDayCourse();
-    const base = {
-      shopId: shop.id,
-      tripId: reef.id,
-      bookingId: booking.booking.id,
-      recordedByPersonId: staff.id,
-      checkpoint: "after_dive_2" as const,
-    };
-    await recordRollCall(db, {
-      meetingDay: 0,
-      ...base,
-      status: "not_boarded",
-      occurredAt: new Date(now - 23 * HOUR),
-    });
-    await expect(
-      recordRollCall(db, {
-        meetingDay: 1,
-        ...base,
-        status: "cleared",
-        source: "offline",
-        clientEventId: "12121212-5555-4555-8555-121212121212",
-        retractsClientEventId: "",
-        offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
-        occurredAt: new Date(now - 1 * HOUR),
-      }),
-    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
-    expect(
-      (await getTripManifest(db, shop.id, reef.id, "after_dive_2"))?.divers.find(
-        (diver) => diver.bookingId === booking.booking.id,
-      )?.rollCall,
-    ).toMatchObject({ state: "not_boarded" });
-  });
-
-  it("is refused even when nothing stands at that checkpoint, because it names nothing", async () => {
-    const { db, shop, reef, booking, staff, now } = await twoDayCourse();
-    await expect(
-      recordRollCall(db, {
-        meetingDay: 1,
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: booking.booking.id,
-        recordedByPersonId: staff.id,
-        checkpoint: "after_dive_1",
-        status: "cleared",
-        source: "offline",
-        clientEventId: "34343434-5555-4555-8555-343434343434",
-        offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
-        occurredAt: new Date(now - 1 * HOUR),
-      }),
-    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
-  });
-
-  it("does not let a replay of the refused event slip through as a duplicate", async () => {
-    const { db, shop, reef, booking, staff, now } = await twoDayCourse();
-    const base = {
-      shopId: shop.id,
-      tripId: reef.id,
-      bookingId: booking.booking.id,
-      recordedByPersonId: staff.id,
-      checkpoint: "after_dive_1" as const,
-    };
-    await recordRollCall(db, {
-      meetingDay: 0,
-      ...base,
-      status: "not_boarded",
-      occurredAt: new Date(now - 23 * HOUR),
-    });
-    const bare = {
-      ...base,
-      status: "cleared" as const,
-      meetingDay: 1,
-      source: "offline" as const,
-      clientEventId: "56565656-5555-4555-8555-565656565656",
-      offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
-      occurredAt: new Date(now - 1 * HOUR),
-    };
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      await expect(recordRollCall(db, bare)).resolves.toEqual({
-        ok: false,
-        reason: "retraction_superseded",
-      });
-    }
-    expect(
-      (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.divers.find(
-        (diver) => diver.bookingId === booking.booking.id,
-      )?.rollCall,
-    ).toMatchObject({ state: "not_boarded" });
-  });
-
-  it("still applies the crew's own bare cleared at the dock", async () => {
-    const { db, shop, reef, staff, now } = await twoDayCourse();
-    const base = {
-      shopId: shop.id,
-      tripId: reef.id,
-      personId: staff.id,
-      recordedByPersonId: staff.id,
-      checkpoint: "departure" as const,
-      source: "offline" as const,
-      offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
-    };
-    await recordCrewRollCall(db, {
-      meetingDay: 1,
-      ...base,
-      status: "not_boarded",
-      clientEventId: "78787878-6666-4666-8666-787878787878",
-      occurredAt: new Date(now - 90 * 60 * 1000),
-    });
-    await expect(
-      recordCrewRollCall(db, {
-        meetingDay: 1,
-        ...base,
-        status: "cleared",
-        clientEventId: "9a9a9a9a-6666-4666-8666-9a9a9a9a9a9a",
-        occurredAt: new Date(now - 80 * 60 * 1000),
-      }),
-    ).resolves.toMatchObject({ ok: true });
-    expect(
-      (await getTripManifest(db, shop.id, reef.id, "departure"))?.crew.find(
-        (item) => item.id === staff.id,
-      )?.rollCall,
-    ).toBeUndefined();
-  });
-
-  it("still applies at the dock, where a cleared never reaches back to a missing diver", async () => {
-    const { db, shop, reef, booking, staff, now } = await twoDayCourse();
-    const base = {
-      shopId: shop.id,
-      tripId: reef.id,
-      bookingId: booking.booking.id,
-      recordedByPersonId: staff.id,
-      checkpoint: "departure" as const,
-      source: "offline" as const,
-      offlineSnapshotSavedAt: new Date(now - 2 * HOUR),
-    };
-    await recordRollCall(db, {
-      meetingDay: 1,
-      ...base,
-      status: "not_boarded",
-      clientEventId: "abababab-4444-4444-8444-abababababab",
-      occurredAt: new Date(now - 90 * 60 * 1000),
-    });
-    await expect(
-      recordRollCall(db, {
-        meetingDay: 1,
-        ...base,
-        status: "cleared",
-        clientEventId: "cdcdcdcd-4444-4444-8444-cdcdcdcdcdcd",
-        occurredAt: new Date(now - 80 * 60 * 1000),
-      }),
-    ).resolves.toMatchObject({ ok: true });
-    expect(
-      (await getTripManifest(db, shop.id, reef.id, "departure"))?.divers.find(
-        (item) => item.bookingId === booking.booking.id,
-      )?.rollCall,
-    ).toBeUndefined();
   });
 });

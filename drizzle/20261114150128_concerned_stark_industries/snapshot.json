@@ -1,0 +1,113 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b0ceab76-fccb-4496-979e-2f9db1b56bc4",
+  "prevIds": [
+    "cee82840-1d03-4d40-bcd8-86443dfacd3c"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_event_claims",
+        "handoff_receipt_id"
+      ],
+      "writes": [
+        "s|col|public.roll_call_event_claims.handoff_receipt_id",
+        "n|col|public.roll_call_event_claims.handoff_receipt_id",
+        "e|col|public.roll_call_event_claims.handoff_receipt_id"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_event_claims",
+        "handoff_receipt_at"
+      ],
+      "writes": [
+        "s|col|public.roll_call_event_claims.handoff_receipt_at",
+        "n|col|public.roll_call_event_claims.handoff_receipt_at",
+        "e|col|public.roll_call_event_claims.handoff_receipt_at"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_event_claims.roll_call_event_claims_handoff_pair",
+        "n|ck|public.roll_call_event_claims.roll_call_event_claims_handoff_pair",
+        "e|ck|public.roll_call_event_claims.roll_call_event_claims_handoff_pair",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_handoff_pair"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.handoff_receipt_id",
+        "n|col|public.roll_call_event_claims.handoff_receipt_at",
+        "n|col|public.roll_call_event_claims.state",
+        "n|col|public.roll_call_event_claims.unresolved_observation"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "handoff_receipt_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "handoff_receipt_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_handoff_pair",
+        "value": "(\"handoff_receipt_id\" is null and \"handoff_receipt_at\" is null) or (\"handoff_receipt_id\" is not null and \"handoff_receipt_at\" is not null and \"state\" = 'unresolved' and \"unresolved_observation\" is not null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

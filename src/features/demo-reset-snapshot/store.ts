@@ -1,6 +1,7 @@
 import { getTableName, type SQL, sql } from "drizzle-orm";
 import type { AppDb, DbExecutor } from "../../db/client";
 import { clearDemoSchedule, resetDemoSchedule } from "../../db/seed";
+import { rotateShopOfflineDatasetIncarnation } from "../../db/shops";
 import { nowMs } from "../../lib/clock";
 import { log } from "../../lib/log";
 
@@ -168,6 +169,8 @@ function planFits(plan: DemoResetPlan, shopId: string): boolean {
 async function clearAndReplay(tx: DbExecutor, shopId: string, plan: DemoResetPlan): Promise<void> {
   await clearWithoutTriggers(tx, shopId, plan.foreignKeys, plan.settles);
   await replayRows(tx, plan);
+  // The snapshot can restore an old shop row; rotate after replay before commit.
+  await rotateShopOfflineDatasetIncarnation(tx, shopId);
 }
 
 /**
@@ -458,6 +461,9 @@ async function capturePlan(db: AppDb, shopId: string): Promise<DemoResetPlan> {
         throw new Error(`a replay does not reproduce ${table.name}`);
       }
     }
+    // Capture itself clears and replays a dataset. Its resulting proofs must
+    // also belong to a new incarnation, outside the captured comparison.
+    await rotateShopOfflineDatasetIncarnation(tx, shopId);
     return plan;
   });
 }

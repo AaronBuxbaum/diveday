@@ -18,11 +18,19 @@ export function checkpointGapLine(t: StaffTranslator, gap: CheckpointGap): strin
     return t("manifest.checkpointGap.notCounted", { dive, plan: plannedDivesWithout(gap) });
   }
   const unmarked = unmarkedLine(t, gap.divers, gap.crew, dive);
-  if (gap.missing === 0) return unmarked ?? "";
-  if (!unmarked) return t("manifest.checkpointGap.lineMissing", { missing: gap.missing, dive });
-  // These counts form a paragraph together. The unmarked message's period
-  // separates it from the missing-person sentence; it is not label punctuation.
-  return `${unmarked} ${t("manifest.checkpointGap.lineMissingToo", { missing: gap.missing })}`;
+  const missing =
+    gap.missing === 0
+      ? null
+      : unmarked
+        ? t("manifest.checkpointGap.lineMissingToo", { missing: gap.missing })
+        : t("manifest.checkpointGap.lineMissing", { missing: gap.missing, dive });
+  return [
+    unmarked,
+    missing,
+    gap.retainedSafetyUnresolved ? t("manifest.retainedSafetyWarning") : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /** Those nobody has marked yet, or null when everyone has a result. */

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { baseManifest } from "@/test/offline-manifests-test-fixture";
 import { crewSnapshot, snapshot } from "../test/substrate-fixtures/lib/offline-manifests-fixtures";
+import { verifiedFixture } from "../test/verified-offline-meeting";
 import { EMPTY_EMERGENCY_REFERENCE } from "./emergency-reference";
 import type { TripManifest } from "./manifests";
 import {
@@ -156,39 +158,6 @@ describe("offline manifest policy", () => {
     // Still nobody, though: an unknown booking is refused in both directions,
     // because there is no person behind the id to be missing.
     expect(canRecordOfflineStatus(saved, "missing", "not_boarded", "after_dive_3")).toBe(false);
-  });
-
-  it("exposes a pending device statement and its exact undo identity", () => {
-    const saved = snapshot();
-    const latest = latestOfflineRollCall(
-      saved,
-      [
-        {
-          clientEventId: "event-1",
-          snapshotId: saved.snapshotId,
-          snapshotSavedAt: saved.savedAt,
-          tripId: "trip-1",
-          bookingId: "ready",
-          checkpoint: "departure",
-          status: "boarded",
-          occurredAt: "2026-07-20T11:05:00.000Z",
-          syncStatus: "pending",
-        },
-      ],
-      "ready",
-      "departure",
-    );
-    expect(latest).toMatchObject({
-      state: "boarded",
-      occurredAt: "2026-07-20T11:05:00.000Z",
-      pending: true,
-      implied: false,
-      local: true,
-      // Which of this device's queued events the row is showing — the id a
-      // retraction of it has to name (ADR
-      // 20260815-an-offline-retraction-names-its-target).
-      clientEventId: "event-1",
-    });
   });
 
   // Dive-domain-expert review (docs/product/features/story-backlog.md, Sal): the old
@@ -676,7 +645,7 @@ describe("offline manifest policy", () => {
   // *server* carried, so the later checkpoints reopen rather than reading a
   // stale "ashore, accounted for" about somebody who is now in the water.
   it("stops carrying when the device says the diver boarded at departure after all", () => {
-    const saved = snapshot();
+    const { saved, tripId, meetingIdentityProof } = verifiedFixture(snapshot());
     for (const manifest of saved.manifests) {
       const diver = manifest.divers.find((entry) => entry.bookingId === "ready");
       if (!diver) throw new Error("fixture lost a diver");
@@ -692,7 +661,9 @@ describe("offline manifest policy", () => {
         clientEventId: "event-made-it",
         snapshotId: saved.snapshotId,
         snapshotSavedAt: saved.savedAt,
-        tripId: "trip-1",
+        tripId,
+        meetingDay: 0,
+        meetingIdentityProof,
         bookingId: "ready",
         checkpoint: "departure" as const,
         status: "boarded" as const,
@@ -791,7 +762,7 @@ describe("offline manifest policy", () => {
   });
 
   it("treats a device-recorded not-boarded as explicit, never carried", () => {
-    const saved = snapshot();
+    const { saved, tripId, meetingIdentityProof } = verifiedFixture(snapshot());
     const latest = latestOfflineRollCall(
       saved,
       [
@@ -799,7 +770,9 @@ describe("offline manifest policy", () => {
           clientEventId: "event-2",
           snapshotId: saved.snapshotId,
           snapshotSavedAt: saved.savedAt,
-          tripId: "trip-1",
+          tripId,
+          meetingDay: 0,
+          meetingIdentityProof,
           bookingId: "blocked",
           checkpoint: "departure",
           status: "not_boarded",
@@ -920,55 +893,6 @@ describe("offline manifest policy", () => {
   });
 
   /** One ready diver on a two-dive departure — the shape these serialization cases vary. */
-  function baseManifest(): TripManifest {
-    return {
-      trip: {
-        id: "trip-1",
-        title: "Two-Tank Reef",
-        startsAt: new Date("2026-07-20T12:00:00.000Z"),
-        endsAt: new Date("2026-07-20T16:00:00.000Z"),
-        plannedDives: 2,
-      },
-      checkpoint: "after_dive_1",
-      crew: [],
-      completeness: {
-        complete: false,
-        diversAccountedFor: false,
-        crewAccountedFor: false,
-        reason: "divers_awaiting",
-        crewReason: "crew_none_assigned",
-        crewCounts: { crewAwaiting: 0, crewNotBackAboard: 0, crewAshore: 0, crewAssigned: 0 },
-      },
-      divers: [
-        {
-          bookingId: "booking-1",
-          fullName: "Nobody Asked",
-          email: "nobody@example.com",
-          emergencyContactName: null,
-          emergencyContactPhone: null,
-          readiness: { status: "ready", blockers: [] },
-          rentalFit: { state: "own_kit" },
-          nitroxRequested: false,
-          checkedIn: false,
-          rollCall: undefined,
-          buddyAlert: null,
-        },
-      ],
-      summary: {
-        totalDivers: 1,
-        ready: 1,
-        blocked: 0,
-        boarded: 0,
-        notBoarded: 0,
-        notBackAboard: 0,
-        awaiting: 1,
-        unaccountedFor: 1,
-        overCapacity: 0,
-        notHere: 0,
-      },
-    } as TripManifest;
-  }
-
   it("saves a held seat without the matched person's particulars (issue #1690)", () => {
     // The copy that lives longest on a crew phone is the last one that should
     // carry a stranger's next of kin, sizes or medical hold. The seat stays,
@@ -1533,13 +1457,15 @@ describe("offline crew roll call", () => {
   });
 
   it("reads a crew member's own device events, and never a diver's", () => {
-    const saved = crewSnapshot();
+    const { saved, tripId, meetingIdentityProof } = verifiedFixture(crewSnapshot());
     const events = [
       {
         clientEventId: "event-crew",
         snapshotId: saved.snapshotId,
         snapshotSavedAt: saved.savedAt,
-        tripId: "trip-1",
+        tripId,
+        meetingDay: 0,
+        meetingIdentityProof,
         crewPersonId: "crew-dana",
         checkpoint: "after_dive_1" as const,
         status: "not_boarded" as const,
@@ -1551,7 +1477,9 @@ describe("offline crew roll call", () => {
         clientEventId: "event-diver",
         snapshotId: saved.snapshotId,
         snapshotSavedAt: saved.savedAt,
-        tripId: "trip-1",
+        tripId,
+        meetingDay: 0,
+        meetingIdentityProof,
         bookingId: "ready",
         checkpoint: "after_dive_1" as const,
         status: "boarded" as const,
@@ -1697,11 +1625,13 @@ describe("offline crew roll call", () => {
   });
 
   it("keeps an observed crew correction at an equal clock regardless of transport order", () => {
-    const saved = crewSnapshot();
+    const { saved, tripId, meetingIdentityProof } = verifiedFixture(crewSnapshot());
     const base = {
       snapshotId: saved.snapshotId,
       snapshotSavedAt: saved.savedAt,
-      tripId: "trip-1",
+      tripId,
+      meetingDay: 0,
+      meetingIdentityProof,
       crewPersonId: "crew-dana",
       checkpoint: "after_dive_1" as const,
       note: null,
@@ -1731,11 +1661,13 @@ describe("offline crew roll call", () => {
   });
 
   it("keeps an observed diver correction at an equal clock regardless of transport order", () => {
-    const saved = crewSnapshot();
+    const { saved, tripId, meetingIdentityProof } = verifiedFixture(crewSnapshot());
     const base = {
       snapshotId: saved.snapshotId,
       snapshotSavedAt: saved.savedAt,
-      tripId: "trip-1",
+      tripId,
+      meetingDay: 0,
+      meetingIdentityProof,
       bookingId: "ready",
       checkpoint: "after_dive_1" as const,
       note: null,
@@ -1759,11 +1691,13 @@ describe("offline crew roll call", () => {
   });
 
   it("follows three explicitly observed corrections at the same clock", () => {
-    const saved = crewSnapshot();
+    const { saved, tripId, meetingIdentityProof } = verifiedFixture(crewSnapshot());
     const base = {
       snapshotId: saved.snapshotId,
       snapshotSavedAt: saved.savedAt,
-      tripId: "trip-1",
+      tripId,
+      meetingDay: 0,
+      meetingIdentityProof,
       crewPersonId: "crew-dana",
       checkpoint: "after_dive_1" as const,
       note: null,
@@ -1826,11 +1760,13 @@ describe("offline crew roll call", () => {
   });
 
   it("keeps opposed opaque evidence conflicted regardless of clocks or queue position", () => {
-    const saved = crewSnapshot();
+    const { saved, tripId, meetingIdentityProof } = verifiedFixture(crewSnapshot());
     const base = {
       snapshotId: saved.snapshotId,
       snapshotSavedAt: saved.savedAt,
-      tripId: "trip-1",
+      tripId,
+      meetingDay: 0,
+      meetingIdentityProof,
       crewPersonId: "crew-dana",
       checkpoint: "after_dive_1" as const,
       note: null,

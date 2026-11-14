@@ -22,9 +22,9 @@
     "notReached": "Aún sin aviso. Llama ya a los propietarios.",
     "notAlerted": "Aquí no hay ningún aviso abierto para esta persona.",
     "found": "Encontrado",
-    "foundDone": "Marcado como encontrado. Los propietarios ya tienen el fin de la alerta.",
-    "foundPartial": "Marcado como encontrado. El fin de la alerta no llegó a todos los propietarios. Llámalos.",
-    "foundNoAllClear": "Marcado como encontrado. No se envió el fin de la alerta.",
+    "foundDone": "Marcado como encontrado. Los propietarios recibieron la actualización.",
+    "foundPartial": "Marcado como encontrado. La actualización no llegó a todos los propietarios. Llámalos.",
+    "foundNoAllClear": "Marcado como encontrado. No se envió la actualización.",
     "foundAlready": "Ya estaba marcado como encontrado.",
     "foundFailed": "No se guardó. Toca de nuevo.",
     "stillMissing": "Sigue sin regresar a bordo. Márcalo antes como de vuelta a bordo.",
@@ -150,11 +150,11 @@
   "found": {
     "label": "Encontrado",
     "byAt": "{name}, {when}",
-    "help": "Envía por correo un único fin de la alerta a los propietarios avisados. Solo cuando ya figure de vuelta a bordo.",
+    "help": "Envía a los propietarios avisados una actualización por correo cuando todas las personas de este reporte figuren de vuelta a bordo.",
     "submit": "Encontrado",
-    "allClearSent": "Fin de la alerta enviado {when}",
-    "allClearPartial": "El fin de la alerta no llegó a todos los propietarios. Llámalos.",
-    "allClearNone": "No se envió el fin de la alerta."
+    "allClearSent": "Aviso de persona encontrada enviado {when}",
+    "allClearPartial": "La actualización no llegó a todos los propietarios. Llámalos.",
+    "allClearNone": "No se envió la actualización."
   },
   "addenda": {
     "title": "Notas posteriores",
@@ -187,7 +187,7 @@
     "holdSet": "Retención legal puesta",
     "holdReleased": "Retención legal levantada",
     "alerted": "Desde este informe se avisó a los propietarios, así que se conserva. Marca al buceador como encontrado.",
-    "found": "Marcado como encontrado. Se envía a los propietarios el fin de la alerta.",
+    "found": "Marcado como encontrado. Se envía una actualización a los propietarios.",
     "stillMissing": "En el manifiesto sigue sin regresar a bordo. Márcalo antes como de vuelta a bordo."
   },
   "safety": {

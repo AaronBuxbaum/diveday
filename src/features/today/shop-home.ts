@@ -193,7 +193,7 @@ async function readTodaySecondWave({
           db,
           shop.id,
           closingStations
-            .filter((station) => station.status === "all_home")
+            .filter((station) => station.status === "all_home" && !station.retainedSafetyUnresolved)
             .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
         )
       : new Map<string, { closedAt: Date; closedBy: string }>(),

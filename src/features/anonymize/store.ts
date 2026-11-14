@@ -138,6 +138,7 @@ import {
   recapPulses,
   reviewModerationEvents,
   reviewReplies,
+  rollCallEventClaims,
   rollCallEvents,
   shops,
   staffCredentialHistory,
@@ -910,6 +911,48 @@ async function scrubPersonRecord(
     ),
   );
 
+  // Until authenticated review exists, clearing an erased author's internal
+  // copy leaves the original device queue pending rather than re-identifying it.
+  await tx
+    .update(rollCallEventClaims)
+    .set({
+      reviewRevision: sql`gen_random_uuid()`,
+      unresolvedObservation: null,
+      unresolvedRecordedByPersonId: null,
+      handoffReceiptId: null,
+      handoffReceiptAt: null,
+    })
+    .where(
+      and(
+        eq(rollCallEventClaims.shopId, shopId),
+        eq(rollCallEventClaims.unresolvedRecordedByPersonId, personId),
+      ),
+    );
+
+  await tx
+    .update(rollCallEventClaims)
+    .set({
+      reviewRevision: sql`gen_random_uuid()`,
+      state: "erased",
+      subjectKind: null,
+      bookingId: null,
+      crewPersonId: null,
+      intentFingerprint: null,
+      intentWithoutNoteFingerprint: null,
+      proofFingerprint: null,
+      keyFingerprint: null,
+      unresolvedReason: null,
+      noteDisposition: null,
+      acceptedEventId: null,
+      unresolvedObservation: null,
+      unresolvedRecordedByPersonId: null,
+      handoffReceiptId: null,
+      handoffReceiptAt: null,
+    })
+    .where(
+      and(eq(rollCallEventClaims.shopId, shopId), eq(rollCallEventClaims.crewPersonId, personId)),
+    );
+
   await tx
     .update(rollCallEvents)
     .set({
@@ -1566,6 +1609,33 @@ async function scrubBookingRows(
     // even though the row it sits on is a boarding fact that stays. Both
     // halves of the head count: this person's own bookings, and — since a crew
     // member is a person who can be erased too — the crew events about them.
+    await tx
+      .update(rollCallEventClaims)
+      .set({
+        reviewRevision: sql`gen_random_uuid()`,
+        state: "erased",
+        subjectKind: null,
+        bookingId: null,
+        crewPersonId: null,
+        intentFingerprint: null,
+        intentWithoutNoteFingerprint: null,
+        proofFingerprint: null,
+        keyFingerprint: null,
+        unresolvedReason: null,
+        noteDisposition: null,
+        acceptedEventId: null,
+        unresolvedObservation: null,
+        unresolvedRecordedByPersonId: null,
+        handoffReceiptId: null,
+        handoffReceiptAt: null,
+      })
+      .where(
+        and(
+          eq(rollCallEventClaims.shopId, shopId),
+          inArray(rollCallEventClaims.bookingId, bookingIds),
+        ),
+      );
+
     await tx
       .update(rollCallEvents)
       .set({ note: null })

@@ -1,5 +1,6 @@
 import { personsAboveTotalPersonsAboard } from "@/lib/boat-safety";
 import { keepUnitsWhole } from "@/lib/date-parts";
+import { isHeldSeat } from "@/lib/held-seat";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { physicalPeople } from "@/lib/manifest-person-counts";
 import {
@@ -26,8 +27,10 @@ import {
   refusedOfflineArrival,
   rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
+import { offlineReviewReasons } from "@/lib/roll-call-offline-causality";
 import { counterIsDone, isSettledAtCounter } from "../../lib/check-in";
 import { offlinePreviousGaps } from "./checkpoint-gap-inputs";
+import { uncertainPossibleAboard } from "./possible-aboard";
 import { deviceLocale } from "./shared";
 
 /** The live manifest this saved copy stands in for, at the checkpoint on screen. */
@@ -101,9 +104,12 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
           const seat = {
             bookingStatus: diver.notHere ? "no_show" : "booked",
             checkedIn: !diver.notHere && Boolean(arrival),
-            readiness: offlineTrainingReadinessStale(envelope.snapshot, diver)
-              ? { ...diver.readiness, status: "blocked" as const }
-              : diver.readiness,
+            readiness:
+              diver.identityWithheld ||
+              isHeldSeat(diver) ||
+              offlineTrainingReadinessStale(envelope.snapshot, diver)
+                ? { ...diver.readiness, status: "blocked" as const }
+                : diver.readiness,
           };
           return {
             diver,
@@ -136,6 +142,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   const localStates = manifest.divers.map((diver) =>
     latestOfflineRollCall(envelope.snapshot, envelope.events, diver.bookingId, checkpoint),
   );
+  const reviewReasons = offlineReviewReasons(envelope.snapshot, envelope.events);
   // The live roll call's after-dive rule, read through the same predicate
   // (`blockedAtRail`, issue #2286): a blocked diver nobody boarded at an
   // earlier checkpoint still wears their readiness here. Read off this device's
@@ -155,6 +162,8 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     rowBlockedAtRail({
       ready:
         diver.readiness.status === "ready" &&
+        !diver.identityWithheld &&
+        !isHeldSeat(diver) &&
         !offlineTrainingReadinessStale(envelope.snapshot, diver),
       isDeparture: checkpoint === "departure",
       boardedEarlier: boardedEarlier[index],
@@ -168,7 +177,13 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   const medicalHold = manifest.divers.map((diver, index) =>
     medicalHoldAfterDive({
       checkpoint,
-      boardedEarlier: boardedEarlier[index],
+      // A possible boarding is enough to display a safety warning, but it
+      // must not confirm boarding or unlock a boarding-dependent action.
+      boardedEarlier:
+        boardedEarlier[index] ||
+        uncertainPossibleAboard(envelope.snapshot, envelope.events, reviewReasons, {
+          bookingId: diver.bookingId,
+        }),
       notBackAboard: isNotBackAboard(checkpoint, localStates[index]),
       blockerCodes: diver.readiness.blockers.map((blocker) => blocker.code),
     }),
@@ -240,11 +255,47 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     ),
     manifest.trip.certifiedTotalPersons,
   );
+  // A removed subject may share another row's identity, so do not invent a
+  // numeric addition to the capacity count. The separate warning asks the crew
+  // to count the boat rather than silently omitting this observation.
+  const possibleUnlistedPerson = envelope.events.some((event) => {
+    // A removed person may still be in the water. Refusal or absence of a
+    // review reason does not disprove a retained physical observation.
+    const unlistedMissing = event.checkpoint !== "departure" && event.status === "not_boarded";
+    if (!unlistedMissing && !reviewReasons.has(event.clientEventId)) return false;
+    if (event.bookingId)
+      return !manifest.divers.some((diver) => diver.bookingId === event.bookingId);
+    if (event.crewPersonId) return !manifest.crew.some((crew) => crew.id === event.crewPersonId);
+    return true;
+  });
+  const possibleOverTotalPersons = overTotalPersons
+    ? null
+    : personsAboveTotalPersonsAboard(
+        physicalPeople(
+          manifest.divers.filter(
+            (diver, index) =>
+              localStates[index]?.state === "boarded" ||
+              uncertainPossibleAboard(envelope.snapshot, envelope.events, reviewReasons, {
+                bookingId: diver.bookingId,
+              }),
+          ),
+          crewWithState.filter(
+            (member) =>
+              member.state?.state === "boarded" ||
+              (member.id !== undefined &&
+                uncertainPossibleAboard(envelope.snapshot, envelope.events, reviewReasons, {
+                  crewPersonId: member.id,
+                })),
+          ),
+        ),
+        manifest.trip.certifiedTotalPersons,
+      );
   const completeness = rollCallCompleteness({
     checkpoint,
     totalDivers: countedDivers,
     awaiting,
     notBackAboard,
+    retainedSafetyUnresolved: manifest.retainedSafetyUnresolved,
     crew: crewWithState.map((member) => ({ rollCall: member.state })),
   });
   const crewCounts = completeness.crewCounts;
@@ -274,7 +325,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   //   no longer anything to apologise for.
   const crewMissing = completeness.crewReason === "crew_not_back_aboard";
   const crewWithoutId = crewWithKeys.filter((member) => !member.id).length;
-  const rollCallComplete = completeness.complete;
+  const rollCallComplete = completeness.complete && !possibleUnlistedPerson;
   // The people this device counts (every row but a turned-away seat nobody
   // has answered for), not the (possibly stale, save-time)
   // `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
@@ -287,7 +338,11 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   // heading text above ("Roll call complete" is accurate either way), but an
   // "everyone's aboard" celebration must not fire on that basis. Gate it on
   // the true boarded count instead.
-  const allBoarded = totalDivers > 0 && boarded === totalDivers;
+  const allBoarded =
+    !possibleUnlistedPerson &&
+    !manifest.retainedSafetyUnresolved &&
+    totalDivers > 0 &&
+    boarded === totalDivers;
   const missingDivers = manifest.divers.filter(
     (_diver, index) => !localStates[index] && !offBoat[index],
   );
@@ -348,6 +403,8 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     medicalHold,
     boarded,
     overTotalPersons,
+    possibleOverTotalPersons,
+    possibleUnlistedPerson,
     awaiting,
     notBackAboard,
     crewAssigned,

@@ -16,6 +16,94 @@ import { carriedMissing, type DayMark, standingByDay } from "./roll-call-days";
 
 type Subject = { bookingId: string } | { crewPersonId: string };
 type Checkpoint = OfflineManifestSnapshot["manifests"][number]["checkpoint"];
+const MEETING_PROOF =
+  /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.(0|[1-9]\d*)\.(-?[0-9a-z]+)\.(-?[0-9a-z]+)\.(0|[1-9]\d*)\.([A-Za-z0-9_-]{43})$/i;
+
+/** A queue's ordinal only names the same meeting while its captured identity and window still match. */
+function eventMeetingDay(
+  snapshot: OfflineManifestSnapshot,
+  event: OfflineRollCallEvent,
+  multiDay: boolean,
+): number {
+  const original = event.meetingDay ?? (multiDay ? -1 : 0);
+  if (original < 0) return -1;
+  if (event.syncStatus !== "pending" && event.snapshotId === snapshot.snapshotId) return original;
+  const capturedToken = event.meetingIdentityProof;
+  const currentToken = snapshot.rollCallMeetingDays?.[original]?.meetingIdentityProof;
+  const captured = capturedToken?.match(MEETING_PROOF);
+  const current = currentToken?.match(MEETING_PROOF);
+  if (!captured || !current || captured[2] !== String(original) || current[2] !== String(original))
+    return -1;
+  const starts = Number.parseInt(captured[3], 36);
+  const ends = Number.parseInt(captured[4], 36);
+  const generation = Number(captured[5]);
+  if (
+    !Number.isSafeInteger(starts) ||
+    !Number.isSafeInteger(ends) ||
+    ends <= starts ||
+    starts.toString(36) !== captured[3] ||
+    ends.toString(36) !== captured[4] ||
+    !Number.isSafeInteger(generation) ||
+    generation > 2_147_483_647
+  )
+    return -1;
+  if (event.snapshotId === snapshot.snapshotId && capturedToken !== currentToken) return -1;
+  return captured[1].toLowerCase() === current[1].toLowerCase() &&
+    captured[3] === current[3] &&
+    captured[4] === current[4] &&
+    captured[5] === current[5]
+    ? original
+    : -1;
+}
+
+/** Uncertainty follows queued causal dependencies even before the next sync. */
+export function offlineReviewReasons(
+  snapshot: OfflineManifestSnapshot,
+  events: readonly OfflineRollCallEvent[],
+): Map<string, string> {
+  const multiDay = (snapshot.rollCallDayBoundaries?.length ?? 0) > 0;
+  const blocked = new Set(
+    events
+      .filter((event) => event.syncStatus === "rejected")
+      .map((event) => clientRollCallEvidenceId(event.clientEventId)),
+  );
+  const reasons = new Map<string, string>();
+  const dependents = new Map<string, OfflineRollCallEvent[]>();
+  for (const event of events) {
+    if (event.syncStatus !== "pending") continue;
+    const dependencies = [
+      ...(event.observedEvidenceIds ?? []).map((id) => id.toLowerCase()),
+      ...(event.retractsClientEventId
+        ? [clientRollCallEvidenceId(event.retractsClientEventId)]
+        : []),
+    ];
+    for (const id of dependencies) {
+      const dependent = dependents.get(id) ?? [];
+      dependent.push(event);
+      dependents.set(id, dependent);
+    }
+    const reason =
+      event.unresolvedReason ??
+      (eventMeetingDay(snapshot, event, multiDay) < 0 ? "meeting_identity_unverified" : undefined);
+    if (reason) {
+      reasons.set(event.clientEventId, reason);
+      blocked.add(clientRollCallEvidenceId(event.clientEventId));
+    }
+  }
+  const queue = [...blocked];
+  for (let index = 0; index < queue.length; index += 1) {
+    for (const event of dependents.get(queue[index]) ?? []) {
+      if (reasons.has(event.clientEventId)) continue;
+      reasons.set(event.clientEventId, "unresolved_predecessor");
+      const id = clientRollCallEvidenceId(event.clientEventId);
+      if (!blocked.has(id)) {
+        blocked.add(id);
+        queue.push(id);
+      }
+    }
+  }
+  return reasons;
+}
 
 /** Read the rendered snapshot and queued evidence; no transport or wall clock orders it. */
 export function offlineCausalContext(
@@ -64,23 +152,37 @@ function contextAt(
     "bookingId" in subject
       ? event.bookingId === subject.bookingId && !event.crewPersonId
       : event.crewPersonId === subject.crewPersonId && !event.bookingId;
-  // A refusal is local uncertainty, not an accepted statement or causal edge.
-  // It cannot keep this device's old dock exemption/positive count confirmed.
-  // Accepted server evidence remains distinct; other devices learn no refusal.
-  const refusedDock =
+  const reviewReasons = offlineReviewReasons(snapshot, events);
+  const uncertainDock =
     checkpoint === "departure" &&
     events.some(
       (event) =>
         sameSubject(event) &&
         event.checkpoint === checkpoint &&
-        event.syncStatus === "rejected" &&
-        ((event.meetingDay ?? (multiDay ? -1 : 0)) === meetingDay ||
-          (event.meetingDay ?? (multiDay ? -1 : 0)) === -1),
+        reviewReasons.has(event.clientEventId),
     );
+  // A refusal is local uncertainty, not an accepted statement or causal edge.
+  // It cannot keep this device's old dock exemption/positive count confirmed.
+  // Accepted server evidence remains distinct; other devices learn no refusal.
+  const refusedDock =
+    uncertainDock ||
+    (checkpoint === "departure" &&
+      events.some(
+        (event) =>
+          sameSubject(event) &&
+          event.checkpoint === checkpoint &&
+          event.syncStatus === "rejected" &&
+          (eventMeetingDay(snapshot, event, multiDay) === meetingDay ||
+            eventMeetingDay(snapshot, event, multiDay) === -1),
+      ));
   const local = events.filter(
     (event) =>
       !refusedDock &&
       event.checkpoint === checkpoint &&
+      // A correction awaiting an unresolved predecessor is not accepted causal
+      // evidence and cannot silence a missing report on this device.
+      (!reviewReasons.has(event.clientEventId) ||
+        (checkpoint !== "departure" && event.status === "not_boarded")) &&
       // Retained clock/auth-refused alarms remain crew evidence. A refused
       // positive correction or dock exemption cannot suppress an alarm.
       (event.syncStatus !== "rejected" ||
@@ -89,33 +191,39 @@ function contextAt(
       sameSubject(event),
   );
   const all: RollCallCausalContext["evidence"] = [
-    ...(refusedDock
-      ? saved.filter(
-          (item) =>
-            savedContext &&
-            !events.some(
-              (event) =>
-                sameSubject(event) &&
-                event.checkpoint === "departure" &&
-                event.syncStatus === "rejected" &&
-                (event.retractsClientEventId
-                  ? clientRollCallEvidenceId(event.retractsClientEventId) === item.id
-                  : event.observedEvidenceIds?.includes(item.id)),
-            ),
-        )
-      : saved),
+    ...(uncertainDock
+      ? []
+      : refusedDock
+        ? saved.filter(
+            (item) =>
+              savedContext &&
+              !events.some(
+                (event) =>
+                  sameSubject(event) &&
+                  event.checkpoint === "departure" &&
+                  event.syncStatus === "rejected" &&
+                  (event.retractsClientEventId
+                    ? clientRollCallEvidenceId(event.retractsClientEventId) === item.id
+                    : event.observedEvidenceIds?.includes(item.id)),
+              ),
+          )
+        : saved),
     ...local.map((event) => ({
       id: clientRollCallEvidenceId(event.clientEventId),
       status: event.status,
       recordedByName: "",
       occurredAt: event.storedOccurredAt ?? event.occurredAt,
       note: event.note ?? null,
-      meetingDay: event.meetingDay ?? (multiDay ? -1 : 0),
-      observedEvidenceIds: event.syncStatus === "rejected" ? undefined : event.observedEvidenceIds,
-      reconcilesEvidence: event.reconcilesEvidence,
-      retracts: event.retractsClientEventId
-        ? clientRollCallEvidenceId(event.retractsClientEventId)
-        : undefined,
+      meetingDay: eventMeetingDay(snapshot, event, multiDay),
+      observedEvidenceIds:
+        event.syncStatus === "rejected" || reviewReasons.has(event.clientEventId)
+          ? undefined
+          : event.observedEvidenceIds,
+      reconcilesEvidence: reviewReasons.has(event.clientEventId) ? false : event.reconcilesEvidence,
+      retracts:
+        !reviewReasons.has(event.clientEventId) && event.retractsClientEventId
+          ? clientRollCallEvidenceId(event.retractsClientEventId)
+          : undefined,
     })),
   ];
   const eligible = new Set(
@@ -225,7 +333,7 @@ function excludeQualifiedReturns(
         : event.crewPersonId === subject.crewPersonId && !event.bookingId;
     if (!matches) continue;
     checkpoints.add(event.checkpoint);
-    addDay(event.meetingDay);
+    addDay(eventMeetingDay(snapshot, event, (snapshot.rollCallDayBoundaries?.length ?? 0) > 0));
   }
   const cache = new Map<string, ReturnType<typeof contextAt>>();
   const standingAt = (day: number, at: Checkpoint) => {
@@ -290,7 +398,16 @@ export function causalOfflineResult(
   if (!projection.status || projection.status === "cleared") {
     if (checkpoint !== "departure") {
       const dock = causalOfflineResult(snapshot, events, subject, "departure");
-      if (dock?.state === "not_boarded" && !dock.evidenceConflict)
+      const review = offlineReviewReasons(snapshot, events);
+      const uncertainDock = events.some(
+        (event) =>
+          event.checkpoint === "departure" &&
+          review.has(event.clientEventId) &&
+          ("bookingId" in subject
+            ? event.bookingId === subject.bookingId && !event.crewPersonId
+            : event.crewPersonId === subject.crewPersonId && !event.bookingId),
+      );
+      if (dock?.state === "not_boarded" && !dock.evidenceConflict && !uncertainDock)
         return { ...dock, implied: true };
     }
     return undefined;
@@ -298,6 +415,11 @@ export function causalOfflineResult(
   const item = context.evidence.find((evidence) => evidence.status === projection.status);
   if (!item) return undefined;
   const local = events.find((event) => clientRollCallEvidenceId(event.clientEventId) === item.id);
+  const pendingIds = new Set(
+    events
+      .filter((event) => event.syncStatus === "pending")
+      .map((event) => clientRollCallEvidenceId(event.clientEventId)),
+  );
   const ownRetractable =
     local &&
     local.syncStatus !== "rejected" &&
@@ -312,7 +434,10 @@ export function causalOfflineResult(
     occurredAt: item.occurredAt,
     recordedByName: item.recordedByName,
     note: item.note,
-    pending: local?.syncStatus === "pending",
+    // Multiple compatible frontier statements can support the same status.
+    // A saved statement chosen for attribution must not hide another pending
+    // statement from the row's waiting-to-send indicator.
+    pending: context.evidence.some((evidence) => pendingIds.has(evidence.id)),
     implied: false,
     local: !!ownRetractable && !context.conflict,
     clientEventId: ownRetractable && !context.conflict ? local.clientEventId : undefined,

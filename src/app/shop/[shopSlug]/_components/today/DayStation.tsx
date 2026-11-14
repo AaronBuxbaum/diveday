@@ -218,6 +218,12 @@ export function DayStation({
         </span>
       </p>
 
+      {station.retainedSafetyUnresolved ? (
+        <p className="mt-3 text-sm font-bold text-danger" role="status">
+          {t("manifest.retainedSafetyWarning")}
+        </p>
+      ) : null}
+
       {crewRollCallOpen ? (
         <p className="mt-3 text-sm font-medium text-warning">
           {t("shopHome.spine.crewRollCallOpen")}

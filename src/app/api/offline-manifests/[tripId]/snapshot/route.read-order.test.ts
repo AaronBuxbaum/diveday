@@ -87,7 +87,15 @@ describe("a page save that lands after a newer copy (dock-operator review, issue
     expect(r1.snapshotRevision).toBe(9);
     const pagePayload: OfflineManifestPayload = {
       ...serializeManifests(r1.manifests, identity, () => ""),
-      readAt: { erasureEpoch: r1.erasureEpoch, snapshotRevision: r1.snapshotRevision },
+      readAt: {
+        erasureEpoch: r1.erasureEpoch,
+        snapshotRevision: r1.snapshotRevision,
+        scheduleVersion: r1.scheduleVersion,
+      },
+      rollCallMeetingDays: r1.meetingDays.map((day) => ({
+        startsAt: day.startsAt.toISOString(),
+        endsAt: day.endsAt.toISOString(),
+      })),
     };
 
     // Another phone seats the walk-up diver.

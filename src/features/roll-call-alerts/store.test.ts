@@ -27,9 +27,11 @@ import {
   bookings,
   people,
   personRoles,
+  rollCallEventClaims,
   shops,
   tripAssignments,
   trips,
+  unresolvedSafetyAlertOutbox,
   userAccounts,
 } from "../../db/schema/index";
 import { setShopShoreAlertContact } from "../../db/shops";
@@ -115,6 +117,48 @@ async function ownerEmails() {
 }
 
 describe("sendStaleRollCallAlerts", () => {
+  it("alerts owners about retained unresolved safety evidence without inventing a count or dive", async () => {
+    const { db, shop, trip, mark } = await departure(2 * HOUR);
+    await mark("after_dive_1", "boarded");
+    const generationId = crypto.randomUUID();
+    const [claim] = await db
+      .insert(rollCallEventClaims)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        clientEventId: crypto.randomUUID(),
+        state: "erased",
+        retainedSafetyEvidence: {
+          version: 1,
+          receiptId: generationId,
+          checkpoint: "after_dive_1",
+          status: "not_boarded",
+          occurredAt: NOW.toISOString(),
+          meetingDay: null,
+          observedEvidenceIds: [],
+          retractsEventId: null,
+          retractsClientEventId: null,
+          reconcilesEvidence: false,
+          noteRetained: false,
+        },
+      })
+      .returning({ id: rollCallEventClaims.id });
+    await db.insert(unresolvedSafetyAlertOutbox).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      claimId: claim.id,
+      generationId,
+    });
+    const { sent, provider } = recorder();
+    await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider });
+    const alerts = sent.filter((message) => String(message.kind) === "unresolved_safety_evidence");
+    expect(alerts.length).toBeGreaterThan(0);
+    for (const alert of alerts) {
+      expect(alert).not.toHaveProperty("diveNumber");
+      expect(alert).not.toHaveProperty("notBackAboard");
+      expect(alert).not.toHaveProperty("awaiting");
+    }
+  });
   it("emails the owners once about a count still open after the boat was due back", async () => {
     const { db, trip } = await departure(2 * HOUR);
     const { sent, provider } = recorder();

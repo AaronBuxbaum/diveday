@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2111fe09-9d43-4189-ab7b-1116c83b0b84",
+  "prevIds": [
+    "37de86cc-9701-4e32-b35f-50f7cb343f46"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_event_claims",
+        "intent_without_note_fingerprint"
+      ],
+      "writes": [
+        "s|col|public.roll_call_event_claims.intent_without_note_fingerprint",
+        "n|col|public.roll_call_event_claims.intent_without_note_fingerprint",
+        "e|col|public.roll_call_event_claims.intent_without_note_fingerprint"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "intent_without_note_fingerprint",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

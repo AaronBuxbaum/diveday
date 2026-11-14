@@ -86,7 +86,8 @@ export function ClosingStation({
   // a diver who was not on the boat; gating on the roster would put "0 of 0
   // back" on a one-seat boat whose only diver stayed ashore, instead of
   // falling through to the per-status wording that says so.
-  const counted = close.status === "all_home" && close.sailed > 0;
+  const counted =
+    close.status === "all_home" && close.sailed > 0 && !close.retainedSafetyUnresolved;
   // **Souls, but only where the records support the claim** (issue #1346). A
   // shop whose crew were counted gets the sentence that names both; a shop
   // that has never tapped a crew roll call keeps the diver-only wording it has
@@ -98,22 +99,24 @@ export function ClosingStation({
     back: close.back + close.crewBack,
   };
   const timedClose = countedLaterOn ? null : headCountClose;
-  const detail = counted
-    ? timedClose
-      ? souls
-        ? t("shopHome.spine.close.backSoulsBy", {
-            ...soulCounts,
-            time: formatTime(timedClose.closedAt, locale, timeZone),
-          })
-        : t("shopHome.spine.close.backBy", {
-            back: close.back,
-            sailed: close.sailed,
-            time: formatTime(timedClose.closedAt, locale, timeZone),
-          })
-      : souls
-        ? t("shopHome.spine.close.backSouls", soulCounts)
-        : t("shopHome.spine.close.back", { back: close.back, sailed: close.sailed })
-    : closeoutDepartureDetailText(t, close, detailTime);
+  const detail = close.retainedSafetyUnresolved
+    ? t("manifest.retainedSafetyWarning")
+    : counted
+      ? timedClose
+        ? souls
+          ? t("shopHome.spine.close.backSoulsBy", {
+              ...soulCounts,
+              time: formatTime(timedClose.closedAt, locale, timeZone),
+            })
+          : t("shopHome.spine.close.backBy", {
+              back: close.back,
+              sailed: close.sailed,
+              time: formatTime(timedClose.closedAt, locale, timeZone),
+            })
+        : souls
+          ? t("shopHome.spine.close.backSouls", soulCounts)
+          : t("shopHome.spine.close.back", { back: close.back, sailed: close.sailed })
+      : closeoutDepartureDetailText(t, close, detailTime);
   const checkpoint = close.diveNumber >= 1 ? `after_dive_${close.diveNumber}` : "departure";
   // A quiet reading the day already contains, rendering nothing when there is
   // no factual answer (ADR 20260904-reef-all-the-way-down, slice 16h). The
@@ -158,12 +161,18 @@ export function ClosingStation({
           status word, never back under the glyph (pixel-craft K-593). */}
       <p className="mt-1.5 text-sm">
         <SettledCheck
-          settled={close.status === "all_home"}
-          label={t(CLOSEOUT_STATUS_KEYS[close.status])}
+          settled={close.status === "all_home" && !close.retainedSafetyUnresolved}
+          label={
+            close.retainedSafetyUnresolved
+              ? t("manifest.retainedSafetyWarning")
+              : t(CLOSEOUT_STATUS_KEYS[close.status])
+          }
           labelClassName="font-medium"
           className="device-text-station-status"
         >
-          <span className={`${detailInk} tabular-nums`}>{detail}</span>
+          {!close.retainedSafetyUnresolved ? (
+            <span className={`${detailInk} tabular-nums`}>{detail}</span>
+          ) : null}
           {counted && countedLaterOn ? (
             <span className="text-muted">
               {t("closeout.pastDay.countedLater", { date: countedLaterOn })}
@@ -188,7 +197,7 @@ export function ClosingStation({
           {note}
         </p>
       ))}
-      {close.gapReason || close.status === "still_out" ? (
+      {close.gapReason || close.status === "still_out" || close.retainedSafetyUnresolved ? (
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           {/* A boat still out is exactly the row you would chase, so it gets
             the manifest door too — not only the rows with a recorded gap

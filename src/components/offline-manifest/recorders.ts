@@ -23,6 +23,8 @@ import type { OfflineStatement } from "./shared";
 /** The words for a tap the store refused, the same for all three taps. */
 function refusalMessage(t: OfflineManifestTranslator, error: unknown): string {
   if (error instanceof OfflineManifestError) {
+    if (error.code === "write_conflict")
+      return t("shared.offlineManifest.single.record.genericError");
     return error.code === "expired"
       ? t("shared.offlineManifest.single.record.expiredCannotRecord")
       : error.code === "not_allowed"
@@ -107,6 +109,19 @@ export function offlineRecorders({
       ? noteDrafts[subjectId]?.trim() || undefined
       : undefined;
     const causal = offlineCausalContext(envelope.snapshot, envelope.events, subject, checkpoint);
+    const { reviewedEvidenceIds, ...eventStatement } = statement;
+    const exactReviewed =
+      statement.reconcilesEvidence === true &&
+      reviewedEvidenceIds !== undefined &&
+      reviewedEvidenceIds.length === causal.observedEvidenceIds.length &&
+      new Set(reviewedEvidenceIds).size === reviewedEvidenceIds.length &&
+      reviewedEvidenceIds.every(
+        (id) => causal.observedEvidenceIds.includes(id) && !id.startsWith("legacy:"),
+      );
+    if (statement.reconcilesEvidence && !exactReviewed) {
+      setMessage(t("shared.offlineManifest.single.record.genericError"));
+      return;
+    }
     const displayed = envelope.snapshot.manifests.find((item) => item.checkpoint === checkpoint);
     const savedDay =
       "bookingId" in subject
@@ -119,20 +134,38 @@ export function offlineRecorders({
     const capturedDay =
       envelope.snapshot.selectedRollCallMeetingDay ??
       envelope.snapshot.rollCallMeetingDay ??
-      savedDay;
+      savedDay ??
+      (envelope.snapshot.rollCallMeetingDays?.length === 1 &&
+      envelope.snapshot.rollCallMeetingDays[0]?.meetingIdentityProof
+        ? 0
+        : undefined);
     setBusyBooking(subjectId);
     try {
       const next = await appendOfflineRollCall(tripId, {
         ...subject,
-        ...statement,
+        ...eventStatement,
         checkpoint,
         meetingDay: capturedDay,
+        meetingIdentityProof:
+          capturedDay === undefined
+            ? undefined
+            : envelope.snapshot.rollCallMeetingDays?.[capturedDay]?.meetingIdentityProof,
         snapshotId: envelope.snapshot.snapshotId,
         snapshotSavedAt: envelope.snapshot.savedAt,
         erasureEpochToken: envelope.snapshot.erasureEpochToken,
         // A synthetic old-copy label cannot name server evidence. It must not
         // discard the real queued predecessors the crew have just observed.
-        observedEvidenceIds: causal.observedEvidenceIds.filter((id) => !id.startsWith("legacy:")),
+        // One aggregate row does not expose every compatible frontier entry.
+        // Do not assert observation of hidden individual statements; leave
+        // them concurrent until an explicit evidence review can name them.
+        observedEvidenceIds: exactReviewed
+          ? reviewedEvidenceIds
+          : causal.evidence.length === 1 &&
+              standing &&
+              !standing.implied &&
+              standing.state === causal.evidence[0].status
+            ? causal.observedEvidenceIds.filter((id) => !id.startsWith("legacy:"))
+            : [],
         // The sentence rides the same queued event as the mark, so there is no
         // second write to lose offshore.
         note: sentNote,

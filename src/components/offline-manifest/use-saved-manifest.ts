@@ -15,7 +15,6 @@ import type { RollCallCheckpoint } from "@/lib/manifests";
 import {
   acknowledgeDiscardedOfflineRecords,
   type DiscardedOfflineRecord,
-  listOfflineManifests,
   loadOfflineManifest,
   readDiscardedOfflineRecords,
   syncOfflineManifest,
@@ -35,6 +34,7 @@ import { initialTripStatusMessage } from "./trip-status";
 import { useCrossShopPurge } from "./use-cross-shop-purge";
 import { useDeviceOnline } from "./use-device-online";
 import { useOfflineTenant } from "./use-offline-tenant";
+import { useRootOfflineInventory } from "./use-root-offline-inventory";
 import {
   foreignPendingTrip,
   hasForeignPendingManifestChanges,
@@ -343,6 +343,7 @@ function useSelectedTripInventoryStatus({
   t: OfflineManifestTranslator;
 }) {
   const inventoryReadyRef = useRef(false);
+  const [inventoryIncomplete, setInventoryIncomplete] = useState(false);
   const onInventoryReady = useCallback(
     (saved: OfflineManifestEnvelope[]) => {
       const lastSync = lastTripSyncRef.current;
@@ -373,8 +374,9 @@ function useSelectedTripInventoryStatus({
     setMessage,
     onInventoryReady,
     allCaughtUpMessage: t("shared.offlineManifest.reconcile.allCaughtUp"),
+    setInventoryIncomplete,
   });
-  return inventoryReadyRef;
+  return { inventoryReadyRef, inventoryIncomplete };
 }
 
 function selectedTripInventoryIsReady(inventoryReadyRef: { current: boolean }) {
@@ -519,6 +521,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   // True when that read threw (#2637): a copy may exist and simply failed to
   // open, which the screen must never word as "nothing saved".
   const [storeReadFailed, setStoreReadFailed] = useState(false);
+  const [rootInventoryIncomplete, setRootInventoryIncomplete] = useState(false);
   /**
    * Unsynced roll call this device threw away at the retention ceiling
    * (`OFFLINE_MANIFEST_PENDING_GRACE_MS`). Read from storage rather than
@@ -569,16 +572,17 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
 
   const { tenantSlugRef, getTenantRound, resolveTenant, invalidateTenantLookup } =
     useOfflineTenant();
-  const tripInventoryReadyRef = useSelectedTripInventoryStatus({
-    tripId,
-    tenantSlugRef,
-    verifiedTenantRevision,
-    verifiedTenantSlugRef,
-    lastTripSyncRef,
-    setList,
-    setMessage,
-    t,
-  });
+  const { inventoryReadyRef: tripInventoryReadyRef, inventoryIncomplete } =
+    useSelectedTripInventoryStatus({
+      tripId,
+      tenantSlugRef,
+      verifiedTenantRevision,
+      verifiedTenantSlugRef,
+      lastTripSyncRef,
+      setList,
+      setMessage,
+      t,
+    });
 
   const handleTenantChanged = useCallback(() => {
     // A 409 is an explicit server assertion that the tenant verified when
@@ -799,61 +803,21 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     refreshDiscarded,
   });
 
-  useEffect(() => {
-    if (tripId) return;
-    // A fresh authenticated identity is a fresh attempt to load the device
-    // copy, even if the URL and its trip id did not change.
-    if (verifiedTenantRevision > 0) setStoreReadFailed(false);
-    tripPurgedRef.current = false;
-    // No specific trip requested — this is the dive.day-root/shell landing
-    // page (see ADR 20260726-shopwide-offline-manifest-priming), so list
-    // whatever this device already has rather than asking for a trip id.
-    const showList = (saved: OfflineManifestEnvelope[]) => {
-      setList(saved);
-      // Nothing saved says nothing here: the empty page's heading already
-      // says it, and the status line under it repeated it word for word
-      // (UX review 2026-10-10, item 33).
-      setMessage(initialMessageForList(saved));
-    };
-
-    const refreshList = () =>
-      listOfflineManifests()
-        .then(async (saved) => {
-          // Paint from storage alone, before anything touches the network —
-          // the whole premise of this surface. The cross-shop purge runs in
-          // its own effect above and repaints if it removes anything.
-          showList(saved);
-          setStoreReadFailed(false);
-          setStoreRead(true);
-          void reconcileList(saved, await resolveTenant());
-        })
-        .catch(() => {
-          setStoreReadFailed(true);
-          setMessage(t("shared.offlineManifest.reconcile.listLoadError"));
-        })
-        // Settled either way: a device whose storage can't be opened at all
-        // has still been *looked at*, and the error message it lands on says
-        // more than an "opening…" state that never ends.
-        .finally(() => {
-          setStoreRead(true);
-          // The read above is itself a moment the retention ceiling can fire
-          // (it decrypts every record), so ask what it discarded — not only
-          // after a purge round.
-          refreshDiscarded();
-        });
-    void refreshList();
-    window.addEventListener("online", refreshList);
-    return () => window.removeEventListener("online", refreshList);
-  }, [
-    reconcileList,
-    refreshDiscarded,
-    resolveTenant,
+  useRootOfflineInventory({
     tripId,
-    t,
     verifiedTenantRevision,
-    initialMessageForList,
     tripPurgedRef,
-  ]);
+    setList,
+    setMessage,
+    setStoreRead,
+    setStoreReadFailed,
+    setInventoryIncomplete: setRootInventoryIncomplete,
+    initialMessageForList,
+    reconcileList,
+    resolveTenant,
+    refreshDiscarded,
+    t,
+  });
 
   const acknowledgeDiscarded = (visibleNotices: DiscardedOfflineRecord[]) =>
     acknowledgeDiscardedNotices(visibleNotices, setDiscarded);
@@ -873,7 +837,17 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     list,
     checkpoint,
     setCheckpoint,
-    message,
+    message: (tripId ? inventoryIncomplete : rootInventoryIncomplete)
+      ? [
+          message === t("shared.offlineManifest.reconcile.allCaughtUp") ||
+          message === t("shared.offlineManifest.reconcile.listAllCaughtUp")
+            ? ""
+            : message,
+          t("shared.offlineManifest.reconcile.inventoryPartial"),
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : message,
     setMessage,
     storeRead,
     storeReadFailed,

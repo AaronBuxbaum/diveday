@@ -62,6 +62,12 @@ export function PrintedSoulsOnBoard({
           </span>
         ) : null}
       </p>
+      {manifest.retainedSafetyUnresolved ? (
+        <p className="mt-2 text-base font-bold">{t("manifest.retainedSafetyWarning")}</p>
+      ) : null}
+      {manifest.retainedSafetyAlertNeedsReview ? (
+        <p className="mt-2 text-base font-bold">{t("manifest.retainedSafetyAlertWarning")}</p>
+      ) : null}
     </>
   );
 }

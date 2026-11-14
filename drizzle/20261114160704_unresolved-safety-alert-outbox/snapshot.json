@@ -1,0 +1,375 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "06de981f-46c2-4c3b-9fc7-797873aec312",
+  "prevIds": [
+    "23cd7f00-719b-4ecf-8f7e-de2f1a1477d7"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_outbox"
+      ],
+      "writes": [
+        "s|tbl|public.unresolved_safety_alert_outbox",
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "e|tbl|public.unresolved_safety_alert_outbox",
+        "n|rel|public.unresolved_safety_alert_outbox",
+        "n|type|public.unresolved_safety_alert_outbox",
+        "n|rel|public.unresolved_safety_alert_outbox_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "unresolved_safety_alert_outbox",
+        "unresolved_safety_alert_outbox_generation_unique"
+      ],
+      "writes": [
+        "s|idx|public.unresolved_safety_alert_outbox_generation_unique",
+        "n|idx|public.unresolved_safety_alert_outbox_generation_unique",
+        "e|idx|public.unresolved_safety_alert_outbox_generation_unique",
+        "n|rel|public.unresolved_safety_alert_outbox_generation_unique"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_outbox.generation_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "unresolved_safety_alert_outbox",
+        "unresolved_safety_alert_outbox_shop_trip_idx"
+      ],
+      "writes": [
+        "s|idx|public.unresolved_safety_alert_outbox_shop_trip_idx",
+        "n|idx|public.unresolved_safety_alert_outbox_shop_trip_idx",
+        "e|idx|public.unresolved_safety_alert_outbox_shop_trip_idx",
+        "n|rel|public.unresolved_safety_alert_outbox_shop_trip_idx"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_outbox.shop_id",
+        "n|col|public.unresolved_safety_alert_outbox.trip_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_outbox"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_shop_id_shops_id_fkey",
+        "n|fk|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_shop_id_shops_id_fkey",
+        "e|fk|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_shop_id_shops_id_fkey",
+        "n|con|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_outbox.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_outbox"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_trip_id_trips_id_fkey",
+        "n|fk|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_trip_id_trips_id_fkey",
+        "e|fk|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_trip_id_trips_id_fkey",
+        "n|con|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_trip_id_trips_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_outbox.trip_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_outbox"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_sElnacRFkZdi_fkey",
+        "n|fk|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_sElnacRFkZdi_fkey",
+        "e|fk|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_sElnacRFkZdi_fkey",
+        "n|con|public.unresolved_safety_alert_outbox.unresolved_safety_alert_outbox_sElnacRFkZdi_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "n|sch|public",
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_outbox.claim_id",
+        "n|col|public.roll_call_event_claims.id",
+        "e|uniqueness|public.roll_call_event_claims.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "unresolved_safety_alert_outbox",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "claim_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "generation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "unresolved_safety_alert_outbox_generation_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "generation_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "unresolved_safety_alert_outbox_shop_trip_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "trip_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "unresolved_safety_alert_outbox_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "unresolved_safety_alert_outbox_trip_id_trips_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "unresolved_safety_alert_outbox_sElnacRFkZdi_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "claim_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "roll_call_event_claims",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "unresolved_safety_alert_outbox_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

@@ -12,6 +12,7 @@ export function ManifestMilestones({
   checkpoint,
   summary,
   complete,
+  suppressHaptics = false,
   t,
 }: {
   tripId: string;
@@ -19,6 +20,7 @@ export function ManifestMilestones({
   summary: TripManifest["summary"];
   /** The checkpoint's completeness verdict — divers *and* crew. */
   complete: boolean;
+  suppressHaptics?: boolean;
   t: StaffTranslator;
 }) {
   return (
@@ -28,11 +30,13 @@ export function ManifestMilestones({
         including if Activity navigation preserves this route (ADR
         20260801-cache-components-activity-state). They are siblings, so each
         key needs its own suffix. */}
-      <MilestoneHaptics
-        key={`${tripId}-${checkpoint}-haptics`}
-        total={summary.totalDivers}
-        boarded={summary.boarded}
-      />
+      {!suppressHaptics ? (
+        <MilestoneHaptics
+          key={`${tripId}-${checkpoint}-haptics`}
+          total={summary.totalDivers}
+          boarded={summary.boarded}
+        />
+      ) : null}
       <SubSurfaceRipple
         key={`${tripId}-${checkpoint}-ripple`}
         complete={complete}

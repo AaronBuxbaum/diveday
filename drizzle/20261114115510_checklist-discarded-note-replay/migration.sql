@@ -1,0 +1,1 @@
+ALTER TABLE "pre_departure_check_events" ADD COLUMN "offline_intent_without_note_fingerprint" text;

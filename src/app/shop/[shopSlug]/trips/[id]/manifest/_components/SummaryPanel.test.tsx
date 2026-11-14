@@ -669,3 +669,29 @@ describe("blocked divers at the head count", () => {
     expect(screen.queryByText(/blocked/)).toBeNull();
   });
 });
+
+it("warns about unattributed retained evidence without showing all-clear", () => {
+  renderPanel({
+    rollCallComplete: false,
+    completeness: completeness({
+      complete: false,
+      reason: "retained_safety_unresolved",
+      retainedSafetyUnresolved: true,
+    }),
+    summary: summary({ notBackAboard: 0, notBoarded: 0, awaiting: 0, boarded: 3 }),
+    notBackAboardDivers: [],
+    notBackAboardCrew: [],
+  });
+  expect(screen.getByText(t("manifest.retainedSafetyWarning"))).toBeTruthy();
+  expect(screen.queryByText(t("manifest.allAccountedFor"))).toBeNull();
+});
+
+it("shows that delivery of a safety review alert needs attention", () => {
+  renderPanel({
+    completeness: completeness({
+      retainedSafetyUnresolved: true,
+      retainedSafetyAlertNeedsReview: true,
+    }),
+  });
+  expect(screen.getByText(t("manifest.retainedSafetyAlertWarning"))).toBeInTheDocument();
+});

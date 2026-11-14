@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "driz
 import type { AppDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { listDepartureRollCallByTrip, readAfterDiveRollCallByTrip } from "@/db/manifests";
+import { retainedSafetyTripIds } from "@/db/retained-safety";
 import { newestMarkFirst, oldestMarkFirst } from "@/db/roll-call-order";
 import { crewMarks, markCrewPersonId, seatMarks } from "@/db/roll-call-subject";
 import {
@@ -131,6 +132,7 @@ async function dayTrips(
     loggedDiveRows,
     stagesByTrip,
     meetingWindows,
+    retainedRows,
   ] = await Promise.all([
     // **Two counts off one roster, because the evening and the shelf ask
     // different questions** (issue #1689). `booked` is the seats this
@@ -297,6 +299,7 @@ async function dayTrips(
     // the whole day, never one per boat.
     latestTripStagesByTrip(db, shopId, tripIds),
     meetingWindowsByTrip(db, rows),
+    retainedSafetyTripIds(db, shopId, tripIds),
   ]);
   // **The roster, and the subset of it the boat carried** (issue #1689). One
   // walk, one rule per seat, so the two numbers can never be derived by
@@ -376,6 +379,7 @@ async function dayTrips(
     planChangesByTrip.set(change.tripId, list);
   }
 
+  const retainedSafetyTrips = retainedRows;
   return rows.map((row) => {
     const crew = crewSubjectsAtClose(
       row.plannedDives,
@@ -413,6 +417,7 @@ async function dayTrips(
       sailed: sailedByTrip.get(row.id) ?? 0,
       capacity: row.capacity,
       plannedDives: row.plannedDives,
+      ...(retainedSafetyTrips.has(row.id) ? { retainedSafetyUnresolved: true } : {}),
       stage: stagesByTrip.get(row.id) ?? null,
       meetingWindows: meetingWindows.get(row.id),
       crew,
@@ -813,7 +818,7 @@ export async function getPastDay(
       db,
       shop.id,
       stations
-        .filter((station) => station.status === "all_home")
+        .filter((station) => station.status === "all_home" && !station.retainedSafetyUnresolved)
         .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
     ),
     listNotBackAfterDive(

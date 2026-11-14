@@ -835,6 +835,7 @@ export type RollCallIncompleteReason =
   | "no_divers"
   | "divers_not_back_aboard"
   | "divers_awaiting"
+  | "retained_safety_unresolved"
   | CrewIncompleteReason;
 
 export type RollCallCompleteness = {
@@ -851,6 +852,9 @@ export type RollCallCompleteness = {
    * member has been recorded as not back aboard.
    */
   crewReason: CrewIncompleteReason | null;
+  /** A trip-level retained fact still requires review and cannot be assigned to a person or day. */
+  retainedSafetyUnresolved?: boolean;
+  retainedSafetyAlertNeedsReview?: boolean;
   /** The crew counts this verdict was reached with, so no caller recomputes them. */
   crewCounts: CrewRollCallCounts;
 };
@@ -956,6 +960,8 @@ export function rollCallCompleteness(input: {
   notBackAboard: number;
   /** The trip's assigned crew *now*, each with their result at this checkpoint. */
   crew: readonly CrewRollCallSubject[];
+  retainedSafetyUnresolved?: boolean;
+  retainedSafetyAlertNeedsReview?: boolean;
 }): RollCallCompleteness {
   const unaccountedFor = input.awaiting + input.notBackAboard;
   const diversAccountedFor = input.totalDivers > 0 && unaccountedFor === 0;
@@ -987,9 +993,11 @@ export function rollCallCompleteness(input: {
         ? "divers_not_back_aboard"
         : input.awaiting > 0
           ? "divers_awaiting"
-          : crewReason;
+          : (crewReason ?? (input.retainedSafetyUnresolved ? "retained_safety_unresolved" : null));
   return {
-    complete: diversAccountedFor && crewAccountedFor,
+    complete: diversAccountedFor && crewAccountedFor && !input.retainedSafetyUnresolved,
+    ...(input.retainedSafetyUnresolved ? { retainedSafetyUnresolved: true } : {}),
+    ...(input.retainedSafetyAlertNeedsReview ? { retainedSafetyAlertNeedsReview: true } : {}),
     diversAccountedFor,
     crewAccountedFor,
     reason,
@@ -999,6 +1007,10 @@ export function rollCallCompleteness(input: {
 }
 
 export type TripManifest = {
+  /** Retained trip-level safety evidence awaiting review; it names no person or meeting. */
+  retainedSafetyUnresolved?: boolean;
+  /** A durable alert-delivery or scanner problem needs staff attention. */
+  retainedSafetyAlertNeedsReview?: boolean;
   trip: {
     id: string;
     title: string;
@@ -1245,6 +1257,8 @@ export function buildTripManifest(input: {
   checkpoint?: RollCallCheckpoint;
   crew: ManifestCrewMember[];
   divers: ManifestDiverInput[];
+  retainedSafetyUnresolved?: boolean;
+  retainedSafetyAlertNeedsReview?: boolean;
 }): TripManifest {
   const checkpoint = input.checkpoint ?? "departure";
   // A buddy alert reads every *teammate's* record, so it needs the whole
@@ -1335,12 +1349,16 @@ export function buildTripManifest(input: {
     trip: input.trip,
     checkpoint,
     crew,
+    ...(input.retainedSafetyUnresolved ? { retainedSafetyUnresolved: true } : {}),
+    ...(input.retainedSafetyAlertNeedsReview ? { retainedSafetyAlertNeedsReview: true } : {}),
     completeness: rollCallCompleteness({
       checkpoint,
       totalDivers: summary.totalDivers,
       awaiting: summary.awaiting,
       notBackAboard: summary.notBackAboard,
       crew: input.crew,
+      retainedSafetyUnresolved: input.retainedSafetyUnresolved,
+      retainedSafetyAlertNeedsReview: input.retainedSafetyAlertNeedsReview,
     }),
     divers,
     summary,

@@ -1,4 +1,7 @@
-import { wipeOfflineMedicalAlerts } from "@/lib/offline-manifest-store";
+import {
+  beginOfflineTenantVerificationRound,
+  wipeOfflineMedicalAlerts,
+} from "@/lib/offline-manifest-store";
 import { forgetReadyPageCopy } from "@/lib/ready-offline";
 import { forgetAllKeptTyped } from "./KeepTypedOnRefusal";
 import { forgetRevealedMedicalAlerts } from "./MedicalAlertReveal";
@@ -34,7 +37,12 @@ export async function forgetThisDevice(): Promise<void> {
   await Promise.race([
     Promise.all([
       // A browser with no IndexedDB has no copies.
-      typeof indexedDB === "undefined" ? undefined : wipeOfflineMedicalAlerts().catch(() => {}),
+      typeof indexedDB === "undefined"
+        ? undefined
+        : (async () => {
+            const round = await beginOfflineTenantVerificationRound();
+            await wipeOfflineMedicalAlerts(undefined, round);
+          })().catch(() => {}),
       // A diver's /ready page this browser kept (issue #2693): a shop tablet
       // that opened a diver's link keeps nothing of them past a sign-out.
       forgetReadyPageCopy(),

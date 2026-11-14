@@ -1,10 +1,19 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { fileScopedShopContext } from "@/test/db";
+import { meetingGeneration, meetingIncarnation } from "@/test/meeting-generation";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { recordCrewRollCall } from "./manifests";
-import { people, personRoles, rollCallEvents, tripAssignments } from "./schema";
+import {
+  people,
+  personRoles,
+  rollCallEvents,
+  tripAssignments,
+  tripScheduleDays,
+  trips as tripTable,
+} from "./schema";
 import { changeStaffCredential, createStaffCredential } from "./staff-credentials";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -139,6 +148,15 @@ describe("crew credential evidence on live boarding marks", () => {
       .values({ tripId: trip.id, personId: staff.person.id })
       .onConflictDoNothing();
     const at = nowDate();
+    const [firstDay] = await db
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, trip.id))
+      .orderBy(asc(tripScheduleDays.dayNumber));
+    const [implicit] = await db.select().from(tripTable).where(eq(tripTable.id, trip.id));
+    const meeting = firstDay ?? implicit;
+    if (!meeting) throw new Error("fixture meeting missing");
+    const snapshotId = crypto.randomUUID();
     expect(
       await recordCrewRollCall(db, {
         shopId: shop.id,
@@ -150,6 +168,19 @@ describe("crew credential evidence on live boarding marks", () => {
         source: "offline",
         clientEventId: "d041920a-7954-4ccf-b900-09a8c7551c8d",
         offlineSnapshotSavedAt: at,
+        offlineSnapshotId: snapshotId,
+        meetingDay: 0,
+        offlineMeetingIdentityProof: signOfflineMeetingIdentity({
+          scheduleGeneration: await meetingGeneration(db, trip.id),
+          datasetIncarnation: await meetingIncarnation(db, trip.id),
+          shopId: shop.id,
+          tripId: trip.id,
+          snapshotId,
+          meetingDay: 0,
+          meetingId: meeting.id,
+          startsAt: meeting.startsAt,
+          endsAt: meeting.endsAt,
+        }),
         occurredAt: at,
       }),
     ).toMatchObject({ ok: true });

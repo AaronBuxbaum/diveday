@@ -8,6 +8,7 @@ import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { recordSystemTripActivity } from "./operations";
+import { retainedSafetyTripIds } from "./retained-safety";
 import { bookings, people, shops, type Trip, tripScheduleDays, trips } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
@@ -196,6 +197,19 @@ export async function cancelDeparturesBelowMinimum(
         departure.tripId,
         "revision-write",
       );
+      // The receipt writer takes this same row lock. Check in a separate
+      // statement after acquiring it so a receipt committed while we waited
+      // is visible under READ COMMITTED.
+      const [locked] = await tx
+        .select({ id: trips.id })
+        .from(trips)
+        .where(and(eq(trips.id, departure.tripId), eq(trips.shopId, departure.shopId), liveTrip()))
+        .for("update");
+      if (
+        !locked ||
+        (await retainedSafetyTripIds(tx, departure.shopId, [departure.tripId])).size > 0
+      )
+        return undefined;
       const [updated] = await tx
         .update(trips)
         // Stamped inline rather than routed through `setTripStatus`: the guard in

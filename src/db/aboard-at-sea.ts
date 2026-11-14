@@ -4,6 +4,7 @@ import { departureUnderway } from "@/lib/day-blowout";
 import { hasSailed } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { onTheWaterByRollCall } from "./manifests";
+import { retainedSafetyTripIds } from "./retained-safety";
 import { newestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, tripAssignments, tripStageEvents, trips } from "./schema";
@@ -217,7 +218,9 @@ export async function cancelDeparture(
   tripId: string,
   now: Date = nowDate(),
   options: { actorPersonId?: string | null } = {},
-): Promise<{ ok: true } | { ok: false; reason: "not_found" | "trip_departed" }> {
+): Promise<
+  { ok: true } | { ok: false; reason: "not_found" | "trip_departed" | "unresolved_safety_evidence" }
+> {
   return db.transaction(async (tx) => {
     // Match reschedule dispatch ordering: fence before taking the trip row.
     await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
@@ -228,6 +231,8 @@ export async function cancelDeparture(
       .limit(1)
       .for("update");
     if (!trip) return { ok: false as const, reason: "not_found" as const };
+    if ((await retainedSafetyTripIds(tx, shopId, [tripId])).has(tripId))
+      return { ok: false as const, reason: "unresolved_safety_evidence" as const };
     if (
       (await tripHasFinalHome(tx, shopId, tripId, now)) ||
       (await departureMayBeAtSea(tx, { shopId, tripId, startsAt: trip.startsAt, now }))

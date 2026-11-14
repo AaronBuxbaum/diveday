@@ -2,18 +2,25 @@ import { createHash } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "../../db/client";
+import { offlineMeetingStillMatches } from "../../db/offline-meeting-proof";
 import {
   boats,
   bookings,
   internalNotes,
   people,
   personRoles,
+  shops,
   trips,
   userAccounts,
 } from "../../db/schema/index";
 import type * as Seed from "../../db/seed";
+import { upcomingTripsWithCounts } from "../../db/trips";
 import { nowDate } from "../../lib/clock";
 import { seededShopContext } from "../../test/db";
+import {
+  issueOfflineManifestSnapshot,
+  readOfflineManifestRoster,
+} from "../offline-manifest-snapshots";
 import type * as Snapshot from "./store";
 
 /**
@@ -208,6 +215,34 @@ async function freshModules(): Promise<{ snapshot: typeof Snapshot; seed: typeof
 }
 
 describe("the e2e demo reset's snapshot", () => {
+  it("invalidates a pre-replay meeting proof even when the snapshot restores the same meeting", async () => {
+    const { db, shop } = await seededShopContext({ history: true });
+    const { resetDemoFromSnapshot } = (await freshModules()).snapshot;
+    expect((await resetDemoFromSnapshot(db, shop.id)).mode).toBe("captured");
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("trip missing");
+    const before = await readOfflineManifestRoster(db, shop.id, trip.id);
+    if (!before) throw new Error("roster missing");
+    const issued = await issueOfflineManifestSnapshot(db, shop.id, trip.id, before);
+    if (!issued.ok || !issued.meetingIdentityProofs[0]) throw new Error("proof missing");
+    const input = {
+      shopId: shop.id,
+      tripId: trip.id,
+      snapshotId: issued.snapshotId,
+      meetingDay: 0,
+      proof: issued.meetingIdentityProofs[0],
+    };
+    expect(await db.transaction((tx) => offlineMeetingStillMatches(tx, input))).toBe(true);
+    expect((await resetDemoFromSnapshot(db, shop.id)).mode).toBe("snapshot");
+    const after = await readOfflineManifestRoster(db, shop.id, trip.id);
+    if (!after) throw new Error("replayed roster missing");
+    expect(after.meetingDays).toEqual(before.meetingDays);
+    expect(await db.transaction((tx) => offlineMeetingStillMatches(tx, input))).toBe(false);
+    expect(await issueOfflineManifestSnapshot(db, shop.id, trip.id, before)).toMatchObject({
+      ok: false,
+    });
+  }, 120_000);
+
   it("leaves exactly the shop a real reset leaves, however a spec drove it", async () => {
     const { db, shop } = await seededShopContext({ history: true });
     const { resetDemoFromSnapshot } = (await freshModules()).snapshot;
@@ -219,13 +254,22 @@ describe("the e2e demo reset's snapshot", () => {
     // The first reset is a real one and captures the shadow from it.
     expect((await resetDemoFromSnapshot(db, shop.id)).mode).toBe("captured");
     const captured = await exportDatabase(db);
+    const [capturedShop] = await db
+      .select({ incarnation: shops.offlineDatasetIncarnation })
+      .from(shops)
+      .where(eq(shops.id, shop.id));
 
-    // A replay restores that state *literally* — same ids, same rows — except
-    // the kept boat name a spec changed, which a reset keeps.
+    // Replay keeps the boat name but rotates the dataset incarnation so a
+    // device proof from before the replay cannot name the new dataset.
     await mutate(db, shop.id, "Renamed By A Spec");
     expect((await resetDemoFromSnapshot(db, shop.id)).mode).toBe("snapshot");
     const replayed = await exportDatabase(db);
-    expect(differingTables(captured, replayed)).toEqual(["boats"]);
+    expect(differingTables(captured, replayed)).toEqual(["boats", "shops"]);
+    const [replayedShop] = await db
+      .select({ incarnation: shops.offlineDatasetIncarnation })
+      .from(shops)
+      .where(eq(shops.id, shop.id));
+    expect(replayedShop.incarnation).not.toBe(capturedShop.incarnation);
     expect(
       (await db.select({ name: boats.name }).from(boats).where(eq(boats.shopId, shop.id))).every(
         (boat) => boat.name === "Renamed By A Spec",

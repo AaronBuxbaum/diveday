@@ -10,6 +10,7 @@ import { sendDueReminders } from "@/features/reminders";
 import { sendStaleRollCallAlerts } from "@/features/roll-call-alerts";
 import { sendSeatSoldAlerts } from "@/features/seat-sold-alerts";
 import { sentry } from "@/features/sentry-server";
+import { runUnresolvedSafetyAlertTick } from "@/features/unresolved-roll-call";
 import { sendDueServiceReminders } from "@/features/work-order-follow-up";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { errorClassToken, errorCodeToken } from "@/lib/error-token";
@@ -46,6 +47,7 @@ export const SHOP_TICK_SCANS = [
   "recaps",
   "crew-notices",
   "roll-call-alerts",
+  "unresolved-safety-alerts",
   "missing-diver-alerts",
   "desk-pings",
   "seat-sold-alerts",
@@ -82,6 +84,8 @@ const RUNS = {
   "crew-notices": (db, now) => sendDueCrewNotices(db, { now }),
   // An after-dive count still open after the boat was due back.
   "roll-call-alerts": (db, now) => sendStaleRollCallAlerts(db, { now }),
+  // This remains a disabled guard until review and delivery can be enabled safely.
+  "unresolved-safety-alerts": (db) => runUnresolvedSafetyAlertTick(db),
   // The missing-diver alert's retry (H-20261016-missing-diver-report-alerts).
   "missing-diver-alerts": (db, now) => sendMissingDiverAlerts(db, { now }),
   // The after-hours desk ping's trailing catch-up (#2311).
@@ -149,5 +153,7 @@ export async function runShopTick(
 export function shopTickIsHealthy(summary: ShopTickSummary): boolean {
   const ran = Object.values(summary);
   if (ran.some((result) => result === null)) return false;
+  const safety = summary["unresolved-safety-alerts"];
+  if (safety && safety.status !== "disabled" && safety.monitoring.needsAttention) return false;
   return (summary["missing-diver-alerts"]?.overdue ?? 0) === 0;
 }

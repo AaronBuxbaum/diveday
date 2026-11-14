@@ -98,3 +98,18 @@ describe("the printed souls-on-board figure", () => {
     expect((container.querySelector("p") as HTMLElement).textContent).toMatch(/^Mantis I · /);
   });
 });
+
+it("prints the unattributed safety warning beside the count", () => {
+  render(
+    <PrintedSoulsOnBoard
+      manifest={tripManifest({
+        retainedSafetyUnresolved: true,
+        retainedSafetyAlertNeedsReview: true,
+      })}
+      vesselName={null}
+      t={t}
+    />,
+  );
+  expect(screen.getByText(t("manifest.retainedSafetyWarning"))).toBeTruthy();
+  expect(screen.getByText(t("manifest.retainedSafetyAlertWarning"))).toBeTruthy();
+});

@@ -13,6 +13,7 @@ export const EXCLUDED_TABLES = [
   "wallet_pass_registrations", // device delivery credentials cannot be transferred to another issuer
 
   "retention_prune_state", // global scheduler cursor, no tenant or personal data
+  "unresolved_safety_alert_scan", // global scan lease and cursor, not one shop's portable record
   "platform_backup_progress", // one shop-scoped scheduler checkpoint, not portable shop data
   "shop_backup_delivery_claims", // one per-shop scheduler lease, not portable shop data
   // record, mirrored here only so an owner sees an open one on Today and on

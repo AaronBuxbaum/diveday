@@ -4332,6 +4332,11 @@
       "body": "Stripe has paused card payments on your account, so divers can still book but pay at the shop for now. Stripe’s dashboard says what it needs to turn them back on.",
       "open": "Open payment settings"
     },
+    "unresolvedSafetyReview": {
+      "subject": "{shopName}: safety observation needs review",
+      "body": "A safety observation for {tripTitle} needs review. The retained information may not identify the person or meeting. Review the departure record and contact the crew if needed.",
+      "open": "Open the departure"
+    },
     "rollCallStale": {
       "subject": "{shopName}: roll call still open on {tripTitle}",
       "body": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back at {time}.",
@@ -4353,8 +4358,9 @@
       "emergency": "Open the emergency reference"
     },
     "incidentMissingDiverFound": {
-      "subject": "{shopName}: the missing diver on {tripTitle} was found",
-      "body": "The diver reported missing on {tripTitle} was found. Marked found {when}.",
+      "subject": "{shopName}: the people reported missing on {tripTitle} were found",
+      "body": "The person or people reported missing on {tripTitle} were found. Marked found {when}.",
+      "scope": "This update concerns only the person or people covered by this report. Check the manifest for other unresolved safety evidence.",
       "stillMissing": "{count, plural, one {# other person is still reported missing on this departure.} other {# others are still reported missing on this departure.}}"
     },
     "shoreAlertStopped": {

@@ -155,6 +155,18 @@ export const EXPORT_FILE_NOTES = {
     "Each ticket's own history, oldest first, in the order things actually happened: the row that opened it, every status move with where it came from and went to, and every hand-over to a technician, each with the staff member who did it. This is what 'who had it, and for how long' is read out of.",
   "pre_departure_checklist_items.csv":
     "The shop's own pre-departure safety line, in the shop's own reading order (sort_order). DiveDay writes only the oxygen line a new shop starts with, and the shop may change it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
+  "roll_call_event_claims.csv":
+    "Offline event identities and their accepted, unresolved, or erased state. The stored observation can include notes, identifiers and signed snapshot proofs; handle this file as sensitive staff data. Fingerprints and disposal outcomes cannot be verified without the server signing key. Unresolved claims do not confirm roll call.",
+  "unresolved_safety_alert_outbox.csv":
+    "One alert obligation for retained safety evidence. This does not establish that anyone was notified or that the observation was resolved.",
+  "unresolved_safety_alert_deliveries.csv":
+    "A recipient delivery attempt and its provider outcome. An uncertain result may have been delivered; it is not an automatic retry or proof that the recipient read it.",
+  "unresolved_safety_alert_escalations.csv":
+    "An alert delivery problem requiring attention. A later delivery does not by itself resolve this record.",
+  "unresolved_safety_scan_incidents.csv":
+    "A scan found an obligation missing or changed; the referenced observation still needs review.",
+  "unresolved_review_deferrals.csv":
+    "A staff member deferred an item at a particular review revision. Deferral does not resolve evidence or settle an offline event.",
   "pre_departure_check_events.csv":
     "Append-only history of every tap against a checklist item, oldest first: status 'checked' or 'cleared' (an explicit undo of a mis-tap), who recorded it and when, and whether it was recorded live or synced from an offline device. The newest event per item is that item's current answer for the departure. Informs only — nothing here ever gated a departure from sailing.",
   "boat_snags.csv":

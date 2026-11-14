@@ -327,7 +327,11 @@ async function ensureDemoSailsTodayInTransaction(
     );
     await tx
       .update(trips)
-      .set({ startsAt, endsAt, revision: sql`${trips.revision} + 1` })
+      .set({
+        startsAt,
+        endsAt,
+        revision: sql`${trips.revision} + 1`,
+      })
       .where(and(eq(trips.shopId, shopId), eq(trips.id, current.id)));
     await rebindDepartureBoatSafetyTime(tx, shopId, current.id, current.startsAt, startsAt, now);
     await clearCrewAwayAcknowledgements(tx, { shopId, tripId: current.id });

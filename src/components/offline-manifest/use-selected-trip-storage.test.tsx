@@ -174,6 +174,8 @@ describe("selected-trip storage invalidation", () => {
     const restoreLocalEvent = suppressSameDocumentManifestEvent();
     const serverState = await loadOfflineManifest(tripId);
     if (!serverState) throw new Error("expected queued roster");
+    const secondEvent = serverState.events.find((event) => event.clientEventId !== firstEventId);
+    if (!secondEvent) throw new Error("expected second queued event");
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -183,7 +185,14 @@ describe("selected-trip storage invalidation", () => {
               withRefreshedSyncFrame(
                 serverState.snapshot,
                 {
-                  results: [{ clientEventId: firstEventId, status: "applied" }],
+                  results: [
+                    { clientEventId: firstEventId, status: "applied" },
+                    {
+                      clientEventId: secondEvent.clientEventId,
+                      status: "unresolved",
+                      reason: "meeting_identity_unverified",
+                    },
+                  ],
                 },
                 {
                   events: serverState.events.filter(

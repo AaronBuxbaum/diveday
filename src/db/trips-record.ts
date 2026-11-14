@@ -8,6 +8,7 @@ import {
   isNull,
   max,
   notInArray,
+  or,
   type SQL,
   type SQLWrapper,
   sql,
@@ -47,6 +48,7 @@ import { publishManifestEvent } from "./manifest-events";
 import { recordDeskLine } from "./operations";
 import { rearmTripReminders } from "./reminder-rearm";
 import { recordedRollCallRows } from "./roll-call-history";
+import { crewMarks, seatMarks } from "./roll-call-subject";
 import type { Trip } from "./schema";
 import {
   boats,
@@ -71,6 +73,7 @@ import {
   tripSiteRunSnapshot,
 } from "./trip-change-events";
 import { tripDetailsAreEditable } from "./trip-editability";
+import { rollCallDayIndex } from "./trip-meeting-windows";
 import { tripPrimarySiteId } from "./trip-primary-site";
 import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
@@ -537,7 +540,11 @@ export type TripPatch = {
    * that still points at last week's dates is what the manifest, the crew
    * double-booking check, and the trip page's meeting-day list all read.
    */
-  scheduleDays?: TripScheduleDayInput[];
+  scheduleDays?: (TripScheduleDayInput & { id?: string })[];
+  /** Complete schedule identity snapshot presented by the editor. */
+  expectedScheduleDayIds?: readonly string[];
+  /** Ordered meeting identities and windows observed by the editor. */
+  expectedScheduleVersion?: string;
   /**
    * The hull, the mode and whether the departure is on public sale — all three
    * `undefined` when the caller is not changing them, so a form that does not
@@ -636,21 +643,67 @@ async function followScheduleEdit(
 async function replaceScheduleDays(
   tx: DbExecutor,
   tripId: string,
-  after: readonly { startsAt: Date; endsAt: Date }[],
+  after: readonly { id?: string; startsAt: Date; endsAt: Date }[],
+  identified: boolean,
 ): Promise<boolean> {
   const before = await tx
-    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .select({
+      id: tripScheduleDays.id,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+    })
     .from(tripScheduleDays)
     .where(eq(tripScheduleDays.tripId, tripId))
     .orderBy(asc(tripScheduleDays.dayNumber));
-  await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
-  await tx
-    .insert(tripScheduleDays)
-    .values(after.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
+  if (
+    identified &&
+    before.length === after.length &&
+    before.every(
+      (day, index) =>
+        day.id === after[index]?.id &&
+        day.startsAt.getTime() === after[index]?.startsAt.getTime() &&
+        day.endsAt.getTime() === after[index]?.endsAt.getTime(),
+    )
+  )
+    return false;
+  if (identified) {
+    // Vacate the positive ordinals before a reorder, preserving each row's ID.
+    await tx
+      .update(tripScheduleDays)
+      .set({ dayNumber: sql`-${tripScheduleDays.dayNumber}` })
+      .where(eq(tripScheduleDays.tripId, tripId));
+    const kept = after.flatMap((day) => (day.id ? [day.id] : []));
+    const removed = before.filter((day) => !kept.includes(day.id)).map((day) => day.id);
+    if (removed.length)
+      await tx.delete(tripScheduleDays).where(inArray(tripScheduleDays.id, removed));
+    for (const [index, day] of after.entries()) {
+      if (day.id)
+        await tx
+          .update(tripScheduleDays)
+          .set({ dayNumber: index + 1, startsAt: day.startsAt, endsAt: day.endsAt })
+          .where(and(eq(tripScheduleDays.tripId, tripId), eq(tripScheduleDays.id, day.id)));
+      else
+        await tx
+          .insert(tripScheduleDays)
+          .values({ tripId, dayNumber: index + 1, startsAt: day.startsAt, endsAt: day.endsAt });
+    }
+  } else {
+    await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
+    await tx.insert(tripScheduleDays).values(
+      after.map((day, index) => ({
+        tripId,
+        startsAt: day.startsAt,
+        endsAt: day.endsAt,
+        dayNumber: index + 1,
+      })),
+    );
+  }
   return (
     before.length !== after.length ||
     before.some(
       (day, index) =>
+        !identified ||
+        day.id !== after[index]?.id ||
         day.startsAt.getTime() !== after[index]?.startsAt.getTime() ||
         day.endsAt.getTime() !== after[index]?.endsAt.getTime(),
     )
@@ -661,16 +714,55 @@ async function replaceScheduleDays(
 async function countedMeetingDayMoved(
   tx: DbExecutor,
   trip: { startsAt: Date; endsAt: Date },
+  shopId: string,
   tripId: string,
-  patch: { scheduleDays?: readonly { startsAt: Date; endsAt: Date }[] },
-  marks: readonly { occurredAt: Date }[],
+  patch: { scheduleDays?: readonly { id?: string; startsAt: Date; endsAt: Date }[] },
+  marks: readonly { occurredAt: Date; day: number }[],
 ) {
   if (!patch.scheduleDays) return null;
   const current = await tx
-    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .select({
+      id: tripScheduleDays.id,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+    })
     .from(tripScheduleDays)
     .where(eq(tripScheduleDays.tripId, tripId))
     .orderBy(asc(tripScheduleDays.dayNumber));
+  // The frontier omits retracted statements; their immutable history still
+  // belongs to the original meeting and must not be reassigned by an edit.
+  const history = await tx
+    .select({ day: rollCallDayIndex() })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        eq(rollCallEvents.tripId, tripId),
+        or(seatMarks(), crewMarks()),
+      ),
+    );
+  for (const mark of history) {
+    const indices = mark.day < 0 ? current.map((_, index) => index) : [mark.day];
+    for (const index of indices) {
+      const before = current[index];
+      const after = patch.scheduleDays[index];
+      const onlyMeeting = current.length === 1 && patch.scheduleDays.length === 1;
+      if (
+        !before ||
+        !after ||
+        before.id !== after.id ||
+        (!onlyMeeting &&
+          (before.startsAt.getTime() !== after.startsAt.getTime() ||
+            before.endsAt.getTime() !== after.endsAt.getTime()))
+      ) {
+        return {
+          ok: false,
+          reason: "meeting_day_has_roll_call",
+          detail: { dayNumber: index + 1 },
+        } as const;
+      }
+    }
+  }
   const dayNumber = movedCountedMeetingDay(
     meetingDayWindows(trip, current),
     patch.scheduleDays,
@@ -897,6 +989,40 @@ async function lockTripForDefinitionEdit(tx: DbExecutor, shopId: string, tripId:
   return existing ?? null;
 }
 
+/** Validate a client's entire ordered meeting snapshot under the trip lock. */
+async function scheduleIdentityIsCurrent(
+  tx: DbExecutor,
+  tripId: string,
+  patch: TripPatch,
+): Promise<boolean> {
+  if (!patch.scheduleDays) return true;
+  const expected = patch.expectedScheduleDayIds;
+  if (!expected) return false;
+  const current = await tx
+    .select({
+      id: tripScheduleDays.id,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+    })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, tripId))
+    .orderBy(asc(tripScheduleDays.dayNumber));
+  const version = JSON.stringify(
+    current.map((day) => [day.id, day.startsAt.toISOString(), day.endsAt.toISOString()]),
+  );
+  const expectedSet = new Set(expected);
+  const requestedIds = patch.scheduleDays.flatMap((day) => (day.id ? [day.id] : []));
+  const retained = current.map((day) => day.id).filter((id) => requestedIds.includes(id));
+  return (
+    patch.expectedScheduleVersion === version &&
+    expectedSet.size === expected.length &&
+    current.length === expectedSet.size &&
+    current.every((day) => expectedSet.has(day.id)) &&
+    new Set(requestedIds).size === requestedIds.length &&
+    requestedIds.every((id, index) => expectedSet.has(id) && id === retained[index])
+  );
+}
+
 async function updateTripRecord(
   db: AppDb,
   shopId: string,
@@ -937,6 +1063,8 @@ async function updateTripRecord(
     const patch = patchAtTripLock(existing, requested, scoped);
     const plannedDives = normalizedDiveCount(patch.plannedDives, existing.courseId !== null);
     if (!plannedDives) return { ok: false, reason: "invalid" };
+    if (!(await scheduleIdentityIsCurrent(tx, tripId, patch)))
+      return { ok: false, reason: "invalid" };
 
     // `seatHeld`, the same predicate `getTripWithBooked` above shows the
     // staffer and `createBookingRecord` enforces capacity with. Counting every
@@ -973,7 +1101,14 @@ async function updateTripRecord(
     if (plannedDives < recordedDiveCount) {
       return { ok: false, reason: "planned_dives_below_history", detail: { recordedDiveCount } };
     }
-    const movedDay = await countedMeetingDayMoved(tx, existing, tripId, patch, checkpointRows);
+    const movedDay = await countedMeetingDayMoved(
+      tx,
+      existing,
+      shopId,
+      tripId,
+      patch,
+      checkpointRows,
+    );
     if (movedDay) return movedDay;
 
     const drafts = patch.dives ? normalizedDiveDrafts(plannedDives, patch.dives) : undefined;
@@ -1165,7 +1300,12 @@ async function updateTripRecord(
       });
     }
     const scheduleDaysMoved = patch.scheduleDays
-      ? await replaceScheduleDays(tx, tripId, patch.scheduleDays)
+      ? await replaceScheduleDays(
+          tx,
+          tripId,
+          patch.scheduleDays,
+          patch.expectedScheduleDayIds !== undefined,
+        )
       : false;
     if (captureRescheduleStart && startMoved) {
       await rememberUnnotifiedTripStart(tx, {
@@ -1221,6 +1361,15 @@ async function updateTripRecord(
     const timesMoved =
       existing.startsAt.getTime() !== patch.startsAt.getTime() ||
       existing.endsAt.getTime() !== patch.endsAt.getTime();
+    if (timesMoved || scheduleDaysMoved) {
+      const [current] = await tx
+        .select({ generation: trips.meetingScheduleGeneration })
+        .from(trips)
+        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+        .limit(1);
+      if (!current) throw new Error("meeting schedule generation unavailable");
+      trip.meetingScheduleGeneration = current.generation;
+    }
     timesChanged = timesMoved;
     // "Working it anyway" was said about the old days (#2678 reviews).
     if (timesMoved || scheduleDaysMoved) {

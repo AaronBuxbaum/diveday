@@ -159,6 +159,7 @@ function allTableNames(): string[] {
  * here, which is the only place it can fail — see the note above.
  */
 const UNSCOPED_REASONS: Record<string, string> = {
+  unresolved_safety_alert_scan: "one global scan cursor and lease, not a shop or person record",
   retention_prune_state:
     "global scheduler cursor holding only a table code, with no shop or person key",
   auth_verifications:
@@ -229,6 +230,13 @@ async function recordDeletedTables(
  * them, and a spec writing any other one needs a private shop too.
  */
 const RESET_KEEPS: Record<string, string> = {
+  unresolved_safety_alert_outbox: "reset refuses before writes while a safety obligation exists",
+  unresolved_safety_alert_deliveries:
+    "reset refuses before writes while its parent obligation exists",
+  unresolved_safety_alert_escalations:
+    "reset refuses before writes while its parent obligation exists",
+  unresolved_safety_scan_incidents:
+    "reset refuses before writes while a shop-scoped scan incident exists",
   account_passkeys: "staff authentication survives schedule reset; purged accounts cascade it",
   account_passkey_challenges:
     "staff ceremonies survive schedule reset; purged accounts cascade them",
@@ -339,6 +347,13 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
  * survivor here is a bug unless it is genuinely shared.
  */
 const CASCADE_KEEPS: Record<string, string> = {
+  unresolved_safety_alert_outbox: "reap refuses before writes while a safety obligation exists",
+  unresolved_safety_alert_deliveries:
+    "reap refuses before writes while its parent obligation exists",
+  unresolved_safety_alert_escalations:
+    "reap refuses before writes while its parent obligation exists",
+  unresolved_safety_scan_incidents:
+    "reap refuses before writes while a shop-scoped scan incident exists",
   account_passkeys: "ON DELETE CASCADE from shops clears it",
   account_passkey_challenges:
     "ON DELETE CASCADE from shops and accounts clears their bound challenges",

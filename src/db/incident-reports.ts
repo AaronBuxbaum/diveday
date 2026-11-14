@@ -62,9 +62,11 @@ import {
   incidentReports,
   people,
   personRoles,
+  rollCallEventClaims,
   rollCallEvents,
   tripAssignments,
   trips,
+  unresolvedReviewDeferrals,
   userAccounts,
 } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
@@ -1558,6 +1560,8 @@ export async function deleteDemoSafetyTrail(db: DbExecutor, shopId: string): Pro
   // Each report takes its people rows with it (cascade): a raised report
   // points at its subject's row, so that row cannot go first.
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
+  await db.delete(unresolvedReviewDeferrals).where(eq(unresolvedReviewDeferrals.shopId, shopId));
+  await db.delete(rollCallEventClaims).where(eq(rollCallEventClaims.shopId, shopId));
   // diveday:roll-call-both-subjects: the demo shop's whole ledger goes, seat and crew.
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
 }

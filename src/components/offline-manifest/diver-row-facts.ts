@@ -23,6 +23,31 @@ import type { OfflineTripView } from "./trip-view";
 
 type OfflineDiver = OfflineTripView["manifest"]["divers"][number];
 
+/** Seat-owned reasons must never reuse free text attributed to an unconfirmed person. */
+export function heldSeatReasons(diver: OfflineDiver, t: OfflineTripControls["t"]): string[] {
+  return [
+    t("manifest.heldSeatNotConfirmed", {
+      // The saved copy need not retain matched-person holds, so their absence
+      // cannot establish that all remaining readiness checks cleared.
+      moreHolds: "yes",
+    }),
+    ...diver.readiness.blockers.flatMap((blocker) => {
+      switch (blocker.code) {
+        case "payment_due":
+          return [t("shared.readiness.blockers.paymentDue")];
+        case "payment_refunded":
+          return [t("shared.readiness.blockers.paymentRefunded")];
+        case "readiness_unavailable":
+          return [t("shared.readiness.blockers.readinessUnavailable")];
+        case "requirements_not_configured":
+          return [t("shared.readiness.blockers.requirementsNotConfigured")];
+        default:
+          return [];
+      }
+    }),
+  ];
+}
+
 /**
  * **What one saved diver's row says at this checkpoint** — read once, for the
  * screen's roll-call row and the saved copy's paper sheet alike (issue #2745),
@@ -41,7 +66,8 @@ export function offlineDiverRowFacts(
   // (`offlineTripView`); a second call here could drift from it.
   const state = view.localStates[index];
   const staleTrainingReadiness = offlineTrainingReadinessStale(view.envelope.snapshot, diver);
-  const ready = diver.readiness.status === "ready" && !staleTrainingReadiness;
+  const withheld = diver.identityWithheld || isHeldSeat(diver);
+  const ready = diver.readiness.status === "ready" && !staleTrainingReadiness && !withheld;
   // The live manifest's own derivation, not a second copy of it
   // (`src/lib/manifests.ts`). The copy this replaces got two things
   // wrong that only showed on the water: it keyed the *boarded* fill
@@ -57,7 +83,7 @@ export function offlineDiverRowFacts(
   // cleared is blocked, and so is one after a dive with no earlier boarding;
   // aboard over that block keeps the blocked tone rather than the boarded green.
   const blockedAtDock =
-    (isDeparture && staleTrainingReadiness) || (view.blockedAtRail[index] ?? !ready);
+    (isDeparture && (staleTrainingReadiness || withheld)) || (view.blockedAtRail[index] ?? !ready);
   // Same condition the live page passes as `showBoardControl`: divers
   // only board at departure once readiness clears them, so a blocked
   // diver's circle is a drawn held ring with no tap.
@@ -65,7 +91,6 @@ export function offlineDiverRowFacts(
   // The live roll call's four medical warnings, dates only: two riding-only
   // (H-20261009-rider-snorkeler-medical), an earlier refusal (H-20261007-after-physician-says-no) and a referral still open (#2163). A
   // held seat never carries them, and the facts block says why instead.
-  const withheld = diver.identityWithheld || isHeldSeat(diver);
   const medicalWarnings = withheld ? undefined : diver.medicalWarnings;
   // The live roll call's capsule for the same facts, strongest first: riding
   // only (H-20261009-rider-snorkeler-medical), then an earlier refusal (H-20261007-after-physician-says-no), then an open referral.
@@ -78,7 +103,7 @@ export function offlineDiverRowFacts(
     : medicalWarnings
       ? medicalWarningChips(t, medicalWarnings)[0]
       : undefined;
-  const training = trainingDiveLines(t, diver);
+  const training = withheld ? { fact: null, warnings: [] } : trainingDiveLines(t, diver);
   // The diver's own "running late" (#2319), on the live page's terms: a dock
   // row not boarded yet, with nothing from the counter on it — this device's
   // queued arrival included, which is the counter's newest word here.
@@ -100,14 +125,16 @@ export function offlineDiverRowFacts(
   }`;
   const statusLine = offlineDiverStatusLine({
     stateWord,
-    blockerTexts: staleTrainingReadiness
-      ? [
-          t("manifest.trainingReadinessStale"),
-          ...diver.readiness.blockers.map((blocker) => blocker.text),
-        ]
-      : ready
-        ? null
-        : diver.readiness.blockers.map((blocker) => blocker.text),
+    blockerTexts: withheld
+      ? heldSeatReasons(diver, t)
+      : staleTrainingReadiness
+        ? [
+            t("manifest.trainingReadinessStale"),
+            ...diver.readiness.blockers.map((blocker) => blocker.text),
+          ]
+        : ready
+          ? null
+          : diver.readiness.blockers.map((blocker) => blocker.text),
     blockedWord: t("shared.offlineManifest.single.blockedBadge"),
     notHereWord: diver.notHere
       ? diver.turnedAway

@@ -63,6 +63,7 @@ import {
 import { partyNotBookedEmail, seatAlreadyHeldEmail } from "./seat-already-held";
 import { setupRequestReceiptEmail } from "./setup-request-receipt";
 import { shopVoiceOf } from "./shop-voice";
+import { unresolvedSafetyReviewEmail } from "./unresolved-safety-email";
 import { weeklyDigestEmail } from "./weekly-digest-email";
 import { gearServiceDueEmail, workOrderReadyEmail } from "./work-order-emails";
 
@@ -258,6 +259,8 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   }
   if (notification.kind === "move_ask_soon") return moveAskSoonEmail(notification);
   if (notification.kind === "roll_call_stale") return rollCallStaleEmail(notification);
+  if (notification.kind === "unresolved_safety_evidence")
+    return unresolvedSafetyReviewEmail(notification);
   if (notification.kind === "roll_call_stale_shore") return rollCallStaleShoreEmail(notification);
   if (notification.kind === "incident_missing_diver")
     return incidentMissingDiverEmail(notification);
