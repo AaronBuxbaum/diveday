@@ -46,7 +46,14 @@ test.describe("light mode", () => {
         await expect(panel).toContainText(staff("manifest.conflicts.aboard"));
         await expect(panel).toContainText(staff("manifest.conflicts.missing"));
         await expect(panel.locator("time").first()).toContainText(/\bEDT\b/);
-        await capture(page, `roll-call-${role}-conflict-live`, "light");
+        await capture(page, `roll-call-${role}-conflict-live`, "light", {
+          beforeScreenshot: async () => {
+            await expect(panel.locator("ul > li > p.font-medium")).toHaveText([
+              staff("manifest.conflicts.missing"),
+              staff("manifest.conflicts.aboard"),
+            ]);
+          },
+        });
 
         await offlineCopySaved(page);
         await page.goto(`/offline-manifest?trip=${fact.tripId}&checkpoint=after_dive_1`);
@@ -61,7 +68,14 @@ test.describe("light mode", () => {
         await expect(savedPanel).toContainText(staff("manifest.conflicts.aboard"));
         await expect(savedPanel).toContainText(staff("manifest.conflicts.missing"));
         await expect(savedPanel.locator("time").first()).toContainText(/\bEDT\b/);
-        await capture(page, `roll-call-${role}-conflict-offline`, "light");
+        await capture(page, `roll-call-${role}-conflict-offline`, "light", {
+          beforeScreenshot: async () => {
+            await expect(savedPanel.locator("ul > li > p.font-medium")).toHaveText([
+              staff("manifest.conflicts.missing"),
+              staff("manifest.conflicts.aboard"),
+            ]);
+          },
+        });
       });
     });
   }
