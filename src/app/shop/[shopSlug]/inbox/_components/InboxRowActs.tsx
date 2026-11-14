@@ -125,7 +125,11 @@ export function InboxRowActs({
     ] as (MenuAct | null)[]
   ).filter((act): act is MenuAct => act !== null);
   return (
-    <RowMenu label={t("inbox.menu.label", { name })} panelClassName="w-80">
+    <RowMenu
+      label={t("inbox.menu.label", { name })}
+      triggerText={t("shared.shopSections.more")}
+      panelClassName="w-80"
+    >
       <form action={doneAction}>
         <input type="hidden" name="messageId" value={message.id} />
         <input type="hidden" name="receivedAt" value={message.receivedAt.toISOString()} />

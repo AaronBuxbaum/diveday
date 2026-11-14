@@ -15,7 +15,6 @@ import { CopyLinkButton } from "./CopyLinkButton";
 import { DepartureLogLink } from "./DepartureLogLink";
 import { OverflowActions } from "./OverflowActions";
 import { PrintTripBundleButton } from "./PrintTripBundleButton";
-import { PrintWithMedicalAlertsLink } from "./PrintWithMedicalAlertsLink";
 
 /**
  * The About section's links out: copy the public booking link, open the
@@ -55,7 +54,6 @@ export function TripAboutLinks({
         recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
         flush
       />
-      <PrintWithMedicalAlertsLink shop={shop} personId={personId} tripId={tripId} />
     </>
   );
   return (

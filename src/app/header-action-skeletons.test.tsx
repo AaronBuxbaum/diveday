@@ -8,7 +8,6 @@ import DiveSiteLoading from "./shop/[shopSlug]/dive-sites/[id]/loading";
 import DiveSitesLoading from "./shop/[shopSlug]/dive-sites/loading";
 import GearLoading from "./shop/[shopSlug]/gear/loading";
 import OrdersLoading from "./shop/[shopSlug]/orders/loading";
-import StaffReviewsLoading from "./shop/[shopSlug]/reviews/loading";
 import ScheduleBoardLoading from "./shop/[shopSlug]/schedule/board/loading";
 import ExportLoading from "./shop/[shopSlug]/settings/export/loading";
 
@@ -28,7 +27,6 @@ afterEach(cleanup);
  */
 const HEADERS_WITH_DOORS: [name: string, rows: number, Skeleton: ComponentType][] = [
   ["public dive site", 1, PublicSiteLoading],
-  ["staff reviews", 1, StaffReviewsLoading],
   ["courses", 1, CoursesLoading],
   ["dive-site library", 1, DiveSitesLoading],
   ["dive-site editor", 1, DiveSiteLoading],

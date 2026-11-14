@@ -365,9 +365,8 @@ export const canPersonReadMedicalAlert = (db: DbExecutor, shopId: string, person
   );
 
 /**
- * The live check behind "Print with medical alerts" (`canPrintMedicalAlerts`,
- * issue #2990): the owner and a manager, read from `person_roles` now, so a
- * manager demoted this morning prints the flag only.
+ * The live staff-role check for a medical-inclusive packet. Disabled or
+ * removed staff and members of other shops are refused.
  */
 export const canPersonPrintMedicalAlerts = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canPrintMedicalAlerts);

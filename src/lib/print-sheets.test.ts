@@ -9,7 +9,6 @@ import {
   passCodePayload,
   printSheetPageRule,
   storefrontAddress,
-  tripMedicalAlertsPacketPath,
   tripPacketPath,
 } from "./print-sheets";
 
@@ -81,13 +80,6 @@ describe("where a packet is drawn", () => {
 
   it("escapes a trip id that would otherwise rewrite the route", () => {
     expect(tripPacketPath("blue-mantis", "../../orders")).not.toContain("/orders");
-  });
-
-  it("draws the packet with the medical alerts in the same print state", () => {
-    expect(tripMedicalAlertsPacketPath("blue-mantis", "trip-1")).toBe(
-      "/shop/blue-mantis/trips/trip-1?print=medical-alerts",
-    );
-    expect(tripMedicalAlertsPacketPath("blue-mantis", "../../orders")).not.toContain("/orders");
   });
 });
 

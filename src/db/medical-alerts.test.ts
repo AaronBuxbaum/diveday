@@ -292,7 +292,7 @@ async function trailLines(db: AppDb, personId: string, code: string) {
 }
 
 /**
- * **"Print with medical alerts"** (issue #2990): owner and manager only; the
+ * **The medical-inclusive packet**: active shop staff may print; the
  * print is the read, one `medical_alert_printed` line per diver on the sheet.
  */
 /** Both halves, as the page runs them once the packet is known to be printable. */
@@ -333,9 +333,26 @@ describe("the medical alerts print", () => {
     expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
   });
 
-  it("hands the owner and a manager every alert on the departure, one trail line per printed diver", async () => {
+  it("refuses disclosure if staff access is disabled after the read", async () => {
     const { db, shop, trip, booking, person } = await signedWith(alert);
-    for (const [index, role] of (["owner", "manager"] as const).entries()) {
+    const printer = await staffer(db, shop.id, ["crew"]);
+    const input = { shopId: shop.id, tripId: trip.id, printerId: printer };
+    const read = await readMedicalAlertsForPrint(db, input);
+    if (!read.ok) throw new Error("expected a read");
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, printer));
+    const printed = await recordMedicalAlertsPrint(db, { ...input, read });
+    expect(printed.texts.has(booking.id)).toBe(false);
+    expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
+  });
+
+  it("hands every staff role every alert on the departure, one trail line per printed diver", async () => {
+    const { db, shop, trip, booking, person } = await signedWith(alert);
+    for (const [index, role] of (
+      ["owner", "manager", "crew", "instructor", "divemaster", "captain"] as const
+    ).entries()) {
       const printer = await staffer(db, shop.id, [role]);
       const printed = await printMedicalAlerts(db, {
         shopId: shop.id,
@@ -366,14 +383,11 @@ describe("the medical alerts print", () => {
     expect(await trailLines(db, person.id, "medical_alert_printed")).toHaveLength(2);
   });
 
-  it("refuses crew, an instructor, a disabled manager and another shop's owner, and writes nothing", async () => {
+  it("refuses a disabled manager and another shop's owner, and writes nothing", async () => {
     const { db, shop, trip, person } = await signedWith(alert);
     const [elsewhere] = await db.select({ id: shops.id }).from(shops).where(ne(shops.id, shop.id));
     if (!elsewhere) throw new Error("expected a second seeded shop");
     const refused = [
-      await staffer(db, shop.id, ["crew"]),
-      await staffer(db, shop.id, ["instructor"]),
-      await staffer(db, shop.id, ["captain"]),
       await staffer(db, shop.id, ["manager"], { status: "disabled" }),
       await staffer(db, elsewhere.id, ["owner"]),
     ];

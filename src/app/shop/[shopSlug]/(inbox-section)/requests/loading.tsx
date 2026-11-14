@@ -1,8 +1,5 @@
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { Bone, Pending } from "@/components/ui/pending";
-import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
  * Body-shaped skeleton for Requests (design principle 1): a day's group label,
@@ -34,21 +31,17 @@ function RequestRows({ count }: { count: number }) {
 
 export default function RequestsLoading() {
   return (
-    <StaffPage width="full">
-      <Pending>
-        <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
-        <StaffSectionTabsSkeleton section="inbox" />
-        <div className="space-y-10">
-          {[2, 1].map((rows) => (
-            <div key={rows}>
-              {/* `RequestDayGroup`'s label alone: the day's act is on each row. */}
-              <Bone className="h-4 w-56 max-w-full" />
-              <Bone className="mt-2 h-4 w-72 max-w-full" />
-              <RequestRows count={rows} />
-            </div>
-          ))}
-        </div>
-      </Pending>
-    </StaffPage>
+    <Pending>
+      <div className="space-y-10">
+        {[2, 1].map((rows) => (
+          <div key={rows}>
+            {/* `RequestDayGroup`'s label alone: the day's act is on each row. */}
+            <Bone className="h-4 w-56 max-w-full" />
+            <Bone className="mt-2 h-4 w-72 max-w-full" />
+            <RequestRows count={rows} />
+          </div>
+        ))}
+      </div>
+    </Pending>
   );
 }

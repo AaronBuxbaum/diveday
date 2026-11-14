@@ -12,9 +12,6 @@ vi.mock("./PrintTripBundleButton", () => ({
   PrintTripBundleButton: ({ href }: { href: string }) => <a href={href}>print</a>,
 }));
 vi.mock("./DepartureLogLink", () => ({ DepartureLogLink: () => <span>log</span> }));
-vi.mock("./PrintWithMedicalAlertsLink", () => ({
-  PrintWithMedicalAlertsLink: () => <span>print with alerts</span>,
-}));
 
 const t = staffTranslator("en-US");
 
@@ -40,6 +37,6 @@ describe("TripAboutLinks", () => {
       "/shop/blue-mantis/trips/trip-1?print=1",
     );
     expect(screen.getByText("log")).toBeTruthy();
-    expect(screen.getByText("print with alerts")).toBeTruthy();
+    expect(screen.getAllByText("print")).toHaveLength(1);
   });
 });

@@ -75,7 +75,10 @@ describe("a message Claude has read, while the shop's assists are on", () => {
     const draft = vi.fn();
     renderRow(draft);
     const menu = screen.getByRole("button", { name: "More for the message from Lena Vogel" });
+    expect(menu).toHaveTextContent("More");
+    expect(menu).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(menu);
+    expect(menu).toHaveAttribute("aria-expanded", "true");
     expect(screen.queryByRole("button", { name: "Draft response" })).toBeNull();
     expect(screen.getByRole("link", { name: "Reply by email" })).toBeVisible();
     await userEvent.keyboard("{Escape}");

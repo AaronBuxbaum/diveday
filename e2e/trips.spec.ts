@@ -318,7 +318,10 @@ test.describe("trip print packet", () => {
     const popup = await popupPromise;
     await popup.waitForLoadState("domcontentloaded");
     await expect(popup).toHaveURL(new RegExp(`/shop/blue-mantis/trips/${tripId}\\?print=1$`));
-    await expect(popup.getByRole("heading", { name: "Trip packet" })).toBeVisible();
+    await expect(
+      popup.getByRole("heading", { name: "Trip packet with medical alerts" }),
+    ).toBeVisible();
+    await popup.emulateMedia({ media: "print" });
     // **Three sections, not four.** The packet stopped composing the two tabs
     // that are working pages rather than documents (issue #814): Trip *is* the
     // trip's edit form and roster, while its actions — send a waiver, remove a
@@ -338,7 +341,6 @@ test.describe("trip print packet", () => {
     // crew rows with no name in any of them. Priya Sharma is on this
     // departure's roster (the trip pulse above lands on her). A CSS locator,
     // because a role locator cannot see what `display: none` removed.
-    await popup.emulateMedia({ media: "print" });
     await expect(
       popup.locator(".paper-sheet-frame [data-roll-call-name]", { hasText: "Priya Sharma" }),
     ).toBeVisible();
@@ -637,7 +639,7 @@ test.describe("the printed trip packet", () => {
     const { path: tripPath, title } = await seededTrip(page);
     await page.goto(`${tripPath}?print=1`);
     // The packet's own heading — the destination's render, not a timing guess.
-    await page.getByRole("heading", { name: "Trip packet" }).waitFor();
+    await page.getByRole("heading", { name: "Trip packet with medical alerts" }).waitFor();
 
     // What the printer sees, which is not what the screen shows.
     await page.emulateMedia({ media: "print" });
@@ -708,7 +710,7 @@ test.describe("the printed trip packet", () => {
   }) => {
     const tripPath = await seededTripPath(page);
     await page.goto(`${tripPath}?print=1`);
-    await page.getByRole("heading", { name: "Trip packet" }).waitFor();
+    await page.getByRole("heading", { name: "Trip packet with medical alerts" }).waitFor();
     await page.emulateMedia({ media: "print" });
 
     const clipped = await page.evaluate(() =>
@@ -752,7 +754,7 @@ test.describe("the printed trip packet", () => {
     await expect(line).toBeVisible();
     // On paper it is the packet's prep sheet that carries it, as one line.
     await page.goto(`${tripPath}?print=1`);
-    await page.getByRole("heading", { name: "Trip packet" }).waitFor();
+    await page.getByRole("heading", { name: "Trip packet with medical alerts" }).waitFor();
     await page.emulateMedia({ media: "print" });
     await expect(
       page.locator(".paper-sheet").getByText(/^\d+ tanks?(, air|: \d+ air, \d+ nitrox)$/),
