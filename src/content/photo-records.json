@@ -7823,6 +7823,16 @@
       "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
       "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
     },
+    "demo-shop/generated/shopfront.webp": {
+      "subject": "demo:shopfront",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "User request, 2026-11-14",
+      "reviewed": "2026-11-14",
+      "sourceSize": [1672, 941],
+      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
     "demo-shop/generated/dock.webp": {
       "subject": "demo:dock",
       "generated": true,

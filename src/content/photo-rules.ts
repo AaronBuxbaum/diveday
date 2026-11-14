@@ -247,7 +247,7 @@ export function demoPlaceholderAllowed(input: {
   return (
     input.isDemo &&
     input.file.startsWith("demo-shop/generated/") &&
-    /^demo:(boat|fleet|dock|briefing|student|reef|oxygen)$/.test(input.subject) &&
+    /^demo:(boat|fleet|shopfront|dock|briefing|student|reef|oxygen)$/.test(input.subject) &&
     input.marked
   );
 }

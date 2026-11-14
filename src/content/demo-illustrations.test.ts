@@ -43,7 +43,7 @@ describe("fictional demo artwork provenance", () => {
       ).toBe(true);
       expect(record.generated).toBe(true);
       expect(record.subject).toBe(`demo:${scene}`);
-      if (scene === "fleet") {
+      if (scene === "fleet" || scene === "shopfront") {
         expect(record.approval).toBe("User request, 2026-11-14");
         expect(record.reviewed).toBe("2026-11-14");
       } else {

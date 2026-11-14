@@ -20,6 +20,10 @@ import { DEMO_SHOP_REPLY_NOTES } from "./seed-reply-notes";
  * the fleet configures no media storage, and a demo that renders broken images
  * the first time a network hiccups is worse than none.
  */
+const ORIGINAL_PHOTO_STRIP = (["dock", "briefing", "student", "reef", "oxygen"] as const).map(
+  (scene) => demoIllustration(scene).url,
+);
+
 export const DEMO_SHOP_BRAND = {
   // i18n-exempt: a shop types its own tagline and about line, like its packing list.
   tagline: "Small-boat reef and wreck diving out of Key Largo.",
@@ -36,9 +40,7 @@ export const DEMO_SHOP_BRAND = {
   // The shop is fictional; third-party accreditation would imply real membership.
   brandBadges: [],
   // Fictional demo scenes, never claimed as photographs of the operator.
-  shopfrontPhotoUrls: (["dock", "briefing", "student", "reef", "oxygen"] as const).map(
-    (scene) => demoIllustration(scene).url,
-  ),
+  shopfrontPhotoUrls: [...ORIGINAL_PHOTO_STRIP, demoIllustration("shopfront").url],
 } satisfies Partial<typeof shops.$inferInsert>;
 
 /**
@@ -67,6 +69,17 @@ export async function syncDemoShopBrand(db: DbExecutor): Promise<void> {
         .where(and(eq(boats.shopId, demo.id), eq(boats.name, name), isNull(boats.photoUrl)));
     }
   }
+  // Extend only the original photo strip; leave edited demo and real shops alone.
+  await db
+    .update(shops)
+    .set({ shopfrontPhotoUrls: DEMO_SHOP_BRAND.shopfrontPhotoUrls })
+    .where(
+      and(
+        eq(shops.slug, DEMO_SHOP_SLUG),
+        eq(shops.isDemo, true),
+        sql`${shops.shopfrontPhotoUrls} = ${JSON.stringify(ORIGINAL_PHOTO_STRIP)}::jsonb`,
+      ),
+    );
   // Remove only the original fictional defaults, never a real shop's badges or
   // a demo visitor's own selection. They imply affiliations the shop cannot hold.
   await db
