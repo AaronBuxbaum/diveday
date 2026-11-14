@@ -349,8 +349,7 @@ builds it and what it holds every screen to.
   the first person (Aaron, 2026-11-14), signed "Aaron Buxbaum, Founder" (Aaron, 2026-11-11), the
   one name and title on the site. It says why to trust him: about fifteen years leading software
   teams, at Google and on self-driving cars, and what safety-critical work taught him about
-  counting people. It never claims dive credentials (he is a diver, not a divemaster). Its
-  stories were drafted for him to adjust to the truth; edit them freely. Outside that band the
+  counting people, in his own account of it. It claims no dive credentials. Outside that band the
   prose names no individual and states no CV.
 - The hero is the Lonergan story, told flat and within its limits (no operator or skipper named,
   no adjective on the account, no sentence saying DiveDay would have prevented it), and its tie to
