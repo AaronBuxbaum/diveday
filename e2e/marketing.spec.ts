@@ -727,7 +727,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // fight). The story carries its own weight and the page does not sell with
   // it.
   await expect(page.getByRole("heading", { level: 1, name: "Why DiveDay exists" })).toBeVisible();
-  await expect(page.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
+  await expect(page.getByText(/Tom and Eileen Lonergan/).first()).toBeVisible();
   // The tie from the story to the product is the company's, in the plural
   // (Aaron, 2026-10-07: "we built DiveDay").
   await expect(page.getByText(/That story is why we built DiveDay/)).toBeVisible();
