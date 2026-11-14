@@ -21,6 +21,10 @@ describePostgres("demo reset and committed dock sightings", () => {
     const [staff] = await listStaff(pg.db, shop.id);
     if (!seat || !staff) throw new Error("seat or staff missing");
     await pg.db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, seat.booking.id));
+    const [beforeBooking] = await pg.db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, seat.booking.id));
     let release!: () => void;
     let ready!: () => void;
     const gate = new Promise<void>((resolve) => {
@@ -52,6 +56,7 @@ describePostgres("demo reset and committed dock sightings", () => {
       release();
       await Promise.allSettled([reset, ...(intake ? [intake] : [])]);
     });
+    const key = crypto.randomUUID();
     let result: Awaited<ReturnType<typeof recordBoardingObservation>> | undefined;
     try {
       await Promise.race([resetReady, reset]);
@@ -60,13 +65,23 @@ describePostgres("demo reset and committed dock sightings", () => {
         tripId: trip.id,
         bookingId: seat.booking.id,
         recordedByPersonId: staff.person.id,
-        clientKey: crypto.randomUUID(),
+        clientKey: key,
       });
       void intake.catch(() => undefined);
-      result = await intake;
+      result = await intake.catch(() => undefined);
     } finally {
       release();
     }
+    await reset.catch(() => undefined);
+    expect(
+      await pg.db
+        .select()
+        .from(boardingObservations)
+        .where(eq(boardingObservations.clientKey, key)),
+    ).toHaveLength(1);
+    expect(await pg.db.select().from(bookings).where(eq(bookings.id, seat.booking.id))).toEqual([
+      beforeBooking,
+    ]);
     expect(result).toMatchObject({ ok: true });
   });
 
