@@ -14,16 +14,18 @@ export function SiteLibraryViews({
   current,
   carry = {},
   t,
+  className = "my-4",
 }: {
   shopSlug: string;
   current: "library" | "catalog";
   carry?: { q?: string } & Pick<SiteListFilters, "difficulty" | "need">;
   t: StaffTranslator;
+  className?: string;
 }) {
   const library = shopPath(shopSlug, "dive-sites");
   return (
     <SegmentedControl
-      className="my-4"
+      className={className}
       ariaLabel={t("diveSites.list.viewsLabel")}
       currentKey={current}
       ariaCurrentValue="true"

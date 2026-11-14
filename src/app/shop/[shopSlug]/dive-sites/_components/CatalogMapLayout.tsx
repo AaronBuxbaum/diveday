@@ -2,6 +2,7 @@
 
 import { type ReactNode, useMemo, useState } from "react";
 import { LazySiteMap } from "@/components/map/LazySiteMap";
+import { MapWheelHint } from "@/components/map/MapWheelHint";
 import type { MapPin, MapPinDetails, ShopAnchor } from "@/components/map/SiteMap";
 
 import type { CatalogMapPin } from "../catalog-map-pins";
@@ -17,6 +18,7 @@ export function CatalogMapLayout({
   detailWords,
   clusterLabel,
   zoomHint,
+  views,
   followLabel,
   areaCount,
   scoped,
@@ -32,6 +34,7 @@ export function CatalogMapLayout({
   detailWords: { loading: string; unavailable: string };
   clusterLabel: string;
   zoomHint: string;
+  views?: ReactNode;
   /** The words on the map's switch, and the count it shows while on. */
   followLabel: string;
   areaCount: string;
@@ -85,24 +88,31 @@ export function CatalogMapLayout({
 
   return (
     <div className="mt-6 flex flex-col gap-8">
-      <div className="relative isolate h-[440px] w-full overflow-hidden rounded-xl border border-border bg-surface shadow-sm sm:h-[540px] lg:h-[620px]">
-        <LazySiteMap
-          viewportStorageKey={viewportStorageKey}
-          center={defaultCenter}
-          zoom={10}
-          shopAnchor={shopAnchor}
-          pins={pins}
-          loadPinDetails={loadPinDetails}
-          pinDetailsWords={detailWords}
-          clusterLabel={clusterLabel}
-          selectedPinId={selectedPinId}
-          onSelectPin={setSelectedPinId}
-          onViewChange={follow.onViewChange}
-          className="h-full w-full"
-        />
-        <p className="pointer-events-none absolute bottom-2 start-2 z-[400] rounded bg-surface px-2 py-1 text-xs text-muted">
-          {zoomHint}
-        </p>
+      <div
+        data-testid="map-container"
+        className="relative isolate h-[440px] w-full overflow-hidden rounded-xl border border-border bg-surface shadow-sm sm:h-[540px] lg:h-[620px]"
+      >
+        <MapWheelHint hint={zoomHint}>
+          <LazySiteMap
+            viewportStorageKey={viewportStorageKey}
+            center={defaultCenter}
+            zoom={10}
+            shopAnchor={shopAnchor}
+            pins={pins}
+            loadPinDetails={loadPinDetails}
+            pinDetailsWords={detailWords}
+            clusterLabel={clusterLabel}
+            selectedPinId={selectedPinId}
+            onSelectPin={setSelectedPinId}
+            onViewChange={follow.onViewChange}
+            className="h-full w-full"
+          />
+        </MapWheelHint>
+        {views ? (
+          <div className="absolute bottom-9 start-3 z-[1000] max-w-[calc(100%-1.5rem)]">
+            {views}
+          </div>
+        ) : null}
         <FilterByMapSwitch
           following={follow.following}
           onToggle={follow.toggle}
