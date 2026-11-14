@@ -169,6 +169,7 @@ export async function CatalogView({
           unavailable: t("diveSites.map.detailsUnavailable"),
         }}
         clusterLabel={t("diveSites.map.clusterLabel")}
+        zoomHint={t("diveSites.map.zoomHint")}
         followLabel={t("diveSites.list.followMap")}
         areaCount={t("diveSites.list.areaCount", { count: catalog.total })}
         scoped={Boolean(filters.area)}

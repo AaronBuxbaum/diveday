@@ -16,6 +16,7 @@ export function CatalogMapLayout({
   loadDetails,
   detailWords,
   clusterLabel,
+  zoomHint,
   followLabel,
   areaCount,
   scoped,
@@ -30,6 +31,7 @@ export function CatalogMapLayout({
   loadDetails: (slug: string) => Promise<MapPinDetails | null>;
   detailWords: { loading: string; unavailable: string };
   clusterLabel: string;
+  zoomHint: string;
   /** The words on the map's switch, and the count it shows while on. */
   followLabel: string;
   areaCount: string;
@@ -98,6 +100,9 @@ export function CatalogMapLayout({
           onViewChange={follow.onViewChange}
           className="h-full w-full"
         />
+        <p className="pointer-events-none absolute bottom-2 start-2 z-[400] rounded bg-surface px-2 py-1 text-xs text-muted">
+          {zoomHint}
+        </p>
         <FilterByMapSwitch
           following={follow.following}
           onToggle={follow.toggle}
