@@ -82,12 +82,12 @@ test.describe("a full boat ahead of the board", () => {
   });
 });
 
-test("on the seeded board the first row is the next boat, and no card repeats it", {
+test("on the seeded board departed trips are marked and no card repeats the next boat", {
   tag: READ_ONLY,
 }, async ({ page }) => {
   await page.goto("/s/blue-mantis");
   const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
-  await expect(first).toContainText(/seats?/);
+  await expect(first).toContainText(diverTranslator("en-US")("booking.sailedHeading"));
   await expect(page.getByRole("region", { name: /Next boat with space/ })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Book this boat" })).toHaveCount(0);
 });
@@ -96,12 +96,14 @@ test("a week row is a link into its own departure", { tag: READ_ONLY }, async ({
   await page.goto("/s/blue-mantis");
 
   const firstRow = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
-  await expect(firstRow).toContainText(/seat|full/i);
+  await expect(firstRow).toContainText(diverTranslator("en-US")("booking.sailedHeading"));
   const link = firstRow.getByRole("link").first();
   const href = await link.getAttribute("href");
   expect(href).toMatch(/^\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
 
   await link.click();
   await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
-  await expect(page.getByLabel("People", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: diverTranslator("en-US")("booking.sailedHeading") }),
+  ).toBeVisible();
 });

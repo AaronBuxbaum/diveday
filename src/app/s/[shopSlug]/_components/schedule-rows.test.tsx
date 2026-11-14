@@ -206,3 +206,16 @@ it("uses only the first planned site’s photo and keeps the embed unchanged", (
   expect(embed?.photoUrl).toBeNull();
   expect(embed?.fact).toBeNull();
 });
+
+it("marks a trip as departed at its scheduled start", () => {
+  const facts = {
+    now: new Date("2026-07-25T12:00:00Z"),
+    shop: { depthUnit: "meters" as const },
+    sightings: new Map(),
+  };
+  const result = rows({ facts });
+  expect(result[0]?.capacityText).toBe("This one’s already sailed");
+  expect(result[0]?.capacityTone).toBe("full");
+  expect(result[0]?.linkLabel).toContain("This one’s already sailed");
+  expect(result[1]?.capacityText).not.toBe("This one’s already sailed");
+});

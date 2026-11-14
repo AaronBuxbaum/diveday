@@ -35,6 +35,17 @@ export function scheduleMonthBounds(ref: MonthRef, tz: string) {
   return { monthStart, monthEnd };
 }
 
+/** Include today's departed trips without consuming the embed's upcoming window. */
+export function scheduleEmbedWindow(
+  trips: UpcomingTrips,
+  now: Date,
+  upcomingLimit: number,
+): UpcomingTrips {
+  const departed = trips.filter((trip) => trip.startsAt.getTime() <= now.getTime());
+  const upcoming = trips.filter((trip) => trip.startsAt.getTime() > now.getTime());
+  return [...departed, ...upcoming.slice(0, upcomingLimit)];
+}
+
 /** The view a diver has built: what every link that re-renders the schedule carries forward. */
 export type ScheduleView = {
   shopSlug: string;
@@ -64,7 +75,7 @@ export function scheduleViewLinks(view: ScheduleView) {
     activeLens,
   } = view;
   const withViewParams = (params: URLSearchParams) => {
-    if ((view.partySize ?? 1) > 1) params.set("partySize", String(view.partySize));
+    if (view.partySize !== undefined) params.set("partySize", String(view.partySize));
     if (month) params.set("month", month);
     if (hasSpaceFilter) params.set("hasSpace", "1");
     if (tripTypeFilter) params.set("tripType", tripTypeFilter);
@@ -205,6 +216,7 @@ export function scheduleSeatState(t: DiverTranslator, trip: { capacity: number; 
 export function scheduleFilterCopy(t: DiverTranslator) {
   return {
     partySize: t("schedule.filters.partySize"),
+    anyPartySize: t("schedule.filters.anyPartySize"),
     fewerPeople: t("party.fewerPeople"),
     morePeople: t("party.morePeople"),
     disclosure: t("schedule.filters.disclosure"),
@@ -256,7 +268,7 @@ export function schedulePagerHrefs({
   // departure", so it keeps the filters but deliberately drops
   // both the cursor and any month bound.
   const params = new URLSearchParams();
-  if ((view.partySize ?? 1) > 1) params.set("partySize", String(view.partySize));
+  if (view.partySize !== undefined) params.set("partySize", String(view.partySize));
   if (hasSpaceFilter) params.set("hasSpace", "1");
   if (tripTypeFilter) params.set("tripType", tripTypeFilter);
   if (canDiveFilter) params.set("canDive", canDiveFilter);
