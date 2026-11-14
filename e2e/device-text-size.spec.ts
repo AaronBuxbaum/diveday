@@ -1,10 +1,72 @@
-import type { Page } from "@playwright/test";
+import type {
+  Request as BrowserRequest,
+  Response as BrowserResponse,
+  Page,
+} from "@playwright/test";
 import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody } from "./device-text-size-fixture";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { manifestRow, openTripFromBoard, openTripTab } from "./helpers";
 import { INSTALL_SAFARI_UA } from "./home-screen-install-helper";
+
+/** Failure-only telemetry: fixed request categories and statuses, no URLs or identifiers. */
+function watchManifestConfirmation(page: Page) {
+  const started = performance.now();
+  const events: string[] = [];
+  const requests = new Map<BrowserRequest, string>();
+  let nextId = 0;
+  const note = (message: string) =>
+    events.push(`${Math.round(performance.now() - started)}ms ${message}`);
+  const onRequest = (request: BrowserRequest) => {
+    const path = new URL(request.url()).pathname;
+    const headers = request.headers();
+    const kind =
+      path.endsWith("/manifest") && headers.rsc === "1"
+        ? headers["next-router-prefetch"] || headers["next-router-segment-prefetch"]
+          ? "manifest-prefetch"
+          : "manifest-rsc"
+        : path.endsWith("/roster-confirmation")
+          ? "confirmation"
+          : path.endsWith("/snapshot")
+            ? "snapshot"
+            : path.endsWith("/manifest-events")
+              ? "events"
+              : null;
+    if (!kind) return;
+    const label = `${kind}#${++nextId}`;
+    requests.set(request, label);
+    note(`${label} start`);
+  };
+  const onResponse = (response: BrowserResponse) => {
+    const label = requests.get(response.request());
+    if (label) note(`${label} status=${response.status()}`);
+  };
+  const onFinished = (request: BrowserRequest) => {
+    const label = requests.get(request);
+    if (label) note(`${label} finished`);
+  };
+  const onFailed = (request: BrowserRequest) => {
+    const label = requests.get(request);
+    if (label) {
+      const error = request.failure()?.errorText ?? "";
+      note(`${label} failed=${/^net::ERR_[A-Z_]+$/.test(error) ? error : "unknown"}`);
+    }
+  };
+  page.on("request", onRequest);
+  page.on("response", onResponse);
+  page.on("requestfinished", onFinished);
+  page.on("requestfailed", onFailed);
+  return {
+    report: () => events.join("\n"),
+    stop: () => {
+      page.off("request", onRequest);
+      page.off("response", onResponse);
+      page.off("requestfinished", onFinished);
+      page.off("requestfailed", onFailed);
+    },
+  };
+}
 
 async function measureOverflow(page: Page) {
   return page.evaluate(() => {
@@ -228,35 +290,46 @@ test.describe("53px body capability input on the working manifest", () => {
 
   test("keeps a person's name and close action readable through repeated detail openings", async ({
     page,
-  }) => {
-    await exposeDeviceBody(page, 53);
-    await page.goto("/shop/blue-mantis/schedule/board");
-    await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
-    await openTripTab(page, "Manifest");
-    await expect(
-      page.getByText(staffTranslator("en-US")("manifest.rosterConfirmed"), { exact: true }),
-    ).toBeVisible();
-    const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
-    const url = page.url();
-    await trigger.click();
-    const dialog = page.getByRole("dialog", { name: "Priya Sharma", exact: true });
-    await expect(dialog).toBeVisible();
-    const geometry = await dialog
-      .getByRole("heading", { level: 2, name: "Priya Sharma", exact: true })
-      .evaluate((element) => ({
-        width: element.getBoundingClientRect().width,
-        font: Number.parseFloat(getComputedStyle(element).fontSize),
-      }));
-    expect(geometry.width).toBeGreaterThanOrEqual(geometry.font * 3);
-    await dialog.getByRole("button", { name: "Close person details", exact: true }).click();
-    await expect(dialog).toHaveCount(0);
-    await expect(trigger).toBeFocused();
-    await trigger.click();
-    await expect(dialog).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(dialog).toHaveCount(0);
-    await expect(trigger).toBeFocused();
-    expect(page.url()).toBe(url);
+  }, testInfo) => {
+    const watch = watchManifestConfirmation(page);
+    try {
+      await exposeDeviceBody(page, 53);
+      await page.goto("/shop/blue-mantis/schedule/board");
+      await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
+      await openTripTab(page, "Manifest");
+      await expect(
+        page.getByText(staffTranslator("en-US")("manifest.rosterConfirmed"), { exact: true }),
+      ).toBeVisible();
+      const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
+      const url = page.url();
+      await trigger.click();
+      const dialog = page.getByRole("dialog", { name: "Priya Sharma", exact: true });
+      await expect(dialog).toBeVisible();
+      const geometry = await dialog
+        .getByRole("heading", { level: 2, name: "Priya Sharma", exact: true })
+        .evaluate((element) => ({
+          width: element.getBoundingClientRect().width,
+          font: Number.parseFloat(getComputedStyle(element).fontSize),
+        }));
+      expect(geometry.width).toBeGreaterThanOrEqual(geometry.font * 3);
+      await dialog.getByRole("button", { name: "Close person details", exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+      await trigger.click();
+      await expect(dialog).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+      expect(page.url()).toBe(url);
+    } catch (error) {
+      await testInfo.attach("manifest-confirmation-phases", {
+        contentType: "text/plain",
+        body: watch.report(),
+      });
+      throw error;
+    } finally {
+      watch.stop();
+    }
   });
 });
 
