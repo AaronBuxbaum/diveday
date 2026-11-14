@@ -8,6 +8,7 @@ import {
   daysFromNow,
   openCopiedWaiverLink,
   openDiverFileGroup,
+  openNamedScheduleTrip,
   openPaperWaiverForm,
   openRosterDetails,
   openThreadStep,
@@ -325,12 +326,7 @@ test("a seat booked as under 18 asks for a parent on its release", async ({ page
   await signOut(page);
 
   await page.goto(`/s/${SHOP}`, { waitUntil: "domcontentloaded" });
-  await page
-    .getByRole("list", { name: "Upcoming trips" })
-    .locator("li")
-    .filter({ hasText: title })
-    .getByRole("link")
-    .click();
+  await openNamedScheduleTrip(page, title);
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill(diver);
   await page.getByLabel("Email", { exact: true }).fill(`teen-${stamp}@example.com`);
@@ -367,12 +363,7 @@ test("a parent signs the release of a child they booked, from their own page", a
   await signOut(page);
 
   await page.goto(`/s/${SHOP}`, { waitUntil: "domcontentloaded" });
-  await page
-    .getByRole("list", { name: "Upcoming trips" })
-    .locator("li")
-    .filter({ hasText: title })
-    .getByRole("link")
-    .click();
+  await openNamedScheduleTrip(page, title);
   await choosePartySize(page, 2);
   await page.getByLabel("Name", { exact: true }).fill(`Dana E2E ${stamp}`);
   await page.getByLabel("Email", { exact: true }).fill(`dana-${stamp}@example.com`);

@@ -5,6 +5,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openNamedScheduleTrip,
   openTripAbout,
   openTripAboutRow,
   openTripTab,
@@ -405,13 +406,7 @@ test.describe("with Accept-Language: es", () => {
 
     // The list's own accessible name is itself a translated string — reaching
     // the trip through it is the first assertion, not scaffolding around one.
-    await page
-      .getByRole("list", { name: "Próximas salidas" })
-      .locator("li")
-      .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-      .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
-      .first()
-      .click();
+    await openNamedScheduleTrip(page, "Two-Tank Reef — Christ of the Abyss", "es-ES");
 
     // The trip's own gate, in Spanish — proof the requirement note goes through
     // the bundle rather than being assembled from English fragments. One

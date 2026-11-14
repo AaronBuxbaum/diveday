@@ -35,6 +35,17 @@ export function scheduleMonthBounds(ref: MonthRef, tz: string) {
   return { monthStart, monthEnd };
 }
 
+/** Include today's departed trips without consuming the embed's upcoming window. */
+export function scheduleEmbedWindow(
+  trips: UpcomingTrips,
+  now: Date,
+  upcomingLimit: number,
+): UpcomingTrips {
+  const departed = trips.filter((trip) => trip.startsAt.getTime() <= now.getTime());
+  const upcoming = trips.filter((trip) => trip.startsAt.getTime() > now.getTime());
+  return [...departed, ...upcoming.slice(0, upcomingLimit)];
+}
+
 /** The view a diver has built: what every link that re-renders the schedule carries forward. */
 export type ScheduleView = {
   shopSlug: string;

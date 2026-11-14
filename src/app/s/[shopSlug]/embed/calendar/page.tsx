@@ -13,7 +13,7 @@ import { EmbedFooter } from "../../_components/EmbedFooter";
 import { SchedulePaperSheet } from "../../_components/SchedulePaperSheet";
 import { readSchedulePage } from "../../_components/schedule-reads";
 import { weekLedgerRows } from "../../_components/schedule-rows";
-import { scheduleDayWords } from "../../_components/schedule-view";
+import { scheduleDayWords, scheduleEmbedWindow } from "../../_components/schedule-view";
 import { WeekLedger } from "../../_components/WeekLedger";
 import { generateMetadata as scheduleMetadata } from "../../page";
 
@@ -23,10 +23,8 @@ import { generateMetadata as scheduleMetadata } from "../../page";
 export const instant = true;
 
 /**
- * **How many departures the widget shows before it hands over** (issue #805).
- * The recommended snippet frames this page at 900px tall; a frame cannot guess
- * the right height, so the widget is a window onto the schedule (the next few
- * departures and one link to the real page) rather than the schedule.
+ * The widget includes today’s departed trips and this many upcoming departures.
+ * The link to the full schedule remains available for later trips (issue #805).
  */
 const EMBED_TRIP_LIMIT = 4;
 
@@ -92,7 +90,7 @@ export default async function EmbeddedSchedulePage({
         zone: timeZoneLabel(zoneAnchor, locale, tz),
       })
     : null;
-  const listedTrips = upcoming.slice(0, EMBED_TRIP_LIMIT);
+  const listedTrips = scheduleEmbedWindow(upcoming, now, EMBED_TRIP_LIMIT);
   const { dayKeyOf } = scheduleDayWords(now, locale, tz);
   const rows = weekLedgerRows({
     listedTrips,

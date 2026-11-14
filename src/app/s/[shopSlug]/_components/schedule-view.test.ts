@@ -6,6 +6,7 @@ import {
   type RequirementsByTrip,
   type ScheduleView,
   scheduleDayWords,
+  scheduleEmbedWindow,
   scheduleFilterCopy,
   scheduleFiltersFor,
   scheduleMonthBounds,
@@ -314,4 +315,20 @@ it("resolves only supported trip types and keeps their literal contract", () => 
   expect(course.tripTypeFilter).toBe("course");
   expect(scheduleFiltersFor({ tripType: "fun_dive" }).tripTypeFilter).toBe("fun_dive");
   expect(scheduleFiltersFor({ tripType: "unknown" }).tripTypeFilter).toBeUndefined();
+});
+
+it("keeps today’s departed rows and four upcoming trips in the embed", () => {
+  const listed = trips(
+    { startsAt: new Date(NOW.getTime() - 3_600_000) },
+    ...Array.from({ length: 5 }, (_, index) => ({
+      startsAt: new Date(NOW.getTime() + (index + 1) * 3_600_000),
+    })),
+  );
+  expect(scheduleEmbedWindow(listed, NOW, 4).map((trip) => trip.id)).toEqual([
+    "t0",
+    "t1",
+    "t2",
+    "t3",
+    "t4",
+  ]);
 });
