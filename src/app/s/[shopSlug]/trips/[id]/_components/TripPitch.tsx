@@ -10,6 +10,7 @@ import {
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { PublicCrewMember } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
+import { nowDate } from "@/lib/clock";
 import { siteFit } from "@/lib/diver-planning";
 import { formatShortDate } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
@@ -71,7 +72,7 @@ export function TripPitch({
 }) {
   const t = diverTranslator(locale);
   const cards = fieldGuideCardsFor(briefings);
-  const tiles = wildlifeCards(briefings, sightings, t);
+  const tiles = wildlifeCards(briefings, sightings, t, nowDate(), timeZone);
   // The one fact this block promotes out from behind the door: how demanding
   // the day reads. Everything else on the chip line the artboard drew is
   // already printed above it — the depth range rides on each `TripDayPlan`

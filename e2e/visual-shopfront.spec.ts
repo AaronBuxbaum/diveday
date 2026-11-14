@@ -358,6 +358,13 @@ for (const scheme of ["light", "dark"] as const) {
           "data-hydrated",
           "true",
         );
+        const seenLabel = diverTranslator("en-US")("trip.seen.cardLabel");
+        await expect(page.getByRole("button", { name: /Southern stingray/ })).toContainText(
+          seenLabel,
+        );
+        await expect(page.getByRole("button", { name: /Green sea turtle/ })).not.toContainText(
+          seenLabel,
+        );
         await capture(page, "site-briefing", scheme);
         const wildlife = page.locator("[data-pitch-tile] button").first();
         await wildlife.focus();

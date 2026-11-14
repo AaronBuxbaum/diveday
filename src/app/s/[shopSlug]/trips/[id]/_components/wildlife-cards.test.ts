@@ -38,7 +38,13 @@ describe("wildlifeCards", () => {
       ],
     });
     if (!result) throw new Error("missing sightings");
-    const rows = wildlifeCards([briefing("reef", picked)], new Map([["reef", result]]), t);
+    const rows = wildlifeCards(
+      [briefing("reef", picked)],
+      new Map([["reef", result]]),
+      t,
+      new Date("2026-11-03T00:00:00Z"),
+      "UTC",
+    );
     expect(rows.slice(0, 4).map(({ card, seen }) => [card.slug, seen])).toEqual([
       ["blue-tang", true],
       ["queen-angelfish", false],
@@ -63,12 +69,40 @@ describe("wildlifeCards", () => {
       [briefing("chosen", [card("blue-tang")]), briefing("other", [])],
       new Map([["other", result]]),
       t,
+      new Date("2026-11-03T00:00:00Z"),
+      "UTC",
     );
     expect(rows[0]).toMatchObject({ card: { slug: "blue-tang" }, seen: false });
     expect(rows.slice(1).map(({ card }) => card.slug)).toEqual([
       "green-sea-turtle",
       "nurse-shark",
       "french-angelfish",
+    ]);
+  });
+  it("marks only sightings in the shop’s current calendar month and never future sightings", () => {
+    const now = new Date("2026-11-01T05:30:00Z");
+    const result = rankSiteSightings({
+      diveSiteId: "reef",
+      dives: 3,
+      tallies: [
+        { ...tally("blue-tang", 1), lastSeenAt: new Date("2026-11-01T03:30:00Z") },
+        { ...tally("nurse-shark", 1), lastSeenAt: new Date("2026-11-01T04:30:00Z") },
+        { ...tally("french-angelfish", 1), lastSeenAt: new Date("2026-11-01T03:30:00Z") },
+        { ...tally("green-sea-turtle", 1), lastSeenAt: new Date("2026-11-01T06:30:00Z") },
+      ],
+    });
+    if (!result) throw new Error("missing sightings");
+    const rows = wildlifeCards(
+      [briefing("reef", [card("blue-tang"), card("nurse-shark")])],
+      new Map([["reef", result]]),
+      t,
+      now,
+      "America/New_York",
+    );
+    expect(rows.map(({ card, seen }) => [card.slug, seen])).toEqual([
+      ["blue-tang", false],
+      ["nurse-shark", true],
+      ["french-angelfish", false],
     ]);
   });
 });

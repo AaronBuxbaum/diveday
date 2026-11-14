@@ -265,7 +265,7 @@
     "courseGearIncludedKinds": "Incluido en el curso: {items}.",
     "seen": {
       "cardLabel": "Visto este mes",
-      "heading": "Visto aquí este mes",
+      "heading": "Visto aquí en los últimos 30 días",
       "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}}",
       "lastSeen": "Visto por última vez el {date}"
     },
@@ -3740,7 +3740,7 @@
       "theDay": "El día",
       "diveNumber": "Inmersión 1",
       "bottomTime": "Alrededor de 45 minutos en el agua",
-      "seenHeading": "Visto aquí este mes",
+      "seenHeading": "Visto aquí en los últimos 30 días",
       "seenStingray": "Raya látigo americana en 2 de 3 inmersiones registradas",
       "lastSeenStingray": "Visto por última vez el 3 oct",
       "seenTurtle": "Tortuga verde en 1 de 3 inmersiones registradas",

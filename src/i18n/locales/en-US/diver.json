@@ -265,7 +265,7 @@
     "courseGearIncludedKinds": "Included with the course: {items}.",
     "seen": {
       "cardLabel": "Seen this month",
-      "heading": "Seen here this month",
+      "heading": "Seen here in the last 30 days",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}}",
       "lastSeen": "Last seen {date}"
     },
@@ -3740,7 +3740,7 @@
       "theDay": "The day",
       "diveNumber": "Dive 1",
       "bottomTime": "Usually 45 minutes in the water",
-      "seenHeading": "Seen here this month",
+      "seenHeading": "Seen here in the last 30 days",
       "seenStingray": "Southern stingray on 2 of 3 logged dives",
       "lastSeenStingray": "Last seen Oct 3",
       "seenTurtle": "Green sea turtle on 1 of 3 logged dives",

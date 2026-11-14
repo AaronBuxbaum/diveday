@@ -6,6 +6,7 @@ import {
 import { type MarineLifeCard, marineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { SiteSightings } from "@/lib/sightings";
+import { utcToWallTime } from "@/lib/zoned";
 import type { DiveBriefing } from "./types";
 
 // Editorial preference, not a claim about rarity. Categories absent here have equal priority.
@@ -22,7 +23,15 @@ export function wildlifeCards(
   briefings: readonly DiveBriefing[],
   sightings: ReadonlyMap<string, SiteSightings> | undefined,
   t: DiverTranslator,
+  now: Date,
+  timeZone: string,
 ): { card: MarineLifeCard; seen: boolean }[] {
+  const month = utcToWallTime(now, timeZone);
+  const thisMonth = (date: Date) => {
+    if (date.getTime() > now.getTime()) return false;
+    const seen = utcToWallTime(date, timeZone);
+    return seen.year === month.year && seen.month === month.month;
+  };
   const selected = new Map<string, { card: MarineLifeCard; seen: boolean }>();
   const extras = new Map<
     string,
@@ -30,9 +39,14 @@ export function wildlifeCards(
   >();
   for (const { diveSite, creatures } of briefings) {
     const tallies = diveSite ? sightings?.get(diveSite.id) : undefined;
-    const rows = tallies?.allSpecies ?? tallies?.species ?? [];
+    const rows = (tallies?.allSpecies ?? tallies?.species ?? []).filter(
+      (row) => new Date(row.lastSeenAt).getTime() <= now.getTime(),
+    );
     for (const card of creatures) {
-      const seen = rows.some((row) => !row.customName && row.speciesSlug === card.slug);
+      const seen = rows.some(
+        (row) =>
+          !row.customName && row.speciesSlug === card.slug && thisMonth(new Date(row.lastSeenAt)),
+      );
       const existing = selected.get(card.slug);
       if (existing) existing.seen ||= seen;
       else selected.set(card.slug, { card, seen });
@@ -44,7 +58,12 @@ export function wildlifeCards(
       const date = new Date(row.lastSeenAt).getTime();
       const existing = extras.get(row.speciesSlug);
       if (!existing || date > existing.date)
-        extras.set(row.speciesSlug, { card, seen: true, score, date });
+        extras.set(row.speciesSlug, {
+          card,
+          seen: thisMonth(new Date(row.lastSeenAt)),
+          score,
+          date,
+        });
     }
   }
   const additional = [...extras.values()]

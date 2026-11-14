@@ -228,7 +228,7 @@ export function dayRhythmLine(
 }
 
 /**
- * **"Seen here this month"**: the crew's own log, under the site it is about.
+ * **"Seen here in the last 30 days"**: the crew's own log, under the site it is about.
  *
  * The shop's field guide says what a reef *may* show; this says how often a
  * thing has actually turned up lately, with a date on the last one.
@@ -236,10 +236,10 @@ export function dayRhythmLine(
  * **It is a record, and it says so.** "Seen" is past tense and every line is a
  * frequency, never an expectation, so it cannot be read as a promise the crew
  * would be asked about on the boat. The heading and lines carry that boundary
- * ("Seen here this month", "of N logged dives", "Last seen"); a separate
+ * ("Seen here in the last 30 days", "of N logged dives", "Last seen"); a separate
  * disclaimer was cut (UX review 2026-10-10, item 22).
  *
- * A site whose crew logged nothing this month renders nothing.
+ * A site whose crew logged nothing in the window renders nothing.
  */
 function SiteSeen({
   seen,
@@ -284,7 +284,7 @@ function SiteSeen({
         {lines.map((line) => (
           <li key={line.slug} className="break-words text-sm leading-relaxed">
             <span className="block">{line.line}</span>
-            {/* The heading already says "this month"; the exact day is a
+            {/* The heading already names the window; the exact day is a
                 desktop's second line, and on a phone it doubled the list. */}
             <span className="block text-muted max-sm:hidden">{line.lastSeen}</span>
           </li>
