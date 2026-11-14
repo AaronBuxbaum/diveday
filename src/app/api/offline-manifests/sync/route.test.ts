@@ -19,6 +19,7 @@ import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
+import { capturedRouteMeeting } from "@/test/offline-meeting-test-support";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -217,12 +218,13 @@ describe("POST /api/offline-manifests/sync", () => {
 
     const clientEventId = crypto.randomUUID();
     const now = nowDate().toISOString();
+    const meeting = await capturedRouteMeeting(db, shop.id, trip.id, 0);
     const response = await POST(
       postRequest({
         events: [
           {
             clientEventId,
-            snapshotId: crypto.randomUUID(),
+            ...meeting,
             snapshotSavedAt: now,
             bookingId: booking.id,
             tripId: trip.id,
@@ -262,10 +264,11 @@ describe("POST /api/offline-manifests/sync", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
     const now = nowDate().toISOString();
+    const meeting = await capturedRouteMeeting(db, shop.id, trip.id, 0);
     const mark = crypto.randomUUID();
     const event = (status: "not_boarded" | "cleared") => ({
       clientEventId: status === "not_boarded" ? mark : crypto.randomUUID(),
-      snapshotId: crypto.randomUUID(),
+      ...meeting,
       snapshotSavedAt: now,
       bookingId: booking.id,
       tripId: trip.id,
@@ -300,9 +303,10 @@ describe("POST /api/offline-manifests/sync", () => {
     if (!member) throw new Error("expected seeded trip to have crew");
 
     const now = nowDate().toISOString();
+    const meeting = await capturedRouteMeeting(db, shop.id, trip.id, 0);
     const event = (status: "boarded" | "not_boarded") => ({
       clientEventId: crypto.randomUUID(),
-      snapshotId: crypto.randomUUID(),
+      ...meeting,
       snapshotSavedAt: now,
       crewPersonId: member.id,
       tripId: trip.id,
@@ -349,12 +353,13 @@ describe("POST /api/offline-manifests/sync", () => {
 
     const clientEventId = crypto.randomUUID();
     const now = nowDate().toISOString();
+    const meeting = await capturedRouteMeeting(db, shop.id, trip.id, 0);
     const response = await POST(
       postRequest({
         events: [
           {
             clientEventId,
-            snapshotId: crypto.randomUUID(),
+            ...meeting,
             snapshotSavedAt: now,
             crewPersonId: member.id,
             tripId: trip.id,
@@ -437,12 +442,13 @@ describe("POST /api/offline-manifests/sync", () => {
 
     const clientEventId = crypto.randomUUID();
     const now = nowDate().toISOString();
+    const meeting = await capturedRouteMeeting(db, shop.id, trip.id, 0);
     const response = await POST(
       postRequest({
         events: [
           {
             clientEventId,
-            snapshotId: crypto.randomUUID(),
+            ...meeting,
             snapshotSavedAt: now,
             bookingId: booking.id,
             tripId: trip.id,
@@ -469,9 +475,10 @@ describe("POST /api/offline-manifests/sync", () => {
 
     const clientEventId = crypto.randomUUID();
     const now = nowDate().toISOString();
+    const meeting = await capturedRouteMeeting(db, shop.id, trip.id, 0);
     const event = {
       clientEventId,
-      snapshotId: crypto.randomUUID(),
+      ...meeting,
       snapshotSavedAt: now,
       bookingId: booking.id,
       tripId: trip.id,
@@ -612,7 +619,10 @@ describe("POST /api/offline-manifests/sync", () => {
       vi.mocked(getDb).mockResolvedValue(db);
       vi.mocked(auth).mockResolvedValue(session);
 
-      const applied = rollCallEvent({ bookingId: booking.id, tripId: trip.id });
+      const applied = {
+        ...rollCallEvent({ bookingId: booking.id, tripId: trip.id }),
+        ...(await capturedRouteMeeting(db, shop.id, trip.id, 0)),
+      };
       const first = await POST(postRequest({ events: [applied] }));
       expect(first.status).toBe(200);
       expect((await first.json()).results).toEqual([
@@ -621,7 +631,10 @@ describe("POST /api/offline-manifests/sync", () => {
 
       await db.delete(personRoles).where(eq(personRoles.personId, person));
 
-      const refused = rollCallEvent({ bookingId: booking.id, tripId: trip.id });
+      const refused = {
+        ...rollCallEvent({ bookingId: booking.id, tripId: trip.id }),
+        ...(await capturedRouteMeeting(db, shop.id, trip.id, 0)),
+      };
       const second = await POST(postRequest({ events: [refused] }));
       expect(second.status).toBe(401);
       const [written] = await db
@@ -647,7 +660,10 @@ describe("POST /api/offline-manifests/sync", () => {
       ).toBe(401);
 
       await db.insert(personRoles).values({ personId: person, role: "captain" });
-      const event = rollCallEvent({ bookingId: booking.id, tripId: trip.id });
+      const event = {
+        ...rollCallEvent({ bookingId: booking.id, tripId: trip.id }),
+        ...(await capturedRouteMeeting(db, shop.id, trip.id, 0)),
+      };
       const response = await POST(postRequest({ events: [event] }));
       expect(response.status).toBe(200);
       expect((await response.json()).results).toEqual([

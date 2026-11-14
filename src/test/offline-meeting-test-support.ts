@@ -87,3 +87,18 @@ export async function capturedMeeting(
     }),
   };
 }
+
+/** The same captured identity in the wire format accepted by sync. */
+export async function capturedRouteMeeting(
+  db: Parameters<typeof getTripManifest>[0],
+  shopId: string,
+  tripId: string,
+  meetingDay: number,
+) {
+  const meeting = await capturedMeeting(db, shopId, tripId, meetingDay);
+  return {
+    snapshotId: meeting.offlineSnapshotId,
+    meetingIdentityProof: meeting.offlineMeetingIdentityProof,
+    meetingDay,
+  };
+}
