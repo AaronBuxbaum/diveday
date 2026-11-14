@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { identifySavedRollCall } from "@/test/identified-offline-roll-call";
+import { verifiedFixture } from "@/test/verified-offline-meeting";
 import {
   boardedAt,
   crewMember,
@@ -149,19 +150,21 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
       savedAt: "2026-07-20T11:45:00.000Z",
       expiresAt: "2026-07-27T16:00:00.000Z",
     };
+    const meeting = verifiedFixture(snapshot);
     identifySavedRollCall(snapshot, { bookingId: "a" }, "departure", 0);
     const observed = identifySavedRollCall(snapshot, { bookingId: "b" }, "departure", 0);
     const ashore: OfflineRollCallEvent = {
       clientEventId: crypto.randomUUID(),
       snapshotId: snapshot.snapshotId,
       snapshotSavedAt: snapshot.savedAt,
-      tripId: trip.id,
+      tripId: meeting.tripId,
       bookingId: "b",
       checkpoint: "departure",
       status: "not_boarded",
       occurredAt: "2026-07-20T11:46:00.000Z",
       syncStatus: "pending",
       meetingDay: 0,
+      meetingIdentityProof: meeting.meetingIdentityProof,
       observedEvidenceIds: [observed],
     };
     const alert = (events: OfflineRollCallEvent[]) =>
