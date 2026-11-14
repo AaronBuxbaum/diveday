@@ -68,11 +68,20 @@ export async function dispatchUnresolvedSafetyReview(
   let alreadyDelivered = 0;
   let uncertain = 0;
   let pending = 0;
+  let reservationFailed = false;
   for (const recipient of recipients) {
-    const deliveryId = await ensureSafetyReviewDelivery(db, {
-      outboxId,
-      personId: recipient.personId,
-    });
+    let deliveryId: string;
+    try {
+      deliveryId = await ensureSafetyReviewDelivery(db, {
+        outboxId,
+        personId: recipient.personId,
+      });
+    } catch {
+      // A stale or locked recipient must not prevent attempts for the other
+      // owners. The scan still records a dispatch error for this obligation.
+      reservationFailed = true;
+      continue;
+    }
     const attemptId = await startSafetyReviewDelivery(db, deliveryId);
     if (!attemptId) {
       const [existing] = await db
@@ -200,6 +209,8 @@ export async function dispatchUnresolvedSafetyReview(
       uncertain += 1;
     }
   }
+  if (reservationFailed)
+    return { status: "unavailable" as const, ledger: await deliveryLedgerSummary(db, outboxId) };
   return {
     status: "attempted" as const,
     delivered,

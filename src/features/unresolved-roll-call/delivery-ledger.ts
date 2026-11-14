@@ -1,4 +1,4 @@
-import { and, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/db/client";
 import { people, unresolvedSafetyAlertDeliveries, unresolvedSafetyAlertOutbox } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
@@ -10,8 +10,9 @@ export async function ensureSafetyReviewDelivery(
   db: DbExecutor,
   input: { outboxId: string; personId: string },
 ) {
-  // The outbox and recipient must belong to the same shop. Insert with the
-  // check in one statement so a foreign person cannot reserve this key.
+  // The outbox and recipient must belong to the same shop. The row lock
+  // fences erasure; a locked or erased recipient cannot acquire a new row.
+  // Historical rows remain intact even when no reservation can be made.
   await db.execute(sql`
     insert into ${unresolvedSafetyAlertDeliveries} (outbox_id, person_id, created_at)
     select ${unresolvedSafetyAlertOutbox.id}, ${people.id}, ${nowDate()}
@@ -19,6 +20,8 @@ export async function ensureSafetyReviewDelivery(
     inner join ${people} on ${people.shopId} = ${unresolvedSafetyAlertOutbox.shopId}
     where ${unresolvedSafetyAlertOutbox.id} = ${input.outboxId}
       and ${people.id} = ${input.personId}
+      and ${people.anonymizedAt} is null
+    for share of ${people} skip locked
     on conflict (outbox_id, person_id) do nothing
   `);
   const [delivery] = await db
@@ -39,9 +42,11 @@ export async function ensureSafetyReviewDelivery(
       and(
         eq(unresolvedSafetyAlertDeliveries.outboxId, input.outboxId),
         eq(unresolvedSafetyAlertDeliveries.personId, input.personId),
+        isNull(people.anonymizedAt),
       ),
     )
-    .limit(1);
+    .limit(1)
+    .for("share", { of: people, skipLocked: true });
   if (!delivery) throw new Error("Safety review delivery could not be recorded");
   return delivery.id;
 }

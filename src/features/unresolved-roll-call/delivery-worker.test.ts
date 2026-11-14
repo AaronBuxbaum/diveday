@@ -1,15 +1,18 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { beforeEach, expect, it, vi } from "vitest";
 import {
+  people,
   personRoles,
   rollCallEventClaims,
   shops,
   unresolvedSafetyAlertDeliveries,
   unresolvedSafetyAlertOutbox,
+  userAccounts,
 } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import * as deliveryLedger from "./delivery-ledger";
 
 vi.mock("./review-availability", () => ({ unresolvedReviewAvailable: () => true }));
 vi.mock("@/db/notifications", async (original) => ({
@@ -73,6 +76,38 @@ it("does not send when the retained generation no longer matches", async () => {
   const result = await dispatchUnresolvedSafetyReview(db, outbox.id, provider);
   expect(result).toMatchObject({ status: "attempted", delivered: 0 });
   expect(sendNotification).not.toHaveBeenCalled();
+});
+
+it("continues with other owners and reports an unavailable reservation", async () => {
+  const { db, shop, outbox } = await obligation();
+  const [secondOwner] = await db
+    .insert(people)
+    .values({
+      shopId: shop.id,
+      fullName: "Additional owner",
+    })
+    .returning();
+  await db.insert(personRoles).values({ personId: secondOwner.id, role: "owner" });
+  await db.insert(userAccounts).values({
+    personId: secondOwner.id,
+    email: "additional-owner@example.invalid",
+    status: "active",
+  });
+  vi.mocked(sendNotification).mockResolvedValue({
+    status: "sent",
+    providerMessageId: "provider-accepted",
+  });
+  const reserve = vi
+    .spyOn(deliveryLedger, "ensureSafetyReviewDelivery")
+    .mockRejectedValueOnce(new Error("Safety review delivery could not be recorded"));
+  try {
+    const result = await dispatchUnresolvedSafetyReview(db, outbox.id, provider);
+    expect(result).toMatchObject({ status: "unavailable" });
+    expect(reserve.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(sendNotification).toHaveBeenCalled();
+  } finally {
+    reserve.mockRestore();
+  }
 });
 
 it("sends a generic review notice once per active owner and generation", async () => {
