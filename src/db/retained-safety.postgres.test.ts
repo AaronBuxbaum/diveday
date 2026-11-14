@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { diveIntentTallyAndRetainedSafetyForTrips } from "@/features/dive-intent";
+import { getDayCloseout } from "@/features/today";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { retainedSafetyShopWarnings } from "./retained-safety";
 import {
@@ -84,6 +85,11 @@ describePostgres("retained safety warnings on PostgreSQL", () => {
     const result = await diveIntentTallyAndRetainedSafetyForTrips(db, shop.id, [trip.id]);
     expect(result.diveIntents.size).toBe(0);
     expect(result.retainedSafetyTripIds).toEqual(new Set([trip.id]));
+    const closeout = await getDayCloseout(db, shop.id, "UTC", new Date("2030-01-01T10:00:00Z"));
+    expect(closeout.departures.find((departure) => departure.tripId === trip.id)).toMatchObject({
+      retainedSafetyUnresolved: true,
+      booked: 0,
+    });
     expect(
       (await diveIntentTallyAndRetainedSafetyForTrips(db, other.id, [trip.id]))
         .retainedSafetyTripIds.size,

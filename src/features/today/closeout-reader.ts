@@ -1,8 +1,8 @@
-import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, max, ne, sql } from "drizzle-orm";
+import { unionAll } from "drizzle-orm/pg-core";
 import type { AppDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { listDepartureRollCallByTrip, readAfterDiveRollCallByTrip } from "@/db/manifests";
-import { retainedSafetyTripIds } from "@/db/retained-safety";
 import { newestMarkFirst, oldestMarkFirst } from "@/db/roll-call-order";
 import { crewMarks, markCrewPersonId, seatMarks } from "@/db/roll-call-subject";
 import {
@@ -11,6 +11,7 @@ import {
   executedDives,
   notificationDeliveries,
   people,
+  rollCallEventClaims,
   rollCallEvents,
   tripAssignments,
   tripDives,
@@ -126,13 +127,12 @@ async function dayTrips(
     photos,
     crewPhotos,
     recapDeliveries,
-    crewRoster,
+    crewAndSafety,
     crewResults,
     planChangeRows,
     loggedDiveRows,
     stagesByTrip,
     meetingWindows,
-    retainedRows,
   ] = await Promise.all([
     // **Two counts off one roster, because the evening and the shelf ask
     // different questions** (issue #1689). `booked` is the seats this
@@ -213,11 +213,29 @@ async function dayTrips(
     // **The assigned crew** (issue #1346). Tenancy through `trips`:
     // `trip_assignments` carries no `shop_id` of its own (CR-007), so a trip id
     // alone must never reach a roster.
-    db
-      .select({ tripId: tripAssignments.tripId, personId: tripAssignments.personId })
-      .from(tripAssignments)
-      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-      .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds))),
+    unionAll(
+      db
+        .select({
+          tripId: tripAssignments.tripId,
+          personId: sql<string | null>`${tripAssignments.personId}`.as("person_id"),
+        })
+        .from(tripAssignments)
+        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+        .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds))),
+      db
+        .selectDistinct({
+          tripId: rollCallEventClaims.tripId,
+          personId: sql<string | null>`null::uuid`.as("person_id"),
+        })
+        .from(rollCallEventClaims)
+        .where(
+          and(
+            eq(rollCallEventClaims.shopId, shopId),
+            inArray(rollCallEventClaims.tripId, tripIds),
+            isNotNull(rollCallEventClaims.retainedSafetyEvidence),
+          ),
+        ),
+    ),
     // Their results, joined back to the roster with the same guard
     // `listRollCallGaps` uses, so a person taken off the trip cannot answer
     // for it. Oldest first: the last row read per (trip, person, checkpoint)
@@ -299,8 +317,13 @@ async function dayTrips(
     // the whole day, never one per boat.
     latestTripStagesByTrip(db, shopId, tripIds),
     meetingWindowsByTrip(db, rows),
-    retainedSafetyTripIds(db, shopId, tripIds),
   ]);
+  const crewRoster = crewAndSafety.filter(
+    (row): row is { tripId: string; personId: string } => row.personId !== null,
+  );
+  const retainedRows = new Set(
+    crewAndSafety.filter((row) => row.personId === null).map((row) => row.tripId),
+  );
   // **The roster, and the subset of it the boat carried** (issue #1689). One
   // walk, one rule per seat, so the two numbers can never be derived by
   // different readings of the same rows.

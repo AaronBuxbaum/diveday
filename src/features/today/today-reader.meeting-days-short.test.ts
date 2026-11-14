@@ -6,6 +6,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { fileScopedShopContext } from "@/test/db";
 import { inHorizonReadiness } from "../blockers/store";
 import { shopClock } from "../shop-clock/rules";
+import { getDayCloseout } from "./closeout-reader";
 import { getShopDayDepartures, getTodayWork, todaysDepartures } from "./today-reader";
 
 /**
@@ -87,6 +88,11 @@ describe("a two-day course shorter than 24 hours", () => {
     });
     expect(tomorrow.find((departure) => departure.tripId === trip.id)).toMatchObject({
       retainedSafetyUnresolved: true,
+    });
+    const closeout = await getDayCloseout(db, shop.id, ZONE, now);
+    expect(closeout.departures.find((departure) => departure.tripId === trip.id)).toMatchObject({
+      retainedSafetyUnresolved: true,
+      booked: 0,
     });
   });
 
