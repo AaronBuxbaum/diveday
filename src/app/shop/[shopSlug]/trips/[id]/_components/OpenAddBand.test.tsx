@@ -8,21 +8,34 @@ afterEach(cleanup);
 
 describe("OpenAddBand", () => {
   it("brings the add band on screen and puts the cursor in its search", () => {
-    const scrollIntoView = vi.fn();
+    // The readiness marker must remain pending while the effect can move the
+    // page, so a browser click cannot race the scroll.
+    const scrollIntoView = vi.fn(function (this: Element) {
+      expect(this.querySelector("[data-open-add-band]")).not.toHaveAttribute(
+        "data-open-add-band-settled",
+      );
+    });
     Element.prototype.scrollIntoView = scrollIntoView;
-    const { container } = render(
+    const { container, unmount } = render(
       <>
         <div id={ADD_A_BOOKING_ID}>
           <form>
             <input type="hidden" name="request" value="r-1" />
             <input type="search" name="diverq" aria-label="Find a diver" />
           </form>
+          <OpenAddBand />
         </div>
-        <OpenAddBand />
       </>,
     );
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
+    expect(container.querySelector("[data-open-add-band]")).toHaveAttribute(
+      "data-open-add-band-settled",
+      "",
+    );
     expect(document.activeElement).toBe(container.querySelector('input[name="diverq"]'));
+    const marker = container.querySelector("[data-open-add-band]");
+    unmount();
+    expect(marker).not.toHaveAttribute("data-open-add-band-settled");
   });
 
   it("does nothing on a departure with no band", () => {

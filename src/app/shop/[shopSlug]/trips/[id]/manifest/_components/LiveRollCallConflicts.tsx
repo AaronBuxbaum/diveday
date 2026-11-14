@@ -41,6 +41,7 @@ export function LiveRollCallConflicts({
     row.context?.conflict ? (
       <RollCallEvidencePanel
         key={`${row.field}:${row.id}`}
+        checkpoint={manifest.checkpoint}
         context={row.context}
         locale={locale}
         timeZone={timeZone}

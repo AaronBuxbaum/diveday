@@ -90,6 +90,10 @@ export const DISCLOSURE_PROBE = "details[data-auto-open-details]";
 /** An add panel whose own focus/scroll effect has completed, independently of the header. */
 export const ADD_PANEL_PROBE = "[data-add-panel]";
 
+/** The add-booking band whose automatic focus and scroll may follow header hydration. */
+export const OPEN_ADD_BAND_PROBE =
+  "#add-a-booking:has([data-open-add-band]:not([data-open-add-band-settled])):visible";
+
 /** The settings hub's selection frame (`SettingsSelection`), which draws `data-hydrated` once it has chosen a setting. */
 export const SETTINGS_SELECTION_PROBE = "[data-settings-selection-root]";
 
@@ -144,6 +148,11 @@ export async function settleStaffHydration(page: Page): Promise<void> {
   await expect(
     page.locator(`${ADD_PANEL_PROBE}:not([data-add-panel-settled]):visible`),
     `${pathname} loaded, but the add panel never settled its focus and scroll`,
+  ).toHaveCount(0);
+  // Opening a departure add band can scroll after other hydration probes settle.
+  await expect(
+    page.locator(OPEN_ADD_BAND_PROBE),
+    `${pathname} loaded, but the add-booking band never settled its focus and scroll`,
   ).toHaveCount(0);
   // The settings hub is server-rendered with every group and picks the selected
   // one after hydration (`SettingsSelection`), and its rail moves the current row
