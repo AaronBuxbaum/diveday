@@ -5,6 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { capturedMeeting } from "@/test/offline-meeting-test-support";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { getIncidentExport } from "../features/incident-export/store";
 import { cancelBooking } from "./bookings";
@@ -169,6 +170,8 @@ describe("departure-log certification captures", () => {
       recordedByPersonId: staff.id,
       status: "boarded" as const,
       source: "offline" as const,
+      meetingDay: 0,
+      ...(await capturedMeeting(db, shop.id, reef.id, 0)),
       clientEventId: "99999999-9999-4999-8999-999999999999",
       occurredAt: nowDate(),
       offlineSnapshotSavedAt: savedAt,

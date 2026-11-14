@@ -79,6 +79,33 @@ function crewSubjectsAtClose(
   });
 }
 
+/** Read the assigned crew and independent retained warnings in one wave. */
+function crewAndSafetyForTrips(db: AppDb, shopId: string, tripIds: string[]) {
+  return unionAll(
+    db
+      .select({
+        tripId: tripAssignments.tripId,
+        personId: sql<string | null>`${tripAssignments.personId}`.as("person_id"),
+      })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds))),
+    db
+      .selectDistinct({
+        tripId: rollCallEventClaims.tripId,
+        personId: sql<string | null>`null::uuid`.as("person_id"),
+      })
+      .from(rollCallEventClaims)
+      .where(
+        and(
+          eq(rollCallEventClaims.shopId, shopId),
+          inArray(rollCallEventClaims.tripId, tripIds),
+          isNotNull(rollCallEventClaims.retainedSafetyEvidence),
+        ),
+      ),
+  );
+}
+
 /**
  * One shop day's departures — today's, or a past day's (issue #2662) —
  * backwards-looking on purpose, like `listRollCallGaps`: the boats this
@@ -213,29 +240,7 @@ async function dayTrips(
     // **The assigned crew** (issue #1346). Tenancy through `trips`:
     // `trip_assignments` carries no `shop_id` of its own (CR-007), so a trip id
     // alone must never reach a roster.
-    unionAll(
-      db
-        .select({
-          tripId: tripAssignments.tripId,
-          personId: sql<string | null>`${tripAssignments.personId}`.as("person_id"),
-        })
-        .from(tripAssignments)
-        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-        .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds))),
-      db
-        .selectDistinct({
-          tripId: rollCallEventClaims.tripId,
-          personId: sql<string | null>`null::uuid`.as("person_id"),
-        })
-        .from(rollCallEventClaims)
-        .where(
-          and(
-            eq(rollCallEventClaims.shopId, shopId),
-            inArray(rollCallEventClaims.tripId, tripIds),
-            isNotNull(rollCallEventClaims.retainedSafetyEvidence),
-          ),
-        ),
-    ),
+    crewAndSafetyForTrips(db, shopId, tripIds),
     // Their results, joined back to the roster with the same guard
     // `listRollCallGaps` uses, so a person taken off the trip cannot answer
     // for it. Oldest first: the last row read per (trip, person, checkpoint)
