@@ -147,7 +147,7 @@ export function CourseHero({
               course.heroImageAlt,
               t("course.photoAltFallback", { course: course.title, n: 1 }),
             )}
-            className="h-44 w-full sm:h-56 md:h-80"
+            className="aspect-[3/2] w-full sm:aspect-auto sm:h-56 md:h-80"
             sizes="(min-width: 1152px) 552px, (min-width: 768px) 48vw, 100vw"
             priority
           />

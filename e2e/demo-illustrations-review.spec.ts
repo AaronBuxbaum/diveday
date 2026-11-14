@@ -104,6 +104,12 @@ for (const width of [390, 1280]) {
       const photo = page.getByRole("img", { name: expected.alt });
       await expect(photo).toBeVisible();
       expect(await loadedScene(photo)).toBe(expected.url);
+      const frame = await photo.boundingBox();
+      expect(frame).not.toBeNull();
+      if (frame) {
+        if (width === 390) expect(frame.width / frame.height).toBeCloseTo(3 / 2, 2);
+        else expect(frame.height).toBe(320);
+      }
       expect(await settleCaptureFonts(page)).toBe("ready");
       await page.evaluate(() => window.scrollTo(0, 0));
       const name = `review-only-real-art-course-detail-${width}.png`;

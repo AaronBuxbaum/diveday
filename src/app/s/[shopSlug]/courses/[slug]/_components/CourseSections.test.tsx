@@ -71,7 +71,7 @@ describe("the public h1 joins the display scale", () => {
 
 /**
  * Visual review 2026-10-24, B34: the hero fills a landscape frame
- * (`object-cover`, 16:9) rather than standing at its own pixels on a gray
+ * (`object-cover`) rather than standing at its own pixels on a gray
  * letterbox. This supersedes issue #2419's natural-size hero; the gray band
  * either side of a narrow photo read as a broken page.
  */
