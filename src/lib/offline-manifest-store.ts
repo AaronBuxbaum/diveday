@@ -2460,9 +2460,12 @@ function completeOfflineSyncReceipt(
       return false;
     if (
       result.status === "unresolved" &&
-      !["meeting_identity_unverified", "unresolved_predecessor", "client_event_conflict"].includes(
-        result.reason,
-      )
+      ![
+        "booking_unavailable",
+        "meeting_identity_unverified",
+        "unresolved_predecessor",
+        "client_event_conflict",
+      ].includes(result.reason)
     )
       return false;
     if (
@@ -2588,7 +2591,8 @@ async function persistSyncReceiptWarnings(
         (result) =>
           postedIds.has(result.clientEventId) &&
           result.status === "unresolved" &&
-          (result.reason === "meeting_identity_unverified" ||
+          (result.reason === "booking_unavailable" ||
+            result.reason === "meeting_identity_unverified" ||
             result.reason === "unresolved_predecessor" ||
             result.reason === "client_event_conflict"),
       )

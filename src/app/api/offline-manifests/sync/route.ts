@@ -362,7 +362,8 @@ export async function POST(request: Request) {
       );
     if (
       !outcome.ok &&
-      (outcome.reason === "meeting_identity_unverified" ||
+      (outcome.reason === "booking_unavailable" ||
+        outcome.reason === "meeting_identity_unverified" ||
         outcome.reason === "unresolved_predecessor" ||
         outcome.reason === "client_event_conflict")
     ) {

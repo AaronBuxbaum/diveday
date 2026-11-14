@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
+import { createBooking, moveBooking } from "@/db/bookings";
 import { getTripManifest } from "@/db/manifests";
 import {
   bookingArrivalEvents,
@@ -9,7 +10,7 @@ import {
   rollCallEvents,
   tripScheduleDays,
 } from "@/db/schema";
-import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { createTrip, getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import type { DiveDaySession } from "@/lib/auth";
 import { authSecret } from "@/lib/auth-secret";
@@ -718,3 +719,48 @@ for (const role of ["diver", "crew"] as const) {
     });
   });
 }
+
+it("keeps an offline observation unresolved when the booked seat moved before upload", async () => {
+  const { db, shop, trip, staffPersonId, event: captured } = await capturedEvent("diver");
+  const booked = await createBooking(db, {
+    actor: "staff",
+    shopId: shop.id,
+    tripId: trip.id,
+    fullName: "Offline Move Regression",
+    email: "offline-move-regression@example.invalid",
+  });
+  if (!booked.ok) throw new Error(`fixture booking refused: ${booked.reason}`);
+  const startsAt = new Date(nowDate().getTime() + 40 * 24 * 60 * 60 * 1000);
+  const target = await createTrip(db, {
+    shopId: shop.id,
+    title: "Offline move regression target",
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+    capacity: 6,
+    plannedDives: 2,
+    priceCents: 12000,
+  });
+  if (!target) throw new Error("fixture target missing");
+  const event = await proveMeeting(
+    { ...captured, bookingId: booked.bookingId, status: "boarded" },
+    shop.id,
+  );
+  const moved = await moveBooking(db, {
+    shopId: shop.id,
+    fromTripId: trip.id,
+    toTripId: target.id,
+    bookingId: booked.bookingId,
+    actorPersonId: staffPersonId,
+  });
+  expect(moved.ok).toBe(true);
+  expect(await send(event)).toMatchObject({ status: "unresolved", reason: "booking_unavailable" });
+  const legacyResponse = await POST(postRequest({ events: [event] }));
+  expect(legacyResponse.status).toBe(409);
+  expect(await legacyResponse.json()).toEqual({ error: "booking_unavailable" });
+  expect(
+    await db
+      .select()
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.clientEventId, event.clientEventId)),
+  ).toHaveLength(0);
+});

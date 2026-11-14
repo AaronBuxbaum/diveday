@@ -646,7 +646,7 @@ it("sends a refused predecessor again as a dependency after reopening the queue"
   expect(seen).toEqual([[], [`client:${first.clientEventId}`]]);
 });
 
-it.each(["meeting_identity_unverified", "client_event_conflict"] as const)(
+it.each(["booking_unavailable", "meeting_identity_unverified", "client_event_conflict"] as const)(
   "retains %s and clears a disposed note even when refresh is missing",
   async (reason) => {
     const tripId = payload.manifests[0].trip.id;
