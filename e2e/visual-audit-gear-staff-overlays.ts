@@ -106,10 +106,17 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
               await summary.click();
             }
           } else {
-            const menu = shift.getByRole("button", { name: /^Shift for Keiko Tanaka on / });
+            // A phone row can hold several shifts for this person. Scope the
+            // menu to the shift whose note was created above.
+            const shiftLine = shift.getByText("Boat 2", { exact: true }).locator("../..");
+            const menu = shiftLine.getByRole("button", { name: /^Shift for Keiko Tanaka on / });
             if ((await menu.getAttribute("aria-expanded")) !== "true") await menu.click();
+            await expect(
+              shiftLine.getByRole("button", { name: "Remove", exact: true }),
+            ).toBeVisible();
           }
-          await expect(shift.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+          if ((await summary.count()) > 0)
+            await expect(shift.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
         },
       });
     });
