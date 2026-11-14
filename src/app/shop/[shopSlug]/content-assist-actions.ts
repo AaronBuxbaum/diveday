@@ -1,6 +1,6 @@
 "use server";
 
-import { canPersonConfigureTrips } from "@/db/authz";
+import { canPersonConfigureTrips, canPersonEditCourseTemplates } from "@/db/authz";
 import type { DiveSpecialty } from "@/db/schema";
 import { recordTranslation, translatableOriginal } from "@/db/shop-text-translations";
 import { runAssist } from "@/features/assists";
@@ -44,12 +44,19 @@ import { uuidParam } from "@/lib/uuid";
 
 /** The gate each kind's own edit form takes, so a draft or a save is never wider than the edit. */
 async function surfaceFor(shopSlug: string, kind: TranslatableKind) {
-  return kind === "trip"
-    ? requireShopSurface(shopSlug, {
-        allow: canPersonConfigureTrips,
-        refusal: { notice: "not-authorized", landing: ["trips"] },
-      })
-    : requireShopSurface(shopSlug);
+  if (kind === "trip") {
+    return requireShopSurface(shopSlug, {
+      allow: canPersonConfigureTrips,
+      refusal: { notice: "not-authorized", landing: ["trips"] },
+    });
+  }
+  if (kind === "course") {
+    return requireShopSurface(shopSlug, {
+      allow: canPersonEditCourseTemplates,
+      refusal: { notice: "not-authorized", landing: ["courses"] },
+    });
+  }
+  return requireShopSurface(shopSlug);
 }
 
 /** A short single-line word from a form box, or undefined for a blank one. */

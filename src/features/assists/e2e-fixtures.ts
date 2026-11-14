@@ -54,13 +54,26 @@ function systemText(request: ClaudeRequest): string {
 /** The fixture answer for one request, shaped as the API answers. */
 export function fixtureMessage(request: ClaudeRequest): ClaudeMessage {
   const answer = FIXTURES.get(systemText(request))?.(request) ?? {};
+  const lookup =
+    request.messages.length === 1 &&
+    request.tools?.some((tool) => "name" in tool && tool.name === "read_shop_facts");
   return {
     id: "msg_e2e_fixture",
     type: "message",
     role: "assistant",
     model: request.model,
-    content: [{ type: "text", text: JSON.stringify(answer), citations: null }],
-    stop_reason: "end_turn",
+    content: lookup
+      ? [
+          {
+            type: "tool_use",
+            caller: { type: "direct" },
+            id: "fixture_lookup",
+            name: "read_shop_facts",
+            input: {},
+          },
+        ]
+      : [{ type: "text", text: JSON.stringify(answer), citations: null }],
+    stop_reason: lookup ? "tool_use" : "end_turn",
     stop_sequence: null,
     stop_details: null,
     container: null,

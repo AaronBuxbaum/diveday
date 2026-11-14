@@ -106,7 +106,11 @@ describe("BookingPartyFields", () => {
 
   it("shows the big-group escape hatch once the party cap is below the maximum (task 24)", () => {
     renderDiver(<BookingPartyFields maxPartySize={3} />);
+    expect(screen.queryByText("Bringing more than 3? Contact the shop.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "3 people" }));
     expect(screen.getByText("Bringing more than 3? Contact the shop.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "2 people" }));
+    expect(screen.queryByText("Bringing more than 3? Contact the shop.")).not.toBeInTheDocument();
     // The address and number stand once in the page's "Questions?" line and
     // once in the footer, not a third time here (visual review 2026-10-24, B23).
     expect(screen.queryByRole("link", { name: /contact the shop/i })).toBeNull();
@@ -387,6 +391,7 @@ it("links a larger group to the trip-prefilled request", () => {
       groupRequestHref="/s/reef?groupTrip=Reef#request-a-date"
     />,
   );
+  fireEvent.click(screen.getByRole("radio", { name: "3 people" }));
   expect(
     screen.getByRole("link", { name: "Bringing more than 3? Ask about a group trip." }),
   ).toHaveAttribute("href", "/s/reef?groupTrip=Reef#request-a-date");

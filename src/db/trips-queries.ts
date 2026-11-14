@@ -19,6 +19,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { SEAT_WAITING_CONFLICTS } from "@/lib/boarding-observations";
 import { sellableSeats } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -45,6 +46,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { offsetPage } from "./paging";
 import {
+  boardingObservations,
   boats,
   bookings,
   courses,
@@ -532,6 +534,19 @@ export const seatHeld = eq(bookings.status, "booked");
 export const seatNotCancelled = ne(bookings.status, "cancelled");
 
 /**
+ * A released seat (`no_show`) whose diver the desk has since seen at the dock,
+ * with that observation still waiting for this departure's seat (issue #4474):
+ * pending, or in conflict only because the boat or the session has no room
+ * (`SEAT_WAITING_CONFLICTS`, src/lib/boarding-observations.ts). Occupancy
+ * only: such a seat is not on the expected list until the observation is
+ * applied.
+ */
+export const seatAwaitedAtDock = and(
+  eq(bookings.status, "no_show"),
+  sql`exists (select 1 from ${boardingObservations} where ${boardingObservations.bookingId} = ${bookings.id} and ${boardingObservations.tripId} = ${bookings.tripId} and ${boardingObservations.shopId} = ${bookings.shopId} and (${boardingObservations.state} = 'pending' or (${boardingObservations.state} = 'conflict' and ${inArray(boardingObservations.conflictCode, [...SEAT_WAITING_CONFLICTS])})))`,
+);
+
+/**
  * The join that makes `booked` a count of the seats somebody is holding rather
  * than of every row. Exported so every reader counts seats with the same
  * predicate the schedule does, rather than a second spelling of it.
@@ -567,11 +582,28 @@ export const bookedSnorkelersCount = () =>
  * which is what makes the answer a gate rather than advice. The ones that add
  * someone aboard (`createBookingRecord`, `restoreBooking`, `undoBookingNoShow`,
  * `askForDeparture`) measure the boat against `sellableCapacity`.
+ *
+ * **And a released seat with an open boarding observation** (issue #4474): the
+ * desk saw that diver at the dock, the observation is recorded and waiting for
+ * its seat (`src/db/boarding-observations.ts`), and until it is applied or
+ * dismissed the freed seat is theirs, not the next buyer's. Counted here, the
+ * one occupancy read every gate shares, so a sale, a move, a restore and the
+ * observation's own allocation all see the same number.
  */
 export async function heldSeatCounts(
   tx: DbExecutor,
   shopId: string,
   tripId: string,
+  options: {
+    /**
+     * False: only the seats actually held, without the dock sightings still
+     * waiting. The allocation measures a sighting against these alone, so
+     * waiting sightings never hold places from one another (issue #4474).
+     */
+    awaited?: boolean;
+    /** A seat measured for itself, which must not count against its own place. */
+    exceptBookingId?: string;
+  } = {},
 ): Promise<SeatCounts> {
   const [row] = await tx
     .select({
@@ -581,7 +613,14 @@ export async function heldSeatCounts(
       ),
     })
     .from(bookings)
-    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatHeld));
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        options.awaited === false ? seatHeld : or(seatHeld, seatAwaitedAtDock),
+        options.exceptBookingId ? ne(bookings.id, options.exceptBookingId) : undefined,
+      ),
+    );
   return { aboard: row?.aboard ?? 0, divers: row?.divers ?? 0 };
 }
 
@@ -727,6 +766,9 @@ export async function pagedUpcomingTripsWithCounts(
     monthEnd?: Date;
     /** Only trips with at least one open seat (booked < capacity). */
     hasSpace?: boolean;
+    minSeats?: number;
+    /** Optional schedule floor, such as the start of the shop-local day. */
+    from?: Date;
     /** "fun_dive" for no linked course, "course" for a course session. */
     tripType?: "fun_dive" | "course";
     /** Hide private charters/sessions (e.g. for public storefront schedule). */
@@ -749,8 +791,8 @@ export async function pagedUpcomingTripsWithCounts(
   const afterDate = after ? new Date(after[0]) : null;
   const beforeDate = before ? new Date(before[0]) : null;
   const nowWithBuffer = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
-  const lowerBound =
-    options.monthStart && options.monthStart > nowWithBuffer ? options.monthStart : nowWithBuffer;
+  const floor = options.from ?? nowWithBuffer;
+  const lowerBound = options.monthStart && options.monthStart > floor ? options.monthStart : floor;
 
   const rows = await db
     .select({
@@ -799,7 +841,14 @@ export async function pagedUpcomingTripsWithCounts(
       ),
     )
     .groupBy(trips.id, courses.id, diveSites.id)
-    .having(hasSpaceHaving(options.hasSpace))
+    .having(
+      options.minSeats
+        ? sql`count(${bookings.id}) + ${options.minSeats} <= ${tripSellableSeatsSql()}
+            and (${trips.snorkelerPriceCents} is not null or ${trips.riderPriceCents} is not null
+              or ${trips.diverCapacity} is null
+              or ${bookedDiversCount()} + ${options.minSeats} <= ${trips.diverCapacity})`
+        : hasSpaceHaving(options.hasSpace),
+    )
     // The keyset cursor carries all three keys (`src/db/cursor.ts`, issue
     // #2175), so the filter above resumes exactly after (or, reading back,
     // exactly before) the row the cursor names.

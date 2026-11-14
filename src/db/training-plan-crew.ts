@@ -3,7 +3,7 @@ import { alias } from "drizzle-orm/pg-core";
 import type { DbExecutor } from "./client";
 import { bookings, tripAssignments } from "./schema";
 
-/** Called under the shop rewrite lock and the changed trip's row lock. */
+/** Called under the crew schedule lock (`lockCrewSchedule`) and the changed trip's row lock. */
 export async function invalidateTrainingPlansForCrewChange(
   tx: DbExecutor,
   shopId: string,

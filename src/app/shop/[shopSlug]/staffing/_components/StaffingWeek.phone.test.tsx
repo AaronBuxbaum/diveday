@@ -79,6 +79,15 @@ describe("the phone staffing day", () => {
     expect(heading.compareDocumentPosition(person) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("wraps crew into compact chips without detaching each person's warning", () => {
+    const { list } = renderPhoneDay({ canManage: true });
+    const warning = within(list).getByText(/^Away Thu/);
+    const chip = warning.closest("a");
+    expect(chip).toHaveClass("min-h-11", "rounded-lg");
+    expect(chip?.closest("ul")).toHaveClass("flex", "flex-wrap", "gap-2");
+    expect(chip).toHaveTextContent("Keiko Tanaka");
+  });
+
   it("names the person's full away dates under their own departure", () => {
     const { list } = renderPhoneDay({ canManage: true });
     const warning = within(list).getByText(/^Away Thu/);

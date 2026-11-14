@@ -69,11 +69,13 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
     }) => {
       await page.goto(`/shop/${privateShop.slug}/staffing?view=plan`);
       await page.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
-      const form = page.locator("#add-shift");
+      const form = page.locator("details", {
+        has: page.locator(`input[name="date"][value="${daysFromNow(2)}"]`),
+      });
+      await form.locator("> summary").click();
       await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
-      await form.getByLabel("Date").fill(daysFromNow(2));
-      await form.getByLabel("Starts").fill("06:30");
-      await form.getByLabel("Ends").fill("14:45");
+      await form.getByLabel("Starts").fill("01:00");
+      await form.getByLabel("Ends").fill("01:30");
       await form.getByLabel("Note").fill("Boat 2");
       await capture(page, "staffing-add-shift-editor", "light");
       await form.getByRole("button", { name: "Add shift" }).click();
@@ -104,10 +106,17 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
               await summary.click();
             }
           } else {
-            const menu = shift.getByRole("button", { name: /^Shift for Keiko Tanaka on / });
+            // A phone row can hold several shifts for this person. Scope the
+            // menu to the shift whose note was created above.
+            const shiftLine = shift.getByText("Boat 2", { exact: true }).locator("../..");
+            const menu = shiftLine.getByRole("button", { name: /^Shift for Keiko Tanaka on / });
             if ((await menu.getAttribute("aria-expanded")) !== "true") await menu.click();
+            await expect(
+              shiftLine.getByRole("button", { name: "Remove", exact: true }),
+            ).toBeVisible();
           }
-          await expect(shift.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+          if ((await summary.count()) > 0)
+            await expect(shift.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
         },
       });
     });

@@ -174,6 +174,14 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="M8.5 16c1.5-2.5 2.5-2.5 3.5 0s2 2.5 3.5 0" />
     </>
   ),
+  // Signed waivers: the same signed page.
+  signedWaivers: (
+    <>
+      <path d="M15 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6Z" />
+      <path d="M14 2v4h5" />
+      <path d="M8.5 16c1.5-2.5 2.5-2.5 3.5 0s2 2.5 3.5 0" />
+    </>
+  ),
   // Reviews: what a diver said afterwards — a star.
   reviews: (
     <>

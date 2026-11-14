@@ -54,6 +54,12 @@ export type StructuredCall<S extends z.ZodType> = {
   readonly effort?: "low" | "medium" | "high";
   /** Server tools, such as `webFetchTool(...)`. */
   readonly tools?: Anthropic.ToolUnion[];
+  /** A single explicitly registered read-only client tool, bound by the caller. */
+  readonly clientTool?: {
+    readonly name: string;
+    readonly required?: boolean;
+    readonly execute: (input: unknown) => Promise<string>;
+  };
   /** Reads the model's own 0–1 confidence off the value, when the schema carries one. */
   readonly confidence?: (value: z.infer<S>) => number;
   /** Below this the value is dropped. Defaults to 0.6. */
@@ -229,7 +235,9 @@ export async function callStructured<S extends z.ZodType>(
       requestId,
       transcript: transcriptOf(
         call,
-        last && last.stop_reason !== "pause_turn" ? last : null,
+        last && last.stop_reason !== "pause_turn" && (!call.clientTool || outcome === "ok")
+          ? last
+          : null,
         responses,
       ),
     };
@@ -237,12 +245,39 @@ export async function callStructured<S extends z.ZodType>(
 
   try {
     let messages = request.messages;
+    let clientToolUsed = false;
     for (let attempt = 0; attempt <= MAX_CONTINUATIONS; attempt += 1) {
       const message = await provider.createMessage({ ...request, messages });
       responses.push(message);
       requestId = requestIdOf(message) ?? requestId;
       usage = addUsage(usage, usageOf(message));
+      if (message.stop_reason === "tool_use") {
+        const blocks = message.content.filter((block) => block.type === "tool_use");
+        const block = blocks[0];
+        if (
+          clientToolUsed ||
+          !call.clientTool ||
+          blocks.length !== 1 ||
+          !block ||
+          block.name !== call.clientTool.name
+        ) {
+          return done(null, "invalid");
+        }
+        clientToolUsed = true;
+        const result = await call.clientTool.execute(block.input);
+        if (result.length > 40_000) return done(null, "invalid");
+        messages = [
+          ...messages,
+          { role: "assistant", content: message.content as Anthropic.ContentBlockParam[] },
+          {
+            role: "user",
+            content: [{ type: "tool_result", tool_use_id: block.id, content: result }],
+          },
+        ];
+        continue;
+      }
       if (message.stop_reason !== "pause_turn") {
+        if (call.clientTool?.required && !clientToolUsed) return done(null, "invalid");
         const { value, outcome } = readValue(message, call);
         return done(value, outcome);
       }

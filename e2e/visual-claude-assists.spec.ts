@@ -123,7 +123,9 @@ test.describe("light mode — Claude's assists, lit", () => {
       await copyResponse.scrollIntoViewIfNeeded();
       await copyResponse.click({ trial: true });
       await page.setViewportSize({ width: 1280, height: 800 });
-      await row.getByRole("link", { name: "Open the record for Diego Alvarez" }).click();
+      // The sender name opens the conversation directly.
+      await page.keyboard.press("Escape");
+      await row.getByRole("link", { name: "Diego Alvarez" }).click();
       await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
       const conversation = page.getByRole("region", { name: "Conversation" });
       await conversation.getByRole("button", { name: "Draft with AI" }).click();

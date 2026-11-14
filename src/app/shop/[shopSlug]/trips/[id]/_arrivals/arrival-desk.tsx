@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FIGURE_HERO_CLASS } from "@/components/ui/typography";
+import { openBoardingObservationsByTrip } from "@/db/boarding-observations";
 import type { AppDb } from "@/db/client";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
@@ -77,6 +79,53 @@ export function deskIsOpen(trip: { status: string; startsAt: Date }, now: Date):
  *
  * Returns `null` outside the arrivals window (`deskIsOpen`).
  */
+/** Seats the desk already said are here, still waiting on the boat (issue #4474). */
+async function observedSeatIds(db: AppDb, shopId: string, tripId: string): Promise<Set<string>> {
+  const observations = await openBoardingObservationsByTrip(db, shopId, [tripId]);
+  return new Set((observations.get(tripId) ?? []).map((row) => row.bookingId));
+}
+
+/**
+ * A released seat's one act: "They're here", until the desk has said it. Once
+ * said, the departure's conflicts band says why the seat has not come back,
+ * and a second tap would only join the first. Nothing once a diver turned away
+ * is ashore past the start.
+ */
+function releasedSeatControl({
+  row,
+  observedHere,
+  turnedAwayAfterStart,
+  undoNoShow,
+  t,
+}: {
+  row: { bookingId: string; personName: string };
+  observedHere: ReadonlySet<string>;
+  turnedAwayAfterStart: boolean;
+  undoNoShow: (formData: FormData) => Promise<void>;
+  t: StaffTranslator;
+}): ReactNode {
+  if (observedHere.has(row.bookingId)) {
+    return (
+      <p className="text-sm font-medium text-warning-strong">{t("checkIn.noShow.hereWaiting")}</p>
+    );
+  }
+  if (turnedAwayAfterStart) return null;
+  return (
+    <RowActionForm action={undoNoShow} sendFailedLabel={t("checkIn.sendFailedButton")}>
+      <input type="hidden" name="bookingId" value={row.bookingId} />
+      {/* One key per drawn tap: a resend of this form is the same observation. */}
+      <input type="hidden" name="observationKey" value={randomUUID()} />
+      <SubmitButton
+        pendingLabel={t("checkIn.noShow.undoing")}
+        ariaLabel={t("checkIn.noShow.undoAriaLabel", { name: row.personName })}
+        className={buttonClass({ variant: "ghost", size: "sm" })}
+      >
+        {t("checkIn.noShow.undo")}
+      </SubmitButton>
+    </RowActionForm>
+  );
+}
+
 export async function buildArrivalDesk({
   db,
   shopId,
@@ -99,9 +148,10 @@ export async function buildArrivalDesk({
   t: StaffTranslator;
 }): Promise<ArrivalDesk | null> {
   if (!deskIsOpen(trip, now)) return null;
-  const [rows, welcomeInputs] = await Promise.all([
+  const [rows, welcomeInputs, observedHere] = await Promise.all([
     listCheckInQueue(db, shopId, { now, tripId }),
     welcomeCueInputsByBooking(db, shopId, tripId, now),
+    observedSeatIds(db, shopId, tripId),
   ]);
 
   const checkIn = checkInAction.bind(null, shopSlug, tripId);
@@ -159,21 +209,14 @@ export async function buildArrivalDesk({
       // **The released seat, and what to do with it.** The group says "Not
       // here"; the row's one act is walking it back for the diver who turns up
       // as the lines come off.
-      if (!turnedAwayAfterStart) {
-        controls.set(
-          row.bookingId,
-          <RowActionForm action={undoNoShow} sendFailedLabel={t("checkIn.sendFailedButton")}>
-            <input type="hidden" name="bookingId" value={row.bookingId} />
-            <SubmitButton
-              pendingLabel={t("checkIn.noShow.undoing")}
-              ariaLabel={t("checkIn.noShow.undoAriaLabel", { name: row.personName })}
-              className={buttonClass({ variant: "ghost", size: "sm" })}
-            >
-              {t("checkIn.noShow.undo")}
-            </SubmitButton>
-          </RowActionForm>,
-        );
-      }
+      const released = releasedSeatControl({
+        row,
+        observedHere,
+        turnedAwayAfterStart,
+        undoNoShow,
+        t,
+      });
+      if (released) controls.set(row.bookingId, released);
       // **Turned away says so, in its own words** (H-20261015-who-may-turn-someone): the desk saw this
       // diver and refused them, which is not "did not arrive". The reason is
       // the category alone.

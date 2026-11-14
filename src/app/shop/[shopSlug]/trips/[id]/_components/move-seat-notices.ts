@@ -15,6 +15,7 @@ export const MOVE_SEAT_NOTICES = {
     key: "trips.notices.seatMovedOwedFlySafeUnreached",
   },
   "seat-moved": { form: "roster", tone: "success", key: "trips.notices.seatMoved" },
+  "seat-moved-clash": { form: "roster", tone: "warning", key: "trips.notices.seatMovedClash" },
   "seat-moved-untold": { form: "roster", tone: "warning", key: "trips.notices.seatMovedUntold" },
   "seat-moved-owed": { form: "roster", tone: "warning", key: "trips.notices.seatMovedOwed" },
   "party-moved": {

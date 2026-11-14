@@ -36,52 +36,65 @@ describe("the phone calendar", () => {
 });
 
 describe("your week on the Shifts tab", () => {
+  const days = [
+    "2026-08-24",
+    "2026-08-25",
+    "2026-08-26",
+    "2026-08-27",
+    "2026-08-28",
+    "2026-08-29",
+    "2026-08-30",
+  ].map((date) => ({ date, label: date, isToday: false }));
   const shift = {
     id: "shift-1",
     startsAt: new Date("2026-08-27T10:30:00.000Z"),
     endsAt: new Date("2026-08-27T16:00:00.000Z"),
     note: "Dock",
   };
-  const render_ = (canManage: boolean, shifts = [shift], blocks = [] as never[]) =>
+  const away = (
+    status: "pending" | "approved" | "declined",
+    decisionNote: string | null = null,
+  ) => ({
+    id: `away-${status}`,
+    personId: KEIKO.personId,
+    startsOn: "2026-08-29",
+    endsOn: "2026-08-30",
+    note: "Family",
+    status,
+    decisionNote,
+  });
+  const render_ = (blocks: ReturnType<typeof away>[] = [], approvalRequired = false) =>
     render(
       <StaffingMyWeek
-        shifts={shifts}
+        days={days}
+        shifts={[shift]}
         blocks={blocks}
         locale="en-US"
         timeZone="America/New_York"
-        canManage={canManage}
+        selfId={KEIKO.personId}
+        approvalRequired={approvalRequired}
         t={staffTranslator("en-US")}
+        createShiftAction={vi.fn()}
+        saveAwayAction={vi.fn()}
         deleteShiftAction={vi.fn()}
         deleteAwayAction={vi.fn()}
       />,
     );
 
-  it("lists my shift and days off with doors to add more", () => {
-    render_(true, [shift], [
-      {
-        id: "away-1",
-        personId: KEIKO.personId,
-        startsOn: "2026-08-29",
-        endsOn: "2026-08-30",
-        note: "Family",
-      },
-    ] as never[]);
+  it("lists each day with my shift, and an Add on every day", () => {
+    render_();
     expect(screen.getByText("Dock")).toBeVisible();
-    expect(screen.getByText("Family")).toBeVisible();
-    expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Add a shift" })).toHaveAttribute("href", "#add-shift");
-    expect(screen.getByRole("link", { name: "Add days off" })).toHaveAttribute("href", "#add-away");
+    expect(screen.getAllByText("Add")).toHaveLength(7);
   });
 
-  it("offers a crew member only the days-off door and no shift Remove", () => {
-    render_(false);
-    expect(screen.queryByRole("link", { name: "Add a shift" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Add days off" })).toBeVisible();
+  it("says where a day off stands, and why when it was declined", () => {
+    render_([away("declined", "Short-staffed")]);
+    expect(screen.getAllByText("Declined").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Why: Short-staffed").length).toBeGreaterThan(0);
   });
 
-  it("says so when there is nothing", () => {
-    render_(true, []);
-    expect(screen.getByText("Nothing scheduled this week")).toBeVisible();
+  it("marks a day off waiting for an owner as waiting", () => {
+    render_([away("pending")], true);
+    expect(screen.getAllByText("Waiting for an OK").length).toBeGreaterThan(0);
   });
 });

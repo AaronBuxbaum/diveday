@@ -796,15 +796,22 @@ export async function setShopCrewScheduleEnabled(
   return shop ?? null;
 }
 
-/** Sets the divemaster target the crew schedule's nudges are measured against. */
+/**
+ * Sets the divemaster target the crew schedule's nudges are measured against, and whether a crew
+ * member's days off wait for an owner or manager.
+ */
 export async function setShopDiversPerDivemaster(
   db: AppDb,
   shopId: string,
   diversPerDivemaster: number,
+  timeOffApprovalEnabled?: boolean,
 ) {
   const [shop] = await db
     .update(shops)
-    .set({ diversPerDivemaster })
+    .set({
+      diversPerDivemaster,
+      ...(timeOffApprovalEnabled === undefined ? {} : { timeOffApprovalEnabled }),
+    })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

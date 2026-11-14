@@ -2,7 +2,6 @@
 
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createBasemapMap } from "./leaflet-basemap";
 import { clusterMapPoints, mapTargetIsVisible, separateShopAnchor } from "./map-clustering";
 import { labelRectangle, placeMapLabel, rectanglesOverlap } from "./map-label-placement";
 import {
@@ -15,6 +14,7 @@ import {
 } from "./map-markup";
 import { loadSitePopupDetails } from "./map-popup-details";
 import { clearMapViewport, readMapViewport, writeMapViewport } from "./map-viewport-storage";
+import { createInteractiveMap } from "./modifier-wheel-map";
 
 export type MapPin = {
   id: string;
@@ -109,7 +109,7 @@ export default function SiteMap({
 
       const savedView = viewportStorageKey ? readMapViewport(viewportStorageKey) : null;
       restoredViewRef.current = savedView !== null;
-      const map = createBasemapMap(L, containerRef.current, {
+      const map = createInteractiveMap(L, containerRef.current, {
         center: savedView
           ? [savedView.latitude, savedView.longitude]
           : [center.latitude, center.longitude],

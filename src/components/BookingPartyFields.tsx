@@ -173,6 +173,11 @@ export function BookingPartyFields({
   const t = useTranslations();
   const [size, setSize] = useState(() => initialBookingPartySize(initialSize, maxPartySize));
   const [hydrated, setHydrated] = useState(false);
+  const [increasedToLimit, setIncreasedToLimit] = useState(false);
+  const changeSize = (next: number) => {
+    setIncreasedToLimit(next === limit && next > size);
+    setSize(next);
+  };
   const { party, updateMember, rememberedDiver, forgetRememberedDiver, forgetCouldNotConfirm } =
     usePartyMembers(lead, rememberForShop, getTrustedServerTime);
   const [phone, setPhone] = useState(lead?.phone ?? "");
@@ -212,7 +217,7 @@ export function BookingPartyFields({
           accessible name and the same `data-hydrated` flag, so anything asking
           for "People" finds one element either way. */}
       {countControl === "stepper" ? (
-        <PartySizeStepper size={size} limit={limit} hydrated={hydrated} onChange={setSize} />
+        <PartySizeStepper size={size} limit={limit} hydrated={hydrated} onChange={changeSize} />
       ) : segmented ? (
         <div>
           <p id="party-size-label" className="text-sm font-semibold">
@@ -259,7 +264,7 @@ export function BookingPartyFields({
                   name="partySize"
                   value={count}
                   checked={size === count}
-                  onChange={() => setSize(count)}
+                  onChange={() => changeSize(count)}
                   aria-label={t("party.diverCountOption", { count })}
                   className="sr-only"
                 />
@@ -275,7 +280,7 @@ export function BookingPartyFields({
               name="partySize"
               value={size}
               data-hydrated={hydrated ? "true" : "false"}
-              onChange={(event) => setSize(Number(event.target.value))}
+              onChange={(event) => changeSize(Number(event.target.value))}
               className={controlClass}
             >
               {counts.map((count) => (
@@ -291,7 +296,7 @@ export function BookingPartyFields({
           however many seats remain) — a bigger group has no way to book itself
           here, so it needs an explicit way out rather than a dead end at the
           last option (task 24). */}
-      {limit < MAX_PUBLIC_PARTY_SIZE ? (
+      {limit < MAX_PUBLIC_PARTY_SIZE && increasedToLimit && size === limit ? (
         // The shop's address and number stand once in the page body, in
         // the "Questions?" line under this card, and once in the footer
         // (visual review 2026-10-24, B23); this line points there.

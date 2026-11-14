@@ -9,7 +9,7 @@ import { DEMO_RECAP_BOOKING_ID, DEMO_TODAY_TRIP_ID } from "../src/db/seed-identi
 import { DEMO_MEDICAL_ALERT, DEMO_MEDICAL_ALERT_TRIP } from "../src/db/seed-medical-alert";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { ARRIVAL_MAP_PROBES } from "../src/lib/maps";
+import { MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { assertCrewPdfPixels } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { bookASeatAndOpenThread, openTripFromBoard, seededTripId } from "./helpers";
@@ -51,7 +51,7 @@ test.describe("print", () => {
   test.use({ viewport: { width: 816, height: 1056 } });
 
   test("the diver's day prints as its sheet, with the address and no map", async ({ page }) => {
-    for (const probe of ARRIVAL_MAP_PROBES) {
+    for (const probe of MAP_REACHABILITY_PROBES) {
       await page.route(probe, (route) =>
         route.fulfill({
           contentType: "image/svg+xml",
@@ -62,9 +62,21 @@ test.describe("print", () => {
     await openReefTrip(page);
     const publicPath = new URL(page.url()).pathname.replace("/shop/", "/s/");
     await page.goto(publicPath);
+    // Booking can navigate client-side, retaining the trip document's policy.
+    // The arrival tile itself must still suppress the referrer on that path.
+    const arrivalTile = page.waitForRequest(
+      (request) =>
+        page.url().includes("/ready/") &&
+        request.resourceType() === "image" &&
+        request.url().startsWith("https://server.arcgisonline.com/") &&
+        !MAP_REACHABILITY_PROBES.includes(
+          request.url() as (typeof MAP_REACHABILITY_PROBES)[number],
+        ),
+    );
     await bookASeatAndOpenThread(page, "Print Map Diver", "print-map@example.com");
-    const map = page.locator('iframe[src*="openstreetmap.org/export/embed"]');
+    const map = page.getByRole("region", { name: /^Map of / });
     await expect(map).toBeVisible();
+    expect((await arrivalTile).headers()).not.toHaveProperty("referer");
     const address = page.locator("address").first();
     await expect(address).not.toBeEmpty();
     const cancel = page.getByRole("button", { name: "Cancel my seat", exact: true });

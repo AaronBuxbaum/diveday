@@ -1,22 +1,14 @@
 {
   "addShift": {
-    "heading": "Agregar un turno",
     "person": "Miembro del personal",
-    "choosePerson": "Elige una persona",
-    "date": "Fecha",
     "starts": "Empieza",
     "ends": "Termina",
     "note": "Nota",
-    "noteHint": "(opcional)",
     "notePlaceholder": "Muelle, aula, barco 2",
     "submit": "Agregar turno"
   },
   "away": {
     "from": "Desde",
-    "heading": "Agregar días libres",
-    "note": "Nota",
-    "notePlaceholder": "Algo que el centro deba saber",
-    "person": "Miembro del personal",
     "save": "Guardar",
     "to": "Hasta"
   },
@@ -88,7 +80,10 @@
     "staffNotFound": "Esa persona ya no forma parte del equipo de este centro.",
     "tripNotFound": "Esa salida ya no está en el tablero.",
     "crewConsentSaved": "Guardado. Los buceadores verán tu nombre en las salidas que tripules.",
-    "crewConsentWithdrawn": "Guardado. Tu nombre desaparece de las salidas que tripules."
+    "crewConsentWithdrawn": "Guardado. Tu nombre desaparece de las salidas que tripules.",
+    "awayRequested": "Enviado. Un propietario o gerente lo aprobará o dirá por qué no.",
+    "awayApproved": "Aprobado",
+    "awayDeclined": "Rechazado, y la persona verá el motivo"
   },
   "week": {
     "approve": "Aprobar",
@@ -158,5 +153,26 @@
     "removePhoto": "Eliminar foto {number}",
     "saved": "Tu presentación pública se guardó.",
     "withdrawn": "Tu presentación pública está oculta y sus fotos se están eliminando."
+  },
+  "mine": {
+    "heading": "Tu semana",
+    "nothing": "Nada todavía",
+    "dayOff": "Día libre",
+    "add": "Agregar",
+    "addTo": "Agregar al {day}",
+    "tabShift": "Turno",
+    "tabDayOff": "Día libre",
+    "needsOk": "Un propietario o gerente aprueba los días libres. Verás su respuesta aquí.",
+    "statusPending": "Esperando aprobación",
+    "statusApproved": "Aprobado",
+    "statusDeclined": "Rechazado",
+    "reason": "Motivo: {reason}",
+    "approvalsHeading": "Días libres esperando tu respuesta",
+    "asked": "{person} pidió {dates}",
+    "approve": "Aprobar",
+    "decline": "Rechazar",
+    "reasonLabel": "Motivo",
+    "reasonHint": "(opcional, lo verá la persona)",
+    "reasonPlaceholder": "Falta personal ese fin de semana"
   }
 }

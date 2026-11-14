@@ -766,14 +766,13 @@ describe("tomorrow from tonight", () => {
 });
 
 /**
- * **Each diver once, a long boat folded** (UX delight sheet 2026-10-22, item
- * 4): naming every diver may not bury the boat, and folding may not drop one.
+ * **Each diver once, a long boat shown whole** (Aaron, 2026-11-13): no "and N more".
  */
 describe("a boat with many divers to name", () => {
   const names = ["Ana", "Ben", "Cara", "Dev", "Eli", "Fay", "Gus", "Hal"];
   const rows = names.map((name, index) =>
     action({
-      // Boat work: a readiness blocker never folds (`foldBoatRows`).
+      // Boat work.
       id: `prep:t1:p${index}`,
       kind: "dive_prep",
       subject: `${name} Diver`,
@@ -784,22 +783,11 @@ describe("a boat with many divers to name", () => {
     }),
   );
 
-  it("shows its first rows and folds the rest behind and N more, every diver still on the page", () => {
+  it("shows every diver, with no and N more", () => {
     const { container } = renderSpine({ actions: rows });
-    const fold = screen.getByText("and 3 more");
-    expect(fold.closest("summary")).not.toBeNull();
-    expect(fold.closest("details")?.hasAttribute("open")).toBe(false);
     for (const name of names) expect(screen.getByText(`${name} Diver`)).toBeTruthy();
-    // The folded rows sit inside the fold, the first five above it.
-    const folded = fold.closest("details");
-    expect(folded?.textContent).toContain("Fay Diver");
-    expect(folded?.textContent).not.toContain("Ana Diver");
-    expect(container.textContent).toContain("rental size, emergency contact");
-  });
-
-  it("shows a boat of six whole, since and 1 more would cost the row it hides", () => {
-    renderSpine({ actions: rows.slice(0, 6) });
     expect(screen.queryByText(/and \d+ more/)).toBeNull();
+    expect(container.querySelector("details")).toBeNull();
   });
 });
 

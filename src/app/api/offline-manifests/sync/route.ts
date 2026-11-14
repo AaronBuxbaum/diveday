@@ -304,6 +304,16 @@ export async function POST(request: Request) {
           // with it — and never a `""` handed to a uuid comparison, which
           // Postgres raises on rather than coercing.
           { ok: false as const, reason: "invalid_subject" as const };
+    // Access can be revoked after the route gate. Refuse the whole request so
+    // the device retains its queue; any earlier commits retry under the same IDs.
+    if (!outcome.ok && outcome.reason === "staff_not_found")
+      return Response.json(
+        { error: "authentication_required" },
+        {
+          status: 401,
+          headers: { "Cache-Control": "private, no-store" },
+        },
+      );
     results.push({
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",
@@ -336,6 +346,14 @@ export async function POST(request: Request) {
       occurredAt: new Date(event.occurredAt),
       note: event.note ?? undefined,
     });
+    if (!outcome.ok && outcome.reason === "staff_not_found")
+      return Response.json(
+        { error: "authentication_required" },
+        {
+          status: 401,
+          headers: { "Cache-Control": "private, no-store" },
+        },
+      );
     results.push({
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",
@@ -377,6 +395,14 @@ export async function POST(request: Request) {
             ...common,
             retractsClientEventId: event.retractsClientEventId,
           });
+    if (!outcome.ok && outcome.reason === "staff_not_found")
+      return Response.json(
+        { error: "authentication_required" },
+        {
+          status: 401,
+          headers: { "Cache-Control": "private, no-store" },
+        },
+      );
     results.push({
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",

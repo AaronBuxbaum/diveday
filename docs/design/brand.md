@@ -345,11 +345,12 @@ screen, with short notes from the person who built it pointing at specific thing
 **The about page** (`/about`, since 2026-10-07; H-20261006-about-say-whose-voice). The company, saying why it exists, who
 builds it and what it holds every screen to.
 
-- Who talks: DiveDay, in the plural, throughout. The prose names no individual and states no CV;
-  the "Who we are" band is signed "Aaron Buxbaum, Founder" (Aaron, 2026-11-11), the one name and
-  title on the site; the people who build it are described in generalities that are true of
-  them (people who build software for a living and dive). The founder's confirmed facts in
-  [product/marketing.md](../product/marketing.md)'s biography rule stay confirmed and unused.
+- Who talks: DiveDay, in the plural, except the "Who we are" band. That band is the founder in
+  the first person (Aaron, 2026-11-14), signed "Aaron Buxbaum, Founder" (Aaron, 2026-11-11), the
+  one name and title on the site. It says why to trust him: about fifteen years leading software
+  teams, at Google and on self-driving cars, and what safety-critical work taught him about
+  counting people, in his own account of it. It claims no dive credentials. Outside that band the
+  prose names no individual and states no CV.
 - The hero is the Lonergan story, told flat and within its limits (no operator or skipper named,
   no adjective on the account, no sentence saying DiveDay would have prevented it), and its tie to
   the product: "That story is why we built DiveDay." Nothing stands over it; the eyebrow is the

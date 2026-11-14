@@ -11,11 +11,13 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { cachedFormatter } from "@/lib/intl-cache";
+import { OfflineArrivalRefusals } from "./ArrivalRefusals";
 import { OfflineChecklist, OfflineSnags } from "./Checklist";
 import { OfflineCheckpointNav } from "./CheckpointNav";
 import { OfflineCounter } from "./Counter";
 import type { OfflineTripControls } from "./controls";
 import { OfflineManifestSheet } from "./ManifestSheet";
+import { MissingRollCallRefusals } from "./MissingRollCallRefusals";
 import { OfflineRollCallSection } from "./RollCallSection";
 import { StatusMessage } from "./StatusMessage";
 import { OfflineTripFoot } from "./TripFoot";
@@ -207,6 +209,8 @@ export function OfflineTripScreen({
           different places, and a row that answered both would be the first
           step toward a queue answering the second. */}
             <OfflineCounter view={view} controls={controls} />
+            <OfflineArrivalRefusals view={view} controls={controls} />
+            <MissingRollCallRefusals view={view} controls={controls} />
 
             <section id="offline-roll-call-context" tabIndex={-1} className="scroll-mt-24">
               <OfflineCheckpointNav view={view} controls={controls} />

@@ -2,13 +2,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import {
-  HELD_SEND_TIMEOUT_MS,
-  openDiverFileGroup,
-  openTodayBoatFolds,
-  rosterRow,
-  tripPathByTitle,
-} from "./helpers";
+import { HELD_SEND_TIMEOUT_MS, openDiverFileGroup, rosterRow, tripPathByTitle } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 const diver = diverTranslator("en-US");
@@ -145,8 +139,6 @@ test.describe("staff and the list", () => {
       certificationLevel: "open_water",
     });
     await page.goto("/shop/blue-mantis");
-    // The want-in row is a chore: on a long boat it sits behind "and N more".
-    await openTodayBoatFolds(page);
     const nudge = page
       .locator("li")
       .filter({ hasText: WANT_IN_ROW })
@@ -240,8 +232,6 @@ test.describe("staff and the list", () => {
     ).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
 
     await page.goto("/shop/blue-mantis");
-    // The want-in row is a chore: on a long boat it sits behind "and N more".
-    await openTodayBoatFolds(page);
     await expect(page.getByText(WANT_IN_ROW)).toBeVisible();
   });
 

@@ -97,6 +97,7 @@ import {
 } from "./settings-states";
 import { slideOneDepartureOntoAnother } from "./slide-one-departure-onto-another";
 import { seedDisconnectedSquareReceipt } from "./square-receipt";
+import { standingCrewShifts, standingCrewShiftsArgs } from "./standing-crew-shifts";
 import {
   connectStripe,
   diverEmailArgs,
@@ -238,6 +239,11 @@ const FACTS = {
     { privateOnly: true },
   ),
   dualRoleManifest: privateOnly(({ db, shop, now }) => seedDualRoleManifest(db, shop, now)),
+  standingCrewShifts: withArgs(
+    standingCrewShiftsArgs,
+    ({ db, shop }, args) => standingCrewShifts(db, shop.id, args.title),
+    { privateOnly: true },
+  ),
   manifestOverCapacity: ({ db, shop, now }) => seedManifestOverCapacityState(db, shop.id, now),
   operationalTrust: withArgs(operationalTrustArgs, ({ db, shop, now }, args) =>
     seedOperationalTrustFact(db, shop, args, now),

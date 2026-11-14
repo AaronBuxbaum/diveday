@@ -43,14 +43,6 @@ export function InboxResponseDraft({
   }, [hasDraft]);
   return (
     <div className={text === null ? undefined : "w-full space-y-3"}>
-      {email ? (
-        <a
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-          href={mailtoHref(email, { subject, body: `${text ?? ""}\n\n${quoted}` })}
-        >
-          {copy.email}
-        </a>
-      ) : null}
       <AssistDraftButton
         draft={async () => {
           setChanged(false);
@@ -63,10 +55,19 @@ export function InboxResponseDraft({
           return response;
         }}
         onDraft={setText}
+        variant="primary"
         label={copy.draft}
         pendingLabel={copy.pending}
         emptyLabel={changed ? copy.changed : copy.empty}
       />
+      {text === null && email ? (
+        <a
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+          href={mailtoHref(email, { subject, body: `\n\n${quoted}` })}
+        >
+          {copy.email}
+        </a>
+      ) : null}
       {text !== null ? (
         <>
           <Field label={copy.label} description={copy.review}>
@@ -90,6 +91,14 @@ export function InboxResponseDraft({
               copiedLabel={copy.copied}
               failedLabel={copy.failed}
             />
+            {email ? (
+              <a
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+                href={mailtoHref(email, { subject, body: `${text}\n\n${quoted}` })}
+              >
+                {copy.email}
+              </a>
+            ) : null}
           </div>
         </>
       ) : null}

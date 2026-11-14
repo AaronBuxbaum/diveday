@@ -88,6 +88,15 @@ async function expectInvalidBody(response: Response) {
 
 const routes: SeedRoute[] = [
   {
+    slug: "manifest-reads",
+    body: { tripId: "00000000-0000-4000-8000-000000000001", action: "clear" },
+    expectPastTheGuard: async (response) => {
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ count: null });
+      expect(getDb).not.toHaveBeenCalled();
+    },
+  },
+  {
     slug: "navigation-gate",
     body: { tripId: "00000000-0000-4000-8000-000000000001", action: "release" },
     expectPastTheGuard: async (response) => {
@@ -338,6 +347,7 @@ const EMAIL = "diver@example.com";
  * fails "every fact has a sample", which is the registry's half of this file.
  */
 const FACT_SAMPLES: Record<string, Record<string, unknown>> = {
+  standingCrewShifts: { title: "Standing Crew fixture" },
   causalRollCallConflict: { role: "diver" },
   operationalTrust: { state: "capacity" },
   executedDepth: { unit: "feet", meters: 18.4404 },

@@ -16,6 +16,8 @@ import DiveSitesLoading from "./shop/[shopSlug]/dive-sites/loading";
 import { DiverFileGroupDisclosure } from "./shop/[shopSlug]/divers/[personId]/_components/DiverFileGroupDisclosure";
 import DiverProfileLoading from "./shop/[shopSlug]/divers/[personId]/loading";
 import DiversLoading from "./shop/[shopSlug]/divers/loading";
+import { SignatureLog } from "./shop/[shopSlug]/divers/waivers/_components/SignatureLog";
+import WaiversLoading from "./shop/[shopSlug]/divers/waivers/loading";
 import GearLoading from "./shop/[shopSlug]/gear/loading";
 import InboxLoading from "./shop/[shopSlug]/inbox/loading";
 import TodayLoading from "./shop/[shopSlug]/loading";
@@ -26,8 +28,6 @@ import ReportsLoading from "./shop/[shopSlug]/reports/loading";
 import RequestsLoading from "./shop/[shopSlug]/requests/loading";
 import StaffReviewsLoading from "./shop/[shopSlug]/reviews/loading";
 import StaffingLoading from "./shop/[shopSlug]/staffing/loading";
-import { SignatureLog } from "./shop/[shopSlug]/waivers/_components/SignatureLog";
-import WaiversLoading from "./shop/[shopSlug]/waivers/loading";
 
 afterEach(cleanup);
 
@@ -54,7 +54,7 @@ const SKELETONS: [name: string, loadedBy: string, Skeleton: ComponentType][] = [
   ["reports", "DepartureLedger", ReportsLoading],
   ["promos", "PromoLedger", PromosLoading],
   ["requests", "RequestLedgerRow", RequestsLoading],
-  ["waivers", "SignatureLog", WaiversLoading],
+  ["signed waivers", "SignatureLog", WaiversLoading],
   ["staffing", "StaffingWeek", StaffingLoading],
   ["staff reviews", "ReviewLedgerRow", StaffReviewsLoading],
   ["Today", "DaySpine's station rows", TodayLoading],
@@ -453,11 +453,8 @@ describe("a loading skeleton standing in for ledger rows", () => {
 });
 
 /**
- * **The waivers skeleton draws the page the log lands on** (class 11). The page
- * stopped showing the release editor at rest ("The ledger leads; the editor is
- * a door", waivers/page.tsx): it is one 48px "Edit the release" button, while
- * the skeleton kept the open editor's 426px card, so "Signed records" landed
- * 378px higher than its bar at 1280.
+ * **The waivers skeleton draws the page the log lands on** (class 11). The release
+ * editor moved to Settings, so this page is the log alone.
  *
  * And its rows are the loaded rows. A loaded row is the `<li>`'s 1px rule over
  * a summary with a 51px floor (`min-h-12.75`). The departure takes its own
@@ -466,19 +463,14 @@ describe("a loading skeleton standing in for ledger rows", () => {
  * without fixing the loaded row's height when longer text needs more room.
  * Both keep the rule on the outer box, including the group's closing rule.
  */
-describe("the waivers skeleton", () => {
-  it("draws the closed release door as one 48px bar, and no editor card", () => {
+describe("the signed waivers skeleton", () => {
+  it("draws no editor card: the release is set up in Settings", () => {
     const { container } = render(<WaiversLoading />);
     const card = sectionCardClass({ padding: "lg" }).split(" ");
     const cards = [...container.querySelectorAll("*")].filter((element) =>
       card.every((token) => element.classList.contains(token)),
     );
     expect(cards).toHaveLength(0);
-    const main = container.querySelector("main > div");
-    // The header, the Safety tabs, then the door, then the log.
-    const door = main?.children[2];
-    expect(door).toHaveClass("h-12", "rounded-lg");
-    expect(door?.children).toHaveLength(0);
   });
 
   it("draws each log row with the departure on its own full-width line at every width", () => {

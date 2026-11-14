@@ -24,6 +24,7 @@ vi.mock("../../../../features/roll-call-alerts/store", () => ({
 vi.mock("@/db/missing-diver-alerts", () => ({ sendMissingDiverAlerts: vi.fn() }));
 vi.mock("../../../../features/desk-pings/store", () => ({ sendTrailingDeskPings: vi.fn() }));
 vi.mock("../../../../features/seat-sold-alerts/store", () => ({ sendSeatSoldAlerts: vi.fn() }));
+vi.mock("@/db/boarding-observations", () => ({ settleOpenBoardingObservations: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
 vi.mock("../../../../features/sentry-dsn/rules", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
@@ -46,6 +47,7 @@ const { sendStaleRollCallAlerts } = await import("../../../../features/roll-call
 const { sendMissingDiverAlerts } = await import("@/db/missing-diver-alerts");
 const { sendTrailingDeskPings } = await import("../../../../features/desk-pings/store");
 const { sendSeatSoldAlerts } = await import("../../../../features/seat-sold-alerts/store");
+const { settleOpenBoardingObservations } = await import("@/db/boarding-observations");
 const Sentry = await import("@sentry/nextjs");
 const { SHOP_TICK_CRONTAB } = await import("@/lib/cron-schedule");
 const { nowDate } = await import("@/lib/clock");
@@ -73,6 +75,7 @@ const ALL_SCANS = [
   sendMissingDiverAlerts,
   sendTrailingDeskPings,
   sendSeatSoldAlerts,
+  settleOpenBoardingObservations,
 ] as const;
 
 function lastCheckInStatus() {

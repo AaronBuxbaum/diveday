@@ -1,140 +1,173 @@
-import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
-import type { AvailabilityBlock } from "@/lib/crew-requests";
-import { formatCalendarDateRange, formatShortDate, formatTimeRange } from "@/lib/format";
+import type { AvailabilityBlock, AwayStatus } from "@/lib/crew-requests";
+import { formatCalendarDateRange, formatTimeRange } from "@/lib/format";
+import { DayAdd } from "./DayAdd";
 
 type MyShift = { id: string; startsAt: Date; endsAt: Date; note: string | null };
+type Day = { date: string; label: string; isToday: boolean };
 
-type Entry =
-  | { kind: "shift"; sort: string; shift: MyShift }
-  | { kind: "away"; sort: string; block: AvailabilityBlock };
+const STATUS: Record<AwayStatus, { tone: BadgeTone; key: "Pending" | "Approved" | "Declined" }> = {
+  pending: { tone: "warning", key: "Pending" },
+  approved: { tone: "success", key: "Approved" },
+  declined: { tone: "danger", key: "Declined" },
+};
 
 /**
- * **Your own week on the Shifts tab**: the shifts and days off the reader has, soonest first, each
- * with its Remove, and the two doors that add more. Everyone else's are on the Crew week.
+ * **Your own week on the Shifts tab**, one row per day, built for the crew member reading it: the
+ * shifts you work, the days off you asked for with where each one stands (and the owner's reason
+ * when it was declined), and an "Add" on every day that opens right there. Everyone else's week
+ * is the Crew tab.
  */
 export function StaffingMyWeek({
+  days,
   shifts,
   blocks,
   locale,
   timeZone,
-  canManage,
+  selfId,
+  people,
+  approvalRequired,
   t,
+  createShiftAction,
+  saveAwayAction,
   deleteShiftAction,
   deleteAwayAction,
 }: {
+  days: readonly Day[];
   shifts: readonly MyShift[];
   blocks: readonly AvailabilityBlock[];
   locale: string;
   timeZone: string;
-  canManage: boolean;
+  selfId: string;
+  /** Present for a manager: whose shift or day off they are writing. */
+  people?: { id: string; name: string }[];
+  /** The reader's own days off wait for an owner (the shop asks, and the reader is not one). */
+  approvalRequired: boolean;
   t: StaffTranslator;
+  createShiftAction: (formData: FormData) => void;
+  saveAwayAction: (formData: FormData) => void;
   deleteShiftAction: (formData: FormData) => void;
   deleteAwayAction: (formData: FormData) => void;
 }) {
-  const entries: Entry[] = [
-    ...shifts.map((shift) => ({
-      kind: "shift" as const,
-      sort: `${calendarDateInTimezone(shift.startsAt, timeZone)}-${shift.startsAt.toISOString()}`,
-      shift,
-    })),
-    ...blocks.map((block) => ({
-      kind: "away" as const,
-      sort: `${block.startsOn}-~`,
-      block,
-    })),
-  ].sort((a, b) => a.sort.localeCompare(b.sort));
-
-  const words = {
-    heading: t("staffing.week.shiftsAndAway"),
-    empty: t("staffing.week.empty"),
-    away: t("staffing.week.away"),
-    remove: t("staffing.working.remove"),
-    removing: t("words.busy.removing"),
-    addShift: t("staffing.addShift.heading"),
-    addAway: t("staffing.away.heading"),
-  };
   const removeClass = buttonClass({ variant: "ghost", size: "md" });
+  const addWords = {
+    add: t("staffing.mine.add"),
+    addTo: t.raw("staffing.mine.addTo"),
+    tabShift: t("staffing.mine.tabShift"),
+    tabDayOff: t("staffing.mine.tabDayOff"),
+    person: t("staffing.addShift.person"),
+    starts: t("staffing.addShift.starts"),
+    ends: t("staffing.addShift.ends"),
+    from: t("staffing.away.from"),
+    to: t("staffing.away.to"),
+    note: t("staffing.addShift.note"),
+    notePlaceholder: t("staffing.addShift.notePlaceholder"),
+    submitShift: t("staffing.addShift.submit"),
+    submitDayOff: t("staffing.away.save"),
+    saving: t("words.busy.saving"),
+    needsOk: approvalRequired ? t("staffing.mine.needsOk") : null,
+  };
+  const weekFirst = days[0]?.date ?? "";
   return (
     <section aria-labelledby="my-week-heading" className="pt-2 pb-8">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 id="my-week-heading" className="font-semibold">
-          {words.heading}
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {canManage ? (
-            <Link href="#add-shift" className={buttonClass({ variant: "secondary", size: "md" })}>
-              {words.addShift}
-            </Link>
-          ) : null}
-          <Link href="#add-away" className={buttonClass({ variant: "secondary", size: "md" })}>
-            {words.addAway}
-          </Link>
-        </div>
-      </div>
-      {entries.length === 0 ? (
-        <LedgerRow as="div">
-          <p className="text-base text-muted">{words.empty}</p>
-        </LedgerRow>
-      ) : (
-        <ul>
-          {entries.map((entry) =>
-            entry.kind === "shift" ? (
-              <LedgerRow key={entry.shift.id} trailing={null}>
-                <div className="flex min-h-11 items-center justify-between gap-3 text-base">
-                  <div className="flex flex-col">
-                    <GroupLabel as="p" tone="muted">
-                      {formatShortDate(entry.shift.startsAt, locale, timeZone)}
-                    </GroupLabel>
-                    <span className="font-medium tabular-nums">
-                      {formatTimeRange(entry.shift.startsAt, entry.shift.endsAt, locale, timeZone)}
-                    </span>
-                    {entry.shift.note ? (
-                      <span className="text-muted">{entry.shift.note}</span>
-                    ) : null}
-                  </div>
-                  {canManage ? (
+      <h2 id="my-week-heading" className="mb-3 font-semibold">
+        {t("staffing.mine.heading")}
+      </h2>
+      <ul>
+        {days.map((day) => {
+          const dayShifts = shifts.filter(
+            (shift) => calendarDateInTimezone(shift.startsAt, timeZone) === day.date,
+          );
+          const dayBlocks = blocks.filter(
+            (block) => block.startsOn <= day.date && day.date <= block.endsOn,
+          );
+          const empty = dayShifts.length === 0 && dayBlocks.length === 0;
+          return (
+            <LedgerRow key={day.date} stacked trailing={null} pad="lg">
+              <div className="flex flex-col gap-2">
+                <GroupLabel as="p" tone={day.isToday ? "primary" : "muted"}>
+                  {day.label}
+                  {day.isToday ? ` · ${t("staffing.week.today")}` : ""}
+                </GroupLabel>
+                {empty ? (
+                  <p className="text-base text-muted">{t("staffing.mine.nothing")}</p>
+                ) : null}
+                {dayShifts.map((shift) => (
+                  <div key={shift.id} className="flex min-h-11 items-center justify-between gap-3">
+                    <div className="flex flex-col text-base">
+                      <span className="font-medium tabular-nums">
+                        {formatTimeRange(shift.startsAt, shift.endsAt, locale, timeZone)}
+                      </span>
+                      {shift.note ? <span className="text-muted">{shift.note}</span> : null}
+                    </div>
                     <form action={deleteShiftAction}>
-                      <input type="hidden" name="shiftId" value={entry.shift.id} />
+                      <input type="hidden" name="shiftId" value={shift.id} />
                       <input type="hidden" name="view" value="plan" />
-                      <SubmitButton pendingLabel={words.removing} className={removeClass}>
-                        {words.remove}
+                      <SubmitButton pendingLabel={t("words.busy.removing")} className={removeClass}>
+                        {t("staffing.working.remove")}
                       </SubmitButton>
                     </form>
-                  ) : null}
-                </div>
-              </LedgerRow>
-            ) : (
-              <LedgerRow key={entry.block.id} trailing={null}>
-                <div className="flex min-h-11 items-center justify-between gap-3 text-base">
-                  <div className="flex flex-col">
-                    <GroupLabel as="p" tone="muted">
-                      {words.away}
-                    </GroupLabel>
-                    <span className="font-medium">
-                      {formatCalendarDateRange(entry.block.startsOn, entry.block.endsOn, locale)}
-                    </span>
-                    {entry.block.note ? (
-                      <span className="text-muted">{entry.block.note}</span>
-                    ) : null}
                   </div>
-                  <form action={deleteAwayAction}>
-                    <input type="hidden" name="blockId" value={entry.block.id} />
-                    <SubmitButton pendingLabel={words.removing} className={removeClass}>
-                      {words.remove}
-                    </SubmitButton>
-                  </form>
-                </div>
-              </LedgerRow>
-            ),
-          )}
-        </ul>
-      )}
+                ))}
+                {dayBlocks.map((block) => {
+                  const status = STATUS[block.status ?? "approved"];
+                  const first = block.startsOn >= weekFirst ? block.startsOn : weekFirst;
+                  return (
+                    <div
+                      key={block.id}
+                      className="flex min-h-11 items-center justify-between gap-3"
+                    >
+                      <div className="flex flex-col items-start gap-1 text-base">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{t("staffing.mine.dayOff")}</span>
+                          <Badge tone={status.tone} size="sm">
+                            {t(`staffing.mine.status${status.key}`)}
+                          </Badge>
+                        </span>
+                        {block.startsOn !== block.endsOn ? (
+                          <span className="text-muted">
+                            {formatCalendarDateRange(block.startsOn, block.endsOn, locale)}
+                          </span>
+                        ) : null}
+                        {block.note ? <span className="text-muted">{block.note}</span> : null}
+                        {block.decisionNote ? (
+                          <span>{t("staffing.mine.reason", { reason: block.decisionNote })}</span>
+                        ) : null}
+                      </div>
+                      {first === day.date ? (
+                        <form action={deleteAwayAction}>
+                          <input type="hidden" name="blockId" value={block.id} />
+                          <SubmitButton
+                            pendingLabel={t("words.busy.removing")}
+                            className={removeClass}
+                          >
+                            {t("staffing.working.remove")}
+                          </SubmitButton>
+                        </form>
+                      ) : null}
+                    </div>
+                  );
+                })}
+                <DayAdd
+                  date={day.date}
+                  dayLabel={day.label}
+                  selfId={selfId}
+                  people={people}
+                  createShift={createShiftAction}
+                  saveAway={saveAwayAction}
+                  words={addWords}
+                />
+              </div>
+            </LedgerRow>
+          );
+        })}
+      </ul>
     </section>
   );
 }

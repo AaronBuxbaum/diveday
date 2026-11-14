@@ -155,7 +155,7 @@ describe("the feature screens' words", () => {
     [
       "SiteBriefingFallback",
       SiteBriefingFallback,
-      ["The day", "Seen here this month", "The route"],
+      ["The day", "Seen here in the last 30 days", "The route"],
     ],
     [
       "GearRegisterFallback",
@@ -191,7 +191,11 @@ describe("the feature screens' words", () => {
       ["Un paso rápido antes del muelle", "Tu firma", "Firmar exención"],
     ],
     ["ArrivalDeskFallback", ArrivalDeskFallback, ["Misma persona", "Registrar", "Registrado"]],
-    ["SiteBriefingFallback", SiteBriefingFallback, ["El día", "Visto aquí este mes", "La ruta"]],
+    [
+      "SiteBriefingFallback",
+      SiteBriefingFallback,
+      ["El día", "Visto aquí en los últimos 30 días", "La ruta"],
+    ],
     [
       "GearRegisterFallback",
       GearRegisterFallback,

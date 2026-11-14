@@ -1,6 +1,6 @@
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
-import { e2eNow, openThreadStep } from "./helpers";
+import { e2eNow, openNamedScheduleTrip, openThreadStep } from "./helpers";
 import { openDrysuitRentalFit } from "./rental-fit-helpers";
 
 const diver = diverTranslator("en-US");
@@ -12,11 +12,7 @@ const diver = diverTranslator("en-US");
 // card (ADR 20260821-the-ready-page-asks-once), and Rin has none.
 test("a diver sees rental prices and an estimate on the booking confirmation", async ({ page }) => {
   await page.goto("/s/blue-mantis");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
-    .click();
+  await openNamedScheduleTrip(page, "Two-Tank Reef — Christ of the Abyss");
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   const bookingForm = page.locator("#book");

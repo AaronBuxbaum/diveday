@@ -43,7 +43,7 @@ export function safetyMonthTiles({
         closed: safety.rollCallsClosed,
         back: safety.departuresBack,
       }),
-      href: `#${SAFETY_LIST_IDS.open}`,
+      ...(safety.openRollCalls.length > 0 ? { href: `#${SAFETY_LIST_IDS.open}` } : {}),
       ...attention(
         safety.unmarkedAtDock > 0
           ? t("incidents.safety.boardedDetail", { count: safety.unmarkedAtDock })
@@ -93,7 +93,7 @@ export function safetyMonthTiles({
         filed,
         drafts,
       }),
-      href: `#${SAFETY_LIST_IDS.incidents}`,
+      ...(filed + drafts > 0 ? { href: `#${SAFETY_LIST_IDS.incidents}` } : {}),
     },
   ];
 }

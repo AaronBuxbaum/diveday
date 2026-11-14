@@ -70,6 +70,7 @@ export type CrewSectionCopy = {
   clash: string;
   onShift: string;
   notOnShift: string;
+  awayWarning?: string;
   /** Null when the shop keeps no crew schedule, so there is no week to go to. */
   manageShifts: string | null;
   /** The per-trip role picker: its `{name}` aria template, its "not specified" option, and each job. */
@@ -89,6 +90,7 @@ export function CrewSection({
   crewIds,
   crewRoles,
   onShiftIds,
+  awayPersonIds = [],
   clashes = [],
   crewGapCode,
   bookingInstructorPresent = false,
@@ -107,6 +109,7 @@ export function CrewSection({
    * An empty array means scheduling exists and assigned crew are off shift.
    */
   onShiftIds: string[] | null;
+  awayPersonIds?: readonly string[];
   /**
    * Assigned people also scheduled on another overlapping departure
    * (`crewClashes`, `src/db/trips-crew.ts`). Show each conflict and the other
@@ -141,6 +144,7 @@ export function CrewSection({
     handleUnassign,
   } = useCrewRoster({ tripId, staff, crewIds, crewRoles, updateCrewAction });
   const onShift = onShiftIds === null ? null : new Set(onShiftIds);
+  const away = new Set(awayPersonIds);
   const hasUnassignedStaff = localCrew.length < availableStaff.length;
 
   return (
@@ -188,6 +192,7 @@ export function CrewSection({
                   .map((entry) => (
                     <option key={entry.id} value={entry.id}>
                       {entry.fullName}
+                      {away.has(entry.id) && copy.awayWarning ? ` — ${copy.awayWarning}` : ""}
                     </option>
                   ))}
               </select>
@@ -211,6 +216,9 @@ export function CrewSection({
                       <span className="font-medium">{entry.fullName}</span>
                       {/* The trip role is shown once; shift coverage is silent
                           when normal and remains available to screen readers. */}
+                      {away.has(entry.id) && copy.awayWarning ? (
+                        <span className="font-medium text-warning-strong">{copy.awayWarning}</span>
+                      ) : null}
                       {onShift === null ? null : onShift.has(entry.id) ? (
                         <span className="sr-only">{copy.onShift}</span>
                       ) : (

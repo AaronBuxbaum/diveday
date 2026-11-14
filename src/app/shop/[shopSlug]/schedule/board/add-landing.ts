@@ -27,12 +27,13 @@ async function landCarryingWaitlist(
   shopSlug: string,
   toTripId: string,
   formData: FormData,
+  keepBoardNotice = false,
 ): Promise<void> {
   const carryFrom = formData.get("carryFrom");
   const fromTripId = typeof carryFrom === "string" ? uuidParam(carryFrom) : undefined;
   if (!fromTripId) return;
   const carried = await carryInterests(db, { shopId, fromTripId, toTripId });
-  if (!carried.ok) return;
+  if (!carried.ok || keepBoardNotice) return;
   const landing = shopPath(shopSlug, "trips", toTripId);
   revalidateAndRedirect(
     landing,
@@ -57,18 +58,22 @@ export async function landAfterAdd(
   createdCount: number,
   createdTripId: string,
   formData: FormData,
+  crewIncomplete = false,
 ): Promise<never> {
-  await landCarryingWaitlist(db, shop.id, shopSlug, createdTripId, formData);
+  await landCarryingWaitlist(db, shop.id, shopSlug, createdTripId, formData, crewIncomplete);
   const back = boardPath(shopSlug);
   const firstBookableMoment =
     !shop.isDemo && (await countShopTrips(db, shop.id)) === Math.max(createdCount, 1);
-  if (firstBookableMoment) {
+  if (firstBookableMoment && !crewIncomplete) {
     const home = `/shop/${shopSlug}`;
     const query = new URLSearchParams({ created: title });
     if (createdCount > 1) query.set("series", String(createdCount));
     revalidateAndRedirect(home, `${home}?${query.toString()}`);
   }
-  const query = new URLSearchParams({ builder: "added", created: title });
+  const query = new URLSearchParams({
+    builder: crewIncomplete ? "added-no-crew" : "added",
+    created: title,
+  });
   if (createdCount > 1) query.set("series", String(createdCount));
   revalidateAndRedirect(back, `${back}?${query.toString()}`);
 }

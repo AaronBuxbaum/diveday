@@ -21,6 +21,7 @@ import {
   canManageBilling,
   canManageMessagingSettings,
   canManageStaffAccounts,
+  canManageWaiverTemplates,
 } from "@/lib/authz";
 import { configuredValue } from "@/lib/configured";
 import { toShopCurrency } from "@/lib/money";
@@ -222,6 +223,7 @@ export default async function SettingsPage({
   // shown a door that would bounce them (ADR
   // 20260724-role-gated-surfaces-hide-not-explain). Both pages re-check.
   const canManageTeam = canManageStaffAccounts(session.user.roles);
+  const canManageWaivers = canManageWaiverTemplates(session.user.roles);
   // What the shop pays DiveDay — the trial, a free term, the card — is the
   // owner's alone, and a demo shop is never billed (ADR
   // 20261007-subscription-billing). The page re-checks against live roles.
@@ -285,7 +287,7 @@ export default async function SettingsPage({
 
         <TeamGroup view={view} canManageTeam={canManageTeam} />
 
-        <BookingsGroup view={view} canPayments={canPayments} />
+        <BookingsGroup view={view} canManageWaivers={canManageWaivers} canPayments={canPayments} />
 
         <MoneyGroup
           view={view}

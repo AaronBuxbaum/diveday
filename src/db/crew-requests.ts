@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { canManageStaffAccounts, canReadCrewAwayNote, STAFF_ROLES } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -93,6 +93,8 @@ export async function listCrewAvailabilityBlocks(
   range: { from: string; to: string },
   /** Who is reading: the note leaves only for the person and owners and managers (#2673). */
   reader: AwayNoteReader,
+  /** A declined row counts as nothing, except on the Shifts tab of the person it was declined for. */
+  options: { includeDeclinedOf?: string } = {},
 ): Promise<(AvailabilityBlock & { createdAt: Date })[]> {
   const rows = await db
     .select()
@@ -101,6 +103,12 @@ export async function listCrewAvailabilityBlocks(
       and(
         eq(crewAvailabilityBlocks.shopId, shopId),
         isNull(crewAvailabilityBlocks.deletedAt),
+        options.includeDeclinedOf
+          ? or(
+              ne(crewAvailabilityBlocks.status, "declined"),
+              eq(crewAvailabilityBlocks.personId, options.includeDeclinedOf),
+            )
+          : ne(crewAvailabilityBlocks.status, "declined"),
         // Two inclusive ranges overlap unless one ends before the other starts.
         lte(crewAvailabilityBlocks.startsOn, range.to),
         gte(crewAvailabilityBlocks.endsOn, range.from),
@@ -113,6 +121,8 @@ export async function listCrewAvailabilityBlocks(
     startsOn: row.startsOn,
     endsOn: row.endsOn,
     note: awayNoteFor(row, reader),
+    status: row.status,
+    decisionNote: awayNoteFor({ personId: row.personId, note: row.decisionNote }, reader),
     // When the shop was told: a "working it anyway" said before it does not
     // cover it (#2678, `crewAwayByTrip`).
     createdAt: row.createdAt,
@@ -132,10 +142,13 @@ export async function readStaffingWeekAway(
   personId: string,
 ): Promise<{ blocks: AvailabilityBlock[]; canManageStaffAccounts: boolean }> {
   const roles = await loadActiveStaffRoles(db, shopId, personId);
-  const blocks = await listCrewAvailabilityBlocks(db, shopId, range, {
-    personId,
-    canReadCrewAwayNote: roles !== null && canReadCrewAwayNote(roles),
-  });
+  const blocks = await listCrewAvailabilityBlocks(
+    db,
+    shopId,
+    range,
+    { personId, canReadCrewAwayNote: roles !== null && canReadCrewAwayNote(roles) },
+    { includeDeclinedOf: personId },
+  );
   return { blocks, canManageStaffAccounts: roles !== null && canManageStaffAccounts(roles) };
 }
 
@@ -150,6 +163,12 @@ export async function recordCrewAvailabilityBlock(
     startsOn: string;
     endsOn: string;
     note?: string | null;
+    /**
+     * The shop asks an owner to approve days off (`shops.time_off_approval_enabled`). Only a crew
+     * member's own, written by themselves, is held: whoever can manage the roster writes
+     * approved days, for themselves or anyone.
+     */
+    approvalRequired?: boolean;
   },
 ): Promise<CrewWriteOutcome> {
   if (input.endsOn < input.startsOn) return { ok: false, reason: "invalid_range" };
@@ -188,12 +207,89 @@ export async function recordCrewAvailabilityBlock(
         startsOn: input.startsOn,
         endsOn: input.endsOn,
         note: input.note?.trim() || null,
+        status: input.approvalRequired && !input.canManageRoster ? "pending" : "approved",
         createdByPersonId: input.actorPersonId,
       })
       .returning({ id: crewAvailabilityBlocks.id });
     if (!row) throw new Error("recordCrewAvailabilityBlock: insert returned no row");
     return { ok: true, id: row.id };
   });
+}
+
+/** Days off waiting on an owner, soonest first, with who asked (the approval box). */
+export async function listPendingTimeOff(
+  db: DbExecutor,
+  shopId: string,
+  /** Shop-local today: days already over are not worth an answer. */
+  fromDay: string,
+): Promise<
+  {
+    id: string;
+    personId: string;
+    personName: string;
+    startsOn: string;
+    endsOn: string;
+    note: string | null;
+  }[]
+> {
+  return db
+    .select({
+      id: crewAvailabilityBlocks.id,
+      personId: crewAvailabilityBlocks.personId,
+      personName: people.fullName,
+      startsOn: crewAvailabilityBlocks.startsOn,
+      endsOn: crewAvailabilityBlocks.endsOn,
+      note: crewAvailabilityBlocks.note,
+    })
+    .from(crewAvailabilityBlocks)
+    .innerJoin(people, eq(people.id, crewAvailabilityBlocks.personId))
+    .where(
+      and(
+        eq(crewAvailabilityBlocks.shopId, shopId),
+        eq(crewAvailabilityBlocks.status, "pending"),
+        isNull(crewAvailabilityBlocks.deletedAt),
+        gte(crewAvailabilityBlocks.endsOn, fromDay),
+      ),
+    )
+    .orderBy(asc(crewAvailabilityBlocks.startsOn));
+}
+
+/**
+ * An owner or manager answers a crew member's days off. Anyone else is refused, and so is a
+ * request already answered, so a second tab cannot flip a decision silently.
+ */
+export async function decideCrewAvailabilityBlock(
+  db: AppDb,
+  input: {
+    shopId: string;
+    blockId: string;
+    decision: "approved" | "declined";
+    reason?: string | null;
+    decidedByPersonId: string;
+    canManageRoster: boolean;
+    now?: Date;
+  },
+): Promise<CrewWriteOutcome> {
+  if (!input.canManageRoster) return { ok: false, reason: "not_allowed" };
+  const now = input.now ?? nowDate();
+  const [row] = await db
+    .update(crewAvailabilityBlocks)
+    .set({
+      status: input.decision,
+      decidedByPersonId: input.decidedByPersonId,
+      decidedAt: now,
+      decisionNote: input.reason?.trim() || null,
+    })
+    .where(
+      and(
+        eq(crewAvailabilityBlocks.id, input.blockId),
+        eq(crewAvailabilityBlocks.shopId, input.shopId),
+        eq(crewAvailabilityBlocks.status, "pending"),
+        isNull(crewAvailabilityBlocks.deletedAt),
+      ),
+    )
+    .returning({ id: crewAvailabilityBlocks.id });
+  return row ? { ok: true, id: row.id } : { ok: false, reason: "request_not_found" };
 }
 
 /** Soft, like every delete (ADR 20260820-every-delete-is-soft). */

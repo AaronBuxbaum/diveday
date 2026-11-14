@@ -197,6 +197,13 @@ const RAIL_ROWS = [
     target: { kind: "route", path: "/settings/activity" },
   },
   {
+    id: "waivers",
+    labelKey: "settings.main.waivers.heading",
+    group: "bookings",
+    target: { kind: "route", path: "/settings/waivers" },
+    gate: "waivers",
+  },
+  {
     id: "counterCard",
     labelKey: "settings.main.counterQr.heading",
     group: "bookings",
