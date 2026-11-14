@@ -1,5 +1,7 @@
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { getTripManifest } from "@/db/manifests";
+import { rollCallEvents } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
@@ -49,6 +51,73 @@ function staffSession(shopId: string, personId: string): DiveDaySession {
 }
 
 describe("sync exact undo preserves independent evidence", () => {
+  it("defers an undo until its delayed target arrives", async () => {
+    const { db, shop, trip, booking, staffPersonId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, staffPersonId));
+    const meeting = await capturedMeeting(db, shop.id, trip.id, 0);
+    const now = nowDate().toISOString();
+    const targetId = crypto.randomUUID();
+    const common = {
+      snapshotId: meeting.offlineSnapshotId,
+      meetingIdentityProof: meeting.offlineMeetingIdentityProof,
+      snapshotSavedAt: now,
+      bookingId: booking.id,
+      tripId: trip.id,
+      checkpoint: "departure" as const,
+      meetingDay: 0,
+      note: null,
+      occurredAt: now,
+    };
+    const target = {
+      ...common,
+      clientEventId: targetId,
+      status: "not_boarded",
+      observedEvidenceIds: [],
+    };
+    const undo = {
+      ...common,
+      clientEventId: crypto.randomUUID(),
+      status: "cleared",
+      observedEvidenceIds: [`client:${targetId}`],
+      retractsClientEventId: targetId,
+    };
+
+    const early = await POST(postRequest({ events: [undo] }));
+    expect(early.status).toBe(409);
+    expect(await early.json()).toEqual({ error: "unresolved_predecessor" });
+    const stored = () =>
+      db
+        .select()
+        .from(rollCallEvents)
+        .where(
+          and(
+            eq(rollCallEvents.shopId, shop.id),
+            inArray(rollCallEvents.clientEventId, [targetId, undo.clientEventId]),
+          ),
+        );
+    expect(await stored()).toEqual([]);
+    const first = await POST(postRequest({ events: [target] }));
+    expect(first.status).toBe(200);
+    expect((await first.json()).results).toEqual([{ clientEventId: targetId, status: "applied" }]);
+    const retry = await POST(postRequest({ events: [undo] }));
+    expect(retry.status).toBe(200);
+    expect((await retry.json()).results).toEqual([
+      { clientEventId: undo.clientEventId, status: "applied" },
+    ]);
+    const duplicate = await POST(postRequest({ events: [undo] }));
+    expect(duplicate.status).toBe(200);
+    expect((await duplicate.json()).results).toEqual([
+      { clientEventId: undo.clientEventId, status: "duplicate" },
+    ]);
+    const rows = await stored();
+    expect(rows).toHaveLength(2);
+    const savedTarget = rows.find((row) => row.clientEventId === targetId);
+    const savedUndo = rows.find((row) => row.clientEventId === undo.clientEventId);
+    expect(savedTarget?.id).toEqual(expect.any(String));
+    expect(savedUndo?.retractsEventId).toBe(savedTarget?.id);
+  });
+
   /**
    * The compare-and-set, from the outside (ADR
    * 20260815-an-offline-retraction-names-its-target). The route's only job here
