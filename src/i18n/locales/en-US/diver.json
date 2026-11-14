@@ -265,7 +265,8 @@
     "courseGearIncluded": "Gear is included.",
     "courseGearIncludedKinds": "Included with the course: {items}.",
     "seen": {
-      "heading": "Seen here this month",
+      "cardLabel": "Seen this month",
+      "heading": "Seen here in the last 30 days",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}}",
       "lastSeen": "Last seen {date}"
     },
@@ -2234,7 +2235,7 @@
       },
       "goliath-grouper": {
         "name": "Goliath grouper",
-        "description": "Enormous and unbothered, usually parked under a ledge or in a wreck’s shadow.",
+        "description": "A huge, mottled grouper that shelters near ledges and wrecks.",
         "tip": "Give it room and never block its way out from under an overhang."
       },
       "gray-angelfish": {
@@ -2295,7 +2296,7 @@
       "green-moray": {
         "name": "Green moray",
         "description": "A heavy olive eel that fills a crevice and breathes with its mouth open.",
-        "tip": "The open mouth is breathing, not a threat. Keep hands away and it stays calm."
+        "tip": "Opening and closing its mouth moves water over its gills. Keep your distance and never touch it."
       },
       "green-razorfish": {
         "name": "Green razorfish",
@@ -2304,8 +2305,8 @@
       },
       "green-sea-turtle": {
         "name": "Green sea turtle",
-        "description": "A smooth-shelled grazer, usually head-down in seagrass or asleep under a ledge.",
-        "tip": "Stay off its path to the surface. It has to breathe, and it will not go around you."
+        "description": "A hard-shelled sea turtle that feeds mostly on seagrass and algae.",
+        "tip": "Give it room and keep its path to the surface clear. Sea turtles breathe air."
       },
       "grooved-brain-coral": {
         "name": "Grooved brain coral",
@@ -2564,7 +2565,7 @@
       },
       "nurse-shark": {
         "name": "Nurse shark",
-        "description": "A broad, mellow bottom-rester with rounded fins and two barbels at the snout.",
+        "description": "A broad shark that rests on the bottom, with rounded fins and two barbels at the snout.",
         "tip": "Check quiet ledges without crowding or blocking an animal’s way out. Never touch or grab one; it bites when handled."
       },
       "ocean-surgeonfish": {
@@ -3129,7 +3130,7 @@
       },
       "stoplight-parrotfish": {
         "name": "Stoplight parrotfish",
-        "description": "A heavy beaked grazer: green and gold as an adult, mottled red as a youngster.",
+        "description": "A beaked grazer: juveniles are reddish-brown, while terminal-phase males are green with orange markings.",
         "tip": "Move slowly near coral heads and let the color find you."
       },
       "stovepipe-sponge": {
@@ -3740,7 +3741,7 @@
       "theDay": "The day",
       "diveNumber": "Dive 1",
       "bottomTime": "Usually 45 minutes in the water",
-      "seenHeading": "Seen here this month",
+      "seenHeading": "Seen here in the last 30 days",
       "seenStingray": "Southern stingray on 2 of 3 logged dives",
       "lastSeenStingray": "Last seen Oct 3",
       "seenTurtle": "Green sea turtle on 1 of 3 logged dives",
