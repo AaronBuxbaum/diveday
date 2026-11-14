@@ -10,14 +10,7 @@
     },
     "urgent": "Urgent",
     "translation": "In {language}: {text}",
-    "requestDraftExists": "Finish or clear your unfinished Log a call form under Add a booking on Today before drafting another request.",
-    "draftResponse": "Draft response",
-    "responseEmpty": "Couldn’t reach AI just now. Try again in a moment, or reply in your own words.",
-    "responseLabel": "Response draft",
-    "responseReview": "Review before sending. This draft does not change any booking.",
-    "copyResponse": "Copy response",
-    "responseCopyFailed": "Select the response to copy it.",
-    "responseChanged": "Kept your edits. Draft again when you’re ready to replace them."
+    "requestDraftExists": "Finish or clear your unfinished Log a call form under Add a booking on Today before drafting another request."
   },
   "conversation": {
     "translatedFrom": "Translated from {language}",
