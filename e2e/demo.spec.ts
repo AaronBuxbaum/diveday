@@ -139,7 +139,7 @@ for (const start of [
     });
     await page.getByRole("button", { name: diverTranslator("en-US")(start.key) }).click();
     await expect(page).toHaveURL(start.destination);
-    await expect(page.getByText("Demo shop")).toBeVisible();
+    await expect(page.getByText("Demo shop", { exact: true })).toBeVisible();
   });
 }
 
