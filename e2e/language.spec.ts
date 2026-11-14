@@ -62,11 +62,11 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
       if (!ids.has(node)) ids.set(node, ++nextId);
       return ids.get(node);
     };
-    const note = (kind: string) => {
+    const note = (kind: string, clicked?: Element | null) => {
       const trigger = document.querySelector('header button[aria-label="Cambiar de idioma"]');
       const menu = document.querySelector("[data-language-menu]");
       events.push(
-        `${Math.round(performance.now())} ${kind} trigger=${trigger ? id(trigger) : 0} expanded=${trigger?.getAttribute("aria-expanded") === "true"} menu=${!!menu}`,
+        `${Math.round(performance.now())} ${kind} trigger=${trigger ? id(trigger) : 0} clicked=${clicked ? id(clicked) : 0} expanded=${trigger?.getAttribute("aria-expanded") === "true"} hydrated=${trigger?.getAttribute("data-language-probe-hydrated") === "true"} handled=${Number(trigger?.getAttribute("data-language-probe-clicked") ?? 0)} menu=${!!menu}`,
       );
       if (events.length > 100) events.shift();
     };
@@ -76,7 +76,10 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
         (event) => {
           const target = event.target instanceof Element ? event.target.closest("button") : null;
           if (target?.getAttribute("aria-label") === "Cambiar de idioma")
-            note(`click-${phase ? "capture" : "bubble"}-prevented=${event.defaultPrevented}`);
+            note(
+              `click-${phase ? "capture" : "bubble"}-prevented=${event.defaultPrevented}`,
+              target,
+            );
         },
         phase,
       );
@@ -94,7 +97,11 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ["aria-expanded"],
+      attributeFilter: [
+        "aria-expanded",
+        "data-language-probe-hydrated",
+        "data-language-probe-clicked",
+      ],
     });
     (window as Window & { __languageDebug?: string[] }).__languageDebug = events;
   });
