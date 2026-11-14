@@ -8,11 +8,12 @@ import {
   personRoles,
   shops,
   tripAssignments,
+  tripScheduleDays,
   trips,
   userAccounts,
   waiverRecords,
 } from "@/db/schema";
-import { createTrip, listTripIdsInOfflineManifestWindow } from "@/db/trips";
+import { createTrip, listTripIdsInOfflineManifestWindow, listTripScheduleDays } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -21,8 +22,10 @@ import {
   offlineManifestMayHoldMedicalAlertWords,
   offlineManifestViewerPersonId,
 } from "@/lib/offline-manifests";
+import { verifyOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
+import { meetingGeneration, meetingIncarnation } from "@/test/meeting-generation";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
@@ -164,6 +167,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
       payloads: Array<{
         snapshotId: string;
         erasureEpochToken: string;
+        rollCallMeetingDays: Array<{ meetingIdentityProof: string }>;
         manifests: Array<{ trip: { id: string; title: string } }>;
       }>;
     };
@@ -178,6 +182,27 @@ describe("GET /api/offline-manifests/upcoming", () => {
         snapshotId: issued?.snapshotId,
       }),
     ).toBe(shop.offlineErasureEpoch);
+    if (!issued || !issued.manifests[0]) throw new Error("snapshot missing");
+    const tripId = issued.manifests[0].trip.id;
+    const days = await listTripScheduleDays(db, shop.id, tripId);
+    expect(issued.rollCallMeetingDays).toHaveLength(days.length);
+    for (const [meetingDay, day] of days.entries()) {
+      expect(
+        verifyOfflineMeetingIdentity({
+          scheduleGeneration: await meetingGeneration(db, tripId),
+          datasetIncarnation: await meetingIncarnation(db, tripId),
+          token: issued.rollCallMeetingDays[meetingDay].meetingIdentityProof,
+          shopId: shop.id,
+          tripId,
+          snapshotId: issued.snapshotId,
+          meetingDay,
+        }),
+      ).toEqual({
+        meetingId: day.id,
+        startsAt: day.startsAt.getTime(),
+        endsAt: day.endsAt.getTime(),
+      });
+    }
 
     // Sails today (within the frozen clock's 5-hour lookahead) — well inside 48h.
     expect(titles).toContain("Two-Tank Reef — Molasses & French");
@@ -186,6 +211,45 @@ describe("GET /api/offline-manifests/upcoming", () => {
     expect(titles).not.toContain("Night Dive — City of Washington");
     // Seeded 5+ days out — far outside the window.
     expect(titles).not.toContain("Wreck Trip — Spiegel Grove");
+  });
+
+  it("issues a time-bound identity for a trip with an implicit meeting", async () => {
+    const { db, shop, personId } = await staffContext();
+    const [trip] = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, "Two-Tank Reef — Molasses & French")))
+      .limit(1);
+    if (!trip) throw new Error("fixture trip missing");
+    await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, trip.id));
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+    const response = await GET(causalRequest());
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      payloads: Array<{
+        snapshotId: string;
+        rollCallMeetingDays: Array<{ meetingIdentityProof: string }>;
+        manifests: Array<{ trip: { id: string } }>;
+      }>;
+    };
+    const copy = body.payloads.find((item) => item.manifests[0]?.trip.id === trip.id);
+    expect(copy?.rollCallMeetingDays).toHaveLength(1);
+    expect(
+      verifyOfflineMeetingIdentity({
+        scheduleGeneration: await meetingGeneration(db, trip.id),
+        datasetIncarnation: await meetingIncarnation(db, trip.id),
+        token: copy?.rollCallMeetingDays[0]?.meetingIdentityProof,
+        shopId: shop.id,
+        tripId: trip.id,
+        snapshotId: copy?.snapshotId ?? "",
+        meetingDay: 0,
+      }),
+    ).toEqual({
+      meetingId: trip.id,
+      startsAt: trip.startsAt.getTime(),
+      endsAt: trip.endsAt.getTime(),
+    });
   });
 
   it("builds the window three at a time and still answers every departure, in the window's order", async () => {

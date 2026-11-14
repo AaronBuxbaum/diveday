@@ -13,6 +13,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 import { firstYardDayOn } from "./trips-queries";
 
 /**
@@ -413,7 +414,24 @@ export async function insertTripInstances(tx: AppTransaction, list: TripInstance
           },
     ),
   );
-  return created;
+  const generations = await tx
+    .select({ id: trips.id, generation: trips.meetingScheduleGeneration })
+    .from(trips)
+    .where(
+      and(
+        inArray(
+          trips.id,
+          created.map((trip) => trip.id),
+        ),
+        liveTrip(),
+      ),
+    );
+  const byTrip = new Map(generations.map((row) => [row.id, row.generation]));
+  return created.map((trip) => {
+    const generation = byTrip.get(trip.id);
+    if (generation === undefined) throw new Error("created trip generation unavailable");
+    return { ...trip, meetingScheduleGeneration: generation };
+  });
 }
 
 // `DbExecutor` rather than `AppDb`: the whole body is one transaction, and a

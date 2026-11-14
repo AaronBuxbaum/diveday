@@ -6,7 +6,6 @@ import {
   acknowledgeDiscardedOfflineRecords,
   appendOfflineArrival,
   appendOfflineChecklistCheck,
-  appendOfflineRollCall,
   loadOfflineManifest,
   OFFLINE_MANIFEST_PENDING_GRACE_MS,
   readDiscardedOfflineRecords,
@@ -65,17 +64,48 @@ const payload: OfflineManifestPayload = {
   ],
 };
 
-async function recordLoss(record: OfflineManifestPayload = payload): Promise<void> {
+// Historical clients could have left a loss notice. Test acknowledgement of
+// those notices without causing a new loss of unsent evidence.
+async function seedHistoricalNotice(record: OfflineManifestPayload = payload): Promise<void> {
   const id = record.manifests[0].trip.id;
   await saveOfflineManifest(record);
-  await appendOfflineRollCall(id, { bookingId, checkpoint: "departure", status: "not_boarded" });
-  await backdateExpiry(id);
-  await loadOfflineManifest(id);
+  const notices = await readDiscardedOfflineRecords();
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("diveday-offline-manifests", 2);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction("keys", "readwrite");
+      tx.objectStore("keys").put(
+        [
+          ...notices,
+          {
+            noticeId: crypto.randomUUID(),
+            tripId: id,
+            tripTitle: record.manifests[0].trip.title,
+            shopName: record.shop.name,
+            shopSlug: record.shop.slug,
+            pendingEvents: 1,
+            discardedAt: TEST_FROZEN_CLOCK,
+          },
+        ],
+        "discarded-pending-roll-call-v1",
+      );
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+    };
+    request.onerror = () => reject(request.error);
+  });
 }
 
 function backdateExpiry(id: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("diveday-offline-manifests", 1);
+    const request = indexedDB.open("diveday-offline-manifests", 2);
     request.onsuccess = () => {
       const db = request.result;
       const get = db.transaction("manifests", "readonly").objectStore("manifests").get(id);
@@ -106,8 +136,8 @@ afterEach(
 
 describe("acknowledgeDiscardedOfflineRecords", () => {
   it("keeps another shop's notice unseen when the visible shop is acknowledged", async () => {
-    await recordLoss();
-    await recordLoss({
+    await seedHistoricalNotice();
+    await seedHistoricalNotice({
       ...payload,
       shop: { ...payload.shop, slug: "reef-runners", name: "Reef Runners" },
       manifests: [
@@ -125,10 +155,10 @@ describe("acknowledgeDiscardedOfflineRecords", () => {
   });
 
   it("keeps a newer notice for the same shop and trip after acknowledging the earlier one", async () => {
-    await recordLoss();
+    await seedHistoricalNotice();
     const [earlier] = await readDiscardedOfflineRecords();
     expect(earlier.noticeId).toEqual(expect.any(String));
-    await recordLoss();
+    await seedHistoricalNotice();
     const [, newer] = await readDiscardedOfflineRecords();
 
     await acknowledgeDiscardedOfflineRecords([earlier]);

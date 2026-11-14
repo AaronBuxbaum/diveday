@@ -39,8 +39,7 @@ export function replayVerdict(
 }
 
 /**
- * **An offline replay that collided with its own first copy is a duplicate,
- * not a 500.**
+ * Resolve a unique collision only through a new, authorized replay transaction.
  *
  * The device gives up on a sync after `SYNC_TIMEOUT_MS` and sends the same
  * `clientEventId`s again on the next pass, while the request it gave up on may
@@ -50,8 +49,8 @@ export function replayVerdict(
  * subject. This catches what is left: a collision on the
  * `(shop_id, client_event_id)` unique index that neither question saw, which
  * would otherwise abort the transaction with 23505 and fail the whole batch.
- * The stored row is then judged as the two questions judge it
- * ({@link replayVerdict}): same subject, a duplicate; another, a conflict.
+ * A bare read cannot establish authorization or the original disposition.
+ * Without a replay-only transaction, fail the batch so the device retains it.
  *
  * Only that one index, and only for an offline write that carried an id. Any
  * other error, or a collision whose row cannot then be read back, is thrown
@@ -65,6 +64,7 @@ export async function answeringReplayAsDuplicate<T>(
     source: "live" | "offline" | undefined;
     subject: string;
     stored: (clientEventId: string) => Promise<StoredOfflineEvent | undefined>;
+    replayOnly?: () => Promise<T | ReplayVerdict>;
   },
 ): Promise<T | ReplayVerdict> {
   try {
@@ -77,12 +77,9 @@ export async function answeringReplayAsDuplicate<T>(
     ) {
       throw error;
     }
-    const verdict = replayVerdict(
-      await replay.stored(replay.clientEventId),
-      replay.subject,
-      replay.indexName,
-    );
-    if (!verdict) throw error;
-    return verdict;
+    if (replay.replayOnly) return replay.replayOnly();
+    // A post-abort lookup alone cannot establish authorization or the
+    // original disposition. Keep the batch pending until a gated retry.
+    throw error;
   }
 }

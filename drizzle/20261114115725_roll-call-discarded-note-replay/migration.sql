@@ -1,0 +1,1 @@
+ALTER TABLE "roll_call_event_claims" ADD COLUMN "intent_without_note_fingerprint" text;

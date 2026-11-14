@@ -20,6 +20,103 @@ export type RollCallCausalSubject = {
   checkpoint: string;
 } & ({ bookingId: string } | { personId: string });
 
+const OFFLINE_PREDECESSOR_HISTORY_LIMIT = 10_000;
+
+/**
+ * An offline observation cannot resolve a predecessor the server has not
+ * accepted for this subject and checkpoint. Called under the trip lock and
+ * the shared erasure fence; an absent basis is deferred, not discarded.
+ */
+export async function offlinePredecessorsAccepted(
+  db: DbExecutor,
+  subject: RollCallCausalSubject,
+  input: {
+    observedEvidenceIds?: string[];
+    clientEventId?: string;
+    retractsClientEventId?: string;
+    meetingDay?: number;
+    reconcilesEvidence?: boolean;
+  },
+): Promise<boolean> {
+  const basis = new Set((input.observedEvidenceIds ?? []).map((id) => id.toLowerCase()));
+  // The causal fold and sync ordering both ignore a statement's self-edge.
+  if (input.clientEventId) basis.delete(`client:${input.clientEventId.toLowerCase()}`);
+  if (input.retractsClientEventId) basis.add(`client:${input.retractsClientEventId.toLowerCase()}`);
+  if (basis.size === 0) return true;
+  const rows = await db
+    .select()
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, subject.shopId),
+        eq(rollCallEvents.tripId, subject.tripId),
+        eq(rollCallEvents.checkpoint, subject.checkpoint),
+        "bookingId" in subject ? seatMarks() : crewMarks(),
+        "bookingId" in subject
+          ? eq(rollCallEvents.bookingId, subject.bookingId)
+          : eq(rollCallEvents.crewPersonId, subject.personId),
+      ),
+    )
+    .limit(OFFLINE_PREDECESSOR_HISTORY_LIMIT + 1);
+  // Never treat a partial graph as proof. Defer for review if the history is
+  // too large to inspect within this bounded transaction.
+  if (rows.length > OFFLINE_PREDECESSOR_HISTORY_LIMIT) return false;
+  const day = await causalMeetingDay(db, subject.tripId, input.meetingDay);
+  const fallbackDay = await causalMeetingDay(db, subject.tripId);
+  const known = new Map(rows.map((row) => [canonicalRollCallEvidenceId(row), row]));
+  const byRowId = new Map(
+    rows.map((row) => [row.id.toLowerCase(), canonicalRollCallEvidenceId(row)]),
+  );
+  const done = new Set<string>();
+  const active = new Set<string>();
+  const stack = [...basis].map((id) => ({
+    id,
+    observerDay: day,
+    reconciles: input.reconcilesEvidence,
+    exit: false,
+  }));
+  while (stack.length > 0) {
+    const item = stack.pop();
+    if (!item) break;
+    if (item.exit) {
+      active.delete(item.id);
+      done.add(item.id);
+      continue;
+    }
+    const row = known.get(item.id);
+    if (
+      !row ||
+      !causalScopeAllowsObservation(
+        item.observerDay,
+        row.meetingDay ?? fallbackDay,
+        row.statementStatus ?? row.status,
+        subject.checkpoint,
+        item.reconciles,
+      )
+    )
+      return false;
+    if (done.has(item.id)) continue;
+    if (active.has(item.id)) return false;
+    active.add(item.id);
+    stack.push({ ...item, exit: true });
+    const ancestors = new Set((row.observedEvidenceIds ?? []).map((id) => id.toLowerCase()));
+    ancestors.delete(item.id);
+    if (row.retractsEventId) {
+      const target = byRowId.get(row.retractsEventId.toLowerCase());
+      if (!target) return false;
+      ancestors.add(target);
+    }
+    for (const id of ancestors)
+      stack.push({
+        id,
+        observerDay: row.meetingDay ?? fallbackDay,
+        reconciles: row.reconcilesEvidence,
+        exit: false,
+      });
+  }
+  return true;
+}
+
 /** Unknown historical meeting days are never reconstructed from a device clock. */
 export async function causalMeetingDay(db: DbExecutor, tripId: string, captured?: number) {
   const [days] = await db

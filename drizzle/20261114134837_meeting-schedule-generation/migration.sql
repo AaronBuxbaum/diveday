@@ -1,0 +1,1 @@
+ALTER TABLE "trips" ADD COLUMN "meeting_schedule_generation" integer DEFAULT 0 NOT NULL;

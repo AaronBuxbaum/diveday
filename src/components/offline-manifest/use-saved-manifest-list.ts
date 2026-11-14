@@ -1,6 +1,6 @@
 import { type MutableRefObject, useCallback, useEffect } from "react";
 import {
-  listOfflineManifests,
+  readOfflineManifestInventory,
   subscribeOfflineManifestChanges,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
@@ -49,6 +49,7 @@ export function useTripPendingManifestInventory({
   setMessage,
   onInventoryReady,
   allCaughtUpMessage,
+  setInventoryIncomplete,
 }: {
   tripId: string;
   tenantSlugRef: { current: string | null };
@@ -58,6 +59,7 @@ export function useTripPendingManifestInventory({
   setMessage: (update: (message: string) => string) => void;
   onInventoryReady: (saved: OfflineManifestEnvelope[]) => void;
   allCaughtUpMessage: string;
+  setInventoryIncomplete: (incomplete: boolean) => void;
 }) {
   useEffect(() => {
     if (!tripId) return;
@@ -69,11 +71,17 @@ export function useTripPendingManifestInventory({
       // latest read settles, selected-trip sync must not claim everything was
       // sent: the device-wide pending queue may contain another shop's work.
       inventoryReadyRef.current = false;
-      void listOfflineManifests()
-        .then((saved) => {
+      void readOfflineManifestInventory()
+        .then(({ manifests: saved, incomplete }) => {
           if (!active || request !== latestRequest) return;
           setList(saved);
+          if (incomplete) {
+            setInventoryIncomplete(true);
+            setMessage((message) => (message === allCaughtUpMessage ? "" : message));
+            return;
+          }
           inventoryReadyRef.current = true;
+          setInventoryIncomplete(false);
           onInventoryReady(saved);
           if (
             verifiedTenantRevision > 0 &&
@@ -86,6 +94,9 @@ export function useTripPendingManifestInventory({
         .catch(() => {
           // An unreadable or failed inventory is not evidence that there are
           // no foreign pending events. Keep caught-up copy suppressed.
+          if (!active || request !== latestRequest) return;
+          setInventoryIncomplete(true);
+          setMessage((message) => (message === allCaughtUpMessage ? "" : message));
         });
     };
     refresh();
@@ -107,6 +118,7 @@ export function useTripPendingManifestInventory({
     setMessage,
     onInventoryReady,
     allCaughtUpMessage,
+    setInventoryIncomplete,
   ]);
 }
 
@@ -128,12 +140,17 @@ export function useSavedManifestList({
   handleTenantChanged: () => void;
 }) {
   return useCallback(
-    async (saved: OfflineManifestEnvelope[], currentShopSlug: string | null) => {
-      if (!currentShopSlug) return;
+    async (
+      saved: OfflineManifestEnvelope[],
+      currentShopSlug: string | null,
+      incomplete = false,
+      isCurrent: () => boolean = () => true,
+    ) => {
+      if (!currentShopSlug || !isCurrent()) return;
       const authorized = saved.filter(
         (envelope) => envelope.snapshot.shop.slug === currentShopSlug,
       );
-      if (tenantSlugRef.current === currentShopSlug) {
+      if (!incomplete && tenantSlugRef.current === currentShopSlug) {
         setMessage(initialListMessage(authorized, currentShopSlug));
       }
       if (!navigator.onLine) return;
@@ -144,13 +161,22 @@ export function useSavedManifestList({
       if (reconcilable.length === 0) return;
 
       let shopChanged = false;
+      const requestTenantRound = getTenantRound();
       const results = await Promise.all(
         reconcilable.map((envelope) => {
           const id = envelope.snapshot.manifests[0]?.trip.id;
           return id
-            ? syncOfflineManifest(id, currentShopSlug, getTenantRound() ?? undefined).catch(
+            ? syncOfflineManifest(id, currentShopSlug, requestTenantRound ?? undefined).catch(
                 (error) => {
-                  if (isShopChanged(error) && !shopChanged) {
+                  if (
+                    isShopChanged(error) &&
+                    !shopChanged &&
+                    (tenantSlugRef.current === null ||
+                      (tenantSlugRef.current === currentShopSlug &&
+                        (requestTenantRound === null
+                          ? isCurrent()
+                          : getTenantRound() === requestTenantRound)))
+                  ) {
                     shopChanged = true;
                     // Quarantine on the first explicit mismatch. Another
                     // trip sync can remain pending indefinitely; waiting for
@@ -163,7 +189,7 @@ export function useSavedManifestList({
             : Promise.resolve(null);
         }),
       );
-      if (shopChanged) return;
+      if (shopChanged || !isCurrent()) return;
       if (tenantSlugRef.current !== currentShopSlug) return;
       const byId = new Map(
         results
@@ -175,7 +201,7 @@ export function useSavedManifestList({
         return id && byId.has(id) ? (byId.get(id) as OfflineManifestEnvelope) : envelope;
       });
       setList(merged);
-      setMessage(reconciledListMessage(merged, currentShopSlug));
+      if (!incomplete) setMessage(reconciledListMessage(merged, currentShopSlug));
     },
     [
       tenantSlugRef,

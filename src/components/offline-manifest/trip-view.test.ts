@@ -5,7 +5,51 @@ import { diver, savedCopy, view } from "./section-fixtures";
 import { offlineTripView } from "./trip-view";
 import { richEnvelope } from "./view-fixtures";
 
+const TEST_MEETING_PROOF = `33333333-3333-4333-8333-333333333333.0.a.b.0.${"a".repeat(43)}`;
+function withMeetingProof(copy: ReturnType<typeof savedCopy>) {
+  const trip = copy.snapshot.manifests[0].trip;
+  copy.snapshot.rollCallMeetingDays = [
+    { startsAt: trip.startsAt, endsAt: trip.endsAt, meetingIdentityProof: TEST_MEETING_PROOF },
+  ];
+  return copy;
+}
+
 describe("offlineTripView", () => {
+  it("keeps diver and crew awaiting after an unconfirmed dock absence", () => {
+    const copy = savedCopy();
+    const departure = copy.snapshot.manifests[0];
+    copy.snapshot.manifests.push({ ...structuredClone(departure), checkpoint: "after_dive_1" });
+    const proof = `33333333-3333-4333-8333-333333333333.0.a.b.0.${"a".repeat(43)}`;
+    copy.snapshot.rollCallMeetingDays = [
+      {
+        startsAt: departure.trip.startsAt,
+        endsAt: departure.trip.endsAt,
+        meetingIdentityProof: proof,
+      },
+    ];
+    for (const subject of [{ bookingId: "b-priya" }, { crewPersonId: "crew-dana" }])
+      copy.events.push({
+        clientEventId: crypto.randomUUID(),
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        ...subject,
+        checkpoint: "departure",
+        status: "not_boarded",
+        meetingDay: 0,
+        meetingIdentityProof: proof,
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending",
+        unresolvedReason: "unresolved_predecessor",
+      });
+    const dock = offlineTripView(copy, "departure");
+    expect(dock?.localStates[0]).toBeUndefined();
+    expect(dock?.crewWithState[0]?.state).toBeUndefined();
+    const afterDive = offlineTripView(copy, "after_dive_1");
+    expect(afterDive?.awaiting).toBe(2);
+    expect(afterDive?.crewWithState[0]?.state).toBeUndefined();
+    expect(afterDive?.rollCallComplete).toBe(false);
+  });
   it("counts nobody called as awaiting, and the checkpoint as open", () => {
     const trip = view();
     expect(trip.totalDivers).toBe(2);
@@ -25,7 +69,7 @@ describe("offlineTripView", () => {
 
 describe("offlineTripView — certified total persons", () => {
   function fullBoat(limit: number | null = 12) {
-    const copy = savedCopy();
+    const copy = withMeetingProof(savedCopy());
     const manifest = copy.snapshot.manifests[0];
     if (!manifest) throw new Error("manifest missing");
     manifest.trip.certifiedTotalPersons = limit;
@@ -77,6 +121,8 @@ describe("offlineTripView — certified total persons", () => {
         crewPersonId: "crew-0",
         checkpoint: "departure",
         status: "not_boarded",
+        meetingDay: 0,
+        meetingIdentityProof: TEST_MEETING_PROOF,
         occurredAt: copy.snapshot.savedAt,
         syncStatus: "pending",
       },
@@ -85,6 +131,277 @@ describe("offlineTripView — certified total persons", () => {
     expect(counted?.overTotalPersons).toEqual({ aboard: 13, limit: 12 });
     expect(counted?.rollCallComplete).toBe(false);
   });
+
+  it("retains possible over-capacity risk while a dock correction is unresolved", () => {
+    const copy = fullBoat();
+    copy.events = [
+      {
+        clientEventId: crypto.randomUUID(),
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        crewPersonId: "crew-0",
+        checkpoint: "departure",
+        status: "not_boarded",
+        meetingDay: 0,
+        meetingIdentityProof: TEST_MEETING_PROOF,
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending",
+        unresolvedReason: "unresolved_predecessor",
+      },
+    ];
+    const counted = offlineTripView(copy, "departure");
+    expect(counted?.rollCallComplete).toBe(false);
+    expect(counted?.possibleOverTotalPersons).toEqual({ aboard: 13, limit: 12 });
+  });
+
+  it("includes an unresolved boarding observation without calling it confirmed", () => {
+    const copy = fullBoat();
+    copy.snapshot.manifests[0].crew[0].rollCall = undefined;
+    copy.events = [
+      {
+        clientEventId: crypto.randomUUID(),
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        crewPersonId: "crew-0",
+        checkpoint: "departure",
+        status: "boarded",
+        meetingDay: 0,
+        meetingIdentityProof: TEST_MEETING_PROOF,
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending",
+        unresolvedReason: "unresolved_predecessor",
+      },
+    ];
+    const counted = offlineTripView(copy, "departure");
+    expect(counted?.crewWithState[0].state).toBeUndefined();
+    expect(counted?.overTotalPersons).toBeNull();
+    expect(counted?.possibleOverTotalPersons).toEqual({ aboard: 13, limit: 12 });
+  });
+
+  for (const role of ["diver", "crew"] as const)
+    for (const status of ["cleared", "not_boarded"] as const) {
+      it(`keeps an earlier local ${role} boarding as possible after an unresolved ${status}`, () => {
+        const copy = fullBoat();
+        const manifest = copy.snapshot.manifests[0];
+        const subject =
+          role === "diver" ? { bookingId: "passenger-0" } : { crewPersonId: "crew-0" };
+        if (role === "diver") manifest.divers[0].rollCall = undefined;
+        else manifest.crew[0].rollCall = undefined;
+        const aboard: OfflineRollCallEvent = {
+          clientEventId: crypto.randomUUID(),
+          snapshotId: copy.snapshot.snapshotId,
+          snapshotSavedAt: copy.snapshot.savedAt,
+          tripId: "trip-1",
+          ...subject,
+          checkpoint: "departure",
+          status: "boarded",
+          meetingDay: 0,
+          meetingIdentityProof: TEST_MEETING_PROOF,
+          occurredAt: copy.snapshot.savedAt,
+          syncStatus: "pending",
+        };
+        const correction: OfflineRollCallEvent = {
+          ...aboard,
+          clientEventId: crypto.randomUUID(),
+          status,
+          observedEvidenceIds: [`client:${aboard.clientEventId}`],
+          unresolvedReason: "unresolved_predecessor",
+        };
+        copy.events = [aboard, correction];
+        const counted = offlineTripView(copy, "departure");
+        expect(counted?.rollCallComplete).toBe(false);
+        expect(counted?.possibleOverTotalPersons).toEqual({ aboard: 13, limit: 12 });
+      });
+    }
+
+  it("retains a saved passenger as possibly aboard when their correction is unresolved", () => {
+    const copy = fullBoat();
+    copy.events = [
+      {
+        clientEventId: crypto.randomUUID(),
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        bookingId: "passenger-0",
+        checkpoint: "departure",
+        status: "not_boarded",
+        meetingDay: 0,
+        meetingIdentityProof: TEST_MEETING_PROOF,
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending",
+        unresolvedReason: "unresolved_predecessor",
+      },
+    ];
+    const counted = offlineTripView(copy, "departure");
+    expect(counted?.localStates[0]).toBeUndefined();
+    expect(counted?.rollCallComplete).toBe(false);
+    expect(counted?.possibleOverTotalPersons).toEqual({ aboard: 13, limit: 12 });
+  });
+
+  it("deduplicates a person with both roles in the possible capacity count", () => {
+    const copy = fullBoat();
+    copy.snapshot.manifests[0].divers[0].personId = "crew-0";
+    copy.events = [
+      {
+        clientEventId: crypto.randomUUID(),
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        crewPersonId: "crew-0",
+        checkpoint: "departure",
+        status: "not_boarded",
+        meetingDay: 0,
+        meetingIdentityProof: TEST_MEETING_PROOF,
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending",
+        unresolvedReason: "unresolved_predecessor",
+      },
+    ];
+    const counted = offlineTripView(copy, "departure");
+    expect(counted?.rollCallComplete).toBe(false);
+    expect(counted?.possibleOverTotalPersons).toBeNull();
+  });
+
+  it("keeps possible capacity risk visible after the dive", () => {
+    const copy = fullBoat();
+    const after = structuredClone(copy.snapshot.manifests[0]);
+    after.checkpoint = "after_dive_1";
+    after.crew[0].rollCall = undefined;
+    copy.snapshot.manifests.push(after);
+    copy.events = [
+      {
+        clientEventId: crypto.randomUUID(),
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        crewPersonId: "crew-0",
+        checkpoint: "departure",
+        status: "not_boarded",
+        meetingDay: 0,
+        meetingIdentityProof: TEST_MEETING_PROOF,
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending",
+        unresolvedReason: "unresolved_predecessor",
+      },
+    ];
+    const counted = offlineTripView(copy, "after_dive_1");
+    expect(counted?.rollCallComplete).toBe(false);
+    expect(counted?.possibleOverTotalPersons).toEqual({ aboard: 13, limit: 12 });
+  });
+
+  for (const subject of [{ bookingId: "removed-booking" }, { crewPersonId: "removed-crew" }]) {
+    it(`warns about an unlisted unresolved ${"bookingId" in subject ? "diver" : "crew member"} without inventing a count`, () => {
+      const copy = fullBoat();
+      copy.events = [
+        {
+          clientEventId: crypto.randomUUID(),
+          snapshotId: copy.snapshot.snapshotId,
+          snapshotSavedAt: copy.snapshot.savedAt,
+          tripId: "trip-1",
+          ...subject,
+          checkpoint: "departure",
+          status: "boarded",
+          meetingDay: 0,
+          meetingIdentityProof: TEST_MEETING_PROOF,
+          occurredAt: copy.snapshot.savedAt,
+          syncStatus: "pending",
+          unresolvedReason: "unresolved_predecessor",
+        },
+      ];
+      expect(offlineTripView(copy, "departure")?.possibleUnlistedPerson).toBe(true);
+    });
+    it("keeps a checkpoint open for an unlisted missing observation and its unresolved correction", () => {
+      const copy = fullBoat(13);
+      const departure = copy.snapshot.manifests[0];
+      copy.snapshot.manifests.push({ ...structuredClone(departure), checkpoint: "after_dive_1" });
+      expect(offlineTripView(copy, "after_dive_1")?.rollCallComplete).toBe(true);
+      const first = {
+        clientEventId: crypto.randomUUID(),
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        ...subject,
+        checkpoint: "after_dive_1" as const,
+        status: "not_boarded" as const,
+        meetingDay: 0,
+        meetingIdentityProof: TEST_MEETING_PROOF,
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending" as const,
+        unresolvedReason: "unresolved_predecessor" as const,
+      };
+      copy.events = [
+        first,
+        {
+          ...first,
+          clientEventId: crypto.randomUUID(),
+          status: "boarded",
+          observedEvidenceIds: [`client:${first.clientEventId}`],
+        },
+      ];
+      const result = offlineTripView(copy, "after_dive_1");
+      expect(result?.possibleUnlistedPerson).toBe(true);
+      expect(result?.rollCallComplete).toBe(false);
+      expect(result?.allBoarded).toBe(false);
+    });
+    for (const syncStatus of ["pending", "rejected"] as const) {
+      it(`keeps a ${syncStatus} unlisted missing observation open even with a matching meeting proof`, () => {
+        const copy = fullBoat(13);
+        copy.snapshot.manifests.push({
+          ...structuredClone(copy.snapshot.manifests[0]),
+          checkpoint: "after_dive_1",
+        });
+        expect(offlineTripView(copy, "after_dive_1")?.rollCallComplete).toBe(true);
+        copy.events = [
+          {
+            clientEventId: crypto.randomUUID(),
+            snapshotId: copy.snapshot.snapshotId,
+            snapshotSavedAt: copy.snapshot.savedAt,
+            tripId: "trip-1",
+            ...subject,
+            checkpoint: "after_dive_1",
+            status: "not_boarded",
+            meetingDay: 0,
+            meetingIdentityProof: TEST_MEETING_PROOF,
+            occurredAt: copy.snapshot.savedAt,
+            syncStatus,
+          },
+        ];
+        const result = offlineTripView(copy, "after_dive_1");
+        expect(result?.possibleUnlistedPerson).toBe(true);
+        expect(result?.rollCallComplete).toBe(false);
+        expect(result?.allBoarded).toBe(false);
+      });
+    }
+    it("does not infer an unlisted missing person returned from a newer copy or an independent aboard mark", () => {
+      const copy = fullBoat(13);
+      copy.snapshot.manifests.push({
+        ...structuredClone(copy.snapshot.manifests[0]),
+        checkpoint: "after_dive_1",
+      });
+      copy.snapshot.erasureEpochToken = `3.9.${"a".repeat(43)}`;
+      const first = {
+        clientEventId: crypto.randomUUID(),
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        ...subject,
+        checkpoint: "after_dive_1" as const,
+        status: "not_boarded" as const,
+        meetingDay: 0,
+        meetingIdentityProof: TEST_MEETING_PROOF,
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "applied" as const,
+        syncedAtRevision: 5,
+      };
+      copy.events = [first, { ...first, clientEventId: crypto.randomUUID(), status: "boarded" }];
+      const result = offlineTripView(copy, "after_dive_1");
+      expect(result?.possibleUnlistedPerson).toBe(true);
+      expect(result?.rollCallComplete).toBe(false);
+      expect(result?.allBoarded).toBe(false);
+    });
+  }
 
   it("recounts queued crew and passenger changes, leaving offboard people out", () => {
     const copy = fullBoat();
@@ -95,6 +412,7 @@ describe("offlineTripView — certified total persons", () => {
       clientEventId: crypto.randomUUID(),
       observedEvidenceIds: [identifySavedRollCall(copy.snapshot, subject, "departure", 0)],
       meetingDay: 0,
+      meetingIdentityProof: TEST_MEETING_PROOF,
       snapshotId: copy.snapshot.snapshotId,
       snapshotSavedAt: copy.snapshot.savedAt,
       tripId: "trip-1",
@@ -109,6 +427,16 @@ describe("offlineTripView — certified total persons", () => {
     expect(offlineTripView(copy, "departure")?.overTotalPersons).toBeNull();
     copy.events = [];
     expect(offlineTripView(copy, "departure")?.overTotalPersons).toEqual({ aboard: 13, limit: 12 });
+  });
+
+  it("does not celebrate a full saved roster when retained safety evidence needs review", () => {
+    const copy = fullBoat(13);
+    expect(offlineTripView(copy, "departure")?.allBoarded).toBe(true);
+    for (const manifest of copy.snapshot.manifests) manifest.retainedSafetyUnresolved = true;
+    expect(offlineTripView(copy, "departure")).toMatchObject({
+      allBoarded: false,
+      rollCallComplete: false,
+    });
   });
 });
 
@@ -128,6 +456,8 @@ describe("offlineTripView — blocked at the rail after a dive", () => {
     bookingId: "diver-priya",
     checkpoint: "departure",
     status: "boarded",
+    meetingDay: 0,
+    meetingIdentityProof: TEST_MEETING_PROOF,
     occurredAt: "2026-08-01T12:58:00.000Z",
     syncStatus: "pending",
   };
@@ -139,14 +469,18 @@ describe("offlineTripView — blocked at the rail after a dive", () => {
 
   it("does not mark the same diver once this device boarded them at the dock", () => {
     const view = offlineTripView(
-      richEnvelope("trip-1", { readiness: "blocked" }, { events: [boardedAtDock] }),
+      withMeetingProof(
+        richEnvelope("trip-1", { readiness: "blocked" }, { events: [boardedAtDock] }),
+      ),
       "after_dive_1",
     );
     expect(view?.blockedAtRail).toEqual([false]);
   });
 
   it("reads earlier by checkpoint order, not by where the copy lists it", () => {
-    const envelope = richEnvelope("trip-1", { readiness: "blocked" }, { events: [boardedAtDock] });
+    const envelope = withMeetingProof(
+      richEnvelope("trip-1", { readiness: "blocked" }, { events: [boardedAtDock] }),
+    );
     const reversed = {
       ...envelope,
       snapshot: { ...envelope.snapshot, manifests: [...envelope.snapshot.manifests].reverse() },
@@ -176,11 +510,13 @@ describe("offlineTripView — a medical block after a dive", () => {
     bookingId: "diver-priya",
     checkpoint: "departure",
     status: "boarded",
+    meetingDay: 0,
+    meetingIdentityProof: TEST_MEETING_PROOF,
     occurredAt: "2026-08-01T12:58:00.000Z",
     syncStatus: "pending",
   };
   function medicallyBlocked(events: OfflineRollCallEvent[]) {
-    const envelope = richEnvelope("trip-1", { readiness: "blocked" }, { events });
+    const envelope = withMeetingProof(richEnvelope("trip-1", { readiness: "blocked" }, { events }));
     for (const manifest of envelope.snapshot.manifests) {
       for (const diver of manifest.divers) {
         if (diver.readiness.status === "blocked") {

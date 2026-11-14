@@ -423,6 +423,24 @@ async function saveDepartureDetails(
     shopNow,
   );
   if (!details.ok) redirectDetailsRefusal(back, details, section);
+  const identifiedMeetings = formData.get("meetingIdsPresent") === "1";
+  const meetingIds = z
+    .array(z.union([z.uuid(), z.literal("")]))
+    .safeParse(formData.getAll("meetingId"));
+  const expectedMeetingIds = z.array(z.uuid()).safeParse(formData.getAll("expectedMeetingId"));
+  const expectedMeetingVersion = z
+    .string()
+    .max(10_000)
+    .safeParse(formData.get("expectedMeetingVersion"));
+  if (
+    identifiedMeetings &&
+    (!meetingIds.success ||
+      !expectedMeetingIds.success ||
+      !expectedMeetingVersion.success ||
+      meetingIds.data.length !== details.patch.scheduleDays.length)
+  ) {
+    redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
+  }
   const dives = tripDiveDraftsFromForm(formData, plannedDives);
   const photo = await arrivalPhotoChange(formData, back, section);
   const previousArrivalPhotoUrl = tripNow?.arrivalPhotoUrl ?? null;
@@ -445,7 +463,19 @@ async function saveDepartureDetails(
     startsAt: details.patch.startsAt,
     // The whole departure, first day's departure to last day's return.
     endsAt: details.patch.endsAt,
-    scheduleDays: details.patch.scheduleDays,
+    scheduleDays:
+      identifiedMeetings && meetingIds.success
+        ? details.patch.scheduleDays.map((day, index) => ({
+            ...day,
+            ...(meetingIds.data[index] ? { id: meetingIds.data[index] } : {}),
+          }))
+        : details.patch.scheduleDays,
+    ...(identifiedMeetings && expectedMeetingIds.success
+      ? { expectedScheduleDayIds: expectedMeetingIds.data }
+      : {}),
+    ...(identifiedMeetings && expectedMeetingVersion.success
+      ? { expectedScheduleVersion: expectedMeetingVersion.data }
+      : {}),
     capacity,
     plannedDives,
     diveMode: details.patch.diveMode,
@@ -663,7 +693,9 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
     redirect(
       outcome.reason === "trip_departed"
         ? noticeUrl(back, "cancel-underway")
-        : noticeUrl(back, "invalid", { form: "lifecycle" }),
+        : outcome.reason === "unresolved_safety_evidence"
+          ? noticeUrl(back, "cancel-safety-review")
+          : noticeUrl(back, "invalid", { form: "lifecycle" }),
     );
   }
   // Its crew hear it is off now, not on the hour (ADR 20261009-crew-hear-about-their-boats).

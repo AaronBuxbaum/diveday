@@ -52,6 +52,7 @@
     "refundsReleased": "Reembolsos con tarjeta enviados. Lo que no pudo volver sigue apareciendo como pendiente en Pedidos.",
     "refundNotAuthorized": "Solo un propietario o gerente envía reembolsos.",
     "resumed": "Se reintentaron los mensajes no enviados.",
+    "safetyReview": "Hay evidencia de seguridad sin resolver que debe revisarse antes de cancelar esta salida.",
     "departed": "Esta salida está en curso o ya zarpó, así que no se canceló nada.",
     "error": "No se canceló nada: esta salida se eliminó o no se pudo leer en este momento. Ábrela desde el calendario para revisarla y vuelve a llamar la cancelación.",
     "dayCalled": "{count, plural, one {Cancelación hecha. La salida está cancelada y el mensaje de cada buceador va en camino.} other {Cancelación hecha en # salidas. Están canceladas y el mensaje de cada buceador va en camino.}}",

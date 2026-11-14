@@ -82,6 +82,8 @@ export function MeetingDaysField({
   defaultCount,
   defaultLaterDates = [],
   defaultLaterHours = [],
+  defaultMeetingIds,
+  defaultMeetingVersion,
   disabled = false,
   namedDates = MAX_MEETING_DAY_GAP_DAYS > 1,
   className,
@@ -94,6 +96,9 @@ export function MeetingDaysField({
   defaultLaterDates?: readonly string[];
   /** The stored later days' own hours, one pair per later day; empty for day one's. */
   defaultLaterHours?: readonly MeetingDayHours[];
+  /** Existing identities, submitted only by the departure editor. */
+  defaultMeetingIds?: readonly string[];
+  defaultMeetingVersion?: string;
   /** The add panel's collapsed state: nothing submitted, nothing required. */
   disabled?: boolean;
   /** Offer a date box per later day. Defaults to whether a gap is allowed at all. */
@@ -105,6 +110,7 @@ export function MeetingDaysField({
   const firstStart = useFormValue(countRef, "startTime");
   const firstEnd = useFormValue(countRef, "endTime");
   const [count, setCount] = useState(defaultCount);
+  const meetingIds = defaultMeetingIds ?? [];
   // Offsets from day one, one per later day. Seeded from the stored dates once
   // day one is known; until then the consecutive run.
   const [offsets, setOffsets] = useState<number[] | null>(null);
@@ -176,6 +182,30 @@ export function MeetingDaysField({
           className={`${controlClass} tabular-nums max-w-40`}
         />
       </Field>
+      {defaultMeetingIds ? (
+        <>
+          <input type="hidden" name="meetingIdsPresent" value="1" disabled={disabled} />
+          <input
+            type="hidden"
+            name="expectedMeetingVersion"
+            value={defaultMeetingVersion ?? ""}
+            disabled={disabled}
+          />
+          {defaultMeetingIds.map((id) => (
+            <input key={id} type="hidden" name="expectedMeetingId" value={id} disabled={disabled} />
+          ))}
+          {Array.from({ length: Math.max(0, Math.min(count, maxDays)) }, (_, index) => (
+            <input
+              // biome-ignore lint/suspicious/noArrayIndexKey: the hidden slot's position is its form identity.
+              key={index}
+              type="hidden"
+              name="meetingId"
+              value={meetingIds[index] ?? ""}
+              disabled={disabled}
+            />
+          ))}
+        </>
+      ) : null}
       {namedDates && later > 0 && firstDate ? (
         <div className="mt-4 space-y-4">
           {laterOffsets.map((offset, index) => (

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { announceSessionInvalidation } from "@/components/session-invalidation";
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
@@ -45,6 +46,26 @@ async function tapSave() {
 
 /** H-20261023-medical-alert-for-the amendment: the words reach this phone only on this tap. */
 describe("MedicalAlertOfflineSave", () => {
+  it("does not start a medical fetch after sign-out while the saved-copy read is paused", async () => {
+    let finish!: (value: OfflineManifestEnvelope) => void;
+    vi.mocked(store.loadOfflineManifest)
+      .mockResolvedValueOnce(copyOnPhone())
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      );
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    render(<MedicalAlertOfflineSave tripId="trip-1" copy={copy} />);
+    fireEvent.click(screen.getByRole("button", { name: copy.button }));
+    await act(async () => {
+      announceSessionInvalidation();
+      finish(copyOnPhone());
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(store.saveOfflineMedicalAlerts).not.toHaveBeenCalled();
+    expect(await screen.findByRole("alert")).toHaveTextContent(copy.failed);
+  });
   it("asks the gated route, puts the words on this phone's copy and says who saved them", async () => {
     vi.mocked(store.loadOfflineManifest).mockResolvedValue(copyOnPhone());
     vi.mocked(store.saveOfflineMedicalAlerts).mockResolvedValue(copyOnPhone(SAVED_BY));

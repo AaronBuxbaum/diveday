@@ -41,8 +41,10 @@ export function refreshedSyncFrame(
   const revision = Math.max(posted.revision ?? 0, (claims?.revision ?? 0) + 1);
   frame.snapshotId = crypto.randomUUID();
   frame.erasureEpochToken = `${claims?.epoch ?? 0}.${revision}.${"a".repeat(43)}`;
-  const accepted = (id: string) =>
-    posted.results?.find((result) => result.clientEventId === id)?.status !== "rejected";
+  const accepted = (id: string) => {
+    const result = posted.results?.find((item) => item.clientEventId === id);
+    return !result || result.status === "applied" || result.status === "duplicate";
+  };
   for (const event of posted.events ?? []) {
     if (!accepted(event.clientEventId)) continue;
     let manifest = frame.manifests.find((item) => item.checkpoint === event.checkpoint);

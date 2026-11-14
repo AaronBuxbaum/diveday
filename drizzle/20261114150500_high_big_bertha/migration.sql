@@ -1,0 +1,2 @@
+ALTER TABLE "roll_call_event_claims" ADD COLUMN "retained_safety_evidence" jsonb;--> statement-breakpoint
+ALTER TABLE "roll_call_event_claims" ADD CONSTRAINT "roll_call_event_claims_safety_keys" CHECK ("retained_safety_evidence" is null or (jsonb_typeof("retained_safety_evidence") = 'object' and ("retained_safety_evidence" - ARRAY['version','receiptId','checkpoint','status','occurredAt','meetingDay','observedEvidenceIds','retractsEventId','retractsClientEventId','reconcilesEvidence','noteRetained']) = '{}'::jsonb));

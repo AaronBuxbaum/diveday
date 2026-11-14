@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { recordCrewRollCall, recordRollCall } from "./manifests";
@@ -81,6 +82,19 @@ async function fixture() {
     .returning();
   if (!booking) throw new Error("booking insert returned no row");
 
+  const meetingProof = (snapshotId: string) =>
+    signOfflineMeetingIdentity({
+      shopId: shop.id,
+      tripId: trip.id,
+      snapshotId,
+      meetingDay: 0,
+      meetingId: trip.id,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      scheduleGeneration: trip.meetingScheduleGeneration,
+      datasetIncarnation: shop.offlineDatasetIncarnation,
+    });
+
   const writeNote = (note: string) =>
     recordCrewRollCall(pg.connect(), {
       shopId: shop.id,
@@ -105,6 +119,8 @@ async function fixture() {
       clientEventId: randomUUID(),
       offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 1_000),
       offlineSnapshotId: snapshotId,
+      meetingDay: 0,
+      offlineMeetingIdentityProof: meetingProof(snapshotId),
       offlineErasureEpochToken: signOfflineErasureEpoch({
         shopId: shop.id,
         tripId: trip.id,
@@ -130,6 +146,8 @@ async function fixture() {
       clientEventId: randomUUID(),
       offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 1_000),
       offlineSnapshotId: snapshotId,
+      meetingDay: 0,
+      offlineMeetingIdentityProof: meetingProof(snapshotId),
       offlineErasureEpochToken: signOfflineErasureEpoch({
         shopId: shop.id,
         tripId: trip.id,

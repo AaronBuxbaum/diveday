@@ -1,6 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import {
+  issueOfflineManifestSnapshot,
+  readOfflineManifestRoster,
+} from "@/features/offline-manifest-snapshots";
 import { nowMs } from "@/lib/clock";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "../features/boats/store";
 import {
@@ -262,12 +267,17 @@ describe("captureDepartureBoatSafety", () => {
     const { db, shop } = ctx;
     const boat = await paperedBoat(db, shop.id);
     const now = nowMs();
-    const startsAt = new Date(now - 4 * 3_600_000);
+    const startsAt = new Date(now + 2 * 3_600_000);
     const trip = await departure(db, shop.id, boat.id, startsAt);
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("demo staff missing");
     await db.insert(tripAssignments).values({ tripId: trip.id, personId: staff.person.id });
     const tappedAt = new Date(startsAt.getTime() - 10 * 60_000);
+    const roster = await readOfflineManifestRoster(db, shop.id, trip.id);
+    if (!roster) throw new Error("fixture roster missing");
+    const issued = await issueOfflineManifestSnapshot(db, shop.id, trip.id, roster);
+    if (!issued.ok || !issued.meetingIdentityProofs[0]) throw new Error("fixture proof missing");
+    advanceClock(6 * 3_600_000);
 
     const synced = await recordCrewRollCall(db, {
       shopId: shop.id,
@@ -278,6 +288,10 @@ describe("captureDepartureBoatSafety", () => {
       source: "offline",
       clientEventId: "dddddddd-2300-4300-8300-dddddddddddd",
       offlineSnapshotSavedAt: new Date(startsAt.getTime() - 2 * 3_600_000),
+      offlineSnapshotId: issued.snapshotId,
+      offlineErasureEpochToken: issued.erasureEpochToken,
+      offlineMeetingIdentityProof: issued.meetingIdentityProofs[0],
+      meetingDay: 0,
       occurredAt: tappedAt,
     });
     expect(synced.ok).toBe(true);

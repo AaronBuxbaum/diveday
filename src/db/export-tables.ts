@@ -8,6 +8,7 @@ import {
   inArray,
   notInArray,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import { DESK_ONLY_CODES } from "@/lib/activity";
@@ -65,6 +66,7 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
+  rollCallEventClaims,
   rollCallEvents,
   safetyDrillParticipants,
   safetyDrills,
@@ -82,6 +84,11 @@ import {
   tripSeriesSkips,
   tripSightings,
   tripStageEvents,
+  unresolvedReviewDeferrals,
+  unresolvedSafetyAlertDeliveries,
+  unresolvedSafetyAlertEscalations,
+  unresolvedSafetyAlertOutbox,
+  unresolvedSafetyScanIncidents,
   waiverMaterialityDecisions,
   waiverRecords,
   waiverSealAcknowledgements,
@@ -127,6 +134,8 @@ export type ExportTableRead = {
   records?: SQL;
   scope: {
     shopColumn: AnyPgColumn;
+    /** Child records can scope through their shop-owned parent. */
+    shopFilter?: (shopId: string) => SQL;
     /** The diver bundle reads this table by `personColumn = personId`. */
     personColumn?: AnyPgColumn;
     /** The diver bundle reads this table by `bookingColumn in (their bookings)`. */
@@ -407,6 +416,50 @@ export const EXPORT_TABLES = {
     // roll_call_events.csv and roll_call_crew_events.csv by `subject_kind`
     // (`splitRollCallRows`), and a diver's scope by booking reads seats only.
     scope: { shopColumn: rollCallEvents.shopId, bookingColumn: rollCallEvents.bookingId },
+  },
+  rollCallEventClaims: {
+    table: rollCallEventClaims,
+    order: [asc(rollCallEventClaims.createdAt), asc(rollCallEventClaims.id)],
+    scope: { shopColumn: rollCallEventClaims.shopId },
+  },
+  unresolvedSafetyAlertOutbox: {
+    table: unresolvedSafetyAlertOutbox,
+    order: [asc(unresolvedSafetyAlertOutbox.scanSequence)],
+    scope: { shopColumn: unresolvedSafetyAlertOutbox.shopId },
+  },
+  unresolvedSafetyAlertDeliveries: {
+    table: unresolvedSafetyAlertDeliveries,
+    order: [
+      asc(unresolvedSafetyAlertDeliveries.createdAt),
+      asc(unresolvedSafetyAlertDeliveries.id),
+    ],
+    scope: {
+      shopColumn: unresolvedSafetyAlertDeliveries.outboxId,
+      shopFilter: (shopId: string) =>
+        sql`${unresolvedSafetyAlertDeliveries.outboxId} in (select ${unresolvedSafetyAlertOutbox.id} from ${unresolvedSafetyAlertOutbox} where ${unresolvedSafetyAlertOutbox.shopId} = ${shopId})`,
+    },
+  },
+  unresolvedSafetyAlertEscalations: {
+    table: unresolvedSafetyAlertEscalations,
+    order: [
+      asc(unresolvedSafetyAlertEscalations.firstSeenAt),
+      asc(unresolvedSafetyAlertEscalations.id),
+    ],
+    scope: {
+      shopColumn: unresolvedSafetyAlertEscalations.outboxId,
+      shopFilter: (shopId: string) =>
+        sql`${unresolvedSafetyAlertEscalations.outboxId} in (select ${unresolvedSafetyAlertOutbox.id} from ${unresolvedSafetyAlertOutbox} where ${unresolvedSafetyAlertOutbox.shopId} = ${shopId})`,
+    },
+  },
+  unresolvedSafetyScanIncidents: {
+    table: unresolvedSafetyScanIncidents,
+    order: [asc(unresolvedSafetyScanIncidents.firstSeenAt), asc(unresolvedSafetyScanIncidents.id)],
+    scope: { shopColumn: unresolvedSafetyScanIncidents.shopId },
+  },
+  unresolvedReviewDeferrals: {
+    table: unresolvedReviewDeferrals,
+    order: [asc(unresolvedReviewDeferrals.createdAt), asc(unresolvedReviewDeferrals.id)],
+    scope: { shopColumn: unresolvedReviewDeferrals.shopId },
   },
   // Buddy teams standing at export time — not a history: dissolving a team
   // deletes the rows, and the trail that outlives them (`buddy_team_events`)
@@ -744,7 +797,11 @@ export async function readScoped<K extends ExportTableKey>(
   scope: ExportScope,
 ): Promise<ExportTableRows<K>> {
   if (scope.kind === "shop") {
-    return readWhere(db, key, (columns) => eq(columns.shopColumn, scope.shopId));
+    return readWhere(
+      db,
+      key,
+      (columns) => columns.shopFilter?.(scope.shopId) ?? eq(columns.shopColumn, scope.shopId),
+    );
   }
   const { scope: by } = EXPORT_TABLES[key] as ExportTableRead;
   const { personColumn, bookingColumn } = by;
@@ -838,7 +895,7 @@ export async function countShopScoped(
   const [row] = await db
     .select({ n: count() })
     .from(table as never)
-    .where(and(eq(scope.shopColumn, shopId), records, exclusion));
+    .where(and(scope.shopFilter?.(shopId) ?? eq(scope.shopColumn, shopId), records, exclusion));
   return row?.n ?? 0;
 }
 

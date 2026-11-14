@@ -73,12 +73,38 @@ export function OfflineRollCallSection({
           </div>
         ))}
       </section>
+      {view.manifest.retainedSafetyUnresolved ? (
+        <p className="mt-3 text-base font-bold text-danger" role="status">
+          {t("manifest.retainedSafetyWarning")}
+        </p>
+      ) : null}
+      {view.manifest.retainedSafetyAlertNeedsReview ? (
+        <p className="mt-3 text-base font-bold text-danger" role="status">
+          {t("manifest.retainedSafetyAlertWarning")}
+        </p>
+      ) : null}
       {view.overTotalPersons ? (
         <p
           className="mt-3 rounded-inset border border-danger bg-danger-tint px-4 py-3 text-base font-bold text-danger sm:px-5"
           role="status"
         >
           {t("manifest.headCountOverTotalPersonsAboard", view.overTotalPersons)}
+        </p>
+      ) : null}
+      {view.possibleOverTotalPersons ? (
+        <p
+          className="mt-3 rounded-inset border border-danger bg-danger-tint px-4 py-3 text-base font-bold text-danger sm:px-5"
+          role="status"
+        >
+          {t("manifest.headCountPossibleOverTotalPersons", view.possibleOverTotalPersons)}
+        </p>
+      ) : null}
+      {view.possibleUnlistedPerson ? (
+        <p
+          className="mt-3 rounded-inset border border-danger bg-danger-tint px-4 py-3 text-base font-bold text-danger sm:px-5"
+          role="status"
+        >
+          {t("manifest.headCountPossibleUnlistedPerson")}
         </p>
       ) : null}
       {/* Who the passengers are, when they are not all divers (ADR

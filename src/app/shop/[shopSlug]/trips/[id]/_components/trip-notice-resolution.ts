@@ -60,6 +60,11 @@ const NOTICE_KEYS: Record<
   cancelled: { form: "lifecycle", tone: "danger", key: "trips.notices.cancelled" },
   // Refused: the boat may be on the water (`cancelDeparture`). Nothing changed.
   "cancel-underway": { form: "lifecycle", tone: "danger", key: "trips.notices.cancelUnderway" },
+  "cancel-safety-review": {
+    form: "lifecycle",
+    tone: "danger",
+    key: "trips.notices.cancelSafetyReview",
+  },
   reinstated: { form: "lifecycle", tone: "success", key: "trips.notices.reinstated" },
   // Refused: its hull went to the yard meanwhile (issue #4027). Nothing changed.
   "reinstate-boat-out-of-service": {

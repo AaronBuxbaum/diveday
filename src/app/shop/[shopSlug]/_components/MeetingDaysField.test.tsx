@@ -22,6 +22,7 @@ function renderField(props: {
   defaultCount: number;
   defaultLaterDates?: string[];
   defaultLaterHours?: { start: string; end: string }[];
+  defaultMeetingIds?: string[];
 }) {
   return render(
     <form>
@@ -36,6 +37,17 @@ function renderField(props: {
 const value = (label: string) => (screen.getByLabelText(label) as HTMLInputElement).value;
 
 describe("MeetingDaysField with named dates", () => {
+  it("preserves original identities when a temporarily hidden day is restored", () => {
+    const { container } = renderField({ defaultCount: 2, defaultMeetingIds: ["first", "second"] });
+    const form = container.querySelector("form");
+    if (!form) throw new Error("form missing");
+    expect(new FormData(form).getAll("meetingId")).toEqual(["first", "second"]);
+    fireEvent.change(screen.getByRole("spinbutton", { name: /Days/ }), { target: { value: "1" } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: /Days/ }), { target: { value: "2" } });
+    const submitted = new FormData(form);
+    expect(submitted.getAll("expectedMeetingId")).toEqual(["first", "second"]);
+    expect(submitted.getAll("meetingId")).toEqual(["first", "second"]);
+  });
   it("shows each later day's own date, and moves them with day one", async () => {
     renderField({ defaultCount: 3, defaultLaterDates: ["2026-10-04", "2026-10-10"] });
     const day2 = (await screen.findByLabelText("Day 2")) as HTMLInputElement;

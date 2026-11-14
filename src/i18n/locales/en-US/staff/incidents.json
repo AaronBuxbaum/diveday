@@ -22,9 +22,9 @@
     "notReached": "Not reached yet. Call the owners now.",
     "notAlerted": "No alert stands for them here.",
     "found": "Found",
-    "foundDone": "Marked found. The owners have the all-clear.",
-    "foundPartial": "Marked found. The all-clear did not reach every owner. Call them.",
-    "foundNoAllClear": "Marked found. No all-clear was sent.",
+    "foundDone": "Marked found. The owners received the found update.",
+    "foundPartial": "Marked found. The found update did not reach every owner. Call them.",
+    "foundNoAllClear": "Marked found. No found update was sent.",
     "foundAlready": "Already marked found",
     "foundFailed": "Not saved. Tap again.",
     "stillMissing": "Still marked not back aboard. Mark them back aboard first.",
@@ -150,11 +150,11 @@
   "found": {
     "label": "Found",
     "byAt": "{name}, {when}",
-    "help": "Sends the owners who were alerted one all-clear by email. Only once they are marked back aboard.",
+    "help": "Sends the alerted owners one found update by email, once everyone covered by this report is marked back aboard.",
     "submit": "Found",
-    "allClearSent": "All-clear sent {when}",
-    "allClearPartial": "The all-clear did not reach every owner. Call them.",
-    "allClearNone": "No all-clear was sent."
+    "allClearSent": "Found update sent {when}",
+    "allClearPartial": "The found update did not reach every owner. Call them.",
+    "allClearNone": "No found update was sent."
   },
   "addenda": {
     "title": "Later notes",
@@ -187,7 +187,7 @@
     "holdSet": "Legal hold set",
     "holdReleased": "Legal hold released",
     "alerted": "The owners were alerted from this report, so it is kept. Mark the diver found instead.",
-    "found": "Marked found. The owners are sent an all-clear.",
+    "found": "Marked found. The owners are sent a found update.",
     "stillMissing": "Still marked not back aboard on the manifest. Mark them back aboard first."
   },
   "safety": {

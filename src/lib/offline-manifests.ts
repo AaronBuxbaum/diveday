@@ -8,7 +8,7 @@ import type { DepartureEmergencyReference } from "./emergency-reference";
 // Its one runtime import, `./dive-recency`, imports nothing at runtime.
 import { type DepthAdvisory, depthAdvisoryIn } from "./findings";
 // Dependency-free too (type-only imports), for the same reason.
-import { withholdHeldSeatParticulars } from "./held-seat";
+import { isHeldSeat, withholdHeldSeatParticulars } from "./held-seat";
 import type { TrainingMarkCleared, TripManifest } from "./manifests";
 import { offlineStoredInstant } from "./offline-events";
 import type { PreDepartureCheckStatus } from "./pre-departure-check";
@@ -141,7 +141,7 @@ export type OfflineManifestFreshness = "current" | "aging" | "stale";
 
 export type OfflineManifestPayload = {
   rollCallMeetingDay?: number;
-  rollCallMeetingDays?: { startsAt: string; endsAt: string }[];
+  rollCallMeetingDays?: { startsAt: string; endsAt: string; meetingIdentityProof?: string }[];
   selectedRollCallMeetingDay?: number;
   /** Server-issued identifier bound into `erasureEpochToken` for note cutoffs. */
   snapshotId?: string;
@@ -648,6 +648,8 @@ export type OfflineRollCallEvent = {
   observedEvidenceIds?: string[];
   reconcilesEvidence?: boolean;
   meetingDay?: number;
+  /** Server proof of the meeting selected in the originating snapshot. */
+  meetingIdentityProof?: string;
   clientEventId: string;
   snapshotId: string;
   snapshotSavedAt: string;
@@ -716,6 +718,8 @@ export type OfflineRollCallEvent = {
   storedOccurredAt?: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
+  /** Pending evidence requiring review before it can be safely associated with a meeting. */
+  unresolvedReason?: string;
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
   /**
    * The departure's snapshot revision when DiveDay answered for this event
@@ -1185,10 +1189,18 @@ export async function fetchOfflineManifestShopSlug(): Promise<string | null> {
  * its rows at, the shop erasure epoch and the trip's snapshot revision (0
  * before any copy was issued).
  */
-export type OfflineManifestSnapshotRequest = { erasureEpoch: number; snapshotRevision: number };
+export type OfflineManifestSnapshotRequest = {
+  erasureEpoch: number;
+  snapshotRevision: number;
+  scheduleVersion: string;
+};
 
 /** Its 200 answer: what makes the page's rows a saved, ordered, epoch-signed copy. */
-export type OfflineManifestSnapshotResponse = { snapshotId: string; erasureEpochToken: string };
+export type OfflineManifestSnapshotResponse = {
+  snapshotId: string;
+  erasureEpochToken: string;
+  meetingIdentityProofs: string[];
+};
 
 /**
  * Its 409 answer, whatever the reason in the body (`erasure_epoch_moved`,
@@ -1198,9 +1210,13 @@ export const OFFLINE_MANIFEST_STALE_READ = "stale_read";
 
 function offlineManifestSnapshotIssued(body: unknown): OfflineManifestSnapshotResponse | null {
   if (!body || typeof body !== "object") return null;
-  const { snapshotId, erasureEpochToken } = body as Partial<OfflineManifestSnapshotResponse>;
-  return typeof snapshotId === "string" && typeof erasureEpochToken === "string"
-    ? { snapshotId, erasureEpochToken }
+  const { snapshotId, erasureEpochToken, meetingIdentityProofs } =
+    body as Partial<OfflineManifestSnapshotResponse>;
+  return typeof snapshotId === "string" &&
+    typeof erasureEpochToken === "string" &&
+    Array.isArray(meetingIdentityProofs) &&
+    meetingIdentityProofs.every((proof) => typeof proof === "string")
+    ? { snapshotId, erasureEpochToken, meetingIdentityProofs }
     : null;
 }
 
@@ -1233,6 +1249,7 @@ export async function claimOfflineManifestSnapshot(
     const body: OfflineManifestSnapshotRequest = {
       erasureEpoch: readAt.erasureEpoch,
       snapshotRevision: readAt.snapshotRevision,
+      scheduleVersion: readAt.scheduleVersion,
     };
     const response = await fetch(`/api/offline-manifests/${encodeURIComponent(tripId)}/snapshot`, {
       method: "POST",
@@ -1247,7 +1264,21 @@ export async function claimOfflineManifestSnapshot(
     }
     if (!response.ok) return null;
     const issued = offlineManifestSnapshotIssued(await response.json());
-    return issued ? { ...rest, ...issued } : null;
+    if (!issued || issued.meetingIdentityProofs.length !== (rest.rollCallMeetingDays?.length ?? 0))
+      return null;
+    const { meetingIdentityProofs, ...identity } = issued;
+    return {
+      ...rest,
+      ...identity,
+      ...(rest.rollCallMeetingDays
+        ? {
+            rollCallMeetingDays: rest.rollCallMeetingDays.map((day, index) => ({
+              ...day,
+              meetingIdentityProof: meetingIdentityProofs[index],
+            })),
+          }
+        : {}),
+    };
   } catch {
     return null;
   } finally {
@@ -1586,7 +1617,12 @@ export function canRecordOfflineStatus(
     ?.divers.find((entry) => entry.bookingId === bookingId);
   if (!diver) return false;
   if (checkpoint !== "departure") return true;
-  return diver.readiness.status === "ready" && !offlineTrainingReadinessStale(snapshot, diver);
+  return (
+    diver.readiness.status === "ready" &&
+    !diver.identityWithheld &&
+    !isHeldSeat(diver) &&
+    !offlineTrainingReadinessStale(snapshot, diver)
+  );
 }
 
 /**
@@ -1669,16 +1705,22 @@ export function canRecordOfflineChecklistCheck(
  * questions a device holding a copy up to a fortnight old cannot answer for
  * itself, which is the whole reason this gate is the narrow one.
  *
- * Both statuses are allowed for any seat this copy has heard of. A booking id
- * nothing here knows is refused outright rather than queuing a claim about
- * nobody — the same first question every gate on this surface asks.
+ * A known held seat cannot receive a new arrival until its identity is
+ * settled. Clearing an existing mark remains possible, and a booking this
+ * copy does not know is refused in either direction.
  */
 export function canRecordOfflineArrival(
   snapshot: OfflineManifestSnapshot,
   bookingId: string,
+  status: OfflineArrivalEvent["status"] = "arrived",
 ): boolean {
-  return snapshot.manifests.some((manifest) =>
-    manifest.divers.some((entry) => entry.bookingId === bookingId),
+  const entries = snapshot.manifests.flatMap((manifest) =>
+    manifest.divers.filter((entry) => entry.bookingId === bookingId),
+  );
+  return (
+    entries.length > 0 &&
+    (status === "cleared" ||
+      entries.every((entry) => !entry.identityWithheld && !isHeldSeat(entry)))
   );
 }
 

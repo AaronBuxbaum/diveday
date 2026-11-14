@@ -1,6 +1,6 @@
 export function rawStoredRecord(tripId: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("diveday-offline-manifests", 1);
+    const request = indexedDB.open("diveday-offline-manifests", 2);
     request.onsuccess = () => {
       const db = request.result;
       const getRequest = db

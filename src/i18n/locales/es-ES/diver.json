@@ -4335,6 +4335,11 @@
       "body": "Stripe pausó los pagos con tarjeta en tu cuenta. Los buceadores pueden seguir reservando, pero por ahora pagan en el centro. El panel de Stripe indica qué necesita para volver a activarlos.",
       "open": "Abrir la configuración de pagos"
     },
+    "unresolvedSafetyReview": {
+      "subject": "{shopName}: una observación de seguridad necesita revisión",
+      "body": "Una observación de seguridad de {tripTitle} necesita revisión. La información conservada puede no identificar a la persona o la fecha correspondiente. Revisa el registro de la salida y contacta a la tripulación si es necesario.",
+      "open": "Abrir la salida"
+    },
     "rollCallStale": {
       "subject": "{shopName}: pase de lista aún abierto en {tripTitle}",
       "body": "El pase de lista después de la inmersión {dive} de {tripTitle} sigue abierto pasada la hora de regreso del barco ({time}).",
@@ -4356,8 +4361,9 @@
       "emergency": "Abrir la referencia de emergencia"
     },
     "incidentMissingDiverFound": {
-      "subject": "{shopName}: encontrado el buceador desaparecido en {tripTitle}",
-      "body": "Se encontró al buceador reportado como desaparecido en {tripTitle}. Marcado como encontrado {when}.",
+      "subject": "{shopName}: se encontraron las personas reportadas como desaparecidas en {tripTitle}",
+      "body": "Se encontró a la persona o las personas reportadas como desaparecidas en {tripTitle}. Marcadas como encontradas {when}.",
+      "scope": "Esta actualización se refiere solo a la persona o las personas incluidas en este reporte. Revisa el manifiesto por otra evidencia de seguridad sin resolver.",
       "stillMissing": "{count, plural, one {# persona más sigue reportada como desaparecida en esta salida.} other {# personas más siguen reportadas como desaparecidas en esta salida.}}"
     },
     "shoreAlertStopped": {

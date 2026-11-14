@@ -89,6 +89,28 @@ describe("spineClearUnlessWindy", () => {
     );
   });
 
+  it("does not show the zero-job fallback when retained evidence needs review", () => {
+    const idle = { boatsClear: false, jobs: 0, blocked: 0 };
+    expect(
+      spineClearUnlessWindy(none, idle, {
+        retainedSafetyUnresolved: true,
+        stations: [{ blocked: 0 }],
+      }),
+    ).toBe(false);
+    expect(
+      spineClearUnlessWindy(none, idle, {
+        stations: [{ blocked: 0, retainedSafetyUnresolved: true }],
+      }),
+    ).toBe(false);
+    expect(
+      spineClearUnlessWindy(
+        none,
+        { ...idle, boatsClear: true },
+        { retainedSafetyUnresolved: true, stations: [{ blocked: 0 }] },
+      ),
+    ).toBe(false);
+  });
+
   it("with no job at all, stands only over stations with nobody blocked", () => {
     const idle = { boatsClear: false, jobs: 0, blocked: 0 };
     expect(spineClearUnlessWindy(none, idle, clearDay)).toBe(true);

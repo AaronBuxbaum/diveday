@@ -5,7 +5,8 @@ import { staffCredentials } from "./schema";
 export function crewCredentialSnapshot(shopId: string, personId: string): SQL {
   return sql`(select coalesce(jsonb_agg(jsonb_build_object(
     'kind', ${staffCredentials.kind}, 'issuedAt', ${staffCredentials.issuedAt},
-    'renewsAt', ${staffCredentials.renewsAt}) order by ${staffCredentials.id}), '[]'::jsonb)
+    'renewsAt', ${staffCredentials.renewsAt}) order by ${staffCredentials.kind}::text,
+    ${staffCredentials.issuedAt}, ${staffCredentials.renewsAt}, ${staffCredentials.id}), '[]'::jsonb)
     from ${staffCredentials} where ${staffCredentials.shopId} = ${shopId}
       and ${staffCredentials.personId} = ${personId} and ${staffCredentials.deletedAt} is null)`;
 }

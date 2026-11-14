@@ -626,6 +626,8 @@ export const trips = pgTable(
      * instance a series roll materializes.
      */
     revision: integer("revision").notNull().default(0),
+    /** Changes whenever a meeting identity or its time window changes. */
+    meetingScheduleGeneration: integer("meeting_schedule_generation").notNull().default(0),
     /**
      * **The start the booked divers last heard, while it differs from
      * `starts_at`** (ux review 2026-10-11, item 1; `src/db/trip-rescheduled.ts`).

@@ -14,6 +14,7 @@ import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { deleteDemoSafetyTrail } from "./incident-reports";
 import { isUniqueConstraintViolation } from "./query-helpers";
+import { requireNoRetainedSafetyForDemoReset } from "./retained-safety";
 import {
   accountSecurity,
   accountSessions,
@@ -134,6 +135,7 @@ import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { type SeedShape, seedDemoSchedule, shapeHas } from "./seed-schedule";
 import { DEMO_SHOP_BRAND, DEMO_SHOP_DESK } from "./seed-shop-brand";
 import { seedStaffPortraits } from "./seed-staff-portraits";
+import { rotateShopOfflineDatasetIncarnation } from "./shops";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 
 const DEMO_BOAT_CAPACITIES = {
@@ -851,8 +853,10 @@ export async function resetDemoSchedule(
   shopId: string,
   shape: SeedShape,
 ): Promise<void> {
-  const cleared = await clearDemoSchedule(db, shopId);
-  await reseedClearedDemoSchedule(db, shopId, cleared, shape);
+  await db.transaction(async (tx) => {
+    const cleared = await clearDemoSchedule(tx, shopId);
+    await reseedClearedDemoSchedule(tx, shopId, cleared, shape);
+  });
 }
 
 /** What {@link clearDemoSchedule} read before it deleted, for the re-seed to put back. */
@@ -874,6 +878,8 @@ export async function clearDemoSchedule(
   db: DbExecutor,
   shopId: string,
 ): Promise<ClearedDemoSchedule> {
+  await requireNoRetainedSafetyForDemoReset(db, shopId);
+  await rotateShopOfflineDatasetIncarnation(db, shopId);
   // The demo shop is excluded from platform backup, but clear its scheduler
   // checkpoint with the rest of its resettable state if a local run wrote one.
   await db.delete(platformBackupProgress).where(eq(platformBackupProgress.shopId, shopId));

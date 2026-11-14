@@ -527,3 +527,266 @@ describe("syncOfflineManifest and the revision DiveDay answered at", () => {
     }
   });
 });
+
+it.each([401, 409, 503])(
+  "keeps an ambiguous event pending when the server returns %i",
+  async (status) => {
+    await saveOfflineManifest(payload);
+    const envelope = await appendOfflineRollCall(payload.manifests[0].trip.id, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    const pending = envelope.events[0];
+    server.use(
+      http.post("/api/offline-manifests/sync", () =>
+        HttpResponse.json({ error: "request_refused" }, { status }),
+      ),
+    );
+    await expect(syncOfflineManifest(payload.manifests[0].trip.id)).rejects.toBeDefined();
+    const reloaded = await loadOfflineManifest(payload.manifests[0].trip.id);
+    expect(reloaded?.events).toContainEqual(
+      expect.objectContaining({ clientEventId: pending.clientEventId, syncStatus: "pending" }),
+    );
+  },
+);
+
+it("retains an unresolved roll call while settling an independent arrival", async () => {
+  const tripId = payload.manifests[0].trip.id;
+  await saveOfflineManifest(payload);
+  const queued = await appendOfflineRollCall(tripId, {
+    bookingId: payload.manifests[0].divers[0].bookingId,
+    checkpoint: "departure",
+    status: "not_boarded",
+  });
+  const arrival = await appendOfflineArrival(tripId, {
+    bookingId: payload.manifests[0].divers[0].bookingId,
+    status: "arrived",
+  });
+  const rollId = queued.events[0].clientEventId;
+  const arrivalId = arrival.arrivalEvents?.[0]?.clientEventId;
+  if (!arrivalId) throw new Error("arrival missing");
+  server.use(
+    http.post("/api/offline-manifests/sync", async ({ request }) => {
+      const body = (await request.json()) as {
+        events: OfflineRollCallEvent[];
+        arrivalEvents: OfflineArrivalEvent[];
+      };
+      return HttpResponse.json(
+        withRefreshedSyncFrame(
+          payload,
+          {
+            results: [
+              {
+                clientEventId: rollId,
+                status: "unresolved",
+                reason: "meeting_identity_unverified",
+              },
+              { clientEventId: arrivalId, status: "applied" },
+            ],
+          },
+          { events: [], arrivalEvents: body.arrivalEvents },
+        ),
+      );
+    }),
+  );
+  await syncOfflineManifest(tripId);
+  const stored = await loadOfflineManifest(tripId);
+  expect(stored?.events).toContainEqual(
+    expect.objectContaining({
+      clientEventId: rollId,
+      syncStatus: "pending",
+      unresolvedReason: "meeting_identity_unverified",
+    }),
+  );
+  expect(stored?.arrivalEvents).toContainEqual(
+    expect.objectContaining({ clientEventId: arrivalId, syncStatus: "applied" }),
+  );
+});
+
+it("sends a refused predecessor again as a dependency after reopening the queue", async () => {
+  const tripId = payload.manifests[0].trip.id;
+  const bookingId = payload.manifests[0].divers[0].bookingId;
+  await saveOfflineManifest(payload);
+  const first = (
+    await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    })
+  ).events[0];
+  const second = (
+    await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "departure",
+      status: "boarded",
+      observedEvidenceIds: [`client:${first.clientEventId}`],
+    })
+  ).events[1];
+  const seen: string[][] = [];
+  server.use(
+    http.post("/api/offline-manifests/sync", async ({ request }) => {
+      const body = (await request.json()) as {
+        events: OfflineRollCallEvent[];
+        refusedEvidenceIds: string[];
+      };
+      seen.push(body.refusedEvidenceIds);
+      return HttpResponse.json(
+        withRefreshedSyncFrame(
+          payload,
+          {
+            results: body.events.map((event) =>
+              event.clientEventId === first.clientEventId
+                ? { clientEventId: event.clientEventId, status: "rejected", reason: "not_ready" }
+                : {
+                    clientEventId: event.clientEventId,
+                    status: "unresolved",
+                    reason: "unresolved_predecessor",
+                  },
+            ),
+          },
+          { events: [], revision: seen.length },
+        ),
+      );
+    }),
+  );
+  await syncOfflineManifest(tripId);
+  const reopened = await loadOfflineManifest(tripId);
+  expect(reopened?.events).toContainEqual(
+    expect.objectContaining({ clientEventId: first.clientEventId, syncStatus: "rejected" }),
+  );
+  expect(reopened?.events).toContainEqual(
+    expect.objectContaining({
+      clientEventId: second.clientEventId,
+      syncStatus: "pending",
+      unresolvedReason: "unresolved_predecessor",
+    }),
+  );
+  await syncOfflineManifest(tripId);
+  expect(seen).toEqual([[], [`client:${first.clientEventId}`]]);
+});
+
+it.each(["booking_unavailable", "meeting_identity_unverified", "client_event_conflict"] as const)(
+  "retains %s and clears a disposed note even when refresh is missing",
+  async (reason) => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    const queued = await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "A private observation",
+    });
+    const eventId = queued.events[0].clientEventId;
+    server.use(
+      http.post("/api/offline-manifests/sync", () =>
+        HttpResponse.json({
+          results: [
+            {
+              clientEventId: eventId,
+              status: "unresolved",
+              reason,
+              noteDisposition: "discarded_erasure_cutoff",
+            },
+          ],
+        }),
+      ),
+    );
+    await expect(syncOfflineManifest(tripId)).rejects.toBeDefined();
+    const reopened = await loadOfflineManifest(tripId);
+    expect(reopened?.events).toContainEqual(
+      expect.objectContaining({
+        clientEventId: eventId,
+        syncStatus: "pending",
+        unresolvedReason: reason,
+        note: null,
+        noteDisposition: "discarded_erasure_cutoff",
+      }),
+    );
+  },
+);
+
+for (const kind of ["duplicate", "missing", "unknown", "unverified handoff"] as const) {
+  it(`does not merge a ${kind} sync receipt or apply its note disposition`, async () => {
+    const tripId = payload.manifests[0].trip.id;
+    const bookingId = payload.manifests[0].divers[0].bookingId;
+    await saveOfflineManifest(payload);
+    const roll = await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "Keep this observation",
+    });
+    const arrival = await appendOfflineArrival(tripId, { bookingId, status: "arrived" });
+    const rollId = roll.events[0].clientEventId;
+    const arrivalId = arrival.arrivalEvents?.[0].clientEventId;
+    if (!arrivalId) throw new Error("arrival missing");
+    server.use(
+      http.post("/api/offline-manifests/sync", () => {
+        const first = {
+          clientEventId: rollId,
+          status: kind === "unverified handoff" ? "handed_off" : "unresolved",
+          reason: "client_event_conflict",
+          noteDisposition: "discarded_erasure_cutoff",
+        };
+        const second = {
+          clientEventId:
+            kind === "duplicate" ? rollId : kind === "unknown" ? crypto.randomUUID() : arrivalId,
+          status: "applied",
+        };
+        return HttpResponse.json({ results: kind === "missing" ? [first] : [first, second] });
+      }),
+    );
+    await expect(syncOfflineManifest(tripId)).rejects.toBeDefined();
+    const stored = await loadOfflineManifest(tripId);
+    expect(stored?.events[0]).toMatchObject({
+      clientEventId: rollId,
+      syncStatus: "pending",
+      note: "Keep this observation",
+    });
+    expect(stored?.arrivalEvents?.[0]).toMatchObject({
+      clientEventId: arrivalId,
+      syncStatus: "pending",
+    });
+  });
+}
+
+for (const order of ["roll-first", "arrival-first"] as const) {
+  it(`does not post cross-queue duplicate IDs in ${order} order`, async () => {
+    const tripId = payload.manifests[0].trip.id;
+    const bookingId = payload.manifests[0].divers[0].bookingId;
+    await saveOfflineManifest(payload);
+    const id = crypto.randomUUID();
+    const uuid = vi.spyOn(crypto, "randomUUID").mockReturnValue(id);
+    try {
+      const roll = () =>
+        appendOfflineRollCall(tripId, {
+          bookingId,
+          checkpoint: "after_dive_1",
+          status: "not_boarded",
+        });
+      const arrival = () => appendOfflineArrival(tripId, { bookingId, status: "arrived" });
+      if (order === "roll-first") {
+        await roll();
+        await arrival();
+      } else {
+        await arrival();
+        await roll();
+      }
+    } finally {
+      uuid.mockRestore();
+    }
+    let called = false;
+    server.use(
+      http.post("/api/offline-manifests/sync", () => {
+        called = true;
+        return HttpResponse.json({ results: [] });
+      }),
+    );
+    await expect(syncOfflineManifest(tripId)).rejects.toBeDefined();
+    expect(called).toBe(false);
+    const stored = await loadOfflineManifest(tripId);
+    expect(stored?.events[0]).toMatchObject({ clientEventId: id, syncStatus: "pending" });
+    expect(stored?.arrivalEvents?.[0]).toMatchObject({ clientEventId: id, syncStatus: "pending" });
+  });
+}

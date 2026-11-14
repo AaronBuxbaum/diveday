@@ -60,7 +60,11 @@ export function OfflineCausalConflicts({
               className={buttonClass({ variant: "secondary" })}
               disabled={view.expired || controls.busyBooking === row.id}
               onClick={() =>
-                void controls.record(row.subject, { status, reconcilesEvidence: true })
+                void controls.record(row.subject, {
+                  status,
+                  reconcilesEvidence: true,
+                  reviewedEvidenceIds: [...context.observedEvidenceIds],
+                })
               }
             >
               {t(

@@ -27,6 +27,66 @@ async function fixture() {
 }
 
 describe("pre-departure checklist notes and diver erasure", () => {
+  it("keeps a discarded-note receipt stable across a diver erasure", async () => {
+    const { db, shop, trip, booking, owner, item } = await fixture();
+    const occurredAt = nowDate();
+    const input = {
+      shopId: shop.id,
+      tripId: trip.id,
+      checklistItemId: item.id,
+      recordedByPersonId: owner.id,
+      status: "checked" as const,
+      source: "offline" as const,
+      clientEventId: crypto.randomUUID(),
+      offlineSnapshotSavedAt: occurredAt,
+      offlineSnapshotId: crypto.randomUUID(),
+      offlineErasureEpochToken: "invalid-token",
+      occurredAt,
+      note: "Unverifiable observation",
+    };
+    expect(await recordPreDepartureCheck(db, input)).toMatchObject({
+      ok: true,
+      noteDisposition: "discarded_unverified_snapshot",
+    });
+    const rows = () =>
+      db
+        .select()
+        .from(preDepartureCheckEvents)
+        .where(eq(preDepartureCheckEvents.clientEventId, input.clientEventId));
+    const [before] = await rows();
+    expect(before).toMatchObject({
+      note: null,
+      offlineNoteDisposition: "discarded_unverified_snapshot",
+      offlineIntentFingerprint: expect.any(String),
+      offlineIntentWithoutNoteFingerprint: expect.any(String),
+      offlineIntentKeyFingerprint: expect.any(String),
+    });
+    expect(
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: booking.booking.personId,
+        actorPersonId: owner.id,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await recordPreDepartureCheck(db, input)).toMatchObject({
+      ok: true,
+      duplicate: true,
+      noteDisposition: "discarded_unverified_snapshot",
+    });
+    expect(await recordPreDepartureCheck(db, { ...input, note: undefined })).toMatchObject({
+      ok: true,
+      duplicate: true,
+      noteDisposition: "discarded_unverified_snapshot",
+    });
+    expect(
+      await recordPreDepartureCheck(db, { ...input, note: "Changed observation" }),
+    ).toMatchObject({
+      ok: false,
+      reason: "client_event_conflict",
+    });
+    expect(await rows()).toEqual([before]);
+  });
+
   it("keeps a stale offline checklist note: it is nobody's own data (issue #3569)", async () => {
     const { db, shop, trip, booking, owner, item } = await fixture();
     const issuedEpoch = shop.offlineErasureEpoch;

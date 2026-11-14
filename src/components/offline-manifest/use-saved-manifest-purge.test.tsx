@@ -27,17 +27,21 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/offline-manifest",
   useSearchParams: () => search.params,
 }));
-vi.mock("@/lib/offline-manifest-store", () => ({
-  acknowledgeDiscardedOfflineRecords: vi.fn(),
-  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
-  getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),
-  listOfflineManifests: vi.fn(),
-  loadOfflineManifest: vi.fn(),
-  purgeOfflineManifestsExceptShop: vi.fn(),
-  readDiscardedOfflineRecords: vi.fn().mockResolvedValue([]),
-  subscribeOfflineManifestChanges: vi.fn(() => () => {}),
-  syncOfflineManifest: vi.fn(),
-}));
+vi.mock("@/lib/offline-manifest-store", () => {
+  const list = vi.fn();
+  return {
+    acknowledgeDiscardedOfflineRecords: vi.fn(),
+    beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
+    getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),
+    listOfflineManifests: list,
+    readOfflineManifestInventory: async () => ({ manifests: await list(), incomplete: false }),
+    loadOfflineManifest: vi.fn(),
+    purgeOfflineManifestsExceptShop: vi.fn(),
+    readDiscardedOfflineRecords: vi.fn().mockResolvedValue([]),
+    subscribeOfflineManifestChanges: vi.fn(() => () => {}),
+    syncOfflineManifest: vi.fn(),
+  };
+});
 vi.mock("@/lib/offline-manifests", async (original) => ({
   ...(await original<typeof import("@/lib/offline-manifests")>()),
   fetchOfflineManifestShopSlug: vi.fn(

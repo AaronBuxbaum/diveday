@@ -1,10 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { offlineManifestSnapshotRevisions } from "../../db/schema/index";
+import { offlineManifestSnapshotRevisions, tripScheduleDays } from "../../db/schema/index";
 import { createDemoShop } from "../../db/seed";
 import { getShopBySlug, getShopOfflineErasureEpoch } from "../../db/shops";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../db/trips";
 import { createTrip } from "../../db/trips-create";
+import { editTripSection } from "../../db/trips-record";
 import { verifyOfflineErasureEpoch } from "../../lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
@@ -35,6 +36,63 @@ async function tripTitled(prefix: string) {
 }
 
 describe("offline manifest snapshot ordering", () => {
+  it("does not sign an old read after a meeting window changes and then returns", async () => {
+    const { db, shop } = context;
+    const startsAt = new Date("2099-11-01T09:00:00.000Z");
+    const endsAt = new Date("2099-11-01T13:00:00.000Z");
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Meeting identity ABA",
+      startsAt,
+      endsAt,
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!trip) throw new Error("trip missing");
+    const read = await readOfflineManifestRoster(db, shop.id, trip.id);
+    const day = read?.meetingDays[0];
+    if (!read || !day) throw new Error("meeting missing");
+    const changedEnd = new Date(endsAt.getTime() + 60_000);
+    const version = (end: Date) =>
+      JSON.stringify([[day.id, startsAt.toISOString(), end.toISOString()]]);
+    expect(
+      await editTripSection(db, shop.id, trip.id, {
+        endsAt: changedEnd,
+        scheduleDays: [{ id: day.id, dayNumber: 1, startsAt, endsAt: changedEnd }],
+        expectedScheduleDayIds: [day.id],
+        expectedScheduleVersion: version(endsAt),
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await editTripSection(db, shop.id, trip.id, {
+        endsAt,
+        scheduleDays: [{ id: day.id, dayNumber: 1, startsAt, endsAt }],
+        expectedScheduleDayIds: [day.id],
+        expectedScheduleVersion: version(changedEnd),
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await issueOfflineManifestSnapshot(db, shop.id, trip.id, read)).toEqual({
+      ok: false,
+      reason: "snapshot_superseded",
+    });
+  });
+  it("does not sign a page copy after its meeting schedule changes", async () => {
+    const { db, shop } = context;
+    const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    if (!trip) throw new Error("trip missing");
+    const read = await readOfflineManifestRoster(db, shop.id, trip.id);
+    const day = read?.meetingDays[0];
+    if (!read || !day) throw new Error("meeting missing");
+    await db
+      .update(tripScheduleDays)
+      .set({ endsAt: new Date(day.endsAt.getTime() + 60_000) })
+      .where(eq(tripScheduleDays.id, day.id));
+    expect(await issueOfflineManifestSnapshot(db, shop.id, trip.id, read)).toEqual({
+      ok: false,
+      reason: "snapshot_superseded",
+    });
+    expect(await revisionRows(trip.id)).toEqual([]);
+  });
   it("reads a new seat and then removes the erased name on later reads", async () => {
     const { db, shop } = context;
     const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
@@ -102,10 +160,13 @@ describe("offline manifest snapshot ordering", () => {
     const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     if (!trip) throw new Error("offline manifest trip missing");
     const epoch = shop.offlineErasureEpoch;
+    const initial = await readOfflineManifestRoster(db, shop.id, trip.id);
+    if (!initial) throw new Error("initial roster missing");
 
     const first = await issueOfflineManifestSnapshot(db, shop.id, trip.id, {
       erasureEpoch: epoch,
       snapshotRevision: 0,
+      scheduleVersion: initial.scheduleVersion,
     });
     const read = await readOfflineManifestRoster(db, shop.id, trip.id);
     if (!read) throw new Error("roster missing");
@@ -180,6 +241,7 @@ describe("offline manifest snapshot ordering", () => {
       await issueOfflineManifestSnapshot(db, shop.id, otherTrip.id, {
         erasureEpoch: shop.offlineErasureEpoch,
         snapshotRevision: 0,
+        scheduleVersion: "[]",
       }),
     ).toEqual({ ok: false, reason: "not_found" });
     expect(await revisionRows(otherTrip.id)).toEqual([]);

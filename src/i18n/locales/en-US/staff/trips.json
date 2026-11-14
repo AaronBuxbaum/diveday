@@ -78,6 +78,7 @@
     "savedFlySafeUnreachedCount": "{count, plural, one {Changes saved. # flying-guidance correction could not be sent. Review this departure’s divers and contact its divers about their flying guidance.} other {Changes saved. # flying-guidance corrections could not be sent. Review this departure’s divers and contact its divers about their flying guidance.}}",
     "savedFlySafeFailed": "Changes saved, but the corrections to the time divers could fly didn’t all go. Save again to retry.",
     "cancelled": "Trip canceled. It’s off the public schedule.",
+    "cancelSafetyReview": "Unresolved safety evidence needs review before this departure can be canceled.",
     "cancelUnderway": "This departure is underway or has left, so it wasn’t canceled.",
     "reinstated": "The trip is back on the schedule.",
     "reinstateBoatOutOfService": "Still canceled: its boat is in the yard on a day it would sail. Move the trip or pick another boat first.",

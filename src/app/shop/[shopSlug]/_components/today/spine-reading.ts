@@ -66,8 +66,16 @@ export function spineMoment(
 export function spineClearUnlessWindy(
   moment: { allHomeLine: boolean; firstBookingMark: boolean; factOfScaleLine: boolean },
   reading: { boatsClear: boolean; jobs: number; blocked: number },
-  spine: { stations: readonly { blocked: number }[] },
+  spine: {
+    retainedSafetyUnresolved?: boolean;
+    stations: readonly { blocked: number; retainedSafetyUnresolved?: boolean }[];
+  },
 ): boolean {
+  if (
+    spine.retainedSafetyUnresolved ||
+    spine.stations.some((station) => station.retainedSafetyUnresolved)
+  )
+    return false;
   if (moment.allHomeLine || moment.firstBookingMark || moment.factOfScaleLine) return false;
   if (reading.boatsClear) return true;
   return (

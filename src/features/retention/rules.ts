@@ -38,6 +38,21 @@
  * The requested-erasure sweep handles person references and matching
  * denormalized names (`src/features/anonymize/store.ts`; ADR 20260804-buddy-teams).
  *
+ * **`roll_call_event_claims` is deliberately unbounded** (ADR
+ * 20261114-unresolved-offline-roll-call). Removing a claimed client identity
+ * could let a later retry acquire a different meaning; erasure scrubs its
+ * identifying material and retains only a terminal tombstone.
+ *
+ * **`unresolved_safety_alert_outbox`, `unresolved_safety_alert_deliveries`,
+ * `unresolved_safety_alert_escalations`, `unresolved_safety_scan_incidents`,
+ * and `unresolved_review_deferrals` are deliberately unbounded** while no
+ * verified resolution and retention lifecycle exists. A clock cannot prove a
+ * possibly unsent safety observation was handled, and an uncertain attempt
+ * must remain distinguishable from a new attempt. Aaron prioritized preserving
+ * unsent safety evidence (2026-11-14). Erasure, tenant-scoped export, demo
+ * cleanup and an eventual audited resolution still need their own rules; this
+ * is not a decision to keep identifying fields forever.
+ *
  * **`safety_drills` and `safety_drill_participants` are deliberately
  * unbounded.** The drill log is what an insurer renewal reads: when the shop
  * last drilled oxygen, a missing diver, a person overboard or a fire, and who
@@ -155,6 +170,12 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "gear_service_events",
   "trip_stage_events",
   "buddy_team_events",
+  "roll_call_event_claims",
+  "unresolved_safety_alert_outbox",
+  "unresolved_safety_alert_deliveries",
+  "unresolved_safety_alert_escalations",
+  "unresolved_safety_scan_incidents",
+  "unresolved_review_deferrals",
   "roll_call_events",
   "safety_drills",
   "safety_drill_participants",

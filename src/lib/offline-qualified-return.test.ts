@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { identifySavedRollCall } from "@/test/identified-offline-roll-call";
 import { crewSnapshot, snapshot } from "@/test/substrate-fixtures/lib/offline-manifests-fixtures";
 import {
@@ -14,6 +15,28 @@ function scenario(
   missingCheckpoint: "after_dive_1" | "after_dive_2" = "after_dive_1",
 ) {
   const copy = role === "crew" ? crewSnapshot() : snapshot();
+  const tripId = "11111111-1111-4111-8111-111111111111";
+  copy.snapshotId = "22222222-2222-4222-8222-222222222222";
+  copy.rollCallMeetingDays = [0, 1, 2].map((day) => {
+    const startsAt = new Date(Date.UTC(2026, 6, 20 + day, 12));
+    const endsAt = new Date(Date.UTC(2026, 6, 20 + day, 16));
+    return {
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      meetingIdentityProof: signOfflineMeetingIdentity({
+        shopId: "33333333-3333-4333-8333-333333333333",
+        tripId,
+        snapshotId: copy.snapshotId,
+        meetingId: `44444444-4444-4444-8444-${String(day + 1).padStart(12, "0")}`,
+        meetingDay: day,
+        scheduleGeneration: 0,
+        datasetIncarnation: "55555555-5555-4555-8555-555555555555",
+        startsAt,
+        endsAt,
+      }),
+    };
+  });
+  for (const manifest of copy.manifests) manifest.trip.id = tripId;
   copy.rollCallDayBoundaries = ["2026-07-21T00:00Z", "2026-07-22T00:00Z"];
   copy.selectedRollCallMeetingDay = 1;
   const subject = role === "crew" ? { crewPersonId: "crew-dana" } : { bookingId: "ready" };
@@ -48,12 +71,13 @@ function scenario(
   ): OfflineRollCallEvent => ({
     ...subject,
     clientEventId: crypto.randomUUID(),
-    tripId: "trip-1",
+    tripId,
     snapshotId: copy.snapshotId,
     snapshotSavedAt: copy.savedAt,
     checkpoint,
     status,
     meetingDay: day,
+    meetingIdentityProof: copy.rollCallMeetingDays?.[day]?.meetingIdentityProof,
     observedEvidenceIds: [],
     occurredAt: "1990-01-01T00:00Z",
     syncStatus: "pending",

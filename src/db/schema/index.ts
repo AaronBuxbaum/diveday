@@ -37,6 +37,7 @@ export * from "./payments";
 export * from "./retention";
 export * from "./reviews";
 export * from "./trips";
+export * from "./unresolved-review";
 export * from "./waivers";
 export * from "./wallet-passes";
 export * from "./website-setup";

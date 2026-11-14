@@ -467,5 +467,6 @@ script again.
 | 20261111-square-receipt-evidence | Square is read-only receipt evidence,… |
 | 20261112-node-26-is-the-floor | DiveDay runs on Node 26,… |
 | 20261112-roll-call-observes-evidence | Resolve roll-call conflicts from observed… (proposed) |
+| 20261114-unresolved-offline-roll-call | Preserve ambiguous offline roll call… (proposed) |
 
 <!-- adr-index:end -->

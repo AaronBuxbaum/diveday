@@ -78,6 +78,7 @@
     "savedFlySafeUnreachedCount": "{count, plural, one {Cambios guardados. No se pudo enviar # corrección sobre cuándo volar. Revisa la lista de esta salida y contacta a sus buceadores sobre cuándo volar.} other {Cambios guardados. No se pudieron enviar # correcciones sobre cuándo volar. Revisa la lista de esta salida y contacta a sus buceadores sobre cuándo volar.}}",
     "savedFlySafeFailed": "Cambios guardados, pero no se enviaron todas las correcciones del plazo para volar. Guarda de nuevo para reintentar.",
     "cancelled": "Salida cancelada. Ya no aparece en el calendario público.",
+    "cancelSafetyReview": "Hay evidencia de seguridad sin resolver que debe revisarse antes de cancelar esta salida.",
     "cancelUnderway": "Esta salida está en curso o ya zarpó, así que no se canceló.",
     "reinstated": "La salida vuelve a estar en el calendario.",
     "reinstateBoatOutOfService": "Sigue cancelada: su barco está en el astillero un día en que saldría. Mueve la salida o elige otro barco primero.",

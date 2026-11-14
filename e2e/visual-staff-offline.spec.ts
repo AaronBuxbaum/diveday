@@ -15,7 +15,6 @@ import {
   installVisualBuildGuard,
   OTHER_SHOP,
   openReefTrip,
-  PAST_PENDING_GRACE,
   rewriteSavedOfflineRecord,
   SURFACE_TIMEOUT_MS,
   savedOfflineRecordFor,
@@ -272,59 +271,41 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "offline-manifest-empty", scheme);
       });
 
-      /**
-       * The discard notice: roll call a crew member recorded offline that never
-       * reached DiveDay, on a saved copy the store finally deleted for passing
-       * `OFFLINE_MANIFEST_PENDING_GRACE_MS` — 28 days past its own expiry — with
-       * that evidence still queued on it (security review 2026-08-06, F3).
-       *
-       * It earns a baseline because of *where* it lands and *when*. The delete
-       * almost always happens with no page open (the worker's push refresh, the
-       * staff layout's auto-save), so this danger-toned panel is the first and
-       * only place a human is told; and the surface it appears on is a shared
-       * boat tablet at the dock, in the minute a captain is counting heads. It
-       * is also the one thing on this shell that reconnecting cannot undo.
-       *
-       * Captured on the **list** branch, once. The notice is a single component
-       * rendered identically by all three branches (list, the trip empty state,
-       * and the roster) — the only difference is which sibling precedes it — so
-       * a second and third frame would cost eight more PNGs to photograph the
-       * same markup at a different vertical offset. The list is where a tablet
-       * picked up at the dock opens.
-       *
-       * Left on Blue Mantis's own record rather than a foreign shop's: the
-       * ceiling is shop-agnostic, and keeping it on the seeded shop means every
-       * word in the notice is a seeded value rather than an invented one.
-       */
+      /** Capture a loss notice left by an older shell; current code retains pending evidence. */
       test(`the offline manifest's discard notice renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        // Board → trip → Manifest → the shell, twice, plus the store rewrite.
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await savedOfflineRecordFor(page);
-        // Two divers' worth, so the plural of both strings is what is banked —
-        // one lost tap is the rarer shape, and it is the narrower one to lay out.
-        await rewriteSavedOfflineRecord(page, tripId, {
-          expiresAt: PAST_PENDING_GRACE,
-          pendingRollCalls: 2,
-        });
-
-        // The tenant lookup stays refused for the rest of this test (see
-        // `savedOfflineRecordFor`), and here that is what makes the panel
-        // deterministic rather than merely still. A tenant the shell *can*
-        // resolve starts a cross-shop purge, and that purge reads every saved
-        // record through `loadOfflineManifest` — the same function the list
-        // branch is already reading them through. Both would reach this record
-        // before either deleted it, both would append a notice for it, and the
-        // panel would photograph one row or two depending on which finished
-        // first. One reader, one row.
+        // Seed the historical notice directly; do not delete a pending event to create it.
+        await page.evaluate(async (id) => {
+          const db = await new Promise<IDBDatabase>((resolve, reject) => {
+            const request = indexedDB.open("diveday-offline-manifests", 2);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+          await new Promise<void>((resolve, reject) => {
+            const tx = db.transaction("keys", "readwrite");
+            tx.objectStore("keys").put(
+              [
+                {
+                  noticeId: crypto.randomUUID(),
+                  tripId: id,
+                  tripTitle: "Two-Tank Reef — Molasses & French",
+                  shopName: "Blue Mantis Divers",
+                  shopSlug: "blue-mantis",
+                  pendingEvents: 2,
+                  discardedAt: new Date().toISOString(),
+                },
+              ],
+              "discarded-pending-roll-call-v1",
+            );
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+          db.close();
+        }, tripId);
         await page.reload();
-        // The notice itself, not the list heading: the discard is written while
-        // the store is being read and the panel arrives after the rows, so the
-        // heading resolves against a page that has not yet been told anything
-        // was lost. `role="alert"` is the panel's own element — waiting on the
-        // "Got it" button would equally prove it mounted, but this is the
-        // sentence a regression would move.
         await page
           .getByRole("alert")
           .filter({

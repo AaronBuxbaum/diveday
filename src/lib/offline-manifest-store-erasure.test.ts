@@ -83,6 +83,156 @@ afterEach(
 );
 
 describe("discarded offline roll-call notes", () => {
+  it("keeps a pending note when an unresolved response includes a discard disposition", async () => {
+    await saveOfflineManifest(payload);
+    const queued = await appendOfflineRollCall(tripId, {
+      crewPersonId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "Last seen at the ladder",
+    });
+    server.use(
+      http.post("/api/offline-manifests/sync", () =>
+        HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: [
+                {
+                  clientEventId: queued.events[0].clientEventId,
+                  status: "unresolved" as const,
+                  reason: "meeting_identity_unverified",
+                  noteDisposition: "discarded_unverified_snapshot" as const,
+                },
+              ],
+            },
+            { events: queued.events, checklistEvents: [] },
+          ),
+        ),
+      ),
+    );
+    await syncOfflineManifest(tripId);
+    const saved = await loadOfflineManifest(tripId);
+    expect(saved?.events).toMatchObject([
+      {
+        syncStatus: "pending",
+        unresolvedReason: "meeting_identity_unverified",
+        note: "Last seen at the ladder",
+      },
+    ]);
+    expect(saved?.events[0].noteDisposition).toBeUndefined();
+  });
+
+  it("preserves all pending notes through a later unverified refresh", async () => {
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      crewPersonId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "A pending observation",
+    });
+    await appendOfflineChecklistCheck(tripId, {
+      checklistItemId,
+      status: "checked",
+      note: "A pending checklist note",
+    });
+    await saveOfflineManifest({ ...payload, erasureEpochToken: `0.2.${"a".repeat(43)}` });
+    const saved = await loadOfflineManifest(tripId);
+    expect(saved?.events[0]).toMatchObject({
+      syncStatus: "pending",
+      note: "A pending observation",
+    });
+    expect(saved?.checklistEvents[0]).toMatchObject({
+      syncStatus: "pending",
+      note: "A pending checklist note",
+    });
+  });
+
+  it("keeps a note appended while an unresolved sync is in flight", async () => {
+    await saveOfflineManifest(payload);
+    const posted = await appendOfflineRollCall(tripId, {
+      crewPersonId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "First pending note",
+    });
+    let release!: () => void;
+    let started!: () => void;
+    const requestStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const responseReady = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post("/api/offline-manifests/sync", async () => {
+        started();
+        await responseReady;
+        return HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: [
+                {
+                  clientEventId: posted.events[0].clientEventId,
+                  status: "unresolved" as const,
+                  reason: "meeting_identity_unverified",
+                },
+              ],
+            },
+            { events: posted.events, checklistEvents: [] },
+          ),
+        );
+      }),
+    );
+    const syncing = syncOfflineManifest(tripId);
+    await requestStarted;
+    await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "after_dive_2",
+      status: "not_boarded",
+      note: "New pending note",
+    });
+    release();
+    await syncing;
+    const saved = await loadOfflineManifest(tripId);
+    expect(saved?.events.map((event) => [event.syncStatus, event.note])).toEqual([
+      ["pending", "First pending note"],
+      ["pending", "New pending note"],
+    ]);
+  });
+
+  it("honors a confirmed erasure disposition even when an unresolved response has no fresh snapshot", async () => {
+    await saveOfflineManifest(payload);
+    const queued = await appendOfflineRollCall(tripId, {
+      crewPersonId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      note: "The subject's identifying note",
+    });
+    server.use(
+      http.post("/api/offline-manifests/sync", () =>
+        HttpResponse.json({
+          results: [
+            {
+              clientEventId: queued.events[0].clientEventId,
+              status: "unresolved",
+              reason: "meeting_identity_unverified",
+              noteDisposition: "discarded_erasure_cutoff",
+            },
+          ],
+        }),
+      ),
+    );
+    await expect(syncOfflineManifest(tripId)).rejects.toThrow();
+    const saved = await loadOfflineManifest(tripId);
+    expect(saved?.events[0]).toMatchObject({
+      syncStatus: "pending",
+      note: null,
+      noteDisposition: "discarded_erasure_cutoff",
+    });
+  });
+
   it("clears each acknowledged note while preserving its roll-call mark", async () => {
     await saveOfflineManifest(payload);
     await appendOfflineRollCall(tripId, {

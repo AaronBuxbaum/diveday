@@ -1,8 +1,10 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seatIsHeld } from "@/lib/no-show";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
+import { meetingGeneration, meetingIncarnation } from "@/test/meeting-generation";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { markBookingNoShow } from "../features/no-show/store";
 import type { AppDb } from "./client";
@@ -15,7 +17,7 @@ import {
 } from "./manifests";
 import { CLIENT_EVENT_CONFLICT } from "./offline-replay";
 import { getBookingReadiness } from "./readiness";
-import { bookings, tripAssignments } from "./schema";
+import { bookings, tripAssignments, tripScheduleDays, trips } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -311,12 +313,33 @@ async function firstSeatOnTheReef(db: AppDb) {
 }
 
 /** An offline event's own fields, made a minute apart from a saved copy. */
-function offlineEvent(minutesAfterSave: number) {
+async function offlineEvent(db: AppDb, shopId: string, tripId: string, minutesAfterSave: number) {
   const savedAt = new Date(nowMs() - 10 * MINUTE_MS);
+  const [trip] = await db.select().from(trips).where(eq(trips.id, tripId));
+  const [day] = await db
+    .select()
+    .from(tripScheduleDays)
+    .where(and(eq(tripScheduleDays.tripId, tripId), eq(tripScheduleDays.dayNumber, 1)));
+  if (!trip) throw new Error("fixture trip missing");
+  const meeting = day ?? trip;
+  const snapshotId = crypto.randomUUID();
   return {
     source: "offline" as const,
     clientEventId: crypto.randomUUID(),
+    offlineSnapshotId: snapshotId,
     offlineSnapshotSavedAt: savedAt,
+    meetingDay: 0,
+    offlineMeetingIdentityProof: signOfflineMeetingIdentity({
+      shopId,
+      tripId,
+      snapshotId,
+      meetingDay: 0,
+      meetingId: meeting.id,
+      startsAt: meeting.startsAt,
+      endsAt: meeting.endsAt,
+      scheduleGeneration: await meetingGeneration(db, tripId),
+      datasetIncarnation: await meetingIncarnation(db, tripId),
+    }),
     occurredAt: new Date(savedAt.getTime() + minutesAfterSave * MINUTE_MS),
   };
 }
@@ -331,7 +354,7 @@ async function rowsCarrying(db: AppDb, clientEventId: string): Promise<number> {
   return Number(rows[0]?.n);
 }
 
-/** Runs `write` twice over: the first parked after its insert, the replay behind it. */
+/** Starts both writers while the staff row is held, then observes their outcomes. */
 async function overlapAReplay<T>(
   pg: Awaited<ReturnType<typeof postgresTestDb>>,
   recorderId: string,
@@ -354,7 +377,7 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
     const pg = await postgresTestDb();
     const { shopId, tripId, bookingId, staffId } = await firstSeatOnTheReef(pg.db);
     const common = { shopId, tripId, bookingId, recordedByPersonId: staffId };
-    const missing = offlineEvent(1);
+    const missing = await offlineEvent(pg.db, shopId, tripId, 1);
     await expect(
       recordRollCall(pg.db, {
         ...common,
@@ -365,7 +388,7 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
     ).resolves.toMatchObject({ ok: true });
     const found = {
       ...common,
-      ...offlineEvent(2),
+      ...(await offlineEvent(pg.db, shopId, tripId, 2)),
       status: "cleared" as const,
       checkpoint: "after_dive_1" as const,
       retractsClientEventId: missing.clientEventId,
@@ -387,7 +410,7 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
       tripId,
       bookingId,
       recordedByPersonId: staffId,
-      ...offlineEvent(1),
+      ...(await offlineEvent(pg.db, shopId, tripId, 1)),
       status: "not_boarded" as const,
       checkpoint: "after_dive_1" as const,
     };
@@ -403,7 +426,7 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
     const pg = await postgresTestDb();
     const { shopId, tripId, staffId } = await crewMemberWithASeat(pg.db);
     const common = { shopId, tripId, personId: staffId, recordedByPersonId: staffId };
-    const missing = offlineEvent(1);
+    const missing = await offlineEvent(pg.db, shopId, tripId, 1);
     await expect(
       recordCrewRollCall(pg.db, {
         ...common,
@@ -414,7 +437,7 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
     ).resolves.toMatchObject({ ok: true });
     const found = {
       ...common,
-      ...offlineEvent(2),
+      ...(await offlineEvent(pg.db, shopId, tripId, 2)),
       status: "cleared" as const,
       checkpoint: "after_dive_1" as const,
       retractsClientEventId: missing.clientEventId,
@@ -430,16 +453,12 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
   });
 
   /**
-   * The last line: a collision on `roll_call_events_shop_client_event_unique`
-   * that no lock lined up. Two seats on two departures share no lock, so the
-   * second request reaches its insert while the first is uncommitted, waits
-   * on the index, and gets 23505 once the first commits. One id on two
-   * subjects is a device bug. Never a 500 that fails the batch, and never a
-   * `duplicate` either: that would mark a tap applied that wrote nothing about
-   * its own seat, which on a missing-diver mark is the quiet direction
-   * (re-review N9). It is refused as a conflict, out loud.
+   * Two departures reuse one ID while both requests are in flight. The claim
+   * lock can serialize them before insertion, so this test does not prove the
+   * unique-index collision branch. The outcome must still be a conflict,
+   * never a duplicate that silently settles another person's observation.
    */
-  it("refuses a collision on the client-event index from another seat as a conflict", async () => {
+  it("refuses concurrent client-event reuse on another seat as a conflict", async () => {
     const pg = await postgresTestDb();
     const { shopId, tripId, bookingId, staffId, otherTripIds } = await firstSeatOnTheReef(pg.db);
     let elsewhere: { tripId: string; bookingId: string } | undefined;
@@ -451,19 +470,23 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
       }
     }
     if (!elsewhere) throw new Error("no second demo departure with a diver on it");
-    const shared = offlineEvent(1);
-    const mark = (seat: { tripId: string; bookingId: string }) => ({
+    const shared = await offlineEvent(pg.db, shopId, tripId, 1);
+    const other = await offlineEvent(pg.db, shopId, elsewhere.tripId, 1);
+    const mark = (seat: { tripId: string; bookingId: string }, event: typeof shared) => ({
       shopId,
       ...seat,
       recordedByPersonId: staffId,
-      ...shared,
+      ...event,
       status: "not_boarded" as const,
       checkpoint: "after_dive_1" as const,
     });
     const gate = await holdRowLock(pg, sql`select id from people where id = ${staffId} for update`);
-    const first = recordRollCall(pg.connect(), mark({ tripId, bookingId }));
+    const first = recordRollCall(pg.connect(), mark({ tripId, bookingId }, shared));
     await waitForLockWaiters(pg.db, 1);
-    const second = recordRollCall(pg.connect(), mark(elsewhere));
+    const second = recordRollCall(
+      pg.connect(),
+      mark(elsewhere, { ...other, clientEventId: shared.clientEventId }),
+    );
     await waitForLockWaiters(pg.db, 2);
     await gate.release();
     const [firstResult, secondResult] = await Promise.all([first, second]);
@@ -478,7 +501,7 @@ describePostgres("a resent offline sync overlapping the request it gave up on", 
     const { shopId, tripId, staffId } = await firstSeatOnTheReef(pg.db);
     const [first, second] = await getTripRoster(pg.db, shopId, tripId);
     if (!first || !second) throw new Error("demo reef trip needs two divers");
-    const shared = offlineEvent(1);
+    const shared = await offlineEvent(pg.db, shopId, tripId, 1);
     const mark = (bookingId: string) => ({
       shopId,
       tripId,

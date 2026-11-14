@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { sessionInvalidationGeneration } from "@/components/session-invalidation";
 import { ErrorToast, SAFETY_TOAST_MS } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { fill } from "@/i18n/fill";
@@ -72,19 +73,33 @@ export function MedicalAlertOfflineSave({
 
   const save = () =>
     startTransition(async () => {
+      const sessionGeneration = sessionInvalidationGeneration();
+      const sessionChanged = () => sessionGeneration !== sessionInvalidationGeneration();
       try {
         const held = await loadOfflineManifest(tripId).catch(() => null);
+        if (sessionChanged()) {
+          setProblem(copy.failed);
+          return;
+        }
         if (!held) {
           setProblem(copy.noCopy);
           return;
         }
         const tenantRound = await beginOfflineTenantVerificationRound();
+        if (sessionChanged()) {
+          setProblem(copy.failed);
+          return;
+        }
         const response = await fetch(`/api/offline-manifests/${tripId}/medical-alerts`, {
           method: "POST",
           credentials: "same-origin",
           headers: ROLL_CALL_CAUSAL_HEADERS,
         });
         const answer = response.ok ? parsed(await response.json()) : null;
+        if (sessionChanged()) {
+          setProblem(copy.failed);
+          return;
+        }
         if (!answer) {
           setProblem(copy.failed);
           return;

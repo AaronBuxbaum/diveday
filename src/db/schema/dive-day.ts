@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigint,
   bigserial,
   boolean,
   check,
@@ -265,6 +266,246 @@ export const rollCallEvents = pgTable(
   ],
 );
 
+/**
+ * Shop-scoped identity reservation for accepted and unconfirmed offline taps.
+ * Raw observation capture is disabled. Erasure leaves only a terminal tombstone,
+ * preventing a later retry from recreating the erased subject's identity.
+ */
+export const rollCallEventClaims = pgTable(
+  "roll_call_event_claims",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    clientEventId: uuid("client_event_id").notNull(),
+    /** Opaque version for disabled staff-review decisions. */
+    reviewRevision: uuid("review_revision").notNull().defaultRandom(),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    state: text("state").notNull(),
+    subjectKind: rollCallSubjectKind("subject_kind"),
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    crewPersonId: uuid("crew_person_id").references(() => people.id),
+    intentFingerprint: text("intent_fingerprint"),
+    intentWithoutNoteFingerprint: text("intent_without_note_fingerprint"),
+    proofFingerprint: text("proof_fingerprint"),
+    keyFingerprint: text("key_fingerprint"),
+    unresolvedReason: text("unresolved_reason"),
+    noteDisposition: text("note_disposition"),
+    acceptedEventId: uuid("accepted_event_id").references(() => rollCallEvents.id),
+    /** Internal copy only; its presence is not a handoff receipt. */
+    unresolvedObservation: jsonb("unresolved_observation").$type<{
+      checkpoint: string;
+      status: string;
+      occurredAt: string | null;
+      snapshotId: string | null;
+      snapshotSavedAt: string | null;
+      meetingDay: number | null;
+      meetingProof: string | null;
+      erasureToken: string | null;
+      observedEvidenceIds: readonly string[] | null;
+      retractsEventId: string | null;
+      retractsClientEventId: string | null;
+      reconcilesEvidence: boolean;
+      note: string | null;
+    }>(),
+    unresolvedRecordedByPersonId: uuid("unresolved_recorded_by_person_id").references(
+      () => people.id,
+    ),
+    /** Internal, disabled handoff prototype; never a client settlement by itself. */
+    handoffReceiptId: uuid("handoff_receipt_id"),
+    handoffReceiptAt: timestamp("handoff_receipt_at", { withTimezone: true }),
+    /** Non-name safety facts retained after claim redaction; never a complete handoff. */
+    retainedSafetyEvidence: jsonb("retained_safety_evidence").$type<{
+      version: 1;
+      receiptId: string;
+      checkpoint: string;
+      status: string;
+      occurredAt: string;
+      meetingDay: number | null;
+      observedEvidenceIds: readonly string[] | null;
+      retractsEventId: string | null;
+      retractsClientEventId: string | null;
+      reconcilesEvidence: boolean;
+      noteRetained: false;
+    }>(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("roll_call_event_claims_shop_client_unique").on(table.shopId, table.clientEventId),
+    uniqueIndex("roll_call_event_claims_accepted_event_unique").on(table.acceptedEventId),
+    index("roll_call_event_claims_booking_idx").on(table.bookingId),
+    index("roll_call_event_claims_crew_person_idx").on(table.crewPersonId),
+    check(
+      "roll_call_event_claims_observation_pair",
+      sql`(${table.unresolvedObservation} is null) = (${table.unresolvedRecordedByPersonId} is null)`,
+    ),
+    check(
+      "roll_call_event_claims_observation_unresolved_only",
+      sql`${table.state} = 'unresolved' or ${table.unresolvedObservation} is null`,
+    ),
+    check(
+      "roll_call_event_claims_handoff_pair",
+      sql`(${table.handoffReceiptId} is null and ${table.handoffReceiptAt} is null) or (${table.handoffReceiptId} is not null and ${table.handoffReceiptAt} is not null and ${table.state} = 'unresolved' and ${table.unresolvedObservation} is not null)`,
+    ),
+    check(
+      "roll_call_event_claims_safety_keys",
+      sql`${table.retainedSafetyEvidence} is null or (jsonb_typeof(${table.retainedSafetyEvidence}) = 'object' and (${table.retainedSafetyEvidence} - ARRAY['version','receiptId','checkpoint','status','occurredAt','meetingDay','observedEvidenceIds','retractsEventId','retractsClientEventId','reconcilesEvidence','noteRetained']) = '{}'::jsonb)`,
+    ),
+    check(
+      "roll_call_event_claims_shape",
+      sql`(
+      ${table.state} = 'erased' and ${table.subjectKind} is null and ${table.bookingId} is null and ${table.crewPersonId} is null
+      and ${table.intentFingerprint} is null and ${table.proofFingerprint} is null and ${table.keyFingerprint} is null and ${table.unresolvedReason} is null
+      and ${table.noteDisposition} is null and ${table.acceptedEventId} is null
+    ) or (
+      ${table.state} in ('accepted', 'unresolved') and ${table.subjectKind} is not null and ${table.intentFingerprint} is not null and ${table.proofFingerprint} is not null and ${table.keyFingerprint} is not null
+      and ((${table.subjectKind} = 'seat' and ${table.bookingId} is not null and ${table.crewPersonId} is null)
+        or (${table.subjectKind} = 'crew' and ${table.crewPersonId} is not null and ${table.bookingId} is null))
+      and ((${table.state} = 'accepted' and ${table.acceptedEventId} is not null and ${table.unresolvedReason} is null)
+        or (${table.state} = 'unresolved' and ${table.acceptedEventId} is null and ${table.unresolvedReason} is not null))
+    )`,
+    ),
+    check(
+      "roll_call_event_claims_reason",
+      sql`${table.unresolvedReason} is null or ${table.unresolvedReason} in ('meeting_identity_unverified', 'unresolved_predecessor')`,
+    ),
+    check(
+      "roll_call_event_claims_note_disposition",
+      sql`${table.noteDisposition} is null or ${table.noteDisposition} in ('discarded_erasure_cutoff', 'discarded_unverified_snapshot')`,
+    ),
+  ],
+);
+
+/** A notification obligation, created atomically with retained safety facts.
+ * It contains no subject or observation text. Delivery is not enabled yet. */
+export const unresolvedSafetyAlertOutbox = pgTable(
+  "unresolved_safety_alert_outbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    scanSequence: bigserial("scan_sequence", { mode: "number" }).notNull(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    claimId: uuid("claim_id")
+      .notNull()
+      .references(() => rollCallEventClaims.id),
+    generationId: uuid("generation_id").notNull(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("unresolved_safety_alert_outbox_generation_unique").on(table.generationId),
+    uniqueIndex("unresolved_safety_alert_outbox_scan_sequence_unique").on(table.scanSequence),
+    index("unresolved_safety_alert_outbox_shop_trip_idx").on(table.shopId, table.tripId),
+  ],
+);
+
+/** Per-recipient state for a review notice. An interrupted attempt is
+ * uncertain, not evidence that a provider did or did not deliver it. */
+export const unresolvedSafetyAlertDeliveries = pgTable(
+  "unresolved_safety_alert_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    outboxId: uuid("outbox_id")
+      .notNull()
+      .references(() => unresolvedSafetyAlertOutbox.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    status: text("status").notNull().default("pending"),
+    attemptId: uuid("attempt_id"),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    providerMessageId: text("provider_message_id"),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("unresolved_safety_alert_delivery_recipient_unique").on(
+      table.outboxId,
+      table.personId,
+    ),
+    check(
+      "unresolved_safety_alert_delivery_status",
+      sql`${table.status} in ('pending', 'sending', 'delivered', 'uncertain')`,
+    ),
+    check(
+      "unresolved_safety_alert_delivery_attempt_shape",
+      sql`(${table.status} = 'pending' and ${table.attemptId} is null and ${table.attemptedAt} is null and ${table.deliveredAt} is null and ${table.providerMessageId} is null) or (${table.status} in ('sending', 'uncertain') and ${table.attemptId} is not null and ${table.attemptedAt} is not null and ${table.deliveredAt} is null and ${table.providerMessageId} is null) or (${table.status} = 'delivered' and ${table.attemptId} is not null and ${table.attemptedAt} is not null and ${table.deliveredAt} is not null and ${table.providerMessageId} is not null)`,
+    ),
+  ],
+);
+
+/** A leased, resumable scan. The cursor is not a claim that work is complete. */
+export const unresolvedSafetyAlertScan = pgTable(
+  "unresolved_safety_alert_scan",
+  {
+    name: text("name").primaryKey(),
+    cursor: bigint("cursor", { mode: "number" }).notNull().default(0),
+    highWater: bigint("high_water", { mode: "number" }),
+    lastProblem: text("last_problem"),
+    lastProblemSequence: bigint("last_problem_sequence", { mode: "number" }),
+    lastProblemAt: timestamp("last_problem_at", { withTimezone: true }),
+    leaseId: uuid("lease_id"),
+    leaseUntil: timestamp("lease_until", { withTimezone: true }),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
+  },
+  (table) => [
+    check(
+      "unresolved_safety_alert_scan_lease_pair",
+      sql`(${table.leaseId} is null) = (${table.leaseUntil} is null)`,
+    ),
+  ],
+);
+
+/** An unresolved operational failure, not an all-clear or a delivered notice. */
+export const unresolvedSafetyAlertEscalations = pgTable(
+  "unresolved_safety_alert_escalations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    outboxId: uuid("outbox_id")
+      .notNull()
+      .references(() => unresolvedSafetyAlertOutbox.id),
+    kind: text("kind").notNull(),
+    firstSeenAt: appNowTimestamp("first_seen_at").notNull(),
+    lastSeenAt: appNowTimestamp("last_seen_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("unresolved_safety_alert_escalation_kind_unique").on(table.outboxId, table.kind),
+    check(
+      "unresolved_safety_alert_escalation_kind",
+      sql`${table.kind} in ('no_recipients', 'uncertain', 'pending', 'dispatch_error')`,
+    ),
+  ],
+);
+
+/** Preserve each missing or changed generation even if its outbox row vanished. */
+export const unresolvedSafetyScanIncidents = pgTable(
+  "unresolved_safety_scan_incidents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    outboxId: uuid("outbox_id").notNull(),
+    generationId: uuid("generation_id").notNull(),
+    scanSequence: bigint("scan_sequence", { mode: "number" }).notNull(),
+    shopId: uuid("shop_id").notNull(),
+    tripId: uuid("trip_id").notNull(),
+    claimId: uuid("claim_id").notNull(),
+    firstSeenAt: appNowTimestamp("first_seen_at").notNull(),
+    lastSeenAt: appNowTimestamp("last_seen_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("unresolved_safety_scan_incident_generation_unique").on(
+      table.outboxId,
+      table.generationId,
+      table.scanSequence,
+    ),
+  ],
+);
+
 /** The four drills (`DRILL_KINDS`, src/lib/safety-drills.ts). */
 export const safetyDrillKind = pgEnum("safety_drill_kind", DRILL_KINDS);
 
@@ -411,6 +652,11 @@ export const preDepartureCheckEvents = pgTable(
     source: rollCallSource("source").notNull().default("live"),
     /** Tap-generated idempotency key for live and offline statements. */
     clientEventId: uuid("client_event_id"),
+    /** Keyed receipt for the original offline intent, never a second copy of its note. */
+    offlineIntentFingerprint: text("offline_intent_fingerprint"),
+    offlineIntentWithoutNoteFingerprint: text("offline_intent_without_note_fingerprint"),
+    offlineIntentKeyFingerprint: text("offline_intent_key_fingerprint"),
+    offlineNoteDisposition: text("offline_note_disposition"),
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: appNowTimestamp("created_at").notNull(),

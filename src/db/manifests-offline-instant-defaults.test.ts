@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { capturedMeeting } from "@/test/offline-meeting-test-support";
 import { manifestContext } from "@/test/substrate-fixtures/db/manifests-test-fixtures";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { rollCallEvents } from "./schema";
@@ -12,6 +13,7 @@ describe("roll-call recorder timestamp defaults", () => {
         const { db, shop, reef, booking, staff } = await manifestContext();
         const now = nowDate();
         const expected = source === "live" ? new Date(now.getTime() - 60_000) : now;
+        const meeting = source === "offline" ? await capturedMeeting(db, shop.id, reef.id, 0) : {};
         const common = {
           shopId: shop.id,
           tripId: reef.id,
@@ -24,6 +26,8 @@ describe("roll-call recorder timestamp defaults", () => {
             : {
                 clientEventId: crypto.randomUUID(),
                 offlineSnapshotSavedAt: new Date(now.getTime() - 300_000),
+                meetingDay: 0,
+                ...meeting,
               }),
         };
         const crewId = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew[0]?.id;

@@ -122,11 +122,15 @@ export function renderSpine({
   departures = [departure()],
   actions = [],
   tomorrow = [],
+  retainedSafetyUnresolved = false,
+  retainedSafetyAlertNeedsReview = false,
   ...props
 }: {
   departures?: SpineDeparture[];
   actions?: TodayAction[];
   tomorrow?: SpineDeparture[];
+  retainedSafetyUnresolved?: boolean;
+  retainedSafetyAlertNeedsReview?: boolean;
   showPaymentsRow?: boolean;
   drafts?: SpineDraft[];
   crewedTripIds?: string[];
@@ -143,7 +147,10 @@ export function renderSpine({
   return render(
     <DaySpine
       context={{
-        spine: assembleDaySpine({ departures, actions }, { departures: tomorrow, actions: [] }),
+        spine: assembleDaySpine(
+          { departures, actions, retainedSafetyUnresolved, retainedSafetyAlertNeedsReview },
+          { departures: tomorrow, actions: [] },
+        ),
         shopSlug: "blue-mantis",
         mailShopName: "Blue Mantis",
         // The source locale: these tests read the English bundle.

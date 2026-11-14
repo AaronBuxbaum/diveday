@@ -33,6 +33,11 @@ import {
 import { listNotificationDeliveryIssues } from "@/db/notifications";
 import { openOrdersForBookings } from "@/db/orders";
 import { listTripsReadiness } from "@/db/readiness";
+import {
+  hasRetainedSafetyAlertNeedsReview,
+  hasRetainedSafetyEvidence,
+  retainedSafetyTripIds as readRetainedSafetyTripIds,
+} from "@/db/retained-safety";
 import { newestMarkFirst } from "@/db/roll-call-order";
 import { markBookingId, seatMarks } from "@/db/roll-call-subject";
 import {
@@ -302,6 +307,8 @@ export type DepartureSummary = {
    * place.
    */
   crewAccountedFor: boolean;
+  /** Trip-wide retained evidence that cannot safely be assigned to a person or meeting. */
+  retainedSafetyUnresolved?: boolean;
   /** Why the crew half is open, as a **code**; the UI picks the words. */
   crewReason: CrewIncompleteReason | null;
   /**
@@ -340,6 +347,9 @@ export type CrewedSessionSummary = {
 };
 
 export type TodayWork = {
+  /** May belong to a trip outside today's departure stations. */
+  retainedSafetyUnresolved?: boolean;
+  retainedSafetyAlertNeedsReview?: boolean;
   departures: DepartureSummary[];
   actions: TodayAction[];
   /** Today's handled help requests, so Today can offer Reopen after the undo toast (issue #2939). */
@@ -784,7 +794,7 @@ async function departureCardFacts(
   const boatIds = [
     ...new Set(trips.map((trip) => trip.boatId).filter((id): id is string => Boolean(id))),
   ];
-  const [diveIntents, boatRows, assignments, plannedSites] = await Promise.all([
+  const [diveIntents, boatRows, assignments, plannedSites, retainedRows] = await Promise.all([
     diveIntentTallyForTrips(db, shopId, tripIds),
     boatIds.length > 0
       ? db
@@ -818,6 +828,7 @@ async function departureCardFacts(
           .orderBy(asc(people.fullName), asc(people.id))
       : [],
     plannedSitesByTrip(db, tripIds),
+    readRetainedSafetyTripIds(db, shopId, tripIds),
   ]);
   const boatNames = new Map(boatRows.map((row) => [row.id, row.name] as const));
 
@@ -846,7 +857,15 @@ async function departureCardFacts(
     );
   }
 
-  return { diveIntents, boatNames, crewByTrip, meetingWindows, plannedSites };
+  const retainedSafetyTripIds = retainedRows;
+  return {
+    diveIntents,
+    boatNames,
+    crewByTrip,
+    meetingWindows,
+    plannedSites,
+    retainedSafetyTripIds,
+  };
 }
 
 type DepartureCardInputs = Awaited<ReturnType<typeof departureCardFacts>> & {
@@ -874,6 +893,7 @@ function summarizeDepartures(
     crewByTrip,
     meetingWindows,
     plannedSites,
+    retainedSafetyTripIds,
   } = inputs;
   return trips.map((trip) => {
     const rows = readinessByTrip.get(trip.id) ?? [];
@@ -937,6 +957,7 @@ function summarizeDepartures(
       priceCents: trip.isRehearsal ? null : perDiverBookingPriceCents(trip, trip.course),
       crew: tripCrew,
       crewAccountedFor: completeness.crewAccountedFor,
+      ...(retainedSafetyTripIds.has(trip.id) ? { retainedSafetyUnresolved: true } : {}),
       crewReason: completeness.crewReason,
       // The chip's one rule (`boatStageOf`), read off the raw tap like the
       // header and the manifest strip, so a card cannot say a word the boat's
@@ -1241,7 +1262,7 @@ async function readTodayWave(
     { open: helpRequests, handled: handledHelp },
     rawStaff,
     credentialRows,
-    { diveIntents, boatNames, crewByTrip, meetingWindows, plannedSites },
+    { diveIntents, boatNames, crewByTrip, meetingWindows, plannedSites, retainedSafetyTripIds },
     boatsOut,
     opsAlerts,
     reviewsAwaiting,
@@ -1456,6 +1477,7 @@ async function readTodayWave(
     crewByTrip,
     meetingWindows,
     plannedSites,
+    retainedSafetyTripIds,
     boatsOut,
     opsAlerts,
     reviewsAwaiting,
@@ -1592,7 +1614,13 @@ export async function getTodayWork(
   // after the queue is built so they cost no phase of their own: every diver
   // the evidence blocks on a pending card is asked about, a superset of the
   // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
-  const [waveRead, agencyCheckCards, lostItemsFound] = await Promise.all([
+  const [
+    waveRead,
+    agencyCheckCards,
+    lostItemsFound,
+    retainedSafetyUnresolved,
+    retainedSafetyAlertNeedsReview,
+  ] = await Promise.all([
     readTodayWave(db, shopId, {
       now,
       horizon,
@@ -1615,6 +1643,8 @@ export async function getTodayWork(
     }),
     // The found items waiting (fifth loop, item 7), beside the wave.
     countOpenLostItems(db, shopId, now),
+    hasRetainedSafetyEvidence(db, shopId),
+    hasRetainedSafetyAlertNeedsReview(db, shopId),
   ]);
   // A feature the shop switched off on the Features page raises no row: the
   // reads above ran beside the shop row that says so, and what they found is
@@ -1644,6 +1674,7 @@ export async function getTodayWork(
     crewByTrip,
     meetingWindows,
     plannedSites,
+    retainedSafetyTripIds,
     boatsOut,
     shopUnits,
     crewedAssignments,
@@ -1763,6 +1794,7 @@ export async function getTodayWork(
       crewByTrip,
       meetingWindows,
       plannedSites,
+      retainedSafetyTripIds,
     },
     now,
     timeZone,
@@ -1816,6 +1848,8 @@ export async function getTodayWork(
 
   return {
     departures,
+    ...(retainedSafetyUnresolved ? { retainedSafetyUnresolved: true } : {}),
+    ...(retainedSafetyAlertNeedsReview ? { retainedSafetyAlertNeedsReview: true } : {}),
     actions: visibleActions,
     // Project before folding: staff never receive an owner-only row or its count.
     actionsWithoutOpsAlerts:

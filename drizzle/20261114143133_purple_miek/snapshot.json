@@ -1,0 +1,184 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "cee82840-1d03-4d40-bcd8-86443dfacd3c",
+  "prevIds": [
+    "762dd683-1a7c-4319-9956-d1eadce7aff5"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_event_claims",
+        "unresolved_observation"
+      ],
+      "writes": [
+        "s|col|public.roll_call_event_claims.unresolved_observation",
+        "n|col|public.roll_call_event_claims.unresolved_observation",
+        "e|col|public.roll_call_event_claims.unresolved_observation"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_event_claims",
+        "unresolved_recorded_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.roll_call_event_claims.unresolved_recorded_by_person_id",
+        "n|col|public.roll_call_event_claims.unresolved_recorded_by_person_id",
+        "e|col|public.roll_call_event_claims.unresolved_recorded_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|fk|public.roll_call_event_claims.roll_call_event_claims_4NwDSoR8G7Wg_fkey",
+        "n|fk|public.roll_call_event_claims.roll_call_event_claims_4NwDSoR8G7Wg_fkey",
+        "e|fk|public.roll_call_event_claims.roll_call_event_claims_4NwDSoR8G7Wg_fkey",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_4NwDSoR8G7Wg_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.unresolved_recorded_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_event_claims.roll_call_event_claims_observation_pair",
+        "n|ck|public.roll_call_event_claims.roll_call_event_claims_observation_pair",
+        "e|ck|public.roll_call_event_claims.roll_call_event_claims_observation_pair",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_observation_pair"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.unresolved_observation",
+        "n|col|public.roll_call_event_claims.unresolved_recorded_by_person_id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_event_claims.roll_call_event_claims_observation_unresolved_only",
+        "n|ck|public.roll_call_event_claims.roll_call_event_claims_observation_unresolved_only",
+        "e|ck|public.roll_call_event_claims.roll_call_event_claims_observation_unresolved_only",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_observation_unresolved_only"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.state",
+        "n|col|public.roll_call_event_claims.unresolved_observation"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "unresolved_observation",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "unresolved_recorded_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_4NwDSoR8G7Wg_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "unresolved_recorded_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_observation_pair",
+        "value": "(\"unresolved_observation\" is null) = (\"unresolved_recorded_by_person_id\" is null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_observation_unresolved_only",
+        "value": "\"state\" = 'unresolved' or \"unresolved_observation\" is null",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

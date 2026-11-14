@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadOfflineManifest } from "@/lib/offline-manifest-store";
+import { listOfflineManifests, loadOfflineManifest } from "@/lib/offline-manifest-store";
 import { OfflineManifestView } from "./OfflineManifestView";
 
 vi.mock("next/navigation", () => ({
@@ -18,6 +18,13 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   appendOfflineRollCall: vi.fn(),
   beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
   listOfflineManifests: vi.fn().mockResolvedValue([]),
+  readOfflineManifestInventory: vi.fn(async () => ({
+    manifests: await listOfflineManifests(),
+    incomplete: false,
+    preservedOnly: false,
+    generation: 0,
+    fence: null,
+  })),
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
   syncOfflineManifest: vi.fn(),

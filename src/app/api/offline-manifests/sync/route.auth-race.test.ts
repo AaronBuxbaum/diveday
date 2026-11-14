@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { beforeEach, expect, it, vi } from "vitest";
 import { getTripManifest } from "@/db/manifests";
 import {
@@ -6,12 +6,15 @@ import {
   personRoles,
   preDepartureCheckEvents,
   rollCallEvents,
+  tripScheduleDays,
 } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
+import { meetingGeneration, meetingIncarnation } from "@/test/meeting-generation";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
 const ctx = fileScopedShopContext();
@@ -61,6 +64,32 @@ function request(body: unknown) {
     headers: { ...ROLL_CALL_CAUSAL_HEADERS, "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+async function proveMeeting<T extends { tripId: string; snapshotId: string }>(
+  event: T,
+  shopId: string,
+) {
+  const [day] = await ctx.db
+    .select()
+    .from(tripScheduleDays)
+    .where(and(eq(tripScheduleDays.tripId, event.tripId), eq(tripScheduleDays.dayNumber, 1)));
+  if (!day) throw new Error("fixture meeting missing");
+  return {
+    ...event,
+    meetingDay: 0,
+    meetingIdentityProof: signOfflineMeetingIdentity({
+      scheduleGeneration: await meetingGeneration(ctx.db, event.tripId),
+      datasetIncarnation: await meetingIncarnation(ctx.db, event.tripId),
+      shopId,
+      tripId: event.tripId,
+      snapshotId: event.snapshotId,
+      meetingDay: 0,
+      meetingId: day.id,
+      startsAt: day.startsAt,
+      endsAt: day.endsAt,
+    }),
+  };
 }
 
 for (const kind of ["diver", "crew", "checklist", "arrived", "cleared"] as const) {
@@ -128,18 +157,21 @@ for (const kind of ["diver", "crew", "checklist", "arrived", "cleared"] as const
 }
 
 it("retries an earlier committed mark after staff access is restored", async () => {
-  const { db, trip, bookingId, personId } = await fixture();
+  const { db, shop, trip, bookingId, personId } = await fixture();
   const now = nowDate().toISOString();
-  const first = {
-    clientEventId: crypto.randomUUID(),
-    snapshotId: crypto.randomUUID(),
-    snapshotSavedAt: now,
-    tripId: trip.id,
-    bookingId,
-    checkpoint: "after_dive_1",
-    status: "not_boarded",
-    occurredAt: now,
-  };
+  const first = await proveMeeting(
+    {
+      clientEventId: crypto.randomUUID(),
+      snapshotId: crypto.randomUUID(),
+      snapshotSavedAt: now,
+      tripId: trip.id,
+      bookingId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      occurredAt: now,
+    },
+    shop.id,
+  );
   const initial = await POST(request({ events: [first] }));
   expect(await initial.json()).toMatchObject({
     results: [{ clientEventId: first.clientEventId, status: "applied" }],
@@ -165,18 +197,21 @@ it("retries an earlier committed mark after staff access is restored", async () 
 });
 
 it("retries the whole batch after a role is revoked between two writer commits", async () => {
-  const { db, trip, bookingId, personId } = await fixture();
+  const { db, shop, trip, bookingId, personId } = await fixture();
   const now = nowDate().toISOString();
-  const first = {
-    clientEventId: crypto.randomUUID(),
-    snapshotId: crypto.randomUUID(),
-    snapshotSavedAt: now,
-    tripId: trip.id,
-    bookingId,
-    checkpoint: "after_dive_1",
-    status: "not_boarded",
-    occurredAt: now,
-  };
+  const first = await proveMeeting(
+    {
+      clientEventId: crypto.randomUUID(),
+      snapshotId: crypto.randomUUID(),
+      snapshotSavedAt: now,
+      tripId: trip.id,
+      bookingId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      occurredAt: now,
+    },
+    shop.id,
+  );
   const second = { ...first, clientEventId: crypto.randomUUID(), status: "boarded" };
   // A trigger in this isolated test DB revokes the writer's roles in the first
   // insert transaction, forcing the next writer to observe the changed state.

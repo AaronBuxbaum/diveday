@@ -41,6 +41,16 @@ export const EXPORT_PURPOSE_KEYS = {
   "trip_sightings.csv": "settings.export.filePurposes.trip_sightings",
   "booking_arrival_events.csv": "settings.export.filePurposes.booking_arrival_events",
   "roll_call_events.csv": "settings.export.filePurposes.roll_call_events",
+  "roll_call_event_claims.csv": "settings.export.filePurposes.roll_call_event_claims",
+  "unresolved_safety_alert_outbox.csv":
+    "settings.export.filePurposes.unresolved_safety_alert_outbox",
+  "unresolved_safety_alert_deliveries.csv":
+    "settings.export.filePurposes.unresolved_safety_alert_deliveries",
+  "unresolved_safety_alert_escalations.csv":
+    "settings.export.filePurposes.unresolved_safety_alert_escalations",
+  "unresolved_safety_scan_incidents.csv":
+    "settings.export.filePurposes.unresolved_safety_scan_incidents",
+  "unresolved_review_deferrals.csv": "settings.export.filePurposes.unresolved_review_deferrals",
   "roll_call_crew_events.csv": "settings.export.filePurposes.roll_call_crew_events",
   "buddy_teams.csv": "settings.export.filePurposes.buddy_teams",
   "waiver_templates.csv": "settings.export.filePurposes.waiver_templates",

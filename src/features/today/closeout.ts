@@ -89,6 +89,8 @@ const GAP_REASON_RANK: Record<RollCallGapReason, number> = {
 /** One of today's departures, as the db layer hands it in. */
 export type CloseoutTripInput = {
   tripId: string;
+  /** Trip-level retained evidence remains unresolved and is not a person count. */
+  retainedSafetyUnresolved?: boolean;
   title: string;
   startsAt: Date;
   endsAt: Date;
@@ -209,6 +211,8 @@ export const OPEN_COUNT_QUIET_MS = 20 * 60 * 1000;
 
 export type CloseoutDeparture = {
   tripId: string;
+  /** Trip-level retained evidence remains unresolved and is not a person count. */
+  retainedSafetyUnresolved?: boolean;
   title: string;
   startsAt: Date;
   endsAt: Date;
@@ -468,6 +472,7 @@ export function assembleDayCloseout(input: {
   const departures = input.trips
     .map((trip) => ({
       tripId: trip.tripId,
+      ...(trip.retainedSafetyUnresolved ? { retainedSafetyUnresolved: true } : {}),
       title: trip.title,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
@@ -520,6 +525,8 @@ export function assembleDayCloseout(input: {
  */
 export type StationClose = {
   tripId: string;
+  /** Trip-level retained evidence remains unresolved and is not a person count. */
+  retainedSafetyUnresolved?: boolean;
   title: string;
   startsAt: Date;
   endsAt: Date;
@@ -728,6 +735,7 @@ export function assembleEveningClose(
       const crewSailed = Math.max(0, crewCounts.crewAssigned - crewCounts.crewAshore);
       return {
         tripId: departure.tripId,
+        ...(departure.retainedSafetyUnresolved ? { retainedSafetyUnresolved: true } : {}),
         title: departure.title,
         startsAt: departure.startsAt,
         endsAt: departure.endsAt,
@@ -775,9 +783,12 @@ export function assembleEveningClose(
     stations.every((station) => station.settled && station.status !== "still_out");
   const allHome =
     closing &&
+    !carryover?.retainedSafetyUnresolved &&
     out > 0 &&
     out === back &&
-    stations.every((station) => station.status === "all_home") &&
+    stations.every(
+      (station) => station.status === "all_home" && !station.retainedSafetyUnresolved,
+    ) &&
     stations.every((station) => station.crewAccountedFor);
   return {
     stations,

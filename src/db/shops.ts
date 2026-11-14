@@ -137,6 +137,32 @@ export async function getShopOfflineErasureEpoch(
   return row?.epoch ?? null;
 }
 
+/** The current dataset incarnation, read under the caller's shop fence. */
+export async function getShopOfflineDatasetIncarnation(
+  db: DbExecutor,
+  shopId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ incarnation: shops.offlineDatasetIncarnation })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return row?.incarnation ?? null;
+}
+
+/** Call inside the same exclusive-fenced transaction as a destructive rebuild. */
+export async function rotateShopOfflineDatasetIncarnation(
+  db: DbExecutor,
+  shopId: string,
+): Promise<void> {
+  const [row] = await db
+    .update(shops)
+    .set({ offlineDatasetIncarnation: sql`gen_random_uuid()` })
+    .where(eq(shops.id, shopId))
+    .returning({ id: shops.id });
+  if (!row) throw new Error("Shop not found for dataset reset");
+}
+
 /**
  * {@link getShopById}, once per render per executor: for the staff gate
  * (`requireShopSurface`) and the shop home, which resolve the session's shop

@@ -27,6 +27,7 @@ export function offlineCheckpointGapInputs(envelope: OfflineManifestEnvelope) {
     );
     return {
       checkpoint: manifest.checkpoint,
+      retainedSafetyUnresolved: manifest.retainedSafetyUnresolved,
       summary: {
         boarded: states.filter((state) => state?.state === "boarded").length,
         awaiting: states.filter((state) => !state).length,

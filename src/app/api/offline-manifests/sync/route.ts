@@ -17,8 +17,16 @@ import { log } from "@/lib/log";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import type { OfflineManifestUpcomingResponse } from "@/lib/offline-manifests";
 import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
-import { causalReplayOrder, rollCallEvidenceIdPattern } from "@/lib/roll-call-causality";
-import { supportsCausalRollCall } from "@/lib/roll-call-protocol";
+import {
+  causalReplayOrder,
+  clientRollCallEvidenceId,
+  rollCallEvidenceIdPattern,
+} from "@/lib/roll-call-causality";
+import {
+  OFFLINE_UNRESOLVED_HEADER,
+  OFFLINE_UNRESOLVED_VERSION,
+  supportsCausalRollCall,
+} from "@/lib/roll-call-protocol";
 
 /**
  * One event carries **exactly one** subject: a `bookingId` (a diver's paid
@@ -42,6 +50,7 @@ const eventSchema = z
     observedEvidenceIds: z.array(z.string().regex(rollCallEvidenceIdPattern)).max(200).optional(),
     reconcilesEvidence: z.boolean().optional(),
     meetingDay: z.number().int().min(0).optional(),
+    meetingIdentityProof: z.string().max(128).optional(),
     snapshotId: z.string().uuid(),
     snapshotSavedAt: z.iso.datetime(),
     erasureEpochToken: z.string().max(128).optional(),
@@ -157,6 +166,11 @@ const bodySchema = z
     events: z.array(eventSchema).max(200),
     checklistEvents: z.array(checklistEventSchema).max(200).optional(),
     arrivalEvents: z.array(arrivalEventSchema).max(200).optional(),
+    /** Previously refused local predecessors; this can only defer, never authorize a write. */
+    // At most 200 events can each reference 200 predecessors. The client
+    // sends only referenced refusals; keeping that same bound avoids starving
+    // an unrelated event when the union exceeds one event's 200-id limit.
+    refusedEvidenceIds: z.array(z.string().regex(rollCallEvidenceIdPattern)).max(40_000).optional(),
   })
   // A quiet shell may request one tenant-owned fresh snapshot. Otherwise a
   // request needs queued evidence; snapshot refresh cannot mix other trips.
@@ -166,6 +180,16 @@ const bodySchema = z
         0 ||
       (body.includeCausalSnapshots === true && body.refreshTripId !== undefined),
   )
+  // Result receipts are keyed by client ID across all three queues. Refuse a
+  // corrupt or colliding batch before any writer can settle the wrong event.
+  .refine((body) => {
+    const ids = [
+      ...body.events,
+      ...(body.checklistEvents ?? []),
+      ...(body.arrivalEvents ?? []),
+    ].map((event) => event.clientEventId.toLowerCase());
+    return new Set(ids).size === ids.length;
+  })
   .refine(
     (body) =>
       !body.includeCausalSnapshots ||
@@ -268,7 +292,22 @@ export async function POST(request: Request) {
   // and payload order. Unobserved compatible facts merge; opposition persists.
   const sorted = causalReplayOrder(parsed.data.events);
   const results = [];
+  const unresolved = new Set((parsed.data.refusedEvidenceIds ?? []).map((id) => id.toLowerCase()));
+  const batchIds = new Set(sorted.map((event) => clientRollCallEvidenceId(event.clientEventId)));
+  const accepted = new Set<string>();
+  const supportsUnresolved =
+    request.headers.get(OFFLINE_UNRESOLVED_HEADER) === OFFLINE_UNRESOLVED_VERSION;
   for (const event of sorted) {
+    const ownId = clientRollCallEvidenceId(event.clientEventId);
+    const predecessors = [
+      ...(event.observedEvidenceIds ?? []).map((id) => id.toLowerCase()),
+      ...(event.retractsClientEventId
+        ? [clientRollCallEvidenceId(event.retractsClientEventId)]
+        : []),
+    ];
+    const offlinePredecessorRefused = predecessors.some(
+      (id) => id !== ownId && (unresolved.has(id) || (batchIds.has(id) && !accepted.has(id))),
+    );
     // Everything except the subject column is identical, and both recorders
     // apply the same causal contract (stable identity, captured basis and
     // exact named targets) — so the dispatch is the only thing that
@@ -283,9 +322,11 @@ export async function POST(request: Request) {
       checkpoint: event.checkpoint as RollCallCheckpoint,
       source: "offline" as const,
       clientEventId: event.clientEventId,
+      offlinePredecessorRefused,
       observedEvidenceIds: event.observedEvidenceIds,
       reconcilesEvidence: event.reconcilesEvidence,
       meetingDay: event.meetingDay,
+      offlineMeetingIdentityProof: event.meetingIdentityProof,
       offlineSnapshotId: event.snapshotId,
       offlineErasureEpochToken: event.erasureEpochToken,
       retractsClientEventId: event.retractsClientEventId,
@@ -304,8 +345,8 @@ export async function POST(request: Request) {
           // with it — and never a `""` handed to a uuid comparison, which
           // Postgres raises on rather than coercing.
           { ok: false as const, reason: "invalid_subject" as const };
-    // Access can be revoked after the route gate. Refuse the whole request so
-    // the device retains its queue; any earlier commits retry under the same IDs.
+    // A role can change after the route gate. A request-level refusal leaves
+    // every device event pending; earlier commits retry under the same IDs.
     if (!outcome.ok && outcome.reason === "staff_not_found")
       return Response.json(
         { error: "authentication_required" },
@@ -314,6 +355,35 @@ export async function POST(request: Request) {
           headers: { "Cache-Control": "private, no-store" },
         },
       );
+    if (!outcome.ok && outcome.reason === "claim_key_unavailable")
+      return Response.json(
+        { error: "sync_unavailable" },
+        { status: 503, headers: { "Cache-Control": "private, no-store" } },
+      );
+    if (
+      !outcome.ok &&
+      (outcome.reason === "booking_unavailable" ||
+        outcome.reason === "meeting_identity_unverified" ||
+        outcome.reason === "unresolved_predecessor" ||
+        outcome.reason === "client_event_conflict")
+    ) {
+      // A 409 keeps the batch pending locally; do not settle an ambiguous
+      // physical observation as an ordinary rejected event.
+      if (!supportsUnresolved)
+        return Response.json(
+          { error: outcome.reason },
+          { status: 409, headers: { "Cache-Control": "private, no-store" } },
+        );
+      unresolved.add(clientRollCallEvidenceId(event.clientEventId));
+      results.push({
+        clientEventId: event.clientEventId,
+        status: "unresolved" as const,
+        reason: outcome.reason,
+        ...(outcome.noteDisposition ? { noteDisposition: outcome.noteDisposition } : {}),
+      });
+      continue;
+    }
+    if (outcome.ok) accepted.add(ownId);
     results.push({
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",
@@ -353,6 +423,11 @@ export async function POST(request: Request) {
           status: 401,
           headers: { "Cache-Control": "private, no-store" },
         },
+      );
+    if (!outcome.ok && outcome.reason === "client_event_conflict")
+      return Response.json(
+        { error: "client_event_conflict" },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } },
       );
     results.push({
       clientEventId: event.clientEventId,
@@ -433,7 +508,7 @@ export async function POST(request: Request) {
         db,
         session.user.shopId,
         results
-          .filter((result) => result.status !== "rejected")
+          .filter((result) => result.status === "applied" || result.status === "duplicate")
           .map((result) => result.clientEventId),
       )
     : new Map<string, string>();
