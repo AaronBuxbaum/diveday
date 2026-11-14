@@ -744,7 +744,10 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   const rendered = await page.locator("body").innerText();
   expect(rendered.match(/Aaron/g)).toHaveLength(1);
   expect(rendered).toContain("Aaron Buxbaum, Founder");
-  expect(rendered).not.toMatch(/Google|biotech|self-driving|two of us/);
+  // The founder's own band, in the first person (Aaron, 2026-11-14), carries
+  // his history; the head count of the team stays out.
+  expect(rendered).toContain("self-driving cars");
+  expect(rendered).not.toMatch(/biotech|two of us/);
 
   // The operational standards every screen is held to, as cards under a statement
   // heading. Each is a shipped behavior a visitor can reproduce in the demo.
