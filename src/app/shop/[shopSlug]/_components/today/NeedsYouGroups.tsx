@@ -54,7 +54,23 @@ export function NeedsYouGroups({
               </Link>
             }
           >
-            <ul>{rankBoatRows(group.rows).map((action) => row(action, true))}</ul>
+            <ul>
+              {rankBoatRows(group.rows).map((action) => {
+                // One trip may contain several meeting days or departure/return moments.
+                // Only elide context when the heading names every row's exact moment.
+                const headingCoversRows = group.rows.every(
+                  (item) =>
+                    item.departure?.label === group.departure?.label &&
+                    item.meetingDayNumber === action.meetingDayNumber,
+                );
+                return row(
+                  headingCoversRows && action.detailWithoutMeetingDay
+                    ? { ...action, detail: action.detailWithoutMeetingDay }
+                    : action,
+                  true,
+                );
+              })}
+            </ul>
           </LedgerGroup>
         ) : (
           <LedgerGroup key="desk" as="h3" label={t("shopHome.spine.deskGroupLabel")}>

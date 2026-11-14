@@ -262,6 +262,10 @@ export type TodayAction = {
    * repeating the header as the row's subject says the boat twice.
    */
   aboutDeparture?: boolean;
+  /** Same warning without meeting context; only when the group heading covers every row. */
+  detailWithoutMeetingDay?: string;
+  /** Meeting identity for conservative grouping; absent for non-course rows. */
+  meetingDayNumber?: number;
   /**
    * What is wrong, in staff language.
    *
