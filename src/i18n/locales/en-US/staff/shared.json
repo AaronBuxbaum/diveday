@@ -472,6 +472,7 @@
       "confirmAboard": "Confirm {name} is aboard",
       "markedElsewhere": "Recorded on another device or on the live manifest. Undo it there, not here.",
       "openLiveManifest": "Open live manifest",
+      "refusedMissingRollCall": "Roll-call change for reference {reference} at {checkpoint} was not accepted. Review it with the crew.",
       "record": {
         "expiredCannotRecord": "This saved copy has expired. Open the live manifest to record roll call.",
         "expiredRecordOnLive": "Expired — record on the live manifest",
@@ -482,11 +483,13 @@
       },
       "checklist": {
         "heading": "Before you leave the dock",
+        "rejectedItem": "{item}: this offline change was not accepted. Review the live checklist.",
         "checkedLabel": "Checked — press twice to clear",
         "confirmClear": "Tap again to clear",
         "uncheckedLabel": "Not checked — press to mark checked"
       },
       "counter": {
+        "refusedMissingSeat": "Arrival change for booking {reference} was not accepted. Review it with the desk.",
         "heading": "At the counter",
         "notCheckedInLabel": "Check in",
         "refusedNotReady": "Not checked in: readiness stopped clearing them after you tapped. Open the live counter before they board.",

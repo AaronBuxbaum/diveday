@@ -7,7 +7,7 @@
 import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { manifestRow, openManifestPerson, openOnThisPhone } from "./helpers";
+import { manifestRow, offlineCopySaved, openManifestPerson, openOnThisPhone } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   capture,
@@ -238,16 +238,23 @@ for (const scheme of ["light", "dark"] as const) {
           await page.goto(`${new URL(page.url()).pathname}/manifest`);
           await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
           // The same background save the English sibling waits out, in this
-          // reader's words: `offlineCopySaved` matches "(Fresh|Aging|Stale)
-          // copy" and would wait forever here. These are the manifest
+          // reader's words: `offlineCopySaved` uses English labels and would
+          // wait forever here. These are the manifest
           // manager's own words (`trips.offlineManifestManager.freshness*`),
           // which is what this page renders — not the offline viewer's "Copia
           // reciente / antigua / caducada" (`shared.offlineManifest.
           // freshnessPill.*`), a different surface saying the same thing at a
           // different URL.
-          await expect(
-            page.getByText(/Copia (actualizada|envejeciendo|desactualizada)/),
-          ).toBeVisible();
+          const copy = staffTranslator(SPANISH);
+          const freshness = page
+            .getByText(copy("trips.offlineManifestManager.freshnessCurrent"), { exact: true })
+            .or(
+              page.getByText(copy("trips.offlineManifestManager.freshnessAging"), { exact: true }),
+            )
+            .or(
+              page.getByText(copy("trips.offlineManifestManager.freshnessStale"), { exact: true }),
+            );
+          await expect(freshness.first()).toBeVisible();
           // The track, not the page: it is what this capture is for, and the
           // heading above it is true before the checkpoints render.
           await expect(page.getByText("Punto de control activo").first()).toBeVisible();
@@ -266,9 +273,7 @@ for (const scheme of ["light", "dark"] as const) {
           test.setTimeout(FLOW_TIMEOUT_MS);
           await openReefTrip(page);
           await page.goto(`${new URL(page.url()).pathname}/manifest`);
-          await expect(
-            page.getByText(/Copia (actualizada|envejeciendo|desactualizada)/),
-          ).toBeVisible();
+          await offlineCopySaved(page, "es-ES");
           await page
             .getByRole("link", { name: "Después de la inmersión 1" })
             .evaluate((link: HTMLElement) => link.click());

@@ -472,6 +472,7 @@
       "confirmAboard": "Confirmar que {name} está a bordo",
       "markedElsewhere": "Registrado en otro dispositivo o en el manifiesto en vivo. Deshazlo allí, no aquí.",
       "openLiveManifest": "Abrir manifiesto en vivo",
+      "refusedMissingRollCall": "El cambio del pase de lista para la referencia {reference} en {checkpoint} no fue aceptado. Revísalo con la tripulación.",
       "record": {
         "expiredCannotRecord": "Esta copia guardada ha caducado. Abre el manifiesto en vivo para registrar el pase de lista.",
         "expiredRecordOnLive": "Caducado — regístralo en el manifiesto en vivo",
@@ -482,11 +483,13 @@
       },
       "checklist": {
         "heading": "Antes de salir del muelle",
+        "rejectedItem": "{item}: este cambio sin conexión no fue aceptado. Revisa la lista en vivo.",
         "checkedLabel": "Verificado — presiona dos veces para quitar la marca",
         "confirmClear": "Presiona otra vez para quitar la marca",
         "uncheckedLabel": "Sin verificar — presiona para marcarlo"
       },
       "counter": {
+        "refusedMissingSeat": "El cambio de llegada de la reserva {reference} no fue aceptado. Revísalo con recepción.",
         "heading": "En el mostrador",
         "notCheckedInLabel": "Registrar",
         "refusedNotReady": "Sin registrar: dejó de estar listo después de que presionaste. Abre el mostrador en vivo antes de que suba a bordo.",

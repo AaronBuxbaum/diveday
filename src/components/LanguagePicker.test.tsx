@@ -2,6 +2,8 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MENU_PANEL, MENU_TICK_GUTTER } from "@/components/ui/menu";
 import { SEGMENT_CORNER } from "@/components/ui/segmented";
@@ -43,6 +45,34 @@ const horizontalPadding = (element: Element) =>
  * the globe and its padding — in every shopfront's phone header.
  */
 describe("LanguagePicker — the closed control", () => {
+  it("is not actionable in server HTML and opens by keyboard once hydrated", async () => {
+    const picker = (
+      <LanguagePicker
+        current="es-ES"
+        currentLabel="Español"
+        choices={CHOICES}
+        setLocale={vi.fn()}
+        copy={{ ariaLabel: "Change language", heading: "Language" }}
+      />
+    );
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(picker);
+    document.body.append(container);
+    const original = container.querySelector('button[aria-label="Change language"]');
+    expect(original?.hasAttribute("disabled")).toBe(true);
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    await act(async () => {
+      root = hydrateRoot(container, picker);
+    });
+    const trigger = screen.getByRole("button", { name: "Change language" });
+    expect(trigger).toBe(original);
+    expect(trigger).toBeEnabled();
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Español" })).toHaveAttribute("aria-current", "true");
+    act(() => root?.unmount());
+    container.remove();
+  });
   it("keeps a 44px square when the globe stands alone, its glyph centered in it", () => {
     render(
       <LanguagePicker

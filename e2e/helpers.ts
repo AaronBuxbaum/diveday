@@ -801,8 +801,16 @@ export function manifestRow(page: Page, name: string): Locator {
  * copy that looks current is the failure mode the whole mechanism exists to
  * prevent, so its state rides the summary line.
  */
-export async function offlineCopySaved(page: Page): Promise<void> {
-  await expect(page.getByText(/(Fresh|Aging|Stale) copy/)).toBeVisible();
+export async function offlineCopySaved(page: Page, locale = "en-US"): Promise<void> {
+  const t = staffTranslator(locale);
+  const labels = [
+    t("trips.offlineManifestManager.freshnessCurrent"),
+    t("trips.offlineManifestManager.freshnessAging"),
+    t("trips.offlineManifestManager.freshnessStale"),
+  ];
+  await expect(
+    page.getByText(new RegExp(`^(?:${labels.map(escapeRegExp).join("|")})$`)),
+  ).toBeVisible();
 }
 
 /**

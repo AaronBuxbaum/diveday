@@ -8,6 +8,7 @@ import { createTrip } from "../../db/trips-create";
 import { verifyOfflineErasureEpoch } from "../../lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
+import { seatDiver } from "../seat-diver/store";
 import {
   issueOfflineManifestSnapshot,
   latestOfflineManifestSnapshotRevisions,
@@ -34,6 +35,49 @@ async function tripTitled(prefix: string) {
 }
 
 describe("offline manifest snapshot ordering", () => {
+  it("reads a new seat and then removes the erased name on later reads", async () => {
+    const { db, shop } = context;
+    const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
+    if (!owner) throw new Error("owner missing");
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Roster freshness test",
+      startsAt: new Date("2099-11-01T09:00:00.000Z"),
+      endsAt: new Date("2099-11-01T13:00:00.000Z"),
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!trip) throw new Error("trip missing");
+    const before = await readOfflineManifestRoster(db, shop.id, trip.id);
+    expect(before?.manifests[0]?.divers).toHaveLength(0);
+    const seated = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      actorPersonId: owner.person.id,
+      diver: { fullName: "Freshness Test Diver", email: "freshness-test@example.com" },
+      entry: "roster",
+      refusals: "coarse",
+    });
+    expect(seated.ok).toBe(true);
+    const afterSeat = await readOfflineManifestRoster(db, shop.id, trip.id);
+    expect(afterSeat?.manifests[0]?.divers.map((diver) => diver.fullName)).toContain(
+      "Freshness Test Diver",
+    );
+    const [seat] = await getTripRoster(db, shop.id, trip.id);
+    if (!seat) throw new Error("seat missing");
+    expect(
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: seat.booking.personId,
+        actorPersonId: owner.person.id,
+      }),
+    ).toMatchObject({ ok: true });
+    const afterErasure = await readOfflineManifestRoster(db, shop.id, trip.id);
+    expect(afterErasure?.manifests[0]?.divers.map((diver) => diver.fullName)).not.toContain(
+      "Freshness Test Diver",
+    );
+  });
+
   it("returns no stored instants for an empty retry request", async () => {
     const { db, shop } = context;
     expect(await offlineSyncInstants(db, shop.id, [])).toEqual(new Map());
