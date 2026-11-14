@@ -1,5 +1,6 @@
 import type { Locator } from "@playwright/test";
 import { demoIllustration } from "../src/content/demo-illustrations";
+import { SEED_COURSE_ILLUSTRATIONS } from "../src/db/seed-course-illustrations";
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, READ_ONLY, test } from "./fixtures";
 import { settleCaptureFonts } from "./visual-harness";
@@ -37,16 +38,17 @@ for (const width of [390, 1280]) {
         const base = "/s/blue-mantis";
         await page.goto(surface === "shopfront" ? base : `${base}/courses`);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        const photos = page
-          .locator('main img[src*="demo-shop/generated"], main img[src*="demo-shop%2Fgenerated"]')
-          .filter({ visible: true });
+        const selector =
+          surface === "shopfront"
+            ? 'main img[src*="demo-shop/generated"], main img[src*="demo-shop%2Fgenerated"]'
+            : 'main img[src*="course-illustrations"]';
+        const photos = page.locator(selector).filter({ visible: true });
         await expect(photos).not.toHaveCount(0);
         await expect(photos.first()).toBeVisible();
         const paths = new Set<string>();
         for (const photo of await photos.all()) paths.add(await loadedScene(photo));
-        for (const path of paths) expect(path).toMatch(/^\/demo-shop\/generated\/[a-z]+\.webp$/);
-
         if (surface === "shopfront") {
+          for (const path of paths) expect(path).toMatch(/^\/demo-shop\/generated\/[a-z]+\.webp$/);
           expect(paths).toEqual(
             new Set(
               ["boat", "dock", "briefing", "student", "reef", "oxygen"].map(
@@ -63,17 +65,19 @@ for (const width of [390, 1280]) {
             element.scrollLeft = 0;
           });
         } else {
-          for (const [course, scene] of [
-            ["discover-scuba-diving", "student"],
-            ["open-water-diver", "student"],
-            ["emergency-oxygen-provider", "oxygen"],
+          expect(paths.size).toBeGreaterThan(1);
+          for (const course of [
+            "discover-scuba-diving",
+            "open-water-diver",
+            "emergency-oxygen-provider",
           ] as const) {
             const coursePath = `${base}/courses/${course}`;
             const image = page.locator(
               `main a[href="${coursePath}"] img, main a[href^="${coursePath}#"] img`,
             );
             await expect(image).toHaveCount(1);
-            expect(await loadedScene(image)).toBe(demoIllustration(scene).url);
+            expect(await loadedScene(image)).toBe(SEED_COURSE_ILLUSTRATIONS[course].url);
+            await expect(image).toHaveAttribute("alt", SEED_COURSE_ILLUSTRATIONS[course].alt);
           }
         }
         expect(await settleCaptureFonts(page)).toBe("ready");
@@ -85,4 +89,26 @@ for (const width of [390, 1280]) {
       },
     );
   }
+}
+
+for (const width of [390, 1280]) {
+  test(
+    `real generated demo artwork on course-detail at ${width}`,
+    { tag: READ_ONLY },
+    async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      const expected = SEED_COURSE_ILLUSTRATIONS["discover-scuba-diving"];
+      const photo = page.getByRole("img", { name: expected.alt });
+      await expect(photo).toBeVisible();
+      expect(await loadedScene(photo)).toBe(expected.url);
+      expect(await settleCaptureFonts(page)).toBe("ready");
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const name = `review-only-real-art-course-detail-${width}.png`;
+      const path = testInfo.outputPath(name);
+      await page.screenshot({ path, fullPage: true, animations: "disabled" });
+      await testInfo.attach(name, { path, contentType: "image/png" });
+    },
+  );
 }
