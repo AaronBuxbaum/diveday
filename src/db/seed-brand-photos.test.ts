@@ -53,6 +53,29 @@ describe("the demo shop's profile and brand", () => {
     expect(shop.shopfrontPhotoUrls.length).toBeGreaterThan(4);
   });
 
+  it("removes only the fictional default affiliations from the canonical demo", async () => {
+    const { db, shop } = await seededShopContext();
+    const defaults = [
+      "padi_5_star",
+      "padi_idc",
+      "green_fins",
+      "blue_star",
+      "dan_partner",
+      "tripadvisor",
+    ];
+    await db.update(shops).set({ brandBadges: defaults }).where(eq(shops.id, shop.id));
+    const [real] = await db
+      .insert(shops)
+      .values({ name: "Real Shop", slug: "real-badges", timezone: "UTC", brandBadges: defaults })
+      .returning();
+    if (!real) throw new Error("shop missing");
+    await syncDemoShopBrand(db);
+    const [demoAfter] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    const [realAfter] = await db.select().from(shops).where(eq(shops.id, real.id));
+    expect(demoAfter?.brandBadges).toEqual([]);
+    expect(realAfter?.brandBadges).toEqual(defaults);
+  });
+
   it("fills a blank canonical demo once and never touches a real shop", async () => {
     const { db, shop } = await seededShopContext();
     await db

@@ -215,7 +215,7 @@ function reviewRowFor(shopId: string) {
       bookingId: row.bookingId,
       tripId: row.tripId,
       personId: row.personId,
-      rating: i % 3 === 0 ? 5 : 4,
+      rating: i % 24 === 20 ? 4 : 5,
       comment: null,
       isPublished: true,
       publishedAt: createdAt,

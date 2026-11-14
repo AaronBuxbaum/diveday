@@ -77,18 +77,16 @@ test.describe("as owner", () => {
   test("staff previewing the public page from Reviews actually see the reviews", async ({
     page,
   }) => {
-    // /s/<slug> is the public, canonical page regardless of session (Lens 17,
-    // docs/product/features/story-backlog.md — the staff operations board lives at its
-    // own /shop/<slug>/schedule/board instead), so the "View public page" link
-    // on Reviews needs no special flag: signed-in staff land on exactly what a
-    // diver sees, reviews included.
+    // Staff preview the same full reviews archive a diver sees.
     await page.goto("/shop/blue-mantis/reviews");
     const previewPage = await Promise.all([
       page.waitForEvent("popup"),
       page.getByRole("link", { name: "View public page" }).click(),
     ]).then(([popup]) => popup);
-    await expect(previewPage).toHaveURL(/\/s\/blue-mantis$/);
-    await expect(previewPage.getByRole("heading", { name: "What divers say" })).toBeVisible();
+    await expect(previewPage).toHaveURL(/\/s\/blue-mantis\/reviews$/);
+    await expect(
+      previewPage.getByRole("heading", { name: diver("reviews.allTitle") }),
+    ).toBeVisible();
   });
 });
 

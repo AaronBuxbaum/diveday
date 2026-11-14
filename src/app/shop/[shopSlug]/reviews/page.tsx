@@ -20,7 +20,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
-import { publicSchedulePath } from "@/lib/public-routes";
+import { publicReviewsPath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -177,7 +177,7 @@ export default async function ReviewsPage({
         title={t("shared.shopSections.inbox")}
         actions={
           <Link
-            href={publicSchedulePath(shopSlug)}
+            href={publicReviewsPath(shopSlug)}
             target="_blank"
             rel="noreferrer"
             className={buttonClass({ variant: "secondary" })}

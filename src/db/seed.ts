@@ -1,5 +1,6 @@
 import { hash } from "bcryptjs";
 import { and, eq, inArray, isNotNull, isNull, notInArray, or } from "drizzle-orm";
+import { demoIllustration } from "@/content/demo-illustrations";
 import { STAFF_ROLES } from "@/lib/authz";
 import { reusablePurposes } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
@@ -433,6 +434,7 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
     {
       shopId: shop.id,
       name: "Mantis I",
+      photoUrl: shop.isDemo ? demoIllustration("fleet").url : null,
       capacity: DEMO_BOAT_CAPACITIES["Mantis I"],
       description:
         "The small boat — fourteen passenger places, plus room aboard for its three-person crew.",
@@ -444,6 +446,7 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
     {
       shopId: shop.id,
       name: "Mantis II",
+      photoUrl: shop.isDemo ? demoIllustration("boat").url : null,
       capacity: DEMO_BOAT_CAPACITIES["Mantis II"],
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
       callSign: "WDM2202",
@@ -713,6 +716,7 @@ export async function createDemoShop(
     {
       shopId: shop.id,
       name: "Mantis I",
+      photoUrl: shop.isDemo ? demoIllustration("fleet").url : null,
       capacity: DEMO_BOAT_CAPACITIES["Mantis I"],
       description:
         "The small boat — fourteen passenger places, plus room aboard for its three-person crew.",
@@ -724,6 +728,7 @@ export async function createDemoShop(
     {
       shopId: shop.id,
       name: "Mantis II",
+      photoUrl: shop.isDemo ? demoIllustration("boat").url : null,
       capacity: DEMO_BOAT_CAPACITIES["Mantis II"],
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
       callSign: "WDM2202",

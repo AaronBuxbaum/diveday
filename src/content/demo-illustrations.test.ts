@@ -43,8 +43,13 @@ describe("fictional demo artwork provenance", () => {
       ).toBe(true);
       expect(record.generated).toBe(true);
       expect(record.subject).toBe(`demo:${scene}`);
-      expect(record.approval).toContain("4381#issuecomment-6814035938");
-      expect(record.reviewed).toBe("2026-11-12");
+      if (scene === "fleet") {
+        expect(record.approval).toBe("User request, 2026-11-14");
+        expect(record.reviewed).toBe("2026-11-14");
+      } else {
+        expect(record.approval).toContain("4381#issuecomment-6814035938");
+        expect(record.reviewed).toBe("2026-11-12");
+      }
       expect(alt).toContain("Generated demo illustration");
       expect(statSync(`public/${file}`).size).toBeLessThan(450_000);
       const data = readFileSync(`public/${file}`);

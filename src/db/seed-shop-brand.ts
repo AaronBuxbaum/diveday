@@ -2,14 +2,14 @@ import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { demoIllustration } from "@/content/demo-illustrations";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
-import { shops } from "./schema";
+import { boats, shops } from "./schema";
 import { DEMO_SHOP_BRAND_COLOR } from "./seed-identifiers";
 import { DEMO_SHOP_REPLY_NOTES } from "./seed-reply-notes";
 
 /**
  * **Blue Mantis's profile and brand: everything a trading shop fills in on
  * Settings → Shop profile & branding.** A tagline and an about line, a logo, a
- * colour and a display face, a cover photo, a badge wall and a photo strip.
+ * colour and a display face, a cover photo and a photo strip.
  * The demo is what a prospect reads as "what my shop would look like", and a
  * profile page with half its fields blank told them the shop had not finished
  * setting up (Aaron, 2026-10-22).
@@ -33,7 +33,8 @@ export const DEMO_SHOP_BRAND = {
   // i18n-exempt: a shop writes its own alt text, like its tagline.
   brandHeroImageAlt: demoIllustration("boat").alt,
   establishedYear: 1998,
-  brandBadges: ["padi_5_star", "padi_idc", "green_fins", "blue_star", "dan_partner", "tripadvisor"],
+  // The shop is fictional; third-party accreditation would imply real membership.
+  brandBadges: [],
   // Fictional demo scenes, never claimed as photographs of the operator.
   shopfrontPhotoUrls: (["dock", "briefing", "student", "reef", "oxygen"] as const).map(
     (scene) => demoIllustration(scene).url,
@@ -50,6 +51,34 @@ export const DEMO_SHOP_BRAND = {
  * brings the whole profile back the next night, tagline and about line too.
  */
 export async function syncDemoShopBrand(db: DbExecutor): Promise<void> {
+  const [demo] = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true)))
+    .limit(1);
+  if (demo) {
+    for (const [name, scene] of [
+      ["Mantis I", "fleet"],
+      ["Mantis II", "boat"],
+    ] as const) {
+      await db
+        .update(boats)
+        .set({ photoUrl: demoIllustration(scene).url })
+        .where(and(eq(boats.shopId, demo.id), eq(boats.name, name), isNull(boats.photoUrl)));
+    }
+  }
+  // Remove only the original fictional defaults, never a real shop's badges or
+  // a demo visitor's own selection. They imply affiliations the shop cannot hold.
+  await db
+    .update(shops)
+    .set({ brandBadges: [] })
+    .where(
+      and(
+        eq(shops.slug, DEMO_SHOP_SLUG),
+        eq(shops.isDemo, true),
+        sql`${shops.brandBadges} = ${JSON.stringify(["padi_5_star", "padi_idc", "green_fins", "blue_star", "dan_partner", "tripadvisor"])}::jsonb`,
+      ),
+    );
   await db
     .update(shops)
     .set(DEMO_SHOP_BRAND)

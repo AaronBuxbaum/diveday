@@ -20,7 +20,7 @@ const HISTORY = [
     kind: "lionfish_count",
     quantity: 7,
     location: "Benwood Wreck",
-    note: "Spearfishing-certified crew removed seven lionfish under the permit.",
+    note: "Crew recorded seven lionfish removed from the wreck.",
   },
   {
     kind: "line_m",
@@ -39,6 +39,18 @@ const HISTORY = [
     quantity: 4,
     location: "Spiegel Grove",
     note: "Four lionfish from the bow and the deck rails.",
+  },
+  {
+    kind: "lionfish_count",
+    quantity: 6,
+    location: "French Reef",
+    note: "Six lionfish removed along the reef edge.",
+  },
+  {
+    kind: "lionfish_count",
+    quantity: 3,
+    location: "Molasses Reef",
+    note: "Three lionfish recorded on the afternoon cleanup.",
   },
   {
     kind: "litter_kg",

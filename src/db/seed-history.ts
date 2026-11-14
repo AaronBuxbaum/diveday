@@ -86,14 +86,18 @@ const DEMO_REVIEWS: { rating: number; comment: string }[] = [
   { rating: 4, comment: "Good guide, sensible pace. The rental fins were a size big." },
   { rating: 3, comment: "Nice reef, but we sat at the dock forty minutes before leaving." },
   { rating: 4, comment: "Easy check-in and a full boat that never felt crowded." },
+  { rating: 5, comment: "The crew helped me get comfortable with my camera before we dropped in." },
+  { rating: 5, comment: "Clear directions at the dock and a lovely slow swim along the reef." },
+  { rating: 5, comment: "Great wreck briefing. We knew exactly where to meet our guide." },
+  { rating: 5, comment: "Rental gear fit well and everyone made our group feel welcome." },
 ];
 /** Which written review (1-based) stays unpublished. */
 const WAITING_COMMENT = 5;
 
-/** A bare rating by its index: half fives, most of the rest fours, the odd three. */
+/** Mostly five-star days, with occasional fours and a rare three. */
 function bareRating(index: number): number {
-  if (index % 17 === 16) return 3;
-  return index % 2 === 0 ? 5 : 4;
+  if (index % 29 === 28) return 3;
+  return index % 6 === 5 ? 4 : 5;
 }
 
 /**
