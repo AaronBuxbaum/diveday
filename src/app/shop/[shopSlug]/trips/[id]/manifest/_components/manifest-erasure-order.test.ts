@@ -12,15 +12,21 @@ import { readManifestPage } from "./manifest-reads";
 const latch = vi.hoisted(() => ({
   reached: undefined as (() => void) | undefined,
   wait: undefined as Promise<void> | undefined,
+  pageDb: undefined as unknown,
 }));
 vi.mock("@/db/buddy-teams", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/buddy-teams")>();
   return {
     ...actual,
     listTripBuddyTeams: async (...args: Parameters<typeof actual.listTripBuddyTeams>) => {
+      const pageRead = args[0] === latch.pageDb;
       const result = await actual.listTripBuddyTeams(...args);
-      latch.reached?.();
-      await latch.wait;
+      // The first call is inside the roster's safety-fenced transaction.
+      // Pause the later page read only after that transaction commits.
+      if (pageRead) {
+        latch.reached?.();
+        await latch.wait;
+      }
       return result;
     },
   };
@@ -35,6 +41,7 @@ it("refuses to confirm a manifest assembled across an erasure", async () => {
   const [seat] = await getTripRoster(db, shop.id, trip.id);
   if (!seat) throw new Error("seeded seat missing");
   const name = seat.person.fullName;
+  latch.pageDb = db;
   let reached!: () => void;
   let release!: () => void;
   const buddyRead = new Promise<void>((resolve) => {
@@ -45,8 +52,16 @@ it("refuses to confirm a manifest assembled across an erasure", async () => {
     release = resolve;
   });
   const reading = readManifestPage(db, shop, trip.id, owner.id);
+  // If a different read fails before the barrier, report it instead of
+  // waiting forever; also observe the promise if erasure fails first.
+  void reading.catch(() => undefined);
   try {
-    await buddyRead;
+    await Promise.race([
+      buddyRead,
+      reading.then(() => {
+        throw new Error("page read completed before buddy barrier");
+      }),
+    ]);
     const erased = await anonymizeDiver(db, {
       shopId: shop.id,
       personId: seat.person.id,
@@ -57,6 +72,8 @@ it("refuses to confirm a manifest assembled across an erasure", async () => {
     release();
     latch.wait = undefined;
     latch.reached = undefined;
+    latch.pageDb = undefined;
+    await Promise.allSettled([reading]);
   }
   const mixed = await reading;
   expect(JSON.stringify(mixed.completeManifests)).toContain(name);
