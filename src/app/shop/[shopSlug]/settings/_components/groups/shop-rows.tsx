@@ -110,40 +110,45 @@ export function seasonRow(view: SettingsView) {
 /** Whether search engines list the shop. */
 export function searchListingRow(view: SettingsView) {
   const { shop, t, banner, activeSection } = view;
-  // A shop is listed by default and the box says so; unticking it drops the shop
-  // out of sitemap.xml *and* makes its public pages emit robots: noindex (ADR
-  // 20260813-search-listing-is-a-choice).
+  // Real shops can opt out; demos are always excluded from public lists and
+  // emit noindex regardless of the stored preference (ADR 20260813-search-listing-is-a-choice).
   return (
     <SettingsRow
       heading={t("settings.main.searchListing.heading")}
       value={
-        shop.searchListingOptOutAt
+        shop.isDemo || shop.searchListingOptOutAt
           ? t("settings.main.searchListing.valueHidden")
           : t("settings.main.searchListing.valueListed")
       }
-      detail={t("settings.main.searchListing.detail")}
+      detail={t(
+        shop.isDemo
+          ? "settings.main.searchListing.demoDetail"
+          : "settings.main.searchListing.detail",
+      )}
       sectionId="searchListing"
       activeSection={activeSection}
     >
       <SectionNotice banner={banner} section="searchListing" active={activeSection} />
-      <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
-        <ChoiceRow
-          name="searchListed"
-          type="checkbox"
-          defaultChecked={!shop.searchListingOptOutAt}
-          className="text-sm"
-        >
-          {t("settings.main.searchListing.label")}
-        </ChoiceRow>
-        <FieldActions>
-          <SubmitButton
-            pendingLabel={t("words.busy.saving")}
-            className={buttonClass({ variant: "secondary" })}
+      {!shop.isDemo && (
+        <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
+          <ChoiceRow
+            name="searchListed"
+            type="checkbox"
+            defaultChecked={!shop.searchListingOptOutAt}
+            className="text-sm"
           >
-            {t("settings.main.searchListing.submit")}
-          </SubmitButton>
-        </FieldActions>
-      </FieldGrid>
+            {t("settings.main.searchListing.label")}
+          </ChoiceRow>
+          <FieldActions>
+            <SubmitButton
+              pendingLabel={t("words.busy.saving")}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("settings.main.searchListing.submit")}
+            </SubmitButton>
+          </FieldActions>
+        </FieldGrid>
+      )}
     </SettingsRow>
   );
 }
