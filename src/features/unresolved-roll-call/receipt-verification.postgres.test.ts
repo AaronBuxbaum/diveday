@@ -1,11 +1,15 @@
 import { and, eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished, vi } from "vitest";
+import { loadShopExportBundleInput } from "@/db/export";
+import { table } from "@/db/export-bundle-table.test-support";
 import { recordRollCall } from "@/db/manifests";
 import { capturableObservation, type RollCallClaimInput } from "@/db/roll-call-claims";
 import {
   accountSessions,
   rollCallEventClaims,
+  shops,
   unresolvedSafetyAlertOutbox,
+  unresolvedSafetyScanIncidents,
   userAccounts,
 } from "@/db/schema";
 import { seedDemo } from "@/db/seed";
@@ -301,6 +305,106 @@ describePostgres("unresolved receipt precondition races", () => {
       ok: false,
       reason: "unavailable",
     });
+    const bundle = await loadShopExportBundleInput(pg.db, shop.id);
+    if (!bundle) throw new Error("shop export missing");
+    const claims = table(bundle, "roll_call_event_claims.csv");
+    const claimRow = claims.rows.find((row) => row[claims.header.indexOf("id")] === before.id);
+    if (!claimRow) throw new Error("erased claim missing from export");
+    for (const field of [
+      "subject_kind",
+      "booking_id",
+      "crew_person_id",
+      "intent_fingerprint",
+      "intent_without_note_fingerprint",
+      "proof_fingerprint",
+      "key_fingerprint",
+      "unresolved_reason",
+      "note_disposition",
+      "accepted_event_id",
+      "unresolved_observation",
+      "unresolved_recorded_by_person_id",
+      "handoff_receipt_id",
+      "handoff_receipt_at",
+    ]) {
+      expect(claimRow[claims.header.indexOf(field)]).toBeNull();
+    }
+    expect(claimRow[claims.header.indexOf("state")]).toBe("erased");
+    expect(claimRow[claims.header.indexOf("client_event_id")]).toBe(input.clientEventId);
+    expect(JSON.parse(String(claimRow[claims.header.indexOf("retained_safety_evidence")]))).toEqual(
+      before.retainedSafetyEvidence,
+    );
+    const outbox = table(bundle, "unresolved_safety_alert_outbox.csv");
+    expect(
+      outbox.rows.some((row) => row[outbox.header.indexOf("id")] === beforeObligations[0].id),
+    ).toBe(true);
+
+    const [other] = await pg.db
+      .insert(shops)
+      .values({
+        name: "Unrelated shop",
+        slug: "receipt-export-other",
+        timezone: "UTC",
+      })
+      .returning();
+    const otherBundle = await loadShopExportBundleInput(pg.db, other.id);
+    if (!otherBundle) throw new Error("other shop export missing");
+    const otherClaims = table(otherBundle, "roll_call_event_claims.csv");
+    expect(
+      otherClaims.rows.some((row) => row[otherClaims.header.indexOf("id")] === before.id),
+    ).toBe(false);
+    const otherOutbox = table(otherBundle, "unresolved_safety_alert_outbox.csv");
+    expect(
+      otherOutbox.rows.some(
+        (row) => row[otherOutbox.header.indexOf("id")] === beforeObligations[0].id,
+      ),
+    ).toBe(false);
+    for (const foreign of [
+      { tripId: input.tripId },
+      { claimId: before.id },
+      { outboxId: beforeObligations[0].id },
+    ]) {
+      const [incident] = await pg.db
+        .insert(unresolvedSafetyScanIncidents)
+        .values({
+          shopId: other.id,
+          tripId: crypto.randomUUID(),
+          claimId: crypto.randomUUID(),
+          outboxId: crypto.randomUUID(),
+          generationId: crypto.randomUUID(),
+          scanSequence: 999,
+          ...foreign,
+        })
+        .returning();
+      await expect(loadShopExportBundleInput(pg.db, other.id)).rejects.toThrow(
+        "Safety export has inconsistent tenant references",
+      );
+      await pg.db
+        .delete(unresolvedSafetyScanIncidents)
+        .where(eq(unresolvedSafetyScanIncidents.id, incident.id));
+    }
+    const [missing] = await pg.db
+      .insert(unresolvedSafetyScanIncidents)
+      .values({
+        shopId: other.id,
+        tripId: crypto.randomUUID(),
+        claimId: crypto.randomUUID(),
+        outboxId: crypto.randomUUID(),
+        generationId: crypto.randomUUID(),
+        scanSequence: 1000,
+      })
+      .returning();
+    const missingBundle = await loadShopExportBundleInput(pg.db, other.id);
+    if (!missingBundle) throw new Error("missing-incident export missing");
+    const incidents = table(missingBundle, "unresolved_safety_scan_incidents.csv");
+    const missingRow = incidents.rows.find(
+      (row) => row[incidents.header.indexOf("id")] === missing.id,
+    );
+    if (!missingRow) throw new Error("missing incident omitted");
+    expect(missingRow[incidents.header.indexOf("outbox_id")]).toBe(missing.outboxId);
+    expect(missingRow[incidents.header.indexOf("generation_id")]).toBe(missing.generationId);
+    expect(missingRow[incidents.header.indexOf("scan_sequence")]).toBe(missing.scanSequence);
+    expect(missingRow[incidents.header.indexOf("trip_id")]).toBe(missing.tripId);
+    expect(missingRow[incidents.header.indexOf("claim_id")]).toBe(missing.claimId);
   });
 
   it("refuses when session revocation commits while verification is waiting", async () => {
