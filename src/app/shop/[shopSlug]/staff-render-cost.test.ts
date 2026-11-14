@@ -637,7 +637,9 @@ const TODAY_CEILING = 76;
 // departure's one head count (`departureCounts`), which reads the roster beside
 // the roll call: one statement more than the dock-only boarded read it
 // replaced, in the same wave.
-const TRIP_CEILING = 69;
+// 69 → 70 (#4474): the Divers tab reads the dock sightings still waiting for a seat
+// (`openBoardingObservationsByTrip`), one statement in the overview's wave.
+const TRIP_CEILING = 70;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never

@@ -597,6 +597,9 @@ describe("who may run each action on the trip page", () => {
     "saveRosterEmergencyContactAction",
     // Day-of crew assignment (H-20260724-staff-role-reach, #788; #2678 away ack withdrawal) stays open.
     "updateTripCrewAction",
+    // Moving a crew member between two boats is the same day-of crew assignment in one step
+    // (#4474), open to every staffer on the same terms.
+    "moveTripCrewAction",
     "withdrawCrewAwayAcknowledgementAction",
     // Same H-20260814-may-sight-card trust boundary as reviewCertification (any active staff
     // role, not instructor-only) — scoped to the surface rather than the
