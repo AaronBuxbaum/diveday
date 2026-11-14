@@ -70,6 +70,9 @@ export function LanguagePicker({
   copy: LanguagePickerCopy;
 }) {
   const [open, setOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  // The server-rendered button has no handler until this client commit.
+  useLayoutEffect(() => setHydrated(true), []);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -159,10 +162,12 @@ export function LanguagePicker({
       <button
         type="button"
         ref={triggerRef}
+        data-language-picker=""
+        disabled={!hydrated}
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-label={copy.ariaLabel}
-        className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground sm:px-2"
+        className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground disabled:cursor-wait disabled:opacity-60 sm:px-2"
       >
         {/* `min-w-11 justify-center`: below `sm` the globe is the whole visible
             control, and without a width floor the target shrank to the glyph
