@@ -34,9 +34,8 @@ import { listNotificationDeliveryIssues } from "@/db/notifications";
 import { openOrdersForBookings } from "@/db/orders";
 import { listTripsReadiness } from "@/db/readiness";
 import {
-  hasRetainedSafetyAlertNeedsReview,
-  hasRetainedSafetyEvidence,
   retainedSafetyTripIds as readRetainedSafetyTripIds,
+  retainedSafetyShopWarnings,
 } from "@/db/retained-safety";
 import { newestMarkFirst } from "@/db/roll-call-order";
 import { markBookingId, seatMarks } from "@/db/roll-call-subject";
@@ -1614,13 +1613,7 @@ export async function getTodayWork(
   // after the queue is built so they cost no phase of their own: every diver
   // the evidence blocks on a pending card is asked about, a superset of the
   // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
-  const [
-    waveRead,
-    agencyCheckCards,
-    lostItemsFound,
-    retainedSafetyUnresolved,
-    retainedSafetyAlertNeedsReview,
-  ] = await Promise.all([
+  const [waveRead, agencyCheckCards, lostItemsFound, retainedSafetyWarnings] = await Promise.all([
     readTodayWave(db, shopId, {
       now,
       horizon,
@@ -1643,9 +1636,10 @@ export async function getTodayWork(
     }),
     // The found items waiting (fifth loop, item 7), beside the wave.
     countOpenLostItems(db, shopId, now),
-    hasRetainedSafetyEvidence(db, shopId),
-    hasRetainedSafetyAlertNeedsReview(db, shopId),
+    retainedSafetyShopWarnings(db, shopId),
   ]);
+  const retainedSafetyUnresolved = retainedSafetyWarnings.evidence;
+  const retainedSafetyAlertNeedsReview = retainedSafetyWarnings.alertNeedsReview;
   // A feature the shop switched off on the Features page raises no row: the
   // reads above ran beside the shop row that says so, and what they found is
   // still there for when it is switched back on (`shop-features.ts`).

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { DbExecutor } from "./client";
 import {
@@ -33,18 +33,7 @@ export async function retainedSafetyTripIds(
 /** A shop-wide unresolved fact or delivery incident may be outside today's
  * stations, including an incident whose original trip is no longer live. */
 export async function hasRetainedSafetyEvidence(db: DbExecutor, shopId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ id: rollCallEventClaims.id })
-    .from(rollCallEventClaims)
-    .where(
-      and(
-        eq(rollCallEventClaims.shopId, shopId),
-        isNotNull(rollCallEventClaims.retainedSafetyEvidence),
-      ),
-    )
-    .limit(1);
-  if (row) return true;
-  return hasRetainedSafetyAlertNeedsReview(db, shopId);
+  return (await retainedSafetyShopWarnings(db, shopId)).evidence;
 }
 
 /** Includes delivery problems for trips outside the current day or removed. */
@@ -52,22 +41,20 @@ export async function hasRetainedSafetyAlertNeedsReview(
   db: DbExecutor,
   shopId: string,
 ): Promise<boolean> {
-  const [incident] = await db
-    .select({ id: unresolvedSafetyScanIncidents.id })
-    .from(unresolvedSafetyScanIncidents)
-    .where(eq(unresolvedSafetyScanIncidents.shopId, shopId))
-    .limit(1);
-  if (incident) return true;
-  const [escalation] = await db
-    .select({ id: unresolvedSafetyAlertEscalations.id })
-    .from(unresolvedSafetyAlertEscalations)
-    .innerJoin(
-      unresolvedSafetyAlertOutbox,
-      eq(unresolvedSafetyAlertOutbox.id, unresolvedSafetyAlertEscalations.outboxId),
-    )
-    .where(eq(unresolvedSafetyAlertOutbox.shopId, shopId))
-    .limit(1);
-  return Boolean(escalation);
+  return (await retainedSafetyShopWarnings(db, shopId)).alertNeedsReview;
+}
+
+/** Read both shop-wide warnings together, including incidents for removed trips. */
+export async function retainedSafetyShopWarnings(db: DbExecutor, shopId: string) {
+  const [row] = await db
+    .select({
+      claim: sql<boolean>`exists (select 1 from ${rollCallEventClaims} where ${rollCallEventClaims.shopId} = ${shopId} and ${rollCallEventClaims.retainedSafetyEvidence} is not null)`,
+      incident: sql<boolean>`exists (select 1 from ${unresolvedSafetyScanIncidents} where ${unresolvedSafetyScanIncidents.shopId} = ${shopId})`,
+      escalation: sql<boolean>`exists (select 1 from ${unresolvedSafetyAlertEscalations} inner join ${unresolvedSafetyAlertOutbox} on ${unresolvedSafetyAlertOutbox.id} = ${unresolvedSafetyAlertEscalations.outboxId} where ${unresolvedSafetyAlertOutbox.shopId} = ${shopId})`,
+    })
+    .from(sql`(select 1) as safety_warning_source`);
+  const alertNeedsReview = row.incident || row.escalation;
+  return { evidence: row.claim || alertNeedsReview, alertNeedsReview };
 }
 
 /** A durable delivery problem needs human review, even if the recipient later changes. */
