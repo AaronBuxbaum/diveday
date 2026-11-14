@@ -77,7 +77,8 @@ for (const width of [390, 1280]) {
             );
             await expect(image).toHaveCount(1);
             expect(await loadedScene(image)).toBe(SEED_COURSE_ILLUSTRATIONS[course].url);
-            await expect(image).toHaveAttribute("alt", SEED_COURSE_ILLUSTRATIONS[course].alt);
+            // The adjacent course title names this link, so its thumbnail is decorative.
+            await expect(image).toHaveAttribute("alt", "");
           }
         }
         expect(await settleCaptureFonts(page)).toBe("ready");
