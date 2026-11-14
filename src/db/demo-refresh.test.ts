@@ -15,6 +15,7 @@ import {
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { getTripManifest } from "./manifests";
 import {
+  crewAvailabilityBlocks,
   departureBoatSafetySnapshots,
   executedDives,
   people,
@@ -243,6 +244,9 @@ describe("refreshCanonicalDemoSchedule", () => {
     await db.delete(tripAssignments).where(eq(tripAssignments.personId, relief[0].id));
     await db.delete(rollCallEvents).where(eq(rollCallEvents.crewPersonId, relief[0].id));
     await db.delete(staffShifts).where(eq(staffShifts.personId, relief[0].id));
+    await db
+      .delete(crewAvailabilityBlocks)
+      .where(eq(crewAvailabilityBlocks.personId, relief[0].id));
     await db.delete(staffCredentials).where(eq(staffCredentials.personId, relief[0].id));
     await db
       .delete(safetyDrillParticipants)
