@@ -595,12 +595,6 @@ jobs:
           path: e2e-durations/
           if-no-files-found: ignore
           retention-days: 14
-      # TEMPORARY: verify the language fix repeatedly after the full shard.
-      - name: TEMPORARY language menu repetitions
-        if: ${{ !cancelled() && matrix.shard == 1 }}
-        env:
-          E2E_WORKERS: "2"
-        run: pnpm exec playwright test e2e/language.spec.ts -g 'a diver switches a shop.s public pages into Spanish' --repeat-each=5 --reporter=line
 
   # An early browser answer on a pull request, not a gate (2026-10-22 CI
   # review). The first browser verdict used to arrive with the full shards:
