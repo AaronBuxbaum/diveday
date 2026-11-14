@@ -1,4 +1,5 @@
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
+import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
@@ -51,6 +52,7 @@ import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSharedDemoRecapPhoto } from "./seed-shared-demo-recap-photo";
 import { seedShopVoice } from "./seed-shop-voice";
 import { seedSightings } from "./seed-sightings";
+import { seedStaffRoster } from "./seed-staff-roster";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
@@ -100,6 +102,7 @@ type Seeded<F extends (...args: never[]) => unknown> = Awaited<ReturnType<F>>;
 export type SeedContext = {
   shopId: string;
   shape: SeedShape;
+  initialStaffRota: boolean;
   shop: { timezone: string; isDemo: boolean; isCanonical: boolean };
   staff: {
     owner: { id: string };
@@ -158,6 +161,7 @@ async function seedTheBoard(
   db: DbExecutor,
   shopId: string,
   shape: SeedShape,
+  initialStaffRota: boolean,
 ): Promise<SeedContext> {
   // Look the instructors up by **name**, not by a hardcoded email and no longer
   // by role. The name is the one key both shops share: a minted demo carries
@@ -205,7 +209,7 @@ async function seedTheBoard(
   // staffing week is a surface specs write to — so it lives in the resettable
   // half, where `/api/test/reset` clears it before the next test rather than
   // leaking one worker's "away" into another's board.
-  await seedCrewAway(db, shopId, instructor.id);
+  if (!initialStaffRota) await seedCrewAway(db, shopId, instructor.id);
 
   // Only the canonical blue-mantis demo pins any primary key, and everything
   // that pins one is gated on this: the visual tests mint a recap link from a
@@ -264,6 +268,7 @@ async function seedTheBoard(
   return {
     shopId,
     shape,
+    initialStaffRota,
     shop: {
       timezone: shopRow?.timezone ?? DEMO_SHOP_TIMEZONE,
       isDemo: shopRow?.isDemo ?? false,
@@ -294,17 +299,38 @@ function reefTrip(c: SeedContext) {
  */
 async function seedTheWeeklyRun(db: DbExecutor, c: SeedContext): Promise<void> {
   const { shopId } = c;
+  const [skipper] = await db
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(people.id, personRoles.personId))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        eq(people.id, c.staff.owner.id),
+        isNull(people.deletedAt),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+      ),
+    )
+    .limit(1);
   const [assistant] = await db
     .select({ id: people.id })
     .from(people)
     .innerJoin(personRoles, eq(people.id, personRoles.personId))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "assistant_instructor")))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        eq(personRoles.role, "assistant_instructor"),
+      ),
+    )
     .limit(1);
   const [divemaster] = await db
     .select({ id: people.id })
     .from(people)
     .innerJoin(personRoles, eq(people.id, personRoles.personId))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "divemaster")))
+    .where(
+      and(eq(people.shopId, shopId), isNull(people.deletedAt), eq(personRoles.role, "divemaster")),
+    )
     .limit(1);
   // Everyone else on the crew, for a date a standing member is out on a
   // longer boat; the owner skippers, so she is not a relief.
@@ -315,6 +341,7 @@ async function seedTheWeeklyRun(db: DbExecutor, c: SeedContext): Promise<void> {
     .where(
       and(
         eq(people.shopId, shopId),
+        isNull(people.deletedAt),
         ne(people.id, c.staff.owner.id),
         inArray(personRoles.role, ["instructor", "assistant_instructor", "divemaster", "captain"]),
       ),
@@ -328,7 +355,8 @@ async function seedTheWeeklyRun(db: DbExecutor, c: SeedContext): Promise<void> {
   // guides.
   const standing = [assistant?.id, divemaster?.id].filter((id): id is string => !!id);
   await seedWeeklyRun(db, shopId, {
-    skipperId: c.staff.owner.id,
+    initialStaffRota: c.initialStaffRota,
+    skipperId: skipper?.id,
     divemasterIds: standing,
     reliefs: reliefPool.filter((relief) => !standing.includes(relief.personId)),
   });
@@ -683,6 +711,7 @@ const THE_DAY: readonly SeedStep[] = [
   // Adds-only: the shop's replies under its reviews and one note to a departure's
   // divers (src/db/seed-shop-voice.ts). Writes no waiver row.
   demo((db, c) => seedShopVoice(db, c.shopId, c.staff.owner.id)),
+  demo((db, c) => (c.initialStaffRota ? seedStaffRoster(db, c.shopId) : Promise.resolve())),
 ];
 
 /**
@@ -699,8 +728,9 @@ export async function seedDemoSchedule(
   db: DbExecutor,
   shopId: string,
   shape: SeedShape,
+  options: { initialStaffRota?: boolean } = {},
 ): Promise<void> {
-  const context = await seedTheBoard(db, shopId, shape);
+  const context = await seedTheBoard(db, shopId, shape, options.initialStaffRota === true);
   for (const step of THE_DAY) {
     if (shapeHas(shape, step.set)) await step.run(db, context);
   }

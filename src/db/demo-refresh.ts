@@ -3,6 +3,7 @@ import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { rebindDepartureBoatSafetyTime } from "./boat-safety";
 import type { AppDb, DbExecutor } from "./client";
+import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops, trips } from "./schema";
@@ -329,6 +330,7 @@ async function ensureDemoSailsTodayInTransaction(
       .set({ startsAt, endsAt, revision: sql`${trips.revision} + 1` })
       .where(and(eq(trips.shopId, shopId), eq(trips.id, current.id)));
     await rebindDepartureBoatSafetyTime(tx, shopId, current.id, current.startsAt, startsAt, now);
+    await clearCrewAwayAcknowledgements(tx, { shopId, tripId: current.id });
     return "moved";
   });
 }

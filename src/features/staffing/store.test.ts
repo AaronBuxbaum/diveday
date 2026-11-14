@@ -923,14 +923,11 @@ describe("crewShiftCoverage", () => {
     expect(await crewShiftCoverage(db, shop.id, trip, [])).toEqual(new Set());
   });
 
-  it("answers null for a shop that has never scheduled a shift — the question does not apply", async () => {
-    // The regression this pins: a shop that doesn't use the staffing feature
-    // used to get a "Not on a shift" warning on every crew member of every
-    // trip, forever — the expected state formatted as an alert (design
-    // principle 9). No shifts on file means shift coverage is not a question
-    // this shop asks, which is a different answer from "nobody is covered".
+  it("answers null only when the shop explicitly disables shift scheduling", async () => {
     const { db, shop } = ctx;
     await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
+    const { shops } = await import("@/db/schema");
+    await db.update(shops).set({ crewScheduleEnabled: false }).where(eq(shops.id, shop.id));
     const staff = await listStaff(db, shop.id);
     const [crew] = staff;
     if (!crew) throw new Error("seeded staffing fixture needs staff");

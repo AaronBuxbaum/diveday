@@ -431,6 +431,7 @@ export type PlacedGapRequest = CrewAssignmentRequest & {
 export type WeekPerson = {
   personId: string;
   name: string;
+  photoUrl?: string | null;
   roles: readonly string[];
   shifts: readonly WeekShift[];
   crewingTrips: readonly WeekCrewing[];
@@ -465,6 +466,7 @@ export type StaffWeekPersonDay = {
 export type StaffWeekPerson = {
   personId: string;
   name: string;
+  photoUrl?: string | null;
   roles: readonly string[];
   days: StaffWeekPersonDay[];
 };
@@ -719,6 +721,7 @@ export function staffWeek(input: {
     return {
       personId: person.personId,
       name: person.name,
+      photoUrl: person.photoUrl,
       roles: person.roles,
       days: personDays,
     };

@@ -59,6 +59,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
     header: [
       "id",
       "full_name",
+      "staff_photo_path",
       "public_staff_profile_enabled",
       "public_staff_profile",
       "email",
@@ -79,6 +80,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
       [
         person.id,
         person.fullName,
+        person.staffPhotoPath,
         person.publicStaffProfileEnabled,
         person.publicStaffProfile ? JSON.stringify(person.publicStaffProfile) : null,
         person.email,

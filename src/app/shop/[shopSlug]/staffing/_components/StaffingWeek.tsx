@@ -17,6 +17,7 @@ import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { formatTimeRangeTz } from "@/lib/format";
+import { CrewPortrait } from "./CrewPortrait";
 import { StaffingDepartureCrew } from "./StaffingDepartureCrew";
 import { StaffingPersonalRows } from "./StaffingPersonalRows";
 import { StaffingWeekHeader } from "./StaffingWeekHeader";
@@ -340,18 +341,23 @@ const GRID_CLASS = "grid grid-cols-[9rem_repeat(7,minmax(0,1fr))]";
 export function PersonFace({
   person,
   totals,
+  print = false,
 }: {
-  person: { name: string; roles: readonly string[] };
+  person: { name: string; roles: readonly string[]; photoUrl?: string | null };
   totals: string | undefined;
+  print?: boolean;
 }) {
   return (
-    <>
-      <p className="text-base font-semibold">{person.name}</p>
-      {person.roles.length > 0 ? (
-        <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
-      ) : null}
-      {totals ? <p className="text-xs text-muted tabular-nums">{totals}</p> : null}
-    </>
+    <div className="flex items-start gap-2">
+      {!print ? <CrewPortrait person={person} /> : null}
+      <div className="min-w-0">
+        <p className="break-words text-base font-semibold">{person.name}</p>
+        {person.roles.length > 0 ? (
+          <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
+        ) : null}
+        {totals ? <p className="text-xs text-muted tabular-nums">{totals}</p> : null}
+      </div>
+    </div>
   );
 }
 
@@ -360,9 +366,9 @@ export const WEEK_GRID = {
   personHead: "pe-2 py-2.5",
   dayHead: "border-s border-border px-1.5 py-2.5",
   person: "pe-2 py-3",
-  day: "flex min-h-32 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+  day: "flex min-h-20 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
   // One person on screen: room to read their own week at a glance.
-  dayTall: "flex min-h-56 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+  dayTall: "flex min-h-32 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
   shiftChip: chipClass("shift"),
 } as const;
 

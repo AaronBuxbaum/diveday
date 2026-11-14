@@ -14,6 +14,7 @@
     "moved": "Moved",
     "movedGearReleased": "Moved. {count, plural, one {# gear assignment} other {# gear assignments}} released. Reassign on the prep page.",
     "copied": "Copied",
+    "addedNoCrew": "Departure added, but some requested crew could not be assigned. Check their shifts, overlapping trips and crew requirements before sailing.",
     "copiedNoCrew": "Copied, without the crew: one of them is on another boat then, or the course needs an instructor. Add them on the Crew schedule.",
     "removed": "Taken off the board",
     "invalid": "That didn’t save. Check the date, times, and seats, then try again.",

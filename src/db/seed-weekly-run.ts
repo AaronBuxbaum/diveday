@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -9,10 +9,11 @@ import {
 import { nowDate } from "@/lib/clock";
 import { SERIES_HORIZON_DAYS, weekdaySetFrom } from "@/lib/recurrence";
 import type { AppDb, DbExecutor } from "./client";
-import { boats, crewNotices, diveSites, shops, tripSeriesCrew, trips } from "./schema";
+import { crewWithScheduledShifts } from "./crew-shift-scheduling";
+import { boats, diveSites, shops, tripAssignments, tripSeriesCrew, trips } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { createTripSeries, deleteTrip } from "./trips";
-import { seatStandingCrew, setTripCrew } from "./trips-crew";
+import { crewBusyElsewhere } from "./trips-crew";
 
 /**
  * **The demo's weekly boat** (fourth review, item 51). A shop's most ordinary
@@ -23,14 +24,13 @@ import { seatStandingCrew, setTripCrew } from "./trips-crew";
  * One open-ended Saturday run, written through the schedule builder's own
  * doors so it is exactly what a shop that set one up would have:
  * `createTripSeries` materializes the horizon, the run gets a standing crew
- * (`trip_series_crew`, seated on each date by `seatStandingCrew`, which leaves
- * a person off a date they already crew elsewhere), and the Saturday Mantis
+ * (`trip_series_crew`, seated on each date using the same clash check as the
+ * live writer), and the Saturday Mantis
  * II is hauled out for her annual survey, plus any Saturday the crew are out
  * is deleted with `deleteTrip`, which leaves the skip the nightly roll honors.
  * A Saturday whose standing crew are out on a longer boat is not deleted: the
  * shop puts a relief on the regular boat for that date alone
- * (`setTripCrew`), which also shows that each date's crew is editable on its
- * own.
+ * which also shows that each date's crew is editable on its own.
  *
  * **Staffed to the shop's own ratio** (issue #2686): sixteen seats on one
  * in-water guide read "Under target" from the seventh booking, a warning the
@@ -96,6 +96,7 @@ export async function seedWeeklyRun(
   db: DbExecutor,
   shopId: string,
   ctx: {
+    initialStaffRota: boolean;
     skipperId: string | undefined;
     /** The standing in-water guides: two cover twelve divers at the default ratio. */
     divemasterIds: readonly string[];
@@ -160,42 +161,70 @@ export async function seedWeeklyRun(
     ...(ctx.skipperId ? [{ personId: ctx.skipperId, tripRole: "captain" as const }] : []),
     ...ctx.divemasterIds.map((personId) => ({ personId, tripRole: "divemaster" as const })),
   ];
-  const calledOff: string[] = [];
+  const calledOff: string[] = ctx.skipperId ? [] : created.trips.map((trip) => trip.id);
   if (crew.length > 0) {
     await db
       .insert(tripSeriesCrew)
       .values(crew.map((member) => ({ shopId, seriesId: series.id, ...member })));
     for (const trip of created.trips) {
-      const seated = await seatStandingCrew(db, {
+      // These are new fictional fixture rows, before the fixture's rota is
+      // built. Ask the same clash predicate as the live writer, then create
+      // the shifts for the resulting assignments in seedStaffRoster.
+      const days = [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
+      const busy = await crewBusyElsewhere(
+        db,
         shopId,
-        tripId: trip.id,
-        courseSession: false,
-        days: [{ startsAt: trip.startsAt, endsAt: trip.endsAt }],
-        crew,
-      });
+        trip.id,
+        crew.map((c) => c.personId),
+        days,
+      );
+      const onShift = ctx.initialStaffRota
+        ? new Set(crew.map((member) => member.personId))
+        : await crewWithScheduledShifts(
+            db,
+            shopId,
+            days,
+            crew.map((member) => member.personId),
+          );
+      const seated = crew
+        .filter((member) => !busy.has(member.personId) && onShift.has(member.personId))
+        .map((c) => c.personId);
+      if (seated.length) {
+        await db.insert(tripAssignments).values(
+          crew
+            .filter((member) => seated.includes(member.personId))
+            .map((member) => ({
+              tripId: trip.id,
+              ...member,
+            })),
+        );
+      }
       // A Saturday a standing member is out on a longer boat keeps its crew
       // by a relief, the way a shop fills it, rather than sailing short or
       // being deleted.
       const absent = crew.filter((member) => !seated.includes(member.personId));
-      if (absent.length === 0) continue;
       const roster: { personId: string; tripRole: (typeof crew)[number]["tripRole"] }[] =
         crew.filter((member) => seated.includes(member.personId));
       // The first relief who is free in the date's hours takes each place:
-      // `setTripCrew` refuses a person who is out on another boat.
-      let unfilled = false;
+      // The live writer refuses a person who is out on another boat.
       for (const member of absent) {
         let placed = false;
         const needs = member.tripRole === "captain" ? ["captain"] : IN_WATER_ROLES;
         const holders = ctx.reliefs.filter((relief) =>
           relief.roles.some((role) => needs.includes(role)),
         );
-        if (holders.length === 0) {
-          throw new Error(`seed: nobody on the staff holds ${needs.join(" or ")} to relieve`);
-        }
         for (const { personId: relief } of holders) {
           if (roster.some((entry) => entry.personId === relief)) continue;
-          const attempt = [...roster, { personId: relief, tripRole: member.tripRole }];
-          if (await setTripCrew(app, shopId, trip.id, attempt)) {
+          const reliefBusy = await crewBusyElsewhere(db, shopId, trip.id, [relief], days);
+          const reliefOnShift =
+            ctx.initialStaffRota ||
+            (await crewWithScheduledShifts(db, shopId, days, [relief])).has(relief);
+          if (!reliefBusy.has(relief) && reliefOnShift) {
+            await db.insert(tripAssignments).values({
+              tripId: trip.id,
+              personId: relief,
+              tripRole: member.tripRole,
+            });
             roster.push({ personId: relief, tripRole: member.tripRole });
             placed = true;
             break;
@@ -209,9 +238,8 @@ export async function seedWeeklyRun(
           calledOff.push(trip.id);
           break;
         }
-        if (!placed) unfilled = true;
       }
-      if (unfilled && !calledOff.includes(trip.id)) {
+      if (!calledOff.includes(trip.id)) {
         const guides = roster.filter((entry) => entry.tripRole === "divemaster").length;
         const seats = guideSeats(guides, ratio);
         // No guide free at all sells nothing, and a trip holds at least one
@@ -220,17 +248,6 @@ export async function seedWeeklyRun(
         else await db.update(trips).set({ capacity: seats }).where(eq(trips.id, trip.id));
       }
     }
-    // The crew have always sailed this run: being seated on it is not news
-    // for their digest.
-    await db.delete(crewNotices).where(
-      and(
-        eq(crewNotices.shopId, shopId),
-        inArray(
-          crewNotices.tripId,
-          created.trips.map((trip) => trip.id),
-        ),
-      ),
-    );
   }
 
   const closed = surveySaturday(firstRun);

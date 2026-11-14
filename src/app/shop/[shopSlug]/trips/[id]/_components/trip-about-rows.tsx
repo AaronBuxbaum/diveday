@@ -178,6 +178,15 @@ function departureEditor(context: TripAboutRowsContext, section: DepartureDetail
   ) : undefined;
 }
 
+function crewRoleOptions(t: StaffTranslator) {
+  return {
+    instructor: t("trips.crew.roleInstructor"),
+    divemaster: t("trips.crew.roleDivemaster"),
+    captain: t("trips.crew.roleCaptain"),
+    crew: t("trips.crew.roleCrew"),
+  };
+}
+
 function departureDefinitionRows(context: TripAboutRowsContext) {
   const {
     overview,
@@ -451,11 +460,9 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
             staff={staff}
             crewIds={crewIds}
             crewRoles={Object.fromEntries(tripRoleByPerson)}
-            // A cancelled departure isn't sailing, so its crew panel drops
-            // the live-trip nudges — the ratio gates, the shop's target,
-            // and the shift-coverage badges are all about a boat that will
-            // leave.
+            // Canceled departures have no live-trip staffing warnings.
             onShiftIds={cancelled ? null : onShiftIds}
+            awayPersonIds={cancelled ? [] : crew.awayPersonIds}
             clashes={liveClashes}
             crewGapCode={cancelled ? "none" : crewGap.code}
             bookingInstructorPresent={crew.rosterInWaterCrew.instructorCount > 0}
@@ -469,6 +476,7 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
               ratingLapsedNote: cancelled ? null : ratingLapsedNote,
               noStaff: t("trips.crew.noCrew"),
               notAssignedYet: t("trips.crew.notAssignedYet"),
+              awayWarning: t("trips.crew.awayWarning"),
               assignLabel: t("trips.crew.assignLabel"),
               assignOption: t("trips.crew.assignOption"),
               unassignAria: t.raw("trips.crew.unassignAria"),
@@ -481,12 +489,7 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
               clash: t.raw("trips.crew.clash"),
               roleAria: t.raw("trips.crew.roleAria"),
               roleUnspecified: t("trips.crew.roleUnspecified"),
-              roleOptions: {
-                instructor: t("trips.crew.roleInstructor"),
-                divemaster: t("trips.crew.roleDivemaster"),
-                captain: t("trips.crew.roleCaptain"),
-                crew: t("trips.crew.roleCrew"),
-              },
+              roleOptions: crewRoleOptions(t),
               onShift: t("trips.crew.onShift"),
               notOnShift: t("trips.crew.notOnShift"),
               manageShifts: shop.crewScheduleEnabled ? t("trips.crew.manageShifts") : null,

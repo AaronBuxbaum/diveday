@@ -133,6 +133,7 @@ import { seedPackages } from "./seed-packages";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { type SeedShape, seedDemoSchedule, shapeHas } from "./seed-schedule";
 import { DEMO_SHOP_BRAND, DEMO_SHOP_DESK } from "./seed-shop-brand";
+import { seedStaffPortraits } from "./seed-staff-portraits";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 
 const DEMO_BOAT_CAPACITIES = {
@@ -226,12 +227,9 @@ const DEMO_SHOP_UNIT_COLUMNS = {
  * around today's departure, on its own local day), so the rostering surface
  * (`/shop/<slug>/staffing`) has a day to show.
  *
- * Shared by all three places staff arrive in a demo shop — the canonical seed,
- * a shop minted by "Try the live demo", and `restoreMissingStableStaff`'s
- * repair — because a shop that has a cast and no shifts renders an empty
- * roster, which is what a minted demo did until 2026-08-15. Part of the
- * **stable** half: a schedule reset never re-seeds these, so a person who
- * already has one keeps it.
+ * Used when `restoreMissingStableStaff` repairs a missing cast member. A new
+ * demo gets its initial full rota after its departures are seeded; reset does
+ * not replace existing staff shifts.
  */
 async function seedStaffShifts(
   db: DbExecutor,
@@ -526,15 +524,10 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
   const accounts = await Promise.all(accountRows); // diveday:allow-db-concurrency: bcrypt, not queries
   await db.insert(userAccounts).values(accounts);
 
-  await seedStaffShifts(
+  await seedStaffPortraits(
     db,
     shop.id,
-    staff.map((person, i) => ({
-      id: person.id,
-      fullName: staffDefs[i].fullName,
-      roles: staffDefs[i].roles,
-    })),
-    { boatAtSea: shapeHas(shape, "history") },
+    staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
   );
   // The shop's own checklist items are settings, not schedule (ADR
   // 20260824-pre-departure-safety-check): seeded once here, never re-seeded by
@@ -546,7 +539,7 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
   // Before the schedule, whose regular holds a card from one of them
   // (src/db/seed-booth.ts).
   await seedPackages(db, shop.id);
-  await seedDemoSchedule(db, shop.id, shape);
+  await seedDemoSchedule(db, shop.id, shape, { initialStaffRota: true });
   // Pay-at-booking in Stripe test mode, when configured (ADR
   // 20261009-demo-test-mode-payments); nothing otherwise.
   await syncDemoStripeAccount(db, shop.id);
@@ -800,15 +793,10 @@ export async function createDemoShop(
   // demo's rostering surface was empty — the cast was there, nobody was ever
   // working — and an e2e spec could not take a shop of its own to write a
   // shift into (ADR 20260815-per-test-private-shops).
-  await seedStaffShifts(
+  await seedStaffPortraits(
     db,
     shop.id,
-    staff.map((person, i) => ({
-      id: person.id,
-      fullName: staffDefs[i].fullName,
-      roles: staffDefs[i].roles,
-    })),
-    { boatAtSea: shapeHas(shape, "history") },
+    staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
   );
   // A visitor's demo should carry the same owner-facing story as the
   // canonical demo, including sailed trips, tips, and reviews. Test-only
@@ -822,7 +810,7 @@ export async function createDemoShop(
   // and starts with nothing on sale, which is the state
   // `e2e/package-purchase.spec.ts` begins from.
   if (shapeHas(shape, "history")) await seedPackages(db, shop.id);
-  await seedDemoSchedule(db, shop.id, shape);
+  await seedDemoSchedule(db, shop.id, shape, { initialStaffRota: true });
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
