@@ -62,9 +62,21 @@ test.describe("print", () => {
     await openReefTrip(page);
     const publicPath = new URL(page.url()).pathname.replace("/shop/", "/s/");
     await page.goto(publicPath);
+    // Booking can navigate client-side, retaining the trip document's policy.
+    // The arrival tile itself must still suppress the referrer on that path.
+    const arrivalTile = page.waitForRequest(
+      (request) =>
+        page.url().includes("/ready/") &&
+        request.resourceType() === "image" &&
+        request.url().startsWith("https://server.arcgisonline.com/") &&
+        !MAP_REACHABILITY_PROBES.includes(
+          request.url() as (typeof MAP_REACHABILITY_PROBES)[number],
+        ),
+    );
     await bookASeatAndOpenThread(page, "Print Map Diver", "print-map@example.com");
     const map = page.getByRole("region", { name: /^Map of / });
     await expect(map).toBeVisible();
+    expect((await arrivalTile).headers()).not.toHaveProperty("referer");
     const address = page.locator("address").first();
     await expect(address).not.toBeEmpty();
     const cancel = page.getByRole("button", { name: "Cancel my seat", exact: true });

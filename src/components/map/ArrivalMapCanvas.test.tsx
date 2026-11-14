@@ -53,6 +53,10 @@ describe("arrival map", () => {
     if (!zoomIn) throw new Error("Zoom control did not mount");
     fireEvent.click(zoomIn);
     await waitFor(() => expect(map.getZoom()).toBeGreaterThan(zoomBeforeButton));
+    const zoomBeforeKeyboard = map.getZoom();
+    element.focus();
+    fireEvent.keyDown(document, { key: "+", keyCode: 187 });
+    await waitFor(() => expect(map.getZoom()).toBeGreaterThan(zoomBeforeKeyboard));
     unmount();
     expect(wheel({ metaKey: true }).defaultPrevented).toBe(false);
   });

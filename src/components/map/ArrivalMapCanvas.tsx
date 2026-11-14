@@ -23,6 +23,7 @@ export function ArrivalMapCanvas({ title, query }: { title: string; query: strin
         center: coordinates ?? [0, 0],
         zoom: coordinates ? 15 : 1,
         zoomControl: true,
+        privateMap: true,
       });
       if (coordinates) L.circleMarker(coordinates, { radius: 8 }).addTo(map);
     });
