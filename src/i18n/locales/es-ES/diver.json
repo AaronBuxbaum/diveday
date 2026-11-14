@@ -264,6 +264,7 @@
     "courseGearIncluded": "El equipo está incluido.",
     "courseGearIncludedKinds": "Incluido en el curso: {items}.",
     "seen": {
+      "cardLabel": "Visto este mes",
       "heading": "Visto aquí este mes",
       "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}}",
       "lastSeen": "Visto por última vez el {date}"

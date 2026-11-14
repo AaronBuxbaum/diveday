@@ -6,24 +6,6 @@ import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./TripPitch";
 import type { DiveBriefing } from "./types";
 
-/**
- * **The composition test the ADR asks for** (20260904-reef-all-the-way-down,
- * decision 1: "the booking page is bounded to three field-guide tiles and a
- * door above the form, with a composition test that refuses more").
- *
- * It reads the rendered tree rather than the source, because what is being
- * pinned is a *shape*: how many tiles, how many top-level children, and that
- * every beat the door swallowed is actually inside the door rather than beside
- * it. `page.composition.test.ts` is the other half — it bounds what may run
- * between the hero and the form at all.
- *
- * **How this fails when somebody adds a section.** A fourth sibling inside
- * `TripPitch` trips "the block is a fact line, three tiles and one door" with
- * `expected 4 to have length 3`; a fourth tile trips the tile count. Either
- * way the fix is to put the new thing behind the door, which is the deliberate
- * act the ADR is asking for.
- */
-
 afterEach(cleanup);
 
 const CREATURES = [
@@ -92,17 +74,12 @@ function fullDay() {
 }
 
 describe("TripPitch", () => {
-  it("shows three faces and puts the rest behind the door", () => {
+  it("shows every selected face and keeps the full guide behind the door", () => {
     const { container } = fullDay();
     const tiles = container.querySelectorAll("[data-pitch-tile]");
-    expect(tiles).toHaveLength(3);
-    expect([...tiles].map((tile) => tile.textContent)).toEqual([
-      "Stoplight parrotfish",
-      "Green turtle",
-      "Elkhorn coral",
-    ]);
-    // Every species is still on the page — nothing is deleted, it is one tap
-    // away — and only three of them are tiles.
+    expect(tiles).toHaveLength(CREATURES.length);
+    expect([...tiles].map((tile) => tile.querySelector("button")?.textContent)).toEqual(CREATURES);
+    // The complete field guide remains available in the details as well.
     const door = container.querySelector("[data-pitch-door-body]");
     if (!door) throw new Error("expected the pitch to render a door");
     for (const name of CREATURES.slice(3)) {

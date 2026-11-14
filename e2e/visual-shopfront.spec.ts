@@ -359,6 +359,10 @@ for (const scheme of ["light", "dark"] as const) {
           "true",
         );
         await capture(page, "site-briefing", scheme);
+        const wildlife = page.locator("[data-pitch-tile] button").first();
+        await wildlife.focus();
+        await expect(wildlife).toHaveAttribute("aria-expanded", "true");
+        await capture(page, "site-briefing-wildlife-open", scheme);
         await page.getByLabel("Email", { exact: true }).fill("avery@gmial.com");
         await page.getByLabel("Email", { exact: true }).press("Tab");
         await page.getByRole("button", { name: /avery@gmail\.com/ }).waitFor();

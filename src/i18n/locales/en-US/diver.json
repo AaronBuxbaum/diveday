@@ -264,6 +264,7 @@
     "courseGearIncluded": "Gear is included.",
     "courseGearIncludedKinds": "Included with the course: {items}.",
     "seen": {
+      "cardLabel": "Seen this month",
       "heading": "Seen here this month",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}}",
       "lastSeen": "Last seen {date}"

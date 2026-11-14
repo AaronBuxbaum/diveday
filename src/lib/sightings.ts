@@ -95,6 +95,8 @@ export type SiteSightings = {
   dives: number;
   /** Top catalog species plus crew-written sightings, which must remain readable. */
   species: SiteSightingTally[];
+  /** Every ranked tally, for matching selected field-guide species. */
+  allSpecies?: SiteSightingTally[];
 };
 
 /**
@@ -117,18 +119,18 @@ export function rankSiteSightings(input: {
   if (input.tallies.length === 0) return null;
   const dives = Math.max(input.dives, ...input.tallies.map((tally) => tally.dives));
   let catalogCount = 0;
-  const species = [...input.tallies]
+  const allSpecies = [...input.tallies]
     .map((tally) => ({ ...tally, dives: Math.min(tally.dives, dives) }))
     .sort(
       (a, b) =>
         b.dives - a.dives || b.total - a.total || a.speciesSlug.localeCompare(b.speciesSlug),
-    )
-    .filter((tally) => {
-      if (tally.customName) return true;
-      catalogCount += 1;
-      return catalogCount <= MAX_SIGHTING_SPECIES;
-    });
-  return { diveSiteId: input.diveSiteId, dives, species };
+    );
+  const species = allSpecies.filter((tally) => {
+    if (tally.customName) return true;
+    catalogCount += 1;
+    return catalogCount <= MAX_SIGHTING_SPECIES;
+  });
+  return { diveSiteId: input.diveSiteId, dives, species, allSpecies };
 }
 
 /**
