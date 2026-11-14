@@ -189,6 +189,10 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
         await page.getByRole("button", { name: "After dive 1" }).click();
         await expect(page.getByRole("heading", { name: "After dive 1 roll call" })).toBeVisible();
+        // The status line reads "ready" until the first sync answers; photograph the settled one.
+        await expect(
+          page.getByRole("status").filter({ hasText: "Everything’s sent" }),
+        ).toBeVisible();
         await capture(page, "offline-manifest-after-dive", scheme);
       });
 
