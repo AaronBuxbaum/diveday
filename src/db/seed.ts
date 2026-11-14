@@ -1,5 +1,6 @@
 import { hash } from "bcryptjs";
 import { and, eq, inArray, isNotNull, isNull, notInArray, or } from "drizzle-orm";
+import { demoIllustration } from "@/content/demo-illustrations";
 import { STAFF_ROLES } from "@/lib/authz";
 import { reusablePurposes } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
@@ -291,11 +292,10 @@ export { AT_SEA_DUSK_TITLE, MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 export { DEMO_SHOP_BRAND } from "./seed-shop-brand";
 
 /**
- * **The brand a minted shop wears when a visual capture or a brand spec asks
- * for one**: Blue Mantis's profile, in a different colour, face and logo, so
+ * **The brand a visitor’s minted demo wears, and a visual or brand spec can request**: Blue Mantis's profile, in a different colour, face and logo, so
  * the brand spec proves the storefront follows the shop's own choices rather
  * than the canonical demo's. Left off, a minted shop is blank shop-wide config,
- * which is what every behavioural spec expects.
+ * which is what behavioural fixtures expect.
  *
  * The logo is a bundled frame, as the cover photo is, because the fleet
  * configures no media storage, so an upload through the form is refused. A
@@ -433,6 +433,7 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
     {
       shopId: shop.id,
       name: "Mantis I",
+      photoUrl: demoIllustration("fleet").url,
       capacity: DEMO_BOAT_CAPACITIES["Mantis I"],
       description:
         "The small boat — fourteen passenger places, plus room aboard for its three-person crew.",
@@ -444,6 +445,7 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
     {
       shopId: shop.id,
       name: "Mantis II",
+      photoUrl: demoIllustration("boat").url,
       capacity: DEMO_BOAT_CAPACITIES["Mantis II"],
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
       callSign: "WDM2202",
@@ -713,6 +715,7 @@ export async function createDemoShop(
     {
       shopId: shop.id,
       name: "Mantis I",
+      photoUrl: shop.isDemo ? demoIllustration("fleet").url : null,
       capacity: DEMO_BOAT_CAPACITIES["Mantis I"],
       description:
         "The small boat — fourteen passenger places, plus room aboard for its three-person crew.",
@@ -724,6 +727,7 @@ export async function createDemoShop(
     {
       shopId: shop.id,
       name: "Mantis II",
+      photoUrl: shop.isDemo ? demoIllustration("boat").url : null,
       capacity: DEMO_BOAT_CAPACITIES["Mantis II"],
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
       callSign: "WDM2202",

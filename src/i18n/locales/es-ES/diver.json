@@ -4496,6 +4496,7 @@
     }
   },
   "brand": {
+    "demoBadge": "Ejemplo ficticio: {badge}",
     "since": "Desde {year}",
     "badges": {
       "padi_5_star": "Centro de buceo PADI 5 estrellas",

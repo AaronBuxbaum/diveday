@@ -9,7 +9,7 @@ import { DEMO_SHOP_REPLY_NOTES } from "./seed-reply-notes";
 /**
  * **Blue Mantis's profile and brand: everything a trading shop fills in on
  * Settings → Shop profile & branding.** A tagline and an about line, a logo, a
- * colour and a display face, a cover photo, a badge wall and a photo strip.
+ * colour and a display face, a cover photo and a photo strip.
  * The demo is what a prospect reads as "what my shop would look like", and a
  * profile page with half its fields blank told them the shop had not finished
  * setting up (Aaron, 2026-10-22).
@@ -20,6 +20,10 @@ import { DEMO_SHOP_REPLY_NOTES } from "./seed-reply-notes";
  * the fleet configures no media storage, and a demo that renders broken images
  * the first time a network hiccups is worse than none.
  */
+const ORIGINAL_PHOTO_STRIP = (["dock", "briefing", "student", "reef", "oxygen"] as const).map(
+  (scene) => demoIllustration(scene).url,
+);
+
 export const DEMO_SHOP_BRAND = {
   // i18n-exempt: a shop types its own tagline and about line, like its packing list.
   tagline: "Small-boat reef and wreck diving out of Key Largo.",
@@ -33,11 +37,10 @@ export const DEMO_SHOP_BRAND = {
   // i18n-exempt: a shop writes its own alt text, like its tagline.
   brandHeroImageAlt: demoIllustration("boat").alt,
   establishedYear: 1998,
+  // Fictional examples, labelled as such wherever a demo renders them.
   brandBadges: ["padi_5_star", "padi_idc", "green_fins", "blue_star", "dan_partner", "tripadvisor"],
   // Fictional demo scenes, never claimed as photographs of the operator.
-  shopfrontPhotoUrls: (["dock", "briefing", "student", "reef", "oxygen"] as const).map(
-    (scene) => demoIllustration(scene).url,
-  ),
+  shopfrontPhotoUrls: [...ORIGINAL_PHOTO_STRIP, demoIllustration("shopfront").url],
 } satisfies Partial<typeof shops.$inferInsert>;
 
 /**
