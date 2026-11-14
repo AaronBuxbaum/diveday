@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   hasManifestRereadOwner,
-  invalidateManifestRead,
+  markManifestReadStale,
   requestManifestReread,
+  resetManifestRereadBudget,
 } from "@/components/manifest-stale-generation";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
@@ -151,6 +152,7 @@ export function useOfflineManifestSync(
     copy,
     setMessage,
     () => {
+      resetManifestRereadBudget(tripId);
       if (hasManifestRereadOwner(tripId)) requestManifestReread(tripId);
       else router.refresh();
     },
@@ -160,9 +162,6 @@ export function useOfflineManifestSync(
   // passing silently, since the save itself only happens once the refreshed
   // payload actually lands as a prop (see the payload effect).
   const manualRefreshPending = useRef(false);
-  // Set when a stale claim asked for one re-read of the page (issue #4391), so
-  // a second stale claim in a row does not ask again.
-  const staleReread = useRef(false);
 
   const runReconcileOnce = useCallback(async () => {
     if (!tripId) return;
@@ -344,7 +343,9 @@ export function useOfflineManifestSync(
           savedReads.delete(readKey);
         }
         const claimed = await claimOfflineManifestSnapshot(currentPayload, {
-          onStale: () => invalidateManifestRead(tripId),
+          onStale: () => {
+            markManifestReadStale(tripId);
+          },
         });
         if (claimed === OFFLINE_MANIFEST_STALE_READ) {
           // The copy already on this device stands: drop "Saving…" rather
@@ -353,16 +354,8 @@ export function useOfflineManifestSync(
             const existing = await loadOfflineManifest(tripId).catch(() => null);
             setMessage(existing ? "" : copy.saveErrorFallback);
           }
-          // One re-read per stale claim, never a loop: if the re-read's own
-          // claim is stale too, stop and leave it to the next refresh trigger.
-          if (staleReread.current) {
-            staleReread.current = false;
-          } else {
-            staleReread.current = requestManifestReread(tripId);
-          }
           return;
         }
-        staleReread.current = false;
         if (!claimed) throw new Error(copy.saveErrorFallback);
         const envelope = await saveOfflineManifest(claimed, { tenantRound });
         if (readKey) savedReads.add(readKey);
@@ -488,6 +481,7 @@ export function useOfflineManifestSync(
         if (opts.manual) setMessage(copy.refreshNoSignal);
         return;
       }
+      resetManifestRereadBudget(tripId);
       if (opts.manual) {
         manualRefreshPending.current = true;
         setBusy(true);
@@ -496,13 +490,14 @@ export function useOfflineManifestSync(
       router.refresh();
       void reconcile();
     },
-    [router, reconcile, copy],
+    [router, reconcile, copy, tripId],
   );
 
   useEffect(() => {
     if (!tripId) return;
     const onOnline = () => {
       if (!navigator.onLine) return;
+      resetManifestRereadBudget(tripId);
       // The freshness owner requests the correlated read on reconnect.
       // Reconcile the queued events without issuing a second independent read.
       if (hasManifestRereadOwner(tripId)) void reconcile();

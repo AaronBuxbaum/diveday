@@ -316,6 +316,45 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
   }
 });
 
+test("two stale snapshot refusals recover only after the latest roster verifies", async ({
+  page,
+}) => {
+  const manifest = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest`;
+  const copy = staffTranslator("en-US");
+  let refusals = 0;
+  let heldVerifiers = 0;
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/*", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith(`/offline-manifests/${DEMO_TODAY_TRIP_ID}/snapshot`) && refusals < 2) {
+      refusals += 1;
+      await route.fulfill({ status: 409, json: { error: "snapshot_superseded" } });
+      return;
+    }
+    if (
+      path.endsWith(`/offline-manifests/${DEMO_TODAY_TRIP_ID}/roster-confirmation`) &&
+      refusals === 2
+    ) {
+      heldVerifiers += 1;
+      await held;
+    }
+    await route.fallback();
+  });
+  try {
+    await page.goto(manifest);
+    await expect(manifestRow(page, "Priya Sharma")).toBeVisible();
+    await expect.poll(() => refusals).toBe(2);
+    await expect.poll(() => heldVerifiers).toBeGreaterThan(0);
+    await expect(page.getByText(copy("manifest.rosterUnconfirmed"), { exact: true })).toBeVisible();
+  } finally {
+    release();
+  }
+  await expect(page.getByText(copy("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
+});
+
 test("a person sheet survives a held roster read alongside route prefetch", async ({ page }) => {
   const trip = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}`;
   const manifest = `${trip}/manifest`;

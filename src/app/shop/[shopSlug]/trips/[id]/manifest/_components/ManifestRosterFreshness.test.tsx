@@ -2,7 +2,11 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { Activity } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { invalidateManifestRead } from "@/components/manifest-stale-generation";
+import {
+  invalidateManifestRead,
+  markManifestReadStale,
+  resetManifestRereadForTests,
+} from "@/components/manifest-stale-generation";
 import { announceSessionInvalidation } from "@/components/session-invalidation";
 import { ManifestRosterFreshness } from "./ManifestRosterFreshness";
 import { manifestHistoryCookieName, readManifestHistoryCookie } from "./manifest-history-cookie";
@@ -14,6 +18,40 @@ vi.mock("next/navigation", () => ({
 }));
 
 const copy = { unconfirmed: "Roster not freshly confirmed", confirmed: "Roster checked" };
+
+for (const failure of ["no-scope", "cookie-unavailable"] as const) {
+  it(`bounds stale fallback refreshes when ${failure}`, () => {
+    const trip = `fallback-${failure}`;
+    const cookie =
+      failure === "cookie-unavailable"
+        ? vi.spyOn(document, "cookie", "get").mockReturnValue("")
+        : null;
+    try {
+      render(
+        <ManifestRosterFreshness
+          historyScope={failure === "no-scope" ? "" : "scope"}
+          readCompletedAt={1_794_581_040_000}
+          readCompletedLabel="read completed"
+          tripId={trip}
+          renderId="initial"
+          copy={copy}
+        />,
+      );
+      expect(router.refresh).toHaveBeenCalledTimes(1);
+      act(() => {
+        markManifestReadStale(trip);
+        markManifestReadStale(trip);
+        markManifestReadStale(trip);
+      });
+      expect(router.refresh).toHaveBeenCalledTimes(3);
+      expect(screen.queryByText(copy.confirmed)).toBeNull();
+    } finally {
+      cleanup();
+      cookie?.mockRestore();
+      resetManifestRereadForTests(trip);
+    }
+  });
+}
 
 beforeEach(() => {
   router.refresh.mockClear();
