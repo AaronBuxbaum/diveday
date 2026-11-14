@@ -85,7 +85,13 @@ const FOLLOW = {
 describe("dive-site map layouts", () => {
   it("places the map before the library rows", () => {
     render(
-      <SiteLibraryLayout {...FOLLOW} shopAnchor={null} pins={pins} clusterLabel="dive sites">
+      <SiteLibraryLayout
+        {...FOLLOW}
+        shopAnchor={null}
+        pins={pins}
+        clusterLabel="dive sites"
+        zoomHint="Use ⌘ or Ctrl + scroll to zoom"
+      >
         <div>Library rows</div>
       </SiteLibraryLayout>,
     );
@@ -100,7 +106,13 @@ describe("dive-site map layouts", () => {
   it("selects a library pin without scrolling the page to its ledger row", () => {
     const scrollSpy = installScrollSpy();
     render(
-      <SiteLibraryLayout {...FOLLOW} shopAnchor={null} pins={pins} clusterLabel="dive sites">
+      <SiteLibraryLayout
+        {...FOLLOW}
+        shopAnchor={null}
+        pins={pins}
+        clusterLabel="dive sites"
+        zoomHint="Use ⌘ or Ctrl + scroll to zoom"
+      >
         <div id="site-row-reef-1">North Reef row</div>
       </SiteLibraryLayout>,
     );
@@ -124,6 +136,7 @@ describe("dive-site map layouts", () => {
         loadDetails={async () => null}
         detailWords={{ loading: "Loading", unavailable: "Unavailable" }}
         clusterLabel="dive sites"
+        zoomHint="Use ⌘ or Ctrl + scroll to zoom"
       >
         <div id="template-row-reef-1">North Reef row</div>
       </CatalogMapLayout>,
@@ -140,7 +153,13 @@ describe("dive-site map layouts", () => {
     [
       "library",
       () => (
-        <SiteLibraryLayout {...FOLLOW} shopAnchor={null} pins={pins} clusterLabel="dive sites">
+        <SiteLibraryLayout
+          {...FOLLOW}
+          shopAnchor={null}
+          pins={pins}
+          clusterLabel="dive sites"
+          zoomHint="Use ⌘ or Ctrl + scroll to zoom"
+        >
           <div>Rows</div>
         </SiteLibraryLayout>
       ),
@@ -157,6 +176,7 @@ describe("dive-site map layouts", () => {
           loadDetails={async () => null}
           detailWords={{ loading: "Loading", unavailable: "Unavailable" }}
           clusterLabel="dive sites"
+          zoomHint="Use ⌘ or Ctrl + scroll to zoom"
         >
           <div>Rows</div>
         </CatalogMapLayout>

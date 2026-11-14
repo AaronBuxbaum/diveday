@@ -10,6 +10,7 @@ export function SiteLibraryLayout({
   viewportStorageKey,
   pins,
   clusterLabel,
+  zoomHint,
   followLabel,
   areaCount,
   scoped,
@@ -20,6 +21,7 @@ export function SiteLibraryLayout({
   viewportStorageKey?: string;
   pins: MapPin[];
   clusterLabel: string;
+  zoomHint: string;
   /** The words on the map's switch that makes the list follow it. */
   followLabel: string;
   /** How many sites the map's area holds, said beside the switch while it is on. */
@@ -54,6 +56,9 @@ export function SiteLibraryLayout({
           onViewChange={follow.onViewChange}
           className="h-full w-full"
         />
+        <p className="pointer-events-none absolute bottom-2 start-2 z-[400] rounded bg-surface px-2 py-1 text-xs text-muted">
+          {zoomHint}
+        </p>
         <FilterByMapSwitch
           following={follow.following}
           onToggle={follow.toggle}

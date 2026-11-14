@@ -276,6 +276,7 @@ export default async function DiveSitesPage({
           shopAnchor={shopAnchor}
           pins={pins}
           clusterLabel={t("diveSites.map.clusterLabel")}
+          zoomHint={t("diveSites.map.zoomHint")}
           followLabel={t("diveSites.list.followMap")}
           areaCount={t("diveSites.list.areaCount", { count: sitePage.total })}
           scoped={Boolean(filters.area)}

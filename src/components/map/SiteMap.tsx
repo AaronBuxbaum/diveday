@@ -109,7 +109,7 @@ export default function SiteMap({
 
       const savedView = viewportStorageKey ? readMapViewport(viewportStorageKey) : null;
       restoredViewRef.current = savedView !== null;
-      const map = createBasemapMap(L, containerRef.current, {
+      const map = createInteractiveMap(L, containerRef.current, {
         center: savedView
           ? [savedView.latitude, savedView.longitude]
           : [center.latitude, center.longitude],
@@ -854,4 +854,29 @@ function bindTooltipFocus(marker: LeafletMarker, selector: string) {
   const target = marker.getElement()?.querySelector<HTMLElement>(selector);
   target?.addEventListener("focus", () => marker.openTooltip());
   target?.addEventListener("blur", () => marker.closeTooltip());
+}
+
+function createInteractiveMap(
+  L: typeof import("leaflet"),
+  container: HTMLElement,
+  options: Parameters<typeof createBasemapMap>[2],
+) {
+  const map = createBasemapMap(L, container, { ...options, scrollWheelZoom: false });
+  enableModifierWheelZoom(map, container);
+  return map;
+}
+
+/** Let a page scroll through the map, while Leaflet handles modified wheels. */
+function enableModifierWheelZoom(map: LeafletMap, container: HTMLElement) {
+  const onWheel = (event: WheelEvent) => {
+    if (event.metaKey || event.ctrlKey) map.scrollWheelZoom.enable();
+    else map.scrollWheelZoom.disable();
+  };
+  container.addEventListener("wheel", onWheel, { capture: true, passive: true });
+  map.on("unload", () => {
+    container.removeEventListener("wheel", onWheel, true);
+    // Leaflet removes its listener but leaves its debounced zoom pending.
+    const wheel = map.scrollWheelZoom as typeof map.scrollWheelZoom & { _timer?: number };
+    window.clearTimeout(wheel._timer);
+  });
 }
