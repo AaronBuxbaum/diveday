@@ -101,6 +101,71 @@ async function fixture() {
 }
 
 describePostgres("unresolved receipt precondition races", () => {
+  it("preserves another author's evidence when only an alert recipient is erased", async () => {
+    const { pg, shop, staffId, sessionId, input } = await fixture();
+    const receipt = await persistVerifiedHandoffReceipt(pg.db, input, sessionId);
+    expect(receipt).toMatchObject({ ok: true });
+    const [claim] = await pg.db
+      .select()
+      .from(rollCallEventClaims)
+      .where(
+        and(
+          eq(rollCallEventClaims.shopId, shop.id),
+          eq(rollCallEventClaims.clientEventId, input.clientEventId),
+        ),
+      );
+    const [outbox] = await pg.db
+      .select()
+      .from(unresolvedSafetyAlertOutbox)
+      .where(eq(unresolvedSafetyAlertOutbox.claimId, claim.id));
+    const [recipient] = await pg.db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Historical recipient",
+      })
+      .returning();
+    const [delivery] = await pg.db
+      .insert(unresolvedSafetyAlertDeliveries)
+      .values({
+        outboxId: outbox.id,
+        personId: recipient.id,
+      })
+      .returning();
+    expect(
+      await anonymizeDiver(pg.db, {
+        shopId: shop.id,
+        personId: recipient.id,
+        actorPersonId: staffId,
+      }),
+    ).toMatchObject({ ok: true });
+    const [erased] = await pg.db.select().from(people).where(eq(people.id, recipient.id));
+    expect(erased.anonymizedAt).not.toBeNull();
+    expect(
+      await pg.db.select().from(rollCallEventClaims).where(eq(rollCallEventClaims.id, claim.id)),
+    ).toEqual([claim]);
+    expect(
+      await pg.db
+        .select()
+        .from(unresolvedSafetyAlertOutbox)
+        .where(eq(unresolvedSafetyAlertOutbox.id, outbox.id)),
+    ).toEqual([outbox]);
+    expect(
+      await pg.db
+        .select()
+        .from(unresolvedSafetyAlertDeliveries)
+        .where(eq(unresolvedSafetyAlertDeliveries.id, delivery.id)),
+    ).toEqual([delivery]);
+    const bundle = await loadShopExportBundleInput(pg.db, shop.id);
+    if (!bundle) throw new Error("shop export missing");
+    const deliveries = table(bundle, "unresolved_safety_alert_deliveries.csv");
+    const row = deliveries.rows.find(
+      (item) => item[deliveries.header.indexOf("id")] === delivery.id,
+    );
+    if (!row) throw new Error("delivery missing from export");
+    expect(row[deliveries.header.indexOf("person_id")]).toBe(recipient.id);
+  });
+
   it("keeps alert and deferral history when an offboarded author and recipient is erased", async () => {
     const { pg, shop, staffId, sessionId, input } = await fixture();
     const receipt = await persistVerifiedHandoffReceipt(pg.db, input, sessionId);
