@@ -1,6 +1,9 @@
+import { DEMO_SHOP_BRAND } from "../src/db/seed-shop-brand";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
+import type { BrandBadgeCode } from "../src/lib/brand";
 import { expect, test } from "./fixtures";
-import { STAFF_DAY_HEADING } from "./helpers";
+import { openSettingsRow, STAFF_DAY_HEADING } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
 
 test("landing demo CTA drops a visitor into the staff shop", async ({ page }) => {
@@ -56,6 +59,68 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
   await page.keyboard.press("Escape");
   await expect(picker).toHaveCount(0);
   await expect(trigger).toBeFocused();
+});
+
+test("a new demo shows its example brand and images in settings", async ({ page }) => {
+  test.setTimeout(60_000);
+  const staff = staffTranslator("en-US");
+  const diver = diverTranslator("en-US");
+  await page.goto("/");
+  await page.getByRole("button", { name: "Try the live demo" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
+  const slug = new URL(page.url()).pathname.split("/")[2];
+  if (!slug) throw new Error("Demo shop slug missing");
+  await page.goto(`/shop/${slug}/settings/profile`);
+  await expect(page.getByText(staff("settings.main.profile.demoBadgesHint"))).toBeVisible();
+  for (const code of DEMO_SHOP_BRAND.brandBadges as BrandBadgeCode[]) {
+    await expect(
+      page.getByRole("checkbox", { name: staff(`settings.main.profile.badgeLabels.${code}`) }),
+    ).toBeChecked();
+  }
+  await expect(
+    page.getByRole("checkbox", { name: staff("settings.main.profile.removeLogo") }),
+  ).toHaveCount(1);
+  for (const label of [
+    staff("settings.main.profile.removeLogo"),
+    staff("settings.main.profile.removeHero"),
+  ]) {
+    const photo = page.getByRole("checkbox", { name: label }).locator("..").locator("img");
+    await photo.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth))
+      .toBeGreaterThan(0);
+  }
+  await expect(
+    page.getByRole("checkbox", { name: staff("settings.main.profile.removeHero") }),
+  ).toHaveCount(1);
+  await page.goto(`/shop/${slug}/settings`);
+  await openSettingsRow(page, staff("settings.main.shopPhotos.heading"));
+  await expect(
+    page.getByRole("checkbox", { name: staff("settings.main.shopPhotos.remove") }),
+  ).toHaveCount(DEMO_SHOP_BRAND.shopfrontPhotoUrls.length);
+  const photos = page.getByRole("checkbox", { name: staff("settings.main.shopPhotos.remove") });
+  for (const checkbox of await photos.all()) {
+    const photo = checkbox.locator("..").locator("img");
+    await photo.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth))
+      .toBeGreaterThan(0);
+  }
+  await page.goto(`/s/${slug}`);
+  await expect(page.getByRole("heading", { name: diver("schedule.boatsHeading") })).toBeVisible();
+  const boatPhotos = page
+    .getByRole("region", { name: diver("schedule.boatsHeading") })
+    .locator("img");
+  await expect(boatPhotos).toHaveCount(2);
+  for (const photo of await boatPhotos.all()) {
+    await photo.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth))
+      .toBeGreaterThan(0);
+  }
+  await expect(
+    page.getByText(diver("brand.demoBadge", { badge: diver("brand.badges.padi_5_star") })),
+  ).toBeVisible();
 });
 
 for (const start of [

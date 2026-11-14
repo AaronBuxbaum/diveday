@@ -130,11 +130,11 @@ describe("createDemoShop", () => {
   });
 
   /**
-   * **A minted shop wears a brand only when a capture asks it to.** A fresh
+   * **A minted shop wears a brand only when its caller asks for one.** A fresh
    * tenant is blank shop-wide config (ADR 20260815-per-test-private-shops), so
    * by default it has no logo, cover photo or badges. `brand` exists for the
-   * one surface that needs all of them on file: the settings profile row,
-   * where a stored logo and cover photo are taken back off (`settings-profile`).
+   * visitor demo and for surfaces that need all of them on file, such as the
+   * settings profile row (`settings-profile`).
    * The canonical demo wears its own profile (`seed-shop-brand.ts`); the
    * minted fixture differs from it in colour, face and logo.
    */

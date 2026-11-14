@@ -152,6 +152,7 @@
       "removeHero": "Remove the cover photo",
       "establishedYear": "Open since (year)",
       "badges": "Badges",
+      "demoBadgesHint": "These badges are fictional examples for this demo shop.",
       "badgesHint": "Shown on your public pages as your own statement.",
       "badgeLabels": {
         "padi_5_star": "PADI 5 Star Dive Center",

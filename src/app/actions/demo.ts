@@ -167,7 +167,7 @@ export async function enterDemoAction(formData?: FormData) {
   let minted: { slug: string; ownerEmail: string } | null = null;
   for (let attempt = 0; attempt < 2 && !minted; attempt++) {
     try {
-      minted = await db.transaction(async (tx) => createDemoShop(tx));
+      minted = await db.transaction(async (tx) => createDemoShop(tx, { brand: true }));
     } catch (err) {
       const isUniqueViolation = (err as { code?: string } | null)?.code === "23505";
       if (attempt === 0 && isUniqueViolation) continue;

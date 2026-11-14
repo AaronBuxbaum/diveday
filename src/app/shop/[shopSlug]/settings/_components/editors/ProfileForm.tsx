@@ -207,7 +207,9 @@ export function ProfileForm({
           (K-13 review). */}
       <ChoiceFieldset
         legend={t("settings.main.profile.badges")}
-        hint={t("settings.main.profile.badgesHint")}
+        hint={t(
+          shop.isDemo ? "settings.main.profile.demoBadgesHint" : "settings.main.profile.badgesHint",
+        )}
         bodyClassName="device-text-profile-grid grid grid-cols-1 gap-2.5 sm:grid-cols-2"
       >
         {BRAND_BADGE_CODES.map((code) => (
