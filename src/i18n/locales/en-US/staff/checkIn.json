@@ -101,7 +101,7 @@
     "noShowSeatMoved": "Saved that they’re here, but their seat has moved to another departure.",
     "noShowSeatCancelled": "Saved that they’re here, but their booking has been removed.",
     "noShowTurnedAwayDeparted": "The desk turned that diver away and the boat has left, so they can’t go back on it. Open their row to remove the booking.",
-    "noShowTripFull": "Boat full. Saved that they came, but they’re not on this boat. Offer them another departure from their row under Not here.",
+    "noShowTripFull": "Boat full: their freed seat was taken. Saved that they came, but they’re not on this boat. Offer them another departure from their row under Not here.",
     "turnAwayAlreadyBoarded": "The crew boarded that diver. Open the trip’s manifest.",
     "turnAwayAlreadyMarked": "That seat is already released.",
     "turnAwaySailed": "The boat left with that diver checked in. Open the trip’s manifest.",

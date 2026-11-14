@@ -107,7 +107,7 @@
     "noShowSeatMoved": "Guardado que está aquí, pero su plaza pasó a otra salida.",
     "noShowSeatCancelled": "Guardado que está aquí, pero su reserva se quitó.",
     "noShowTurnedAwayDeparted": "Ese buceador no embarcó por decisión del mostrador y el barco ya salió, así que no puede volver a esta salida. Abre su fila para quitar la reserva.",
-    "noShowTripFull": "Barco lleno. Guardado que vino, pero no va en este barco. Ofrécele otra salida desde su fila en No vino.",
+    "noShowTripFull": "Barco lleno: su plaza liberada ya está ocupada. Guardado que vino, pero no va en este barco. Ofrécele otra salida desde su fila en No vino.",
     "noShowCourseRatioFull": "Guardado que está aquí. La sesión está en su ratio instructor-alumno. Asigna otro instructor para volver a ponerlo.",
     "noShowCourseUnstaffed": "Guardado que está aquí. La sesión no tiene instructor. Asigna uno para volver a ponerlo.",
     "noShowCoursePrerequisite": "Guardado que está aquí, pero ya no tiene la certificación que pide este curso.",
