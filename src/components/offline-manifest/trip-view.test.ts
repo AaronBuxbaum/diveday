@@ -5,7 +5,7 @@ import { diver, savedCopy, view } from "./section-fixtures";
 import { offlineTripView } from "./trip-view";
 import { richEnvelope } from "./view-fixtures";
 
-const TEST_MEETING_PROOF = `33333333-3333-4333-8333-333333333333.0.a.b.${"a".repeat(43)}`;
+const TEST_MEETING_PROOF = `33333333-3333-4333-8333-333333333333.0.a.b.0.${"a".repeat(43)}`;
 function withMeetingProof(copy: ReturnType<typeof savedCopy>) {
   const trip = copy.snapshot.manifests[0].trip;
   copy.snapshot.rollCallMeetingDays = [
@@ -19,7 +19,7 @@ describe("offlineTripView", () => {
     const copy = savedCopy();
     const departure = copy.snapshot.manifests[0];
     copy.snapshot.manifests.push({ ...structuredClone(departure), checkpoint: "after_dive_1" });
-    const proof = `33333333-3333-4333-8333-333333333333.0.a.b.${"a".repeat(43)}`;
+    const proof = `33333333-3333-4333-8333-333333333333.0.a.b.0.${"a".repeat(43)}`;
     copy.snapshot.rollCallMeetingDays = [
       {
         startsAt: departure.trip.startsAt,

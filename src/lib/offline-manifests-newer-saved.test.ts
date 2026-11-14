@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { verifiedFixture } from "@/test/verified-offline-meeting";
 import { crewSnapshot, snapshot } from "../test/substrate-fixtures/lib/offline-manifests-fixtures";
 import {
   latestOfflineCrewRollCall,
@@ -79,11 +80,14 @@ describe("opaque saved evidence and this tablet's own evidence", () => {
   });
 
   it("preserves the saved missing evidence against an unobserved pending aboard statement", () => {
-    const saved = refreshed("not_boarded");
+    const { saved, tripId, meetingIdentityProof } = verifiedFixture(refreshed("not_boarded"));
     const mine = tap(saved, {
       status: "boarded",
       occurredAt: "2026-07-20T14:00:00.000Z",
       syncStatus: "pending",
+      tripId,
+      meetingDay: 0,
+      meetingIdentityProof,
     });
     expect(latestOfflineRollCall(saved, [mine], "ready", "after_dive_1")).toMatchObject({
       state: "not_boarded",

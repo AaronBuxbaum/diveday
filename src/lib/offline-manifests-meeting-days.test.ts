@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { identifySavedRollCall } from "@/test/identified-offline-roll-call";
 import { crewSnapshot, snapshot } from "../test/substrate-fixtures/lib/offline-manifests-fixtures";
 import { latestOfflineCrewRollCall, latestOfflineRollCall } from "./offline-manifests";
@@ -54,6 +55,41 @@ describe("an offline copy of a course that meets on two days", () => {
     syncStatus: "pending",
     ...over,
   });
+
+  function bindMeetingProofs(
+    copy: ReturnType<typeof snapshot>,
+    events: ReturnType<typeof event>[],
+  ) {
+    const tripId = "11111111-1111-4111-8111-111111111111";
+    const snapshotId = "22222222-2222-4222-8222-222222222222";
+    copy.snapshotId = snapshotId;
+    for (const manifest of copy.manifests) manifest.trip.id = tripId;
+    copy.rollCallMeetingDays = [0, 1, 2].map((day) => {
+      const startsAt = new Date(Date.UTC(2026, 6, 20 + day, 12));
+      const endsAt = new Date(Date.UTC(2026, 6, 20 + day, 16));
+      return {
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        meetingIdentityProof: signOfflineMeetingIdentity({
+          shopId: "33333333-3333-4333-8333-333333333333",
+          tripId,
+          snapshotId,
+          meetingId: `44444444-4444-4444-8444-${String(day + 1).padStart(12, "0")}`,
+          meetingDay: day,
+          scheduleGeneration: 0,
+          datasetIncarnation: "55555555-5555-4555-8555-555555555555",
+          startsAt,
+          endsAt,
+        }),
+      };
+    });
+    for (const item of events) {
+      if (item.meetingDay === undefined) throw new Error("fixture meeting day missing");
+      item.tripId = tripId;
+      item.snapshotId = snapshotId;
+      item.meetingIdentityProof = copy.rollCallMeetingDays[item.meetingDay]?.meetingIdentityProof;
+    }
+  }
 
   it("a day-one copy starts day two empty only when crew select that meeting day", () => {
     const copy = courseCopy(dockAndDive);
@@ -131,6 +167,7 @@ describe("an offline copy of a course that meets on two days", () => {
         observedEvidenceIds: [],
       }),
     ];
+    bindMeetingProofs(copy, events);
     expect(latestOfflineRollCall(copy, events, "blocked", "departure", DAY_TWO)).toMatchObject({
       state: "boarded",
       local: true,
@@ -168,6 +205,7 @@ describe("an offline copy of a course that meets on two days", () => {
           ?.observedEvidenceIds,
       }),
     ];
+    bindMeetingProofs(copy, events);
     // Day one's queued "back aboard" settles day one's missing diver for good.
     copy.selectedRollCallMeetingDay = 1;
     expect(latestOfflineRollCall(copy, events, "blocked", "after_dive_1", DAY_TWO)).toBeUndefined();
@@ -394,6 +432,7 @@ describe("an offline copy of a course that meets on two days", () => {
         observedEvidenceIds: [],
       }),
     ];
+    bindMeetingProofs(copy, events);
     expect(latestOfflineRollCall(copy, [], "blocked", "after_dive_1", DAY_THREE)?.state).toBe(
       "not_boarded",
     );
