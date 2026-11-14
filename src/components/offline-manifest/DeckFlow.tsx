@@ -2,7 +2,7 @@
 
 import { createContext, type ReactNode, useContext, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { DateField, controlClass } from "@/components/ui/form";
 import { ITEM_TITLE_CLASS, SHELL_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { formatDateTimeTz } from "@/lib/format";
 import { wallTimeToUtc } from "@/lib/zoned";
@@ -134,11 +134,11 @@ function DeckObservation({
       <label htmlFor="deck-observed-at" className="block text-sm font-semibold">
         {copy.observe} · {timeZone}
       </label>
-      <input
+      <DateField
         id="deck-observed-at"
         type="datetime-local"
         disabled={busy}
-        className={`${controlClass} mt-2`}
+        wrapperClassName="mt-2"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
