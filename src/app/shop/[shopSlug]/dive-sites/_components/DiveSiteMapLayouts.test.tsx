@@ -83,6 +83,55 @@ const FOLLOW = {
 };
 
 describe("dive-site map layouts", () => {
+  it.each(["library", "catalog"] as const)(
+    "places the %s view control on the map and content after it",
+    (view) => {
+      const views = (
+        <nav aria-label="Site views">
+          <a href="/catalog">Catalog</a>
+        </nav>
+      );
+      const content = <div>Search and results</div>;
+      if (view === "library") {
+        render(
+          <SiteLibraryLayout
+            {...FOLLOW}
+            shopAnchor={null}
+            pins={pins}
+            clusterLabel="dive sites"
+            zoomHint="Zoom"
+            views={views}
+          >
+            {content}
+          </SiteLibraryLayout>,
+        );
+      } else {
+        render(
+          <CatalogMapLayout
+            {...FOLLOW}
+            shopAnchor={null}
+            pins={[]}
+            catalogPageHref="/catalog"
+            openSiteLabel="Open"
+            loadDetails={async () => null}
+            detailWords={{ loading: "Loading", unavailable: "Unavailable" }}
+            clusterLabel="dive sites"
+            zoomHint="Zoom"
+            views={views}
+          >
+            {content}
+          </CatalogMapLayout>,
+        );
+      }
+      const map = screen.getByTestId("map-container");
+      expect(map).toContainElement(screen.getByRole("navigation", { name: "Site views" }));
+      expect(
+        map.compareDocumentPosition(screen.getByText("Search and results")) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    },
+  );
+
   it("places the map before the library rows", () => {
     render(
       <SiteLibraryLayout
@@ -184,7 +233,7 @@ describe("dive-site map layouts", () => {
     ],
   ])("draws Filter by map on the %s map, not under it", (_view, layout) => {
     render(layout());
-    const map = screen.getByRole("button", { name: "Select map pin" }).parentElement?.parentElement;
-    expect(map?.contains(screen.getByRole("switch", { name: /Filter by map/ }))).toBe(true);
+    const map = screen.getByTestId("map-container");
+    expect(map).toContainElement(screen.getByRole("switch", { name: /Filter by map/ }));
   });
 });
