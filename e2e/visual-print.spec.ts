@@ -274,10 +274,12 @@ test.describe("print", () => {
     await expect(page.getByRole("link", { name: "Divers" }).first()).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await expect(page.locator(".paper-sheet-fold").first()).toContainText("Printed by");
+    await page.emulateMedia({ media: "print" });
     for (const pdf of await capturePrintPdfs(page, "trip-attribution", info.outputDir)) {
       assertPacketAttributionBelowKit(pdf);
       await info.attach("packet-attribution", { path: pdf, contentType: "application/pdf" });
     }
+    await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
   });
 
