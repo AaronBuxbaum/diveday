@@ -595,7 +595,7 @@ jobs:
           path: e2e-durations/
           if-no-files-found: ignore
           retention-days: 14
-      # TEMPORARY: reproduce the language-menu failure without changing the full shard.
+      # TEMPORARY: verify the language fix repeatedly after the full shard.
       - name: TEMPORARY language menu repetitions
         if: ${{ !cancelled() && matrix.shard == 1 }}
         env:

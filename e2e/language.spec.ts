@@ -53,76 +53,16 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
 
   // A cookie, not page state: a fresh load of a different public page is still
   // Spanish, which is the whole difference from a switcher that forgets.
-  // TEMPORARY: record menu event/state changes, never page text or URLs.
-  await page.addInitScript(() => {
-    const events: string[] = [];
-    const ids = new WeakMap<Element, number>();
-    let nextId = 0;
-    const id = (node: Element) => {
-      if (!ids.has(node)) ids.set(node, ++nextId);
-      return ids.get(node);
-    };
-    const note = (kind: string, clicked?: Element | null) => {
-      const trigger = document.querySelector('header button[aria-label="Cambiar de idioma"]');
-      const menu = document.querySelector("[data-language-menu]");
-      events.push(
-        `${Math.round(performance.now())} ${kind} trigger=${trigger ? id(trigger) : 0} clicked=${clicked ? id(clicked) : 0} expanded=${trigger?.getAttribute("aria-expanded") === "true"} hydrated=${trigger?.getAttribute("data-language-probe-hydrated") === "true"} handled=${Number(trigger?.getAttribute("data-language-probe-clicked") ?? 0)} menu=${!!menu}`,
-      );
-      if (events.length > 100) events.shift();
-    };
-    for (const phase of [true, false])
-      document.addEventListener(
-        "click",
-        (event) => {
-          const target = event.target instanceof Element ? event.target.closest("button") : null;
-          if (target?.getAttribute("aria-label") === "Cambiar de idioma")
-            note(
-              `click-${phase ? "capture" : "bubble"}-prevented=${event.defaultPrevented}`,
-              target,
-            );
-        },
-        phase,
-      );
-    new MutationObserver((changes) => {
-      if (
-        changes.some(
-          (change) =>
-            change.target instanceof Element &&
-            ((change.type === "childList" && !!change.target.closest("header")) ||
-              change.target.getAttribute("aria-label") === "Cambiar de idioma"),
-        )
-      )
-        note("mutation");
-    }).observe(document, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: [
-        "aria-expanded",
-        "data-language-probe-hydrated",
-        "data-language-probe-clicked",
-      ],
-    });
-    (window as Window & { __languageDebug?: string[] }).__languageDebug = events;
-  });
   await page.goto("/s/blue-mantis/courses");
   await expect(page.getByRole("heading", { level: 1, name: "Cursos" })).toBeVisible();
 
   // …and back, from the same control, which offers every language either way
   // round rather than only the other one.
   await page.getByRole("banner").getByRole("button", { name: "Cambiar de idioma" }).click();
-  try {
-    await expect(page.getByRole("banner").getByRole("button", { name: "Español" })).toHaveAttribute(
-      "aria-current",
-      "true",
-    );
-  } catch (error) {
-    const events = await page
-      .evaluate(() => (window as Window & { __languageDebug?: string[] }).__languageDebug ?? [])
-      .catch(() => []);
-    process.stderr.write(`TEMPORARY language menu events: ${JSON.stringify(events)}\n`);
-    throw error;
-  }
+  await expect(page.getByRole("banner").getByRole("button", { name: "Español" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
   await page.getByRole("banner").getByRole("button", { name: "English" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
 });
