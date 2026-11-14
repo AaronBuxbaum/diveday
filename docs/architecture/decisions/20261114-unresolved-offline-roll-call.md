@@ -33,6 +33,8 @@ Until a reviewed non-starving protocol and its mixed-server cutover are proven, 
 
 Acceptance requires real PostgreSQL tests with reset held before intake and with intake committed before the check, between check and delete, after delete, and around the final check and commit. Tests must verify the original client key, meeting, booking and trip context; retries after response loss; authorization revocation and erasure; and both reset and reap paths. Browser and mixed-version tests must show that a device keeps evidence until an authenticated receipt is durably applied. A passing single ordering does not establish the contract.
 
+Move acceptance also needs both intake/move orderings, a move back to the original trip, late upload after a move or reset, and deleted or recreated identities. A separate durable intake is a possible design, not proof that moves, reset cutover or mixed-server lock ordering are safe.
+
 ## Alternatives considered
 
 - **Infer a meeting from ordinal or clock** — may move an observation to another day.
