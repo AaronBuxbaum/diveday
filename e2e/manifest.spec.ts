@@ -360,9 +360,10 @@ test("a new shell worker replaces the older cache without losing encrypted roll 
   expect(workerResponse.status()).toBe(200);
   const currentWorker = await workerResponse.text();
   const versionPattern = new RegExp(
-    `var OFFLINE_MANIFEST_SHELL_VERSION = "${OFFLINE_MANIFEST_SHELL_VERSION}";`,
+    `\\bOFFLINE_MANIFEST_SHELL_VERSION = "${OFFLINE_MANIFEST_SHELL_VERSION}";`,
   );
   expect(currentWorker).toMatch(versionPattern);
+  expect(currentWorker.match(new RegExp(versionPattern.source, "g"))).toHaveLength(1);
 
   let serveOldWorker = true;
   const workerRoute = async (route: Route) => {
@@ -374,7 +375,7 @@ test("a new shell worker replaces the older cache without losing encrypted roll 
     const body = await response.text();
     await route.fulfill({
       response,
-      body: body.replace(versionPattern, `var OFFLINE_MANIFEST_SHELL_VERSION = "${oldVersion}";`),
+      body: body.replace(versionPattern, `OFFLINE_MANIFEST_SHELL_VERSION = "${oldVersion}";`),
     });
   };
   const blockOfflineApi = (route: Route) => route.abort();
