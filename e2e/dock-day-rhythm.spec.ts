@@ -2,6 +2,7 @@ import { expect, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   daysFromNow,
+  openFirstBookableScheduleTrip,
   openThreadStep,
   seededTripId,
   signInAsOwner,
@@ -94,7 +95,7 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   // with the *course* they teach, and a by-name click lands on the course
   // page — which has no rhythm on it at all.
   await page.goto(`/s/${SHOP}`);
-  await page.locator(`a[href^="/s/${SHOP}/trips/"]`).first().click();
+  await openFirstBookableScheduleTrip(page);
   await bookASeatAndOpenThread(page, "Rhythm Reader");
   await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
 

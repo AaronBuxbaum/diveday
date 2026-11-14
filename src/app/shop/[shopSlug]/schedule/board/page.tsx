@@ -127,6 +127,7 @@ export default async function ScheduleBoardPage({
     requestedCourse,
     requestedSite,
     requestRows,
+    weekConflicts,
   } = await getScheduleBoardPage(db, shop, session.user.personId, {
     weekStartIso,
     now,
@@ -201,6 +202,7 @@ export default async function ScheduleBoardPage({
     weekRows,
     weekAsks,
     openRollCalls,
+    weekConflicts,
     ...weekAround,
     boatMap,
     // Loop 5, row 5: the board warns about a departure on a hull in the yard.

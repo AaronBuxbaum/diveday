@@ -703,7 +703,7 @@ describe("turnBookingAway, second review", () => {
           recordedByPersonId: staffId,
           now: atStart(ctx, minutes),
         }),
-      ).toEqual({ ok: false, reason: "turned_away_departed" });
+      ).toMatchObject({ ok: true, state: "conflict", conflict: "turned_away_departed" });
     }
     expect(await seatRow(db, bookingId)).toEqual({ status: "no_show", reason: "waiver" });
     expect(await heldSeats(db, trip.id)).toBe(before);

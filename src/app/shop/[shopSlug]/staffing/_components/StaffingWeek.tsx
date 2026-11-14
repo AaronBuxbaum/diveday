@@ -54,7 +54,7 @@ const CHIP_BOX = "flex w-full flex-col rounded-lg border px-2 py-1.5 text-start 
 
 const CHIP_KIND = {
   shift: "gap-px border-transparent",
-  crew: "gap-px border-primary/25 bg-primary-tint text-primary",
+  crew: "min-h-24 gap-px border-primary/25 bg-primary-tint text-primary",
   away: "gap-px border-dashed border-border bg-surface-sunken text-muted",
   gap: "gap-1 border-transparent bg-surface-sunken",
   loudGap: "gap-1 border-transparent bg-warning-tint",
@@ -148,7 +148,7 @@ function CrewChip({
       <span className="font-semibold tabular-nums">
         {windowOnThisDay(trip, words, locale, timeZone, "range")}
       </span>
-      <span className="line-clamp-2 font-medium" title={trip.title}>
+      <span className="font-medium" title={trip.title}>
         {trip.title}
       </span>
       {/* Conflicting crew times are advisory; the blackout warning below is

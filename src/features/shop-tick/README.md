@@ -25,7 +25,7 @@ Module shape: [20260730-feature-module-contracts](../../../docs/architecture/dec
 - The scans' reads and sends, which stay in `src/db/`: `src/features/reminders/store.ts`, `src/features/recap/store.ts`,
   `src/db/crew-notices.ts`, `src/features/roll-call-alerts/store.ts`, `src/db/missing-diver-alerts.ts`,
   `src/features/desk-pings/store.ts`, `src/features/seat-sold-alerts/store.ts`, `src/db/held-sends.ts`,
-  `src/features/work-order-follow-up/store.ts`, `src/db/trips-minimum.ts` and `src/db/seed-boat-at-sea.ts`.
+  `src/features/work-order-follow-up/store.ts`, `src/db/boarding-observations.ts`, `src/db/trips-minimum.ts` and `src/db/seed-boat-at-sea.ts`.
 - The cron frame (the bearer gate, the Sentry monitor, the 503), which is `cronRoute`
   (`src/features/cron-route/rules.ts`), and the schedule, `SHOP_TICK_CRONTAB` (`src/lib/cron-schedule.ts`).
 - Platform cadences that are not about a shop's day: retention, backups, integrations, the daily

@@ -17,7 +17,13 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
-import { formatMoneyCents, formatShortDate, formatWeekdayTime, weekdayNames } from "@/lib/format";
+import {
+  formatMoneyCents,
+  formatShortDate,
+  formatTimeTz,
+  formatWeekdayTime,
+  weekdayNames,
+} from "@/lib/format";
 import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
@@ -28,7 +34,7 @@ import {
 } from "@/lib/temperature-units";
 import { laterMeetingDates, laterMeetingHours } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
-import { updateTripCrewAction } from "../crew-actions";
+import { moveTripCrewAction, updateTripCrewAction } from "../crew-actions";
 import type { DepartureDetailsSection } from "../departure-detail-sections";
 import { saveDetailsSection } from "../details-actions";
 import {
@@ -38,6 +44,7 @@ import {
 import { saveRequirementsAction } from "../terms-actions";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewAwayWorkingList } from "./CrewAwayWorkingList";
+import { CrewMoveForm } from "./CrewMoveForm";
 import { CrewSection } from "./CrewSection";
 import { DetailsEditor } from "./DetailsEditor";
 import type { departureConditionReads } from "./departure-conditions";
@@ -495,6 +502,8 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
               manageShifts: shop.crewScheduleEnabled ? t("trips.crew.manageShifts") : null,
             }}
           />
+          {/* One step to another boat that day (issue #4474). */}
+          {crewMoveFormFor(context)}
           {/* "No longer working it" (#2678, dock review S2). */}
           <CrewAwayWorkingList
             shopSlug={shopSlug}
@@ -556,6 +565,34 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
         ) : undefined,
     },
   ];
+}
+
+/** "Move to another boat": the crew here and the day's other boats, while the departure is editable. */
+function crewMoveFormFor(context: TripAboutRowsContext) {
+  const { overview, shop, shopSlug, tripId, locale, t } = context;
+  if (overview.cancelled || context.detailsEditable === false) return null;
+  const { crewIds } = overview.crew;
+  return (
+    <CrewMoveForm
+      tripId={tripId}
+      crew={overview.staff
+        .filter((entry) => crewIds.includes(entry.person.id))
+        .map((entry) => ({ id: entry.person.id, fullName: entry.person.fullName }))}
+      targets={overview.crewMoveTargets.map((target) => ({
+        id: target.id,
+        label: `${formatTimeTz(target.startsAt, locale, shop.timezone)} · ${target.title}`,
+      }))}
+      action={moveTripCrewAction.bind(null, shopSlug, tripId)}
+      copy={{
+        trigger: t("trips.crew.move.trigger"),
+        who: t("trips.crew.move.who"),
+        to: t("trips.crew.move.to"),
+        choose: t("trips.crew.move.choose"),
+        submit: t("trips.crew.move.submit"),
+        pending: t("trips.crew.move.pending"),
+      }}
+    />
+  );
 }
 
 /** A completed departure keeps all facts but none of its definition editors. */

@@ -2,7 +2,7 @@ import { mkdir, readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
-import { bookASeatAndOpenThread } from "./helpers";
+import { bookASeatAndOpenThread, openFirstBookableScheduleTrip } from "./helpers";
 
 const diver = diverTranslator("en-US");
 test.use({
@@ -16,8 +16,7 @@ test("Wallet is dark by default and offers a signed departure when test credenti
   // One full booking and archive download: measured under the ordinary booking flow budget.
   test.setTimeout(30_000);
   await page.goto("/s/blue-mantis");
-  const departure = page.locator('a[href^="/s/blue-mantis/trips/"]').first();
-  await departure.click();
+  await openFirstBookableScheduleTrip(page);
   await bookASeatAndOpenThread(page, "Yara Wallet");
   const wallet = page.getByRole("link", { name: diver("wallet.addToWallet"), exact: true });
   const calendar = page.getByRole("link", { name: diver("trip.addToCalendar"), exact: true });

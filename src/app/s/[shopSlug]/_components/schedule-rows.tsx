@@ -109,6 +109,15 @@ export function weekLedgerRows({
     // site's demand here would read as a bar on the very students it is for.
     const requirement = trip.course ? null : (requirementsByTrip.get(trip.id) ?? null);
     const seats = scheduleSeatState(t, trip);
+    const departed = facts ? trip.startsAt.getTime() <= facts.now.getTime() : false;
+    const capacityText = departed
+      ? t("booking.sailedHeading")
+      : !isEmbed && trip.capacity - trip.booked < partySize
+        ? t("schedule.filters.partySeats", {
+            count: Math.max(0, trip.capacity - trip.booked),
+            party: partySize,
+          })
+        : seats.text;
     return {
       id: trip.id,
       dayKey: dayKeyOf(trip.startsAt),
@@ -119,7 +128,7 @@ export function weekLedgerRows({
       linkLabel: t("schedule.tripCardLabel", {
         when: `${formatShortDate(trip.startsAt, locale, timezone)} · ${formatTimeRange(trip.startsAt, trip.endsAt, locale, timezone)}`,
         trip: trip.title,
-        capacity: seats.text,
+        capacity: capacityText,
       }),
       timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, timezone),
       startsAt: trip.startsAt,
@@ -160,14 +169,8 @@ export function weekLedgerRows({
       // (issue #696) — and the word is what gives the dimming a name.
       aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
       insufficientSeats: !isEmbed && trip.capacity - trip.booked < partySize,
-      capacityText:
-        !isEmbed && trip.capacity - trip.booked < partySize
-          ? t("schedule.filters.partySeats", {
-              count: Math.max(0, trip.capacity - trip.booked),
-              party: partySize,
-            })
-          : seats.text,
-      capacityTone: seats.tone,
+      capacityText,
+      capacityTone: departed ? "full" : seats.tone,
       // A course session reads the course total the booking charges, never
       // the trip row's own figure (fourth UX review item 2, H-20261014-course-session-price).
       price: seatPriceLabel(trip, currency, locale),

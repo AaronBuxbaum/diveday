@@ -108,6 +108,44 @@ export async function saveDiveIntent(page: Page, label: string) {
   ).toBeVisible();
 }
 
+/** Follow the schedule's pages to a named departure. */
+export async function findNamedScheduleTrip(
+  page: Page,
+  title: string,
+  locale: "en-US" | "es-ES" = "en-US",
+) {
+  const t = diverTranslator(locale);
+  const list = page.getByRole("list", { name: t("schedule.tripListLabel") });
+  await expect(list).toBeVisible();
+  const trip = list.getByRole("link", { name: title }).first();
+  while ((await trip.count()) === 0) {
+    const later = page.getByRole("link", { name: t("schedule.showLater") });
+    await expect(later).toBeVisible();
+    const previousUrl = page.url();
+    await later.click();
+    await page.waitForURL((url) => url.href !== previousUrl);
+    await expect(list).toBeVisible();
+  }
+  return trip;
+}
+
+/** Open a named departure through the schedule. */
+export async function openNamedScheduleTrip(
+  page: Page,
+  title: string,
+  locale: "en-US" | "es-ES" = "en-US",
+) {
+  await (await findNamedScheduleTrip(page, title, locale)).click();
+}
+
+/** Open a future departure with available seats from the schedule. */
+export async function openFirstBookableScheduleTrip(page: Page) {
+  const list = page.getByRole("list", { name: diverTranslator("en-US")("schedule.tripListLabel") });
+  const trip = list.getByRole("link", { name: /(?:[0-9]+ seats?|last seat)/i }).first();
+  await expect(trip).toBeVisible();
+  await trip.click();
+}
+
 /** Submit one booking on the open public trip and wait for its `/ready/<token>` thread. */
 export async function bookASeatAndOpenThread(page: Page, name: string, email?: string) {
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");

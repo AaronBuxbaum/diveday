@@ -1,5 +1,9 @@
 import { expect, test } from "./fixtures";
-import { bookASeatAndOpenThread, payInvoiceThroughWebhook } from "./helpers";
+import {
+  bookASeatAndOpenThread,
+  openFirstBookableScheduleTrip,
+  payInvoiceThroughWebhook,
+} from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 /**
@@ -91,7 +95,7 @@ test("a paid package shows the dives left on the diver's page", async ({
 
   // Booked before the shop is connected, so the seat is unpaid rather than sent to Stripe.
   await page.goto(`/s/${SHOP}`);
-  await page.locator(`a[href^="/s/${SHOP}/trips/"]`).first().click();
+  await openFirstBookableScheduleTrip(page);
   await bookASeatAndOpenThread(page, "Pia Package", email);
   const thread = page.url();
   await expect(page.getByText(/package dives? left/)).toHaveCount(0);

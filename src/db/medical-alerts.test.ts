@@ -1,5 +1,5 @@
 import { and, eq, ne } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -18,6 +18,7 @@ import {
   readMedicalAlertsForPrint,
   recordMedicalAlertsPrint,
 } from "./medical-alerts";
+import * as operations from "./operations";
 import {
   activityEvents,
   bookings,
@@ -363,6 +364,51 @@ describe("the medical alerts print", () => {
     expect(await recordMedicalAlertsPrint(db, { ...input, read: emptyRead })).toEqual({
       ok: false,
     });
+  });
+
+  it("refuses the whole packet when a diver's audit line cannot be recorded", async () => {
+    const { db, shop, trip, booking, person } = await signedWith(alert);
+    const printer = await staffer(db, shop.id, ["crew"]);
+    const input = { shopId: shop.id, tripId: trip.id, printerId: printer };
+    const read = await readMedicalAlertsForPrint(db, input);
+    if (!read.ok) throw new Error("expected a read");
+    const missingId = "00000000-0000-4000-8000-000000000000";
+    const partial = {
+      ...read,
+      printed: {
+        ...read.printed,
+        texts: new Map([
+          [booking.id, alert],
+          [missingId, "alert"],
+        ]),
+      },
+      divers: [...read.divers, { bookingId: missingId, personId: missingId }],
+    };
+    expect(await recordMedicalAlertsPrint(db, { ...input, read: partial })).toEqual({ ok: false });
+    expect(await trailLines(db, person.id, "medical_alert_printed")).toHaveLength(1);
+  });
+
+  it("refuses the packet when staff access is disabled during the audit", async () => {
+    const { db, shop, trip, person } = await signedWith(alert);
+    const printer = await staffer(db, shop.id, ["crew"]);
+    const input = { shopId: shop.id, tripId: trip.id, printerId: printer };
+    const read = await readMedicalAlertsForPrint(db, input);
+    if (!read.ok) throw new Error("expected a read");
+    const record = operations.recordDiverActivity;
+    const spy = vi.spyOn(operations, "recordDiverActivity").mockImplementation(async (...args) => {
+      const result = await record(...args);
+      await db
+        .update(userAccounts)
+        .set({ status: "disabled" })
+        .where(eq(userAccounts.personId, printer));
+      return result;
+    });
+    try {
+      expect(await recordMedicalAlertsPrint(db, { ...input, read })).toEqual({ ok: false });
+      expect(await trailLines(db, person.id, "medical_alert_printed")).toHaveLength(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("hands every staff role every alert on the departure, one trail line per printed diver", async () => {

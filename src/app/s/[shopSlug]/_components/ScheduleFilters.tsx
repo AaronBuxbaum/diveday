@@ -9,6 +9,7 @@ import { SchedulePartySize } from "./SchedulePartySize";
 
 export type ScheduleFiltersCopy = {
   partySize: string;
+  anyPartySize: string;
   fewerPeople: string;
   morePeople: string;
   /** The one word the rail shows at rest, on the disclosure that holds the rest. */
@@ -77,7 +78,7 @@ export type ScheduleFiltersCopy = {
  */
 export function ScheduleFilters({
   month,
-  partySize = 1,
+  partySize = null,
   lens,
   tripTypeFilter,
   hasSpaceFilter,
@@ -88,7 +89,7 @@ export function ScheduleFilters({
   monthRail = null,
 }: {
   month: string | null;
-  partySize?: number;
+  partySize?: number | null;
   /**
    * The lens the reader is looking through, or null. Carried as a hidden input
    * below for the same reason `month` is: this is a GET form, so any parameter
@@ -123,10 +124,13 @@ export function ScheduleFilters({
   // moment somebody cleared their last filter, which is the one instant they
   // are most likely to want another.
   const [open, setOpen] = useState(
-    Boolean(tripTypeFilter || hasSpaceFilter || canDiveFilter || hideAboveFilter),
+    Boolean(
+      partySize !== null || tripTypeFilter || hasSpaceFilter || canDiveFilter || hideAboveFilter,
+    ),
   );
   const submit = () => formRef.current?.requestSubmit();
   const activeSummary = [
+    partySize !== null ? `${copy.partySize} ${partySize}` : null,
     tripTypeFilter === "course" ? copy.course : tripTypeFilter === "fun_dive" ? copy.funDive : null,
     hasSpaceFilter ? copy.hasSpace : null,
     copy.canDiveLevels.find((level) => level.value === canDiveFilter)?.label,
@@ -137,7 +141,6 @@ export function ScheduleFilters({
 
   return (
     <QueryForm ref={formRef} className="mb-6">
-      <SchedulePartySize value={partySize} copy={copy} submit={submit} />
       {month ? <input type="hidden" name="month" value={month} /> : null}
       {lens ? <input type="hidden" name="lens" value={lens} /> : null}
       {/* **One filter row** (visual review 2026-10-24, B18): the shop's
@@ -217,16 +220,7 @@ export function ScheduleFilters({
               </select>
             </Field>
           </FieldGrid>
-          <ChoiceRow
-            type="checkbox"
-            name="hasSpace"
-            value="1"
-            defaultChecked={hasSpaceFilter}
-            onChange={submit}
-            className="text-sm"
-          >
-            {copy.hasSpace}
-          </ChoiceRow>
+          <SchedulePartySize value={partySize} copy={copy} submit={submit} />
           {/* Opt-in, and only once a level is stated. Marking rather than hiding is
                 the default because a shop will happily take an Open Water diver on an
                 Advanced charter as a guided dive, or sell them the specialty — a

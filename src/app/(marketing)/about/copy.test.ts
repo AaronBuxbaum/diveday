@@ -29,7 +29,7 @@ const LOCALES = Object.entries(DIVER_MESSAGES) as [
 ][];
 
 /** Every published sentence of the page, flattened, so a rule can read the whole of it. */
-function sentencesOf(about: (typeof DIVER_MESSAGES)[DiverLocale]["marketing"]["about"]) {
+function sentencesOf(about: object) {
   const values: string[] = [];
   const walk = (node: unknown) => {
     if (typeof node === "string") values.push(node);
@@ -37,6 +37,11 @@ function sentencesOf(about: (typeof DIVER_MESSAGES)[DiverLocale]["marketing"]["a
   };
   walk(about);
   return values;
+}
+
+/** The page minus the founder's own band, which is first person singular (Aaron, 2026-11-14). */
+function withoutFounderBand(about: object) {
+  return Object.fromEntries(Object.entries(about).filter(([key]) => !/^peopleP\d$/.test(key)));
 }
 
 describe("the /about hero", () => {
@@ -72,6 +77,18 @@ describe("the /about hero", () => {
   });
 });
 
+describe("the founder band", () => {
+  it.each(LOCALES)("speaks as the founder, in the first person, in %s", (locale, messages) => {
+    const { peopleP1, peopleP2, peopleP3, peopleP4 } = messages.marketing.about;
+    const band = [peopleP1, peopleP2, peopleP3, peopleP4].join(" ");
+    expect(band).toMatch(locale === "es-ES" ? /\b(?:llevo|soy|tengo|yo)\b/i : /\bI(?:’m|’ve)?\b/);
+    // The Lonergans are named for the story, never as something he prevented.
+    expect(band).not.toMatch(
+      /would have|could have|might have|habría|hubiera|hubiese|podría haber/i,
+    );
+  });
+});
+
 describe("the home page's short telling", () => {
   it.each(LOCALES)("keeps the same limits as the /about hero in %s", (_l, messages) => {
     // The band under the home hero (Aaron, 2026-11-11) is the same story cut
@@ -80,6 +97,11 @@ describe("the home page's short telling", () => {
     const { whyStory, whyTie } = messages.marketing.home;
     expect(whyStory).toContain("Lonergan");
     expect(whyStory).toContain("1998");
+    // The line the owner asked for (Aaron, 2026-11-14): it ends on what the
+    // public record says of the pair.
+    expect(whyStory).toMatch(
+      /Neither of them was ever found|Nunca se encontró a ninguno de los dos/,
+    );
     for (const value of [whyStory, whyTie]) {
       expect(value).not.toMatch(/outer edge|skipper|patrón|operador|operator/i);
       expect(value).not.toMatch(
@@ -100,18 +122,20 @@ describe("the rest of /about", () => {
     // head count of the team are the facts that must not come back, in either
     // language. The Lonergans are the one pair of names the page carries, and
     // they live in the hero, which is tested above.
-    const published = sentencesOf(messages.marketing.about).join(" ");
+    // The founder band (`people*`) is the one place the page speaks as him
+    // (Aaron, 2026-11-14), so his history lives there and nowhere else.
+    const published = sentencesOf(withoutFounderBand(messages.marketing.about)).join(" ");
     expect(published).not.toMatch(
-      /Aaron|Buxbaum|Google|biotech|self-driving|autos que se conducen/i,
+      /Aaron|Buxbaum|Google|biotech|self-driving|coches autónomos|autos que se conducen/i,
     );
     expect(published).not.toMatch(/two of us|the other person|nosotros dos|la otra persona/i);
   });
 
-  it.each(LOCALES)("speaks for the company, never for one person, in %s", (locale, messages) => {
+  it.each(LOCALES)("speaks for the company outside the founder band in %s", (locale, messages) => {
     // No first-person singular anywhere on the page. The founder's own parts
     // were first-person singular until 2026-10-07; the page is the company's
     // now, and "we" is the only first person on it.
-    const published = sentencesOf(messages.marketing.about).join(" ");
+    const published = sentencesOf(withoutFounderBand(messages.marketing.about)).join(" ");
     const singular =
       locale === "es-ES"
         ? /\b(?:yo|soy|construí|trabajé|escribo|trabajo en|mi trabajo)\b/i
