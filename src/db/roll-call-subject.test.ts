@@ -5,6 +5,7 @@ import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "@/db/seed-
 import { nowDate, nowMs } from "@/lib/clock";
 import { compareMarkOrder } from "@/lib/roll-call";
 import { fileScopedShopContext } from "@/test/db";
+import { capturedMeeting } from "@/test/offline-meeting-test-support";
 import type { AppDb } from "./client";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { CLIENT_EVENT_CONFLICT } from "./offline-replay";
@@ -198,7 +199,11 @@ describe("the two halves of one head count stay apart", () => {
   it("refuses a crew replay under an id a seat mark already holds, and writes nothing", async () => {
     const { db, shop } = ctx;
     const { tripId, bookingId, staffId } = await reefWithCrew(db, shop.id);
-    const shared = offlineEvent(crypto.randomUUID());
+    const shared = {
+      ...offlineEvent(crypto.randomUUID()),
+      meetingDay: 0,
+      ...(await capturedMeeting(db, shop.id, tripId, 0)),
+    };
     await expect(
       recordRollCall(db, {
         shopId: shop.id,
@@ -232,7 +237,11 @@ describe("the two halves of one head count stay apart", () => {
   it("refuses a seat replay under an id a crew mark already holds", async () => {
     const { db, shop } = ctx;
     const { tripId, bookingId, staffId } = await reefWithCrew(db, shop.id);
-    const shared = offlineEvent(crypto.randomUUID());
+    const shared = {
+      ...offlineEvent(crypto.randomUUID()),
+      meetingDay: 0,
+      ...(await capturedMeeting(db, shop.id, tripId, 0)),
+    };
     await expect(
       recordCrewRollCall(db, {
         shopId: shop.id,
@@ -271,6 +280,8 @@ describe("the two halves of one head count stay apart", () => {
       recordedByPersonId: staffId,
       status: "boarded" as const,
       ...offlineEvent(crypto.randomUUID()),
+      meetingDay: 0,
+      ...(await capturedMeeting(db, shop.id, tripId, 0)),
     };
     const first = await recordCrewRollCall(db, mark);
     expect(first).toMatchObject({ ok: true });

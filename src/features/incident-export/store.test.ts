@@ -22,6 +22,7 @@ import { nowDate } from "../../lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";
 import { WAIVER_SIGNATURE_VALIDITY_MS } from "../../lib/waivers";
 import { fileScopedShopContext } from "../../test/db";
+import { capturedMeeting } from "../../test/offline-meeting-test-support";
 import { getIncidentExport } from "./store";
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
@@ -77,6 +78,8 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
       recordedByPersonId: staff.id,
       status: "boarded",
       source: "offline",
+      meetingDay: 0,
+      ...(await capturedMeeting(db, shop.id, reef.id, 0)),
       clientEventId: "11111111-1111-4111-8111-111111111111",
       offlineSnapshotSavedAt: new Date(nowDate().getTime() - 60 * 60 * 1000),
       occurredAt: nowDate(),
