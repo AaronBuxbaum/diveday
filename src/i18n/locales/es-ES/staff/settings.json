@@ -216,6 +216,7 @@
       "valueListed": "Visible",
       "valueHidden": "Oculto",
       "detail": "Estar visible también pone tu centro en la página de DiveDay para tu localidad. Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer, y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
+      "demoDetail": "Los centros de demostración están ocultos para los buscadores. Sus páginas siguen disponibles mediante un enlace directo.",
       "label": "Mostrar mis páginas públicas en los buscadores",
       "submit": "Guardar"
     },

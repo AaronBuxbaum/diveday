@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
+import { ChoiceRow } from "@/components/ui/form";
 import type { AppDb } from "@/db/client";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { fileScopedShopContext } from "@/test/db";
@@ -18,6 +19,7 @@ import {
   WebsiteGroup,
 } from "./groups";
 import { SettingsGroup, type SettingsView } from "./kit";
+import { searchListingRow } from "./shop-rows";
 
 const ctx = fileScopedShopContext();
 
@@ -175,4 +177,22 @@ describe("each settings group renders as its own component", () => {
     const messages = MessagesGroup({ view, canManageMessaging: false });
     expect(hrefsIn(messages)).not.toContain(`${base}/settings/whatsapp`);
   });
+});
+
+it("shows the enforced demo search policy without an ineffective control", async () => {
+  const { view } = await viewFor();
+  const demo = searchListingRow({
+    ...view,
+    shop: { ...view.shop, isDemo: true, searchListingOptOutAt: null },
+  });
+  expect(demo.props.value).toBe("Hidden");
+  expect(findElements(demo, ChoiceRow)).toHaveLength(0);
+  const real = searchListingRow({
+    ...view,
+    shop: { ...view.shop, isDemo: false, searchListingOptOutAt: null },
+  });
+  expect(real.props.value).toBe("Listed");
+  expect(findElements<{ defaultChecked: boolean }>(real, ChoiceRow)[0]?.props.defaultChecked).toBe(
+    true,
+  );
 });
