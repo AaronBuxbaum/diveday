@@ -35,6 +35,10 @@ Acceptance requires real PostgreSQL tests with reset held before intake and with
 
 Move acceptance also needs both intake/move orderings, a move back to the original trip, late upload after a move or reset, and deleted or recreated identities. A separate durable intake is a possible design, not proof that moves, reset cutover or mixed-server lock ordering are safe.
 
+One proposed slice is an append-only intake ledger with tenant and event identity, a keyed and versioned payload digest, and the original generation, meeting and subject context. Missing verification keys leave an event unresolved. Append-only intent does not prohibit required erasure scrubbing or terminal tombstones, and must not be used to justify destroying the only unsent copy. A receipt would mean only that the ledger transaction committed; seat allocation remains a separate decision. Review would read that retained context directly, including after the current booking or trip has moved or been removed. Reset would preserve the old generation and atomically switch the active one, rather than delete its context.
+
+This is not yet an implementation or an approved migration. The current reset hard-deletes parent records, existing sighting readers depend on current booking rows, and removing parent foreign keys would also remove database-enforced tenant and parent integrity. Before an automatically applied schema change or activation, the proposal needs a reviewed authorization and revocation frontier, erasure and export rules, protected sensitive payloads, old-server behavior, and a cutover in which every reset, reap, move, intake and review writer preserves the generation contract. A durable ledger alone does not prove a safe occupancy projection or make device-only evidence visible to a concurrent move.
+
 ## Alternatives considered
 
 - **Infer a meeting from ordinal or clock** — may move an observation to another day.
