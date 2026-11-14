@@ -1,14 +1,43 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { draftReplyToMessage } from "@/features/inbox-assists";
+import { replyFacts } from "@/features/inbox-assists/store";
+import { REPLY_NOTES_MAX_LENGTH } from "@/lib/assists/inbox";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { inboundMessages } from "./schema";
+import { inboundMessages, shops } from "./schema";
 import { resetDemoSchedule } from "./seed";
+import { DEMO_SHOP_REPLY_NOTES } from "./seed-reply-notes";
+import { DEMO_SHOP_DESK } from "./seed-shop-brand";
 
 const ctx = fileScopedShopContext();
 
 describe("demo inbox reply drafts", () => {
+  it.each([false, true])(
+    "keeps the complete desk handbook in seeded AI facts after reset=%s",
+    async (reset) => {
+      if (reset) await resetDemoSchedule(ctx.db, ctx.shop.id, "lean");
+      const [shop] = await ctx.db.select().from(shops).where(eq(shops.id, ctx.shop.id));
+      expect(shop.replyNotes).toBe(DEMO_SHOP_REPLY_NOTES);
+      expect(DEMO_SHOP_DESK.replyNotes).toBe(DEMO_SHOP_REPLY_NOTES);
+      expect(shop.replyNotes?.length).toBeGreaterThan(3_000);
+      expect(shop.replyNotes?.length).toBeLessThanOrEqual(REPLY_NOTES_MAX_LENGTH);
+      const { lines } = await replyFacts(ctx.db, ctx.shop.id);
+      const notes = lines.slice(lines.indexOf("Notes from the shop:") + 1);
+      expect(notes).toEqual(DEMO_SHOP_REPLY_NOTES.split("\n").filter(Boolean));
+      for (const section of [
+        "ARRIVAL & CHECK-IN",
+        "RENTALS & FIT",
+        "ON THE BOATS",
+        "SITES & EXPERIENCE",
+        "CHANGES, WEATHER & PAYMENTS",
+        "REPLY STYLE & HANDOFFS",
+      ]) {
+        expect(notes).toContain(section);
+      }
+      expect(shop.replyNotes).toContain("never promise every size is available");
+    },
+  );
   it.each([false, true])("lets seeded messages draft after reset=%s", async (reset) => {
     if (reset) await resetDemoSchedule(ctx.db, ctx.shop.id, "lean");
     const messages = await ctx.db
