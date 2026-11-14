@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
+import { capturedMeeting } from "@/test/offline-meeting-test-support";
 import { listExecutedDives, upsertExecutedDive } from "./executed-dives";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { bookings, courses, people, tripDives, trips } from "./schema";
@@ -117,6 +118,8 @@ describe("five-dive course sessions", () => {
       checkpoint: "after_dive_5" as const,
       status: "not_boarded" as const,
       source: "offline" as const,
+      meetingDay: 0,
+      ...(await capturedMeeting(db, shop.id, trip.id, 0)),
       clientEventId: "8d9769b0-f865-44a6-83e9-5534c355a47d",
       occurredAt: nowDate(),
       offlineSnapshotSavedAt: nowDate(),

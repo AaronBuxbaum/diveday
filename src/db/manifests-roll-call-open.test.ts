@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { capturedMeeting } from "@/test/offline-meeting-test-support";
 import {
   getTripManifest,
   recordCrewRollCall,
@@ -166,6 +167,7 @@ describe("rollCallOpenOnTrip", () => {
   // record when it syncs; one made after the cancel, or live, does not.
   it("takes an offline count made before the cancel, and nothing made after it", async () => {
     const { db, shop, reef, bookingId, staffId } = await reefDeparture();
+    const meeting = await capturedMeeting(db, shop.id, reef.id, 0);
     const cancelledAt = nowDate();
     await ctx.db
       .update(trips)
@@ -179,6 +181,8 @@ describe("rollCallOpenOnTrip", () => {
         recordedByPersonId: staffId,
         status: "boarded",
         source: "offline",
+        meetingDay: 0,
+        ...meeting,
         clientEventId,
         offlineSnapshotSavedAt: new Date(cancelledAt.getTime() - 3 * 3_600_000),
         occurredAt,

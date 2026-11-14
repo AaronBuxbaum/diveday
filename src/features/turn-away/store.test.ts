@@ -22,6 +22,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";
 import { turnAwayReasons } from "../../lib/turn-away";
 import { markArrived } from "../../test/arrivals";
 import { fileScopedShopContext } from "../../test/db";
+import { capturedMeeting } from "../../test/offline-meeting-test-support";
 import { listCheckInQueue } from "../check-in/store";
 import { markBookingNoShow, undoBookingNoShow } from "../no-show/store";
 import { turnBookingAway } from "./store";
@@ -819,6 +820,8 @@ describe("turnBookingAway, second review", () => {
         recordedByPersonId: staffId,
         status: "boarded",
         source: "offline",
+        meetingDay: 0,
+        ...(await capturedMeeting(db, shop.id, trip.id, 0)),
         clientEventId: "dddddddd-3333-4333-8333-dddddddddddd",
         offlineSnapshotSavedAt: new Date(synced - 2 * HOUR_MS),
         occurredAt: new Date(synced - HOUR_MS),
