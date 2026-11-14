@@ -27,7 +27,6 @@ import {
   pendingOfflineEventCount,
   withMedicalAlertWords,
 } from "./offline-manifests";
-import { validRecoveryEnvelope } from "./offline-recovery-envelope";
 import { type PostedOfflineEvents, receiptStillNamesCurrentEvents } from "./offline-sync-receipt";
 import { clientRollCallEvidenceId } from "./roll-call-causality";
 import {
@@ -1753,6 +1752,7 @@ async function recoverExactPreservedDuplicate(
   ]);
   if (!sameBytes(archivedPlaintext, activePlaintext)) return false;
   const envelope: unknown = JSON.parse(new TextDecoder().decode(activePlaintext));
+  const { validRecoveryEnvelope } = await import("./offline-recovery-envelope");
   if (!validRecoveryEnvelope(envelope, shop, tripId)) return false;
   const copy = envelope as OfflineManifestEnvelope;
   if (

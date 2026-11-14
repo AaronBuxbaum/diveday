@@ -113,6 +113,18 @@ describe("useSavedManifest and what retention threw away", () => {
     discardedAt: "2026-08-01T12:00:00.000Z",
   };
 
+  it("warns about an incomplete inventory rather than claiming every event was sent", async () => {
+    inventory.incomplete = true;
+    const { result } = at("");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.storeReadFailed).toBe(true);
+    expect(result.current.message).toContain("shared.offlineManifest.reconcile.inventoryPartial");
+    expect(result.current.message).not.toContain("shared.offlineManifest.reconcile.allCaughtUp");
+    expect(result.current.message).not.toContain(
+      "shared.offlineManifest.reconcile.listAllCaughtUp",
+    );
+  });
+
   it("reads the discarded records after the store is opened", async () => {
     list.mockResolvedValue([]);
     readDiscarded.mockResolvedValue([lost]);

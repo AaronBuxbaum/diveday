@@ -230,7 +230,7 @@ export async function listTripSightings(db: DbExecutor, shopId: string, tripId: 
 }
 
 /**
- * **"Seen here this month"**, for every site a page is about.
+ * **"Seen here in the last 30 days"**, for every site a page is about.
  *
  * Batched over site ids because the caller is a trip page with a two-tank day
  * on it, and the one thing this read must never become is a query per site per

@@ -19,7 +19,7 @@ export function TripSupportingDetails({ shop, sightings, siteReviews, ...pitch }
           locale={pitch.locale}
         />
       ) : null}
-      <TripPitch {...pitch} />
+      <TripPitch {...pitch} sightings={sightings} />
     </div>
   );
 }
