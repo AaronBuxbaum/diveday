@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEMO_SHOP_DESK } from "@/db/seed-shop-brand";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import { DRAFT_SYSTEM } from "@/lib/assists/inbox";
 import { PackingSection } from "./PackingSection";
 import type { Shop, Trip } from "./types";
 
@@ -280,6 +281,6 @@ describe("PackingSection — demo course context", () => {
     renderDemo(false);
     expect(screen.queryByText(/tablets.*night before/i)).not.toBeInTheDocument();
     expect(DEMO_SHOP_DESK.replyNotes).not.toMatch(/medicine.*night before/i);
-    expect(DEMO_SHOP_DESK.replyNotes).toContain("Do not give medical advice");
+    expect(DRAFT_SYSTEM).toContain("do not give any medical opinion");
   });
 });

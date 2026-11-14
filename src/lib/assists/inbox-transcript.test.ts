@@ -15,6 +15,14 @@ function transcript(answer: string | null): CallTranscript {
 }
 
 describe("keepUnlessHealth", () => {
+  it.each([null, "not JSON", '{"reply":"hello"}'])(
+    "redacts an unclassified answer %s",
+    (answer) => {
+      const kept = keepUnlessHealth(transcript(answer));
+      expect(kept.content).toBe(HEALTH_MESSAGE_NOT_KEPT);
+      expect(JSON.stringify(kept)).not.toContain("pregnant");
+    },
+  );
   it("keeps a call that is not about health whole", () => {
     const kept = transcript(
       JSON.stringify({ reply: "Yes, 4 seats.", medical: false, eligibility: false, confidence: 1 }),

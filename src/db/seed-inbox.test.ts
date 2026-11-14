@@ -20,22 +20,13 @@ describe("demo inbox reply drafts", () => {
       const [shop] = await ctx.db.select().from(shops).where(eq(shops.id, ctx.shop.id));
       expect(shop.replyNotes).toBe(DEMO_SHOP_REPLY_NOTES);
       expect(DEMO_SHOP_DESK.replyNotes).toBe(DEMO_SHOP_REPLY_NOTES);
-      expect(shop.replyNotes?.length).toBeGreaterThan(3_000);
+      expect(shop.replyNotes?.length).toBeGreaterThan(100);
       expect(shop.replyNotes?.length).toBeLessThanOrEqual(REPLY_NOTES_MAX_LENGTH);
       const { lines } = await replyFacts(ctx.db, ctx.shop.id);
       const notes = lines.slice(lines.indexOf("Notes from the shop:") + 1);
       expect(notes).toEqual(DEMO_SHOP_REPLY_NOTES.split("\n").filter(Boolean));
-      for (const section of [
-        "ARRIVAL & CHECK-IN",
-        "RENTALS & FIT",
-        "ON THE BOATS",
-        "SITES & EXPERIENCE",
-        "CHANGES, WEATHER & PAYMENTS",
-        "REPLY STYLE & HANDOFFS",
-      ]) {
-        expect(notes).toContain(section);
-      }
-      expect(shop.replyNotes).toContain("never promise every size is available");
+      expect(shop.replyNotes).toContain("The gate opens at 7:15.");
+      expect(shop.replyNotes).not.toContain("$45");
     },
   );
   it.each([false, true])("lets seeded messages draft after reset=%s", async (reset) => {
@@ -50,10 +41,24 @@ describe("demo inbox reply drafts", () => {
     expect(seeded).toHaveLength(4);
     const reply = "Thanks for getting in touch. Our team will confirm the details with you.";
     const provider = fakeClaude({
-      reply: () =>
-        fakeClaudeMessage({
-          text: JSON.stringify({ reply, medical: false, eligibility: false, confidence: 0.9 }),
-        }),
+      reply: (request) =>
+        request.tools?.some((tool) => "name" in tool && tool.name === "read_shop_facts") &&
+        request.messages.length === 1
+          ? {
+              ...fakeClaudeMessage({ text: "", stopReason: "tool_use" }),
+              content: [
+                {
+                  type: "tool_use",
+                  caller: { type: "direct" },
+                  id: "facts",
+                  name: "read_shop_facts",
+                  input: {},
+                },
+              ],
+            }
+          : fakeClaudeMessage({
+              text: JSON.stringify({ reply, medical: false, eligibility: false, confidence: 0.9 }),
+            }),
     });
     for (const message of seeded) {
       expect(
@@ -65,6 +70,6 @@ describe("demo inbox reply drafts", () => {
         }),
       ).toBe(reply);
     }
-    expect(provider.requests).toHaveLength(4);
+    expect(provider.requests).toHaveLength(8);
   });
 });
