@@ -857,6 +857,10 @@ export async function resetDemoSchedule(
   await db.transaction(async (tx) => {
     const cleared = await clearDemoSchedule(tx, shopId);
     await reseedClearedDemoSchedule(tx, shopId, cleared, shape);
+    // Catch an intake committed after the sighting delete but before this
+    // check. Intake can still race this final check and commit, so reset is
+    // not yet serialized with the independent intake transaction.
+    await requireNoRetainedSafetyForDemoReset(tx, shopId);
   });
 }
 

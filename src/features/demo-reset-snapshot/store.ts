@@ -1,5 +1,6 @@
 import { getTableName, type SQL, sql } from "drizzle-orm";
 import type { AppDb, AppTransaction, DbExecutor } from "../../db/client";
+import { requireNoRetainedSafetyForDemoReset } from "../../db/retained-safety";
 import { clearDemoSchedule, resetDemoSchedule } from "../../db/seed";
 import { rotateShopOfflineDatasetIncarnation } from "../../db/shops";
 import { nowMs } from "../../lib/clock";
@@ -175,6 +176,9 @@ async function clearAndReplay(
   await replayRows(tx, plan);
   // The snapshot can restore an old shop row; rotate after replay before commit.
   await rotateShopOfflineDatasetIncarnation(tx, shopId);
+  // This catches intake visible before the last check; intake racing the
+  // subsequent commit still needs a coordinated, non-starving protocol.
+  await requireNoRetainedSafetyForDemoReset(tx, shopId);
 }
 
 /**
@@ -468,6 +472,7 @@ async function capturePlan(db: AppDb, shopId: string): Promise<DemoResetPlan> {
     // Capture itself clears and replays a dataset. Its resulting proofs must
     // also belong to a new incarnation, outside the captured comparison.
     await rotateShopOfflineDatasetIncarnation(tx, shopId);
+    await requireNoRetainedSafetyForDemoReset(tx, shopId);
     return plan;
   });
 }
