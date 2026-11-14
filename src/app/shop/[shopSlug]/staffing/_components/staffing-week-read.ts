@@ -96,6 +96,7 @@ export async function readStaffingWeek({
     people: view.staff.map((member) => ({
       personId: member.person.id,
       name: member.person.fullName,
+      photoUrl: member.person.staffPhotoPath,
       roles: staffRoleLabels(t, member.roles),
       shifts: member.shifts.map((shift) => ({
         id: shift.id,

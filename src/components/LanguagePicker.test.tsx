@@ -60,6 +60,8 @@ describe("LanguagePicker — the closed control", () => {
     document.body.append(container);
     const original = container.querySelector('button[aria-label="Change language"]');
     expect(original?.hasAttribute("disabled")).toBe(true);
+    // The label remains readable while the client handler is loading.
+    expect(original).not.toHaveClass("disabled:opacity-60");
     let root: ReturnType<typeof hydrateRoot> | undefined;
     await act(async () => {
       root = hydrateRoot(container, picker);

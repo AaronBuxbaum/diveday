@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { SafetyMonth } from "../../../../../features/safety-report/rules";
+import { SAFETY_LIST_IDS } from "./SafetyLists";
 import { safetyMonthTiles } from "./safety-month-tiles";
 
 const t = staffTranslator("en-US");
@@ -32,6 +33,7 @@ function month(crew: Partial<SafetyMonth>): SafetyMonth {
     checkedSailings: 0,
     unrecordedSailings: 0,
     lapsedSailings: [],
+    openRollCalls: [],
     unrecordedCrew: [],
     noCrewDepartures: [],
     noCrewOnRecord: false,
@@ -152,4 +154,34 @@ describe("the month's crew tile", () => {
     expect(tile.value).toBe("0 of 4");
     expect(tile.href).toBeUndefined();
   });
+});
+
+it("never links empty roll-call and incident figures to missing lists", () => {
+  const figures = safetyMonthTiles({
+    t,
+    safety: month({}),
+    filed: 0,
+    drafts: 0,
+    activityHref: "/activity",
+    staffingHref: null,
+  });
+  expect(figures.find((figure) => figure.key === "rollCalls")?.href).toBeUndefined();
+  expect(figures.find((figure) => figure.key === "incidents")?.href).toBeUndefined();
+});
+
+it("links roll-call and incident figures when their lists have entries", () => {
+  const figures = safetyMonthTiles({
+    t,
+    safety: month({ openRollCalls: [{}] as SafetyMonth["openRollCalls"] }),
+    filed: 1,
+    drafts: 0,
+    activityHref: "/activity",
+    staffingHref: null,
+  });
+  expect(figures.find((figure) => figure.key === "rollCalls")?.href).toBe(
+    `#${SAFETY_LIST_IDS.open}`,
+  );
+  expect(figures.find((figure) => figure.key === "incidents")?.href).toBe(
+    `#${SAFETY_LIST_IDS.incidents}`,
+  );
 });

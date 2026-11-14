@@ -541,6 +541,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     header: [
       "id",
       "full_name",
+      "staff_photo_path",
       "email",
       "phone",
       "roles",
@@ -622,6 +623,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       peopleRows.map((row) => [
         row.id,
         row.fullName,
+        row.staffPhotoPath,
         row.email,
         row.phone,
         personRolesText(row.id),

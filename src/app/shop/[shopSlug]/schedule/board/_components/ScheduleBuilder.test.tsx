@@ -200,13 +200,13 @@ describe("ScheduleBuilder week board", () => {
     board(week());
 
     expect(within(grid()).queryAllByRole("listitem")).toHaveLength(0);
-    // **Seven rows saying "No boats", where the grid said nothing at all.**
+    // **Seven rows saying "No trips", where the grid said nothing at all.**
     // An empty *column* is read against the six beside it, which is what gave
     // the blank its meaning; one empty row in a run of rows is just a gap, so
     // the week says it in words.
     // Five of them now: the three days already behind fold into one row
-    // ("Mon–Wed · No boats", UX review 2026-10-10, item 24).
-    expect(within(grid()).getAllByText("No boats")).toHaveLength(5);
+    // ("Mon–Wed · No trips", UX review 2026-10-10, item 24).
+    expect(within(grid()).getAllByText("No trips")).toHaveLength(5);
     // What an empty day still ahead does carry is its own way to fill it —
     // and a day already behind carries none, because a departure is put on
     // the board and the board is ahead. Aug 27 is "today" in this fixture, so

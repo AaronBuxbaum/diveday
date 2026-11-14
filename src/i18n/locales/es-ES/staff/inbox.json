@@ -38,9 +38,6 @@
     "actionForSeat": "Marcar que {name} llega tarde a {trip}, {when}",
     "markedFor": "En el manifiesto de {trip}: llega tarde, avisó a las {time}"
   },
-  "more": "Más",
-  "openRecord": "Abrir la ficha de {name}",
-  "openRecordShort": "Abrir la ficha",
   "replyByEmail": "Responder por correo",
   "timesIn": "Zona horaria: {zone}",
   "delete": {

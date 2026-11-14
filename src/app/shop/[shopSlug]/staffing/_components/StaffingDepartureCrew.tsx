@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
+import { CrewPortrait } from "./CrewPortrait";
 import type { StaffingWeekWords } from "./StaffingWeek";
 import type { mobileDepartureGroups } from "./staffing-mobile-groups";
 import { WarningLine } from "./staffing-warning-line";
@@ -18,14 +19,17 @@ export function StaffingDepartureCrew({
   locale: string;
 }) {
   return crew.length > 0 ? (
-    <ul className="mt-1">
+    <ul className="mt-2 flex flex-wrap items-start gap-2">
       {crew.map(({ person, trip: ownTrip }) => (
-        <li key={person.personId}>
+        <li key={person.personId} className="max-w-full">
           <Link
             href={href}
-            className="flex min-h-11 flex-col justify-center py-1 text-base hover:underline"
+            className="flex min-h-11 flex-col justify-center rounded-lg border border-border px-2 py-1 text-base hover:underline"
           >
-            <span className="font-medium">{person.name}</span>
+            <span className="flex items-center gap-2 font-medium">
+              <CrewPortrait person={person} />
+              <span className="break-words">{person.name}</span>
+            </span>
             {ownTrip.clashes.map((clash) => (
               <WarningLine key={clash.tripId} size="sm">
                 {fill(words.crewClash, { departure: clash.title })}

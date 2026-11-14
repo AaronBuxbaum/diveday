@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
+import { withDemoCrewEvidence } from "@/db/seed-crew-evidence";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
@@ -864,18 +865,22 @@ async function seedShopCertified(
   }
   await seedRollCallEvidence(
     db,
-    counts.map(({ checkpoint, meetingDay, occurredAt }) => ({
+    await withDemoCrewEvidence(
+      db,
       shopId,
-      tripId: trip.id,
-      meetingDay,
-      subjectKind: "crew" as const,
-      crewPersonId: ctx.instructorId,
-      recordedByPersonId: ctx.instructorId,
-      status: "boarded" as const,
-      checkpoint,
-      source: "live" as const,
-      occurredAt: new Date(occurredAt.getTime() + seated.length * 1_000),
-    })),
+      counts.map(({ checkpoint, meetingDay, occurredAt }) => ({
+        shopId,
+        tripId: trip.id,
+        meetingDay,
+        subjectKind: "crew" as const,
+        crewPersonId: ctx.instructorId,
+        recordedByPersonId: ctx.instructorId,
+        status: "boarded" as const,
+        checkpoint,
+        source: "live" as const,
+        occurredAt: new Date(occurredAt.getTime() + seated.length * 1_000),
+      })),
+    ),
     { observesPrevious: false },
   );
 }

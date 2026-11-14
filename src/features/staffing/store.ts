@@ -8,6 +8,7 @@ import {
   seatNotCancelled,
 } from "@/db/trips";
 import { crewGapFor, type StaffGapCode, type TripMeeting } from "@/features/staffing-week";
+import { shiftsCoverWindow } from "@/lib/shift-coverage";
 import type { AppDb } from "../../db/client";
 import { courseCrewCountsByTrip, NO_SUPERVISION } from "../../db/course-crew-counts";
 import {
@@ -20,12 +21,12 @@ import {
   courses,
   people,
   personRoles,
+  shops,
   staffShifts,
   tripAssignments,
   tripScheduleDays,
   trips,
 } from "../../db/schema/index";
-
 import { STAFF_ROLES } from "../../lib/authz";
 import { HOUR_MS, nowDate } from "../../lib/clock";
 import type { InWaterCrewCount } from "../../lib/crew-roles";
@@ -448,43 +449,29 @@ export async function tripMeetings(
   return byTrip;
 }
 
-/**
- * Which of a trip's assigned crew (`personIds`) have a staff shift
- * overlapping the trip's own window — the other half of task 165's
- * cross-link, read from the trip's `CrewSection` rather than the staffing
- * page.
- *
- * `null` means the shop has never scheduled a shift at all, so the question
- * does not apply — a different answer from "nobody is covered". Without the
- * distinction, a shop that doesn't use the staffing feature saw a "Not on a
- * shift" warning on every crew member of every trip, forever: the expected
- * state formatted as an alert (design principle 9). The consumer renders no
- * coverage state at all on `null`; the warning is reserved for shops whose
- * own shift schedule says this sailing has a hole in it.
- */
+/** Full shift coverage for assigned crew. Only an explicitly disabled schedule
+ * suppresses warnings; deleting the final shift must not hide an existing gap. */
 export async function crewShiftCoverage(
   db: AppDb,
   shopId: string,
   trip: { startsAt: Date; endsAt: Date },
   personIds: readonly string[],
+  windows: readonly { startsAt: Date; endsAt: Date }[] = [trip],
 ): Promise<Set<string> | null> {
-  // Existence probe, deliberately unscoped to the trip window: "does this
-  // shop schedule shifts" is a fact about the shop, and a week nobody entered
-  // shifts for at a shop that does schedule them is exactly when the warning
-  // is earned.
-  // The probe and the window read need nothing from one another, so they go
-  // out together: one round trip, not two (#2487). With no one rostered there
-  // is nothing to cover, so only the probe runs.
   const probe = db
-    .select({ personId: staffShifts.personId })
-    .from(staffShifts)
-    .where(eq(staffShifts.shopId, shopId))
+    .select({ enabled: shops.crewScheduleEnabled })
+    .from(shops)
+    .where(eq(shops.id, shopId))
     .limit(1);
   const covering =
     personIds.length === 0
-      ? Promise.resolve([] as Array<{ personId: string }>)
+      ? Promise.resolve([] as Array<{ personId: string; startsAt: Date; endsAt: Date }>)
       : db
-          .select({ personId: staffShifts.personId })
+          .select({
+            personId: staffShifts.personId,
+            startsAt: staffShifts.startsAt,
+            endsAt: staffShifts.endsAt,
+          })
           .from(staffShifts)
           .where(
             and(
@@ -495,8 +482,17 @@ export async function crewShiftCoverage(
             ),
           );
   const [usesShifts, rows] = await Promise.all([probe, covering]);
-  if (usesShifts.length === 0) return null;
-  return new Set(rows.map((row) => row.personId));
+  if (!usesShifts[0]?.enabled) return null;
+  return new Set(
+    personIds.filter((personId) =>
+      windows.every((window) =>
+        shiftsCoverWindow(
+          rows.filter((row) => row.personId === personId),
+          window,
+        ),
+      ),
+    ),
+  );
 }
 
 export type CreateStaffShiftOutcome =

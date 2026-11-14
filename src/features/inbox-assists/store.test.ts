@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { recordInboundMessage, recordStaffReply } from "../../db/inbound-messages";
-import { inboundMessages, people, personRoles, shops, trips } from "../../db/schema/index";
+import { courses, inboundMessages, people, personRoles, shops, trips } from "../../db/schema/index";
 import { setShopFeature, setShopReplyNotes } from "../../db/shops";
 import type { ClaudeProvider, ClaudeRequest } from "../../lib/claude/provider";
 import { nowDate, nowMs } from "../../lib/clock";
@@ -31,7 +31,24 @@ beforeEach(async () => {
 const keyed = { ANTHROPIC_API_KEY: "test-anthropic-key" };
 
 function answering(value: unknown) {
-  return fakeClaude({ reply: () => fakeClaudeMessage({ text: JSON.stringify(value) }) });
+  return fakeClaude({
+    reply: (request) =>
+      request.tools?.some((tool) => "name" in tool && tool.name === "read_shop_facts") &&
+      request.messages.length === 1
+        ? {
+            ...fakeClaudeMessage({ text: "", stopReason: "tool_use" }),
+            content: [
+              {
+                type: "tool_use",
+                caller: { type: "direct" },
+                id: "facts",
+                name: "read_shop_facts",
+                input: {},
+              },
+            ],
+          }
+        : fakeClaudeMessage({ text: JSON.stringify(value) }),
+  });
 }
 
 async function diverWithMessage(body: string, providerMessageId = `assist-${body.length}`) {
@@ -232,6 +249,32 @@ describe("awaitsTriage", () => {
 });
 
 describe("replyFacts", () => {
+  it("bounds a large course catalog and says that more courses exist", async () => {
+    await ctx.db.insert(courses).values(
+      Array.from({ length: 41 }, (_, index) => ({
+        shopId: ctx.shop.id,
+        title: `Catalog course ${index}`,
+        slug: `lookup-catalog-${index}`,
+      })),
+    );
+    const { lines } = await replyFacts(ctx.db, ctx.shop.id);
+    const courseLines = lines
+      .slice(lines.indexOf("Courses:") + 1)
+      .filter((line) => line.startsWith("- "));
+    expect(courseLines).toHaveLength(41);
+    expect(courseLines.at(-1)).toContain("limited to 40 courses");
+  });
+  it("does not present guessed desk hours as confirmed shop hours", async () => {
+    await ctx.db.update(shops).set({ deskHoursConfirmedAt: null }).where(eq(shops.id, ctx.shop.id));
+    const unknown = (await replyFacts(ctx.db, ctx.shop.id)).lines.join("\n");
+    expect(unknown).not.toContain("Desk hours:");
+    await ctx.db
+      .update(shops)
+      .set({ deskHoursConfirmedAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(shops.id, ctx.shop.id));
+    const confirmed = (await replyFacts(ctx.db, ctx.shop.id)).lines.join("\n");
+    expect(confirmed).toContain("Desk hours:");
+  });
   it("describes an empty public departure window using the actual 45-day horizon", async () => {
     await ctx.db.update(trips).set({ isPrivate: true }).where(eq(trips.shopId, ctx.shop.id));
     const { window, lines } = await replyFacts(ctx.db, ctx.shop.id);
@@ -466,6 +509,68 @@ describe("translateReplyFor", () => {
 });
 
 describe("draftReplyToMessage", () => {
+  it("reads current shop facts only when requested and rejects a model-supplied shop id", async () => {
+    const { messageId } = await diverWithMessage("Where is the shop?");
+    await ctx.db
+      .update(shops)
+      .set({ addressStreet: "42 Current Dock Road", rentalTerms: "x".repeat(36_000) })
+      .where(eq(shops.id, ctx.shop.id));
+    let turn = 0;
+    const provider = fakeClaude({
+      reply: () => {
+        turn += 1;
+        return turn === 1
+          ? {
+              ...fakeClaudeMessage({ text: "", stopReason: "tool_use" }),
+              content: [
+                {
+                  type: "tool_use",
+                  caller: { type: "direct" },
+                  id: "lookup_1",
+                  name: "read_shop_facts",
+                  input: {},
+                },
+              ],
+            }
+          : fakeClaudeMessage({
+              text: JSON.stringify({
+                reply: "The shop is at 42 Current Dock Road.",
+                medical: false,
+              }),
+            });
+      },
+    });
+    expect(
+      await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed, provider }),
+    ).toContain("42 Current Dock Road");
+    expect(JSON.stringify(provider.requests[0])).not.toContain("42 Current Dock Road");
+    expect(JSON.stringify(provider.requests[1])).toContain("42 Current Dock Road");
+    expect(JSON.stringify(provider.requests[1])).toContain("fact list was truncated");
+    expect(JSON.stringify(provider.requests[1])).not.toContain("x".repeat(36_000));
+    const forged = fakeClaude({
+      reply: () => ({
+        ...fakeClaudeMessage({ text: "", stopReason: "tool_use" }),
+        content: [
+          {
+            type: "tool_use",
+            caller: { type: "direct" },
+            id: "lookup_2",
+            name: "read_shop_facts",
+            input: { shopId: "another-shop" },
+          },
+        ],
+      }),
+    });
+    expect(
+      await draftReplyToMessage(ctx.db, {
+        shopId: ctx.shop.id,
+        messageId,
+        env: keyed,
+        provider: forged,
+      }),
+    ).toBeNull();
+    expect(forged.requests).toHaveLength(1);
+  });
   it.each(["matched", "unmatched"] as const)(
     "keeps structured meeting destinations out of a %s sender's provider context",
     async (kind) => {
@@ -499,8 +604,8 @@ describe("draftReplyToMessage", () => {
       expect(
         await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed, provider }),
       ).toBe("Staff will confirm your arrival details.");
-      expect(provider.requests).toHaveLength(1);
-      const sent = JSON.stringify(provider.requests[0]);
+      expect(provider.requests).toHaveLength(2);
+      const sent = JSON.stringify(provider.requests);
       expect(sent).not.toContain("Private departure gate");
       expect(sent).not.toContain("101 Restricted Pier");
       expect((await stored(messageId))?.answeredAt).toBeNull();
@@ -590,6 +695,6 @@ describe("selected-message draft freshness", () => {
     expect(
       await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed, provider }),
     ).toBeNull();
-    expect(fixture.requests).toHaveLength(1);
+    expect(fixture.requests).toHaveLength(2);
   });
 });

@@ -110,6 +110,13 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
       ]
         .filter(Boolean)
         .join(" "),
+      meetingDayNumber: gap.dayNumber,
+      detailWithoutMeetingDay:
+        (gap.dayNumber ?? 1) > 1
+          ? undefined
+          : [rollCallGapDetailText(t, gap), rollCallAlertedText(t, gap, locale, timeZone)]
+              .filter(Boolean)
+              .join(" "),
       actionLabel: openRollCallActionText(t),
       // Straight to the checkpoint that is open, not the manifest's default
       // departure tab — one tap from the queue to the count that closes it.

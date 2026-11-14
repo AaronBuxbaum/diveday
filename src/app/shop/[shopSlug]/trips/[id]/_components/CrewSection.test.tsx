@@ -644,3 +644,24 @@ describe("the way out to the week's shifts", () => {
     expect(link).toHaveClass("self-start", "px-0");
   });
 });
+
+it("warns about a day off before assignment and retains the warning on assigned crew", () => {
+  const props = {
+    tripId: "trip",
+    shopSlug: "blue-mantis",
+    staff: [staffMember("away", "Ana Cruz")],
+    crewRoles: {},
+    onShiftIds: null,
+    awayPersonIds: ["away"],
+    crewGapCode: "none" as const,
+    updateCrewAction: vi.fn(async () => ({ ok: true })),
+    copy: { ...COPY, awayWarning: "Day off during this trip — resolve with crew" },
+  };
+  const view = render(<CrewSection {...props} crewIds={[]} />);
+  expect(
+    screen.getByRole("option", { name: "Ana Cruz — Day off during this trip — resolve with crew" }),
+  ).not.toBeDisabled();
+  view.unmount();
+  render(<CrewSection {...props} crewIds={["away"]} />);
+  expect(screen.getByText("Day off during this trip — resolve with crew")).toBeVisible();
+});

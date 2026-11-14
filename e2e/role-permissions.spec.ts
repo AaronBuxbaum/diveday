@@ -201,8 +201,12 @@ test.describe("H-20260724-staff-role-reach role permissions", () => {
       // composer's presence is the whole assertion: nothing is typed and
       // nothing is sent, so this stays READ_ONLY (the send is
       // `e2e/inbox.spec.ts`).
-      await page.getByRole("button", { name: "More for the message from Priya Sharma" }).click();
-      await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
+      await page
+        .getByRole("listitem")
+        .filter({ hasText: "Priya Sharma" })
+        .first()
+        .getByRole("link", { name: "Priya Sharma" })
+        .click();
       await expect(
         page.getByLabel("Reply by email to priya.sharma@mail.example", {
           exact: true,

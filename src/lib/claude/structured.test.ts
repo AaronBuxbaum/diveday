@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { HEALTH_MESSAGE_NOT_KEPT, keepUnlessHealth } from "@/lib/assists/inbox";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import type { ClaudeRequest } from "./provider";
 import { buildStructuredRequest, callStructured, type StructuredCall } from "./structured";
@@ -60,6 +61,105 @@ describe("buildStructuredRequest", () => {
 });
 
 describe("callStructured", () => {
+  it("redacts a health thread if a tool fails after untrusted intermediate text", async () => {
+    const provider = fakeClaude({
+      reply: () => ({
+        ...fakeClaudeMessage({ text: "", stopReason: "tool_use" }),
+        content: [
+          { type: "text", text: '{"medical":false}', citations: null },
+          {
+            type: "tool_use",
+            caller: { type: "direct" },
+            id: "t",
+            name: "read_shop_facts",
+            input: {},
+          },
+        ],
+      }),
+    });
+    const result = await callStructured(provider, {
+      ...call,
+      content: "I am pregnant",
+      keepTranscript: keepUnlessHealth,
+      clientTool: {
+        name: "read_shop_facts",
+        required: true,
+        execute: async () => {
+          throw new Error("failed");
+        },
+      },
+    });
+    expect(result.transcript.content).toBe(HEALTH_MESSAGE_NOT_KEPT);
+    expect(JSON.stringify(result.transcript)).not.toContain("pregnant");
+  });
+  it("rejects an answer that skips a required shop lookup", async () => {
+    const provider = fakeClaude({
+      reply: () => fakeClaudeMessage({ text: JSON.stringify({ tag: "question", confidence: 1 }) }),
+    });
+    const result = await callStructured(provider, {
+      ...call,
+      clientTool: { name: "read_shop_facts", required: true, execute: async () => "facts" },
+    });
+    expect(result.value).toBeNull();
+    expect(result.outcome).toBe("invalid");
+  });
+  it("does not execute a second client lookup in one draft", async () => {
+    const handler = vi.fn(async () => "facts");
+    const provider = fakeClaude({
+      reply: () => ({
+        ...fakeClaudeMessage({ text: "", stopReason: "tool_use" }),
+        content: [
+          {
+            type: "tool_use",
+            caller: { type: "direct" },
+            id: "tool_1",
+            name: "read_shop_facts",
+            input: {},
+          },
+        ],
+      }),
+    });
+    const result = await callStructured(provider, {
+      ...call,
+      clientTool: { name: "read_shop_facts", execute: handler },
+    });
+    expect(result.value).toBeNull();
+    expect(result.outcome).toBe("invalid");
+    expect(handler).toHaveBeenCalledOnce();
+    expect(provider.requests).toHaveLength(2);
+  });
+  it("executes a bounded client tool and accounts for both provider turns", async () => {
+    const handler = vi.fn(async () => "current scoped facts");
+    let turn = 0;
+    const provider = fakeClaude({
+      reply: () => {
+        turn += 1;
+        if (turn === 1)
+          return {
+            ...fakeClaudeMessage({ text: "", stopReason: "tool_use" }),
+            content: [
+              {
+                type: "tool_use",
+                caller: { type: "direct" },
+                id: "tool_1",
+                name: "read_shop_facts",
+                input: {},
+              },
+            ],
+          };
+        return fakeClaudeMessage({ text: JSON.stringify({ tag: "question", confidence: 0.9 }) });
+      },
+    });
+    const result = await callStructured(provider, {
+      ...call,
+      clientTool: { name: "read_shop_facts", execute: handler },
+    });
+    expect(result.value?.tag).toBe("question");
+    expect(handler).toHaveBeenCalledOnce();
+    expect(provider.requests).toHaveLength(2);
+    expect(JSON.stringify(provider.requests[1].messages)).toContain("current scoped facts");
+    expect(result.usage.inputTokens).toBe(20);
+  });
   it("returns the validated value, the usage and what it cost", async () => {
     const provider = fakeClaude({
       reply: () =>

@@ -1,6 +1,13 @@
 import { weekStartOf } from "@/lib/week-board";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripAbout, tripPathByTitle } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openTripAbout,
+  selectCrewByName,
+  tripPathByTitle,
+} from "./helpers";
 
 signedInAsOwner();
 
@@ -25,7 +32,7 @@ test("a crew member away on a day they are rostered is named on the board", asyn
   await page.goto(await tripPathByTitle(page, SHOP, title));
   await openTripAbout(page);
   await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+  await selectCrewByName(page, "Marcus Webb");
   // Still assignable: a day away is somebody's note, not a refusal.
   await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
 

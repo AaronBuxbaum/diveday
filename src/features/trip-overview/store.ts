@@ -1,3 +1,4 @@
+import { listCrewAvailabilityBlocks } from "@/db/crew-requests";
 import {
   boatClashes,
   bookedDiverLanguages,
@@ -110,18 +111,32 @@ export async function getTripOverview(
   // the series and the permission — chain off their own input inside the wave
   // rather than after the whole of it (issue #2353), and the two clash reads
   // need nothing but the departure.
+  const awayBlocksRead = listCrewAvailabilityBlocks(
+    db,
+    shop.id,
+    {
+      from: calendarDateInTimezone(trip.startsAt, shop.timezone),
+      to: calendarDateInTimezone(new Date(trip.endsAt.getTime() - 1), shop.timezone),
+    },
+    "dates_only",
+  );
   const crewAssignmentsRead = getTripCrewAssignments(db, shop.id, tripId);
+  const scheduleDaysRead = listTripScheduleDays(db, shop.id, tripId);
   const canConfigureRead = canPersonConfigureTrips(db, shop.id, actorPersonId);
   const seriesRead = getTripSeriesSummary(db, shop.id, tripId);
-  const crewEvidenceRead = crewAssignmentsRead.then(async (assignments) => {
-    const ids = assignments.map((entry) => entry.personId);
-    const [credentials, shiftCoverage] = await Promise.all([
-      ratingCredentialsByPerson(db, shop.id, ids),
-      // No shifts exist to cover anybody while the crew schedule is off.
-      shop.crewScheduleEnabled ? crewShiftCoverage(db, shop.id, trip, ids) : null,
-    ]);
-    return { credentials, shiftCoverage };
-  });
+  const crewEvidenceRead = Promise.all([crewAssignmentsRead, scheduleDaysRead]).then(
+    async ([assignments, days]) => {
+      const ids = assignments.map((entry) => entry.personId);
+      const [credentials, shiftCoverage] = await Promise.all([
+        ratingCredentialsByPerson(db, shop.id, ids),
+        // No shifts exist to cover anybody while the crew schedule is off.
+        shop.crewScheduleEnabled
+          ? crewShiftCoverage(db, shop.id, trip, ids, days.length ? days : [trip])
+          : null,
+      ]);
+      return { credentials, shiftCoverage };
+    },
+  );
   // Only ever non-empty right after staff narrowed this run's cadence, and only
   // for someone who can act on it — a second query rather than a field on the
   // summary, because it is the one thing here that costs a join and is empty
@@ -163,7 +178,7 @@ export async function getTripOverview(
     listTripDives(db, shop.id, tripId),
     shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
     seriesRead,
-    listTripScheduleDays(db, shop.id, tripId),
+    scheduleDaysRead,
     canConfigureRead,
     // Whether this trip's cancellation was a called blow-out — the cascade record
     // is the surface a weather morning is worked from, so the trip page must
@@ -215,6 +230,21 @@ export async function getTripOverview(
     })),
   );
 
+  const awayBlocks = await awayBlocksRead;
+  const awayPersonIds = [
+    ...new Set(
+      awayBlocks
+        .filter((block) =>
+          (scheduleDays.length ? scheduleDays : [trip]).some(
+            (day) =>
+              block.startsOn <=
+                calendarDateInTimezone(new Date(day.endsAt.getTime() - 1), shop.timezone) &&
+              block.endsOn >= calendarDateInTimezone(day.startsAt, shop.timezone),
+          ),
+        )
+        .map((block) => block.personId),
+    ),
+  ];
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   // Day one's window, not the trip's whole span: a multi-day departure ends on
   // its *last* day, and the details editor's Departs/Returns boxes describe one
@@ -367,6 +397,7 @@ export async function getTripOverview(
       onShiftIds: shiftCoverage === null ? null : [...shiftCoverage],
       clashes,
       awayWorking: crewAwayWorking,
+      awayPersonIds,
     },
   };
 }

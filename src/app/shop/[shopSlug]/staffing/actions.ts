@@ -278,7 +278,7 @@ export async function decideCrewRequestAction(week: string, formData: FormData) 
     session.user.shopId,
     outcome.tripId,
     { operation: "assign", personId: outcome.personId },
-    { actorPersonId: session.user.personId },
+    { actorPersonId: session.user.personId, requireScheduledShift: true },
   );
   if (!assigned) {
     // The asker was approved and is still not aboard: they hear that, not the

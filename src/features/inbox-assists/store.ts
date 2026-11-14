@@ -43,6 +43,7 @@ export const TRIAGE_PER_VIEW = 5;
 /** The bounded public departure window and maximum number a desk would read out. */
 const FACT_DEPARTURES = 40;
 const FACT_HORIZON_DAYS = 45;
+const FACT_COURSES = 40;
 
 /**
  * **Whether triage would read this message**: the same rule as the `where` in
@@ -191,6 +192,7 @@ export async function replyFacts(
       currency: shops.currency,
       opens: shops.deskOpensMinute,
       closes: shops.deskClosesMinute,
+      hoursConfirmedAt: shops.deskHoursConfirmedAt,
       phone: shops.contactPhone,
       rentalTerms: shops.rentalTerms,
       replyNotes: shops.replyNotes,
@@ -226,10 +228,10 @@ export async function replyFacts(
   ]);
   const money = (cents: number | null | undefined) =>
     cents == null ? "price on request" : formatMoneyCents(cents, shop.currency, shop.locale);
-  const lines = [
-    `Shop: ${shop.name}. Times are local (${shop.timezone}).`,
-    `Desk hours: ${deskTimeValue(shop.opens)} to ${deskTimeValue(shop.closes)} daily.`,
-  ];
+  const lines = [`Shop: ${shop.name}. Times are local (${shop.timezone}).`];
+  if (shop.hoursConfirmedAt) {
+    lines.push(`Desk hours: ${deskTimeValue(shop.opens)} to ${deskTimeValue(shop.closes)} daily.`);
+  }
   if (shop.phone) lines.push(`Phone: ${shop.phone}`);
   const address = [shop.street, shop.locality, shop.region].filter(Boolean).join(", ");
   if (address) lines.push(`Address: ${address}`);
@@ -242,7 +244,7 @@ export async function replyFacts(
     .join(", ");
   if (offers) lines.push(`Offers: ${offers}.`);
   if (shop.tagline?.trim()) lines.push(`About: ${shop.tagline.trim()}`);
-  if (shop.description?.trim()) lines.push(shop.description.trim());
+  if (shop.description?.trim()) lines.push(shop.description.trim().slice(0, 400));
   if (shop.hotelPickup) lines.push("Hotel pickup is offered.");
   if (shop.packingList.length > 0) lines.push(`What to bring: ${shop.packingList.join("; ")}.`);
   if (shop.rentalItems.length > 0) lines.push(`Rental gear: ${shop.rentalItems.join(", ")}.`);
@@ -268,10 +270,13 @@ export async function replyFacts(
     lines.push(`- No public departures are listed in this ${FACT_HORIZON_DAYS}-day window.`);
   if (courses.length > 0) {
     lines.push("Courses:");
-    for (const course of courses) {
+    for (const course of courses.slice(0, FACT_COURSES)) {
       lines.push(`- ${course.title}: ${money(course.priceCents)}`);
       const about = (course.summary ?? course.description ?? "").trim();
       if (about) lines.push(`  ${about.slice(0, 400)}`);
+    }
+    if (courses.length > FACT_COURSES) {
+      lines.push(`- This list is limited to ${FACT_COURSES} courses; staff can check the rest.`);
     }
   }
   if (shop.rentalTerms?.trim()) lines.push(`Rental terms: ${shop.rentalTerms.trim()}`);
@@ -313,6 +318,50 @@ export type DraftReplyOutcome =
   | { text: string }
   | { text: null; reason: "unavailable" | "declined" | "nothing-to-answer" };
 
+/** Bind the lookup to the authenticated caller's shop, never to model input. */
+async function draftCallWithShopLookup(
+  db: AppDb,
+  shopId: string,
+  thread: readonly ThreadLine[],
+  now?: Date,
+) {
+  const [shop] = await db
+    .select({ notes: shops.replyNotes })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return replyDraftCall({
+    window: "",
+    facts: [],
+    thread,
+    knowledge: shop?.notes ?? "",
+    lookup: async (input) => {
+      if (
+        !input ||
+        typeof input !== "object" ||
+        Array.isArray(input) ||
+        Object.keys(input).length !== 0
+      ) {
+        throw new Error("Invalid shop lookup input");
+      }
+      const { window, lines } = await replyFacts(db, shopId, now);
+      const notesIndex = lines.indexOf("Notes from the shop:");
+      const facts = notesIndex < 0 ? lines : lines.slice(0, notesIndex);
+      const included: string[] = [];
+      let length = 0;
+      for (const fact of facts) {
+        if (length + fact.length + 1 > 35_000) break;
+        included.push(fact);
+        length += fact.length + 1;
+      }
+      if (included.length < facts.length) {
+        included.push("The fact list was truncated; staff must check omitted details.");
+      }
+      return `<window>\n${window}\n</window>\n<facts>\n${included.join("\n")}\n</facts>`;
+    },
+  });
+}
+
 /** {@link draftReplyFor} that says why when there is no draft. */
 export async function draftReplyOutcome(
   db: AppDb,
@@ -333,12 +382,14 @@ export async function draftReplyOutcome(
   // last there is nothing to answer.
   if (lines.at(-1)?.from !== "diver") return { text: null, reason: "nothing-to-answer" };
   const thread = lines.slice(-DRAFT_THREAD_LINES);
-  const { window, lines: facts } = await replyFacts(db, shopId, input.now);
   const { status, value } = await runAssistOutcome(db, {
     ...input,
     feature: "inbox_draft",
-    call: replyDraftCall({ window, facts, thread }),
+    call: await draftCallWithShopLookup(db, shopId, thread, input.now),
   });
+  if (JSON.stringify(await personThread(db, shopId, personId)) !== JSON.stringify(entries)) {
+    return { text: null, reason: "unavailable" };
+  }
   if (status === "skipped") return { text: null, reason: "unavailable" };
   const text = value ? draftedReply(value) : null;
   if (!text) {
@@ -418,11 +469,10 @@ export async function draftReplyToMessage(
   const thread: ThreadLine[] = [
     { from: "diver", text: [message.subject, message.body].filter(Boolean).join("\n\n") },
   ];
-  const { window, lines: facts } = await replyFacts(db, input.shopId, input.now);
   const value = await runAssist(db, {
     ...input,
     feature: "inbox_draft",
-    call: replyDraftCall({ window, facts, thread }),
+    call: await draftCallWithShopLookup(db, input.shopId, thread, input.now),
   });
   if (!value) return null;
   // Erasure or an edit while the model was answering must not resurrect old words.

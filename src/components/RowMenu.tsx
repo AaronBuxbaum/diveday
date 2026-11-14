@@ -44,6 +44,7 @@ export function RowMenu({
   open: controlledOpen,
   onOpenChange,
   onClosed,
+  keepMounted = false,
   children,
 }: {
   /** The "⋯" button's accessible name, naming the row it belongs to. */
@@ -55,6 +56,8 @@ export function RowMenu({
   onOpenChange?: (open: boolean) => void;
   /** Called whenever the list shuts, however it shut — to reset a panel's view. */
   onClosed?: () => void;
+  /** Preserve an unfinished editor when its menu is dismissed. */
+  keepMounted?: boolean;
   children: ReactNode | ((close: () => void) => ReactNode);
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -78,6 +81,7 @@ export function RowMenu({
   const panelRef = useRef<HTMLDivElement>(null);
   const [upward, setUpward] = useState(false);
   const [inlineEnd, setInlineEnd] = useState(0);
+  const [maxHeight, setMaxHeight] = useState<number>();
 
   // Measured before paint, so a list near the foot never flashes downward
   // first. The tab bar is fixed over the foot below `lg` (`--tabbar-h`), and a
@@ -92,10 +96,14 @@ export function RowMenu({
     }
     const positionPanel = () => {
       const trigger = triggerRef.current?.getBoundingClientRect();
-      const height = panel.getBoundingClientRect().height;
+      const height = Math.max(panel.scrollHeight, panel.getBoundingClientRect().height);
       if (!trigger || height === 0) return;
       const floor = window.innerHeight - tabBarHeight(panel);
-      setUpward(trigger.bottom + height + 8 > floor && trigger.top - height - 8 >= 0);
+      const below = Math.max(44, floor - trigger.bottom - 24);
+      const above = Math.max(44, trigger.top - 24);
+      const opensUpward = height > below && above > below;
+      setUpward(opensUpward);
+      setMaxHeight(opensUpward ? above : below);
 
       // The trigger may wrap to the left on a phone. Measure the unanimated
       // width, then clamp the normal end alignment inside the viewport.
@@ -114,7 +122,13 @@ export function RowMenu({
     };
     positionPanel();
     window.addEventListener("resize", positionPanel);
-    return () => window.removeEventListener("resize", positionPanel);
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(positionPanel);
+    observer?.observe(panel);
+    return () => {
+      window.removeEventListener("resize", positionPanel);
+      observer?.disconnect();
+    };
   }, [open, children]);
 
   // The first act takes focus as the list opens, so a keyboard reader lands in
@@ -122,7 +136,9 @@ export function RowMenu({
   useEffect(() => {
     if (!open) return;
     panelRef.current
-      ?.querySelector<HTMLElement>("button, a, select, input, textarea")
+      ?.querySelector<HTMLElement>(
+        "button:not(:disabled), a[href], select:not(:disabled), input:not([type='hidden']):not(:disabled), textarea:not(:disabled)",
+      )
       ?.focus({ preventScroll: true });
   }, [open]);
 
@@ -147,13 +163,14 @@ export function RowMenu({
       >
         <DiveDayIcon name="more" className="size-4" />
       </button>
-      {open ? (
+      {open || keepMounted ? (
         <div
+          hidden={!open}
           ref={panelRef}
           id={panelId}
           data-row-menu=""
-          style={{ insetInlineEnd: inlineEnd }}
-          className={`absolute end-0 z-20 ${upward ? "bottom-full mb-1" : "top-full mt-1"} max-w-[calc(100vw-2rem)] animate-scale-in ${MENU_PANEL} ${panelClassName}`}
+          style={{ insetInlineEnd: inlineEnd, maxHeight }}
+          className={`absolute end-0 z-20 max-h-[calc(100dvh-var(--tabbar-h,0px)-2rem)] overflow-y-auto ${upward ? "bottom-full mb-1" : "top-full mt-1"} max-w-[calc(100vw-2rem)] animate-scale-in ${MENU_PANEL} ${panelClassName}`}
         >
           {typeof children === "function" ? children(close) : children}
         </div>

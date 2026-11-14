@@ -266,7 +266,7 @@ export function reservedMicroUsd(call: StructuredCall<z.ZodType>): number {
     call.inputTokens ?? 0,
     call.tools?.length ? RESERVED_TOOL_INPUT_TOKENS : RESERVED_INPUT_TOKENS,
   );
-  const output = call.maxTokens ?? DEFAULT_RESERVED_OUTPUT_TOKENS;
+  const output = (call.maxTokens ?? DEFAULT_RESERVED_OUTPUT_TOKENS) * (call.clientTool ? 4 : 1);
   return Math.ceil(input * price.input + output * price.output);
 }
 
