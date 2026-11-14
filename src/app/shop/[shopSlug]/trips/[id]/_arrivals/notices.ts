@@ -15,7 +15,10 @@ import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff
 type CheckInRefusal = Extract<CheckInOutcome, { ok: false }>["reason"];
 type UndoRefusal = Extract<UndoCheckInOutcome, { ok: false }>["reason"];
 type MarkNoShowRefusal = Extract<MarkNoShowOutcome, { ok: false }>["reason"];
-type UndoNoShowRefusal = Extract<UndoNoShowOutcome, { ok: false }>["reason"];
+type UndoNoShowRefusal =
+  | Extract<UndoNoShowOutcome, { ok: false }>["reason"]
+  | Extract<UndoNoShowOutcome, { state: "conflict" }>["conflict"]
+  | "pending";
 type TurnAwayRefusal = Extract<TurnAwayOutcome, { ok: false }>["reason"];
 type DeskNoticeCode = NoticeCodeOf<
   | Exclude<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">, ArrivalOfflineRefusal>
@@ -53,12 +56,18 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "no-show-already-marked": { tone: "neutral", key: "checkIn.notice.noShowAlreadyMarked" },
   "no-show-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
   "no-show-trip-cancelled": { tone: "neutral", key: "checkIn.notice.noShowTripCancelled" },
-  "no-show-divers-full": { tone: "danger", key: "participants.notices.noShowDiversFull" },
+  "no-show-divers-full": { tone: "warning", key: "participants.notices.noShowDiversFull" },
   "no-show-before-departure": { tone: "warning", key: "checkIn.notice.noShowBeforeDeparture" },
   "no-show-window-closed": { tone: "warning", key: "checkIn.notice.noShowWindowClosed" },
   "no-show-not-marked": { tone: "neutral", key: "checkIn.notice.noShowNotMarked" },
-  // The seat was resold before the undo.
-  "no-show-trip-full": { tone: "danger", key: "checkIn.notice.noShowTripFull" },
+  // Recorded; the departure was busy, and the seat comes back after the response.
+  "no-show-pending": { tone: "neutral", key: "checkIn.notice.noShowPending" },
+  "no-show-key-reused": { tone: "danger", key: "checkIn.notice.invalid" },
+  // Recorded and open: the seat was resold before the tap, so it waits for the next one.
+  "no-show-trip-full": { tone: "warning", key: "checkIn.notice.noShowTripFull" },
+  "no-show-seat-moved": { tone: "warning", key: "checkIn.notice.noShowSeatMoved" },
+  "no-show-seat-cancelled": { tone: "warning", key: "checkIn.notice.noShowSeatCancelled" },
+  "no-show-diver-erased": { tone: "neutral", key: "checkIn.notice.notFound" },
   "no-show-course-ratio-full": { tone: "danger", key: "checkIn.notice.noShowCourseRatioFull" },
   "no-show-course-unstaffed": { tone: "danger", key: "checkIn.notice.noShowCourseUnstaffed" },
   "no-show-course-prerequisite": {

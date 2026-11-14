@@ -820,6 +820,20 @@ const rows = [
     why: "a crew member on a team, refused as a staff record",
   },
   {
+    table: "boarding_observations",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who saw the diver at the dock",
+  },
+  {
+    table: "boarding_observations",
+    column: "dismissed_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who set aside a dock sighting that could not take its seat back",
+  },
+  {
     table: "booking_arrival_events",
     column: "recorded_by_person_id",
     kind: "actor",

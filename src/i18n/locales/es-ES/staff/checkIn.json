@@ -20,6 +20,7 @@
     "badge": "No vino",
     "undo": "Volver a ponerlo en la lista",
     "undoing": "Poniéndolo…",
+    "hereWaiting": "Aquí, esperando plaza",
     "undoAriaLabel": "Volver a poner a {name} en la lista de esta salida",
     "waiting": "{count, plural, one {# buceador está esperando esta plaza} other {# buceadores están esperando esta plaza}}",
     "waitingDoor": "Ver quién quiere plaza",
@@ -102,11 +103,14 @@
     "turnAwayReasonNotBlocking": "Su fila cambió. Elige un motivo que aparezca ahora.",
     "noShowWindowClosed": "Esa salida queda demasiado atrás para marcar que alguien no vino. Cambia la reserva desde su fila.",
     "noShowNotMarked": "Ese buceador no está marcado como que no vino.",
+    "noShowPending": "Guardado que está aquí. Su plaza vuelve en un momento.",
+    "noShowSeatMoved": "Guardado que está aquí, pero su plaza pasó a otra salida.",
+    "noShowSeatCancelled": "Guardado que está aquí, pero su reserva se quitó.",
     "noShowTurnedAwayDeparted": "Ese buceador no embarcó por decisión del mostrador y el barco ya salió, así que no puede volver a esta salida. Abre su fila para quitar la reserva.",
-    "noShowTripFull": "La plaza liberada ya se ocupó, así que ese buceador no puede volver a esta salida.",
-    "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero.",
-    "noShowCourseUnstaffed": "Esa sesión no tiene instructor, así que ese buceador no puede volver a ella. Asigna un instructor primero.",
-    "noShowCoursePrerequisite": "Ese buceador ya no tiene la certificación que pide este curso, así que no puede volver a él.",
-    "noShowCourseMinAge": "Ese buceador no tiene la edad mínima del curso el día que se imparte, así que no puede volver a él. Corrige la fecha de nacimiento si es incorrecta."
+    "noShowTripFull": "Guardado que está aquí. Su plaza se vendió, así que tendrá la próxima que quede libre.",
+    "noShowCourseRatioFull": "Guardado que está aquí. La sesión está en su ratio instructor-alumno. Asigna otro instructor para volver a ponerlo.",
+    "noShowCourseUnstaffed": "Guardado que está aquí. La sesión no tiene instructor. Asigna uno para volver a ponerlo.",
+    "noShowCoursePrerequisite": "Guardado que está aquí, pero ya no tiene la certificación que pide este curso.",
+    "noShowCourseMinAge": "Guardado que está aquí, pero no tiene la edad mínima del curso el día que se imparte. Corrige la fecha de nacimiento si es incorrecta."
   }
 }

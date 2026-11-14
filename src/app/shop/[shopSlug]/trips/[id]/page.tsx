@@ -14,11 +14,11 @@ import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
 import { CoursePulse } from "./_components/CoursePulse";
 import { DeskRefresh } from "./_components/DeskRefresh";
+import { DiversTabBands } from "./_components/DiversTabBands";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { departureStateOf } from "./_components/departure-states";
 import { detailsReadRows } from "./_components/details-rows";
 import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
-import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
 import { addBandFor } from "./_components/seat-request-band";
@@ -335,15 +335,14 @@ export default async function ManageTripPage({
               refreshing: t("checkIn.pullToRefresh.refreshing"),
             }}
           >
-            {pulseNeeded && !sailed ? (
-              <MinimumSeatsBand
-                trip={trip}
-                booked={trip.booked}
-                locale={locale}
-                timeZone={shop.timezone}
-                t={t}
-              />
-            ) : null}
+            <DiversTabBands
+              overview={overview}
+              showMinimum={pulseNeeded && !sailed}
+              shopSlug={shopSlug}
+              locale={locale}
+              timeZone={shop.timezone}
+              t={t}
+            />
 
             <PulseFacts
               facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}

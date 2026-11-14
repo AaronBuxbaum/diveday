@@ -593,12 +593,12 @@ describe("markBookingNoShow", () => {
 
 describe("undoBookingNoShow", () => {
   it("puts the diver back on the expected list and keeps both taps on the trail", async () => {
-    const { db, shop, trip, staffId, bookingId, personName, now } = await context();
+    const { db, shop, trip, staffId, bookingId, now } = await context();
     await markBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now });
 
     expect(
       await undoBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
-    ).toEqual({ ok: true, bookingId, tripId: trip.id, personName });
+    ).toEqual({ ok: true, bookingId, tripId: trip.id, state: "applied" });
     expect(await statusOf(db, bookingId)).toBe("booked");
     const trail = await db
       .select({ code: activityEvents.code })
@@ -713,7 +713,7 @@ describe("undoBookingNoShow", () => {
 
     expect(
       await undoBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
-    ).toEqual({ ok: false, reason: "trip_full" });
+    ).toMatchObject({ ok: true, state: "conflict", conflict: "trip_full" });
     expect(await statusOf(db, bookingId)).toBe("no_show");
     const undone = await db
       .select({ code: activityEvents.code })
@@ -775,7 +775,7 @@ describe("undoBookingNoShow", () => {
         recordedByPersonId: staffId,
         now,
       }),
-    ).toEqual({ ok: false, reason: "course_ratio_full" });
+    ).toMatchObject({ ok: true, state: "conflict", conflict: "course_ratio_full" });
     expect(await statusOf(db, late)).toBe("no_show");
     // The ratio refusal reads as itself on the trail, not as the sold-seat one:
     // this session needs another instructor, not another boat.
@@ -834,7 +834,7 @@ describe("undoBookingNoShow", () => {
 
     expect(
       await undoBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
-    ).toEqual({ ok: false, reason: "trip_cancelled" });
+    ).toMatchObject({ ok: true, state: "conflict", conflict: "trip_cancelled" });
     expect(await statusOf(db, bookingId)).toBe("no_show");
     // Neither the undo nor a refusal line: the two refusals that get their own
     // entry are the ones where the *seat* is gone and a shop has a next act to

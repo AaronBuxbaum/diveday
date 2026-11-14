@@ -926,7 +926,7 @@
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 923,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1073,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
-    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1027,
+    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 990,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1146,
     "src/components/MarketingFeatureScreens.tsx": 948,
     "src/components/search/CommandPalette.tsx": 913,
@@ -988,7 +988,6 @@
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 392,
-    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 306,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 302,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 632,
@@ -1055,7 +1054,7 @@
     "src/app/shop/[shopSlug]/promos/page.tsx": 407,
     "src/app/shop/[shopSlug]/reports/page.tsx": 412,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 569,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 407
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 406
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

@@ -2,7 +2,7 @@ import type { listOpenDateInterestsForDates } from "@/db/interest-dates";
 import type { weekBoard } from "@/db/trips";
 import { maxConcurrentTrips, overlappingBoatIds } from "@/features/boats";
 import type { openAfterDiveRollCalls } from "@/features/roll-call-gaps";
-import type { LastYearWeek, WeekCrew } from "@/features/schedule-board-page";
+import type { LastYearWeek, WeekConflicts, WeekCrew } from "@/features/schedule-board-page";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,
@@ -172,6 +172,7 @@ export function boardWeekView({
   weekRows,
   weekAsks,
   openRollCalls,
+  weekConflicts = new Map(),
   crewByTrip,
   boatMap,
   yardWindows = new Map(),
@@ -191,6 +192,8 @@ export function boardWeekView({
   weekRows: Awaited<ReturnType<typeof weekBoard>>;
   weekAsks: Awaited<ReturnType<typeof listOpenDateInterestsForDates>>;
   openRollCalls: Awaited<ReturnType<typeof openAfterDiveRollCalls>>;
+  /** Dock observations and double bookings per departure (issue #4474). */
+  weekConflicts?: WeekConflicts;
   crewByTrip: WeekCrew;
   boatMap: Map<string, string>;
   /** Each live hull's out-of-service window (loop 5, row 5), by id. */
@@ -302,6 +305,7 @@ export function boardWeekView({
         // `src/lib/week-seats.ts` must never have to read one.
         seats: { booked: entry.booked, capacity: entry.capacity },
         rollCallOpen: weekRollCalls.get(entry.tripId) ?? null,
+        conflicts: weekConflicts.get(entry.tripId) ?? null,
         // Single-day by construction: `weekBoard` returns a multi-day course
         // as a span, never as a day entry, so an entry's move panel never has
         // a block of days to warn about.
@@ -373,6 +377,7 @@ export function boardWeekView({
         // A rehearsal is a single departure, never a multi-day span.
         rehearsal: false,
         rollCallOpen: weekRollCalls.get(span.tripId) ?? null,
+        conflicts: weekConflicts.get(span.tripId) ?? null,
         crewAway: crewAwayLine(crewByTrip.get(span.tripId), st, locale),
         ref: `${span.title}, ${formatCalendarDateRange(span.firstDay, span.lastDay, locale)}`,
         startColumn: first + 1,

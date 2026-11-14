@@ -4,7 +4,7 @@
     "typeChangeUnavailable": "On a course session, students stay divers and nobody else becomes one. Use Remove booking, then seat them again as what they’ll do. Snorkelers and riders need a price on the session.",
     "typeUnavailable": "On a course session, students stay divers and nobody else becomes one. Snorkelers and riders need a price on the session.",
     "restoreDiversFull": "Couldn’t undo. Every diver’s seat has been taken since.",
-    "noShowDiversFull": "Couldn’t put them back. Every diver’s seat has been taken since.",
+    "noShowDiversFull": "Saved that they’re here. Every diver’s seat has been taken, so they get the next one that opens.",
     "typeSet": "Saved",
     "onBuddyTeam": "Take them off their buddy team first. A buddy team is divers only.",
     "certBlocked": "Their card for this trip isn’t on file. Check it first, or change anyway.",

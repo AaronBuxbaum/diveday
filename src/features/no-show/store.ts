@@ -1,13 +1,12 @@
 import { and, eq, isNull } from "drizzle-orm";
-import {
-  heldSeatCounts,
-  liveTrip,
-  pagedUpcomingTripsWithCounts,
-  seatHeld,
-  sellableCapacity,
-} from "@/db/trips";
+import { liveTrip, pagedUpcomingTripsWithCounts, seatHeld } from "@/db/trips";
 import { loadActiveStaffRoles } from "../../db/authz";
-import { courseSeatRefusal } from "../../db/bookings";
+import {
+  observationStanding,
+  type RecordObservationOutcome,
+  recordBoardingObservation,
+  settleBoardingObservations,
+} from "../../db/boarding-observations";
 import { expirePendingCheckoutsForBooking } from "../../db/checkouts";
 import type { AppDb, DbExecutor } from "../../db/client";
 import { departureOpenToDiver } from "../../db/interest-offers";
@@ -20,11 +19,10 @@ import { shopHasFeatureOn } from "../../db/shops";
 import { tripPrimarySiteId } from "../../db/trip-primary-site";
 
 import { isStaff } from "../../lib/authz";
+import type { BoardingObservationConflict } from "../../lib/boarding-observations";
 import { nowDate } from "../../lib/clock";
-import type { CourseAdmissionRefusal } from "../../lib/course-admission";
 import { seatName } from "../../lib/held-seat";
 import { type NoShowGate, noShowGate, type SalvageOffer, salvageOffer } from "../../lib/no-show";
-import { isDiver, seatRefusal } from "../../lib/participant-types";
 import { type SimilarDeparture, similarDepartures } from "../../lib/similar-departures";
 
 /**
@@ -60,29 +58,22 @@ export type MarkNoShowOutcome =
   | { ok: false; reason: Exclude<NoShowGate, "eligible"> | "not_found" | "staff_not_found" };
 
 export type UndoNoShowOutcome =
-  | { ok: true; bookingId: string; tripId: string; personName: string }
   | {
-      ok: false;
-      reason:
-        | "not_found"
-        | "staff_not_found"
-        | "not_marked"
-        | "trip_full"
-        /** The boat has room, but every diver's seat has gone (ADR 20261007-participant-types). */
-        | "divers_full"
-        /**
-         * The course session's own gates, asked again (issues #3769, #3686):
-         * no instructor, the student's card gone, too young, or the ratio full.
-         */
-        | CourseAdmissionRefusal
-        | "trip_cancelled"
-        /**
-         * The desk turned this diver away and the boat's scheduled start has
-         * passed: they are ashore, and putting them back would show them
-         * aboard (layer 3 re-review, dde-3 #2).
-         */
-        | "turned_away_departed";
-    };
+      ok: true;
+      bookingId: string;
+      tripId: string;
+      /** The seat is back (`applied`), or the observation is recorded and waiting (`pending`). */
+      state: "applied" | "pending";
+    }
+  | {
+      ok: true;
+      bookingId: string;
+      tripId: string;
+      /** Recorded, and open: the departure cannot take the diver back yet, and says why. */
+      state: "conflict";
+      conflict: BoardingObservationConflict;
+    }
+  | Extract<RecordObservationOutcome, { ok: false }>;
 
 /**
  * The person recording this is staff at this shop, right now.
@@ -229,203 +220,70 @@ export async function markBookingNoShow(
 }
 
 /**
- * **Take the mark back**, for the diver who walks in as the lines come off.
+ * **"They're here": take the mark back**, for the diver who walks in as the
+ * lines come off (issue #4474).
  *
- * Not a plain status flip, because the release was real: by the time somebody
- * taps Undo the shop may have sold the seat to the diver who was waiting for
- * it, and putting the first one back would overfill the boat. So the seat
- * count re-runs under the trip's own lock — `FOR NO KEY UPDATE`, taken by
- * `lockSeatDeparture` before the booking (#2324's order), which still
- * serializes against `restoreBooking` and `bookSpot`'s `FOR UPDATE` — and a
- * seat that is gone refuses rather than quietly oversells.
+ * The release was real, so by the time somebody taps the seat may have been
+ * sold. It used to be one locked transaction that either put the seat back or
+ * refused, and a refusal (or a lock wait behind a schedule write on the same
+ * departure) left no record that the diver was standing at the dock. Now the
+ * tap is an observation first (`recordBoardingObservation`): it commits without
+ * waiting on the departure, idempotent by the form's own `clientKey`, and from
+ * then on it holds the freed seat in every capacity count. The seat is then
+ * allocated under the departure's lock (`settleBoardingObservations`), with a
+ * one-second wait so the tap stays quick: `applied` puts the seat back as the
+ * undo always did, `conflict` keeps the observation open with the reason (the
+ * seat was sold, the course is full, the boat was called off) on the departure
+ * and the board, and `pending` means the departure was busy and the retry after
+ * the response or the shop tick will settle it.
  *
- * "Gone" means gone under **both** limits every seat-granting path applies, the
- * same pair `restoreBooking` checks and for the same reason: the trip's own
- * capacity, and on a ratio-gated course session the crew's seat cap
- * (`courseSeatCapacity`). Capacity alone left the tightest control in the
- * product one tap from being exceeded — mark a late participant not here on a
- * two-seat intro session, let a walk-up take the freed seat, then tap Undo as
- * they arrive at the dock, and a third uncertified first-timer joins one
- * instructor with no refusal anywhere.
- *
- * The trip's own state is read under that lock too, for the one condition that
- * makes an undo meaningless: **cancelled**. Nobody fails to show for a boat
- * that never left, so the mark is already refused there (`noShowGate`); the
- * undo answers the same way `restoreBooking` does, and reinstating the
- * departure is the recovery. No hold check and no departure-time check: an undo
- * is not a new booking, and the diver it puts back is the one standing at the
- * dock as the lines come off.
- *
- * The trail keeps both taps, and the tap that was refused. A correction is its
- * own line, never a deletion of the first one: "who released this seat, and did
- * they take it back?" is a question asked at a desk with a stranger standing at
- * it — and "somebody tried and the seat was gone" is the answer that question
- * most needs (`booking_no_show_undo_refused`, and the `refuse` helper below).
- *
- * **And the seat comes back as what it was**, which the arrival trail is the
- * only record of: a diver a staffer checked in at 06:40 and released at 07:10
- * still has that `arrived` row standing, because the mark never touches it,
- * and every reader of "checked in" reads the trail (`seatCheckedIn`,
- * src/db/arrival-provenance.ts). Before issue #2702 the restore had to copy
- * the trail back onto the seat word, and restoring every seat to `booked` put a diver who is standing
- * at the desk back on the counter's "still to come" list and asked a staffer to
- * check them in a second time with the diver in front of them
- * (`dive-domain-expert`, 2026-09-11).
+ * Both limits, the course gates and the cancelled and turned-away boundaries
+ * are the ones the old undo asked (`observationPrecheck`, then the count);
+ * nothing here grants a seat the old undo would have refused.
  */
 export async function undoBookingNoShow(
   db: AppDb,
-  input: { shopId: string; bookingId: string; recordedByPersonId: string; now?: Date },
+  input: {
+    shopId: string;
+    tripId?: string;
+    bookingId: string;
+    recordedByPersonId: string;
+    clientKey?: string;
+    now?: Date;
+  },
 ): Promise<UndoNoShowOutcome> {
-  const now = input.now ?? nowDate();
-  const result = await db.transaction(async (tx): Promise<UndoNoShowOutcome> => {
-    const recorder = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
-    if (!recorder) return { ok: false, reason: "staff_not_found" };
-
-    // The departure, then the seat (`lockSeatDeparture`): this used to lock
-    // the seat first and deadlock against a participant-type change (#2324).
-    const tripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
-    if (!tripId) return { ok: false, reason: "not_found" };
-    const [seat] = await tx
-      .select({
-        id: bookings.id,
-        status: bookings.status,
-        tripId: bookings.tripId,
-        participantType: bookings.participantType,
-        turnedAwayAt: bookings.turnedAwayAt,
-        personId: bookings.personId,
-        personName: people.fullName,
-      })
-      .from(bookings)
-      .innerJoin(people, eq(people.id, bookings.personId))
-      .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          eq(bookings.tripId, tripId),
-        ),
-      )
-      .limit(1)
-      .for("update", { of: [bookings, people] });
-    if (!seat) return { ok: false, reason: "not_found" };
-    if (seat.status !== "no_show") return { ok: false, reason: "not_marked" };
-
-    // Already locked above; read under that lock.
-    const [trip] = await tx
-      .select({
-        id: trips.id,
-        shopId: trips.shopId,
-        boatId: trips.boatId,
-        capacity: trips.capacity,
-        diverCapacity: trips.diverCapacity,
-        status: trips.status,
-        courseId: trips.courseId,
-        startsAt: trips.startsAt,
-      })
-      .from(trips)
-      .where(and(eq(trips.id, seat.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-      .limit(1);
-    if (!trip) return { ok: false, reason: "not_found" };
-    if (trip.status === "cancelled") return { ok: false, reason: "trip_cancelled" };
-    // A diver the desk turned away was seen ashore. From the scheduled start
-    // (the boundary `turnAwayGate` closes on) putting them back would hold
-    // the seat under a standing arrival and show them checked in for a boat that
-    // left without them (dde-3 #2). A plain "Not here" keeps its Undo: that
-    // diver may be walking up as the lines come off.
-    if (seat.turnedAwayAt !== null && now.getTime() >= trip.startsAt.getTime()) {
-      return { ok: false, reason: "turned_away_departed" };
-    }
-
-    // Counted under the lock, and counting only the seats somebody else holds:
-    // this booking is `no_show` right now, so it is not in the total, and the
-    // question is whether the boat has room for it back.
-    //
-    // Both limits (ADR 20261007-participant-types): every held seat against the
-    // boat, and divers against the divers-only limit when this seat is one.
-    const held = await heldSeatCounts(tx, input.shopId, trip.id);
-    /**
-     * **The two refusals that get a line of their own.**
-     *
-     * Every other one is either nothing happening (`not_marked` is a second
-     * tap, `not_found` is a row this shop cannot see) or a fact already on the
-     * board (`trip_cancelled`). These two are different: the seat is gone, a
-     * staffer is standing at a desk with the diver in front of them, and until
-     * this existed the shop's record of that morning ended at "somebody was
-     * written off" — the mark was on the trail, the attempt to take it back was
-     * not, and the person reconciling a full departure afterwards had no way to
-     * learn that anyone had tried.
-     *
-     * The trail rather than the manifest, for the reason the mark is there:
-     * the manifest answers "who is aboard", and nobody is. This is history,
-     * and history is what the trail is for.
-     */
-    const refuse = async (
-      reason: "trip_full" | "divers_full" | CourseAdmissionRefusal,
-    ): Promise<UndoNoShowOutcome> => {
-      await tx.insert(activityEvents).values({
-        shopId: input.shopId,
-        tripId: seat.tripId,
-        bookingId: seat.id,
-        actorPersonId: recorder.id,
-        code: "booking_no_show_undo_refused",
-        params: { actor: recorder.name, diver: seat.personName, reason },
-        occurredAt: now,
-      });
-      return { ok: false, reason };
-    };
-    // The boat's certificate caps the seats under the same lock (H-20261009-certificate-caps-seats).
-    const capacity = await sellableCapacity(tx, trip);
-    const full = seatRefusal(seat.participantType, { ...trip, capacity }, held);
-    if (full) return await refuse(full);
-
-    // A course session's gates, every one the sale asks (issues #3769,
-    // #3686): staffing, the student's card and age, then the ratio, which
-    // counts its students, its divers (G5 of #2226): a priced rider beside the
-    // class is a passenger, asked only staffing. Asked as the staff door asks,
-    // because only staff take a release back.
-    const courseRefusal = await courseSeatRefusal(tx, {
-      trip,
-      actor: "staff",
-      personId: seat.personId,
-      student: isDiver(seat.participantType),
-      studentsHeld: held.divers,
-    });
-    if (courseRefusal) return await refuse(courseRefusal);
-    // No `tripAdmissionFor` here, for the reason `restoreBooking` records
-    // (issue #3839): a charter's own card gate is the weaker booking-time half,
-    // the seat was already sold, and readiness holds the diver at the dock.
-
-    // The seat is held again, and that is all this writes. Whether the desk
-    // saw the diver is the arrival trail's, which the release left standing,
-    // so a diver checked in before the mark reads as checked in again with no
-    // second statement (issues #1838, #2702). Not a new check-in and so no
-    // readiness re-read: boarding re-gates readiness of its own at the rail
-    // (`recordRollCall`, src/db/manifests.ts).
-    const [updated] = await tx
-      .update(bookings)
-      // Back on the list, so no longer turned away either: the reason only
-      // ever sits on a released seat (`bookings_turned_away_is_released`).
-      .set({
-        status: "booked",
-        turnedAwayReason: null,
-        turnedAwayAt: null,
-      })
-      .where(and(eq(bookings.id, seat.id), eq(bookings.status, "no_show")))
-      .returning({ id: bookings.id });
-    if (!updated) return { ok: false, reason: "not_marked" };
-
-    await tx.insert(activityEvents).values({
-      shopId: input.shopId,
-      tripId: seat.tripId,
-      bookingId: seat.id,
-      actorPersonId: recorder.id,
-      code: "booking_no_show_undone",
-      params: { actor: recorder.name, diver: seat.personName },
-      occurredAt: now,
-    });
-    return { ok: true, bookingId: seat.id, tripId: seat.tripId, personName: seat.personName };
+  const recorded = await recordBoardingObservation(db, input);
+  if (!recorded.ok) return recorded;
+  const settled = await settleBoardingObservations(db, {
+    shopId: input.shopId,
+    tripId: recorded.tripId,
+    wait: "brief",
+    now: input.now,
   });
-  if (result.ok) await publishManifestEvent(db, input.shopId, result.tripId);
-  return result;
+  const base = { ok: true as const, bookingId: recorded.bookingId, tripId: recorded.tripId };
+  if (!settled.ok) return { ...base, state: "pending" };
+  const mine = settled.settled.find((row) => row.observationId === recorded.observationId);
+  // Not in this pass: another pass holds the row (`SKIP LOCKED`) or already
+  // settled it. Read where it stands rather than guess.
+  if (!mine) {
+    const standing = await observationStanding(db, input.shopId, recorded.observationId);
+    if (standing?.state === "conflict" && standing.conflict) {
+      return { ...base, state: "conflict", conflict: standing.conflict };
+    }
+    return { ...base, state: standing?.state === "applied" ? "applied" : "pending" };
+  }
+  if (mine.state === "conflict" && mine.conflict) {
+    return { ...base, state: "conflict", conflict: mine.conflict };
+  }
+  return { ...base, state: "applied" };
+}
+
+/** Settle a departure's observations after the response, with the ordinary lock wait. */
+export async function settleDockObservations(
+  db: AppDb,
+  input: { shopId: string; tripId: string },
+): Promise<void> {
+  await settleBoardingObservations(db, { ...input, wait: "bounded" });
 }
 
 /**

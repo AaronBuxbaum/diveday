@@ -38,6 +38,12 @@
  * The requested-erasure sweep handles person references and matching
  * denormalized names (`src/features/anonymize/store.ts`; ADR 20260804-buddy-teams).
  *
+ * **`boarding_observations` is deliberately unbounded.** Each row is the desk
+ * seeing a diver at the dock, and what became of it (the seat taken back, or
+ * why not). It is the same evidence as a desk arrival, and a physical boarding
+ * observation is never lost (Aaron, issue #4474, 2026-11-14). Its person
+ * references are actors, kept on erasure like the other desk trails.
+ *
  * **`safety_drills` and `safety_drill_participants` are deliberately
  * unbounded.** The drill log is what an insurer renewal reads: when the shop
  * last drilled oxygen, a missing diver, a person overboard or a fire, and who
@@ -159,6 +165,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "safety_drills",
   "safety_drill_participants",
   "booking_arrival_events",
+  "boarding_observations",
   "pre_departure_check_events",
   "trip_change_events",
   "review_moderation_events",

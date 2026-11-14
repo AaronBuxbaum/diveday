@@ -20,6 +20,7 @@
     "badge": "Not here",
     "undo": "Put back on the list",
     "undoing": "Putting back…",
+    "hereWaiting": "Here, waiting for a seat",
     "undoAriaLabel": "Put {name} back on this boat’s list",
     "waiting": "{count, plural, one {# diver is waiting for this seat} other {# divers are waiting for this seat}}",
     "waitingDoor": "See who wants in",
@@ -96,17 +97,20 @@
     "noShowBeforeDeparture": "That boat has not left yet, so nobody has missed it. Try again once it departs.",
     "noShowWindowClosed": "That departure is too far past to mark anyone not here. Change the booking from their row instead.",
     "noShowNotMarked": "That diver is not marked not here.",
+    "noShowPending": "Saved that they’re here. Their seat comes back in a moment.",
+    "noShowSeatMoved": "Saved that they’re here, but their seat has moved to another departure.",
+    "noShowSeatCancelled": "Saved that they’re here, but their booking has been removed.",
     "noShowTurnedAwayDeparted": "The desk turned that diver away and the boat has left, so they can’t go back on it. Open their row to remove the booking.",
-    "noShowTripFull": "The freed seat has already been taken, so that diver cannot go back on this boat.",
+    "noShowTripFull": "Saved that they’re here. Their seat has been sold, so they get the next one that opens.",
     "turnAwayAlreadyBoarded": "The crew boarded that diver. Open the trip’s manifest.",
     "turnAwayAlreadyMarked": "That seat is already released.",
     "turnAwaySailed": "The boat left with that diver checked in. Open the trip’s manifest.",
     "turnAwayOutsideWindow": "That departure is outside the desk’s hours. Change the booking from their row instead.",
     "turnAwayNotBlocked": "Nothing stops them boarding now. Check them in instead.",
     "turnAwayReasonNotBlocking": "Their row changed. Choose a reason it shows now.",
-    "noShowCourseRatioFull": "That session is at its instructor-to-student ratio, so that diver can’t go back on it. Assign another instructor first.",
-    "noShowCourseUnstaffed": "That session has no instructor, so that diver can’t go back on it. Assign an instructor first.",
-    "noShowCoursePrerequisite": "That diver no longer holds the card this course asks for, so they can’t go back on it.",
-    "noShowCourseMinAge": "That diver is under this course’s minimum age on the day it runs, so they can’t go back on it. Correct the date of birth if it’s wrong."
+    "noShowCourseRatioFull": "Saved that they’re here. The session is at its instructor-to-student ratio. Assign another instructor to put them back.",
+    "noShowCourseUnstaffed": "Saved that they’re here. The session has no instructor. Assign one to put them back.",
+    "noShowCoursePrerequisite": "Saved that they’re here, but they no longer hold the card this course asks for.",
+    "noShowCourseMinAge": "Saved that they’re here, but they are under this course’s minimum age on the day it runs. Correct the date of birth if it’s wrong."
   }
 }

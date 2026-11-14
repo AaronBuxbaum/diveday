@@ -21,6 +21,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boardingObservations,
   boatSnags,
   boats,
   bookingArrivalEvents,
@@ -896,6 +897,7 @@ export async function clearDemoSchedule(
   // acknowledgement links cascade before the departures they reference go away.
   await db.delete(todayReadMarks).where(eq(todayReadMarks.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
+  await db.delete(boardingObservations).where(eq(boardingObservations.shopId, shopId));
   await deleteDemoSafetyTrail(db, shopId);
   await db.delete(executedDives).where(eq(executedDives.shopId, shopId));
   // The crew's own tally of what the day saw, beside the dive log it sits under

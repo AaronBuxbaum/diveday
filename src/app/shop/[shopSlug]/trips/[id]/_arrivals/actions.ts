@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { offerDepartureToDiver } from "@/db/interest-offers";
 import { checkInBooking, undoCheckInBooking } from "@/features/check-in";
 import { parseForm } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
-import { markBookingNoShow, undoBookingNoShow } from "@/features/no-show";
+import { markBookingNoShow, settleDockObservations, undoBookingNoShow } from "@/features/no-show";
 import { requireShopSurface } from "@/features/session";
 import { turnBookingAway } from "@/features/turn-away";
 import { noticeUrl } from "@/lib/staff-notices";
@@ -196,14 +197,24 @@ export async function markNoShowAction(
   revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
 }
 
+/** The undo posts the seat and its tap's own key, so a retried send is one observation. */
+const undoNoShowForm = z.object({
+  bookingId: z.string().refine((id) => uuidParam(id) !== undefined),
+  // The desk draws one per tap; a form without one still records, as a tap nobody retries.
+  observationKey: z
+    .string()
+    .refine((key) => uuidParam(key) !== undefined)
+    .optional(),
+});
+
 /**
- * The diver who walks up as the lines come off.
+ * **"They're here"**: the diver who walks up as the lines come off (issue
+ * #4474).
  *
- * Its refusals worth a sentence are the two races: by the time somebody taps
- * Undo the freed seat may be sold, and `undoBookingNoShow` re-counts it under
- * the trip's lock against both limits rather than overfilling the boat —
- * capacity (`trip_full`) and, on a ratio-gated course session, the crew's own
- * seat cap (`course_ratio_full`).
+ * The tap is recorded before anything else is asked (`undoBookingNoShow`), so
+ * a sold seat or a busy departure never loses it. The row settles into its
+ * seat when the boat has room; otherwise the departure keeps the observation
+ * open and says why, and a pending one is settled again after the response.
  */
 export async function undoNoShowAction(
   shopSlug: string,
@@ -212,7 +223,9 @@ export async function undoNoShowAction(
 ): Promise<void> {
   const session = (await requireShopSurface(shopSlug)).session;
   const back = counterQueuePath(shopSlug, tripId);
-  const bookingId = bookingIdFrom(formData, back);
+  const parsed = parseForm(undoNoShowForm, formData);
+  if (!parsed.ok) redirect(noticeUrl(back, "invalid"));
+  const { bookingId, observationKey } = parsed.data;
   const db = await getDb();
   // A seat from another departure is not this counter's (../roster-booking.ts).
   await requireRosterBooking(
@@ -225,14 +238,26 @@ export async function undoNoShowAction(
 
   const outcome = await undoBookingNoShow(db, {
     shopId: session.user.shopId,
+    tripId,
     bookingId,
     recordedByPersonId: session.user.personId,
+    clientKey: observationKey,
   });
-  if (outcome.ok) {
+  if (!outcome.ok) {
+    revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
+    return;
+  }
+  if (outcome.state === "conflict") {
+    revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.conflict}`));
+    return;
+  }
+  if (outcome.state === "applied") {
     revalidatePath(back);
     return;
   }
-  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
+  const shopId = session.user.shopId;
+  after(() => settleDockObservations(db, { shopId, tripId: outcome.tripId }));
+  revalidateAndRedirect(back, noticeUrl(back, "no-show-pending"));
 }
 
 const turnAwayForm = z.object({

@@ -115,6 +115,10 @@ export type BuilderCopy = {
   rollCallOpen: string;
   rollCallOpenAria: string;
   rollCallOpenNote: string;
+  dockWaiting: string;
+  dockWaitingAria: string;
+  bookedTwice: string;
+  bookedTwiceAria: string;
   rowActionsAria: string;
   move: string;
   moveAria: string;

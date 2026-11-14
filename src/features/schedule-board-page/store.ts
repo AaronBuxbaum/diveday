@@ -1,4 +1,12 @@
-import { departuresWeekBefore, tripCrewByTrip, upcomingScheduleRange, weekBoard } from "@/db/trips";
+import { openBoardingObservationsByTrip } from "@/db/boarding-observations";
+import { personClashesByTrip } from "@/db/person-clashes";
+import {
+  crewClashesByTrip,
+  departuresWeekBefore,
+  tripCrewByTrip,
+  upcomingScheduleRange,
+  weekBoard,
+} from "@/db/trips";
 import { listBoats, listBoatsForHistory } from "@/features/boats";
 import { listActiveCourses } from "@/features/courses";
 import { crewAwayByTrip } from "@/features/crew-away";
@@ -57,6 +65,46 @@ async function weekCrewRead(
       ];
     }),
   );
+}
+
+/** What each departure on the week is standing in that a person has to sort out. */
+export type WeekConflicts = Map<string, { dock: number; clashes: number }>;
+
+/**
+ * **The day board's conflicts** (issue #4474): divers the desk saw at the dock
+ * whose seat has not come back, and people on two overlapping departures (crew
+ * on two boats, or a seat on either side). The same committed-row readers the
+ * departure page draws its panels from, so the board and the departure never
+ * disagree, and a move committed in any order is in the next read.
+ */
+async function weekConflictsRead(
+  db: AppDb,
+  shopId: string,
+  weekRead: Promise<WeekRows>,
+  now: Date,
+): Promise<WeekConflicts> {
+  const week = await weekRead;
+  const tripIds = [
+    ...Object.values(week.days).flatMap((entries) => entries.map((e) => e.tripId)),
+    ...week.spans.map((span) => span.tripId),
+  ];
+  const [dock, seats, crew] = await Promise.all([
+    openBoardingObservationsByTrip(db, shopId, tripIds),
+    personClashesByTrip(db, shopId, tripIds, now),
+    crewClashesByTrip(db, shopId, tripIds, now),
+  ]);
+  const conflicts: WeekConflicts = new Map();
+  for (const tripId of tripIds) {
+    const people = new Set([
+      ...(seats.get(tripId) ?? []).map((clash) => clash.personId),
+      ...(crew.get(tripId) ?? []).map((clash) => clash.personId),
+    ]);
+    const waiting = dock.get(tripId)?.length ?? 0;
+    if (waiting > 0 || people.size > 0) {
+      conflicts.set(tripId, { dock: waiting, clashes: people.size });
+    }
+  }
+  return conflicts;
 }
 
 /**
@@ -156,6 +204,7 @@ export async function getScheduleBoardPage(
     weekAround,
     { requestedCourse, requestedSite },
     requestRows,
+    weekConflicts,
   ] = await Promise.all([
     // The reader's own half-typed add panel, if they left one in the last day (ADR
     // 20260906-before-you-ask, decision 3).
@@ -187,6 +236,7 @@ export async function getScheduleBoardPage(
           allowed ? listDateInterestsByIds(db, shop.id, [...input.requestIds]) : [],
         )
       : [],
+    weekConflictsRead(db, shop.id, weekRead, now),
   ]);
   return {
     draft,
@@ -201,5 +251,6 @@ export async function getScheduleBoardPage(
     requestedCourse,
     requestedSite,
     requestRows,
+    weekConflicts,
   };
 }

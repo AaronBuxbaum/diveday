@@ -4,5 +4,6 @@ export {
   activeStaffRecorderId,
   markBookingNoShow,
   noShowSalvage,
+  settleDockObservations,
   undoBookingNoShow,
 } from "./store";

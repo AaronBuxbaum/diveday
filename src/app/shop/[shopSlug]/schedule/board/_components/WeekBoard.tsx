@@ -8,7 +8,7 @@ import Link from "next/link";
 import { type ReactNode, useRef } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { buttonClass } from "@/components/ui/button";
 import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
 import { MENU_PANEL, menuRowClass } from "@/components/ui/menu";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -20,6 +20,13 @@ import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
 import type { WeekAsk } from "./builder-types";
 import { CopyLastYear, LastYearTally, type LastYearWeekView } from "./CopyLastYear";
+import {
+  ConflictFlag,
+  type ConflictFlagCopy,
+  FLAG_CLASS,
+  RollCallFlag,
+  type WeekConflictCounts,
+} from "./week-flags";
 import { WEEK_DAY_GRID_CLASS, WEEK_EMPTY_DAY_CLASS, WEEK_ROW_BOX_CLASS } from "./week-geometry";
 import { weekRows } from "./week-rows";
 
@@ -63,6 +70,8 @@ export type WeekDeparture = {
    * nobody has accounted for.
    */
   rollCallOpen: { diveNumber: number; uncounted: number } | null;
+  /** Dock sightings and people booked twice, for a person to sort out (`ConflictFlag`). */
+  conflicts?: WeekConflictCounts | null;
   /**
    * "Marcus Webb away Sat, Oct 17 – Sun, Oct 18" (fourth review, item 12):
    * rostered people who said they are away on a day this departure meets,
@@ -201,7 +210,7 @@ export type WeekBoardCopy = {
   crewLabel: string;
   /** What stands where the names would be when nobody is assigned. */
   crewNobodyYet: string;
-};
+} & ConflictFlagCopy;
 
 /** The three acts a departure still to sail can take from its row. */
 export type RowActionKind = "move" | "copy" | "remove";
@@ -330,54 +339,6 @@ export function AllUnpricedNotice({
     </p>
   );
 }
-
-/**
- * **The loudest thing this board can say** (DOM-H3): the boat is back and
- * somebody on its list was never counted. It is the same fact, the same tone
- * and the same destination as the stream's row badge — a departure that
- * shouted at 1279px and went quiet at 1280 would make the desktop board the
- * worst place in the app to notice a diver nobody has accounted for.
- *
- * Drawn mark and words together, never hue alone, and it **outranks** the
- * price flag rather than stacking with it: one slot, one grammar (issue 758,
- * the same call the stream made).
- *
- * Both flags are a 44px target that ends at its words (`FLAG_CLASS`), lifted
- * over the row's own door.
- */
-function RollCallFlag({
-  departure,
-  shopSlug,
-  copy,
-}: {
-  departure: WeekDeparture & { rollCallOpen: { diveNumber: number; uncounted: number } };
-  shopSlug: string;
-  copy: { rollCallOpen: string; rollCallOpenAria: string };
-}) {
-  return (
-    <Link
-      href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest?checkpoint=after_dive_${departure.rollCallOpen.diveNumber}`}
-      aria-label={fill(copy.rollCallOpenAria, {
-        ref: departure.ref,
-        dive: departure.rollCallOpen.diveNumber,
-      })}
-      className={`${FLAG_CLASS} text-danger`}
-    >
-      <DiveDayIcon name="warning" className="size-3.5" />
-      {fill(copy.rollCallOpen, { count: departure.rollCallOpen.uncounted })}
-    </Link>
-  );
-}
-
-/**
- * **A flag is its own target, over the row's door** (pixel-craft class 7). It
- * was a block `flex` link with no floor: 16px tall, and at 390 228px wide for
- * 90px of words, its hit area running the whole column. `tapTargetLinkClass`
- * gives it the 44px floor and ends its box at its words; `relative z-10`
- * stands it above the row's stretched link, so a tap on it is a tap on it.
- * No margin above it: the 44px box's own band is the room under the title.
- */
-const FLAG_CLASS = `${tapTargetLinkClass} relative z-10 gap-1.5 text-xs font-semibold hover:underline`;
 
 /**
  * The quieter toned mark, and only while the departure can still be booked.
@@ -616,6 +577,8 @@ function WeekBoat({
               shopSlug={shopSlug}
               copy={copy}
             />
+          ) : departure.conflicts ? (
+            <ConflictFlag departure={departure} shopSlug={shopSlug} copy={copy} />
           ) : departure.rehearsal ? (
             <Badge size="sm" className="mt-1">
               {copy.rehearsal}
