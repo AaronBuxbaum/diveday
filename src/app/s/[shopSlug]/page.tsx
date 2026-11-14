@@ -129,9 +129,7 @@ export default async function SchedulePage({
     notFound();
   }
 
-  // The page is served in pieces: the list is one keyset page — nothing loads
-  // every trip at once, so a shop with hundreds of departures on the books
-  // stays quick.
+  // One keyset page keeps large schedules quick.
   const tz = shop.timezone;
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
@@ -162,11 +160,12 @@ export default async function SchedulePage({
     now,
     listMonthBounds,
     hasSpaceFilter,
+    partySize: query.partySize ? partySize : undefined,
     tripTypeFilter,
   });
   const view: ScheduleView = {
     shopSlug,
-    partySize,
+    partySize: query.partySize ? partySize : undefined,
     month,
     hasSpaceFilter,
     tripTypeFilter,
@@ -178,7 +177,7 @@ export default async function SchedulePage({
 
   // The widget shows a window, sliced below once the composed requirements are
   // known so hiding happens first and both surfaces read one list (issue #805).
-  const hasUpcoming = range.first !== null;
+  const hasUpcoming = range.first !== null || upcoming.length > 0;
 
   const { quiet, quietLine } = scheduleOffSeason({
     now,
@@ -196,10 +195,10 @@ export default async function SchedulePage({
     : upcoming;
 
   const { nextBoat, filteredView, skippedBoats, firstSkippedBoat } = scheduleNextBoat({
-    visibleUpcoming,
+    visibleUpcoming: visibleUpcoming.filter((trip) => trip.startsAt.getTime() > now.getTime()),
     explicitMonth,
     after: after ?? before,
-    hasSpaceFilter,
+    hasSpaceFilter: hasSpaceFilter || Boolean(query.partySize),
     tripTypeFilter,
     hideAboveFilter,
     activeLens,
@@ -363,7 +362,7 @@ export default async function SchedulePage({
               filters and the list re-renders server-side (ADR
               20260812-javascript-is-required). */}
           <ScheduleFilterBar
-            partySize={partySize}
+            partySize={query.partySize ? partySize : null}
             month={month ?? null}
             lenses={lenses}
             activeLens={activeLens}

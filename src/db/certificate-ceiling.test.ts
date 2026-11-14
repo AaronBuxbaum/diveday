@@ -556,7 +556,7 @@ describe("the certificate holds on the paths that hand back or split a seat", ()
         recordedByPersonId,
         now: trip.startsAt,
       }),
-    ).toMatchObject({ ok: false, reason: "trip_full" });
+    ).toMatchObject({ ok: true, state: "conflict", conflict: "trip_full" });
     const [row] = await db
       .select({ status: bookings.status })
       .from(bookings)

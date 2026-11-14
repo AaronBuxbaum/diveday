@@ -1,4 +1,28 @@
 {
+  "conflicts": {
+    "dockHeading": "Waiting at the dock",
+    "pending": "Putting their seat back.",
+    "conflict": {
+      "trip_full": "Boat full. They came, but they’re not on this boat. Offer them another departure.",
+      "divers_full": "Every diver’s seat is taken. They came, but they’re not diving this boat. Offer them another departure.",
+      "course_ratio_full": "The session is at its instructor ratio.",
+      "course_unstaffed": "The session has no instructor.",
+      "course_prerequisite": "They no longer hold the card this course asks for.",
+      "course_min_age": "They are under this course’s minimum age.",
+      "trip_cancelled": "This departure is called off.",
+      "turned_away_departed": "Turned away, and the boat has left.",
+      "seat_moved": "Their seat moved to another departure.",
+      "seat_cancelled": "Their booking was removed.",
+      "diver_erased": "Their details were erased.",
+      "boat_left": "The boat left before their seat came back."
+    },
+    "retry": "Try again",
+    "retryFor": "Try again to put {name} back",
+    "dismiss": "Dismiss",
+    "dismissFor": "Dismiss {name} waiting at the dock",
+    "clashHeading": "Booked at the same time",
+    "clash": "{name}, also {there, select, crew {crewing} other {diving}}:"
+  },
   "flySafeFollowUp": {
     "heading": "Flying guidance follow-up",
     "resolveHelp": "Mark resolved only after contacting the diver or otherwise resolving their flying guidance. This does not confirm email delivery.",
@@ -83,6 +107,8 @@
     "reinstateBoatOutOfService": "Still canceled: its boat is in the yard on a day it would sail. Move the trip or pick another boat first.",
     "reinstateBoatOutOfServiceOn": "Still canceled: its boat is in the yard on {date}. Move the trip or pick another boat first.",
     "crew": "Crew updated",
+    "crewMoved": "Moved to the other boat.",
+    "crewMovedClash": "Moved, and they’re booked to dive another boat at the same time. Both departures show it.",
     "crewConflict": "Crew wasn’t changed. Someone is already assigned during this time, or the course would fall below its teaching ratio.",
     "noteAdded": "Private staff note added",
     "noteDeleted": "Private staff note deleted",
@@ -92,6 +118,7 @@
     "seatMovedFlySafeUnreached": "Moved. Contact the diver to confirm the new trip and flying advice.",
     "seatMovedOwedFlySafeUnreached": "Moved; the price difference is owed. Contact the diver to confirm the new trip and flying advice.",
     "seatMoved": "Moved. The diver has the new time.",
+    "seatMovedClash": "Moved, and they’re on another boat at the same time. Both departures show it.",
     "seatMovedUntold": "Moved, but the message with the new time did not go out. Tell them yourself.",
     "seatMovedOwed": "Moved. The new departure costs more, so the difference is owed.",
     "partyMoved": "Moved the party. Each of them has the new time.",
@@ -396,7 +423,15 @@
     "unassignAria": "Unassign {name}",
     "clash": "Also scheduled on {departure} at these hours",
     "assignClash": "{name} is already scheduled on another departure at these hours.",
-    "assignFailed": "That didn’t save. Recheck your connection or try again."
+    "assignFailed": "That didn’t save. Recheck your connection or try again.",
+    "move": {
+      "trigger": "Move to another boat",
+      "who": "Who",
+      "to": "To",
+      "choose": "Choose…",
+      "submit": "Move",
+      "pending": "Moving…"
+    }
   },
   "recapNote": {
     "heading": "Note to divers",

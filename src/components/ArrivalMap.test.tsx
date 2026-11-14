@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAP_REACHABILITY_PROBES } from "@/lib/maps";
 
@@ -50,6 +50,20 @@ const mount = () =>
     .container;
 
 describe("ArrivalMap", () => {
+  it("shows the zoom hint only after an unmodified wheel over the map", () => {
+    const container = mount();
+    act(() => answerAll());
+    const map = container.querySelector("section[aria-label]");
+    if (!map) throw new Error("Map did not mount");
+    expect(container.querySelector('[role="status"]')).toBeNull();
+    fireEvent.wheel(map, { deltaY: 80, metaKey: true });
+    expect(container.querySelector('[role="status"]')).toBeNull();
+    fireEvent.wheel(map, { deltaY: 80 });
+    expect(container.querySelector('[role="status"]')).toHaveTextContent(
+      "Use ⌘ or Ctrl + scroll to zoom",
+    );
+  });
+
   it("draws nothing while online until the map host answers, then the map", () => {
     const container = mount();
     expect(container.querySelector("section[aria-label]")).toBeNull();

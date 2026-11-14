@@ -142,8 +142,8 @@ test("the lens survives a month step and a 'Has space' tap", { tag: READ_ONLY },
   // The filter row is a GET form: without the hidden `lens` input, one tap of
   // "Has space" erases the reader's view with nothing saying why.
   await openFilters(page);
-  await page.getByLabel("Has space").check();
-  await expect(page).toHaveURL(/hasSpace=1/);
+  await page.getByLabel("How many of you?").selectOption("2");
+  await expect(page).toHaveURL(/partySize=2/);
   await expect(page).toHaveURL(/[?&]lens=after-dark/);
   await expect(rail(page).getByRole("link", { name: "After dark", exact: true })).toHaveAttribute(
     "aria-current",

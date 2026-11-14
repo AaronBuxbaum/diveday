@@ -213,15 +213,6 @@ export default async function DiveSitesPage({
         }
       />
 
-      {librarySize > 0 && catalogSize > 0 ? (
-        <SiteLibraryViews
-          shopSlug={shopSlug}
-          current="library"
-          carry={{ q: query, difficulty: filters.difficulty, need: filters.need }}
-          t={t}
-        />
-      ) : null}
-
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
       <AddPanel
@@ -233,13 +224,6 @@ export default async function DiveSitesPage({
       >
         <NewSitePanel surface={surface} shopSlug={shopSlug} t={t} locale={locale} />
       </AddPanel>
-
-      {/* Unconditional once there is anything to search: a library that hid
-        its search box below some size would teach staff to scroll. Hidden only
-        when the library is empty, where the empty state has the one thing to do. */}
-      {librarySize > 0 ? (
-        <SiteToolbar base={libraryPath} query={query} filters={filters} t={t} diverT={diverT} />
-      ) : null}
 
       {librarySize === 0 ? (
         <EmptyState
@@ -277,11 +261,23 @@ export default async function DiveSitesPage({
           pins={pins}
           clusterLabel={t("diveSites.map.clusterLabel")}
           zoomHint={t("diveSites.map.zoomHint")}
+          views={
+            catalogSize > 0 ? (
+              <SiteLibraryViews
+                shopSlug={shopSlug}
+                current="library"
+                carry={{ q: query, difficulty: filters.difficulty, need: filters.need }}
+                t={t}
+                className=""
+              />
+            ) : null
+          }
           followLabel={t("diveSites.list.followMap")}
           areaCount={t("diveSites.list.areaCount", { count: sitePage.total })}
           scoped={Boolean(filters.area)}
           baseHref={withoutArea}
         >
+          <SiteToolbar base={libraryPath} query={query} filters={filters} t={t} diverT={diverT} />
           {sites.length === 0 ? (
             <EmptyState
               title={t("diveSites.list.noMatchHeading")}

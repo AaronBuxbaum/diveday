@@ -22,6 +22,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boardingObservations,
   boatSnags,
   boats,
   bookingArrivalEvents,
@@ -181,7 +182,7 @@ const DEMO_BOAT_CAPACITIES = {
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
  * | `./seed-desk-trail.ts` | the notes and activity behind today's reef boat, so its Guests tab has a history |
  * | `./seed-desk-handoff.ts` | the morning's desk acts on that same boat, the owner's read mark behind them, and the two divers who said the crew may know it is their first trip |
- * | `./seed-sightings.ts` | a month of the crew's sighting log on Molasses and French, so "Seen here this month" is a real beat on the demo's trip pages |
+ * | `./seed-sightings.ts` | a month of the crew's sighting log on Molasses and French, so "Seen here in the last 30 days" is a real beat on the demo's trip pages |
  * | `./seed-diver-trail.ts` | the same table read the other way round — what the desk has done about eight of the cast, so a diver's record opens on a history rather than an empty Activity panel |
  * | `./seed-dive-site-catalog.ts` | DiveDay's published dive-site templates — shared by every shop, never this one's |
  * | `./seed-self-declared.ts` | the two list joiners who said what they can dive, so the marks a staffer reads before a blast are ever rendered |
@@ -900,6 +901,7 @@ export async function clearDemoSchedule(
   // acknowledgement links cascade before the departures they reference go away.
   await db.delete(todayReadMarks).where(eq(todayReadMarks.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
+  await db.delete(boardingObservations).where(eq(boardingObservations.shopId, shopId));
   await deleteDemoSafetyTrail(db, shopId);
   await db.delete(executedDives).where(eq(executedDives.shopId, shopId));
   // The crew's own tally of what the day saw, beside the dive log it sits under
