@@ -595,10 +595,8 @@ describe("who may run each action on the trip page", () => {
     // took it, and `recordPaperCourseForm` refuses anyone not active staff.
     "recordPaperCourseFormAction",
     "saveRosterEmergencyContactAction",
-    // Day-of crew assignment (H-20260724-staff-role-reach, #788; #2678 away ack withdrawal) stays open.
+    // Day-of crew assignment (H-20260724-staff-role-reach, #788; #2678 away ack; #4474 move) stays open.
     "updateTripCrewAction",
-    // Moving a crew member between two boats is the same day-of crew assignment in one step
-    // (#4474), open to every staffer on the same terms.
     "moveTripCrewAction",
     "withdrawCrewAwayAcknowledgementAction",
     // Same H-20260814-may-sight-card trust boundary as reviewCertification (any active staff
@@ -610,9 +608,8 @@ describe("who may run each action on the trip page", () => {
     // same terms as the tap above it: it appears only beside a name on that
     // session's own roster, and records a sentence rather than a credential.
     "saveCourseNextStepAction",
-    // The learning-materials tick (ADR 20261008-course-learning-materials) and
-    // the sent-to-the-agency tick (item 46), open on the same terms as the next
-    // step: bookkeeping on a course session's own roster that gates nothing.
+    // The learning-materials tick (ADR 20261008-course-learning-materials) and the sent-to-the-agency
+    // tick (item 46), open on the same terms as the next step: course-roster bookkeeping that gates nothing.
     "setCourseMaterialsDoneAction",
     "markCardProcessedAction",
     "updateBookingPickupAction",
