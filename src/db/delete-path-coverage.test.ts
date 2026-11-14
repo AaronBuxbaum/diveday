@@ -6,7 +6,7 @@ import {
   capturedDemoResetPlan,
   resetDemoFromSnapshot,
 } from "../features/demo-reset-snapshot/store";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { PERSON_COLUMNS } from "./person-columns";
 import * as schema from "./schema";
 import { accountSessions, mediaDeletionAttempts, people, shops, userAccounts } from "./schema";
@@ -510,7 +510,7 @@ describe("the e2e reset's snapshot covers what the reset deletes", () => {
       .transaction(async (tx) => {
         const before = await rowCounts(tx, names);
         deleted = await recordDeletedTables(tx as unknown as AppDb, (recorder) =>
-          clearDemoSchedule(recorder, shop.id).then(() => undefined),
+          clearDemoSchedule(recorder as AppTransaction, shop.id).then(() => undefined),
         );
         const after = await rowCounts(tx, names);
         for (const name of names) {

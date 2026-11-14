@@ -41,7 +41,8 @@
  * **`roll_call_event_claims` is deliberately unbounded** (ADR
  * 20261114-unresolved-offline-roll-call). Removing a claimed client identity
  * could let a later retry acquire a different meaning; erasure scrubs its
- * identifying material and retains only a terminal tombstone.
+ * identifying material and retains a terminal tombstone and any retained
+ * safety facts.
  *
  * **`unresolved_safety_alert_outbox`, `unresolved_safety_alert_deliveries`,
  * `unresolved_safety_alert_escalations`, `unresolved_safety_scan_incidents`,
@@ -52,6 +53,11 @@
  * unsent safety evidence (2026-11-14). Erasure, tenant-scoped export, demo
  * cleanup and an eventual audited resolution still need their own rules; this
  * is not a decision to keep identifying fields forever.
+ * **`boarding_observations` is deliberately unbounded.** Each row is the desk
+ * seeing a diver at the dock, and what became of it (the seat taken back, or
+ * why not). It is the same evidence as a desk arrival, and a physical boarding
+ * observation is never lost (Aaron, issue #4474, 2026-11-14). Its person
+ * references are actors, kept on erasure like the other desk trails.
  *
  * **`safety_drills` and `safety_drill_participants` are deliberately
  * unbounded.** The drill log is what an insurer renewal reads: when the shop
@@ -180,6 +186,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "safety_drills",
   "safety_drill_participants",
   "booking_arrival_events",
+  "boarding_observations",
   "pre_departure_check_events",
   "trip_change_events",
   "review_moderation_events",

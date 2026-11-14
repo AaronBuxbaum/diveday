@@ -8,7 +8,7 @@ import { shopDefaults } from "@/lib/curated-defaults";
 import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-identity";
 import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
-import type { DbExecutor } from "./client";
+import type { AppTransaction, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
@@ -22,6 +22,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boardingObservations,
   boatSnags,
   boats,
   bookingArrivalEvents,
@@ -875,7 +876,7 @@ export type ClearedDemoSchedule = { waiverTitle: string };
  * the snapshot's capture refuses a clear that inserted anything.
  */
 export async function clearDemoSchedule(
-  db: DbExecutor,
+  db: AppTransaction,
   shopId: string,
 ): Promise<ClearedDemoSchedule> {
   await requireNoRetainedSafetyForDemoReset(db, shopId);
@@ -902,6 +903,14 @@ export async function clearDemoSchedule(
   // acknowledgement links cascade before the departures they reference go away.
   await db.delete(todayReadMarks).where(eq(todayReadMarks.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
+  // An intake can commit after the preflight check. Roll the entire reset back
+  // if this statement encounters one; intake after this delete is still an
+  // unresolved race until reset and intake have a non-starving protocol.
+  const deletedSightings = await db
+    .delete(boardingObservations)
+    .where(eq(boardingObservations.shopId, shopId))
+    .returning({ id: boardingObservations.id });
+  if (deletedSightings.length) throw new Error("Demo reset blocked by unresolved safety evidence");
   await deleteDemoSafetyTrail(db, shopId);
   await db.delete(executedDives).where(eq(executedDives.shopId, shopId));
   // The crew's own tally of what the day saw, beside the dive log it sits under

@@ -1,0 +1,579 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "658c7868-89a9-4b31-9b9f-2558131a6313",
+  "prevIds": [
+    "dcb6e5ed-166a-4a8e-a2bf-2705a266cca0"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "boarding_observation_state"
+      ],
+      "writes": [
+        "s|enum|public.boarding_observation_state",
+        "n|enum|public.boarding_observation_state",
+        "e|enum|public.boarding_observation_state",
+        "n|type|public.boarding_observation_state"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "boarding_observations"
+      ],
+      "writes": [
+        "s|tbl|public.boarding_observations",
+        "n|tbl|public.boarding_observations",
+        "e|tbl|public.boarding_observations",
+        "n|rel|public.boarding_observations",
+        "n|type|public.boarding_observations",
+        "n|rel|public.boarding_observations_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.boarding_observation_state"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "boarding_observations",
+        "boarding_observations_client_key_unique"
+      ],
+      "writes": [
+        "s|idx|public.boarding_observations_client_key_unique",
+        "n|idx|public.boarding_observations_client_key_unique",
+        "e|idx|public.boarding_observations_client_key_unique",
+        "n|rel|public.boarding_observations_client_key_unique"
+      ],
+      "reads": [
+        "n|tbl|public.boarding_observations",
+        "n|sch|public",
+        "n|col|public.boarding_observations.shop_id",
+        "n|col|public.boarding_observations.client_key"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "boarding_observations",
+        "boarding_observations_open_seat_unique"
+      ],
+      "writes": [
+        "s|idx|public.boarding_observations_open_seat_unique",
+        "n|idx|public.boarding_observations_open_seat_unique",
+        "e|idx|public.boarding_observations_open_seat_unique",
+        "n|rel|public.boarding_observations_open_seat_unique"
+      ],
+      "reads": [
+        "n|tbl|public.boarding_observations",
+        "n|sch|public",
+        "n|col|public.boarding_observations.booking_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "boarding_observations",
+        "boarding_observations_open_trip_idx"
+      ],
+      "writes": [
+        "s|idx|public.boarding_observations_open_trip_idx",
+        "n|idx|public.boarding_observations_open_trip_idx",
+        "e|idx|public.boarding_observations_open_trip_idx",
+        "n|rel|public.boarding_observations_open_trip_idx"
+      ],
+      "reads": [
+        "n|tbl|public.boarding_observations",
+        "n|sch|public",
+        "n|col|public.boarding_observations.shop_id",
+        "n|col|public.boarding_observations.trip_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "boarding_observations"
+      ],
+      "writes": [
+        "s|fk|public.boarding_observations.boarding_observations_shop_id_shops_id_fkey",
+        "n|fk|public.boarding_observations.boarding_observations_shop_id_shops_id_fkey",
+        "e|fk|public.boarding_observations.boarding_observations_shop_id_shops_id_fkey",
+        "n|con|public.boarding_observations.boarding_observations_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.boarding_observations",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.boarding_observations.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "boarding_observations"
+      ],
+      "writes": [
+        "s|fk|public.boarding_observations.boarding_observations_recorded_by_person_id_people_id_fkey",
+        "n|fk|public.boarding_observations.boarding_observations_recorded_by_person_id_people_id_fkey",
+        "e|fk|public.boarding_observations.boarding_observations_recorded_by_person_id_people_id_fkey",
+        "n|con|public.boarding_observations.boarding_observations_recorded_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.boarding_observations",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.boarding_observations.recorded_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "boarding_observations"
+      ],
+      "writes": [
+        "s|fk|public.boarding_observations.boarding_observations_dismissed_by_person_id_people_id_fkey",
+        "n|fk|public.boarding_observations.boarding_observations_dismissed_by_person_id_people_id_fkey",
+        "e|fk|public.boarding_observations.boarding_observations_dismissed_by_person_id_people_id_fkey",
+        "n|con|public.boarding_observations.boarding_observations_dismissed_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.boarding_observations",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.boarding_observations.dismissed_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "boarding_observations",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "boarding_observation_state",
+        "values": [
+          "pending",
+          "applied",
+          "conflict",
+          "dismissed"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "booking_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "client_key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "recorded_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "observed_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "state",
+        "type": "boarding_observation_state",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'pending'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "conflict_code",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "settled_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "dismissed_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_client_key_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "client_key",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_open_seat_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "booking_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"state\" in ('pending', 'conflict')",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_open_trip_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "trip_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"state\" in ('pending', 'conflict')",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_recorded_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "recorded_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_dismissed_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "dismissed_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_client_key_length",
+        "value": "length(\"client_key\") between 8 and 100",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_conflict_has_code",
+        "value": "(\"state\" = 'conflict') = (\"conflict_code\" is not null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_settled_unless_pending",
+        "value": "(\"state\" = 'pending') = (\"settled_at\" is null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "boarding_observations",
+        "name": "boarding_observations_dismissed_by",
+        "value": "(\"state\" = 'dismissed') = (\"dismissed_by_person_id\" is not null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

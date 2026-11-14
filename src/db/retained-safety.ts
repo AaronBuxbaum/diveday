@@ -2,6 +2,7 @@ import { and, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { DbExecutor } from "./client";
 import {
+  boardingObservations,
   rollCallEventClaims,
   unresolvedReviewDeferrals,
   unresolvedSafetyAlertEscalations,
@@ -136,6 +137,14 @@ export async function requireNoRetainedSafetyForDemoReset(tx: DbExecutor, shopId
     .from(unresolvedReviewDeferrals)
     .where(eq(unresolvedReviewDeferrals.shopId, shopId))
     .limit(1);
-  if (claim || outbox || incident || deferral)
+  // Every sighting and its client key is evidence, including resolved rows.
+  // Intake does not yet share this fence; this check alone does not serialize
+  // a reset racing a new sighting.
+  const [sighting] = await tx
+    .select({ id: boardingObservations.id })
+    .from(boardingObservations)
+    .where(eq(boardingObservations.shopId, shopId))
+    .limit(1);
+  if (claim || outbox || incident || deferral || sighting)
     throw new Error("Demo reset blocked by unresolved safety evidence");
 }

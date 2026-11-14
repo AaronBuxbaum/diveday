@@ -1,5 +1,5 @@
 import { getTableName, type SQL, sql } from "drizzle-orm";
-import type { AppDb, DbExecutor } from "../../db/client";
+import type { AppDb, AppTransaction, DbExecutor } from "../../db/client";
 import { clearDemoSchedule, resetDemoSchedule } from "../../db/seed";
 import { rotateShopOfflineDatasetIncarnation } from "../../db/shops";
 import { nowMs } from "../../lib/clock";
@@ -166,7 +166,11 @@ function planFits(plan: DemoResetPlan, shopId: string): boolean {
  *
  * Unique, check and exclusion constraints are not triggers and stay on.
  */
-async function clearAndReplay(tx: DbExecutor, shopId: string, plan: DemoResetPlan): Promise<void> {
+async function clearAndReplay(
+  tx: AppTransaction,
+  shopId: string,
+  plan: DemoResetPlan,
+): Promise<void> {
   await clearWithoutTriggers(tx, shopId, plan.foreignKeys, plan.settles);
   await replayRows(tx, plan);
   // The snapshot can restore an old shop row; rotate after replay before commit.
@@ -180,7 +184,7 @@ async function clearAndReplay(tx: DbExecutor, shopId: string, plan: DemoResetPla
  * which tables the clear deleted from, so there is one per set seen.
  */
 async function clearWithoutTriggers(
-  tx: DbExecutor,
+  tx: AppTransaction,
   shopId: string,
   keys: ForeignKey[],
   settles: Map<string, string>,
@@ -213,7 +217,7 @@ async function replayRows(tx: DbExecutor, plan: DemoResetPlan): Promise<void> {
 }
 
 /** `db`, noting the name of every table a `db.delete(table)` is called on. */
-function recordingDeletes(db: DbExecutor, into: Set<string>): DbExecutor {
+function recordingDeletes(db: AppTransaction, into: Set<string>): AppTransaction {
   return new Proxy(db, {
     get(target, property, receiver) {
       if (property === "delete") {

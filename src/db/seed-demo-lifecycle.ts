@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { DAY_MS, nowMs } from "@/lib/clock";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { requireNoRetainedSafetyForDemoReset } from "./retained-safety";
@@ -12,6 +12,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boardingObservations,
   boatSnags,
   boats,
   bookingArrivalEvents,
@@ -168,7 +169,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.transaction((tx) => deleteDemoShopCascadeInTransaction(tx, shopId));
 }
 
-async function deleteDemoShopCascadeInTransaction(db: DbExecutor, shopId: string): Promise<void> {
+async function deleteDemoShopCascadeInTransaction(
+  db: AppTransaction,
+  shopId: string,
+): Promise<void> {
   await requireNoRetainedSafetyForDemoReset(db, shopId);
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
@@ -216,6 +220,13 @@ async function deleteDemoShopCascadeInTransaction(db: DbExecutor, shopId: string
   // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
+  // If intake committed after the preflight check, roll back the whole reap.
+  // An intake after this delete still requires a coordinated protocol.
+  const deletedSightings = await db
+    .delete(boardingObservations)
+    .where(eq(boardingObservations.shopId, shopId))
+    .returning({ id: boardingObservations.id });
+  if (deletedSightings.length) throw new Error("Demo reset blocked by unresolved safety evidence");
   // Incident reports name bookings, people and the departure, so they go first.
   await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
   // Each report takes its people rows with it (cascade): a raised report
