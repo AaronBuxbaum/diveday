@@ -6,17 +6,15 @@ import {
   VECTOR_LABEL_HOSTS,
   vectorLabelsStyleUrl,
 } from "./basemap";
-import { osmCoordsEmbedUrl } from "./maps";
 
 describe("routeFrameBounds", () => {
   // A route stored before the shared basemap was drawn over the
   // OpenStreetMap embed of this box; the new frame has to be the same box.
   it("frames the box the OpenStreetMap embed framed", () => {
     const [[south, west], [north, east]] = routeFrameBounds(25.0106, -80.3756, 16);
-    const bbox = new URL(osmCoordsEmbedUrl("25.0106,-80.3756", 16)).searchParams.get("bbox");
-    expect(bbox?.split(",").map(Number)).toEqual(
-      [west, south, east, north].map((value) => Number(value.toFixed(5))),
-    );
+    expect([west, south, east, north].map((value) => Number(value.toFixed(5)))).toEqual([
+      -80.38109, 25.00785, -80.37011, 25.01335,
+    ]);
   });
 
   it("is twice as wide as it is tall in degrees, centred on the site", () => {

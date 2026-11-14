@@ -35,6 +35,7 @@ export function OfflineCausalConflicts({
     return (
       <RollCallEvidencePanel
         key={row.id}
+        checkpoint={view.checkpoint}
         context={context}
         locale={locale}
         timeZone={view.envelope.snapshot.shop.timezone}

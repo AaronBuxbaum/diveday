@@ -62,6 +62,45 @@ const tileUrls = (L: typeof import("leaflet"), map: import("leaflet").Map) => {
 };
 
 describe("createBasemapMap", () => {
+  it("does not send a referrer when following the basemap credit", async () => {
+    const L = await import("leaflet");
+    const container = document.createElement("div");
+    document.body.append(container);
+    const map = createBasemapMap(L, container, { center: [25, -80], zoom: 10, privateMap: true });
+    const link = container.querySelector<HTMLAnchorElement>(".leaflet-control-attribution a");
+    expect(link?.relList.contains("noreferrer")).toBe(true);
+    map.remove();
+    container.remove();
+  });
+
+  it("uses no-referrer raster requests for a private map even with vector labels configured", async () => {
+    const L = await import("leaflet");
+    vi.stubEnv("NEXT_PUBLIC_ARCGIS_API_KEY", "test-key");
+    const fetchStyle = answer(200, STYLE);
+    withWebGL2();
+    const container = document.createElement("div");
+    document.body.append(container);
+    const map = createBasemapMap(L, container, { center: [25, -80], zoom: 10, privateMap: true });
+    const tiles: HTMLImageElement[] = [];
+    map.eachLayer((layer) => {
+      if (layer instanceof L.TileLayer) {
+        const tileLayer = layer as unknown as {
+          createTile(
+            coords: { x: number; y: number; z: number },
+            done: () => void,
+          ): HTMLImageElement;
+        };
+        tiles.push(tileLayer.createTile({ x: 0, y: 0, z: 0 }, () => {}));
+      }
+    });
+    expect(tiles).toHaveLength(2);
+    expect(tiles.map((tile) => tile.referrerPolicy)).toEqual(["no-referrer", "no-referrer"]);
+    expect(fetchStyle).not.toHaveBeenCalled();
+    expect(vectorLabels.options).toHaveLength(0);
+    map.remove();
+    container.remove();
+  });
+
   it("draws the shared imagery and labels and follows its own box", async () => {
     const L = await import("leaflet");
     const observed: { callback: ResizeObserverCallback; disconnected: boolean }[] = [];

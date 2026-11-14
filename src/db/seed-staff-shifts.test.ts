@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, lt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { crewShiftCoverage } from "../features/staffing/store";
@@ -82,6 +82,84 @@ it("gives every assigned meeting full shift coverage and no seeded day-off confl
         assignment.tripId,
       ).toBe(false);
     }
+  }
+});
+
+it("keeps the instructor's away-day scenario on the third day without a shift", async () => {
+  const { db, shop } = await seededShopContext();
+  const { crewAvailabilityBlocks, people, staffShifts } = await import("./schema");
+  const { calendarDateInTimezone } = await import("@/lib/calendar-date");
+  const { at } = await import("./seed-clock");
+  const { LEAD_INSTRUCTOR_NAME } = await import("./seed-cast");
+  const [instructor] = await db
+    .select()
+    .from(people)
+    .where(and(eq(people.shopId, shop.id), eq(people.fullName, LEAD_INSTRUCTOR_NAME)));
+  if (!instructor) throw new Error("instructor missing");
+  const date = calendarDateInTimezone(at(3, 8), shop.timezone);
+  const blocks = await db
+    .select()
+    .from(crewAvailabilityBlocks)
+    .where(
+      and(
+        eq(crewAvailabilityBlocks.shopId, shop.id),
+        eq(crewAvailabilityBlocks.personId, instructor.id),
+      ),
+    );
+  expect(blocks.some((block) => block.startsOn <= date && block.endsOn >= date)).toBe(true);
+  const shifts = await db
+    .select()
+    .from(staffShifts)
+    .where(and(eq(staffShifts.shopId, shop.id), eq(staffShifts.personId, instructor.id)));
+  expect(shifts.some((shift) => shift.startsAt <= at(3, 12) && shift.endsAt > at(3, 12))).toBe(
+    false,
+  );
+});
+
+it("has a distinctive dawn shift this week that is absent next week", async () => {
+  const { db, shop } = await seededShopContext();
+  const { staffShifts } = await import("./schema");
+  const { at } = await import("./seed-clock");
+  const shifts = await db
+    .select()
+    .from(staffShifts)
+    .where(
+      and(
+        eq(staffShifts.shopId, shop.id),
+        gte(staffShifts.startsAt, at(0, 0)),
+        lt(staffShifts.startsAt, at(13, 0)),
+      ),
+    );
+  const sameTime = (shift: (typeof shifts)[number], offset: number) =>
+    shift.startsAt.getTime() === at(offset, 5).getTime() &&
+    shift.endsAt.getTime() === at(offset, 9).getTime();
+  expect(shifts.some((shift) => sameTime(shift, 0))).toBe(true);
+  expect(
+    shifts.some((shift) =>
+      Array.from({ length: 7 }, (_, index) => index + 6).some((offset) => sameTime(shift, offset)),
+    ),
+  ).toBe(false);
+});
+
+it("leaves early-morning room to add a separate fixture shift on each target week", async () => {
+  const { db, shop } = await seededShopContext();
+  const { people } = await import("./schema");
+  const { at } = await import("./seed-clock");
+  const { createStaffShift } = await import("@/features/staffing/store");
+  const [person] = await db
+    .select()
+    .from(people)
+    .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Keiko Tanaka")));
+  if (!person) throw new Error("staff missing");
+  for (const offset of [2, 6]) {
+    expect(
+      await createStaffShift(db, {
+        shopId: shop.id,
+        personId: person.id,
+        startsAt: at(offset, 1),
+        endsAt: at(offset, 1, 30),
+      }),
+    ).toMatchObject({ ok: true });
   }
 });
 

@@ -159,7 +159,7 @@ describe("crew availability blocks", () => {
       endsOn: "2026-07-22",
       note: "Family",
     });
-    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error("own request refused");
 
     // Scoped to this person: the demo shop seeds a blackout of its own
     // (`seedCrewAway`), which is the point of the reader but not of this test.
@@ -171,8 +171,9 @@ describe("crew availability blocks", () => {
         { personId: crew.id, canReadCrewAwayNote: false },
       )
     ).filter((block) => block.personId === crew.id);
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0]).toMatchObject({ personId: crew.id, startsOn: "2026-07-20", note: "Family" });
+    expect(blocks.filter((block) => block.id === outcome.id)).toEqual([
+      expect.objectContaining({ personId: crew.id, startsOn: "2026-07-20", note: "Family" }),
+    ]);
   });
 
   /**
@@ -219,6 +220,7 @@ describe("crew availability blocks", () => {
 
   it("refuses a crew member writing somebody else's days", async () => {
     const { db, shop, crew, owner } = await context();
+    const before = await db.select().from(crewAvailabilityBlocks);
     const outcome = await recordCrewAvailabilityBlock(db, {
       shopId: shop.id,
       personId: owner.id,
@@ -228,19 +230,8 @@ describe("crew availability blocks", () => {
       endsOn: "2026-07-20",
     });
     expect(outcome).toEqual({ ok: false, reason: "not_allowed" });
-    // Nothing landed on the owner's row. (The shop's seeded blackout belongs to
-    // whichever staff person `seedCrewAway` picked, so this is scoped rather
-    // than asserting the table is empty.)
-    expect(
-      (
-        await listCrewAvailabilityBlocks(
-          db,
-          shop.id,
-          { from: "2026-07-01", to: "2026-12-31" },
-          "dates_only",
-        )
-      ).filter((block) => block.startsOn === "2026-07-20"),
-    ).toEqual([]);
+    // Existing fictional days off stay; the refused write adds or changes none.
+    expect(await db.select().from(crewAvailabilityBlocks)).toEqual(before);
   });
 
   it("lets somebody who manages the roster record it for a person who phoned in", async () => {

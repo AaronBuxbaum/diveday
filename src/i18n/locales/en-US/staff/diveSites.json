@@ -35,7 +35,8 @@
     "loadingDetails": "Loading site details…",
     "detailsUnavailable": "Details are unavailable. Open the site or select it again to retry.",
     "openSite": "Open site",
-    "clusterLabel": "dive sites"
+    "clusterLabel": "dive sites",
+    "zoomHint": "Use ⌘ or Ctrl + scroll to zoom"
   },
   "catalog": {
     "title": "DiveDay common dive sites",

@@ -35,7 +35,8 @@
     "loadingDetails": "Cargando detalles del sitio…",
     "detailsUnavailable": "Los detalles no están disponibles. Abre el sitio o selecciónalo de nuevo para reintentar.",
     "openSite": "Abrir sitio de buceo",
-    "clusterLabel": "sitios de buceo"
+    "clusterLabel": "sitios de buceo",
+    "zoomHint": "Usa ⌘ o Ctrl + desplazamiento para acercar el mapa"
   },
   "catalog": {
     "title": "Sitios de buceo comunes de DiveDay",

@@ -136,26 +136,10 @@ export async function CatalogView({
 
   return (
     <StaffPage width="full">
-      <div>
-        <ShopPageHeader
-          title={t("diveSites.catalog.title")}
-          description={t("diveSites.catalog.description")}
-          descriptionIsCaption
-        />
-        <SiteLibraryViews
-          shopSlug={shopSlug}
-          current="catalog"
-          carry={{ q: query, difficulty: filters.difficulty, need: filters.need }}
-          t={t}
-        />
-      </div>
-      <SiteToolbar
-        base={back}
-        view="catalog"
-        query={query}
-        filters={filters}
-        t={t}
-        diverT={diverT}
+      <ShopPageHeader
+        title={t("diveSites.catalog.title")}
+        description={t("diveSites.catalog.description")}
+        descriptionIsCaption
       />
       <CatalogMapLayout
         viewportStorageKey={`${shop.id}:catalog`}
@@ -169,11 +153,29 @@ export async function CatalogView({
           unavailable: t("diveSites.map.detailsUnavailable"),
         }}
         clusterLabel={t("diveSites.map.clusterLabel")}
+        zoomHint={t("diveSites.map.zoomHint")}
+        views={
+          <SiteLibraryViews
+            shopSlug={shopSlug}
+            current="catalog"
+            carry={{ q: query, difficulty: filters.difficulty, need: filters.need }}
+            t={t}
+            className=""
+          />
+        }
         followLabel={t("diveSites.list.followMap")}
         areaCount={t("diveSites.list.areaCount", { count: catalog.total })}
         scoped={Boolean(filters.area)}
         baseHref={withoutArea}
       >
+        <SiteToolbar
+          base={back}
+          view="catalog"
+          query={query}
+          filters={filters}
+          t={t}
+          diverT={diverT}
+        />
         {catalog.templates.length === 0 ? (
           <EmptyState
             title={t("diveSites.list.noMatchHeading")}

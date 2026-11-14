@@ -12,6 +12,19 @@ import { E2E_FROZEN_CLOCK, E2E_STRIPE_TEST_WEBHOOK_SECRET } from "./servers";
 // lifetime; a changed value tells the fixture to sign in again.
 let staffStorageStateGeneration = 0;
 
+/** Select one named crew member whether their option also names a day-off warning. */
+export async function selectCrewByName(page: Page, name: string): Promise<void> {
+  const select = page.getByLabel("Assign crew");
+  const labels = await select.locator("option").allTextContents();
+  const matching = labels
+    .map((label) => label.trim())
+    .filter((label) => label === name || label.startsWith(`${name} — `));
+  expect(matching, `one crew option for ${name}`).toHaveLength(1);
+  const [label] = matching;
+  if (!label) throw new Error(`Missing crew option for ${name}`);
+  await select.selectOption({ label });
+}
+
 export function currentStaffStorageStateGeneration(): number {
   return staffStorageStateGeneration;
 }
@@ -93,6 +106,44 @@ export async function saveDiveIntent(page: Page, label: string) {
   await expect(
     page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
   ).toBeVisible();
+}
+
+/** Follow the schedule's pages to a named departure. */
+export async function findNamedScheduleTrip(
+  page: Page,
+  title: string,
+  locale: "en-US" | "es-ES" = "en-US",
+) {
+  const t = diverTranslator(locale);
+  const list = page.getByRole("list", { name: t("schedule.tripListLabel") });
+  await expect(list).toBeVisible();
+  const trip = list.getByRole("link", { name: title }).first();
+  while ((await trip.count()) === 0) {
+    const later = page.getByRole("link", { name: t("schedule.showLater") });
+    await expect(later).toBeVisible();
+    const previousUrl = page.url();
+    await later.click();
+    await page.waitForURL((url) => url.href !== previousUrl);
+    await expect(list).toBeVisible();
+  }
+  return trip;
+}
+
+/** Open a named departure through the schedule. */
+export async function openNamedScheduleTrip(
+  page: Page,
+  title: string,
+  locale: "en-US" | "es-ES" = "en-US",
+) {
+  await (await findNamedScheduleTrip(page, title, locale)).click();
+}
+
+/** Open a future departure with available seats from the schedule. */
+export async function openFirstBookableScheduleTrip(page: Page) {
+  const list = page.getByRole("list", { name: diverTranslator("en-US")("schedule.tripListLabel") });
+  const trip = list.getByRole("link", { name: /(?:[0-9]+ seats?|last seat)/i }).first();
+  await expect(trip).toBeVisible();
+  await trip.click();
 }
 
 /** Submit one booking on the open public trip and wait for its `/ready/<token>` thread. */

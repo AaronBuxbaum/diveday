@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 
 /**
@@ -11,12 +11,16 @@ import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
  * the same move the masthead's `TripAddBookingLink` makes on a tap.
  */
 export function OpenAddBand() {
+  const anchor = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    const band = document.getElementById(ADD_A_BOOKING_ID);
+    const band = anchor.current?.closest<HTMLElement>(`#${ADD_A_BOOKING_ID}`);
     const field = band?.querySelector<HTMLElement>("input:not([type=hidden]), select, textarea");
     if (!band) return;
     band.scrollIntoView({ block: "start" });
     field?.focus({ preventScroll: true });
+    const marker = anchor.current;
+    marker?.setAttribute("data-open-add-band-settled", "");
+    return () => marker?.removeAttribute("data-open-add-band-settled");
   }, []);
-  return null;
+  return <span ref={anchor} data-open-add-band="" hidden />;
 }

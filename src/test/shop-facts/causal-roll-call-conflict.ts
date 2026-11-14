@@ -19,8 +19,12 @@ export async function seedCausalRollCallConflict(
   const seat = fixture.seats[0];
   if (!actor || !seat) throw new Error("causal conflict fixture has no active recorder or seat");
   const evidenceIds: string[] = [];
-  for (const status of ["boarded", "not_boarded"] as const) {
-    const clientEventId = randomUUID();
+  // Keep both IDs unique while making the fixture's equal-time statements
+  // sort the same way across independently seeded visual captures.
+  const clientEventIds = [randomUUID(), randomUUID()].toSorted();
+  for (const [index, status] of (["boarded", "not_boarded"] as const).entries()) {
+    const clientEventId = clientEventIds[1 - index];
+    if (!clientEventId) throw new Error("causal conflict fixture has no evidence ID");
     const common = {
       shopId: shop.id,
       tripId: fixture.tripId,

@@ -7,6 +7,10 @@ import { siteRunsLine } from "@/lib/site-runs";
 import { arrivalCardFacts, arrivalDockCallLine } from "./arrival-card-facts";
 import { TripArrivalCard } from "./TripArrivalCard";
 
+vi.mock("./map/ArrivalMapCanvas", () => ({
+  ArrivalMapCanvas: ({ title }: { title: string }) => <section aria-label={title} />,
+}));
+
 afterEach(cleanup);
 
 const shop = {
@@ -229,14 +233,14 @@ describe("the dock call", () => {
  * It used to sit in a trailing "Your dive shop" card that also restated this
  * card's address, phone, email and map link. The frame moved here; the card it
  * came from is gone. It stays opt-in, because `src/lib/maps.ts` deliberately
- * decides nothing about *whether* a surface should draw a map and this frame is
- * a third party's — and it yields to the shop's own arrival photo, since two
+ * decides nothing about *whether* a surface should draw a map, and it yields
+ * to the shop's own arrival photo, since two
  * 16:9 blocks stacked is the card shouting and a photo of the dock answers
  * "did I find it?" better than a street map does.
  */
 describe("the map", () => {
   function mapFrame() {
-    return document.querySelector("iframe");
+    return document.querySelector('section[aria-label^="Map of "]');
   }
 
   // The frame waits for the map host to answer a probe image (`ArrivalMap`,
@@ -274,15 +278,11 @@ describe("the map", () => {
     hostAnswers();
     const frame = mapFrame();
     expect(frame).not.toBeNull();
-    expect(frame?.getAttribute("title")).toBe("Map of Blue Mantis Divers");
-    // The query is the shop's own address, never a guess.
-    expect(frame?.getAttribute("src")).toContain("100%20Ocean%20Drive");
-    // An element's own policy overrides the document's, and the one caller is
-    // `/ready/[token]` — a `TOKEN_ROUTE_PREFIXES` route served under
-    // `Referrer-Policy: no-referrer` because a bearer-token page has no
-    // legitimate cross-origin use for a referrer, origin-only included. A map
-    // embed needs none, so it asks for none.
-    expect(frame?.getAttribute("referrerpolicy")).toBe("no-referrer");
+    expect(frame?.getAttribute("aria-label")).toBe("Map of Blue Mantis Divers");
+    expect(screen.getByRole("link", { name: "Open in maps" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("100%20Ocean%20Drive"),
+    );
   });
 
   it("names a custom meeting point, not the shop behind it", () => {
@@ -295,7 +295,7 @@ describe("the map", () => {
       />,
     );
     hostAnswers();
-    expect(mapFrame()?.getAttribute("title")).toBe("Map of North Jetty");
+    expect(mapFrame()?.getAttribute("aria-label")).toBe("Map of North Jetty");
   });
 
   it("yields to the shop's own arrival photo", () => {
@@ -312,10 +312,9 @@ describe("the map", () => {
   });
 
   it("is never in the server's HTML, the copy a phone keeps for the marina", () => {
-    // A frame with no signal is 16:9 of gray above the address (third UX
-    // review, item 27); the saved page carries the address and the link alone.
+    // The saved page carries the address and the link without an empty map.
     const html = renderToString(<TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />);
-    expect(html).not.toContain("<iframe");
+    expect(html).not.toContain('aria-label="Map of Blue Mantis Divers"');
     expect(html).toContain("100 Ocean Drive");
   });
 

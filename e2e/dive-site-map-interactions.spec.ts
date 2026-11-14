@@ -51,6 +51,45 @@ async function firstLibraryPin(page: Page) {
   return { pin, name };
 }
 
+test("scrolling over the map moves the page and briefly explains zoom", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/dive-sites");
+  await waitForMarkerLayer(page);
+  const map = page.locator(".leaflet-container");
+  await map.hover();
+  const before = await page.evaluate(() => window.scrollY);
+  const hint = page.getByRole("status").filter({ hasText: staff("diveSites.map.zoomHint") });
+  await expect(hint).toHaveCount(0);
+  await page.mouse.wheel(0, 150);
+  await expect(hint).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before);
+  await expect(hint).toHaveCount(0);
+});
+
+for (const width of [390, 1280]) {
+  test(`the view switch sits on the map and search follows it at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    for (const view of ["library", "catalog"] as const) {
+      await page.goto(`/shop/blue-mantis/dive-sites${view === "catalog" ? "?view=catalog" : ""}`);
+      await waitForMarkerLayer(page);
+      const map = page.getByTestId("map-container");
+      const views = map.getByRole("navigation", { name: staff("diveSites.list.viewsLabel") });
+      await expect(views).toBeVisible();
+      const mapBox = await map.boundingBox();
+      const viewsBox = await views.boundingBox();
+      const searchBox = await page.getByLabel(staff("diveSites.list.searchLabel")).boundingBox();
+      expect(mapBox).not.toBeNull();
+      expect(viewsBox).not.toBeNull();
+      expect(searchBox).not.toBeNull();
+      if (!mapBox || !viewsBox || !searchBox) throw new Error("Map controls did not lay out");
+      expect(viewsBox.x).toBeGreaterThanOrEqual(mapBox.x);
+      expect(viewsBox.y).toBeGreaterThanOrEqual(mapBox.y);
+      expect(viewsBox.x + viewsBox.width).toBeLessThanOrEqual(mapBox.x + mapBox.width);
+      expect(viewsBox.y + viewsBox.height).toBeLessThanOrEqual(mapBox.y + mapBox.height);
+      expect(searchBox.y).toBeGreaterThanOrEqual(mapBox.y + mapBox.height);
+    }
+  });
+}
+
 test("a standalone site's hover label names it at a readable width", async ({ page }) => {
   const { pin, name } = await firstLibraryPin(page);
   await pin.hover();
