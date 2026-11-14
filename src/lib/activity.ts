@@ -1,3 +1,4 @@
+import type { BoardingObservationConflict } from "./boarding-observations";
 import type { CatchUpKind } from "./catch-up";
 import type { CourseAdmissionRefusal } from "./course-admission";
 import type { TurnAwayReason } from "./turn-away";
@@ -141,8 +142,14 @@ type ActivityParamShapes = {
   booking_no_show_undo_refused: {
     actor: string;
     diver: string;
-    reason: "trip_full" | "divers_full" | CourseAdmissionRefusal;
+    reason: "trip_full" | "divers_full" | CourseAdmissionRefusal | BoardingObservationConflict;
   };
+  /**
+   * A staffer set aside a dock sighting that could not take its seat back
+   * (issue #4474): the diver went home, was moved by hand, or the tap was a
+   * mistake. The seat stays released.
+   */
+  boarding_observation_dismissed: { actor: string; diver: string };
   /**
    * A staffer changed what a seated person is doing aboard (ADR
    * 20261007-participant-types): diving, snorkeling or riding along. Recorded
@@ -586,6 +593,7 @@ export const ACTIVITY_CODES = [
   "booking_no_show",
   "booking_no_show_undone",
   "booking_no_show_undo_refused",
+  "boarding_observation_dismissed",
   "participant_type_changed",
   "course_form_medical_changed",
   "training_dive_marked",

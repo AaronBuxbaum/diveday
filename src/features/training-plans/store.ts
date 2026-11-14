@@ -4,6 +4,7 @@ import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "../../db/authz";
 import { lockBoardingCertificationEvidence } from "../../db/boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "../../db/client";
+import { lockCrewSchedule } from "../../db/crew-schedule-lock";
 import { queryAll } from "../../db/query-helpers";
 import { bookings, people, personRoles, tripAssignments, trips } from "../../db/schema/index";
 import {
@@ -34,6 +35,8 @@ export async function setTrainingPlanAssignment(
     // The same shop lock as boarding evidence prevents an erasure/merge from
     // finishing its personal-data sweep before this plan is written.
     await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+    // A plan names the crew; a crew change must not interleave with it.
+    await lockCrewSchedule(tx, input.shopId, "plan");
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.actorPersonId);
     if (!roles || !canConfigureTrips(roles)) return { ok: false };
     const [trip] = await tx

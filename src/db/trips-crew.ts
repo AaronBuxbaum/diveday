@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -6,12 +6,13 @@ import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { shopDayOf } from "@/lib/shop-day";
-import { hasReturned } from "@/lib/trips";
+import { hasReturned, hasSailed } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewNotices } from "./crew-notices";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
+import { lockCrewSchedule } from "./crew-schedule-lock";
 import { crewHaveScheduledShifts, crewWithScheduledShifts } from "./crew-shift-scheduling";
 import { publishManifestEvent } from "./manifest-events";
 import { crewMarks, markCrewPersonId } from "./roll-call-subject";
@@ -578,7 +579,11 @@ export async function setTripCrew(
   );
   const valid = requested.map(crewInputPersonId);
   const changed = await db.transaction(async (tx) => {
-    await lockBoardingCertificationEvidence(tx, shopId, "rewrite");
+    // Shared: erasure and merge still exclude this write, and a boarding
+    // capture elsewhere in the shop no longer waits for it. Crew writers and
+    // plan writes serialize on the crew schedule's own lock (issue #4474).
+    await lockBoardingCertificationEvidence(tx, shopId, "boarding");
+    await lockCrewSchedule(tx, shopId, "crew");
     const [trip] = await tx
       .select({
         id: trips.id,
@@ -866,6 +871,9 @@ export async function seatStandingCrew(
     shopRoles.set(row.personId, [...(shopRoles.get(row.personId) ?? []), row.role]);
   }
   const staff = input.crew.filter((member) => shopRoles.has(member.personId));
+  // Crew writers' own lock, so a crew edit committing beside this roll is
+  // read by the overlap check below (issue #4474).
+  await lockCrewSchedule(tx, input.shopId, "crew");
   const busy = await crewBusyElsewhere(
     tx,
     input.shopId,
@@ -1020,6 +1028,38 @@ export async function countCrewDeparturesNotHome(
   return row?.count ?? 0;
 }
 
+/**
+ * Whether a course session's crew, as a change would leave it, still has an
+ * instructor in the water: the one definition (`countInWaterCrew`,
+ * src/lib/crew-roles.ts) with the per-trip roles the change leaves in place,
+ * never `person_roles` alone (review 20260803, D8). Ratio is deliberately not
+ * asked: an over-ratio crew is recorded and surfaced as `over_ratio`.
+ */
+async function courseCrewKeepsInstructor(
+  tx: DbExecutor,
+  proposedRoles: ReadonlyMap<string, TripCrewRole | null>,
+): Promise<boolean> {
+  const roles = proposedRoles.size
+    ? await tx
+        .select({ personId: personRoles.personId, role: personRoles.role })
+        .from(personRoles)
+        .where(inArray(personRoles.personId, [...proposedRoles.keys()]))
+    : [];
+  const roleSets = new Map<string, string[]>();
+  for (const role of roles) {
+    const personRolesForMember = roleSets.get(role.personId) ?? [];
+    personRolesForMember.push(role.role);
+    roleSets.set(role.personId, personRolesForMember);
+  }
+  const proposedCrew = [...proposedRoles].map(([personId, tripRole]) => ({
+    tripRole,
+    shopRoles: roleSets.get(personId) ?? [],
+  }));
+  if (reviewManifestChange({ courseRequiresInstructor: true, proposedCrew }).blocking) return false;
+  // The roster's claim, as in `setTripCrew` (H-20260825-staff-credentials-renewal-clock, issue #1853).
+  return countInWaterCrew(proposedCrew).instructorCount > 0;
+}
+
 export async function changeTripCrewOutcome(
   db: AppDb,
   shopId: string,
@@ -1028,7 +1068,9 @@ export async function changeTripCrewOutcome(
   options: CrewChangeOptions = {},
 ): Promise<TripCrewOutcome> {
   const outcome = await db.transaction(async (tx): Promise<TripCrewOutcome> => {
-    await lockBoardingCertificationEvidence(tx, shopId, "rewrite");
+    // Shared, then the crew schedule's own lock, as in `setTripCrew` above.
+    await lockBoardingCertificationEvidence(tx, shopId, "boarding");
+    await lockCrewSchedule(tx, shopId, "crew");
     const [eligible] = await tx
       .select({ personId: people.id })
       .from(people)
@@ -1098,36 +1140,9 @@ export async function changeTripCrewOutcome(
       } else {
         proposedRoles.delete(change.personId);
       }
-      const roles = proposedRoles.size
-        ? await tx
-            .select({ personId: personRoles.personId, role: personRoles.role })
-            .from(personRoles)
-            .where(inArray(personRoles.personId, [...proposedRoles.keys()]))
-        : [];
-      const roleSets = new Map<string, string[]>();
-      for (const role of roles) {
-        const personRolesForMember = roleSets.get(role.personId) ?? [];
-        personRolesForMember.push(role.role);
-        roleSets.set(role.personId, personRolesForMember);
+      if (!(await courseCrewKeepsInstructor(tx, proposedRoles))) {
+        return { ok: false, refusal: "refused" };
       }
-      // One definition of who counts as this session's instructor
-      // (`countInWaterCrew`, src/lib/crew-roles.ts) — with the per-trip roles
-      // this change would leave in place, not `person_roles` alone. Reading the
-      // shop-wide list here let a course session keep its "has an instructor"
-      // pass while that instructor was rostered as the captain (review
-      // 20260803, D8).
-      const proposedCrew = [...proposedRoles].map(([personId, tripRole]) => ({
-        tripRole,
-        shopRoles: roleSets.get(personId) ?? [],
-      }));
-      const review = reviewManifestChange({
-        courseRequiresInstructor: true,
-        proposedCrew,
-      });
-      if (review.blocking) return { ok: false, refusal: "refused" };
-      // The roster's claim, as in `setTripCrew` above (H-20260825-staff-credentials-renewal-clock, issue #1853).
-      const { instructorCount } = countInWaterCrew(proposedCrew);
-      if (instructorCount === 0) return { ok: false, refusal: "refused" };
       // No ratio check — same reason as `setTripCrew` above: pulling a crew
       // member who is not on the boat must always be recordable, even when it
       // leaves the session over ratio. The `over_ratio` advisory is the nudge;
@@ -1317,6 +1332,171 @@ export async function changeTripCrew(
   return (await changeTripCrewOutcome(db, shopId, tripId, change, options)).ok;
 }
 
+/** Why a crew move was turned down: the assign refusals, plus the two only a move has. */
+export type CrewMoveRefusal =
+  | TripCrewRefusal
+  | "not_on_crew"
+  | "same_departure"
+  /** Either boat has left: who crewed it is a record by then, not a plan. */
+  | "departed";
+
+export type CrewMoveOutcome = { ok: true } | { ok: false; refusal: CrewMoveRefusal };
+
+/**
+ * **Move one crew member from one departure to another in one step** (issues
+ * #4258, #4474): off the first and onto the second, keeping their job aboard,
+ * or neither.
+ *
+ * Every guard the two separate taps would ask, in one transaction:
+ * - both departures this shop's, live, and locked `FOR UPDATE` in id order (the
+ *   order `moveBooking` takes), so two moves crossing between the same pair
+ *   never hold one each;
+ * - the person this shop's live staff and on the first crew;
+ * - nobody with per-person roll-call history leaves a departure;
+ * - a course session keeps an instructor on both sides;
+ * - **the crew clash**: the person's other assignments, read under the crew
+ *   schedule's lock (`lockCrewSchedule`), may not overlap the second
+ *   departure's hours. Leaving the first is the point of the move, so it is
+ *   never the clash.
+ *
+ * Boarding captures never take the crew schedule's lock, and the evidence lock
+ * is shared, so a roll-call tap or a dock observation never waits on a move.
+ *
+ * Each crew hears it as the two taps would say it (a removed and an assigned
+ * notice), both manifests are pushed, and both trails record it. Clashes in
+ * which the person also holds a seat are information, read after the commit by
+ * the caller (`personClashesAfterMove`), never a refusal.
+ */
+export async function moveTripCrewMember(
+  db: AppDb,
+  shopId: string,
+  input: { personId: string; fromTripId: string; toTripId: string },
+  options: CrewChangeOptions = {},
+): Promise<CrewMoveOutcome> {
+  const { personId, fromTripId, toTripId } = input;
+  if (fromTripId === toTripId) return { ok: false, refusal: "same_departure" };
+  const outcome = await db.transaction(async (tx): Promise<CrewMoveOutcome> => {
+    await lockBoardingCertificationEvidence(tx, shopId, "boarding");
+    await lockCrewSchedule(tx, shopId, "crew");
+    const lockTrip = (id: string) =>
+      tx
+        .select({
+          id: trips.id,
+          startsAt: trips.startsAt,
+          endsAt: trips.endsAt,
+          courseId: trips.courseId,
+          status: trips.status,
+        })
+        .from(trips)
+        .where(and(eq(trips.id, id), eq(trips.shopId, shopId), liveTrip()))
+        .limit(1)
+        .for("update");
+    const [first] = await lockTrip(fromTripId < toTripId ? fromTripId : toTripId);
+    const [second] = await lockTrip(fromTripId < toTripId ? toTripId : fromTripId);
+    const from = first?.id === fromTripId ? first : second;
+    const to = first?.id === toTripId ? first : second;
+    if (!from || !to || to.status !== "scheduled") return { ok: false, refusal: "refused" };
+    const now = options.now ?? nowDate();
+    if (hasSailed(from.startsAt, now) || hasSailed(to.startsAt, now)) {
+      return { ok: false, refusal: "departed" };
+    }
+
+    const [eligible] = await tx
+      .select({ personId: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(
+        and(
+          eq(people.shopId, shopId),
+          eq(people.id, personId),
+          livePerson(),
+          inArray(personRoles.role, [...STAFF_ROLES]),
+        ),
+      )
+      .limit(1);
+    if (!eligible) return { ok: false, refusal: "refused" };
+
+    const crewOf = (tripId: string) =>
+      tx
+        .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, tripId));
+    const [fromCrew, toCrew] = [await crewOf(from.id), await crewOf(to.id)];
+    const moving = fromCrew.find((row) => row.personId === personId);
+    if (!moving) return { ok: false, refusal: "not_on_crew" };
+    if (toCrew.some((row) => row.personId === personId)) return { ok: false, refusal: "refused" };
+    if ((await crewWithRollCallHistory(tx, shopId, from.id, [personId])).size > 0) {
+      return { ok: false, refusal: "refused" };
+    }
+    if (from.courseId) {
+      const left = new Map(fromCrew.map((row) => [row.personId, row.tripRole] as const));
+      left.delete(personId);
+      if (!(await courseCrewKeepsInstructor(tx, left))) return { ok: false, refusal: "refused" };
+    }
+    if (to.courseId) {
+      const joined = new Map(toCrew.map((row) => [row.personId, row.tripRole] as const));
+      joined.set(personId, moving.tripRole);
+      if (!(await courseCrewKeepsInstructor(tx, joined))) return { ok: false, refusal: "refused" };
+    }
+
+    const days = await tx
+      .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, to.id));
+    const windows = days.length > 0 ? days : [{ startsAt: to.startsAt, endsAt: to.endsAt }];
+    const [clash] = await tx
+      .select({ tripId: trips.id })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+      .where(
+        and(
+          liveTrip(),
+          eq(trips.shopId, shopId),
+          eq(trips.status, "scheduled"),
+          ne(trips.id, to.id),
+          ne(trips.id, from.id),
+          eq(tripAssignments.personId, personId),
+          or(...windows.map((day) => windowsOverlap(legWindow(tripScheduleDays, trips), day))),
+        ),
+      )
+      .limit(1);
+    if (clash) return { ok: false, refusal: "crew_clash" };
+
+    // Off the first boat: its promises go with them, as an unassign clears them.
+    await invalidateTrainingPlansForCrewChange(tx, shopId, from.id, [personId]);
+    await clearHelpRequestHelpers(tx, shopId, from.id, [personId], options.now);
+    await tx
+      .delete(tripAssignments)
+      .where(and(eq(tripAssignments.tripId, from.id), eq(tripAssignments.personId, personId)));
+    await clearCrewAwayAcknowledgements(tx, { shopId, tripId: from.id, personIds: [personId] });
+    // Onto the second, in the same job.
+    await invalidateTrainingPlansForCrewChange(tx, shopId, to.id, [personId]);
+    await tx.insert(tripAssignments).values({
+      tripId: to.id,
+      personId,
+      tripRole: moving.tripRole,
+      assignedByPersonId: options.actorPersonId ?? null,
+    });
+    const actorPersonId = options.actorPersonId ?? null;
+    await recordCrewNotices(
+      tx,
+      [
+        { shopId, tripId: from.id, personId, change: "removed" as const, actorPersonId },
+        { shopId, tripId: to.id, personId, change: "assigned" as const, actorPersonId },
+      ],
+      options.now,
+    );
+    return { ok: true };
+  });
+  if (outcome.ok) {
+    await publishManifestEvent(db, shopId, fromTripId);
+    await publishManifestEvent(db, shopId, toTripId);
+    await flushUrgentCrewNotices(db, { shopId, tripIds: [fromTripId, toTripId], now: options.now });
+  }
+  return outcome;
+}
+
 /** The crew assigned to each of these trips, in one query, grouped by trip. */
 export async function tripCrewByTrip(
   db: DbExecutor,
@@ -1338,4 +1518,39 @@ export async function tripCrewByTrip(
     byTrip.set(row.tripId, list);
   }
   return byTrip;
+}
+
+/** A departure a crew member here could be moved to, as the crew panel lists it. */
+export type CrewMoveTarget = { id: string; title: string; startsAt: Date };
+
+/**
+ * **Where a crew member here could go instead** (issue #4474): this shop's
+ * other live, scheduled departures in the same window (`from`..`to`, the shop
+ * day the caller worked out in the shop's zone) that have not left yet.
+ * `moveTripCrewMember` is still the gate: a clash or a roll-call history is
+ * refused there, so this list only saves a staffer scrolling the week.
+ */
+export async function listCrewMoveTargets(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  window: { from: Date; to: Date },
+  now: Date = nowDate(),
+): Promise<CrewMoveTarget[]> {
+  const rows = await db
+    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        ne(trips.id, tripId),
+        gte(trips.startsAt, window.from),
+        lt(trips.startsAt, window.to),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
+    .limit(20);
+  return rows.filter((row) => !hasSailed(row.startsAt, now));
 }

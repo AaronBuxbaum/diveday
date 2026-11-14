@@ -20,6 +20,7 @@ import {
   ensureDepartureInterest,
 } from "@/db/interests";
 import { getBookingPayment } from "@/db/payments";
+import { seatClashesAfterMove } from "@/db/person-clashes";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { recordShopActivity } from "@/db/shop-activity";
 import { shopHasFeatureOn } from "@/db/shops";
@@ -451,6 +452,9 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
     );
   }
   revalidatePath(tripPath(shopSlug, toTripId));
+  // Read after the move committed, so a crew edit or another move that landed
+  // first is in it (issue #4474). A warning only: the move stands.
+  const clashes = await seatClashesAfterMove(dbi, s.user.shopId, toTripId, bookingId);
   const flySafeUnreached = moved.flySafe === "failed" || moved.flySafe.unreached.length > 0;
   const notice = flySafeUnreached
     ? moved.owedCents > 0
@@ -460,7 +464,9 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
       ? "seat-moved-owed"
       : moved.notice === "failed"
         ? "seat-moved-untold"
-        : "seat-moved";
+        : clashes.length > 0
+          ? "seat-moved-clash"
+          : "seat-moved";
   revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 

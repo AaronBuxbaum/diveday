@@ -15,7 +15,11 @@ import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff
 type CheckInRefusal = Extract<CheckInOutcome, { ok: false }>["reason"];
 type UndoRefusal = Extract<UndoCheckInOutcome, { ok: false }>["reason"];
 type MarkNoShowRefusal = Extract<MarkNoShowOutcome, { ok: false }>["reason"];
-type UndoNoShowRefusal = Extract<UndoNoShowOutcome, { ok: false }>["reason"];
+type UndoNoShowRefusal =
+  | Extract<UndoNoShowOutcome, { ok: false }>["reason"]
+  | Extract<UndoNoShowOutcome, { state: "conflict" }>["conflict"]
+  | "pending"
+  | "dismissed";
 type TurnAwayRefusal = Extract<TurnAwayOutcome, { ok: false }>["reason"];
 type DeskNoticeCode = NoticeCodeOf<
   | Exclude<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">, ArrivalOfflineRefusal>
@@ -57,8 +61,17 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "no-show-before-departure": { tone: "warning", key: "checkIn.notice.noShowBeforeDeparture" },
   "no-show-window-closed": { tone: "warning", key: "checkIn.notice.noShowWindowClosed" },
   "no-show-not-marked": { tone: "neutral", key: "checkIn.notice.noShowNotMarked" },
-  // The seat was resold before the undo.
+  // Recorded; the departure was busy, and the seat comes back after the response.
+  "no-show-pending": { tone: "neutral", key: "checkIn.notice.noShowPending" },
+  "no-show-key-reused": { tone: "danger", key: "checkIn.notice.invalid" },
+  // A resend of a tap a staffer has since set aside: nothing is seated.
+  "no-show-dismissed": { tone: "neutral", key: "checkIn.notice.noShowDismissed" },
+  // Recorded; the boat has no room, so they are not on it.
   "no-show-trip-full": { tone: "danger", key: "checkIn.notice.noShowTripFull" },
+  "no-show-boat-left": { tone: "warning", key: "checkIn.notice.noShowBoatLeft" },
+  "no-show-seat-moved": { tone: "warning", key: "checkIn.notice.noShowSeatMoved" },
+  "no-show-seat-cancelled": { tone: "warning", key: "checkIn.notice.noShowSeatCancelled" },
+  "no-show-diver-erased": { tone: "neutral", key: "checkIn.notice.notFound" },
   "no-show-course-ratio-full": { tone: "danger", key: "checkIn.notice.noShowCourseRatioFull" },
   "no-show-course-unstaffed": { tone: "danger", key: "checkIn.notice.noShowCourseUnstaffed" },
   "no-show-course-prerequisite": {

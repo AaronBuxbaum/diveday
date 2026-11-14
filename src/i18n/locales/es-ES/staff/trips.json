@@ -1,4 +1,28 @@
 {
+  "conflicts": {
+    "dockHeading": "Esperando en el muelle",
+    "pending": "Devolviendo su plaza.",
+    "conflict": {
+      "trip_full": "Barco lleno. Vino, pero no va en este barco. Ofrécele otra salida.",
+      "divers_full": "Todas las plazas de buceo están ocupadas. Vino, pero no bucea en este barco. Ofrécele otra salida.",
+      "course_ratio_full": "La sesión está en su ratio de instructor.",
+      "course_unstaffed": "La sesión no tiene instructor.",
+      "course_prerequisite": "Ya no tiene la certificación que pide este curso.",
+      "course_min_age": "No tiene la edad mínima de este curso.",
+      "trip_cancelled": "Esta salida está cancelada.",
+      "turned_away_departed": "No embarcó por decisión del mostrador y el barco ya salió.",
+      "seat_moved": "Su plaza pasó a otra salida.",
+      "seat_cancelled": "Su reserva se quitó.",
+      "diver_erased": "Sus datos se borraron.",
+      "boat_left": "El barco salió antes de que volviera su plaza."
+    },
+    "retry": "Reintentar",
+    "retryFor": "Reintentar volver a poner a {name}",
+    "dismiss": "Descartar",
+    "dismissFor": "Descartar a {name} esperando en el muelle",
+    "clashHeading": "Reservado a la misma hora",
+    "clash": "{name}, también {there, select, crew {de tripulación} other {buceando}}:"
+  },
   "flySafeFollowUp": {
     "heading": "Seguimiento de las indicaciones para volar",
     "resolveHelp": "Marca como resuelto solo después de contactar con el buceador o resolver de otro modo las indicaciones para volar. Esto no confirma la entrega del correo.",
@@ -83,6 +107,8 @@
     "reinstateBoatOutOfService": "Sigue cancelada: su barco está en el astillero un día en que saldría. Mueve la salida o elige otro barco primero.",
     "reinstateBoatOutOfServiceOn": "Sigue cancelada: su barco está en el astillero el {date}. Mueve la salida o elige otro barco primero.",
     "crew": "Tripulación actualizada",
+    "crewMoved": "Listo, ya está en el otro barco.",
+    "crewMovedClash": "Listo, pero tiene plaza de buceo en otro barco a la misma hora. Las dos salidas lo muestran.",
     "crewConflict": "No se cambió la tripulación. Alguien ya está asignado en este horario, o el curso quedaría por debajo de su ratio de enseñanza.",
     "noteAdded": "Nota privada del personal agregada",
     "noteDeleted": "Nota privada del personal eliminada",
@@ -90,6 +116,7 @@
     "seatMovedFlySafeUnreached": "Se trasladó. Contacta al buceador para confirmar la nueva salida y cuándo puede volar.",
     "seatMovedOwedFlySafeUnreached": "Se trasladó; queda pendiente la diferencia de precio. Contacta al buceador para confirmar la nueva salida y cuándo puede volar.",
     "seatMoved": "Listo. El buceador ya tiene el nuevo horario.",
+    "seatMovedClash": "Listo, pero también está en otro barco a la misma hora. Las dos salidas lo muestran.",
     "seatMovedUntold": "Listo, pero el mensaje con el nuevo horario no salió. Avísale tú.",
     "seatMovedOwed": "Listo. La nueva salida cuesta más, así que se debe la diferencia.",
     "partyMoved": "Listo, el grupo se movió. Cada uno ya tiene el nuevo horario.",
@@ -396,7 +423,15 @@
     "unassignAria": "Quitar a {name}",
     "clash": "También figura en la tripulación de {departure} a esas horas.",
     "assignClash": "{name} ya figura en la tripulación de otra salida a esas horas.",
-    "assignFailed": "No se ha guardado. Verifica tu conexión o inténtalo de nuevo."
+    "assignFailed": "No se ha guardado. Verifica tu conexión o inténtalo de nuevo.",
+    "move": {
+      "trigger": "Pasar a otro barco",
+      "who": "Quién",
+      "to": "A",
+      "choose": "Elegir…",
+      "submit": "Pasar",
+      "pending": "Pasando…"
+    }
   },
   "recapNote": {
     "heading": "Nota para los buceadores",

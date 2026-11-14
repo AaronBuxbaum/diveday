@@ -70,6 +70,10 @@ test.describe("light mode", () => {
         await expect(savedPanel.locator("time").first()).toContainText(/\bEDT\b/);
         await capture(page, `roll-call-${role}-conflict-offline`, "light", {
           beforeScreenshot: async () => {
+            // "ready" until the first sync answers; photograph the settled status line.
+            await expect(
+              page.getByRole("status").filter({ hasText: "Everything’s sent" }),
+            ).toBeVisible();
             await expect(savedPanel.locator("ul > li > p.font-medium")).toHaveText([
               staff("manifest.conflicts.missing"),
               staff("manifest.conflicts.aboard"),

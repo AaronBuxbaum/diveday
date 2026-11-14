@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
+import { lockCrewSchedule } from "./crew-schedule-lock";
 import { recordCrewRollCall } from "./manifests";
 import { tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
@@ -21,7 +22,9 @@ describePostgres("crew changes serialize with training plan writes", () => {
       release = resolve;
     });
     const planning = pg.connect().transaction(async (tx) => {
+      // What `setTrainingPlanAssignment` takes before it reads the crew.
       await lockBoardingCertificationEvidence(tx, shopId, "boarding");
+      await lockCrewSchedule(tx, shopId, "plan");
       acquired();
       await hold;
     });

@@ -47,6 +47,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   booking_no_show: "seats",
   booking_no_show_undone: "seats",
   booking_no_show_undo_refused: "seats",
+  boarding_observation_dismissed: "seats",
   booking_no_show_boarded: "seats",
   booking_no_show_missing_after_dive: "seats",
   booking_turned_away: "safety",

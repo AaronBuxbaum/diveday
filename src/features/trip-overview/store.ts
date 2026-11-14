@@ -6,6 +6,7 @@ import {
   getTripCrewAssignments,
   getTripSeriesSummary,
   getTripWithBooked,
+  listCrewMoveTargets,
   listOffCadenceSeriesTrips,
   listStaff,
   listTripDives,
@@ -20,10 +21,12 @@ import type { TripSharedReads } from "@/features/trip-shared-reads";
 import { hasReturned } from "@/lib/trips";
 import { canPersonConfigureTrips } from "../../db/authz";
 import { tripBlowoutCause } from "../../db/blowouts";
+import { openBoardingObservationsByTrip } from "../../db/boarding-observations";
 import type { AppDb } from "../../db/client";
 import { listCrewAwayAcknowledgements } from "../../db/crew-away-acknowledgements";
 import { listDiveSites } from "../../db/dive-sites";
 import { flySafeToldUncorrected } from "../../db/fly-safe-correction";
+import { personClashesByTrip } from "../../db/person-clashes";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "../../db/readiness";
 import { ratingCredentialsByPerson } from "../../db/staff-credentials";
 
@@ -41,7 +44,7 @@ import {
 import { divemasterRatioGap, inWaterDivemasterCount } from "../../lib/divemaster-ratio";
 import { summarizeTripDiveSites } from "../../lib/trip-dives";
 
-import { utcToWallTime } from "../../lib/zoned";
+import { shopDayBounds, utcToWallTime } from "../../lib/zoned";
 
 /**
  * Everything the trip's Overview page is about, in one call — the third of the
@@ -170,6 +173,9 @@ export async function getTripOverview(
     clashes,
     hullClashes,
     crewAwayWorking,
+    seatClashes,
+    dockObservations,
+    crewMoveTargets,
   ] = await Promise.all([
     listStaff(db, shop.id),
     crewAssignmentsRead,
@@ -219,6 +225,18 @@ export async function getTripOverview(
     // Who a staffer said is working it anyway (#2678), so the crew panel can
     // take it back; only while the boat is still ahead.
     pulseNeeded ? listCrewAwayAcknowledgements(db, shop.id, trip.id) : [],
+    // The rest of the departure's conflicts (issue #4474): a person here also
+    // on an overlapping departure with a seat on either side, and a diver the
+    // desk saw at the dock whose seat has not come back. Both are read from
+    // committed rows, so neither can be stale or missing after a move.
+    personClashesByTrip(db, shop.id, [trip.id]).then((byTrip) => byTrip.get(trip.id) ?? []),
+    openBoardingObservationsByTrip(db, shop.id, [trip.id]).then(
+      (byTrip) => byTrip.get(trip.id) ?? [],
+    ),
+    // The other boats that day a crew member here can be moved to in one step.
+    pulseNeeded
+      ? listCrewMoveTargets(db, shop.id, trip.id, shopDayBounds(trip.startsAt, shop.timezone), now)
+      : [],
   ]);
 
   // Where this departure goes, composed from the dives already loaded above — no
@@ -384,6 +402,12 @@ export async function getTripOverview(
      */
     flySafeTold: flySafeToldUncorrected(pulseReadiness.map((row) => row.booking)),
     boatClashes: hullClashes,
+    /** People here also on an overlapping departure, a seat on at least one side. */
+    seatClashes,
+    /** Divers seen at the dock whose seat has not come back yet. */
+    dockObservations,
+    /** The other departures that day a crew member here can be moved to. */
+    crewMoveTargets,
     crew: {
       crewIds,
       tripRoleByPerson,

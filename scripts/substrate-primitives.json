@@ -1,4 +1,6 @@
 {
+  "src/db/boarding-observations.ts": "The boarding_observations table module: a dock sighting's idempotent intake and its allocation under the departure lock, plus the open-sighting read (issue #4474). Concrete consumers: src/features/no-show/store.ts, src/features/trip-overview/store.ts and src/features/shop-tick/shop-tick.ts.",
+  "src/db/person-clashes.ts": "One read of who on a departure is also on an overlapping one with a seat on either side, from committed rows (issue #4474). Concrete consumers: src/features/trip-overview/store.ts, src/features/schedule-board-page/store.ts and the move actions under src/app/shop/[shopSlug]/trips/[id]/.",
   "src/db/shop-render-facts.ts": "One statement for the shop facts every staff render reads (trips, orders, courses, gear, work orders), memoized per render so the chrome and Today share it. Concrete consumers: src/app/shop/[shopSlug]/_components/ShopChrome.tsx and src/features/today/shop-home.ts.",
   "src/lib/add-panel.ts": "URL and panel-state vocabulary shared by AddPanel and client add forms; it has no data reader or mutation. Concrete consumer: src/app/actions/held-sends.ts.",
   "src/lib/address-lookup.ts": "Address suggestion types and normalization shared by the AddressSearch client and settings server form. Concrete consumer: src/app/shop/[shopSlug]/settings/AddressSearch.tsx.",

@@ -11,6 +11,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boardingObservations,
   boatSnags,
   boats,
   bookingArrivalEvents,
@@ -208,6 +209,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
+  await db.delete(boardingObservations).where(eq(boardingObservations.shopId, shopId));
   // Incident reports name bookings, people and the departure, so they go first.
   await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
   // Each report takes its people rows with it (cascade): a raised report

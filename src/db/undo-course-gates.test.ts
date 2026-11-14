@@ -253,7 +253,11 @@ describe("undoBookingNoShow on a course session", () => {
     const { db, trip, student, undo } = await released("Advanced Open Water Diver");
     await emptyCrew(db, trip.id);
 
-    expect(await undo()).toEqual({ ok: false, reason: "course_unstaffed" });
+    expect(await undo()).toMatchObject({
+      ok: true,
+      state: "conflict",
+      conflict: "course_unstaffed",
+    });
     expect(await statusOf(db, student.bookingId)).toBe("no_show");
     expect(await refusedReasons(db, student.bookingId)).toEqual(["course_unstaffed"]);
   });
@@ -266,7 +270,11 @@ describe("undoBookingNoShow on a course session", () => {
       deletedByPersonId: staffId,
     });
 
-    expect(await undo()).toEqual({ ok: false, reason: "course_prerequisite" });
+    expect(await undo()).toMatchObject({
+      ok: true,
+      state: "conflict",
+      conflict: "course_prerequisite",
+    });
     expect(await statusOf(db, student.bookingId)).toBe("no_show");
     expect(await refusedReasons(db, student.bookingId)).toEqual(["course_prerequisite"]);
   });
@@ -282,7 +290,7 @@ describe("undoBookingNoShow on a course session", () => {
       .set({ dateOfBirth: bornYearsBefore(trip.startsAt, minimumAge) })
       .where(eq(people.id, student.personId));
 
-    expect(await undo()).toEqual({ ok: false, reason: "course_min_age" });
+    expect(await undo()).toMatchObject({ ok: true, state: "conflict", conflict: "course_min_age" });
     expect(await statusOf(db, student.bookingId)).toBe("no_show");
     expect(await refusedReasons(db, student.bookingId)).toEqual(["course_min_age"]);
   });

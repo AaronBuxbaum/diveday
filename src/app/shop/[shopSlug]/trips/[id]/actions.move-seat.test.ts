@@ -28,6 +28,7 @@ vi.mock("../../../../../features/seat-diver/store", async (importOriginal) => {
   return { ...actual, moveSeat: vi.fn(), moveParty: vi.fn() };
 });
 vi.mock("../../../../../features/interest-roll/store", () => ({ carryInterests: vi.fn() }));
+vi.mock("@/db/person-clashes", () => ({ seatClashesAfterMove: vi.fn(async () => []) }));
 vi.mock("./roster-booking", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./roster-booking")>();
   return { ...actual, requireRosterBooking: vi.fn() };
@@ -38,6 +39,7 @@ const { moveParty, moveSeat } = await import("../../../../../features/seat-diver
 const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { requireRosterBooking } = await import("./roster-booking");
 const { carryInterests } = await import("../../../../../features/interest-roll/store");
+const { seatClashesAfterMove } = await import("@/db/person-clashes");
 const { carryWaitlistAction, moveSeatAction } = await import("./roster-seating-actions");
 
 const SHOP_SLUG = "reef-life";
@@ -94,6 +96,26 @@ describe("moveSeatAction", () => {
         actorPersonId: STAFF_ID,
       },
     );
+  });
+
+  it("says so when the moved diver is now on another boat at the same time", async () => {
+    signIn();
+    vi.mocked(moveSeat).mockResolvedValue(moved);
+    vi.mocked(seatClashesAfterMove).mockResolvedValueOnce([
+      {
+        personId: STAFF_ID,
+        fullName: "Nora",
+        here: "diver",
+        otherTripId: TRIP_ID,
+        otherTitle: "Wreck",
+        there: "crew",
+      },
+    ]);
+    expect(await redirectedTo(() => moveSeatAction(SHOP_SLUG, TRIP_ID, form()))).toBe(
+      noticeUrl(back, "seat-moved-clash"),
+    );
+    // Read on the departure the seat landed on, after the move.
+    expect(seatClashesAfterMove).toHaveBeenCalledWith({}, SHOP_ID, TO_TRIP_ID, BOOKING_ID);
   });
 
   it.each([
