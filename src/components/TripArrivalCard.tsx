@@ -8,7 +8,7 @@ import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
-import { openMapsUrl, osmMapEmbedUrl } from "@/lib/maps";
+import { openMapsUrl } from "@/lib/maps";
 import { siteRunsLine } from "@/lib/site-runs";
 
 function ArrivalFact({ label, value }: { label: string; value: string }) {
@@ -94,7 +94,8 @@ export function TripArrivalCard({
       ) : showMap && facts.mapQuery ? (
         <ArrivalMap
           title={t("trip.arrivalMapTitle", { place: facts.label })}
-          src={osmMapEmbedUrl(facts.mapQuery)}
+          query={facts.mapQuery}
+          zoomHint={t("trip.mapZoomHint")}
         />
       ) : null}
       {/* A ruled row pads `pt-3` under its rule, the column's own gap above
