@@ -9,7 +9,7 @@ import { DEMO_RECAP_BOOKING_ID, DEMO_TODAY_TRIP_ID } from "../src/db/seed-identi
 import { DEMO_MEDICAL_ALERT, DEMO_MEDICAL_ALERT_TRIP } from "../src/db/seed-medical-alert";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { ARRIVAL_MAP_PROBES } from "../src/lib/maps";
+import { MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { assertCrewPdfPixels } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { bookASeatAndOpenThread, openTripFromBoard, seededTripId } from "./helpers";
@@ -51,7 +51,7 @@ test.describe("print", () => {
   test.use({ viewport: { width: 816, height: 1056 } });
 
   test("the diver's day prints as its sheet, with the address and no map", async ({ page }) => {
-    for (const probe of ARRIVAL_MAP_PROBES) {
+    for (const probe of MAP_REACHABILITY_PROBES) {
       await page.route(probe, (route) =>
         route.fulfill({
           contentType: "image/svg+xml",
@@ -63,7 +63,7 @@ test.describe("print", () => {
     const publicPath = new URL(page.url()).pathname.replace("/shop/", "/s/");
     await page.goto(publicPath);
     await bookASeatAndOpenThread(page, "Print Map Diver", "print-map@example.com");
-    const map = page.locator('iframe[src*="openstreetmap.org/export/embed"]');
+    const map = page.getByRole("region", { name: /^Map of / });
     await expect(map).toBeVisible();
     const address = page.locator("address").first();
     await expect(address).not.toBeEmpty();
