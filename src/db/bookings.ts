@@ -1076,7 +1076,9 @@ function tripTakesSeatFrom(
   actor: BookingRequest["actor"],
 ): trip is typeof trips.$inferSelect {
   if (trip?.status !== "scheduled" || trip.conditionsHold) return false;
-  if (hasSailed(trip.startsAt, nowDate())) return false;
+  const now = nowDate();
+  if (actor !== "staff" && trip.startsAt.getTime() <= now.getTime()) return false;
+  if (hasSailed(trip.startsAt, now)) return false;
   return actor === "staff" || !trip.isRehearsal;
 }
 

@@ -5,6 +5,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openNamedScheduleTrip,
   openTripActivity,
   openTripFromBoard,
   signInAsOwner,
@@ -46,12 +47,7 @@ test.describe("seat claim links", () => {
     // The organizer books two seats from the public schedule — their own with
     // an email, the second just a typed name (no address, the relay reality).
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-    await page
-      .getByRole("list", { name: "Upcoming trips" })
-      .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link")
-      .click();
+    await openNamedScheduleTrip(page, title);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await choosePartySize(page, 2);
     await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");

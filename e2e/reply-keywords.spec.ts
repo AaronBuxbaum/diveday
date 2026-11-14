@@ -3,6 +3,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openNamedScheduleTrip,
   openTripFromBoard,
   signInAsOwner,
   signOut,
@@ -54,12 +55,7 @@ test.describe("reply keywords", () => {
     // `C` has one honest meaning.
     await signOut(page);
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-    await page
-      .getByRole("list", { name: "Upcoming trips" })
-      .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link")
-      .click();
+    await openNamedScheduleTrip(page, title);
     await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
       "data-hydrated",
       "true",
@@ -147,12 +143,7 @@ test.describe("reply keywords", () => {
 
     await signOut(page);
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-    await page
-      .getByRole("list", { name: "Upcoming trips" })
-      .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link")
-      .click();
+    await openNamedScheduleTrip(page, title);
     await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
       "data-hydrated",
       "true",

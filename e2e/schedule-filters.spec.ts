@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, READ_ONLY, test } from "./fixtures";
+import { findNamedScheduleTrip } from "./helpers";
 
 /**
  * **The filters live behind one quiet "More filters" disclosure** (2026-09-17;
@@ -72,9 +73,9 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
   // Combine with "has space": the seed has a sold-out course session, so this
   // narrows further still.
   await openFilters(page);
-  await page.getByLabel("Has space").check();
+  await page.getByLabel("How many of you?").selectOption("2");
   await expect(page).toHaveURL(/tripType=course/);
-  await expect(page).toHaveURL(/hasSpace=1/);
+  await expect(page).toHaveURL(/partySize=2/);
 });
 
 test("no control comes or goes from the filter row while it hydrates", { tag: READ_ONLY }, async ({
@@ -168,24 +169,12 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   // (The sampler only records changes, so a stable row is exactly one entry;
   // asserting the value rather than just the length is what stops an empty or
   // never-found form passing as "never changed".)
-  // Three, since issue #696 added the "what can you dive?" select beside the two.
-  // The fourth control — "Hide what needs more" — renders only once a level is
-  // stated, and that is a *URL* condition rather than a hydration one, so it is
-  // present in the first paint of a page carrying `?canDive=` and absent from
-  // every frame of this one. It is exactly the distinction this test is for.
-  // Four with the "More filters" button, which has sat inside the form since
-  // the row became one row (visual review 2026-10-24, B18): it renders on
-  // first paint for every reader, so it is in every sample or none.
-  // Seven since #4378: the party-size decrement, increment and hidden form
-  // value are all server-rendered, alongside those four existing controls.
-  expect([...new Set(samples.map(([count]) => count))]).toEqual([7]);
-  const copy = diverTranslator("en-US");
+  // The disclosure button and three selects are all present before hydration.
+  expect([...new Set(samples.map(([count]) => count))]).toEqual([4]);
   const form = page.locator('form:has(select[name="tripType"])');
-  await expect(form.getByRole("button", { name: copy("party.fewerPeople") })).toHaveCount(1);
-  await expect(form.getByRole("button", { name: copy("party.morePeople") })).toHaveCount(1);
-  const partySize = form.locator('input[type="hidden"][name="partySize"]');
+  const partySize = form.locator('select[name="partySize"]');
   await expect(partySize).toHaveCount(1);
-  await expect(partySize).toHaveValue("1");
+  await expect(partySize).toHaveValue("");
 
   // And no Apply button at any point, for any reader.
   await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);
@@ -261,7 +250,7 @@ test("stating a certification level marks the departures above it without removi
   await expect(page.getByText("Above your level")).toHaveCount(0);
 
   await openFilters(page);
-  await page.getByLabel("What can you dive?").selectOption("open_water");
+  await page.getByLabel("Existing certification").selectOption("open_water");
   await expect(page).toHaveURL(/canDive=open_water/);
 
   // Still on the list, and now saying why it is dimmed. The reef charter, which
@@ -277,13 +266,13 @@ test("stating a certification level marks the departures above it without removi
   await expect(page.getByText(/asks? for more than Open Water/)).toHaveCount(0);
 
   // Saying a higher level opens them: the same page, nothing marked.
-  await page.getByLabel("What can you dive?").selectOption("advanced_open_water");
+  await page.getByLabel("Existing certification").selectOption("advanced_open_water");
   await expect(page).toHaveURL(/canDive=advanced_open_water/);
   await expect(advanced).toHaveCount(1);
   await expect(page.getByText("Above your level")).toHaveCount(0);
 
   // The shorter list is opt-in, and only offered once a level is stated.
-  await page.getByLabel("What can you dive?").selectOption("open_water");
+  await page.getByLabel("Existing certification").selectOption("open_water");
   await expect(page).toHaveURL(/canDive=open_water/);
   await page.getByLabel("Hide what needs more").check();
   await expect(page).toHaveURL(/hideAbove=1/);
@@ -292,7 +281,7 @@ test("stating a certification level marks the departures above it without removi
 
   // A full reload keeps both -- they are query params, not client state.
   await page.reload();
-  await expect(page.getByLabel("What can you dive?")).toHaveValue("open_water");
+  await expect(page.getByLabel("Existing certification")).toHaveValue("open_water");
   await expect(page.getByLabel("Hide what needs more")).toBeChecked();
 });
 
@@ -318,7 +307,7 @@ test("stating a certification level marks the departures above it without removi
 test("the stated level never reaches the booking form", { tag: READ_ONLY }, async ({ page }) => {
   await page.goto("/s/blue-mantis");
   await openFilters(page);
-  await page.getByLabel("What can you dive?").selectOption("rescue");
+  await page.getByLabel("Existing certification").selectOption("rescue");
   await expect(page).toHaveURL(/canDive=rescue/);
 
   await page
@@ -362,19 +351,30 @@ test("phone schedule filters reveal the trip tags and summarize a closed selecti
   await expect(page.getByLabel(copy("schedule.filters.tripType"))).toHaveValue("course");
 });
 
-test("a party preference keeps short boats visible and explains the live booking limit", {
+test("a party preference filters short boats and preserves the direct booking limit", {
   tag: READ_ONLY,
 }, async ({ page }) => {
   const t = diverTranslator("en-US");
-  await page.goto("/s/blue-mantis?partySize=4");
-  const people = page.getByRole("group", { name: t("schedule.filters.partySize") });
-  await expect(people).toBeVisible();
-  await expect(people.getByRole("status")).toHaveText("4");
+  await page.goto("/s/blue-mantis");
   const list = page.locator("form + ul");
-  await expect(list.getByText(/party of 4/).first()).toBeVisible();
-  const trip = list.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).first();
-  await expect(trip).toHaveAttribute("href", /partySize=4/);
-  await trip.click();
+  const shortTrip = await findNamedScheduleTrip(page, "Two-Tank Reef — Molasses & French");
+  await expect(shortTrip).toBeVisible();
+  const shortHref = await shortTrip.getAttribute("href");
+  expect(shortHref).toBeTruthy();
+
+  await page.goto("/s/blue-mantis?partySize=4");
+  await expect(page.getByRole("combobox", { name: t("schedule.filters.partySize") })).toHaveValue(
+    "4",
+  );
+  await expect(list.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ })).toHaveCount(
+    0,
+  );
+  await expect(
+    list.getByRole("link", { name: /Two-Tank Reef — Benwood & Elbow/ }).first(),
+  ).toBeVisible();
+
+  // A direct link still rechecks the live booking limit.
+  await page.goto(`${shortHref}?partySize=4`);
   const count = page.getByRole("group", { name: t("party.numberOfDivers") });
   await expect(count).toHaveAttribute("data-hydrated", "true");
   await expect(count.getByRole("status")).toHaveText(t("party.diverCountOption", { count: 3 }));
@@ -407,16 +407,13 @@ test("the first schedule control changes only the URL party preference", {
   const t = diverTranslator("en-US");
   await page.goto("/s/blue-mantis?partySize=3&tripType=fun_dive");
   await expect(page.locator('select[name="tripType"]')).toHaveAttribute("data-hydrated", "true");
-  await page
-    .getByRole("group", { name: t("schedule.filters.partySize") })
-    .getByRole("button", { name: t("party.morePeople") })
-    .click();
+  await page.getByRole("combobox", { name: t("schedule.filters.partySize") }).selectOption("4");
   await expect(page).toHaveURL(/partySize=4/);
   await expect(page).toHaveURL(/tripType=fun_dive/);
   await page.reload();
-  await expect(
-    page.getByRole("group", { name: t("schedule.filters.partySize") }).getByRole("status"),
-  ).toHaveText("4");
+  await expect(page.getByRole("combobox", { name: t("schedule.filters.partySize") })).toHaveValue(
+    "4",
+  );
 });
 
 test("a public schedule row adds its site photo and one fact without another tap target", {

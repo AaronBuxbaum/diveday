@@ -49,12 +49,8 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the schedule shows room for a party (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis?partySize=4");
-        await page.getByRole("group", { name: "How many of you?" }).waitFor();
-        await page
-          .locator("form + ul")
-          .getByText(/party of 4/)
-          .first()
-          .waitFor();
+        await page.getByRole("combobox", { name: "How many of you?" }).waitFor();
+        await page.locator("form + ul").getByRole("listitem").first().waitFor();
         await capture(page, "schedule-party-size", scheme);
       });
 
@@ -358,7 +354,18 @@ for (const scheme of ["light", "dark"] as const) {
           "data-hydrated",
           "true",
         );
+        const seenLabel = diverTranslator("en-US")("trip.seen.cardLabel");
+        await expect(page.getByRole("button", { name: /Southern stingray/ })).toContainText(
+          seenLabel,
+        );
+        await expect(page.getByRole("button", { name: /Green sea turtle/ })).not.toContainText(
+          seenLabel,
+        );
         await capture(page, "site-briefing", scheme);
+        const wildlife = page.locator("[data-pitch-tile] button").first();
+        await wildlife.focus();
+        await expect(wildlife).toHaveAttribute("aria-expanded", "true");
+        await capture(page, "site-briefing-wildlife-open", scheme);
         await page.getByLabel("Email", { exact: true }).fill("avery@gmial.com");
         await page.getByLabel("Email", { exact: true }).press("Tab");
         await page.getByRole("button", { name: /avery@gmail\.com/ }).waitFor();

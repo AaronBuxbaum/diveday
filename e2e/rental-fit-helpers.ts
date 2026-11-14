@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect } from "./fixtures";
-import { bookASeatAndOpenThread, openThreadStep, signOut } from "./helpers";
+import { bookASeatAndOpenThread, openNamedScheduleTrip, openThreadStep, signOut } from "./helpers";
 
 const staff = staffTranslator("en-US");
 
@@ -15,7 +15,7 @@ export async function openDrysuitRentalFit(page: Page, shopSlug: string) {
   await expect(page.getByRole("status")).toContainText(staff("settings.main.notice.rentalsSaved"));
   await signOut(page);
   await page.goto(`/s/${shopSlug}`);
-  await page.getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" }).click();
+  await openNamedScheduleTrip(page, "Two-Tank Reef — Christ of the Abyss");
   await bookASeatAndOpenThread(page, "Short Cut Diver", "short-cut-diver@example.com");
   const fit = await openThreadStep(page, "gear");
   await fit.getByRole("radio", { name: /^Rent a drysuit/ }).check();

@@ -3,6 +3,7 @@ import {
   acceptAgeAttestation,
   e2eNow,
   openDiverFileGroup,
+  openNamedScheduleTrip,
   openThreadStep,
   openTripTab,
   tripPathByTitle,
@@ -99,11 +100,7 @@ test.describe("a shop that stops filling nitrox", () => {
     });
     const anon = makeActivitySafe(await anonContext.newPage());
     await anon.goto(`/s/${SHOP}`);
-    await anon
-      .locator("li")
-      .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-      .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
-      .click();
+    await openNamedScheduleTrip(anon, "Two-Tank Reef — Christ of the Abyss");
     // The booking form is controlled, so wait for hydration before typing.
     await expect(anon.getByLabel("People", { exact: true })).toHaveAttribute(
       "data-hydrated",
@@ -278,11 +275,7 @@ test("the nitrox request is hidden until the diver files a nitrox card, then app
   // 20260820-attested-at-booking-verified-at-boarding), and `authorizesNitroxFill`
   // still reads `verified`, which only a staffer can set.
   await page.goto("/s/blue-mantis");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
-    .click();
+  await openNamedScheduleTrip(page, "Two-Tank Reef — Christ of the Abyss");
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByRole("textbox", { name: "Name" }).fill("Nora Quinn");

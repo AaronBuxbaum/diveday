@@ -19,7 +19,7 @@ import { DAY_MS } from "./clock";
  */
 
 /**
- * How far back "this month" reaches, in days.
+ * How far back the recent-sightings window reaches, in days.
  *
  * A trailing thirty days rather than the calendar month, because the calendar
  * month makes the answer worst exactly when a diver is most likely to read it:
@@ -36,7 +36,7 @@ export const SIGHTING_WINDOW_DAYS = 30;
  * crew that saved the actual site as *unknown* — the boat moved, or the dive
  * was called — had their taps attributed to the reef on the plan. That
  * attribution is not an internal detail: it is what a diver later reads as
- * "seen here this month" for a reef the boat did not visit.
+ * a sighting for a reef the boat did not visit.
  *
  * A saved null is staff saying they do not know where they were, and the honest
  * answer to that is no group at all rather than a guess.
@@ -95,6 +95,8 @@ export type SiteSightings = {
   dives: number;
   /** Top catalog species plus crew-written sightings, which must remain readable. */
   species: SiteSightingTally[];
+  /** Every ranked tally, for matching selected field-guide species. */
+  allSpecies?: SiteSightingTally[];
 };
 
 /**
@@ -117,18 +119,18 @@ export function rankSiteSightings(input: {
   if (input.tallies.length === 0) return null;
   const dives = Math.max(input.dives, ...input.tallies.map((tally) => tally.dives));
   let catalogCount = 0;
-  const species = [...input.tallies]
+  const allSpecies = [...input.tallies]
     .map((tally) => ({ ...tally, dives: Math.min(tally.dives, dives) }))
     .sort(
       (a, b) =>
         b.dives - a.dives || b.total - a.total || a.speciesSlug.localeCompare(b.speciesSlug),
-    )
-    .filter((tally) => {
-      if (tally.customName) return true;
-      catalogCount += 1;
-      return catalogCount <= MAX_SIGHTING_SPECIES;
-    });
-  return { diveSiteId: input.diveSiteId, dives, species };
+    );
+  const species = allSpecies.filter((tally) => {
+    if (tally.customName) return true;
+    catalogCount += 1;
+    return catalogCount <= MAX_SIGHTING_SPECIES;
+  });
+  return { diveSiteId: input.diveSiteId, dives, species, allSpecies };
 }
 
 /**

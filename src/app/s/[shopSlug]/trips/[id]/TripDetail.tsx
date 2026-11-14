@@ -23,7 +23,7 @@ import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicGroupRequestPath, publicTripPath } from "@/lib/public-routes";
 import { unionRequirements } from "@/lib/requirement";
 import { shopDayOf } from "@/lib/shop-day";
-import { hasSailed, isFull, schedulePartySize, spotsRemaining } from "@/lib/trips";
+import { isFull, schedulePartySize, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
 import {
@@ -233,7 +233,7 @@ export async function TripDetailPage({
   const combinedRequirement = trip.course ? null : unionRequirements(requirement, siteRequirement);
   const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale, knownDiver);
 
-  const inPast = hasSailed(trip.startsAt, now);
+  const inPast = trip.startsAt.getTime() <= now.getTime();
   const logEntry = inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course };
 
   // Where this departure stands against the head count it needs, if it named
