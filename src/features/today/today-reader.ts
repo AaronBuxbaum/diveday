@@ -34,8 +34,9 @@ import { listNotificationDeliveryIssues } from "@/db/notifications";
 import { openOrdersForBookings } from "@/db/orders";
 import { listTripsReadiness } from "@/db/readiness";
 import {
-  retainedSafetyTripIds as readRetainedSafetyTripIds,
   retainedSafetyShopWarnings,
+  retainedSafetyWarningFields,
+  retainedSafetyWarningsFromFields,
 } from "@/db/retained-safety";
 import { newestMarkFirst } from "@/db/roll-call-order";
 import { markBookingId, seatMarks } from "@/db/roll-call-subject";
@@ -79,7 +80,7 @@ import {
 import { openSnagsForShop } from "@/features/boat-snags";
 import { readBoatWork } from "@/features/boat-work";
 import { crewAwayByTrip } from "@/features/crew-away";
-import { diveIntentTallyForTrips } from "@/features/dive-intent";
+import { diveIntentTallyAndRetainedSafetyForTrips } from "@/features/dive-intent";
 import { type HandledHelpRequest, listTodayHelpWork } from "@/features/help-requests";
 import { countOpenLostItems } from "@/features/lost-items";
 import { listOpenPaymentDisputes } from "@/features/payment-disputes";
@@ -793,8 +794,13 @@ async function departureCardFacts(
   const boatIds = [
     ...new Set(trips.map((trip) => trip.boatId).filter((id): id is string => Boolean(id))),
   ];
-  const [diveIntents, boatRows, assignments, plannedSites, retainedRows] = await Promise.all([
-    diveIntentTallyForTrips(db, shopId, tripIds),
+  const [
+    { diveIntents, retainedSafetyTripIds: retainedRows },
+    boatRows,
+    assignments,
+    plannedSites,
+  ] = await Promise.all([
+    diveIntentTallyAndRetainedSafetyForTrips(db, shopId, tripIds),
     boatIds.length > 0
       ? db
           .select({ id: boats.id, name: boats.name })
@@ -827,7 +833,6 @@ async function departureCardFacts(
           .orderBy(asc(people.fullName), asc(people.id))
       : [],
     plannedSitesByTrip(db, tripIds),
-    readRetainedSafetyTripIds(db, shopId, tripIds),
   ]);
   const boatNames = new Map(boatRows.map((row) => [row.id, row.name] as const));
 
@@ -1267,7 +1272,7 @@ async function readTodayWave(
     reviewsAwaiting,
     unanswered,
     openDateRequests,
-    shopUnits,
+    shopFacts,
     [overdueGear, dueBackGear, gearServiceDueRows, fitAdjustedReturns],
     boatSafety,
     workOrdersNeedingAttention,
@@ -1391,11 +1396,18 @@ async function readTodayWave(
         // gear servicing): off, their rows are dropped after the wave.
         lostFoundEnabled: shops.lostFoundEnabled,
         workOrdersEnabled: shops.workOrdersEnabled,
+        ...retainedSafetyWarningFields(shopId),
       })
       .from(shops)
       .where(eq(shops.id, shopId))
       .limit(1)
-      .then((rows) => rows[0]),
+      .then(async (rows) => {
+        const row = rows[0];
+        // Missing settings must never turn into a safety all-clear.
+        if (!row)
+          return { shopUnits: undefined, warnings: await retainedSafetyShopWarnings(db, shopId) };
+        return { shopUnits: row, warnings: retainedSafetyWarningsFromFields(row) };
+      }),
     Promise.all([
       listOverdueGearReservations(db, shopId, todayLocal),
       listGearDueBack(db, shopId, todayLocal),
@@ -1482,7 +1494,8 @@ async function readTodayWave(
     reviewsAwaiting,
     unanswered,
     openDateRequests,
-    shopUnits,
+    shopUnits: shopFacts.shopUnits,
+    retainedSafetyWarnings: shopFacts.warnings,
     overdueGear,
     dueBackGear,
     gearServiceDueRows,
@@ -1613,7 +1626,7 @@ export async function getTodayWork(
   // after the queue is built so they cost no phase of their own: every diver
   // the evidence blocks on a pending card is asked about, a superset of the
   // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
-  const [waveRead, agencyCheckCards, lostItemsFound, retainedSafetyWarnings] = await Promise.all([
+  const [waveRead, agencyCheckCards, lostItemsFound] = await Promise.all([
     readTodayWave(db, shopId, {
       now,
       horizon,
@@ -1636,10 +1649,9 @@ export async function getTodayWork(
     }),
     // The found items waiting (fifth loop, item 7), beside the wave.
     countOpenLostItems(db, shopId, now),
-    retainedSafetyShopWarnings(db, shopId),
   ]);
-  const retainedSafetyUnresolved = retainedSafetyWarnings.evidence;
-  const retainedSafetyAlertNeedsReview = retainedSafetyWarnings.alertNeedsReview;
+  const retainedSafetyUnresolved = waveRead.retainedSafetyWarnings.evidence;
+  const retainedSafetyAlertNeedsReview = waveRead.retainedSafetyWarnings.alertNeedsReview;
   // A feature the shop switched off on the Features page raises no row: the
   // reads above ran beside the shop row that says so, and what they found is
   // still there for when it is switched back on (`shop-features.ts`).

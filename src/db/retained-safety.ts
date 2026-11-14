@@ -44,17 +44,30 @@ export async function hasRetainedSafetyAlertNeedsReview(
   return (await retainedSafetyShopWarnings(db, shopId)).alertNeedsReview;
 }
 
+/** SQL fields usable beside other shop-scoped reads in the same statement. */
+export function retainedSafetyWarningFields(shopId: string) {
+  return {
+    claim: sql<boolean>`exists (select 1 from ${rollCallEventClaims} where ${rollCallEventClaims.shopId} = ${shopId} and ${rollCallEventClaims.retainedSafetyEvidence} is not null)`,
+    incident: sql<boolean>`exists (select 1 from ${unresolvedSafetyScanIncidents} where ${unresolvedSafetyScanIncidents.shopId} = ${shopId})`,
+    escalation: sql<boolean>`exists (select 1 from ${unresolvedSafetyAlertEscalations} inner join ${unresolvedSafetyAlertOutbox} on ${unresolvedSafetyAlertOutbox.id} = ${unresolvedSafetyAlertEscalations.outboxId} where ${unresolvedSafetyAlertOutbox.shopId} = ${shopId})`,
+  };
+}
+
+export function retainedSafetyWarningsFromFields(row: {
+  claim: boolean;
+  incident: boolean;
+  escalation: boolean;
+}) {
+  const alertNeedsReview = row.incident || row.escalation;
+  return { evidence: row.claim || alertNeedsReview, alertNeedsReview };
+}
+
 /** Read both shop-wide warnings together, including incidents for removed trips. */
 export async function retainedSafetyShopWarnings(db: DbExecutor, shopId: string) {
   const [row] = await db
-    .select({
-      claim: sql<boolean>`exists (select 1 from ${rollCallEventClaims} where ${rollCallEventClaims.shopId} = ${shopId} and ${rollCallEventClaims.retainedSafetyEvidence} is not null)`,
-      incident: sql<boolean>`exists (select 1 from ${unresolvedSafetyScanIncidents} where ${unresolvedSafetyScanIncidents.shopId} = ${shopId})`,
-      escalation: sql<boolean>`exists (select 1 from ${unresolvedSafetyAlertEscalations} inner join ${unresolvedSafetyAlertOutbox} on ${unresolvedSafetyAlertOutbox.id} = ${unresolvedSafetyAlertEscalations.outboxId} where ${unresolvedSafetyAlertOutbox.shopId} = ${shopId})`,
-    })
+    .select(retainedSafetyWarningFields(shopId))
     .from(sql`(select 1) as safety_warning_source`);
-  const alertNeedsReview = row.incident || row.escalation;
-  return { evidence: row.claim || alertNeedsReview, alertNeedsReview };
+  return retainedSafetyWarningsFromFields(row);
 }
 
 /** A durable delivery problem needs human review, even if the recipient later changes. */

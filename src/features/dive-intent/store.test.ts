@@ -1,11 +1,15 @@
 import { and, eq, isNotNull, notInArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "../../db/client";
-import { bookings, people, shops, trips } from "../../db/schema/index";
+import { bookings, people, rollCallEventClaims, shops, trips } from "../../db/schema/index";
 import { createTrip } from "../../db/trips";
 import { diveIntentTally } from "../../lib/dive-intent";
 import { fileScopedShopContext } from "../../test/db";
-import { diveIntentTallyForTrip, diveIntentTallyForTrips } from "./store";
+import {
+  diveIntentTallyAndRetainedSafetyForTrips,
+  diveIntentTallyForTrip,
+  diveIntentTallyForTrips,
+} from "./store";
 
 let seq = 0;
 
@@ -46,6 +50,83 @@ async function twoTrips(db: AppDb, shopId: string) {
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
+
+it("preserves warnings without intent seats and does not mix shops", async () => {
+  const { db, shop } = ctx;
+  const [emptyTrip, answeredTrip] = await twoTrips(db, shop.id);
+  const [other] = await db
+    .insert(shops)
+    .values({ name: "Other", slug: `other-${crypto.randomUUID()}`, timezone: "UTC" })
+    .returning();
+  const otherTrip = await createTrip(db, {
+    shopId: other.id,
+    title: "Other",
+    startsAt: new Date("2030-01-01T09:00:00Z"),
+    endsAt: new Date("2030-01-01T12:00:00Z"),
+    capacity: 5,
+  });
+  if (!otherTrip) throw new Error("other trip not created");
+  const evidence = {
+    version: 1 as const,
+    receiptId: crypto.randomUUID(),
+    checkpoint: "departure",
+    status: "not_boarded",
+    occurredAt: "2030-01-01T09:00:00Z",
+    meetingDay: null,
+    observedEvidenceIds: [],
+    retractsEventId: null,
+    retractsClientEventId: null,
+    reconcilesEvidence: false,
+    noteRetained: false as const,
+  };
+  await db.insert(rollCallEventClaims).values([
+    {
+      shopId: shop.id,
+      tripId: emptyTrip,
+      clientEventId: crypto.randomUUID(),
+      state: "erased",
+      retainedSafetyEvidence: evidence,
+    },
+    {
+      shopId: shop.id,
+      tripId: emptyTrip,
+      clientEventId: crypto.randomUUID(),
+      state: "erased",
+      retainedSafetyEvidence: evidence,
+    },
+    {
+      shopId: other.id,
+      tripId: otherTrip.id,
+      clientEventId: crypto.randomUUID(),
+      state: "erased",
+      retainedSafetyEvidence: evidence,
+    },
+  ]);
+  await db.insert(bookings).values({
+    bookedAs: "diver",
+    shopId: shop.id,
+    tripId: answeredTrip,
+    personId: await makeDiver(db, shop.id),
+    diveIntent: "a_wreck",
+  });
+  const combined = await diveIntentTallyAndRetainedSafetyForTrips(db, shop.id, [
+    emptyTrip,
+    answeredTrip,
+    otherTrip.id,
+  ]);
+  expect(combined.retainedSafetyTripIds).toEqual(new Set([emptyTrip]));
+  expect(combined.diveIntents).toEqual(
+    await diveIntentTallyForTrips(db, shop.id, [emptyTrip, answeredTrip, otherTrip.id]),
+  );
+  await db
+    .update(trips)
+    .set({ deletedAt: new Date("2030-01-02T00:00:00Z") })
+    .where(eq(trips.id, emptyTrip));
+  expect(
+    (await diveIntentTallyAndRetainedSafetyForTrips(db, shop.id, [emptyTrip]))
+      .retainedSafetyTripIds,
+  ).toEqual(new Set([emptyTrip]));
+});
 
 describe("diveIntentTallyForTrip", () => {
   it("counts an answer once per seat that gave one", async () => {

@@ -1,7 +1,8 @@
-import { and, count, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { unionAll } from "drizzle-orm/pg-core";
 import { liveTrip, seatNotCancelled } from "@/db/trips";
 import type { AppDb } from "../../db/client";
-import { bookings, trips } from "../../db/schema/index";
+import { bookings, rollCallEventClaims, trips } from "../../db/schema/index";
 
 import {
   type DiveIntent,
@@ -45,8 +46,18 @@ export async function diveIntentTallyForTrips(
   tripIds: readonly string[],
 ): Promise<Map<string, DiveIntentCount[]>> {
   if (tripIds.length === 0) return new Map();
-  const rows = await db
-    .select({ tripId: bookings.tripId, intent: bookings.diveIntent, seats: count(bookings.id) })
+  const rows = await intentTallyRows(db, shopId, tripIds);
+  return projectTallyRows(rows);
+}
+
+function intentTallyRows(db: AppDb, shopId: string, tripIds: readonly string[]) {
+  return db
+    .select({
+      tripId: bookings.tripId,
+      intent: bookings.diveIntent,
+      seats: count(bookings.id).as("seats"),
+      kind: sql<string>`'intent'`.as("kind"),
+    })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
@@ -59,6 +70,48 @@ export async function diveIntentTallyForTrips(
       ),
     )
     .groupBy(bookings.tripId, bookings.diveIntent);
+}
+
+/** One statement for card intent counts and retained warnings, even with no seats. */
+export async function diveIntentTallyAndRetainedSafetyForTrips(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+) {
+  if (tripIds.length === 0)
+    return {
+      diveIntents: new Map<string, DiveIntentCount[]>(),
+      retainedSafetyTripIds: new Set<string>(),
+    };
+  const rows = await unionAll(
+    intentTallyRows(db, shopId, tripIds),
+    db
+      .selectDistinct({
+        tripId: rollCallEventClaims.tripId,
+        intent: sql<DiveIntent | null>`null::dive_intent`.as("intent"),
+        seats: sql<number>`0::integer`.as("seats"),
+        kind: sql<string>`'safety'`.as("kind"),
+      })
+      .from(rollCallEventClaims)
+      .where(
+        and(
+          eq(rollCallEventClaims.shopId, shopId),
+          inArray(rollCallEventClaims.tripId, [...tripIds]),
+          isNotNull(rollCallEventClaims.retainedSafetyEvidence),
+        ),
+      ),
+  );
+  return {
+    diveIntents: projectTallyRows(rows.filter((row) => row.kind === "intent")),
+    retainedSafetyTripIds: new Set(
+      rows.filter((row) => row.kind === "safety").map((row) => row.tripId),
+    ),
+  };
+}
+
+function projectTallyRows(
+  rows: readonly { tripId: string; intent: DiveIntent | null; seats: number }[],
+) {
   const byTrip = new Map<string, { intent: DiveIntent | null; seats: number }[]>();
   for (const row of rows) {
     const list = byTrip.get(row.tripId);

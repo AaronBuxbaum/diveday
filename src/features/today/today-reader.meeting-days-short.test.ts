@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { shops, tripScheduleDays, trips } from "@/db/schema";
+import { rollCallEventClaims, shops, tripScheduleDays, trips } from "@/db/schema";
 import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { fileScopedShopContext } from "@/test/db";
@@ -45,6 +45,51 @@ async function course(db: AppDb) {
 }
 
 describe("a two-day course shorter than 24 hours", () => {
+  it("shows retained safety evidence on both meeting-day cards", async () => {
+    const { db } = ctx;
+    const { shop, trip } = await course(db);
+    await db.insert(rollCallEventClaims).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      clientEventId: crypto.randomUUID(),
+      state: "erased",
+      retainedSafetyEvidence: {
+        version: 1,
+        receiptId: crypto.randomUUID(),
+        checkpoint: "departure",
+        status: "not_boarded",
+        occurredAt: SAT.start,
+        meetingDay: 1,
+        observedEvidenceIds: [],
+        retractsEventId: null,
+        retractsClientEventId: null,
+        reconcilesEvidence: false,
+        noteRetained: false,
+      },
+    });
+    const now = new Date("2026-08-01T14:00:00.000Z");
+    const evidence = await inHorizonReadiness(db, shop.id, now);
+    const today = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shopClock(shop, now),
+      undefined,
+      staffTranslator("en-US"),
+      undefined,
+      false,
+      evidence,
+    );
+    const tomorrow = await getShopDayDepartures(db, shop.id, ZONE, new Date(SUN.start), evidence);
+    expect(today.retainedSafetyUnresolved).toBe(true);
+    expect(today.departures.find((departure) => departure.tripId === trip.id)).toMatchObject({
+      retainedSafetyUnresolved: true,
+    });
+    expect(tomorrow.find((departure) => departure.tripId === trip.id)).toMatchObject({
+      retainedSafetyUnresolved: true,
+    });
+  });
+
   it("reads both meeting windows", async () => {
     const { db } = ctx;
     const { trip } = await course(db);

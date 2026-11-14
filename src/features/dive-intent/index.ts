@@ -6,4 +6,8 @@ export {
   STAFF_RE_ENTRY_KEYS,
   staffDiveIntentLine,
 } from "./labels";
-export { diveIntentTallyForTrip, diveIntentTallyForTrips } from "./store";
+export {
+  diveIntentTallyAndRetainedSafetyForTrips,
+  diveIntentTallyForTrip,
+  diveIntentTallyForTrips,
+} from "./store";

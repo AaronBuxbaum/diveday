@@ -455,6 +455,8 @@ async function materializeWindow(
     timeZone: string;
     from: CalendarDate;
     through: CalendarDate;
+    /** The only occupied date of a series just inserted in this transaction. */
+    initialSeedDate?: CalendarDate;
   },
 ): Promise<MaterializedWindow | null> {
   const { series, timeZone } = input;
@@ -485,7 +487,12 @@ async function materializeWindow(
     await boatCertifiedPassengers(tx, series.shopId, template.trip.boatId),
   );
 
-  const spokenFor = await spokenForDates(tx, series, input);
+  // During creation the series and its seed were inserted in this transaction;
+  // no earlier instances or skips can exist. Later rolls must read both, even
+  // deleted instances, so a removed date is never silently recreated.
+  const spokenFor = input.initialSeedDate
+    ? new Set<string>([input.initialSeedDate])
+    : await spokenForDates(tx, series, input);
   // The run's own standing crew, never the furthest-out date's: a date the
   // roll had to leave short must not become every later date's crew.
   const standingCrew = await getSeriesStandingCrew(tx, series.shopId, series.id);
@@ -770,6 +777,7 @@ export async function createTripSeriesOrRefusal(db: AppDb, input: NewTripSeries)
       timeZone: input.timeZone,
       from: seedDate,
       through: shiftCalendarDate(seedDate, SERIES_HORIZON_DAYS),
+      initialSeedDate: seedDate,
     });
     // `inTheYard` is always empty here: a yard week was refused above.
     if (!rest) return null;
