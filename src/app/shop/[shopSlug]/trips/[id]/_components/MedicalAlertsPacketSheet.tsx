@@ -56,14 +56,15 @@ export async function MedicalAlertsPacketSheet({
   // words, so it leaves no line and wears no medical title.
   let printed: PrintedMedicalAlerts | null = null;
   if (packet.status === "stable") {
-    printed = await recordMedicalAlertsPrint(db, {
+    const recorded = await recordMedicalAlertsPrint(db, {
       shopId: shop.id,
       tripId,
       printerId: session.user.personId,
       read,
     });
     // Never produce a packet missing an alert because its audit write failed.
-    if (printed.texts.size !== read.printed.texts.size) notFound();
+    if (!recorded.ok) notFound();
+    printed = recorded.printed;
   }
 
   // The paper identifies the included alerts and when they were printed.

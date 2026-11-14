@@ -91,7 +91,7 @@ describe("the print with medical alerts", () => {
     // Nothing writes the trail ahead of the composed packet.
     expect(SOURCE.indexOf("recordMedicalAlertsPrint(")).toBeGreaterThan(composes);
     // A failed audit refuses the packet rather than omitting an alert.
-    expect(SOURCE).toContain("if (printed.texts.size !== read.printed.texts.size) notFound();");
+    expect(SOURCE).toContain("if (!recorded.ok) notFound();");
   });
 
   it("is the only caller that hands the packet the words", () => {

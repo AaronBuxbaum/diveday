@@ -420,10 +420,10 @@ export async function recordMedicalAlertsPrint(
     printerId: string;
     read: Extract<Awaited<ReturnType<typeof readMedicalAlertsForPrint>>, { ok: true }>;
   },
-): Promise<PrintedMedicalAlerts> {
+): Promise<{ ok: true; printed: PrintedMedicalAlerts } | { ok: false }> {
   const texts = new Map<string, string>();
   if (!(await canPersonPrintMedicalAlerts(db, input.shopId, input.printerId))) {
-    return { ...input.read.printed, texts };
+    return { ok: false };
   }
   for (const { bookingId, personId } of input.read.divers) {
     const recorded = await recordDiverActivity(db, {
@@ -437,9 +437,10 @@ export async function recordMedicalAlertsPrint(
     if (recorded && text !== undefined) texts.set(bookingId, text);
   }
   if (!(await canPersonPrintMedicalAlerts(db, input.shopId, input.printerId))) {
-    return { ...input.read.printed, texts: new Map() };
+    return { ok: false };
   }
-  return { ...input.read.printed, texts };
+  if (texts.size !== input.read.printed.texts.size) return { ok: false };
+  return { ok: true, printed: { ...input.read.printed, texts } };
 }
 
 /**

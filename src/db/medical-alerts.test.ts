@@ -302,7 +302,7 @@ async function printMedicalAlerts(
 ) {
   const read = await readMedicalAlertsForPrint(db, input);
   if (!read.ok) return read;
-  return { ok: true as const, printed: await recordMedicalAlertsPrint(db, { ...input, read }) };
+  return recordMedicalAlertsPrint(db, { ...input, read });
 }
 
 describe("the medical alerts print", () => {
@@ -316,12 +316,13 @@ describe("the medical alerts print", () => {
     // A packet that then cannot render stops here: no line for a copy that never existed.
     expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
     const printed = await recordMedicalAlertsPrint(db, { ...input, read });
-    expect([...printed.texts]).toEqual([[booking.id, alert]]);
+    if (!printed.ok) throw new Error("expected a recorded print");
+    expect([...printed.printed.texts]).toEqual([[booking.id, alert]]);
     expect(await trailLines(db, person.id, "medical_alert_printed")).toHaveLength(1);
   });
 
   it("hands a sheet only the words whose trail line was taken", async () => {
-    const { db, shop, trip, booking, person } = await signedWith(alert);
+    const { db, shop, trip, person } = await signedWith(alert);
     const owner = await staffer(db, shop.id, ["owner"]);
     const input = { shopId: shop.id, tripId: trip.id, printerId: owner };
     const read = await readMedicalAlertsForPrint(db, input);
@@ -329,12 +330,12 @@ describe("the medical alerts print", () => {
     // The printer is removed between the read and the write: the trail refuses the line.
     await db.update(people).set({ deletedAt: now }).where(eq(people.id, owner));
     const printed = await recordMedicalAlertsPrint(db, { ...input, read });
-    expect(printed.texts.has(booking.id)).toBe(false);
+    expect(printed).toEqual({ ok: false });
     expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
   });
 
   it("refuses disclosure if staff access is disabled after the read", async () => {
-    const { db, shop, trip, booking, person } = await signedWith(alert);
+    const { db, shop, trip, person } = await signedWith(alert);
     const printer = await staffer(db, shop.id, ["crew"]);
     const input = { shopId: shop.id, tripId: trip.id, printerId: printer };
     const read = await readMedicalAlertsForPrint(db, input);
@@ -344,8 +345,24 @@ describe("the medical alerts print", () => {
       .set({ status: "disabled" })
       .where(eq(userAccounts.personId, printer));
     const printed = await recordMedicalAlertsPrint(db, { ...input, read });
-    expect(printed.texts.has(booking.id)).toBe(false);
+    expect(printed).toEqual({ ok: false });
     expect(await trailLines(db, person.id, "medical_alert_printed")).toEqual([]);
+  });
+
+  it("refuses a packet after access is disabled even when no alerts were read", async () => {
+    const { db, shop, trip } = await signedWith(alert);
+    const printer = await staffer(db, shop.id, ["crew"]);
+    const input = { shopId: shop.id, tripId: trip.id, printerId: printer };
+    const read = await readMedicalAlertsForPrint(db, input);
+    if (!read.ok) throw new Error("expected a read");
+    const emptyRead = { ...read, printed: { ...read.printed, texts: new Map() }, divers: [] };
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, printer));
+    expect(await recordMedicalAlertsPrint(db, { ...input, read: emptyRead })).toEqual({
+      ok: false,
+    });
   });
 
   it("hands every staff role every alert on the departure, one trail line per printed diver", async () => {
