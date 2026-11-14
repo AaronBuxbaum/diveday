@@ -167,7 +167,7 @@ export function LanguagePicker({
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-label={copy.ariaLabel}
-        className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground disabled:cursor-wait disabled:opacity-60 sm:px-2"
+        className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground disabled:cursor-wait sm:px-2"
       >
         {/* `min-w-11 justify-center`: below `sm` the globe is the whole visible
             control, and without a width floor the target shrank to the glyph
