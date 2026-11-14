@@ -504,10 +504,10 @@ jobs:
       # attempt's JSON report is put back after the rerun for the budget and
       # duration steps below, since the rerun's report holds only its few.
       - name: Run non-visual Playwright tests
-        id: playwright-tests
         env:
           SKIP: ${{ needs.changes.outputs.pixel_probe == 'false' && 'e2e/pixel-probe.spec.ts' || '' }}
           E2E_WORKERS: "2"
+        id: playwright-tests
         run: |
           set -o pipefail
           mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --skip="${SKIP}" --explain --summary="$GITHUB_STEP_SUMMARY")
