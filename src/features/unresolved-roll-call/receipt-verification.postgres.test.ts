@@ -6,8 +6,12 @@ import { recordRollCall } from "@/db/manifests";
 import { capturableObservation, type RollCallClaimInput } from "@/db/roll-call-claims";
 import {
   accountSessions,
+  people,
+  personRoles,
   rollCallEventClaims,
   shops,
+  unresolvedReviewDeferrals,
+  unresolvedSafetyAlertDeliveries,
   unresolvedSafetyAlertOutbox,
   unresolvedSafetyScanIncidents,
   userAccounts,
@@ -97,6 +101,161 @@ async function fixture() {
 }
 
 describePostgres("unresolved receipt precondition races", () => {
+  it("keeps alert and deferral history when an offboarded author and recipient is erased", async () => {
+    const { pg, shop, staffId, sessionId, input } = await fixture();
+    const receipt = await persistVerifiedHandoffReceipt(pg.db, input, sessionId);
+    if (!receipt.ok || !("receipt" in receipt) || !receipt.receipt)
+      throw new Error("fixture receipt missing");
+    const [claim] = await pg.db
+      .select()
+      .from(rollCallEventClaims)
+      .where(
+        and(
+          eq(rollCallEventClaims.shopId, shop.id),
+          eq(rollCallEventClaims.clientEventId, input.clientEventId),
+        ),
+      );
+    const [outbox] = await pg.db
+      .select()
+      .from(unresolvedSafetyAlertOutbox)
+      .where(eq(unresolvedSafetyAlertOutbox.claimId, claim.id));
+    const attemptedAt = nowDate();
+    const [delivery] = await pg.db
+      .insert(unresolvedSafetyAlertDeliveries)
+      .values({
+        outboxId: outbox.id,
+        personId: staffId,
+        status: "delivered",
+        attemptId: crypto.randomUUID(),
+        attemptedAt,
+        deliveredAt: attemptedAt,
+        providerMessageId: "fixture-provider-message",
+      })
+      .returning();
+    const [otherRecipient] = await pg.db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Other recipient",
+      })
+      .returning();
+    const [otherDelivery] = await pg.db
+      .insert(unresolvedSafetyAlertDeliveries)
+      .values({
+        outboxId: outbox.id,
+        personId: otherRecipient.id,
+      })
+      .returning();
+    const [deferral] = await pg.db
+      .insert(unresolvedReviewDeferrals)
+      .values({
+        shopId: shop.id,
+        tripId: input.tripId,
+        claimId: claim.id,
+        actorPersonId: staffId,
+        reviewRevision: claim.reviewRevision,
+        requestId: crypto.randomUUID(),
+      })
+      .returning();
+
+    // Former staff may be erased only after offboarding. A separate owner
+    // authorizes this action in the isolated database.
+    const [actor] = await pg.db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Replacement owner",
+      })
+      .returning();
+    await pg.db.insert(personRoles).values({ personId: actor.id, role: "owner" });
+    await pg.db.insert(userAccounts).values({
+      personId: actor.id,
+      email: "replacement-owner@example.invalid",
+      status: "active",
+    });
+    await pg.db.delete(personRoles).where(eq(personRoles.personId, staffId));
+    expect(
+      await anonymizeDiver(pg.db, {
+        shopId: shop.id,
+        personId: staffId,
+        actorPersonId: actor.id,
+      }),
+    ).toMatchObject({ ok: true });
+    const [erasedPerson] = await pg.db.select().from(people).where(eq(people.id, staffId));
+    expect(erasedPerson.anonymizedAt).not.toBeNull();
+    const [after] = await pg.db
+      .select()
+      .from(rollCallEventClaims)
+      .where(eq(rollCallEventClaims.id, claim.id));
+    expect(after).toMatchObject({
+      state: "unresolved",
+      unresolvedObservation: null,
+      unresolvedRecordedByPersonId: null,
+      handoffReceiptId: null,
+      handoffReceiptAt: null,
+      retainedSafetyEvidence: claim.retainedSafetyEvidence,
+    });
+    expect(
+      await pg.db
+        .select()
+        .from(unresolvedSafetyAlertDeliveries)
+        .where(eq(unresolvedSafetyAlertDeliveries.id, delivery.id)),
+    ).toEqual([delivery]);
+    expect(
+      await pg.db
+        .select()
+        .from(unresolvedSafetyAlertDeliveries)
+        .where(eq(unresolvedSafetyAlertDeliveries.id, otherDelivery.id)),
+    ).toEqual([otherDelivery]);
+    expect(
+      await pg.db
+        .select()
+        .from(unresolvedReviewDeferrals)
+        .where(eq(unresolvedReviewDeferrals.id, deferral.id)),
+    ).toEqual([deferral]);
+    const bundle = await loadShopExportBundleInput(pg.db, shop.id);
+    if (!bundle) throw new Error("shop export missing");
+    const deliveries = table(bundle, "unresolved_safety_alert_deliveries.csv");
+    const exportedDelivery = deliveries.rows.find(
+      (row) => row[deliveries.header.indexOf("id")] === delivery.id,
+    );
+    if (!exportedDelivery) throw new Error("delivery missing from export");
+    expect(exportedDelivery[deliveries.header.indexOf("person_id")]).toBe(staffId);
+    expect(exportedDelivery[deliveries.header.indexOf("provider_message_id")]).toBe(
+      delivery.providerMessageId,
+    );
+    expect(
+      deliveries.rows.some((row) => row[deliveries.header.indexOf("id")] === otherDelivery.id),
+    ).toBe(true);
+    const deferrals = table(bundle, "unresolved_review_deferrals.csv");
+    const exportedDeferral = deferrals.rows.find(
+      (row) => row[deferrals.header.indexOf("id")] === deferral.id,
+    );
+    if (!exportedDeferral) throw new Error("deferral missing from export");
+    expect(exportedDeferral[deferrals.header.indexOf("actor_person_id")]).toBe(staffId);
+    expect(exportedDeferral[deferrals.header.indexOf("claim_id")]).toBe(claim.id);
+    const [otherShop] = await pg.db
+      .insert(shops)
+      .values({
+        name: "Unrelated recipient shop",
+        slug: "author-erasure-other",
+        timezone: "UTC",
+      })
+      .returning();
+    const otherBundle = await loadShopExportBundleInput(pg.db, otherShop.id);
+    if (!otherBundle) throw new Error("other shop export missing");
+    for (const [file, id] of [
+      ["unresolved_safety_alert_deliveries.csv", delivery.id],
+      ["unresolved_safety_alert_deliveries.csv", otherDelivery.id],
+      ["unresolved_review_deferrals.csv", deferral.id],
+    ] as const) {
+      const otherTable = table(otherBundle, file);
+      expect(otherTable.rows.some((row) => row[otherTable.header.indexOf("id")] === id)).toBe(
+        false,
+      );
+    }
+  });
+
   it("retains committed safety facts when receipt persistence wins the fence", async () => {
     const { pg, shop, seat, staffId, sessionId, input } = await fixture();
     const [before] = await pg.db
