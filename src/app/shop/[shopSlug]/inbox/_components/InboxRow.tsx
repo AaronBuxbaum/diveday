@@ -157,10 +157,6 @@ export function InboxRow({
   const lateSeats = seats.filter((seat) => seat.lateWindow);
   const severalLate = lateSeats.length > 1;
   const assisted = responseAction !== undefined;
-  const draftAction =
-    message.senderAuthenticated && !message.spamFlagged && message.channel !== "page"
-      ? responseAction
-      : undefined;
   // A keyword reply already says what it asked; Claude's tag would repeat it.
   const intent =
     assisted &&
@@ -261,7 +257,6 @@ export function InboxRow({
             lateAction={lateAction}
             deleteAction={deleteAction}
             doneAction={doneAction}
-            draftAction={draftAction}
             done={done}
             t={t}
             when={when}

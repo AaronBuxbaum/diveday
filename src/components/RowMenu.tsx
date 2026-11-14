@@ -12,6 +12,7 @@ import {
 } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { MENU_PANEL } from "@/components/ui/menu";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 
@@ -40,6 +41,7 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
  */
 export function RowMenu({
   label,
+  triggerText,
   panelClassName = "w-48",
   open: controlledOpen,
   onOpenChange,
@@ -49,6 +51,8 @@ export function RowMenu({
 }: {
   /** The "⋯" button's accessible name, naming the row it belongs to. */
   label: string;
+  /** Visible label for a conventional text disclosure. */
+  triggerText?: string;
   /** The panel's width; a list of acts is `w-48`, a form inside it wider. */
   panelClassName?: string;
   /** An owning row editor may reopen the panel when a refused action returns. */
@@ -159,9 +163,16 @@ export function RowMenu({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => (open ? close() : setOpen(true))}
-        className={buttonClass({ variant: "ghost", size: "icon-sm" })}
+        className={buttonClass({ variant: "ghost", size: triggerText ? "sm" : "icon-sm" })}
       >
-        <DiveDayIcon name="more" className="size-4" />
+        {triggerText ? (
+          <>
+            {triggerText}
+            <DisclosureCaret direction="down" />
+          </>
+        ) : (
+          <DiveDayIcon name="more" className="size-4" />
+        )}
       </button>
       {open || keepMounted ? (
         <div

@@ -14,7 +14,12 @@ const SHOP_DIR = join(import.meta.dirname, "..", "app", "shop", "[shopSlug]");
 function pageDirectories(directory = SHOP_DIR): string[] {
   const entries = readdirSync(directory, { withFileTypes: true });
   const found = entries.some((entry) => entry.isFile() && entry.name === "page.tsx")
-    ? [relative(SHOP_DIR, directory).split(sep).join("/")]
+    ? [
+        relative(SHOP_DIR, directory)
+          .split(sep)
+          .filter((segment) => !/^\([^/]+\)$/.test(segment))
+          .join("/"),
+      ]
     : [];
   for (const entry of entries) {
     if (entry.isDirectory() && !entry.name.startsWith("_")) {

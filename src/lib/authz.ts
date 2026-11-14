@@ -429,17 +429,9 @@ export function canReadMedicalAlert(
   return isStaff(roles) && scope.crewsDiversDeparture;
 }
 
-/**
- * Who prints a departure's packet **with the medical alerts' words on it**
- * (issue #2990, H-20261023-medical-alert-for-the amendment of 2026-10-24): the owner and a manager, the
- * readers who hold the words on every departure. Paper records no read of its
- * own, so the print is the read: the server writes one `medical_alert_printed`
- * line per diver when it produces the sheet. Crew who read the words on
- * screen do not print them; the default print keeps the flag only. Never the
- * dispute sheet, the day's paper or any other print.
- */
+/** Every active shop staffer may print the packet with its medical alerts. */
 export function canPrintMedicalAlerts(roles: readonly Role[] | undefined): boolean {
-  return isOwnerOrManager(roles);
+  return isStaff(roles);
 }
 
 /**

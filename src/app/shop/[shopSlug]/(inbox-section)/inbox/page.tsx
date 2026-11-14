@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { after } from "next/server";
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { NoticeTone } from "@/components/ui/tone";
@@ -14,14 +12,13 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatTimeZoneGeneric } from "@/lib/format";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { StaffSectionTabs } from "../_components/StaffSectionTabs";
-import { InboxRow } from "./_components/InboxRow";
+import { InboxRow } from "../../inbox/_components/InboxRow";
 import {
   deleteInboxMessageAction,
   markInboxSenderLateAction,
   setInboxMessageDoneAction,
-} from "./actions";
-import { draftInboxResponseAction } from "./assist-actions";
+} from "../../inbox/actions";
+import { draftInboxResponseAction } from "../../inbox/assist-actions";
 
 /**
  * `?notice=` codes this page redirects back to itself with. Read through
@@ -81,7 +78,7 @@ export default async function InboxPage({
   // request and sends a disabled, deleted or fully demoted staffer to
   // `/sign-in?session=ended`, and the tenant assert follows it — so a stale
   // 30-day token buys nobody the shop's messages.
-  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
@@ -125,16 +122,7 @@ export default async function InboxPage({
   const timesIn = t("inbox.timesIn", { zone: formatTimeZoneGeneric(locale, shop.timezone) });
 
   return (
-    <StaffPage width="full">
-      <ShopPageHeader title={t("shared.shopSections.inbox")} />
-      <StaffSectionTabs
-        section="inbox"
-        current="inbox"
-        roles={session.user.roles}
-        shop={shop}
-        t={t}
-      />
-
+    <>
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
       {messages.total === 0 ? (
@@ -208,6 +196,6 @@ export default async function InboxPage({
         total={t("inbox.pagination.total", { count: messages.total })}
         words={staffPagerWords(t)}
       />
-    </StaffPage>
+    </>
   );
 }

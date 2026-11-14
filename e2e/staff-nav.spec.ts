@@ -462,6 +462,39 @@ test.describe("owner", () => {
     ).toHaveText(["Calendar subscription", "Email settings"]);
   });
 
+  test("keeps the Inbox title and tabs mounted across tab navigation and back", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/inbox");
+    const main = page.getByRole("main");
+    const title = main.getByRole("heading", { level: 1, name: "Inbox" });
+    const tabs = main.getByRole("navigation", { name: "Inbox" });
+    await expect(title).toBeVisible();
+    await expect(tabs.getByRole("link", { name: "Messages" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await title.evaluate((node) => node.setAttribute("data-navigation-probe", "title"));
+    await tabs.evaluate((node) => node.setAttribute("data-navigation-probe", "tabs"));
+    await tabs.getByRole("link", { name: "Date requests" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/requests$/);
+    await expect(tabs.getByRole("link", { name: "Date requests" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(title).toHaveAttribute("data-navigation-probe", "title");
+    await expect(tabs).toHaveAttribute("data-navigation-probe", "tabs");
+    await page.goBack();
+    await expect(page).toHaveURL(/\/inbox$/);
+    await expect(tabs.getByRole("link", { name: "Messages" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(title).toHaveAttribute("data-navigation-probe", "title");
+    await expect(tabs).toHaveAttribute("data-navigation-probe", "tabs");
+  });
+
   test("Inbox and Money are one place each, its parts as tabs under the title", async ({
     page,
   }) => {

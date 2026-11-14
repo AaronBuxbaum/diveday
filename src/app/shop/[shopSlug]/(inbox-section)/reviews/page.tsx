@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -24,25 +22,28 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import { StaffListPagination } from "../_components/StaffListPagination";
-import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { StaffListPagination } from "../../_components/StaffListPagination";
 import {
   type BulkPublishCopy,
   PublishAllButton,
   PublishAllProvider,
   PublishAllStatus,
-} from "./_components/ReviewBulkPublish";
-import { type ReviewGroup, ReviewLedgerRow } from "./_components/ReviewLedgerRow";
-import { ReviewLinkEmptyForm } from "./_components/ReviewLinkEmptyForm";
-import { ReviewNarrowChips, reviewsPageHref } from "./_components/ReviewNarrowChips";
-import { ReviewRowProvider } from "./_components/ReviewRowActions";
-import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
-import { loadReviewAssists, ReviewThemes, reviewFlagWords } from "./_components/review-assists";
-import { PULSE_NOTICES, REVIEW_REASON_KEYS } from "./_components/review-page-copy";
-import { reviewReplyContext } from "./_components/review-reply-context";
-import { reviewRowCopy } from "./_components/review-row-copy";
-import { pulseReaderOrInbox } from "./_lib/pulse-reader";
-import { markPulseAddressedAction } from "./actions";
+} from "../../reviews/_components/ReviewBulkPublish";
+import { type ReviewGroup, ReviewLedgerRow } from "../../reviews/_components/ReviewLedgerRow";
+import { ReviewLinkEmptyForm } from "../../reviews/_components/ReviewLinkEmptyForm";
+import { ReviewNarrowChips, reviewsPageHref } from "../../reviews/_components/ReviewNarrowChips";
+import { ReviewRowProvider } from "../../reviews/_components/ReviewRowActions";
+import { ReviewsAggregateLine } from "../../reviews/_components/ReviewsAggregateLine";
+import {
+  loadReviewAssists,
+  ReviewThemes,
+  reviewFlagWords,
+} from "../../reviews/_components/review-assists";
+import { PULSE_NOTICES, REVIEW_REASON_KEYS } from "../../reviews/_components/review-page-copy";
+import { reviewReplyContext } from "../../reviews/_components/review-reply-context";
+import { reviewRowCopy } from "../../reviews/_components/review-row-copy";
+import { pulseReaderOrInbox } from "../../reviews/_lib/pulse-reader";
+import { markPulseAddressedAction } from "../../reviews/actions";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — this segment's
 // `loading.tsx`, with no request read above it. Since the staff shell became synchronous (issue
@@ -172,27 +173,17 @@ export default async function ReviewsPage({
     ));
 
   return (
-    <StaffPage width="full">
-      <ShopPageHeader
-        title={t("shared.shopSections.inbox")}
-        actions={
-          <Link
-            href={publicSchedulePath(shopSlug)}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("reviews.viewPublicPage")}
-          </Link>
-        }
-      />
-      <StaffSectionTabs
-        section="inbox"
-        current="reviews"
-        roles={session.user.roles}
-        shop={shop}
-        t={t}
-      />
+    <>
+      <div className="mb-6 flex justify-end">
+        <Link
+          href={publicSchedulePath(shopSlug)}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonClass({ variant: "secondary" })}
+        >
+          {t("reviews.viewPublicPage")}
+        </Link>
+      </div>
       <ReviewsAggregateLine aggregate={aggregate} month={monthAggregate} t={t} className="mb-4" />
       {narrow || !nothingAtAll ? <ReviewNarrowChips base={base} narrow={narrow} t={t} /> : null}
 
@@ -369,6 +360,6 @@ export default async function ReviewsPage({
         href={pageHref}
         totalLabel={t("reviews.pagination.total", { count: moderatedPage.total })}
       />
-    </StaffPage>
+    </>
   );
 }

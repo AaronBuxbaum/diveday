@@ -10,14 +10,7 @@
     },
     "urgent": "Urgente",
     "translation": "En {language}: {text}",
-    "requestDraftExists": "Completa o borra tu formulario de llamada sin terminar en Agregar una reserva, en Hoy, antes de preparar otra solicitud.",
-    "draftResponse": "Redactar respuesta",
-    "responseEmpty": "No pudimos contactar con la IA ahora mismo. Inténtalo de nuevo en un momento o responde con tus propias palabras.",
-    "responseLabel": "Borrador de respuesta",
-    "responseReview": "Revisa antes de enviar. Este borrador no modifica ninguna reserva.",
-    "copyResponse": "Copiar respuesta",
-    "responseCopyFailed": "Selecciona la respuesta para copiarla.",
-    "responseChanged": "Se conservaron tus cambios. Vuelve a redactar cuando quieras reemplazarlos."
+    "requestDraftExists": "Completa o borra tu formulario de llamada sin terminar en Agregar una reserva, en Hoy, antes de preparar otra solicitud."
   },
   "conversation": {
     "translatedFrom": "Traducido del {language}",

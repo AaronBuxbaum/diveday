@@ -5,21 +5,17 @@ import { waitForNavigationGate } from "@/features/e2e-test-routes";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { MEDICAL_ALERTS_PRINT } from "@/lib/print-sheets";
 import { runtimeMode } from "@/lib/runtime-mode";
 import { uuidParam } from "@/lib/uuid";
 import { BlowoutPageBody } from "./blowout/BlowoutPageBody";
 import { blowoutTitleKey } from "./blowout/title";
 import { MedicalAlertsPacketSheet } from "./MedicalAlertsPacketSheet";
 import { PaperPassSheet } from "./PaperPassSheet";
-import { TripPacketSheet } from "./TripPacketSheet";
 
 /**
  * The departure's states that replace its tabs: the paper pass for one booking
  * (`?pass=<bookingId>`), the blow-out (`?blowout=1`, the confirmation before
- * the call and the cascade record after), the packet (`?print=1`, the sheets
- * a captain prints and carries) and the packet with the medical alerts' words
- * (`?print=medical-alerts`, the owner's or a manager's, recorded on the trail). `null` is the ordinary tabbed page.
+ * the call and the cascade record after), the packet (`?print=1`, including medical alerts and recorded on the trail). `null` is the ordinary tabbed page.
  * Kept here so the route file stays a page.
  */
 export async function departureStateOf(
@@ -37,10 +33,9 @@ export async function departureStateOf(
   if (params.blowout !== undefined) {
     return <BlowoutPageBody shopSlug={shopSlug} tripId={tripId} notice={params.notice} />;
   }
-  if (params.print === MEDICAL_ALERTS_PRINT) {
+  if (params.print !== undefined) {
     return <MedicalAlertsPacketSheet shopSlug={shopSlug} tripId={tripId} />;
   }
-  if (params.print !== undefined) return <TripPacketSheet shopSlug={shopSlug} tripId={tripId} />;
   return null;
 }
 
@@ -60,9 +55,6 @@ export async function departureMetadata({
   const [{ shopSlug, id }, { pass, blowout, print }] = await Promise.all([params, searchParams]);
   if (pass !== undefined) {
     return { title: "Paper pass — DiveDay", robots: { index: false, follow: false } };
-  }
-  if (print === MEDICAL_ALERTS_PRINT && blowout === undefined) {
-    return { title: "Trip packet with medical alerts — DiveDay" };
   }
   if (print !== undefined && blowout === undefined) return { title: "Trip packet — DiveDay" };
   if (blowout === undefined) return { title: "Manage trip — DiveDay" };

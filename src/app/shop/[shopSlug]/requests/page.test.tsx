@@ -34,7 +34,7 @@ const { countWaitingDateInterests, listOpenDateInterests, listClosedDateInterest
   "@/db/interest-dates"
 );
 const { requireShopSurface } = await import("../../../../features/session/rules");
-const { default: RequestsPage } = await import("./page");
+const { default: RequestsPage } = await import("../(inbox-section)/requests/page");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";
 

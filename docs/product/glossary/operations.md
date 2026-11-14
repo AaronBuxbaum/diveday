@@ -1891,9 +1891,8 @@
   writes `medical_alert_saved_offline` per diver on the server. The copy records who saved them,
   signing out or another person signing in on the device wipes them, and a crew member taken off
   the boat later keeps that copy until it expires. Opening the copy at sea writes nothing. On the
-  signed record the words are owner and manager only; a held seat shows neither. The default print
-  carries the fact only. **"Print with medical alerts"**, beside "Print packet" for an owner or a
-  manager on a departure with an alert, prints the packet under its own title with each diver's
+  signed record the words are owner and manager only; a held seat shows neither. Active shop staff
+  can print the departure packet with medical alerts. It prints under its own title with each diver's
   words under their row, the not-reviewed line once above them, the row numbers and names that
   carry an alert, who printed it and when in the shop's zone with a line that it is a snapshot from
   then, and a line to keep the sheet with the crew and destroy it after the trip, repeated under
