@@ -2,9 +2,13 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  issueOfflineManifestSnapshot,
+  readOfflineManifestRoster,
+} from "../features/offline-manifest-snapshots";
 import {
   deferredOfflineNoteDisposition,
   getTripManifest,
@@ -29,23 +33,25 @@ async function fixture() {
   if (erased.booking.personId === other.booking.personId) {
     throw new Error("roll-call fixture needs two different divers");
   }
-  const issuedEpoch = shop.offlineErasureEpoch;
+  const roster = await readOfflineManifestRoster(db, shop.id, trip.id);
+  if (!roster) throw new Error("fixture offline roster missing");
+  const savedAt = nowDate();
+  const issued = await issueOfflineManifestSnapshot(db, shop.id, trip.id, roster);
+  if (!issued.ok || !issued.meetingIdentityProofs[0])
+    throw new Error("fixture offline meeting proof missing");
+  advanceClock(500);
+  const occurredAt = nowDate();
+  advanceClock(500);
   /** A sync from a snapshot the device saved before anything below was erased. */
   const staleSnapshot = () => {
-    const snapshotId = randomUUID();
-    const occurredAt = nowDate();
     return {
       source: "offline" as const,
       clientEventId: randomUUID(),
-      offlineSnapshotSavedAt: new Date(occurredAt.getTime() - 1_000),
-      offlineSnapshotId: snapshotId,
-      offlineErasureEpochToken: signOfflineErasureEpoch({
-        shopId: shop.id,
-        tripId: trip.id,
-        snapshotId,
-        epoch: issuedEpoch,
-        snapshotRevision: 1,
-      }),
+      offlineSnapshotSavedAt: savedAt,
+      offlineSnapshotId: issued.snapshotId,
+      offlineErasureEpochToken: issued.erasureEpochToken,
+      offlineMeetingIdentityProof: issued.meetingIdentityProofs[0],
+      meetingDay: 0,
       occurredAt,
     };
   };
