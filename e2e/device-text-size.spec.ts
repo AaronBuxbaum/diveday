@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
 import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody } from "./device-text-size-fixture";
@@ -229,13 +229,77 @@ test.describe("53px body capability input on the working manifest", () => {
   test("keeps a person's name and close action readable through repeated detail openings", async ({
     page,
   }) => {
+    // TEMPORARY: failure-only timings for the challenged roster and its verifier.
+    const started = performance.now();
+    const events: string[] = [];
+    const requestIds = new WeakMap<Request, number>();
+    let nextRequestId = 0;
+    const classify = (url: string, headers: Record<string, string>) => {
+      if (url.includes("/roster-confirmation")) return "verify";
+      if (url.includes("/snapshot")) return "snapshot";
+      if (url.includes("_rsc=")) {
+        const route = new URL(url).pathname.endsWith("/manifest") ? "manifest" : "other";
+        const kind = headers["next-router-segment-prefetch"]
+          ? "segment-prefetch"
+          : headers["next-router-prefetch"]
+            ? "prefetch"
+            : "rsc";
+        return `${route}-${kind}`;
+      }
+      return null;
+    };
+    page.on("request", (request) => {
+      const kind = classify(request.url(), request.headers());
+      if (kind) {
+        const id = ++nextRequestId;
+        requestIds.set(request, id);
+        events.push(`${Math.round(performance.now() - started)} ${id} ${kind} start`);
+      }
+    });
+    page.on("response", (response) => {
+      const request = response.request();
+      const kind = classify(request.url(), request.headers());
+      if (kind)
+        events.push(
+          `${Math.round(performance.now() - started)} ${requestIds.get(request)} ${kind} ${response.status()}`,
+        );
+    });
+    page.on("requestfailed", (request) => {
+      const kind = classify(request.url(), request.headers());
+      if (kind)
+        events.push(
+          `${Math.round(performance.now() - started)} ${requestIds.get(request)} ${kind} failed`,
+        );
+    });
+    page.on("requestfinished", (request) => {
+      const kind = classify(request.url(), request.headers());
+      if (kind)
+        events.push(
+          `${Math.round(performance.now() - started)} ${requestIds.get(request)} ${kind} finished`,
+        );
+    });
     await exposeDeviceBody(page, 53);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
     await openTripTab(page, "Manifest");
-    await expect(
-      page.getByText(staffTranslator("en-US")("manifest.rosterConfirmed"), { exact: true }),
-    ).toBeVisible();
+    try {
+      await expect(
+        page.getByText(staffTranslator("en-US")("manifest.rosterConfirmed"), { exact: true }),
+      ).toBeVisible();
+    } catch (error) {
+      const ui = await Promise.race([
+        page.evaluate(() => ({
+          visible: document.visibilityState,
+          online: navigator.onLine,
+          unconfirmed: document.body.textContent?.includes("Roster not freshly confirmed"),
+        })),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1_000)),
+      ]).catch(() => null);
+      process.stderr.write(
+        `TEMPORARY roster confirmation timing: ${JSON.stringify({ events: events.slice(-80), ui })}\n`,
+      );
+      throw error;
+    }
     const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
     const url = page.url();
     await trigger.click();
