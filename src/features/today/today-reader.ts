@@ -1614,7 +1614,13 @@ export async function getTodayWork(
   // after the queue is built so they cost no phase of their own: every diver
   // the evidence blocks on a pending card is asked about, a superset of the
   // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
-  const [waveRead, agencyCheckCards, lostItemsFound, retainedSafetyUnresolved, retainedSafetyAlertNeedsReview] = await Promise.all([
+  const [
+    waveRead,
+    agencyCheckCards,
+    lostItemsFound,
+    retainedSafetyUnresolved,
+    retainedSafetyAlertNeedsReview,
+  ] = await Promise.all([
     readTodayWave(db, shopId, {
       now,
       horizon,

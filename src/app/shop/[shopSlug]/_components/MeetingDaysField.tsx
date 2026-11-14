@@ -195,8 +195,8 @@ export function MeetingDaysField({
             <input key={id} type="hidden" name="expectedMeetingId" value={id} disabled={disabled} />
           ))}
           {Array.from({ length: Math.max(0, Math.min(count, maxDays)) }, (_, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: this field submits each visible row's identity.
             <input
+              // biome-ignore lint/suspicious/noArrayIndexKey: the hidden slot's position is its form identity.
               key={index}
               type="hidden"
               name="meetingId"

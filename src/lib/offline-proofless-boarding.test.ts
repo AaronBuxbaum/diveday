@@ -24,13 +24,32 @@ it("retains a proofless pending boarding for review without confirming it", () =
 
 it("exposes a verified pending device statement and its exact undo identity", () => {
   const { saved, tripId, meetingIdentityProof } = verifiedFixture(snapshot());
-  const latest = latestOfflineRollCall(saved, [{
-    clientEventId: "event-1", snapshotId: saved.snapshotId, snapshotSavedAt: saved.savedAt,
-    tripId, meetingDay: 0, meetingIdentityProof, bookingId: "ready", checkpoint: "departure",
-    status: "boarded", occurredAt: "2026-07-20T11:05:00.000Z", syncStatus: "pending",
-  }], "ready", "departure");
+  const latest = latestOfflineRollCall(
+    saved,
+    [
+      {
+        clientEventId: "event-1",
+        snapshotId: saved.snapshotId,
+        snapshotSavedAt: saved.savedAt,
+        tripId,
+        meetingDay: 0,
+        meetingIdentityProof,
+        bookingId: "ready",
+        checkpoint: "departure",
+        status: "boarded",
+        occurredAt: "2026-07-20T11:05:00.000Z",
+        syncStatus: "pending",
+      },
+    ],
+    "ready",
+    "departure",
+  );
   expect(latest).toMatchObject({
-    state: "boarded", occurredAt: "2026-07-20T11:05:00.000Z", pending: true,
-    implied: false, local: true, clientEventId: "event-1",
+    state: "boarded",
+    occurredAt: "2026-07-20T11:05:00.000Z",
+    pending: true,
+    implied: false,
+    local: true,
+    clientEventId: "event-1",
   });
 });

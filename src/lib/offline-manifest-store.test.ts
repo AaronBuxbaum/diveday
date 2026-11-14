@@ -245,23 +245,6 @@ describe("saveOfflineManifest", () => {
 });
 
 describe("loadOfflineManifest", () => {
-  it("withholds but retains unsent evidence after the pending grace period", async () => {
-    const tripId = payload.manifests[0].trip.id;
-    await saveOfflineManifest(payload);
-    await appendOfflineRollCall(tripId, {
-      bookingId: payload.manifests[0].divers[0].bookingId,
-      checkpoint: "departure",
-      status: "not_boarded",
-    });
-    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
-    const before = await rawStoredRecord(tripId);
-
-    await expect(loadOfflineManifest(tripId)).rejects.toThrow();
-    expect(await rawStoredRecord(tripId)).toEqual(before);
-    await expect(saveOfflineManifest(payload)).rejects.toThrow();
-    expect(await rawStoredRecord(tripId)).toEqual(before);
-  });
-
   it("keeps an expired record alive if it still has an unsynced pending event", async () => {
     const tripId = payload.manifests[0].trip.id;
     await saveOfflineManifest(payload);

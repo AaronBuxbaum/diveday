@@ -177,7 +177,7 @@ export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeL
 export const OFFLINE_MANIFEST_PENDING_GRACE_MS = 2 * OFFLINE_MANIFEST_MAX_RETENTION_MS;
 
 /**
- * What this device gave up when the ceiling above fired: enough for a human to
+ * What an earlier shell gave up when its retention ceiling fired: enough for a human to
  * go and find out what was lost, and deliberately nothing more. No diver names,
  * no booking ids, no emergency contacts, no readiness text — the notice must not
  * quietly re-retain the very roster the discard exists to remove. A trip title
@@ -908,8 +908,8 @@ async function deleteExpiredRecord(
 }
 
 /**
- * Every unsynced roll-call record this device has thrown away at the retention
- * ceiling and not had acknowledged yet — the offline shell reads this and says
+ * Every unsynced roll-call record an earlier shell discarded at its retention
+ * ceiling and that has not been acknowledged yet — the offline shell reads this and says
  * so on screen.
  *
  * It is durable rather than a return value from the delete, because the delete
@@ -1056,9 +1056,8 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
  * pending-event rules (keep an expired record alive only while it still
  * holds an unsynced roll-call event, and only until
  * OFFLINE_MANIFEST_PENDING_GRACE_MS past its expiry) apply exactly once, in
- * one place, instead of being re-implemented here and risking drift. That is
- * also what makes simply *opening the shell* enough to clear a record past the
- * ceiling — no session, no network, no purge pass required.
+ * one place, instead of being re-implemented here and risking drift. It also
+ * reports a past-grace pending record as unavailable without deleting it.
  *
  * Ordered upcoming-or-active trips first (soonest departure on top — "the
  * next boat leaving"), then past trips still within their post-trip
@@ -1198,17 +1197,8 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * `loadOfflineManifest` already makes for the single-shop expiry case,
  * applied here too.
  *
- * **That reprieve is bounded, and not by this function.** It lasts until the
- * original shop's own session next reconciles it, or until
- * OFFLINE_MANIFEST_PENDING_GRACE_MS past the record's expiry, whichever comes
- * first — and the ceiling is enforced inside `loadOfflineManifest`, which this
- * function reads every candidate through. So a past-ceiling record is already
- * gone by the time the pending check below looks at it (`current` is null), and
- * there is deliberately no second copy of the rule here to drift from the
- * first. Before that ceiling existed, "until the original shop signs in again"
- * was the only bound on record that never had to arrive at all — see
- * OFFLINE_MANIFEST_PENDING_GRACE_MS for why that is a finding rather than a
- * tradeoff (security review, 2026-08-06, F3).
+ * After the pending grace period the ordinary read fails closed. The record is
+ * retained for a future authenticated recovery path rather than being purged.
  *
  * The pending check and the delete both run under this trip's
  * `withManifestLock`, re-reading the record once the lock is held rather than
@@ -1276,7 +1266,13 @@ export async function purgeOfflineManifestsExceptShop(
         // may have changed while it was reading. Keep the final guard adjacent
         // to deletion, inside the same per-trip lock.
         if (isCurrent && !isCurrent()) return null;
-        const deleted = await deletePurgeCandidate(tripId, currentShopSlug, tenantRound, isCurrent);
+        const deleted = await deletePurgeCandidate(
+          tripId,
+          currentShopSlug,
+          tenantRound,
+          loadedVersion(current),
+          isCurrent,
+        );
         if (!deleted) return null;
         return tripId;
       });
@@ -1288,16 +1284,15 @@ export async function purgeOfflineManifestsExceptShop(
 }
 
 /**
- * Atomically compare the shared verification round and plaintext safety
- * metadata with the delete. A different context can start a newer tenant
- * request between any preceding await and this transaction; IDB serializes
- * this read/write transaction against that round allocation. Missing metadata
- * is treated as unknown and retained, never guessed to be safe to delete.
+ * Compare the exact examined record, generation, and verification round in
+ * the delete transaction. An older shell may write without the Web Lock;
+ * plaintext pending metadata alone cannot prove its replacement is safe.
  */
 async function deletePurgeCandidate(
   tripId: string,
   currentShopSlug: string,
   tenantRound: number,
+  expected: ManifestVersion,
   isCurrent?: () => boolean,
 ): Promise<boolean> {
   if (isCurrent && !isCurrent()) return false;
@@ -1318,6 +1313,8 @@ async function deletePurgeCandidate(
     const maybeDelete = () => {
       if (!roundReady || !recordReady || !generationReady || (isCurrent && !isCurrent())) return;
       if (latestRound !== tenantRound || !record) return;
+      if (!strictStoredRecoveryRecord(record) || !strictStoredRecoveryRecord(expected.record))
+        return;
       if (typeof record.shopSlug !== "string" || record.shopSlug.length === 0) return;
       if (record.shopSlug === currentShopSlug) return;
       if (
@@ -1330,6 +1327,12 @@ async function deletePurgeCandidate(
       let token: number;
       try {
         token = storedGeneration(generation);
+        if (
+          token !== expected.generation ||
+          storedGeneration(latestRound) !== expected.tenantRound ||
+          !sameStoredRecord(record, expected.record)
+        )
+          return;
       } catch {
         transaction.abort();
         return;

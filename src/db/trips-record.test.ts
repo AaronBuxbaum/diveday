@@ -24,7 +24,6 @@ import {
   getTripWithBooked,
   listStaff,
   listTripDives,
-  listTripScheduleDays,
   setTripCrew,
   tripCrewSpokenLanguages,
   upcomingTripsWithCounts,

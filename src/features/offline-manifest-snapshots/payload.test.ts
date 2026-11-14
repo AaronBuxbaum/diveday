@@ -4,7 +4,10 @@ import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 vi.mock("@/db/boarding-certification-snapshot", () => ({
   lockBoardingCertificationEvidence: vi.fn(),
 }));
-vi.mock("@/db/shops", () => ({ getShopOfflineErasureEpoch: vi.fn() }));
+vi.mock("@/db/shops", () => ({
+  getShopOfflineErasureEpoch: vi.fn(),
+  getShopOfflineDatasetIncarnation: vi.fn(async () => "11111111-1111-4111-8111-111111111111"),
+}));
 vi.mock("@/db/manifests", () => ({ getTripManifests: vi.fn() }));
 vi.mock("@/db/trip-meeting-windows", () => ({
   meetingWindowsByTrip: vi.fn(async () => new Map()),

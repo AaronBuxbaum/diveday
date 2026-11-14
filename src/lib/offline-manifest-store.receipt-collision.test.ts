@@ -6,11 +6,14 @@ import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
+import { nowMs } from "@/lib/clock";
+import { rawStoredRecord } from "@/test/offline-raw-record";
 import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
 import {
   appendOfflineArrival,
   appendOfflineRollCall,
   loadOfflineManifest,
+  OFFLINE_MANIFEST_PENDING_GRACE_MS,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "./offline-manifest-store";
@@ -81,6 +84,44 @@ function indexedDbReset() {
 }
 
 afterEach(indexedDbReset);
+
+it("withholds but retains unsent evidence after the pending grace period", async () => {
+  const tripId = payload.manifests[0].trip.id;
+  await saveOfflineManifest(payload);
+  await appendOfflineRollCall(tripId, {
+    bookingId: payload.manifests[0].divers[0].bookingId,
+    checkpoint: "departure",
+    status: "not_boarded",
+  });
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("diveday-offline-manifests", 2);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction("manifests", "readwrite");
+      const store = tx.objectStore("manifests");
+      const get = store.get(tripId);
+      get.onsuccess = () => {
+        store.put({
+          ...get.result,
+          expiresAt: new Date(
+            nowMs() - OFFLINE_MANIFEST_PENDING_GRACE_MS - 86_400_000,
+          ).toISOString(),
+        });
+      };
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+  const before = await rawStoredRecord(tripId);
+  await expect(loadOfflineManifest(tripId)).rejects.toThrow();
+  expect(await rawStoredRecord(tripId)).toEqual(before);
+  await expect(saveOfflineManifest(payload)).rejects.toThrow();
+  expect(await rawStoredRecord(tripId)).toEqual(before);
+});
 
 for (const kind of ["warning", "settlement"] as const) {
   for (const casing of ["same", "upper"] as const) {

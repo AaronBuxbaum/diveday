@@ -74,7 +74,11 @@ it("shows a warning for unresolved evidence outside today's stations", () => {
 });
 
 it("surfaces a delivery problem even when its trip is outside today's stations", () => {
-  renderSpine({ departures: [], retainedSafetyUnresolved: true, retainedSafetyAlertNeedsReview: true });
+  renderSpine({
+    departures: [],
+    retainedSafetyUnresolved: true,
+    retainedSafetyAlertNeedsReview: true,
+  });
   expect(screen.getByText(/A safety review alert needs attention/)).toBeTruthy();
   expect(screen.queryByText(/today.s boats are all clear/i)).toBeNull();
 });

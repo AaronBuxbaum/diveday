@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import "fake-indexeddb/auto";
 import { afterEach, expect, it, vi } from "vitest";
+import { rawStoredRecord } from "@/test/offline-raw-record";
 import {
   beginOfflineTenantVerificationRound,
   deleteOfflineManifest,
   listOfflineManifests,
   loadOfflineManifest,
+  purgeOfflineManifestsExceptShop,
   readOfflineManifestInventory,
   recoverExactPreservedDuplicates,
   saveOfflineManifest,
@@ -56,6 +58,65 @@ afterEach(
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     }),
+);
+
+it.each(["ciphertext", "unknown field"] as const)(
+  "does not purge an older shell replacement that changes %s",
+  async (change) => {
+    const tripId = "foreign-copy";
+    await saveOfflineManifest(payload(tripId));
+    const round = await beginOfflineTenantVerificationRound();
+    const decrypt = crypto.subtle.decrypt.bind(crypto.subtle);
+    let entered!: () => void;
+    let release!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let reads = 0;
+    const spy = vi.spyOn(crypto.subtle, "decrypt").mockImplementation((async (
+      ...args: Parameters<typeof crypto.subtle.decrypt>
+    ) => {
+      const plaintext = await decrypt(...args);
+      reads += 1;
+      if (reads === 2) {
+        entered();
+        await barrier;
+      }
+      return plaintext;
+    }) as typeof crypto.subtle.decrypt);
+    try {
+      const purging = purgeOfflineManifestsExceptShop("another-shop", round);
+      await started;
+      const existing = (await rawStoredRecord(tripId)) as Record<string, unknown>;
+      const replacement =
+        change === "ciphertext"
+          ? { ...existing, ciphertext: new Uint8Array([1, 2, 3]).buffer }
+          : { ...existing, futureSafetyEvidence: "unknown" };
+      await new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open("diveday-offline-manifests", 2);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const db = request.result;
+          const tx = db.transaction("manifests", "readwrite");
+          tx.objectStore("manifests").put(replacement);
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      });
+      release();
+      expect(await purging).toEqual([]);
+      expect(await rawStoredRecord(tripId)).toEqual(replacement);
+    } finally {
+      release();
+      spy.mockRestore();
+    }
+  },
 );
 
 it("uses the winning encryption key when two first saves generate keys without Web Locks", async () => {
