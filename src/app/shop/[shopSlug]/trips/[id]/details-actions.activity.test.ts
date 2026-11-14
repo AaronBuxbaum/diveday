@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull, notExists } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, isNull, notExists } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import {
@@ -8,6 +8,7 @@ import {
   courses,
   diveSites,
   tripDives,
+  tripScheduleDays,
   tripStageEvents,
   trips,
 } from "@/db/schema";
@@ -52,6 +53,7 @@ const { cancelTripAction, correctDiveSafetyRecord, saveDetails, saveDetailsSecti
 );
 
 const pad = (value: number) => String(value).padStart(2, "0");
+const meetingDaysFor = new WeakMap<object, { id: string; startsAt: Date; endsAt: Date }[]>();
 
 /** A live future departure nobody has booked. */
 async function emptyFutureTrip(db: AppDb, shopId: string) {
@@ -73,6 +75,16 @@ async function emptyFutureTrip(db: AppDb, shopId: string) {
     .orderBy(trips.startsAt)
     .limit(1);
   if (!trip) throw new Error("seeded shop has no empty future departure");
+  const days = await db
+    .select({
+      id: tripScheduleDays.id,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+    })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, trip.id))
+    .orderBy(asc(tripScheduleDays.dayNumber));
+  meetingDaysFor.set(trip, days);
   return trip;
 }
 
@@ -110,6 +122,21 @@ function detailsForm(
   form.set("endTime", `${pad(end.hour)}:${pad(end.minute)}`);
   form.set("capacity", String(trip.capacity));
   form.set("plannedDives", String(trip.plannedDives));
+  const expectedMeetingDays = meetingDaysFor.get(trip);
+  if (!expectedMeetingDays) throw new Error("fixture meeting days missing");
+  form.set("meetingIdsPresent", "1");
+  form.set(
+    "expectedMeetingVersion",
+    JSON.stringify(
+      expectedMeetingDays.map((day) => [
+        day.id,
+        day.startsAt.toISOString(),
+        day.endsAt.toISOString(),
+      ]),
+    ),
+  );
+  for (const day of expectedMeetingDays) form.append("expectedMeetingId", day.id);
+  form.append("meetingId", expectedMeetingDays[0]?.id ?? "");
   if (trip.priceCents !== null) form.set("priceDollars", String(trip.priceCents / 100));
   return form;
 }

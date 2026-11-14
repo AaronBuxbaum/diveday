@@ -6,6 +6,7 @@ import type { DiveDaySession } from "@/lib/auth";
 import { nowMs } from "@/lib/clock";
 import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { advanceClock } from "@/test/clock";
+import { capturedMeeting } from "@/test/offline-meeting-test-support";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import {
   clearAnswers,
@@ -150,6 +151,7 @@ describe("offline sync returns committed instants without inferring chronology",
         } as DiveDaySession);
         const crewId = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew[0]?.id;
         if (!crewId) throw new Error("seeded crew missing");
+        const meeting = await capturedMeeting(db, shop.id, reef.id, 0);
         const start = nowMs();
         if (scenario === "delayed") {
           advanceClock(5 * MINUTE);
@@ -169,10 +171,12 @@ describe("offline sync returns committed instants without inferring chronology",
         }
         const event = {
           clientEventId: crypto.randomUUID(),
-          snapshotId: crypto.randomUUID(),
+          snapshotId: meeting.offlineSnapshotId,
           snapshotSavedAt: iso(start - MINUTE),
           tripId: reef.id,
           checkpoint: "after_dive_1",
+          meetingDay: 0,
+          meetingIdentityProof: meeting.offlineMeetingIdentityProof,
           ...(subject === "diver" ? { bookingId: booking.booking.id } : { crewPersonId: crewId }),
           status: "boarded",
           occurredAt: iso(start + (scenario === "future" ? 10 * MINUTE : 0)),
