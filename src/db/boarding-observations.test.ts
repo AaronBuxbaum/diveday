@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { anonymizeDiver } from "../features/anonymize/store";
-import { markBookingNoShow } from "../features/no-show/store";
+import { markBookingNoShow, undoBookingNoShow } from "../features/no-show/store";
 import { MINUTE_MS } from "../lib/clock";
 import { fileScopedShopContext } from "../test/db";
 import {
@@ -342,5 +342,31 @@ describe("dismissing a sighting", () => {
         ),
       );
     expect(kept?.rows).toBe(1);
+  });
+});
+
+describe("a resend of a tap that was set aside", () => {
+  it("answers dismissed and seats nobody", async () => {
+    const ctx = await released();
+    const key = randomUUID();
+    const recorded = await record(ctx, key);
+    if (!recorded.ok) throw new Error("record refused");
+    await dismissBoardingObservation(ctx.db, {
+      shopId: ctx.shopId,
+      tripId: ctx.trip.id,
+      observationId: recorded.observationId,
+      actorPersonId: ctx.staffId,
+    });
+    expect(
+      await undoBookingNoShow(ctx.db, {
+        shopId: ctx.shopId,
+        tripId: ctx.trip.id,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        clientKey: key,
+        now: ctx.now,
+      }),
+    ).toMatchObject({ ok: true, state: "dismissed" });
+    expect(await seatStatus(ctx)).toBe("no_show");
   });
 });

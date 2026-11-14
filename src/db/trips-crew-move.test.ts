@@ -87,6 +87,19 @@ describe("moveTripCrewMember", () => {
     expect(still?.personId).toBe(personId);
   });
 
+  it("refuses once either boat has sailed: the crew is a record by then", async () => {
+    const personId = await divemaster();
+    const morning = await boat("Morning reef", 8);
+    const afternoon = await boat("Afternoon wreck", 13);
+    await changeTripCrewOutcome(ctx.db, ctx.shop.id, morning.id, { operation: "assign", personId });
+    const move = { personId, fromTripId: morning.id, toTripId: afternoon.id };
+    expect(await moveTripCrewMember(ctx.db, ctx.shop.id, move, { now: at(11) })).toEqual({
+      ok: false,
+      refusal: "departed",
+    });
+    expect(await getTripCrewAssignments(ctx.db, ctx.shop.id, morning.id)).toHaveLength(1);
+  });
+
   it("refuses someone not on the first crew, the same boat, and another shop", async () => {
     const personId = await divemaster();
     const morning = await boat("Morning reef", 8);

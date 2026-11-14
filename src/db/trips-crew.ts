@@ -1333,7 +1333,12 @@ export async function changeTripCrew(
 }
 
 /** Why a crew move was turned down: the assign refusals, plus the two only a move has. */
-export type CrewMoveRefusal = TripCrewRefusal | "not_on_crew" | "same_departure";
+export type CrewMoveRefusal =
+  | TripCrewRefusal
+  | "not_on_crew"
+  | "same_departure"
+  /** Either boat has left: who crewed it is a record by then, not a plan. */
+  | "departed";
 
 export type CrewMoveOutcome = { ok: true } | { ok: false; refusal: CrewMoveRefusal };
 
@@ -1391,6 +1396,10 @@ export async function moveTripCrewMember(
     const from = first?.id === fromTripId ? first : second;
     const to = first?.id === toTripId ? first : second;
     if (!from || !to || to.status !== "scheduled") return { ok: false, refusal: "refused" };
+    const now = options.now ?? nowDate();
+    if (hasSailed(from.startsAt, now) || hasSailed(to.startsAt, now)) {
+      return { ok: false, refusal: "departed" };
+    }
 
     const [eligible] = await tx
       .select({ personId: people.id })

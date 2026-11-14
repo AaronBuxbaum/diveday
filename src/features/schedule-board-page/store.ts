@@ -1,12 +1,6 @@
 import { openBoardingObservationsByTrip } from "@/db/boarding-observations";
 import { personClashesByTrip } from "@/db/person-clashes";
-import {
-  crewClashesByTrip,
-  departuresWeekBefore,
-  tripCrewByTrip,
-  upcomingScheduleRange,
-  weekBoard,
-} from "@/db/trips";
+import { departuresWeekBefore, tripCrewByTrip, upcomingScheduleRange, weekBoard } from "@/db/trips";
 import { listBoats, listBoatsForHistory } from "@/features/boats";
 import { listActiveCourses } from "@/features/courses";
 import { crewAwayByTrip } from "@/features/crew-away";
@@ -88,17 +82,15 @@ async function weekConflictsRead(
     ...Object.values(week.days).flatMap((entries) => entries.map((e) => e.tripId)),
     ...week.spans.map((span) => span.tripId),
   ];
-  const [dock, seats, crew] = await Promise.all([
+  // Seat clashes only: the flag links to the departure's booked-twice panel,
+  // and a crew clash is the crew panel's, refused at the write.
+  const [dock, seats] = await Promise.all([
     openBoardingObservationsByTrip(db, shopId, tripIds),
     personClashesByTrip(db, shopId, tripIds, now),
-    crewClashesByTrip(db, shopId, tripIds, now),
   ]);
   const conflicts: WeekConflicts = new Map();
   for (const tripId of tripIds) {
-    const people = new Set([
-      ...(seats.get(tripId) ?? []).map((clash) => clash.personId),
-      ...(crew.get(tripId) ?? []).map((clash) => clash.personId),
-    ]);
+    const people = new Set((seats.get(tripId) ?? []).map((clash) => clash.personId));
     const waiting = dock.get(tripId)?.length ?? 0;
     if (waiting > 0 || people.size > 0) {
       conflicts.set(tripId, { dock: waiting, clashes: people.size });

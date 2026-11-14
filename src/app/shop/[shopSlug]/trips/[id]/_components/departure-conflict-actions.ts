@@ -16,7 +16,8 @@ import { uuidParam } from "@/lib/uuid";
 export async function retryDockObservationsAction(shopSlug: string, tripId: string) {
   const { db, shop } = await requireShopSurface(shopSlug);
   if (!uuidParam(tripId)) return;
-  await settleDockObservations(db, { shopId: shop.id, tripId });
+  // A staffer asked: the one pass that may still seat a diver after the boat's start.
+  await settleDockObservations(db, { shopId: shop.id, tripId, by: "desk" });
   revalidatePath(shopPath(shopSlug, "trips", tripId));
   revalidatePath(shopPath(shopSlug, "schedule", "board"));
 }

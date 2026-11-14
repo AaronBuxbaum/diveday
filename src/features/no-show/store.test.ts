@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, notInArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { standingArrivalStatus } from "../../db/arrival-provenance";
 import { createBooking } from "../../db/bookings";
@@ -836,12 +836,11 @@ describe("undoBookingNoShow", () => {
       await undoBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now }),
     ).toMatchObject({ ok: true, state: "conflict", conflict: "trip_cancelled" });
     expect(await statusOf(db, bookingId)).toBe("no_show");
-    // Neither the undo nor a refusal line: the two refusals that get their own
-    // entry are the ones where the *seat* is gone and a shop has a next act to
-    // take. A cancelled departure is already on the board, and reinstating it
-    // is the recovery.
+    // No undo, and one line saying why not (issue #4474 review): the desk saw
+    // the diver, and the trail keeps that the called-off boat could not take
+    // them. Reinstating the departure is still the recovery.
     const written = await db
-      .select({ code: activityEvents.code })
+      .select({ code: activityEvents.code, reason: sql`${activityEvents.params}->>'reason'` })
       .from(activityEvents)
       .where(
         and(
@@ -849,7 +848,7 @@ describe("undoBookingNoShow", () => {
           inArray(activityEvents.code, ["booking_no_show_undone", "booking_no_show_undo_refused"]),
         ),
       );
-    expect(written).toHaveLength(0);
+    expect(written).toEqual([{ code: "booking_no_show_undo_refused", reason: "trip_cancelled" }]);
   });
 
   it("refuses a seat nobody marked", async () => {

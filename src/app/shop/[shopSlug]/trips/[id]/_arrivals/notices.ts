@@ -18,7 +18,8 @@ type MarkNoShowRefusal = Extract<MarkNoShowOutcome, { ok: false }>["reason"];
 type UndoNoShowRefusal =
   | Extract<UndoNoShowOutcome, { ok: false }>["reason"]
   | Extract<UndoNoShowOutcome, { state: "conflict" }>["conflict"]
-  | "pending";
+  | "pending"
+  | "dismissed";
 type TurnAwayRefusal = Extract<TurnAwayOutcome, { ok: false }>["reason"];
 type DeskNoticeCode = NoticeCodeOf<
   | Exclude<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">, ArrivalOfflineRefusal>
@@ -56,15 +57,18 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "no-show-already-marked": { tone: "neutral", key: "checkIn.notice.noShowAlreadyMarked" },
   "no-show-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
   "no-show-trip-cancelled": { tone: "neutral", key: "checkIn.notice.noShowTripCancelled" },
-  "no-show-divers-full": { tone: "warning", key: "participants.notices.noShowDiversFull" },
+  "no-show-divers-full": { tone: "danger", key: "participants.notices.noShowDiversFull" },
   "no-show-before-departure": { tone: "warning", key: "checkIn.notice.noShowBeforeDeparture" },
   "no-show-window-closed": { tone: "warning", key: "checkIn.notice.noShowWindowClosed" },
   "no-show-not-marked": { tone: "neutral", key: "checkIn.notice.noShowNotMarked" },
   // Recorded; the departure was busy, and the seat comes back after the response.
   "no-show-pending": { tone: "neutral", key: "checkIn.notice.noShowPending" },
   "no-show-key-reused": { tone: "danger", key: "checkIn.notice.invalid" },
-  // Recorded and open: the seat was resold before the tap, so it waits for the next one.
-  "no-show-trip-full": { tone: "warning", key: "checkIn.notice.noShowTripFull" },
+  // A resend of a tap a staffer has since set aside: nothing is seated.
+  "no-show-dismissed": { tone: "neutral", key: "checkIn.notice.noShowDismissed" },
+  // Recorded; the boat has no room, so they are not on it.
+  "no-show-trip-full": { tone: "danger", key: "checkIn.notice.noShowTripFull" },
+  "no-show-boat-left": { tone: "warning", key: "checkIn.notice.noShowBoatLeft" },
   "no-show-seat-moved": { tone: "warning", key: "checkIn.notice.noShowSeatMoved" },
   "no-show-seat-cancelled": { tone: "warning", key: "checkIn.notice.noShowSeatCancelled" },
   "no-show-diver-erased": { tone: "neutral", key: "checkIn.notice.notFound" },

@@ -217,7 +217,11 @@ describePostgres("a dock sighting is never held behind a schedule edit", () => {
       await move.release();
     }
     // The after-response retry.
-    await settleDockObservations(ctx.pg.connect(), { shopId: ctx.shopId, tripId: ctx.trip.id });
+    await settleDockObservations(ctx.pg.connect(), {
+      shopId: ctx.shopId,
+      tripId: ctx.trip.id,
+      by: "automatic",
+    });
     expect((await observationsOf(ctx.pg.db, ctx.late))[0]?.state).toBe("applied");
     expect(await statusOf(ctx.pg.db, ctx.late)).toBe("booked");
   });

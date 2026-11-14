@@ -19,6 +19,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { SEAT_WAITING_CONFLICTS } from "@/lib/boarding-observations";
 import { sellableSeats } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -542,7 +543,7 @@ export const seatNotCancelled = ne(bookings.status, "cancelled");
  */
 export const seatAwaitedAtDock = and(
   eq(bookings.status, "no_show"),
-  sql`exists (select 1 from ${boardingObservations} where ${boardingObservations.bookingId} = ${bookings.id} and ${boardingObservations.tripId} = ${bookings.tripId} and ${boardingObservations.shopId} = ${bookings.shopId} and (${boardingObservations.state} = 'pending' or (${boardingObservations.state} = 'conflict' and ${boardingObservations.conflictCode} in ('trip_full', 'divers_full', 'course_unstaffed', 'course_prerequisite', 'course_min_age', 'course_ratio_full'))))`,
+  sql`exists (select 1 from ${boardingObservations} where ${boardingObservations.bookingId} = ${bookings.id} and ${boardingObservations.tripId} = ${bookings.tripId} and ${boardingObservations.shopId} = ${bookings.shopId} and (${boardingObservations.state} = 'pending' or (${boardingObservations.state} = 'conflict' and ${inArray(boardingObservations.conflictCode, [...SEAT_WAITING_CONFLICTS])})))`,
 );
 
 /**
@@ -593,6 +594,16 @@ export async function heldSeatCounts(
   tx: DbExecutor,
   shopId: string,
   tripId: string,
+  options: {
+    /**
+     * False: only the seats actually held, without the dock sightings still
+     * waiting. The allocation measures a sighting against these alone, so
+     * waiting sightings never hold places from one another (issue #4474).
+     */
+    awaited?: boolean;
+    /** A seat measured for itself, which must not count against its own place. */
+    exceptBookingId?: string;
+  } = {},
 ): Promise<SeatCounts> {
   const [row] = await tx
     .select({
@@ -606,7 +617,8 @@ export async function heldSeatCounts(
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
-        or(seatHeld, seatAwaitedAtDock),
+        options.awaited === false ? seatHeld : or(seatHeld, seatAwaitedAtDock),
+        options.exceptBookingId ? ne(bookings.id, options.exceptBookingId) : undefined,
       ),
     );
   return { aboard: row?.aboard ?? 0, divers: row?.divers ?? 0 };

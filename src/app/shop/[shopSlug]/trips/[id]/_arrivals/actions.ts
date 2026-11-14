@@ -255,8 +255,12 @@ export async function undoNoShowAction(
     revalidatePath(back);
     return;
   }
+  if (outcome.state === "dismissed") {
+    revalidateAndRedirect(back, noticeUrl(back, "no-show-dismissed"));
+    return;
+  }
   const shopId = session.user.shopId;
-  after(() => settleDockObservations(db, { shopId, tripId: outcome.tripId }));
+  after(() => settleDockObservations(db, { shopId, tripId: outcome.tripId, by: "automatic" }));
   revalidateAndRedirect(back, noticeUrl(back, "no-show-pending"));
 }
 

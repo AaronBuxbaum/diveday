@@ -3,8 +3,8 @@
     "dockHeading": "Waiting at the dock",
     "pending": "Putting their seat back.",
     "conflict": {
-      "trip_full": "The boat is full. They get the next seat that opens.",
-      "divers_full": "Every diver’s seat is taken. They get the next one that opens.",
+      "trip_full": "Boat full. They came, but they’re not on this boat. Offer them another departure.",
+      "divers_full": "Every diver’s seat is taken. They came, but they’re not diving this boat. Offer them another departure.",
       "course_ratio_full": "The session is at its instructor ratio.",
       "course_unstaffed": "The session has no instructor.",
       "course_prerequisite": "They no longer hold the card this course asks for.",
@@ -13,7 +13,8 @@
       "turned_away_departed": "Turned away, and the boat has left.",
       "seat_moved": "Their seat moved to another departure.",
       "seat_cancelled": "Their booking was removed.",
-      "diver_erased": "Their details were erased."
+      "diver_erased": "Their details were erased.",
+      "boat_left": "The boat left before their seat came back."
     },
     "retry": "Try again",
     "retryFor": "Try again to put {name} back",

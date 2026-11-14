@@ -3,8 +3,8 @@
     "dockHeading": "Esperando en el muelle",
     "pending": "Devolviendo su plaza.",
     "conflict": {
-      "trip_full": "El barco está lleno. Tendrá la próxima plaza que quede libre.",
-      "divers_full": "Todas las plazas de buceo están ocupadas. Tendrá la próxima que quede libre.",
+      "trip_full": "Barco lleno. Vino, pero no va en este barco. Ofrécele otra salida.",
+      "divers_full": "Todas las plazas de buceo están ocupadas. Vino, pero no bucea en este barco. Ofrécele otra salida.",
       "course_ratio_full": "La sesión está en su ratio de instructor.",
       "course_unstaffed": "La sesión no tiene instructor.",
       "course_prerequisite": "Ya no tiene la certificación que pide este curso.",
@@ -13,7 +13,8 @@
       "turned_away_departed": "No embarcó por decisión del mostrador y el barco ya salió.",
       "seat_moved": "Su plaza pasó a otra salida.",
       "seat_cancelled": "Su reserva se quitó.",
-      "diver_erased": "Sus datos se borraron."
+      "diver_erased": "Sus datos se borraron.",
+      "boat_left": "El barco salió antes de que volviera su plaza."
     },
     "retry": "Reintentar",
     "retryFor": "Reintentar volver a poner a {name}",

@@ -241,7 +241,18 @@ export type SettleOutcome =
  */
 export async function settleBoardingObservations(
   db: AppDb,
-  input: { shopId: string; tripId: string; wait?: "brief" | "bounded"; now?: Date },
+  input: {
+    shopId: string;
+    tripId: string;
+    wait?: "brief" | "bounded";
+    /**
+     * `automatic`: nobody is at the desk (the after-response retry, the shop
+     * tick), so a boat that has left is not boarded from here. Defaults to the
+     * desk: the tap itself, or a staffer's Try again.
+     */
+    by?: "desk" | "automatic";
+    now?: Date;
+  },
 ): Promise<SettleOutcome> {
   const now = input.now ?? nowDate();
   let outcome: SettleOutcome;
@@ -274,7 +285,7 @@ export async function settleBoardingObservations(
         .for("update", { skipLocked: true });
       const settled: SettledObservation[] = [];
       for (const observation of open) {
-        settled.push(await settleOne(tx, observation, trip ?? null, now));
+        settled.push(await settleOne(tx, observation, trip ?? null, now, input.by === "automatic"));
       }
       return { ok: true, settled };
     });
@@ -296,6 +307,7 @@ async function settleOne(
   observation: typeof boardingObservations.$inferSelect,
   trip: typeof trips.$inferSelect | null,
   now: Date,
+  automatic: boolean,
 ): Promise<SettledObservation> {
   const [seat] = await tx
     .select({
@@ -312,12 +324,15 @@ async function settleOne(
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(and(eq(bookings.id, observation.bookingId), eq(bookings.shopId, observation.shopId)))
     .limit(1)
-    .for("update", { of: bookings });
+    // The person row too: an erasure takes it before rewriting the name, so a
+    // name read here cannot reach the trail after the person is erased.
+    .for("update", { of: [bookings, people] });
   const precheck = observationPrecheck({
     observedTripId: observation.tripId,
     seat: seat ?? null,
     trip: trip && trip.deletedAt === null ? { status: trip.status, startsAt: trip.startsAt } : null,
     now,
+    automatic,
   });
   const done = (state: "applied" | "conflict", conflict: BoardingObservationConflict | null) => ({
     observationId: observation.id,
@@ -330,19 +345,16 @@ async function settleOne(
     return done("applied", null);
   }
   if (precheck.kind === "conflict") {
-    await markConflict(tx, observation, precheck.code, now, null);
+    await markConflict(tx, observation, precheck.code, now, seat?.personName ?? null);
     return done("conflict", precheck.code);
   }
   if (!seat || !trip) throw new Error("observation precheck counted a missing seat or departure");
 
-  // Counted under the departure lock. This observation already counts as a
-  // held seat (`seatAwaitedAtDock`), so its own place comes off first: the
-  // question is whether the boat has room for it among everyone else.
-  const held = await heldSeatCounts(tx, observation.shopId, trip.id);
-  const others = {
-    aboard: Math.max(0, held.aboard - 1),
-    divers: Math.max(0, held.divers - (isDiver(seat.participantType) ? 1 : 0)),
-  };
+  // Counted under the departure lock, against the seats actually held: the
+  // sightings still waiting hold places against a sale, never against one
+  // another. This loop runs earliest first, so each one seated here is held
+  // when the next is measured.
+  const others = await heldSeatCounts(tx, observation.shopId, trip.id, { awaited: false });
   const capacity = await sellableCapacity(tx, trip);
   const full = seatRefusal(seat.participantType, { ...trip, capacity }, others);
   const courseRefusal: CourseAdmissionRefusal | null = full
@@ -356,10 +368,7 @@ async function settleOne(
       });
   const refusal = full ?? courseRefusal;
   if (refusal) {
-    await markConflict(tx, observation, refusal, now, {
-      diver: seat.personName,
-      reason: refusal,
-    });
+    await markConflict(tx, observation, refusal, now, seat.personName);
     return done("conflict", refusal);
   }
 
@@ -401,16 +410,15 @@ async function markApplied(tx: DbExecutor, observationId: string, now: Date) {
 }
 
 /**
- * Open with a reason. The trail gets one "could not put back" line the first
- * time a seat-waiting reason is reached, not on every pass that finds the boat
- * still full.
+ * Open with a reason. The trail gets one "could not put back" line each time
+ * the reason changes, not on every pass that finds the boat still full.
  */
 async function markConflict(
   tx: DbExecutor,
   observation: typeof boardingObservations.$inferSelect,
   code: BoardingObservationConflict,
   now: Date,
-  trail: { diver: string; reason: (typeof SEAT_WAITING_CONFLICTS)[number] } | null,
+  diver: string | null,
 ) {
   if (observation.state === "conflict" && observation.conflictCode === code) return;
   await tx
@@ -422,7 +430,7 @@ async function markConflict(
         inArray(boardingObservations.state, ["pending", "conflict"]),
       ),
     );
-  if (!trail) return;
+  if (diver === null) return;
   const actor = await personName(tx, observation.shopId, observation.recordedByPersonId);
   await tx.insert(activityEvents).values({
     shopId: observation.shopId,
@@ -430,7 +438,7 @@ async function markConflict(
     bookingId: observation.bookingId,
     actorPersonId: observation.recordedByPersonId,
     code: "booking_no_show_undo_refused",
-    params: { actor, diver: trail.diver, reason: trail.reason },
+    params: { actor, diver, reason: code },
     occurredAt: now,
   });
 }
@@ -457,24 +465,46 @@ export async function dismissBoardingObservation(
 ): Promise<boolean> {
   const roles = await loadActiveStaffRoles(db, input.shopId, input.actorPersonId);
   if (!roles || !isStaff(roles)) return false;
-  const rows = await db
-    .update(boardingObservations)
-    .set({
-      state: "dismissed",
-      conflictCode: null,
-      settledAt: nowDate(),
-      dismissedByPersonId: input.actorPersonId,
-    })
-    .where(
-      and(
-        eq(boardingObservations.id, input.observationId),
-        eq(boardingObservations.shopId, input.shopId),
-        eq(boardingObservations.tripId, input.tripId),
-        inArray(boardingObservations.state, ["pending", "conflict"]),
-      ),
-    )
-    .returning({ id: boardingObservations.id });
-  return rows.length > 0;
+  return db.transaction(async (tx) => {
+    const now = nowDate();
+    const [row] = await tx
+      .update(boardingObservations)
+      .set({
+        state: "dismissed",
+        conflictCode: null,
+        settledAt: now,
+        dismissedByPersonId: input.actorPersonId,
+      })
+      .where(
+        and(
+          eq(boardingObservations.id, input.observationId),
+          eq(boardingObservations.shopId, input.shopId),
+          eq(boardingObservations.tripId, input.tripId),
+          inArray(boardingObservations.state, ["pending", "conflict"]),
+        ),
+      )
+      .returning({ bookingId: boardingObservations.bookingId });
+    if (!row) return false;
+    const [seat] = await tx
+      .select({ diver: people.fullName })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(and(eq(bookings.id, row.bookingId), eq(bookings.shopId, input.shopId)))
+      .limit(1);
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      bookingId: row.bookingId,
+      actorPersonId: input.actorPersonId,
+      code: "boarding_observation_dismissed",
+      params: {
+        actor: await personName(tx, input.shopId, input.actorPersonId),
+        diver: seat?.diver ?? "",
+      },
+      occurredAt: now,
+    });
+    return true;
+  });
 }
 
 /** One open observation, as the departure and the board read it. */
@@ -597,6 +627,7 @@ export async function settleOpenBoardingObservations(
     const outcome = await settleBoardingObservations(db, {
       shopId: row.shopId,
       tripId: row.tripId,
+      by: "automatic",
       now,
     });
     if (!outcome.ok) busy += 1;

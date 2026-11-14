@@ -88,6 +88,21 @@ describe("observationPrecheck", () => {
       facts({ seat: { turnedAwayAt: before }, now: before }),
       { kind: "count" },
     ],
+    [
+      "an automatic pass once the boat has sailed",
+      { ...facts({ now: new Date("2026-11-14T15:00:00Z") }), automatic: true },
+      { kind: "conflict", code: "boat_left" },
+    ],
+    [
+      "a staffer at the desk once the boat has sailed",
+      facts({ now: new Date("2026-11-14T15:00:00Z") }),
+      { kind: "count" },
+    ],
+    [
+      "an automatic pass before the boat sails",
+      { ...facts({}), automatic: true },
+      { kind: "count" },
+    ],
   ] as const)("%s", (_name, input, expected) => {
     expect(observationPrecheck(input)).toEqual(expected);
   });
@@ -105,7 +120,11 @@ describe("conflict codes", () => {
   it("keeps only room and course gates waiting for this departure's seat", () => {
     expect([...SEAT_WAITING_CONFLICTS].sort()).toEqual(
       BOARDING_OBSERVATION_CONFLICTS.filter(
-        (code) => code === "trip_full" || code === "divers_full" || code.startsWith("course_"),
+        (code) =>
+          code === "trip_full" ||
+          code === "divers_full" ||
+          code === "course_unstaffed" ||
+          code === "course_ratio_full",
       ).sort(),
     );
   });

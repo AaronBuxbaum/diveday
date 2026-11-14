@@ -62,8 +62,12 @@ export type UndoNoShowOutcome =
       ok: true;
       bookingId: string;
       tripId: string;
-      /** The seat is back (`applied`), or the observation is recorded and waiting (`pending`). */
-      state: "applied" | "pending";
+      /**
+       * The seat is back (`applied`), the observation is recorded and waiting
+       * (`pending`), or this tap was already recorded and since set aside
+       * (`dismissed`): a resend of it seats nobody.
+       */
+      state: "applied" | "pending" | "dismissed";
     }
   | {
       ok: true;
@@ -270,6 +274,7 @@ export async function undoBookingNoShow(
     if (standing?.state === "conflict" && standing.conflict) {
       return { ...base, state: "conflict", conflict: standing.conflict };
     }
+    if (standing?.state === "dismissed") return { ...base, state: "dismissed" };
     return { ...base, state: standing?.state === "applied" ? "applied" : "pending" };
   }
   if (mine.state === "conflict" && mine.conflict) {
@@ -278,10 +283,14 @@ export async function undoBookingNoShow(
   return { ...base, state: "applied" };
 }
 
-/** Settle a departure's observations after the response, with the ordinary lock wait. */
+/**
+ * Settle a departure's observations with the ordinary lock wait: after the
+ * response (`automatic`, which never boards a boat that has left) or on a
+ * staffer's Try again (`desk`).
+ */
 export async function settleDockObservations(
   db: AppDb,
-  input: { shopId: string; tripId: string },
+  input: { shopId: string; tripId: string; by: "desk" | "automatic" },
 ): Promise<void> {
   await settleBoardingObservations(db, { ...input, wait: "bounded" });
 }

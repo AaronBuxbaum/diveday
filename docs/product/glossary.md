@@ -209,12 +209,14 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Backup destination
 - Blocked / Ready
 - Boarding
+- Boarding observation
 - Boat at departure
 - Boat capacity
 - Boat clash
 - Boat mode
 - Boat papers
 - Booked as
+- Booked twice
 - Booking checkout
 - Bounce record
 - Buddy team

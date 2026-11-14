@@ -916,7 +916,6 @@
         "why": "issue #2722: every card insert now names its kind on the one cards ledger",
         "files": {
           "src/db/executed-dives.test.ts": "1084 -> 1085",
-          "src/features/no-show/store.test.ts": "1156 -> 1158",
           "src/db/self-declared-cards.test.ts": "1849 -> 1869"
         }
       }
@@ -960,7 +959,7 @@
     "src/features/courses/store.test.ts": 1676,
     "src/features/divers/store.test.ts": 2759,
     "src/features/import/store.test.ts": 1074,
-    "src/features/no-show/store.test.ts": 1158,
+    "src/features/no-show/store.test.ts": 1157,
     "src/features/recap/store.test.ts": 2138,
     "src/features/reminders/store.test.ts": 936,
     "src/features/reporting/store.test.ts": 1380,

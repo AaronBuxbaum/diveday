@@ -1,4 +1,5 @@
 import type { CourseAdmissionRefusal } from "./course-admission";
+import { hasSailed } from "./trips";
 
 /**
  * **Why a boarding observation cannot take its seat back yet** (issue #4474).
@@ -13,6 +14,8 @@ import type { CourseAdmissionRefusal } from "./course-admission";
  * - `trip_cancelled`: the departure was called off.
  * - `turned_away_departed`: the desk turned this diver away and the boat has
  *   left; putting them back would show them aboard.
+ * - `boat_left`: an automatic pass (after the response, the shop tick) found
+ *   the boat already gone; only a person at the desk may still put them back.
  * - `seat_moved`: the seat was moved to another departure after the tap.
  * - `seat_cancelled`: the seat was removed after the tap.
  * - `diver_erased`: the diver's personal data was erased after the tap.
@@ -23,6 +26,7 @@ export type BoardingObservationConflict =
   | CourseAdmissionRefusal
   | "trip_cancelled"
   | "turned_away_departed"
+  | "boat_left"
   | "seat_moved"
   | "seat_cancelled"
   | "diver_erased";
@@ -36,24 +40,24 @@ export const BOARDING_OBSERVATION_CONFLICTS = [
   "course_ratio_full",
   "trip_cancelled",
   "turned_away_departed",
+  "boat_left",
   "seat_moved",
   "seat_cancelled",
   "diver_erased",
 ] as const satisfies readonly BoardingObservationConflict[];
 
 /**
- * The conflicts that still want **this** departure's seat: no room, or a
- * course gate that a staffer can clear. While one stands the seat keeps
+ * The conflicts that still want **this** departure's seat: no room, or an
+ * instructor gate a staffer can clear. While one stands the seat keeps
  * counting as held (`seatAwaitedAtDock`, src/db/trips-queries.ts), so it is
- * the next seat to open. The others hold nothing: the boat is called off, the
- * diver is ashore or elsewhere.
+ * the next seat to open. The others hold nothing: the boat is called off or
+ * gone, the diver is ashore or elsewhere, or no seat that opens would clear it
+ * (a missing course card, an age under the course's).
  */
 export const SEAT_WAITING_CONFLICTS = [
   "trip_full",
   "divers_full",
   "course_unstaffed",
-  "course_prerequisite",
-  "course_min_age",
   "course_ratio_full",
 ] as const satisfies readonly BoardingObservationConflict[];
 
@@ -76,6 +80,11 @@ export type ObservedSeatFacts = {
   } | null;
   trip: { status: string; startsAt: Date } | null;
   now: Date;
+  /**
+   * Nobody is standing at the desk: the after-response retry or the shop
+   * tick. Such a pass never puts a diver on a boat that has already left.
+   */
+  automatic?: boolean;
 };
 
 /**
@@ -106,6 +115,9 @@ export function observationPrecheck(
   // ashore once the scheduled start has passed (dde-3 #2).
   if (seat.turnedAwayAt !== null && facts.now.getTime() >= trip.startsAt.getTime()) {
     return { kind: "conflict", code: "turned_away_departed" };
+  }
+  if (facts.automatic && hasSailed(trip.startsAt, facts.now)) {
+    return { kind: "conflict", code: "boat_left" };
   }
   return { kind: "count" };
 }
