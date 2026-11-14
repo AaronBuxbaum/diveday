@@ -66,6 +66,8 @@ test.describe("light mode", () => {
     await expect(
       page.getByRole("progressbar", { name: t("manifest.progressAriaLabel") }),
     ).toHaveAttribute("aria-valuenow", "3");
+    // The roster check answers after hydration; photograph the confirmed line, not the pending one.
+    await expect(page.getByText(t("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
     await capture(page, "manifest-dual-role-missing", "light");
 
     await page.emulateMedia({ media: "print" });

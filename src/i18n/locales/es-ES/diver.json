@@ -110,10 +110,11 @@
       "course": "Curso",
       "hasSpace": "Con plazas",
       "noMatches": "Ninguna salida coincide con estos filtros. Prueba a quitar uno",
-      "canDive": "¿Qué puedes bucear?",
+      "canDive": "Certificación actual",
       "canDiveUnsaid": "Prefiero no decirlo",
       "hideAboveLevel": "Ocultar las que piden más",
       "aboveLevelChip": "Por encima de tu nivel",
+      "anyPartySize": "Cualquier tamaño de grupo",
       "partySize": "¿Cuántos vienen?",
       "partySeats": "{count, plural, one {# plaza libre} other {# plazas libres}} · grupo de {party}"
     },
@@ -264,7 +265,8 @@
     "courseGearIncluded": "El equipo está incluido.",
     "courseGearIncludedKinds": "Incluido en el curso: {items}.",
     "seen": {
-      "heading": "Visto aquí este mes",
+      "cardLabel": "Visto este mes",
+      "heading": "Visto aquí en los últimos 30 días",
       "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}}",
       "lastSeen": "Visto por última vez el {date}"
     },
@@ -420,7 +422,7 @@
     "bookVerb": "Reservar",
     "headingToPayment": "Vamos al pago…",
     "booking": "Reservando…",
-    "rememberOnDevice": "Recuerda mi nombre y correo en este dispositivo para este centro durante un máximo de 30 días.",
+    "rememberOnDevice": "Recuerda mi nombre y correo en este dispositivo",
     "rememberUnavailable": "Esta pestaña no pudo guardar la opción para volver a intentarlo. La reserva se puede confirmar igualmente.",
     "fullHeading": "Este barco está completo",
     "alternativeSameCourse": "El mismo curso, {date}",
@@ -2233,7 +2235,7 @@
       },
       "goliath-grouper": {
         "name": "Mero guasa",
-        "description": "Enorme y despreocupado, casi siempre estacionado bajo una cornisa o en la sombra de un pecio.",
+        "description": "Un mero enorme y moteado que se refugia cerca de cornisas y pecios.",
         "tip": "Dale espacio y nunca le bloquees la salida por debajo de un saliente."
       },
       "gray-angelfish": {
@@ -2294,7 +2296,7 @@
       "green-moray": {
         "name": "Morena verde",
         "description": "Una anguila oliva y pesada que llena una grieta y respira con la boca abierta.",
-        "tip": "La boca abierta es respiración, no amenaza. Mantén las manos lejos y se queda tranquila."
+        "tip": "Al abrir y cerrar la boca mueve agua sobre las branquias. Mantén la distancia y nunca la toques."
       },
       "green-razorfish": {
         "name": "Pez navaja verde",
@@ -2303,8 +2305,8 @@
       },
       "green-sea-turtle": {
         "name": "Tortuga verde",
-        "description": "Una pastadora de caparazón liso, casi siempre de cabeza en el pasto marino o dormida bajo una cornisa.",
-        "tip": "No te pongas en su camino a la superficie. Tiene que respirar, y no te va a rodear."
+        "description": "Una tortuga marina de caparazón duro que se alimenta principalmente de pastos marinos y algas.",
+        "tip": "Dale espacio y deja libre su camino a la superficie. Las tortugas marinas respiran aire."
       },
       "grooved-brain-coral": {
         "name": "Coral cerebro surcado",
@@ -2563,7 +2565,7 @@
       },
       "nurse-shark": {
         "name": "Tiburón gata",
-        "description": "Un tranquilo habitante del fondo, ancho, de aletas redondeadas y dos barbillas en el hocico.",
+        "description": "Un tiburón ancho que descansa en el fondo, con aletas redondeadas y dos barbillas en el hocico.",
         "tip": "Revisa las cornisas tranquilas sin amontonarte ni taparle la salida al animal. Nunca lo toques ni lo agarres; muerde si lo manipulan."
       },
       "ocean-surgeonfish": {
@@ -3128,7 +3130,7 @@
       },
       "stoplight-parrotfish": {
         "name": "Loro semáforo",
-        "description": "Un pastador pesado de pico fuerte: verde y dorado de adulto, moteado de rojo de joven.",
+        "description": "Un pastador de pico fuerte: los juveniles son pardo rojizos y los machos en fase terminal son verdes con marcas naranjas.",
         "tip": "Muévete despacio cerca de las cabezas de coral y deja que el color te encuentre."
       },
       "stovepipe-sponge": {
@@ -3739,7 +3741,7 @@
       "theDay": "El día",
       "diveNumber": "Inmersión 1",
       "bottomTime": "Alrededor de 45 minutos en el agua",
-      "seenHeading": "Visto aquí este mes",
+      "seenHeading": "Visto aquí en los últimos 30 días",
       "seenStingray": "Raya látigo americana en 2 de 3 inmersiones registradas",
       "lastSeenStingray": "Visto por última vez el 3 oct",
       "seenTurtle": "Tortuga verde en 1 de 3 inmersiones registradas",

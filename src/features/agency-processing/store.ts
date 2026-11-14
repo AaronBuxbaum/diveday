@@ -356,7 +356,7 @@ export async function listCardsToValidate(
         isNull(people.anonymizedAt),
       ),
     )
-    .orderBy(asc(cards.createdAt), asc(people.fullName), asc(cards.id));
+    .orderBy(asc(cards.createdAt), asc(people.fullName), asc(cards.kind), asc(cards.id));
   return rows.flatMap((row): CardToValidate[] => {
     const what: CardWhat | null =
       row.kind === "level" && row.level

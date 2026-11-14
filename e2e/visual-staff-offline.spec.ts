@@ -208,6 +208,12 @@ for (const scheme of ["light", "dark"] as const) {
           page.locator("#deck-flow").getByText(/Two-Tank Reef.*After dive 1/, { exact: true }),
         ).toBeVisible();
         await openDeckPerson(page, "Priya Sharma");
+        // The status line reads "ready" until the first sync answers; photograph the settled one.
+        await expect(
+          page.locator('[data-deck-screen] > [role="status"]').getByText("Everything’s sent", {
+            exact: true,
+          }),
+        ).toBeVisible();
         await capture(page, "offline-manifest-after-dive", scheme);
       });
 

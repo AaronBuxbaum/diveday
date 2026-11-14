@@ -6,7 +6,7 @@ import { diveSites, people, personRoles, tripSightings, trips } from "./schema";
 
 /**
  * **A month of the crew's own log, on the two reefs the demo sells** — so
- * "Seen here this month" is a real beat on the seeded trip page rather than a
+ * "Seen here in the last 30 days" is a real beat on the seeded trip page rather than a
  * feature nobody can see.
  *
  * Without this the whole diver-facing half of the living reef ships inert:

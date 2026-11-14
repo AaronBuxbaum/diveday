@@ -766,6 +766,9 @@ export async function pagedUpcomingTripsWithCounts(
     monthEnd?: Date;
     /** Only trips with at least one open seat (booked < capacity). */
     hasSpace?: boolean;
+    minSeats?: number;
+    /** Optional schedule floor, such as the start of the shop-local day. */
+    from?: Date;
     /** "fun_dive" for no linked course, "course" for a course session. */
     tripType?: "fun_dive" | "course";
     /** Hide private charters/sessions (e.g. for public storefront schedule). */
@@ -788,8 +791,8 @@ export async function pagedUpcomingTripsWithCounts(
   const afterDate = after ? new Date(after[0]) : null;
   const beforeDate = before ? new Date(before[0]) : null;
   const nowWithBuffer = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
-  const lowerBound =
-    options.monthStart && options.monthStart > nowWithBuffer ? options.monthStart : nowWithBuffer;
+  const floor = options.from ?? nowWithBuffer;
+  const lowerBound = options.monthStart && options.monthStart > floor ? options.monthStart : floor;
 
   const rows = await db
     .select({
@@ -838,7 +841,14 @@ export async function pagedUpcomingTripsWithCounts(
       ),
     )
     .groupBy(trips.id, courses.id, diveSites.id)
-    .having(hasSpaceHaving(options.hasSpace))
+    .having(
+      options.minSeats
+        ? sql`count(${bookings.id}) + ${options.minSeats} <= ${tripSellableSeatsSql()}
+            and (${trips.snorkelerPriceCents} is not null or ${trips.riderPriceCents} is not null
+              or ${trips.diverCapacity} is null
+              or ${bookedDiversCount()} + ${options.minSeats} <= ${trips.diverCapacity})`
+        : hasSpaceHaving(options.hasSpace),
+    )
     // The keyset cursor carries all three keys (`src/db/cursor.ts`, issue
     // #2175), so the filter above resumes exactly after (or, reading back,
     // exactly before) the row the cursor names.
