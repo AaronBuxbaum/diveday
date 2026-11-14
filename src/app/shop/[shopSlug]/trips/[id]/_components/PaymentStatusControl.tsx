@@ -96,8 +96,10 @@ export function PaymentStatusControl({
   allowedStatuses,
   mark,
   copy,
+  summarizeStatus = true,
 }: {
   bookingId: string;
+  summarizeStatus?: boolean;
   status: PaymentStatus;
   /**
    * Which statuses this staffer may set. `waived` and `refunded` are decisions
@@ -147,11 +149,17 @@ export function PaymentStatusControl({
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <input type="hidden" name="paymentEntryId" value={mark.paymentEntryId ?? ""} />
-      <span className="text-sm text-muted">
-        {copy.prefix} {copy.statuses[optimisticStatus]}
-        {sourceNote ? <span className="text-muted"> · {sourceNote}</span> : null}
-        {showRefund ? <span className="text-muted"> · {refundNote}</span> : null}
-      </span>
+      {summarizeStatus || sourceNote || showRefund ? (
+        <span className="text-sm text-muted">
+          {summarizeStatus ? (
+            <>
+              {copy.prefix} {copy.statuses[optimisticStatus]}
+            </>
+          ) : null}
+          {sourceNote ? <span className="text-muted"> · {sourceNote}</span> : null}
+          {showRefund ? <span className="text-muted"> · {refundNote}</span> : null}
+        </span>
+      ) : null}
       {showPackage ? (
         <span className="basis-full text-sm" data-testid="payment-package-note">
           {packageNote}

@@ -26,6 +26,7 @@ const allOn = {
   offersHotelPickup: true,
   checkoutRecoveryEnabled: true,
   buddyLinksEnabled: true,
+  buddyTeamsEnabled: true,
   sightingsEnabled: true,
   diverPhotosEnabled: true,
   selfRegistrationEnabled: true,

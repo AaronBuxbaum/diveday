@@ -6,7 +6,13 @@
  */
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openOnThisPhone, openTripTab } from "./helpers";
+import {
+  offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
+  openOnThisPhone,
+  openTripTab,
+} from "./helpers";
 import {
   AGING_SAVED_AT,
   capture,
@@ -118,8 +124,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(/offline-manifest/);
         // The roster is what proves the record was read back and decrypted —
         // the shell renders its chrome before the store resolves.
-        await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+        ).toBeVisible();
+        await openDeckPerson(page, "Priya Sharma");
         await capture(page, "offline-manifest-roll-call", scheme);
+        await openDeckDetails(page);
         await page.getByRole("link", { name: "Roll call", exact: true }).click();
         await expect(page.locator("#offline-roll-call-context")).toBeFocused();
         await capture(page, "offline-manifest-roll-call-jump", scheme);
@@ -155,8 +165,11 @@ for (const scheme of ["light", "dark"] as const) {
           () => {},
         );
         await page.goto(`/offline-manifest?trip=${tripId}&fallback=slow`);
-        await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
-        await expect(page.getByText("No answer · device copy")).toBeVisible();
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+        ).toBeVisible();
+        await openDeckDetails(page);
+        await expect(page.getByText("No answer · device copy").first()).toBeVisible();
         await capture(page, "offline-manifest-unanswered", scheme);
 
         await page.unrouteAll();
@@ -186,9 +199,15 @@ for (const scheme of ["light", "dark"] as const) {
         await openOnThisPhone(page);
         await page.getByRole("link", { name: "Open offline roll call" }).click();
         await page.waitForURL(/offline-manifest/);
-        await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
-        await page.getByRole("button", { name: "After dive 1" }).click();
-        await expect(page.getByRole("heading", { name: "After dive 1 roll call" })).toBeVisible();
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+        ).toBeVisible();
+        await openDeckDetails(page);
+        await page.getByRole("button", { name: "After dive 1", exact: true }).click();
+        await expect(
+          page.locator("#deck-flow").getByText(/Two-Tank Reef.*After dive 1/, { exact: true }),
+        ).toBeVisible();
+        await openDeckPerson(page, "Priya Sharma");
         await capture(page, "offline-manifest-after-dive", scheme);
       });
 
@@ -215,6 +234,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openOnThisPhone(page);
         await page.getByRole("link", { name: "Open offline roll call" }).click();
         await page.waitForURL(/offline-manifest/);
+        await openDeckDetails(page);
         const counter = page.getByRole("region", { name: "At the counter" });
         const diego = counter.getByRole("button", { name: /Diego Alvarez/ });
         await diego.click();
@@ -371,7 +391,9 @@ for (const scheme of ["light", "dark"] as const) {
         // also put this navigation through the service worker's cached shell:
         // a second thing to prime and a second thing to be flaky.
         await page.goto(`/offline-manifest?trip=${tripId}`);
-        await page.getByRole("heading", { name: "Before departure roll call" }).waitFor();
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+        ).toBeVisible();
 
         // Signal returns. The shell re-runs its purge on `online` — the same
         // event the fixture's own `setOffline(false)` dispatches — and this time

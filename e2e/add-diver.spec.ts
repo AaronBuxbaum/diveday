@@ -7,7 +7,7 @@ import {
   e2eNow,
   findTripOnBoard,
   HELD_SEND_TIMEOUT_MS,
-  openIfClosed,
+  openFirstRosterRowWith,
   openRosterRow,
   openTripActivity,
   openTripFromBoard,
@@ -26,9 +26,9 @@ signedInAsOwner();
 async function openPrivateNotes(page: Page) {
   // Every seat is one line, its notes behind the row's own mark (owner,
   // 2026-10-05): open the row first. The spec seats exactly one diver.
-  await openIfClosed(page.locator('#roster li[id^="booking-"] > details').first());
+  await openFirstRosterRowWith(page, "Save note");
   const details = page
-    .locator('#roster li[id^="booking-"] > details details')
+    .locator('#roster li[id^="booking-"] details')
     .filter({ hasText: /Private staff notes|Add a private note/ })
     .filter({ visible: true });
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
@@ -86,7 +86,7 @@ async function openNewTripWithWalkIn(page: Page, titlePrefix: string): Promise<s
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
   await expect(
-    rosterRow(page, "Walk-in Wanda").getByRole("link", { name: "Walk-in Wanda" }),
+    (await rosterRow(page, "Walk-in Wanda")).getByRole("link", { name: "Walk-in Wanda" }),
   ).toBeVisible();
   // The header's capacity pill states a full boat, the same pill on every tab.
   const header = page
@@ -474,7 +474,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
   await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
   await expect(
-    rosterRow(page, "Phoned In Pat").getByRole("link", { name: "Phoned In Pat" }),
+    (await rosterRow(page, "Phoned In Pat")).getByRole("link", { name: "Phoned In Pat" }),
   ).toBeVisible();
 });
 
@@ -507,9 +507,8 @@ test("a full boat's add band offers the wait list, never a seat", async ({ page 
   await stalePick.click();
   await expect(stale.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
   // Seats only: the Divers tab also lists who wants in, where Priya can stand.
-  const seats = stale.locator('#roster li[id^="booking-"]');
-  await expect(seats.filter({ hasText: "First Aboard Fay" })).toHaveCount(1);
-  await expect(seats.filter({ hasText: "Priya Sharma" })).toHaveCount(0);
+  await expect(await rosterRow(stale, "First Aboard Fay")).toHaveCount(1);
+  await expect(await rosterRow(stale, "Priya Sharma")).toHaveCount(0);
   await stale.close();
 
   // The boat is full now. The band has one rule for a full boat (#2737): it
@@ -534,7 +533,7 @@ test("a held seat that is someone else gets its own diver record", async ({ page
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Night Dive — City of Washington");
   await openTripTab(page, "Trip");
-  const row = rosterRow(page, "June Park").filter({ visible: true }).first();
+  const row = (await rosterRow(page, "June Park")).filter({ visible: true }).first();
   await expect(row).toContainText(
     "Booked as Hana Park, then matched to June Park from the name list.",
   );
@@ -562,7 +561,7 @@ test("a held seat that is someone else gets its own diver record", async ({ page
   await expect(page.getByRole("status")).toContainText(
     "Their waiver is ready: send it from their row",
   );
-  const hana = rosterRow(page, "Hana Park").filter({ visible: true }).first();
+  const hana = (await rosterRow(page, "Hana Park")).filter({ visible: true }).first();
   await expect(hana).toBeVisible();
   await expect(hana.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
 });

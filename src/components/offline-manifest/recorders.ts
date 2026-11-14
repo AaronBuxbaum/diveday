@@ -100,7 +100,7 @@ export function offlineRecorders({
   ) {
     if (expired) {
       setMessage(t("shared.offlineManifest.single.record.expiredCannotRecord"));
-      return;
+      return false;
     }
     const subjectId = "bookingId" in subject ? subject.bookingId : subject.crewPersonId;
     const sentNote = rollCallNoteAllowed(checkpoint, statement.status, standing)
@@ -149,8 +149,17 @@ export function offlineRecorders({
       dispatchSaved({ type: "loaded", envelope: next });
       setMessage(t("shared.offlineManifest.single.record.saved"));
       if (navigator.onLine) void reconcile();
+      const saved = next.events.at(-1);
+      if (!saved) return false;
+      return {
+        ok: true as const,
+        observedAt: saved.occurredAt,
+        eventId: saved.clientEventId,
+        pending: saved.syncStatus === "pending",
+      };
     } catch (error) {
       setMessage(refusalMessage(t, error));
+      return false;
     } finally {
       setBusyBooking((busy) => (busy === subjectId ? null : busy));
     }

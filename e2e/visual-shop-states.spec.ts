@@ -545,7 +545,7 @@ for (const scheme of ["light", "dark"] as const) {
           .locator(":scope > details"),
       ).not.toHaveAttribute("open");
       await expect(
-        manifestRow(page, "Bea Quill").getByText(
+        (await manifestRow(page, "Bea Quill")).getByText(
           staffCopy("shared.buddyTeam.ashoreNamed", { name: "Ari" }),
           { exact: true },
         ),

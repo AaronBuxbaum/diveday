@@ -62,8 +62,11 @@ describe("a cancelled departure's roll call", () => {
     expect(SOURCE).toContain("    cancelled,\n");
     // One set of props per list, read by the screen and the packet's paper alike.
     expect(VIEW).toContain('rollCallClosed: read.cancelled === "closed",');
-    expect(SOURCE).toContain("<DiverRollCall context={rollCall.divers} />");
-    expect(SOURCE).toContain("<CrewRollCall {...rollCall.crew} />");
+    expect(SOURCE).toContain("<DeckRollCall");
+    expect(SOURCE).toContain("view={view}");
+    const deck = routeSource(import.meta.dirname, "_components/DeckRollCall.tsx");
+    // Both named recording paths retain the same server-read closure.
+    expect(deck.match(/view.cancelled === "closed" \|\| missing \|\| conflict/g)).toHaveLength(2);
     expect(PACKET).toContain("rollCall={manifest.rollCall}");
     const props = readFileSync(
       path.join(import.meta.dirname, "_components/roll-call-props.ts"),

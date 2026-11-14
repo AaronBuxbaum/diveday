@@ -5,7 +5,7 @@ import { depthWarningText } from "@/i18n/depth-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { BoatSafetySection } from "@/lib/boat-safety";
-import { type OfflineManifestPayload, serializeManifests } from "@/lib/offline-manifests";
+import { type OfflineManifestShop, serializeManifests } from "@/lib/offline-manifests";
 import { type DayWindow, rollCallDayBoundariesOf } from "@/lib/trip-days";
 import { snagSentences } from "./pre-departure-check-view";
 
@@ -28,7 +28,7 @@ export function offlineManifestPayload({
   t,
 }: {
   roster: NonNullable<Awaited<ReturnType<typeof readOfflineManifestRoster>>>;
-  shop: OfflineManifestPayload["shop"];
+  shop: OfflineManifestShop;
   checklistItems: Awaited<ReturnType<typeof listChecklistItems>>;
   checklistChecks: Awaited<ReturnType<typeof latestPreDepartureChecksForTrip>>;
   boatSafety: BoatSafetySection | null;
@@ -48,6 +48,7 @@ export function offlineManifestPayload({
         name: shop.name,
         timezone: shop.timezone,
         emergencyReference: shop.emergencyReference,
+        buddyTeamsEnabled: shop.buddyTeamsEnabled,
       },
       (blocker, diver) => crewBlockerText(t, diver, blocker),
       checklistItems.map((item) => ({

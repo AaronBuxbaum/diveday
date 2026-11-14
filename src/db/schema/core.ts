@@ -279,6 +279,8 @@ export const shops = pgTable(
      * credit; credits already earned stay.
      */
     buddyLinksEnabled: boolean("buddy_links_enabled").notNull().default(true),
+    /** Optional trip planning; membership never controls presence or readiness. */
+    buddyTeamsEnabled: boolean("buddy_teams_enabled").notNull().default(true),
     /**
      * **Marine-life sightings**: what the crew saw on a dive (the manifest's
      * "Seen" group and the dive log's species), the shopfront's month shelf,

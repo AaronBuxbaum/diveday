@@ -22,6 +22,8 @@ export type TripPageSearchParams = {
   confirmPhone?: string;
   /** `details` opens the Details tab; anything else is the Divers tab. */
   view?: string;
+  buddies?: string;
+  buddyError?: string;
   /** A booking id: the page is that booking's paper pass, to print and hand over. */
   pass?: string;
   /** `1`: the page is the departure's packet, the sheets a captain prints and carries (#2736). */

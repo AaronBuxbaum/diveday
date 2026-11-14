@@ -204,15 +204,15 @@ test.describe("at the seeded demo, which runs the PADI checks", () => {
     await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
     await addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click();
     await expect(
-      rosterRow(page, name).getByRole("button", { name: "Check with PADI" }),
+      (await rosterRow(page, name)).getByRole("button", { name: "Check with PADI" }),
     ).toBeVisible();
     await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(other);
     await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
     await addDiver.getByRole("button", { name: `Add ${other} to the trip` }).click();
     await expect(
-      rosterRow(page, other).getByRole("button", { name: "Check with PADI" }),
+      (await rosterRow(page, other)).getByRole("button", { name: "Check with PADI" }),
     ).toBeVisible();
-    await expect(rosterRow(page, SEEDED_DIVER)).toBeVisible();
+    await expect(await rosterRow(page, SEEDED_DIVER)).toBeVisible();
 
     await page.getByRole("button", { name: /^Check all \d+ cards with their agencies$/ }).click();
 
@@ -224,10 +224,12 @@ test.describe("at the seeded demo, which runs the PADI checks", () => {
     await expect(page.getByText(/couldn’t read PADI’s page/)).toHaveCount(0);
     expect(await padiLookups(page)).toBe(1);
     await expect(
-      rosterRow(page, name).getByText("Sign in to the PADI Pros’ Site first, then check again."),
+      (await rosterRow(page, name)).getByText(
+        "Sign in to the PADI Pros’ Site first, then check again.",
+      ),
     ).toBeVisible();
     await expect(
-      rosterRow(page, name).getByRole("button", { name: "Check with PADI" }),
+      (await rosterRow(page, name)).getByRole("button", { name: "Check with PADI" }),
     ).toBeEnabled();
     await expect(page.getByText("PADI shows this certification. Marked certified.")).toHaveCount(0);
   });
@@ -269,13 +271,13 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(name);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
   await addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click();
-  await expect(rosterRow(page, name)).toBeVisible();
+  await expect(await rosterRow(page, name)).toBeVisible();
   await expect(
-    rosterRow(page, SEEDED_DIVER).getByRole("button", { name: "Check with SSI" }),
+    (await rosterRow(page, SEEDED_DIVER)).getByRole("button", { name: "Check with SSI" }),
   ).toBeVisible();
-  await expect(rosterRow(page, name).getByRole("button", { name: "Check with PADI" })).toHaveCount(
-    0,
-  );
+  await expect(
+    (await rosterRow(page, name)).getByRole("button", { name: "Check with PADI" }),
+  ).toHaveCount(0);
   // SSI is manual-only and PADI is switched off, so there is no batch check.
   await expect(
     page.getByRole("button", { name: /^Check all \d+ cards with their agencies$/ }),

@@ -13,12 +13,15 @@ import {
   createTrip,
   daysFromNow,
   disclosureSettled,
+  manifestRow,
   offlineCopySaved,
   openBookingActions,
   openCounterFor,
+  openDeckDetails,
   openPaperWaiverForm,
   openRosterDetails,
   requireCourseForm,
+  rosterRow,
   STAFF_DAY_HEADING,
   scheduleCrewedOpenWaterSession,
   seatFromRoster,
@@ -245,7 +248,7 @@ for (const scheme of ["light", "dark"] as const) {
         const { runningLate } = seeded as { runningLate?: { tripId: string } };
         if (!runningLate) throw new Error("the fact found no seat to say it on");
         await page.goto(`/shop/blue-mantis/trips/${runningLate.tripId}/manifest`);
-        await page.getByRole("heading", { name: "Roll call" }).waitFor();
+        await manifestRow(page, "Priya Sharma");
         await page
           .getByText(/^Running late, said /)
           .first()
@@ -527,10 +530,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // Remove on that seat (H-20261015-aboard-diver-removal-at): held as possibly carried, and told how
         // to let it go, never that it sailed.
-        const row = page
-          .locator('#roster li[id^="booking-"]')
-          .filter({ hasText: uncountedSeat.personName })
-          .first();
+        const row = await rosterRow(page, uncountedSeat.personName);
         await openRosterDetails(row);
         await openBookingActions(row);
         await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
@@ -546,10 +546,11 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
         await page.goto(counterPath("blue-mantis", tripId));
         await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
-        const row = page
-          .locator('#roster li[id^="booking-"]')
-          .filter({ has: page.locator("summary", { hasText: /^\s*Remove booking\s*$/ }) })
-          .first();
+        const name = await page
+          .locator('#roster a[href^="/shop/blue-mantis/divers/"]')
+          .first()
+          .innerText();
+        const row = await rosterRow(page, name);
         await openRosterDetails(row);
         await openBookingActions(row);
         await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
@@ -593,7 +594,8 @@ for (const scheme of ["light", "dark"] as const) {
         if (!blockedMinor) throw new Error("the fact found no seat for the demo's minor");
 
         await page.goto(counterPath("blue-mantis", blockedMinor.tripId));
-        const row = page.locator(`#booking-${blockedMinor.bookingId}`);
+        const row = await rosterRow(page, "Lena Fischer");
+        await expect(row).toHaveAttribute("id", `booking-${blockedMinor.bookingId}`);
         await openRosterDetails(row);
         await openPaperWaiverForm(row);
         await row
@@ -645,10 +647,7 @@ for (const scheme of ["light", "dark"] as const) {
         if (!identityHeld) throw new Error("the fact could not hold a seat");
 
         await page.goto(counterPath("blue-mantis", identityHeld.tripId));
-        const row = page
-          .locator('#roster li[id^="booking-"]')
-          .filter({ visible: true })
-          .filter({ has: page.getByRole("link", { name: identityHeld.diver, exact: true }) });
+        const row = await rosterRow(page, identityHeld.diver);
         await row.getByRole("button", { name: `Same person as ${identityHeld.diver}` }).click();
         // Armed, and waited on by the block the tap reveals rather than by the
         // trigger it replaces: the consequence sentence is the frame's subject.
@@ -720,12 +719,8 @@ for (const scheme of ["light", "dark"] as const) {
         await depart(10);
 
         await page.goto(counterPath("blue-mantis", tripId));
-        const deskRow = () =>
-          page
-            .locator('#roster li[id^="booking-"]')
-            .filter({ visible: true })
-            .filter({ has: page.getByRole("link", { name: "Odile Marchand", exact: true }) });
-        const row = deskRow();
+        const deskRow = () => rosterRow(page, "Odile Marchand");
+        const row = await deskRow();
         await openRosterDetails(row);
         await openPaperWaiverForm(row);
         await row
@@ -752,7 +747,7 @@ for (const scheme of ["light", "dark"] as const) {
         // comparison this second frame is for.
         await depart(90);
         await page.goto(counterPath("blue-mantis", tripId));
-        const sailedRow = deskRow();
+        const sailedRow = await deskRow();
         await openRosterDetails(sailedRow);
         const sailedDoor = sailedRow.getByText("Not here", { exact: true }).locator("..");
         // Hydrated before the tap, not after: this frame opens the door
@@ -796,16 +791,16 @@ for (const scheme of ["light", "dark"] as const) {
           "data-hydrated",
           "true",
         );
-        const row = page
-          .locator('#roster li[id^="booking-"]')
-          .filter({ visible: true })
-          .filter({ has: page.getByRole("link", { name: "Odile Marchand", exact: true }) });
+        const row = await rosterRow(page, "Odile Marchand");
+        await openRosterDetails(row);
         await row.getByRole("button", { name: "Turn away", exact: true }).click();
         await expect(row.getByRole("button", { name: "Turn Odile Marchand away" })).toBeVisible();
         await capture(page, "trip-desk-turn-away", scheme);
 
         await row.getByRole("button", { name: "Turn Odile Marchand away" }).click();
-        await expect(page.getByRole("heading", { name: "Turned away · 1" })).toBeVisible();
+        await expect(
+          row.getByText("Seen at the desk, turned away: waiver", { exact: true }),
+        ).toBeVisible();
         await capture(page, "trip-desk-turned-away", scheme);
       });
 
@@ -868,6 +863,7 @@ for (const scheme of ["light", "dark"] as const) {
         if (!id) throw new Error("the evening fixture moved no departures");
         await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
         await offlineCopySaved(page);
+        await openDeckDetails(page);
         const underway = page.getByRole("button", { name: "Underway", exact: true });
         await underway.click();
         await expect(underway).toHaveAttribute("aria-pressed", "true");
@@ -911,6 +907,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`lost and found lists what crews found aboard (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
         await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
+        await openDeckDetails(page);
         const form = page.getByTestId("lost-item-form");
         await form.getByLabel("What was found").fill("Blue mask in a black case");
         await form.getByRole("button", { name: "Record" }).click();

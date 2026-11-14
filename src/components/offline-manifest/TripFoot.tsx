@@ -4,44 +4,9 @@ import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { OfflineTripControls } from "./controls";
-import { offlineRollCallRowId } from "./shared";
 import { liveManifestHref, type OfflineTripView } from "./trip-view";
 
-/**
- * Who is still to call at this checkpoint, as one jump: how many, and the row
- * of the first of them in roster order. `null` when nobody is, so the page
- * says nothing rather than "0". Every diver here is one the roll call above
- * renders, so the row id is on the page by construction (#1675).
- */
-export function stillToCallLine(
-  missingDivers: readonly { bookingId: string }[],
-): { count: number; href: string } | null {
-  const first = missingDivers[0];
-  if (!first) return null;
-  return { count: missingDivers.length, href: `#${offlineRollCallRowId(first.bookingId)}` };
-}
-
-function StillToCallLine({
-  line,
-  label,
-}: {
-  line: { count: number; href: string } | null;
-  label: (count: number) => string;
-}) {
-  if (!line) return null;
-  return (
-    <p className="mt-4">
-      <a
-        href={line.href}
-        className="inline-flex min-h-11 items-center text-base font-semibold text-primary underline underline-offset-2"
-      >
-        {label(line.count)}
-      </a>
-    </p>
-  );
-}
-
-/** Below the roll call: who is still to call, this phone's settings, the live page, and the milestone. */
+/** Device settings, the live destination and local milestone feedback stay in Deck Details. */
 export function OfflineTripFoot({
   view,
   controls,
@@ -51,26 +16,10 @@ export function OfflineTripFoot({
   controls: OfflineTripControls;
   tripId: string;
 }) {
-  const { envelope, checkpoint, isDeparture, missingDivers, totalDivers, boarded, allBoarded } =
-    view;
+  const { envelope, checkpoint, totalDivers, boarded, allBoarded } = view;
   const { t } = controls;
   return (
     <>
-      {/* **One line, not a second list of people** (visual review
-          2026-10-24, B02): the roll-call rows above already name everyone,
-          so the face grid that repeated them is gone, as the live
-          manifest's went before it. The line counts who nobody has called
-          yet, in the live page's words for the checkpoint, and jumps to the
-          first of them. Nothing when nobody is left. */}
-      <StillToCallLine
-        line={stillToCallLine(missingDivers)}
-        label={(count) =>
-          isDeparture
-            ? t("manifest.stillToBoardHeading", { count })
-            : t("manifest.notCountedBackHeading", { count })
-        }
-      />
-
       {/* Per-device controls are secondary to roll call. Keep them in the
           same disclosure on the offline surface as the live manifest's
           "On this phone" group, rather than mixing one toggle into the

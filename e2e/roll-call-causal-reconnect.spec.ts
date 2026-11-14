@@ -1,9 +1,16 @@
 import type { Page } from "@playwright/test";
+import { CAPTAIN_NAME } from "../src/db/seed-cast";
 import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { pinBrowserClock } from "./browser-clock";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { manifestRow, offlineCopySaved, openManifestPerson } from "./helpers";
+import {
+  manifestRow,
+  offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
+  openManifestPerson,
+} from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 const staff = staffTranslator("en-US");
@@ -26,6 +33,40 @@ async function setDeviceClock(page: Page, timestamp: number) {
     }
   }, timestamp);
   expect(await page.evaluate(() => Date.now())).toBe(timestamp);
+}
+
+async function openEvidence(page: Page) {
+  const expanded = page.locator("#deck-flow > div > details[open] > summary");
+  if (await expanded.count()) await expanded.click();
+  await page.getByRole("button", { name: staff("manifest.deck.attention"), exact: true }).click();
+  await expect(page.locator('[data-deck-screen="attention"]')).toBeVisible();
+}
+
+async function crewDetails(page: Page, name: string) {
+  await openDeckPerson(page, name);
+  await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).click();
+  return page.locator("li[id^='crew-row-']").filter({ hasText: name });
+}
+
+async function savedDetails(page: Page, name: string, role: "diver" | "crew") {
+  await openDeckPerson(page, name);
+  await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).click();
+  return page
+    .locator(role === "diver" ? "li[id^='offline-roll-call-']" : "#offline-crew-roll-call > li")
+    .filter({ has: page.getByRole("heading", { name, exact: true }) });
+}
+
+async function recordNamed(page: Page, name: string) {
+  await openDeckPerson(page, name);
+  await page
+    .getByRole("button", { name: staff("manifest.deck.record", { name }), exact: true })
+    .click();
+  await expect(
+    page.locator('[data-deck-screen="receipt"]').getByRole("heading", { name, exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+    staff("manifest.deck.savedAboard"),
+  );
 }
 
 // Independent Chromium storage/network contexts model two crew devices. This
@@ -63,27 +104,19 @@ for (const role of ["diver", "crew"] as const) {
           }),
         ]);
         mark("pages-loaded");
-        const liveRow =
-          role === "diver"
-            ? manifestRow(live, "Diego Alvarez")
-            : live.locator("li[id^='crew-row-']").first();
-        const personName =
-          role === "diver"
-            ? "Diego Alvarez"
-            : await liveRow.locator("[data-person-row-name] > span > span").first().innerText();
-        if (situation === "fast aboard") await openManifestPerson(liveRow);
+        const personName = role === "diver" ? "Diego Alvarez" : CAPTAIN_NAME;
+        await openDeckPerson(live, personName);
+        if (situation === "fast aboard") {
+          const liveRow =
+            role === "diver"
+              ? await manifestRow(live, personName)
+              : await crewDetails(live, personName);
+          await openManifestPerson(liveRow);
+        }
+        await openDeckDetails(page);
         await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
         mark("shell-rendered");
-        const list = page.locator(
-          role === "diver" ? "#offline-roll-call" : "#offline-crew-roll-call",
-        );
-        const offlineRow =
-          role === "diver"
-            ? list.getByRole("listitem").filter({ hasText: "Diego Alvarez" }).first()
-            : list
-                .getByRole("listitem")
-                .filter({ has: page.getByRole("heading", { name: personName, exact: true }) })
-                .first();
+        await openDeckPerson(page, personName);
         // The rendered shell is already loaded; this case cuts transport
         // without a reload. Worker-cache reload has its own existing journey.
         await context.setOffline(true);
@@ -95,41 +128,24 @@ for (const role of ["diver", "crew"] as const) {
           new Date(E2E_FROZEN_CLOCK).getTime() + (situation === "fast aboard" ? 15 : -15) * 60_000,
         );
         if (situation === "fast aboard") {
-          await offlineRow
-            .getByRole("button", {
-              name: role === "diver" ? "Mark boarded" : "Mark aboard",
-              exact: true,
-            })
-            .click();
-          await expect(
-            offlineRow.getByRole("button", {
-              name: role === "diver" ? "Boarded — tap again to undo" : "Aboard — tap again to undo",
-              exact: true,
-            }),
-          ).toBeVisible();
+          await recordNamed(page, personName);
           await live
             .getByRole("dialog")
             .getByRole("button", { name: "Mark not back aboard", exact: true })
             .click();
-          await expect(
-            live.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
-          ).toBeVisible();
+          await expect(live.locator('[data-deck-screen="receipt"]')).toContainText(
+            staff("manifest.deck.savedMissing"),
+          );
         } else {
+          const offlineRow = await savedDetails(page, personName, role);
           await offlineRow.getByText("Not back aboard?", { exact: true }).click();
           await offlineRow
             .getByRole("button", { name: "Mark not back aboard", exact: true })
             .click();
-          await liveRow
-            .getByRole("button", {
-              name: role === "diver" ? "Mark boarded" : "Mark aboard",
-              exact: true,
-            })
-            .click();
-          await expect(
-            liveRow.getByRole("button", {
-              name: role === "diver" ? "Boarded — tap again to undo" : "Aboard — tap again to undo",
-            }),
-          ).toBeVisible();
+          await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+            staff("manifest.deck.savedMissing"),
+          );
+          await recordNamed(live, personName);
         }
         // Change the offline clock again between tap and send.
         await setDeviceClock(page, new Date(E2E_FROZEN_CLOCK).getTime() - 7 * 60_000);
@@ -158,12 +174,13 @@ for (const role of ["diver", "crew"] as const) {
           name: staff("manifest.conflicts.confirmAboard"),
           exact: true,
         });
-        await Promise.all([
-          expect(resolve).toBeVisible(),
-          live.reload({ waitUntil: "domcontentloaded" }),
-        ]);
+        await Promise.all([openEvidence(page), live.reload({ waitUntil: "domcontentloaded" })]);
+        await expect(resolve).toBeVisible();
+        await openEvidence(live);
         mark("conflict-visible-and-live-refreshed");
-        await expect(offlineRow).toContainText(staff("manifest.conflicts.missing"));
+        await expect(page.locator("details").filter({ has: resolve })).toContainText(
+          staff("manifest.conflicts.missing"),
+        );
         const liveResolve = live.getByRole("button", {
           name: staff("manifest.conflicts.confirmAboard"),
           exact: true,
@@ -232,16 +249,8 @@ for (const role of ["diver", "crew"] as const) {
             waitUntil: "domcontentloaded",
           }),
         ]);
-        const liveRow =
-          role === "diver"
-            ? manifestRow(live, fact.fullName)
-            : live.locator("li[id^='crew-row-']").filter({ hasText: fact.fullName });
-        const offlineList = page.locator(
-          role === "diver" ? "#offline-roll-call" : "#offline-crew-roll-call",
-        );
-        const offlineRow = offlineList
-          .getByRole("listitem")
-          .filter({ has: page.getByRole("heading", { name: fact.fullName, exact: true }) });
+        await openEvidence(live);
+        await openEvidence(page);
         const liveResolve = live.getByRole("button", {
           name: staff("manifest.conflicts.confirmAboard"),
           exact: true,
@@ -255,12 +264,19 @@ for (const role of ["diver", "crew"] as const) {
         const evidence = live.locator("details").filter({ has: liveResolve });
         await expect(evidence).toContainText(staff("manifest.conflicts.missing"));
         await expect(evidence).toContainText(staff("manifest.conflicts.aboard"));
-        await expect(offlineRow).toContainText(staff("manifest.conflicts.missing"));
+        await expect(page.locator("details").filter({ has: savedResolve })).toContainText(
+          staff("manifest.conflicts.missing"),
+        );
         mark("conflict-visible");
         await liveResolve.click();
-        const aboardLabel =
-          role === "diver" ? "Boarded — tap again to undo" : "Aboard — tap again to undo";
-        await expect(liveRow.getByRole("button", { name: aboardLabel, exact: true })).toBeVisible();
+        await expect(
+          live
+            .locator('[data-deck-screen="receipt"]')
+            .getByRole("heading", { name: fact.fullName, exact: true }),
+        ).toBeVisible();
+        await expect(live.locator('[data-deck-screen="receipt"]')).toContainText(
+          staff("manifest.deck.savedAboard"),
+        );
         await expect(liveResolve).toHaveCount(0);
         mark("explicit-resolution-persisted");
         // No event was recorded on the saved device. Its reconnect still has
@@ -279,8 +295,11 @@ for (const role of ["diver", "crew"] as const) {
         await context.setOffline(false);
         const refreshed = await quietReceipt;
         expect(refreshed.ok()).toBe(true);
+        await openDeckPerson(page, fact.fullName);
         await expect(
-          offlineRow.getByRole("button", { name: aboardLabel, exact: true }),
+          page
+            .locator('[data-deck-screen="person"]')
+            .getByText(staff("shared.presence.boarded"), { exact: true }),
         ).toBeVisible();
         await expect(savedResolve).toHaveCount(0);
         mark("quiet-copy-positive-aboard");

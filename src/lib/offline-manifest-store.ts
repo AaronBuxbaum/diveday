@@ -1220,10 +1220,27 @@ export async function appendOfflineRollCall(
     | "observedEvidenceIds"
     | "reconcilesEvidence"
     | "meetingDay"
+    | "physicalPresenceOnly"
   > &
-    Partial<Pick<OfflineRollCallEvent, "snapshotId" | "snapshotSavedAt" | "erasureEpochToken">>,
+    Partial<
+      Pick<
+        OfflineRollCallEvent,
+        "snapshotId" | "snapshotSavedAt" | "erasureEpochToken" | "occurredAt"
+      >
+    >,
 ): Promise<OfflineManifestEnvelope> {
   const capturedAt = nowDate().toISOString();
+  const occurredAt = input.occurredAt ?? capturedAt;
+  // A deliberate delayed entry is an audit instant, never causal observation.
+  // Reject a malformed/future selection before writing the encrypted queue.
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(occurredAt) ||
+    !Number.isFinite(Date.parse(occurredAt)) ||
+    new Date(occurredAt).toISOString().slice(0, 19) !== occurredAt.slice(0, 19) ||
+    Date.parse(occurredAt) > Date.parse(capturedAt)
+  ) {
+    throw new OfflineManifestError("not_allowed");
+  }
   const eventIdentity = crypto.randomUUID();
   return withManifestLock(tripId, async () => {
     const envelope = await loadOfflineManifest(tripId);
@@ -1238,6 +1255,17 @@ export async function appendOfflineRollCall(
     }
     const subject = offlineRollCallSubject(input);
     if (!subject) throw new OfflineManifestError("not_allowed");
+    if (
+      input.meetingDay !== undefined &&
+      (!Number.isInteger(input.meetingDay) ||
+        input.meetingDay < 0 ||
+        input.meetingDay >= (envelope.snapshot.rollCallMeetingDays?.length ?? 1))
+    ) {
+      throw new OfflineManifestError("not_allowed");
+    }
+    if (subject.kind === "crew" && input.physicalPresenceOnly) {
+      throw new OfflineManifestError("not_allowed");
+    }
     const allowed =
       subject.kind === "crew"
         ? canRecordOfflineCrewStatus(
@@ -1251,6 +1279,7 @@ export async function appendOfflineRollCall(
             subject.bookingId,
             input.status,
             input.checkpoint,
+            input.physicalPresenceOnly,
           );
     if (!allowed) {
       throw new OfflineManifestError("not_allowed");
@@ -1264,7 +1293,7 @@ export async function appendOfflineRollCall(
         ? input.erasureEpochToken
         : envelope.snapshot.erasureEpochToken,
       tripId,
-      occurredAt: capturedAt,
+      occurredAt,
       syncStatus: "pending",
     });
     const db = await openDatabase();

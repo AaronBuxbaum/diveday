@@ -287,9 +287,18 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     await page.waitForURL(/\/divers\?add=1/);
     await page.getByLabel("Full name").fill(`Ageless Diver ${stamp}`);
     await page.getByLabel("Email").fill(`ageless-${stamp}@example.com`);
-    await page.getByRole("button", { name: "Add to trip" }).click();
-    await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-    await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
+    await Promise.all([
+      page.waitForURL(
+        (url) =>
+          url.pathname === tripPath &&
+          url.searchParams.get("notice")?.startsWith("diver-added") === true,
+      ),
+      page.getByRole("button", { name: "Add to trip" }).click(),
+    ]);
+    await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: `Ageless Diver ${stamp}`, exact: true }),
+    ).toBeVisible();
   });
 
   test("refuses a diver once a date of birth on file makes them under age", async ({ page }) => {

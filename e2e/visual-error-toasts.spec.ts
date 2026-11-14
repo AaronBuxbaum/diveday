@@ -48,7 +48,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, DEMO_MEDICAL_ALERT_TRIP);
         await openTripTab(page, "Manifest");
-        await openManifestPerson(manifestRow(page, DEMO_MEDICAL_ALERT_DIVER));
+        await openManifestPerson(await manifestRow(page, DEMO_MEDICAL_ALERT_DIVER));
         const sheet = page.getByRole("dialog");
         await sheet
           .getByRole("button", { name: staffCopy("manifest.medicalAlertEmergencyOffer") })

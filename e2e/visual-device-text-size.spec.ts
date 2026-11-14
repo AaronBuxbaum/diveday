@@ -35,7 +35,7 @@ for (const bodySize of [34, 53]) {
       await page.goto("/shop/blue-mantis/schedule/board");
       await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
       await openTripTab(page, "Manifest");
-      await expect(page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ })).toBeVisible();
+      await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
       await offlineCopySaved(page);
       if (bodySize === 34) await capture(page, "manifest-device-body-34", "light");
       else {
@@ -90,7 +90,7 @@ test.describe("light mode largest device body person sheet", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
     await openTripTab(page, "Manifest");
-    await openManifestPerson(manifestRow(page, "Priya Sharma"));
+    await openManifestPerson(await manifestRow(page, "Priya Sharma"));
     await expect(page.getByRole("dialog", { name: "Priya Sharma", exact: true })).toBeVisible();
     await capture(page, "person-sheet-device-body-53", "light");
   });

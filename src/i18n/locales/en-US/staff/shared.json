@@ -229,7 +229,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Trip requirements have not been configured yet.",
-      "identityUnconfirmed": "Matched to this record on a guess: confirm who this is on the Divers tab before boarding.",
+      "identityUnconfirmed": "Matched to this record on a guess: confirm who this is on the Guests tab before boarding.",
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverLapsed": "Signed waiver lapsed; send a fresh link.",
@@ -259,7 +259,7 @@
       "courseFormUnsigned": "Course form not signed: {form}.",
       "courseFormAgeUnknown": "{form} is for students {maxAge} and under, and there’s no date of birth on file. Add it, or have it signed with a parent or guardian.",
       "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature.",
-      "trainingMarkInvalid": "Training mark no longer fits its course seat. Clear it on the Divers tab."
+      "trainingMarkInvalid": "Training mark no longer fits its course seat. Clear it on the Guests tab."
     }
   },
   "presence": {

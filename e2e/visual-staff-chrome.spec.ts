@@ -7,7 +7,14 @@
 import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { manifestRow, offlineCopySaved, openManifestPerson, openOnThisPhone } from "./helpers";
+import {
+  manifestRow,
+  offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
+  openManifestPerson,
+  openOnThisPhone,
+} from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   capture,
@@ -217,13 +224,19 @@ for (const scheme of ["light", "dark"] as const) {
           await openReefTrip(page);
           await page.goto(`${new URL(page.url()).pathname}/manifest`);
           await settleOfflineShellWorker(page);
-          await openOnThisPhone(page);
+          await openOnThisPhone(page, SPANISH);
           await page.getByRole("link", { name: "Abrir pase de lista sin conexión" }).click();
           await page.waitForURL(/offline-manifest/);
-          await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
-          // The still-to-board line under the roll call: the roster above it
-          // renders first, so a wait on a diver's name is not a wait on this.
-          await expect(page.getByRole("link", { name: /^Por embarcar: / })).toBeVisible();
+          await openDeckPerson(page, "Priya Sharma", SPANISH);
+          await expect(
+            page.getByRole("heading", { name: "Priya Sharma", exact: true }),
+          ).toBeVisible();
+          await expect(
+            page.getByRole("button", {
+              name: staffTranslator(SPANISH)("manifest.deck.exception"),
+              exact: true,
+            }),
+          ).toBeVisible();
           await capture(page, "offline-manifest-roll-call", scheme, { locale: SPANISH });
         });
 
@@ -236,7 +249,14 @@ for (const scheme of ["light", "dark"] as const) {
         test(`a trip's manifest reads in Spanish (${scheme})`, async ({ page }) => {
           await openReefTrip(page);
           await page.goto(`${new URL(page.url()).pathname}/manifest`);
-          await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+          await expect(
+            page.getByRole("heading", {
+              level: 1,
+              name: staffTranslator(SPANISH)("manifest.deck.title"),
+              exact: true,
+            }),
+          ).toBeVisible();
+          await openDeckDetails(page, SPANISH);
           // The same background save the English sibling waits out, in this
           // reader's words: `offlineCopySaved` uses English labels and would
           // wait forever here. These are the manifest
@@ -273,25 +293,32 @@ for (const scheme of ["light", "dark"] as const) {
           test.setTimeout(FLOW_TIMEOUT_MS);
           await openReefTrip(page);
           await page.goto(`${new URL(page.url()).pathname}/manifest`);
-          await offlineCopySaved(page, "es-ES");
+          await offlineCopySaved(page, SPANISH);
+          await openDeckDetails(page, SPANISH);
           await page
             .getByRole("link", { name: "Después de la inmersión 1" })
             .evaluate((link: HTMLElement) => link.click());
           await page.waitForURL(/checkpoint=after_dive_1/);
-          const tomRow = manifestRow(page, "Tom Okafor");
-          const lenaRow = manifestRow(page, "Lena Fischer");
-          const boardTom = tomRow.getByRole("button", { name: "Marcar embarcado" });
-          await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
-          await boardTom.click();
-          await openManifestPerson(lenaRow);
+          const copy = staffTranslator(SPANISH);
+          await openDeckPerson(page, "Tom Okafor", SPANISH);
+          await page
+            .getByRole("button", {
+              name: copy("manifest.deck.record", { name: "Tom Okafor" }),
+              exact: true,
+            })
+            .click();
+          await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+            copy("manifest.deck.savedAboard"),
+          );
+          await openManifestPerson(await manifestRow(page, "Lena Fischer", SPANISH));
           const dialog = page.getByRole("dialog");
           const lenaNotBack = dialog.getByRole("button", { name: "Marcar sin regresar a bordo" });
           await lenaNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
           await lenaNotBack.click();
-          await expect(
-            dialog.getByRole("button", { name: "Sin regresar a bordo", exact: true }),
-          ).toBeVisible();
-          await dialog.getByRole("button", { name: "Cerrar detalles de la persona" }).click();
+          await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+            copy("manifest.deck.savedMissing"),
+          );
+          const tomRow = await manifestRow(page, "Tom Okafor", SPANISH);
           await expect(tomRow.getByText("Lena sin regresar a bordo")).toBeVisible();
           await page.mouse.move(0, 0);
           await capture(page, "manifest-buddy-divergence", scheme, { locale: SPANISH });

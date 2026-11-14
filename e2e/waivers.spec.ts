@@ -1536,7 +1536,7 @@ test("a diver's medical alert for the crew is signed, flagged on the manifest an
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Manifest");
-  const manifestEntry = manifestRow(page, diverName);
+  const manifestEntry = await manifestRow(page, diverName);
   await expect(
     manifestEntry.getByText(staff("manifest.medicalAlertChip"), { exact: true }),
   ).toBeVisible();

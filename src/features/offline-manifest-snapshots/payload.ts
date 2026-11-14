@@ -102,6 +102,7 @@ export async function buildOfflineManifestCopies(
           manifests,
           {
             ...shopIdentity,
+            buddyTeamsEnabled: shop.buddyTeamsEnabled,
             emergencyReference: emergencyReferenceForDeparture(
               shop.emergencyReference,
               vessels.get(tripId) ?? null,

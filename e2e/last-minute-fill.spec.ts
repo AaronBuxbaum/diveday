@@ -306,8 +306,8 @@ test.describe("staff and the list", () => {
     });
     await openWhoWantsIn(page);
 
-    await expect(rosterRow(page, "Owen Achebe").filter({ visible: true })).toBeVisible();
-    await expect(rosterRow(page, "Nell Byrne").filter({ visible: true })).toHaveCount(0);
+    await expect((await rosterRow(page, "Owen Achebe")).filter({ visible: true })).toBeVisible();
+    await expect((await rosterRow(page, "Nell Byrne")).filter({ visible: true })).toHaveCount(0);
     await expect(page.getByText(/below this departure’s requirement/)).toHaveCount(0);
 
     // Other eligible recipients can still be offered a seat, each from their own row.

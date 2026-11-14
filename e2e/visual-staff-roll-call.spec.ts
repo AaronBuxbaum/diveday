@@ -9,6 +9,8 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   manifestRow,
   offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
   openManifestPerson,
   openRosterDetails,
   openRosterNotes,
@@ -125,6 +127,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
+        await openDeckDetails(page);
         // Same background-save settle the departure capture waits on, so this
         // isn't racing that async write either.
         await offlineCopySaved(page);
@@ -132,21 +135,23 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
+        await openDeckDetails(page);
         // Scoped to the diver list: the crew section above it carries controls
         // with the same words, for a crew member rather than a diver.
         // Two deliberate steps, the way a crew records it (ADR
         // 20260827-the-departure-is-two-working-surfaces, decision 3): the
         // claim lives in the person's own panel, never on the row.
-        const missingRow = page.locator("#roll-call-list > ul > li").first();
+        const missingRow = await manifestRow(page, "Diego Alvarez");
         await openManifestPerson(missingRow);
         const markNotBack = page
           .getByRole("dialog")
           .getByRole("button", { name: "Mark not back aboard" });
         await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await markNotBack.click();
-        await expect(
-          page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
-        ).toBeVisible();
+        await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+          staffCopy("manifest.deck.savedMissing"),
+        );
+        await openManifestPerson(await manifestRow(page, "Diego Alvarez"));
         // The panel the alarm leaves open, with the report's door in it (safety
         // sheet 2026-10-15, item 2): "Start a missing diver report" under "Mark
         // back aboard", for the owner signed in here.
@@ -163,6 +168,10 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("dialog")
           .getByRole("button", { name: "Close person details" })
           .click();
+        await page
+          .getByRole("button", { name: staffCopy("manifest.deck.attention"), exact: true })
+          .click();
+        await expect(page.locator('[data-deck-screen="attention"]')).toBeVisible();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-not-back-aboard", scheme);
       });
@@ -183,11 +192,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: AT_SEA_DAY_TITLE, exact: true }).first().click();
         await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
         await openTripTab(page, "Manifest");
+        await openDeckDetails(page);
         await offlineCopySaved(page);
         await page
           .getByRole("link", { name: "After dive 2" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_2/);
+        await openDeckDetails(page);
+        await page.locator("#deck-flow > div > details[open] > summary").click();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-at-sea-mid-roll-call", scheme);
       });
@@ -213,11 +225,13 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
+        await openDeckDetails(page);
         await offlineCopySaved(page);
         await page
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
+        await openDeckDetails(page);
         // The log's own summary line, which only this checkpoint renders.
         await page.getByText("Dive 1 — not recorded yet").click();
         // Waits on a control the open form renders and the closed one does not.
@@ -249,11 +263,13 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openSailedTrip(page);
         await openTripTab(page, "Manifest");
+        await openDeckDetails(page);
         await offlineCopySaved(page);
         await page
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
+        await openDeckDetails(page);
         const seen = page.getByRole("region", { name: "Seen" });
         const chip = seen.getByRole("button", { name: "Southern stingray", exact: true });
         await chip.evaluate((button) => button.scrollIntoView({ block: "center" }));
@@ -288,8 +304,9 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
+        await openDeckDetails(page);
         await offlineCopySaved(page);
-        const row = page.locator("#roll-call-list > ul > li").first();
+        const row = await manifestRow(page, "Tom Okafor");
         await openManifestPerson(row);
         // Painted before the shot: the facts grid renders its emergency-contact
         // heading and the note field its input. Scoped to the disclosure — the
@@ -324,37 +341,33 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
+        await openDeckDetails(page);
         await offlineCopySaved(page);
         await page
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
-        // `manifestRow` anchors on the row's own summary — the name column the
-        // person's panel opens from. A bare `hasText` also matches whichever
-        // *other* row carries the name in a printed buddy label, which is what
-        // the old `<h3>` anchor was guarding against before the name became the
-        // row's own summary.
-        const tomRow = manifestRow(page, "Tom Okafor");
-        const lenaRow = manifestRow(page, "Lena Fischer");
-        const boardTom = tomRow.getByRole("button", { name: "Mark boarded" });
-        await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
-        await boardTom.click();
-        await openManifestPerson(lenaRow);
-        const lenaNotBack = page
-          .getByRole("dialog")
-          .getByRole("button", { name: "Mark not back aboard" });
-        await lenaNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
-        await lenaNotBack.click();
-        await expect(
-          page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
-        ).toBeVisible();
-        // Closed again: this capture is about what the list says, not what a
-        // panel holds — that is `manifest-person-panel`'s job.
+        await openDeckDetails(page);
+        await openDeckPerson(page, "Tom Okafor");
+        await page
+          .getByRole("button", {
+            name: staffCopy("manifest.deck.record", { name: "Tom Okafor" }),
+            exact: true,
+          })
+          .click();
+        await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+          staffCopy("manifest.deck.savedAboard"),
+        );
+        await openManifestPerson(await manifestRow(page, "Lena Fischer"));
         await page
           .getByRole("dialog")
-          .getByRole("button", { name: "Close person details" })
+          .getByRole("button", { name: "Mark not back aboard", exact: true })
           .click();
-        await expect(tomRow.getByText("Lena not back aboard")).toBeVisible();
+        await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+          staffCopy("manifest.deck.savedMissing"),
+        );
+        const tomRow = await manifestRow(page, "Tom Okafor");
+        await expect(tomRow.getByText("Lena not back aboard", { exact: true })).toBeVisible();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-buddy-divergence", scheme);
       });
@@ -367,14 +380,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: AT_SEA_DAY_TITLE, exact: true }).first().click();
         await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
         await openTripTab(page, "Manifest");
+        await openDeckDetails(page);
         await offlineCopySaved(page);
         const boarding = page.getByRole("button", { name: "Boarding", exact: true });
-        const home = page.getByRole("button", { name: "Home", exact: true });
+        const home = page
+          .locator('form:has(input[name="stage"][value="home"])')
+          .getByRole("button", { name: "Home", exact: true });
         await expect(boarding).toBeVisible();
         await expect(home).toBeVisible();
 
         const focusByTab = async (label: "Boarding" | "Home") => {
-          const target = page.getByRole("button", { name: label, exact: true });
+          const target = label === "Home" ? home : boarding;
           await target.evaluate((button) => {
             if (!(button instanceof HTMLElement)) {
               throw new Error(`The ${label} stage control is not an HTML element`);
@@ -419,6 +435,9 @@ for (const scheme of ["light", "dark"] as const) {
           }
 
           await page.goto(`/shop/blue-mantis/trips/${manifestOverCapacity.tripId}/manifest`);
+          await page
+            .getByRole("button", { name: staffCopy("manifest.deck.attention"), exact: true })
+            .click();
           await expect(
             page.getByText(/beyond the passenger capacity set for this trip/),
           ).toBeVisible();
@@ -442,7 +461,8 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
-        await openTripTab(page, "Manifest");
+        await page.getByRole("link", { name: "The day", exact: true }).click();
+        await expect(page).toHaveURL(/view=details/);
         const panel = page.locator("section", {
           has: page.getByRole("heading", { name: "Buddy teams" }),
         });

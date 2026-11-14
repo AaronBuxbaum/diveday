@@ -565,6 +565,11 @@
         "heading": "Presentaciones públicas del equipo",
         "label": "Mostrar las presentaciones públicas del equipo",
         "description": "Mostrar las presentaciones que cada persona del equipo escribe y comparte."
+      },
+      "buddyTeams": {
+        "heading": "Planificación de compañeros",
+        "label": "Planificar compañeros para cada salida",
+        "description": "Mostrar la planificación opcional de compañeros en El día"
       }
     },
     "crewSchedule": {

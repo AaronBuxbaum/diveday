@@ -1,5 +1,5 @@
 // i18n-exempt-file: test fixture; only the roster's tests import it, and its names are seeded data.
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
@@ -114,6 +114,8 @@ export function deepRow() {
 
 /** What `renderRoster` draws, and `seatFacts` reads, built from one set of options. */
 export type RosterFixtureOptions = {
+  /** Tests of a guest workflow open its real folio; index tests pass null. */
+  selectedBookingId?: string | null;
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
   waivers: WaiverByBooking;
@@ -219,7 +221,16 @@ function rosterProps({
 }
 
 export function renderRoster(options: RosterFixtureOptions) {
-  return render(<RosterSection {...rosterProps(options)} />);
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  const rendered = render(<RosterSection {...rosterProps(options)} />);
+  if (!options.record && options.selectedBookingId !== null) {
+    const id = options.selectedBookingId ?? options.roster[0]?.booking.id;
+    const button = id ? rendered.container.querySelector(`[data-guest-open="${id}"]`) : null;
+    if (button) fireEvent.click(button);
+    const reference = rendered.container.querySelector("[data-guest-reference] > summary");
+    if (reference && !reference.parentElement?.hasAttribute("open")) fireEvent.click(reference);
+  }
+  return rendered;
 }
 
 /**

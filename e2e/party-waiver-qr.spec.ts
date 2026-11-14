@@ -134,7 +134,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await thirdDialog.getByRole("button", { name: "Close" }).click();
     await page.getByRole("link", { name: "Back to departure" }).click();
     await expect(page).toHaveURL(counterPath("blue-mantis", tripId));
-    const thirdRow = rosterRow(page, "Chris Lagoon");
+    const thirdRow = await rosterRow(page, "Chris Lagoon");
     await openBookingActions(thirdRow);
     await thirdRow.getByRole("button", { name: "Remove booking" }).click();
     await thirdRow.getByRole("button", { name: "Yes, remove booking" }).click();
@@ -226,7 +226,9 @@ test("a counter waiver receipt stays scoped when course forms are still outstand
     await expect(phone.getByText("That’s the paperwork done")).toHaveCount(0);
     await expect(phone.locator('a[href^="/ready/"]')).toHaveCount(0);
     await page.getByRole("link", { name: "Back to departure" }).click();
-    await expect(rosterRow(page, "Alex Course").locator("[data-course-forms-owed]")).toHaveCount(1);
+    await expect(
+      (await rosterRow(page, "Alex Course")).locator("[data-course-forms-owed]"),
+    ).toHaveCount(1);
   } finally {
     await phoneContext.close();
   }

@@ -7,9 +7,11 @@ import {
   e2eNow,
   findTripOnBoard,
   openBookingActions,
+  openGuestFolio,
   openTripAbout,
   openTripAboutRow,
   openTripMore,
+  rosterRow,
   seededTripId,
 } from "./helpers";
 
@@ -415,7 +417,8 @@ test.describe("undoing a removal after the trip is canceled", () => {
     // A cancel inside a refund window moves real money, so the removal keeps
     // its blocking two-tap confirm (InlineConfirm) rather than landing behind
     // an undo toast.
-    const row = page.locator("#roster li").filter({ hasText: diver }).filter({ visible: true });
+    await openGuestFolio(page, diver);
+    const row = await rosterRow(page, diver);
     // One state sync, then single clicks: the page fixture has already settled
     // staff hydration after the `waitForURL` above, and the disclosure helpers
     // check `open` before clicking, so the arm-tap needs no retry (#3299).

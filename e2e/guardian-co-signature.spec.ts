@@ -11,6 +11,7 @@ import {
   openPaperWaiverForm,
   openRosterDetails,
   openThreadStep,
+  rosterRow,
   signOut,
   waiverLinkFromToast,
 } from "./helpers";
@@ -182,10 +183,7 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   // are open — which puts her row on screen in one render and keeps it there.
   // The paper form is the roster row's own, behind the row's disclosure.
   await page.goto(counterPath(SHOP, blockedMinor.tripId));
-  const row = page
-    .locator('#roster li[id^="booking-"]')
-    .filter({ visible: true })
-    .filter({ has: page.getByRole("link", { name: "Lena Fischer", exact: true }) });
+  const row = await rosterRow(page, "Lena Fischer");
   await expect(row.getByText("Blocked", { exact: true })).toBeVisible();
 
   const fillPaperForm = async () => {

@@ -62,6 +62,7 @@ export const FEATURE_ROWS: readonly FeatureRow[] = [
     headingKey: "boats.divingOptionsHeading",
     link: { path: "/boats", labelKey: "settings.features.boats" },
   },
+  optional("buddyTeams", "diving", "settings"),
   optional("hotelPickup", "diving", "settings"),
   optional("publicConditions", "diving", "settings"),
   optional("fieldGuide", "diving", "settings"),

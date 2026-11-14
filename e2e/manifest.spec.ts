@@ -1,4 +1,5 @@
 import type { Page, Route } from "@playwright/test";
+import { CAPTAIN_NAME } from "../src/db/seed-cast";
 import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import {
   DEMO_MEDICAL_ALERT,
@@ -17,6 +18,8 @@ import {
   manifestRow,
   offlineCopySaved,
   openBoatCheck,
+  openDeckDetails,
+  openDeckPerson,
   openDiverFileGroup,
   openFirstRosterRowWith,
   openManifestPerson,
@@ -24,6 +27,7 @@ import {
   openTripAbout,
   openTripFromBoard,
   openTripTab,
+  rosterRow,
   tripPathByTitle,
   waiverRequestLinkAfterSend,
 } from "./helpers";
@@ -31,6 +35,40 @@ import {
 const staff = staffTranslator("en-US");
 
 signedInAsOwner();
+
+async function recordDeckPerson(page: Page, name: string) {
+  await openDeckPerson(page, name);
+  await page
+    .getByRole("button", { name: staff("manifest.deck.record", { name }), exact: true })
+    .click();
+  const receipt = page.locator('[data-deck-screen="receipt"]');
+  await expect(receipt.getByRole("heading", { name, exact: true })).toBeVisible();
+  await expect(
+    receipt.getByText(staff("manifest.deck.savedAboard"), { exact: true }),
+  ).toBeVisible();
+}
+
+async function savedPersonDetails(page: Page, name: string) {
+  await openDeckPerson(page, name);
+  await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).click();
+  return page
+    .locator("li[id^='offline-roll-call-'], #offline-crew-roll-call > li")
+    .filter({ has: page.getByRole("heading", { name, exact: true }) });
+}
+
+async function deckPeople(page: Page, role: "guest" | "crew") {
+  await page.getByRole("button", { name: staff("manifest.deck.find"), exact: true }).click();
+  return page
+    .locator('[data-deck-screen="find"] li')
+    .filter({ hasText: staff(`manifest.deck.${role}`) })
+    .getByRole("button")
+    .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label") ?? ""));
+}
+
+async function openDeckAttention(page: Page) {
+  await page.getByRole("button", { name: staff("manifest.deck.attention"), exact: true }).click();
+  await expect(page.locator('[data-deck-screen="attention"]')).toBeVisible();
+}
 
 // The manifest page primes the offline shell in the background — no tap
 // required. Wait for that to land before cutting the network. Polled from
@@ -112,155 +150,68 @@ async function activeShellState(page: Page, expectedVersion: string, priorCache:
 test("live manifest retains blocked divers and records an explicit not-boarded result", async ({
   page,
 }) => {
-  // Eight full server round trips — board, trip page, manifest, two checkpoint
-  // switches, a note save, and two roll-call writes — each re-rendering a
-  // 9-diver manifest. Measured at 12.4s serially against the default 15s
-  // ceiling, which leaves no headroom once the config's own parallelism
-  // (`E2E_WORKER_COUNT`, cpus/2) puts two workers and two Next servers on the
-  // same cores: it then times out reproducibly, and did so before the crew
-  // roll-call work landed. Same reasoning as the crew checkpoint test below —
-  // the budget bounds a *stuck* test, and this one is simply long.
-  test.setTimeout(45_000);
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripTab(page, "Manifest");
-
-  await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
-  // Blocked divers are said once, on the head count's own next line, and only
-  // at the dock (UX audit #17) — not as a banner, and not as a sentence in the
-  // half of the panel that scrolls away.
-  await expect(page.getByText(/^\d+ blocked$/)).toBeVisible();
-  // Scoped to the roster list, not a bare text match: every unteamed diver's
-  // name also appears on the buddy-team builder's checkbox below (ADR
-  // 20260804-buddy-teams), so `getByText` is a strict-mode violation here.
-  await expect(manifestRow(page, "Priya Sharma")).toBeVisible();
-
-  // At departure the readiness gate hides boarding for blocked divers only —
-  // Priya is the boat's one remaining straggler (the rest of the roster
-  // already signed their waiver), so she alone has no boarding button while
-  // the rest of the roster does. Anchored on the row's own <h3> for the same
-  // reason: a team row carries her name inside its "add a member" picker.
-  const priyaRow = manifestRow(page, "Priya Sharma");
-  await expect(priyaRow.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Mark boarded" }).first()).toBeVisible();
-
-  // Switching checkpoints keeps the roll-call list where the crew was looking.
-  // Measured as the list's own top in the viewport, not as `scrollY`: an
-  // unfinished boat check stands open at the dock and folds to its one line
-  // after a dive (UX audit 2026-10-07, item 17), so ~270px above the list goes
-  // away on this switch, a few hundred milliseconds after it commits. The
-  // list's `HoldPlace` marker holds it still by moving `scrollY` that same
-  // distance — an unchanged `scrollY` would be the list jumping up the screen,
-  // not staying put.
-  const rollCallList = page.locator("#roll-call-list").filter({ visible: true });
-  // The list's top at the top of the screen, so the checklist that folds is
-  // wholly above the fold, where the crew is not looking. `IfNeeded` left it
-  // wherever it already sat, and on CI that was sometimes with the checklist
-  // still on screen: a fold you can see moves what is under it, by design.
-  await rollCallList.evaluate((list) => list.scrollIntoView({ block: "start" }));
-  const listTop = () => rollCallList.evaluate((list) => list.getBoundingClientRect().top);
-  const listTopAtDeparture = await listTop();
+  test.setTimeout(45_000); // Named-person lookup, a note, two checkpoints and two confirmed statements.
+  await page.goto(`/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest`);
+  await expect(
+    page
+      .locator("#deck-flow h1")
+      .getByRole("button", { name: staff("manifest.deck.home"), exact: true }),
+  ).toBeVisible();
+  let priyaRow = await manifestRow(page, "Priya Sharma");
+  await expect(priyaRow.getByRole("button", { name: "Mark boarded", exact: true })).toHaveCount(0);
+  await openDeckPerson(page, "Tom Okafor");
+  await expect(
+    page.getByRole("button", { name: staff("manifest.deck.record", { name: "Tom Okafor" }) }),
+  ).toBeVisible();
+  await openDeckDetails(page);
   await page
-    .getByRole("link", { name: "After dive 1" })
+    .getByRole("link", { name: "After dive 1", exact: true })
     .evaluate((link: HTMLElement) => link.click());
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
-  // After a dive, roll call is a physical head count — a blocked diver who is
-  // aboard can still be recorded present, so boarding is offered here.
-  await expect(page.getByRole("button", { name: "Mark boarded" }).first()).toBeVisible();
-  // The fold is the change the list has to survive, so it is waited on first:
-  // the URL and the boarding button both arrive before it, and a position
-  // sampled then is the departure layout's, which passes without testing
-  // anything.
+  await openDeckDetails(page);
+  await openDeckPerson(page, "Priya Sharma");
   await expect(
-    // The checklist's own disclosure, not the snag notes inside its rows.
-    page
-      .getByRole("region", { name: /^Before you leave the dock:/ })
-      .locator("details")
-      .first(),
-  ).not.toHaveAttribute("open");
-  await expect.poll(async () => Math.abs((await listTop()) - listTopAtDeparture)).toBeLessThan(4);
+    page.getByRole("button", { name: staff("manifest.deck.record", { name: "Priya Sharma" }) }),
+  ).toBeVisible();
+  await openDeckDetails(page);
   await page
-    .getByRole("link", { name: "Before departure" })
+    .getByRole("link", { name: "Before departure", exact: true })
     .evaluate((link: HTMLElement) => link.click());
   await expect(page).toHaveURL(/checkpoint=departure/);
-
-  // One disclosure per row now, not two: the person's own panel holds the
-  // contact block, the notes, and the exception control together (ADR
-  // 20260827-the-departure-is-two-working-surfaces, decision 2).
-  const priyaTrigger = priyaRow.locator('button[aria-haspopup="dialog"]');
-  await expect(priyaTrigger).toHaveAttribute("aria-expanded", "false");
+  await openDeckDetails(page);
+  priyaRow = await manifestRow(page, "Priya Sharma");
   await openManifestPerson(priyaRow);
-  const priyaDialog = page.getByRole("dialog");
-  await priyaDialog
+  await page
+    .getByRole("dialog")
     .getByLabel("Add a note only staff can see")
     .fill("Guest asked to sit out before departure.");
   const manifestUrl = page.url();
-  await priyaDialog.getByRole("button", { name: "Add private note" }).click();
-  // Private notes are independent of roll-call state: the desk can save
-  // context before anyone is marked boarded, and the action revalidates this
-  // page in place rather than redirecting it.
-  await expect(page).toHaveURL(manifestUrl);
-  await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
-  // Park the button clear of the sticky header and progress panel before
-  // sampling. Playwright scrolls a target into view as part of clicking it, so
-  // a button sitting under those overlays moves the page after the sample and
-  // the comparison is then against a position the user was never at.
-  // **Never one tap from the list** (decision 3): open the person first. Priya
-  // is blocked and carries no boarding mark at all, so hers is the row whose
-  // only recordable result is this one.
-  await openManifestPerson(priyaRow);
-  const markNotBoarded = priyaDialog.getByRole("button", { name: "Mark not boarded" });
-  await markNotBoarded.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  // **Where the diver is on screen, not what `window.scrollY` reads.** Those
-  // were the same question until the count panel started naming who is still
-  // to call: recording the first result inserts the count row and the chip
-  // list *above* the roster, and Chromium's scroll anchoring then moves
-  // `scrollY` by exactly that much precisely so the reader's view does not
-  // move. Asserting on `scrollY` would fail the browser for keeping the
-  // promise this test is about — which is that the row a crew member is
-  // working stays under their thumb.
-  const rowTopBefore = (await priyaRow.boundingBox())?.y ?? Number.NaN;
-  await markNotBoarded.click();
-  // WP-6: the card settles in place — the button flips to the confirmed state
-  // without a full-page redirect. The first recorded result also reveals the
-  // sticky panel's count row above the list; allow that one panel expansion to
-  // settle while keeping the working row within the viewport.
-  // The settled control's accessible name is its undo-bearing aria-label
-  // (PR #607 review) — an aria-label replaces the computed name outright, so
-  // "Not boarded ☑️" no longer matches; the visible label is unchanged.
+  await page.getByRole("dialog").getByRole("button", { name: "Add private note" }).click();
   await expect(
-    priyaDialog.getByRole("button", { name: "Not boarded — tap again to undo" }),
+    page.getByRole("dialog").getByText("Guest asked to sit out before departure."),
   ).toBeVisible();
-  await expect
-    .poll(async () => Math.abs(((await priyaRow.boundingBox())?.y ?? Number.NaN) - rowTopBefore))
-    .toBeLessThan(160);
-  await expect(page).not.toHaveURL(/#roll-call-/);
-  // The head count now lives once, in the checkpoint panel's count row —
-  // the six summary tiles (three responsive layouts of the same numbers,
-  // one of them collapsed behind "More stats") are gone. Scoped to the
-  // panel and asserted on the *number* as well as the word: an unscoped
-  // text match would also find a row's own status words.
-  const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
-  const notBoardedCount = progressPanel.locator("dl > div").filter({ hasText: "Not boarded" });
-  await expect(notBoardedCount).toBeVisible();
-  await expect(notBoardedCount).toContainText("1");
-  // And the row **adds up to the boat**. The entries are mutually exclusive
-  // by construction (every diver has at most one result), so the three
-  // numbers must total the roster — the row used to carry a fourth,
-  // "Blocked", which is a readiness fact overlapping "Awaiting" and made a
-  // nine-diver departure read as ten people.
-  await expect(progressPanel.getByText("Blocked", { exact: true })).toHaveCount(0);
-  const rosterTotal = await page.locator("#roll-call-list > ul > li").count();
-  const rowTotal = await progressPanel
-    .locator("dl > div dd")
-    .evaluateAll((cells) => cells.reduce((sum, cell) => sum + Number(cell.textContent), 0));
-  expect(rowTotal).toBe(rosterTotal);
-  // A second row, through the same two steps.
-  const tomRow = manifestRow(page, "Tom Okafor");
-  await openManifestPerson(tomRow);
-  await page.getByRole("dialog").getByRole("button", { name: "Mark not boarded" }).click();
+  await expect(page).toHaveURL(manifestUrl);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Mark not boarded", exact: true })
+    .click();
+  const receipt = page.locator('[data-deck-screen="receipt"]');
+  await expect(receipt.getByRole("heading", { name: "Priya Sharma", exact: true })).toBeVisible();
   await expect(
-    page.getByRole("dialog").getByRole("button", { name: "Not boarded — tap again to undo" }),
+    receipt.getByText(staff("manifest.deck.savedAshore"), { exact: true }),
+  ).toBeVisible();
+  await expect(
+    receipt.getByRole("button", { name: staff("manifest.deck.undo", { name: "Priya Sharma" }) }),
+  ).toBeVisible();
+  const tomRow = await manifestRow(page, "Tom Okafor");
+  await openManifestPerson(tomRow);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Mark not boarded", exact: true })
+    .click();
+  await expect(receipt.getByRole("heading", { name: "Tom Okafor", exact: true })).toBeVisible();
+  await expect(
+    receipt.getByText(staff("manifest.deck.savedAshore"), { exact: true }),
   ).toBeVisible();
 });
 
@@ -271,7 +222,9 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // This journey exercises the device copy; the booking smoke covers board navigation.
   await page.goto(`/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest`);
   await expect(
-    page.getByRole("heading", { name: DEMO_TODAY_TRIP_TITLE, exact: true }),
+    page
+      .locator("#deck-flow h1")
+      .getByRole("button", { name: staff("manifest.deck.home"), exact: true }),
   ).toBeVisible();
 
   // The device copy now saves itself automatically once the page has signal —
@@ -291,6 +244,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
     page.getByText(staff("trips.offlineManifestManager.freshnessCurrent")),
   ).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
+  await openDeckDetails(page);
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
 
@@ -302,49 +256,36 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await page.reload();
   // Offline reload serves the device copy; its header says so (B51, review
   // dde-b 1), and the banner says how old it is.
+  await openDeckDetails(page);
   await expect(page.getByText("No signal · device copy")).toBeVisible();
   await page.getByRole("button", { name: "After dive 1" }).click();
-  // Two lists on this page carry roll-call controls now (H-20260814-where-diveday-sit-between), and the crew
-  // panel renders *above* the diver list — so every click below names which
-  // list it means. An unscoped `.first()` here silently moved to a crew member
-  // the moment crew gained buttons, and the diver half of this test stopped
-  // testing the diver half.
-  const diverList = page.locator("#offline-roll-call");
-  const crewList = page.locator("#offline-crew-roll-call");
-  // After a dive the offline copy words this control the same way the live
-  // manifest does — "not back aboard", never a settled "Not boarded ☑️" (DOM-H3).
-  await expect(page.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
-  // The claim is a deliberate second step (#1840): open the row's "Not back
-  // aboard?" disclosure, then mark.
-  const diverRow = diverList.getByRole("listitem").first();
+  await openDeckDetails(page);
+  const diverRow = await savedPersonDetails(page, "Diego Alvarez");
+  await expect(diverRow.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
   await diverRow.getByText("Not back aboard?", { exact: true }).click();
-  await diverRow.getByRole("button", { name: "Mark not back aboard" }).click();
-  // Two live regions exist here (the action message and the connectivity
-  // badge); scope to the one carrying the sync message.
+  await diverRow.getByRole("button", { name: "Mark not back aboard", exact: true }).click();
+  await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+    staff("manifest.deck.savedMissing"),
+  );
   await expect(
     page.getByRole("status").filter({ hasText: "when you’re back in service" }),
   ).toBeVisible();
 
-  // The crew half of the same head count, still with the radio off (H-20260814-where-diveday-sit-between).
-  // Until this shipped a captain offshore could count divers and not crew, and
-  // `rollCallCompleteness` needs both — so the after-dive checkpoint, the one
-  // where a person may still be in the water, could not be closed at sea at
-  // all. The button settling to "Aboard ☑️" is the crew row's own recorded
-  // state, so this asserts the write landed on *that* row rather than
-  // re-reading the panel's count (which depends on how many crew the seed
-  // rosters).
-  const crewRow = crewList.getByRole("listitem").first();
-  await crewRow.getByRole("button", { name: "Mark aboard" }).click();
-  // The settled control's accessible name is its undo-bearing aria-label
-  // (PR #607 review), which replaces "Aboard ☑️" rather than extending it.
-  await expect(crewRow.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
-
+  // Crew use their own named record; a diver result never counts a captain.
+  await recordDeckPerson(page, CAPTAIN_NAME);
+  await expect(
+    page.getByRole("status").filter({ hasText: "when you’re back in service" }),
+  ).toBeVisible();
   await context.setOffline(false);
-  // One message for both queued events — the diver's and the crew member's go
-  // through the same sync route and the same reconcile.
-  await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
-  // And the crew result stuck: reconciled, not rolled back by the server.
-  await expect(crewRow.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
+  await expect(
+    page
+      .locator('[data-deck-screen] > [role="status"]')
+      .getByText(staff("shared.offlineManifest.reconcile.allCaughtUp"), { exact: true }),
+  ).toBeVisible();
+  const crewRow = await savedPersonDetails(page, CAPTAIN_NAME);
+  await expect(
+    crewRow.getByRole("button", { name: "Aboard — tap again to undo", exact: true }),
+  ).toBeVisible();
 });
 
 test("a new shell worker replaces the older cache without losing encrypted roll call", async ({
@@ -387,13 +328,16 @@ test("a new shell worker replaces the older cache without losing encrypted roll 
       "Two-Tank Reef — Molasses & French",
     );
     await page.goto(`${tripPath}/manifest`);
+    await openDeckDetails(page);
     await page
       .getByRole("link", { name: "After dive 1" })
       .evaluate((link: HTMLElement) => link.click());
     await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+    await openDeckDetails(page);
     await offlineCopySaved(page);
     await openOnThisPhone(page);
     await page.getByRole("link", { name: "Open offline roll call" }).click();
+    await openDeckDetails(page);
     await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
     await expect
       .poll(() => activeShellState(page, oldVersion, currentCache))
@@ -401,11 +345,11 @@ test("a new shell worker replaces the older cache without losing encrypted roll 
 
     await context.setOffline(true);
     await page.reload();
+    await openDeckDetails(page);
     await expect(page.getByText("No signal · device copy")).toBeVisible();
     await page.getByRole("button", { name: "After dive 1" }).click();
-    const crewRow = page.locator("#offline-crew-roll-call").getByRole("listitem").first();
-    await crewRow.getByRole("button", { name: "Mark aboard" }).click();
-    await expect(crewRow.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
+    await openDeckDetails(page);
+    await recordDeckPerson(page, CAPTAIN_NAME);
     await expect(
       page.getByRole("status").filter({ hasText: "when you’re back in service" }),
     ).toBeVisible();
@@ -448,9 +392,11 @@ test("a new shell worker replaces the older cache without losing encrypted roll 
     // queued event after the old shell cache has been removed.
     await context.setOffline(true);
     await page.reload();
+    await openDeckDetails(page);
     await expect(page.getByText("No signal · device copy")).toBeVisible();
     await page.getByRole("button", { name: "After dive 1" }).click();
-    const preservedCrewRow = page.locator("#offline-crew-roll-call").getByRole("listitem").first();
+    await openDeckDetails(page);
+    const preservedCrewRow = await savedPersonDetails(page, CAPTAIN_NAME);
     await expect(
       preservedCrewRow.getByRole("button", { name: "Aboard — tap again to undo" }),
     ).toBeVisible();
@@ -481,12 +427,14 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   // Switch checkpoints before losing signal — the redirect should carry this
   // through so a captain mid roll call doesn't land back on "Before departure".
   await page
     .getByRole("link", { name: "After dive 1" })
     .evaluate((link: HTMLElement) => link.click());
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+  await openDeckDetails(page);
 
   await waitForShellPrimed(page);
 
@@ -607,6 +555,7 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   await waitForShellPrimed(page);
 
   // Move to a *different* trip surface — the worker's live-manifest pattern
@@ -697,6 +646,7 @@ test("the live manifest response never enters Cache Storage", async ({ page }) =
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   await waitForShellPrimed(page);
 
   // The worker is network-first for the live manifest and only ever caches
@@ -767,6 +717,7 @@ test("an out-of-range checkpoint in the offline URL falls back to departure, not
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   await offlineCopySaved(page);
 
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
@@ -776,7 +727,7 @@ test("an out-of-range checkpoint in the offline URL falls back to departure, not
   // heading and `isDeparture` still read the raw, nonexistent checkpoint —
   // showing one checkpoint's data under another's label.
   await page.goto(`/offline-manifest?trip=${tripId}&checkpoint=after_dive_999`);
-  await expect(page.getByRole("heading", { name: "Before departure roll call" })).toBeVisible();
+  await expect(page.locator("[data-deck-screen]").getByText(/Before departure/)).toBeVisible();
 });
 
 /**
@@ -798,6 +749,7 @@ test("a copy opened because DiveDay was slow says so from the list on, and offer
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   await offlineCopySaved(page);
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
 
@@ -806,6 +758,7 @@ test("a copy opened because DiveDay was slow says so from the list on, and offer
 
   await expect(page).toHaveURL(`/offline-manifest?trip=${tripId}&fallback=slow`);
   await expect(page.getByText(staff("shared.connectivity.unansweredWithCopy"))).toBeVisible();
+  await openDeckDetails(page);
   await expect(page.getByText(/DiveDay didn’t answer, so this is the list/)).toBeVisible();
   // Under the roll call: who may be missing from this copy (issue #2980).
   await expect(page.getByText(/one removed still has one/)).toBeVisible();
@@ -817,15 +770,29 @@ test("a copy opened because DiveDay was slow says so from the list on, and offer
   await expect(page.getByText(staff("shared.connectivity.online"), { exact: true })).toHaveCount(0);
   // DiveDay answers this time: the copy says so and offers the live list,
   // and stays put until the captain takes the offer.
+  // Reconnect verifies the tenant before remounting the saved trip. Its
+  // native Details disclosure is closed again; await the attached recovery
+  // message, then deliberately reopen it to take the offered live route.
+  await page
+    .locator(`p:text-is(${JSON.stringify(staff("shared.offlineManifest.single.liveAnswering"))})`)
+    .waitFor({ state: "attached", timeout: 15_000 });
+  await openDeckDetails(page);
   const offer = page
     .getByRole("status")
     .filter({ hasText: staff("shared.offlineManifest.single.liveAnswering") })
-    .getByRole("link", { name: staff("shared.offlineManifest.single.openLiveManifest") });
+    .getByRole("link", {
+      name: staff("shared.offlineManifest.single.openLiveManifest"),
+      exact: true,
+    });
   await expect(offer).toBeVisible({ timeout: 15_000 });
   await expect(page).toHaveURL(`/offline-manifest?trip=${tripId}&fallback=slow`);
   await offer.click();
   await page.waitForURL((url) => url.pathname.endsWith(`/trips/${tripId}/manifest`));
-  await expect(page.getByRole("heading", { name: /roll call/ })).toBeVisible();
+  await expect(
+    page
+      .locator("#deck-flow h1")
+      .getByRole("button", { name: staff("manifest.deck.home"), exact: true }),
+  ).toBeVisible();
 });
 
 test("visiting any shop page auto-saves the near-term board without opening a manifest, and dive.day root falls back to the saved list offline", async ({
@@ -876,6 +843,7 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
   await expect(page.getByText("Two-Tank Reef — Molasses & French")).toBeVisible();
   await page.getByText("Two-Tank Reef — Molasses & French").click();
   await expect(page).toHaveURL(/\/offline-manifest\?trip=[^&]+&fallback=failed$/);
+  await openDeckDetails(page);
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
 
   await context.setOffline(false);
@@ -884,178 +852,91 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
 test("a checkpoint with every diver counted stays open until the crew are called too", async ({
   page,
 }) => {
-  // DOM-H1. Crew are the people most reliably in the water and were not part
-  // of the head count at all, so a boat could read "roll call complete" with a
-  // divemaster still down.
-  //
-  // Deliberately *not* the "Molasses & French" boat every other spec drives:
-  // this test boards its whole roster, and under `fullyParallel` that would
-  // pull the shared trip's roll-call state out from under the tests above.
-  // This charter carries three divers and two crew and belongs to no other spec.
-  const TRIP = "Afternoon Two-Tank — French Reef";
-  // Three sequential diver writes plus two crew writes and three corrections,
-  // each a full server action round trip — more than the default per-test
-  // budget allows for.
-  test.setTimeout(90_000);
-
+  test.setTimeout(90_000); // Every named guest/crew record, two missing statements, a correction and a report.
   await page.goto("/shop/blue-mantis/schedule/board");
-  await openTripFromBoard(page, TRIP);
+  await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
   await openTripTab(page, "Manifest");
-
-  // After a dive, roll call is a head count, so every diver — blocked or not —
-  // can be recorded present. That is what makes "all divers counted" reachable.
-  await page
-    .getByRole("link", { name: "After dive 1" })
-    .evaluate((link: HTMLElement) => link.click());
+  await openDeckDetails(page);
+  await page.getByRole("link", { name: "After dive 1", exact: true }).click();
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
 
-  const boardButtons = page.getByRole("button", { name: "Mark boarded" });
-  // Wait for the *settled* label, not merely "no longer says Mark boarded" —
-  // the pending label ("Boarding…") also fails that weaker test, so a count-based
-  // loop fires every click before the first write has landed and the page ends
-  // up with nine disabled spinners and nothing recorded.
-  for (let guard = 0; guard < 20; guard += 1) {
-    const remaining = await boardButtons.count();
-    if (remaining === 0) break;
-    // The settled control's accessible name is its undo-bearing aria-label
-    // (PR #607 review), which replaces "Boarded ☑️" rather than extending it.
-    const settled = page.getByRole("button", { name: "Boarded — tap again to undo" });
-    const settledBefore = await settled.count();
-    const next = boardButtons.first();
-    await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
-    await next.click();
-    await expect(settled).toHaveCount(settledBefore + 1);
-  }
-  await expect(boardButtons).toHaveCount(0);
-  // The diver gap is stated by the pinned count row's "Awaiting" entry, which
-  // renders only while its number is nonzero — with every diver recorded it
-  // is gone. (The crew half keeps its own "N crew members still to call"
-  // sentence below, asserted next, because crew have no entry on that row.)
-  const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
-  const awaitingEntry = progressPanel.locator("dl > div").filter({ hasText: "Awaiting" });
-  await expect(awaitingEntry).toHaveCount(0);
+  const guests = await deckPeople(page, "guest");
+  const crew = await deckPeople(page, "crew");
+  expect(guests.length).toBeGreaterThan(0);
+  expect(crew.length).toBeGreaterThan(0);
+  for (const name of guests) await recordDeckPerson(page, name);
+  await expect(
+    page.getByText(
+      staff("manifest.deck.progress", { count: guests.length, total: guests.length + crew.length }),
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: staff("manifest.deck.home"), exact: true }).click();
+  await expect(page.getByText(staff("manifest.deck.complete"), { exact: true })).toHaveCount(0);
 
-  // Every diver has a result — and the checkpoint is still open, naming why:
-  // the crew, by name, are the whole crew half (ADR
-  // 20260804-crew-roll-call-is-per-person).
-  await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
-  await expect(page.getByText(/crew members still to call/)).toBeVisible();
+  for (const name of crew) await recordDeckPerson(page, name);
+  await page.getByRole("button", { name: staff("manifest.deck.home"), exact: true }).click();
+  await expect(page.getByText(staff("manifest.deck.complete"), { exact: true })).toBeVisible();
 
-  const crewAboardButtons = page.getByRole("button", { name: "Mark aboard" });
-  for (let guard = 0; guard < 6; guard += 1) {
-    const remaining = await crewAboardButtons.count();
-    if (remaining === 0) break;
-    // Same undo-bearing accessible name, crew side.
-    const settled = page.getByRole("button", { name: "Aboard — tap again to undo" });
-    const settledBefore = await settled.count();
-    const next = crewAboardButtons.first();
-    await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
-    await next.click();
-    await expect(settled).toHaveCount(settledBefore + 1);
-  }
-  await expect(crewAboardButtons).toHaveCount(0);
-
-  // Every person aboard named by a human: now it closes.
-  await expect(page.getByRole("heading", { name: "Roll call complete" })).toBeVisible();
-
-  // DOM-H3. Now a diver does not come back from dive one. After a dive, the
-  // control that isn't "Boarded" says so in those words and never settles into
-  // a green-checked "Not boarded ☑️", and the closed checkpoint re-opens —
-  // which is what the Today queue is simultaneously alarming about.
-  await expect(page.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
-  // **Two steps, always** (ADR 20260827-the-departure-is-two-working-surfaces,
-  // decision 3): the highest-consequence claim this app can make is recorded
-  // from the person's own panel, never from the row a wet thumb runs down.
-  const firstDiverRow = page.locator("#roll-call-list > ul > li").first();
+  const firstName = guests[0];
+  const firstDiverRow = await manifestRow(page, firstName);
+  const firstDiverId = await firstDiverRow.getAttribute("id");
   await openManifestPerson(firstDiverRow);
-  const firstDiverDialog = page.getByRole("dialog");
-  const markNotBack = firstDiverDialog.getByRole("button", { name: "Mark not back aboard" });
-  // The sentence rides the same submit as the mark (ADR
-  // 20260828-a-missing-diver-gets-a-sentence). What is being pinned is the
-  // pairing: there is no separate save, so nothing can record the alarm and
-  // lose the observation behind it.
-  await firstDiverDialog
+  const observation = "Surfaced 200 m north, picked up by Reef Runner at 14:31.";
+  await page
+    .getByRole("dialog")
     .getByRole("textbox", { name: "What happened (optional)" })
     .first()
-    .fill("Surfaced 200 m north, picked up by Reef Runner at 14:31.");
-  await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  await markNotBack.click();
-  // `exact` matters: without it the substring match resolves against the
-  // *other* rows' still-unpressed "Mark not back aboard" buttons and settles
-  // instantly, so the assertion never waits for this write at all.
-  await expect(
-    firstDiverDialog.getByRole("button", { name: "Not back aboard", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
-  await expect(page.getByText(/1 person is not back aboard/)).toBeVisible();
-  // The report starts from the row that raised the alarm (safety sheet
-  // 2026-10-15, item 2), named for the diver, for the owner signed in here.
+    .fill(observation);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Mark not back aboard", exact: true })
+    .click();
+  await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+    staff("manifest.deck.savedMissing"),
+  );
+  // A serious result persists in attention and names its person.
+  await openDeckAttention(page);
+  const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
+  await expect(progressPanel.getByText(/1 person is not back aboard/)).toBeVisible();
+  const missingList = progressPanel.getByRole("list", { name: "Who is not back aboard" });
+  await expect(missingList.getByRole("link")).toHaveCount(1);
+  await expect(missingList.getByRole("link")).toHaveAttribute("href", `#${firstDiverId}`);
+
+  await openManifestPerson(await manifestRow(page, firstName));
+  const firstDiverDialog = page.getByRole("dialog");
   const startMissingReport = firstDiverDialog.getByRole("button", {
     name: /^Start a missing diver report — /,
   });
   await expect(startMissingReport).toBeVisible();
-  // Read back on the row, so a second crew member arriving at the alarm does
-  // not type the same sentence again.
-  await expect(
-    firstDiverDialog.getByText("Surfaced 200 m north, picked up by Reef Runner at 14:31."),
-  ).toBeVisible();
-  // And the panel names who it is about, not just how many. `order-first` is
-  // paint order: it reaches neither a keyboard nor the crew list, so this link
-  // is what actually gets a reader to the row (dive-domain review 20260828).
-  const missingList = progressPanel.getByRole("list", { name: "Who is not back aboard" });
-  await expect(missingList.getByRole("link")).toHaveCount(1);
-  await expect(missingList.getByRole("link").first()).toHaveAttribute(
-    "href",
-    `#${await firstDiverRow.getAttribute("id")}`,
-  );
-
-  // DD1. A stated crew emergency must never be hidden behind a clerical diver
-  // gap. `rollCallCompleteness` ranks `divers_awaiting` above
-  // `crew_not_back_aboard` (other surfaces key off that ranking, so it stays),
-  // and the panel used to render only that single top reason — so a boat with
-  // a divemaster in the water and a diver uncalled read as a muted "1 diver
-  // still to call" and nothing else.
-  //
-  // Set exactly that state up: clear the diver's result so they are awaiting
-  // again, then record a crew member as not back aboard.
-  await openManifestPerson(firstDiverRow);
-  const clearNotBack = firstDiverDialog.getByRole("button", {
-    name: "Not back aboard",
-    exact: true,
-  });
-  await clearNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  await clearNotBack.click();
-  await expect(awaitingEntry).toBeVisible();
-  await expect(awaitingEntry).toContainText("1");
-  // Taken back, the row no longer offers a missing diver report.
+  await expect(firstDiverDialog.getByText(observation, { exact: true })).toBeVisible();
+  // Withdraw the diver statement, then record a crew emergency while the guest remains uncalled.
+  await firstDiverDialog.getByRole("button", { name: "Not back aboard", exact: true }).click();
+  await expect(page.locator('[data-deck-screen="person"]')).toBeVisible();
   await expect(startMissingReport).toHaveCount(0);
-
-  // Crew reach it the same way — a divemaster who did not surface is the same
-  // claim about the same kind of body.
-  const crewRow = page.locator("li[id^='crew-row-']").first();
-  await openManifestPerson(crewRow);
-  const crewNotBack = page
+  await openDeckPerson(page, crew[0]);
+  await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).click();
+  await openManifestPerson(page.locator("li[id^='crew-row-']").filter({ hasText: crew[0] }));
+  await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Mark not back aboard" });
-  await crewNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  await crewNotBack.click();
-
-  // Both facts, at once: the diver gap on the pinned count row ("Awaiting 1"),
-  // and the crew emergency in danger tone that no clerical gap is allowed to
-  // suppress.
+    .getByRole("button", { name: "Mark not back aboard", exact: true })
+    .click();
+  await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+    staff("manifest.deck.savedMissing"),
+  );
+  await openDeckAttention(page);
+  const awaitingEntry = progressPanel.locator("dl > div").filter({ hasText: "Awaiting" });
   await expect(progressPanel.getByText(/1 crew member is not back aboard/)).toBeVisible();
-  await expect(awaitingEntry).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
+  await expect(awaitingEntry).toContainText("1");
+  await expect(page.getByText(staff("manifest.deck.complete"), { exact: true })).toHaveCount(0);
 
-  // The missing crew member's report starts from their own sheet too, and
-  // the report it opens leads straight back to this checkpoint (domain review
-  // 2026-10-16).
-  const crewReport = page
+  await openDeckPerson(page, crew[0]);
+  await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).click();
+  await openManifestPerson(page.locator("li[id^='crew-row-']").filter({ hasText: crew[0] }));
+  await page
     .getByRole("dialog")
-    .getByRole("button", { name: /^Start a missing diver report — / });
-  await crewReport.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  await crewReport.click();
+    .getByRole("button", { name: /^Start a missing diver report — / })
+    .click();
   await expect(page).toHaveURL(
     /\/incidents\/[0-9a-f-]{36}\?from=manifest&checkpoint=after_dive_\d+$/,
   );
@@ -1084,6 +965,7 @@ test("the manifest offers a per-device push opt-in without asking for permission
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
 
   // Behind the "On this phone" line since slice 5a: every per-device
   // preference is one tap away rather than standing at the foot of the boat
@@ -1109,32 +991,20 @@ test("the manifest offers a per-device push opt-in without asking for permission
   expect(await page.evaluate(() => Notification.permission)).not.toBe("granted");
 });
 
-/**
- * The two ways a captain moves around a roll call, both of which the
- * 2026-08-06 review found broken in the same way — the page looked right on
- * arrival and then stopped helping the moment anyone scrolled.
- */
-test("the active-checkpoint panel stays pinned for the whole roll call", async ({ page }) => {
-  // Three full page loads (board → trip → Manifest tab) against the 15s
-  // single-load default; no writes, so nothing like the 90s roll-call budget.
-  test.setTimeout(30_000);
-  // A phone: the panel matters most where the roster is many screens long.
+test("the active checkpoint stays visible while selecting named Deck people", async ({ page }) => {
+  // The individual Deck keeps checkpoint and progress visible while the captain navigates names.
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripTab(page, "Manifest");
-
-  const heading = page.locator("#roll-call-progress-heading");
-  await expect(heading).toBeVisible();
-
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  // `sticky` is bounded by its own containing block, so wrapping the card and
-  // the prose under it in one short `<section>` un-pinned the panel a few diver
-  // rows down the page — visible on arrival, gone by the first name a captain
-  // actually had to call.
-  await expect(heading).toBeInViewport();
-  const box = await heading.boundingBox();
-  expect(box?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(200);
+  await page.goto(`/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest?checkpoint=after_dive_1`);
+  for (const name of ["Tom Okafor", "Lena Fischer", "Diego Alvarez"]) {
+    await openDeckPerson(page, name);
+    await expect(
+      page.locator('[data-deck-screen="person"]').getByText(/After dive 1/),
+    ).toBeInViewport();
+    await expect(page.getByText(/^0 of \d+ people accounted for$/)).toBeInViewport();
+    await expect(
+      page.getByRole("button", { name: staff("manifest.deck.record", { name }), exact: true }),
+    ).toBeInViewport();
+  }
 });
 
 test("resolving a blocker from the manifest lands on that diver, under the blocked filter", async ({
@@ -1146,11 +1016,12 @@ test("resolving a blocker from the manifest lands on that diver, under the block
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
 
   // Blockers and their one fix moved into the person's own panel (ADR
   // 20260827-the-departure-is-two-working-surfaces, decision 2 — clearing a
   // blocker is ashore work, not something the rail needs standing on the row).
-  const blockedRow = manifestRow(page, "Priya Sharma");
+  const blockedRow = await manifestRow(page, "Priya Sharma");
   await openManifestPerson(blockedRow);
   const resolve = page.getByRole("dialog").getByRole("link", { name: /Resolve/i });
   await expect(resolve).toBeVisible();
@@ -1159,16 +1030,15 @@ test("resolving a blocker from the manifest lands on that diver, under the block
   expect(bookingAnchor, "the resolve link must name the diver it is about").toBeTruthy();
 
   await resolve.click();
-  // The Guests ledger files everyone with open work under its "Still to
-  // clear" group (ADR 20260827-the-departure-is-two-working-surfaces, slice
-  // 5d), so the captain arrives with the group band saying why this diver
-  // needs them — the retired `?rf=blocked` filter is not asked for.
-  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+#booking-/);
-  await expect(page.getByRole("heading", { name: /Still to clear/ })).toBeVisible();
+  // The remedy opens this guest’s folio with its outstanding requirements.
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+(?:\?booking=[^#]+)?#booking-/);
+  await expect(
+    page.locator("[data-guest-folio]").getByRole("heading", { name: "Priya Sharma", exact: true }),
+  ).toBeVisible();
 
   // And actually scrolled to them: a `<Link>` transition does not run the
   // browser's own fragment scroll, so this used to land at the top of a page
-  // of ~200px cards with the named diver far below the fold.
+  // of guest cards with the named diver far below the fold.
   const row = page.locator(`#${bookingAnchor}`);
   await expect(row).toBeInViewport();
 });
@@ -1212,6 +1082,7 @@ test("a crew member checks a pre-departure item on the live manifest, and two re
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
 
   await openBoatCheck(page);
   const item = page.getByRole("button", { name: "VHF radio checked" });
@@ -1235,6 +1106,7 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
 
   await offlineCopySaved(page);
   await openOnThisPhone(page);
@@ -1243,6 +1115,7 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
     page.getByText(staff("trips.offlineManifestManager.freshnessCurrent")),
   ).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
+  await openDeckDetails(page);
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
 
   // Only an *activated* worker catches the reload below. Neither the pill nor
@@ -1251,6 +1124,7 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
   await waitForShellPrimed(page);
   await context.setOffline(true);
   await page.reload();
+  await openDeckDetails(page);
   await expect(page.getByText("No signal · device copy")).toBeVisible();
 
   // The offline viewer, not the live manifest — its own surface, with the
@@ -1262,7 +1136,11 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
   ).toBeVisible();
 
   await context.setOffline(false);
-  await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
+  await expect(
+    page
+      .locator('[data-deck-screen] > [role="status"]')
+      .getByText(staff("shared.offlineManifest.reconcile.allCaughtUp"), { exact: true }),
+  ).toBeVisible();
 });
 
 /**
@@ -1293,6 +1171,7 @@ test("the catch-up strip says what the desk did, and stops once the crew has rea
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
 
   const strip = page.getByRole("region", { name: /Since you looked at/ });
   await expect(strip).toBeVisible();
@@ -1307,7 +1186,10 @@ test("the catch-up strip says what the desk did, and stops once the crew has rea
   // And it stays gone across a fresh render: the mark moved, so there is
   // nothing left to be "since".
   await page.reload();
-  await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+  await page
+    .locator("#deck-flow h1")
+    .getByRole("button", { name: staff("manifest.deck.home"), exact: true })
+    .waitFor();
   await expect(page.getByRole("region", { name: /Since you looked at/ })).toHaveCount(0);
 });
 
@@ -1318,7 +1200,11 @@ test("a departure this staffer has never opened shows no catch-up at all", async
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Wreck Trip — Spiegel Grove");
   await openTripTab(page, "Manifest");
-  await page.getByRole("heading", { level: 1, name: /Wreck Trip/ }).waitFor();
+  await openDeckDetails(page);
+  await page
+    .locator("#deck-flow h1")
+    .getByRole("button", { name: staff("manifest.deck.home"), exact: true })
+    .waitFor();
   await expect(page.getByRole("region", { name: /Since you looked at/ })).toHaveCount(0);
 });
 
@@ -1328,6 +1214,7 @@ test("the crew records why the plan changed, and the plan itself does not move",
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
 
   // At the dock the plan is read-only (issue #1184, D24). A change is said in
   // the dive log, at the checkpoint after the dive: the switch is the way
@@ -1338,6 +1225,7 @@ test("the crew records why the plan changed, and the plan itself does not move",
   await expect(page.getByText(/Changed the plan|Say why in the dive log/)).toHaveCount(0);
   await page.getByRole("link", { name: "After dive 1" }).click();
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+  await openDeckDetails(page);
 
   const summary = page.locator("summary").filter({ hasText: "Dive 1" });
   await summary.click();
@@ -1357,6 +1245,7 @@ test("the crew records why the plan changed, and the plan itself does not move",
   // The published plan is untouched: what happened lives in a different table.
   await page.getByRole("link", { name: "Before departure" }).click();
   await expect(page).toHaveURL(/checkpoint=departure/);
+  await openDeckDetails(page);
   await expect(page.getByText("Dive 1 · Molasses Reef")).toBeVisible();
 });
 
@@ -1366,8 +1255,10 @@ test("a transposed dive log entry is refused out loud and keeps what was typed",
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   await page.getByRole("link", { name: "After dive 1" }).click();
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+  await openDeckDetails(page);
 
   // The dive log is collapsed to a summary line now (#1055) — it stays on the
   // boat, where the numbers are, but the form is one tap in rather than a third
@@ -1420,6 +1311,7 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   const tripId = new URL(page.url()).pathname.split("/").at(-1) ?? "";
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
 
   await offlineCopySaved(page);
   await openOnThisPhone(page);
@@ -1428,6 +1320,7 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
     page.getByText(staff("trips.offlineManifestManager.freshnessCurrent")),
   ).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
+  await openDeckDetails(page);
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
 
   // Only an *activated* worker catches the reload below. Neither the pill nor
@@ -1436,6 +1329,7 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await waitForShellPrimed(page);
   await context.setOffline(true);
   await page.reload();
+  await openDeckDetails(page);
   await expect(page.getByText("No signal · device copy")).toBeVisible();
 
   const counter = page.getByRole("region", { name: "At the counter" });
@@ -1463,24 +1357,22 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   // is untouched, and the arrival never becomes a boarding on reconnection.
   // The tile's label and figure are two elements, so this reads the figure
   // inside the tile the label names rather than one string spanning both.
-  const boardedTile = page
-    .locator("div")
-    .filter({ hasText: /^Boarded\d+$/ })
-    .first();
-  await expect(boardedTile).toContainText("0");
+  await expect(page.getByText(/^0 of \d+ people accounted for$/)).toBeVisible();
   await expect(diego).toContainText("Checked in");
 
   await context.setOffline(false);
-  await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
-
-  // The live counter is this departure's Divers tab, where the arrived row
-  // has sunk into its "Checked in" group and ends in the tap that undoes it.
-  await page.goto(counterPath("blue-mantis", tripId));
-  const roster = page.locator("#roster");
-  await expect(roster.getByRole("heading", { name: /^Checked in · \d+$/ })).toBeVisible();
   await expect(
-    roster.getByRole("button", { name: "Undo check-in for Diego Alvarez" }),
+    page
+      .locator('[data-deck-screen] > [role="status"]')
+      .getByText(staff("shared.offlineManifest.reconcile.allCaughtUp"), { exact: true }),
   ).toBeVisible();
+
+  // The live counter opens this guest's folio with the persisted arrival and its Undo.
+  await page.goto(counterPath("blue-mantis", tripId));
+  const roster = await rosterRow(page, "Diego Alvarez");
+  const arrival = roster.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
+  await expect(arrival).toBeVisible();
+  await expect(arrival).toHaveText("Checked in");
   // And still nobody aboard — the desk closed the arrival and nothing else:
   // the group says "boarded" only once somebody has.
   await expect(roster.getByText(/boarded$/)).toHaveCount(0);
@@ -1501,6 +1393,7 @@ test("a failed reload of the counter lands on this device's saved copy", async (
   const tripUrl = new URL(page.url());
   const tripId = tripUrl.pathname.split("/").at(-1) ?? "";
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   await waitForShellPrimed(page);
 
   await page.goto(counterPath("blue-mantis", tripId));
@@ -1513,6 +1406,7 @@ test("a failed reload of the counter lands on this device's saved copy", async (
   // the staffer was working rather than the device-wide list, and says why the
   // worker opened it (`fallback=failed`: the request failed, offline).
   await expect(page).toHaveURL(new RegExp(`/offline-manifest\\?trip=${tripId}&fallback=failed$`));
+  await openDeckDetails(page);
   await expect(page.getByRole("region", { name: "At the counter" })).toBeVisible();
 });
 
@@ -1534,7 +1428,7 @@ test("a departure's crew opens a diver's medical alert, and the read is on their
     await viewer.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(viewer, DEMO_MEDICAL_ALERT_TRIP);
     await openTripTab(viewer, "Manifest");
-    const row = manifestRow(viewer, DEMO_MEDICAL_ALERT_DIVER);
+    const row = await manifestRow(viewer, DEMO_MEDICAL_ALERT_DIVER);
     await expect(row.getByText(staff("manifest.medicalAlertChip"), { exact: true })).toBeVisible();
     await openManifestPerson(row);
     const sheet = viewer.getByRole("dialog");
@@ -1676,7 +1570,9 @@ test("an instructor off the crew opens a medical alert in an emergency today, an
   await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
   await openTripTab(page, "Trip");
   const row = await openFirstRosterRowWith(page, "Send waiver");
-  const diverName = (await row.locator('a[href*="/divers/"]').first().innerText()).trim();
+  const diverName = (
+    await page.locator("[data-guest-folios]").getByRole("heading", { level: 2 }).first().innerText()
+  ).trim();
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
   // The diver signs on the thread link the request carried (issue #2743); the
   // helper waits out the held send before it reads the link.
@@ -1701,7 +1597,7 @@ test("an instructor off the crew opens a medical alert in an emergency today, an
     await instructor.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(instructor, DEMO_TODAY_TRIP_TITLE);
     await openTripTab(instructor, "Manifest");
-    const entry = manifestRow(instructor, diverName);
+    const entry = await manifestRow(instructor, diverName);
     await expect(
       entry.getByText(staff("manifest.medicalAlertChip"), { exact: true }),
     ).toBeVisible();

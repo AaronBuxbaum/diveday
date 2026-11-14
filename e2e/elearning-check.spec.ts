@@ -67,7 +67,7 @@ test("PADI showing the eLearning finished ticks the student's materials, and Und
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
-  const row = rosterRow(page, student);
+  const row = await rosterRow(page, student);
   await expect(row.getByText("Materials not done")).toBeVisible();
   await openRosterDetails(row);
 

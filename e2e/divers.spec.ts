@@ -198,7 +198,7 @@ test("a diver note is shared with the live boat manifest", async ({ page }) => {
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+\/manifest$/);
   // The desk's note reads in the person's own panel, one tap from the row
   // (ADR 20260827-the-departure-is-two-working-surfaces, decision 2).
-  const row = manifestRow(page, "Priya Sharma");
+  const row = await manifestRow(page, "Priya Sharma");
   await openManifestPerson(row);
   await expect(page.getByRole("dialog").getByText("Diver notes", { exact: true })).toBeVisible();
   await expect(page.getByRole("dialog")).toContainText(note);
@@ -237,7 +237,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
   await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
 
-  const card = rosterRow(page, diverName);
+  const card = await rosterRow(page, diverName);
   await expect(
     card.getByText("Emergency contact · Not on file").filter({ visible: true }),
   ).toBeVisible();
@@ -284,7 +284,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   // print copy always carries it). Reference text, never a `tel:` link: there
   // are no call buttons anywhere on the boat (decision 3).
   await page.goto(`${tripPath}/manifest`);
-  const manifestDiverRow = manifestRow(page, diverName);
+  const manifestDiverRow = await manifestRow(page, diverName);
   await openManifestPerson(manifestDiverRow);
   await expect(page.getByRole("dialog").getByText("Casey Diver ·")).toBeVisible();
   await expect(page.getByRole("dialog").locator('a[href^="tel:"]')).toHaveCount(0);
@@ -313,7 +313,7 @@ test("a Guests card shows an emergency contact only when it is missing", async (
 
   // Nadia Petrov is seeded with no contact (src/db/seed.ts `customerDefs`), so
   // her card states it where a staffer will act on it.
-  const missing = page.locator("#roster li").filter({ hasText: "Nadia Petrov" });
+  const missing = await rosterRow(page, "Nadia Petrov");
   // One warning line under her name, and the form behind her row.
   await expect(
     missing.getByText("Emergency contact · Not on file").filter({ visible: true }),
@@ -325,7 +325,7 @@ test("a Guests card shows an emergency contact only when it is missing", async (
 
   // Tom Okafor has one on file. It must not be on the face of the card — but
   // it must still be *on* the card, one tap away, not dropped.
-  const onFile = page.locator("#roster li").filter({ hasText: "Tom Okafor" });
+  const onFile = await rosterRow(page, "Tom Okafor");
   await expect(onFile.getByText(/Ngozi Okafor/)).toBeHidden();
   await openRosterDetails(onFile);
   await expect(onFile.getByText(/Ngozi Okafor/).filter({ visible: true })).toBeVisible();

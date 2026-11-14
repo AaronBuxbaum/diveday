@@ -431,7 +431,7 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
   // Scoped to the ledger: slice 23c folded the packing list in under the
   // roster, and a diver with no fit on file is named there too.
-  await expect(rosterRow(page, diver).getByRole("link", { name: diver })).toBeVisible();
+  await expect((await rosterRow(page, diver)).getByRole("link", { name: diver })).toBeVisible();
 
   // And the outcome was *announced*, not merely rendered. The e2e fleet
   // configures no email provider, so seating always resolves to the

@@ -16,12 +16,22 @@ import { rollCallRowState, rollCallScrollMargin } from "./RollCallControls";
 import { SharedDepthAdvisories, sharedDepthAdvisories } from "./SharedDepthAdvisories";
 
 /** The diver half of the head count — every active booking, one row each. */
-export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
+export function DiverRollCall({
+  context,
+  selectedBookingId,
+}: {
+  context: DiverRollCallContext;
+  /** Render one guest while preserving the roster as buddy reference context. */
+  selectedBookingId?: string;
+}) {
   const { idPrefix, divers: rosterDivers, checkpoint, isDeparture, locale, t } = context;
   // **A held seat shows the seat, not the matched person** (issue #1690,
   // H-20260916-unconfirmed-identity-withhold-cost): everything below, on screen and on paper, reads the withheld row,
   // so no capsule, fact block or shared advisory can reach past it.
-  const divers = rosterDivers.map(withholdHeldSeatParticulars);
+  const roster = rosterDivers.map(withholdHeldSeatParticulars);
+  const divers = selectedBookingId
+    ? roster.filter((diver) => diver.bookingId === selectedBookingId)
+    : roster;
   const { sharedAdvisories, sharedAdvisoryTexts } = sharedDepthAdvisories(divers, t);
   // At the dock only: after a dive the people are out of the water and the
   // plan is behind them. The printed packet is the departure sheet, so paper keeps it.
@@ -132,7 +142,7 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
             context={context}
             diver={diver}
             index={index}
-            divers={divers}
+            divers={roster}
             firstOnScreenBookingId={firstOnScreenBookingId}
             sharedAdvisoryTexts={sharedAdvisoryTexts}
           />

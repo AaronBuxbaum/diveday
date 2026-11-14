@@ -13,12 +13,15 @@ import {
   manifestRow,
   offlineCopySaved,
   openBoatCheck,
+  openDeckDetails,
+  openDeckPerson,
   openPaperWaiverForm,
   openRosterDetails,
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
   openTripTab,
+  rosterRow,
   seatFromRoster,
   seededTripId,
 } from "./helpers";
@@ -396,7 +399,9 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a trip's manifest renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
-        await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+        ).toBeVisible();
         // The offline safety copy now saves itself in the background on
         // mount; wait for that to settle (the offline-roll-call link only
         // renders once saved) so the capture isn't racing that async write.
@@ -433,6 +438,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Night Dive — City of Washington");
         await openTripTab(page, "Manifest");
+        await openBoatCheck(page);
         await page.getByRole("region", { name: "Open on this boat" }).waitFor();
         await offlineCopySaved(page);
         await capture(page, "manifest-snag-carried", scheme);
@@ -455,6 +461,7 @@ for (const scheme of ["light", "dark"] as const) {
         const { boatSafety } = seeded as { boatSafety?: { tripId: string } };
         if (!boatSafety) throw new Error("the fact found no reef departure on a boat");
         await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}/manifest`);
+        await openDeckDetails(page);
         await page
           .getByRole("heading", { level: 2, name: "Mantis I: papers and safety kit" })
           .waitFor();
@@ -530,7 +537,18 @@ for (const scheme of ["light", "dark"] as const) {
         const seeded = await seedFacts(request, ["troublePanels", "crewClash"]);
         const { crewClash } = seeded as { crewClash?: { tripId: string } };
         if (!crewClash) throw new Error("the fact found no two departures to clash");
-        await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}/manifest`);
+        await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}?view=details`);
+        const crew = await openTripAboutRow(page, "Boat & crew");
+        const clashingName = await crew
+          .locator("#crew li")
+          .filter({ has: page.getByText(/^Also scheduled on /) })
+          .first()
+          .locator("span.font-medium")
+          .first()
+          .innerText();
+        await openTripTab(page, "Manifest");
+        await openDeckPerson(page, clashingName);
+        await page.getByRole("button", { name: "Not aboard / details", exact: true }).click();
         // The destination's own words, not a timing guess.
         await page
           .getByText(/^Also scheduled on /)
@@ -552,6 +570,7 @@ for (const scheme of ["light", "dark"] as const) {
         const { blockedAboard } = seeded as { blockedAboard?: { tripId: string } };
         if (!blockedAboard) throw new Error("the fact boarded nobody to block");
         await page.goto(`/shop/blue-mantis/trips/${blockedAboard.tripId}/manifest`);
+        await page.getByRole("button", { name: "Review reports", exact: true }).click();
         await page.getByText("1 blocked person aboard").first().waitFor();
         await offlineCopySaved(page);
         await capture(page, "manifest-blocked-aboard", scheme);
@@ -611,13 +630,8 @@ for (const scheme of ["light", "dark"] as const) {
         // Both cleared the same way a staffer does, so neither row wears a
         // blocker that would compete with the one chip under test.
         await page.goto(counterPath("blue-mantis", tripId));
-        const counterRow = (name: string) =>
-          page
-            .locator('#roster li[id^="booking-"]')
-            .filter({ visible: true })
-            .filter({ has: page.getByRole("link", { name, exact: true }) });
         for (const name of ["Odile Marchand", "Hana Kobayashi"]) {
-          const row = counterRow(name);
+          const row = await rosterRow(page, name);
           await openRosterDetails(row);
           await openPaperWaiverForm(row);
           await row
@@ -628,19 +642,28 @@ for (const scheme of ["light", "dark"] as const) {
           await expect(row.getByRole("button", { name: `Check in ${name}` })).toBeVisible();
         }
 
-        const odile = counterRow("Odile Marchand");
+        const odile = await rosterRow(page, "Odile Marchand");
         await openRosterDetails(odile);
         await odile.getByText("Not here", { exact: true }).click();
         await expect(odile.getByText(staffCopy("checkIn.noShow.consequence"))).toBeVisible();
         await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
-        await expect(page.getByRole("heading", { name: "Not here · 1" })).toBeVisible();
+        await expect(
+          odile.getByRole("button", {
+            name: staffCopy("checkIn.noShow.undoAriaLabel", { name: "Odile Marchand" }),
+            exact: true,
+          }),
+        ).toBeVisible();
 
         await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
-        await page.getByRole("heading", { level: 1, name: new RegExp(title) }).waitFor();
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+        ).toBeVisible();
         // The chip itself, waited on rather than assumed: this capture is
         // worthless if it photographs the manifest a moment before the row
         // says anything.
-        await expect(manifestRow(page, "Odile Marchand").getByText("Not here")).toBeVisible();
+        await expect(
+          (await manifestRow(page, "Odile Marchand")).getByText("Not here"),
+        ).toBeVisible();
         // The same background save the capture above waits out.
         await offlineCopySaved(page);
         await capture(page, "manifest-not-here", scheme);
@@ -660,13 +683,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "departure-log", scheme);
       });
 
-      // A fresh incident report, opened from the departure's Details tab (ADR
+      // A fresh incident report, opened from the departure's Record tab (ADR
       // 20261012-incident-reports): the draft's three cards, every yes/no
       // unanswered rather than defaulted to "no", the people list, and the
       // filing card naming what a report needs before it can be filed.
       test(`a new incident report renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        await openTripAbout(page);
+        await page
+          .getByRole("navigation", { name: "Departure" })
+          .getByRole("link", { name: "Record", exact: true })
+          .click();
         await page
           .getByRole("region", { name: "Incident reports" })
           .getByRole("button", { name: "Report an incident" })
@@ -681,7 +707,10 @@ for (const scheme of ["light", "dark"] as const) {
       // and when, opening the draft. Started here, so the seed stays clean.
       test(`an unfiled incident report is one line on Today (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        await openTripAbout(page);
+        await page
+          .getByRole("navigation", { name: "Departure" })
+          .getByRole("link", { name: "Record", exact: true })
+          .click();
         await page
           .getByRole("region", { name: "Incident reports" })
           .getByRole("button", { name: "Report an incident" })
@@ -697,7 +726,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the departure log lists its incident reports (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         const tripPath = new URL(page.url()).pathname;
-        await openTripAbout(page);
+        await page
+          .getByRole("navigation", { name: "Departure" })
+          .getByRole("link", { name: "Record", exact: true })
+          .click();
         await page
           .getByRole("region", { name: "Incident reports" })
           .getByRole("button", { name: "Report an incident" })

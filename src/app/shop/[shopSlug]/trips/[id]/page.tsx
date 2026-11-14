@@ -22,18 +22,16 @@ import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
 import { addBandFor } from "./_components/seat-request-band";
-import { TripAddBookingLink } from "./_components/TripAddBookingLink";
 import { TripCancellation } from "./_components/TripCancellation";
+import { TripDayOperations } from "./_components/TripDayOperations";
 import { TripDeskConnectivity } from "./_components/TripDeskConnectivity";
 import { TripDetailsPanel } from "./_components/TripDetailsPanel";
+import { TripFolioHeader } from "./_components/TripFolioHeader";
 import { TripHeaderBadges } from "./_components/TripHeaderBadges";
-import { TripIncidentReports } from "./_components/TripIncidentReports";
-import { TripMoreActions } from "./_components/TripMoreActions";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripPageHeader } from "./_components/TripPageHeader";
-import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
+import { TripRecordPanel } from "./_components/TripRecordPanel";
+import { TripRosterContent } from "./_components/TripRosterContent";
 import { TripTabs } from "./_components/TripTabs";
-import { assignedCrewNames } from "./_components/trip-about-rows";
 import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-price";
 import { showsDetailsTab } from "./_components/trip-notice-tabs";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
@@ -53,21 +51,8 @@ export const instant = true;
 
 export { departureMetadata as generateMetadata } from "./_components/departure-states";
 
-/**
- * Two of a departure's four tabs (ADR 20261001-logbook, decision 3): Divers,
- * the grouped roster of the people coming, and Details (`?view=details`), the
- * departure's definition laid flat. Boat and Gear are their own routes beside
- * this one.
- *
- * **Divers is also the desk** (owner, 2026-10-05). Check-in was a fifth tab
- * listing the same people with the same blockers and the same fixes; once a
- * departure's arrivals open, this roster gains the count and each cleared row
- * its check-in tap (`_arrivals/arrival-desk.tsx`), and there is one list.
- *
- * ADR 20260919-one-idea's hour masthead and drawn hull are retired here (owner,
- * 2026-10-05): every tab wears one `TripPageHeader`, and the roster is the
- * only reading of who is aboard.
- */
+/** Guests and The day share this route; Record keeps its own evidence view.
+ * Preserves the trip identity from 20260919-one-idea. */
 export default async function ManageTripPage({
   params,
   searchParams,
@@ -126,7 +111,6 @@ export default async function ManageTripPage({
     cancelled,
     pulseNeeded,
     tripDiveList,
-    series,
     scheduleDays,
     canConfigure,
     blowoutCalled,
@@ -148,6 +132,7 @@ export default async function ManageTripPage({
   });
 
   const showDetails = showsDetailsTab(view, rest.add, tripNotice);
+  const showRecord = view === "record" && !showDetails && !rest.add;
   const pulseFacts = tripPulseFactsOf(overview, {
     liveBoatClashes: cancelled ? [] : boatClashes,
     shopSlug,
@@ -192,7 +177,7 @@ export default async function ManageTripPage({
     locale,
     timeZone: shop.timezone,
     t,
-    onDivers: !showDetails,
+    onDivers: !showDetails && !showRecord,
     stage: stageReading,
     cancelled,
     meetingWindows: scheduleDays,
@@ -228,13 +213,13 @@ export default async function ManageTripPage({
           sections of one kind. One `space-y-10` holds them all; the roster's
           own blocks are `display: contents`, in this flow, on the same stack
           (`TripRosterContent`). */}
-      <div className="space-y-10">
+      <div className="group/folio space-y-6 sm:space-y-10 group-has-[[data-guest-folio]]/folio:space-y-3">
         {/* **One header on all four tabs** (owner, 2026-10-05): the
             departure's name, its stage and seats, and when it sails. Divers
             and Details wore a header of their own — the hour as a giant
             name, the crew and boat in a line under it — so every tab change
             redrew the top of the page. */}
-        <TripPageHeader
+        <TripFolioHeader
           trip={trip}
           locale={locale}
           timeZone={shop.timezone}
@@ -244,16 +229,13 @@ export default async function ManageTripPage({
           extraMeta={desk ? <TripDeskConnectivity active t={t} /> : undefined}
           price={tripHeaderPrice(trip, shop.currency, locale, t)}
           daySpan={tripHeaderDaySpan(scheduleDays, locale, shop.timezone, t)}
-          // A full boat's wait list stays in the roster's Add band.
-          actions={
-            !acceptsDivers || isFull(seatsOnSale(trip)) ? undefined : (
-              <TripAddBookingLink
-                tripHref={shopPath(shopSlug, "trips", tripId)}
-                label={t("trips.addDiver.heading")}
-                ariaLabel={t("trips.about.addDiverJump")}
-              />
-            )
-          }
+          doors={{
+            tripHref: shopPath(shopSlug, "trips", tripId),
+            allowAdd: acceptsDivers && !isFull(seatsOnSale(trip)),
+            addLabel: t("trips.addDiver.heading"),
+            addAriaLabel: t("trips.about.addDiverJump"),
+            deckLabel: t("trips.folio.openDeck"),
+          }}
         />
         {/* **The roll call is a tab on every departure, cancelled or not.** A
             blow-out cancels the trip and leaves every booking active, so the
@@ -262,7 +244,7 @@ export default async function ManageTripPage({
         <TripTabs
           shopSlug={shopSlug}
           tripId={tripId}
-          current={showDetails ? "details" : "divers"}
+          current={showDetails ? "details" : showRecord ? "record" : "divers"}
           copy={tabsCopy}
         />
 
@@ -273,7 +255,9 @@ export default async function ManageTripPage({
           {...{ cancelled, canConfigure, blowoutCalled, lifecycleStatus, shopSlug, tripId, t }}
         />
 
-        {details ? (
+        {showRecord ? (
+          <TripRecordPanel context={{ db, shop, session }} {...{ tripId, locale, t, guests }} />
+        ) : details ? (
           <>
             <TripDetailsPanel
               context={{
@@ -298,32 +282,22 @@ export default async function ManageTripPage({
               conservation={details.conservation}
               personId={session.user.personId}
             />
-            <TripIncidentReports shop={shop} personId={session.user.personId} tripId={tripId} />
-            <TripPromoteAndActivity
-              guests={guests}
-              shopSlug={shopSlug}
-              locale={locale}
-              shop={shop}
-              tripNotice={tripNotice}
+            <TripDayOperations
+              context={{ db, shop, session }}
+              {...{
+                overview,
+                tripId,
+                locale,
+                t,
+                guests,
+                tripNotice,
+                mayChangeDeparture,
+                lifecycleStatus,
+              }}
               mayDiscount={staffGates.mayDiscount}
-              more={
-                !mayChangeDeparture && !(canConfigure && series) ? undefined : (
-                  <TripMoreActions
-                    shop={shop}
-                    personId={session.user.personId}
-                    shopSlug={shopSlug}
-                    tripId={tripId}
-                    startsAt={trip.startsAt}
-                    mayChangeDeparture={mayChangeDeparture}
-                    series={canConfigure ? series : null}
-                    crewNames={assignedCrewNames(overview)}
-                    lifecycleStatus={lifecycleStatus}
-                    refundsHeld={!mayWriteOffPayment}
-                    locale={locale}
-                    t={t}
-                  />
-                )
-              }
+              refundsHeld={!mayWriteOffPayment}
+              buddies={rest.buddies}
+              buddyError={rest.buddyError}
             />
           </>
         ) : (
@@ -335,28 +309,29 @@ export default async function ManageTripPage({
               refreshing: t("checkIn.pullToRefresh.refreshing"),
             }}
           >
-            <DiversTabBands
-              overview={overview}
-              showMinimum={pulseNeeded && !sailed}
-              shopSlug={shopSlug}
-              locale={locale}
-              timeZone={shop.timezone}
-              t={t}
-            />
+            <div className="space-y-6 group-has-[[data-guest-folio]]/folio:hidden">
+              <DiversTabBands
+                overview={overview}
+                showMinimum={pulseNeeded && !sailed}
+                shopSlug={shopSlug}
+                locale={locale}
+                timeZone={shop.timezone}
+                t={t}
+              />
 
-            <PulseFacts
-              facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
-              foldLabel={(count) => t("trips.pulse.needsYou", { count })}
-            />
+              <PulseFacts
+                facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
+                foldLabel={(count) => t("trips.pulse.needsYou", { count })}
+              />
 
-            <CoursePulse
-              shopSlug={shopSlug}
-              pulse={coursePulse}
-              tripId={tripId}
-              locale={locale}
-              timeZone={shop.timezone}
-            />
-
+              <CoursePulse
+                shopSlug={shopSlug}
+                pulse={coursePulse}
+                tripId={tripId}
+                locale={locale}
+                timeZone={shop.timezone}
+              />
+            </div>
             <TripRosterContent
               context={{
                 arrival: desk?.arrival,

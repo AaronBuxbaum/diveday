@@ -33,7 +33,7 @@ export type RowHeaderInput = Pick<
   | "record"
 >;
 
-export function rowHeader(seat: RowHeaderInput) {
+export function rowHeader(seat: RowHeaderInput, { omitName = false }: { omitName?: boolean } = {}) {
   const {
     booking,
     checkedIn,
@@ -60,12 +60,14 @@ export function rowHeader(seat: RowHeaderInput) {
           column the loudest thing on the ledger (principle 10: hierarchy by
           type before colour), and the board's own trip-title doors already
           read this way. Hover restores the link cue. */}
-      <Link
-        href={`/shop/${shopSlug}/divers/${person.id}`}
-        className="inline-flex min-h-11 items-center font-semibold leading-tight text-base text-foreground hover:text-primary hover:underline"
-      >
-        {person.fullName}
-      </Link>
+      {omitName ? null : (
+        <Link
+          href={`/shop/${shopSlug}/divers/${person.id}`}
+          className="inline-flex min-h-11 items-center font-semibold leading-tight text-base text-foreground hover:text-primary hover:underline"
+        >
+          {person.fullName}
+        </Link>
+      )}
       {/* What this person is doing aboard, in words, when it is not diving
           (ADR 20261007-participant-types). A diver carries no capsule: the
           roster is a dive roster, and the exception is what the crew is

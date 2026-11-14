@@ -95,7 +95,7 @@ describe("staffRouteAt", () => {
 
   it("lands on the part of the parent the page came from", () => {
     expect(up("/shop/blue-mantis/trips/t-1/incidents/r-1")).toBe(
-      "/shop/blue-mantis/trips/t-1?view=details#incidents",
+      "/shop/blue-mantis/trips/t-1?view=record#incidents",
     );
     expect(up("/shop/blue-mantis/divers/d-1/waivers/w-1")).toBe(
       "/shop/blue-mantis/divers/d-1#waiver",

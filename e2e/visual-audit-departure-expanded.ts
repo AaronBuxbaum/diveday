@@ -9,7 +9,6 @@ import {
   findTripOnBoard,
   openBoatCheck,
   openIfClosed,
-  openRosterDetails,
   openRosterNotes,
   openRosterRow,
   openTripAboutRow,
@@ -138,8 +137,7 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     test("certifying a student exposes the agency award picker", async ({ page }) => {
       await (await findTripOnBoard(page, "blue-mantis", /Advanced Open Water Diver/)).click();
       await openTripTab(page, "Trip");
-      const student = page.locator('#roster li[id^="booking-"]').first();
-      await openRosterDetails(student);
+      const student = await openRosterRow(page, "Naledi Khumalo");
       const editor = fieldEditor(student, 'select[name="award"]');
       await openIfClosed(editor);
       await expect(editor.getByLabel(staff("trips.roster.certifyLevel"))).toBeVisible();

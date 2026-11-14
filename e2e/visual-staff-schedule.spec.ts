@@ -14,10 +14,13 @@ import {
   daysFromNow,
   e2eNow,
   openCounterFor,
+  openDeckDetails,
+  openRosterDetails,
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
   publicTripUrl,
+  rosterRow,
   seededTripId,
   selectCrewByName,
   tripPathByTitle,
@@ -602,16 +605,11 @@ for (const scheme of ["light", "dark"] as const) {
         if (!mixedBoat) throw new Error("the fact found no departure to mix");
 
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}`);
-        await expect(
-          page
-            .locator('#roster li[id^="booking-"]')
-            .filter({ hasText: mixedBoat.rider })
-            .first()
-            .getByText("Rider", { exact: true }),
-        ).toBeVisible();
+        const rider = await rosterRow(page, mixedBoat.rider);
+        await expect(rider.getByText("Rider", { exact: true })).toBeVisible();
         await capture(page, "trip-roster-participant-types", scheme);
 
-        await page.locator(`summary[aria-label="Details for ${mixedBoat.rider}"]`).click();
+        await openRosterDetails(rider);
         await page.getByText("Coming as: Rider", { exact: true }).click();
         await page.locator('select[name="participantType"]:visible').waitFor();
         await capture(page, "trip-coming-as-editor", scheme);
@@ -621,9 +619,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-details-participant-terms", scheme);
 
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/manifest`);
-        await page.getByRole("heading", { name: "Roll call" }).waitFor();
+        await page.getByRole("button", { name: "Review reports", exact: true }).click();
         await expect(page.getByText(/1 snorkeler · 1 rider/).first()).toBeVisible();
         await capture(page, "manifest-participant-types", scheme);
+        await openDeckDetails(page);
         const dismiss = page.getByRole("button", {
           name: staffCopy("manifest.catchUp.dismiss"),
           exact: true,

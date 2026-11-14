@@ -65,6 +65,7 @@ type Event = {
   observedEvidenceIds: string[];
   meetingDay: number;
   retractsClientEventId?: string;
+  physicalPresenceOnly?: boolean;
 };
 async function send(event: Event) {
   const response = await POST(postRequest({ events: [event] }));
@@ -96,6 +97,37 @@ async function capturedEvent(role: "diver" | "crew") {
   };
   return { ...fixture, event };
 }
+
+it("syncs an explicit blocked-person physical observation once without converting it to eligibility or default boarding", async () => {
+  const { db, shop, trip, booking, event } = await capturedEvent("diver");
+  const presence = {
+    ...event,
+    checkpoint: "departure",
+    status: "boarded",
+    physicalPresenceOnly: true,
+  };
+  expect(await send({ ...presence, physicalPresenceOnly: false })).toMatchObject({
+    status: "rejected",
+    reason: "not_ready",
+  });
+  expect(await send(presence)).toMatchObject({ status: "applied" });
+  expect(await send(presence)).toMatchObject({ status: "duplicate" });
+  expect(await send({ ...presence, physicalPresenceOnly: false })).toMatchObject({
+    status: "rejected",
+    reason: "client_event_conflict",
+  });
+  const manifest = await getTripManifest(db, shop.id, trip.id);
+  expect(manifest?.divers.find((person) => person.bookingId === booking.id)).toMatchObject({
+    readiness: { status: "blocked" },
+    rollCall: { state: "boarded" },
+  });
+  const rows = await db
+    .select()
+    .from(rollCallEvents)
+    .where(eq(rollCallEvents.clientEventId, presence.clientEventId));
+  expect(rows).toHaveLength(1);
+  expect(rows[0].captureContext).toMatchObject({ physicalPresenceOnly: true });
+});
 for (const role of ["diver", "crew"] as const) {
   it(`refuses a changed day over real offline sync but accepts an unchanged retry for ${role}`, async () => {
     const { db, shop, trip, event } = await capturedEvent(role);

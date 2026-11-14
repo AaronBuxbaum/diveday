@@ -68,9 +68,11 @@ test.describe("course forms", () => {
     // 3. The roster names the form the student owes.
     await signInAsOwner(page);
     await page.goto(tripPath);
-    await expect(rosterRow(page, student).locator("[data-course-forms-owed]")).toHaveCount(1);
+    await expect((await rosterRow(page, student)).locator("[data-course-forms-owed]")).toHaveCount(
+      1,
+    );
     await expect(
-      rosterRow(page, student).getByText(`Course form not signed: ${formTitle}.`),
+      (await rosterRow(page, student)).getByText(`Course form not signed: ${formTitle}.`),
     ).toBeVisible();
     await signOut(page);
 
@@ -87,10 +89,12 @@ test.describe("course forms", () => {
     // 5. The roster clears.
     await signInAsOwner(page);
     await page.goto(tripPath);
-    await expect(rosterRow(page, student)).toHaveCount(1);
-    await expect(rosterRow(page, student).locator("[data-course-forms-owed]")).toHaveCount(0);
+    await expect(await rosterRow(page, student)).toHaveCount(1);
+    await expect((await rosterRow(page, student)).locator("[data-course-forms-owed]")).toHaveCount(
+      0,
+    );
     await expect(
-      rosterRow(page, student).getByText(`Course form not signed: ${formTitle}.`),
+      (await rosterRow(page, student)).getByText(`Course form not signed: ${formTitle}.`),
     ).toHaveCount(0);
   });
 });

@@ -913,6 +913,15 @@ body {
  * tab bar, no header and a navy ground. Each selector follows the identity
  * wrapper and excludes every boundary Activity can hide. */
 @media (max-width: 1023px) {
+  /* Deck owns the phone viewport, including the shell's inset. Keep full
+     scrolling for exceptions and enlarged text; never clip a safety detail. */
+  #shop-main-content
+    > main:has(
+      > [data-departure-paper]:not([style*="display: none"])
+        > div.boat-mode:not([style*="display: none"])
+    ) {
+    padding-block: 0.5rem;
+  }
   body:has(
       #shop-main-content
         > main:not([style*="display: none"])

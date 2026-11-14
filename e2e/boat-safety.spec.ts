@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, tripPathByTitle } from "./helpers";
+import { daysFromNow, openDeckDetails, tripPathByTitle } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 const REEF = "Two-Tank Reef — Molasses & French";
@@ -195,6 +195,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   //    check — and on the printed sheet too.
   const reefManifest = `${await tripPathByTitle(page, privateShop.slug, REEF)}/manifest`;
   await page.goto(reefManifest);
+  await openDeckDetails(page);
   const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });
   await expect(section).toBeVisible();
   // A lapsed paper is danger ink, named by its date (H-20261015-lapsed-boat-papers-loud).
@@ -218,6 +219,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   // 5. The other hull speaks for itself: the shop keeps an AED now, Mantis II
   //    has none aboard, and none of Mantis I's papers or kit are its lines.
   await page.goto(`${await tripPathByTitle(page, privateShop.slug, WRECK)}/manifest`);
+  await openDeckDetails(page);
   const other = page.getByRole("region", { name: "Mantis II: papers and safety kit" });
   await expect(other.getByText("No AED aboard")).toBeVisible();
   await expect(other.getByText(/Insurance|AED e2e/)).toHaveCount(0);
@@ -240,6 +242,7 @@ test.describe("a seeded lapse on the demo's reef boat", () => {
     if (!boatSafety) throw new Error("the fact found no reef departure on a boat");
 
     await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}/manifest`);
+    await openDeckDetails(page);
     const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });
     await expect(section.getByText("No emergency oxygen aboard")).toBeVisible();
     await expect(section.getByText("Flares (Mantis): expired 3 days ago")).toBeVisible();

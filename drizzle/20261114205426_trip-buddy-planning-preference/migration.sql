@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "buddy_teams_enabled" boolean DEFAULT true NOT NULL;

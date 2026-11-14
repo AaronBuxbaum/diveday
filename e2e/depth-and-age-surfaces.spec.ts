@@ -7,6 +7,7 @@ import {
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
+  rosterRow,
   tripPathByTitle,
 } from "./helpers";
 
@@ -106,13 +107,13 @@ test.describe("staff", () => {
       .first();
     await expect(warning).toBeVisible();
     await expect(warning).toContainText(staff("trips.roster.depthVerificationCard"));
-    const juneCard = page.locator("#roster li").filter({ hasText: "June Park" }).first();
+    const juneCard = await rosterRow(page, "June Park");
     await expect(juneCard.getByText("Depth advisory")).toBeVisible();
     await expect(juneCard.getByText(/deeper than the/)).toHaveCount(0);
     // Lena is 13, so her age-based band differs from the adults'. Her row
     // carries the same explicit card-status check, plus the age/limit check,
     // rather than flattening her evidence into the boat-wide line.
-    const lenaCard = page.locator("#roster li").filter({ hasText: "Lena Fischer" }).first();
+    const lenaCard = await rosterRow(page, "Lena Fischer");
     const lenaWarning = lenaCard.getByText(
       staff("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }),
       { exact: false },
@@ -124,8 +125,8 @@ test.describe("staff", () => {
     // And no diver on this boat is *refused*: an advisory warns, a blocker
     // blocks. June's shared advisory files her under "Still to clear" as open
     // work, so the assertion is the absence of the refusal word on her row.
-    await expect(juneCard.getByText("Blocked")).toHaveCount(0);
-    await expect(lenaCard.getByText("Blocked")).toHaveCount(0);
+    await expect((await rosterRow(page, "June Park")).getByText("Blocked")).toHaveCount(0);
+    await expect((await rosterRow(page, "Lena Fischer")).getByText("Blocked")).toHaveCount(0);
 
     // On the manifest the same fact is the boarding control being offered at
     // all: a blocked seat gets no "Mark boarded" at departure, and the readiness

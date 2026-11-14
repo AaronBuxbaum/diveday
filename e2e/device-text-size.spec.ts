@@ -1,9 +1,14 @@
 import type { Page } from "@playwright/test";
 import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
-import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody } from "./device-text-size-fixture";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { manifestRow, openTripFromBoard, openTripTab } from "./helpers";
+import {
+  manifestRow,
+  openDeckDetails,
+  openDeckPerson,
+  openTripFromBoard,
+  openTripTab,
+} from "./helpers";
 import { INSTALL_SAFARI_UA } from "./home-screen-install-helper";
 
 async function measureOverflow(page: Page) {
@@ -128,15 +133,10 @@ test.describe("53px body capability input on the working manifest", () => {
     expect(box?.width).toBeGreaterThanOrEqual(44);
     await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
     await openTripTab(page, "Manifest");
-    await expect(page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ })).toBeVisible();
-    const blocked = manifestRow(page, "Priya Sharma");
+    await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
+    const blocked = await manifestRow(page, "Priya Sharma");
     await expect(blocked).toBeVisible();
     await expect(blocked.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
-    const boarding = page.getByRole("button", { name: "Mark boarded" }).first();
-    await expect(boarding).toBeVisible();
-    const boardingBox = await boarding.boundingBox();
-    expect(boardingBox?.height).toBeGreaterThanOrEqual(44);
-    expect(boardingBox?.width).toBeGreaterThanOrEqual(44);
     const root = await page
       .locator("html")
       .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
@@ -156,13 +156,12 @@ test.describe("53px body capability input on the working manifest", () => {
         font: Number.parseFloat(getComputedStyle(element).fontSize),
       }));
     expect(nameGeometry.width).toBeGreaterThanOrEqual(nameGeometry.font * 3);
-    const countPanel = page.locator("[data-roll-call-panel]");
-    await expect(countPanel).toHaveAttribute("data-roll-call-panel-flow", "true");
-    await expect(countPanel).toHaveCSS("position", "static");
-    await expect(countPanel).toHaveCSS("max-height", "none");
-    const count = countPanel.getByRole("progressbar");
-    await count.scrollIntoViewIfNeeded();
-    await expect(count).toBeInViewport({ ratio: 1 });
+    await openDeckPerson(page, "Tom Okafor");
+    const boarding = page.getByRole("button", { name: "Record Tom Okafor aboard", exact: true });
+    await expect(boarding).toBeVisible();
+    const boardingBox = await boarding.boundingBox();
+    expect(boardingBox?.height).toBeGreaterThanOrEqual(44);
+    expect(boardingBox?.width).toBeGreaterThanOrEqual(44);
     await boarding.focus();
     await expect(boarding).toBeFocused();
     await boarding.scrollIntoViewIfNeeded();
@@ -197,6 +196,7 @@ test.describe("53px body capability input on the working manifest", () => {
         }),
       );
     expect(navAir).toBe(true);
+    await openDeckDetails(page);
     const stageFits = await page
       .getByRole("region", { name: "Where the boat is", exact: true })
       .getByRole("button")
@@ -233,10 +233,10 @@ test.describe("53px body capability input on the working manifest", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
     await openTripTab(page, "Manifest");
-    await expect(
-      page.getByText(staffTranslator("en-US")("manifest.rosterConfirmed"), { exact: true }),
-    ).toBeVisible();
-    const trigger = manifestRow(page, "Priya Sharma").locator('button[aria-haspopup="dialog"]');
+    await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
+    const trigger = (await manifestRow(page, "Priya Sharma")).locator(
+      'button[aria-haspopup="dialog"]',
+    );
     const url = page.url();
     await trigger.click();
     const dialog = page.getByRole("dialog", { name: "Priya Sharma", exact: true });
@@ -400,7 +400,7 @@ test.describe("ordinary root with a reduced zoom viewport", () => {
     await expect(panel).toBeVisible();
     await expect(page.locator("html")).toHaveCSS("font-size", "16px");
     await expect(panel).toHaveCSS("position", "sticky");
-    const nameColumn = manifestRow(page, "Priya Sharma").locator("[data-person-row-name]");
+    const nameColumn = (await manifestRow(page, "Priya Sharma")).locator("[data-person-row-name]");
     await expect(nameColumn).not.toHaveCSS("flex-basis", "100%");
     const session = await page.context().newCDPSession(page);
     await session.send("Emulation.setPageScaleFactor", { pageScaleFactor: 2 });

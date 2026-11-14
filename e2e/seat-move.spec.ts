@@ -8,6 +8,7 @@ import {
   openBookingActions,
   openRosterRow,
   openTripFromBoard,
+  rosterRow,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -103,10 +104,10 @@ test("staff carry a full boat's wait list to another departure, then move a seat
   );
   await row.getByRole("button", { name: "Move", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(/^Moved/);
-  await expect(page.locator("#roster").getByRole("link", { name: "Moira Seat" })).toHaveCount(0);
+  await expect(await rosterRow(page, "Moira Seat")).toHaveCount(0);
 
   await page.goto(laterUrl);
-  await expect(page.locator("#roster").getByRole("link", { name: "Moira Seat" })).toBeVisible();
+  await expect(await rosterRow(page, "Moira Seat")).toBeVisible();
 
   // The diver's own link followed the seat.
   await signOut(page);

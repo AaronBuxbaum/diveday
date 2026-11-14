@@ -1,10 +1,12 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   e2eNow,
   openCounterFor,
   publicTripUrl,
+  rosterRow,
   signInAsOwner,
   signOut,
   tripPathByTitle,
@@ -58,10 +60,7 @@ test("a diver taps Running late on their link, and the desk sees when they said 
   await expect(page.getByText(/^Running late, said \d/)).toBeVisible();
   // …and so does the boat's own Divers tab.
   await openCounterFor(page, "blue-mantis", name);
-  const row = page
-    .locator('#roster li[id^="booking-"]')
-    .filter({ visible: true })
-    .filter({ has: page.getByRole("link", { name, exact: true }) });
+  const row = await rosterRow(page, name);
   await expect(row.getByText(/^Running late, said \d/)).toBeVisible();
 });
 
@@ -141,9 +140,7 @@ test("a diver says it in their own words, and the desk marks it from the inbox r
   // …and its open view puts the mark on that seat.
   await message.getByRole("button", { name: `More for the message from ${name}` }).click();
   await page.getByRole("button", { name: `Mark ${name} running late for ${OPEN_BOAT}` }).click();
-  await expect(
-    page.getByText("Marked running late. The Divers tab and the manifest show it."),
-  ).toBeVisible();
+  await expect(page.getByText(staffTranslator("en-US")("inbox.notices.lateMarked"))).toBeVisible();
   await expect(
     page
       .getByRole("listitem")
@@ -154,9 +151,6 @@ test("a diver says it in their own words, and the desk marks it from the inbox r
 
   // The boat hears it: the Divers tab's row carries the same mark.
   await openCounterFor(page, "blue-mantis", name);
-  const row = page
-    .locator('#roster li[id^="booking-"]')
-    .filter({ visible: true })
-    .filter({ has: page.getByRole("link", { name, exact: true }) });
+  const row = await rosterRow(page, name);
   await expect(row.getByText(/^Running late, said \d/)).toBeVisible();
 });

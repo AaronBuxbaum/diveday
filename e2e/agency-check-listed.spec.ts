@@ -131,23 +131,23 @@ test("Check all leaves each diver's offer under their row once the run has finis
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(newcomer);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
   await addDiver.getByRole("button", { name: `Add ${newcomer} to the trip` }).click();
-  await expect(rosterRow(page, newcomer)).toBeVisible();
+  await expect(await rosterRow(page, newcomer)).toBeVisible();
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(other);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
   await addDiver.getByRole("button", { name: `Add ${other} to the trip` }).click();
-  await expect(rosterRow(page, other)).toBeVisible();
-  await expect(rosterRow(page, SEEDED_DIVER)).toBeVisible();
+  await expect(await rosterRow(page, other)).toBeVisible();
+  await expect(await rosterRow(page, SEEDED_DIVER)).toBeVisible();
 
   await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
 
   await expect(page.getByText("Checked 2. Certified: 2.")).toBeVisible({ timeout: 20_000 });
   for (const diver of [other, newcomer]) {
-    await expect(rosterRow(page, diver).getByRole("group", { name: LEAD })).toBeVisible();
+    await expect((await rosterRow(page, diver)).getByRole("group", { name: LEAD })).toBeVisible();
   }
 
-  const offer = rosterRow(page, newcomer).getByRole("group", { name: LEAD });
+  const offer = (await rosterRow(page, newcomer)).getByRole("group", { name: LEAD });
   await offer.getByRole("button", { name: "Add" }).click();
-  await expect(rosterRow(page, newcomer).getByText(ADDED)).toBeVisible();
+  await expect((await rosterRow(page, newcomer)).getByText(ADDED)).toBeVisible();
   // The other diver's offer is theirs to take or leave.
-  await expect(rosterRow(page, other).getByRole("group", { name: LEAD })).toBeVisible();
+  await expect((await rosterRow(page, other)).getByRole("group", { name: LEAD })).toBeVisible();
 });

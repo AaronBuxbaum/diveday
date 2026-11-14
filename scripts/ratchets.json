@@ -663,9 +663,8 @@
     "e2e/backup.spec.ts": 5,
     "e2e/blowout.spec.ts": 2,
     "e2e/booking.spec.ts": 1,
-    "e2e/buddy-teams.spec.ts": 1,
     "e2e/certifications.spec.ts": 4,
-    "e2e/check-in.spec.ts": 10,
+    "e2e/check-in.spec.ts": 7,
     "e2e/courses.spec.ts": 5,
     "e2e/crew-clash.spec.ts": 1,
     "e2e/date-requests.spec.ts": 2,
@@ -684,7 +683,7 @@
     "e2e/incident-reports.spec.ts": 2,
     "e2e/integrations.spec.ts": 1,
     "e2e/invoicing.spec.ts": 2,
-    "e2e/manifest.spec.ts": 3,
+    "e2e/manifest.spec.ts": 2,
     "e2e/marketing.spec.ts": 7,
     "e2e/nitrox.spec.ts": 1,
     "e2e/onboard.spec.ts": 1,
@@ -697,7 +696,6 @@
     "e2e/review-replies.spec.ts": 1,
     "e2e/reviews.spec.ts": 1,
     "e2e/role-permissions.spec.ts": 1,
-    "e2e/running-late.spec.ts": 1,
     "e2e/seat-move.spec.ts": 1,
     "e2e/security-settings.spec.ts": 3,
     "e2e/shop-activity.spec.ts": 3,
@@ -1052,8 +1050,7 @@
     "src/app/shop/[shopSlug]/page.tsx": 576,
     "src/app/shop/[shopSlug]/promos/page.tsx": 407,
     "src/app/shop/[shopSlug]/reports/page.tsx": 412,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 569,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 406
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 569
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

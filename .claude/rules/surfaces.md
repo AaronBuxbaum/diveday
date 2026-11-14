@@ -32,7 +32,7 @@ schedule builder, date requests, site briefings, bearer-token routes). What they
   `?notice=` (`src/components/AddPanel.tsx`, `src/lib/add-panel.ts`); never a `/new` route.
 - **The builder is the one place a trip is created**; another reading of the schedule is a view in
   `schedule/_components/ScheduleViews.tsx`.
-- **A departure is four tabs** drawn by `_components/TripTabs.tsx`; add to a tab, never a fifth surface.
+- **A departure has four folio tabs** drawn by `_components/TripTabs.tsx`: Guests, Equipment, The day and Record. Open Deck enters the focused individual roll call (ADR 20261114-trip-folio-and-individual-deck); add ordinary work to its tab.
 - **The shop home** is `_components/today/DaySpine.tsx`: departures, then one "Needs you" list.
 - **Back-office queues** sit with their object and render nothing when empty, never on Reports.
 - **A date request is never the wait list.**

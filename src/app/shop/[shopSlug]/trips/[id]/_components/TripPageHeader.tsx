@@ -101,8 +101,12 @@ export function TripPageHeader({
   price,
   daySpan,
   className,
+  stackActionsOnMobile = false,
+  compactForFolio = false,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
+  stackActionsOnMobile?: boolean;
+  compactForFolio?: boolean;
   /** The manifest retains a way out when boat mode hides global navigation. */
   backLabel?: string;
   locale: string;
@@ -153,14 +157,18 @@ export function TripPageHeader({
           below it — and from `sm` to top-align beside the title, 4px above
           its line (K-196, K-357). When present, the eyebrow keeps a line of
           its own, and the actions end the title's. */}
-      <div className={`${backLabel ? TRIP_TITLE_GAP : ""} flex items-center gap-4 sm:gap-8`}>
+      <div
+        className={`${backLabel ? TRIP_TITLE_GAP : ""} flex gap-4 sm:gap-8 ${stackActionsOnMobile ? "flex-col items-stretch sm:flex-row sm:items-center group-has-[[data-guest-folio]]/folio:flex-row group-has-[[data-guest-folio]]/folio:items-center" : "items-center"}`}
+      >
         <h1
-          className={`min-w-0 flex-1 ${TRIP_TITLE_TYPE} font-semibold tracking-tight text-balance`}
+          className={`min-w-0 flex-1 ${TRIP_TITLE_TYPE} font-semibold tracking-tight text-balance ${compactForFolio ? "group-has-[[data-guest-folio]]/folio:text-xl" : ""}`}
         >
           {trip.title}
         </h1>
         {headerAside ? (
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <div
+            className={`flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 ${stackActionsOnMobile ? "justify-between sm:justify-end" : "justify-end"}`}
+          >
             {headerAside}
             {actionSlot}
           </div>
@@ -174,7 +182,11 @@ export function TripPageHeader({
       <div
         className={`${TRIP_META_GAP} flex flex-wrap items-center gap-x-3 gap-y-2 ${TRIP_META_TYPE} text-muted`}
       >
-        {badge}
+        {compactForFolio ? (
+          <span className="contents group-has-[[data-guest-folio]]/folio:hidden">{badge}</span>
+        ) : (
+          badge
+        )}
         <span>
           {daySpan ?? (
             <>
@@ -182,7 +194,16 @@ export function TripPageHeader({
               {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
             </>
           )}
-          {price ? <> · {price}</> : null}
+          {price ? (
+            <span
+              className={
+                compactForFolio ? "group-has-[[data-guest-folio]]/folio:hidden" : undefined
+              }
+            >
+              {" "}
+              · {price}
+            </span>
+          ) : null}
         </span>
       </div>
       {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}

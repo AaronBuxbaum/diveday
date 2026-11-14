@@ -171,41 +171,52 @@ test.describe("as owner", () => {
  * spec read departure times in the wrong zone.
  */
 test.describe("settings that change the shop", () => {
-  test("a shop can take its public pages out of search, and put them back", async ({
-    page,
-    privateShop,
-  }) => {
-    // The mint and the live sign-in the fixture pays for are inside this
-    // test's own budget.
-    test.setTimeout(60_000);
-    // Being listed used to be a consequence of signing up, with nothing to
-    // say so and nothing to undo it (ADR 20260813-search-listing-is-a-choice).
-    // The row states which way it is set at rest, and the switch round-trips.
-    await page.goto(`/shop/${privateShop.slug}/settings`);
-    await openSettingsRow(page, "Search listing");
-    const listed = page.getByLabel("List my public pages in search engines");
-    await expect(listed).toBeChecked();
+  test.describe(() => {
+    // Demo shops are always excluded; the editable listing policy belongs to a real shop.
+    test.use({ privateShopDemo: false });
 
-    // Listed: the agent-facing availability document answers (issue #1427).
-    expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(200);
+    test("a shop can take its public pages out of search, and put them back", async ({
+      page,
+      privateShop,
+    }) => {
+      // The mint and the live sign-in the fixture pays for are inside this
+      // test's own budget.
+      test.setTimeout(60_000);
+      // Being listed used to be a consequence of signing up, with nothing to
+      // say so and nothing to undo it (ADR 20260813-search-listing-is-a-choice).
+      // The row states which way it is set at rest, and the switch round-trips.
+      await page.goto(`/shop/${privateShop.slug}/settings`);
+      await openSettingsRow(page, "Search listing");
+      const listed = page.getByLabel("List my public pages in search engines");
+      await expect(listed).toBeChecked();
 
-    await listed.uncheck();
-    await page.getByRole("button", { name: "Save" }).first().click();
-    await expect(
-      page.getByRole("status").filter({ hasText: "hidden from search engines" }),
-    ).toBeVisible();
-    await expect(page.getByLabel("List my public pages in search engines")).not.toBeChecked();
-    // Hidden from search is hidden from an agent too: the document is a 404,
-    // not an empty list (ADR 20260813-search-listing-is-a-choice).
-    expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(404);
+      // Listed: the agent-facing availability document answers (issue #1427).
+      expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(
+        200,
+      );
 
-    // And back on again — the round trip is the claim, not the one-way switch.
-    await page.getByLabel("List my public pages in search engines").check();
-    await page.getByRole("button", { name: "Save" }).first().click();
-    await expect(
-      page.getByRole("status").filter({ hasText: "listed in search engines" }),
-    ).toBeVisible();
-    expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(200);
+      await listed.uncheck();
+      await page.getByRole("button", { name: "Save" }).first().click();
+      await expect(
+        page.getByRole("status").filter({ hasText: "hidden from search engines" }),
+      ).toBeVisible();
+      await expect(page.getByLabel("List my public pages in search engines")).not.toBeChecked();
+      // Hidden from search is hidden from an agent too: the document is a 404,
+      // not an empty list (ADR 20260813-search-listing-is-a-choice).
+      expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(
+        404,
+      );
+
+      // And back on again — the round trip is the claim, not the one-way switch.
+      await page.getByLabel("List my public pages in search engines").check();
+      await page.getByRole("button", { name: "Save" }).first().click();
+      await expect(
+        page.getByRole("status").filter({ hasText: "listed in search engines" }),
+      ).toBeVisible();
+      expect((await page.request.get(`/s/${privateShop.slug}/availability.json`)).status()).toBe(
+        200,
+      );
+    });
   });
 
   test("the rail opens a setting's own page, and the save lands back on it", async ({

@@ -624,10 +624,10 @@ test("SSI cards are excluded from Check all", async ({ page, extensionId }) => {
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
   await addDiver.getByRole("button", { name: `Add ${newcomer} to the trip` }).click();
   await expect(
-    rosterRow(page, newcomer).getByRole("button", { name: "Check with SSI" }),
+    (await rosterRow(page, newcomer)).getByRole("button", { name: "Check with SSI" }),
   ).toBeVisible();
   await expect(
-    rosterRow(page, SEEDED_DIVER).getByRole("button", { name: "Check with SSI" }),
+    (await rosterRow(page, SEEDED_DIVER)).getByRole("button", { name: "Check with SSI" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /^Check all/ })).toHaveCount(0);
 });

@@ -27,7 +27,7 @@ import type { TripStage } from "@/lib/trip-stages";
  * A staff component takes its words as props; `staffTranslator` is
  * server-side only.
  */
-export const TRIP_TABS = ["divers", "boat", "gear", "details"] as const;
+export const TRIP_TABS = ["divers", "gear", "details", "record"] as const;
 
 export type TripTab = (typeof TRIP_TABS)[number];
 
@@ -50,8 +50,8 @@ export function tripTabHref(shopSlug: string, tripId: string, tab: TripTab): str
   switch (tab) {
     case "divers":
       return root;
-    case "boat":
-      return `${root}/manifest`;
+    case "record":
+      return `${root}?view=record`;
     case "gear":
       return `${root}/prep`;
     case "details":
@@ -115,7 +115,9 @@ export function TripTabs({
         </ul>
       </nav>
       {copy.checkInLine && current === "divers" ? (
-        <p className="mt-3 text-sm text-muted tabular-nums">{copy.checkInLine}</p>
+        <p className="mt-3 text-sm text-muted tabular-nums group-has-[[data-guest-folio]]/folio:hidden">
+          {copy.checkInLine}
+        </p>
       ) : null}
     </div>
   );

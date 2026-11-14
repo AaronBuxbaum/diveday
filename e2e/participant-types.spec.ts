@@ -9,6 +9,7 @@ import {
   openTripAboutRow,
   openTripFromBoard,
   openTripTab,
+  rosterRow,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -27,11 +28,8 @@ import {
 signedInAsOwner();
 
 /** The seat's own roster card, not every `<li>` the name appears in (the fit list names them too). */
-function seatRow(page: Page, name: string): Locator {
-  return page
-    .locator('#roster li[id^="booking-"]')
-    .filter({ visible: true })
-    .filter({ has: page.getByRole("link", { name, exact: true }) });
+async function seatRow(page: Page, name: string): Promise<Locator> {
+  return rosterRow(page, name);
 }
 
 test("a snorkeler books from the public page and is on the manifest and the roll call", async ({
@@ -89,29 +87,28 @@ test("a snorkeler books from the public page and is on the manifest and the roll
   await signInAsOwner(page);
   await page.goto(tripUrl);
   await openTripTab(page, "Trip");
-  const row = seatRow(page, guest);
+  const row = await seatRow(page, guest);
   await expect(row.getByText("Snorkeler", { exact: true })).toBeVisible();
 
   // And on the manifest: in the head count's split, and on the roll-call row
   // the crew calls back after the dive.
   await openTripTab(page, "Manifest");
-  await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
-  await expect(page.getByText(/1 snorkeler/).first()).toBeVisible();
-  const called = manifestRow(page, guest);
+  await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
+  const called = await manifestRow(page, guest);
   await expect(called).toBeVisible();
   await expect(called.getByText("Snorkeler", { exact: true })).toBeVisible();
 
   // The desk changes their mind for them: they are staying on the boat. The
   // row says so, and the roll call still lists them.
   await openTripTab(page, "Trip");
-  const seat = seatRow(page, guest);
+  const seat = await seatRow(page, guest);
   await openRosterDetails(seat);
   await seat.getByText("Coming as: Snorkeler").click();
   await seat.getByLabel("Coming as").selectOption("rider");
   await seat.getByRole("button", { name: "Save" }).click();
   await page.waitForURL(/notice=participant-type-set/);
-  await expect(seatRow(page, guest).getByText("Rider", { exact: true })).toBeVisible();
+  await expect((await seatRow(page, guest)).getByText("Rider", { exact: true })).toBeVisible();
 
   await openTripTab(page, "Manifest");
-  await expect(manifestRow(page, guest).getByText("Rider", { exact: true })).toBeVisible();
+  await expect((await manifestRow(page, guest)).getByText("Rider", { exact: true })).toBeVisible();
 });

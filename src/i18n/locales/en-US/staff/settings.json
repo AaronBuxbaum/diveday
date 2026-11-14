@@ -565,6 +565,11 @@
         "heading": "Public crew introductions",
         "label": "Show public crew introductions",
         "description": "Show introductions written and shared by each staff member."
+      },
+      "buddyTeams": {
+        "heading": "Buddy planning",
+        "label": "Plan buddy teams for each trip",
+        "description": "Keep optional buddy planning in The day"
       }
     },
     "crewSchedule": {

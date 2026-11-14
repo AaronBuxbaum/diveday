@@ -122,6 +122,12 @@ back.
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 
+**Approved 2026-11-14** ([ADR](../architecture/decisions/20261114-trip-folio-and-individual-deck.md), [#4527](https://github.com/AaronBuxbaum/diveday/issues/4527)): the Trip is a working folio whose four subjects are Guests, Equipment, The day and Record.
+The guest arrives with several independent requirements, so one selected folio shows every outstanding remedy and preserves booking relationships, arrival and equipment context.
+A compact guest index opens the person, and Next guest needing attention continues the counter workflow without scattering controls across the whole roster.
+Permanent rows expanded for every guest and a generic administrative card grid were considered and rejected; hierarchy comes from names, work and space.
+Removing the guest's unresolved tasks would hide the job, while removing repeated settled detail makes the next action clearer; Open Deck is the explicit transition to boat accounting.
+
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the four tabs become one page — the boat's facts, the needs and the roster as groups (A) or sections (B), or a ring of here of booked with five facts beside it over A's groups (C) — and Roll call is the page's one filled control or its floating capsule. Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
 
 **Decided 2026-09-19 (H-20260919-physical-thing-diveday-day)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: the departure is its hour with the strip zoomed to the voyage (I), its hull with every seat's initials and state (II), or its voyage on the chart with the legs as a timeline (III); one page, the roll call's tap untouched beneath. **The pick: Tide's hour with Deck's hull inside it** — the departure opens with its time over the sky and the strip zoomed to the voyage, then the seats laid out bow to stern.
@@ -215,6 +221,12 @@ with a shop's fleet** — the assignments table scales with the register rather 
 departure, which is the one thing here that could turn a long page into an unbounded one.
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
+
+**Approved 2026-11-14** ([ADR](../architecture/decisions/20261114-trip-folio-and-individual-deck.md), [#4527](https://github.com/AaronBuxbaum/diveday/issues/4527)): Deck answers “who am I recording now?” with one full name and one large action.
+The routine home, person and receipt each fit one phone viewport; selecting, skipping and Next create no evidence, and every recording concerns exactly one named guest or crew member.
+The receipt keeps that person's name until the captain advances, preventing an ordinary double tap from recording the next person.
+A permanent roster and named batch confirmation were rejected; counts are derived, buddy planning stays in The day, and history, timing and reference details open when needed.
+Missing or conflicting evidence takes priority and remains unresolved until explicitly reconciled, so removing that attention would change the meaning while removing routine admin chrome does not.
 
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the checkpoint card, the five stage chips, the three-way switch and the disclosure above the first name become the count and one line — at 34px in a group (A), at 44px under a floating bar (B), or as a ring that closes when everyone is aboard (C) — then the one still to call, then everyone aboard, one circle per name; glare is a word in the bar. Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
 

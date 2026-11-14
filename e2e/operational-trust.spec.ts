@@ -9,6 +9,8 @@ import { expect, test } from "./fixtures";
 import {
   manifestRow,
   offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
   openIfClosed,
   openManifestPerson,
   openOnThisPhone,
@@ -52,7 +54,43 @@ async function openOffline(page: Page, manifest: string) {
   await openOnThisPhone(page);
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await page.waitForURL(/offline-manifest/);
-  await expect(page.getByRole("heading", { name: "Ari Vale" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: copy("manifest.deck.title"), exact: true }),
+  ).toBeVisible();
+  await openDeckPerson(page, "Ari Vale");
+}
+
+async function openBuddyPanel(page: Page, trip: string) {
+  await page.goto(`${trip}?view=details&buddies=open`);
+  const panel = page
+    .locator("details")
+    .filter({
+      has: page.getByRole("heading", { name: copy("manifest.buddyHeading"), exact: true }),
+    })
+    .first();
+  await openIfClosed(panel);
+  return panel;
+}
+
+async function openBuddyBuilder(page: Page, trip: string) {
+  const panel = await openBuddyPanel(page, trip);
+  const builder = panel.locator('details:has(> form input[name="members"])');
+  await openIfClosed(builder);
+}
+
+async function openBuddyReference(page: Page, name: string) {
+  await openManifestPerson(await manifestRow(page, name));
+  return page.getByRole("dialog");
+}
+
+async function expectReceipt(
+  page: Page,
+  name: string,
+  status: "savedAboard" | "savedAshore" | "savedMissing",
+) {
+  const receipt = page.locator('[data-deck-screen="receipt"]');
+  await expect(receipt.getByRole("heading", { name, exact: true })).toBeVisible();
+  await expect(receipt.getByText(copy(`manifest.deck.${status}`), { exact: true })).toBeVisible();
 }
 
 test("offline total-person warning follows queued crew counts without refusing the count", async ({
@@ -70,6 +108,7 @@ test("offline total-person warning follows queued crew counts without refusing t
     limit: state.limit,
   });
   await expect(page.getByText(warning)).toHaveCount(0);
+  await openDeckDetails(page);
   await expect(
     page.getByText(copy("manifest.passengerSnorkelers", { count: 1 }), { exact: false }),
   ).toBeVisible();
@@ -77,14 +116,31 @@ test("offline total-person warning follows queued crew counts without refusing t
     page.getByText(copy("manifest.passengerRiders", { count: 1 }), { exact: false }),
   ).toBeVisible();
   await context.setOffline(true);
-  const crew = page
-    .getByRole("region", { name: "Crew aboard" })
-    .getByRole("listitem")
-    .filter({ hasText: state.crewName });
-  await crew.getByRole("button", { name: copy("manifest.crewMarkAboard"), exact: true }).click();
+  await openDeckPerson(page, state.crewName);
+  await page
+    .getByRole("button", {
+      name: copy("manifest.deck.record", { name: state.crewName }),
+      exact: true,
+    })
+    .click();
+  const receipt = page.locator('[data-deck-screen="receipt"]');
+  await expect(receipt.getByRole("heading", { name: state.crewName, exact: true })).toBeVisible();
+  await expect(receipt.getByText(copy("manifest.deck.savedAboard"), { exact: true })).toBeVisible();
+  await expect(
+    receipt.getByText(copy("manifest.deck.pendingReceipt"), { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("status").filter({ hasText: warning })).toBeVisible();
-  await expect(crew).toContainText(copy("shared.offlineManifest.single.statePendingSuffix"));
-  await crew.getByRole("button", { name: copy("manifest.crewAboardCheckAriaLabel") }).click();
+  await receipt
+    .getByRole("button", {
+      name: copy("manifest.deck.undo", { name: state.crewName }),
+      exact: true,
+    })
+    .click();
+  await expect(
+    page
+      .locator('[data-deck-screen="person"]')
+      .getByRole("heading", { name: state.crewName, exact: true }),
+  ).toBeVisible();
   await expect(page.getByText(warning)).toHaveCount(0);
   await context.setOffline(false);
 });
@@ -137,10 +193,8 @@ test("a manual junior team retains blocked readiness and ashore advice clears wh
   // Private-shop setup, explicit team formation, four dock marks and a deliberate re-pair.
   test.setTimeout(60_000);
   const state = await seed(request, privateShop.slug, "buddy");
-  await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
-  await page.getByRole("heading", { name: copy("manifest.buddyHeading") }).click();
-  const builder = page.locator('details:has(> form input[name="members"])');
-  await openIfClosed(builder);
+  const trip = `/shop/${privateShop.slug}/trips/${state.tripId}`;
+  await openBuddyBuilder(page, trip);
   await page.getByRole("checkbox", { name: "Ari Vale", exact: true }).check();
   await page.getByRole("checkbox", { name: "Bea Quill", exact: true }).check();
   await page.getByRole("button", { name: copy("manifest.buddyFormSubmit"), exact: true }).click();
@@ -153,33 +207,55 @@ test("a manual junior team retains blocked readiness and ashore advice clears wh
     ),
   ).toBeVisible();
   await expect(page.getByText(copy("manifest.buddyTeamNotCleared"))).toBeVisible();
-  const junior = manifestRow(page, "Ari Vale");
-  const adult = manifestRow(page, "Bea Quill");
-  await expect(junior.getByRole("button", { name: "Mark boarded", exact: true })).toHaveCount(0);
-  await adult.getByRole("button", { name: "Mark boarded", exact: true }).click();
+  await page.goto(`${trip}/manifest`);
+  await openDeckPerson(page, "Ari Vale");
   await expect(
-    adult.getByRole("button", { name: copy("manifest.boardedCheckAriaLabel") }),
-  ).toBeVisible();
-  await openManifestPerson(junior);
+    page.getByRole("button", {
+      name: copy("manifest.deck.record", { name: "Ari Vale" }),
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    (await manifestRow(page, "Ari Vale")).getByRole("button", {
+      name: "Mark boarded",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await openDeckPerson(page, "Bea Quill");
   await page
-    .getByRole("dialog")
+    .getByRole("button", { name: copy("manifest.deck.record", { name: "Bea Quill" }), exact: true })
+    .click();
+  await expectReceipt(page, "Bea Quill", "savedAboard");
+  await (await openBuddyReference(page, "Ari Vale"))
     .getByRole("button", { name: copy("manifest.markNotBoarded"), exact: true })
     .click();
+  await expectReceipt(page, "Ari Vale", "savedAshore");
   const ashore = copy("shared.buddyTeam.ashoreNamed", { name: "Ari" });
-  await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
+  let adult = await manifestRow(page, "Bea Quill");
   await expect(adult.getByText(ashore, { exact: true })).toBeVisible();
-  await openManifestPerson(adult);
-  await page
-    .getByRole("dialog")
+  await (await openBuddyReference(page, "Bea Quill"))
     .getByRole("button", { name: copy("manifest.markNotBoarded"), exact: true })
     .click();
-  await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
-  await expect(page.getByText(ashore, { exact: true })).toHaveCount(0);
-  await adult.getByRole("button", { name: copy("manifest.markBoarded"), exact: true }).click();
+  await expectReceipt(page, "Bea Quill", "savedAshore");
+  adult = await manifestRow(page, "Bea Quill");
+  await expect(adult.getByText(ashore, { exact: true })).toHaveCount(0);
+  await openDeckPerson(page, "Bea Quill");
+  await page
+    .getByRole("button", { name: copy("manifest.deck.record", { name: "Bea Quill" }), exact: true })
+    .click();
+  await expectReceipt(page, "Bea Quill", "savedAboard");
+  adult = await manifestRow(page, "Bea Quill");
   await expect(adult.getByText(ashore, { exact: true })).toBeVisible();
+  await openBuddyPanel(page, trip);
   await page.getByRole("button", { name: copy("manifest.buddyDissolve"), exact: true }).click();
-  await expect(page.getByText(ashore, { exact: true })).toHaveCount(0);
-  await openIfClosed(builder);
+  await expect(page).toHaveURL(/buddies=open/);
+  await expect(page.locator("li[data-buddy-member]").filter({ hasText: "Ari Vale" })).toHaveCount(
+    0,
+  );
+  await page.goto(`${trip}/manifest`);
+  adult = await manifestRow(page, "Bea Quill");
+  await expect(adult.getByText(ashore, { exact: true })).toHaveCount(0);
+  await openBuddyBuilder(page, trip);
   await page.getByRole("checkbox", { name: "Bea Quill", exact: true }).check();
   await page.getByRole("checkbox", { name: state.crewName, exact: false }).check();
   await page.getByRole("button", { name: copy("manifest.buddyFormSubmit"), exact: true }).click();
@@ -187,7 +263,14 @@ test("a manual junior team retains blocked readiness and ashore advice clears wh
   await expect(
     page.locator("li[data-buddy-member]").filter({ hasText: state.crewName }),
   ).toBeVisible();
-  await expect(page.getByText(ashore, { exact: true })).toHaveCount(0);
+  await page.goto(`${trip}/manifest`);
+  adult = await manifestRow(page, "Bea Quill");
+  const buddyReference = await openBuddyReference(page, "Bea Quill");
+  await expect(
+    buddyReference.getByRole("region", { name: copy("manifest.personSheetBuddyTeam") }),
+  ).toContainText(state.crewName);
+  adult = await manifestRow(page, "Bea Quill");
+  await expect(adult.getByText(ashore, { exact: true })).toHaveCount(0);
 });
 
 test("an intro team's caution informs and a recorded nonreturn outranks a carried ashore mark", async ({
@@ -198,7 +281,7 @@ test("an intro team's caution informs and a recorded nonreturn outranks a carrie
   // Two bounded synthetic departures: a formed intro team and two after-dive physical counts.
   test.setTimeout(45_000);
   const intro = await seed(request, privateShop.slug, "intro");
-  await page.goto(`/shop/${privateShop.slug}/trips/${intro.tripId}/manifest`);
+  await openBuddyPanel(page, `/shop/${privateShop.slug}/trips/${intro.tripId}`);
   await expect(
     page.getByText(
       copy("manifest.buddyTeamCaution", {
@@ -206,11 +289,6 @@ test("an intro team's caution informs and a recorded nonreturn outranks a carrie
       }),
     ),
   ).toBeVisible();
-  const buddyPanel = page
-    .locator("details")
-    .filter({ has: page.getByRole("heading", { name: copy("manifest.buddyHeading") }) })
-    .first();
-  await openIfClosed(buddyPanel);
   await expect(
     page.getByRole("button", { name: copy("manifest.buddyDissolve"), exact: true }),
   ).toBeEnabled();
@@ -218,22 +296,19 @@ test("an intro team's caution informs and a recorded nonreturn outranks a carrie
   await page.goto(
     `/shop/${privateShop.slug}/trips/${state.tripId}/manifest?checkpoint=after_dive_1`,
   );
-  const adult = manifestRow(page, "Bea Quill");
-  await adult.getByRole("button", { name: "Mark boarded", exact: true }).click();
-  await expect(
-    adult.getByRole("button", { name: copy("manifest.boardedCheckAriaLabel") }),
-  ).toBeVisible();
-  const ashore = copy("shared.buddyTeam.ashoreNamed", { name: "Ari" });
-  await expect(adult.getByText(ashore, { exact: true })).toBeVisible();
-  await openManifestPerson(manifestRow(page, "Ari Vale"));
+  await openDeckPerson(page, "Bea Quill");
   await page
-    .getByRole("dialog")
+    .getByRole("button", { name: copy("manifest.deck.record", { name: "Bea Quill" }), exact: true })
+    .click();
+  await expectReceipt(page, "Bea Quill", "savedAboard");
+  const ashore = copy("shared.buddyTeam.ashoreNamed", { name: "Ari" });
+  let adult = await manifestRow(page, "Bea Quill");
+  await expect(adult.getByText(ashore, { exact: true })).toBeVisible();
+  await (await openBuddyReference(page, "Ari Vale"))
     .getByRole("button", { name: "Mark not back aboard", exact: true })
     .click();
-  await expect(
-    page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
+  await expectReceipt(page, "Ari Vale", "savedMissing");
+  adult = await manifestRow(page, "Bea Quill");
   await expect(adult.getByText("Ari not back aboard", { exact: true })).toBeVisible();
   await expect(adult.getByText(ashore, { exact: true })).toHaveCount(0);
 });
