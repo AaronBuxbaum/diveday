@@ -38,7 +38,16 @@ export async function callBlowoutAction(shopSlug: string, tripId: string) {
     refunds: (await canPersonRefund(db, s.user.shopId, s.user.personId)) ? "release" : "queue",
   });
   if (!outcome.ok) {
-    redirect(noticeUrl(back, outcome.reason === "trip_departed" ? "departed" : "error"));
+    redirect(
+      noticeUrl(
+        back,
+        outcome.reason === "trip_departed"
+          ? "departed"
+          : outcome.reason === "unresolved_safety_evidence"
+            ? "safety-review"
+            : "error",
+      ),
+    );
   }
   await trackEvent({
     name: "blowout_called",

@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { canRecordOfflineArrival, canRecordOfflineStatus } from "@/lib/offline-manifests";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
+import { OfflineCausalConflicts } from "./CausalConflicts";
 import { OfflineCounter } from "./Counter";
 import { OfflineDiverRollCall } from "./DiverRollCall";
 import { controls, savedCopy, view } from "./section-fixtures";
@@ -9,6 +12,180 @@ import { offlineTripView } from "./trip-view";
 afterEach(cleanup);
 
 describe("OfflineDiverRollCall", () => {
+  it("keeps a contradictory withheld-ready seat blocked and withholds untrusted reason text", () => {
+    const copy = savedCopy();
+    const diver = copy.snapshot.manifests[0]?.divers[0];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.identityWithheld = true;
+    diver.readiness = {
+      status: "ready",
+      blockers: [{ code: "payment_due", text: "private text" }],
+    };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("fixture manifest missing");
+    expect(canRecordOfflineStatus(copy.snapshot, diver.bookingId, "boarded", "departure")).toBe(
+      false,
+    );
+    expect(trip.blockedAtRail[0]).toBe(true);
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector(`#offline-roll-call-${diver.bookingId}`);
+    expect(row?.textContent).toContain("Not confirmed");
+    expect(row?.textContent).toContain("Payment");
+    expect(row?.textContent).not.toContain("private text");
+    expect(row?.querySelector('button[aria-label="Mark boarded"]')).toBeNull();
+  });
+  it("recognizes a legacy identity blocker and keeps seat-owned payment guidance", () => {
+    const copy = savedCopy();
+    const diver = copy.snapshot.manifests[0]?.divers[0];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.readiness = {
+      status: "ready",
+      blockers: [
+        { code: "identity_unconfirmed", text: "untrusted person detail" },
+        { code: "payment_due", text: "untrusted payment detail" },
+        { code: "medical_review", text: "untrusted medical detail" },
+      ],
+    };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("fixture manifest missing");
+    expect(canRecordOfflineStatus(copy.snapshot, diver.bookingId, "boarded", "departure")).toBe(
+      false,
+    );
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector(`#offline-roll-call-${diver.bookingId}`);
+    expect(row?.textContent).toContain("Not confirmed");
+    expect(row?.textContent).toContain("Payment");
+    expect(row?.textContent).toContain("Other holds may still apply");
+    expect(row?.textContent).not.toContain("untrusted");
+    expect(row?.querySelector('button[aria-label="Mark boarded"]')).toBeNull();
+  });
+  it("keeps a held counter seat blocked while allowing an exact local arrival undo", () => {
+    const copy = savedCopy();
+    const diver = copy.snapshot.manifests[0]?.divers[0];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.identityWithheld = true;
+    diver.readiness = {
+      status: "ready",
+      blockers: [{ code: "payment_due", text: "private blocker text" }],
+    };
+    copy.arrivalEvents = [
+      {
+        clientEventId: "arrival-held",
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: "trip-1",
+        bookingId: diver.bookingId,
+        status: "arrived",
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending",
+      },
+    ];
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("fixture manifest missing");
+    expect(canRecordOfflineArrival(copy.snapshot, diver.bookingId, "arrived")).toBe(false);
+    expect(canRecordOfflineArrival(copy.snapshot, diver.bookingId, "cleared")).toBe(true);
+    const actions = controls();
+    const { container } = render(<OfflineCounter view={trip} controls={actions} />);
+    expect(container.textContent).toContain("Not confirmed");
+    expect(container.textContent).toContain("Payment");
+    expect(container.textContent).toContain("Checked in");
+    expect(container.textContent).toContain("waiting to send");
+    expect(container.textContent).not.toContain("private blocker text");
+    fireEvent.click(screen.getByRole("button", { name: `Undo check-in for ${diver.fullName}` }));
+    expect(actions.recordArrival).toHaveBeenCalledWith(diver.bookingId, "cleared");
+  });
+  it("shows a saved held-seat arrival without offering a new check-in", () => {
+    const copy = savedCopy();
+    const diver = copy.snapshot.manifests[0]?.divers[0];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.identityWithheld = true;
+    diver.checkedIn = true;
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("fixture manifest missing");
+    const { container } = render(<OfflineCounter view={trip} controls={controls()} />);
+    expect(container.textContent).toContain("Checked in");
+    expect(container.textContent).toContain("Not confirmed");
+    expect(
+      screen.queryByRole("button", { name: `Undo check-in for ${diver.fullName}` }),
+    ).toBeNull();
+  });
+  it("shows a pending same-meeting statement even beside a compatible older saved mark", () => {
+    const copy = savedCopy();
+    const manifest = copy.snapshot.manifests[0];
+    const diver = manifest?.divers[0];
+    if (!manifest || !diver) throw new Error("missing fixture row");
+    const tripId = "11111111-1111-4111-8111-111111111111";
+    const snapshotId = "22222222-2222-4222-8222-222222222222";
+    const startsAt = new Date("2026-08-01T13:00:00.000Z");
+    const endsAt = new Date("2026-08-01T16:00:00.000Z");
+    const proof = signOfflineMeetingIdentity({
+      scheduleGeneration: 0,
+      datasetIncarnation: "55555555-5555-4555-8555-555555555555",
+      shopId: "33333333-3333-4333-8333-333333333333",
+      tripId,
+      snapshotId,
+      meetingDay: 0,
+      meetingId: "44444444-4444-4444-8444-444444444444",
+      startsAt,
+      endsAt,
+    });
+    manifest.trip.id = tripId;
+    manifest.checkpoint = "after_dive_1";
+    copy.snapshot.snapshotId = snapshotId;
+    copy.snapshot.rollCallMeetingDays = [
+      {
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        meetingIdentityProof: proof,
+      },
+    ];
+    diver.rollCall = {
+      state: "boarded",
+      occurredAt: copy.snapshot.savedAt,
+      recordedByName: "Older crew",
+    };
+    copy.events.push({
+      clientEventId: "10000000-0000-4000-8000-000000000001",
+      snapshotId,
+      snapshotSavedAt: copy.snapshot.savedAt,
+      tripId,
+      bookingId: diver.bookingId,
+      checkpoint: "after_dive_1",
+      status: "boarded",
+      meetingDay: 0,
+      meetingIdentityProof: proof,
+      occurredAt: copy.snapshot.savedAt,
+      syncStatus: "pending",
+      observedEvidenceIds: [],
+    });
+    const trip = offlineTripView(copy, "after_dive_1");
+    if (!trip) throw new Error("manifest missing");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector(`#offline-roll-call-${diver.bookingId}`);
+    expect(row?.textContent).toContain("waiting to send");
+    diver.rollCall = undefined;
+    copy.events.push({
+      ...copy.events[0],
+      clientEventId: "10000000-0000-4000-8000-000000000002",
+      status: "not_boarded",
+    });
+    const conflictView = offlineTripView(copy, "after_dive_1");
+    if (!conflictView) throw new Error("manifest missing");
+    const actions = controls();
+    render(<OfflineCausalConflicts view={conflictView} controls={actions} />);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm aboard" }));
+    expect(actions.record).toHaveBeenCalledWith(
+      { bookingId: diver.bookingId },
+      expect.objectContaining({
+        status: "boarded",
+        reconcilesEvidence: true,
+        reviewedEvidenceIds: expect.arrayContaining([
+          "client:10000000-0000-4000-8000-000000000001",
+          "client:10000000-0000-4000-8000-000000000002",
+        ]),
+      }),
+    );
+  });
   it("does not present an older training clearance as boardable", () => {
     const copy = savedCopy();
     const [diver] = copy.snapshot.manifests[0]?.divers ?? [];
@@ -152,6 +329,33 @@ describe("OfflineDiverRollCall", () => {
     expect(rowAt("after_dive_1")).toContain("Not medically cleared");
     expect(rowAt("after_dive_2")).toContain("Not medically cleared");
     expect(rowAt("departure")).not.toContain("Not medically cleared");
+  });
+  it("shows the medical warning for a possible aboard diver without confirming the boarding", () => {
+    const copy = savedCopy();
+    const diver = copy.snapshot.manifests[0]?.divers[0];
+    if (!diver) throw new Error("fixture diver missing");
+    diver.readiness = {
+      status: "blocked",
+      blockers: [{ code: "medical_not_cleared", text: "Physician did not clear" }],
+    };
+    copy.events.push({
+      clientEventId: "event-uncertain",
+      snapshotId: copy.snapshot.snapshotId,
+      snapshotSavedAt: copy.snapshot.savedAt,
+      tripId: "trip-1",
+      bookingId: diver.bookingId,
+      checkpoint: "departure",
+      status: "boarded",
+      occurredAt: copy.snapshot.savedAt,
+      syncStatus: "pending",
+    });
+    const trip = offlineTripView(copy, "after_dive_1");
+    if (!trip) throw new Error("manifest missing");
+    expect(trip.localStates[0]?.state).not.toBe("boarded");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector(`#offline-roll-call-${diver.bookingId}`);
+    expect(row?.textContent).toContain("Not medically cleared");
+    expect(row?.textContent).not.toContain("Boarded");
   });
   it("shows the observation on a diver not back aboard under the status line, outside any disclosure (review dde-b 2)", () => {
     const copy = savedCopy();

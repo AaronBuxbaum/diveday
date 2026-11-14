@@ -1,0 +1,258 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "39cf177c-d36f-4965-9a8f-a66d91fce1d5",
+  "prevIds": [
+    "758d643e-e04e-45fc-8fbd-e6deaf2c562f"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_scan_incidents"
+      ],
+      "writes": [
+        "s|tbl|public.unresolved_safety_scan_incidents",
+        "n|tbl|public.unresolved_safety_scan_incidents",
+        "e|tbl|public.unresolved_safety_scan_incidents",
+        "n|rel|public.unresolved_safety_scan_incidents",
+        "n|type|public.unresolved_safety_scan_incidents",
+        "n|rel|public.unresolved_safety_scan_incidents_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "unresolved_safety_scan_incidents",
+        "unresolved_safety_scan_incident_generation_unique"
+      ],
+      "writes": [
+        "s|idx|public.unresolved_safety_scan_incident_generation_unique",
+        "n|idx|public.unresolved_safety_scan_incident_generation_unique",
+        "e|idx|public.unresolved_safety_scan_incident_generation_unique",
+        "n|rel|public.unresolved_safety_scan_incident_generation_unique"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_scan_incidents",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_scan_incidents.outbox_id",
+        "n|col|public.unresolved_safety_scan_incidents.generation_id",
+        "n|col|public.unresolved_safety_scan_incidents.scan_sequence"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "unresolved_safety_scan_incidents",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "outbox_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "generation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "scan_sequence",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "claim_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "first_seen_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "last_seen_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "unresolved_safety_scan_incident_generation_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "outbox_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "generation_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "scan_sequence",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_scan_incidents",
+        "name": "unresolved_safety_scan_incidents_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

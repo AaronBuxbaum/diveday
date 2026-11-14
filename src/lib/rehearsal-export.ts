@@ -15,7 +15,8 @@ import type { ExportTable } from "./export";
  * **The exception is evidence**: a signed release (a staffer seating
  * themselves may sign a real one), a course form, and the roll call. A
  * rehearsal where people were counted onto the boat or out of the water is a
- * record of people in the water, and it outlives the practice. Those rows stay,
+ * record of people in the water, and it outlives the practice. Unresolved
+ * claims and their delivery/review records stay with that evidence. Those rows stay,
  * with the `trip_id` and `booking_id` blanked so nothing in the bundle points
  * at a departure or seat that is not in it; the names and times stay, so the
  * row still says who and when.
@@ -30,6 +31,12 @@ const KEPT_AS_EVIDENCE = new Set([
   "waiver_records.csv",
   "course_form_records.csv",
   "roll_call_events.csv",
+  "roll_call_event_claims.csv",
+  "unresolved_safety_alert_outbox.csv",
+  "unresolved_safety_alert_deliveries.csv",
+  "unresolved_safety_alert_escalations.csv",
+  "unresolved_safety_scan_incidents.csv",
+  "unresolved_review_deferrals.csv",
 ]);
 
 /** The same exclusion contract drives row filtering and SQL count predicates. */

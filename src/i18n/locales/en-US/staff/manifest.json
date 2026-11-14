@@ -1,4 +1,6 @@
 {
+  "retainedSafetyWarning": "Unresolved safety evidence needs review. It cannot be assigned to a person or meeting; do not treat head counts as an all-clear.",
+  "retainedSafetyAlertWarning": "A safety review alert needs attention. Check notification delivery and contact the crew if needed.",
   "stage": {
     "legend": "Where the boat is",
     "tapBoarding": "Boarding",
@@ -54,6 +56,8 @@
   "headCountOverCertificate": "{limit, plural, one {Certificate allows # passenger} other {Certificate allows # passengers}}",
   "headCountOverTotalPersons": "{limit, plural, one {Certificate allows # person, crew included} other {Certificate allows # persons, crew included}}",
   "headCountOverTotalPersonsAboard": "{aboard, plural, one {# person} other {# people}} aboard, crew included; the certificate allows {limit} in all.",
+  "headCountPossibleOverTotalPersons": "{aboard, plural, one {# person may be aboard} other {# people may be aboard}}; the certificate allows {limit}. Some observations are unconfirmed or may be from another meeting. Count everyone.",
+  "headCountPossibleUnlistedPerson": "An unlisted person may be aboard or unaccounted for. Count everyone and check capacity; an unconfirmed observation may be from another meeting.",
   "progressAriaLabel": "Roll-call progress",
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",

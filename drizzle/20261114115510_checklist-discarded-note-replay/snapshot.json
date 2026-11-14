@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "37de86cc-9701-4e32-b35f-50f7cb343f46",
+  "prevIds": [
+    "177526c1-a7e8-4f9f-a802-11335a34f311"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pre_departure_check_events",
+        "offline_intent_without_note_fingerprint"
+      ],
+      "writes": [
+        "s|col|public.pre_departure_check_events.offline_intent_without_note_fingerprint",
+        "n|col|public.pre_departure_check_events.offline_intent_without_note_fingerprint",
+        "e|col|public.pre_departure_check_events.offline_intent_without_note_fingerprint"
+      ],
+      "reads": [
+        "n|tbl|public.pre_departure_check_events",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pre_departure_check_events",
+        "name": "offline_intent_without_note_fingerprint",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

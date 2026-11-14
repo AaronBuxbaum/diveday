@@ -71,6 +71,119 @@ function renderSheet(copy: OfflineManifestEnvelope = savedCopy()) {
 }
 
 describe("OfflineManifestSheet", () => {
+  it("prints a medical warning for a possible boarding without confirming it or exposing withheld details", () => {
+    const copy = savedCopy();
+    const manifest = rosterOf(copy);
+    const [diver, withheld] = manifest.divers;
+    if (!diver || !withheld) throw new Error("fixture divers missing");
+    diver.readiness = {
+      status: "blocked",
+      blockers: [{ code: "medical_not_cleared", text: "Physician did not clear" }],
+    };
+    withheld.identityWithheld = true;
+    withheld.medicalAlert = { text: ALERT_WORDS };
+    withheld.readiness = {
+      status: "blocked",
+      blockers: [{ code: "medical_not_cleared", text: ALERT_WORDS }],
+    };
+    for (const person of [diver, withheld])
+      copy.events.push({
+        clientEventId: `uncertain-${person.bookingId}`,
+        snapshotId: copy.snapshot.snapshotId,
+        snapshotSavedAt: copy.snapshot.savedAt,
+        tripId: manifest.trip.id,
+        bookingId: person.bookingId,
+        checkpoint: "departure",
+        status: "boarded",
+        occurredAt: copy.snapshot.savedAt,
+        syncStatus: "pending",
+      });
+    copy.events.push({
+      clientEventId: "withheld-note",
+      snapshotId: copy.snapshot.snapshotId,
+      snapshotSavedAt: copy.snapshot.savedAt,
+      tripId: manifest.trip.id,
+      bookingId: withheld.bookingId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      occurredAt: copy.snapshot.savedAt,
+      syncStatus: "pending",
+      note: "Crew saw a person near the stern",
+    });
+    copy.snapshot.manifests.push({ ...manifest, checkpoint: "after_dive_1" });
+    const view = offlineTripView(copy, "after_dive_1");
+    if (!view) throw new Error("fixture view missing");
+    render(
+      <OfflineManifestSheet
+        view={view}
+        controls={controls()}
+        origin={null}
+        onBack={() => {}}
+        autoPrint={false}
+      />,
+    );
+    const row = document.querySelector(`[data-sheet-row="${diver.bookingId}"]`);
+    expect(row?.textContent).toContain("Not medically cleared");
+    expect(row?.textContent).not.toContain("Boarded");
+    const withheldRow = document.querySelector(`[data-sheet-row="${withheld.bookingId}"]`);
+    expect(withheldRow?.textContent).not.toContain(ALERT_WORDS);
+    expect(withheldRow?.textContent).not.toContain("Not medically cleared");
+    expect(withheldRow?.textContent).toContain("Crew saw a person near the stern");
+  });
+  it("warns on paper about a proofless tap from the same older saved copy", () => {
+    const copy = copyWith((c) =>
+      c.events.push({
+        clientEventId: "legacy-1",
+        snapshotId: c.snapshot.snapshotId,
+        snapshotSavedAt: c.snapshot.savedAt,
+        tripId: "trip-1",
+        bookingId: "b-priya",
+        checkpoint: "departure",
+        status: "boarded",
+        meetingDay: 0,
+        occurredAt: "2026-08-01T12:15:00.000Z",
+        syncStatus: "pending",
+      }),
+    );
+    const { sheet } = renderSheet(copy);
+    expect(sheet.textContent).toMatch(
+      /Unconfirmed device observation.*Priya Shah.*Boarded.*meeting is not confirmed/i,
+    );
+  });
+  it("prints unresolved device observations before the roster", () => {
+    const copy = copyWith((c) => {
+      c.snapshot.rollCallMeetingDays = [
+        {
+          startsAt: "2026-08-01T12:00:00Z",
+          endsAt: "2026-08-01T14:00:00Z",
+          meetingIdentityProof:
+            "11111111-1111-4111-8111-111111111111.0.a.b.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        },
+      ];
+      c.events.push({
+        clientEventId: "mark-12345678",
+        snapshotId: "older-snapshot",
+        snapshotSavedAt: c.snapshot.savedAt,
+        tripId: "trip-1",
+        bookingId: "b-priya",
+        checkpoint: "departure",
+        status: "boarded",
+        meetingDay: 0,
+        meetingIdentityProof:
+          "22222222-2222-4222-8222-222222222222.0.c.d.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        occurredAt: "2026-08-01T12:15:00.000Z",
+        syncStatus: "pending",
+      });
+    });
+    const { sheet } = renderSheet(copy);
+    const text = sheet.textContent ?? "";
+    expect(text).toMatch(
+      /Unconfirmed device observation.*Priya Shah.*Boarded.*meeting is not confirmed/i,
+    );
+    expect(text.indexOf("Unconfirmed device observation")).toBeLessThan(
+      text.lastIndexOf("Priya Shah"),
+    );
+  });
   it("prints every person on the saved roster, in roster order, numbered", () => {
     const copy = copyWith((c) => {
       rosterOf(c).divers.push(diver("b-ana", "Ana Ruiz"));
@@ -439,4 +552,15 @@ describe("OfflineTripScreen's paper door", () => {
     expect(priyaRow?.hasAttribute("data-print-critical")).toBe(false);
     expect(priyaRow?.textContent).toMatch(/EDT by Sal/);
   });
+});
+
+it("prints the retained safety warning without assigning it to a person", () => {
+  const copy = savedCopy();
+  rosterOf(copy).retainedSafetyUnresolved = true;
+  rosterOf(copy).retainedSafetyAlertNeedsReview = true;
+  const view = offlineTripView(copy, "departure");
+  expect(view?.rollCallComplete).toBe(false);
+  const { sheet } = renderSheet(copy);
+  expect(sheet).toHaveTextContent(/Unresolved safety evidence needs review/);
+  expect(sheet).toHaveTextContent(/A safety review alert needs attention/);
 });

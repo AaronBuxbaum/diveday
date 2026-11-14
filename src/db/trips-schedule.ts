@@ -21,6 +21,7 @@ import { rewindowTripGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { queryAll } from "./query-helpers";
 import { rearmTripReminders } from "./reminder-rearm";
+import { retainedSafetyTripIds } from "./retained-safety";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import type { Trip } from "./schema";
 import {
@@ -299,6 +300,13 @@ export async function moveTrip(
         .set({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) })
         .where(eq(tripScheduleDays.id, day.id));
     }
+    const [currentGeneration] = await tx
+      .select({ generation: trips.meetingScheduleGeneration })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+      .limit(1);
+    if (!currentGeneration) throw new Error("moved trip generation unavailable");
+    trip.meetingScheduleGeneration = currentGeneration.generation;
     if (options.captureRescheduleStart) {
       await rememberUnnotifiedTripStart(tx, {
         shopId,
@@ -347,7 +355,10 @@ export async function moveTrip(
 
 export type DeleteTripOutcome =
   | { ok: true }
-  | { ok: false; reason: "not_found" | "has_roster" | "already_sailed" };
+  | {
+      ok: false;
+      reason: "not_found" | "has_roster" | "already_sailed" | "unresolved_safety_evidence";
+    };
 
 /**
  * Takes a departure off the board — the schedule builder's "remove".
@@ -389,6 +400,10 @@ export async function deleteTrip(
       .limit(1)
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
+
+    if ((await retainedSafetyTripIds(tx, shopId, [tripId])).size > 0) {
+      return { ok: false, reason: "unresolved_safety_evidence" };
+    }
 
     // Any booking at all, cancelled ones included: a cancelled booking is a
     // diver who was once on this manifest, and that is history to keep.

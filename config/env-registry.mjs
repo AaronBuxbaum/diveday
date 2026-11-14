@@ -225,6 +225,26 @@ export const ENV_GROUPS = [
   {
     seam: null,
     doc: [
+      "Optional JSON array of previous AUTH_SECRET values for a planned rotation.",
+      "First deploy support on every server, then configure both current and upcoming",
+      "keys on every verifier before changing any signing key; retain old keys",
+      "only while offline proofs and receipts may need verification. These old keys",
+      "can authorize new offline proofs and have no cryptographic expiry. Never retain",
+      "a compromised key; remove it immediately and handle affected events through",
+      "recovery. This does not restore sessions or events without a receipt.",
+    ],
+    keys: [
+      {
+        key: "OFFLINE_PREVIOUS_AUTH_SECRETS",
+        from: "manual",
+        targets: VERCEL,
+        absent: "offline receipts and proofs verify only with the current AUTH_SECRET",
+      },
+    ],
+  },
+  {
+    seam: null,
+    doc: [
       "Dedicated signing keys for three bearer-token families, each optional. Unset,",
       "recap links (src/lib/recap-links.ts) and buddy links (src/features/buddy-tokens/rules.ts)",
       "sign with a key derived from AUTH_SECRET, and the waiver integrity seal",

@@ -75,7 +75,7 @@ async function recordLoss(record: OfflineManifestPayload = payload): Promise<voi
 
 function backdateExpiry(id: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("diveday-offline-manifests", 1);
+    const request = indexedDB.open("diveday-offline-manifests", 2);
     request.onsuccess = () => {
       const db = request.result;
       const get = db.transaction("manifests", "readonly").objectStore("manifests").get(id);

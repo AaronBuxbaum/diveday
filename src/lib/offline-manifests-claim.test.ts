@@ -12,9 +12,10 @@ import { ROLL_CALL_CAUSAL_PROTOCOL, ROLL_CALL_CAUSAL_PROTOCOL_HEADER } from "./r
 const issued = {
   snapshotId: "10000000-0000-4000-8000-000000000001",
   erasureEpochToken: `4.8.${"a".repeat(43)}`,
+  meetingIdentityProofs: [],
 };
 function pagePayload(): OfflineManifestPayload {
-  return { ...snapshot(), readAt: { erasureEpoch: 4, snapshotRevision: 7 } };
+  return { ...snapshot(), readAt: { erasureEpoch: 4, snapshotRevision: 7, scheduleVersion: "[]" } };
 }
 function radio(online: boolean) {
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
@@ -33,7 +34,11 @@ it("claims the displayed read under the causal protocol without posting roster d
   vi.stubGlobal("fetch", fetcher);
   const claimed = await claimOfflineManifestSnapshot(payload);
   const { readAt: _readAt, ...preserved } = original;
-  expect(claimed).toEqual({ ...preserved, ...issued });
+  expect(claimed).toEqual({
+    ...preserved,
+    snapshotId: issued.snapshotId,
+    erasureEpochToken: issued.erasureEpochToken,
+  });
   expect(claimed).not.toHaveProperty("readAt");
   expect(payload).toEqual(original);
   expect(fetcher).toHaveBeenCalledTimes(1);
@@ -44,7 +49,11 @@ it("claims the displayed read under the causal protocol without posting roster d
     ROLL_CALL_CAUSAL_PROTOCOL,
   );
   expect(new Headers(init?.headers).get("content-type")).toBe("application/json");
-  expect(JSON.parse(String(init?.body))).toEqual({ erasureEpoch: 4, snapshotRevision: 7 });
+  expect(JSON.parse(String(init?.body))).toEqual({
+    erasureEpoch: 4,
+    snapshotRevision: 7,
+    scheduleVersion: "[]",
+  });
   expect(init?.signal).toBeInstanceOf(AbortSignal);
   expect(init?.signal?.aborted).toBe(false);
 });

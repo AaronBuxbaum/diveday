@@ -1853,6 +1853,23 @@ const moveAskSoonSchema = z.object({
   askedAt: z.date(),
 });
 
+/** An owner review notice, separate from missing-person or stale-count alerts.
+ * Dispatch is disabled until the URL, recipient, generation and delivery are
+ * verified against current server state. */
+const unresolvedSafetyReviewSchema = z.object({
+  kind: z.literal("unresolved_safety_evidence"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  tripId: z.uuid(),
+  generationId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  reviewUrl: z.url().max(2_000),
+});
+
 /**
  * **A roll call still open after the boat should be home** (batch 6, item 6;
  * `sendStaleRollCallAlerts`, src/features/roll-call-alerts/store.ts). Staff safety mail
@@ -2175,6 +2192,7 @@ export const notificationSchema = z
     seatSoldDigestSchema,
     stripePaymentsRestrictedSchema,
     moveAskSoonSchema,
+    unresolvedSafetyReviewSchema,
     rollCallStaleSchema,
     rollCallStaleShoreSchema,
     incidentMissingDiverSchema,
@@ -2322,6 +2340,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "seat_sold_digest":
     case "move_ask_soon":
     case "roll_call_stale":
+    case "unresolved_safety_evidence":
     case "roll_call_stale_shore":
     case "incident_missing_diver":
     case "incident_missing_diver_found":
@@ -2544,6 +2563,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per departure per owner; the departure's claim comes first.
     case "roll_call_stale":
       return `roll-call-stale/${notification.tripId}/${notification.personId}`;
+    case "unresolved_safety_evidence":
+      return `unresolved-safety-evidence/${notification.generationId}/${notification.personId}`;
     // One alert per report per owner; the report's claim comes first.
     case "incident_missing_diver":
       return `incident-missing-diver/${notification.incidentReportId}/${notification.personId}`;

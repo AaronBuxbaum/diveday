@@ -1,0 +1,440 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ffec7100-c58d-4f02-9f97-791e9f7d40ed",
+  "prevIds": [
+    "39cf177c-d36f-4965-9a8f-a66d91fce1d5"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_review_deferrals"
+      ],
+      "writes": [
+        "s|tbl|public.unresolved_review_deferrals",
+        "n|tbl|public.unresolved_review_deferrals",
+        "e|tbl|public.unresolved_review_deferrals",
+        "n|rel|public.unresolved_review_deferrals",
+        "n|type|public.unresolved_review_deferrals",
+        "n|rel|public.unresolved_review_deferrals_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_event_claims",
+        "review_revision"
+      ],
+      "writes": [
+        "s|col|public.roll_call_event_claims.review_revision",
+        "n|col|public.roll_call_event_claims.review_revision",
+        "e|col|public.roll_call_event_claims.review_revision"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "unresolved_review_deferrals",
+        "unresolved_review_deferrals_shop_request_unique"
+      ],
+      "writes": [
+        "s|idx|public.unresolved_review_deferrals_shop_request_unique",
+        "n|idx|public.unresolved_review_deferrals_shop_request_unique",
+        "e|idx|public.unresolved_review_deferrals_shop_request_unique",
+        "n|rel|public.unresolved_review_deferrals_shop_request_unique"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_review_deferrals",
+        "n|sch|public",
+        "n|col|public.unresolved_review_deferrals.shop_id",
+        "n|col|public.unresolved_review_deferrals.request_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_review_deferrals"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_shop_id_shops_id_fkey",
+        "n|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_shop_id_shops_id_fkey",
+        "e|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_shop_id_shops_id_fkey",
+        "n|con|public.unresolved_review_deferrals.unresolved_review_deferrals_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_review_deferrals",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.unresolved_review_deferrals.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_review_deferrals"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_trip_id_trips_id_fkey",
+        "n|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_trip_id_trips_id_fkey",
+        "e|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_trip_id_trips_id_fkey",
+        "n|con|public.unresolved_review_deferrals.unresolved_review_deferrals_trip_id_trips_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_review_deferrals",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.unresolved_review_deferrals.trip_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_review_deferrals"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_RkCswdcay9BQ_fkey",
+        "n|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_RkCswdcay9BQ_fkey",
+        "e|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_RkCswdcay9BQ_fkey",
+        "n|con|public.unresolved_review_deferrals.unresolved_review_deferrals_RkCswdcay9BQ_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_review_deferrals",
+        "n|sch|public",
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.unresolved_review_deferrals.claim_id",
+        "n|col|public.roll_call_event_claims.id",
+        "e|uniqueness|public.roll_call_event_claims.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_review_deferrals"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_actor_person_id_people_id_fkey",
+        "n|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_actor_person_id_people_id_fkey",
+        "e|fk|public.unresolved_review_deferrals.unresolved_review_deferrals_actor_person_id_people_id_fkey",
+        "n|con|public.unresolved_review_deferrals.unresolved_review_deferrals_actor_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_review_deferrals",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.unresolved_review_deferrals.actor_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "unresolved_review_deferrals",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "review_revision",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "claim_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "actor_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "review_revision",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "request_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "unresolved_review_deferrals_shop_request_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "request_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "unresolved_review_deferrals_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "unresolved_review_deferrals_trip_id_trips_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "unresolved_review_deferrals_RkCswdcay9BQ_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "claim_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "roll_call_event_claims",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "unresolved_review_deferrals_actor_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "actor_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_review_deferrals",
+        "name": "unresolved_review_deferrals_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

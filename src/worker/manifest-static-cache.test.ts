@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 vi.mock("@/lib/offline-manifest-store", () => ({
   listOfflineManifests: vi.fn(),
+  readOfflineManifestInventory: vi.fn().mockResolvedValue({ manifests: [], incomplete: false }),
   purgeOfflineManifestsExceptShop: vi.fn(),
   saveOfflineManifest: vi.fn(),
   syncOfflineManifest: vi.fn(),

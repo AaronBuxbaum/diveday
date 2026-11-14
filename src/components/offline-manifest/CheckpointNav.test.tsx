@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { OfflineManifestEnvelope, OfflineRollCallEvent } from "@/lib/offline-manifests";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { OfflineCheckpointNav } from "./CheckpointNav";
 import { controls, savedCopy } from "./section-fixtures";
 import { offlineTripView } from "./trip-view";
@@ -16,19 +17,48 @@ import { offlineTripView } from "./trip-view";
 /** Two planned dives, so the copy carries a dock count and two after-dive ones. */
 function twoDiveCopy(events: OfflineRollCallEvent[] = []): OfflineManifestEnvelope {
   const copy = savedCopy();
+  const tripId = "11111111-1111-4111-8111-111111111111";
+  const snapshotId = "22222222-2222-4222-8222-222222222222";
+  const startsAt = new Date("2026-08-01T13:00:00.000Z");
+  const endsAt = new Date("2026-08-01T16:30:00.000Z");
+  const proof = signOfflineMeetingIdentity({
+    scheduleGeneration: 0,
+    datasetIncarnation: "55555555-5555-4555-8555-555555555555",
+    shopId: "33333333-3333-4333-8333-333333333333",
+    tripId,
+    snapshotId,
+    meetingId: "44444444-4444-4444-8444-444444444444",
+    meetingDay: 0,
+    startsAt,
+    endsAt,
+  });
   const [dock] = copy.snapshot.manifests;
   const at = (checkpoint: "departure" | "after_dive_1" | "after_dive_2") => ({
     ...dock,
-    trip: { ...dock.trip, plannedDives: 2 },
+    trip: { ...dock.trip, id: tripId, plannedDives: 2 },
     checkpoint,
   });
   return {
     ...copy,
     snapshot: {
       ...copy.snapshot,
+      snapshotId,
+      rollCallMeetingDays: [
+        {
+          startsAt: startsAt.toISOString(),
+          endsAt: endsAt.toISOString(),
+          meetingIdentityProof: proof,
+        },
+      ],
       manifests: [at("departure"), at("after_dive_1"), at("after_dive_2")],
     },
-    events,
+    events: events.map((event) => ({
+      ...event,
+      tripId,
+      snapshotId,
+      meetingDay: 0,
+      meetingIdentityProof: proof,
+    })),
   };
 }
 
@@ -70,6 +100,13 @@ const priyaAndMarcusAboard = (checkpoint: "after_dive_1") => [
 afterEach(cleanup);
 
 describe("OfflineCheckpointNav", () => {
+  it("keeps a proofless older pending mark from completing the count", () => {
+    const copy = twoDiveCopy();
+    copy.events = [tap("after_dive_1", { bookingId: "b-priya" })];
+    open(copy, "after_dive_1");
+    fireEvent.click(screen.getByRole("button", { name: /after dive 2/i }));
+    expect(screen.getByRole("alert").textContent).toBe("2 people not marked after dive 1.");
+  });
   it("asks first when the count before is open, and names the people unmarked", () => {
     const trip = open(twoDiveCopy(), "after_dive_1");
     fireEvent.click(screen.getByRole("button", { name: /after dive 2/i }));

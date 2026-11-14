@@ -13,6 +13,8 @@ describe("offlineManifestPayload", () => {
         ],
         erasureEpoch: 3,
         snapshotRevision: 9,
+        meetingDays: [],
+        scheduleVersion: "[]",
       },
       shop: {
         slug: "blue-mantis",
@@ -23,7 +25,6 @@ describe("offlineManifestPayload", () => {
       checklistItems: [{ id: "radio", label: "Radio check" }] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,
-      meetingWindows: undefined,
       snags: [],
       locale: "en-US",
       t,
@@ -32,7 +33,7 @@ describe("offlineManifestPayload", () => {
     expect(payload.shop.slug).toBe("blue-mantis");
     // The epoch and revision the rows were read at, for the device to trade for a signed
     // token when it saves; the page itself issues no snapshot (issue #4391).
-    expect(payload.readAt).toEqual({ erasureEpoch: 3, snapshotRevision: 9 });
+    expect(payload.readAt).toEqual({ erasureEpoch: 3, snapshotRevision: 9, scheduleVersion: "[]" });
     expect(payload).not.toHaveProperty("snapshotId");
     expect(payload).not.toHaveProperty("erasureEpochToken");
     expect(payload.manifests.map((entry) => entry.checkpoint)).toEqual([
@@ -47,6 +48,8 @@ describe("offlineManifestPayload", () => {
         manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
         erasureEpoch: 0,
         snapshotRevision: 0,
+        meetingDays: [],
+        scheduleVersion: "[]",
       },
       shop: {
         slug: "blue-mantis",
@@ -57,7 +60,6 @@ describe("offlineManifestPayload", () => {
       checklistItems: [{ id: "radio", label: "Radio check" }] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,
-      meetingWindows: undefined,
       snags: [
         {
           id: "s-1",
@@ -108,7 +110,6 @@ describe("offlineManifestPayload", () => {
       checklistItems: [] as never,
       checklistChecks: new Map() as never,
       boatSafety: null,
-      meetingWindows: undefined,
       snags: [],
       locale: "en-US",
       t,
@@ -117,19 +118,23 @@ describe("offlineManifestPayload", () => {
       manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
       erasureEpoch: 0,
       snapshotRevision: 0,
+      meetingDays: [],
+      scheduleVersion: "[]",
     };
     const day = (date: number) => ({
+      id: `day-${date}`,
+      scheduleGeneration: 0,
       startsAt: new Date(Date.UTC(2026, 6, date, 10)),
       endsAt: new Date(Date.UTC(2026, 6, date, 14)),
     });
     // Halfway between day one's end (14:00) and day two's start (10:00 the next day).
     expect(
-      offlineManifestPayload({ ...base, roster, meetingWindows: [day(20), day(21)] })
+      offlineManifestPayload({ ...base, roster: { ...roster, meetingDays: [day(20), day(21)] } })
         .rollCallDayBoundaries,
     ).toEqual(["2026-07-21T00:00:00.000Z"]);
     expect(
       "rollCallDayBoundaries" in
-        offlineManifestPayload({ ...base, roster, meetingWindows: [day(20)] }),
+        offlineManifestPayload({ ...base, roster: { ...roster, meetingDays: [day(20)] } }),
     ).toBe(false);
   });
 });

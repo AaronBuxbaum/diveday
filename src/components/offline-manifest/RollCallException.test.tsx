@@ -9,7 +9,14 @@ import {
 import type { OfflineManifestEnvelope } from "@/lib/offline-manifests";
 import { identifySavedRollCall } from "@/test/identified-offline-roll-call";
 import { OfflineManifestView } from "../OfflineManifestView";
-import { FROZEN_MS, identityResponse, richEnvelope, setOnline } from "./view-fixtures";
+import {
+  FROZEN_MS,
+  identityResponse,
+  richEnvelope,
+  setOnline,
+  VERIFIED_TRIP_ID,
+  verifiedRollCallFixture,
+} from "./view-fixtures";
 
 function renderedTapFields(
   saved: OfflineManifestEnvelope,
@@ -22,6 +29,10 @@ function renderedTapFields(
     erasureEpochToken: saved.snapshot.erasureEpochToken,
     observedEvidenceIds,
     meetingDay,
+    meetingIdentityProof:
+      meetingDay === undefined
+        ? undefined
+        : saved.snapshot.rollCallMeetingDays?.[meetingDay]?.meetingIdentityProof,
     note: undefined,
   };
 }
@@ -48,6 +59,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   appendOfflineArrival: vi.fn(),
   appendOfflineRollCall: vi.fn(),
   listOfflineManifests: vi.fn().mockResolvedValue([]),
+  readOfflineManifestInventory: vi.fn().mockResolvedValue({ manifests: [], incomplete: false }),
   subscribeOfflineManifestChanges: vi.fn(() => () => {}),
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
@@ -449,27 +461,29 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     // aboard control: re-tapping it retracts the sighting rather than restating
     // it. Same scoping — only a sighting this device recorded.
     it("retracts a boarded mark this device made, rather than restating it", async () => {
-      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
-      const saved = richEnvelope(
-        "trip-1",
-        {},
-        {
-          events: [
-            {
-              clientEventId: "10000000-0000-4000-8000-000000000002",
-              snapshotId: "snap-trip-1",
-              snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
-              tripId: "trip-1",
-              bookingId: "diver-priya",
-              checkpoint: "after_dive_1",
-              status: "boarded",
-              meetingDay: 0,
-              observedEvidenceIds: [],
-              occurredAt: new Date(FROZEN_MS).toISOString(),
-              syncStatus: "pending",
-            },
-          ],
-        },
+      searchParams = new URLSearchParams({ trip: VERIFIED_TRIP_ID, checkpoint: "after_dive_1" });
+      const saved = verifiedRollCallFixture(
+        richEnvelope(
+          "trip-1",
+          {},
+          {
+            events: [
+              {
+                clientEventId: "10000000-0000-4000-8000-000000000002",
+                snapshotId: "snap-trip-1",
+                snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+                tripId: "trip-1",
+                bookingId: "diver-priya",
+                checkpoint: "after_dive_1",
+                status: "boarded",
+                meetingDay: 0,
+                observedEvidenceIds: [],
+                occurredAt: new Date(FROZEN_MS).toISOString(),
+                syncStatus: "pending",
+              },
+            ],
+          },
+        ),
       );
       saved.snapshot.rollCallMeetingDay = 0;
       vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
@@ -484,7 +498,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       // computed name outright, it does not append to it.
       fireEvent.click(screen.getByRole("button", { name: "Boarded — tap again to undo" }));
       await waitFor(() =>
-        expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+        expect(appendOfflineRollCall).toHaveBeenCalledWith(VERIFIED_TRIP_ID, {
           ...renderedTapFields(saved, ["client:10000000-0000-4000-8000-000000000002"], 0),
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
@@ -502,26 +516,28 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
      * that names nothing is the one the server cannot check.
      */
     it("names what a crew retraction undoes, exactly as the diver half does", async () => {
-      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
-      const saved = richEnvelope(
-        "trip-1",
-        { crewCalled: true },
-        {
-          events: [
-            {
-              clientEventId: "10000000-0000-4000-8000-000000000003",
-              snapshotId: "snap-trip-1",
-              snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
-              tripId: "trip-1",
-              crewPersonId: "crew-dana",
-              checkpoint: "after_dive_1",
-              status: "not_boarded",
-              // Capture time is audit only; the explicit observed basis below establishes correction.
-              occurredAt: "2026-08-01T14:30:00.000Z",
-              syncStatus: "pending",
-            },
-          ],
-        },
+      searchParams = new URLSearchParams({ trip: VERIFIED_TRIP_ID, checkpoint: "after_dive_1" });
+      const saved = verifiedRollCallFixture(
+        richEnvelope(
+          "trip-1",
+          { crewCalled: true },
+          {
+            events: [
+              {
+                clientEventId: "10000000-0000-4000-8000-000000000003",
+                snapshotId: "snap-trip-1",
+                snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+                tripId: "trip-1",
+                crewPersonId: "crew-dana",
+                checkpoint: "after_dive_1",
+                status: "not_boarded",
+                // Capture time is audit only; the explicit observed basis below establishes correction.
+                occurredAt: "2026-08-01T14:30:00.000Z",
+                syncStatus: "pending",
+              },
+            ],
+          },
+        ),
       );
       const prior = identifySavedRollCall(
         saved.snapshot,
@@ -542,7 +558,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
 
       fireEvent.click(within(crewList).getByRole("button", { name: "Not back aboard" }));
       await waitFor(() =>
-        expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+        expect(appendOfflineRollCall).toHaveBeenCalledWith(VERIFIED_TRIP_ID, {
           ...renderedTapFields(saved, ["client:10000000-0000-4000-8000-000000000003"], 0),
           crewPersonId: "crew-dana",
           checkpoint: "after_dive_1",
@@ -554,26 +570,28 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
 
     // The crew half of the same gate — the people most reliably in the water.
     it("puts claiming a missing crew member is aboard in their panel", async () => {
-      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
-      const saved = richEnvelope(
-        "trip-1",
-        { crewCalled: true },
-        {
-          events: [
-            {
-              clientEventId: "10000000-0000-4000-8000-000000000003",
-              snapshotId: "snap-trip-1",
-              snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
-              tripId: "trip-1",
-              crewPersonId: "crew-dana",
-              checkpoint: "after_dive_1",
-              status: "not_boarded",
-              // Capture time is audit only; the explicit observed basis below establishes correction.
-              occurredAt: "2026-08-01T14:30:00.000Z",
-              syncStatus: "pending",
-            },
-          ],
-        },
+      searchParams = new URLSearchParams({ trip: VERIFIED_TRIP_ID, checkpoint: "after_dive_1" });
+      const saved = verifiedRollCallFixture(
+        richEnvelope(
+          "trip-1",
+          { crewCalled: true },
+          {
+            events: [
+              {
+                clientEventId: "10000000-0000-4000-8000-000000000003",
+                snapshotId: "snap-trip-1",
+                snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+                tripId: "trip-1",
+                crewPersonId: "crew-dana",
+                checkpoint: "after_dive_1",
+                status: "not_boarded",
+                // Capture time is audit only; the explicit observed basis below establishes correction.
+                occurredAt: "2026-08-01T14:30:00.000Z",
+                syncStatus: "pending",
+              },
+            ],
+          },
+        ),
       );
       const prior = identifySavedRollCall(
         saved.snapshot,
@@ -598,7 +616,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       expect(confirm.closest("details[data-roll-call-exception]")).not.toBeNull();
       fireEvent.click(confirm);
       await waitFor(() =>
-        expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
+        expect(appendOfflineRollCall).toHaveBeenCalledWith(VERIFIED_TRIP_ID, {
           ...renderedTapFields(saved, ["client:10000000-0000-4000-8000-000000000003"], 0),
           crewPersonId: "crew-dana",
           checkpoint: "after_dive_1",
@@ -612,26 +630,28 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     // dive, so nobody reaches for "Mark not back aboard" to tidy the count and
     // reports a missing diver who is in the car park.
     it("carries an offline dock not-boarded forward instead of reading awaiting", async () => {
-      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      searchParams = new URLSearchParams({ trip: VERIFIED_TRIP_ID, checkpoint: "after_dive_1" });
       vi.mocked(loadOfflineManifest).mockResolvedValue(
-        richEnvelope(
-          "trip-1",
-          {},
-          {
-            events: [
-              {
-                clientEventId: "evt-dock",
-                snapshotId: "snap-trip-1",
-                snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
-                tripId: "trip-1",
-                bookingId: "diver-priya",
-                checkpoint: "departure",
-                status: "not_boarded",
-                occurredAt: new Date(FROZEN_MS).toISOString(),
-                syncStatus: "pending",
-              },
-            ],
-          },
+        verifiedRollCallFixture(
+          richEnvelope(
+            "trip-1",
+            {},
+            {
+              events: [
+                {
+                  clientEventId: "evt-dock",
+                  snapshotId: "snap-trip-1",
+                  snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+                  tripId: "trip-1",
+                  bookingId: "diver-priya",
+                  checkpoint: "departure",
+                  status: "not_boarded",
+                  occurredAt: new Date(FROZEN_MS).toISOString(),
+                  syncStatus: "pending",
+                },
+              ],
+            },
+          ),
         ),
       );
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);

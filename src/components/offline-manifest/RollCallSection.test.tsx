@@ -15,6 +15,8 @@ import {
   identityResponse,
   richEnvelope,
   setOnline,
+  VERIFIED_TRIP_ID,
+  verifiedRollCallFixture,
 } from "./view-fixtures";
 
 let searchParams = new URLSearchParams();
@@ -39,6 +41,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   appendOfflineArrival: vi.fn(),
   appendOfflineRollCall: vi.fn(),
   listOfflineManifests: vi.fn().mockResolvedValue([]),
+  readOfflineManifestInventory: vi.fn().mockResolvedValue({ manifests: [], incomplete: false }),
   subscribeOfflineManifestChanges: vi.fn(() => () => {}),
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
@@ -117,26 +120,28 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     ["not_boarded", "ashore"],
   ] as const) {
     it(`draws a blocked diver recorded ${status} at the dock as ${drawn}, with no tap`, async () => {
-      searchParams = new URLSearchParams({ trip: "trip-1" });
+      searchParams = new URLSearchParams({ trip: VERIFIED_TRIP_ID });
       vi.mocked(loadOfflineManifest).mockResolvedValue(
-        richEnvelope(
-          "trip-1",
-          { readiness: "blocked" },
-          {
-            events: [
-              {
-                clientEventId: `evt-${status}`,
-                snapshotId: "snap-trip-1",
-                snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
-                tripId: "trip-1",
-                bookingId: "diver-priya",
-                checkpoint: "departure",
-                status,
-                occurredAt: new Date(FROZEN_MS).toISOString(),
-                syncStatus: "pending",
-              },
-            ],
-          },
+        verifiedRollCallFixture(
+          richEnvelope(
+            "trip-1",
+            { readiness: "blocked" },
+            {
+              events: [
+                {
+                  clientEventId: `evt-${status}`,
+                  snapshotId: "snap-trip-1",
+                  snapshotSavedAt: new Date(FROZEN_MS).toISOString(),
+                  tripId: "trip-1",
+                  bookingId: "diver-priya",
+                  checkpoint: "departure",
+                  status,
+                  occurredAt: new Date(FROZEN_MS).toISOString(),
+                  syncStatus: "pending",
+                },
+              ],
+            },
+          ),
         ),
       );
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
@@ -448,7 +453,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     ["not_boarded", true],
   ] as const) {
     it(`inks a blocked diver boarded at the dock and recorded ${afterDive} after dive 1 ${red ? "as the alarm" : "plainly"}`, async () => {
-      searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+      searchParams = new URLSearchParams({ trip: VERIFIED_TRIP_ID, checkpoint: "after_dive_1" });
       const event = (
         checkpoint: "departure" | "after_dive_1",
         status: "boarded" | "not_boarded",
@@ -464,10 +469,12 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         syncStatus: "pending" as const,
       });
       vi.mocked(loadOfflineManifest).mockResolvedValue(
-        richEnvelope(
-          "trip-1",
-          { readiness: "blocked" },
-          { events: [event("departure", "boarded"), event("after_dive_1", afterDive)] },
+        verifiedRollCallFixture(
+          richEnvelope(
+            "trip-1",
+            { readiness: "blocked" },
+            { events: [event("departure", "boarded"), event("after_dive_1", afterDive)] },
+          ),
         ),
       );
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
@@ -521,8 +528,10 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
    * after a dive.
    */
   it("says a diver is running late on the dock row, until they are boarded", async () => {
-    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
-    const saved = richEnvelope("trip-1", { runningLateAt: "2026-08-01T11:42:00.000Z" });
+    searchParams = new URLSearchParams({ trip: VERIFIED_TRIP_ID, checkpoint: "departure" });
+    const saved = verifiedRollCallFixture(
+      richEnvelope("trip-1", { runningLateAt: "2026-08-01T11:42:00.000Z" }),
+    );
     vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
@@ -538,7 +547,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(line?.textContent).not.toMatch(/^Boarded/);
     cleanup();
 
-    const boarded: OfflineManifestEnvelope = {
+    const boarded: OfflineManifestEnvelope = verifiedRollCallFixture({
       ...saved,
       events: [
         {
@@ -553,7 +562,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
           syncStatus: "pending",
         },
       ],
-    };
+    });
     vi.mocked(loadOfflineManifest).mockResolvedValue(boarded);
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });

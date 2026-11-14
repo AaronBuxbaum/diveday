@@ -60,6 +60,8 @@ export type DetailsSectionContext = {
   endWall: WallTime;
   /** How many days this departure meets on — its `trip_schedule_days` count. */
   dayCount: number;
+  meetingIds?: string[];
+  meetingVersion?: string;
   /** One date per later day when the days are not consecutive; empty otherwise. */
   laterDates: string[];
   /** Each later day's own hours as stored (#2558), one pair per later day. */
@@ -277,6 +279,8 @@ export function DetailsSection({
     startWall,
     endWall,
     dayCount,
+    meetingIds,
+    meetingVersion,
     laterDates,
     laterHours,
     locale,
@@ -404,6 +408,8 @@ export function DetailsSection({
             minDays={MIN_TRIP_DAYS}
             maxDays={MAX_TRIP_DAYS}
             defaultCount={dayCount}
+            defaultMeetingIds={meetingIds}
+            defaultMeetingVersion={meetingVersion}
             defaultLaterDates={laterDates}
             defaultLaterHours={laterHours}
           />

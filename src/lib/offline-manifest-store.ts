@@ -1,6 +1,5 @@
 "use client";
 import { nowDate } from "./clock";
-import { log } from "./log";
 import {
   canRecordOfflineArrival,
   canRecordOfflineChecklistCheck,
@@ -28,13 +27,24 @@ import {
   pendingOfflineEventCount,
   withMedicalAlertWords,
 } from "./offline-manifests";
-import { ROLL_CALL_CAUSAL_HEADERS } from "./roll-call-protocol";
+import { validRecoveryEnvelope } from "./offline-recovery-envelope";
+import { type PostedOfflineEvents, receiptStillNamesCurrentEvents } from "./offline-sync-receipt";
+import { clientRollCallEvidenceId } from "./roll-call-causality";
+import {
+  OFFLINE_UNRESOLVED_HEADER,
+  OFFLINE_UNRESOLVED_VERSION,
+  ROLL_CALL_CAUSAL_HEADERS,
+} from "./roll-call-protocol";
 
 const DB_NAME = "diveday-offline-manifests";
-const DB_VERSION = 1;
+// Version 2 keeps the same stores and ciphertext. Older shells opening version
+// 1 cannot write once the conditional-write protocol is active.
+const DB_VERSION = 2;
 const KEY_STORE = "keys";
 const MANIFEST_STORE = "manifests";
+const UNREADABLE_PRESERVATION_PREFIX = "unreadable-preservation-v1:";
 const KEY_ID = "manifest-aes-gcm-v1";
+const KEY_EPOCH_KEY = "manifest-aes-gcm-identity-v1";
 const TENANT_ROUND_KEY = "tenant-verification-round-v1";
 const MANIFEST_CHANGE_EVENT = "diveday-offline-manifest-change";
 const MANIFEST_CHANGE_CHANNEL = "diveday-offline-manifest-changes-v1";
@@ -259,9 +269,83 @@ type StoredRecord = {
   ciphertext: ArrayBuffer;
 };
 
+type InventoryFence = {
+  generation: number;
+  records: StoredRecord[];
+  preservationKeys: IDBValidKey[];
+};
+
+function sameInventoryRecords(expected: StoredRecord[], actual: unknown[]): boolean {
+  if (expected.length !== actual.length || !actual.every(strictStoredRecoveryRecord)) return false;
+  return expected.every((row, index) => sameStoredRecord(row, actual[index] as StoredRecord));
+}
+
+function samePreservationKeys(expected: IDBValidKey[], actual: IDBValidKey[]): boolean {
+  const keys = actual.filter(isPreservationKey);
+  return expected.length === keys.length && expected.every((key, index) => key === keys[index]);
+}
+
+type ManifestVersion = {
+  generation: number;
+  tenantRound: number;
+  record: StoredRecord | undefined;
+};
+const loadedManifestVersions = new WeakMap<OfflineManifestEnvelope, ManifestVersion>();
+const generationKey = (tripId: string) => `manifest-generation-v2:${tripId}`;
+const INVENTORY_GENERATION_KEY = "manifest-inventory-generation-v2";
+
+function storedGeneration(value: unknown): number {
+  if (value === undefined) return 0;
+  if (
+    typeof value !== "number" ||
+    !Number.isSafeInteger(value) ||
+    value < 0 ||
+    value >= Number.MAX_SAFE_INTEGER
+  )
+    throw new OfflineManifestError("unavailable");
+  return value;
+}
+
+/** Must be called inside the same read/write transaction as the record mutation. */
+function advanceInventoryGeneration(keys: IDBObjectStore): void {
+  keys.get(INVENTORY_GENERATION_KEY).onsuccess = (event) => {
+    try {
+      const current = storedGeneration((event.target as IDBRequest<unknown>).result);
+      if (current >= Number.MAX_SAFE_INTEGER - 1) throw new Error("inventory generation exhausted");
+      keys.put(current + 1, INVENTORY_GENERATION_KEY);
+    } catch {
+      keys.transaction.abort();
+    }
+  };
+}
+
+function sameBytes(a: ArrayBuffer, b: ArrayBuffer): boolean {
+  const left = new Uint8Array(a);
+  const right = new Uint8Array(b);
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function sameStoredRecord(a: StoredRecord | undefined, b: StoredRecord | undefined): boolean {
+  if (!a || !b) return a === b;
+  return (
+    a.tripId === b.tripId &&
+    a.expiresAt === b.expiresAt &&
+    a.shopSlug === b.shopSlug &&
+    a.pendingEvents === b.pendingEvents &&
+    sameBytes(a.iv, b.iv) &&
+    sameBytes(a.ciphertext, b.ciphertext)
+  );
+}
+
+function loadedVersion(envelope: OfflineManifestEnvelope): ManifestVersion {
+  const version = loadedManifestVersions.get(envelope);
+  if (!version) throw new OfflineManifestError("unavailable");
+  return version;
+}
+
 export type OfflineSyncResult = {
   clientEventId: string;
-  status: "applied" | "duplicate" | "rejected";
+  status: "applied" | "duplicate" | "rejected" | "unresolved";
   storedOccurredAt?: string;
   reason?: string;
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
@@ -289,6 +373,7 @@ export type OfflineManifestErrorCode =
   | "unavailable"
   | "expired"
   | "not_allowed"
+  | "write_conflict"
   | "shop_changed"
   | "sync_unreachable";
 
@@ -320,13 +405,35 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 
 async function openDatabase(): Promise<IDBDatabase> {
   const request = indexedDB.open(DB_NAME, DB_VERSION);
-  request.onupgradeneeded = () => {
-    const db = request.result;
-    if (!db.objectStoreNames.contains(KEY_STORE)) db.createObjectStore(KEY_STORE);
-    if (!db.objectStoreNames.contains(MANIFEST_STORE))
-      db.createObjectStore(MANIFEST_STORE, { keyPath: "tripId" });
-  };
-  return requestResult(request);
+  return new Promise((resolve, reject) => {
+    let cancelled = false;
+    request.onblocked = () => {
+      cancelled = true;
+      reject(new OfflineManifestError("unavailable"));
+    };
+    request.onupgradeneeded = () => {
+      if (cancelled) {
+        request.transaction?.abort();
+        return;
+      }
+      const db = request.result;
+      if (!db.objectStoreNames.contains(KEY_STORE)) db.createObjectStore(KEY_STORE);
+      if (!db.objectStoreNames.contains(MANIFEST_STORE))
+        db.createObjectStore(MANIFEST_STORE, { keyPath: "tripId" });
+    };
+    request.onerror = () => {
+      if (!cancelled) reject(request.error ?? new Error("IndexedDB open failed"));
+    };
+    request.onsuccess = () => {
+      const db = request.result;
+      if (cancelled) {
+        db.close();
+        return;
+      }
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
+  });
 }
 
 /**
@@ -404,20 +511,82 @@ function withKeyLock<T>(fn: () => Promise<T>): Promise<T> {
 
 async function encryptionKey(db: IDBDatabase): Promise<CryptoKey> {
   return withKeyLock(async () => {
-    const read = db.transaction(KEY_STORE, "readonly");
-    const existing = await requestResult(read.objectStore(KEY_STORE).get(KEY_ID));
-    await transactionDone(read);
+    // Existing keys from older stores acquire an identity in the same
+    // transaction that reads them. Supported key writers update it whenever
+    // they install a new key; recovery compares it at its own commit.
+    const read = db.transaction(KEY_STORE, "readwrite");
+    const readDone = transactionDone(read);
+    const readStore = read.objectStore(KEY_STORE);
+    let existing: unknown;
+    let identity: unknown;
+    let ready = 0;
+    const identify = () => {
+      if (++ready !== 2) return;
+      if (existing instanceof CryptoKey && identity === undefined)
+        readStore.put(crypto.randomUUID(), KEY_EPOCH_KEY);
+      else if (existing instanceof CryptoKey && (typeof identity !== "string" || !identity))
+        read.abort();
+    };
+    readStore.get(KEY_ID).onsuccess = (event) => {
+      existing = (event.target as IDBRequest<unknown>).result;
+      identify();
+    };
+    readStore.get(KEY_EPOCH_KEY).onsuccess = (event) => {
+      identity = (event.target as IDBRequest<unknown>).result;
+      identify();
+    };
+    await readDone;
     if (existing instanceof CryptoKey) return existing;
 
     const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
       "encrypt",
       "decrypt",
     ]);
-    const write = db.transaction(KEY_STORE, "readwrite");
-    write.objectStore(KEY_STORE).put(key, KEY_ID);
-    await transactionDone(write);
-    return key;
+    // Installing a replacement key while any old ciphertext exists would make
+    // later recovery ambiguous and could strand the only queued evidence.
+    // Serialize the empty-store check with both key and manifest writers.
+    const write = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+    const done = transactionDone(write);
+    const store = write.objectStore(KEY_STORE);
+    let selected: CryptoKey | undefined;
+    let keyReady = false;
+    let countReady = false;
+    let archiveKeysReady = false;
+    let archiveKeys: IDBValidKey[] = [];
+    let winner: unknown;
+    let count = 0;
+    const choose = () => {
+      if (!keyReady || !countReady || !archiveKeysReady) return;
+      if (winner instanceof CryptoKey) selected = winner;
+      else if (winner === undefined && count === 0 && !archiveKeys.some(isPreservationKey)) {
+        store.put(key, KEY_ID);
+        store.put(crypto.randomUUID(), KEY_EPOCH_KEY);
+        selected = key;
+      } else write.abort();
+    };
+    store.get(KEY_ID).onsuccess = (event) => {
+      winner = (event.target as IDBRequest<unknown>).result;
+      keyReady = true;
+      choose();
+    };
+    write.objectStore(MANIFEST_STORE).count().onsuccess = (event) => {
+      count = (event.target as IDBRequest<number>).result;
+      countReady = true;
+      choose();
+    };
+    store.getAllKeys().onsuccess = (event) => {
+      archiveKeys = (event.target as IDBRequest<IDBValidKey[]>).result;
+      archiveKeysReady = true;
+      choose();
+    };
+    await done;
+    if (!selected) throw new Error("Offline encryption key unavailable");
+    return selected;
   });
+}
+
+function isPreservationKey(key: IDBValidKey): boolean {
+  return typeof key === "string" && key.startsWith(UNREADABLE_PRESERVATION_PREFIX);
 }
 
 function additionalData(tripId: string): ArrayBuffer {
@@ -438,11 +607,70 @@ function nextTenantRound(previous: unknown): number | null {
   return previous + 1;
 }
 
+/** Compare non-extractable keys while the readwrite transaction excludes other writers. */
+function verifyTransactionKey(
+  store: IDBObjectStore,
+  candidate: CryptoKey,
+  dataIv: ArrayBuffer,
+  finish: (matches: boolean) => void,
+): void {
+  const read = store.get(KEY_ID);
+  read.onsuccess = () => {
+    const current: unknown = read.result;
+    if (!(current instanceof CryptoKey)) {
+      finish(false);
+      return;
+    }
+    try {
+      const proofIv = new Uint8Array(dataIv.slice(0));
+      proofIv[0] ^= 0x80; // The proof never reuses this write's encryption nonce.
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      let verdict: boolean | undefined;
+      const deadline = performance.now() + 2_000;
+      crypto.subtle
+        .encrypt({ name: "AES-GCM", iv: proofIv }, candidate, challenge)
+        .then((proof) => crypto.subtle.decrypt({ name: "AES-GCM", iv: proofIv }, current, proof))
+        .then(
+          (plaintext) => {
+            verdict = sameBytes(challenge.buffer as ArrayBuffer, plaintext);
+          },
+          () => {
+            verdict = false;
+          },
+        )
+        .catch(() => {
+          verdict = false;
+        });
+      // IndexedDB transactions become inactive between tasks. Keep one request
+      // outstanding while WebCrypto runs, and make the decision in its callback.
+      const poll = () => {
+        const request = store.get(KEY_ID);
+        request.onsuccess = () => {
+          if (verdict !== undefined || performance.now() >= deadline) {
+            finish(verdict === true && performance.now() < deadline);
+            return;
+          }
+          try {
+            poll();
+          } catch {
+            finish(false);
+          }
+        };
+      };
+      poll();
+    } catch {
+      finish(false);
+    }
+  };
+}
+
 async function persistEnvelope(
   db: IDBDatabase,
   envelope: OfflineManifestEnvelope,
+  expected: ManifestVersion,
   tenantRound?: number,
   changeReason: OfflineManifestChangeReason = "unknown",
+  expectedInventory?: InventoryFence,
 ): Promise<boolean> {
   const tripId = envelope.snapshot.manifests[0]?.trip.id;
   if (!tripId) throw new Error("Manifest snapshot has no trip");
@@ -456,26 +684,127 @@ async function persistEnvelope(
   const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
   const done = transactionDone(transaction);
   let persisted = false;
+  let conflicted = false;
+  let invalidGeneration = false;
+  let recordReady = false;
+  let generationReady = false;
+  let roundReady = false;
+  let inventoryReady = false;
+  let recordsReady = !expectedInventory;
+  let preservationKeysReady = !expectedInventory;
+  let keyReady = false;
+  let keyMatches = false;
+  let record: StoredRecord | undefined;
+  let generation: unknown;
+  let currentRound: unknown;
+  let inventoryGeneration: unknown;
+  let inventoryRecords: unknown[] = [];
+  let preservationKeys: IDBValidKey[] = [];
+  let committedRecord: StoredRecord | undefined;
+  const keys = transaction.objectStore(KEY_STORE);
   const manifestStore = transaction.objectStore(MANIFEST_STORE);
-  const write = () => {
-    manifestStore.put({
+  const maybeWrite = () => {
+    if (
+      !recordReady ||
+      !generationReady ||
+      !roundReady ||
+      !inventoryReady ||
+      !recordsReady ||
+      !preservationKeysReady ||
+      !keyReady
+    )
+      return;
+    if (!keyMatches) {
+      conflicted = true;
+      return;
+    }
+    const currentTenantRound = currentRound === undefined ? 0 : currentRound;
+    if (tenantRound !== undefined && currentTenantRound !== tenantRound) return;
+    if (currentTenantRound !== expected.tenantRound) {
+      conflicted = true;
+      return;
+    }
+    let token: number;
+    try {
+      token = storedGeneration(generation);
+      if (
+        expectedInventory !== undefined &&
+        (storedGeneration(inventoryGeneration) !== expectedInventory.generation ||
+          !sameInventoryRecords(expectedInventory.records, inventoryRecords) ||
+          !samePreservationKeys(expectedInventory.preservationKeys, preservationKeys))
+      ) {
+        conflicted = true;
+        return;
+      }
+    } catch {
+      invalidGeneration = true;
+      return;
+    }
+    if (token !== expected.generation || !sameStoredRecord(record, expected.record)) {
+      conflicted = true;
+      return;
+    }
+    const newRecord = {
       tripId,
       expiresAt: envelope.snapshot.expiresAt,
       shopSlug: envelope.snapshot.shop.slug,
       pendingEvents: pendingOfflineEventCount(envelope),
       iv,
       ciphertext,
-    } satisfies StoredRecord);
+    } satisfies StoredRecord;
+    manifestStore.put(newRecord);
+    committedRecord = newRecord;
+    keys.put(token + 1, generationKey(tripId));
+    advanceInventoryGeneration(keys);
     persisted = true;
   };
-  if (tenantRound === undefined) {
-    write();
-  } else {
-    transaction.objectStore(KEY_STORE).get(TENANT_ROUND_KEY).onsuccess = (event) => {
-      if ((event.target as IDBRequest<unknown>).result === tenantRound) write();
+  manifestStore.get(tripId).onsuccess = (event) => {
+    record = (event.target as IDBRequest<StoredRecord | undefined>).result;
+    recordReady = true;
+    maybeWrite();
+  };
+  keys.get(generationKey(tripId)).onsuccess = (event) => {
+    generation = (event.target as IDBRequest<unknown>).result;
+    generationReady = true;
+    maybeWrite();
+  };
+  keys.get(TENANT_ROUND_KEY).onsuccess = (event) => {
+    currentRound = (event.target as IDBRequest<unknown>).result;
+    roundReady = true;
+    maybeWrite();
+  };
+  keys.get(INVENTORY_GENERATION_KEY).onsuccess = (event) => {
+    inventoryGeneration = (event.target as IDBRequest<unknown>).result;
+    inventoryReady = true;
+    maybeWrite();
+  };
+  verifyTransactionKey(keys, key, iv, (matches) => {
+    keyMatches = matches;
+    keyReady = true;
+    maybeWrite();
+  });
+  if (expectedInventory) {
+    manifestStore.getAll().onsuccess = (event) => {
+      inventoryRecords = (event.target as IDBRequest<unknown[]>).result;
+      recordsReady = true;
+      maybeWrite();
+    };
+    keys.getAllKeys().onsuccess = (event) => {
+      preservationKeys = (event.target as IDBRequest<IDBValidKey[]>).result;
+      preservationKeysReady = true;
+      maybeWrite();
     };
   }
   await done;
+  if (persisted && committedRecord && expectedInventory) {
+    const committed = committedRecord;
+    expectedInventory.records = expectedInventory.records.map((row) =>
+      row.tripId === tripId ? committed : row,
+    );
+    expectedInventory.generation += 1;
+  }
+  if (invalidGeneration) throw new OfflineManifestError("unavailable");
+  if (conflicted) throw new OfflineManifestError("write_conflict");
   if (persisted) announceManifestChange(tripId, changeReason);
   return persisted;
 }
@@ -511,16 +840,19 @@ export async function beginOfflineTenantVerificationRound(): Promise<number> {
   }
 }
 
-async function readStoredRecord(
-  db: IDBDatabase,
-  tripId: string,
-): Promise<StoredRecord | undefined> {
-  const transaction = db.transaction(MANIFEST_STORE, "readonly");
-  const record = (await requestResult(transaction.objectStore(MANIFEST_STORE).get(tripId))) as
-    | StoredRecord
-    | undefined;
-  await transactionDone(transaction);
-  return record;
+async function readStoredRecord(db: IDBDatabase, tripId: string): Promise<ManifestVersion> {
+  const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readonly");
+  const done = transactionDone(transaction);
+  const record = requestResult(transaction.objectStore(MANIFEST_STORE).get(tripId));
+  const generation = requestResult(transaction.objectStore(KEY_STORE).get(generationKey(tripId)));
+  const tenantRound = requestResult(transaction.objectStore(KEY_STORE).get(TENANT_ROUND_KEY));
+  const [stored, token, round] = await Promise.all([record, generation, tenantRound]);
+  await done;
+  return {
+    record: stored as StoredRecord | undefined,
+    generation: storedGeneration(token),
+    tenantRound: storedGeneration(round),
+  };
 }
 
 /**
@@ -539,17 +871,6 @@ function withManifestLock<T>(tripId: string, fn: () => Promise<T>): Promise<T> {
   return navigator.locks.request(`diveday-offline-manifest:${tripId}`, fn);
 }
 
-/**
- * Serializes the read-modify-write on the discard notice, which several trips'
- * reads can hit at once (`listOfflineManifests` loads every record in parallel,
- * and each one can discard). Its own lock name, never taken while holding it —
- * `withManifestLock` → this, never the reverse — so the pair cannot deadlock.
- */
-function withNoticeLock<T>(fn: () => Promise<T>): Promise<T> {
-  if (typeof navigator === "undefined" || !navigator.locks) return fn();
-  return navigator.locks.request("diveday-offline-manifest-discards", fn);
-}
-
 async function readNotices(db: IDBDatabase): Promise<DiscardedOfflineRecord[]> {
   const transaction = db.transaction(KEY_STORE, "readonly");
   const stored = await requestResult(transaction.objectStore(KEY_STORE).get(DISCARD_NOTICE_KEY));
@@ -557,27 +878,18 @@ async function readNotices(db: IDBDatabase): Promise<DiscardedOfflineRecord[]> {
   return Array.isArray(stored) ? (stored as DiscardedOfflineRecord[]) : [];
 }
 
-/**
- * Appends the loss so a screen can report it later. **Never a throw path**: the
- * caller is mid-delete on a record that must go regardless (see
- * {@link OFFLINE_MANIFEST_PENDING_GRACE_MS}), and failing here would either
- * abort a retention deletion to preserve a footnote about it, or — worse —
- * delete the record and then propagate an error to a caller that treats it as
- * "storage is broken". Losing the notice is bad; keeping a foreign shop's
- * roster because the notice could not be written is the finding.
- */
-async function noteDiscardedRecord(
+/** Delete only the examined record, atomically recording any pending loss. */
+async function deleteExpiredRecord(
   db: IDBDatabase,
+  tripId: string,
+  expected: ManifestVersion,
   envelope: OfflineManifestEnvelope,
   pendingEvents: number,
-): Promise<void> {
+): Promise<boolean> {
   const trip = envelope.snapshot.manifests[0]?.trip;
-  try {
-    await withNoticeLock(async () => {
-      const existing = await readNotices(db);
-      const next = [
-        ...existing,
-        {
+  const notice: DiscardedOfflineRecord | null =
+    pendingEvents > 0
+      ? {
           noticeId: crypto.randomUUID(),
           tripId: trip?.id ?? "",
           tripTitle: trip?.title ?? "",
@@ -585,21 +897,59 @@ async function noteDiscardedRecord(
           shopSlug: envelope.snapshot.shop.slug,
           pendingEvents,
           discardedAt: nowDate().toISOString(),
-        } satisfies DiscardedOfflineRecord,
-      ].slice(-DISCARD_NOTICE_LIMIT);
-      const transaction = db.transaction(KEY_STORE, "readwrite");
-      transaction.objectStore(KEY_STORE).put(next, DISCARD_NOTICE_KEY);
-      await transactionDone(transaction);
-    });
-  } catch (error) {
-    // Deliberately not rethrown — see the docblock above: the deletion must
-    // win over its own footnote. But leave a trace, or a device that can
-    // never write the notice looks identical to one with nothing to say.
-    log("offline_manifest.discard_notice_failed", "error", {
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-    return;
-  }
+        }
+      : null;
+  const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+  const done = transactionDone(transaction);
+  const keys = transaction.objectStore(KEY_STORE);
+  const manifests = transaction.objectStore(MANIFEST_STORE);
+  let recordReady = false,
+    generationReady = false,
+    noticesReady = !notice;
+  let record: StoredRecord | undefined, generation: unknown, notices: unknown;
+  let deleted = false;
+  const maybeDelete = () => {
+    if (!recordReady || !generationReady || !noticesReady) return;
+    let token: number;
+    try {
+      token = storedGeneration(generation);
+    } catch {
+      transaction.abort();
+      return;
+    }
+    if (token !== expected.generation || !sameStoredRecord(record, expected.record)) return;
+    if (notice) {
+      if (notices !== undefined && !Array.isArray(notices)) {
+        transaction.abort();
+        return;
+      }
+      const previous = Array.isArray(notices) ? (notices as DiscardedOfflineRecord[]) : [];
+      keys.put([...previous, notice].slice(-DISCARD_NOTICE_LIMIT), DISCARD_NOTICE_KEY);
+    }
+    keys.put(token + 1, generationKey(tripId));
+    advanceInventoryGeneration(keys);
+    manifests.delete(tripId);
+    deleted = true;
+  };
+  manifests.get(tripId).onsuccess = (event) => {
+    record = (event.target as IDBRequest<StoredRecord | undefined>).result;
+    recordReady = true;
+    maybeDelete();
+  };
+  keys.get(generationKey(tripId)).onsuccess = (event) => {
+    generation = (event.target as IDBRequest<unknown>).result;
+    generationReady = true;
+    maybeDelete();
+  };
+  if (notice)
+    keys.get(DISCARD_NOTICE_KEY).onsuccess = (event) => {
+      notices = (event.target as IDBRequest<unknown>).result;
+      noticesReady = true;
+      maybeDelete();
+    };
+  await done;
+  if (deleted) announceManifestChange(tripId, "delete");
+  return deleted;
 }
 
 /**
@@ -632,17 +982,23 @@ export async function acknowledgeDiscardedOfflineRecords(
 ): Promise<void> {
   const db = await openDatabase();
   try {
-    await withNoticeLock(async () => {
-      const acknowledgedIds = new Set(acknowledged.map(({ noticeId }) => noticeId));
-      const remaining = (await readNotices(db)).filter(
-        (notice) => !acknowledgedIds.has(notice.noticeId),
+    const acknowledgedIds = new Set(acknowledged.map(({ noticeId }) => noticeId));
+    const transaction = db.transaction(KEY_STORE, "readwrite");
+    const done = transactionDone(transaction);
+    const notices = transaction.objectStore(KEY_STORE);
+    notices.get(DISCARD_NOTICE_KEY).onsuccess = (event) => {
+      const stored = (event.target as IDBRequest<unknown>).result;
+      if (stored !== undefined && !Array.isArray(stored)) {
+        transaction.abort();
+        return;
+      }
+      const remaining = (Array.isArray(stored) ? (stored as DiscardedOfflineRecord[]) : []).filter(
+        (notice: DiscardedOfflineRecord) => !acknowledgedIds.has(notice.noticeId),
       );
-      const transaction = db.transaction(KEY_STORE, "readwrite");
-      const notices = transaction.objectStore(KEY_STORE);
       if (remaining.length === 0) notices.delete(DISCARD_NOTICE_KEY);
       else notices.put(remaining, DISCARD_NOTICE_KEY);
-      await transactionDone(transaction);
-    });
+    };
+    await done;
   } finally {
     db.close();
   }
@@ -663,14 +1019,18 @@ function isPastPendingGrace(
   return new Date(record.expiresAt).getTime() + OFFLINE_MANIFEST_PENDING_GRACE_MS <= now.getTime();
 }
 
-export async function loadOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
+async function loadOfflineManifestState(
+  tripId: string,
+  options: { cleanupExpired?: boolean } = {},
+): Promise<{ envelope: OfflineManifestEnvelope | null; version: ManifestVersion }> {
   const db = await openDatabase();
   try {
-    const record = await readStoredRecord(db, tripId);
-    if (!record) return null;
-    const key = await encryptionKey(db);
+    const version = await readStoredRecord(db, tripId);
+    const record = version.record;
+    if (!record) return { envelope: null, version };
     let envelope: OfflineManifestEnvelope;
-    try {
+    {
+      const key = await encryptionKey(db);
       const plaintext = await crypto.subtle.decrypt(
         { name: "AES-GCM", iv: record.iv, additionalData: additionalData(tripId) },
         key,
@@ -697,14 +1057,8 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       envelope.events ??= [];
       envelope.checklistEvents ??= [];
       envelope.arrivalEvents ??= [];
-    } catch (error) {
-      // Nothing recoverable from ciphertext this key can't open — if it's
-      // also past its retention window, clean it up now rather than leaving
-      // unreadable bytes behind forever with no delete button to clear them.
-      if (isOfflineManifestExpired(record)) await deleteOfflineManifest(tripId, db);
-      throw error;
     }
-    if (isOfflineManifestExpired(record)) {
+    if (options.cleanupExpired !== false && isOfflineManifestExpired(record)) {
       // A record still holding a roll-call event that never reached the
       // server is the only copy of that evidence — keep serving it (as
       // stale) rather than silently discarding it, until every event is
@@ -729,15 +1083,27 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       // it", exactly as the ordinary retention window has always worked.
       const pendingEvents = pendingOfflineEventCount(envelope);
       if (pendingEvents === 0 || isPastPendingGrace(record)) {
-        if (pendingEvents > 0) await noteDiscardedRecord(db, envelope, pendingEvents);
-        await deleteOfflineManifest(tripId, db);
-        return null;
+        if (!(await deleteExpiredRecord(db, tripId, version, envelope, pendingEvents)))
+          throw new OfflineManifestError("unavailable");
+        return {
+          envelope: null,
+          version: {
+            generation: version.generation + 1,
+            tenantRound: version.tenantRound,
+            record: undefined,
+          },
+        };
       }
     }
-    return envelope;
+    loadedManifestVersions.set(envelope, version);
+    return { envelope, version };
   } finally {
     db.close();
   }
+}
+
+export async function loadOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
+  return (await loadOfflineManifestState(tripId)).envelope;
 }
 
 /**
@@ -758,21 +1124,61 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
  * once the board has run for more than a few days, which is the opposite of
  * what this list is for.
  */
-export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]> {
+async function readOfflineManifestInventoryOnce(): Promise<{
+  manifests: OfflineManifestEnvelope[];
+  incomplete: boolean;
+  changed: boolean;
+  preservedOnly: boolean;
+  generation: number;
+  fence: InventoryFence | null;
+}> {
   const db = await openDatabase();
   let tripIds: string[];
+  let inventoryGeneration: number;
+  let hasPreservations: boolean;
+  let records: unknown[];
+  let preservationKeys: IDBValidKey[];
   try {
-    const transaction = db.transaction(MANIFEST_STORE, "readonly");
-    tripIds = (await requestResult(
-      transaction.objectStore(MANIFEST_STORE).getAllKeys(),
-    )) as string[];
-    await transactionDone(transaction);
+    const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readonly");
+    const done = transactionDone(transaction);
+    const [ids, generation, keyIds, rows] = await Promise.all([
+      requestResult(transaction.objectStore(MANIFEST_STORE).getAllKeys()),
+      requestResult(transaction.objectStore(KEY_STORE).get(INVENTORY_GENERATION_KEY)),
+      requestResult(transaction.objectStore(KEY_STORE).getAllKeys()),
+      requestResult(transaction.objectStore(MANIFEST_STORE).getAll()),
+    ]);
+    tripIds = ids as string[];
+    inventoryGeneration = storedGeneration(generation);
+    hasPreservations = keyIds.some(isPreservationKey);
+    preservationKeys = keyIds.filter(isPreservationKey);
+    records = rows;
+    await done;
   } finally {
     db.close();
   }
-  const envelopes = await Promise.all(
-    tripIds.map((tripId) => loadOfflineManifest(tripId).catch(() => null)),
-  );
+  const reads = await Promise.allSettled(tripIds.map((tripId) => loadOfflineManifest(tripId)));
+  const checkDb = await openDatabase();
+  let changed: boolean;
+  try {
+    const transaction = checkDb.transaction([KEY_STORE, MANIFEST_STORE], "readonly");
+    const done = transactionDone(transaction);
+    const [current, currentRows, currentKeys] = await Promise.all([
+      requestResult(transaction.objectStore(KEY_STORE).get(INVENTORY_GENERATION_KEY)),
+      requestResult(transaction.objectStore(MANIFEST_STORE).getAll()),
+      requestResult(transaction.objectStore(KEY_STORE).getAllKeys()),
+    ]);
+    await done;
+    changed =
+      storedGeneration(current) !== inventoryGeneration ||
+      !records.every(strictStoredRecoveryRecord) ||
+      !sameInventoryRecords(records as StoredRecord[], currentRows) ||
+      !samePreservationKeys(preservationKeys, currentKeys);
+  } finally {
+    checkDb.close();
+  }
+  const unreadable = reads.some((read) => read.status === "rejected");
+  const incomplete = changed || hasPreservations || unreadable;
+  const envelopes = reads.flatMap((read) => (read.status === "fulfilled" ? [read.value] : []));
   const now = nowDate();
   const byStartsAt = (a: OfflineManifestEnvelope, b: OfflineManifestEnvelope) =>
     (a.snapshot.manifests[0]?.trip.startsAt ?? "").localeCompare(
@@ -781,14 +1187,50 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
   const saved = envelopes.filter(
     (envelope): envelope is OfflineManifestEnvelope => envelope !== null,
   );
+  const recordsValid = records.every(strictStoredRecoveryRecord);
+  const matchingReads =
+    recordsValid &&
+    saved.length === records.length &&
+    saved.every((item) => {
+      const version = loadedVersion(item);
+      return records.some((row) => sameStoredRecord(row as StoredRecord, version.record));
+    });
   const isPast = (envelope: OfflineManifestEnvelope) => {
     const endsAt = envelope.snapshot.manifests[0]?.trip.endsAt;
     return !!endsAt && new Date(endsAt) < now;
   };
-  return [
-    ...saved.filter((envelope) => !isPast(envelope)).sort(byStartsAt),
-    ...saved.filter(isPast).sort(byStartsAt),
-  ];
+  return {
+    manifests: [
+      ...saved.filter((envelope) => !isPast(envelope)).sort(byStartsAt),
+      ...saved.filter(isPast).sort(byStartsAt),
+    ],
+    incomplete: incomplete || !matchingReads,
+    changed,
+    preservedOnly: hasPreservations && !changed && !unreadable && matchingReads,
+    generation: inventoryGeneration,
+    fence: matchingReads
+      ? { generation: inventoryGeneration, records: records as StoredRecord[], preservationKeys }
+      : null,
+  };
+}
+
+/** Retry once after a changing read, including expiry cleanup. */
+export async function readOfflineManifestInventory(): Promise<{
+  manifests: OfflineManifestEnvelope[];
+  incomplete: boolean;
+  preservedOnly: boolean;
+  generation: number;
+  fence: InventoryFence | null;
+}> {
+  const first = await readOfflineManifestInventoryOnce();
+  return first.changed ? readOfflineManifestInventoryOnce() : first;
+}
+
+/** Callers needing a complete inventory must never mistake an unreadable row for an empty queue. */
+export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]> {
+  const inventory = await readOfflineManifestInventory();
+  if (inventory.incomplete) throw new OfflineManifestError("unavailable");
+  return inventory.manifests;
 }
 
 /**
@@ -925,11 +1367,13 @@ async function deletePurgeCandidate(
     const manifestStore = transaction.objectStore(MANIFEST_STORE);
     let roundReady = false;
     let recordReady = false;
+    let generationReady = false;
     let latestRound: unknown;
+    let generation: unknown;
     let record: StoredRecord | undefined;
     let deleted = false;
     const maybeDelete = () => {
-      if (!roundReady || !recordReady || (isCurrent && !isCurrent())) return;
+      if (!roundReady || !recordReady || !generationReady || (isCurrent && !isCurrent())) return;
       if (latestRound !== tenantRound || !record) return;
       if (typeof record.shopSlug !== "string" || record.shopSlug.length === 0) return;
       if (record.shopSlug === currentShopSlug) return;
@@ -940,7 +1384,16 @@ async function deletePurgeCandidate(
         record.pendingEvents > 0
       )
         return;
+      let token: number;
+      try {
+        token = storedGeneration(generation);
+      } catch {
+        transaction.abort();
+        return;
+      }
       manifestStore.delete(tripId);
+      keyStore.put(token + 1, generationKey(tripId));
+      advanceInventoryGeneration(keyStore);
       deleted = true;
     };
     keyStore.get(TENANT_ROUND_KEY).onsuccess = (event) => {
@@ -951,6 +1404,11 @@ async function deletePurgeCandidate(
     manifestStore.get(tripId).onsuccess = (event) => {
       record = (event.target as IDBRequest<StoredRecord | undefined>).result;
       recordReady = true;
+      maybeDelete();
+    };
+    keyStore.get(generationKey(tripId)).onsuccess = (event) => {
+      generation = (event.target as IDBRequest<unknown>).result;
+      generationReady = true;
       maybeDelete();
     };
     await done;
@@ -973,17 +1431,30 @@ export async function saveOfflineManifest(
     keepMedicalAlertWords?: boolean;
     /** Shared tenant-verification round allocated before the payload request. */
     tenantRound?: number;
+    /** Internal sync fence: the posted events must still name this envelope. */
+    receiptGuard?: { posted: PostedOfflineEvents; disposed: ReadonlyMap<string, string> };
+    /** Guard a preserved-only inventory decision through the replacement transaction. */
+    expectedInventory?: InventoryFence;
   } = {},
 ): Promise<OfflineManifestEnvelope> {
   const keepMedicalAlertWords = options.keepMedicalAlertWords ?? true;
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
   return withManifestLock(trip.id, async () => {
-    // A corrupt or undecryptable existing record (storage corruption, a stale
-    // key, a version/AAD mismatch) must not abort the save — there's no delete
-    // button anymore, so failing here would brick this device's offline copy
-    // for good instead of just losing that record's own queued events.
-    const existing = await loadOfflineManifest(trip.id).catch(() => null);
+    // An unreadable record may hold the only queued evidence. Never replace
+    // it merely because decryption or shape validation failed.
+    const state = await loadOfflineManifestState(trip.id);
+    const existing = state.envelope;
+    if (
+      options.receiptGuard &&
+      (!existing ||
+        !receiptStillNamesCurrentEvents(
+          existing,
+          options.receiptGuard.posted,
+          options.receiptGuard.disposed,
+        ))
+    )
+      throw new OfflineManifestError("sync_unreachable");
     const savedAt = nowDate();
     // Snapshot tokens carry a server-authenticated epoch. This local comparison
     // only removes retained text from this device; every sync writer still
@@ -1000,6 +1471,7 @@ export async function saveOfflineManifest(
         (currentClaims.epoch === previousClaims.epoch &&
           currentClaims.revision <= previousClaims.revision))
     ) {
+      if (options.expectedInventory !== undefined) throw new OfflineManifestError("write_conflict");
       // An older in-flight render must not replace a post-erasure copy and put
       // erased names back on this device, or mark old facts fresh. A revoked
       // medical-alert grant still takes effect when the roster payload is stale.
@@ -1014,7 +1486,13 @@ export async function saveOfflineManifest(
       };
       const db = await openDatabase();
       try {
-        const persisted = await persistEnvelope(db, revoked, options.tenantRound, "snapshot");
+        const persisted = await persistEnvelope(
+          db,
+          revoked,
+          state.version,
+          options.tenantRound,
+          "snapshot",
+        );
         if (!persisted && options.tenantRound !== undefined)
           throw new OfflineManifestError("shop_changed");
       } finally {
@@ -1055,7 +1533,11 @@ export async function saveOfflineManifest(
       // checklist note is nobody's own data and stays (issue #3569).
       events:
         refresh === "unverified"
-          ? clearSavedNotes(existing?.events ?? [], "discarded_unverified_snapshot")
+          ? clearSavedNotes(
+              existing?.events ?? [],
+              "discarded_unverified_snapshot",
+              (event) => event.syncStatus !== "pending",
+            )
           : refresh === "erasure"
             ? clearSavedNotes(
                 existing?.events ?? [],
@@ -1065,7 +1547,11 @@ export async function saveOfflineManifest(
             : (existing?.events ?? []),
       checklistEvents:
         refresh === "unverified"
-          ? clearSavedNotes(existing?.checklistEvents ?? [], "discarded_unverified_snapshot")
+          ? clearSavedNotes(
+              existing?.checklistEvents ?? [],
+              "discarded_unverified_snapshot",
+              (event) => event.syncStatus !== "pending",
+            )
           : (existing?.checklistEvents ?? []),
       arrivalEvents: existing?.arrivalEvents ?? [],
       ...(carriesWords && existing?.medicalAlertsSavedBy
@@ -1074,7 +1560,14 @@ export async function saveOfflineManifest(
     };
     const db = await openDatabase();
     try {
-      const persisted = await persistEnvelope(db, envelope, options.tenantRound, "snapshot");
+      const persisted = await persistEnvelope(
+        db,
+        envelope,
+        state.version,
+        options.tenantRound,
+        "snapshot",
+        options.expectedInventory,
+      );
       if (!persisted && options.tenantRound !== undefined)
         throw new OfflineManifestError("shop_changed");
     } finally {
@@ -1098,7 +1591,7 @@ export async function saveOfflineMedicalAlerts(
   tenantRound?: number,
 ): Promise<OfflineManifestEnvelope | null> {
   return withManifestLock(tripId, async () => {
-    const existing = await loadOfflineManifest(tripId).catch(() => null);
+    const existing = await loadOfflineManifest(tripId);
     if (!existing) return null;
     const manifests = withMedicalAlertWords(existing.snapshot.manifests, texts);
     const carriesWords = Object.keys(medicalAlertWordsOf(manifests)).length > 0;
@@ -1110,13 +1603,466 @@ export async function saveOfflineMedicalAlerts(
     };
     const db = await openDatabase();
     try {
-      const persisted = await persistEnvelope(db, envelope, tenantRound, "medical-alerts");
+      const persisted = await persistEnvelope(
+        db,
+        envelope,
+        loadedVersion(existing),
+        tenantRound,
+        "medical-alerts",
+      );
       if (!persisted && tenantRound !== undefined) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
     }
     return envelope;
   });
+}
+
+type PreservedOfflineRecord = {
+  record: StoredRecord;
+  observedKey: CryptoKey | null;
+  aad: ArrayBuffer;
+  keyId: string;
+  revision: number;
+};
+
+function strictStoredRecoveryRecord(value: unknown): value is StoredRecord {
+  if (!value || typeof value !== "object") return false;
+  const row = value as StoredRecord;
+  const allowed = new Set(["tripId", "expiresAt", "shopSlug", "pendingEvents", "iv", "ciphertext"]);
+  return (
+    Object.keys(value).every((key) => allowed.has(key)) &&
+    typeof row.tripId === "string" &&
+    typeof row.expiresAt === "string" &&
+    (row.shopSlug === undefined || typeof row.shopSlug === "string") &&
+    (row.pendingEvents === undefined ||
+      (Number.isSafeInteger(row.pendingEvents) && row.pendingEvents >= 0)) &&
+    Object.prototype.toString.call(row.iv) === "[object ArrayBuffer]" &&
+    Object.prototype.toString.call(row.ciphertext) === "[object ArrayBuffer]"
+  );
+}
+
+function strictPreservedRecoveryRecord(
+  value: unknown,
+): value is PreservedOfflineRecord & { version: number; observedKey: CryptoKey } {
+  if (!value || typeof value !== "object") return false;
+  const archive = value as PreservedOfflineRecord & { version?: number };
+  const allowed = new Set(["record", "observedKey", "aad", "version", "keyId", "revision"]);
+  return (
+    Object.keys(value).every((key) => allowed.has(key)) &&
+    archive.version === OFFLINE_MANIFEST_RECORD_VERSION &&
+    typeof archive.keyId === "string" &&
+    archive.keyId.length > 0 &&
+    Number.isSafeInteger(archive.revision) &&
+    archive.revision >= 0 &&
+    archive.observedKey instanceof CryptoKey &&
+    Object.prototype.toString.call(archive.aad) === "[object ArrayBuffer]" &&
+    strictStoredRecoveryRecord(archive.record)
+  );
+}
+
+/** A point-in-time live authorization check; no cached slug authorizes recovery. */
+async function recoveryAuthority(): Promise<{
+  body: unknown;
+  round: number;
+  deadline: number;
+} | null> {
+  if (!navigator.onLine) return null;
+  const round = await beginOfflineTenantVerificationRound();
+  const deadline = performance.now() + 10_000;
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const request = (async () => {
+    const response = await fetch("/api/offline-manifests/upcoming", {
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: controller.signal,
+      headers: ROLL_CALL_CAUSAL_HEADERS,
+    });
+    if (!response.ok || response.redirected) return null;
+    return response.json() as Promise<unknown>;
+  })();
+  try {
+    const body = await Promise.race([
+      request,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new Error("recovery authorization timeout"));
+        }, 10_000);
+      }),
+    ]);
+    return performance.now() < deadline &&
+      offlineManifestShopSlug(body) &&
+      offlineManifestViewerPersonId(body)
+      ? { body, round, deadline }
+      : null;
+  } catch {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+    request.catch(() => undefined);
+  }
+}
+
+/** Retire only an authenticated, byte-identical copy; no event is merged or settled. */
+export async function recoverExactPreservedDuplicates(): Promise<number> {
+  // Disabled until the version-3 shell and rollback cutover is verified.
+  if (DB_VERSION < 3) return 0;
+  const db = await openDatabase();
+  try {
+    const index = db.transaction(KEY_STORE, "readonly");
+    const indexDone = transactionDone(index);
+    const ids = (await requestResult(index.objectStore(KEY_STORE).getAllKeys())).filter(
+      isPreservationKey,
+    );
+    await indexDone;
+    if (!ids.length) return 0;
+    const authority = await recoveryAuthority();
+    if (!authority) return 0;
+    const shop = offlineManifestShopSlug(authority.body);
+    if (!shop) return 0;
+    let recovered = 0;
+    for (const id of ids) {
+      try {
+        if (
+          await recoverExactPreservedDuplicate(
+            db,
+            id,
+            shop,
+            authority.body,
+            authority.round,
+            authority.deadline,
+          )
+        )
+          recovered += 1;
+      } catch {
+        // A malformed, changed, or inaccessible copy remains preserved.
+      }
+    }
+    return recovered;
+  } finally {
+    db.close();
+  }
+}
+
+async function recoverExactPreservedDuplicate(
+  db: IDBDatabase,
+  id: IDBValidKey,
+  shop: string,
+  body: unknown,
+  round: number,
+  deadline: number,
+): Promise<boolean> {
+  await encryptionKey(db);
+  const read = db.transaction(KEY_STORE, "readonly");
+  const readDone = transactionDone(read);
+  const keys = read.objectStore(KEY_STORE);
+  const [value, activeKey, savedRound, keyIdentity] = await Promise.all([
+    requestResult(keys.get(id)),
+    requestResult(keys.get(KEY_ID)),
+    requestResult(keys.get(TENANT_ROUND_KEY)),
+    requestResult(keys.get(KEY_EPOCH_KEY)),
+  ]);
+  await readDone;
+  if (
+    !strictPreservedRecoveryRecord(value) ||
+    !(activeKey instanceof CryptoKey) ||
+    typeof keyIdentity !== "string" ||
+    !keyIdentity ||
+    storedGeneration(savedRound) !== round
+  )
+    return false;
+  const archive = value;
+  const tripId = archive.record.tripId;
+  if (
+    !offlineManifestPayloads(body).some(
+      (item) =>
+        item?.shop?.slug === shop &&
+        Array.isArray(item.manifests) &&
+        item.manifests.some((manifest) => manifest?.trip?.id === tripId),
+    )
+  )
+    return false;
+  if (!sameBytes(archive.aad, additionalData(tripId)) || isOfflineManifestExpired(archive.record))
+    return false;
+  const active = await readStoredRecord(db, tripId);
+  if (
+    active.tenantRound !== round ||
+    !strictStoredRecoveryRecord(active.record) ||
+    !sameStoredRecord(active.record, archive.record)
+  )
+    return false;
+  const [archivedPlaintext, activePlaintext] = await Promise.all([
+    crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: archive.record.iv, additionalData: archive.aad },
+      archive.observedKey,
+      archive.record.ciphertext,
+    ),
+    crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: active.record.iv, additionalData: additionalData(tripId) },
+      activeKey,
+      active.record.ciphertext,
+    ),
+  ]);
+  if (!sameBytes(archivedPlaintext, activePlaintext)) return false;
+  const envelope: unknown = JSON.parse(new TextDecoder().decode(activePlaintext));
+  if (!validRecoveryEnvelope(envelope, shop, tripId)) return false;
+  const copy = envelope as OfflineManifestEnvelope;
+  if (
+    copy.snapshot.expiresAt !== active.record.expiresAt ||
+    (active.record.shopSlug !== undefined && active.record.shopSlug !== shop) ||
+    (active.record.pendingEvents !== undefined &&
+      active.record.pendingEvents !== pendingOfflineEventCount(copy))
+  )
+    return false;
+  return deleteExactPreservedDuplicate(db, id, archive, active, round, keyIdentity, deadline);
+}
+
+async function deleteExactPreservedDuplicate(
+  db: IDBDatabase,
+  id: IDBValidKey,
+  archive: PreservedOfflineRecord,
+  active: ManifestVersion,
+  round: number,
+  keyIdentity: string,
+  deadline: number,
+): Promise<boolean> {
+  const tx = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+  const done = transactionDone(tx);
+  const keys = tx.objectStore(KEY_STORE);
+  let latestArchive: PreservedOfflineRecord | undefined;
+  let latestRecord: StoredRecord | undefined;
+  let latestGeneration: unknown;
+  let latestRound: unknown;
+  let currentKey: unknown;
+  let currentKeyIdentity: unknown;
+  let ready = 0;
+  let deleted = false;
+  const commit = () => {
+    if (++ready !== 6) return;
+    try {
+      if (
+        performance.now() >= deadline ||
+        !strictPreservedRecoveryRecord(latestArchive) ||
+        !(currentKey instanceof CryptoKey) ||
+        currentKeyIdentity !== keyIdentity ||
+        storedGeneration(latestRound) !== round ||
+        storedGeneration(latestGeneration) !== active.generation ||
+        !strictStoredRecoveryRecord(latestRecord) ||
+        isOfflineManifestExpired(latestRecord) ||
+        !sameStoredRecord(latestRecord, active.record) ||
+        !strictStoredRecoveryRecord(latestArchive.record) ||
+        !sameStoredRecord(latestArchive.record, archive.record) ||
+        latestArchive.keyId !== archive.keyId ||
+        latestArchive.revision !== archive.revision ||
+        !sameBytes(latestArchive.aad, archive.aad)
+      )
+        return;
+      keys.delete(id);
+      advanceInventoryGeneration(keys);
+      deleted = true;
+    } catch {
+      tx.abort();
+    }
+  };
+  keys.get(id).onsuccess = (event) => {
+    latestArchive = (event.target as IDBRequest<PreservedOfflineRecord | undefined>).result;
+    commit();
+  };
+  tx.objectStore(MANIFEST_STORE).get(archive.record.tripId).onsuccess = (event) => {
+    latestRecord = (event.target as IDBRequest<StoredRecord | undefined>).result;
+    commit();
+  };
+  keys.get(generationKey(archive.record.tripId)).onsuccess = (event) => {
+    latestGeneration = (event.target as IDBRequest<unknown>).result;
+    commit();
+  };
+  keys.get(TENANT_ROUND_KEY).onsuccess = (event) => {
+    latestRound = (event.target as IDBRequest<unknown>).result;
+    commit();
+  };
+  keys.get(KEY_ID).onsuccess = (event) => {
+    currentKey = (event.target as IDBRequest<unknown>).result;
+    commit();
+  };
+  keys.get(KEY_EPOCH_KEY).onsuccess = (event) => {
+    currentKeyIdentity = (event.target as IDBRequest<unknown>).result;
+    commit();
+  };
+  await done;
+  if (deleted) announceManifestChange(archive.record.tripId, "unknown");
+  return deleted;
+}
+
+/** Bind an old-format candidate to an identity before any read-modify-write. */
+async function identifyLegacyPreservedRecord(
+  db: IDBDatabase,
+  id: IDBValidKey,
+  expectedRound: number,
+): Promise<PreservedOfflineRecord | undefined> {
+  const transaction = db.transaction(KEY_STORE, "readwrite");
+  const done = transactionDone(transaction);
+  const keys = transaction.objectStore(KEY_STORE);
+  let current: PreservedOfflineRecord | undefined;
+  let round: unknown;
+  let ready = 0;
+  let identified: PreservedOfflineRecord | undefined;
+  const commit = () => {
+    if (++ready !== 2) return;
+    try {
+      if (!current || storedGeneration(round) !== expectedRound) return;
+      if (
+        typeof current.keyId === "string" &&
+        current.keyId &&
+        Number.isSafeInteger(current.revision) &&
+        current.revision >= 0
+      ) {
+        identified = current;
+        return;
+      }
+      if (current.keyId !== undefined || current.revision !== undefined) return;
+      identified = { ...current, keyId: crypto.randomUUID(), revision: 0 };
+      keys.put(identified, id);
+      advanceInventoryGeneration(keys);
+    } catch {
+      transaction.abort();
+    }
+  };
+  keys.get(id).onsuccess = (event) => {
+    current = (event.target as IDBRequest<PreservedOfflineRecord | undefined>).result;
+    commit();
+  };
+  keys.get(TENANT_ROUND_KEY).onsuccess = (event) => {
+    round = (event.target as IDBRequest<unknown>).result;
+    commit();
+  };
+  await done;
+  return identified;
+}
+
+/** Redact readable preserved copies without deleting or acknowledging their queues. */
+async function wipePreservedMedicalAlerts(
+  keepSavedBy?: string,
+  tenantRound?: number,
+): Promise<void> {
+  const db = await openDatabase();
+  try {
+    const initial = db.transaction(KEY_STORE, "readonly");
+    const initialDone = transactionDone(initial);
+    const ids = await requestResult(initial.objectStore(KEY_STORE).getAllKeys());
+    await initialDone;
+    entry: for (const id of ids.filter(isPreservationKey)) {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const read = db.transaction(KEY_STORE, "readonly");
+        const readDone = transactionDone(read);
+        const store = read.objectStore(KEY_STORE);
+        const [candidate, capturedRound] = await Promise.all([
+          requestResult(store.get(id)),
+          requestResult(store.get(TENANT_ROUND_KEY)),
+        ]);
+        await readDone;
+        let archive = candidate as PreservedOfflineRecord | undefined;
+        const round = storedGeneration(capturedRound);
+        if (tenantRound !== undefined && tenantRound !== round) continue entry;
+        if (archive && archive.keyId === undefined && archive.revision === undefined)
+          archive = await identifyLegacyPreservedRecord(db, id, round);
+        const isBuffer = (value: unknown) =>
+          Object.prototype.toString.call(value) === "[object ArrayBuffer]";
+        if (
+          !archive ||
+          typeof archive.keyId !== "string" ||
+          !archive.keyId ||
+          !Number.isSafeInteger(archive.revision) ||
+          archive.revision < 0 ||
+          !(archive.observedKey instanceof CryptoKey) ||
+          !isBuffer(archive.aad) ||
+          !archive.record ||
+          !isBuffer(archive.record.iv) ||
+          !isBuffer(archive.record.ciphertext)
+        )
+          continue entry;
+        let envelope: OfflineManifestEnvelope;
+        try {
+          const plaintext = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: archive.record.iv, additionalData: archive.aad },
+            archive.observedKey,
+            archive.record.ciphertext,
+          );
+          envelope = JSON.parse(new TextDecoder().decode(plaintext)) as OfflineManifestEnvelope;
+          if (!Array.isArray(envelope?.snapshot?.manifests)) continue entry;
+        } catch {
+          // An unknown copy stays intact and keeps the inventory incomplete.
+          continue entry;
+        }
+        if (keepSavedBy && envelope.medicalAlertsSavedBy?.personId === keepSavedBy) continue entry;
+        if (
+          !envelope.medicalAlertsSavedBy &&
+          Object.keys(medicalAlertWordsOf(envelope.snapshot.manifests)).length === 0
+        )
+          continue entry;
+        const { medicalAlertsSavedBy: _savedBy, ...rest } = envelope;
+        const redacted = {
+          ...rest,
+          snapshot: {
+            ...envelope.snapshot,
+            manifests: withMedicalAlertWords(envelope.snapshot.manifests, {}),
+          },
+        };
+        const iv = crypto.getRandomValues(new Uint8Array(12)).buffer as ArrayBuffer;
+        const ciphertext = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv, additionalData: archive.aad },
+          archive.observedKey,
+          new TextEncoder().encode(JSON.stringify(redacted)),
+        );
+        const write = db.transaction(KEY_STORE, "readwrite");
+        const done = transactionDone(write);
+        const keys = write.objectStore(KEY_STORE);
+        let current: PreservedOfflineRecord | undefined;
+        let currentRound: unknown;
+        let ready = 0;
+        let conflict = false;
+        const commit = () => {
+          if (++ready !== 2) return;
+          try {
+            if (!current || storedGeneration(currentRound) !== round) return;
+            if (
+              current.revision !== archive.revision ||
+              current.keyId !== archive.keyId ||
+              !sameStoredRecord(current.record, archive.record) ||
+              !sameBytes(current.aad, archive.aad)
+            ) {
+              conflict = true;
+              return;
+            }
+            keys.put(
+              {
+                ...current,
+                record: { ...current.record, iv, ciphertext },
+                revision: current.revision + 1,
+              },
+              id,
+            );
+            advanceInventoryGeneration(keys);
+          } catch {
+            write.abort();
+          }
+        };
+        keys.get(id).onsuccess = (event) => {
+          current = (event.target as IDBRequest<PreservedOfflineRecord | undefined>).result;
+          commit();
+        };
+        keys.get(TENANT_ROUND_KEY).onsuccess = (event) => {
+          currentRound = (event.target as IDBRequest<unknown>).result;
+          commit();
+        };
+        await done;
+        if (!conflict) continue entry;
+      }
+    }
+  } finally {
+    db.close();
+  }
 }
 
 /**
@@ -1131,7 +2077,21 @@ export async function wipeOfflineMedicalAlerts(
   keepSavedBy?: string,
   tenantRound?: number,
 ): Promise<void> {
-  const saved = await listOfflineManifests();
+  await wipeMedicalAlerts(keepSavedBy, tenantRound);
+}
+
+async function wipeMedicalAlerts(
+  keepSavedBy?: string,
+  tenantRound?: number,
+  allowPreservedFor?: { tripId: string; shopSlug: string },
+): Promise<InventoryFence | undefined> {
+  // Start both paths independently: a blocked or failed preserved-copy write
+  // must not prevent readable manifest copies being wiped on sign-out.
+  const preserved = wipePreservedMedicalAlerts(keepSavedBy, tenantRound).then(
+    () => null,
+    (error: unknown) => error,
+  );
+  const { manifests: saved, incomplete, preservedOnly } = await readOfflineManifestInventory();
   await Promise.all(
     saved
       .filter(
@@ -1143,30 +2103,72 @@ export async function wipeOfflineMedicalAlerts(
         const tripId = envelope.snapshot.manifests[0]?.trip.id;
         if (!tripId) return Promise.resolve();
         return withManifestLock(tripId, async () => {
-          const current = await loadOfflineManifest(tripId).catch(() => null);
-          if (!current?.medicalAlertsSavedBy) return;
-          if (keepSavedBy && current.medicalAlertsSavedBy.personId === keepSavedBy) return;
-          const { medicalAlertsSavedBy: _wiped, ...rest } = current;
-          const db = await openDatabase();
-          try {
-            await persistEnvelope(
-              db,
-              {
-                ...rest,
-                snapshot: {
-                  ...current.snapshot,
-                  manifests: withMedicalAlertWords(current.snapshot.manifests, {}),
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            const current = await loadOfflineManifest(tripId);
+            if (!current?.medicalAlertsSavedBy) return;
+            if (keepSavedBy && current.medicalAlertsSavedBy.personId === keepSavedBy) return;
+            const { medicalAlertsSavedBy: _wiped, ...rest } = current;
+            const db = await openDatabase();
+            try {
+              const persisted = await persistEnvelope(
+                db,
+                {
+                  ...rest,
+                  snapshot: {
+                    ...current.snapshot,
+                    manifests: withMedicalAlertWords(current.snapshot.manifests, {}),
+                  },
                 },
-              },
-              tenantRound,
-              "medical-alerts",
-            );
-          } finally {
-            db.close();
+                loadedVersion(current),
+                tenantRound,
+                "medical-alerts",
+              );
+              if (!persisted) throw new OfflineManifestError("shop_changed");
+              return;
+            } catch (error) {
+              if (
+                !(error instanceof OfflineManifestError) ||
+                error.code !== "write_conflict" ||
+                attempt === 2
+              )
+                throw error;
+            } finally {
+              db.close();
+            }
           }
         });
       }),
   );
+  if (
+    allowPreservedFor &&
+    preservedOnly &&
+    saved.some(
+      (envelope) =>
+        envelope.snapshot.shop.slug === allowPreservedFor.shopSlug &&
+        envelope.snapshot.manifests[0]?.trip.id === allowPreservedFor.tripId,
+    )
+  ) {
+    const checked = await readOfflineManifestInventory();
+    if (
+      !checked.preservedOnly ||
+      !checked.fence ||
+      !checked.manifests.some(
+        (envelope) =>
+          envelope.snapshot.shop.slug === allowPreservedFor.shopSlug &&
+          envelope.snapshot.manifests[0]?.trip.id === allowPreservedFor.tripId,
+      ) ||
+      checked.manifests.some(
+        (envelope) =>
+          envelope.medicalAlertsSavedBy &&
+          (!keepSavedBy || envelope.medicalAlertsSavedBy.personId !== keepSavedBy),
+      )
+    )
+      throw new OfflineManifestError("unavailable");
+    return checked.fence;
+  }
+  const preservedFailure = await preserved;
+  if (preservedFailure) throw preservedFailure;
+  if (incomplete) throw new OfflineManifestError("unavailable");
 }
 
 export async function deleteOfflineManifest(
@@ -1174,6 +2176,16 @@ export async function deleteOfflineManifest(
   existingDb?: IDBDatabase,
   isCurrent?: () => boolean,
 ): Promise<boolean> {
+  if (isCurrent && !isCurrent()) return false;
+  // Plaintext pendingEvents is only a hint. An unreadable ciphertext may
+  // contain the sole copy of safety evidence even when that hint says zero.
+  let examined: Awaited<ReturnType<typeof loadOfflineManifestState>>;
+  try {
+    examined = await loadOfflineManifestState(tripId, { cleanupExpired: false });
+  } catch {
+    return false;
+  }
+  if (examined.envelope && pendingOfflineEventCount(examined.envelope) > 0) return false;
   const ownsDb = existingDb === undefined;
   const db = existingDb ?? (await openDatabase());
   try {
@@ -1181,11 +2193,56 @@ export async function deleteOfflineManifest(
     // reread. Recheck at the last synchronous point before queuing the delete
     // request so a newer tenant round cannot be crossed by that await.
     if (isCurrent && !isCurrent()) return false;
-    const transaction = db.transaction(MANIFEST_STORE, "readwrite");
-    transaction.objectStore(MANIFEST_STORE).delete(tripId);
+    const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+    const manifests = transaction.objectStore(MANIFEST_STORE);
+    const keys = transaction.objectStore(KEY_STORE);
+    let recordReady = false;
+    let generationReady = false;
+    let roundReady = false;
+    let record: StoredRecord | undefined;
+    let generation: unknown;
+    let round: unknown;
+    let deleted = false;
+    const maybeDelete = () => {
+      if (!recordReady || !generationReady || !roundReady || (isCurrent && !isCurrent())) return;
+      // Missing or invalid metadata cannot establish that no evidence is queued.
+      if (record && record.pendingEvents !== 0) return;
+      let token: number;
+      try {
+        token = storedGeneration(generation);
+        if (
+          token !== examined.version.generation ||
+          storedGeneration(round) !== examined.version.tenantRound ||
+          !sameStoredRecord(record, examined.version.record)
+        )
+          return;
+      } catch {
+        transaction.abort();
+        return;
+      }
+      if (record) manifests.delete(tripId);
+      keys.put(token + 1, generationKey(tripId));
+      advanceInventoryGeneration(keys);
+      deleted = !!record;
+    };
+    manifests.get(tripId).onsuccess = (event) => {
+      record = (event.target as IDBRequest<StoredRecord | undefined>).result;
+      recordReady = true;
+      maybeDelete();
+    };
+    keys.get(generationKey(tripId)).onsuccess = (event) => {
+      generation = (event.target as IDBRequest<unknown>).result;
+      generationReady = true;
+      maybeDelete();
+    };
+    keys.get(TENANT_ROUND_KEY).onsuccess = (event) => {
+      round = (event.target as IDBRequest<unknown>).result;
+      roundReady = true;
+      maybeDelete();
+    };
     await transactionDone(transaction);
-    announceManifestChange(tripId, "delete");
-    return true;
+    if (deleted) announceManifestChange(tripId, "delete");
+    return deleted;
   } finally {
     if (ownsDb) db.close();
   }
@@ -1220,6 +2277,7 @@ export async function appendOfflineRollCall(
     | "observedEvidenceIds"
     | "reconcilesEvidence"
     | "meetingDay"
+    | "meetingIdentityProof"
   > &
     Partial<Pick<OfflineRollCallEvent, "snapshotId" | "snapshotSavedAt" | "erasureEpochToken">>,
 ): Promise<OfflineManifestEnvelope> {
@@ -1269,7 +2327,7 @@ export async function appendOfflineRollCall(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope, undefined, "record");
+      await persistEnvelope(db, envelope, loadedVersion(envelope), undefined, "record");
     } finally {
       db.close();
     }
@@ -1311,7 +2369,7 @@ export async function appendOfflineChecklistCheck(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope, undefined, "record");
+      await persistEnvelope(db, envelope, loadedVersion(envelope), undefined, "record");
     } finally {
       db.close();
     }
@@ -1343,7 +2401,7 @@ export async function appendOfflineArrival(
     if (isOfflineManifestExpired(envelope.snapshot)) {
       throw new OfflineManifestError("expired");
     }
-    if (!canRecordOfflineArrival(envelope.snapshot, input.bookingId)) {
+    if (!canRecordOfflineArrival(envelope.snapshot, input.bookingId, input.status)) {
       throw new OfflineManifestError("not_allowed");
     }
     envelope.arrivalEvents = offlineArrivalEvents(envelope);
@@ -1358,7 +2416,7 @@ export async function appendOfflineArrival(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope, undefined, "record");
+      await persistEnvelope(db, envelope, loadedVersion(envelope), undefined, "record");
     } finally {
       db.close();
     }
@@ -1374,6 +2432,50 @@ export async function appendOfflineArrival(
  * Ten seconds is long enough for a cold database and a full boat's batch.
  */
 export const SYNC_TIMEOUT_MS = 10_000;
+
+/** Do not merge a receipt that can name a different or missing queued event. */
+function completeOfflineSyncReceipt(
+  posted: readonly { clientEventId: string }[],
+  body: unknown,
+): body is OfflineSyncResponse {
+  const ids = posted.map((event) => event.clientEventId.toLowerCase());
+  const expected = new Set(ids);
+  const original = new Map(
+    posted.map((event) => [event.clientEventId.toLowerCase(), event.clientEventId]),
+  );
+  if (expected.size !== ids.length || !body || typeof body !== "object") return false;
+  const results = (body as { results?: unknown }).results;
+  if (!Array.isArray(results) || results.length !== expected.size) return false;
+  const seen = new Set<string>();
+  for (const result of results) {
+    if (!result || typeof result !== "object" || typeof result.clientEventId !== "string")
+      return false;
+    const id = result.clientEventId.toLowerCase();
+    if (
+      !expected.has(id) ||
+      original.get(id) !== result.clientEventId ||
+      seen.has(id) ||
+      !["applied", "duplicate", "rejected", "unresolved"].includes(result.status)
+    )
+      return false;
+    if (
+      result.status === "unresolved" &&
+      !["meeting_identity_unverified", "unresolved_predecessor", "client_event_conflict"].includes(
+        result.reason,
+      )
+    )
+      return false;
+    if (
+      result.noteDisposition !== undefined &&
+      !["discarded_erasure_cutoff", "discarded_unverified_snapshot"].includes(
+        result.noteDisposition,
+      )
+    )
+      return false;
+    seen.add(id);
+  }
+  return true;
+}
 
 /**
  * The one round trip, under a deadline that covers the reply's body as well
@@ -1396,8 +2498,12 @@ async function postPendingEvents(batch: {
   events: OfflineRollCallEvent[];
   checklistEvents: OfflineChecklistEvent[];
   arrivalEvents: OfflineArrivalEvent[];
+  refusedEvidenceIds: string[];
   refreshTripId: string;
 }): Promise<OfflineSyncResponse> {
+  const posted = [...batch.events, ...batch.checklistEvents, ...batch.arrivalEvents];
+  if (new Set(posted.map((event) => event.clientEventId.toLowerCase())).size !== posted.length)
+    throw new OfflineManifestError("sync_unreachable");
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
@@ -1409,7 +2515,11 @@ async function postPendingEvents(batch: {
   const roundTrip = (async () => {
     const response = await fetch("/api/offline-manifests/sync", {
       method: "POST",
-      headers: { ...ROLL_CALL_CAUSAL_HEADERS, "content-type": "application/json" },
+      headers: {
+        ...ROLL_CALL_CAUSAL_HEADERS,
+        [OFFLINE_UNRESOLVED_HEADER]: OFFLINE_UNRESOLVED_VERSION,
+        "content-type": "application/json",
+      },
       body: JSON.stringify({ ...batch, includeStoredInstants: true, includeCausalSnapshots: true }),
       signal: controller.signal,
     });
@@ -1420,7 +2530,20 @@ async function postPendingEvents(batch: {
       }
       throw new OfflineManifestError("sync_unreachable");
     }
-    return (await response.json()) as OfflineSyncResponse;
+    const body: unknown = await response.json();
+    if (!completeOfflineSyncReceipt(posted, body))
+      throw new OfflineManifestError("sync_unreachable");
+    const rollIds = new Set(batch.events.map((event) => event.clientEventId));
+    const arrivalIds = new Set(batch.arrivalEvents.map((event) => event.clientEventId));
+    if (
+      body.results.some(
+        (result) =>
+          (result.status === "unresolved" && !rollIds.has(result.clientEventId)) ||
+          (result.noteDisposition && arrivalIds.has(result.clientEventId)),
+      )
+    )
+      throw new OfflineManifestError("sync_unreachable");
+    return body;
   })();
   try {
     // Raced as well as aborted: a fetch (or a body stream) that ignores its
@@ -1436,36 +2559,62 @@ async function postPendingEvents(batch: {
 }
 
 /** Privacy disposal is independent of accepting a new causal snapshot. */
-async function discardSyncReceiptNotes(
+async function persistSyncReceiptWarnings(
   tripId: string,
   shopSlug: string,
   tenantRound: number,
-  postedIds: ReadonlySet<string>,
+  posted: PostedOfflineEvents,
   results: OfflineSyncResult[],
 ) {
+  const postedIds = new Set(
+    [...posted.events, ...posted.checklistEvents, ...posted.arrivalEvents].map(
+      (event) => event.clientEventId,
+    ),
+  );
   const discarded = new Map(
     results
       .filter(
         (result) =>
           postedIds.has(result.clientEventId) &&
           (result.noteDisposition === "discarded_erasure_cutoff" ||
-            result.noteDisposition === "discarded_unverified_snapshot"),
+            (result.status !== "unresolved" &&
+              result.noteDisposition === "discarded_unverified_snapshot")),
       )
       .map((result) => [result.clientEventId, result.noteDisposition]),
   );
-  if (!discarded.size) return;
+  const unresolved = new Map(
+    results
+      .filter(
+        (result) =>
+          postedIds.has(result.clientEventId) &&
+          result.status === "unresolved" &&
+          (result.reason === "meeting_identity_unverified" ||
+            result.reason === "unresolved_predecessor" ||
+            result.reason === "client_event_conflict"),
+      )
+      .map((result) => [result.clientEventId, result.reason]),
+  );
+  if (!discarded.size && !unresolved.size) return;
   await withManifestLock(tripId, async () => {
     const current = await loadOfflineManifest(tripId);
     if (!current || current.snapshot.shop.slug !== shopSlug) return;
+    if (!receiptStillNamesCurrentEvents(current, posted))
+      throw new OfflineManifestError("sync_unreachable");
     const clear = <T extends OfflineRollCallEvent | OfflineChecklistEvent>(event: T): T => {
       const disposition = discarded.get(event.clientEventId);
       return disposition ? { ...event, note: null, noteDisposition: disposition } : event;
     };
-    current.events = current.events.map(clear);
+    current.events = current.events.map((event) => {
+      const cleared = clear(event);
+      const reason = unresolved.get(event.clientEventId);
+      return reason && event.syncStatus === "pending"
+        ? { ...cleared, unresolvedReason: reason }
+        : cleared;
+    });
     current.checklistEvents = current.checklistEvents.map(clear);
     const db = await openDatabase();
     try {
-      if (!(await persistEnvelope(db, current, tenantRound, "sync")))
+      if (!(await persistEnvelope(db, current, loadedVersion(current), tenantRound, "sync")))
         throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
@@ -1488,23 +2637,44 @@ export async function syncOfflineManifest(
   const pendingArrivals = offlineArrivalEvents(envelope).filter(
     (event) => event.syncStatus === "pending",
   );
+  const refused = new Set(
+    envelope.events
+      .filter((event) => event.syncStatus === "rejected")
+      .map((event) => clientRollCallEvidenceId(event.clientEventId)),
+  );
+  const refusedEvidenceIds = [
+    ...new Set(
+      pending
+        .flatMap((event) => [
+          ...(event.observedEvidenceIds ?? []),
+          ...(event.retractsClientEventId
+            ? [clientRollCallEvidenceId(event.retractsClientEventId)]
+            : []),
+        ])
+        .filter((id) => refused.has(id)),
+    ),
+  ];
   if ((!options.refreshWhenQuiet && pendingOfflineEventCount(envelope) === 0) || !navigator.onLine)
     return envelope;
   const tenantRound = requestTenantRound ?? (await beginOfflineTenantVerificationRound());
+  const posted = {
+    events: pending,
+    checklistEvents: pendingChecklist,
+    arrivalEvents: pendingArrivals,
+  };
   const body = await postPendingEvents({
     ...(expectedShopSlug ? { expectedShopSlug } : {}),
     events: pending,
     checklistEvents: pendingChecklist,
     arrivalEvents: pendingArrivals,
+    refusedEvidenceIds,
     refreshTripId: tripId,
   });
-  await discardSyncReceiptNotes(
+  await persistSyncReceiptWarnings(
     tripId,
     envelope.snapshot.shop.slug,
     tenantRound,
-    new Set(
-      [...pending, ...pendingChecklist, ...pendingArrivals].map((event) => event.clientEventId),
-    ),
+    posted,
     body.results,
   );
   const refreshed = body.refreshedManifests;
@@ -1532,17 +2702,28 @@ export async function syncOfflineManifest(
   }
   // Never settle success against an old frontier. Saving uses the existing
   // locked merge and erasure/medical-viewer gates, preserving concurrent taps.
-  await wipeOfflineMedicalAlerts(
+  const inventoryFence = await wipeMedicalAlerts(
     offlineManifestViewerPersonId(refreshed) ?? undefined,
     tenantRound,
+    { tripId, shopSlug: envelope.snapshot.shop.slug },
+  );
+  const disposed = new Map(
+    body.results
+      .filter(
+        (result) =>
+          result.noteDisposition === "discarded_erasure_cutoff" ||
+          (result.status !== "unresolved" && result.noteDisposition),
+      )
+      .map((result) => [result.clientEventId, result.noteDisposition as string]),
   );
   await saveOfflineManifest(payload, {
     keepMedicalAlertWords: offlineManifestMayHoldMedicalAlertWords(refreshed, tripId),
     tenantRound,
+    receiptGuard: { posted, disposed },
+    expectedInventory: inventoryFence,
   });
-  // One map for both arrays: a roll-call event id and a checklist event id are
-  // both `crypto.randomUUID()`, so they never collide, and the sync route
-  // returns one flat `results` list naming whichever kind each id belongs to.
+  // The receipt is one-to-one with the posted events; check that the current
+  // envelope still contains those same events before applying this map.
   const byId = new Map(body.results.map((result) => [result.clientEventId, result]));
   // Re-read and merge under the lock instead of writing back the envelope
   // read before the network round-trip: a concurrent appendOfflineRollCall
@@ -1551,6 +2732,8 @@ export async function syncOfflineManifest(
   return withManifestLock(tripId, async () => {
     const current = await loadOfflineManifest(tripId);
     if (!current) return null;
+    if (!receiptStillNamesCurrentEvents(current, posted, disposed))
+      throw new OfflineManifestError("sync_unreachable");
     const revision = body.snapshotRevisions?.[tripId];
     const syncedAtRevision =
       typeof revision === "number" && Number.isSafeInteger(revision) && revision >= 0
@@ -1561,8 +2744,10 @@ export async function syncOfflineManifest(
     ) => {
       const result = byId.get(event.clientEventId);
       if (!result) return event;
+      if (result.status === "unresolved") return { ...event, unresolvedReason: result.reason };
       return {
         ...event,
+        unresolvedReason: undefined,
         ...(result.noteDisposition ? { note: null } : {}),
         syncStatus: result.status === "rejected" ? "rejected" : "applied",
         rejectionReason: result.reason,
@@ -1582,7 +2767,14 @@ export async function syncOfflineManifest(
     current.arrivalEvents = offlineArrivalEvents(current).map(applyResult);
     const db = await openDatabase();
     try {
-      const persisted = await persistEnvelope(db, current, tenantRound, "sync");
+      const persisted = await persistEnvelope(
+        db,
+        current,
+        loadedVersion(current),
+        tenantRound,
+        "sync",
+        inventoryFence,
+      );
       if (!persisted) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
@@ -1679,7 +2871,7 @@ export async function selectOfflineRollCallDay(
     envelope.selectedRollCallMeetingDay = day;
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope, undefined, "record");
+      await persistEnvelope(db, envelope, loadedVersion(envelope), undefined, "record");
     } finally {
       db.close();
     }

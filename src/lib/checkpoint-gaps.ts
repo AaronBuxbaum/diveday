@@ -44,6 +44,8 @@ export type CheckpointGap =
       crew: number;
       /** Passengers and crew recorded not back aboard here. */
       missing: number;
+      /** Trip-level retained evidence without a safe person/day attribution. */
+      retainedSafetyUnresolved?: boolean;
     }
   | {
       /**
@@ -65,7 +67,7 @@ type GapCrewMember = {
   id: string;
   rollCall?: { state: "boarded" | "not_boarded"; implied?: boolean } | undefined;
 };
-type GapManifest = Pick<TripManifest, "checkpoint"> & {
+type GapManifest = Pick<TripManifest, "checkpoint" | "retainedSafetyUnresolved"> & {
   summary: Pick<TripManifest["summary"], "awaiting" | "boarded" | "notBackAboard">;
   crew: readonly GapCrewMember[];
 };
@@ -109,8 +111,15 @@ function unmarkedAt(manifest: GapManifest, counted: ReadonlySet<string>): Checkp
     (member) => member.rollCall && isNotBackAboard(manifest.checkpoint, member.rollCall),
   ).length;
   const missing = manifest.summary.notBackAboard + crewMissing;
-  return divers + crew + missing > 0
-    ? { kind: "unmarked", checkpoint: manifest.checkpoint, divers, crew, missing }
+  return divers + crew + missing > 0 || manifest.retainedSafetyUnresolved
+    ? {
+        kind: "unmarked",
+        checkpoint: manifest.checkpoint,
+        divers,
+        crew,
+        missing,
+        ...(manifest.retainedSafetyUnresolved ? { retainedSafetyUnresolved: true } : {}),
+      }
     : null;
 }
 
@@ -179,7 +188,9 @@ export function homewardCheckpointGap(manifests: readonly GapManifest[]): Checkp
     last.crew.every((member) => recordedState(member.rollCall) === undefined);
   const beforeClosed =
     before !== undefined && before.checkpoint !== "departure" && !unmarkedAt(before, counted);
-  return nobodyCounted && beforeClosed ? { kind: "not_counted", checkpoint: last.checkpoint } : gap;
+  return nobodyCounted && beforeClosed && !(gap.kind === "unmarked" && gap.retainedSafetyUnresolved)
+    ? { kind: "not_counted", checkpoint: last.checkpoint }
+    : gap;
 }
 
 /** The dive count a `not_counted` gap suggests: the dives before the uncounted one. */

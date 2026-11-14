@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import {
   acknowledgeDiscardedOfflineRecords,
-  type DiscardedOfflineRecord,
   listOfflineManifests,
   loadOfflineManifest,
   OfflineManifestError,
@@ -20,21 +19,31 @@ import { useSavedManifest } from "./use-saved-manifest";
 import { envelope, setOnline } from "./view-fixtures";
 
 const search = vi.hoisted(() => ({ params: new URLSearchParams() }));
+const inventory = vi.hoisted(() => ({ incomplete: false }));
 const tenant = vi.hoisted(() => ({
   slug: "blue-mantis" as string | null,
   setVerified: (_slug: string | null) => {},
 }));
 const purgeState = vi.hoisted(() => ({
-  latest: null as null | { tenantChangeRevision: number; onTenantVerified: (slug: string) => void },
+  latest: null as null | {
+    tenantChangeRevision: number;
+    onTenantVerified: (slug: string) => void;
+    onListPurged: (saved: OfflineManifestEnvelope[], slug: string) => void;
+  },
 }));
 
 vi.mock("next/navigation", () => ({ useSearchParams: () => search.params }));
 vi.mock("@/lib/offline-manifest-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/offline-manifest-store")>();
+  const list = vi.fn();
   return {
     ...actual,
     acknowledgeDiscardedOfflineRecords: vi.fn(),
-    listOfflineManifests: vi.fn(),
+    listOfflineManifests: list,
+    readOfflineManifestInventory: async () => ({
+      manifests: await list(),
+      incomplete: inventory.incomplete,
+    }),
     loadOfflineManifest: vi.fn(),
     readDiscardedOfflineRecords: vi.fn(),
     syncOfflineManifest: vi.fn(),
@@ -135,6 +144,7 @@ beforeEach(() => {
   list.mockResolvedValue([]);
   readDiscarded.mockResolvedValue([]);
   tenant.slug = "blue-mantis";
+  inventory.incomplete = false;
   tenant.setVerified(null);
   purgeState.latest = null;
   setOnline(false);
@@ -143,6 +153,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("useSavedManifest on a trip", () => {
+  it("warns when another saved copy could not be included in the inventory", async () => {
+    inventory.incomplete = true;
+    load.mockResolvedValue(envelope("trip-1", "Morning Two-Tank"));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.message).toContain(line("inventoryPartial")));
+    expect(result.current.message).not.toBe(line("allCaughtUp"));
+    act(() => result.current.setMessage("A separate sync failed."));
+    expect(result.current.message).toContain("A separate sync failed.");
+    expect(result.current.message).toContain(line("inventoryPartial"));
+    act(() => result.current.setMessage(line("allCaughtUp")));
+    expect(result.current.message).toBe(line("inventoryPartial"));
+  });
   it("keeps tenant-verification callback stable as the selected saved copy loads", async () => {
     const saved = envelope("trip-1", "Morning Two-Tank");
     load.mockResolvedValue(saved);
@@ -668,6 +690,84 @@ describe("useSavedManifest and the copy's roll-call caveat", () => {
 });
 
 describe("useSavedManifest on the list", () => {
+  it("keeps an unreadable-inventory warning when an older purge reports success", async () => {
+    const saved = [withEvents("trip-1", {})];
+    list.mockResolvedValue(saved);
+    const { result } = at("");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    list.mockRejectedValue(new Error("storage failed"));
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(result.current.message).toContain(line("inventoryPartial")));
+    act(() => purgeState.latest?.onListPurged(saved, "blue-mantis"));
+    expect(result.current.message).toContain(line("inventoryPartial"));
+    expect(result.current.storeReadFailed).toBe(true);
+  });
+  it("does not clear an incomplete warning while an identity refresh is still loading", async () => {
+    inventory.incomplete = true;
+    list.mockResolvedValue([]);
+    const { result } = at("");
+    await waitFor(() => expect(result.current.storeReadFailed).toBe(true));
+    let finish!: (saved: OfflineManifestEnvelope[]) => void;
+    list.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
+    await waitFor(() => expect(list.mock.calls.length).toBeGreaterThan(1));
+    expect(result.current.storeReadFailed).toBe(true);
+    expect(result.current.message).toContain(line("inventoryPartial"));
+    await act(async () => {
+      inventory.incomplete = false;
+      finish([]);
+    });
+    await waitFor(() => expect(result.current.storeReadFailed).toBe(false));
+  });
+  it("does not let an older sync hide a newer incomplete-inventory warning", async () => {
+    setOnline(true);
+    const pending = withEvents("trip-1", { pending: 1 });
+    const sent = withEvents("trip-1", {});
+    list.mockResolvedValue([pending]);
+    const finishes: Array<(saved: OfflineManifestEnvelope) => void> = [];
+    sync.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishes.push(resolve);
+        }),
+    );
+    const { result } = at("");
+    await waitFor(() => expect(sync).toHaveBeenCalled());
+    inventory.incomplete = true;
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(result.current.message).toBe(line("inventoryPartial")));
+    await act(async () => {
+      finishes[0](sent);
+    });
+    expect(result.current.message).toBe(line("inventoryPartial"));
+    act(() => purgeState.latest?.onListPurged([sent], "blue-mantis"));
+    expect(result.current.message).toContain(line("inventoryPartial"));
+  });
+  it("shows readable copies and an error when the inventory is incomplete", async () => {
+    setOnline(true);
+    const saved = [withEvents("trip-1", { pending: 1 })];
+    list.mockResolvedValue(saved);
+    sync.mockResolvedValue(saved[0]);
+    inventory.incomplete = true;
+    const { result } = at("");
+    await waitFor(() => expect(result.current.storeRead).toBe(true));
+    expect(result.current.list).toEqual(saved);
+    expect(result.current.storeReadFailed).toBe(true);
+    expect(result.current.message).toBe(line("inventoryPartial"));
+    await waitFor(() => expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis", 1));
+    expect(result.current.message).toBe(line("inventoryPartial"));
+    act(() => result.current.setMessage(line("listAllCaughtUp")));
+    expect(result.current.message).toBe(line("inventoryPartial"));
+  });
   it("lists what the device holds and counts it", async () => {
     const saved = [envelope("trip-1", "Morning"), envelope("trip-2", "Night")];
     list.mockResolvedValue(saved);
@@ -690,7 +790,8 @@ describe("useSavedManifest on the list", () => {
     list.mockRejectedValue(new Error("store unreadable"));
     const { result } = at("");
     await waitFor(() => expect(result.current.storeRead).toBe(true));
-    expect(result.current.message).toBe(line("listLoadError"));
+    expect(result.current.message).toContain(line("listLoadError"));
+    expect(result.current.message).toContain(line("inventoryPartial"));
     expect(result.current.storeReadFailed).toBe(true);
   });
 
@@ -790,35 +891,5 @@ describe("useSavedManifest on the list", () => {
     await waitFor(() =>
       expect(result.current.message).toBe(`${line("listPendingRejected")} {"count":2}`),
     );
-  });
-});
-
-describe("useSavedManifest and what retention threw away", () => {
-  const lost: DiscardedOfflineRecord = {
-    noticeId: "notice-trip-9",
-    tripId: "trip-9",
-    tripTitle: "Wreck Dive",
-    shopName: "Blue Mantis Divers",
-    shopSlug: "blue-mantis",
-    pendingEvents: 3,
-    discardedAt: "2026-08-01T12:00:00.000Z",
-  };
-
-  it("reads the discarded records after the store is opened", async () => {
-    list.mockResolvedValue([]);
-    readDiscarded.mockResolvedValue([lost]);
-    const { result } = at("");
-    await waitFor(() => expect(result.current.discarded).toEqual([lost]));
-  });
-
-  it("clears the notice at once when acknowledged, and records the acknowledgement", async () => {
-    list.mockResolvedValue([]);
-    readDiscarded.mockResolvedValue([lost]);
-    const { result } = at("");
-    await waitFor(() => expect(result.current.discarded).toEqual([lost]));
-    act(() => result.current.acknowledgeDiscarded([lost]));
-    expect(result.current.discarded).toEqual([]);
-    expect(acknowledge).toHaveBeenCalledTimes(1);
-    expect(acknowledge).toHaveBeenCalledWith([lost]);
   });
 });

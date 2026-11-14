@@ -3,6 +3,7 @@ import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
+import { requireNoRetainedSafetyForDemoReset } from "./retained-safety";
 import {
   accountSecurity,
   accountSessions,
@@ -73,6 +74,7 @@ import {
   rentalFitProfiles,
   reviewModerationEvents,
   reviewReplies,
+  rollCallEventClaims,
   rollCallEvents,
   safetyDrillParticipants,
   safetyDrills,
@@ -108,6 +110,7 @@ import {
   tripSightings,
   tripStageEvents,
   trips,
+  unresolvedReviewDeferrals,
   userAccounts,
   waiverDeliveries,
   waiverDrafts,
@@ -162,6 +165,11 @@ export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
  * held in server memory. A supplied real-shop slug alone is never ownership.
  */
 export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Promise<void> {
+  await db.transaction((tx) => deleteDemoShopCascadeInTransaction(tx, shopId));
+}
+
+async function deleteDemoShopCascadeInTransaction(db: DbExecutor, shopId: string): Promise<void> {
+  await requireNoRetainedSafetyForDemoReset(db, shopId);
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
   const shopPeople = await db
@@ -213,6 +221,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Each report takes its people rows with it (cascade): a raised report
   // points at its subject's row, so that row cannot go first.
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
+  await db.delete(unresolvedReviewDeferrals).where(eq(unresolvedReviewDeferrals.shopId, shopId));
+  await db.delete(rollCallEventClaims).where(eq(rollCallEventClaims.shopId, shopId));
   // diveday:roll-call-both-subjects: the demo shop's whole ledger goes, seat and crew.
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   // Events before the shop's own item list they reference.

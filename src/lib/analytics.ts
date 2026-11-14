@@ -138,6 +138,7 @@ export type AnalyticsEvent =
         | "not_scheduled"
         | "already_sailed"
         | "has_roster"
+        | "unresolved_safety_evidence"
         | "capacity_above_boat"
         | "capacity_above_certificate"
         | "boat_out_of_service";

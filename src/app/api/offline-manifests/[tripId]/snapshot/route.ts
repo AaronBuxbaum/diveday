@@ -10,7 +10,11 @@ import { uuidParam } from "@/lib/uuid";
 import { authorizeOfflineManifestStaff, OFFLINE_MANIFEST_NO_STORE } from "../../staff-context";
 
 const counter = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
-const bodySchema = z.object({ erasureEpoch: counter, snapshotRevision: counter });
+const bodySchema = z.object({
+  erasureEpoch: counter,
+  snapshotRevision: counter,
+  scheduleVersion: z.string().max(10_000),
+});
 
 /**
  * **A device saving the manifest page's rows** (issue #4391). The page reads
@@ -70,6 +74,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   const body: OfflineManifestSnapshotResponse = {
     snapshotId: issued.snapshotId,
     erasureEpochToken: issued.erasureEpochToken,
+    meetingIdentityProofs: issued.meetingIdentityProofs,
   };
   return Response.json(body, { headers: OFFLINE_MANIFEST_NO_STORE });
 }

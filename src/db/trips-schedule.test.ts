@@ -42,7 +42,15 @@ it("rebinds known-unsailed boat provenance when the schedule builder moves a dep
   if (!trip) throw new Error("trip missing");
   expect(await captureDepartureBoatSafety(db, shop.id, trip.id)).toBe("captured");
   const movedStart = new Date(startsAt.getTime() + 24 * 3_600_000);
-  expect((await moveTrip(db, shop.id, trip.id, movedStart)).ok).toBe(true);
+  const moved = await moveTrip(db, shop.id, trip.id, movedStart);
+  expect(moved.ok).toBe(true);
+  const [updated] = await db
+    .select({ generation: trips.meetingScheduleGeneration })
+    .from(trips)
+    .where(eq(trips.id, trip.id));
+  if (!moved.ok || !updated) throw new Error("trip move missing");
+  expect(moved.trip.meetingScheduleGeneration).toBe(updated.generation);
+  expect(updated.generation).toBeGreaterThan(trip.meetingScheduleGeneration);
   const [row] = await db
     .select()
     .from(departureBoatSafetySnapshots)

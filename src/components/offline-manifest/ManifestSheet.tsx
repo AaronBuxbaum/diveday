@@ -16,6 +16,7 @@ import { isOfflineManifestExpired, type OfflineRollCallResult } from "@/lib/offl
 import { PACKET_PAPER, storefrontAddress } from "@/lib/print-sheets";
 import type { OfflineTripControls } from "./controls";
 import { offlineDiverFactLines, offlineDiverRowFacts } from "./diver-row-facts";
+import { MissingRollCallRefusals } from "./MissingRollCallRefusals";
 import { buddyNamesList } from "./shared";
 import type { OfflineTripView } from "./trip-view";
 
@@ -219,9 +220,26 @@ export function OfflineManifestSheet({
                     `${t("shared.offlineManifest.single.statsAwaiting")} ${view.awaiting}`,
                   ].join(" · ")}
                 </p>
+                {manifest.retainedSafetyUnresolved ? (
+                  <p className="mt-1 font-bold">{t("manifest.retainedSafetyWarning")}</p>
+                ) : null}
+                {manifest.retainedSafetyAlertNeedsReview ? (
+                  <p className="mt-1 font-bold">{t("manifest.retainedSafetyAlertWarning")}</p>
+                ) : null}
+                <MissingRollCallRefusals view={view} controls={controls} paper />
                 {view.overTotalPersons ? (
                   <p data-sheet-over-capacity="" className="mt-1 font-bold text-danger">
                     {t("manifest.headCountOverTotalPersonsAboard", view.overTotalPersons)}
+                  </p>
+                ) : null}
+                {view.possibleOverTotalPersons ? (
+                  <p data-sheet-possible-over-capacity="" className="mt-1 font-bold">
+                    {t("manifest.headCountPossibleOverTotalPersons", view.possibleOverTotalPersons)}
+                  </p>
+                ) : null}
+                {view.possibleUnlistedPerson ? (
+                  <p data-sheet-possible-unlisted-person="" className="mt-1 font-bold">
+                    {t("manifest.headCountPossibleUnlistedPerson")}
                   </p>
                 ) : null}
               </header>

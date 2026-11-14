@@ -1,8 +1,25 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { signOfflineErasureEpoch, verifyOfflineErasureEpoch } from "./offline-erasure-epoch";
+import * as receiptSecrets from "./offline-receipt-secrets";
 
 describe("offline manifest erasure epochs", () => {
+  it("verifies a prior key only while configured and still checks the snapshot scope", () => {
+    const scope = { shopId: randomUUID(), tripId: randomUUID(), snapshotId: randomUUID() };
+    const token = signOfflineErasureEpoch({ ...scope, epoch: 4, snapshotRevision: 1 });
+    const previous = receiptSecrets.offlineReceiptSecrets();
+    const keys = vi
+      .spyOn(receiptSecrets, "offlineReceiptSecrets")
+      .mockReturnValue(["new key", ...previous]);
+    try {
+      expect(verifyOfflineErasureEpoch({ ...scope, token })).toBe(4);
+      expect(verifyOfflineErasureEpoch({ ...scope, snapshotId: randomUUID(), token })).toBeNull();
+      keys.mockReturnValue(["new key"]);
+      expect(verifyOfflineErasureEpoch({ ...scope, token })).toBeNull();
+    } finally {
+      keys.mockRestore();
+    }
+  });
   it("authenticates the shop, snapshot id, erasure epoch, and ordering revision", () => {
     const shopId = randomUUID();
     const tripId = randomUUID();

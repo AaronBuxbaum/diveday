@@ -1,7 +1,9 @@
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { isHeldSeat } from "@/lib/held-seat";
 import { offlineTrainingReadinessStale } from "@/lib/offline-manifests";
 import type { OfflineTripControls } from "./controls";
+import { heldSeatReasons } from "./diver-row-facts";
 import type { OfflineTripView } from "./trip-view";
 
 /**
@@ -91,16 +93,37 @@ export function OfflineCounter({
             view.envelope.snapshot,
             diver,
           );
-          if (diver.readiness.status !== "ready" || diver.notHere || staleTrainingReadiness) {
-            const blocked = diver.readiness.status !== "ready" || staleTrainingReadiness;
+          const withheld = diver.identityWithheld || isHeldSeat(diver);
+          if (
+            diver.readiness.status !== "ready" ||
+            diver.notHere ||
+            staleTrainingReadiness ||
+            withheld
+          ) {
+            const blocked =
+              diver.readiness.status !== "ready" || staleTrainingReadiness || withheld;
             // The status line: why the desk cannot tap. Readiness's own
             // reasons, resolved into this copy when it was saved, so already
             // in the reader's language; then the desk's release, when there
             // is one. A blocked seat with no reason saved says "Blocked".
             const why = [
-              ...(staleTrainingReadiness ? [t("manifest.trainingReadinessStale")] : []),
-              ...(blocked ? diver.readiness.blockers.map((blocker) => blocker.text) : []),
-              ...(blocked && !staleTrainingReadiness && diver.readiness.blockers.length === 0
+              ...(withheld && arrived
+                ? [
+                    `${t("shared.presence.arrived")}${arrival.pending ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}` : ""}`,
+                  ]
+                : []),
+              ...(staleTrainingReadiness && !withheld
+                ? [t("manifest.trainingReadinessStale")]
+                : []),
+              ...(withheld
+                ? heldSeatReasons(diver, t)
+                : blocked
+                  ? diver.readiness.blockers.map((blocker) => blocker.text)
+                  : []),
+              ...(blocked &&
+              !withheld &&
+              !staleTrainingReadiness &&
+              diver.readiness.blockers.length === 0
                 ? [t("shared.offlineManifest.single.blockedBadge")]
                 : []),
               ...(diver.notHere
@@ -126,6 +149,16 @@ export function OfflineCounter({
                     </span>
                   </span>
                 </div>
+                {withheld && arrival?.local && arrival.clientEventId ? (
+                  <button
+                    type="button"
+                    disabled={busy || expired}
+                    className="mx-4 mb-3 underline"
+                    onClick={() => recordArrival(diver.bookingId, "cleared")}
+                  >
+                    {t("shared.offlineManifest.single.counter.undoHeld", { name: diver.fullName })}
+                  </button>
+                ) : null}
                 {refusal}
               </li>
             );

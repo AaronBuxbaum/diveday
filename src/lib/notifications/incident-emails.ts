@@ -79,13 +79,14 @@ export function incidentMissingDiverFoundEmail(
     input.stillMissing > 0
       ? ` ${t("notifications.incidentMissingDiverFound.stillMissing", { count: input.stillMissing })}`
       : "";
+  const scope = t("notifications.incidentMissingDiverFound.scope");
   const open = t("notifications.incidentMissingDiver.open");
   return {
     subject: t("notifications.incidentMissingDiverFound.subject", {
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${greetingText}\n\n${body}${still}\n\n${open}:\n${input.reportUrl}\n`,
-    html: `<p>${greetingHtml}</p><p>${escapeHtml(body + still)}</p>${emailButton(input.reportUrl, open)}`,
+    text: `${greetingText}\n\n${body}${still}\n\n${scope}\n\n${open}:\n${input.reportUrl}\n`,
+    html: `<p>${greetingHtml}</p><p>${escapeHtml(body + still)}</p><p>${escapeHtml(scope)}</p>${emailButton(input.reportUrl, open)}`,
   };
 }

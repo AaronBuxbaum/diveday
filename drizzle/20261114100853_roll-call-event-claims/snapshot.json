@@ -1,0 +1,724 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "da32768c-c2de-45f0-a860-583a6592e902",
+  "prevIds": [
+    "dcb6e5ed-166a-4a8e-a2bf-2705a266cca0"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|tbl|public.roll_call_event_claims",
+        "n|tbl|public.roll_call_event_claims",
+        "e|tbl|public.roll_call_event_claims",
+        "n|rel|public.roll_call_event_claims",
+        "n|type|public.roll_call_event_claims",
+        "n|rel|public.roll_call_event_claims_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.roll_call_subject_kind"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "roll_call_event_claims",
+        "roll_call_event_claims_shop_client_unique"
+      ],
+      "writes": [
+        "s|idx|public.roll_call_event_claims_shop_client_unique",
+        "n|idx|public.roll_call_event_claims_shop_client_unique",
+        "e|idx|public.roll_call_event_claims_shop_client_unique",
+        "n|rel|public.roll_call_event_claims_shop_client_unique"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.shop_id",
+        "n|col|public.roll_call_event_claims.client_event_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "roll_call_event_claims",
+        "roll_call_event_claims_accepted_event_unique"
+      ],
+      "writes": [
+        "s|idx|public.roll_call_event_claims_accepted_event_unique",
+        "n|idx|public.roll_call_event_claims_accepted_event_unique",
+        "e|idx|public.roll_call_event_claims_accepted_event_unique",
+        "n|rel|public.roll_call_event_claims_accepted_event_unique"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.accepted_event_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "roll_call_event_claims",
+        "roll_call_event_claims_booking_idx"
+      ],
+      "writes": [
+        "s|idx|public.roll_call_event_claims_booking_idx",
+        "n|idx|public.roll_call_event_claims_booking_idx",
+        "e|idx|public.roll_call_event_claims_booking_idx",
+        "n|rel|public.roll_call_event_claims_booking_idx"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.booking_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "roll_call_event_claims",
+        "roll_call_event_claims_crew_person_idx"
+      ],
+      "writes": [
+        "s|idx|public.roll_call_event_claims_crew_person_idx",
+        "n|idx|public.roll_call_event_claims_crew_person_idx",
+        "e|idx|public.roll_call_event_claims_crew_person_idx",
+        "n|rel|public.roll_call_event_claims_crew_person_idx"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.crew_person_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|fk|public.roll_call_event_claims.roll_call_event_claims_shop_id_shops_id_fkey",
+        "n|fk|public.roll_call_event_claims.roll_call_event_claims_shop_id_shops_id_fkey",
+        "e|fk|public.roll_call_event_claims.roll_call_event_claims_shop_id_shops_id_fkey",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|fk|public.roll_call_event_claims.roll_call_event_claims_trip_id_trips_id_fkey",
+        "n|fk|public.roll_call_event_claims.roll_call_event_claims_trip_id_trips_id_fkey",
+        "e|fk|public.roll_call_event_claims.roll_call_event_claims_trip_id_trips_id_fkey",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_trip_id_trips_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.trip_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|fk|public.roll_call_event_claims.roll_call_event_claims_booking_id_bookings_id_fkey",
+        "n|fk|public.roll_call_event_claims.roll_call_event_claims_booking_id_bookings_id_fkey",
+        "e|fk|public.roll_call_event_claims.roll_call_event_claims_booking_id_bookings_id_fkey",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_booking_id_bookings_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.booking_id",
+        "n|col|public.bookings.id",
+        "e|uniqueness|public.bookings.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|fk|public.roll_call_event_claims.roll_call_event_claims_crew_person_id_people_id_fkey",
+        "n|fk|public.roll_call_event_claims.roll_call_event_claims_crew_person_id_people_id_fkey",
+        "e|fk|public.roll_call_event_claims.roll_call_event_claims_crew_person_id_people_id_fkey",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_crew_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.crew_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_event_claims"
+      ],
+      "writes": [
+        "s|fk|public.roll_call_event_claims.roll_call_event_claims_7PQwLZQNpyZp_fkey",
+        "n|fk|public.roll_call_event_claims.roll_call_event_claims_7PQwLZQNpyZp_fkey",
+        "e|fk|public.roll_call_event_claims.roll_call_event_claims_7PQwLZQNpyZp_fkey",
+        "n|con|public.roll_call_event_claims.roll_call_event_claims_7PQwLZQNpyZp_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_event_claims",
+        "n|sch|public",
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_event_claims.accepted_event_id",
+        "n|col|public.roll_call_events.id",
+        "e|uniqueness|public.roll_call_events.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "roll_call_event_claims",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "client_event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "state",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "subject_kind",
+        "type": "roll_call_subject_kind",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "booking_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "crew_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "intent_fingerprint",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "proof_fingerprint",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "key_fingerprint",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "unresolved_reason",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "note_disposition",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "accepted_event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_shop_client_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "client_event_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_accepted_event_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "accepted_event_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_booking_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "booking_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_crew_person_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "crew_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_trip_id_trips_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_booking_id_bookings_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "booking_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "bookings",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_crew_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "crew_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_7PQwLZQNpyZp_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "accepted_event_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "roll_call_events",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_shape",
+        "value": "(\n      \"state\" = 'erased' and \"subject_kind\" is null and \"booking_id\" is null and \"crew_person_id\" is null\n      and \"intent_fingerprint\" is null and \"proof_fingerprint\" is null and \"key_fingerprint\" is null and \"unresolved_reason\" is null\n      and \"note_disposition\" is null and \"accepted_event_id\" is null\n    ) or (\n      \"state\" in ('accepted', 'unresolved') and \"subject_kind\" is not null and \"intent_fingerprint\" is not null and \"proof_fingerprint\" is not null and \"key_fingerprint\" is not null\n      and ((\"subject_kind\" = 'seat' and \"booking_id\" is not null and \"crew_person_id\" is null)\n        or (\"subject_kind\" = 'crew' and \"crew_person_id\" is not null and \"booking_id\" is null))\n      and ((\"state\" = 'accepted' and \"accepted_event_id\" is not null and \"unresolved_reason\" is null)\n        or (\"state\" = 'unresolved' and \"accepted_event_id\" is null and \"unresolved_reason\" is not null))\n    )",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_reason",
+        "value": "\"unresolved_reason\" is null or \"unresolved_reason\" in ('meeting_identity_unverified', 'unresolved_predecessor')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_event_claims",
+        "name": "roll_call_event_claims_note_disposition",
+        "value": "\"note_disposition\" is null or \"note_disposition\" in ('discarded_erasure_cutoff', 'discarded_unverified_snapshot')",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

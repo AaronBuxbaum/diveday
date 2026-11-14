@@ -154,6 +154,10 @@ function departureEditor(context: TripAboutRowsContext, section: DepartureDetail
         startWall,
         endWall,
         dayCount: Math.max(1, scheduleDays.length),
+        meetingIds: scheduleDays.map((day) => day.id),
+        meetingVersion: JSON.stringify(
+          scheduleDays.map((day) => [day.id, day.startsAt.toISOString(), day.endsAt.toISOString()]),
+        ),
         // The later days' own dates when the run has gaps (third UX
         // review, item 10), so a save keeps a course's weekends apart.
         laterHours: laterMeetingHours(scheduleDays, shop.timezone),

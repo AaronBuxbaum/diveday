@@ -144,3 +144,17 @@ describe("the shared rehearsal exclusion scope", () => {
     expect(rehearsalExportColumns("boat_snags.csv", ["id", "noted_on_trip_id"])).toEqual([]);
   });
 });
+
+it("keeps unresolved safety records linked to a rehearsal while removing rehearsal trip references", () => {
+  const files = [
+    "roll_call_event_claims.csv",
+    "unresolved_safety_alert_outbox.csv",
+    "unresolved_safety_scan_incidents.csv",
+    "unresolved_review_deferrals.csv",
+  ];
+  const result = withoutRehearsals(
+    files.map((file) => table(file, ["id", "trip_id"], [["record", TRIP]])),
+    ids,
+  );
+  for (const item of result) expect(item.rows).toEqual([["record", null]]);
+});

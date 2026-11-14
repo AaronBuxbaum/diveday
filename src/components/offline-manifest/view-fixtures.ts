@@ -1,5 +1,39 @@
 import type { OfflineManifestEnvelope, OfflineManifestPayload } from "@/lib/offline-manifests";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
+
+export const VERIFIED_TRIP_ID = "11111111-1111-4111-8111-111111111111";
+
+/** Rebind a test copy and its queued events to one genuinely signed meeting. */
+export function verifiedRollCallFixture(copy: OfflineManifestEnvelope): OfflineManifestEnvelope {
+  const snapshotId = "22222222-2222-4222-8222-222222222222";
+  const startsAt = new Date("2026-08-01T13:00:00.000Z");
+  const endsAt = new Date("2026-08-01T16:30:00.000Z");
+  const meetingIdentityProof = signOfflineMeetingIdentity({
+    scheduleGeneration: 0,
+    datasetIncarnation: "55555555-5555-4555-8555-555555555555",
+    shopId: "33333333-3333-4333-8333-333333333333",
+    tripId: VERIFIED_TRIP_ID,
+    snapshotId,
+    meetingId: "44444444-4444-4444-8444-444444444444",
+    meetingDay: 0,
+    startsAt,
+    endsAt,
+  });
+  copy.snapshot.snapshotId = snapshotId;
+  copy.snapshot.rollCallMeetingDays = [
+    { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), meetingIdentityProof },
+  ];
+  for (const manifest of copy.snapshot.manifests) manifest.trip.id = VERIFIED_TRIP_ID;
+  copy.events = copy.events.map((event) => ({
+    ...event,
+    snapshotId,
+    tripId: VERIFIED_TRIP_ID,
+    meetingDay: 0,
+    meetingIdentityProof,
+  }));
+  return copy;
+}
 
 /**
  * **Saved copies for the offline manifest's tests** — the payloads and

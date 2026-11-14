@@ -19,6 +19,21 @@ afterEach(() => {
 });
 
 describe("OfflineManifestList", () => {
+  it("visibly warns about possible unsent changes when no saved copy can be opened", () => {
+    const t = offlineManifestTranslator("en-US");
+    const warning = t("shared.offlineManifest.reconcile.inventoryPartial");
+    const { getByText } = render(
+      <OfflineManifestList
+        t={t}
+        shellVersionCopy={{ staleBanner: "", updateBanner: "", refreshButton: "" }}
+        list={[]}
+        message={warning}
+        discardNotice={null}
+        readFailed
+      />,
+    );
+    expect(getByText(warning)).toBeVisible();
+  });
   for (const [locale, dates] of [
     [
       "en-US",

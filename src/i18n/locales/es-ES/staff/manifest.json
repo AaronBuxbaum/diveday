@@ -1,4 +1,6 @@
 {
+  "retainedSafetyWarning": "Hay evidencia de seguridad sin resolver que requiere revisión. No puede asignarse a una persona ni a una fecha; no considere los conteos como confirmación de que todos están a salvo.",
+  "retainedSafetyAlertWarning": "Un aviso de revisión de seguridad necesita atención. Verifique la entrega de la notificación y contacte a la tripulación si es necesario.",
   "stage": {
     "legend": "Dónde está el barco",
     "tapBoarding": "Embarcando",
@@ -54,6 +56,8 @@
   "headCountOverCertificate": "{limit, plural, one {El certificado permite # pasajero} other {El certificado permite # pasajeros}}",
   "headCountOverTotalPersons": "{limit, plural, one {El certificado permite # persona, tripulación incluida} other {El certificado permite # personas, tripulación incluida}}",
   "headCountOverTotalPersonsAboard": "{aboard, plural, one {# persona a bordo, incluida la tripulación} other {# personas a bordo, incluida la tripulación}}; el certificado permite {limit} en total.",
+  "headCountPossibleOverTotalPersons": "{aboard, plural, one {# persona puede estar a bordo} other {# personas pueden estar a bordo}}; el certificado permite {limit}. Algunas observaciones no están confirmadas o pueden ser de otra fecha. Cuenta a todas las personas.",
+  "headCountPossibleUnlistedPerson": "Una persona que no figura en la lista puede estar a bordo o sin localizar. Cuenta a todas las personas y verifica la capacidad; una observación sin confirmar puede ser de otra fecha.",
   "progressAriaLabel": "Progreso del pase de lista",
   "ofTotalAboard": "de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "allAccountedFor": "Todos contabilizados, buceadores y tripulación. Listo para el siguiente control.",

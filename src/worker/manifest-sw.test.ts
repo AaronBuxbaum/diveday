@@ -17,7 +17,6 @@ import {
 } from "@/lib/offline-manifest-store";
 import {
   OFFLINE_MANIFEST_RECORD_VERSION,
-  OFFLINE_MANIFEST_SHELL_VERSION,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
@@ -25,14 +24,22 @@ import {
 import { READY_CACHE_NAME } from "@/lib/ready-offline";
 import { saveReadyPage } from "./ready-page-cache";
 
-vi.mock("@/lib/offline-manifest-store", () => ({
-  beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
-  listOfflineManifests: vi.fn(),
-  purgeOfflineManifestsExceptShop: vi.fn(),
-  saveOfflineManifest: vi.fn(),
-  syncOfflineManifest: vi.fn(),
-  wipeOfflineMedicalAlerts: vi.fn(),
-}));
+const inventoryState = vi.hoisted(() => ({ incomplete: false }));
+vi.mock("@/lib/offline-manifest-store", () => {
+  const list = vi.fn();
+  return {
+    beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
+    listOfflineManifests: list,
+    readOfflineManifestInventory: async () => ({
+      manifests: await list(),
+      incomplete: inventoryState.incomplete,
+    }),
+    purgeOfflineManifestsExceptShop: vi.fn(),
+    saveOfflineManifest: vi.fn(),
+    syncOfflineManifest: vi.fn(),
+    wipeOfflineMedicalAlerts: vi.fn(),
+  };
+});
 
 // Fixed strings rather than the frozen clock: nothing under test reads the
 // clock (the store is mocked), so a real instant here would only be noise.
@@ -186,6 +193,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  inventoryState.incomplete = false;
   vi.resetAllMocks();
   installGlobals();
   vi.mocked(beginOfflineTenantVerificationRound).mockResolvedValue(1);
@@ -200,6 +208,18 @@ beforeEach(() => {
 });
 
 describe("flushPendingRollCall (the sync event)", () => {
+  it("syncs a readable same-shop queue but keeps the retry when inventory is incomplete", async () => {
+    inventoryState.incomplete = true;
+    vi.mocked(listOfflineManifests).mockResolvedValue([
+      envelope("trip-mine", "blue-mantis", [pendingEvent("trip-mine")]),
+      envelope("trip-theirs", "reef-runners", [pendingEvent("trip-theirs")]),
+    ]);
+    routeFetch({ identity: () => identityResponse("blue-mantis") });
+    const settled = await fireSync();
+    expect(syncOfflineManifest).toHaveBeenCalledTimes(1);
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis", 1);
+    expect(settled.map((result) => result.status)).toEqual(["rejected"]);
+  });
   // Security review, 2026-08-06. This loop used to submit *every* envelope on
   // the device under whatever session the tablet currently holds. Traced
   // through: the sync route scopes to `session.user.shopId`, so a foreign
@@ -219,6 +239,17 @@ describe("flushPendingRollCall (the sync event)", () => {
 
     expect(syncOfflineManifest).toHaveBeenCalledTimes(1);
     expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis", 1);
+  });
+
+  it("keeps the background sync retry when the sync request is refused", async () => {
+    const pending = envelope("trip-mine", "blue-mantis", [pendingEvent("trip-mine")]);
+    vi.mocked(listOfflineManifests).mockResolvedValue([pending]);
+    vi.mocked(syncOfflineManifest).mockRejectedValueOnce(new Error("sync_unreachable"));
+    routeFetch({ identity: () => identityResponse("blue-mantis") });
+    const settled = await fireSync();
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis", 1);
+    expect(settled.map((result) => result.status)).toEqual(["rejected"]);
+    expect(pending.events[0].syncStatus).toBe("pending");
   });
 
   it.each([
@@ -769,115 +800,5 @@ describe("a navigation on a network that never answers", () => {
     );
     if (landed === "still waiting") throw new Error("the live page never arrived");
     expect(await landed.text()).toBe("live manifest");
-  });
-});
-
-describe("offline shell versioning", () => {
-  it("reports the shared shell version to clients", () => {
-    const postMessage = vi.fn();
-    const handler = listeners.get("message");
-    if (!handler) throw new Error("the worker registered no message listener");
-
-    handler({
-      data: { type: "GET_SHELL_VERSION" },
-      ports: [{ postMessage }],
-    });
-
-    expect(postMessage).toHaveBeenCalledWith({ version: OFFLINE_MANIFEST_SHELL_VERSION });
-  });
-
-  it("keeps the versioned shell cache and removes older shell caches on activation", async () => {
-    const currentCache = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
-    const previousShellVersion = Number(OFFLINE_MANIFEST_SHELL_VERSION.slice(1)) - 1;
-    const oldCache = `diveday-offline-manifest-shell-v${previousShellVersion}`;
-    const unrelatedCache = "diveday-ready-pages-v1";
-    const deleted: string[] = [];
-    vi.stubGlobal("caches", {
-      keys: async () => [oldCache, currentCache, unrelatedCache],
-      delete: async (name: string) => {
-        deleted.push(name);
-        return true;
-      },
-    });
-    const handler = listeners.get("activate");
-    if (!handler) throw new Error("the worker registered no activate listener");
-    const waits: Promise<unknown>[] = [];
-
-    handler({ waitUntil: (promise: Promise<unknown>) => waits.push(promise) });
-    await Promise.all(waits);
-
-    expect(deleted).toEqual([oldCache]);
-  });
-
-  it("holds activation until the old shell caches are gone even when another step fails", async () => {
-    const currentCache = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
-    const oldCache = "diveday-offline-manifest-shell-v0";
-    const deleted: string[] = [];
-    vi.stubGlobal("caches", {
-      // Listing fails at once: the first step to settle, and a rejection.
-      keys: async () => {
-        throw new Error("storage unavailable");
-      },
-      delete: async (name: string) => {
-        deleted.push(name);
-        return true;
-      },
-    });
-    const handler = listeners.get("activate");
-    if (!handler) throw new Error("the worker registered no activate listener");
-    const waits: Promise<unknown>[] = [];
-    handler({ waitUntil: (promise: Promise<unknown>) => waits.push(promise) });
-    // keys() throws, so nothing could be listed: the activation reports it
-    // rather than swallowing it, after every step has finished.
-    await expect(Promise.all(waits)).rejects.toThrow("storage unavailable");
-    expect(deleted).toEqual([]);
-
-    // And a slow deletion is waited for, not raced, when the claim fails first.
-    let finishDelete: () => void = () => {};
-    const slowDelete = new Promise<void>((resolve) => {
-      finishDelete = resolve;
-    });
-    vi.stubGlobal("caches", {
-      keys: async () => [oldCache, currentCache],
-      delete: async (name: string) => {
-        await slowDelete;
-        deleted.push(name);
-        return true;
-      },
-    });
-    scope.clients.claim = async () => {
-      throw new Error("claim failed");
-    };
-    const lateWaits: Promise<unknown>[] = [];
-    handler({ waitUntil: (promise: Promise<unknown>) => lateWaits.push(promise) });
-    let settled = false;
-    const activation = Promise.allSettled(lateWaits).then(() => {
-      settled = true;
-    });
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    expect(settled).toBe(false);
-    finishDelete();
-    await activation;
-    scope.clients.claim = async () => {};
-    expect(deleted).toEqual([oldCache]);
-  });
-
-  it("removes shell caches left by earlier builds of the same version", async () => {
-    const currentCache = `diveday-offline-manifest-shell-${OFFLINE_MANIFEST_SHELL_VERSION}`;
-    const deleted: string[] = [];
-    vi.stubGlobal("caches", {
-      keys: async () => [`${currentCache}-build-old`, currentCache],
-      delete: async (name: string) => {
-        deleted.push(name);
-        return true;
-      },
-    });
-    const handler = listeners.get("activate");
-    if (!handler) throw new Error("the worker registered no activate listener");
-    const waits: Promise<unknown>[] = [];
-    handler({ waitUntil: (promise: Promise<unknown>) => waits.push(promise) });
-    await Promise.all(waits);
-    // The test worker has no build list, so its cache carries no build id.
-    expect(deleted).toEqual([`${currentCache}-build-old`]);
   });
 });

@@ -164,7 +164,7 @@ export function translatorForThisDevice() {
 export type OfflineStatement = Pick<
   OfflineRollCallEvent,
   "status" | "retractsClientEventId" | "reconcilesEvidence"
->;
+> & { reviewedEvidenceIds?: string[] };
 
 /**
  * What re-tapping a control that already carries its own state should queue: the

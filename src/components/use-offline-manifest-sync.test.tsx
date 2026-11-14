@@ -696,15 +696,20 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
   const SNAPSHOT_URL = `/api/offline-manifests/${TRIP_ID}/snapshot`;
   const pagePayload: OfflineManifestPayload = {
     ...payload,
-    readAt: { erasureEpoch: 4, snapshotRevision: 9 },
+    readAt: { erasureEpoch: 4, snapshotRevision: 9, scheduleVersion: "[]" },
   };
   /** The page's next render, as router.refresh() would deliver it. */
   const reread: OfflineManifestPayload = {
     ...payload,
-    readAt: { erasureEpoch: 4, snapshotRevision: 10 },
+    readAt: { erasureEpoch: 4, snapshotRevision: 10, scheduleVersion: "[]" },
   };
   const stale = () => Response.json({ error: "snapshot_superseded" }, { status: 409 });
-  const issued = () => Response.json({ snapshotId: SNAPSHOT_ID, erasureEpochToken: "4.10.signed" });
+  const issued = () =>
+    Response.json({
+      snapshotId: SNAPSHOT_ID,
+      erasureEpochToken: "4.10.signed",
+      meetingIdentityProofs: [],
+    });
 
   let releaseRereadOwner: (() => void) | undefined;
   afterEach(() => {
@@ -781,11 +786,16 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
       ...payload,
       snapshotId: SNAPSHOT_ID,
       erasureEpochToken: "4.10.signed",
+      meetingIdentityProofs: [],
     });
     expect(saved).not.toHaveProperty("readAt");
     const claim = fetchMock.mock.calls.find(([url]) => url === SNAPSHOT_URL);
     expect(claim?.[1]?.method).toBe("POST");
-    expect(JSON.parse(String(claim?.[1]?.body))).toEqual({ erasureEpoch: 4, snapshotRevision: 9 });
+    expect(JSON.parse(String(claim?.[1]?.body))).toEqual({
+      erasureEpoch: 4,
+      snapshotRevision: 9,
+      scheduleVersion: "[]",
+    });
   });
 
   it("does not claim the same read twice when the page mounts again on a cached payload", async () => {

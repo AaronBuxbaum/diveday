@@ -1,13 +1,19 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { offlineManifestSnapshotRevisions, shops, trips } from "@/db/schema";
-import { nextOfflineManifestSnapshotRevision } from "@/features/offline-manifest-snapshots";
+import { listTripScheduleDays } from "@/db/trips";
+import {
+  nextOfflineManifestSnapshotRevision,
+  readOfflineManifestRoster,
+} from "@/features/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import type { OfflineManifestSnapshotResponse } from "@/lib/offline-manifests";
+import { verifyOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
+import { meetingGeneration, meetingIncarnation } from "@/test/meeting-generation";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
 const ctx = fileScopedShopContext();
@@ -67,7 +73,13 @@ async function departure() {
   const epoch = row?.epoch ?? 0;
   const [counter] = await revisions(trip.id);
   // What the page read its rows at.
-  const readAt = { erasureEpoch: epoch, snapshotRevision: counter?.revision ?? 0 };
+  const read = await readOfflineManifestRoster(db, shop.id, trip.id);
+  if (!read) throw new Error("roster missing");
+  const readAt = {
+    erasureEpoch: epoch,
+    snapshotRevision: counter?.revision ?? 0,
+    scheduleVersion: read.scheduleVersion,
+  };
   return { db, shop, tripId: trip.id, epoch, readAt };
 }
 
@@ -84,7 +96,7 @@ beforeEach(() => {
 
 describe("POST /api/offline-manifests/[tripId]/snapshot (issue #4391)", () => {
   it("issues a snapshot signed at the epoch and next revision after the page's read", async () => {
-    const { shop, tripId, epoch, readAt } = await departure();
+    const { db, shop, tripId, epoch, readAt } = await departure();
 
     const response = await request(tripId, readAt);
 
@@ -100,6 +112,25 @@ describe("POST /api/offline-manifests/[tripId]/snapshot (issue #4391)", () => {
       }),
     ).toBe(epoch);
     expect(body.erasureEpochToken.split(".")[1]).toBe(String(readAt.snapshotRevision + 1));
+    const days = await listTripScheduleDays(db, shop.id, tripId);
+    expect(body.meetingIdentityProofs).toHaveLength(days.length);
+    for (const [meetingDay, day] of days.entries()) {
+      expect(
+        verifyOfflineMeetingIdentity({
+          scheduleGeneration: await meetingGeneration(db, tripId),
+          datasetIncarnation: await meetingIncarnation(db, tripId),
+          token: body.meetingIdentityProofs[meetingDay],
+          shopId: shop.id,
+          tripId,
+          snapshotId: body.snapshotId,
+          meetingDay,
+        }),
+      ).toEqual({
+        meetingId: day.id,
+        startsAt: day.startsAt.getTime(),
+        endsAt: day.endsAt.getTime(),
+      });
+    }
     expect(await revisions(tripId)).toEqual([{ revision: readAt.snapshotRevision + 1 }]);
   });
 
@@ -165,7 +196,10 @@ describe("POST /api/offline-manifests/[tripId]/snapshot (issue #4391)", () => {
   it("answers not found for a trip that is not this shop's, writing nothing", async () => {
     const { epoch } = await departure();
     const foreign = "00000000-0000-4000-8000-000000000000";
-    expect((await request(foreign, { erasureEpoch: epoch, snapshotRevision: 0 })).status).toBe(404);
+    expect(
+      (await request(foreign, { erasureEpoch: epoch, snapshotRevision: 0, scheduleVersion: "[]" }))
+        .status,
+    ).toBe(404);
     expect(await revisions(foreign)).toEqual([]);
   });
 

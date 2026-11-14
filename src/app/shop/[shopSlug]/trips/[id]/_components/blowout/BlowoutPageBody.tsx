@@ -28,6 +28,7 @@ const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey
   called: { tone: "success", key: "blowout.notices.called" },
   resumed: { tone: "success", key: "blowout.notices.resumed" },
   departed: { tone: "danger", key: "blowout.notices.departed" },
+  "safety-review": { tone: "danger", key: "blowout.notices.safetyReview" },
   error: { tone: "danger", key: "blowout.notices.error" },
   "refunds-released": { tone: "success", key: "blowout.notices.refundsReleased" },
   "refund-not-authorized": { tone: "danger", key: "blowout.notices.refundNotAuthorized" },

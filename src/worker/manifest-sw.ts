@@ -3,8 +3,8 @@ import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
 import { nowMs } from "@/lib/clock";
 import {
   beginOfflineTenantVerificationRound,
-  listOfflineManifests,
   purgeOfflineManifestsExceptShop,
+  readOfflineManifestInventory,
   saveOfflineManifest,
   syncOfflineManifest,
   wipeOfflineMedicalAlerts,
@@ -560,10 +560,10 @@ self.addEventListener("sync" as keyof ServiceWorkerGlobalScopeEventMap, (event) 
 });
 
 async function flushPendingRollCall(): Promise<void> {
-  // Every trip this device holds a copy for. `listOfflineManifests` is the
+  // Every readable trip this device holds a copy for. The inventory is the
   // store's own reader, so the worker discovers what to flush exactly the way
   // the page would.
-  const envelopes = await listOfflineManifests();
+  const { manifests: envelopes, incomplete } = await readOfflineManifestInventory();
   // Only records with something to send, which is also what lets a device with
   // nothing queued skip the tenant lookup below entirely — a push on a quiet
   // phone must not cost a round trip. `syncOfflineManifest` would return early
@@ -574,7 +574,10 @@ async function flushPendingRollCall(): Promise<void> {
   // could not see one of the three would leave that evidence sitting on the
   // device until the purge that cannot see it either deletes the record.
   const pending = envelopes.filter((envelope) => pendingOfflineEventCount(envelope) > 0);
-  if (pending.length === 0) return;
+  if (pending.length === 0) {
+    if (incomplete) throw new Error("manifest inventory incomplete");
+    return;
+  }
 
   // **Whose events are these?** Resolved once, from the server, before
   // anything is submitted — the same rule and the same reason
@@ -617,7 +620,7 @@ async function flushPendingRollCall(): Promise<void> {
   // silently abandon events that are still on the device. A skipped
   // foreign-shop record is not a failure — nothing about it will ever succeed
   // under this session, so retrying the tag for it would spin forever.
-  if (failed) throw new Error("manifest sync incomplete");
+  if (failed || incomplete) throw new Error("manifest sync incomplete");
 }
 
 self.addEventListener("notificationclick", (event) => {

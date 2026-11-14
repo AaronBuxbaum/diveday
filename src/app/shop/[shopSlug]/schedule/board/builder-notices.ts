@@ -37,6 +37,10 @@ export const BUILDER_NOTICE_KEYS: Record<
   "not-scheduled": { tone: "warning", key: "schedule.notices.notScheduled" },
   "already-sailed": { tone: "warning", key: "schedule.notices.alreadySailed" },
   "has-roster": { tone: "warning", key: "schedule.notices.hasRoster" },
+  "unresolved-safety-evidence": {
+    tone: "warning",
+    key: "schedule.notices.unresolvedSafetyEvidence",
+  },
   "capacity-above-boat": { tone: "danger", key: "schedule.notices.capacityAboveBoat" },
   // A rehearsal is one departure, never a repeating one (ADR 20261012-rehearsal-departures).
   "rehearsal-repeats": { tone: "danger", key: "schedule.notices.rehearsalRepeats" },

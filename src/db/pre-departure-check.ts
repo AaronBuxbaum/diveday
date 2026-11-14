@@ -3,21 +3,18 @@ import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventInstant, offlineEventOutOfBounds } from "@/lib/offline-events";
+import { offlineReceiptSecrets } from "@/lib/offline-receipt-secrets";
 import {
   PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED,
   type PreDepartureCheckStatus,
 } from "@/lib/pre-departure-check";
+import { deriveLabelKey, signPayload, tagMatches } from "@/lib/signed-token";
 import { canPersonManageSafetyChecklist, requireActiveStaffId } from "./authz";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
-import {
-  answeringReplayAsDuplicate,
-  type CLIENT_EVENT_CONFLICT,
-  replayVerdict,
-  type StoredOfflineEvent,
-} from "./offline-replay";
+import { answeringReplayAsDuplicate, CLIENT_EVENT_CONFLICT, replayVerdict } from "./offline-replay";
 import { violatesUniqueIndex } from "./query-helpers";
 import { people, preDepartureCheckEvents, preDepartureChecklistItems, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -276,16 +273,17 @@ export async function latestPreDepartureChecksForTrip(
 }
 
 /** The check event this shop already holds under a device's `clientEventId`, with its line. */
-async function storedCheckEvent(
-  tx: DbExecutor,
-  shopId: string,
-  clientEventId: string,
-): Promise<StoredOfflineEvent | undefined> {
+async function storedCheckEvent(tx: DbExecutor, shopId: string, clientEventId: string) {
   const [existing] = await tx
     .select({
       id: preDepartureCheckEvents.id,
       tripId: preDepartureCheckEvents.tripId,
       checklistItemId: preDepartureCheckEvents.checklistItemId,
+      status: preDepartureCheckEvents.status,
+      intent: preDepartureCheckEvents.offlineIntentFingerprint,
+      intentWithoutNote: preDepartureCheckEvents.offlineIntentWithoutNoteFingerprint,
+      key: preDepartureCheckEvents.offlineIntentKeyFingerprint,
+      disposition: preDepartureCheckEvents.offlineNoteDisposition,
     })
     .from(preDepartureCheckEvents)
     .where(
@@ -295,7 +293,65 @@ async function storedCheckEvent(
       ),
     )
     .limit(1);
-  return existing && { id: existing.id, subject: `${existing.tripId}/${existing.checklistItemId}` };
+  return (
+    existing && {
+      ...existing,
+      subject: `${existing.tripId}/${existing.checklistItemId}/${existing.status}`,
+    }
+  );
+}
+
+type ChecklistReceiptInput = Parameters<typeof recordPreDepartureCheck>[1];
+
+function checklistReceipt(input: ChecklistReceiptInput, secret = offlineReceiptSecrets()[0]) {
+  const key = deriveLabelKey(secret, "diveday-checklist-offline-receipt-v1");
+  const fields = [
+    input.shopId.toLowerCase(),
+    input.tripId.toLowerCase(),
+    input.checklistItemId.toLowerCase(),
+    input.clientEventId?.toLowerCase() ?? null,
+    input.status,
+    input.retractsClientEventId?.toLowerCase() ?? null,
+    input.offlineSnapshotSavedAt?.toISOString() ?? null,
+    input.offlineSnapshotId?.toLowerCase() ?? null,
+    input.offlineErasureEpochToken ?? null,
+    input.occurredAt?.toISOString() ?? null,
+  ];
+  return {
+    key: signPayload(key, "key-id"),
+    intent: signPayload(key, JSON.stringify([...fields, input.note?.trim() || null])),
+    withoutNote: signPayload(key, JSON.stringify(fields)),
+  };
+}
+
+async function checklistReplay(
+  tx: DbExecutor,
+  input: ChecklistReceiptInput,
+): Promise<RecordPreDepartureCheckOutcome | undefined> {
+  if (!input.clientEventId) return undefined;
+  const stored = await storedCheckEvent(tx, input.shopId, input.clientEventId);
+  const verdict = replayVerdict(
+    stored,
+    `${input.tripId}/${input.checklistItemId}/${input.status}`,
+    "pre_departure_check_events",
+  );
+  if (!verdict || !verdict.ok) return verdict;
+  // A missing receipt or rotated key cannot establish the original outcome.
+  const expected =
+    stored &&
+    offlineReceiptSecrets()
+      .map((secret) => checklistReceipt(input, secret))
+      .find((receipt) => tagMatches(stored.key, receipt.key));
+  if (!stored || !expected) throw new Error("Offline checklist receipt unavailable");
+  const safelyDiscarded =
+    stored.disposition === "discarded_unverified_snapshot" &&
+    !input.note?.trim() &&
+    tagMatches(stored.intentWithoutNote, expected.withoutNote);
+  if (!tagMatches(stored.intent, expected.intent) && !safelyDiscarded)
+    return { ok: false as const, reason: CLIENT_EVENT_CONFLICT };
+  if (stored.disposition !== null && stored.disposition !== "discarded_unverified_snapshot")
+    throw new Error("Invalid offline checklist note disposition");
+  return { ...verdict, ...(stored.disposition ? { noteDisposition: stored.disposition } : {}) };
 }
 
 export type RecordPreDepartureCheckOutcome =
@@ -345,164 +401,164 @@ export async function recordPreDepartureCheck(
     occurredAt?: Date;
   },
 ): Promise<RecordPreDepartureCheckOutcome> {
-  const outcome = await answeringReplayAsDuplicate(
-    () =>
-      db.transaction(async (tx): Promise<RecordPreDepartureCheckOutcome> => {
-        const source = input.source ?? "live";
-        // An offline tap is never dated after its own sync (`offlineEventInstant`).
-        const now = nowDate();
-        const occurredAt =
-          source === "offline"
-            ? offlineEventInstant(input.occurredAt, now)
-            : (input.occurredAt ?? now);
-        const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
-        if (!staffId) return { ok: false, reason: "staff_not_found" };
+  const write = (replayOnly = false) =>
+    db.transaction(async (tx): Promise<RecordPreDepartureCheckOutcome> => {
+      const source = input.source ?? "live";
+      // An offline tap is never dated after its own sync (`offlineEventInstant`).
+      const now = nowDate();
+      const occurredAt =
+        source === "offline"
+          ? offlineEventInstant(input.occurredAt, now)
+          : (input.occurredAt ?? now);
+      const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
+      if (!staffId) return { ok: false, reason: "staff_not_found" };
 
-        const mayWriteNote = Boolean(input.note?.trim());
-        if (mayWriteNote) {
-          // A checklist narrative is retained shop evidence just like a roll-call
-          // note, and takes the same shared erasure fence in the same order
-          // (fence before trip), so the two writers never disagree on it.
-          await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+      const mayWriteNote = Boolean(input.note?.trim());
+      if (mayWriteNote) {
+        // A checklist narrative is retained shop evidence just like a roll-call
+        // note, and takes the same shared erasure fence in the same order
+        // (fence before trip), so the two writers never disagree on it.
+        await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+      }
+      // A checklist note is about a checklist item, never a person's own
+      // data, so an erasure since the snapshot does not discard it (ADR
+      // 20260802-diver-data-erasure, amendment 2026-11-01; issue #3569). A
+      // note from a snapshot the server cannot authenticate still goes.
+      const unverified =
+        source === "offline" &&
+        mayWriteNote &&
+        verifyOfflineErasureEpoch({
+          token: input.offlineErasureEpochToken,
+          shopId: input.shopId,
+          tripId: input.tripId,
+          snapshotId: input.offlineSnapshotId,
+        }) === null;
+      const acceptedNote: string | null | undefined = unverified ? null : input.note;
+      const noteDisposition = unverified ? ("discarded_unverified_snapshot" as const) : undefined;
+      const refuse = (
+        reason: Extract<RecordPreDepartureCheckOutcome, { ok: false }>["reason"],
+      ) => ({
+        ok: false as const,
+        reason,
+        ...(noteDisposition ? { noteDisposition } : {}),
+      });
+
+      if (source === "offline" && input.clientEventId) {
+        const replayed = await checklistReplay(tx, input);
+        if (replayed)
+          return replayed.ok && noteDisposition ? { ...replayed, noteDisposition } : replayed;
+      }
+      if (replayOnly) throw new Error("Offline checklist receipt disappeared");
+
+      // The trip's lock, so two requests carrying the same offline event take
+      // turns: a device that gave up on a slow sync resends it while the first
+      // request may still be running. `no key update`, the roll-call writers'
+      // lock on the same row, so this queues behind them rather than beside,
+      // and with their bounded wait: behind a stuck holder a tap fails fast
+      // (55P03) and stays queued on the device rather than hanging the sync.
+      await boundLockWaits(tx);
+      const [trip] = await tx
+        .select({ id: trips.id })
+        .from(trips)
+        .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+        .limit(1)
+        .for("no key update", { of: trips });
+      // Asked again under that lock, where the first request's commit shows.
+      // Without it a replayed `cleared` reads its own first copy as the newest
+      // row and is refused as superseded.
+      if (source === "offline" && input.clientEventId) {
+        const replayed = await checklistReplay(tx, input);
+        if (replayed)
+          return replayed.ok && noteDisposition ? { ...replayed, noteDisposition } : replayed;
+      }
+      if (!trip) return refuse("trip_unavailable");
+
+      const [item] = await tx
+        .select({ id: preDepartureChecklistItems.id })
+        .from(preDepartureChecklistItems)
+        .where(
+          and(
+            eq(preDepartureChecklistItems.id, input.checklistItemId),
+            eq(preDepartureChecklistItems.shopId, input.shopId),
+            isNull(preDepartureChecklistItems.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!item) return refuse("item_unavailable");
+
+      if (source === "offline") {
+        if (
+          offlineEventOutOfBounds({
+            clientEventId: input.clientEventId,
+            offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
+            // The device's own reading, beside its own `savedAt`.
+            occurredAt: input.occurredAt ?? occurredAt,
+          })
+        ) {
+          return refuse("snapshot_invalid");
         }
-        // A checklist note is about a checklist item, never a person's own
-        // data, so an erasure since the snapshot does not discard it (ADR
-        // 20260802-diver-data-erasure, amendment 2026-11-01; issue #3569). A
-        // note from a snapshot the server cannot authenticate still goes.
-        const unverified =
-          source === "offline" &&
-          mayWriteNote &&
-          verifyOfflineErasureEpoch({
-            token: input.offlineErasureEpochToken,
-            shopId: input.shopId,
-            tripId: input.tripId,
-            snapshotId: input.offlineSnapshotId,
-          }) === null;
-        const acceptedNote: string | null | undefined = unverified ? null : input.note;
-        const noteDisposition = unverified ? ("discarded_unverified_snapshot" as const) : undefined;
-        const refuse = (
-          reason: Extract<RecordPreDepartureCheckOutcome, { ok: false }>["reason"],
-        ) => ({
-          ok: false as const,
-          reason,
-          ...(noteDisposition ? { noteDisposition } : {}),
-        });
-
-        if (source === "offline" && input.clientEventId) {
-          const replayed = replayVerdict(
-            await storedCheckEvent(tx, input.shopId, input.clientEventId),
-            `${input.tripId}/${input.checklistItemId}`,
-            "pre_departure_check_events",
-          );
-          if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
-        }
-
-        // The trip's lock, so two requests carrying the same offline event take
-        // turns: a device that gave up on a slow sync resends it while the first
-        // request may still be running. `no key update`, the roll-call writers'
-        // lock on the same row, so this queues behind them rather than beside,
-        // and with their bounded wait: behind a stuck holder a tap fails fast
-        // (55P03) and stays queued on the device rather than hanging the sync.
-        await boundLockWaits(tx);
-        const [trip] = await tx
-          .select({ id: trips.id })
-          .from(trips)
-          .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-          .limit(1)
-          .for("no key update", { of: trips });
-        // Asked again under that lock, where the first request's commit shows.
-        // Without it a replayed `cleared` reads its own first copy as the newest
-        // row and is refused as superseded.
-        if (source === "offline" && input.clientEventId) {
-          const replayed = replayVerdict(
-            await storedCheckEvent(tx, input.shopId, input.clientEventId),
-            `${input.tripId}/${input.checklistItemId}`,
-            "pre_departure_check_events",
-          );
-          if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
-        }
-        if (!trip) return refuse("trip_unavailable");
-
-        const [item] = await tx
-          .select({ id: preDepartureChecklistItems.id })
-          .from(preDepartureChecklistItems)
+        const [newest] = await tx
+          .select({
+            occurredAt: preDepartureCheckEvents.occurredAt,
+            clientEventId: preDepartureCheckEvents.clientEventId,
+          })
+          .from(preDepartureCheckEvents)
           .where(
             and(
-              eq(preDepartureChecklistItems.id, input.checklistItemId),
-              eq(preDepartureChecklistItems.shopId, input.shopId),
-              isNull(preDepartureChecklistItems.deletedAt),
+              eq(preDepartureCheckEvents.shopId, input.shopId),
+              eq(preDepartureCheckEvents.tripId, input.tripId),
+              eq(preDepartureCheckEvents.checklistItemId, input.checklistItemId),
             ),
           )
+          .orderBy(
+            sql`${preDepartureCheckEvents.occurredAt} desc`,
+            sql`${preDepartureCheckEvents.createdAt} desc`,
+            sql`${preDepartureCheckEvents.seq} desc`,
+          )
           .limit(1);
-        if (!item) return refuse("item_unavailable");
-
-        if (source === "offline") {
-          if (
-            offlineEventOutOfBounds({
-              clientEventId: input.clientEventId,
-              offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-              // The device's own reading, beside its own `savedAt`.
-              occurredAt: input.occurredAt ?? occurredAt,
-            })
-          ) {
-            return refuse("snapshot_invalid");
-          }
-          const [newest] = await tx
-            .select({
-              occurredAt: preDepartureCheckEvents.occurredAt,
-              clientEventId: preDepartureCheckEvents.clientEventId,
-            })
-            .from(preDepartureCheckEvents)
-            .where(
-              and(
-                eq(preDepartureCheckEvents.shopId, input.shopId),
-                eq(preDepartureCheckEvents.tripId, input.tripId),
-                eq(preDepartureCheckEvents.checklistItemId, input.checklistItemId),
-              ),
-            )
-            .orderBy(
-              sql`${preDepartureCheckEvents.occurredAt} desc`,
-              sql`${preDepartureCheckEvents.createdAt} desc`,
-              sql`${preDepartureCheckEvents.seq} desc`,
-            )
-            .limit(1);
-          if (newest && newest.occurredAt > occurredAt) {
-            return refuse("newer_event_exists");
-          }
-          if (
-            input.status === "cleared" &&
-            input.retractsClientEventId &&
-            newest?.clientEventId?.toLowerCase() !== input.retractsClientEventId.toLowerCase()
-          ) {
-            return refuse(PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED);
-          }
+        if (newest && newest.occurredAt > occurredAt) {
+          return refuse("newer_event_exists");
         }
+        if (
+          input.status === "cleared" &&
+          input.retractsClientEventId &&
+          newest?.clientEventId?.toLowerCase() !== input.retractsClientEventId.toLowerCase()
+        ) {
+          return refuse(PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED);
+        }
+      }
 
-        const [event] = await tx
-          .insert(preDepartureCheckEvents)
-          .values({
-            shopId: input.shopId,
-            tripId: input.tripId,
-            checklistItemId: input.checklistItemId,
-            recordedByPersonId: staffId,
-            status: input.status,
-            source,
-            clientEventId: source === "offline" ? input.clientEventId : null,
-            note: acceptedNote?.trim() || null,
-            occurredAt,
-          })
-          .returning({ id: preDepartureCheckEvents.id });
-        if (!event) throw new Error("recordPreDepartureCheck: insert returned no row");
-        return { ok: true, eventId: event.id, ...(noteDisposition ? { noteDisposition } : {}) };
-      }),
-    {
-      indexName: "pre_departure_check_events_shop_client_event_unique",
-      clientEventId: input.clientEventId,
-      source: input.source,
-      subject: `${input.tripId}/${input.checklistItemId}`,
-      stored: (clientEventId) => storedCheckEvent(db, input.shopId, clientEventId),
-    },
-  );
+      const receipt =
+        source === "offline" && input.clientEventId ? checklistReceipt(input) : undefined;
+      const [event] = await tx
+        .insert(preDepartureCheckEvents)
+        .values({
+          shopId: input.shopId,
+          tripId: input.tripId,
+          checklistItemId: input.checklistItemId,
+          recordedByPersonId: staffId,
+          status: input.status,
+          source,
+          clientEventId: source === "offline" ? input.clientEventId : null,
+          offlineIntentFingerprint: receipt?.intent,
+          offlineIntentWithoutNoteFingerprint: receipt?.withoutNote,
+          offlineIntentKeyFingerprint: receipt?.key,
+          offlineNoteDisposition: noteDisposition,
+          note: acceptedNote?.trim() || null,
+          occurredAt,
+        })
+        .returning({ id: preDepartureCheckEvents.id });
+      if (!event) throw new Error("recordPreDepartureCheck: insert returned no row");
+      return { ok: true, eventId: event.id, ...(noteDisposition ? { noteDisposition } : {}) };
+    });
+  const outcome = await answeringReplayAsDuplicate(() => write(), {
+    indexName: "pre_departure_check_events_shop_client_event_unique",
+    clientEventId: input.clientEventId,
+    source: input.source,
+    subject: `${input.tripId}/${input.checklistItemId}/${input.status}`,
+    stored: (clientEventId) => storedCheckEvent(db, input.shopId, clientEventId),
+    replayOnly: () => write(true),
+  });
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
   }

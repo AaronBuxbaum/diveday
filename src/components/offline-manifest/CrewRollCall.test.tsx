@@ -9,7 +9,14 @@ import {
 import { OfflineManifestView } from "../OfflineManifestView";
 import { OfflineCrewRollCall } from "./CrewRollCall";
 import { controls as sectionControls, view as sectionView } from "./section-fixtures";
-import { FROZEN_MS, identityResponse, richEnvelope, setOnline } from "./view-fixtures";
+import {
+  FROZEN_MS,
+  identityResponse,
+  richEnvelope,
+  setOnline,
+  VERIFIED_TRIP_ID,
+  verifiedRollCallFixture,
+} from "./view-fixtures";
 
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -33,6 +40,7 @@ vi.mock("@/lib/offline-manifest-store", async () => ({
   appendOfflineArrival: vi.fn(),
   appendOfflineRollCall: vi.fn(),
   listOfflineManifests: vi.fn().mockResolvedValue([]),
+  readOfflineManifestInventory: vi.fn().mockResolvedValue({ manifests: [], incomplete: false }),
   subscribeOfflineManifestChanges: vi.fn(() => () => {}),
   loadOfflineManifest: vi.fn(),
   purgeOfflineManifestsExceptShop: vi.fn().mockResolvedValue([]),
@@ -136,8 +144,10 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
   });
 
   it("reads complete once the saved snapshot has a result for every assigned crew member", async () => {
-    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
-    const saved = richEnvelope("trip-1", { withCarriedNotBoarded: true, crewCalled: true });
+    searchParams = new URLSearchParams({ trip: VERIFIED_TRIP_ID, checkpoint: "after_dive_1" });
+    const saved = verifiedRollCallFixture(
+      richEnvelope("trip-1", { withCarriedNotBoarded: true, crewCalled: true }),
+    );
     // The carried exemption has an original dock statement, not only an implied display.
     const dockMarcus = saved.snapshot.manifests[0].divers.find(
       (row) => row.bookingId === "diver-marcus",
@@ -150,22 +160,24 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     };
     vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
-    vi.mocked(appendOfflineRollCall).mockResolvedValue({
-      ...saved,
-      events: [
-        {
-          clientEventId: "evt-1",
-          snapshotId: saved.snapshot.snapshotId,
-          snapshotSavedAt: saved.snapshot.savedAt,
-          tripId: "trip-1",
-          bookingId: "diver-priya",
-          checkpoint: "after_dive_1",
-          status: "boarded",
-          occurredAt: new Date(FROZEN_MS).toISOString(),
-          syncStatus: "pending",
-        },
-      ],
-    });
+    vi.mocked(appendOfflineRollCall).mockResolvedValue(
+      verifiedRollCallFixture({
+        ...saved,
+        events: [
+          {
+            clientEventId: "evt-1",
+            snapshotId: saved.snapshot.snapshotId,
+            snapshotSavedAt: saved.snapshot.savedAt,
+            tripId: "trip-1",
+            bookingId: "diver-priya",
+            checkpoint: "after_dive_1",
+            status: "boarded",
+            occurredAt: new Date(FROZEN_MS).toISOString(),
+            syncStatus: "pending",
+          },
+        ],
+      }),
+    );
 
     render(<OfflineManifestView />);
     await screen.findByRole("heading", { name: "Two-Tank Reef" });

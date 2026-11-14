@@ -1,0 +1,115 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "758d643e-e04e-45fc-8fbd-e6deaf2c562f",
+  "prevIds": [
+    "11d7e850-b090-4432-8dfd-343f60f134b3"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "unresolved_safety_alert_scan",
+        "last_problem"
+      ],
+      "writes": [
+        "s|col|public.unresolved_safety_alert_scan.last_problem",
+        "n|col|public.unresolved_safety_alert_scan.last_problem",
+        "e|col|public.unresolved_safety_alert_scan.last_problem"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_scan",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "unresolved_safety_alert_scan",
+        "last_problem_sequence"
+      ],
+      "writes": [
+        "s|col|public.unresolved_safety_alert_scan.last_problem_sequence",
+        "n|col|public.unresolved_safety_alert_scan.last_problem_sequence",
+        "e|col|public.unresolved_safety_alert_scan.last_problem_sequence"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_scan",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "unresolved_safety_alert_scan",
+        "last_problem_at"
+      ],
+      "writes": [
+        "s|col|public.unresolved_safety_alert_scan.last_problem_at",
+        "n|col|public.unresolved_safety_alert_scan.last_problem_at",
+        "e|col|public.unresolved_safety_alert_scan.last_problem_at"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_scan",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "last_problem",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "last_problem_sequence",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "last_problem_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

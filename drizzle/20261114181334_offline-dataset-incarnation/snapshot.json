@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "1d2ab84b-4756-4fb1-a2fe-b74ae28c8ddc",
+  "prevIds": [
+    "ffec7100-c58d-4f02-9f97-791e9f7d40ed"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "offline_dataset_incarnation"
+      ],
+      "writes": [
+        "s|col|public.shops.offline_dataset_incarnation",
+        "n|col|public.shops.offline_dataset_incarnation",
+        "e|col|public.shops.offline_dataset_incarnation"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "offline_dataset_incarnation",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

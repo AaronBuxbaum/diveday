@@ -1,0 +1,3 @@
+ALTER TABLE "roll_call_event_claims" ADD COLUMN "handoff_receipt_id" uuid;--> statement-breakpoint
+ALTER TABLE "roll_call_event_claims" ADD COLUMN "handoff_receipt_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "roll_call_event_claims" ADD CONSTRAINT "roll_call_event_claims_handoff_pair" CHECK (("handoff_receipt_id" is null and "handoff_receipt_at" is null) or ("handoff_receipt_id" is not null and "handoff_receipt_at" is not null and "state" = 'unresolved' and "unresolved_observation" is not null));

@@ -29,7 +29,18 @@
  * "a person reads it" side gets its key here and a sentence at its clause.
  */
 
-import { and, asc, count, eq, getTableColumns, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  getTableColumns,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from "drizzle-orm";
 import { fieldGuideCardsIn } from "@/i18n/marine-life-labels";
 import { canExportShopData, STAFF_ROLES } from "@/lib/authz";
 import { splitCardsByKind } from "@/lib/card-ledger";
@@ -46,6 +57,7 @@ import { sortBuddyMemberRowsByTeam } from "./buddy-teams";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { exportCountScope } from "./export-count-scope";
 import { DIVER_EXPORT_FILES } from "./export-diver-files";
+import { assertSafetyExportIntegrity } from "./export-safety-integrity";
 import { SHOP_EXPORT_FILES } from "./export-shop-files";
 import {
   buildExportTables,
@@ -79,6 +91,7 @@ import {
   recapPulses,
   reviewModerationEvents,
   reviewReplies,
+  rollCallEventClaims,
   rollCallEvents,
   shops,
   staffShifts,
@@ -212,11 +225,28 @@ async function readSafetyRecordRows(tx: AppTransaction, scope: ShopExportScope) 
  * against an item for the boat's next crew (fifth-loop ideas, item 1).
  */
 async function readDepartureCheckRows(tx: AppTransaction, scope: ShopExportScope) {
+  await assertSafetyExportIntegrity(tx, scope.shopId);
+  const rawClaimJsonRows = await tx
+    .select({
+      id: rollCallEventClaims.id,
+      observation: sql<string | null>`${rollCallEventClaims.unresolvedObservation}::text`,
+      safetyEvidence: sql<string | null>`${rollCallEventClaims.retainedSafetyEvidence}::text`,
+    })
+    .from(rollCallEventClaims)
+    .where(eq(rollCallEventClaims.shopId, scope.shopId));
+  const rawClaimJson = new Map(rawClaimJsonRows.map((row) => [row.id, row]));
   const checklistItemRows = await readScoped(tx, "preDepartureChecklistItems", scope);
   return {
     checklistItemRows,
     checklistItemLabel: new Map(checklistItemRows.map((row) => [row.id, row.label])),
     checklistEventRows: await readScoped(tx, "preDepartureCheckEvents", scope),
+    rollCallClaimRows: await readScoped(tx, "rollCallEventClaims", scope),
+    rawClaimJson,
+    safetyAlertOutboxRows: await readScoped(tx, "unresolvedSafetyAlertOutbox", scope),
+    safetyAlertDeliveryRows: await readScoped(tx, "unresolvedSafetyAlertDeliveries", scope),
+    safetyAlertEscalationRows: await readScoped(tx, "unresolvedSafetyAlertEscalations", scope),
+    safetyScanIncidentRows: await readScoped(tx, "unresolvedSafetyScanIncidents", scope),
+    safetyReviewDeferralRows: await readScoped(tx, "unresolvedReviewDeferrals", scope),
     boatSafetySnapshotRows: await readScoped(tx, "departureBoatSafetySnapshots", scope),
     boatSnagRows: await readScoped(tx, "boatSnags", scope),
   };
@@ -1264,6 +1294,7 @@ export async function loadShopExportCounts(
 ): Promise<ExportFileCount[] | null> {
   const [shop] = await db.select({ id: shops.id }).from(shops).where(eq(shops.id, shopId)).limit(1);
   if (!shop) return null;
+  await assertSafetyExportIntegrity(db, shopId);
 
   const specification = (file: keyof typeof EXPORT_FILE_NOTES) => {
     const spec = SHOP_EXPORT_FILES.find((spec) => spec.file === file);
@@ -1419,6 +1450,18 @@ export async function loadShopExportCounts(
         "crew",
         exclusion("roll_call_crew_events.csv", rollCallEvents),
       ),
+    "roll_call_event_claims.csv": async () =>
+      scoped("roll_call_event_claims.csv", "rollCallEventClaims"),
+    "unresolved_safety_alert_outbox.csv": async () =>
+      scoped("unresolved_safety_alert_outbox.csv", "unresolvedSafetyAlertOutbox"),
+    "unresolved_safety_alert_deliveries.csv": async () =>
+      scoped("unresolved_safety_alert_deliveries.csv", "unresolvedSafetyAlertDeliveries"),
+    "unresolved_safety_alert_escalations.csv": async () =>
+      scoped("unresolved_safety_alert_escalations.csv", "unresolvedSafetyAlertEscalations"),
+    "unresolved_safety_scan_incidents.csv": async () =>
+      scoped("unresolved_safety_scan_incidents.csv", "unresolvedSafetyScanIncidents"),
+    "unresolved_review_deferrals.csv": async () =>
+      scoped("unresolved_review_deferrals.csv", "unresolvedReviewDeferrals"),
     "buddy_teams.csv": async () => scoped("buddy_teams.csv", "buddyTeamMembers"),
     "waiver_templates.csv": async () => scoped("waiver_templates.csv", "waiverTemplates"),
     "waiver_materiality_decisions.csv": async () =>

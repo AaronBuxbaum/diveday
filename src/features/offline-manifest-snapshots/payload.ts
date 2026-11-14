@@ -6,8 +6,7 @@ import type { AppDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import type { getShopById } from "@/db/shops";
-import { getShopOfflineErasureEpoch } from "@/db/shops";
-import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
+import { getShopOfflineDatasetIncarnation, getShopOfflineErasureEpoch } from "@/db/shops";
 import { departureVessels } from "@/features/boats";
 import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -25,8 +24,9 @@ import type {
   OfflineManifestUpcomingResponse,
 } from "@/lib/offline-manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
+import { signOfflineMeetingIdentity } from "@/lib/offline-meeting-identity";
 import { rollCallDayBoundariesOf } from "@/lib/trip-days";
-import { nextOfflineManifestSnapshotRevision } from "./store";
+import { meetingDaysAtLock, nextOfflineManifestSnapshotRevision } from "./store";
 
 /** Shared complete, fenced roster refresh for priming and causal sync receipts. */
 export async function buildOfflineManifestCopies(
@@ -48,12 +48,6 @@ export async function buildOfflineManifestCopies(
     // the device when the signal goes (issue #688).
     emergencyReference: shop.emergencyReference,
   };
-  // One read for every trip in the window: each copy carries where its later
-  // meeting days begin (issue #3904).
-  const meetingWindows = await meetingWindowsByTrip(
-    db,
-    tripIds.map((id) => ({ id })),
-  );
   const payloads = await mapWithLimit(
     tripIds,
     MANIFEST_BUILD_CONCURRENCY,
@@ -65,6 +59,8 @@ export async function buildOfflineManifestCopies(
         await lockBoardingCertificationEvidence(tx, shop.id, "boarding");
         const epoch = await getShopOfflineErasureEpoch(tx, shop.id);
         if (epoch === null) return null;
+        const datasetIncarnation = await getShopOfflineDatasetIncarnation(tx, shop.id);
+        if (!datasetIncarnation) return null;
         const snapshotRevision = await nextOfflineManifestSnapshotRevision(tx, shop.id, tripId);
         if (snapshotRevision === null) return null;
         const snapshotId = randomUUID();
@@ -73,6 +69,9 @@ export async function buildOfflineManifestCopies(
         // use only Drizzle query methods, which both objects implement.
         const manifests = await getTripManifests(tx as unknown as AppDb, shop.id, tripId);
         if (!manifests) return null;
+        // Read the ordered meeting identities after taking the owned-trip
+        // lock: an edit cannot change this mapping while this copy is issued.
+        const meetings = await meetingDaysAtLock(tx, tripId);
         const checklistItems = await listChecklistItems(tx, shop.id);
         const checks = checklistItems.length
           ? await latestPreDepartureChecksForTrip(tx, shop.id, tripId)
@@ -120,13 +119,24 @@ export async function buildOfflineManifestCopies(
               ? t("shared.offlineManifest.juniorCheckRequired")
               : depthWarningText(t, advisory),
         );
-        const boundaries = rollCallDayBoundariesOf(meetingWindows.get(tripId));
+        const boundaries = rollCallDayBoundariesOf(meetings);
         return {
           ...payload,
           ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
-          rollCallMeetingDays: meetingWindows.get(tripId)?.map((day) => ({
+          rollCallMeetingDays: meetings.map((day, meetingDay) => ({
             startsAt: day.startsAt.toISOString(),
             endsAt: day.endsAt.toISOString(),
+            meetingIdentityProof: signOfflineMeetingIdentity({
+              shopId: shop.id,
+              tripId,
+              snapshotId,
+              meetingId: day.id,
+              scheduleGeneration: day.scheduleGeneration,
+              datasetIncarnation,
+              startsAt: day.startsAt,
+              endsAt: day.endsAt,
+              meetingDay,
+            }),
           })),
           snapshotId,
           erasureEpochToken: signOfflineErasureEpoch({

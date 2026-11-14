@@ -5,7 +5,12 @@ import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
-import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
+import {
+  deferredOfflineNoteDisposition,
+  getTripManifest,
+  recordCrewRollCall,
+  recordRollCall,
+} from "./manifests";
 import { people, rollCallEvents, shops } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -95,6 +100,30 @@ async function fixture() {
  * that person's own: their roll-call note, or their own crew row (issue #3569).
  */
 describe("offline roll-call notes after erasure", () => {
+  it("disposes a deferred note for the erased subject without discarding another person's note", async () => {
+    const f = await fixture();
+    const sync = f.staleSnapshot();
+    await f.eraseDiver();
+    const common = {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      snapshotId: sync.offlineSnapshotId,
+      token: sync.offlineErasureEpochToken,
+      note: "Last seen near the ladder.",
+    };
+    expect(
+      await deferredOfflineNoteDisposition(f.db, {
+        ...common,
+        subject: { bookingId: f.erased.booking.id },
+      }),
+    ).toBe("discarded_erasure_cutoff");
+    expect(
+      await deferredOfflineNoteDisposition(f.db, {
+        ...common,
+        subject: { bookingId: f.other.booking.id },
+      }),
+    ).toBeUndefined();
+  });
   it("drops a pre-erasure note on the erased diver's own booking and keeps the mark", async () => {
     const f = await fixture();
     await f.eraseDiver();

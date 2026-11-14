@@ -1,4 +1,5 @@
 import { authSecret } from "./auth-secret";
+import { offlineReceiptSecrets } from "./offline-receipt-secrets";
 import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
 
 const uuidShape = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -9,9 +10,10 @@ function signature(
   snapshotId: string,
   epoch: number,
   snapshotRevision: number,
+  secret = authSecret,
 ): string {
-  if (!authSecret) throw new Error("AUTH_SECRET is required to sign offline manifest epochs");
-  const key = deriveLabelKey(authSecret, "diveday-offline-manifest-erasure-epoch-v1");
+  if (!secret) throw new Error("AUTH_SECRET is required to sign offline manifest epochs");
+  const key = deriveLabelKey(secret, "diveday-offline-manifest-erasure-epoch-v1");
   return signPayload(key, JSON.stringify([shopId, tripId, snapshotId, epoch, snapshotRevision]));
 }
 
@@ -73,8 +75,10 @@ export function verifyOfflineErasureEpoch(input: {
     return null;
   }
   if (
-    !tagMatches(supplied, () =>
-      signature(input.shopId, input.tripId, snapshotId, epoch, snapshotRevision),
+    !offlineReceiptSecrets().some((secret) =>
+      tagMatches(supplied, () =>
+        signature(input.shopId, input.tripId, snapshotId, epoch, snapshotRevision, secret),
+      ),
     )
   ) {
     return null;

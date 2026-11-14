@@ -6,7 +6,7 @@ import { crewBlockerText } from "@/i18n/identity-check-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { BoatSafetySection } from "@/lib/boat-safety";
 import { type OfflineManifestPayload, serializeManifests } from "@/lib/offline-manifests";
-import { type DayWindow, rollCallDayBoundariesOf } from "@/lib/trip-days";
+import { rollCallDayBoundariesOf } from "@/lib/trip-days";
 import { snagSentences } from "./pre-departure-check-view";
 
 /**
@@ -23,7 +23,6 @@ export function offlineManifestPayload({
   checklistChecks,
   boatSafety,
   snags,
-  meetingWindows,
   locale,
   t,
 }: {
@@ -34,12 +33,10 @@ export function offlineManifestPayload({
   boatSafety: BoatSafetySection | null;
   /** `openSnagsForTrip`: carried and this crew's own, in the reader's order. */
   snags: readonly OpenSnag[];
-  /** The run's real windows (`trip_schedule_days`), which the page has already read. */
-  meetingWindows: readonly DayWindow[] | undefined;
   locale: string;
   t: StaffTranslator;
 }) {
-  const boundaries = rollCallDayBoundariesOf(meetingWindows);
+  const boundaries = rollCallDayBoundariesOf(roster.meetingDays);
   return {
     ...serializeManifests(
       roster.manifests,
@@ -73,13 +70,17 @@ export function offlineManifestPayload({
           : depthWarningText(t, advisory),
     ),
     ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
-    rollCallMeetingDays: meetingWindows?.map((day) => ({
+    rollCallMeetingDays: roster.meetingDays.map((day) => ({
       startsAt: day.startsAt.toISOString(),
       endsAt: day.endsAt.toISOString(),
     })),
     // The device trades this for a snapshot id, revision and signed token when
     // it saves (`claimOfflineManifestSnapshot`), refused if an erasure landed
     // since these rows were read or another copy was issued since (issue #4391).
-    readAt: { erasureEpoch: roster.erasureEpoch, snapshotRevision: roster.snapshotRevision },
+    readAt: {
+      erasureEpoch: roster.erasureEpoch,
+      snapshotRevision: roster.snapshotRevision,
+      scheduleVersion: roster.scheduleVersion,
+    },
   };
 }

@@ -121,6 +121,16 @@ describe("offline sync returns committed instants without inferring chronology",
         }),
       ]),
     );
+    for (const changed of [{ status: "cleared" }, { note: "A different observation" }]) {
+      const conflict = await POST(
+        request({
+          ...batch,
+          checklistEvents: [{ ...batch.checklistEvents[0], ...changed }],
+        }),
+      );
+      expect(conflict.status).toBe(409);
+      expect(await conflict.json()).toEqual({ error: "client_event_conflict" });
+    }
   });
   for (const subject of ["diver", "crew"] as const) {
     for (const scenario of ["future", "delayed"] as const) {

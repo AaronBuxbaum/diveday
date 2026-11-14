@@ -1,10 +1,15 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { offlineManifestSnapshotRevisions } from "../../db/schema/index";
 import { seedDemo } from "../../db/seed";
 import { getShopBySlug } from "../../db/shops";
-import { upcomingTripsWithCounts } from "../../db/trips";
-import { describePostgres, postgresTestDb } from "../../test/postgres";
+import { createTrip, editTripSection, upcomingTripsWithCounts } from "../../db/trips";
+import {
+  describePostgres,
+  holdRowLock,
+  postgresTestDb,
+  waitForLockWaiters,
+} from "../../test/postgres";
 import {
   issueOfflineManifestSnapshot,
   nextOfflineManifestSnapshotRevision,
@@ -12,6 +17,48 @@ import {
 } from "./store";
 
 describePostgres("offline manifest snapshot claims on real Postgres (issue #4391)", () => {
+  it("does not issue an old roster while a schedule edit wins the trip lock", async () => {
+    const pg = await postgresTestDb();
+    await seedDemo(pg.db, "history");
+    const shop = await getShopBySlug(pg.db, "blue-mantis");
+    if (!shop) throw new Error("shop missing");
+    const startsAt = new Date("2099-11-01T09:00:00Z");
+    const endsAt = new Date("2099-11-01T13:00:00Z");
+    const trip = await createTrip(pg.db, {
+      shopId: shop.id,
+      title: "Schedule claim race",
+      startsAt,
+      endsAt,
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!trip) throw new Error("trip missing");
+    const read = await readOfflineManifestRoster(pg.db, shop.id, trip.id);
+    const day = read?.meetingDays[0];
+    if (!read || !day) throw new Error("meeting missing");
+    const gate = await holdRowLock(pg, sql`select id from trips where id = ${trip.id} for update`);
+    const edit = editTripSection(pg.connect(), shop.id, trip.id, {
+      endsAt: new Date(endsAt.getTime() + 60_000),
+      scheduleDays: [
+        { id: day.id, dayNumber: 1, startsAt, endsAt: new Date(endsAt.getTime() + 60_000) },
+      ],
+      expectedScheduleDayIds: [day.id],
+      expectedScheduleVersion: JSON.stringify([
+        [day.id, startsAt.toISOString(), endsAt.toISOString()],
+      ]),
+    });
+    let claim: ReturnType<typeof issueOfflineManifestSnapshot> | undefined;
+    try {
+      await waitForLockWaiters(pg.db, 1);
+      claim = issueOfflineManifestSnapshot(pg.connect(), shop.id, trip.id, read);
+      await waitForLockWaiters(pg.db, 2);
+    } finally {
+      await gate.release();
+    }
+    if (!claim) throw new Error("claim did not start");
+    expect(await edit).toMatchObject({ ok: true });
+    expect(await claim).toEqual({ ok: false, reason: "snapshot_superseded" });
+  });
   it("issues exactly one snapshot for two devices claiming the same read at once", async () => {
     const pg = await postgresTestDb();
     await seedDemo(pg.db, "history");

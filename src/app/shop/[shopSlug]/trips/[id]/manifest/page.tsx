@@ -357,7 +357,6 @@ export default async function TripManifestPage({
                 shop: { ...shop, emergencyReference },
                 ...boatCheck,
                 boatSafety,
-                meetingWindows: view.stageStrip.meetingWindows,
                 locale,
                 t,
               })}
@@ -385,6 +384,7 @@ export default async function TripManifestPage({
             checkpoint={checkpoint}
             summary={manifest.summary}
             complete={completeness.complete}
+            suppressHaptics={manifest.retainedSafetyUnresolved === true}
             t={t}
           />
         </div>

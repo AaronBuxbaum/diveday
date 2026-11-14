@@ -939,6 +939,7 @@ export type SpineDeparture = {
    * #791) is a `blocked_aboard` row in Needs you, where their fix is.
    */
   crewAccountedFor: boolean;
+  retainedSafetyUnresolved?: boolean;
   crewReason: CrewIncompleteReason | null;
   /**
    * The crew's own word for where this boat is, and when they said it (ADR
@@ -981,6 +982,9 @@ export type DayStation = SpineDeparture & {
 };
 
 export type DaySpine = {
+  /** May concern a trip outside today's stations. */
+  retainedSafetyUnresolved?: boolean;
+  retainedSafetyAlertNeedsReview?: boolean;
   /** Today's departures, clock order. Never re-ordered by the role lens. */
   stations: DayStation[];
   /**
@@ -1072,6 +1076,8 @@ const clockMinute = (at: Date): number => Math.floor(at.getTime() / 60_000);
 
 /** What `assembleDaySpine` needs of one `getTodayWork` result. */
 export type SpineWork = {
+  retainedSafetyUnresolved?: boolean;
+  retainedSafetyAlertNeedsReview?: boolean;
   departures: readonly SpineDeparture[];
   actions: readonly TodayAction[];
   /**
@@ -1182,6 +1188,8 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
 
   return {
     stations,
+    ...(today.retainedSafetyUnresolved ? { retainedSafetyUnresolved: true } : {}),
+    ...(today.retainedSafetyAlertNeedsReview ? { retainedSafetyAlertNeedsReview: true } : {}),
     desk: sortStationRows(desk),
     tomorrow: {
       stations: tomorrowStations,
@@ -1261,6 +1269,7 @@ export function spineIsQuiet(
 ): boolean {
   return (
     !firstRun &&
+    !spine.retainedSafetyUnresolved &&
     spine.stations.length === 0 &&
     dayDepartures === 0 &&
     spineJobCount(spine) === 0 &&
@@ -1290,10 +1299,12 @@ export function spineIsQuiet(
  * also counts a diver blocked aboard a boat that is out past its station.
  */
 export function todaysBoatsAreClear(spine: DaySpine, blocked = 0): boolean {
+  if (spine.retainedSafetyUnresolved) return false;
   if (spine.stations.length === 0) return false;
   if (spineJobCount(spine) === 0) return false;
   if (blocked > 0) return false;
-  if (spine.stations.some((station) => station.blocked > 0)) return false;
+  if (spine.stations.some((station) => station.blocked > 0 || station.retainedSafetyUnresolved))
+    return false;
   const pressing = (action: TodayAction) => toneRank(action) < TONE_RANK.neutral;
   if (spine.desk.some(pressing)) return false;
   return !spine.stations.some((station) => station.rows.some(pressing));

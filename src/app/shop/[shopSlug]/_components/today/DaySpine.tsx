@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { type ComponentProps, Suspense } from "react";
 import { type WaiverSendCopy, waiverSendCopy } from "@/app/actions/waiver-send-types";
 import {
@@ -21,8 +20,6 @@ import {
   offerSeatCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/offer-seat-copy";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
-import { EmptyState } from "@/components/EmptyState";
-import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { FirstBooking } from "@/features/first-booking";
 import type { DayTakings as DayTakingsReading, EveningClose } from "@/features/today";
@@ -51,11 +48,13 @@ import { DayStation } from "./DayStation";
 import { HelpRequestSection, helpRequestControl } from "./help-request-row";
 import { NeedsYouQueue } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
+import { QueueEmpty } from "./QueueEmpty";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
 import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
+import { RetainedSafetyWarnings } from "./RetainedSafetyWarnings";
 import { quietIcon, RowGlyph } from "./row-glyph";
 import { rowKey } from "./row-key";
 import { SpineRow } from "./SpineRow";
@@ -488,28 +487,6 @@ function UnlessWindy({
   );
 }
 
-/**
- * The whole week is in order — the queue's own good-news moment, and the only
- * thing that stands where the work would be.
- */
-function QueueEmpty({ t, shopSlug }: { t: StaffTranslator; shopSlug: string }) {
-  return (
-    <EmptyState
-      titleId="queue-heading"
-      title={t("today.todayQueue.emptyHeading")}
-      body={t("today.todayQueue.emptyBody")}
-      action={
-        <Link
-          href={`/shop/${shopSlug}/schedule/board`}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-        >
-          {t("today.todayQueue.emptyAction")}
-        </Link>
-      }
-    />
-  );
-}
-
 function Stations({
   stations,
   crewedTripIds,
@@ -775,7 +752,8 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           them, so nothing is above either but the sky band: pulled, they sat
           16px under its edge with 40px to the first station. Unpulled, they
           sit the header's 32px under the band like every first block. */}
-      {allHomeLine && evening ? (
+      <RetainedSafetyWarnings spine={spine} t={t} />
+      {allHomeLine && evening && !spine.retainedSafetyUnresolved ? (
         <AllClearLine className="rise-in -mt-4 tabular-nums">
           {/* **Souls, not seats** (issue #1346). The one sentence in the
               product about who came home used to leave the crew out of both
@@ -946,7 +924,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           only thing that stands where the work would be. It never renders for
           a shop still in first-run: that shop has no roster to make a claim
           about (issue #711), and its setup ledger leads the page. */}
-      {jobs === 0 && !closing && !firstRun ? (
+      {jobs === 0 && !closing && !firstRun && !spine.retainedSafetyUnresolved ? (
         <UnlessWindy wind={highWind} show={(wind) => wind.length === 0}>
           <QueueEmpty t={t} shopSlug={shopSlug} />
         </UnlessWindy>

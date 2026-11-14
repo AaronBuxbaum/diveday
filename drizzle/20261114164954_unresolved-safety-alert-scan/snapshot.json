@@ -1,0 +1,464 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "11d7e850-b090-4432-8dfd-343f60f134b3",
+  "prevIds": [
+    "c219eded-288b-4f35-b56b-fcef7d8a13e6"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_escalations"
+      ],
+      "writes": [
+        "s|tbl|public.unresolved_safety_alert_escalations",
+        "n|tbl|public.unresolved_safety_alert_escalations",
+        "e|tbl|public.unresolved_safety_alert_escalations",
+        "n|rel|public.unresolved_safety_alert_escalations",
+        "n|type|public.unresolved_safety_alert_escalations",
+        "n|rel|public.unresolved_safety_alert_escalations_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_scan"
+      ],
+      "writes": [
+        "s|tbl|public.unresolved_safety_alert_scan",
+        "n|tbl|public.unresolved_safety_alert_scan",
+        "e|tbl|public.unresolved_safety_alert_scan",
+        "n|rel|public.unresolved_safety_alert_scan",
+        "n|type|public.unresolved_safety_alert_scan",
+        "n|rel|public.unresolved_safety_alert_scan_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "unresolved_safety_alert_outbox",
+        "scan_sequence"
+      ],
+      "writes": [
+        "s|col|public.unresolved_safety_alert_outbox.scan_sequence",
+        "n|col|public.unresolved_safety_alert_outbox.scan_sequence",
+        "e|col|public.unresolved_safety_alert_outbox.scan_sequence"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "unresolved_safety_alert_escalations",
+        "unresolved_safety_alert_escalation_kind_unique"
+      ],
+      "writes": [
+        "s|idx|public.unresolved_safety_alert_escalation_kind_unique",
+        "n|idx|public.unresolved_safety_alert_escalation_kind_unique",
+        "e|idx|public.unresolved_safety_alert_escalation_kind_unique",
+        "n|rel|public.unresolved_safety_alert_escalation_kind_unique"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_escalations",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_escalations.outbox_id",
+        "n|col|public.unresolved_safety_alert_escalations.kind"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "unresolved_safety_alert_outbox",
+        "unresolved_safety_alert_outbox_scan_sequence_unique"
+      ],
+      "writes": [
+        "s|idx|public.unresolved_safety_alert_outbox_scan_sequence_unique",
+        "n|idx|public.unresolved_safety_alert_outbox_scan_sequence_unique",
+        "e|idx|public.unresolved_safety_alert_outbox_scan_sequence_unique",
+        "n|rel|public.unresolved_safety_alert_outbox_scan_sequence_unique"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_outbox.scan_sequence"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_escalations"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_safety_alert_escalations.unresolved_safety_alert_escalations_hMbe32MvQwWk_fkey",
+        "n|fk|public.unresolved_safety_alert_escalations.unresolved_safety_alert_escalations_hMbe32MvQwWk_fkey",
+        "e|fk|public.unresolved_safety_alert_escalations.unresolved_safety_alert_escalations_hMbe32MvQwWk_fkey",
+        "n|con|public.unresolved_safety_alert_escalations.unresolved_safety_alert_escalations_hMbe32MvQwWk_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_escalations",
+        "n|sch|public",
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_escalations.outbox_id",
+        "n|col|public.unresolved_safety_alert_outbox.id",
+        "e|uniqueness|public.unresolved_safety_alert_outbox.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "unresolved_safety_alert_escalations",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "unresolved_safety_alert_scan",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_escalations",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_escalations",
+        "name": "outbox_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_escalations",
+        "name": "kind",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_escalations",
+        "name": "first_seen_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_escalations",
+        "name": "last_seen_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "scan_sequence",
+        "type": "bigserial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "cursor",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "high_water",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "lease_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "lease_until",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_escalations",
+        "name": "unresolved_safety_alert_escalation_kind_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "outbox_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "kind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_outbox",
+        "name": "unresolved_safety_alert_outbox_scan_sequence_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "scan_sequence",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_escalations",
+        "name": "unresolved_safety_alert_escalations_hMbe32MvQwWk_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "outbox_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "unresolved_safety_alert_outbox",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_escalations",
+        "name": "unresolved_safety_alert_escalations_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "unresolved_safety_alert_scan_pkey",
+        "columns": [
+          "name"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_escalations",
+        "name": "unresolved_safety_alert_escalation_kind",
+        "value": "\"kind\" in ('no_recipients', 'uncertain', 'pending', 'dispatch_error')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_scan",
+        "name": "unresolved_safety_alert_scan_lease_pair",
+        "value": "(\"lease_id\" is null) = (\"lease_until\" is null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

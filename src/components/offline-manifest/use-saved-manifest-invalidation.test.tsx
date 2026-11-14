@@ -29,10 +29,12 @@ const purgeState = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useSearchParams: () => search.params }));
 vi.mock("@/lib/offline-manifest-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/offline-manifest-store")>();
+  const list = vi.fn();
   return {
     ...actual,
     acknowledgeDiscardedOfflineRecords: vi.fn(),
-    listOfflineManifests: vi.fn(),
+    listOfflineManifests: list,
+    readOfflineManifestInventory: async () => ({ manifests: await list(), incomplete: false }),
     loadOfflineManifest: vi.fn(),
     readDiscardedOfflineRecords: vi.fn(),
     syncOfflineManifest: vi.fn(),

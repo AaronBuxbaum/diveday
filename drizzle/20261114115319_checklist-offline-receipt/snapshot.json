@@ -1,0 +1,115 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "177526c1-a7e8-4f9f-a802-11335a34f311",
+  "prevIds": [
+    "da32768c-c2de-45f0-a860-583a6592e902"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pre_departure_check_events",
+        "offline_intent_fingerprint"
+      ],
+      "writes": [
+        "s|col|public.pre_departure_check_events.offline_intent_fingerprint",
+        "n|col|public.pre_departure_check_events.offline_intent_fingerprint",
+        "e|col|public.pre_departure_check_events.offline_intent_fingerprint"
+      ],
+      "reads": [
+        "n|tbl|public.pre_departure_check_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pre_departure_check_events",
+        "offline_intent_key_fingerprint"
+      ],
+      "writes": [
+        "s|col|public.pre_departure_check_events.offline_intent_key_fingerprint",
+        "n|col|public.pre_departure_check_events.offline_intent_key_fingerprint",
+        "e|col|public.pre_departure_check_events.offline_intent_key_fingerprint"
+      ],
+      "reads": [
+        "n|tbl|public.pre_departure_check_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pre_departure_check_events",
+        "offline_note_disposition"
+      ],
+      "writes": [
+        "s|col|public.pre_departure_check_events.offline_note_disposition",
+        "n|col|public.pre_departure_check_events.offline_note_disposition",
+        "e|col|public.pre_departure_check_events.offline_note_disposition"
+      ],
+      "reads": [
+        "n|tbl|public.pre_departure_check_events",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pre_departure_check_events",
+        "name": "offline_intent_fingerprint",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pre_departure_check_events",
+        "name": "offline_intent_key_fingerprint",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pre_departure_check_events",
+        "name": "offline_note_disposition",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

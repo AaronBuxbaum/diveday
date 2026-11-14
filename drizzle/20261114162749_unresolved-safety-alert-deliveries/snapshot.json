@@ -1,0 +1,356 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "c219eded-288b-4f35-b56b-fcef7d8a13e6",
+  "prevIds": [
+    "06de981f-46c2-4c3b-9fc7-797873aec312"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_deliveries"
+      ],
+      "writes": [
+        "s|tbl|public.unresolved_safety_alert_deliveries",
+        "n|tbl|public.unresolved_safety_alert_deliveries",
+        "e|tbl|public.unresolved_safety_alert_deliveries",
+        "n|rel|public.unresolved_safety_alert_deliveries",
+        "n|type|public.unresolved_safety_alert_deliveries",
+        "n|rel|public.unresolved_safety_alert_deliveries_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "unresolved_safety_alert_deliveries",
+        "unresolved_safety_alert_delivery_recipient_unique"
+      ],
+      "writes": [
+        "s|idx|public.unresolved_safety_alert_delivery_recipient_unique",
+        "n|idx|public.unresolved_safety_alert_delivery_recipient_unique",
+        "e|idx|public.unresolved_safety_alert_delivery_recipient_unique",
+        "n|rel|public.unresolved_safety_alert_delivery_recipient_unique"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_deliveries",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_deliveries.outbox_id",
+        "n|col|public.unresolved_safety_alert_deliveries.person_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_deliveries"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_safety_alert_deliveries.unresolved_safety_alert_deliveries_nrD84TjxkEBA_fkey",
+        "n|fk|public.unresolved_safety_alert_deliveries.unresolved_safety_alert_deliveries_nrD84TjxkEBA_fkey",
+        "e|fk|public.unresolved_safety_alert_deliveries.unresolved_safety_alert_deliveries_nrD84TjxkEBA_fkey",
+        "n|con|public.unresolved_safety_alert_deliveries.unresolved_safety_alert_deliveries_nrD84TjxkEBA_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_deliveries",
+        "n|sch|public",
+        "n|tbl|public.unresolved_safety_alert_outbox",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_deliveries.outbox_id",
+        "n|col|public.unresolved_safety_alert_outbox.id",
+        "e|uniqueness|public.unresolved_safety_alert_outbox.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "unresolved_safety_alert_deliveries"
+      ],
+      "writes": [
+        "s|fk|public.unresolved_safety_alert_deliveries.unresolved_safety_alert_deliveries_person_id_people_id_fkey",
+        "n|fk|public.unresolved_safety_alert_deliveries.unresolved_safety_alert_deliveries_person_id_people_id_fkey",
+        "e|fk|public.unresolved_safety_alert_deliveries.unresolved_safety_alert_deliveries_person_id_people_id_fkey",
+        "n|con|public.unresolved_safety_alert_deliveries.unresolved_safety_alert_deliveries_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.unresolved_safety_alert_deliveries",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.unresolved_safety_alert_deliveries.person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "unresolved_safety_alert_deliveries",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "outbox_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "status",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'pending'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "attempt_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "attempted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "delivered_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "provider_message_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "unresolved_safety_alert_delivery_recipient_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "outbox_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "unresolved_safety_alert_deliveries_nrD84TjxkEBA_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "outbox_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "unresolved_safety_alert_outbox",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "unresolved_safety_alert_deliveries_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "unresolved_safety_alert_deliveries_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "unresolved_safety_alert_delivery_status",
+        "value": "\"status\" in ('pending', 'sending', 'delivered', 'uncertain')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "unresolved_safety_alert_deliveries",
+        "name": "unresolved_safety_alert_delivery_attempt_shape",
+        "value": "(\"status\" = 'pending' and \"attempt_id\" is null and \"attempted_at\" is null and \"delivered_at\" is null and \"provider_message_id\" is null) or (\"status\" in ('sending', 'uncertain') and \"attempt_id\" is not null and \"attempted_at\" is not null and \"delivered_at\" is null and \"provider_message_id\" is null) or (\"status\" = 'delivered' and \"attempt_id\" is not null and \"attempted_at\" is not null and \"delivered_at\" is not null and \"provider_message_id\" is not null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

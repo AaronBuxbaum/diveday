@@ -72,6 +72,8 @@ export const shops = pgTable(
     name: text("name").notNull(),
     /** Monotone shop-wide invalidation epoch for offline roll-call note text. */
     offlineErasureEpoch: integer("offline_erasure_epoch").notNull().default(0),
+    /** Changes on destructive dataset rebuild; never reuses a previous proof incarnation. */
+    offlineDatasetIncarnation: uuid("offline_dataset_incarnation").notNull().defaultRandom(),
     slug: text("slug").notNull().unique(),
     /** IANA timezone of the physical shop — all schedule display uses this. */
     timezone: text("timezone").notNull(),
