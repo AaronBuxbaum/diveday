@@ -507,7 +507,6 @@ jobs:
         env:
           SKIP: ${{ needs.changes.outputs.pixel_probe == 'false' && 'e2e/pixel-probe.spec.ts' || '' }}
           E2E_WORKERS: "2"
-        id: playwright-tests
         run: |
           set -o pipefail
           mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --skip="${SKIP}" --explain --summary="$GITHUB_STEP_SUMMARY")
@@ -596,18 +595,6 @@ jobs:
           path: e2e-durations/
           if-no-files-found: ignore
           retention-days: 14
-      # TEMPORARY: gather repeated failure-only roster timings without changing
-      # the original full shard, assertion, or timeout. Remove before merge.
-      - name: TEMPORARY roster confirmation repetitions
-        if: ${{ !cancelled() && matrix.shard == 5 && steps.playwright-tests.outcome != 'skipped' }}
-        env:
-          E2E_WORKERS: "2"
-        run: pnpm exec playwright test e2e/device-text-size.spec.ts -g 'keeps a person.s name and close action readable' --repeat-each=6 --reporter=line
-      - name: TEMPORARY certification disclosure repetitions
-        if: ${{ !cancelled() && matrix.shard == 5 && steps.playwright-tests.outcome != 'skipped' }}
-        env:
-          E2E_WORKERS: "2"
-        run: pnpm exec playwright test e2e/certification-feedback.spec.ts -g 'mobile.*a lower submitted certification' --repeat-each=3 --reporter=line
 
   # An early browser answer on a pull request, not a gate (2026-10-22 CI
   # review). The first browser verdict used to arrive with the full shards:
