@@ -12,6 +12,19 @@ import { E2E_FROZEN_CLOCK, E2E_STRIPE_TEST_WEBHOOK_SECRET } from "./servers";
 // lifetime; a changed value tells the fixture to sign in again.
 let staffStorageStateGeneration = 0;
 
+/** Select one named crew member whether their option also names a day-off warning. */
+export async function selectCrewByName(page: Page, name: string): Promise<void> {
+  const select = page.getByLabel("Assign crew");
+  const labels = await select.locator("option").allTextContents();
+  const matching = labels
+    .map((label) => label.trim())
+    .filter((label) => label === name || label.startsWith(`${name} — `));
+  expect(matching, `one crew option for ${name}`).toHaveLength(1);
+  const [label] = matching;
+  if (!label) throw new Error(`Missing crew option for ${name}`);
+  await select.selectOption({ label });
+}
+
 export function currentStaffStorageStateGeneration(): number {
   return staffStorageStateGeneration;
 }

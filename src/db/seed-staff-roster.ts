@@ -11,6 +11,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { LEAD_INSTRUCTOR_NAME } from "./seed-cast";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
 
 /**
@@ -81,13 +82,14 @@ export async function seedStaffRoster(db: DbExecutor, shopId: string): Promise<v
     for (let offset = -2; offset < 12; offset += 1) {
       const day = calendarDateInTimezone(at(offset, 8), DEMO_SHOP_TIMEZONE);
       if (busyDays.has(day)) continue;
-      if ((offset + index + 7) % 7 < 2) {
+      const awayScenario = person.fullName === LEAD_INSTRUCTOR_NAME && offset === 3;
+      if (awayScenario || (offset + index + 7) % 7 < 2) {
         await db.insert(crewAvailabilityBlocks).values({
           shopId,
           personId: person.id,
           startsOn: day,
           endsOn: day,
-          note: "Day off",
+          note: awayScenario ? "Family trip" : "Day off",
           createdByPersonId: person.id,
         });
       } else {

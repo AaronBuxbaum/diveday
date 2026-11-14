@@ -74,8 +74,8 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
       });
       await form.locator("> summary").click();
       await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
-      await form.getByLabel("Starts").fill("06:30");
-      await form.getByLabel("Ends").fill("14:45");
+      await form.getByLabel("Starts").fill("01:00");
+      await form.getByLabel("Ends").fill("01:30");
       await form.getByLabel("Note").fill("Boat 2");
       await capture(page, "staffing-add-shift-editor", "light");
       await form.getByRole("button", { name: "Add shift" }).click();

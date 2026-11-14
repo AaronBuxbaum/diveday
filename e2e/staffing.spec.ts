@@ -11,8 +11,8 @@ import { seedFacts } from "./shop-facts";
  *
  * Three things worth knowing before reading the assertions:
  *
- * - The seed gives **every** staff member one shift *today*, around the reef
- *   boat (`src/db/seed.ts`, `SEEDED_SHIFT` below), and the frozen clock puts today at
+ * - The seed gives the dawn boat's crew a distinct shift today
+ *   (`src/db/seed-staff-roster.ts`, `SEEDED_SHIFT` below), and the frozen clock puts today at
  *   Tuesday 21 July 2026, 09:30 in the shop's own zone — so the default week
  *   is Mon 20 – Sun 26 July and it is never empty.
  * - Paging is `?week=<ISO Monday>`, the schedule board's own grammar
@@ -32,17 +32,10 @@ const STAFFING = "/shop/blue-mantis/staffing";
 const t = staffTranslator("en-US");
 
 /**
- * The seeded shift every member of the cast works today (`seedStaffShifts`,
- * `src/db/seed.ts`), read by its hours: it carries no note, since a seed label
- * on every chip read as a fixture rather than a shop (UX audit 2026-10-07,
- * item 34). An hour before today's reef boat sails (2:30 PM at the frozen
- * 9:30 AM clock) until an hour after it is back (`demoTodayShift`,
- * `src/db/seed-clock.ts`): it used to be a flat twelve hours, which put an
- * evening boat's crew on until 5:30 AM (UX review 2026-10-10, item 4). The
- * dawn boat's crew also hold a 4:30 – 9:30 AM shift, which is why the
- * assertions below take `.first()`.
+ * The distinct fictional dawn-crew shift, independently checked to be
+ * present this week and absent next week by `seed-staff-shifts.test.ts`.
  */
-const SEEDED_SHIFT = "1:30 PM – 7:00 PM";
+const SEEDED_SHIFT = "5:00 AM – 9:00 AM";
 
 /**
  * The Add-a-shift form, scoped by its section's own id — the days-away form
@@ -68,9 +61,8 @@ const weekOf = (page: Page) => page.getByRole("region", { name: "Who’s working
  * to blue-mantis survives into every later spec in the same worker whenever
  * this test fails before reaching its own Remove step.
  *
- * A minted shop carries the same seeded shift for every member
- * of the cast (`seedStaffShifts`, src/db/seed.ts), which is what the
- * before-and-after assertions below read.
+ * A minted shop carries the same fictional dawn-crew shift as the canonical
+ * demo, which is what the before-and-after assertions below read.
  */
 test("an owner puts a shift in a day, steps a week off it, and takes it back off", async ({
   page,
@@ -80,9 +72,8 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   // week steps and a delete — full server round trips, all inside this test's
   // own budget.
   test.setTimeout(60_000);
-  // Thursday of the week the frozen clock sits in, where nobody is scheduled:
-  // the seeded shift is on today (Tuesday), and `createStaffShift` refuses an
-  // overlap.
+  // Thursday of the frozen week. The demo's full rota already covers daytime;
+  // use the independently tested early-morning gap for this new shift.
   const shiftDay = daysFromNow(2);
   // Unique, so the assertions target this test's own shift rather than the
   // seeded one.
@@ -98,8 +89,8 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   await expect(page).toHaveURL(/view=plan/);
   const form = await addShiftForm(page, shiftDay);
   await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
-  await form.getByLabel("Starts").fill("06:30");
-  await form.getByLabel("Ends").fill("14:45");
+  await form.getByLabel("Starts").fill("01:00");
+  await form.getByLabel("Ends").fill("01:30");
   await form.getByLabel("Note").fill(note);
   await form.getByRole("button", { name: "Add shift" }).click();
 
@@ -110,7 +101,7 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   await page.getByRole("link", { name: t("schedule.views.crew"), exact: true }).click();
   // Read back through the shop's own timezone, not the wall time it was typed
   // in: this fails if the shift is written or bucketed in the host's zone.
-  await expect(week.getByText("6:30 AM – 2:45 PM").first()).toBeVisible();
+  await expect(week.getByText("1:00 AM – 1:30 AM").first()).toBeVisible();
   await expect(week.getByText(note).first()).toBeVisible();
 
   // Step a week forward. Nothing on this page filters in the browser — this is
@@ -158,6 +149,8 @@ test("a shift added on another week comes back to that week", async ({ page, pri
   // The day is the row it is added on, so it is inside the week on screen by construction.
   const form = await addShiftForm(page, nextWeekMonday);
   await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
+  await form.getByLabel("Starts").fill("01:00");
+  await form.getByLabel("Ends").fill("01:30");
   await form.getByLabel("Note").fill(note);
   await form.getByRole("button", { name: "Add shift" }).click();
 

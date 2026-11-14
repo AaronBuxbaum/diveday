@@ -10,6 +10,7 @@ import {
   openTripAboutRow,
   openTripFromBoard,
   openTripMore,
+  selectCrewByName,
 } from "./helpers";
 
 const staff = staffTranslator("en-US");
@@ -206,7 +207,7 @@ test("applying a series' standing crew reaches later dates, and spares one a cre
   await page.goto(await tripPathOn(page, second, busy));
   await openTripAbout(page);
   await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+  await selectCrewByName(page, "Marcus Webb");
   await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
 
   // The run's first date takes a two-person crew.
