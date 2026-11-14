@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ManifestRosterFreshness } from "@/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestRosterFreshness";
 import { readManifestHistoryCookie } from "@/app/shop/[shopSlug]/trips/[id]/manifest/_components/manifest-history-cookie";
 import {
-  manifestStaleGeneration,
+  markManifestReadStale,
   resetManifestRereadForTests,
   subscribeManifestReread,
 } from "@/components/manifest-stale-generation";
@@ -321,6 +321,13 @@ describe("useOfflineManifestSync on a network that stops answering", () => {
     const unsubscribe = subscribeManifestReread(TRIP_ID, owner);
     const { result } = renderHook(() => useOfflineManifestSync(payload, copy));
     await waitFor(() => expect(result.current.saved).not.toBeNull());
+    act(() => {
+      markManifestReadStale(TRIP_ID);
+      markManifestReadStale(TRIP_ID);
+      markManifestReadStale(TRIP_ID);
+    });
+    expect(owner).toHaveBeenCalledTimes(2);
+    owner.mockClear();
     mockRouter.refresh.mockClear();
     const channel = channels.find((item) => item.name === "diveday-offline-manifest-changes-v1");
     expect(channel).toBeDefined();
@@ -833,25 +840,6 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
     rerender({ page: reread });
     await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
     expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
-  });
-
-  it("asks for one re-read per stale claim, never a loop", async () => {
-    mountRereadOwner();
-    const generation = manifestStaleGeneration(TRIP_ID);
-    const fetchMock = vi.fn(async () => stale());
-    vi.stubGlobal("fetch", fetchMock);
-
-    const { rerender } = renderPage(pagePayload);
-    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
-
-    // The re-read lands, and its claim is stale too (another copy again).
-    rerender({ page: reread });
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    await act(async () => {});
-
-    expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
-    expect(manifestStaleGeneration(TRIP_ID)).toBe(generation + 2);
-    expect(saveOfflineManifest).not.toHaveBeenCalled();
   });
 
   it("does not stay on Saving… after a manual refresh whose claim is stale and whose re-read never lands", async () => {

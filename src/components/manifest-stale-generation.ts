@@ -32,7 +32,10 @@ export function subscribeManifestInvalidation(tripId: string, listener: () => vo
 // freshness owner and remains pending until the matching rendered read confirms.
 const owners = new Map<string, Set<() => boolean>>();
 const pending = new Map<string, number>();
-const running = new Map<string, () => boolean>();
+const running = new Map<string, { owner: () => boolean }>();
+const stalePending = new Set<string>();
+const staleAttempts = new Map<string, number>();
+const STALE_REREAD_LIMIT = 2;
 
 function drain(tripId: string): boolean {
   const generation = pending.get(tripId);
@@ -40,9 +43,23 @@ function drain(tripId: string): boolean {
   if (generation === undefined || candidates?.size !== 1) return false;
   const owner = candidates.values().next().value;
   if (!owner) return false;
-  if (running.get(tripId) === owner) return true;
+  if (running.get(tripId)?.owner === owner) return true;
+  const stale = stalePending.has(tripId);
+  const attempts = staleAttempts.get(tripId) ?? 0;
+  if (stale && attempts >= STALE_REREAD_LIMIT) return false;
+  // Mark before calling the owner: synchronous re-entry must not start twice.
+  const attempt = { owner };
+  running.set(tripId, attempt);
+  if (stale) staleAttempts.set(tripId, attempts + 1);
   const started = owner();
-  if (started && pending.get(tripId) === generation) running.set(tripId, owner);
+  if (!started) {
+    if (running.get(tripId) === attempt) {
+      running.delete(tripId);
+      if (stale && staleAttempts.get(tripId) === attempts + 1) staleAttempts.set(tripId, attempts);
+    }
+  } else if (pending.get(tripId) !== generation && running.get(tripId) === attempt) {
+    running.delete(tripId);
+  }
   return started;
 }
 
@@ -57,27 +74,43 @@ export function requestManifestReread(tripId: string): boolean {
   return drain(tripId);
 }
 
+/** Withdraw immediately and assign recovery to the current per-trip owner. */
+export function markManifestReadStale(tripId: string): boolean {
+  invalidateManifestRead(tripId);
+  pending.set(tripId, manifestStaleGeneration(tripId));
+  running.delete(tripId);
+  stalePending.add(tripId);
+  return drain(tripId);
+}
+
+/** An independent trigger allows a new bounded recovery episode. */
+export function resetManifestRereadBudget(tripId: string): void {
+  staleAttempts.delete(tripId);
+}
+
 export function subscribeManifestReread(tripId: string, owner: () => boolean): () => void {
   const candidates = owners.get(tripId) ?? new Set();
+  if (candidates.size === 0) resetManifestRereadBudget(tripId);
   candidates.add(owner);
   owners.set(tripId, candidates);
   drain(tripId);
   return () => {
     candidates.delete(owner);
-    if (running.get(tripId) === owner) running.delete(tripId);
+    if (running.get(tripId)?.owner === owner) running.delete(tripId);
     if (!candidates.size) owners.delete(tripId);
     else drain(tripId);
   };
 }
 
 export function isManifestRereadRunning(tripId: string, owner: () => boolean): boolean {
-  return running.get(tripId) === owner;
+  return running.get(tripId)?.owner === owner;
 }
 
 export function satisfyPendingManifestReread(tripId: string, generation: number): void {
   if (generation !== manifestStaleGeneration(tripId) || pending.get(tripId) !== generation) return;
   pending.delete(tripId);
   running.delete(tripId);
+  stalePending.delete(tripId);
 }
 
 /** Reset isolated test state after all owners have unmounted. */
@@ -85,6 +118,8 @@ export function resetManifestRereadForTests(tripId: string): void {
   generations.delete(tripId);
   pending.delete(tripId);
   running.delete(tripId);
+  stalePending.delete(tripId);
+  staleAttempts.delete(tripId);
 }
 
 type CommittedRoster = { generation: number; renderId: string; token: string; checkpoint: string };

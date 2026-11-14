@@ -83,7 +83,7 @@ export function ManifestRosterFreshness({
       activeToken.current = null;
       setRequestToken(null);
       router.refresh();
-      return false;
+      return true;
     }
     const token = crypto.randomUUID();
     readStarted.current = { wall: nowMs(), monotonic: performance.now() };
@@ -101,7 +101,7 @@ export function ManifestRosterFreshness({
       activeToken.current = null;
       setRequestToken(null);
       router.refresh();
-      return false;
+      return true;
     }
     requested.current = token;
     setRequestToken(token);
