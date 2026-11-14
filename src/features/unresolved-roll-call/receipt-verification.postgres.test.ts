@@ -195,6 +195,10 @@ describePostgres("unresolved receipt precondition races", () => {
       handoffReceiptAt: null,
       retainedSafetyEvidence: claim.retainedSafetyEvidence,
     });
+    expect(await persistVerifiedHandoffReceipt(pg.db, input, sessionId)).toMatchObject({
+      ok: false,
+      reason: "forbidden",
+    });
     expect(
       await pg.db
         .select()
