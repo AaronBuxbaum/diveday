@@ -343,11 +343,17 @@ test.describe("owner, the Safety page", () => {
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/safety");
 
-    // Four counts, each the door to its list (visual review A05); a list
-    // renders only when it has rows, so the tiles are what is asserted.
+    // All four counts remain visible; a figure only links to a list that exists.
     const record = page.getByRole("region", { name: "This month’s safety record" });
     await expect(record).toBeVisible();
-    await expect(record.getByRole("link")).toHaveCount(4);
+    await expect(record.locator("dt")).toHaveCount(4);
+    await expect(record.locator('a[href*="/settings/activity"]')).toHaveCount(1);
+    const listLinks = record.locator('a[href^="#"]');
+    for (let index = 0; index < (await listLinks.count()); index += 1) {
+      const href = await listLinks.nth(index).getAttribute("href");
+      expect(href).toBeTruthy();
+      await expect(page.locator(href as string)).toBeVisible();
+    }
 
     // The Print door opens the month as a sheet of the shop's paper, with the
     // same four counts and no control on it.
