@@ -12,6 +12,7 @@ import { tripPacketPath } from "@/lib/print-sheets";
 import { publicTripPath } from "@/lib/public-routes";
 import { recordTripPrintPdfAction } from "../print-actions";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { DepartureLogLink } from "./DepartureLogLink";
 import { OverflowActions } from "./OverflowActions";
 import { PrintTripBundleButton } from "./PrintTripBundleButton";
 import { PrintWithMedicalAlertsLink } from "./PrintWithMedicalAlertsLink";
@@ -46,6 +47,7 @@ export function TripAboutLinks({
       >
         {t("trips.about.viewPublic")}
       </Link>
+      <DepartureLogLink shop={shop} personId={personId} tripId={tripId} />
       <PrintTripBundleButton
         href={tripPacketPath(shopSlug, tripId)}
         label={t("trips.about.printPacket")}

@@ -21,7 +21,7 @@ const t = staffTranslator("en-US");
 afterEach(cleanup);
 
 describe("TripAboutLinks", () => {
-  it("copies and opens the public page, prints the packet, and leaves the log to the records section", () => {
+  it("copies and opens the public page, prints the packet, and shows the log beside the public page", () => {
     const { container } = render(
       <TripAboutLinks
         shop={{ id: "shop", slug: "blue-mantis", defaultLocale: "en-US" }}
@@ -39,7 +39,7 @@ describe("TripAboutLinks", () => {
     expect(screen.getByText("print").getAttribute("href")).toBe(
       "/shop/blue-mantis/trips/trip-1?print=1",
     );
-    expect(screen.queryByText("log")).toBeNull();
+    expect(screen.getByText("log")).toBeTruthy();
     expect(screen.getByText("print with alerts")).toBeTruthy();
   });
 });

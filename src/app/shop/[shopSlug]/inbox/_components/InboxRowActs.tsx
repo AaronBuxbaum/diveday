@@ -7,7 +7,6 @@ import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { InboxSeat } from "@/features/inbox-seats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { mailtoHref } from "@/lib/contact-links";
-import { InboxResponseDraft } from "./InboxResponseDraft";
 
 /** All message actions in one disclosure, with no nested menu. */
 export function InboxRowActs({
@@ -22,7 +21,6 @@ export function InboxRowActs({
   lateAction,
   deleteAction,
   doneAction,
-  draftAction,
   done,
   t,
   when,
@@ -39,7 +37,6 @@ export function InboxRowActs({
   lateAction?: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
   doneAction: (formData: FormData) => Promise<void>;
-  draftAction?: (messageId: string) => Promise<string | null>;
   done: boolean;
   t: StaffTranslator;
   when: (seat: InboxSeat) => string;
@@ -84,33 +81,10 @@ export function InboxRowActs({
   const lateOpen =
     lateAction && message.channel !== "page" ? lateSeats.filter((seat) => !seat.runningLateAt) : [];
   const menuRow = (tone: "quiet" | "danger" = "quiet") => menuRowClass(tone, { gutter: false });
-  const draftPanel = draftAction ? (
-    <InboxResponseDraft
-      key={JSON.stringify([message.id, replySubject, quoted, email])}
-      draft={draftAction.bind(null, message.id)}
-      email={email}
-      subject={replySubject}
-      quoted={quoted}
-      copy={{
-        draft: t("assistsFront.inbox.draftResponse"),
-        pending: t("assistsFront.conversation.drafting"),
-        empty: t("assistsFront.inbox.responseEmpty"),
-        label: t("assistsFront.inbox.responseLabel"),
-        review: t("assistsFront.inbox.responseReview"),
-        email: t("inbox.replyByEmail"),
-        copy: t("assistsFront.inbox.copyResponse"),
-        copied: t("words.did.copied"),
-        failed: t("assistsFront.inbox.responseCopyFailed"),
-        changed: t("assistsFront.inbox.responseChanged"),
-      }}
-    />
-  ) : null;
   type MenuAct = { key: string; node: ReactNode };
   const more: MenuAct[] = (
     [
-      // With a draft, the plain mail link is a door in the menu; the draft's own
-      // "Reply by email" carries its text once there is one.
-      email && !draftAction
+      email
         ? {
             key: "mail",
             node: (
@@ -151,8 +125,7 @@ export function InboxRowActs({
     ] as (MenuAct | null)[]
   ).filter((act): act is MenuAct => act !== null);
   return (
-    <RowMenu label={t("inbox.menu.label", { name })} panelClassName="w-80" keepMounted>
-      {draftPanel}
+    <RowMenu label={t("inbox.menu.label", { name })} panelClassName="w-80">
       <form action={doneAction}>
         <input type="hidden" name="messageId" value={message.id} />
         <input type="hidden" name="receivedAt" value={message.receivedAt.toISOString()} />
