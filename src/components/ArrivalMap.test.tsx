@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ARRIVAL_MAP_PROBES } from "@/lib/maps";
+import { MAP_REACHABILITY_PROBES } from "@/lib/maps";
+
+vi.mock("./map/ArrivalMapCanvas", () => ({
+  ArrivalMapCanvas: ({ title }: { title: string }) => <section aria-label={title} />,
+}));
+
 import { ArrivalMap } from "./ArrivalMap";
 
 /**
@@ -10,9 +15,15 @@ import { ArrivalMap } from "./ArrivalMap";
  * network that blocks the map host still drew a gray 16:9 block. The map
  * takes no space until the host answers the same probe the dive-site map uses.
  */
-const probes: { src: string; onload: (() => void) | null; onerror: (() => void) | null }[] = [];
+const probes: {
+  src: string;
+  referrerPolicy: string;
+  onload: (() => void) | null;
+  onerror: (() => void) | null;
+}[] = [];
 class FakeImage {
   src = "";
+  referrerPolicy = "";
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
   constructor() {
@@ -35,35 +46,36 @@ const answerAll = () => {
 };
 
 const mount = () =>
-  render(<ArrivalMap title="Map" src="https://www.openstreetmap.org/export/embed.html" />)
+  render(<ArrivalMap title="Map" query="25,-80" zoomHint="Use ⌘ or Ctrl + scroll to zoom" />)
     .container;
 
 describe("ArrivalMap", () => {
   it("draws nothing while online until the map host answers, then the map", () => {
     const container = mount();
-    expect(container.querySelector("iframe")).toBeNull();
-    expect(probes.map((probe) => probe.src)).toEqual([...ARRIVAL_MAP_PROBES]);
+    expect(container.querySelector("section[aria-label]")).toBeNull();
+    expect(probes.map((probe) => probe.src)).toEqual([...MAP_REACHABILITY_PROBES]);
+    expect(probes.every((probe) => probe.referrerPolicy === "no-referrer")).toBe(true);
     act(() => answerAll());
-    expect(container.querySelector("iframe")).not.toBeNull();
+    expect(container.querySelector("section[aria-label]")).not.toBeNull();
   });
 
   it("draws nothing when the host cannot be reached on a live connection", () => {
     const container = mount();
     expect(probes[0]?.onerror).toBeTypeOf("function");
     act(() => probes[0]?.onerror?.());
-    expect(container.querySelector("iframe")).toBeNull();
+    expect(container.querySelector("section[aria-label]")).toBeNull();
   });
 
   it("steps aside when the connection drops", () => {
     const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     const container = mount();
     act(() => answerAll());
-    expect(container.querySelector("iframe")).not.toBeNull();
+    expect(container.querySelector("section[aria-label]")).not.toBeNull();
     onLine.mockReturnValue(false);
     act(() => {
       window.dispatchEvent(new Event("offline"));
     });
-    expect(container.querySelector("iframe")).toBeNull();
+    expect(container.querySelector("section[aria-label]")).toBeNull();
   });
 
   /**
@@ -73,13 +85,13 @@ describe("ArrivalMap", () => {
   it("asks again when the signal comes back after a failed probe, then draws the map", () => {
     const container = mount();
     act(() => probes[0]?.onerror?.());
-    expect(container.querySelector("iframe")).toBeNull();
+    expect(container.querySelector("section[aria-label]")).toBeNull();
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
-    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length * 2);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length * 2);
     act(() => answerAll());
-    expect(container.querySelector("iframe")).not.toBeNull();
+    expect(container.querySelector("section[aria-label]")).not.toBeNull();
   });
 
   it("asks again when the page is visible again after a failed probe", () => {
@@ -89,14 +101,14 @@ describe("ArrivalMap", () => {
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
     visibility.mockReturnValue("visible");
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length * 2);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length * 2);
     act(() => answerAll());
-    expect(container.querySelector("iframe")).not.toBeNull();
+    expect(container.querySelector("section[aria-label]")).not.toBeNull();
   });
 
   it("asks nothing more after the host has answered", () => {
@@ -106,12 +118,12 @@ describe("ArrivalMap", () => {
       window.dispatchEvent(new Event("online"));
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
   });
 
   it("stops listening once the map is gone", () => {
     const { unmount } = render(
-      <ArrivalMap title="Map" src="https://www.openstreetmap.org/export/embed.html" />,
+      <ArrivalMap title="Map" query="25,-80" zoomHint="Use ⌘ or Ctrl + scroll to zoom" />,
     );
     act(() => probes[0]?.onerror?.());
     unmount();
@@ -119,6 +131,6 @@ describe("ArrivalMap", () => {
       window.dispatchEvent(new Event("online"));
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(ARRIVAL_MAP_PROBES.length);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
   });
 });

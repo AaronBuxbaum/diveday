@@ -26,9 +26,9 @@ import {
 export function createBasemapMap(
   L: typeof import("leaflet"),
   container: HTMLElement,
-  options: MapOptions & { credit?: boolean; holdsCenter?: () => boolean },
+  options: MapOptions & { credit?: boolean; holdsCenter?: () => boolean; privateMap?: boolean },
 ): LeafletMap {
-  const { credit = true, holdsCenter, ...mapOptions } = options;
+  const { credit = true, holdsCenter, privateMap = false, ...mapOptions } = options;
   const map = L.map(container, {
     ...mapOptions,
     maxZoom: BASEMAP_MAX_ZOOM,
@@ -36,13 +36,18 @@ export function createBasemapMap(
     attributionControl: false,
   });
   if (credit) L.control.attribution({ prefix: false }).addTo(map);
-  const tiles = { maxZoom: BASEMAP_MAX_ZOOM, maxNativeZoom: BASEMAP_MAX_NATIVE_ZOOM };
+  const tiles = {
+    maxZoom: BASEMAP_MAX_ZOOM,
+    maxNativeZoom: BASEMAP_MAX_NATIVE_ZOOM,
+    ...(privateMap ? { referrerPolicy: "no-referrer" as const } : {}),
+  };
   L.tileLayer(BASEMAP_IMAGERY_URL, { ...tiles, attribution: BASEMAP_ATTRIBUTION }).addTo(map);
   const rasterLabels = () => {
     L.tileLayer(BASEMAP_LABELS_URL, tiles).addTo(map);
   };
   const key = arcgisApiKey();
-  if (key) addVectorLabels(L, map, key, rasterLabels);
+  // Vector style and its dependent requests cannot set an element-level policy.
+  if (key && !privateMap) addVectorLabels(L, map, key, rasterLabels);
   else rasterLabels();
 
   if (typeof ResizeObserver !== "undefined") {

@@ -2,7 +2,6 @@
 
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createBasemapMap } from "./leaflet-basemap";
 import { clusterMapPoints, mapTargetIsVisible, separateShopAnchor } from "./map-clustering";
 import { labelRectangle, placeMapLabel, rectanglesOverlap } from "./map-label-placement";
 import {
@@ -15,6 +14,7 @@ import {
 } from "./map-markup";
 import { loadSitePopupDetails } from "./map-popup-details";
 import { clearMapViewport, readMapViewport, writeMapViewport } from "./map-viewport-storage";
+import { createInteractiveMap } from "./modifier-wheel-map";
 
 export type MapPin = {
   id: string;
@@ -854,29 +854,4 @@ function bindTooltipFocus(marker: LeafletMarker, selector: string) {
   const target = marker.getElement()?.querySelector<HTMLElement>(selector);
   target?.addEventListener("focus", () => marker.openTooltip());
   target?.addEventListener("blur", () => marker.closeTooltip());
-}
-
-function createInteractiveMap(
-  L: typeof import("leaflet"),
-  container: HTMLElement,
-  options: Parameters<typeof createBasemapMap>[2],
-) {
-  const map = createBasemapMap(L, container, { ...options, scrollWheelZoom: false });
-  enableModifierWheelZoom(map, container);
-  return map;
-}
-
-/** Let a page scroll through the map, while Leaflet handles modified wheels. */
-function enableModifierWheelZoom(map: LeafletMap, container: HTMLElement) {
-  const onWheel = (event: WheelEvent) => {
-    if (event.metaKey || event.ctrlKey) map.scrollWheelZoom.enable();
-    else map.scrollWheelZoom.disable();
-  };
-  container.addEventListener("wheel", onWheel, { capture: true, passive: true });
-  map.on("unload", () => {
-    container.removeEventListener("wheel", onWheel, true);
-    // Leaflet removes its listener but leaves its debounced zoom pending.
-    const wheel = map.scrollWheelZoom as typeof map.scrollWheelZoom & { _timer?: number };
-    window.clearTimeout(wheel._timer);
-  });
 }
