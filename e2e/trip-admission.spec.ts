@@ -235,11 +235,60 @@ test.describe("as owner", () => {
     const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER, CHARTERS);
     // Odile Marchand holds a verified Instructor card — the top rung — and no
     // specialty card at all. Nothing about her level can explain this refusal.
-    await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1&diverq=Odile+Marchand`);
-    const actionResponses: number[] = [];
-    page.on("response", (response) => {
-      if (response.request().method() === "POST") actionResponses.push(response.status());
+    // Keep request lifecycle evidence when the refusal does not appear. A POST
+    // can start and fail without a response, so statuses alone cannot tell a
+    // lost click from a failed action. Paths and payloads are not recorded.
+    const diagnosticStart = performance.now();
+    const actionRequests = new Map<
+      object,
+      { category: string; startedMs: number; status?: number; endedMs?: number; failed?: boolean }
+    >();
+    const failedGets: { startedMs: number; failedMs: number; category: string; status?: number }[] =
+      [];
+    const getStarts = new Map<object, { startedMs: number; status?: number }>();
+    const elapsed = () => Math.round(performance.now() - diagnosticStart);
+    page.on("request", (request) => {
+      if (request.method() === "POST") {
+        const pathname = new URL(request.url()).pathname;
+        const category =
+          pathname === "/api/staff-activity"
+            ? "staff-activity"
+            : pathname.endsWith(`/trips/${tripId}`)
+              ? "trip"
+              : "other";
+        actionRequests.set(request, { category, startedMs: elapsed() });
+      } else if (request.method() === "GET") getStarts.set(request, { startedMs: elapsed() });
     });
+    page.on("response", (response) => {
+      const action = actionRequests.get(response.request());
+      if (action) action.status = response.status();
+      const get = getStarts.get(response.request());
+      if (get) get.status = response.status();
+    });
+    page.on("requestfinished", (request) => {
+      const action = actionRequests.get(request);
+      if (action) action.endedMs = elapsed();
+      getStarts.delete(request);
+    });
+    page.on("requestfailed", (request) => {
+      const action = actionRequests.get(request);
+      if (action) {
+        action.endedMs = elapsed();
+        action.failed = true;
+      }
+      const get = getStarts.get(request);
+      if (!get || failedGets.length >= 50) return;
+      const pathname = new URL(request.url()).pathname;
+      const category = pathname.startsWith("/_next/")
+        ? "next-asset"
+        : pathname.startsWith("/_vercel/")
+          ? "vercel"
+          : "other";
+      failedGets.push({ ...get, failedMs: elapsed(), category });
+      getStarts.delete(request);
+    });
+    await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1&diverq=Odile+Marchand`);
+    const clickStartedMs = elapsed();
     await page.getByRole("button", { name: "Add Odile Marchand to the trip" }).click();
 
     // "Add a booking" is the departure's own add band (#2737): its refusal
@@ -251,7 +300,7 @@ test.describe("as owner", () => {
     } catch (error) {
       const current = new URL(page.url());
       process.stdout.write(
-        `Admission diagnostic: ${JSON.stringify({ pathname: current.pathname, notice: current.searchParams.get("notice"), hasGate: current.searchParams.has("gate"), hasAdd: current.searchParams.has("add"), actionResponses })}\n`,
+        `Admission diagnostic: ${JSON.stringify({ pathname: current.pathname, notice: current.searchParams.get("notice"), hasGate: current.searchParams.has("gate"), hasAdd: current.searchParams.has("add"), clickStartedMs, actionRequests: [...actionRequests.values()], failedGets })}\n`,
       );
       throw error;
     }

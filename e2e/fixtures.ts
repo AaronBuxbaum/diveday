@@ -525,6 +525,19 @@ export const test = base.extend<
       inFlight.set(request, `${what} (started ${since()}ms)`);
       record(`→ ${what}`);
     });
+    // A server action can send its redirect headers before the response stream
+    // finishes. Capture that distinction for the intermittent boat refusal
+    // (#4466), without recording the redirect URL or submitted form values.
+    page.on("response", (response) => {
+      const request = response.request();
+      if (request.method() !== "POST" || !new URL(response.url()).pathname.endsWith("/boats"))
+        return;
+      const distressRedirect =
+        response.headers()["x-action-redirect"]?.includes("notice=boat-channel-distress") === true;
+      record(
+        `headers POST /boats status=${response.status()} distressRedirect=${distressRedirect}`,
+      );
+    });
     page.on("requestfinished", (request) => {
       inFlight.delete(request);
       if (!interesting(request) || isPrefetch(request)) return;
