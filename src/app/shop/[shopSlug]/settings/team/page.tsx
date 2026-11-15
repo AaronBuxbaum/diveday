@@ -3,7 +3,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
@@ -21,7 +20,6 @@ import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
@@ -30,8 +28,9 @@ import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
 import { LanguageCheckboxes, StaffLanguagesValue } from "./_components/LanguageCheckboxes";
 import { PendingInviteActions } from "./_components/PendingInviteActions";
 import { StaffCardCredentialsWithActions as StaffCardCredentials } from "./_components/StaffCardCredentialsWithActions";
+import { StaffIdentity } from "./_components/StaffIdentity";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
-import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
+import { type CrewYear, readStaffYears } from "./_components/StaffYear";
 import {
   deleteStaffCredentialAction,
   removeStaffAction,
@@ -45,7 +44,6 @@ import {
 import { type CardCredential, credentialRowsFor } from "./credential-rows";
 import { noticeMessages } from "./notice-messages";
 import { parseRoles, TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
-import { publicName } from "./public-name";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -118,38 +116,7 @@ function StaffRow({
   return (
     <li id={`staff-${member.personId}`} className="min-w-0 scroll-mt-24 px-5 py-4 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-start gap-3">
-          {member.staffPhotoPath ? (
-            <StoredPhoto
-              src={member.staffPhotoPath}
-              alt=""
-              className="size-10 shrink-0 rounded-full"
-              sizes="40px"
-            />
-          ) : null}
-          <div className="min-w-0">
-            <p className="font-medium">{member.fullName}</p>
-            <p className="text-sm text-muted wrap-anywhere">{member.email}</p>
-            <StaffYearLine year={year} t={t} />
-            {/* What this person publishes to divers, when they have said yes on
-              their own staffing page (issue #1357). Read-only here: the switch
-              is theirs, and a shop that could edit it would be overriding
-              somebody's consent from the other side. Nothing at all for
-              somebody who declined — a row that said so would be a list of who
-              declined, which is the boundary the feature rests on. */}
-            {/* The stamp rides the name and only the name: a row with no name
-              shows nothing at all, so a declined answer and a never-asked one
-              stay indistinguishable (issue #1357). */}
-            {publicName(member) && member.crewPublicConsentAt ? (
-              <p className="text-sm text-muted">
-                {t("settings.team.publicNameSeen", {
-                  name: publicName(member),
-                  date: formatDateWithYear(member.crewPublicConsentAt, locale, timezone),
-                })}
-              </p>
-            ) : null}
-          </div>
-        </div>
+        <StaffIdentity member={member} year={year} t={t} locale={locale} timezone={timezone} />
         {status ? <Badge tone={status.tone}>{status.label}</Badge> : null}
       </div>
 

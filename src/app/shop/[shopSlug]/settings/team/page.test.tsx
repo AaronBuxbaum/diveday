@@ -12,6 +12,7 @@ import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import type { StaffMember } from "../../../../../features/staff-accounts/store";
+import { StaffIdentity } from "./_components/StaffIdentity";
 
 const ctx = fileScopedShopContext();
 
@@ -115,12 +116,24 @@ it("shows the seeded portrait beside a team member and tolerates a missing photo
   const dana = rows.find((row) => row.props.member.fullName === "Dana Reyes");
   expect(dana).toBeDefined();
   if (!dana) throw new Error("Dana missing from the team");
-  const photos = findElements<{ src: string; alt: string }>(rowTree(dana), StoredPhoto);
+  const [identity] = findElements<Parameters<typeof StaffIdentity>[0]>(
+    rowTree(dana),
+    StaffIdentity,
+  );
+  expect(identity).toBeDefined();
+  if (!identity) throw new Error("Staff identity missing");
+  const photos = findElements<{ src: string; alt: string }>(
+    StaffIdentity(identity.props),
+    StoredPhoto,
+  );
   expect(photos.map((photo) => [photo.props.src, photo.props.alt])).toEqual([
     ["/demo-staff/dana-reyes.webp", ""],
   ]);
   expect(
-    findElements(rowTree(dana, { ...dana.props.member, staffPhotoPath: null }), StoredPhoto),
+    findElements(
+      StaffIdentity({ ...identity.props, member: { ...dana.props.member, staffPhotoPath: null } }),
+      StoredPhoto,
+    ),
   ).toHaveLength(0);
 });
 
