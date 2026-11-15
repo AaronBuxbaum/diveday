@@ -300,10 +300,10 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       // arrivals open: the count leads, and a cleared row ends in its tap.
       await staff.goto(`${shopPath()}/trips/${day.tripId}`);
       await expect(staff.getByText(/^\d+ of \d+ here$/)).toBeVisible();
-      const card = staff
-        .locator('#roster li[id^="booking-"]')
-        .filter({ visible: true })
-        .filter({ has: staff.getByRole("link", { name: DIVER_NAME, exact: true }) });
+      const roster = staff.locator("#roster");
+      await roster.getByRole("button", { name: DIVER_NAME, exact: true }).click();
+      await expect(roster.getByRole("heading", { name: DIVER_NAME, exact: true })).toBeVisible();
+      const card = roster.locator('li[id^="booking-"]').filter({ visible: true });
       await expect(card).toHaveCount(1);
       const checkIn = card.getByRole("button", { name: `Check in ${DIVER_NAME}` });
       if ((await checkIn.count()) === 0) {
