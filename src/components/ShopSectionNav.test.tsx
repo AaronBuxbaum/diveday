@@ -162,3 +162,46 @@ it("updates More's active section when the address moves before hydration", asyn
   });
   expect(container.querySelector("button.text-primary, button .text-primary")).not.toBeNull();
 });
+
+describe("More stays where a tap put it", () => {
+  async function openMore() {
+    location.pathname = root;
+    const container = document.createElement("div");
+    document.body.append(container);
+    const reactRoot = createRoot(container);
+    await act(async () => {
+      reactRoot.render(<ShopTabBar {...props} />);
+    });
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>("[aria-expanded]")?.click();
+    });
+    return { container, reactRoot };
+  }
+
+  it("survives the page re-reading itself with fresh props", async () => {
+    const { container, reactRoot } = await openMore();
+    await act(async () => {
+      reactRoot.render(<ShopTabBar {...props} items={[...props.items]} blocked={3} />);
+    });
+    expect(container.querySelector("[aria-expanded]")).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("survives its dismissal effect running again at the same address", async () => {
+    const { container, reactRoot } = await openMore();
+    // A kept-alive route un-hiding or a replay after hydration re-runs effects
+    // without moving the address; it must not read as a navigation.
+    await act(async () => {
+      reactRoot.render(<ShopTabBar {...props} copy={{ ...props.copy }} />);
+    });
+    expect(container.querySelector("[aria-expanded]")).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("closes when the address moves", async () => {
+    const { container, reactRoot } = await openMore();
+    location.pathname = `${root}/safety-checklist`;
+    await act(async () => {
+      reactRoot.render(<ShopTabBar {...props} />);
+    });
+    expect(container.querySelector("[aria-expanded]")).toHaveAttribute("aria-expanded", "false");
+  });
+});

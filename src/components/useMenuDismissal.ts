@@ -68,13 +68,15 @@ export function useMenuDismissal(options: Parameters<typeof useMenuDismissalEven
   useMenuDismissalEvents(options);
   const { close } = options;
   const pathname = usePathname();
-  const pathnameEffectRan = useRef(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change closes the menu, which is the point.
+  // The address the menu last saw, not "has this effect run before": an
+  // effect also re-runs when React un-hides a kept-alive route or replays one
+  // after hydration, and neither of those is a navigation. Only a different
+  // address closes, so a tap that opens the menu is never undone by an effect
+  // that merely ran again.
+  const seen = useRef(pathname);
   useEffect(() => {
-    if (!pathnameEffectRan.current) {
-      pathnameEffectRan.current = true;
-      return;
-    }
+    if (seen.current === pathname) return;
+    seen.current = pathname;
     close();
-  }, [pathname]);
+  }, [pathname, close]);
 }
