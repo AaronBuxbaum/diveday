@@ -90,3 +90,20 @@ it("addresses seeded IDs across renames without assigning a namesake's portrait"
   expect(renamed.staffPhotoPath).toBe(DEMO_STAFF_PORTRAIT_PATHS.dana);
   expect(unrelated.staffPhotoPath).toBeNull();
 });
+
+it("preserves a photo already chosen for a demo cast member", async () => {
+  const { seededShopContext } = await import("@/test/db");
+  const { eq } = await import("drizzle-orm");
+  const { people } = await import("./schema");
+  const { listStaff } = await import("./trips");
+  const { seedStaffPortraits } = await import("./seed-staff-portraits");
+  const { db, shop } = await seededShopContext();
+  const person = (await listStaff(db, shop.id))[0].person;
+  await db
+    .update(people)
+    .set({ staffPhotoPath: "/own-photo.webp" })
+    .where(eq(people.id, person.id));
+  await seedStaffPortraits(db, shop.id, [{ id: person.id, local: "dana" }]);
+  const [after] = await db.select().from(people).where(eq(people.id, person.id));
+  expect(after.staffPhotoPath).toBe("/own-photo.webp");
+});

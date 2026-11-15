@@ -1,6 +1,7 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
@@ -108,6 +109,20 @@ async function renderTeam(searchParams: Record<string, string> = {}) {
     searchParams: Promise.resolve(searchParams),
   });
 }
+
+it("shows the seeded portrait beside a team member and tolerates a missing photo", async () => {
+  const rows = staffRows(await renderTeam());
+  const dana = rows.find((row) => row.props.member.fullName === "Dana Reyes");
+  expect(dana).toBeDefined();
+  if (!dana) throw new Error("Dana missing from the team");
+  const photos = findElements<{ src: string; alt: string }>(rowTree(dana), StoredPhoto);
+  expect(photos.map((photo) => [photo.props.src, photo.props.alt])).toEqual([
+    ["/demo-staff/dana-reyes.webp", ""],
+  ]);
+  expect(
+    findElements(rowTree(dana, { ...dana.props.member, staffPhotoPath: null }), StoredPhoto),
+  ).toHaveLength(0);
+});
 
 /**
  * **The page's two sections speak at one volume** (K-314). "Invite someone" is
