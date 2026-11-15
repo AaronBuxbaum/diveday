@@ -152,6 +152,7 @@
       "removeHero": "Quitar la foto de portada",
       "establishedYear": "Abierto desde (año)",
       "badges": "Insignias",
+      "demoBadgesHint": "Estas insignias son ejemplos ficticios para este centro de demostración.",
       "badgesHint": "Se muestran en tus páginas públicas como declaración propia.",
       "badgeLabels": {
         "padi_5_star": "Centro de buceo PADI 5 estrellas",
