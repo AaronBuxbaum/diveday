@@ -124,6 +124,11 @@
   },
   "/shop/[shopSlug]/divers/[personId]/computer-dives": {
     "e2e": ["computer-dives.spec.ts"],
-    "visual": ["computer-dives-empty", "computer-dives-preview", "computer-dives-profile"]
+    "visual": [
+      "computer-dives-empty",
+      "computer-dives-preview",
+      "computer-dives-profile",
+      "computer-dives-ssi-guidance"
+    ]
   }
 }
