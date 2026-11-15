@@ -162,15 +162,21 @@ for (const role of ["diver", "crew"] as const) {
             staff("manifest.deck.savedMissing"),
           );
         } else {
-          const offlineRow = await savedDetails(page, personName, role);
-          await offlineRow.getByText("Not back aboard?", { exact: true }).click();
-          await offlineRow
-            .getByRole("button", { name: "Mark not back aboard", exact: true })
-            .click();
-          await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
-            staff("manifest.deck.savedMissing"),
-          );
-          await recordNamed(live, personName);
+          // Both old bases are rendered and the saved device is offline. These
+          // independent statements can finish together before reconnecting.
+          await Promise.all([
+            (async () => {
+              const offlineRow = await savedDetails(page, personName, role);
+              await offlineRow.getByText("Not back aboard?", { exact: true }).click();
+              await offlineRow
+                .getByRole("button", { name: "Mark not back aboard", exact: true })
+                .click();
+              await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+                staff("manifest.deck.savedMissing"),
+              );
+            })(),
+            recordNamed(live, personName),
+          ]);
         }
         // Change the offline clock again between tap and send.
         await setDeviceClock(page, new Date(E2E_FROZEN_CLOCK).getTime() - 7 * 60_000);
