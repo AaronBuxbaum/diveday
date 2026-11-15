@@ -1,8 +1,5 @@
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { Bone, Pending } from "@/components/ui/pending";
-import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
  * Body-shaped skeleton for the inbox (design principle 1): a group label, then
@@ -34,19 +31,15 @@ function MessageRows({ count }: { count: number }) {
 
 export default function InboxLoading() {
   return (
-    <StaffPage width="full">
-      <Pending>
-        <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
-        <StaffSectionTabsSkeleton section="inbox" />
-        <div className="space-y-10">
-          {[3, 2].map((rows) => (
-            <div key={rows}>
-              <Bone className="h-4 w-40 max-w-full" />
-              <MessageRows count={rows} />
-            </div>
-          ))}
-        </div>
-      </Pending>
-    </StaffPage>
+    <Pending>
+      <div className="space-y-10">
+        {[3, 2].map((rows) => (
+          <div key={rows}>
+            <Bone className="h-4 w-40 max-w-full" />
+            <MessageRows count={rows} />
+          </div>
+        ))}
+      </div>
+    </Pending>
   );
 }

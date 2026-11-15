@@ -274,10 +274,12 @@ test.describe("print", () => {
     await expect(page.getByRole("link", { name: "Divers" }).first()).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await expect(page.locator(".paper-sheet-fold").first()).toContainText("Printed by");
+    await page.emulateMedia({ media: "print" });
     for (const pdf of await capturePrintPdfs(page, "trip-attribution", info.outputDir)) {
       assertPacketAttributionBelowKit(pdf);
       await info.attach("packet-attribution", { path: pdf, contentType: "application/pdf" });
     }
+    await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
   });
 
@@ -288,7 +290,7 @@ test.describe("print", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, DEMO_MEDICAL_ALERT_TRIP);
     const tripPath = new URL(page.url()).pathname.replace(/\/(manifest|prep)$/, "");
-    await page.goto(`${tripPath}?print=medical-alerts`);
+    await page.goto(`${tripPath}?print=1`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
     await expect(page.getByText(DEMO_MEDICAL_ALERT)).toBeVisible();
