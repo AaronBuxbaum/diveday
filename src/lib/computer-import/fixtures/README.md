@@ -13,6 +13,26 @@ fixture has a separate, documented real-device provenance.
   <https://github.com/subsurface/subsurface/blob/master/dives/test23.xml>.
 - `labelled-imperial.csv`: DiveDay's own template with feet and an explicit offset or
   `unknown`. It is not a vendor mapping. Missing measurements stay null.
+- `multi-entry.zip`: synthetic archive transport, with `logs/si.uddf` copied verbatim from
+  `si.uddf`, `logs/summary.csv` containing the labelled template's header and first row,
+  `notes.txt` with invented instructions, and a four-byte JPEG marker in `photo.jpg`.
+  It yields two dives and reports two ignored attachments. This is not a vendor archive
+  or evidence of Oceanic+ packaging. The ZIP reader accepts stored/DEFLATE entries only,
+  at most 20 entries, 5 MiB per entry and 10 MiB total expanded bytes, with a 200:1
+  expansion-ratio ceiling (1 KiB minimum allowance). It rejects nested archives, unsafe
+  paths, encryption, ZIP64, symlinks, inconsistent headers and bad CRCs, and does not
+  retain any attachment. Actual inflater output is bounded independently of metadata.
+
+The explicit CSV mapping tests are synthetic interchange cases, not PADI, SSI or other
+vendor export evidence. Staff must choose the date order and measurement units; dates
+without a time retain their calendar date with no manufactured midnight or instant.
+Mapped column names and choices are retained as provenance. Unknown offsets and DST
+ambiguity are preserved; archive entry hashes and entry-local ordinals preserve identity
+when the same file is uploaded directly or inside a ZIP.
+The mapping applies to generic CSV only: exact DiveDay template headers keep their labelled
+units and ISO date grammar, including when uploaded alongside a generic mapped CSV.
+An unmapped depth has no known source unit. A mapped but blank depth stays unknown while
+retaining the explicit unit choice for that source column.
 
 ## Garmin Connect FIT fixture
 

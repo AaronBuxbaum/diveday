@@ -13,10 +13,19 @@ import {
 import { livePerson } from "@/db/trips";
 import { canExportShopData, isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { type ParsedComputerDive, parseComputerFile } from "@/lib/computer-import";
+import {
+  type ComputerLogbookProvider,
+  type ComputerParseOptions,
+  isComputerLogbookProvider,
+  type ParsedComputerDive,
+  parseComputerFile,
+  validateComputerParseOptions,
+} from "@/lib/computer-import";
+import { computerHistorySummaryCsv } from "./summary-csv";
 
 export type ComputerScope = { shopId: string; personId: string; actorPersonId: string };
 export type ComputerFile = { name: string; bytes: Uint8Array };
+export type ComputerImportOptions = ComputerParseOptions & { provider?: ComputerLogbookProvider };
 export type PreviewDive = {
   key: string;
   fingerprint: string;
@@ -65,7 +74,53 @@ async function authorize(db: DbExecutor, scope: ComputerScope, lock = false) {
   return person;
 }
 
-function parseFiles(files: ComputerFile[]) {
+function importOptions(raw: unknown): ComputerImportOptions {
+  if (raw === undefined) return {};
+  if (
+    raw === null ||
+    typeof raw !== "object" ||
+    Array.isArray(raw) ||
+    ![Object.prototype, null].includes(Object.getPrototypeOf(raw)) ||
+    Object.keys(raw).some((key) => key !== "provider" && key !== "csvMapping")
+  )
+    throw new Error("invalid_options");
+  const value = raw as Record<string, unknown>;
+  const provider = value.provider;
+  if (Object.hasOwn(value, "provider") && !isComputerLogbookProvider(provider))
+    throw new Error("invalid_options");
+  return {
+    ...(isComputerLogbookProvider(provider) ? { provider } : {}),
+    ...validateComputerParseOptions(
+      Object.hasOwn(value, "csvMapping") ? { csvMapping: value.csvMapping } : {},
+    ),
+  };
+}
+
+/** Transport and staff-chosen mapping/origin are provenance, not new dive identity. */
+function fingerprint(record: ParsedComputerDive, fileHash: string, recordIndex: number) {
+  const {
+    importSource: _origin,
+    csvMapping: _mapping,
+    archiveEntry: _entry,
+    archiveIgnoredEntries: _ignored,
+    archiveEntryHash: _entryHash,
+    archiveEntryRecordIndex: _entryIndex,
+    ...identity
+  } = record;
+  if (record.localDate && !record.sourceId && !record.localStart && !record.startInstant) {
+    return digest(
+      JSON.stringify({
+        record: identity,
+        fileHash: record.archiveEntryHash ?? fileHash,
+        recordIndex: record.archiveEntryRecordIndex ?? recordIndex,
+      }),
+    );
+  }
+  // Preserve the prior canonical representation for already-imported recordings.
+  return digest(JSON.stringify(identity));
+}
+
+function parseFiles(files: ComputerFile[], options: ComputerImportOptions) {
   if (
     !Array.isArray(files) ||
     files.length < 1 ||
@@ -77,12 +132,18 @@ function parseFiles(files: ComputerFile[]) {
   const results = files.map((file, fileIndex) => {
     if (!(file.bytes instanceof Uint8Array)) throw new Error("invalid_file");
     try {
-      const records = parseComputerFile(file.bytes);
+      const records = parseComputerFile(
+        file.bytes,
+        options.csvMapping ? { csvMapping: options.csvMapping } : undefined,
+      );
       const fileHash = digest(file.bytes);
-      records.forEach((record, index) => {
+      records.forEach((parsedRecord, index) => {
+        const record: ParsedComputerDive = options.provider
+          ? { ...parsedRecord, importSource: { provider: options.provider, beta: true } }
+          : parsedRecord;
         dives.push({
           key: `${fileHash}:${fileIndex}:${index}`,
-          fingerprint: digest(JSON.stringify(record)),
+          fingerprint: fingerprint(record, fileHash, index),
           record,
         });
       });
@@ -95,32 +156,58 @@ function parseFiles(files: ComputerFile[]) {
     }
   });
   if (dives.length > 500) throw new Error("too_many_dives");
+  if (dives.reduce((sum, dive) => sum + dive.record.samples.length, 0) > 100_000)
+    throw new Error("too_many_samples");
   return { files: results, dives };
 }
 
-export async function previewComputerFiles(db: AppDb, scope: ComputerScope, files: ComputerFile[]) {
+export async function previewComputerFiles(
+  db: AppDb,
+  scope: ComputerScope,
+  files: ComputerFile[],
+  options?: ComputerImportOptions,
+) {
   const person = await authorize(db, scope);
-  const parsed = parseFiles(files);
+  const parsed = parseFiles(files, importOptions(options));
   const existing = await db
     .select({ fingerprint: computerDives.fingerprint, record: computerDives.record })
     .from(computerDives)
     .where(scopeWhere(scope));
   const seen = new Set(existing.map((row) => row.fingerprint));
+  const priorRecords: ParsedComputerDive[] = [];
   const dives: PreviewDive[] = parsed.dives.map((dive) => {
     const duplicate = seen.has(dive.fingerprint)
       ? "exact"
-      : existing.some(
-            (row) =>
-              (dive.record.startInstant !== null &&
-                row.record.startInstant === dive.record.startInstant) ||
-              (dive.record.localStart !== null && row.record.localStart === dive.record.localStart),
+      : existing.some((row) => possibleDuplicate(dive.record, row.record)) ||
+          priorRecords.some(
+            (prior) =>
+              Boolean(dive.record.localDate || prior.localDate) &&
+              possibleDuplicate(dive.record, prior),
           )
         ? "possible"
         : null;
     seen.add(dive.fingerprint);
+    priorRecords.push(dive.record);
     return { ...dive, duplicate };
   });
   return { personName: person.fullName, files: parsed.files, dives };
+}
+
+function originalDate(record: { localDate?: unknown; localStart?: unknown }) {
+  if (typeof record.localDate === "string") return record.localDate;
+  return typeof record.localStart === "string" ? record.localStart.slice(0, 10) : null;
+}
+function possibleDuplicate(
+  record: ParsedComputerDive,
+  prior: { localStart?: unknown; localDate?: unknown; startInstant?: unknown },
+) {
+  return (
+    (record.startInstant !== null && record.startInstant === prior.startInstant) ||
+    (record.localStart !== null && record.localStart === prior.localStart) ||
+    (Boolean(record.localDate || prior.localDate) &&
+      originalDate(record) !== null &&
+      originalDate(record) === originalDate(prior))
+  );
 }
 
 export type CommitComputerInput = {
@@ -129,6 +216,7 @@ export type CommitComputerInput = {
   requestKey: string;
   confirmedPersonId: string;
   timeOffsets?: Record<string, number | null>;
+  options?: ComputerImportOptions;
 };
 export async function commitComputerFiles(
   db: AppDb,
@@ -142,7 +230,8 @@ export async function commitComputerFiles(
     input.selectedKeys.length === 0
   )
     throw new Error("invalid_selection");
-  const parsed = parseFiles(input.files);
+  const options = importOptions(input.options);
+  const parsed = parseFiles(input.files, options);
   const byKey = new Map(parsed.dives.map((dive) => [dive.key, dive]));
   const selected = [...new Set(input.selectedKeys)].sort().map((key) => {
     const dive = byKey.get(key);
@@ -167,7 +256,9 @@ export async function commitComputerFiles(
     }
     return { key, record, fingerprint: dive.fingerprint };
   });
-  const selectionHash = digest(JSON.stringify(selected));
+  const selectionHash = digest(
+    JSON.stringify(Object.keys(options).length ? { selected, options } : selected),
+  );
   return db.transaction(async (tx) => {
     await authorize(tx, scope, true);
     const [prior] = await tx
@@ -249,7 +340,7 @@ async function readHistory(db: DbExecutor, scope: ComputerScope, personName: str
     )
     .where(scopeWhere(scope))
     .orderBy(
-      sql`coalesce(${computerDives.record}->>'localStart', ${computerDives.record}->>'startInstant')`,
+      sql`coalesce(${computerDives.record}->>'localStart', ${computerDives.record}->>'localDate', ${computerDives.record}->>'startInstant')`,
       asc(computerDives.fingerprint),
       asc(computerDives.id),
     );
@@ -300,5 +391,30 @@ export async function exportComputerDives(db: AppDb, scope: ComputerScope) {
     const roles = await readActiveStaffRoles(tx, scope.shopId, scope.actorPersonId);
     if (!canExportShopData(roles ?? undefined)) throw new Error("not_authorized");
     return JSON.stringify(await readHistory(tx, scope, person.fullName));
+  });
+}
+
+/** Summary export avoids loading profiles and retains the full export's live authorization. */
+export async function exportComputerDiveSummaryCsv(db: AppDb, scope: ComputerScope) {
+  return db.transaction(async (tx) => {
+    await authorize(tx, scope, true);
+    const roles = await readActiveStaffRoles(tx, scope.shopId, scope.actorPersonId);
+    if (!canExportShopData(roles ?? undefined)) throw new Error("not_authorized");
+    const rows = await tx
+      .select({
+        id: computerDives.id,
+        record: computerDives.record,
+        annotation: computerDives.annotation,
+        deletedAt: computerDives.deletedAt,
+      })
+      .from(computerDives)
+      .where(scopeWhere(scope))
+      .orderBy(asc(computerDives.id));
+    return computerHistorySummaryCsv(
+      rows.map((row) => ({
+        ...row,
+        record: row.record as unknown as Omit<ParsedComputerDive, "samples">,
+      })),
+    );
   });
 }
