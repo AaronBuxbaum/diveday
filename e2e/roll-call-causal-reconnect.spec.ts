@@ -37,7 +37,32 @@ async function setDeviceClock(page: Page, timestamp: number) {
 
 async function openEvidence(page: Page) {
   const expanded = page.locator("#deck-flow > div > details[open] > summary");
-  if (await expanded.count()) await expanded.click();
+  if (await expanded.count()) {
+    await expanded.click();
+    // Closing Details keeps its body in layout through ::details-content's
+    // discrete transition. Wait for the collapse before aiming at the header:
+    // its final scroll clamp can otherwise move Needs attention during a click.
+    await expect
+      .poll(() =>
+        page.locator("#deck-flow > div > details").evaluate((el) => {
+          const transitioning = el.getAnimations().some((animation) => {
+            const effect = animation.effect;
+            return (
+              effect instanceof KeyframeEffect &&
+              effect.pseudoElement === "::details-content" &&
+              animation.playState !== "finished" &&
+              animation.playState !== "idle"
+            );
+          });
+          return (
+            !(el as HTMLDetailsElement).open &&
+            getComputedStyle(el, "::details-content").contentVisibility === "hidden" &&
+            !transitioning
+          );
+        }),
+      )
+      .toBe(true);
+  }
   await page.getByRole("button", { name: staff("manifest.deck.attention"), exact: true }).click();
   await expect(page.locator('[data-deck-screen="attention"]')).toBeVisible();
 }
@@ -137,15 +162,21 @@ for (const role of ["diver", "crew"] as const) {
             staff("manifest.deck.savedMissing"),
           );
         } else {
-          const offlineRow = await savedDetails(page, personName, role);
-          await offlineRow.getByText("Not back aboard?", { exact: true }).click();
-          await offlineRow
-            .getByRole("button", { name: "Mark not back aboard", exact: true })
-            .click();
-          await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
-            staff("manifest.deck.savedMissing"),
-          );
-          await recordNamed(live, personName);
+          // Both old bases are rendered and the saved device is offline. These
+          // independent statements can finish together before reconnecting.
+          await Promise.all([
+            (async () => {
+              const offlineRow = await savedDetails(page, personName, role);
+              await offlineRow.getByText("Not back aboard?", { exact: true }).click();
+              await offlineRow
+                .getByRole("button", { name: "Mark not back aboard", exact: true })
+                .click();
+              await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+                staff("manifest.deck.savedMissing"),
+              );
+            })(),
+            recordNamed(live, personName),
+          ]);
         }
         // Change the offline clock again between tap and send.
         await setDeviceClock(page, new Date(E2E_FROZEN_CLOCK).getTime() - 7 * 60_000);
@@ -295,6 +326,13 @@ for (const role of ["diver", "crew"] as const) {
         await context.setOffline(false);
         const refreshed = await quietReceipt;
         expect(refreshed.ok()).toBe(true);
+        // Headers can arrive before the saved copy commits the resolution.
+        // Observe removal on Attention before navigating away, where the
+        // control would disappear even if the old conflict data remained.
+        const savedAttention = page.locator('[data-deck-screen="attention"]');
+        await expect(savedAttention).toBeVisible();
+        await expect(savedResolve).toHaveCount(0);
+        await expect(savedAttention).toBeVisible();
         await openDeckPerson(page, fact.fullName);
         await expect(
           page

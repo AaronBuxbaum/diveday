@@ -1,4 +1,5 @@
 import { expect, STUB_BASEMAP_TILE, signedInAsOwner, test } from "../e2e/fixtures";
+import { manifestRow } from "../e2e/helpers";
 import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { createRequestWindow, measurementNetworkPolicy } from "./network-policy";
@@ -160,9 +161,12 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
         await link.click();
         await page.waitForURL((url) => url.pathname + url.search === route);
       } else await page.goto(route);
-      if (name === "manifest")
+      if (name === "manifest") {
+        // Deck starts at Home; open the named person's working row through
+        // the real controls before measuring a usable roll-call surface.
+        await manifestRow(page, "Priya Sharma");
         await expect(page.locator("#roll-call-list").getByRole("button").first()).toBeVisible();
-      else if (name === "catalog") {
+      } else if (name === "catalog") {
         await expect(
           page.getByRole("heading", {
             name: staffTranslator("en-US")("diveSites.catalog.title"),

@@ -1,7 +1,7 @@
 {
   "title": "Computer dives",
   "intro": "Import a file into this diver’s personal computer history.",
-  "formats": "UDDF, Subsurface XML and the labeled CSV template. Vendor exports have not yet been verified.",
+  "formats": "Garmin dive FIT (one Descent/Connect export verified), UDDF, Subsurface XML and the labeled CSV template. Other vendor exports are unverified.",
   "files": "Dive files",
   "preview": "Preview files",
   "previewHeading": "Review dives",
@@ -67,10 +67,13 @@
     "profile_absent": "This record has no depth profile.",
     "duration_unknown": "Duration is unknown.",
     "depth_unknown": "Maximum depth is unknown.",
-    "multiple_recordings": "This dive has multiple computer recordings."
+    "multiple_recordings": "This dive has multiple computer recordings.",
+    "local_time_unknown": "Original local clock and timezone unknown; the recorded UTC instant is preserved.",
+    "duration_elapsed": "Elapsed session duration can include surface time.",
+    "unmapped_fit_fields": "Additional FIT telemetry is not imported. Keep the original file."
   },
   "fileErrorCodes": {
-    "unsupported_fit": "FIT import is not available yet.",
+    "unsupported_fit": "This FIT activity or recording structure is not supported.",
     "unknown_units": "The file needs explicit units.",
     "unsafe_xml": "XML declarations or entities are not accepted.",
     "file_too_large": "The file is too large.",
@@ -79,5 +82,6 @@
   },
   "deviceId": "Computer identifier",
   "recordingIndex": "Recording index",
-  "fileErrors": "Files with errors"
+  "fileErrors": "Files with errors",
+  "zipHint": "Extract ZIP downloads first. For UDDF, choose the .uddf file in the extracted folder."
 }

@@ -128,6 +128,15 @@ for (const scheme of ["light", "dark"] as const) {
           page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
         ).toBeVisible();
         await openDeckPerson(page, "Priya Sharma");
+        // This capture opens the saved copy with service available. Photograph
+        // its reconciled state, independently of the person panel mounting.
+        await expect(
+          page
+            .locator('[data-deck-screen] > [role="status"]')
+            .getByText(staffTranslator("en-US")("shared.offlineManifest.reconcile.allCaughtUp"), {
+              exact: true,
+            }),
+        ).toBeVisible();
         await capture(page, "offline-manifest-roll-call", scheme);
         await openDeckDetails(page);
         await page.getByRole("link", { name: "Roll call", exact: true }).click();
@@ -245,10 +254,25 @@ for (const scheme of ["light", "dark"] as const) {
         await openDeckDetails(page);
         const counter = page.getByRole("region", { name: "At the counter" });
         const diego = counter.getByRole("button", { name: /Diego Alvarez/ });
+        const applied = page.waitForResponse(
+          (response) =>
+            response.url().endsWith("/api/offline-manifests/sync") &&
+            response.status() === 200 &&
+            response.request().postDataJSON().arrivalEvents?.length > 0,
+        );
         await diego.click();
-        // Wait on what the tap itself renders, never on a timeout: the row
-        // reports its own settled state through `aria-pressed`.
+        // aria-pressed proves the local write; this online saved-copy capture
+        // also needs the applied server receipt and the reconciled UI.
         await expect(diego).toHaveAttribute("aria-pressed", "true");
+        expect((await (await applied).json()).results).toEqual([
+          expect.objectContaining({ status: "applied" }),
+        ]);
+        const sent = page
+          .locator('[data-deck-screen] > [role="status"]')
+          .getByText(staffTranslator("en-US")("shared.offlineManifest.reconcile.allCaughtUp"), {
+            exact: true,
+          });
+        await expect(sent).toBeVisible();
         await capture(page, "offline-counter-settled", scheme, {
           beforeShot: async () => {
             const name = counter.getByText("Diego Alvarez", { exact: true });
@@ -261,6 +285,7 @@ for (const scheme of ["light", "dark"] as const) {
               ),
             ).toBe(true);
             await expect(diego).toHaveAttribute("aria-pressed", "true");
+            await expect(sent).toBeVisible();
           },
         });
       });

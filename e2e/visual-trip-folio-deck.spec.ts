@@ -6,6 +6,7 @@ import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   SURFACE_TIMEOUT_MS,
   settleOfflineShellWorker,
   VISUAL_STEP_BOUNDS,
@@ -40,11 +41,14 @@ for (const scheme of ["light", "dark"] as const) {
       test(`Deck records a named person through a separate receipt (${scheme})`, async ({
         page,
       }) => {
+        const confirmed = liveRosterConfirmation(page);
         await page.goto(`${trip}/manifest?checkpoint=after_dive_1`);
         await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
+        await confirmed;
         await capture(page, "trip-deck-home", scheme);
         await openDeckPerson(page, "Tom Okafor");
         await capture(page, "trip-deck-person", scheme);
+        const afterRecord = liveRosterConfirmation(page);
         await page
           .getByRole("button", {
             name: t("manifest.deck.record", { name: "Tom Okafor" }),
@@ -52,6 +56,7 @@ for (const scheme of ["light", "dark"] as const) {
           })
           .click();
         await expect(page.locator('[data-deck-screen="receipt"]')).toBeVisible();
+        await afterRecord;
         await capture(page, "trip-deck-receipt", scheme);
       });
       test(`offline Deck keeps the named local receipt visible (${scheme})`, async ({

@@ -1,5 +1,6 @@
 /** ADR 20260907-in-your-hands 19d: captures use simulated device-body readings. */
 
+import { DEMO_SHOP_BRAND } from "../src/db/seed-shop-brand";
 import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody, fragmentedWords } from "./device-text-size-fixture";
@@ -17,6 +18,7 @@ import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   SURFACE_TIMEOUT_MS,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
@@ -35,9 +37,11 @@ for (const bodySize of [34, 53]) {
       await exposeDeviceBody(page, bodySize);
       await page.goto("/shop/blue-mantis/schedule/board");
       await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
+      const confirmed = liveRosterConfirmation(page);
       await openTripTab(page, "Manifest");
       await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
       await offlineCopySaved(page);
+      await confirmed;
       if (bodySize === 34) await capture(page, "manifest-device-body-34", "light");
       else {
         await capture(page, "manifest-device-body-53", "light");
@@ -227,18 +231,34 @@ test.describe("light mode largest device body checklist editor", () => {
     await capture(page, "checklist-editor-device-body-53", "light");
     await page.goto("/shop/blue-mantis/settings/profile");
     const tagline = page.getByRole("textbox", { name: "Tagline", exact: true });
+    // Focus the loaded native field before selecting its text, as the readability flow does.
+    // Filling during hydration can collapse the selection and prepend to the saved tagline.
+    await tagline.click();
+    await expect(tagline).toBeFocused();
+    await expect(tagline).toHaveValue(DEMO_SHOP_BRAND.tagline);
     await tagline.fill("Large type check");
+    await expect(tagline).toHaveValue("Large type check");
     await capture(page, "settings-editor-device-body-53", "light", {
-      beforeShot: async () => tagline.focus(),
+      beforeShot: async () => {
+        await tagline.focus();
+        await expect(tagline).toHaveValue("Large type check");
+      },
     });
     await page.setViewportSize({ width: 1024, height: 844 });
     await tagline.focus();
+    await expect(tagline).toHaveValue("Large type check");
     await page.screenshot({
       path: test.info().outputPath("settings-editor-1024.png"),
       fullPage: true,
     });
     await page.emulateMedia({ colorScheme: "dark" });
-    await capture(page, "settings-editor-device-body-53", "dark", { darkPhone: true });
+    await capture(page, "settings-editor-device-body-53", "dark", {
+      darkPhone: true,
+      beforeShot: async () => {
+        await tagline.focus();
+        await expect(tagline).toHaveValue("Large type check");
+      },
+    });
   });
 });
 
@@ -249,8 +269,10 @@ test.describe("light mode unchanged device body", () => {
     await exposeDeviceBody(page, 17);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
+    const confirmed = liveRosterConfirmation(page);
     await openTripTab(page, "Manifest");
     await offlineCopySaved(page);
+    await confirmed;
     await expect(page.locator("html")).not.toHaveAttribute("data-device-text-size");
     await capture(page, "manifest-device-body-default", "light");
     await page.goto("/s/blue-mantis/register");

@@ -204,6 +204,9 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.5.16
         version: 0.5.16
+      '@garmin/fitsdk':
+        specifier: 21.221.0
+        version: 21.221.0
       '@maplibre/maplibre-gl-leaflet':
         specifier: ^0.1.4
         version: 0.1.4(@types/leaflet@1.9.22)(leaflet@1.9.4)(maplibre-gl@6.17.0)
@@ -1099,6 +1102,9 @@ packages:
 
   '@formatjs/intl-localematcher@0.8.14':
     resolution: {integrity: sha512-8O7V38QmbB11+ryJ3KM/znrzXtiqgpXzqNoqDsndHZZ5/zDKTTL+cf5F0mzXkQEwhx8IlWnqYvEovf2S5EwLTw==}
+
+  '@garmin/fitsdk@21.221.0':
+    resolution: {integrity: sha512-dZiBXPNFowe8VhjHUAoRMFW0sgI6SZaqb3OhOX5UjdLuRmtCoC/bXDJPOObDzyPP68CoEBLv6ueGXayT2tohjw==}
 
   '@hapi/hoek@9.3.0':
     resolution: {integrity: sha512-/c6rf4UJlmHlC9b5BaNvzAcFv7HZ2QHaV0D4/HNlBdvFnvQq8RI4kYdhyPCl7Xj+oWvTWQ8ujhqS53LIgAe6KQ==}
@@ -7369,6 +7375,8 @@ snapshots:
   '@formatjs/intl-localematcher@0.8.14':
     dependencies:
       '@formatjs/fast-memoize': 3.1.7
+
+  '@garmin/fitsdk@21.221.0': {}
 
   '@hapi/hoek@9.3.0': {}
 

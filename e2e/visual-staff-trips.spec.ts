@@ -31,6 +31,7 @@ import {
   deepDiverLogPath,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   MINIMUM_SEATS_TRIP,
   openReefTrip,
   REEF_TRIP,
@@ -398,6 +399,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`a trip's manifest renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
+        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)/)?.[1];
+        if (!tripId) throw new Error("The manifest capture must identify its trip");
+        const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "departure" });
         await openTripTab(page, "Manifest");
         await expect(
           page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
@@ -412,8 +416,15 @@ for (const scheme of ["light", "dark"] as const) {
         // 2) — so neither can change this capture's picture, and waiting on
         // them would only be waiting. The freshness pill above is the one piece
         // of that group's state on the summary line, and it is what this shot
-        // must not race.
-        await capture(page, "manifest", scheme);
+        // must not race. Live roster trust is a separate completed read.
+        await confirmed;
+        await capture(page, "manifest", scheme, {
+          beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
+          },
+        });
       });
 
       /**
@@ -546,6 +557,10 @@ for (const scheme of ["light", "dark"] as const) {
           .locator("span.font-medium")
           .first()
           .innerText();
+        const confirmed = liveRosterConfirmation(page, {
+          tripId: crewClash.tripId,
+          checkpoint: "departure",
+        });
         await openTripTab(page, "Manifest");
         await openDeckPerson(page, clashingName);
         await page.getByRole("button", { name: "Not aboard / details", exact: true }).click();
@@ -555,7 +570,14 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .waitFor();
         await offlineCopySaved(page);
-        await capture(page, "manifest-crew-clash", scheme);
+        await confirmed;
+        await capture(page, "manifest-crew-clash", scheme, {
+          beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
+          },
+        });
       });
 
       /**
@@ -654,6 +676,7 @@ for (const scheme of ["light", "dark"] as const) {
           }),
         ).toBeVisible();
 
+        const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "departure" });
         await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
         await expect(
           page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
@@ -666,7 +689,14 @@ for (const scheme of ["light", "dark"] as const) {
         ).toBeVisible();
         // The same background save the capture above waits out.
         await offlineCopySaved(page);
-        await capture(page, "manifest-not-here", scheme);
+        await confirmed;
+        await capture(page, "manifest-not-here", scheme, {
+          beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
+          },
+        });
       });
 
       // The departure log: the hand-to-authorities document of the

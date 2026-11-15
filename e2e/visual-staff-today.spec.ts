@@ -93,7 +93,16 @@ for (const scheme of ["light", "dark"] as const) {
             .getByText(/At the dock \d{1,2}:\d\d\s[AP]M · leaves/)
             .first()
             .waitFor();
-          await capture(page, "today-captain-your-week", scheme);
+          const arrivals = page.getByRole("searchbox", {
+            name: staffCopy("shopHome.arrivals.label"),
+          });
+          await expect(arrivals).toHaveAttribute("data-hydrated", "true");
+          await expect(arrivals).toBeFocused();
+          await capture(page, "today-captain-your-week", scheme, {
+            beforeScreenshot: async () => {
+              await expect(arrivals).toBeFocused();
+            },
+          });
         });
       });
 

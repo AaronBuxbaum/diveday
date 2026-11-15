@@ -25,6 +25,7 @@ export default async function ComputerDivesPage({
     title: t("computerDives.title"),
     intro: t("computerDives.intro"),
     formats: t("computerDives.formats"),
+    zipHint: t("computerDives.zipHint"),
     files: t("computerDives.files"),
     preview: t("computerDives.preview"),
     previewHeading: t("computerDives.previewHeading"),
@@ -89,6 +90,9 @@ export default async function ComputerDivesPage({
     offsetHint: t("computerDives.offsetHint"),
     selectionHint: t("computerDives.selectionHint"),
     warningCodes: {
+      local_time_unknown: t("computerDives.warningCodes.local_time_unknown"),
+      duration_elapsed: t("computerDives.warningCodes.duration_elapsed"),
+      unmapped_fit_fields: t("computerDives.warningCodes.unmapped_fit_fields"),
       timezone_unknown: t("computerDives.warningCodes.timezone_unknown"),
       profile_absent: t("computerDives.warningCodes.profile_absent"),
       duration_unknown: t("computerDives.warningCodes.duration_unknown"),
