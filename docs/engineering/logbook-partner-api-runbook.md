@@ -26,10 +26,20 @@ places detailed technical documentation in the approved portal. The
 [Personal API](https://developer.garmin.com/gc-developer-program/personal/personal-faq/)
 is unsuitable for this commercial service serving multiple users; do not collect personal API keys.
 
+The current [program overview](https://developer.garmin.com/gc-developer-program/overview/)
+lists Activity JSON/FIT for both Business tiers. Starter is push-only, has limited user capacity
+and excludes historical data. Enterprise offers push or ping/pull and lists historical access
+as “1 month +”; confirm the actual entitlement and commercial terms with Garmin. Do not build a
+Starter polling/backfill flow or promise a complete historical logbook. The Activity overview does
+not establish dive-specific coverage for the approved application. Keep file import available for
+history and unsupported recordings.
+
 Suunto's [partner process](https://apizone.suunto.com/) and
 [quickstart](https://apizone.suunto.com/how-to-start) distinguish application credentials from the
 API subscription key. Separate applications/environments need the account arrangements described
 in the [FAQ](https://apizone.suunto.com/faq). A key does not prove production approval or partnership.
+The public process currently states review can take up to two weeks and API usage is not charged;
+confirm current terms during application rather than treating that statement as a service guarantee.
 Follow the providers' agreements when arranging developer access. Do not paste confidential portal
 materials into an unauthorized service; supply contract details only through an approved channel.
 
@@ -71,6 +81,11 @@ where refresh tokens are optional; this is mock-tested tolerance, not observed S
 The quickstart identifies `GET https://cloudapi.suunto.com/v2/workouts`; the FAQ documents Bearer
 and `Ocp-Apim-Subscription-Key` headers. This research did not establish its response envelope,
 paging parameters or per-workout download operation, so the adapter does not fetch this resource.
+
+The [FIT description](https://apizone.suunto.com/fit-description) documents dive depth, surface
+interval, dive mode, settings and gas fields. That establishes a published dive-data vocabulary,
+not verified coverage for a specific device/account or a tested Suunto import. Representative
+authorized FIT recordings and the approved download contract are still required.
 
 Suunto's state return, PKCE, refresh and API revocation behavior were not established from the
 readable public contract. Authorization requests include state and a future callback must refuse
