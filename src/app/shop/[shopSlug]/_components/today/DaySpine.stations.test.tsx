@@ -169,12 +169,29 @@ describe("a station owns its departure's facts", () => {
         element.textContent === "Molasses Reef · Mantis II · Keiko Tanaka · $95",
     );
     expect(line).toBeInTheDocument();
-    // The crew's names are the desktop's: below `sm` the line is the site,
-    // the hull and the price (phone text density pass).
-    expect(within(line).getByText("Keiko Tanaka", { exact: false })).toHaveClass("max-sm:hidden");
+    expect(
+      within(line).getByText("Keiko Tanaka", { exact: false }).closest(".max-sm\\:hidden"),
+    ).toBeNull();
     expect(within(line).getByText("Molasses Reef", { exact: false })).not.toHaveClass(
       "max-sm:hidden",
     );
+  });
+
+  it("shows a crew portrait on the station while preserving a name without one", () => {
+    renderSpine({
+      departures: [
+        departure({
+          crew: [
+            { fullName: "Keiko Tanaka", staffPhotoPath: "/demo-staff/keiko-tanaka.webp" },
+            { fullName: "Sal Moretti", staffPhotoPath: null },
+          ],
+        }),
+      ],
+    });
+    const keiko = screen.getByText("Keiko Tanaka");
+    expect(keiko.querySelector("img")).toHaveAttribute("alt", "");
+    expect(keiko.querySelector("img")?.getAttribute("src")).toContain("keiko-tanaka.webp");
+    expect(screen.getByText(/Sal Moretti/).querySelector("img")).toBeNull();
   });
 
   it("says how many of the booked divers are ready, and the open seats beside it", () => {

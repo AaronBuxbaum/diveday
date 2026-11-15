@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Badge } from "@/components/ui/badge";
@@ -87,21 +88,18 @@ export function DayStation({
   const ready = station.booked - blocked;
   // The seats on sale, not the stated number (H-20261009-certificate-caps-seats, #2388).
   const open = Math.max(0, station.sellableCapacity - station.booked);
-  // **The crew's names are the desktop's**: on a phone the card is the time,
-  // the boat and the bar, and who is crewing is one tap away on the departure
-  // (and on Schedule's Crew view). Their names ran the line onto a second row.
   const meta = [
-    { text: station.siteName, phone: true },
-    { text: station.boatName, phone: true },
-    { text: station.crewNames.length > 0 ? station.crewNames.join(", ") : null, phone: false },
+    { text: station.siteName, crew: false },
+    { text: station.boatName, crew: false },
+    { text: station.crewNames.length > 0 ? station.crewNames.join(", ") : null, crew: true },
     {
       text:
         station.priceCents === null
           ? null
           : formatMoneyScanned(station.priceCents, currency, locale),
-      phone: true,
+      crew: false,
     },
-  ].filter((fact): fact is { text: string; phone: boolean } => Boolean(fact.text));
+  ].filter((fact): fact is { text: string; crew: boolean } => Boolean(fact.text));
   const intentLine = staffDiveIntentLine(t, station.intents ?? [], locale);
   const hello = sayHelloSentences(t, locale, station.welcome ?? []).join(" ");
   const [titleHead, titleLast] = lastWordApart(station.title);
@@ -165,19 +163,30 @@ export function DayStation({
       </h3>
       {meta.length > 0 ? (
         <p className="mt-1 text-sm text-muted">
-          {meta.map((fact, index) => {
-            // A separator a phone would show at the head of its line (the
-            // crew hidden in front of it) is a desktop separator.
-            const firstOnPhone = fact.phone && !meta.slice(0, index).some((f) => f.phone);
-            return (
-              <span key={fact.text} className={fact.phone ? undefined : "max-sm:hidden"}>
-                {index > 0 ? (
-                  <span className={firstOnPhone ? "max-sm:hidden" : undefined}>{" · "}</span>
-                ) : null}
-                {fact.text}
-              </span>
-            );
-          })}
+          {meta.map((fact, index) => (
+            <span key={fact.text}>
+              {index > 0 ? " · " : null}
+              {!fact.crew
+                ? fact.text
+                : station.crew.map((person, personIndex) => (
+                    // Names can repeat; the list is already ordered by person ID.
+                    // biome-ignore lint/suspicious/noArrayIndexKey: this display has no mutable state.
+                    <span key={personIndex}>
+                      {personIndex > 0 ? ", " : ""}
+                      {person.staffPhotoPath ? (
+                        <Image
+                          src={person.staffPhotoPath}
+                          alt=""
+                          width={24}
+                          height={24}
+                          className="me-1 inline-block rounded-full align-middle"
+                        />
+                      ) : null}
+                      {person.fullName}
+                    </span>
+                  ))}
+            </span>
+          ))}
         </p>
       ) : null}
       {/* What the divers said they came for is the briefing's colour, not the

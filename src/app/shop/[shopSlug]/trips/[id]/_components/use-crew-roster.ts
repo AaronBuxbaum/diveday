@@ -29,6 +29,7 @@ export function useCrewRoster({
   const availableStaff = staff.map((entry) => ({
     id: entry.person.id,
     fullName: entry.person.fullName,
+    photoUrl: entry.person.staffPhotoPath,
     roles: entry.roles,
   }));
   const crewFromProps = availableStaff.filter((entry) => crewIds.includes(entry.id));

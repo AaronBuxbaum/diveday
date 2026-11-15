@@ -194,6 +194,30 @@ function staffMember(id: string, fullName: string, roles: string[] = ["instructo
   } satisfies StaffList[number];
 }
 
+it("shows the assigned crew portrait beside the name and keeps a name-only fallback", () => {
+  const dana = staffMember("dana", "Dana Reyes");
+  dana.person.staffPhotoPath = "/demo-staff/dana-reyes.webp";
+  const { container } = render(
+    <CrewSection
+      tripId="trip-1"
+      staff={[dana, staffMember("sal", "Sal Moretti")]}
+      crewIds={["dana", "sal"]}
+      crewRoles={{}}
+      onShiftIds={null}
+      shopSlug="blue-mantis"
+      crewGapCode="none"
+      copy={COPY}
+      updateCrewAction={async () => ({ ok: true })}
+    />,
+  );
+  expect(screen.getByText("Dana Reyes")).toBeTruthy();
+  expect(screen.getByText("Sal Moretti")).toBeTruthy();
+  const images = container.querySelectorAll("img");
+  expect(images).toHaveLength(1);
+  expect(images[0]).toHaveAttribute("alt", "");
+  expect(images[0]?.getAttribute("src")).toContain("dana-reyes.webp");
+});
+
 describe("CrewSection assignError reset on revisit", () => {
   it("clears a stale assign-failed banner once the server's own crew data resyncs (e.g. a trip switch)", async () => {
     const failing = vi.fn(async () => ({ ok: false }));

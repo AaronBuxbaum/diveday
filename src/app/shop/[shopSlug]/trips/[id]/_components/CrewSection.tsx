@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { EmptyState } from "@/components/EmptyState";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";
@@ -211,8 +212,16 @@ export function CrewSection({
                   key={entry.id}
                   className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
                 >
-                  <span className="flex min-w-0 flex-col gap-1">
-                    <span className="flex min-w-0 flex-wrap items-center gap-2">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      {entry.photoUrl ? (
+                        <StoredPhoto
+                          src={entry.photoUrl}
+                          alt=""
+                          className="size-8 shrink-0 rounded-full"
+                          sizes="32px"
+                        />
+                      ) : null}
                       <span className="font-medium">{entry.fullName}</span>
                       {/* The trip role is shown once; shift coverage is silent
                           when normal and remains available to screen readers. */}
@@ -226,7 +235,7 @@ export function CrewSection({
                           {copy.notOnShift}
                         </Badge>
                       )}
-                    </span>
+                    </div>
                     {/* A standing conflict is informational status, one per
                         other departure, keyed by id so equal titles remain distinct. */}
                     {clashes
@@ -241,7 +250,7 @@ export function CrewSection({
                           <span>{fill(copy.clash, { departure: clash.otherTitle })}</span>
                         </span>
                       ))}
-                  </span>
+                  </div>
                   <span className="flex items-center gap-2">
                     {/* This is the role for this departure; blank means
                         unspecified. See ADR 20260803-per-trip-crew-role. */}

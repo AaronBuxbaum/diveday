@@ -687,6 +687,10 @@ describe("listShopStaff", () => {
   it("aggregates each staff person's roles once, sorted by name, excluding divers-only", async () => {
     const { db, shop } = ctx;
     const zed = await makeStaff(db, shop.id, ["instructor", "divemaster"]);
+    await db
+      .update(people)
+      .set({ staffPhotoPath: "/staff/zed.webp" })
+      .where(eq(people.id, zed.personId));
     const [diverOnly] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Diver Only", email: "diver-only@example.com" })
@@ -697,6 +701,7 @@ describe("listShopStaff", () => {
     const staff = await listShopStaff(db, shop.id);
     const zedRow = staff.find((member) => member.personId === zed.personId);
     expect(zedRow?.roles.sort()).toEqual(["divemaster", "instructor"]);
+    expect(zedRow?.staffPhotoPath).toBe("/staff/zed.webp");
     expect(staff.some((member) => member.personId === diverOnly.id)).toBe(false);
 
     const names = staff.map((member) => member.fullName);
