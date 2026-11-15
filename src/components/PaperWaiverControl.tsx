@@ -189,6 +189,7 @@ export function PaperWaiverControl({
   return (
     <form
       action={formAction}
+      data-task-remedy-form
       className={`${className} w-full max-w-md rounded-inset border border-border bg-surface-sunken p-4`}
     >
       {bookingId ? <input type="hidden" name="bookingId" value={bookingId} /> : null}

@@ -22,6 +22,7 @@ import {
   installVisualBuildGuard,
   REEF_TRIP,
   SURFACE_TIMEOUT_MS,
+  staffCopy,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
@@ -142,8 +143,7 @@ for (const scheme of ["light", "dark"] as const) {
         await staffPage.waitForURL(/\/trips\/[a-f0-9-]+$/);
         const unsent = await openFirstRosterRowWith(staffPage, "Send waiver");
         const profileHref = await unsent
-          .locator('a[href*="/divers/"]')
-          .first()
+          .getByRole("link", { name: staffCopy("trips.folio.openProfile"), exact: true })
           .getAttribute("href");
         if (!profileHref)
           throw new Error("The waiver roster row did not link to its diver profile");

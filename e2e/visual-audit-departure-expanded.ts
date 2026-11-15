@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { clearCourseForms } from "./course-form-only";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { expectFolioRemedyGeometry } from "./folio-remedy-geometry";
 import {
   bookOpenWaterSession,
   createTrip,
@@ -308,7 +309,9 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
         paper.getByLabel(staff("trips.roster.courseForms.signedOn"), { exact: true }),
       ).toBeVisible();
       await expect(paper.getByRole("checkbox")).toBeVisible();
-      await capture(page, "roster-paper-course-form-editor", "light");
+      await capture(page, "roster-paper-course-form-editor", "light", {
+        beforeShot: () => expectFolioRemedyGeometry(paper.locator("form")),
+      });
 
       const charterTitle = "Training dive — review charter";
       await createTrip(page, {

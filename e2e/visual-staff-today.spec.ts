@@ -7,6 +7,7 @@
 
 import { clearCourseForms } from "./course-form-only";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { expectFolioRemedyGeometry } from "./folio-remedy-geometry";
 import {
   bookOpenWaterSession,
   counterPath,
@@ -598,6 +599,14 @@ for (const scheme of ["light", "dark"] as const) {
         const row = await rosterRow(page, "Lena Fischer");
         await expect(row).toHaveAttribute("id", `booking-${blockedMinor.bookingId}`);
         await openRosterDetails(row);
+        const paperTrigger = row.getByRole("button", { name: "Mark signed on paper" });
+        await capture(page, "trip-desk-waiver-paper-closed", scheme, {
+          beforeShot: async () => {
+            await expect(paperTrigger).toBeVisible();
+            const triggerBounds = await paperTrigger.boundingBox();
+            expect(triggerBounds?.width).toBeLessThanOrEqual(176);
+          },
+        });
         await openPaperWaiverForm(row);
         await row
           .getByLabel("I have this diver’s signed release on file", { exact: false })
@@ -615,7 +624,9 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(
           row.getByLabel("This co-signer and this diver have the same name", { exact: false }),
         ).toBeVisible();
-        await capture(page, "trip-desk-waiver-refused", scheme);
+        await capture(page, "trip-desk-waiver-refused", scheme, {
+          beforeShot: () => expectFolioRemedyGeometry(row.locator("form:has([name=guardianName])")),
+        });
       });
 
       /**

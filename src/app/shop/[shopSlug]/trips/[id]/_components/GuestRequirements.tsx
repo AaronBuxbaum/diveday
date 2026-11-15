@@ -90,8 +90,10 @@ export function GuestRequirements({
                         ))}
                       </div>
                     </div>
+                    {/* Only expanded editors span the task; closed disclosures and
+                        button-only server-action forms keep the compact action column. */}
                     {family !== "payment" && family !== "contact" && row.actions.length ? (
-                      <div className="min-w-0 max-w-36 sm:max-w-44 [&>div]:mt-0 [&_button]:max-w-full [&_a]:max-w-full">
+                      <div className="min-w-0 max-w-36 has-[[data-task-remedy-form],details[open]_form]:col-span-full has-[[data-task-remedy-form],details[open]_form]:max-w-none sm:max-w-44 [&>div]:mt-0 [&_[data-task-remedy-form]]:max-w-none [&_button]:max-w-full [&_a]:max-w-full">
                         {row.actions}
                       </div>
                     ) : null}
