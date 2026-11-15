@@ -263,11 +263,15 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripTab(page, "Manifest");
         await openDeckDetails(page);
         await offlineCopySaved(page);
+        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\/manifest/)?.[1];
+        if (!tripId) throw new Error("The sailed trip manifest must identify its trip");
+        const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "after_dive_1" });
         await page
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
         await openDeckDetails(page);
+        await confirmed;
         const seen = page.getByRole("region", { name: "Seen" });
         const chip = seen.getByRole("button", { name: "Southern stingray", exact: true });
         await chip.evaluate((button) => button.scrollIntoView({ block: "center" }));
@@ -280,11 +284,18 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(tally).toContainText("2");
         const grouper = seen.getByRole("button", { name: "Goliath grouper", exact: true });
         await expect(grouper).toBeEnabled();
-        const confirmed = liveRosterConfirmation(page);
         await grouper.click();
         await expect(seen.getByRole("listitem")).toHaveCount(2);
         await expect(grouper).toBeEnabled();
-        await confirmed;
+        // Sighting writes can supersede the current roster proof. Photograph
+        // the persisted tally after a fresh read, retaining the immediate
+        // feedback assertions above as well as the current-roster check.
+        const persisted = liveRosterConfirmation(page, { tripId, checkpoint: "after_dive_1" });
+        await page.reload();
+        await openDeckDetails(page);
+        await persisted;
+        await expect(tally).toContainText("2");
+        await expect(seen.getByRole("listitem")).toHaveCount(2);
         await page.mouse.move(0, 0);
         await capture(page, "manifest-seen", scheme, {
           beforeScreenshot: async () => {

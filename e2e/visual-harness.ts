@@ -41,10 +41,22 @@ export const CATALOG_MAP_SITE_COUNT = DIVE_SITE_TEMPLATES.filter(
 ).length;
 
 /** Start before navigation or a roster mutation; a saved copy alone is not live trust. */
-export async function liveRosterConfirmation(page: Page) {
-  await page.waitForResponse(
-    (response) => response.url().endsWith("/roster-confirmation") && response.status() === 204,
-  );
+export async function liveRosterConfirmation(
+  page: Page,
+  scope?: { tripId: string; checkpoint: string },
+) {
+  await page.waitForResponse((response) => {
+    const request = response.request();
+    return (
+      request.method() === "POST" &&
+      response.status() === 204 &&
+      (scope
+        ? new URL(response.url()).pathname ===
+            `/api/offline-manifests/${scope.tripId}/roster-confirmation` &&
+          request.postDataJSON().checkpoint === scope.checkpoint
+        : response.url().endsWith("/roster-confirmation"))
+    );
+  });
   await expect(
     page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
   ).toHaveCount(0);

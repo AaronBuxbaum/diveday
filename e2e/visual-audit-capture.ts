@@ -5,7 +5,7 @@ export type AuditCapture = (
   page: Page,
   name: string,
   scheme: "light" | "dark",
-  options?: { beforeShot?: () => Promise<void> },
+  options?: { beforeShot?: () => Promise<void>; beforeScreenshot?: () => Promise<void> },
 ) => Promise<void>;
 
 export type AuditPrintCapture = (page: Page, name: string) => Promise<void>;

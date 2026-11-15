@@ -320,6 +320,13 @@ for (const role of ["diver", "crew"] as const) {
         await context.setOffline(false);
         const refreshed = await quietReceipt;
         expect(refreshed.ok()).toBe(true);
+        // Headers can arrive before the saved copy commits the resolution.
+        // Observe removal on Attention before navigating away, where the
+        // control would disappear even if the old conflict data remained.
+        const savedAttention = page.locator('[data-deck-screen="attention"]');
+        await expect(savedAttention).toBeVisible();
+        await expect(savedResolve).toHaveCount(0);
+        await expect(savedAttention).toBeVisible();
         await openDeckPerson(page, fact.fullName);
         await expect(
           page

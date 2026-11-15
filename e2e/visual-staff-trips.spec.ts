@@ -31,6 +31,7 @@ import {
   deepDiverLogPath,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   MINIMUM_SEATS_TRIP,
   openReefTrip,
   REEF_TRIP,
@@ -654,6 +655,7 @@ for (const scheme of ["light", "dark"] as const) {
           }),
         ).toBeVisible();
 
+        const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "departure" });
         await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
         await expect(
           page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
@@ -666,7 +668,14 @@ for (const scheme of ["light", "dark"] as const) {
         ).toBeVisible();
         // The same background save the capture above waits out.
         await offlineCopySaved(page);
-        await capture(page, "manifest-not-here", scheme);
+        await confirmed;
+        await capture(page, "manifest-not-here", scheme, {
+          beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
+          },
+        });
       });
 
       // The departure log: the hand-to-authorities document of the
