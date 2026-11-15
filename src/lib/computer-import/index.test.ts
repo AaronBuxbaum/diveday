@@ -108,11 +108,11 @@ describe("hostile and ambiguous input", () => {
   ])("refuses %s", (input, code) => {
     expect(() => parseComputerFile(bytes(input))).toThrow(code);
   });
-  it("refuses malformed UTF-8 and FIT without a verified official adapter", () => {
+  it("refuses malformed UTF-8 and invalid FIT headers", () => {
     expect(() => parseComputerFile(new Uint8Array([0xc3, 0x28]))).toThrow("invalid_encoding");
     const fit = new Uint8Array(12);
     fit.set(bytes(".FIT"), 8);
-    expect(() => parseComputerFile(fit)).toThrow("unsupported_fit");
+    expect(() => parseComputerFile(fit)).toThrow("invalid_value");
   });
   it("bounds byte size, XML nesting, nodes, text and samples", () => {
     expect(() => parseComputerFile(new Uint8Array(5 * 1024 * 1024 + 1))).toThrow("file_too_large");

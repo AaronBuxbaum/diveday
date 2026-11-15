@@ -160,6 +160,20 @@
       "classes": ["size-4", "shrink-0", "focus-visible:outline-none"],
       "reason": "The rental suit radio draws focus around its ChoicePill label or aside wrapper through radioRingClass, not around the native 16px dot. The short-size capture's state atlas confirms the rounded parent ring at focus; its select and save button keep their own rings. The probe measures only the input's outline. Restricted to this capture and these exact wrapper signatures.",
       "pointer": "src/components/ui/form.tsx, radioClass/radioRingClass docblock and both ChoicePill wrappers; docs/design/settled-questions.md"
+    },
+    {
+      "check": "ragged-column",
+      "signature": "button.bg-surface border border-border cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 font-medium gap-1 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-70 inline-flex items-center justify-center min-h-11 min-h-12 not-disabled:not-has-[input:disabled]:hover:bg-foreground/8 pressable px-4 py-2.5 rounded-lg text-base text-center text-foreground",
+      "container": "div.space-y-10",
+      "label": "Preview files",
+      "captures": [
+        "computer-dives-beta-date-only",
+        "computer-dives-beta-zip-preview",
+        "computer-dives-preview",
+        "computer-dives-result"
+      ],
+      "reason": "These are independent upload, confirmation and history sections, not repeated data rows. Preview and confirmation begin at the content edge; desktop history downloads sit beside their own heading. Reviewed at 1280px: x392/392/650 without overflow or collision. Restricted to these captures, button signature and label.",
+      "pointer": "src/app/shop/[shopSlug]/divers/[personId]/computer-dives/ComputerDives.tsx, independent-action-sections comment; docs/design/surfaces.md"
     }
   ]
 }
