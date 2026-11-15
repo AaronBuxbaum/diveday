@@ -169,11 +169,9 @@ describe("a station owns its departure's facts", () => {
         element.textContent === "Molasses Reef · Mantis II · Keiko Tanaka · $95",
     );
     expect(line).toBeInTheDocument();
-    // The crew's names are the desktop's: below `sm` the line is the site,
-    // the hull and the price (phone text density pass).
     expect(
       within(line).getByText("Keiko Tanaka", { exact: false }).closest(".max-sm\\:hidden"),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(within(line).getByText("Molasses Reef", { exact: false })).not.toHaveClass(
       "max-sm:hidden",
     );
