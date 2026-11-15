@@ -280,6 +280,26 @@ describe("the ratchet", () => {
 
 describe("server-only modules stay out of client bundles", () => {
   const phone = 'import { parsePhoneNumberFromString } from "libphonenumber-js/mobile";\n';
+  it("keeps the full computer-file decoder out of CSV setup client bundles", async () => {
+    const root = await fixture({
+      "src/lib/computer-import/index.ts":
+        "export const inspect = () => []; export type Mapping = string;",
+      "src/app/Form.tsx": '"use client";\nimport { inspect } from "@/lib/computer-import";',
+    });
+    expect(flat(await collectViolations(root))).toEqual([
+      expect.stringContaining("reaches server-only src/lib/computer-import/index.ts"),
+    ]);
+  });
+  it("permits computer-import types and a browser-safe CSV header primitive", async () => {
+    const root = await fixture({
+      "src/lib/computer-import/index.ts":
+        "export const inspect = () => []; export type Mapping = string;",
+      "src/lib/computer-csv-columns.ts": "export const inspectComputerCsvColumns = () => [];",
+      "src/app/Form.tsx":
+        '"use client";\nimport type { Mapping } from "@/lib/computer-import";\nimport { inspectComputerCsvColumns } from "@/lib/computer-csv-columns";',
+    });
+    expect(flat(await collectViolations(root))).toEqual([]);
+  });
 
   for (const [feature, file] of [
     ["phone-line-type", "rules.ts"],

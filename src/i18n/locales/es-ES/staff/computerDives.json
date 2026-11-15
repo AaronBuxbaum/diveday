@@ -53,7 +53,7 @@
   "saved": "Cambio guardado",
   "error": "No se pudo completar la acción. Revisa tus archivos y tu acceso, e inténtalo de nuevo.",
   "retry": "Reintentar la misma importación",
-  "limit": "Hasta 5 archivos de 2 MB cada uno. Los originales no se guardan.",
+  "limit": "Hasta 5 archivos de 2 MB cada uno. Los originales no se guardan.",
   "previewOnly": "No se guarda nada hasta que confirmes los buceos seleccionados.",
   "template": "Descargar plantilla CSV",
   "samples": "Muestras del perfil",

@@ -38,7 +38,8 @@ ordinal. Review possible duplicates without silently merging them.
 
 Provide an authorised, formula-escaped summary CSV alongside the complete JSON backup. Summary
 CSV deliberately omits profiles and gases. Every path uses the existing scoped live authorization
-and lifecycle locks. No schema change or dependency is required.
+and lifecycle locks. No schema change or dependency is required. Browser setup imports only the shared header grammar;
+the complete decoder barrel is guarded as server-only to avoid shipping vendor decoders.
 
 ## Alternatives considered
 

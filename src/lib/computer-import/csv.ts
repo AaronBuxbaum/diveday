@@ -1,6 +1,7 @@
 import Papa from "papaparse";
+import { computerCsvColumns, inspectComputerCsvColumns } from "@/lib/computer-csv-columns";
 import { parseMappedCsvRows } from "./csv-mapping";
-import { type ComputerCsvMapping, safeCsvColumn } from "./options";
+import type { ComputerCsvMapping } from "./options";
 import { computerTime } from "./time";
 import { finite, COMPUTER_IMPORT_LIMITS as LIMIT, type ParsedComputerDive, refuse } from "./types";
 /** Units are required column names. This template is not a vendor export mapping. */
@@ -8,33 +9,13 @@ export const COMPUTER_CSV_TEMPLATE =
   "local_start,utc_offset,device,source_id,duration_seconds,max_depth_m\n2026-01-01T12:00:00,unknown,Computer,1,1800,20\n";
 const baseColumns = ["local_start", "utc_offset", "device", "source_id", "duration_seconds"];
 function csvColumns(text: string): string[] {
-  // The first record must finish inside this bound, including quoting overhead.
-  const prefix = text.slice(0, 32768);
-  const result = Papa.parse<string[]>(prefix, { delimiter: ",", preview: 1 });
-  const fields = result.data[0];
-  if (
-    result.errors.length ||
-    !fields ||
-    fields.length > 64 ||
-    fields.some((field) => !safeCsvColumn(field)) ||
-    new Set(fields.map((field) => field.normalize("NFKC").trim().toLowerCase())).size !==
-      fields.length ||
-    (text.length > prefix.length && result.meta.cursor >= prefix.length)
-  )
-    refuse("invalid_csv");
-  return fields;
+  return computerCsvColumns(text, refuse);
 }
-/** Browser-safe header inspection only; no dates, units or mapping are inferred. */
+/** Browser-safe header grammar with the parser's structured refusal codes. */
 export function inspectCsvColumns(bytes: Uint8Array): string[] {
-  if (bytes.byteLength > LIMIT.fileBytes) refuse("file_too_large");
-  let text: string;
-  try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    return refuse("invalid_encoding");
-  }
-  return csvColumns(text);
+  return inspectComputerCsvColumns(bytes, LIMIT.fileBytes, refuse);
 }
+
 export function parseCsv(text: string, mapping?: ComputerCsvMapping): ParsedComputerDive[] {
   const fields = csvColumns(text);
   const result = Papa.parse<Record<string, string>>(text, {

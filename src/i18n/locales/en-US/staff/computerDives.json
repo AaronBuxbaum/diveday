@@ -53,7 +53,7 @@
   "saved": "Change saved",
   "error": "Couldn’t complete this action. Check your files and access, then try again.",
   "retry": "Retry the same import",
-  "limit": "Up to 5 files, 2 MB each. Original files are not saved.",
+  "limit": "Up to 5 files, 2 MB each. Original files are not saved.",
   "previewOnly": "Nothing is saved until you confirm the selected dives.",
   "template": "Download CSV template",
   "samples": "Profile samples",

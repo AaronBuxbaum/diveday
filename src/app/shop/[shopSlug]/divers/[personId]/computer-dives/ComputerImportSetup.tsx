@@ -2,13 +2,8 @@ import { useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceRow, controlClass, Field } from "@/components/ui/form";
 import type { StaffMessages } from "@/i18n/staff-messages";
-import {
-  COMPUTER_IMPORT_LIMITS,
-  COMPUTER_LOGBOOK_PROVIDERS,
-  type ComputerCsvMapping,
-  type ComputerLogbookProvider,
-  inspectCsvColumns,
-} from "@/lib/computer-import";
+import { inspectComputerCsvColumns } from "@/lib/computer-csv-columns";
+import type { ComputerCsvMapping, ComputerLogbookProvider } from "@/lib/computer-import";
 
 type Copy = StaffMessages["computerDives"];
 const guides: Partial<Record<ComputerLogbookProvider, string>> = {
@@ -58,14 +53,14 @@ export function useImportSource(files: File[]) {
     setReading(false);
     if (!mappingEnabled || !files.length) return;
     const file = files.find((entry) => /\.csv$/i.test(entry.name)) ?? files[0];
-    if (file.size > COMPUTER_IMPORT_LIMITS.fileBytes) {
+    if (file.size > 2 * 1024 * 1024) {
       setHeaderError(true);
       return;
     }
     setReading(true);
     void fileBytes(file)
       .then((bytes) => {
-        const inspected = inspectCsvColumns(bytes);
+        const inspected = inspectComputerCsvColumns(bytes, 2 * 1024 * 1024);
         if (active) setHeaders(inspected);
       })
       .catch(() => {
@@ -152,7 +147,7 @@ export function LogbookSource({
           className={controlClass}
           onChange={(event) => source.setProvider(event.target.value as ComputerLogbookProvider)}
         >
-          {COMPUTER_LOGBOOK_PROVIDERS.map((provider) => (
+          {(Object.keys(copy.providers) as ComputerLogbookProvider[]).map((provider) => (
             <option key={provider} value={provider}>
               {copy.providers[provider].label}
               {provider === "generic" ? "" : ` · ${copy.beta}`}

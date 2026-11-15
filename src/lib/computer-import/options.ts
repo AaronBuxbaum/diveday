@@ -1,3 +1,7 @@
+import { safeComputerCsvColumn as safeCsvColumn } from "@/lib/computer-csv-columns";
+
+export { safeComputerCsvColumn as safeCsvColumn } from "@/lib/computer-csv-columns";
+
 import { refuse } from "./types";
 
 /** Explicit staff choices for a generic CSV; this is not a vendor export mapping. */
@@ -18,17 +22,7 @@ export type ComputerCsvMapping = {
 export type ComputerParseOptions = { csvMapping?: ComputerCsvMapping };
 
 const columnNames = ["date", "time", "duration", "maxDepth", "utcOffset", "device", "sourceId"];
-export function safeCsvColumn(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.trim().length > 0 &&
-    value.length <= 256 &&
-    !Array.from(value).some(
-      (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
-    ) &&
-    !["__proto__", "constructor", "prototype"].includes(value.trim().toLowerCase())
-  );
-}
+
 function object(value: unknown): value is Record<string, unknown> {
   return (
     value !== null &&
