@@ -1,27 +1,41 @@
+import { isComputerArchive, parseComputerArchive } from "./archive";
 import { parseCsv } from "./csv";
 import { parseFit } from "./fit";
+import { type ComputerParseOptions, validateComputerParseOptions } from "./options";
 import { parseSubsurface } from "./subsurface";
 import { COMPUTER_IMPORT_LIMITS as LIMIT, type ParsedComputerDive, refuse } from "./types";
 import { parseUddf } from "./uddf";
 import { descendants, localName, parseXml } from "./xml";
 
-export { COMPUTER_CSV_TEMPLATE } from "./csv";
+export { COMPUTER_CSV_TEMPLATE, inspectCsvColumns } from "./csv";
+export * from "./options";
+export * from "./providers";
 export * from "./types";
-export function parseComputerFile(bytes: Uint8Array): ParsedComputerDive[] {
+export function parseComputerFile(
+  bytes: Uint8Array,
+  rawOptions?: ComputerParseOptions,
+): ParsedComputerDive[] {
+  const options = validateComputerParseOptions(rawOptions);
   if (bytes.byteLength > LIMIT.fileBytes) refuse("file_too_large");
+  const dives = isComputerArchive(bytes)
+    ? parseComputerArchive(bytes, options, parsePlainFile)
+    : parsePlainFile(bytes, options);
+  return validateDives(dives);
+}
+function parsePlainFile(bytes: Uint8Array, options: ComputerParseOptions): ParsedComputerDive[] {
   const isFit = bytes.length >= 12 && String.fromCharCode(...bytes.slice(8, 12)) === ".FIT";
   let text = "";
   if (!isFit) {
     try {
-      text = new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim();
+      text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     } catch {
       return refuse("invalid_encoding");
     }
   }
   let dives: ParsedComputerDive[];
   if (isFit) dives = parseFit(bytes);
-  else if (text.startsWith("<")) {
-    const root = parseXml(text);
+  else if (text.trimStart().startsWith("<")) {
+    const root = parseXml(text.trim());
     if (localName(root) === "uddf") dives = parseUddf(root);
     else if (
       (localName(root) === "divelog" || localName(root) === "dives") &&
@@ -30,8 +44,13 @@ export function parseComputerFile(bytes: Uint8Array): ParsedComputerDive[] {
     )
       dives = parseSubsurface(root);
     else return refuse("unsupported_format");
-  } else if (text.startsWith("local_start,")) dives = parseCsv(text);
+  } else if (options.csvMapping) dives = parseCsv(text, options.csvMapping);
+  else if (text.trimStart().startsWith("local_start,")) dives = parseCsv(text.trim());
   else return refuse("unsupported_format");
+  if (dives.length === 0) refuse("no_dives");
+  return dives;
+}
+function validateDives(dives: ParsedComputerDive[]): ParsedComputerDive[] {
   if (dives.length === 0) refuse("no_dives");
   if (dives.length > LIMIT.dives) refuse("limit_exceeded");
   let samples = 0;

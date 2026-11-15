@@ -8,7 +8,14 @@ import { ChoiceRow, controlClass, Field, FormStatus, textareaClassFor } from "@/
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffMessages } from "@/i18n/staff-messages";
 import type { ParsedComputerDive } from "@/lib/computer-import";
-import { changeAction, commitAction, exportAction, previewAction } from "./computer-actions";
+import { CsvMapping, LogbookSource, useImportSource } from "./ComputerImportSetup";
+import {
+  changeAction,
+  commitAction,
+  exportAction,
+  exportCsvAction,
+  previewAction,
+} from "./computer-actions";
 
 type Copy = StaffMessages["computerDives"];
 type Preview = Extract<Awaited<ReturnType<typeof previewAction>>, { ok: true }>["value"];
@@ -18,6 +25,18 @@ type HistoryDive = {
   annotation: string;
   deletedAt: Date | null;
 };
+
+/** Date-only evidence has no local clock to preserve; retain original warning codes in exports. */
+function visibleWarnings(record: ParsedComputerDive) {
+  return record.warnings.filter(
+    (warning) =>
+      !(
+        warning === "timezone_unknown" &&
+        record.localStart === null &&
+        record.warnings.includes("date_only")
+      ),
+  );
+}
 
 function Fact({
   label,
@@ -83,11 +102,40 @@ function Profile({ record, copy }: { record: ParsedComputerDive; copy: Copy }) {
   );
 }
 
+function SourceFacts({ record, copy }: { record: ParsedComputerDive; copy: Copy }) {
+  return (
+    <>
+      {record.importSource ? (
+        <Fact
+          label={copy.chosenSource}
+          value={`${copy.providers[record.importSource.provider].label} · ${copy.beta}`}
+          unknown={copy.unknown}
+        />
+      ) : null}
+      <Fact label={copy.source} value={record.sourceFormat} unknown={copy.unknown} />
+      {record.archiveEntry ? (
+        <Fact label={copy.zipEntry} value={record.archiveEntry} unknown={copy.unknown} />
+      ) : null}
+      {record.archiveIgnoredEntries !== undefined ? (
+        <Fact label={copy.zipIgnored} value={record.archiveIgnoredEntries} unknown={copy.unknown} />
+      ) : null}
+      {record.localDate && !record.localStart ? (
+        <>
+          <Fact label={copy.localDate} value={record.localDate} unknown={copy.unknown} />
+          <Fact label={copy.localStart} value={copy.unknownTime} unknown={copy.unknown} />
+        </>
+      ) : null}
+    </>
+  );
+}
+
 function RecordDetails({ record, copy }: { record: ParsedComputerDive; copy: Copy }) {
   return (
     <div className="space-y-6">
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Fact label={copy.localStart} value={record.localStart} unknown={copy.unknown} />
+        {!record.localDate || record.localStart ? (
+          <Fact label={copy.localStart} value={record.localStart} unknown={copy.unknown} />
+        ) : null}
         <Fact
           label={copy.zone}
           value={record.offsetMinutes === null ? null : `${copy.offset}: ${record.offsetMinutes}`}
@@ -99,11 +147,20 @@ function RecordDetails({ record, copy }: { record: ParsedComputerDive; copy: Cop
         <Fact label={copy.device} value={record.device} unknown={copy.unknown} />
         <Fact label={copy.deviceId} value={record.deviceId} unknown={copy.unknown} />
         <Fact label={copy.recordingIndex} value={record.recordingIndex} unknown={copy.unknown} />
-        <Fact label={copy.source} value={record.sourceFormat} unknown={copy.unknown} />
+        <SourceFacts record={record} copy={copy} />
         <Fact label={copy.sourceId} value={record.sourceId} unknown={copy.unknown} />
         <Fact
           label={copy.units}
-          value={Object.values(record.sourceUnits).filter(Boolean).join(", ")}
+          value={
+            Object.entries(record.sourceUnits)
+              .filter(
+                ([unit, value]) =>
+                  value &&
+                  (unit !== "depth" || record.maxDepthMeters !== null || record.samples.length > 0),
+              )
+              .map(([, value]) => value)
+              .join(", ") || null
+          }
           unknown={copy.unknown}
         />
       </dl>
@@ -141,11 +198,11 @@ function RecordDetails({ record, copy }: { record: ParsedComputerDive; copy: Cop
           ))}
         </div>
       ) : null}
-      {record.warnings.length ? (
+      {visibleWarnings(record).length ? (
         <div>
           <h3 className="font-medium">{copy.warnings}</h3>
           <ul className="list-inside list-disc text-sm text-warning-strong">
-            {record.warnings.map((warning) => (
+            {visibleWarnings(record).map((warning) => (
               <li key={warning}>
                 {copy.warningCodes[warning as keyof Copy["warningCodes"]] ?? warning}
               </li>
@@ -161,6 +218,7 @@ function PreviewFacts({ record, copy }: { record: ParsedComputerDive; copy: Copy
   return (
     <div className="space-y-3">
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <SourceFacts record={record} copy={copy} />
         {record.startInstant !== null ? (
           <Fact label={copy.instant} value={record.startInstant} unknown={copy.unknown} />
         ) : null}
@@ -174,13 +232,22 @@ function PreviewFacts({ record, copy }: { record: ParsedComputerDive; copy: Copy
         <Fact label={copy.samples} value={record.samples.length} unknown={copy.unknown} />
         <Fact
           label={copy.units}
-          value={Object.values(record.sourceUnits).filter(Boolean).join(", ")}
+          value={
+            Object.entries(record.sourceUnits)
+              .filter(
+                ([unit, value]) =>
+                  value &&
+                  (unit !== "depth" || record.maxDepthMeters !== null || record.samples.length > 0),
+              )
+              .map(([, value]) => value)
+              .join(", ") || null
+          }
           unknown={copy.unknown}
         />
       </dl>
-      {record.warnings.length ? (
+      {visibleWarnings(record).length ? (
         <ul className="list-inside list-disc text-sm text-warning-strong">
-          {record.warnings.map((warning) => (
+          {visibleWarnings(record).map((warning) => (
             <li key={warning}>
               {copy.warningCodes[warning as keyof Copy["warningCodes"]] ?? warning}
             </li>
@@ -194,6 +261,7 @@ function PreviewFacts({ record, copy }: { record: ParsedComputerDive; copy: Copy
 function useComputerDives(shopSlug: string, personId: string) {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
+  const source = useImportSource(files);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
@@ -232,6 +300,7 @@ function useComputerDives(shopSlug: string, personId: string) {
     returnToFiles.current = true;
     setPreview(null);
     setFiles([]);
+    source.resetSource();
     setSelected(new Set());
     setReviewed(new Set());
     setOffsets({});
@@ -243,10 +312,12 @@ function useComputerDives(shopSlug: string, personId: string) {
   const payload = () => {
     const data = new FormData();
     for (const file of files) data.append("files", file);
+    data.set("importOptions", JSON.stringify(source.options));
     return data;
   };
   const onPreview = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!source.valid) return;
     run(async () => {
       const response = await previewAction(shopSlug, personId, payload());
       if (!response.ok) {
@@ -298,23 +369,31 @@ function useComputerDives(shopSlug: string, personId: string) {
       setSaved((value) => value + 1);
       router.refresh();
     });
-  const download = () =>
+  const download = (format: "json" | "csv") =>
     run(async () => {
-      const response = await exportAction(shopSlug, personId);
+      const response = await (format === "csv" ? exportCsvAction : exportAction)(
+        shopSlug,
+        personId,
+      );
       if (!response.ok) {
         setError((value) => value + 1);
         return;
       }
-      const url = URL.createObjectURL(new Blob([response.value], { type: "application/json" }));
+      const url = URL.createObjectURL(
+        new Blob([response.value], {
+          type: format === "csv" ? "text/csv;charset=utf-8" : "application/json",
+        }),
+      );
       const link = document.createElement("a");
       link.href = url;
-      link.download = "computer-dives.json";
+      link.download = `computer-dives.${format}`;
       link.click();
       URL.revokeObjectURL(url);
     });
   return {
     files,
     setFiles,
+    source,
     preview,
     selected,
     setSelected,
@@ -353,7 +432,7 @@ function HistoryLedger({
   canExport: boolean;
   copy: Copy;
   pending: boolean;
-  download: () => void;
+  download: (format: "json" | "csv") => void;
   mutate: (dive: HistoryDive, intent: "note" | "delete" | "restore", note?: string) => void;
 }) {
   return (
@@ -362,26 +441,43 @@ function HistoryLedger({
         <h2 id="computer-history" className={SECTION_TITLE_CLASS}>
           {copy.history}
         </h2>
-        {canExport ? (
-          <button
-            type="button"
-            onClick={download}
-            disabled={pending}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {copy.export}
-          </button>
+        {canExport && history.length > 0 ? (
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => download("json")}
+              disabled={pending}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {copy.export}
+            </button>
+            <button
+              type="button"
+              onClick={() => download("csv")}
+              disabled={pending}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {copy.exportCsv}
+            </button>
+          </div>
         ) : null}
       </div>
-      {canExport ? <p className="text-sm text-muted">{copy.exportHint}</p> : null}
+      {canExport && history.length > 0 ? (
+        <p className="text-sm text-muted">
+          {copy.exportHint} {copy.exportCsvHint}
+        </p>
+      ) : null}
       {!history.length ? (
         <EmptyState title={copy.empty} titleAs="h3" icon={false} />
       ) : (
         history.map((dive) => (
           <details key={dive.id} className="border-t border-border">
             <summary className="min-h-12 cursor-pointer py-3 font-medium">
-              {dive.record.localStart ?? dive.record.startInstant ?? copy.unknown} ·{" "}
-              {dive.record.device ?? copy.unknown}
+              {dive.record.localStart ??
+                dive.record.localDate ??
+                dive.record.startInstant ??
+                copy.unknown}{" "}
+              · {dive.record.device ?? copy.unknown}
               {dive.deletedAt ? ` · ${copy.deleted}` : ""}
             </summary>
             <div className="space-y-6 pb-6">
@@ -450,6 +546,7 @@ export function ComputerDives({
   const {
     files,
     setFiles,
+    source,
     preview,
     selected,
     setSelected,
@@ -474,6 +571,8 @@ export function ComputerDives({
     mutate,
     download,
   } = useComputerDives(shopSlug, personId);
+  // Upload, review and history own independent actions. Their buttons align to each section,
+  // not one repeated column: history downloads sit beside the history heading on desktop.
   const hasFileErrors = preview?.files.some((file) => file.error);
   return (
     <div className="mt-6 space-y-10">
@@ -485,6 +584,7 @@ export function ComputerDives({
       ) : null}
       <section className="space-y-5">
         <p>{copy.intro}</p>
+        <LogbookSource source={source} copy={copy} disabled={pending || preview !== null} />
         <p className="text-sm text-muted">{copy.formats}</p>
         <a
           href={`/shop/${shopSlug}/divers/${personId}/computer-dives/template`}
@@ -509,11 +609,12 @@ export function ComputerDives({
               }}
             />
           </Field>
+          <CsvMapping source={source} copy={copy} disabled={pending || preview !== null} />
           <div className="flex flex-wrap gap-3">
             <button
               type="submit"
               className={buttonClass({ variant: "secondary" })}
-              disabled={pending || !files.length || preview !== null}
+              disabled={pending || !files.length || preview !== null || !source.valid}
             >
               {pending ? copy.busy : copy.preview}
             </button>
@@ -545,8 +646,9 @@ export function ComputerDives({
                     // biome-ignore lint/suspicious/noArrayIndexKey: Repeated file names are valid in this immutable preview.
                     <li key={`${file.name}-${index}`}>
                       {file.name}:{" "}
-                      {copy.fileErrorCodes[file.error as keyof Copy["fileErrorCodes"]] ??
-                        copy.fileError}
+                      {copy.fileErrorCodes[
+                        file.error?.replace("archive", "zip") as keyof Copy["fileErrorCodes"]
+                      ] ?? copy.fileError}
                     </li>
                   ))}
               </ul>
@@ -570,8 +672,11 @@ export function ComputerDives({
                   }}
                 >
                   {copy.selected}:{" "}
-                  {dive.record.localStart ?? dive.record.startInstant ?? copy.unknown} ·{" "}
-                  {dive.record.device ?? copy.unknown}
+                  {dive.record.localStart ??
+                    dive.record.localDate ??
+                    dive.record.startInstant ??
+                    copy.unknown}{" "}
+                  · {dive.record.device ?? copy.unknown}
                 </ChoiceRow>
                 {dive.duplicate ? (
                   <p className="text-sm text-warning-strong">
@@ -656,7 +761,7 @@ export function ComputerDives({
                 disabled={pending}
                 className={buttonClass({ variant: "secondary" })}
               >
-                {copy.cancel}
+                {result ? copy.importMore : copy.cancel}
               </button>
             </div>
             {result ? (

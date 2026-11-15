@@ -1,3 +1,6 @@
+import type { ComputerCsvMapping } from "./options";
+import type { ComputerImportOrigin } from "./providers";
+
 /** Parsed evidence only: no field is an operational safety input. */
 export type ComputerSourceFormat = "uddf" | "subsurface" | "csv" | "fit";
 export type ComputerSample = { seconds: number; depthMeters: number; temperatureC?: number };
@@ -13,12 +16,19 @@ export type ComputerTank = {
   endPressureBar: number | null;
 };
 export type ParsedComputerDive = {
+  importSource?: ComputerImportOrigin;
+  csvMapping?: ComputerCsvMapping;
+  archiveEntry?: string;
+  archiveEntryHash?: string;
+  archiveEntryRecordIndex?: number;
+  archiveIgnoredEntries?: number;
   sourceFormat: ComputerSourceFormat;
   sourceId: string | null;
   device: string | null;
   deviceId?: string | null;
   recordingIndex?: number;
   localStart: string | null;
+  localDate?: string;
   startInstant: string | null;
   offsetMinutes: number | null;
   durationSeconds: number | null;
@@ -28,7 +38,7 @@ export type ParsedComputerDive = {
   tanks: ComputerTank[];
   warnings: string[];
   sourceUnits: {
-    depth: "m" | "ft";
+    depth: "m" | "ft" | null;
     temperature: "K" | "C" | "F" | null;
     pressure: "Pa" | "bar" | "psi" | null;
   };
@@ -54,7 +64,11 @@ export type ComputerImportErrorCode =
   | "unknown_units"
   | "invalid_reference"
   | "no_dives"
-  | "invalid_csv";
+  | "invalid_csv"
+  | "invalid_options"
+  | "invalid_archive"
+  | "unsafe_archive"
+  | "archive_limit_exceeded";
 export class ComputerImportError extends Error {
   constructor(public readonly code: ComputerImportErrorCode) {
     super(code);

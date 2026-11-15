@@ -1,10 +1,11 @@
 {
   "title": "Computer dives",
   "intro": "Import a file into this diver’s personal computer history.",
-  "formats": "Garmin dive FIT (one Descent/Connect export verified), UDDF, Subsurface XML and the labeled CSV template. Other vendor exports are unverified.",
+  "formats": "Garmin dive FIT (one Descent/Connect export verified), UDDF, Subsurface XML, labeled CSV and ZIPs containing these files.",
   "files": "Dive files",
   "preview": "Preview files",
   "previewHeading": "Review dives",
+  "importMore": "Import more files",
   "cancel": "Cancel import",
   "commit": "Import selected dives",
   "busy": "Working…",
@@ -52,7 +53,7 @@
   "saved": "Change saved",
   "error": "Couldn’t complete this action. Check your files and access, then try again.",
   "retry": "Retry the same import",
-  "limit": "Up to 5 files, 2 MB each. Files are read for this import and are not saved.",
+  "limit": "Up to 5 files, 2 MB each. Original files are not saved.",
   "previewOnly": "Nothing is saved until you confirm the selected dives.",
   "template": "Download CSV template",
   "samples": "Profile samples",
@@ -70,7 +71,8 @@
     "multiple_recordings": "This dive has multiple computer recordings.",
     "local_time_unknown": "Original local clock and timezone unknown; the recorded UTC instant is preserved.",
     "duration_elapsed": "Elapsed session duration can include surface time.",
-    "unmapped_fit_fields": "Additional FIT telemetry is not imported. Keep the original file."
+    "unmapped_fit_fields": "Additional FIT telemetry is not imported. Keep the original file.",
+    "date_only": "Only the date is known; time and timezone are unknown."
   },
   "fileErrorCodes": {
     "unsupported_fit": "This FIT activity or recording structure is not supported.",
@@ -78,10 +80,91 @@
     "unsafe_xml": "XML declarations or entities are not accepted.",
     "file_too_large": "The file is too large.",
     "limit_exceeded": "The file exceeds the import limits.",
-    "invalid_reference": "The file contains an unresolved reference."
+    "invalid_reference": "The file contains an unresolved reference.",
+    "invalid_csv": "Check the CSV headers, mapped columns and date values.",
+    "invalid_options": "Check the selected CSV columns, date format and units.",
+    "invalid_zip": "This ZIP could not be read or contains no dive files.",
+    "unsafe_zip": "This ZIP contains an unsafe path or unsupported entry. Extract only the dive files and select them directly.",
+    "zip_limit_exceeded": "The ZIP exceeds the import limits. Select fewer extracted dive files.",
+    "no_dives": "No dives found in this file."
   },
   "deviceId": "Computer identifier",
   "recordingIndex": "Recording index",
   "fileErrors": "Files with errors",
-  "zipHint": "Extract ZIP downloads first. For UDDF, choose the .uddf file in the extracted folder."
+  "zipHint": "Choose a ZIP, or extract it and choose the dive files. Images and document attachments are ignored; review the dives before importing.",
+  "beta": "Beta",
+  "provider": "Logbook source",
+  "providerGuide": "Official guidance",
+  "betaHint": "Vendor compatibility is beta except for the stated Garmin export. Review every preview. This choice records the source you provide; it does not connect your account.",
+  "chosenSource": "Chosen source",
+  "localDate": "Local date",
+  "unknownTime": "Time unknown",
+  "zipEntry": "File within ZIP",
+  "zipIgnored": "Ignored ZIP attachments",
+  "exportCsv": "Download summary CSV",
+  "exportCsvHint": "CSV includes summaries and annotations. JSON also preserves profiles and gas details.",
+  "mapCsv": "Map spreadsheet CSV columns",
+  "mappingHint": "Choose a loose CSV file. Columns come from the first selected CSV; generic CSV files share this mapping. The labeled DiveDay template keeps its own units. Empty cells stay unknown.",
+  "mappingError": "Couldn’t read CSV headers. Choose a CSV with unique column names.",
+  "mappingReading": "Reading columns…",
+  "mappingChoose": "Choose a column",
+  "mappingNone": "Unmapped (unknown)",
+  "mappingRequired": "Choose the date, its format, and units for mapped fields. Use a different column for each field.",
+  "mappingOffsetHint": "UTC offset: Z, +HH:MM, -HH:MM or unknown. With no column, the timezone stays unknown.",
+  "mappingDateHint": "The date can include a time. A date without a time stays that way.",
+  "providers": {
+    "generic": {
+      "label": "Other file or spreadsheet",
+      "hint": "Use a supported dive file, the labeled template, or explicitly map your spreadsheet CSV."
+    },
+    "oceanic": {
+      "label": "Oceanic+",
+      "hint": "Oceanic+ documents UDDF download. Import the UDDF or its ZIP here; a real Oceanic+ export has not been verified."
+    },
+    "padi": {
+      "label": "PADI · manual CSV transfer",
+      "hint": "Beta manual CSV transfer. Copy your own entries into the template, or map a spreadsheet you already have. PADI’s native export format and a public integration are unverified."
+    },
+    "ssi": {
+      "label": "SSI · manual CSV transfer",
+      "hint": "Beta manual CSV transfer. Copy your own entries into the template, or map a spreadsheet you already have. SSI’s native export format and a general public integration are unverified."
+    },
+    "garmin": {
+      "label": "Garmin",
+      "hint": "One Descent/Connect single-session dive FIT export is verified. Other devices, sessions and export variants are beta."
+    },
+    "shearwater": {
+      "label": "Shearwater Cloud",
+      "hint": "Shearwater Cloud documents UDDF/XML export. Real Shearwater exports are unverified; review the detected format and every dive."
+    },
+    "subsurface": {
+      "label": "Subsurface",
+      "hint": "Subsurface documents XML/UDDF export. Only synthetic XML/UDDF fixtures are verified here."
+    },
+    "suunto": {
+      "label": "Suunto",
+      "hint": "Suunto documents FIT export. Suunto’s dive FIT variant is unverified here and may not import."
+    }
+  },
+  "mapping": {
+    "date": "Date or datetime",
+    "time": "Separate time",
+    "duration": "Duration",
+    "maxDepth": "Maximum depth",
+    "utcOffset": "UTC offset",
+    "device": "Computer",
+    "sourceId": "Source identifier",
+    "dateFormat": "Date format",
+    "durationUnit": "Duration unit",
+    "depthUnit": "Depth unit",
+    "chooseFormat": "Choose a format",
+    "chooseUnit": "Choose a unit",
+    "iso": "Year-month-day (2031-10-14)",
+    "dmy": "Day/month/year (14/10/2031)",
+    "mdy": "Month/day/year (10/14/2031)",
+    "seconds": "Seconds",
+    "minutes": "Minutes",
+    "m": "Meters",
+    "ft": "Feet"
+  }
 }

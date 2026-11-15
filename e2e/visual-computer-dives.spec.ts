@@ -38,7 +38,7 @@ for (const scheme of ["light", "dark"] as const) {
         .click();
       await expect(page.getByText(staffCopy("computerDives.done"), { exact: true })).toBeVisible();
       await page
-        .getByRole("button", { name: staffCopy("computerDives.cancel"), exact: true })
+        .getByRole("button", { name: staffCopy("computerDives.importMore"), exact: true })
         .click();
       const history = page.getByRole("region", { name: staffCopy("computerDives.history") });
       await history.locator("summary").click();
@@ -46,6 +46,76 @@ for (const scheme of ["light", "dark"] as const) {
         history.getByRole("img", { name: staffCopy("computerDives.profile") }),
       ).toBeVisible();
       await capture(page, "computer-dives-fit-profile", scheme);
+    });
+    test("online logbook beta mapping, date-only and archive review", async ({ page }) => {
+      await page.goto("/shop/blue-mantis/divers?q=Priya");
+      await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+      await page.getByRole("link", { name: staffCopy("computerDives.title"), exact: true }).click();
+      await page
+        .getByLabel(staffCopy("computerDives.provider"), { exact: true })
+        .selectOption("padi");
+      await page.getByLabel(staffCopy("computerDives.files"), { exact: true }).setInputFiles({
+        name: "personal-logbook.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("Date,Minutes,Feet,Entry\n14/10/2031,30,60,my-entry\n"),
+      });
+      await page
+        .getByRole("checkbox", { name: staffCopy("computerDives.mapCsv"), exact: true })
+        .check();
+      await expect(
+        page.getByLabel(staffCopy("computerDives.mapping.date"), { exact: true }),
+      ).toBeEnabled();
+      await page
+        .getByLabel(staffCopy("computerDives.mapping.date"), { exact: true })
+        .selectOption("Date");
+      await page
+        .getByLabel(staffCopy("computerDives.mapping.dateFormat"), { exact: true })
+        .selectOption("dmy");
+      await page
+        .getByLabel(staffCopy("computerDives.mapping.duration"), { exact: true })
+        .selectOption("Minutes");
+      await page
+        .getByLabel(staffCopy("computerDives.mapping.maxDepth"), { exact: true })
+        .selectOption("Feet");
+      await page
+        .getByLabel(staffCopy("computerDives.mapping.sourceId"), { exact: true })
+        .selectOption("Entry");
+      await page
+        .getByLabel(staffCopy("computerDives.mapping.durationUnit"), { exact: true })
+        .selectOption("minutes");
+      await page
+        .getByLabel(staffCopy("computerDives.mapping.depthUnit"), { exact: true })
+        .selectOption("ft");
+      await capture(page, "computer-dives-beta-csv-mapping", scheme);
+      await page
+        .getByRole("button", { name: staffCopy("computerDives.preview"), exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: staffCopy("computerDives.previewHeading") }),
+      ).toBeFocused();
+      await expect(
+        page.getByText(staffCopy("computerDives.warningCodes.date_only"), { exact: true }).first(),
+      ).toBeVisible();
+      await capture(page, "computer-dives-beta-date-only", scheme);
+      await page
+        .getByRole("button", { name: staffCopy("computerDives.cancel"), exact: true })
+        .click();
+      await page
+        .getByLabel(staffCopy("computerDives.provider"), { exact: true })
+        .selectOption("oceanic");
+      await page
+        .getByLabel(staffCopy("computerDives.files"), { exact: true })
+        .setInputFiles("src/lib/computer-import/fixtures/multi-entry.zip");
+      await page
+        .getByRole("button", { name: staffCopy("computerDives.preview"), exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: staffCopy("computerDives.previewHeading") }),
+      ).toBeFocused();
+      await expect(
+        page.getByRole("checkbox", { name: new RegExp(staffCopy("computerDives.selected")) }),
+      ).toHaveCount(2);
+      await capture(page, "computer-dives-beta-zip-preview", scheme);
     });
     test("computer import review", async ({ page }) => {
       await page.goto("/shop/blue-mantis/divers?q=Priya");
@@ -91,7 +161,7 @@ for (const scheme of ["light", "dark"] as const) {
       await expect(page.getByText(staffCopy("computerDives.done"), { exact: true })).toBeVisible();
       await capture(page, "computer-dives-result", scheme);
       await page
-        .getByRole("button", { name: staffCopy("computerDives.cancel"), exact: true })
+        .getByRole("button", { name: staffCopy("computerDives.importMore"), exact: true })
         .click();
       const history = page.getByRole("region", { name: staffCopy("computerDives.history") });
       await history.locator("summary").click();

@@ -1261,3 +1261,16 @@ imported. Removing individual record cards leaves the ledger readable; removing 
 unknown-zone state would make the evidence misleading. The light review's pixel probe covered 24
 records with no flags; the independent critic's empty-state and duplicate-counter findings were
 reproduced and corrected.
+
+Online-logbook import extends the same ledger: the arriving question is how to bring this person's
+own records over without changing the shop's dive evidence. One source chooser reveals relevant
+beta guidance; optional CSV mapping expands only when requested. Replacing it with a wall of vendor
+connection buttons would imply integrations we have not established. Mapping cannot dissolve into
+inferred dates or units because the explicit choices establish the meaning of the evidence.
+
+The review keeps the chosen mapping visible and frozen beside the source file, followed by selected
+dives and named-person confirmation. Calendar-only evidence says time and timezone are unknown.
+After saving, “Import more files” resets the review without suggesting it undoes saved records;
+record deletion stays in each record's disclosure. Empty history has no downloads; populated or
+soft-deleted history retains both authorised exports. Each section owns its actions, so a desktop
+history download beside its heading need not align with the upload or confirmation button.

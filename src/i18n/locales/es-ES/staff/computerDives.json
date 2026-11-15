@@ -1,10 +1,11 @@
 {
   "title": "Buceos de computadora",
   "intro": "Importa un archivo al historial personal de computadora de este buceador.",
-  "formats": "FIT de buceo Garmin (una exportación Descent/Connect verificada), UDDF, XML de Subsurface y la plantilla CSV con unidades. Otras exportaciones de fabricantes no están verificadas.",
+  "formats": "FIT de buceo Garmin (una exportación Descent/Connect verificada), UDDF, XML de Subsurface, CSV con unidades y ZIP con estos archivos.",
   "files": "Archivos de buceo",
   "preview": "Ver vista previa",
   "previewHeading": "Revisar buceos",
+  "importMore": "Importar más archivos",
   "cancel": "Cancelar importación",
   "commit": "Importar buceos seleccionados",
   "busy": "Procesando…",
@@ -52,7 +53,7 @@
   "saved": "Cambio guardado",
   "error": "No se pudo completar la acción. Revisa tus archivos y tu acceso, e inténtalo de nuevo.",
   "retry": "Reintentar la misma importación",
-  "limit": "Hasta 5 archivos de 2 MB cada uno. Los archivos se leen para esta importación y no se guardan.",
+  "limit": "Hasta 5 archivos de 2 MB cada uno. Los originales no se guardan.",
   "previewOnly": "No se guarda nada hasta que confirmes los buceos seleccionados.",
   "template": "Descargar plantilla CSV",
   "samples": "Muestras del perfil",
@@ -70,7 +71,8 @@
     "multiple_recordings": "Este buceo tiene varios registros de computadora.",
     "local_time_unknown": "Hora local y zona horaria originales desconocidas; se conserva el instante UTC registrado.",
     "duration_elapsed": "La duración de la sesión puede incluir tiempo en superficie.",
-    "unmapped_fit_fields": "Los datos FIT adicionales no se importan. Conserva el archivo original."
+    "unmapped_fit_fields": "Los datos FIT adicionales no se importan. Conserva el archivo original.",
+    "date_only": "Solo se conoce la fecha; la hora y la zona horaria son desconocidas."
   },
   "fileErrorCodes": {
     "unsupported_fit": "Esta actividad o estructura de registro FIT no es compatible.",
@@ -78,10 +80,91 @@
     "unsafe_xml": "No se aceptan declaraciones ni entidades XML.",
     "file_too_large": "El archivo es demasiado grande.",
     "limit_exceeded": "El archivo excede los límites de importación.",
-    "invalid_reference": "El archivo contiene una referencia sin resolver."
+    "invalid_reference": "El archivo contiene una referencia sin resolver.",
+    "invalid_csv": "Revisa los encabezados CSV, las columnas asignadas y las fechas.",
+    "invalid_options": "Revisa las columnas CSV, el formato de fecha y las unidades.",
+    "invalid_zip": "No se pudo leer el ZIP o no contiene archivos de buceo.",
+    "unsafe_zip": "El ZIP contiene una ruta insegura o una entrada incompatible. Extrae solo los archivos de buceo y selecciónalos directamente.",
+    "zip_limit_exceeded": "El ZIP excede los límites de importación. Selecciona menos archivos de buceo extraídos.",
+    "no_dives": "No se encontraron buceos en este archivo."
   },
   "deviceId": "Identificador de computadora",
   "recordingIndex": "Índice de registro",
   "fileErrors": "Archivos con errores",
-  "zipHint": "Primero extrae los archivos ZIP. Para UDDF, selecciona el archivo .uddf de la carpeta extraída."
+  "zipHint": "Puedes seleccionar un ZIP o extraerlo y elegir los archivos de buceo. Se ignoran las imágenes y los documentos adjuntos; revisa los buceos antes de importar.",
+  "beta": "Beta",
+  "provider": "Origen del historial",
+  "providerGuide": "Guía oficial",
+  "betaHint": "La compatibilidad de fabricantes es beta salvo la exportación Garmin indicada. Revisa cada vista previa. La selección registra el origen que indicas; no conecta tu cuenta.",
+  "chosenSource": "Origen indicado",
+  "localDate": "Fecha local",
+  "unknownTime": "Hora desconocida",
+  "zipEntry": "Archivo dentro del ZIP",
+  "zipIgnored": "Adjuntos ignorados en el ZIP",
+  "exportCsv": "Descargar resumen CSV",
+  "exportCsvHint": "El CSV incluye el resumen y las anotaciones. El JSON conserva también los perfiles y las mezclas de gas.",
+  "mapCsv": "Asignar columnas de un CSV de hoja de cálculo",
+  "mappingHint": "Elige un archivo CSV sin comprimir. Las columnas vienen del primer CSV seleccionado; los CSV genéricos comparten esta asignación. La plantilla de DiveDay conserva sus propias unidades. Las celdas vacías quedan como desconocidas.",
+  "mappingError": "No se pudieron leer los encabezados CSV. Selecciona un CSV con encabezados únicos.",
+  "mappingReading": "Leyendo columnas…",
+  "mappingChoose": "Selecciona una columna",
+  "mappingNone": "Sin asignar (desconocido)",
+  "mappingRequired": "Elige la fecha, su formato y las unidades de los campos asignados. Usa una columna distinta para cada campo.",
+  "mappingOffsetHint": "Desfase UTC: Z, +HH:MM, -HH:MM o unknown. Sin columna, la zona queda desconocida.",
+  "mappingDateHint": "La fecha puede incluir la hora. Una fecha sin hora se conserva sin inventar una hora.",
+  "providers": {
+    "generic": {
+      "label": "Otro archivo u hoja de cálculo",
+      "hint": "Usa un archivo de buceo compatible, la plantilla con unidades o asigna las columnas de tu CSV."
+    },
+    "oceanic": {
+      "label": "Oceanic+",
+      "hint": "Oceanic+ documenta la descarga UDDF. Importa aquí el UDDF o su ZIP; no se ha verificado una exportación real de Oceanic+."
+    },
+    "padi": {
+      "label": "PADI · transferencia manual CSV",
+      "hint": "Transferencia manual CSV beta. Copia tus registros a la plantilla o asigna las columnas de una hoja de cálculo que ya tengas. El formato nativo de PADI y una integración pública no están verificados."
+    },
+    "ssi": {
+      "label": "SSI · transferencia manual CSV",
+      "hint": "Transferencia manual CSV beta. Copia tus registros a la plantilla o asigna las columnas de una hoja de cálculo que ya tengas. El formato nativo de SSI y una integración pública general no están verificados."
+    },
+    "garmin": {
+      "label": "Garmin",
+      "hint": "Se verificó una exportación FIT de buceo de una sola sesión Descent/Connect. Otros dispositivos, sesiones y variantes son beta."
+    },
+    "shearwater": {
+      "label": "Shearwater Cloud",
+      "hint": "Shearwater Cloud documenta la exportación UDDF/XML. No se han verificado exportaciones reales de Shearwater; revisa el formato detectado y cada buceo."
+    },
+    "subsurface": {
+      "label": "Subsurface",
+      "hint": "Subsurface documenta la exportación XML/UDDF. Aquí solo se verificaron ejemplos sintéticos de XML/UDDF."
+    },
+    "suunto": {
+      "label": "Suunto",
+      "hint": "Suunto documenta la exportación FIT. La variante FIT de buceo de Suunto no está verificada aquí y podría no importarse."
+    }
+  },
+  "mapping": {
+    "date": "Fecha o fecha y hora",
+    "time": "Hora separada",
+    "duration": "Duración",
+    "maxDepth": "Profundidad máxima",
+    "utcOffset": "Desfase UTC",
+    "device": "Computadora",
+    "sourceId": "Identificador original",
+    "dateFormat": "Formato de fecha",
+    "durationUnit": "Unidad de duración",
+    "depthUnit": "Unidad de profundidad",
+    "chooseFormat": "Selecciona el formato",
+    "chooseUnit": "Selecciona la unidad",
+    "iso": "Año-mes-día (2031-10-14)",
+    "dmy": "Día/mes/año (14/10/2031)",
+    "mdy": "Mes/día/año (10/14/2031)",
+    "seconds": "Segundos",
+    "minutes": "Minutos",
+    "m": "Metros",
+    "ft": "Pies"
+  }
 }

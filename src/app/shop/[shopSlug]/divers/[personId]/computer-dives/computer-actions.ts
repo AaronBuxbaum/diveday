@@ -6,6 +6,7 @@ import {
   annotateComputerDive,
   commitComputerFiles,
   deleteComputerDive,
+  exportComputerDiveSummaryCsv,
   exportComputerDives,
   previewComputerFiles,
   restoreComputerDive,
@@ -38,12 +39,19 @@ async function readFiles(data: FormData) {
   );
 }
 
+function readOptions(data: FormData) {
+  const raw = data.get("importOptions");
+  if (raw === null) return undefined;
+  if (typeof raw !== "string" || raw.length > 8192) throw new Error("invalid_options");
+  return JSON.parse(raw);
+}
+
 export async function previewAction(shopSlug: string, personId: string, data: FormData) {
   const { db, scope } = await context(shopSlug, personId);
   try {
     return {
       ok: true as const,
-      value: await previewComputerFiles(db, scope, await readFiles(data)),
+      value: await previewComputerFiles(db, scope, await readFiles(data), readOptions(data)),
     };
   } catch {
     return { ok: false as const };
@@ -73,6 +81,7 @@ export async function commitAction(shopSlug: string, personId: string, data: For
       requestKey,
       confirmedPersonId,
       timeOffsets,
+      options: readOptions(data),
     });
     revalidatePath(`/shop/${shopSlug}/divers/${personId}/computer-dives`);
     return { ok: true as const, value };
@@ -106,6 +115,15 @@ export async function exportAction(shopSlug: string, personId: string) {
   const { db, scope } = await context(shopSlug, personId);
   try {
     return { ok: true as const, value: await exportComputerDives(db, scope) };
+  } catch {
+    return { ok: false as const };
+  }
+}
+
+export async function exportCsvAction(shopSlug: string, personId: string) {
+  const { db, scope } = await context(shopSlug, personId);
+  try {
+    return { ok: true as const, value: await exportComputerDiveSummaryCsv(db, scope) };
   } catch {
     return { ok: false as const };
   }

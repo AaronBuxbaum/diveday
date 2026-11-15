@@ -1,8 +1,15 @@
-export type { CommitComputerInput, ComputerFile, ComputerScope, PreviewDive } from "./store";
+export type {
+  CommitComputerInput,
+  ComputerFile,
+  ComputerImportOptions,
+  ComputerScope,
+  PreviewDive,
+} from "./store";
 export {
   annotateComputerDive,
   commitComputerFiles,
   deleteComputerDive,
+  exportComputerDiveSummaryCsv,
   exportComputerDives,
   historyComputerDives,
   previewComputerFiles,
