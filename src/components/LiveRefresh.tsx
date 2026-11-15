@@ -15,6 +15,10 @@ export const LIVE_REFRESH_MIN_GAP_MS = 30 * 1000;
  */
 export const LIVE_REFRESH_IDLE_LIMIT_MS = STAFF_IDLE_LIMIT_MS;
 
+/** A staff menu that is open: a refresh must not redraw the page under it. */
+const OPEN_MENU =
+  '[data-staff-chrome] [aria-expanded="true"], [data-more-menu] [aria-expanded="true"]';
+
 /** True while someone is typing into a field, which a refresh must not interrupt. */
 export function isTyping(active: Element | null): boolean {
   if (active == null) return false;
@@ -60,6 +64,7 @@ export function LiveRefresh({ holdAfterTapMs = 0 }: { holdAfterTapMs?: number } 
     const refresh = (force: boolean) => {
       if (document.visibilityState !== "visible") return;
       if (isTyping(document.activeElement)) return;
+      if (document.querySelector(OPEN_MENU)) return;
       const at = performance.now();
       if (at - lastInput >= LIVE_REFRESH_IDLE_LIMIT_MS) return;
       if (at - lastTap < holdAfterTapMs) return;
