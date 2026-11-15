@@ -277,7 +277,12 @@ for (const scheme of ["light", "dark"] as const) {
           await expect(freshness.first()).toBeVisible();
           // The track, not the page: it is what this capture is for, and the
           // heading above it is true before the checkpoints render.
-          await expect(page.getByText("Punto de control activo").first()).toBeVisible();
+          const checkpoints = page.getByRole("navigation", {
+            name: copy("manifest.checkpointNavAriaLabel"),
+            exact: true,
+          });
+          await expect(checkpoints).toBeVisible();
+          await expect(checkpoints.locator('a[aria-current="true"]')).toHaveCount(1);
           await capture(page, "manifest", scheme, { locale: SPANISH });
         });
 

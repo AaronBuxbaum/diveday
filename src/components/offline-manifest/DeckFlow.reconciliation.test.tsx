@@ -142,7 +142,7 @@ describe("Deck reconciliation receipts", () => {
       );
       expect(container.querySelector('[data-deck-screen="receipt"]')).toBeTruthy();
       expect(screen.getByRole("heading", { name: "Priya Shah" })).toBeVisible();
-      expect(screen.getByText("Saved on this device · Pending sync")).toBeVisible();
+      expect(screen.getByText(t("manifest.deck.pendingReceipt"))).toBeVisible();
       expect(screen.getByRole("button", { name: "Next person" })).toBeVisible();
     });
   }

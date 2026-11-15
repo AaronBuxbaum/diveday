@@ -7,6 +7,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   manifestRow,
   offlineCopySaved,
+  openDeckPerson,
   openManifestPerson,
   openTripFromBoard,
   openTripTab,
@@ -117,12 +118,24 @@ test.describe("light mode largest device body after-dive warnings", () => {
     await exposeDeviceBody(page, 53);
     const path = `/shop/${privateShop.slug}/trips/${state.tripId}/manifest`;
     await page.goto(path);
-    await page.getByRole("button", { name: copy("manifest.crewMarkAboard"), exact: true }).click();
+    await openDeckPerson(page, state.crewName);
+    await page
+      .getByRole("button", {
+        name: copy("manifest.deck.record", { name: state.crewName }),
+        exact: true,
+      })
+      .click();
     await expect(
-      page.getByRole("button", { name: copy("manifest.crewAboardCheckAriaLabel"), exact: true }),
-    ).toHaveCount(2);
+      page
+        .locator('[data-deck-screen="receipt"]')
+        .getByRole("heading", { name: state.crewName, exact: true }),
+    ).toBeVisible();
     await page.goto(`${path}?checkpoint=after_dive_1`);
     for (const name of ["Ari Vale", state.crewName]) {
+      await openDeckPerson(page, name);
+      await page
+        .getByRole("button", { name: copy("manifest.deck.exception"), exact: true })
+        .click();
       await page
         .getByRole("button", { name: copy("manifest.openPersonDetails", { name }), exact: true })
         .click();
@@ -130,14 +143,14 @@ test.describe("light mode largest device body after-dive warnings", () => {
       await dialog
         .getByRole("button", { name: copy("manifest.markNotBackAboard"), exact: true })
         .click();
+      const receipt = page.locator('[data-deck-screen="receipt"]');
+      await expect(receipt.getByRole("heading", { name, exact: true })).toBeVisible();
       await expect(
-        dialog.getByRole("button", { name: copy("manifest.notBackAboardActive"), exact: true }),
+        receipt.getByText(copy("manifest.deck.savedMissing"), { exact: true }),
       ).toBeVisible();
-      await dialog
-        .getByRole("button", { name: copy("manifest.closePersonDetails"), exact: true })
-        .click();
       await expect(dialog).toHaveCount(0);
     }
+    await page.getByRole("button", { name: copy("manifest.deck.attention"), exact: true }).click();
     const panel = page.locator("[data-roll-call-panel]");
     await expect(
       panel.getByText(copy("manifest.notBackAboardOpen", { count: 1 }), { exact: true }),
@@ -150,9 +163,30 @@ test.describe("light mode largest device body after-dive warnings", () => {
     await expect(panel).toHaveAttribute("data-roll-call-panel-flow", "true");
     await expect(panel).toHaveCSS("max-height", "none");
     const count = panel.getByRole("progressbar");
-    await count.scrollIntoViewIfNeeded();
+    await count.evaluate((element) =>
+      element.scrollIntoView({ block: "center", inline: "nearest" }),
+    );
     await expect(count).toBeInViewport({ ratio: 1 });
     await capture(page, "manifest-warnings-device-body-53", "light");
+    const deck = page.getByRole("region", { name: copy("manifest.deck.title"), exact: true });
+    const navigation = [
+      ["Deck home", deck.getByRole("button", { name: copy("manifest.deck.home"), exact: true })],
+      [
+        "Return to Guests",
+        deck.getByRole("link", { name: copy("manifest.deck.return"), exact: true }),
+      ],
+      [
+        "Find a person",
+        deck.getByRole("button", { name: copy("manifest.deck.find"), exact: true }),
+      ],
+      ["Details", deck.locator("details > summary").filter({ hasText: /^Details$/ })],
+      ["Missing guest", deck.getByRole("button", { name: "Ari Vale", exact: true })],
+      ["Missing crew", deck.getByRole("button", { name: state.crewName, exact: true })],
+    ] as const;
+    for (const [label, target] of navigation) {
+      await expect(target).toBeVisible();
+      expect.soft(await fragmentedWords(target), `${label} at 53px`).toEqual([]);
+    }
     const missingLinks = panel.getByRole("link");
     await expect(missingLinks).toHaveCount(2);
     for (const link of await missingLinks.all()) {

@@ -286,6 +286,9 @@ const sizes = {
    * person gets marked aboard twice.
    */
   boat: { x: "px-6", rest: "min-h-14 touch-manipulation py-3.5 text-base font-semibold" },
+  /** The one primary Deck action: a 72px target with an 18px label for wet hands. */
+  // diveday:allow-type-ramp: This is the shared Deck action label size, not a heading.
+  deck: { x: "px-6", rest: "min-h-18 touch-manipulation py-5.5 text-lg font-semibold" },
   /**
    * A square target holding one glyph and no label — a row's "remove", a
    * month stepper's arrow.
@@ -479,6 +482,7 @@ const EDGE_X: Record<ButtonSize, string> = {
   sm: "px-2.75",
   md: "px-3.75",
   boat: "px-5.75",
+  deck: "px-5.75",
   icon: "px-0",
   "icon-sm": "px-0",
   mark: "px-0",
@@ -619,12 +623,18 @@ const OUTDENT_16 = {
   "block-end-phone": "max-sm:-mb-4 max-sm:align-bottom",
   "block-end-wide": "sm:-mb-4 sm:align-bottom",
 } as const;
+const OUTDENT_22 = {
+  "block-end": "-mb-5.5 align-bottom",
+  "block-end-phone": "max-sm:-mb-5.5 max-sm:align-bottom",
+  "block-end-wide": "sm:-mb-5.5 sm:align-bottom",
+} as const;
 const OUTDENT: Record<ButtonSize, Record<ButtonOutdent, string>> = {
   sm: OUTDENT_12,
   md: OUTDENT_12,
   icon: OUTDENT_12,
   "icon-sm": OUTDENT_12,
   boat: OUTDENT_16,
+  deck: OUTDENT_22,
   mark: OUTDENT_16,
 };
 

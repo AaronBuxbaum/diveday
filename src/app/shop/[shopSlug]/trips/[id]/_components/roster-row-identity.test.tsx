@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { SameNameHeldSeat } from "@/db/bookings";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { rowIdentity } from "./roster-row-identity";
 import {
@@ -223,7 +224,10 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     });
 
     expect(screen.getByText(/Matched to this record on a guess/)).toBeVisible();
-    expect(screen.getByRole("link", { name: "Marisol Vega" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Marisol Vega" })).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: staffTranslator("en-US")("trips.folio.openProfile") }),
+    ).toHaveAttribute("href", `/shop/blue-mantis/divers/${matched.person.id}`);
     // Both answers stand in the open, outside the row's fold (Aaron,
     // 2026-10-05: the old row offered one answer, behind the mark).
     const same = screen.getByRole("button", { name: "Same person as Marisol Vega" });

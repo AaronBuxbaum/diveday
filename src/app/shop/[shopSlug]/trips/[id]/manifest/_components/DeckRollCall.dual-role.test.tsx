@@ -105,6 +105,7 @@ it("records guest and crew roles in separate scalar submissions with separate re
   expect(crewAction).not.toHaveBeenCalled();
   const guest = guestAction.mock.calls[0]?.[1] as unknown as FormData;
   expect(guest.get("bookingId")).toBe("seat-0");
+  expect(guest.get("status")).toBe("boarded");
   expect(guest.has("personId")).toBe(false);
   expect(screen.getByText("Aboard recorded")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
@@ -116,6 +117,29 @@ it("records guest and crew roles in separate scalar submissions with separate re
   expect(crewAction).toHaveBeenCalledTimes(1);
   const member = crewAction.mock.calls[0]?.[1] as unknown as FormData;
   expect(member.get("personId")).toBe("person-0");
+  expect(member.get("status")).toBe("boarded");
   expect(member.has("bookingId")).toBe(false);
   expect(screen.getByText("Aboard recorded")).toBeVisible();
 });
+
+it.each(["Guest", "Crew"] as const)(
+  "posts the named %s role's scalar ordinary status",
+  async (role) => {
+    const { guestAction, crewAction } = dualRole("awaiting");
+    const action = role === "Guest" ? guestAction : crewAction;
+    const other = role === "Guest" ? crewAction : guestAction;
+    fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
+    fireEvent.click(screen.getByRole("button", { name: `Shared Person · ${role}` }));
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Record Shared Person aboard" })),
+    );
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(other).not.toHaveBeenCalled();
+    const posted = action.mock.calls[0]?.[1];
+    expect(posted?.get("status")).toBe("boarded");
+    expect(posted?.get(role === "Guest" ? "bookingId" : "personId")).toBe(
+      role === "Guest" ? "seat-0" : "person-0",
+    );
+    expect(posted?.has(role === "Guest" ? "personId" : "bookingId")).toBe(false);
+  },
+);

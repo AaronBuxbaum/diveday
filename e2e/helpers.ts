@@ -840,7 +840,7 @@ export async function openRosterDetails(row: Locator): Promise<void> {
     .locator(":scope > details")
     .filter({ has: row.page().locator('summary[aria-label^="Details for "]') });
   if (await disclosure.count()) await openIfClosed(disclosure);
-  const reference = row.locator("details[data-guest-reference]");
+  const reference = row.locator('details[id^="guest-reference-"]');
   if (await reference.count()) await openIfClosed(reference);
 }
 
@@ -857,10 +857,11 @@ export async function openRosterDetails(row: Locator): Promise<void> {
 export async function openRosterNotes(row: Locator): Promise<void> {
   await openRosterDetails(row);
   await openIfClosed(
-    row
-      .locator(":scope > details details")
-      .filter({ hasText: /Private staff notes|Add a private note/ })
-      .first(),
+    row.locator("details").filter({
+      has: row.page().locator(":scope > summary", {
+        hasText: /Private staff notes|Add a private note/,
+      }),
+    }),
   );
 }
 
@@ -962,7 +963,8 @@ export async function openBoatCheck(page: Page): Promise<void> {
 
 /** Open the manifest's "On this phone" group — offline detail, push, toggles. */
 export async function openOnThisPhone(page: Page, locale = "en-US"): Promise<void> {
-  if (await page.locator("[data-deck-screen]").count()) await openDeckDetails(page, locale);
+  await expect(page.locator("[data-deck-screen]").filter({ visible: true })).toBeVisible();
+  await openDeckDetails(page, locale);
   await openIfClosed(
     page
       .locator("#offline-heading")

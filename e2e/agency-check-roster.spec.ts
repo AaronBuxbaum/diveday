@@ -1,8 +1,26 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { findTripOnBoard, openDiverFileGroup, openTripTab, rosterRow } from "./helpers";
+import {
+  findTripOnBoard,
+  openDiverFileGroup,
+  openRosterDetails,
+  openTripTab,
+  rosterRow,
+} from "./helpers";
 
 signedInAsOwner();
+
+async function showAllGuests(page: Page) {
+  const all = page.getByRole("button", { name: "All guests", exact: true });
+  if (await all.count()) await all.click();
+}
+
+async function waitForAddedGuest(page: Page, name: string) {
+  await showAllGuests(page);
+  await expect(
+    page.locator("button[data-guest-open]").filter({ has: page.getByText(name, { exact: true }) }),
+  ).toBeVisible();
+}
 
 const SHOP = "blue-mantis";
 /** A seeded diver on this departure whose SSI card is still pending (`seed-divers.ts`, index 34). */
@@ -78,7 +96,9 @@ async function seatNewcomerWithPendingCard(page: Page, departure: RegExp, prefix
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
-  await (await rosterRow(page, newcomer)).getByRole("link", { name: newcomer }).click();
+  const guest = await rosterRow(page, newcomer);
+  await openRosterDetails(guest);
+  await guest.getByRole("link", { name: "Open guest profile", exact: true }).click();
   await page.waitForURL(new RegExp(`/shop/${SHOP}/divers/[0-9a-f-]{36}`));
   const group = await openDiverFileGroup(page, "Certification records");
   await group.getByText("Add certification", { exact: true }).click();
@@ -114,6 +134,8 @@ test("Check all certifies the departure one card at a time, and each card keeps 
   await installFakeExtension(page, "match");
   const { newcomer, other } = await departureWithTwoPendingCards(page);
 
+  await showAllGuests(page);
+
   await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
 
   await expect(page.getByText("Checked 2. Certified: 2.")).toBeVisible({ timeout: 20_000 });
@@ -146,6 +168,8 @@ test("Check all skips one page it cannot read, stops on two in a row, and leaves
   test.setTimeout(90_000);
   await installFakeExtension(page, "captcha");
   const { newcomer, other } = await departureWithTwoPendingCards(page);
+
+  await showAllGuests(page);
 
   await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
 
@@ -188,6 +212,7 @@ test("without the extension the Divers tab offers no check at all", async ({ pag
   await openTripTab(page, "Trip");
   await expect(await rosterRow(page, SEEDED_DIVER)).toBeVisible();
   await expect(page.getByRole("button", { name: "Check with SSI" })).toHaveCount(0);
+  await showAllGuests(page);
   await expect(page.getByRole("button", { name: /^Check all/ })).toHaveCount(0);
 });
 
@@ -228,7 +253,11 @@ test("a certification-pending row on Today checks the card in place, with Undo",
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(name);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-  await addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click();
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+    addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click(),
+  ]);
+  await waitForAddedGuest(page, name);
   await expect(await rosterRow(page, name)).toBeVisible();
 
   await page.goto(`/shop/${SHOP}`);

@@ -227,7 +227,7 @@ export function renderRoster(options: RosterFixtureOptions) {
     const id = options.selectedBookingId ?? options.roster[0]?.booking.id;
     const button = id ? rendered.container.querySelector(`[data-guest-open="${id}"]`) : null;
     if (button) fireEvent.click(button);
-    const reference = rendered.container.querySelector("[data-guest-reference] > summary");
+    const reference = rendered.container.querySelector('details[id^="guest-reference-"] > summary');
     if (reference && !reference.parentElement?.hasAttribute("open")) fireEvent.click(reference);
   }
   return rendered;

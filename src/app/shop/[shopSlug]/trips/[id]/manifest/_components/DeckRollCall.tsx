@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { MixedTrainingDepthWarning } from "@/components/MixedTrainingDepthWarning";
 import { DeckFlow, type DeckPerson } from "@/components/offline-manifest/DeckFlow";
 import { deckCopy } from "@/components/offline-manifest/deck-copy";
 import { buttonClass } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { physicalPeople } from "@/lib/manifest-person-counts";
 import { isNotBackAboard, rollCallLabel } from "@/lib/manifests";
+import { mixedTrainingDepthAdvisory } from "@/lib/training-mark";
 import { RollCallButton } from "../../_components/RollCallButton";
 import { CrewRollCall } from "./CrewRollCall";
 import { diverBlockerText } from "./DiverFacts";
@@ -36,7 +38,7 @@ export function DeckRollCall({
 }) {
   const { manifest, rollCall, actions } = view;
   const { t, shopSlug, tripId } = rollCall.divers;
-  const recordClass = buttonClass({ size: "boat", className: "min-h-18 w-full text-lg" });
+  const recordClass = buttonClass({ size: "deck", className: "w-full" });
   const undoClass = buttonClass({ variant: "link", className: "min-h-11" });
   const divers = manifest.divers
     .map(withholdHeldSeatParticulars)
@@ -208,7 +210,19 @@ export function DeckRollCall({
       complete={manifest.completeness.complete}
       attention={attention}
       details={details}
-      status={status}
+      status={
+        <>
+          {status}
+          <MixedTrainingDepthWarning
+            show={mixedTrainingDepthAdvisory(
+              divers.flatMap((diver) =>
+                !diver.identityWithheld && diver.trainingDive ? [diver.trainingDive] : [],
+              ),
+            )}
+            t={t}
+          />
+        </>
+      }
       timeZone={rollCall.divers.timezone}
       locale={rollCall.divers.locale}
       isDeparture={view.isDeparture}

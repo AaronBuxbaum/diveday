@@ -16,6 +16,7 @@ import {
   openTripAbout,
   openTripAboutRow,
   publicTripUrl,
+  rosterRow,
   saveDiveIntent,
   seededTripId,
   signInAsOwner,
@@ -533,19 +534,17 @@ for (const scheme of ["light", "dark"] as const) {
         try {
           const staffPay = makeActivitySafe(await staffPayContext.newPage());
           await staffPay.goto(`/shop/blue-mantis/trips/${tripId}`);
-          const row = staffPay
-            .locator("li")
-            .filter({ hasText: "Rafa Ortiz" })
-            .filter({ visible: true });
+          const row = await rosterRow(staffPay, "Rafa Ortiz");
           await openRosterDetails(row);
           await row.getByRole("combobox").selectOption("paid");
           await row.getByRole("radio", { name: "Cash" }).check();
           await row.getByRole("button", { name: "Update" }).click();
-          await expect(row.getByText("Payment: Paid")).toBeVisible();
           const paymentPath = `/shop/blue-mantis/trips/${tripId}`;
           await staffPay.waitForURL(
             (url) => url.pathname === paymentPath && url.searchParams.get("notice") === "payment",
           );
+          await openRosterDetails(await rosterRow(staffPay, "Rafa Ortiz"));
+          await expect(row.getByRole("combobox")).toHaveValue("paid");
         } finally {
           await staffPayContext.close();
         }

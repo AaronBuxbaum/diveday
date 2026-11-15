@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { e2eNow, rosterRow } from "./helpers";
+import { e2eNow } from "./helpers";
 
 /**
  * One booking, seated end to end with nothing but Tab, Shift+Tab, Enter and
@@ -429,9 +429,11 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
 
   // Seated: the shared seat-a-diver action lands on the trip's roster.
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  // Scoped to the ledger: slice 23c folded the packing list in under the
-  // roster, and a diver with no fit on file is named there too.
-  await expect((await rosterRow(page, diver)).getByRole("link", { name: diver })).toBeVisible();
+  // Seating opens this guest’s folio directly; checking its heading keeps
+  // the complete journey keyboard-only, including the durable booked outcome.
+  await expect(
+    page.locator("#roster").getByRole("heading", { name: diver, exact: true }),
+  ).toBeVisible();
 
   // And the outcome was *announced*, not merely rendered. The e2e fleet
   // configures no email provider, so seating always resolves to the

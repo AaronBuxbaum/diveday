@@ -256,8 +256,8 @@ export function RosterRow({
             ) : null}
           </div>
           <aside className="border-t border-border pt-4">
-            <details
-              data-guest-reference
+            <AutoOpenDetails
+              openOnHash={`guest-reference-${booking.id}`}
               id={`guest-reference-${booking.id}`}
               open={holdOpen}
               className="group/reference"
@@ -276,12 +276,13 @@ export function RosterRow({
                 >
                   {t("trips.folio.openProfile")}
                 </Link>
+                {s6.referenceFacts}
                 {reference}
                 {!paymentOutstanding ? s6.paymentRemedy : null}
                 {s6.blockerTexts.length > 0 ? arrivalControl : null}
                 {arrival?.details?.get(booking.id)}
               </div>
-            </details>
+            </AutoOpenDetails>
           </aside>
         </div>
       </li>

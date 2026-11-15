@@ -347,7 +347,7 @@ describe("the roster's row geometry", () => {
     expect(screen.getAllByText(blocked.person.fullName)).toHaveLength(1);
     expect(screen.getByText("No certification is on file for this trip.")).toBeVisible();
     expect(screen.getByRole("link", { name: /Review certifications/ })).toBeVisible();
-    const reference = container.querySelector("[data-guest-reference]");
+    const reference = container.querySelector('details[id^="guest-reference-"]');
     expect(reference).not.toHaveAttribute("open");
     expect(screen.getByText(blocked.person.email as string)).not.toBeVisible();
   });

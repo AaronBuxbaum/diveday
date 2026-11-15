@@ -13,6 +13,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  manifestRow,
   openCounterFor,
   openDeckDetails,
   openRosterDetails,
@@ -619,8 +620,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-details-participant-terms", scheme);
 
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/manifest`);
-        await page.getByRole("button", { name: "Review reports", exact: true }).click();
-        await expect(page.getByText(/1 snorkeler · 1 rider/).first()).toBeVisible();
+        const snorkeler = await manifestRow(page, mixedBoat.snorkeler);
+        await expect(snorkeler.getByText("Snorkeler", { exact: true })).toBeVisible();
+        const deckRider = await manifestRow(page, mixedBoat.rider);
+        await expect(deckRider.getByText("Rider", { exact: true })).toBeVisible();
         await capture(page, "manifest-participant-types", scheme);
         await openDeckDetails(page);
         const dismiss = page.getByRole("button", {

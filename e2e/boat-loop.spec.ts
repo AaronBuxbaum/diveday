@@ -46,6 +46,7 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
 
   await page.getByRole("link", { name: "Open Deck", exact: true }).click();
   await expect(page).toHaveURL(/\/manifest/);
+  await expect(page.getByRole("heading", { name: "Deck", exact: true })).toBeVisible();
 
   // Every per-device preference rests behind the "On this phone" line (ADR
   // 20260827-the-departure-is-two-working-surfaces, decision 2), the last

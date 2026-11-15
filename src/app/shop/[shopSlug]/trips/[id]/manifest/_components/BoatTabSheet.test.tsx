@@ -154,20 +154,26 @@ describe("the Boat tab's sheet", () => {
 describe("the Boat tab's wiring", () => {
   const PAGE = routeSource(import.meta.dirname, "../page.tsx");
   const PAPER = routeSource(import.meta.dirname, "BoatTabPaper.tsx");
+  const screenStart = PAGE.indexOf('<div className="boat-mode"');
 
   it("prints ManifestPaper from the page's own view, inside the sheet", () => {
     expect(PAGE).toMatch(
       /<BoatTabPaper[\s\S]*cancelled, manifest[\s\S]*rollCall, boatPaper, stage/,
     );
-    expect(PAGE.indexOf("<BoatTabPaper")).toBeLessThan(PAGE.indexOf('<div className="boat-mode">'));
+    expect(screenStart).toBeGreaterThan(0);
+    expect(PAGE.indexOf("<BoatTabPaper")).toBeLessThan(screenStart);
+    expect(PAGE.slice(screenStart)).toMatch(/<DeckRollCall[\s\S]*view={view}/);
     // The screen's own roll call, only its ids moved off the screen's.
     expect(PAPER).toContain("divers: { ...rollCall.divers, idPrefix: sheetIds }");
     expect(PAPER).toContain("crew: { ...rollCall.crew, idPrefix: sheetIds }");
-    expect(PAPER).toContain("<ManifestPaper");
+    const sheet = PAPER.slice(PAPER.indexOf("<BoatTabSheet"), PAPER.indexOf("</BoatTabSheet>"));
+    expect(sheet).toContain("<ManifestPaper");
+    expect(sheet).toContain("manifest={manifest}");
   });
 
   it("draws no print-only copy on the screen", () => {
-    const screen = PAGE.slice(PAGE.indexOf('<div className="boat-mode">'));
+    expect(screenStart).toBeGreaterThan(0);
+    const screen = PAGE.slice(screenStart);
     expect(screen).not.toContain("<PrintedSoulsOnBoard");
     expect(screen).not.toContain("<PrintedBoatPaper");
   });

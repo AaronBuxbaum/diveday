@@ -1,5 +1,11 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { addDiverFormPath, openCounterFor, openDiverFileGroup, openRosterRow } from "./helpers";
+import {
+  addDiverFormPath,
+  openCounterFor,
+  openDeckDetails,
+  openDiverFileGroup,
+  openRosterRow,
+} from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 for (const width of [390, 1280]) {
@@ -73,6 +79,7 @@ for (const width of [390, 1280]) {
       const { mixedBoat } = seeded as { mixedBoat?: { tripId: string } };
       if (!mixedBoat) throw new Error("The mixed departure is missing");
       await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/manifest`);
+      await openDeckDetails(page);
       const strip = page.getByRole("region", { name: /Since you looked at/ });
       const dismiss = strip.getByRole("button", { name: "Got it", exact: true });
       await expect(dismiss).toBeVisible();

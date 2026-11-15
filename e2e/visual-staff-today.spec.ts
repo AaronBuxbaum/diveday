@@ -485,7 +485,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the desk on a departure's Divers tab renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await openCounterFor(page, "blue-mantis", "Priya Sharma");
+        const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#roster`);
         await page.getByText(/^\d+ of \d+ here$/).waitFor();
         await page.getByRole("searchbox", { name: "Find a returning diver" }).waitFor();
         await capture(page, "trip-desk", scheme);

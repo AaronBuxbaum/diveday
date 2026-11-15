@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { rowReasonLines } from "./roster-row-reasons";
 import {
@@ -140,7 +140,13 @@ describe("the missing emergency contact line", () => {
 
     expect(screen.getByText("Emergency contact · Not on file")).toBeVisible();
     expect(screen.getAllByText("Emergency contact · Not on file")).toHaveLength(1);
-    expect(screen.getByText("Add emergency contact")).not.toBeVisible();
+    const remedy = screen.getByRole("link", { name: "Add emergency contact" });
+    expect(remedy).toBeVisible();
+    expect(remedy).toHaveAttribute("href", "#guest-reference-e");
+    const reference = document.getElementById("guest-reference-e") as HTMLDetailsElement;
+    fireEvent.click(within(reference).getByText("Guest reference"));
+    expect(reference.open).toBe(false);
+    expect(within(reference).getByText("Add emergency contact")).not.toBeVisible();
   });
 });
 
@@ -214,7 +220,8 @@ describe("an unanswered referral under a cleared release", () => {
     });
 
     // Ready, not blocked: the override stands.
-    expect(screen.getByRole("heading", { name: /^Ready/ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Noor Haddad" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Before boarding" })).toBeNull();
     const line = screen.getByText(/Referred to a physician on/);
     expect(line).toBeVisible();
     expect(line.textContent).toMatch(/Aug\s1; re-signed with no physician clearance on file/);

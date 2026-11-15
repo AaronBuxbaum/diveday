@@ -8,6 +8,7 @@ import {
   openRosterDetails,
   openTripAbout,
   openTripAboutRow,
+  rosterRow,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -63,9 +64,9 @@ test.describe("ask to move", () => {
 
     await signInAsOwner(page);
     await page.goto(tripUrl);
-    const row = page.locator("li").filter({ hasText: "Rafa Ortiz" }).filter({ visible: true });
+    const row = await rosterRow(page, "Rafa Ortiz");
     await openRosterDetails(row);
-    await row.getByRole("combobox").selectOption("paid");
+    await row.getByRole("combobox", { name: "Payment status" }).selectOption("paid");
     // The Paid mark asks how the money came in (batch 6 item 1, H-20261014-paid-mark-amount-and).
     await row.getByRole("radio", { name: "Cash" }).check();
     const paymentPath = new URL(tripUrl).pathname;
@@ -86,13 +87,16 @@ test.describe("ask to move", () => {
     try {
       await row.getByRole("button", { name: "Update" }).click();
       await paymentStarted.promise;
-      // The real request is still held: this label is optimistic, not a receipt.
-      await expect(row.getByText("Payment: Paid")).toBeVisible();
+      // The real request is still held: the picked value is not a saved receipt.
+      await expect(row.getByRole("combobox", { name: "Payment status" })).toHaveValue("paid");
+      await expect(row.locator('button[type="submit"][aria-busy="true"]')).toBeDisabled();
       const paymentSaved = page.waitForURL(
         (url) => url.pathname === paymentPath && url.searchParams.get("notice") === "payment",
       );
       releasePayment.resolve();
       await paymentSaved;
+      await openRosterDetails(row);
+      await expect(row.getByRole("combobox", { name: "Payment status" })).toHaveValue("paid");
     } finally {
       releasePayment.resolve();
       try {

@@ -2,6 +2,19 @@ import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { findTripOnBoard, openDiverFileGroup, openTripTab, rosterRow } from "./helpers";
 
+async function showAllGuests(page: Page) {
+  const all = page.getByRole("button", { name: "All guests", exact: true });
+  if (await all.count()) await all.click();
+}
+
+async function waitForAddedGuest(page: Page, name: string) {
+  // The completed add selects the new folio after its refreshed props commit.
+  // Wait for that landing before navigating back to the guest list.
+  await expect(
+    page.locator("[data-guest-folios]").getByRole("heading", { level: 2, name, exact: true }),
+  ).toBeVisible();
+}
+
 const SHOP = "blue-mantis";
 /** A seeded diver on this departure whose SSI card is still pending (`seed-divers.ts`). */
 const SEEDED_DIVER = "Tyler Brooks";
@@ -202,17 +215,28 @@ test.describe("at the seeded demo, which runs the PADI checks", () => {
     const addDiver = page.locator("#add-diver").filter({ visible: true });
     await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(name);
     await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-    await addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click();
+    await Promise.all([
+      page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+      addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click(),
+    ]);
+    await waitForAddedGuest(page, name);
     await expect(
       (await rosterRow(page, name)).getByRole("button", { name: "Check with PADI" }),
     ).toBeVisible();
+    await showAllGuests(page);
     await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(other);
     await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-    await addDiver.getByRole("button", { name: `Add ${other} to the trip` }).click();
+    await Promise.all([
+      page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+      addDiver.getByRole("button", { name: `Add ${other} to the trip` }).click(),
+    ]);
+    await waitForAddedGuest(page, other);
     await expect(
       (await rosterRow(page, other)).getByRole("button", { name: "Check with PADI" }),
     ).toBeVisible();
     await expect(await rosterRow(page, SEEDED_DIVER)).toBeVisible();
+
+    await showAllGuests(page);
 
     await page.getByRole("button", { name: /^Check all \d+ cards with their agencies$/ }).click();
 
@@ -270,7 +294,11 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(name);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-  await addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click();
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+    addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click(),
+  ]);
+  await waitForAddedGuest(page, name);
   await expect(await rosterRow(page, name)).toBeVisible();
   await expect(
     (await rosterRow(page, SEEDED_DIVER)).getByRole("button", { name: "Check with SSI" }),
@@ -279,6 +307,7 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
     (await rosterRow(page, name)).getByRole("button", { name: "Check with PADI" }),
   ).toHaveCount(0);
   // SSI is manual-only and PADI is switched off, so there is no batch check.
+  await showAllGuests(page);
   await expect(
     page.getByRole("button", { name: /^Check all \d+ cards with their agencies$/ }),
   ).toHaveCount(0);

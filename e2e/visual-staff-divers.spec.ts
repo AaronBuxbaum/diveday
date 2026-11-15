@@ -6,7 +6,14 @@
  */
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openDiverFileGroup, openPaperWaiverForm, openTripFromBoard, openTripTab } from "./helpers";
+import {
+  openDiverFileGroup,
+  openPaperWaiverForm,
+  openRosterDetails,
+  openTripFromBoard,
+  openTripTab,
+  rosterRow,
+} from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   capture,
@@ -456,10 +463,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a signed waiver renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
-        const row = page
-          .locator("li")
-          .filter({ has: page.getByText("Rowan Pike", { exact: true }) })
-          .filter({ visible: true });
+        const row = await rosterRow(page, "Rowan Pike");
+        await openRosterDetails(row);
         await row.getByRole("link", { name: "View signed record" }).click();
         await page.getByRole("heading", { level: 1, name: "Signed waiver" }).waitFor();
         await page.getByRole("heading", { name: "What they signed" }).waitFor();
@@ -712,7 +717,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Two-Tank Reef — French Reef");
         await openTripTab(page, "Trip");
-        const roster = page.locator("#roster");
+        const roster = await rosterRow(page, "Tyler Brooks");
         await roster.getByRole("button", { name: "Check with GUE" }).click();
         await roster.getByText("GUE found this diver, but not at this level.").waitFor();
         await page.mouse.move(0, 0);

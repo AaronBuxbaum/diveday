@@ -341,9 +341,24 @@ export function rowOutstanding(
     />
   );
   const paymentRemedy = paymentRemedyFor(seat, folio);
-  const outstanding = (
+  const referenceFacts = (
     <>
       {arrival ? identityContact : null}
+      {flaggedPrompts.length > 0 ? (
+        <div className="mt-3 text-sm">
+          <GroupLabel as="p">{WAIVER_CONTROLS[waiverStatus].label}</GroupLabel>
+          <ul className="mt-1 flex list-disc flex-col gap-1 ps-4">
+            {flaggedPrompts.map((prompt) => (
+              <li key={prompt}>{prompt}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </>
+  );
+  const outstanding = (
+    <>
+      {!folio ? referenceFacts : null}
       {!folio && deskPrivateLines.length > 0 ? (
         <ul className="mt-2 grid gap-1 text-sm">
           {deskPrivateLines.map(({ key, text }) => (
@@ -356,16 +371,6 @@ export function rowOutstanding(
       ) : null}
       {!folio && arrival && booking.reEntryAsk ? (
         <p className={`mt-3 ${INSET_NOTE_CLASS}`}>{t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}</p>
-      ) : null}
-      {flaggedPrompts.length > 0 ? (
-        <div className="mt-3 text-sm">
-          <GroupLabel as="p">{WAIVER_CONTROLS[waiverStatus].label}</GroupLabel>
-          <ul className="mt-1 flex list-disc flex-col gap-1 ps-4">
-            {flaggedPrompts.map((prompt) => (
-              <li key={prompt}>{prompt}</li>
-            ))}
-          </ul>
-        </div>
       ) : null}
       {blockerTexts.length > 0 ? (
         <>
@@ -500,6 +505,7 @@ export function rowOutstanding(
    */
   return {
     outstanding,
+    referenceFacts,
     paymentRemedy,
     hasWork,
     waiverRemedy,

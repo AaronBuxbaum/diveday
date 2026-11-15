@@ -1,6 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { HELD_SEND_TIMEOUT_MS, openCounterFor, STAFF_DAY_HEADING } from "./helpers";
+import { HELD_SEND_TIMEOUT_MS, openCounterFor, rosterRow, STAFF_DAY_HEADING } from "./helpers";
 
 const staff = staffTranslator("en-US");
 
@@ -133,7 +133,10 @@ test("a diver blocked on the spine is the same diver waiting at the counter", as
   // the way to it from Today is the arrival lookup — the desk types the name it
   // was given.
   await openCounterFor(page, "blue-mantis", "Priya Sharma");
+  await expect(page.getByRole("heading", { name: "Priya Sharma", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "All guests", exact: true }).click();
   await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  await expect(await rosterRow(page, "Priya Sharma")).toBeVisible();
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
 
   // The counter explains neither its own lens nor the shared horizon — the

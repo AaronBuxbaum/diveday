@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, seededTripId } from "./helpers";
+import { offlineCopySaved, openDeckDetails, seededTripId } from "./helpers";
 import {
   capture,
   installVisualBuildGuard,
@@ -31,6 +31,7 @@ test.describe("light mode", () => {
     const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
     await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
     await offlineCopySaved(page);
+    await openDeckDetails(page);
     await expect(page.getByRole("region", { name: "Where the boat is" })).toBeVisible();
     await capture(page, "ui-cleanup-manifest-stages", "light");
   });
@@ -43,6 +44,7 @@ test.describe("dark mode", () => {
     const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
     await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
     await offlineCopySaved(page);
+    await openDeckDetails(page);
     await expect(page.getByRole("region", { name: "Where the boat is" })).toBeVisible();
     await capture(page, "ui-cleanup-manifest-stages", "dark", { darkPhone: true });
   });

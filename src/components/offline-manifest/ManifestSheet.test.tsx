@@ -355,6 +355,7 @@ describe("OfflineTripScreen's paper door", () => {
 
   it("swaps the screen for the sheet, so no roll-call control is on the printed page", () => {
     renderScreen(savedCopy());
+    fireEvent.click(screen.getByText("Details", { selector: "summary" }));
     fireEvent.click(screen.getByRole("button", { name: "Print this saved copy" }));
     expect(document.querySelector(".paper-sheet")).not.toBeNull();
     expect(document.querySelector("[data-roll-call-surface]")).toBeNull();
@@ -366,6 +367,7 @@ describe("OfflineTripScreen's paper door", () => {
         c.snapshot.expiresAt = "2000-01-01T00:00:00.000Z";
       }),
     );
+    fireEvent.click(screen.getByText("Details", { selector: "summary" }));
     expect(screen.queryByRole("button", { name: "Print this saved copy" })).toBeNull();
     // Ctrl+P on it prints one line, never the expired roster: the page holds
     // a print-only frame, so on paper it is that frame (`ScreenNotPrinted`).
@@ -384,8 +386,13 @@ describe("OfflineTripScreen's paper door", () => {
         priya.medicalAlert = { text: ALERT_WORDS };
       }),
     );
-    for (const details of document.querySelectorAll("details")) details.open = true;
+    fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
+    fireEvent.click(screen.getByRole("button", { name: "Priya Shah" }));
+    fireEvent.click(screen.getByRole("button", { name: controls().t("manifest.deck.exception") }));
+    const facts = screen.getByText(controls().t("manifest.diverFactsSummary"), { exact: true });
+    fireEvent.click(facts.closest("summary") as HTMLElement);
     const words = screen.getByText(ALERT_WORDS);
+    expect(words).toBeVisible();
     // The page holds a print-only frame, so on paper it is that frame and
     // nothing of the screen: the words sit outside every sheet.
     expect(words.closest(".paper-sheet-frame")).toBeNull();
