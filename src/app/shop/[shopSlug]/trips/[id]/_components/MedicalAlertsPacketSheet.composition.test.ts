@@ -5,7 +5,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { routeSource } from "@/test/route-source";
 
 /**
- * **"Print with medical alerts"** (issue #2990), the departure's `?print=medical-alerts`
+ * **The medical-inclusive trip packet**, the departure's `?print=1`
  * state (#2736), is a Server Component over the
  * whole trip packet, so these read its source: who it checks, that it records
  * before it renders, and that no other print ever carries the words. The
@@ -52,11 +52,8 @@ describe("the print with medical alerts", () => {
     expect(css).toMatch(
       /@media screen\s*\{\s*\.paper-sheet-frame\[data-paper-print-only\]\s*\{\s*display:\s*none !important;/,
     );
-    // The two default packets show their sheets.
-    for (const packet of [
-      "app/shop/[shopSlug]/trips/[id]/_components/TripPacketSheet.tsx",
-      "app/shop/[shopSlug]/print/page.tsx",
-    ]) {
+    // The day packet shows its sheets.
+    for (const packet of ["app/shop/[shopSlug]/print/page.tsx"]) {
       expect(readFileSync(path.join(SRC, packet), "utf8")).not.toContain("printOnly");
     }
   });
@@ -93,8 +90,8 @@ describe("the print with medical alerts", () => {
     expect(renders).toBeGreaterThan(records);
     // Nothing writes the trail ahead of the composed packet.
     expect(SOURCE.indexOf("recordMedicalAlertsPrint(")).toBeGreaterThan(composes);
-    // The sheet gets only the words the trail took.
-    expect(SOURCE).toContain("printedMedicalAlerts: printed });");
+    // A failed audit refuses the packet rather than omitting an alert.
+    expect(SOURCE).toContain("if (!recorded.ok) notFound();");
   });
 
   it("is the only caller that hands the packet the words", () => {
@@ -105,11 +102,8 @@ describe("the print with medical alerts", () => {
     expect(handing.map((file) => path.relative(SRC, file)).sort()).toEqual([
       "app/shop/[shopSlug]/trips/[id]/_components/MedicalAlertsPacketSheet.tsx",
     ]);
-    // The default packet and the day's paper never pass any.
-    for (const other of [
-      "app/shop/[shopSlug]/trips/[id]/_components/TripPacketSheet.tsx",
-      "app/shop/[shopSlug]/print/page.tsx",
-    ]) {
+    // The day's paper never passes any.
+    for (const other of ["app/shop/[shopSlug]/print/page.tsx"]) {
       expect(readFileSync(path.join(SRC, other), "utf8")).not.toContain("printedMedicalAlerts");
     }
   });
@@ -141,11 +135,12 @@ describe("the print with medical alerts", () => {
 describe("the departure's print states (issue 2736)", () => {
   const states = routeSource(import.meta.dirname, "departure-states.tsx");
 
-  it("answers ?print=medical-alerts with the alerts' packet, before the plain packet", () => {
-    const alerts = states.indexOf("if (params.print === MEDICAL_ALERTS_PRINT) {");
-    const plain = states.indexOf("if (params.print !== undefined) return <TripPacketSheet");
-    expect(alerts).toBeGreaterThan(-1);
-    expect(plain).toBeGreaterThan(alerts);
+  it("routes every packet print state through the audited medical-inclusive sheet", () => {
+    expect(states).toContain("if (params.print !== undefined) {");
+    expect(states).toContain(
+      "return <MedicalAlertsPacketSheet shopSlug={shopSlug} tripId={tripId} />;",
+    );
+    expect(states).not.toContain("<TripPacketSheet");
   });
 
   it("is reached from the trip id the page has already parsed, never a route of its own", () => {

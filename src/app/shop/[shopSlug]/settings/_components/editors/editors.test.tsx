@@ -66,11 +66,11 @@ function named(node: unknown, name: string, found: ReactElement<{ id?: string }>
 describe("the profile editor", () => {
   const PROFILE = STAFF_MESSAGES["en-US"].settings.main.profile;
 
-  async function profileForm() {
+  async function profileForm(isDemo = true) {
     const { shop } = await demoShop(async (db, shopId) => {
       await db.update(shops).set({ logoUrl: "/dive-sites/logo.png" }).where(eq(shops.id, shopId));
     });
-    return ProfileForm({ shop, t });
+    return ProfileForm({ shop: { ...shop, isDemo }, t });
   }
 
   it("asks for the tagline, the logo and every brand field", async () => {
@@ -150,12 +150,21 @@ describe("the profile editor", () => {
       ChoiceFieldset,
     ).filter((group) => group.props.legend === PROFILE.badges);
     expect(groups).toHaveLength(1);
-    expect(groups[0]?.props.hint).toBe(PROFILE.badgesHint);
+    expect(groups[0]?.props.hint).toBe(PROFILE.demoBadgesHint);
     expect(inputNamesIn(groups[0]?.props.children)).toContain("badge");
     const wrapping = findElements<{ children?: unknown }>(form, Field).filter(
       (field) => findElements(field.props.children, ChoiceRow).length > 0,
     );
     expect(wrapping).toHaveLength(0);
+  });
+
+  it("keeps the ordinary badge hint for a real shop", async () => {
+    const form = await profileForm(false);
+    const groups = findElements<{ legend?: unknown; hint?: unknown }>(form, ChoiceFieldset).filter(
+      (group) => group.props.legend === PROFILE.badges,
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.props.hint).toBe(PROFILE.badgesHint);
   });
 });
 

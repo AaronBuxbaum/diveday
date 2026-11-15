@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { demoEntries } from "@/db/schema";
+import { resetDemoSchedule } from "@/db/seed";
+import { DEMO_SHOP_BRAND } from "@/db/seed-shop-brand";
+import { getShopBySlug } from "@/db/shops";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -130,6 +133,26 @@ beforeEach(() => {
 });
 
 describe("enterDemoAction instrumentation", () => {
+  it("seeds the visitor’s brand and keeps it through a demo reset", async () => {
+    await useDb();
+    const landing = await enterDemo();
+    const slug = landing.split("/")[2];
+    if (!slug) throw new Error("Demo shop slug missing");
+    const shop = await getShopBySlug(ctx.db, slug);
+    if (!shop) throw new Error("Demo shop missing");
+    expect(shop.isDemo).toBe(true);
+    expect(shop.logoUrl).toBeTruthy();
+    expect(shop.brandHeroImageUrl).toBe(DEMO_SHOP_BRAND.brandHeroImageUrl);
+    expect(shop.shopfrontPhotoUrls).toEqual(DEMO_SHOP_BRAND.shopfrontPhotoUrls);
+    expect(shop.brandBadges).toEqual(DEMO_SHOP_BRAND.brandBadges);
+    await resetDemoSchedule(ctx.db, shop.id, "history");
+    const after = await getShopBySlug(ctx.db, slug);
+    expect(after?.logoUrl).toBe(shop.logoUrl);
+    expect(after?.brandHeroImageUrl).toBe(shop.brandHeroImageUrl);
+    expect(after?.shopfrontPhotoUrls).toEqual(shop.shopfrontPhotoUrls);
+    expect(after?.brandBadges).toEqual(shop.brandBadges);
+  });
+
   it("fires demo_entered exactly once, with the role and the page that sent them", async () => {
     await useDb();
     await enterDemo(demoForm({ role: "captain", source: "pricing" }));

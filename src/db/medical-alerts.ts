@@ -114,7 +114,7 @@ export async function medicalAlertsForTrip(
 
 /**
  * Whether any seat on the departure has an alert on its standing release: the
- * fact, never the text, for whether "Print with medical alerts" is offered.
+ * fact, never the text.
  */
 export async function tripHasMedicalAlert(
   db: DbExecutor,
@@ -363,7 +363,7 @@ export type PrintedMedicalAlerts = {
  * alerts"** (issue #2990, H-20261023-medical-alert-for-the amendment of
  * 2026-10-24), writing nothing. `not_found` for a departure that is not this
  * shop's live one; `forbidden` unless `canPersonPrintMedicalAlerts` admits the
- * printer now (the owner or a manager). A held seat has no words.
+ * printer now (an active staff member). A held seat has no words.
  *
  * The words are in memory only: they reach no screen or paper until the caller
  * has asked whether the packet can print and then
@@ -420,8 +420,11 @@ export async function recordMedicalAlertsPrint(
     printerId: string;
     read: Extract<Awaited<ReturnType<typeof readMedicalAlertsForPrint>>, { ok: true }>;
   },
-): Promise<PrintedMedicalAlerts> {
+): Promise<{ ok: true; printed: PrintedMedicalAlerts } | { ok: false }> {
   const texts = new Map<string, string>();
+  if (!(await canPersonPrintMedicalAlerts(db, input.shopId, input.printerId))) {
+    return { ok: false };
+  }
   for (const { bookingId, personId } of input.read.divers) {
     const recorded = await recordDiverActivity(db, {
       shopId: input.shopId,
@@ -433,7 +436,11 @@ export async function recordMedicalAlertsPrint(
     const text = input.read.printed.texts.get(bookingId);
     if (recorded && text !== undefined) texts.set(bookingId, text);
   }
-  return { ...input.read.printed, texts };
+  if (!(await canPersonPrintMedicalAlerts(db, input.shopId, input.printerId))) {
+    return { ok: false };
+  }
+  if (texts.size !== input.read.printed.texts.size) return { ok: false };
+  return { ok: true, printed: { ...input.read.printed, texts } };
 }
 
 /**

@@ -23,6 +23,7 @@ export function ShopfrontHero({
   heroImage = null,
   badges = [],
   establishedYear = null,
+  isDemo = false,
   beside = false,
   locale,
   t,
@@ -39,6 +40,7 @@ export function ShopfrontHero({
   /** The badge wall, in the shop's order. */
   badges?: readonly BrandBadgeCode[];
   establishedYear?: number | null;
+  isDemo?: boolean;
   /** `shops.tagline` — the shop's own line, or nothing at all. */
   tagline: string | null;
   /**
@@ -125,7 +127,13 @@ export function ShopfrontHero({
           </span>
         </p>
       )}
-      <BadgeWall badges={badges} establishedYear={establishedYear} t={t} className="mt-4" />
+      <BadgeWall
+        badges={badges}
+        establishedYear={establishedYear}
+        isDemo={isDemo}
+        t={t}
+        className="mt-4"
+      />
     </div>
   );
 }

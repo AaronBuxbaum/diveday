@@ -13,11 +13,13 @@ import type { BrandBadgeCode } from "@/lib/brand";
 export function BadgeWall({
   badges,
   establishedYear,
+  isDemo = false,
   t,
   className = "",
 }: {
   badges: readonly BrandBadgeCode[];
   establishedYear: number | null;
+  isDemo?: boolean;
   t: DiverTranslator;
   className?: string;
 }) {
@@ -38,7 +40,9 @@ export function BadgeWall({
           className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm"
         >
           <BadgeShield />
-          {brandBadgeLabel(code, t)}
+          {isDemo
+            ? t("brand.demoBadge", { badge: brandBadgeLabel(code, t) })
+            : brandBadgeLabel(code, t)}
         </li>
       ))}
     </ul>

@@ -97,6 +97,7 @@ export function ShopWelcome({
           )}
           <BadgeWall
             badges={badges}
+            isDemo={shop.isDemo}
             establishedYear={shop.establishedYear}
             t={t}
             className="mt-3"
