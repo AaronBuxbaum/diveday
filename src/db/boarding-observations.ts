@@ -38,20 +38,22 @@ import { heldSeatCounts, sellableCapacity } from "./trips-queries";
  * out with nothing recorded. The observation is now two steps:
  *
  * 1. **Intake** ({@link recordBoardingObservation}): one short transaction that
- *    takes no departure, seat or schedule lock and writes one row, keyed by the
- *    tap's own `clientKey`. It commits whatever the boat looks like. A retry,
- *    a double tap or an offline replay of the same key writes nothing new.
+ *    does not explicitly lock the departure or seat and attempts to write a row
+ *    keyed by the tap's `clientKey`. Foreign-key checks can still wait behind a
+ *    reset that deletes a parent; a timeout before commit leaves no server
+ *    receipt. Joining an existing open observation also does not persist the
+ *    joining tap's key. Neither outcome proves a durable offline handoff.
  * 2. **Allocation** ({@link settleBoardingObservations}): under the departure's
  *    lock, every open observation on it is measured as a seat is measured
  *    (both capacity limits, the course gates) and either takes the seat back
  *    or stays open as a `conflict` with its reason. Run at once after intake
  *    with a short lock wait, again after the response, and by the shop tick
- *    ({@link settleOpenBoardingObservations}) so a crash between the steps
- *    leaves a pending row the next pass applies.
+ *    ({@link settleOpenBoardingObservations}) so a committed pending row may
+ *    be retried after a crash between the steps.
  *
- * While open the observation counts as a held seat (`seatAwaitedAtDock`), so
- * nothing else can take the freed seat in the meantime, and the conflict is
- * read on the departure and on the board ({@link openBoardingObservationsByTrip}).
+ * Eligible same-trip open observations contribute to the held-seat projection
+ * (`seatAwaitedAtDock`), and conflicts are read on the departure and board
+ * ({@link openBoardingObservationsByTrip}). This does not prove move ordering.
  */
 
 export type RecordObservationOutcome =
@@ -88,8 +90,8 @@ export async function recordBoardingObservation(
 ): Promise<RecordObservationOutcome> {
   const clientKey = input.clientKey ?? randomUUID();
   return db.transaction(async (tx): Promise<RecordObservationOutcome> => {
-    // Bounded like every other write, though this one takes no row lock of
-    // its own and references no row a schedule writer locks.
+    // Individual lock waits are bounded, but foreign-key checks can wait for reset
+    // or erasure even though this function does not explicitly lock parents.
     await boundLockWaits(tx);
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
     if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" };

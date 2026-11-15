@@ -231,11 +231,14 @@ export async function markBookingNoShow(
  * sold. It used to be one locked transaction that either put the seat back or
  * refused, and a refusal (or a lock wait behind a schedule write on the same
  * departure) left no record that the diver was standing at the dock. Now the
- * tap is an observation first (`recordBoardingObservation`): it commits without
- * waiting on the departure, idempotent by the form's own `clientKey`, and from
- * then on it holds the freed seat in every capacity count. The seat is then
+ * tap first attempts an observation (`recordBoardingObservation`). It does not
+ * explicitly lock the departure, but parent foreign-key checks can block behind
+ * reset or erasure; a timeout before commit is not a durable receipt. Joining
+ * an existing observation also does not durably reserve this tap's key.
+ * Eligible same-trip open observations contribute to capacity counts; their
+ * behavior across concurrent moves remains unproven. The seat is then
  * allocated under the departure's lock (`settleBoardingObservations`), with a
- * one-second wait so the tap stays quick: `applied` puts the seat back as the
+ * one-second allocation lock timeout: `applied` puts the seat back as the
  * undo always did, `conflict` keeps the observation open with the reason (the
  * seat was sold, the course is full, the boat was called off) on the departure
  * and the board, and `pending` means the departure was busy and the retry after
