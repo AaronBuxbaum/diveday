@@ -82,5 +82,6 @@
   },
   "deviceId": "Computer identifier",
   "recordingIndex": "Recording index",
-  "fileErrors": "Files with errors"
+  "fileErrors": "Files with errors",
+  "zipHint": "Extract ZIP downloads first. For UDDF, choose the .uddf file in the extracted folder."
 }

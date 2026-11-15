@@ -37,7 +37,32 @@ async function setDeviceClock(page: Page, timestamp: number) {
 
 async function openEvidence(page: Page) {
   const expanded = page.locator("#deck-flow > div > details[open] > summary");
-  if (await expanded.count()) await expanded.click();
+  if (await expanded.count()) {
+    await expanded.click();
+    // Closing Details keeps its body in layout through ::details-content's
+    // discrete transition. Wait for the collapse before aiming at the header:
+    // its final scroll clamp can otherwise move Needs attention during a click.
+    await expect
+      .poll(() =>
+        page.locator("#deck-flow > div > details").evaluate((el) => {
+          const transitioning = el.getAnimations().some((animation) => {
+            const effect = animation.effect;
+            return (
+              effect instanceof KeyframeEffect &&
+              effect.pseudoElement === "::details-content" &&
+              animation.playState !== "finished" &&
+              animation.playState !== "idle"
+            );
+          });
+          return (
+            !(el as HTMLDetailsElement).open &&
+            getComputedStyle(el, "::details-content").contentVisibility === "hidden" &&
+            !transitioning
+          );
+        }),
+      )
+      .toBe(true);
+  }
   await page.getByRole("button", { name: staff("manifest.deck.attention"), exact: true }).click();
   await expect(page.locator('[data-deck-screen="attention"]')).toBeVisible();
 }

@@ -493,6 +493,7 @@ export function ComputerDives({
         >
           {copy.template}
         </a>
+        <p className="text-sm text-muted">{copy.zipHint}</p>
         <form onSubmit={onPreview} className="space-y-4">
           <Field label={copy.files} htmlFor="computer-files" description={copy.limit}>
             <input

@@ -25,6 +25,7 @@ export default async function ComputerDivesPage({
     title: t("computerDives.title"),
     intro: t("computerDives.intro"),
     formats: t("computerDives.formats"),
+    zipHint: t("computerDives.zipHint"),
     files: t("computerDives.files"),
     preview: t("computerDives.preview"),
     previewHeading: t("computerDives.previewHeading"),

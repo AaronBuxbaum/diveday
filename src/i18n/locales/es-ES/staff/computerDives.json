@@ -82,5 +82,6 @@
   },
   "deviceId": "Identificador de computadora",
   "recordingIndex": "Índice de registro",
-  "fileErrors": "Archivos con errores"
+  "fileErrors": "Archivos con errores",
+  "zipHint": "Primero extrae los archivos ZIP. Para UDDF, selecciona el archivo .uddf de la carpeta extraída."
 }

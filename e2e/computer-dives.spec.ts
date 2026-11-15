@@ -129,3 +129,38 @@ test("Garmin FIT retains the UTC instant and profile without inventing a local t
     history.getByText(t("computerDives.warningCodes.unmapped_fit_fields"), { exact: true }),
   ).toBeVisible();
 });
+
+test("ZIP guidance preserves preview-only behavior when choosing an extracted UDDF", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers?q=Priya");
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  await page.getByRole("link", { name: t("computerDives.title"), exact: true }).click();
+  await expect(page.getByText(t("computerDives.zipHint"), { exact: true })).toBeVisible();
+  // A valid empty ZIP: archives are neither decoded nor retained by the import.
+  const emptyZip = Buffer.alloc(22);
+  emptyZip.writeUInt32LE(0x06054b50);
+  await page
+    .getByLabel(t("computerDives.files"), { exact: true })
+    .setInputFiles({ name: "download.zip", mimeType: "application/zip", buffer: emptyZip });
+  await page.getByRole("button", { name: t("computerDives.preview"), exact: true }).click();
+  await expect(page.getByText(t("computerDives.fileError"), { exact: false })).toBeVisible();
+  await expect(page.getByText(t("computerDives.empty"), { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: t("computerDives.commit"), exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: t("computerDives.cancel"), exact: true }).click();
+  await page
+    .getByLabel(t("computerDives.files"), { exact: true })
+    .setInputFiles("src/lib/computer-import/fixtures/si.uddf");
+  await page.getByRole("button", { name: t("computerDives.preview"), exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: t("computerDives.previewHeading") }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("checkbox", { name: new RegExp(t("computerDives.selected")) }),
+  ).toBeChecked();
+  await expect(page.getByText(t("computerDives.empty"), { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: t("computerDives.cancel"), exact: true }).click();
+  await expect(page.getByLabel(t("computerDives.files"), { exact: true })).toBeFocused();
+});

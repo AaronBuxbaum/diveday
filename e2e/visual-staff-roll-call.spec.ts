@@ -28,6 +28,7 @@ import {
   DEEP_CHARTER,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   openReefTrip,
   openSailedTrip,
   SURFACE_TIMEOUT_MS,
@@ -277,10 +278,21 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(tally).toContainText("1");
         await chip.click();
         await expect(tally).toContainText("2");
-        await seen.getByRole("button", { name: "Goliath grouper", exact: true }).click();
+        const grouper = seen.getByRole("button", { name: "Goliath grouper", exact: true });
+        await expect(grouper).toBeEnabled();
+        const confirmed = liveRosterConfirmation(page);
+        await grouper.click();
         await expect(seen.getByRole("listitem")).toHaveCount(2);
+        await expect(grouper).toBeEnabled();
+        await confirmed;
         await page.mouse.move(0, 0);
-        await capture(page, "manifest-seen", scheme);
+        await capture(page, "manifest-seen", scheme, {
+          beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
+          },
+        });
       });
 
       /**

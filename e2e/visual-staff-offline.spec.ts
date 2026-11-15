@@ -128,6 +128,15 @@ for (const scheme of ["light", "dark"] as const) {
           page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
         ).toBeVisible();
         await openDeckPerson(page, "Priya Sharma");
+        // This capture opens the saved copy with service available. Photograph
+        // its reconciled state, independently of the person panel mounting.
+        await expect(
+          page
+            .locator('[data-deck-screen] > [role="status"]')
+            .getByText(staffTranslator("en-US")("shared.offlineManifest.reconcile.allCaughtUp"), {
+              exact: true,
+            }),
+        ).toBeVisible();
         await capture(page, "offline-manifest-roll-call", scheme);
         await openDeckDetails(page);
         await page.getByRole("link", { name: "Roll call", exact: true }).click();
