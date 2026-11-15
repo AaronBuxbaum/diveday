@@ -45,6 +45,42 @@ test("touch navigation reaches the course catalog and returns to the schedule", 
   await expect(nav.getByRole("link", { name: "Schedule" })).toHaveAttribute("aria-current", "page");
 });
 
+test.describe("staff navigation on a phone", () => {
+  signedInAsOwner();
+
+  test("More remains open and its destination receives a tap after the animation", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis");
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    const more = nav.getByRole("button", { name: "More", exact: true });
+    const money = nav.getByRole("link", { name: "Money", exact: true });
+
+    await more.tap();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await expect(money).toBeVisible();
+    await money.locator("../..").evaluate(async (panel) => {
+      await Promise.all(panel.getAnimations().map((animation) => animation.finished));
+    });
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await expect(money).toBeVisible();
+    expect(
+      await money.evaluate((link) => {
+        const rect = link.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          rect.left + rect.width / 2,
+          rect.top + rect.height / 2,
+        );
+        return hit !== null && link.contains(hit);
+      }),
+      "the destination is hit-testable at its center",
+    ).toBe(true);
+    await money.tap();
+    await expect(page).toHaveURL(/\/orders$/);
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
 test("touch booking and guardian signing stay complete after reload", async ({ page }) => {
   await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
   const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
