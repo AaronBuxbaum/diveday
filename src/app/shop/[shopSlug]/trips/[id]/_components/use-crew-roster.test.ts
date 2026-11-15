@@ -8,7 +8,10 @@ afterEach(cleanup);
 
 const staff = [
   { person: { id: "dana", fullName: "Dana Reef" }, roles: ["divemaster"] },
-  { person: { id: "omar", fullName: "Omar Keel" }, roles: ["captain"] },
+  {
+    person: { id: "omar", fullName: "Omar Keel", staffPhotoPath: "/omar.webp" },
+    roles: ["captain"],
+  },
 ] as unknown as StaffList;
 // Stable references, as the server hands them: the hook resyncs whenever these change.
 const crewRoles = { dana: null };
@@ -38,6 +41,9 @@ describe("useCrewRoster", () => {
     await act(async () => result.current.handleAssign("omar"));
     expect(write).toHaveBeenCalledWith("trip-1", { personId: "omar", operation: "assign" });
     expect(result.current.localCrew.map((entry) => entry.id)).toEqual(["dana", "omar"]);
+    expect(result.current.localCrew.find((entry) => entry.id === "omar")?.photoUrl).toBe(
+      "/omar.webp",
+    );
     expect(result.current.assignRefusal).toBeNull();
   });
 
