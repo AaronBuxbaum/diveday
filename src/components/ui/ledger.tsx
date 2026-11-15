@@ -528,7 +528,13 @@ export function LedgerRow({
         <RowKind
           word={kind.word}
           tone={kind.tone}
-          className={stacked ? `${ledgerKindColumnClass} max-sm:order-1` : ledgerKindColumnClass}
+          // Stacked on a phone the kind has its own line, so no column to align
+          // to: it takes its natural width and never wraps ("Emergency reference").
+          className={
+            stacked
+              ? `${ledgerKindColumnClass} max-sm:order-1 max-sm:w-auto max-sm:whitespace-nowrap`
+              : ledgerKindColumnClass
+          }
         />
       ) : null}
       {/* Every `stacked` class is a `max-sm:` one, deliberately: from `sm` up
