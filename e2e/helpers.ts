@@ -364,11 +364,33 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
  * `trips.roster.heading` on any page that owns its masthead, which the
  * departure does. English, like every other locator in this suite.
  */
-export function rosterRow(page: Page, diverName: string): Locator {
-  return page
-    .getByRole("region", { name: "Divers", exact: true })
-    .locator("li")
-    .filter({ hasText: diverName });
+export async function openGuestFolio(page: Page, diverName: string): Promise<void> {
+  await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
+  const folios = page.locator("[data-guest-folios]").filter({ visible: true });
+  if (!(await folios.count())) return;
+  if (await folios.getByRole("heading", { name: diverName, exact: true }).count()) return;
+  const all = folios.getByRole("button", { name: "All guests", exact: true });
+  if (await all.count()) await all.click();
+  const search = folios.getByRole("searchbox", { name: "Find a guest", exact: true });
+  if (await search.count()) await search.fill("");
+  const name = folios.locator("button[data-guest-open]").filter({
+    has: page.locator("span", { hasText: new RegExp(`^${escapeRegExp(diverName)}$`) }),
+  });
+  // A caller may be asserting that a cancelled or moved person is absent.
+  if ((await name.count()) === 0) return;
+  await name.click();
+  await expect(folios.getByRole("heading", { name: diverName, exact: true })).toBeVisible();
+}
+
+export async function rosterRow(page: Page, diverName: string): Promise<Locator> {
+  await openGuestFolio(page, diverName);
+  const folio = page
+    .locator("[data-guest-folio]")
+    .filter({ visible: true })
+    .filter({ has: page.getByRole("heading", { name: diverName, exact: true }) });
+  const bookingId = (await folio.count()) ? await folio.getAttribute("data-guest-folio") : null;
+  if (bookingId) return page.locator(`#roster li[id="booking-${bookingId}"]`);
+  return page.locator('#roster li[id^="booking-"]').filter({ hasText: diverName });
 }
 
 const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
@@ -505,6 +527,28 @@ export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
 
 /** Open and return the first booking row that offers a currently folded control. */
 export async function openFirstRosterRowWith(page: Page, control: string): Promise<Locator> {
+  await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
+  const folios = page.locator("[data-guest-folios]").filter({ visible: true });
+  if (await folios.count()) {
+    const all = folios.getByRole("button", { name: "All guests", exact: true });
+    if (await all.count()) await all.click();
+    await folios.getByRole("searchbox", { name: "Find a guest", exact: true }).fill("");
+    const ids = await folios
+      .locator("button[data-guest-open]")
+      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("data-guest-open")));
+    for (const id of ids) {
+      await folios.locator(`button[data-guest-open="${id}"]`).click();
+      const candidate = page.locator(`#roster li[id="booking-${id}"]`).first();
+      if (
+        await candidate.locator("button", { hasText: new RegExp(`^\\s*${control}\\s*$`) }).count()
+      ) {
+        await openRosterDetails(candidate);
+        return candidate;
+      }
+      await all.click();
+    }
+    throw new Error(`No guest folio offers ${control}`);
+  }
   const row = page
     .locator('#roster li[id^="booking-"]')
     // `page.locator`, not `getByRole`: the fixture keeps role queries to
@@ -521,10 +565,7 @@ export async function openFirstRosterRowWith(page: Page, control: string): Promi
 
 /** Open one diver's row on the Divers tab, where every fix for their seat waits. */
 export async function openRosterRow(page: Page, diverName: string): Promise<Locator> {
-  const row = page
-    .locator('#roster li[id^="booking-"]')
-    .filter({ visible: true })
-    .filter({ has: page.getByRole("link", { name: diverName, exact: true }) });
+  const row = await rosterRow(page, diverName);
   await openRosterDetails(row);
   return row;
 }
@@ -795,11 +836,12 @@ export async function openBookingActions(row: Locator): Promise<void> {
 export async function openRosterDetails(row: Locator): Promise<void> {
   // The row's own disclosure, named by its mark — not the desk's "Not here"
   // door, which is also a direct `<details>` of the row once arrivals open.
-  await openIfClosed(
-    row
-      .locator(":scope > details")
-      .filter({ has: row.page().locator('summary[aria-label^="Details for "]') }),
-  );
+  const disclosure = row
+    .locator(":scope > details")
+    .filter({ has: row.page().locator('summary[aria-label^="Details for "]') });
+  if (await disclosure.count()) await openIfClosed(disclosure);
+  const reference = row.locator('details[id^="guest-reference-"]');
+  if (await reference.count()) await openIfClosed(reference);
 }
 
 /**
@@ -815,10 +857,11 @@ export async function openRosterDetails(row: Locator): Promise<void> {
 export async function openRosterNotes(row: Locator): Promise<void> {
   await openRosterDetails(row);
   await openIfClosed(
-    row
-      .locator(":scope > details details")
-      .filter({ hasText: /Private staff notes|Add a private note/ })
-      .first(),
+    row.locator("details").filter({
+      has: row.page().locator(":scope > summary", {
+        hasText: /Private staff notes|Add a private note/,
+      }),
+    }),
   );
 }
 
@@ -835,10 +878,47 @@ export async function openRosterNotes(row: Locator): Promise<void> {
  * guarantee from the other end: within the roster list a person's name appears
  * on their own row and nowhere else.
  */
-export function manifestRow(page: Page, name: string): Locator {
-  return page.locator("#roll-call-list > ul > li").filter({
-    has: page.locator('button[aria-haspopup="dialog"]', { hasText: name }),
-  });
+export async function openDeckPerson(page: Page, name: string, locale = "en-US"): Promise<void> {
+  const t = staffTranslator(locale);
+  const dialog = page.locator('[role="dialog"]:not([inert])');
+  const close = dialog.getByRole("button", { name: t("manifest.closePersonDetails") });
+  if (await close.count()) await close.click();
+  const person = page.locator('[data-deck-screen="person"]').filter({ visible: true });
+  if (await person.getByRole("heading", { name, exact: true }).count()) return;
+  await page.getByRole("button", { name: t("manifest.deck.find"), exact: true }).click();
+  const list = page.locator('[data-deck-screen="find"]');
+  await list.getByRole("searchbox").fill("");
+  await list.getByRole("button", { name, exact: true }).click();
+  await expect(person.getByRole("heading", { name, exact: true })).toBeVisible();
+}
+
+export async function openDeckDetails(page: Page, locale = "en-US"): Promise<void> {
+  const t = staffTranslator(locale);
+  const details = page
+    .locator("[data-deck-screen]")
+    .filter({ visible: true })
+    .locator("details")
+    .filter({
+      has: page.locator(":scope > summary", {
+        hasText: new RegExp(`^${escapeRegExp(t("manifest.deck.details"))}$`),
+      }),
+    })
+    .last();
+  await openIfClosed(details);
+}
+
+export async function manifestRow(page: Page, name: string, locale = "en-US"): Promise<Locator> {
+  const t = staffTranslator(locale);
+  await openDeckPerson(page, name, locale);
+  const row = page
+    .locator("#roll-call-list > ul > li")
+    .filter({ has: page.locator('button[aria-haspopup="dialog"]', { hasText: name }) })
+    .filter({ visible: true });
+  if (!(await row.isVisible())) {
+    await page.getByRole("button", { name: t("manifest.deck.exception"), exact: true }).click();
+  }
+  await expect(row).toBeVisible();
+  return row;
 }
 
 /**
@@ -859,9 +939,9 @@ export async function offlineCopySaved(page: Page, locale = "en-US"): Promise<vo
     t("trips.offlineManifestManager.freshnessAging"),
     t("trips.offlineManifestManager.freshnessStale"),
   ];
-  await expect(
-    page.getByText(new RegExp(`^(?:${labels.map(escapeRegExp).join("|")})$`)),
-  ).toBeVisible();
+  await expect(page.locator("[data-offline-copy]")).toContainText(
+    new RegExp(`(?:${labels.map(escapeRegExp).join("|")})`),
+  );
 }
 
 /**
@@ -872,6 +952,7 @@ export async function offlineCopySaved(page: Page, locale = "en-US"): Promise<vo
  * leaves).
  */
 export async function openBoatCheck(page: Page): Promise<void> {
+  if (await page.locator("[data-deck-screen]").count()) await openDeckDetails(page);
   await openIfClosed(
     page
       .locator("details")
@@ -881,12 +962,14 @@ export async function openBoatCheck(page: Page): Promise<void> {
 }
 
 /** Open the manifest's "On this phone" group — offline detail, push, toggles. */
-export async function openOnThisPhone(page: Page): Promise<void> {
+export async function openOnThisPhone(page: Page, locale = "en-US"): Promise<void> {
+  await expect(page.locator("[data-deck-screen]").filter({ visible: true })).toBeVisible();
+  await openDeckDetails(page, locale);
   await openIfClosed(
     page
-      .locator("details")
-      .filter({ has: page.locator("#offline-heading") })
-      .first(),
+      .locator("#offline-heading")
+      .filter({ visible: true })
+      .locator("xpath=ancestor::details[1]"),
   );
 }
 
@@ -915,9 +998,8 @@ export async function openManifestPerson(row: Locator): Promise<void> {
 }
 
 /**
- * Open a departure's activity log, which lives on its Details tab
- * (`?view=details`) beside "Promote this trip", not under the roster. Call it
- * from any tab of the departure; it leaves the page on Details, so a spec that
+ * Open a departure's activity log on Record (`?view=record`). Call it
+ * from any tab of the departure; it leaves the page on Record, so a spec that
  * goes on to work the roster returns with `openTripTab(page, "Trip")`.
  */
 export async function openTripActivity(page: Page): Promise<void> {
@@ -925,8 +1007,8 @@ export async function openTripActivity(page: Page): Promise<void> {
   const root = new URL(page.url()).pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
   if (!root)
     throw new Error(`openTripActivity called from ${page.url()}, which is not a departure`);
-  await page.goto(`${root}?view=details`);
-  await page.waitForURL(/\?view=details/);
+  await page.goto(`${root}?view=record`);
+  await page.waitForURL(/\?view=record/);
   await openIfClosed(
     page
       .locator("details")

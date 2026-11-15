@@ -36,11 +36,14 @@ test.describe("light mode", () => {
         await page.goto(
           `/shop/${privateShop.slug}/trips/${fact.tripId}/manifest?checkpoint=after_dive_1`,
         );
+        await page
+          .getByRole("button", { name: staff("manifest.deck.review"), exact: true })
+          .click();
         const resolve = page.getByRole("button", {
           name: staff("manifest.conflicts.confirmAboard"),
           exact: true,
         });
-        const panel = page.locator("details").filter({ has: resolve });
+        const panel = page.locator("details").filter({ has: resolve }).filter({ visible: true });
         await expect(resolve).toBeVisible();
         await expect(panel).toContainText(fact.fullName);
         await expect(panel).toContainText(staff("manifest.conflicts.aboard"));
@@ -57,12 +60,20 @@ test.describe("light mode", () => {
 
         await offlineCopySaved(page);
         await page.goto(`/offline-manifest?trip=${fact.tripId}&checkpoint=after_dive_1`);
-        await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
+        await expect(
+          page.getByRole("heading", { name: staff("manifest.deck.title"), exact: true }),
+        ).toBeVisible();
+        await page
+          .getByRole("button", { name: staff("manifest.deck.review"), exact: true })
+          .click();
         const savedResolve = page.getByRole("button", {
           name: staff("manifest.conflicts.confirmAboard"),
           exact: true,
         });
-        const savedPanel = page.locator("details").filter({ has: savedResolve });
+        const savedPanel = page
+          .locator("details")
+          .filter({ has: savedResolve })
+          .filter({ visible: true });
         await expect(savedResolve).toBeVisible();
         await expect(savedPanel).toContainText(fact.fullName);
         await expect(savedPanel).toContainText(staff("manifest.conflicts.aboard"));

@@ -17,6 +17,7 @@ export function RosterFreshness({
   renderId,
   checkpoint,
   t,
+  compact,
 }: {
   tripId: string;
   shop: { id: string; timezone: string };
@@ -27,6 +28,7 @@ export function RosterFreshness({
   renderId: string;
   checkpoint: string;
   t: StaffTranslator;
+  compact?: boolean;
 }) {
   const { readCompletedAt, renderErasureEpoch } = read;
   const historyScope = sessionId
@@ -58,6 +60,7 @@ export function RosterFreshness({
         date: formatDateTimeTz(new Date(readCompletedAt), locale, shop.timezone),
       })}
       requireCommit
+      compact={compact}
       copy={{
         confirmed: t("manifest.rosterConfirmed"),
         unconfirmed: t("manifest.rosterUnconfirmed"),

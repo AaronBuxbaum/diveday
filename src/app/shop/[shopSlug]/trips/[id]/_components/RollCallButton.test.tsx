@@ -1,14 +1,22 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
+import { flushSync } from "react-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useDeckMutation } from "@/components/offline-manifest/DeckFlow";
 import {
   TOUCH_REFUSED_ATTRIBUTE,
   TOUCH_REFUSED_CUE_MS,
   TOUCH_REFUSED_EVENT,
 } from "@/components/roll-call-touch-guard";
+import { clientRollCallEvidenceId, type RollCallCausalContext } from "@/lib/roll-call-causality";
 import type { RollCallAction, RollCallButtonCopy, RollCallResult } from "./RollCallButton";
 import { RollCallButton } from "./RollCallButton";
+import { RollCallCausalProvider } from "./roll-call-causal-context";
+
+vi.mock("@/components/offline-manifest/DeckFlow", () => ({ useDeckMutation: vi.fn() }));
+beforeEach(() => vi.mocked(useDeckMutation).mockReturnValue(null));
 
 afterEach(() => {
   cleanup();
@@ -39,6 +47,124 @@ function setup(action: RollCallAction, copy: RollCallButtonCopy = DEFAULT_COPY) 
 }
 
 describe("RollCallButton", () => {
+  it("includes the just-accepted receipt in an immediate Undo basis while the server projection is still stale", async () => {
+    const eventId = "00000000-0000-4000-8000-0000000000e1";
+    const subjectId = "00000000-0000-4000-8000-000000000001";
+    const action = vi.fn<RollCallAction>(async () => ({
+      ok: true,
+      eventId,
+      observedAt: "2026-11-21T12:30:00.000Z",
+    }));
+    const stale: RollCallCausalContext = {
+      meetingDay: 0,
+      conflict: false,
+      orderingUnknown: false,
+      unknownMeetingDay: false,
+      observedEvidenceIds: [],
+      evidence: [],
+    };
+    type Receipt = Parameters<NonNullable<ReturnType<typeof useDeckMutation>>["saved"]>[2];
+    function Harness() {
+      const [receipt, setReceipt] = useState<Receipt | null>(null);
+      const deck = {
+        ...receipt,
+        setBusy: vi.fn(),
+        setDeviceNotice: vi.fn(),
+        saved: (_id: string, status: string, saved?: Receipt) => {
+          if (status === "boarded") setReceipt(saved);
+        },
+      };
+      vi.mocked(useDeckMutation).mockReturnValue(deck);
+      return (
+        <RollCallCausalProvider contexts={{ [`bookingId:${subjectId}`]: stale }}>
+          <RollCallButton
+            key={receipt ? "undo" : "record"}
+            action={action}
+            subject={{ field: "bookingId", id: subjectId }}
+            status={receipt ? "cleared" : "boarded"}
+            retracts={receipt?.eventId}
+            label={receipt ? "Undo named record" : "Record named person"}
+            pendingLabel="Recording…"
+            className="btn"
+            copy={DEFAULT_COPY}
+          />
+        </RollCallCausalProvider>
+      );
+    }
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: "Record named person" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Undo named record" }));
+    expect(action).toHaveBeenCalledTimes(2);
+    const originalClientId = action.mock.calls[0]?.[1].get("clientEventId");
+    if (typeof originalClientId !== "string") throw new Error("expected original tap identity");
+    const undo = action.mock.calls[1]?.[1];
+    expect(undo?.get("retractsEventId")).toBe(eventId);
+    expect(JSON.parse(String(undo?.get("observedEvidenceIds")))).toContain(
+      clientRollCallEvidenceId(originalClientId),
+    );
+  });
+
+  for (const field of ["bookingId", "personId"] as const) {
+    it(`delivers the exact named ${field} receipt when a server rerender removes the action control before it settles`, async () => {
+      const saved = vi.fn();
+      vi.mocked(useDeckMutation).mockReturnValue({
+        saved,
+        setBusy: vi.fn(),
+        setDeviceNotice: vi.fn(),
+      });
+      const subjectId = "00000000-0000-4000-8000-000000000001";
+      const eventId = "00000000-0000-4000-8000-0000000000e1";
+      const observedAt = "2026-11-21T12:30:00.000Z";
+      function Harness() {
+        const [showCorrection, setShowCorrection] = useState(true);
+        const action: RollCallAction = async () => {
+          // A returned RSC tree can remove a conditional correction control
+          // before useActionState publishes its successful result to an effect.
+          flushSync(() => setShowCorrection(false));
+          return { ok: true, status: "boarded", eventId, observedAt };
+        };
+        return showCorrection ? (
+          <RollCallButton
+            action={action}
+            subject={{ field, id: subjectId }}
+            status="boarded"
+            label="Mark back aboard"
+            pendingLabel="Recording…"
+            className="btn"
+            copy={DEFAULT_COPY}
+          />
+        ) : (
+          <p>Boarded</p>
+        );
+      }
+      render(<Harness />);
+      await userEvent.click(screen.getByRole("button", { name: "Mark back aboard" }));
+      expect(screen.getByText("Boarded")).toBeVisible();
+      expect(saved).toHaveBeenCalledExactlyOnceWith(
+        subjectId,
+        "boarded",
+        expect.objectContaining({
+          eventId,
+          observedAt,
+          evidenceId: expect.stringMatching(/^client:/),
+        }),
+      );
+    });
+  }
+
+  it("never creates a success receipt for a refused individual save", async () => {
+    const saved = vi.fn();
+    vi.mocked(useDeckMutation).mockReturnValue({
+      saved,
+      setBusy: vi.fn(),
+      setDeviceNotice: vi.fn(),
+    });
+    setup(mockAction({ ok: false, reason: "error" }));
+    await userEvent.click(screen.getByRole("button", { name: "Board" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(DEFAULT_COPY.errorRefusal);
+    expect(saved).not.toHaveBeenCalled();
+  });
+
   it("announces a repeated refusal after the previous safety toast expires", async () => {
     vi.useFakeTimers();
     const action = mockAction({ ok: false, reason: "not_ready" });

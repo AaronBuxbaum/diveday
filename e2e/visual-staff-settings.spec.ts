@@ -5,7 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openSettingsRail, openSettingsRow, openTripTab } from "./helpers";
+import { openDeckDetails, openSettingsRail, openSettingsRow, openTripTab } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { seedFacts } from "./shop-facts";
 import {
@@ -628,6 +628,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
+        await openDeckDetails(page);
         await page.locator("#dock-rider summary").click();
         const form = page.getByTestId("dock-rider-form");
         await capture(page, "manifest-dock-rider-controls", scheme, {

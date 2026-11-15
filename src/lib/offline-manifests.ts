@@ -645,6 +645,8 @@ export type OfflineManifestSnapshot = OfflineManifestPayload & {
  * no deploy that reaches a phone in a dry bag on a boat.
  */
 export type OfflineRollCallEvent = {
+  /** Explicit per-seat physical observation; it grants no readiness or desk state. */
+  physicalPresenceOnly?: boolean;
   observedEvidenceIds?: string[];
   reconcilesEvidence?: boolean;
   meetingDay?: number;
@@ -1255,9 +1257,14 @@ export async function claimOfflineManifestSnapshot(
   }
 }
 
+export type OfflineManifestShop = OfflineManifestPayload["shop"] & {
+  /** Presentation preference only; underlying buddy assignments remain intact. */
+  buddyTeamsEnabled?: boolean;
+};
+
 export function serializeManifests(
   manifests: readonly TripManifest[],
-  shop: OfflineManifestPayload["shop"],
+  shop: OfflineManifestShop,
   /**
    * The crew's sentence for a blocker on a diver's (already withheld) row:
    * `crewBlockerText` in `src/i18n/identity-check-labels.ts` for a caller with
@@ -1283,13 +1290,15 @@ export function serializeManifests(
    */
   resolveJuniorAdvisory?: (advisory: DepthAdvisory) => string,
 ): OfflineManifestPayload {
+  const { buddyTeamsEnabled, ...savedShop } = shop;
+  const includeBuddyTeams = buddyTeamsEnabled !== false;
   return {
     readinessPolicyVersion: 1,
     rollCallMeetingDay:
       manifests[0]?.divers[0]?.rollCallContext?.meetingDay ??
       manifests[0]?.crew[0]?.rollCallContext?.meetingDay ??
       0,
-    shop,
+    shop: savedShop,
     ...(resolveJuniorAdvisory ? { juniorAdvisoriesChecked: true as const } : {}),
     ...(boatSafety ? { boatSafety } : {}),
     ...(snags && snags.items.length > 0 ? { snags } : {}),
@@ -1322,11 +1331,17 @@ export function serializeManifests(
         roles: member.roles,
         // Names only, and de-duplicated: a teammate who shares two of this
         // person's groups is still one body to look for.
-        buddyTeamNames: [
-          ...new Set(
-            (member.buddyTeams ?? []).flatMap((team) => team.others.map((other) => other.fullName)),
-          ),
-        ],
+        ...(includeBuddyTeams
+          ? {
+              buddyTeamNames: [
+                ...new Set(
+                  (member.buddyTeams ?? []).flatMap((team) =>
+                    team.others.map((other) => other.fullName),
+                  ),
+                ),
+              ],
+            }
+          : {}),
         // Absent when there is none, so a snapshot of an ordinary departure
         // serializes to exactly what it did before.
         ...(member.clashes && member.clashes.length > 0
@@ -1390,7 +1405,9 @@ export function serializeManifests(
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
         // snapshot.
-        buddyTeamNames: (diver.buddyTeam?.others ?? []).map((other) => other.fullName),
+        ...(includeBuddyTeams
+          ? { buddyTeamNames: (diver.buddyTeam?.others ?? []).map((other) => other.fullName) }
+          : {}),
         // Not needed for dock-side roll call; minimize retained private data.
         email: null as null,
         readiness: {
@@ -1548,7 +1565,9 @@ export function canRecordOfflineStatus(
   bookingId: string,
   status: OfflineRollCallEvent["status"],
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
+  physicalPresenceOnly = false,
 ): boolean {
+  if (physicalPresenceOnly && (status !== "boarded" || checkpoint !== "departure")) return false;
   // "Is this booking on this dock copy at all?" is asked across every manifest,
   // and it is asked first. A booking id nothing here has heard of is refused
   // outright: there is no name behind it, so the event would queue a claim
@@ -1585,6 +1604,7 @@ export function canRecordOfflineStatus(
     .find((manifest) => manifest.checkpoint === checkpoint)
     ?.divers.find((entry) => entry.bookingId === bookingId);
   if (!diver) return false;
+  if (physicalPresenceOnly) return !diver.notHere && !diver.turnedAway;
   if (checkpoint !== "departure") return true;
   return diver.readiness.status === "ready" && !offlineTrainingReadinessStale(snapshot, diver);
 }

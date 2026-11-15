@@ -6,6 +6,7 @@ import {
   HELD_SEND_TIMEOUT_MS,
   manifestRow,
   openBookingActions,
+  openDeckDetails,
   openRosterDetails,
   openTripFromBoard,
   openTripTab,
@@ -32,6 +33,7 @@ test("a captain adds a rider at the dock, who counts at once and only once", asy
   await openTripFromBoard(page, REEF);
   await openTripTab(page, "Manifest");
 
+  await openDeckDetails(page);
   await page.locator("#dock-rider summary").click();
   const form = page.getByTestId("dock-rider-form");
   await form.getByLabel("Name").fill("Sam Rider");
@@ -49,9 +51,10 @@ test("a captain adds a rider at the dock, who counts at once and only once", asy
   // A seat's release has no link of its own to hand over: it lives on the
   // rider's thread (ADR 20261105-waiver-folds-into-the-thread).
   await expect(form.getByRole("link", { name: "open the release on this phone" })).toHaveCount(0);
-  await expect(manifestRow(page, "Sam Rider")).toBeVisible();
+  await expect(await manifestRow(page, "Sam Rider")).toBeVisible();
 
   // The same name again is a second tap, not a second rider.
+  await openDeckDetails(page);
   const again = page.getByTestId("dock-rider-form");
   await again.getByLabel("Name").fill("sam rider");
   await again.getByLabel("Emergency contact", { exact: true }).fill("Jo Rider");
@@ -88,6 +91,7 @@ test("the crew records something left aboard and the shop hands it back", async 
   // The demo's dawn boat has already sailed, so its Boat tab carries "Left aboard".
   const tripId = await seededTripId(page, "blue-mantis", SAILED);
   await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
+  await openDeckDetails(page);
   const form = page.getByTestId("lost-item-form");
   await form.getByLabel("What was found").fill("Blue mask, seat 4");
   const seat = form.getByLabel("Whose seat");

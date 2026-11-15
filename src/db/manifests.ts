@@ -26,6 +26,7 @@ import {
   standingResultMeansSailed,
   type TripManifest,
 } from "@/lib/manifests";
+import { seatIsHeld } from "@/lib/no-show";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventInstant } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
@@ -70,6 +71,7 @@ import { queryAll } from "./query-helpers";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
 import {
+  causalMeetingDay,
   causalRetractionTarget,
   manifestRollCallReads,
   prepareCausalRollCall,
@@ -1822,14 +1824,16 @@ async function pauseRecapOnMissingAfterDive(
 }
 
 /**
- * Roll call is append-only operational history. At departure, a boarded event
- * has an additional hard gate: the shared readiness service must prove the diver
- * ready at the moment staff board them. After-dive checkpoints are a physical
+ * Roll call is append-only operational history. Ordinary departure boarding
+ * requires the shared readiness service to prove the diver ready. A deliberate
+ * physical-only observation on a held seat keeps the current blockers instead
+ * of granting eligibility. After-dive checkpoints are a physical
  * head count of who is on the boat — a diver whose paperwork lapsed after the
  * boat left is still aboard and must be recordable as present.
  *
  * A boarded event on a seat the counter released takes that release back
- * (`reclaimReleasedSeat`). The rail never refuses; it overrules.
+ * (`reclaimReleasedSeat`). The physical-only exception cannot take this path:
+ * released seats use their separate durable boarding-observation workflow.
  */
 /**
  * **Roll call never refuses a boat that is already counting heads**
@@ -1947,6 +1951,7 @@ async function storedRollCallEvent(
       meetingDay: captured?.meetingDay,
       retractsEventId: captured?.retractsEventId,
       retractsClientEventId: captured?.retractsClientEventId,
+      physicalPresenceOnly: captured?.physicalPresenceOnly,
     }),
   };
 }
@@ -1969,6 +1974,8 @@ export async function recordRollCall(
     bookingId: string;
     recordedByPersonId: string;
     status: RollCallEventStatus;
+    /** A named physical observation on an active seat; never grants eligibility. */
+    physicalPresenceOnly?: boolean;
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;
@@ -2125,7 +2132,25 @@ async function writeRollCall(
     .limit(1)
     .for("update", { of: bookings });
   if (!booking) return refuse("booking_unavailable");
+  // Released seats have their own durable boarding-observation workflow. This
+  // exception must not reclaim one or change any commercial/desk state.
+  if (
+    input.physicalPresenceOnly &&
+    (input.status !== "boarded" ||
+      checkpoint !== "departure" ||
+      !seatIsHeld(booking.status) ||
+      isTurnedAwaySeat(booking))
+  ) {
+    return refuse("booking_unavailable");
+  }
   if (!isRollCallCheckpoint(checkpoint, booking.plannedDives)) {
+    return refuse("invalid_checkpoint");
+  }
+  if (
+    input.meetingDay !== undefined &&
+    (input.meetingDay < 0 ||
+      (await causalMeetingDay(tx, input.tripId, input.meetingDay)) !== input.meetingDay)
+  ) {
     return refuse("invalid_checkpoint");
   }
 
@@ -2163,8 +2188,9 @@ async function writeRollCall(
     if (!retractsEventId) return refuse(RETRACTION_SUPERSEDED);
   }
 
-  // Readiness gates boarding at departure only. An after-dive checkpoint is a
-  // head count of bodies on the boat: a diver whose card was pulled or payment
+  // Readiness gates ordinary boarding at departure. An explicit physical-only
+  // observation keeps the current blockers and grants no eligibility. An
+  // after-dive checkpoint counts bodies: a diver whose card was pulled or payment
   // reversed mid-trip is still aboard, and refusing to record them present
   // would corrupt the one number that says nobody was left in the water.
   //
@@ -2176,7 +2202,9 @@ async function writeRollCall(
   if (input.status === "boarded") {
     if (checkpoint === "departure") {
       const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
-      if (readiness?.status !== "ready") return refuse("not_ready");
+      if (!readiness || (readiness.status !== "ready" && !input.physicalPresenceOnly)) {
+        return refuse("not_ready");
+      }
       readinessSnapshot = readinessSnapshotOf(readiness);
       // A seat the desk turned away and then sold is not the crew's to take
       // back at the gangway: "Boat full. See the desk." (dde-3 #6). Counted
@@ -2232,7 +2260,12 @@ async function writeRollCall(
       source,
       clientEventId: input.clientEventId ?? null,
       statementStatus: input.status,
-      captureContext: rawRollCallCapture(input),
+      captureContext: {
+        ...rawRollCallCapture(input),
+        // Personal blocker reasons live only in readinessBlockers, whose
+        // erasure sweep removes them. Capture context keeps retry intent.
+        ...(input.physicalPresenceOnly ? { physicalPresenceOnly: true } : {}),
+      },
       observedEvidenceIds: input.observedEvidenceIds ?? null,
       reconcilesEvidence: input.reconcilesEvidence ?? false,
       retractsEventId: retractsEventId ?? null,
@@ -2538,6 +2571,13 @@ export async function recordCrewRollCall(
         }
         if (!trip) return refuse("trip_unavailable");
         if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
+          return refuse("invalid_checkpoint");
+        }
+        if (
+          input.meetingDay !== undefined &&
+          (input.meetingDay < 0 ||
+            (await causalMeetingDay(tx, input.tripId, input.meetingDay)) !== input.meetingDay)
+        ) {
           return refuse("invalid_checkpoint");
         }
 

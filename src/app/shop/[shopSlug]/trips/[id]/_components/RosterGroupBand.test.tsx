@@ -18,16 +18,16 @@ describe("the roster's row geometry", () => {
   it("opens the add-diver group with the same rule as every other group", () => {
     const { container } = renderRoster({
       ...fixtures,
+      selectedBookingId: null,
       addDiverGroup: <p>Find a returning diver</p>,
     });
 
     const addDiver = container.querySelector("#add-diver");
-    const ready = screen.getByRole("heading", { name: "Ready · 1" }).parentElement;
-    // Siblings in the card, each drawing the rule between groups.
-    expect(addDiver?.parentElement).toBe(ready?.parentElement);
-    for (const group of [addDiver, ready]) {
-      expect(group).toHaveClass("border-t", "first:border-t-0");
-    }
+    const guestIndex = container.querySelector("[data-guest-open]")?.closest("ul");
+    // Recruitment follows the searchable guest index in the overview.
+    expect(guestIndex).not.toBeNull();
+    expect(addDiver?.parentElement).toBe(guestIndex?.parentElement);
+    expect(addDiver).toHaveClass("border-t", "first:border-t-0");
     // The band inside the add-diver box draws none of its own.
     const band = within(addDiver as HTMLElement).getByRole("heading", {
       name: "Add a booking",

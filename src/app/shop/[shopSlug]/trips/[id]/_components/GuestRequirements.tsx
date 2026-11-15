@@ -1,0 +1,121 @@
+import type { ReactNode } from "react";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+import { BLOCKER_CATEGORY } from "@/lib/readiness";
+import type { RowReasonLines } from "./roster-row-reasons";
+import type { RosterSeat } from "./roster-seat";
+
+/** Requirement families share a remedy; every underlying blocker stays visible. */
+export function GuestRequirements({
+  lines,
+  blockers,
+  payment,
+  contact,
+  t,
+}: {
+  lines: RowReasonLines["reasonLines"];
+  blockers: RosterSeat["blockerTexts"];
+  payment: ReactNode;
+  contact: ReactNode;
+  t: StaffTranslator;
+}) {
+  const titles = {
+    waiver: t("trips.folio.requirementWaiver"),
+    certification: t("trips.folio.requirementCertification"),
+    payment: t("trips.folio.requirementPayment"),
+    medical: t("trips.folio.requirementMedical"),
+    identity: t("trips.folio.requirementIdentity"),
+    setup: t("trips.folio.requirementOther"),
+    contact: t("trips.roster.emergencyContactHeading"),
+  };
+  type Family = keyof typeof titles;
+  const required = new Map<Family, { text: string[]; actions: ReactNode[]; blocking: boolean }>();
+  const preparation: typeof lines = [];
+  for (const line of lines) {
+    const blocker = blockers.find(
+      (item) => item.text === line.key || item.text === line.text,
+    )?.blocker;
+    const family: Family | null = blocker
+      ? blocker.code.startsWith("medical_")
+        ? "medical"
+        : blocker.code.startsWith("identity_")
+          ? "identity"
+          : BLOCKER_CATEGORY[blocker.code]
+      : line.key === "waiver-remedy" || line.key === "waiver"
+        ? "waiver"
+        : line.key === "payment"
+          ? "payment"
+          : line.key === "contact"
+            ? "contact"
+            : line.tone === "danger"
+              ? "setup"
+              : null;
+    if (!family) {
+      preparation.push(line);
+      continue;
+    }
+    const row = required.get(family) ?? { text: [], actions: [], blocking: false };
+    // A readiness payment blocker already states the debt; the desk's amber
+    // "Not paid yet" line is the same fact, not another task.
+    if (!(family === "payment" && line.key === "payment" && row.text.length))
+      row.text.push(line.text);
+    if (line.actions) row.actions.push(line.actions);
+    row.blocking ||= line.tone === "danger";
+    required.set(family, row);
+  }
+  return (
+    <div className="space-y-5">
+      {([true, false] as const).map((blocking) => {
+        const rows = [...required].filter(([, row]) => row.blocking === blocking);
+        if (!rows.length && (blocking || !preparation.length)) return null;
+        return (
+          <section
+            key={String(blocking)}
+            aria-label={t(
+              blocking ? "trips.folio.beforeBoarding" : "trips.roster.informationAndPreparation",
+            )}
+          >
+            <p className={`text-sm font-semibold ${blocking ? "text-danger" : "text-muted"}`}>
+              {t(blocking ? "trips.roster.cannotBoard" : "trips.roster.informationAndPreparation")}
+            </p>
+            <div className="divide-y divide-border">
+              {rows.map(([family, row]) => (
+                <section key={family} className="py-4 first:pt-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-5 gap-y-3">
+                    <div className="min-w-0">
+                      <h3 className={ITEM_TITLE_CLASS}>{titles[family]}</h3>
+                      <div className="mt-1 space-y-1 text-sm text-muted">
+                        {row.text.map((text) => (
+                          <p key={text}>{text}</p>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Only expanded editors span the task; closed disclosures and
+                        button-only server-action forms keep the compact action column. */}
+                    {family !== "payment" && family !== "contact" && row.actions.length ? (
+                      <div className="min-w-0 max-w-36 has-[[data-task-remedy-form],details[open]_form]:col-span-full has-[[data-task-remedy-form],details[open]_form]:max-w-none sm:max-w-44 [&>div]:mt-0 [&_[data-task-remedy-form]]:max-w-none [&_button]:max-w-full [&_a]:max-w-full">
+                        {row.actions}
+                      </div>
+                    ) : null}
+                  </div>
+                  {family === "payment" ? <div className="mt-3">{payment}</div> : null}
+                  {family === "contact" ? <div className="mt-2">{contact}</div> : null}
+                </section>
+              ))}
+            </div>
+            {!blocking && preparation.length ? (
+              <div className="mt-2 space-y-3 text-sm">
+                {preparation.map((line) => (
+                  <div key={line.key}>
+                    <p>{line.text}</p>
+                    {line.actions}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
+    </div>
+  );
+}

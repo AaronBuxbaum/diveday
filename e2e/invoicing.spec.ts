@@ -1,7 +1,7 @@
 import type { Page, Request as PlaywrightRequest } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { counterPath, openBookingActions, seededTripId } from "./helpers";
+import { counterPath, openBookingActions, rosterRow, seededTripId } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 /**
@@ -110,7 +110,7 @@ async function firstSeededOrderPath(page: Page) {
 /** The first seat on a seeded departure's roster, opened to its foot row. */
 async function openFirstSeat(page: Page) {
   await page.goto(counterPath("blue-mantis", await seededTripId(page, "blue-mantis", ROSTER_TRIP)));
-  const row = page.locator('#roster li[id^="booking-"]').first();
+  const row = await rosterRow(page, "Tom Okafor");
   await openBookingActions(row);
   return row;
 }
@@ -335,10 +335,9 @@ test.describe("as owner", () => {
   }) => {
     await seedFacts(request, ["stripeAccount"]);
     await openFirstSeat(page);
-    const seats = page.locator('#roster li[id^="booking-"]').filter({ visible: true });
     const urls: string[] = [];
-    for (let index = 0; index < 2; index++) {
-      const seat = seats.nth(index);
+    for (const guest of ["Tom Okafor", "Lena Fischer"]) {
+      const seat = await rosterRow(page, guest);
       await openBookingActions(seat);
       const href = await seat
         .getByRole("link", { name: "Create order", exact: true })
@@ -348,6 +347,8 @@ test.describe("as owner", () => {
     }
     const targetA = new URL(urls[0], "https://example.test");
     const targetB = new URL(urls[1], "https://example.test");
+    expect(targetB.searchParams.get("bookingId")).not.toBe(targetA.searchParams.get("bookingId"));
+    expect(targetB.searchParams.get("personId")).not.toBe(targetA.searchParams.get("personId"));
     await page.goto(urls[0]);
     await page
       .locator('input[name="description-0"]')

@@ -9,6 +9,7 @@ import {
   openTripAbout,
   openTripAboutRow,
   openTripTab,
+  rosterRow,
   seededTripId,
 } from "./helpers";
 
@@ -366,7 +367,7 @@ test.describe("as owner", () => {
     // The seated notice, not the URL: `FlashParams` strips `notice` on mount
     // (by `replaceState`, so the server-rendered banner itself stays).
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");
-    await expect(page.locator("#roster").getByText("Kwame Asante").first()).toBeVisible();
+    await expect(await rosterRow(page, "Kwame Asante")).toBeVisible();
 
     // The site's gate is still stated — on the one surface where staff cannot
     // edit it, it used to be invisible entirely — and it says out loud that it

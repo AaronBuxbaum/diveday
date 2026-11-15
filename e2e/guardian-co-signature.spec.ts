@@ -1,5 +1,6 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   choosePartySize,
@@ -12,6 +13,7 @@ import {
   openPaperWaiverForm,
   openRosterDetails,
   openThreadStep,
+  rosterRow,
   signOut,
   waiverLinkFromToast,
 } from "./helpers";
@@ -183,11 +185,13 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   // are open — which puts her row on screen in one render and keeps it there.
   // The paper form is the roster row's own, behind the row's disclosure.
   await page.goto(counterPath(SHOP, blockedMinor.tripId));
-  const row = page
-    .locator('#roster li[id^="booking-"]')
-    .filter({ visible: true })
-    .filter({ has: page.getByRole("link", { name: "Lena Fischer", exact: true }) });
-  await expect(row.getByText("Blocked", { exact: true })).toBeVisible();
+  const row = await rosterRow(page, "Lena Fischer");
+  await expect(
+    row.getByRole("region", {
+      name: staffTranslator("en-US")("trips.folio.beforeBoarding"),
+      exact: true,
+    }),
+  ).toBeVisible();
 
   const fillPaperForm = async () => {
     await row

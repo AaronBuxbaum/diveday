@@ -133,22 +133,77 @@ function referralControls(
   };
 }
 
-export function rowOutstanding(seat: RowOutstandingInput) {
+function paymentRemedyFor(seat: RowOutstandingInput, folio: boolean) {
+  const {
+    requiresPayment,
+    booking,
+    paymentStatus,
+    markPaymentAction,
+    mayWriteOffPayment,
+    paymentSource,
+    paymentMark,
+    packageNote,
+    refundEligible,
+    cancellationDeadline,
+    t,
+    locale,
+    shopTimezone,
+    paymentStatusCopy,
+    partyPay,
+    previewPartyPaymentAction,
+    markPartyPaidAction,
+  } = seat;
+  return requiresPayment ? (
+    <div className="mt-3">
+      <PaymentStatusControl
+        bookingId={booking.id}
+        summarizeStatus={!folio}
+        status={paymentStatus ?? "unpaid"}
+        action={markPaymentAction}
+        allowedStatuses={
+          mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
+        }
+        sourceNote={paymentSource}
+        mark={paymentMark}
+        packageNote={packageNote}
+        refundNote={
+          refundEligible && cancellationDeadline
+            ? t("trips.roster.refundEligibleUntil", {
+                date: formatDateTimeTz(cancellationDeadline, locale, shopTimezone),
+              })
+            : null
+        }
+        copy={paymentStatusCopy}
+      />
+      {partyPay ? (
+        <PartyPaymentSection
+          bookingId={booking.id}
+          party={partyPay}
+          previewAction={previewPartyPaymentAction}
+          confirmAction={markPartyPaidAction}
+          copy={paymentStatusCopy}
+          t={t}
+        />
+      ) : null}
+    </div>
+  ) : null;
+}
+
+export function rowOutstanding(
+  seat: RowOutstandingInput,
+  { folio = false }: { folio?: boolean } = {},
+) {
   const {
     booking,
     person,
     t,
     arrival,
     WAIVER_CONTROLS,
-    paymentStatusCopy,
-    refundEligible,
     shopSlug,
     shopTimezone,
     locale,
     tripId,
     requiresPayment,
-    cancellationDeadline,
-    mayWriteOffPayment,
     certifyDefaultLevel,
     courseHasMaterials,
     readinessByBooking,
@@ -156,10 +211,6 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     elearningQueryByBooking,
     elearningChecksOff,
     markRosterWaiverInPersonAction,
-    markPaymentAction,
-    previewPartyPaymentAction,
-    markPartyPaidAction,
-    partyPay,
     partyLeadId,
     record,
     certifyDiverAction,
@@ -173,9 +224,6 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     actions,
     trainingMarks,
     materialsDone,
-    paymentStatus,
-    paymentSource,
-    paymentMark,
     waiverStatus,
     waiverControl,
     identityUnconfirmed,
@@ -184,7 +232,6 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     blockerTexts,
     namesakeRefused,
     identityContact,
-    packageNote,
     deskPrivateLines,
     textable,
   } = seat;
@@ -293,22 +340,10 @@ export function rowOutstanding(seat: RowOutstandingInput) {
       t={t}
     />
   );
-  const outstanding = (
+  const paymentRemedy = paymentRemedyFor(seat, folio);
+  const referenceFacts = (
     <>
       {arrival ? identityContact : null}
-      {deskPrivateLines.length > 0 ? (
-        <ul className="mt-2 grid gap-1 text-sm">
-          {deskPrivateLines.map(({ key, text }) => (
-            <li key={key} className="flex items-baseline gap-2 text-warning-strong">
-              <StatusMarkColumn variant="warning" />
-              <span>{text}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {arrival && booking.reEntryAsk ? (
-        <p className={`mt-3 ${INSET_NOTE_CLASS}`}>{t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}</p>
-      ) : null}
       {flaggedPrompts.length > 0 ? (
         <div className="mt-3 text-sm">
           <GroupLabel as="p">{WAIVER_CONTROLS[waiverStatus].label}</GroupLabel>
@@ -318,6 +353,24 @@ export function rowOutstanding(seat: RowOutstandingInput) {
             ))}
           </ul>
         </div>
+      ) : null}
+    </>
+  );
+  const outstanding = (
+    <>
+      {!folio ? referenceFacts : null}
+      {!folio && deskPrivateLines.length > 0 ? (
+        <ul className="mt-2 grid gap-1 text-sm">
+          {deskPrivateLines.map(({ key, text }) => (
+            <li key={key} className="flex items-baseline gap-2 text-warning-strong">
+              <StatusMarkColumn variant="warning" />
+              <span>{text}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {!folio && arrival && booking.reEntryAsk ? (
+        <p className={`mt-3 ${INSET_NOTE_CLASS}`}>{t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}</p>
       ) : null}
       {blockerTexts.length > 0 ? (
         <>
@@ -428,39 +481,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
           status happens to be, so the control a staffer just used to mark a
           seat Paid cannot vanish into a collapsed panel at the instant it
           lands. */}
-      {requiresPayment ? (
-        <div className="mt-3">
-          <PaymentStatusControl
-            bookingId={booking.id}
-            status={paymentStatus ?? "unpaid"}
-            action={markPaymentAction}
-            allowedStatuses={
-              mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
-            }
-            sourceNote={paymentSource}
-            mark={paymentMark}
-            packageNote={packageNote}
-            refundNote={
-              refundEligible && cancellationDeadline
-                ? t("trips.roster.refundEligibleUntil", {
-                    date: formatDateTimeTz(cancellationDeadline, locale, shopTimezone),
-                  })
-                : null
-            }
-            copy={paymentStatusCopy}
-          />
-          {partyPay ? (
-            <PartyPaymentSection
-              bookingId={booking.id}
-              party={partyPay}
-              previewAction={previewPartyPaymentAction}
-              confirmAction={markPartyPaidAction}
-              copy={paymentStatusCopy}
-              t={t}
-            />
-          ) : null}
-        </div>
-      ) : null}
+      {!folio ? paymentRemedy : null}
     </>
   );
 
@@ -484,6 +505,8 @@ export function rowOutstanding(seat: RowOutstandingInput) {
    */
   return {
     outstanding,
+    referenceFacts,
+    paymentRemedy,
     hasWork,
     waiverRemedy,
     certificationRemedy,

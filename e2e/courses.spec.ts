@@ -14,6 +14,7 @@ import {
   openTripAbout,
   openTripTab,
   publicTripUrl,
+  rosterRow,
 } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
@@ -1474,12 +1475,15 @@ test("a course's learning materials reach the student's thread, and staff tick t
   const trip = await findTripOnBoard(page, slug, /Open Water Diver — three-day course/);
   await trip.click();
   await openTripTab(page, "Trip");
-  const row = page.locator('#roster li[id^="booking-"]').filter({ hasText: diver });
-  await expect(row.getByText("Materials not done")).toBeVisible();
+  const row = await rosterRow(page, diver);
   await openRosterDetails(row);
+  await expect(row.getByRole("button", { name: "Mark materials done", exact: true })).toBeVisible();
   await row.getByRole("button", { name: "Mark materials done" }).click();
   await expect(page.getByText("Learning materials updated")).toBeVisible();
-  await expect(row.getByText("Materials not done")).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Mark materials done", exact: true })).toHaveCount(
+    0,
+  );
+  await expect(row.getByText(/^Materials done ·/)).toBeVisible();
 
   await diverPage.reload();
   await expect(diverPage.getByText("The shop has these marked done")).toBeVisible();

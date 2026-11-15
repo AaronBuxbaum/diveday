@@ -1259,7 +1259,12 @@
   It is not part of the **radio identity**: a boat with only a channel still prints the shop's
   vessel line.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
-  not boarded, or cleared, including the time and who recorded it. **After a dive it may carry a
+  not boarded, or cleared, including the time and who recorded it. Each action names exactly one
+  person; selecting, skipping or advancing in Deck never creates evidence. Deck keeps the named
+  receipt visible until a separate Next action. `occurredAt` is the observation time, chosen by
+  staff or captured when they record; `createdAt` is when the server stores it. Observation time
+  cannot be in the future; staff select the checkpoint and meeting day independently. Neither timestamp replaces
+  the causal evidence used to reconcile records. **After a dive it may carry a
   short note** (up to `ROLL_CALL_NOTE_MAX`, 300 characters) when the mark raises a "not back
   aboard" or unsays one that stands, so the shop can record *what happened* to a diver who did not
   come back, not only *that* they did not; an ordinary "came back" tap and every mark at the dock
@@ -1295,9 +1300,12 @@
   only at the dock, because readiness gates boarding there and nowhere else — after a dive roll call
   is a physical head count, and a blocked diver counts back aboard like anyone else. One who was
   never counted aboard earlier is boarding at that count (they joined at a later site), so their
-  row shows the dock's readiness capsule and blockers — but keeps its tap. A held row
-  carries no tap at all: the act that clears it is ashore, on the Trip tab, and offering a tap the
-  server would refuse is a control that lies. It is not a state anything is stored as — the row is
+  row shows the dock's readiness capsule and blockers — but keeps its tap. Ordinary departure
+  boarding of a held person remains refused. Deck can separately record an explicit physical
+  observation that this named person is already aboard: only for an active held seat, with capacity
+  checks, the exception intent and blocker codes preserved. This does not clear readiness, change
+  eligibility or check them in. Released seats use the separate durable boarding-sighting workflow.
+  It is not a state anything is stored as — the row is
   simply *awaiting* with a readiness blocker (see **Readiness**), drawn so a captain can tell at a
   glance which empty circles are theirs to close.
 - **Touch guard** — the roll call's refusal of a press made with more than one finger on the glass
@@ -1328,7 +1336,9 @@
   open because they did not come back read complete. Employment ends; who was on the boat does not.
 - **Buddy team** — two or more people staff group together on one departure, so roll call can say
   the thing a deck actually watches for: **someone is back aboard and someone on their team is
-  not**. A member is either a *booking* (a roster entry of that trip) or a *crew person* — the
+  not**. Planning lives in The day behind the shop's default-on `buddyTeamsEnabled` feature switch;
+  disabling it removes planning controls while preserving history. Teams do not organize Deck's
+  individual recording flow. A member is either a *booking* (a roster entry of that trip) or a *crew person* — the
   divemaster leading the group holds no booking, and before crew could be members a diver
   deliberately placed with a DM printed on the departure log identically to a diver nobody
   paired. Membership is a decision about this boat, never a standing relationship. Stored as

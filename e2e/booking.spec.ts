@@ -165,7 +165,7 @@ test.describe("staff", () => {
     // Removing a booking confirms first — it can fire an automatic refund that
     // undo can't claw back, so a misclick shouldn't be one tap from done.
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
-    const noraRow = rosterRow(page, "Nora Quinn").filter({ visible: true });
+    const noraRow = (await rosterRow(page, "Nora Quinn")).filter({ visible: true });
     await openRosterDetails(noraRow);
     await openBookingActions(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
@@ -344,7 +344,7 @@ test.describe("staff counts and intent", () => {
     await openTripFromBoard(page, title);
     await page
       .getByRole("navigation", { name: "Departure" })
-      .getByRole("link", { name: "Boat" })
+      .getByRole("link", { name: "The day" })
       .click();
     await page.getByRole("heading", { name: "Buddy teams" }).click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
@@ -398,8 +398,9 @@ test.describe("staff counts and intent", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    await expect(page.getByText("Ruth Okafor").first()).toBeVisible();
-    await expect(page.getByText("Asked for a word with the divemaster.")).toHaveCount(1);
+    const ruth = await rosterRow(page, "Ruth Okafor");
+    await expect(ruth).toBeVisible();
+    await expect(ruth.getByText("Asked for a word with the divemaster.")).toHaveCount(1);
   });
 
   test("a departure inside the day asks the question and offers nothing", async ({ page }) => {
@@ -551,10 +552,10 @@ test.describe("as owner", () => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, tripB);
-    const row = rosterRow(page, "Ben Quinn").filter({ visible: true }).first();
+    const row = (await rosterRow(page, "Ben Quinn")).filter({ visible: true }).first();
     await expect(row).toBeVisible();
     await expect(row.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
-    await expect(rosterRow(page, "Nora Quinn").filter({ visible: true })).toHaveCount(0);
+    await expect((await rosterRow(page, "Nora Quinn")).filter({ visible: true })).toHaveCount(0);
   });
 });
 

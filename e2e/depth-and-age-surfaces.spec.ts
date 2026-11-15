@@ -3,10 +3,13 @@ import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
 import {
+  manifestRow,
+  openDeckPerson,
   openSettingsRow,
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
+  rosterRow,
   tripPathByTitle,
 } from "./helpers";
 
@@ -54,6 +57,7 @@ test.describe("staff", () => {
     // (src/db/seed.ts), so the roster carries the manifest's "Minor · age N"
     // badge, the capsule being the word alone. An adult's age waits in the
     // row's reference panel; the minor's is the one the crew acts on (H-20260730-minimum-age-gate-data).
+    await rosterRow(page, "Lena Fischer");
     const minorBadge = page.getByText(/^Minor · age \d+$/).first();
     await expect(minorBadge).toBeVisible();
 
@@ -72,7 +76,8 @@ test.describe("staff", () => {
 
     // The seeded minor's birthday is two days out: the callout lives once, as
     // the capsule on the celebrating diver's row (`birthdayCalloutText`).
-    await expect(page.getByText("Birthday in 2 days").first()).toBeVisible();
+    const row = await rosterRow(page, "Lena Fischer");
+    await expect(row.getByText("Birthday in 2 days")).toBeVisible();
   });
 
   test("the manifest carries age and the minor flag to the crew's boarding list", async ({
@@ -81,8 +86,9 @@ test.describe("staff", () => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}/manifest`);
 
-    // A captain reading the boarding list can see it without opening a profile.
-    await expect(page.getByText(/Minor · age \d+/).first()).toBeVisible();
+    // The selected person's boarding reference carries the same fact, without leaving Deck.
+    const row = await manifestRow(page, "Lena Fischer");
+    await expect(row.getByText(/Minor · age \d+/)).toBeVisible();
   });
 
   test("a site deeper than a diver's card warns staff but never refuses the booking", async ({
@@ -106,13 +112,18 @@ test.describe("staff", () => {
       .first();
     await expect(warning).toBeVisible();
     await expect(warning).toContainText(staff("trips.roster.depthVerificationCard"));
-    const juneCard = page.locator("#roster li").filter({ hasText: "June Park" }).first();
-    await expect(juneCard.getByText("Depth advisory")).toBeVisible();
+    const juneCard = await rosterRow(page, "June Park");
+    await expect(
+      juneCard.getByText(
+        staff("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }),
+        { exact: false },
+      ),
+    ).toBeVisible();
     await expect(juneCard.getByText(/deeper than the/)).toHaveCount(0);
     // Lena is 13, so her age-based band differs from the adults'. Her row
     // carries the same explicit card-status check, plus the age/limit check,
     // rather than flattening her evidence into the boat-wide line.
-    const lenaCard = page.locator("#roster li").filter({ hasText: "Lena Fischer" }).first();
+    const lenaCard = await rosterRow(page, "Lena Fischer");
     const lenaWarning = lenaCard.getByText(
       staff("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }),
       { exact: false },
@@ -124,20 +135,29 @@ test.describe("staff", () => {
     // And no diver on this boat is *refused*: an advisory warns, a blocker
     // blocks. June's shared advisory files her under "Still to clear" as open
     // work, so the assertion is the absence of the refusal word on her row.
-    await expect(juneCard.getByText("Blocked")).toHaveCount(0);
-    await expect(lenaCard.getByText("Blocked")).toHaveCount(0);
+    for (const name of ["June Park", "Lena Fischer"]) {
+      await expect(
+        (await rosterRow(page, name)).getByRole("region", {
+          name: staff("trips.folio.beforeBoarding"),
+          exact: true,
+        }),
+      ).toHaveCount(0);
+    }
 
     // On the manifest the same fact is the boarding control being offered at
     // all: a blocked seat gets no "Mark boarded" at departure, and the readiness
     // chip there is now reserved for the exception (only a *blocked* diver
     // wears one), so its absence is the assertion.
     await page.goto(`${tripPath}/manifest`);
-    await expect(
-      page.locator("#roll-call-list").getByRole("button", { name: "Mark boarded" }).first(),
-    ).toBeVisible();
-    await expect(page.locator("#roll-call-list").getByText("Ready", { exact: true })).toHaveCount(
-      0,
-    );
+    for (const name of ["June Park", "Lena Fischer"]) {
+      await openDeckPerson(page, name);
+      await expect(
+        page.getByRole("button", { name: staff("manifest.deck.record", { name }), exact: true }),
+      ).toBeEnabled();
+      await expect(
+        page.locator("[data-deck-screen]").getByText("Blocked", { exact: true }),
+      ).toHaveCount(0);
+    }
   });
 
   test("depth is entered and read back in the shop's own unit", async ({ page }) => {

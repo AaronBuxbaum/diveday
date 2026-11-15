@@ -217,6 +217,7 @@
       "valueListed": "Listed",
       "valueHidden": "Hidden",
       "detail": "Being listed also puts your shop on DiveDay’s page for your town. Untick this and anything already indexed can take a few weeks to disappear, and a page someone has linked to stays reachable by that link.",
+      "demoDetail": "Demo shops are hidden from search engines. Their pages are still available by direct link.",
       "label": "List my public pages in search engines",
       "submit": "Save"
     },
@@ -566,6 +567,11 @@
         "heading": "Public crew introductions",
         "label": "Show public crew introductions",
         "description": "Show introductions written and shared by each staff member."
+      },
+      "buddyTeams": {
+        "heading": "Buddy planning",
+        "label": "Plan buddy teams for each trip",
+        "description": "Keep optional buddy planning in The day"
       }
     },
     "crewSchedule": {

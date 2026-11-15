@@ -58,7 +58,7 @@ export function OfflineDiverRollCall({
  * One diver's roll-call row: their state at this checkpoint, the circle that
  * boards them, and the panel holding the exception and its sentence.
  */
-function OfflineDiverRow({
+export function OfflineDiverRow({
   diver,
   index,
   view,

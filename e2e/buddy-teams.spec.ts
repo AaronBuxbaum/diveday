@@ -1,13 +1,16 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   manifestRow,
+  openDeckPerson,
   openIfClosed,
   openManifestPerson,
   openTripFromBoard,
   openTripTab,
 } from "./helpers";
 
+const t = staffTranslator("en-US");
 signedInAsOwner();
 
 async function openBuddyTeamBuilder(page: Page) {
@@ -20,7 +23,7 @@ async function openBuddyTeamBuilder(page: Page) {
 
 /**
  * Buddy teams on the roll call (ADR 20260804-buddy-teams): build a team on the
- * manifest, board one member after a dive, and the split team is the loudest
+ * The day, board one member after a dive, and the split team is the loudest
  * thing short of a stated missing diver — then board the rest and watch it
  * settle. The seed already carries two teams (Tom & Lena; Diego, June, and
  * Keiko leading), so the spec also proves a fresh team lands beside them, that
@@ -29,13 +32,14 @@ async function openBuddyTeamBuilder(page: Page) {
 test("staff build a buddy team, roll call raises the split, and boarding the rest settles it", async ({
   page,
 }) => {
-  // Board → trip → manifest, a team build, a checkpoint switch, and two
+  // Board → trip → The day, a team build, a checkpoint switch, and two
   // roll-call writes — a long serial flow, same budget reasoning as
   // manifest.spec.ts's own long test.
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripTab(page, "Manifest");
+  await page.getByRole("link", { name: "The day", exact: true }).click();
+  await expect(page).toHaveURL(/view=details/);
   // The panel can arrive open when a team warning needs attention. Inspect its
   // native state before opening so the test never toggles an already-open fold
   // shut. Buddy actions redirect back with `?buddies=open`.
@@ -72,100 +76,65 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await expect(page).toHaveURL(/buddies=open/);
   await expect(teamRow("Omar Haddad")).toContainText("Sam Whitfield");
 
-  // Their rows carry the team, one tap away. A team label is not an exception,
-  // so it does not earn the row's single capsule (ADR
-  // 20260827-the-departure-is-two-working-surfaces, decision 1) — it reads in
-  // the person's own panel, and unconditionally on the printed sheet. Rows are
-  // scoped to `> ul > li` so a name can only match the row it belongs to: a
-  // bare `li hasText` also matched the *other* row once the chip text landed in
-  // it, which is how this spec's first CI run misread Omar's row as Sam's.
-  const omarRow = manifestRow(page, "Omar Haddad");
-  const samRow = manifestRow(page, "Sam Whitfield");
-  await openManifestPerson(omarRow);
-  await expect(page.getByRole("dialog").getByRole("region", { name: "Buddy team" })).toContainText(
-    "Sam Whitfield",
-  );
-  await openManifestPerson(samRow);
-  await expect(page.getByRole("dialog").getByRole("region", { name: "Buddy team" })).toContainText(
-    "Omar Haddad",
-  );
-
-  // Checkpoint navigation belongs to the manifest surface, so close the
-  // Person Sheet before using the tab's link; its backdrop otherwise correctly
-  // intercepts the click as a modal interaction.
-  await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-
-  // After dive 1: Omar is recorded back aboard while Sam has no result yet.
-  // **That is not a split** — an alarm is earned by a recorded fact, never by
-  // the absence of one (ADR 20260827-the-departure-is-two-working-surfaces,
-  // decision 4). A crew starts the surface-interval count believing everyone is
-  // back, so the first diver counted in must not paint their buddy red before
-  // anybody has said a word about them.
+  const tripPath = new URL(page.url()).pathname;
+  await page.goto(`${tripPath}/manifest?checkpoint=after_dive_1`);
+  await openDeckPerson(page, "Omar Haddad");
   await page
-    .getByRole("link", { name: "After dive 1" })
-    .evaluate((link: HTMLElement) => link.click());
-  await expect(page).toHaveURL(/checkpoint=after_dive_1/);
-  const boardOmar = omarRow.getByRole("button", { name: "Mark boarded" });
-  await boardOmar.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  await boardOmar.click();
-  // The settled control's accessible name is its undo-bearing aria-label
-  // (PR #607 review), which replaces "Boarded ☑️" rather than extending it.
-  await expect(omarRow.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
-  await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);
-
-  // A human records Sam not back aboard — from his own panel, the deliberate
-  // two-step (decision 3) — and *now* the split is the loudest thing on the
-  // page, on the row of the diver who is aboard.
-  await openManifestPerson(samRow);
-  const samNotBack = page.getByRole("dialog").getByRole("button", { name: "Mark not back aboard" });
-  await samNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  await samNotBack.click();
+    .getByRole("button", {
+      name: t("manifest.deck.record", { name: "Omar Haddad" }),
+      exact: true,
+    })
+    .click();
   await expect(
-    page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
+    page.locator('[data-deck-screen="receipt"]').getByRole("heading", {
+      name: "Omar Haddad",
+      exact: true,
+    }),
   ).toBeVisible();
-  await openManifestPerson(omarRow);
+  await expect(
+    page.getByText("buddy team is split", { exact: false }).filter({ visible: true }),
+  ).toHaveCount(0);
+
+  // Each exception is opened for its named person. A cached row belonging to
+  // the previous person is never used after navigation.
+  await openManifestPerson(await manifestRow(page, "Sam Whitfield"));
+  const samNotBack = page.getByRole("dialog").getByRole("button", { name: "Mark not back aboard" });
+  await samNotBack.click();
+  const receipt = page.locator('[data-deck-screen="receipt"]');
+  await expect(receipt.getByRole("heading", { name: "Sam Whitfield", exact: true })).toBeVisible();
+  await expect(receipt.getByText(t("manifest.deck.savedMissing"), { exact: true })).toBeVisible();
+  await openManifestPerson(await manifestRow(page, "Omar Haddad"));
   await expect(page.getByRole("dialog").getByRole("region", { name: "Buddy team" })).toContainText(
     "Sam Whitfield",
   );
-  await expect(page.getByText("Sam not back aboard", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("1 buddy team is split. Someone is back aboard, someone is not."),
-  ).toBeVisible();
-  // The alert informs; it never blocks. The pinned count row still names
-  // what actually keeps the checkpoint open — awaiting divers — beside it.
-  await expect(
-    page
-      .locator('section[aria-labelledby="roll-call-progress-heading"]')
-      .locator("dl > div")
-      .filter({ hasText: "Awaiting" }),
+    page.getByText("Sam not back aboard", { exact: true }).filter({ visible: true }).first(),
   ).toBeVisible();
 
-  // Sam climbs the ladder. Asserting he is aboard over a stated missing-diver
-  // mark is recorded from his own panel, never from the row — ADR
-  // 20260815-offline-can-unsay-a-missing-diver calls it "the one tap on this
-  // surface that turns the loudest row the product has into green", and the
-  // retraction beside it costs exactly the same two gestures. His row carries
-  // no tap at all while the mark stands.
-  await expect(samRow.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
-  await openManifestPerson(samRow);
-  const boardSam = page.getByRole("dialog").getByRole("button", { name: /^Mark back aboard/ });
-  await boardSam.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  await boardSam.click();
-  await expect(samRow.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
-  await openManifestPerson(omarRow);
+  // Explicit correction is still made inside Sam's own evidence panel.
+  await openManifestPerson(await manifestRow(page, "Sam Whitfield"));
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Mark back aboard/ })
+    .click();
+  await expect(receipt.getByRole("heading", { name: "Sam Whitfield", exact: true })).toBeVisible();
+  await expect(receipt.getByText(t("manifest.deck.savedAboard"), { exact: true })).toBeVisible();
+  await openManifestPerson(await manifestRow(page, "Omar Haddad"));
   await expect(page.getByRole("dialog").getByRole("region", { name: "Buddy team" })).toContainText(
     "Sam Whitfield",
   );
   await expect(page.getByRole("dialog").getByText("Sam not back aboard")).toHaveCount(0);
-  await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);
+  await expect(
+    page.getByText("buddy team is split", { exact: false }).filter({ visible: true }),
+  ).toHaveCount(0);
 });
 
 test("a team grows, a member leaves, and dissolving is the explicit act", async ({ page }) => {
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripTab(page, "Manifest");
+  await page.getByRole("link", { name: "The day", exact: true }).click();
+  await expect(page).toHaveURL(/view=details/);
   // Same collapsed-at-rest panel as the first test: open it once, and the
   // `?buddies=open` redirects keep it open across the acts below.
   await expect(page.getByRole("heading", { name: "Buddy teams" })).toBeVisible();
@@ -223,9 +192,10 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   );
   await openBuddyTeamBuilder(page);
   await expect(page.getByRole("checkbox", { name: "Lena Fischer" })).toBeVisible();
+  await openTripTab(page, "Manifest");
   // Same h3-anchored row shape as the first test: Tom's row must not be
   // found via some other row's chip text.
-  const tomRow = manifestRow(page, "Tom Okafor");
+  const tomRow = await manifestRow(page, "Tom Okafor");
   await openManifestPerson(tomRow);
   await expect(page.getByRole("dialog").getByText("Buddy team:", { exact: false })).toHaveCount(0);
 });

@@ -50,7 +50,7 @@ export async function submitLowerCard(page: Page, slug: string) {
 
 export async function checkLowerCardRoster(page: Page, slug: string, tripId: string) {
   await page.goto(`/shop/${slug}/trips/${tripId}`);
-  const row = rosterRow(page, AUDIT_DIVER);
+  const row = await rosterRow(page, AUDIT_DIVER);
   await openRosterDetails(row);
   await expect(row.getByText(staffLowerCard())).toBeVisible();
   await expect(row.getByText(staff("shared.readiness.blockers.certificationMissing"))).toHaveCount(

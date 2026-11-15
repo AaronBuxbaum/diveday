@@ -3,15 +3,14 @@
 - **Status:** Accepted
 - **Date:** 2026-10-15
 
+**Amendment, 2026-11-14:** [20261114-trip-folio-and-individual-deck](20261114-trip-folio-and-individual-deck.md) adds an explicit physical-presence exception for an active held seat. Ordinary departure boarding still applies live readiness; the exception records unresolved blocker codes without granting eligibility.
+
 ## Context
 
-A finished departure's record files a diver who was counted aboard while blocked under "Sailed"
-with no trace of the block. Readiness is recomputed live, so a card verified at 09:00 after a 05:30
-boat reads Ready now and "was blocked" cannot be said truthfully afterwards. Two legitimate ways a
-sailed seat was blocked: counted aboard at an after-dive checkpoint without clearing the dock
-(Today raises `blocked_aboard` while the boat is out, issue #2064, then goes quiet once home), and
-readiness lapsing after boarding. The dive-domain review of the record asked for the follow-up
-(issue #2414).
+A finished departure files a diver counted aboard while blocked under "Sailed" without the block.
+Readiness is recomputed live: a card verified after departure hides the earlier state. Someone may
+be counted aboard after a dive without clearing the dock, or readiness may lapse after boarding.
+The record's domain review requested this follow-up (issues #2064, #2414).
 
 ## Decision
 

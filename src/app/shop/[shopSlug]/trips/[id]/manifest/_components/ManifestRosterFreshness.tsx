@@ -40,6 +40,7 @@ export function ManifestRosterFreshness({
   readCompletedLabel,
   requireCommit = false,
   copy,
+  compact = false,
 }: {
   renderToken?: string;
   renderProof?: string;
@@ -51,6 +52,7 @@ export function ManifestRosterFreshness({
   readCompletedLabel: string;
   requireCommit?: boolean;
   copy: { unconfirmed: string; confirmed: string };
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [requestToken, setRequestToken] = useState<string | null>(null);
@@ -290,6 +292,7 @@ export function ManifestRosterFreshness({
     confirmedHistory.generation === sessionInvalidationGeneration()
       ? confirmedHistory.label
       : "";
+  if (compact && confirmed && historicalLabel) return null;
   return (
     <p role="status" className="text-sm font-medium text-muted">
       <span>{confirmed && historicalLabel ? copy.confirmed : copy.unconfirmed}</span>

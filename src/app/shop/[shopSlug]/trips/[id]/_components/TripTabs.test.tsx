@@ -6,7 +6,7 @@ import { TripStageBadge, TripTabs, type TripTabsCopy, tripTabHref } from "./Trip
 
 const copy: TripTabsCopy = {
   tabsLabel: "Departure",
-  tabs: { divers: "Divers", boat: "Boat", gear: "Gear", details: "Details" },
+  tabs: { divers: "Guests", record: "Record", gear: "Equipment", details: "The day" },
   stageLabel: "Stage",
   stages: {
     boarding: "Boarding",
@@ -26,9 +26,17 @@ describe("TripTabs", () => {
     const links = within(nav).getAllByRole("link");
     // No Check-in tab: arrival is a state of the Divers roster (owner,
     // 2026-10-05), so the desk's list is the one list.
-    expect(links.map((link) => link.textContent)).toEqual(["Divers", "Boat", "Gear", "Details"]);
-    expect(within(nav).getByRole("link", { name: "Gear" })).toHaveAttribute("aria-current", "page");
-    expect(within(nav).getByRole("link", { name: "Divers" })).not.toHaveAttribute("aria-current");
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Guests",
+      "Equipment",
+      "The day",
+      "Record",
+    ]);
+    expect(within(nav).getByRole("link", { name: "Equipment" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(nav).getByRole("link", { name: "Guests" })).not.toHaveAttribute("aria-current");
   });
 
   it("says check-in is open under the Divers tab, and nowhere else", () => {
@@ -41,7 +49,7 @@ describe("TripTabs", () => {
     expect(screen.getByText(line)).toBeInTheDocument();
     cleanup();
     render(
-      <TripTabs shopSlug="s" tripId="t" current="boat" copy={{ ...copy, checkInLine: line }} />,
+      <TripTabs shopSlug="s" tripId="t" current="record" copy={{ ...copy, checkInLine: line }} />,
     );
     expect(screen.queryByText(line)).toBeNull();
   });
@@ -80,7 +88,7 @@ describe("TripStageBadge", () => {
 describe("tripTabHref", () => {
   it("points each tab at the surface that does that work", () => {
     expect(tripTabHref("s", "t", "divers")).toBe("/shop/s/trips/t");
-    expect(tripTabHref("s", "t", "boat")).toBe("/shop/s/trips/t/manifest");
+    expect(tripTabHref("s", "t", "record")).toBe("/shop/s/trips/t?view=record");
     expect(tripTabHref("s", "t", "gear")).toBe("/shop/s/trips/t/prep");
     expect(tripTabHref("s", "t", "details")).toBe("/shop/s/trips/t?view=details");
   });

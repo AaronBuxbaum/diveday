@@ -93,6 +93,7 @@ describe("the Features page's save", () => {
   it("covers every switch, each with a gate", () => {
     expect(ALL_ROWS).toEqual([
       "divingOptions",
+      "buddyTeams",
       "hotelPickup",
       "publicConditions",
       "fieldGuide",

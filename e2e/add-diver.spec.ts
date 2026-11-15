@@ -7,7 +7,7 @@ import {
   e2eNow,
   findTripOnBoard,
   HELD_SEND_TIMEOUT_MS,
-  openIfClosed,
+  openRosterNotes,
   openRosterRow,
   openTripActivity,
   openTripFromBoard,
@@ -26,18 +26,11 @@ signedInAsOwner();
 async function openPrivateNotes(page: Page) {
   // Every seat is one line, its notes behind the row's own mark (owner,
   // 2026-10-05): open the row first. The spec seats exactly one diver.
-  await openIfClosed(page.locator('#roster li[id^="booking-"] > details').first());
-  const details = page
-    .locator('#roster li[id^="booking-"] > details details')
-    .filter({ hasText: /Private staff notes|Add a private note/ })
-    .filter({ visible: true });
-  const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
-  // `> summary`, matching `openIfClosed` in helpers.ts: roster cards nest
-  // disclosures inside disclosures, so a descendant summary is both ambiguous
-  // under strict mode and the wrong thing to click. This one stays page-scoped
-  // rather than moving to helpers.ts because the spec seats exactly one diver
-  // and reads the notes box without first locating a row.
-  if (!isOpen) await details.locator("> summary").click();
+  const row = await rosterRow(page, "Walk-in Wanda");
+  await openRosterNotes(row);
+  const details = row.locator("details").filter({
+    has: page.locator(":scope > summary", { hasText: /Private staff notes|Add a private note/ }),
+  });
   // The body animates in, and the frame where `open` flips is not the frame
   // where it is laid out — see `disclosureSettled`. This spec measures a scroll
   // position immediately after opening, so it is the one that noticed.
@@ -85,9 +78,8 @@ async function openNewTripWithWalkIn(page: Page, titlePrefix: string): Promise<s
   await expect(page.getByRole("alert").first()).toContainText(
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
-  await expect(
-    rosterRow(page, "Walk-in Wanda").getByRole("link", { name: "Walk-in Wanda" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Walk-in Wanda", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "All guests", exact: true }).click();
   // The header's capacity pill states a full boat, the same pill on every tab.
   const header = page
     .locator("header")
@@ -233,6 +225,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   );
   const roster = page.locator("#roster");
   await expect(roster.getByText("Priya Sharma").filter({ visible: true })).toBeVisible();
+  await page.getByRole("button", { name: "All guests", exact: true }).click();
 
   // Picking the same diver again is no longer offered — the roster can't
   // double-book them.
@@ -298,7 +291,7 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   // Seated, and blocked on the identity the shop only guessed at — the seat
   // does not inherit her certifications or her waiver on a spelling.
   const roster = page.locator("#roster");
-  await expect(roster.getByRole("link", { name: "Marisol Vega" }).first()).toBeVisible();
+  await expect(roster.getByRole("heading", { name: "Marisol Vega", exact: true })).toBeVisible();
   await expect(roster.getByRole("button", { name: "Same person as Marisol Vega" })).toBeVisible();
 
   // One tap at the roster, the same one the shared-inbox path has always cost.
@@ -403,9 +396,9 @@ test("booking a diver from their record issues their waiver, like every other do
   );
 
   await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-  await expect(page.getByRole("link", { name: "Priya Sharma" }).first()).toBeVisible();
   // The waiver control is one of the row's fixes, behind its fold.
   const priya = await openRosterRow(page, "Priya Sharma");
+  await expect(page.getByRole("heading", { name: "Priya Sharma", exact: true })).toBeVisible();
   await expect(priya.getByText("Waiver sent").first()).toBeVisible();
   // ...and the seating reaches the trip's activity trail, which this door also
   // used to skip.
@@ -473,9 +466,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   // Lands on the trip's Trip surface with the roster's usual success affordance.
   await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
   await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
-  await expect(
-    rosterRow(page, "Phoned In Pat").getByRole("link", { name: "Phoned In Pat" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Phoned In Pat", exact: true })).toBeVisible();
 });
 
 test("a full boat's add band offers the wait list, never a seat", async ({ page }) => {
@@ -507,9 +498,8 @@ test("a full boat's add band offers the wait list, never a seat", async ({ page 
   await stalePick.click();
   await expect(stale.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
   // Seats only: the Divers tab also lists who wants in, where Priya can stand.
-  const seats = stale.locator('#roster li[id^="booking-"]');
-  await expect(seats.filter({ hasText: "First Aboard Fay" })).toHaveCount(1);
-  await expect(seats.filter({ hasText: "Priya Sharma" })).toHaveCount(0);
+  await expect(await rosterRow(stale, "First Aboard Fay")).toHaveCount(1);
+  await expect(await rosterRow(stale, "Priya Sharma")).toHaveCount(0);
   await stale.close();
 
   // The boat is full now. The band has one rule for a full boat (#2737): it
@@ -534,7 +524,7 @@ test("a held seat that is someone else gets its own diver record", async ({ page
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Night Dive — City of Washington");
   await openTripTab(page, "Trip");
-  const row = rosterRow(page, "June Park").filter({ visible: true }).first();
+  const row = (await rosterRow(page, "June Park")).filter({ visible: true }).first();
   await expect(row).toContainText(
     "Booked as Hana Park, then matched to June Park from the name list.",
   );
@@ -562,7 +552,7 @@ test("a held seat that is someone else gets its own diver record", async ({ page
   await expect(page.getByRole("status")).toContainText(
     "Their waiver is ready: send it from their row",
   );
-  const hana = rosterRow(page, "Hana Park").filter({ visible: true }).first();
+  const hana = (await rosterRow(page, "Hana Park")).filter({ visible: true }).first();
   await expect(hana).toBeVisible();
   await expect(hana.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
 });

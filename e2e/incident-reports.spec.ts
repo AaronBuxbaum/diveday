@@ -1,11 +1,11 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, openTripAbout, openTripFromBoard } from "./helpers";
+import { daysFromNow, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
 /**
  * An incident report on a departure (ADR 20261012-incident-reports), end to
- * end: started from the Details tab, written as a draft, a diver named by
+ * end: started from Record, written as a draft, a diver named by
  * their seat, filed once, a dated note added after, and the report found
  * again on the Safety tab beside Reports. Safety-critical record, so the
  * whole path runs in a browser.
@@ -15,7 +15,10 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   test.setTimeout(60_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripAbout(page);
+  await page
+    .getByRole("navigation", { name: "Departure" })
+    .getByRole("link", { name: "Record", exact: true })
+    .click();
 
   const section = page.getByRole("region", { name: "Incident reports" });
   await section.getByRole("button", { name: "Report an incident" }).click();
@@ -101,12 +104,13 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // 20261015-incident-draft-discard-and-hold): it leaves the departure's list,
   // and the log still says it existed, and who deleted it.
   const tripPath = reportPath.replace(/\/incidents\/[0-9a-f-]+$/, "");
-  await page.goto(`${tripPath}?view=details`);
+  await page.goto(`${tripPath}?view=record`);
   await section.getByRole("button", { name: "Report an incident" }).click();
   await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
   await page.getByRole("button", { name: "Delete draft" }).click();
   await page.getByRole("button", { name: "Yes, delete the draft" }).click();
   await page.waitForURL((url) => url.pathname === tripPath);
+  await expect(page.getByRole("heading", { name: "Record", exact: true })).toBeVisible();
   await expect(section.getByText("Draft", { exact: true })).toHaveCount(0);
   await page.goto(`${tripPath}/log`);
   await expect(page.getByText(/^Draft started by .+, deleted unfiled by .+ on /)).toBeVisible();

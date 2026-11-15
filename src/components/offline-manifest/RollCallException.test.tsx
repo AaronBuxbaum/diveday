@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   appendOfflineRollCall,
   loadOfflineManifest,
@@ -82,6 +83,31 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const t = staffTranslator("en-US");
+
+async function selectPerson(name = "Priya Shah") {
+  await screen.findByRole("heading", { name: t("manifest.deck.title") });
+  fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.find") }));
+  fireEvent.click(screen.getByRole("button", { name }));
+}
+
+async function openPersonDetails(name = "Priya Shah") {
+  await selectPerson(name);
+  fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.exception") }));
+}
+
+function openException() {
+  const panel = document.querySelector<HTMLDetailsElement>("details[data-roll-call-exception]");
+  if (!panel) throw new Error("selected person's exception panel missing");
+  if (!panel.open) fireEvent.click(panel.querySelector("summary") as HTMLElement);
+  return panel;
+}
+
+function openDeckDetails() {
+  const summary = screen.getByText(t("manifest.deck.details"), { selector: "summary" });
+  if (!summary.closest("details")?.open) fireEvent.click(summary);
+}
+
 // Task 72 — dive-domain-expert review invariants (persona 10 Sal,
 // docs/product/archive/ux-personas-20260730-findings.md), exercised at the UI
 // level. The pure-function guarantees these depend on are covered directly
@@ -152,7 +178,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(loadOfflineManifest).mockResolvedValue(missingAfterDive());
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
       const row = document.getElementById("offline-roll-call-diver-priya");
       // One status line, not a pill (visual review 2026-10-24, B01); the
       // row's own danger tone stays (`rollCallRowTone`).
@@ -162,15 +188,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       expect(line?.textContent).toMatch(/^Not back aboard/);
     });
 
-    it("never puts an exception within one tap of the list, at any checkpoint", async () => {
-      const AFFIRMATIVE = new Set([
-        "Mark boarded",
-        "Boarded — tap again to undo",
-        "Mark aboard",
-        "Aboard — tap again to undo",
-      ]);
-      const nameOf = (button: HTMLButtonElement) =>
-        button.getAttribute("aria-label") ?? button.textContent ?? "";
+    it("keeps every person's exception behind deliberate navigation at every checkpoint", async () => {
       for (const [checkpoint, saved] of [
         ["departure", richEnvelope("trip-1", { crewCalled: true })],
         ["after_dive_1", richEnvelope("trip-1", { crewCalled: true })],
@@ -181,26 +199,24 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
         vi.mocked(syncOfflineManifest).mockResolvedValue(null);
         render(<OfflineManifestView />);
-        await screen.findByRole("heading", { name: "Two-Tank Reef" });
-
-        const rows = Array.from(
-          document.querySelectorAll<HTMLElement>(
-            "#offline-roll-call > li, #offline-crew-roll-call > li",
-          ),
-        );
-        expect(rows.length, checkpoint).toBeGreaterThan(2);
-        for (const row of rows) {
-          const onTheRow = Array.from(row.querySelectorAll("button")).filter(
-            (button) => !button.closest("details"),
+        await screen.findByRole("heading", { name: t("manifest.deck.title") });
+        // Home and Find offer navigation only, never a destructive observation.
+        expect(screen.queryByRole("button", { name: /Mark not|Confirm .* is aboard/ })).toBeNull();
+        const names = saved.snapshot.manifests[0];
+        for (const person of [...names.divers, ...names.crew]) {
+          await selectPerson(person.fullName);
+          expect(
+            screen.queryByRole("button", { name: /Mark not|Confirm .* is aboard/ }),
+          ).toBeNull();
+          expect(document.querySelector("details[data-roll-call-exception]")).toBeNull();
+          fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.exception") }));
+          const panel = document.querySelector<HTMLDetailsElement>(
+            "details[data-roll-call-exception]",
           );
-          expect(onTheRow.length, row.id).toBeLessThanOrEqual(1);
-          for (const button of onTheRow) expect(AFFIRMATIVE).toContain(nameOf(button));
-          for (const button of Array.from(row.querySelectorAll("button"))) {
-            if (AFFIRMATIVE.has(nameOf(button))) continue;
-            const panel = button.closest<HTMLDetailsElement>("details[data-roll-call-exception]");
-            expect(panel, nameOf(button)).not.toBeNull();
-            expect(panel?.open, nameOf(button)).toBe(false);
-          }
+          expect(panel, person.fullName).not.toBeNull();
+          expect(panel?.open, person.fullName).toBe(false);
+          for (const button of panel?.querySelectorAll("button") ?? [])
+            expect(button).not.toBeVisible();
         }
         expect(appendOfflineRollCall).not.toHaveBeenCalled();
       }
@@ -214,7 +230,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
 
       const confirm = screen.getByRole("button", { name: "Confirm Priya Shah is aboard" });
       const panel = confirm.closest("details[data-roll-call-exception]") as HTMLDetailsElement;
@@ -243,7 +259,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
+      openException();
 
       const retract = screen.getByRole("button", { name: "Not back aboard" });
       const confirm = screen.getByRole("button", { name: "Confirm Priya Shah is aboard" });
@@ -270,7 +287,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
+      openException();
       const priya = () => document.getElementById("offline-roll-call-diver-priya") as HTMLElement;
       const nav = () => screen.getByRole("navigation", { name: "Roll-call checkpoint" });
 
@@ -278,10 +296,12 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         target: { value: "Last seen surfacing north of the mooring" },
       });
       // Away to the dock, where the panel closes and no sentence is allowed.
+      openDeckDetails();
       fireEvent.click(within(nav()).getAllByRole("button")[0] as HTMLElement);
-      await waitFor(() => expect(priya().querySelector("details[open]")).toBeNull());
+      await selectPerson();
+      expect(document.querySelector("details[data-roll-call-exception]")).toBeNull();
       // Her own mark at the dock, where the rule allows no sentence.
-      fireEvent.click(within(priya()).getByRole("button", { name: "Mark boarded" }));
+      fireEvent.click(screen.getByRole("button", { name: "Record Priya Shah aboard" }));
       await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalledTimes(1));
       expect(vi.mocked(appendOfflineRollCall).mock.calls[0]?.[1]).toMatchObject({
         bookingId: "diver-priya",
@@ -291,7 +311,10 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       expect(vi.mocked(appendOfflineRollCall).mock.calls[0]?.[1].note).toBeUndefined();
 
       // Back after the dive: the draft is still Priya's, and goes with her mark.
+      openDeckDetails();
       fireEvent.click(within(nav()).getByRole("button", { name: "After dive 1" }));
+      await openPersonDetails();
+      openException();
       expect(within(priya()).getByRole("textbox")).toHaveValue(
         "Last seen surfacing north of the mooring",
       );
@@ -311,7 +334,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
 
       // The loudest row the product has does not turn green from the list.
       expect(screen.queryByRole("button", { name: "Mark boarded" })).not.toBeInTheDocument();
@@ -329,7 +352,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
+      openException();
       expect(screen.getByText("Tap “Not back aboard” again to undo.")).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole("button", { name: "Not back aboard" }));
@@ -397,7 +421,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
+      openException();
       // The alarm is still up.
       expect(screen.getByRole("button", { name: "Not back aboard" })).toBeInTheDocument();
       expect(
@@ -429,7 +454,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
+      openException();
       expect(
         screen.getByText(/Recorded on another device or on the live manifest/),
       ).toBeInTheDocument();
@@ -477,7 +503,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
       // The settled control's accessible name is now the undo-bearing
       // aria-label ("Boarded — tap again to undo", PR #607 review) rather
       // than its visible "Boarded ☑️" text — an aria-label replaces the
@@ -536,7 +562,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails("Dana Divemaster");
+      openException();
       const crewList = document.getElementById("offline-crew-roll-call");
       if (!crewList) throw new Error("crew list missing");
 
@@ -588,7 +615,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails("Dana Divemaster");
+      openException();
       const crewList = document.getElementById("offline-crew-roll-call");
       if (!crewList) throw new Error("crew list missing");
       const crew = within(crewList);
@@ -637,7 +665,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
       render(<OfflineManifestView />);
-      await screen.findByRole("heading", { name: "Two-Tank Reef" });
+      await openPersonDetails();
       const row = document.getElementById("offline-roll-call-diver-priya");
       if (!row) throw new Error("Priya's row missing");
       expect(within(row).getByText(/Not boarded · carried/)).toBeInTheDocument();

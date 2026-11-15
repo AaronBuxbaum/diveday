@@ -14,6 +14,13 @@ import { seedFacts } from "./shop-facts";
 
 const staffCopy = staffTranslator("en-US");
 
+async function waitForCatalogControl(page: Page): Promise<void> {
+  const views = page.getByRole("navigation", { name: staffCopy("diveSites.list.viewsLabel") });
+  // Runs 43650058204 and 43671399915 changed this track's layout during a click.
+  // Wait for its measured pill before targeting the server's unmeasured layout.
+  await expect(views.locator(':scope > span[aria-hidden="true"]')).toHaveCSS("opacity", "1");
+}
+
 /**
  * Open one of the briefing's closed sections (visual review 2026-10-24, A11):
  * the site, the dive and certification stand open; every other section is a
@@ -578,6 +585,7 @@ test.describe("staff", () => {
 
     // The catalog is the other half of the Your sites / DiveDay catalog
     // toggle, so there is exactly one way in from here.
+    await waitForCatalogControl(page);
     const catalogDoor = page.getByRole("link", { name: "DiveDay catalog", exact: true });
     await expect(catalogDoor).toHaveCount(1);
     await catalogDoor.click();
@@ -900,6 +908,7 @@ test.describe("an owner's own library", () => {
     // reached through the door at the library ledger's tail (ADR
     // 20260827-the-shops-shelves), never a peer destination.
     await page.goto("/shop/blue-mantis/dive-sites");
+    await waitForCatalogControl(page);
     await page.getByRole("link", { name: "DiveDay catalog", exact: true }).click();
     await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
     // The catalog pages, ordered by distance — this one is on the first page and

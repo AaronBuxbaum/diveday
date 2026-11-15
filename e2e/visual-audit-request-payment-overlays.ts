@@ -51,7 +51,7 @@ export function registerRequestPaymentOverlayAuditCaptures(
       await openTripFromBoard(page, "Night Dive — City of Washington");
       await openTripTab(page, "Trip");
       await openRosterRow(page, "June Park");
-      const row = rosterRow(page, "June Park").first();
+      const row = (await rosterRow(page, "June Park")).first();
       const split = row
         .getByTestId("identity-check")
         .locator('details:has(input[name="fullName"])');
@@ -109,8 +109,10 @@ export function registerRequestPaymentOverlayAuditCaptures(
           .getByRole("alert")
           .filter({ hasText: staffCopy("trips.notices.diverAddedIdentityUnconfirmed") }),
       ).toBeVisible();
+      const row = await rosterRow(page, NAMESAKE);
+      await expect(row.getByTestId("identity-check")).toBeVisible();
+      await expect(row.getByRole("button", { name: `Same person as ${NAMESAKE}` })).toBeVisible();
       await openRosterRow(page, NAMESAKE);
-      const row = rosterRow(page, NAMESAKE).first();
       const choices = row
         .getByTestId("identity-check")
         .locator('details:has(input[name="toPersonId"])');

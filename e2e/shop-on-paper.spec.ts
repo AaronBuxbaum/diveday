@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { openCounterFor } from "./helpers";
+import { openCounterFor, openRosterDetails } from "./helpers";
 
 /**
  * Every test here mints a shop of its own and signs in live, and that setup
@@ -46,6 +46,7 @@ test.describe("the shop on paper", () => {
       .filter({ has: page.getByRole("button", { name: `Undo check-in for ${diverName}` }) });
     await expect(row).toHaveCount(1);
 
+    await openRosterDetails(row);
     await row.getByRole("link", { name: "Print a pass" }).click();
     await page.waitForURL(new RegExp(`/shop/${privateShop.slug}/trips/[^/?]+\\?pass=`));
     // Scoped to the sheet, not the page: the staff chrome around it carries a

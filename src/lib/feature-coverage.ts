@@ -112,6 +112,7 @@ export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
   offersHotelPickup: "hotelPickup",
   checkoutRecoveryEnabled: "checkoutRecovery",
   buddyLinksEnabled: "buddyLinks",
+  buddyTeamsEnabled: "buddyTeams",
   sightingsEnabled: "sightings",
   diverPhotosEnabled: "diverPhotos",
   selfRegistrationEnabled: "selfRegistration",

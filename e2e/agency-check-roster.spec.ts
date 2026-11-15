@@ -1,8 +1,26 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { findTripOnBoard, openDiverFileGroup, openTripTab, rosterRow } from "./helpers";
+import {
+  findTripOnBoard,
+  openDiverFileGroup,
+  openRosterDetails,
+  openTripTab,
+  rosterRow,
+} from "./helpers";
 
 signedInAsOwner();
+
+async function showAllGuests(page: Page) {
+  const all = page.getByRole("button", { name: "All guests", exact: true });
+  if (await all.count()) await all.click();
+}
+
+async function waitForAddedGuest(page: Page, name: string) {
+  await showAllGuests(page);
+  await expect(
+    page.locator("button[data-guest-open]").filter({ has: page.getByText(name, { exact: true }) }),
+  ).toBeVisible();
+}
 
 const SHOP = "blue-mantis";
 /** A seeded diver on this departure whose SSI card is still pending (`seed-divers.ts`, index 34). */
@@ -78,7 +96,9 @@ async function seatNewcomerWithPendingCard(page: Page, departure: RegExp, prefix
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
-  await rosterRow(page, newcomer).getByRole("link", { name: newcomer }).click();
+  const guest = await rosterRow(page, newcomer);
+  await openRosterDetails(guest);
+  await guest.getByRole("link", { name: "Open guest profile", exact: true }).click();
   await page.waitForURL(new RegExp(`/shop/${SHOP}/divers/[0-9a-f-]{36}`));
   const group = await openDiverFileGroup(page, "Certification records");
   await group.getByText("Add certification", { exact: true }).click();
@@ -94,7 +114,7 @@ async function seatNewcomerWithPendingCard(page: Page, departure: RegExp, prefix
 
   await page.goto(tripUrl);
   await expect(
-    rosterRow(page, newcomer).getByRole("button", { name: "Check with GUE" }),
+    (await rosterRow(page, newcomer)).getByRole("button", { name: "Check with GUE" }),
   ).toBeVisible();
   return { newcomer };
 }
@@ -103,7 +123,7 @@ async function seatNewcomerWithPendingCard(page: Page, departure: RegExp, prefix
 async function departureWithTwoPendingCards(page: Page) {
   const first = await seatNewcomerWithPendingCard(page, DEPARTURE);
   const second = await seatNewcomerWithPendingCard(page, DEPARTURE, "Robin");
-  await expect(rosterRow(page, SEEDED_DIVER)).toBeVisible();
+  await expect(await rosterRow(page, SEEDED_DIVER)).toBeVisible();
   return { newcomer: first.newcomer, other: second.newcomer };
 }
 
@@ -114,29 +134,31 @@ test("Check all certifies the departure one card at a time, and each card keeps 
   await installFakeExtension(page, "match");
   const { newcomer, other } = await departureWithTwoPendingCards(page);
 
+  await showAllGuests(page);
+
   await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
 
   await expect(page.getByText("Checked 2. Certified: 2.")).toBeVisible({ timeout: 20_000 });
   expect(await lookups(page)).toBe(2);
   // SSI is a separate manual handoff and is not part of the batch.
   await expect(
-    rosterRow(page, SEEDED_DIVER).getByRole("button", { name: "Check with SSI" }),
+    (await rosterRow(page, SEEDED_DIVER)).getByRole("button", { name: "Check with SSI" }),
   ).toBeVisible();
   for (const diver of [other, newcomer]) {
-    const row = rosterRow(page, diver);
+    const row = await rosterRow(page, diver);
     await expect(row.getByText("GUE shows this certification. Marked certified.")).toBeVisible();
     await expect(row.getByRole("button", { name: "Check with GUE" })).toHaveCount(0);
   }
   // Undo is the card's, never the departure's.
   await expect(page.getByRole("button", { name: /Undo all|Undo every/ })).toHaveCount(0);
 
-  await rosterRow(page, newcomer).getByRole("button", { name: "Undo" }).click();
+  await (await rosterRow(page, newcomer)).getByRole("button", { name: "Undo" }).click();
   await expect(
-    rosterRow(page, newcomer).getByRole("button", { name: "Check with GUE" }),
+    (await rosterRow(page, newcomer)).getByRole("button", { name: "Check with GUE" }),
   ).toBeVisible();
   // The other card stays certified.
   await expect(
-    rosterRow(page, other).getByText("GUE shows this certification. Marked certified."),
+    (await rosterRow(page, other)).getByText("GUE shows this certification. Marked certified."),
   ).toBeVisible();
 });
 
@@ -147,6 +169,8 @@ test("Check all skips one page it cannot read, stops on two in a row, and leaves
   await installFakeExtension(page, "captcha");
   const { newcomer, other } = await departureWithTwoPendingCards(page);
 
+  await showAllGuests(page);
+
   await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
 
   await expect(page.getByText(/^Stopped at .+: couldn’t read GUE’s page\./)).toBeVisible({
@@ -155,7 +179,7 @@ test("Check all skips one page it cannot read, stops on two in a row, and leaves
   expect(await lookups(page)).toBe(2);
   // Nothing was written: each card waits, named, with the agency's page to open.
   for (const diver of [other, newcomer]) {
-    const row = rosterRow(page, diver);
+    const row = await rosterRow(page, diver);
     await expect(
       row.getByText(/^Couldn’t find .+ on GUE’s page\. Open it and look\.$/),
     ).toBeVisible();
@@ -168,7 +192,7 @@ test("one row's own check certifies that card with the diver record's toast", as
   test.setTimeout(60_000);
   await installFakeExtension(page, "match");
   const { newcomer } = await seatNewcomerWithPendingCard(page, DEPARTURE);
-  const row = rosterRow(page, newcomer);
+  const row = await rosterRow(page, newcomer);
 
   await row.getByRole("button", { name: "Check with GUE" }).click();
 
@@ -186,8 +210,9 @@ test("without the extension the Divers tab offers no check at all", async ({ pag
   const trip = await findTripOnBoard(page, SHOP, DEPARTURE);
   await trip.click();
   await openTripTab(page, "Trip");
-  await expect(rosterRow(page, SEEDED_DIVER)).toBeVisible();
+  await expect(await rosterRow(page, SEEDED_DIVER)).toBeVisible();
   await expect(page.getByRole("button", { name: "Check with SSI" })).toHaveCount(0);
+  await showAllGuests(page);
   await expect(page.getByRole("button", { name: /^Check all/ })).toHaveCount(0);
 });
 
@@ -228,8 +253,12 @@ test("a certification-pending row on Today checks the card in place, with Undo",
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(name);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-  await addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click();
-  await expect(rosterRow(page, name)).toBeVisible();
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+    addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click(),
+  ]);
+  await waitForAddedGuest(page, name);
+  await expect(await rosterRow(page, name)).toBeVisible();
 
   await page.goto(`/shop/${SHOP}`);
   const cardRow = () =>

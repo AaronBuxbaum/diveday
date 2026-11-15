@@ -37,7 +37,7 @@ export async function openCourseFormQr(page: Page, options: { clock?: boolean } 
   );
   await signInAsOwner(page);
   await page.goto(tripPath);
-  const row = rosterRow(page, student);
+  const row = await rosterRow(page, student);
   await expect(row.locator("[data-course-forms-owed]")).toHaveCount(1);
   const t = staffTranslator("en-US");
   if (options.clock) await page.clock.install();

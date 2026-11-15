@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { EDGE_PADDING, PADDED_SIZES, SIZES } from "@/test/button-sizes";
 import {
   type ButtonSize,
   type ButtonVariant,
@@ -11,8 +12,6 @@ import {
 } from "./button";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-
-const SIZES = ["sm", "md", "boat", "icon", "icon-sm"] as const satisfies readonly ButtonSize[];
 
 /**
  * Every variant, as a record keyed by the type so that a variant added to
@@ -31,9 +30,6 @@ const EVERY_VARIANT: Record<ButtonVariant, true> = {
   bare: true,
 };
 const VARIANTS = Object.keys(EVERY_VARIANT) as ButtonVariant[];
-
-/** The sizes that carry a horizontal padding for `flush` to act on. */
-const PADDED_SIZES = ["sm", "md", "boat"] as const satisfies readonly ButtonSize[];
 
 /** The variants that paint nothing of their own around their label, hover included. */
 const PAINTS_NOTHING = ["link", "bare"] as const satisfies readonly ButtonVariant[];
@@ -366,7 +362,6 @@ describe("buttonClass", () => {
     });
 
     it("keeps the box's width: each size's padding less the pixel the edge adds a side", () => {
-      const padding = { sm: ["px-2.75"], md: ["px-3.75"], boat: ["px-5.75"] } as const;
       for (const size of PADDED_SIZES) {
         expect(horizontalPadding(buttonClass({ variant: "secondary", size })), size).toHaveLength(
           1,
@@ -374,7 +369,7 @@ describe("buttonClass", () => {
         expect(
           horizontalPadding(buttonClass({ variant: "secondary", size, edge: "danger" })),
           size,
-        ).toEqual(padding[size]);
+        ).toEqual(EDGE_PADDING[size]);
       }
       for (const size of ["icon", "icon-sm"] as const) {
         expect(

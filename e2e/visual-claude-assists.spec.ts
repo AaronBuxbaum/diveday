@@ -10,6 +10,7 @@ import { demoEmail } from "../src/lib/simulator-email";
 import { expect, test } from "./fixtures";
 import {
   offlineCopySaved,
+  openDeckDetails,
   openDiverFileGroup,
   openIfClosed,
   openTripAbout,
@@ -287,10 +288,12 @@ test.describe("light mode — Claude's assists, lit", () => {
       await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
       await openTripTab(page, "Manifest");
       await offlineCopySaved(page);
+      await openDeckDetails(page);
       await page
         .getByRole("link", { name: "After dive 1" })
         .evaluate((link: HTMLElement) => link.click());
       await page.waitForURL(/checkpoint=after_dive_1/);
+      await openDeckDetails(page);
       const seen = page.getByRole("region", { name: "Seen" });
       await seen.getByRole("combobox").fill("seaho");
       await expect(seen.getByRole("option").first()).toBeVisible();

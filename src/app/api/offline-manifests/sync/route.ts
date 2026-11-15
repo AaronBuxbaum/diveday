@@ -98,12 +98,20 @@ const eventSchema = z
      */
     note: z.string().trim().max(ROLL_CALL_NOTE_MAX).nullish(),
     occurredAt: z.iso.datetime(),
+    physicalPresenceOnly: z.boolean().optional(),
   })
   // No `message`: nothing here reaches a person. A failure of this refinement
   // is answered as the batch-level `{ error: "invalid_events" }` below, in the
   // same words a malformed body has always produced — a caller learns that the
   // batch was refused and nothing about which event or why.
-  .refine((event) => (event.bookingId === undefined) !== (event.crewPersonId === undefined));
+  .refine((event) => (event.bookingId === undefined) !== (event.crewPersonId === undefined))
+  .refine(
+    (event) =>
+      !event.physicalPresenceOnly ||
+      (event.bookingId !== undefined &&
+        event.checkpoint === "departure" &&
+        event.status === "boarded"),
+  );
 
 /**
  * A checklist tap. No subject refinement needed the way `eventSchema` has one
@@ -296,7 +304,11 @@ export async function POST(request: Request) {
     const outcome = event.crewPersonId
       ? await recordCrewRollCall(db, { ...common, personId: event.crewPersonId })
       : event.bookingId
-        ? await recordRollCall(db, { ...common, bookingId: event.bookingId })
+        ? await recordRollCall(db, {
+            ...common,
+            bookingId: event.bookingId,
+            physicalPresenceOnly: event.physicalPresenceOnly,
+          })
         : // Unreachable: `eventSchema`'s refinement already refused an event
           // naming no subject. Written as a refusal rather than a cast or a
           // throw so that a future loosening of that refinement costs one

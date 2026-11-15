@@ -25,6 +25,7 @@ export type RollCallIntent = {
   meetingDay?: number;
   retractsEventId?: string;
   retractsClientEventId?: string;
+  physicalPresenceOnly?: boolean;
 };
 
 /** Retry identity names immutable causal intent; audit clocks cannot alter it. */
@@ -41,6 +42,7 @@ export function rollCallIntentKey<T extends RollCallIntent>(event: T): string {
     event.meetingDay ?? null,
     event.status === "cleared" ? (event.retractsEventId?.toLowerCase() ?? null) : null,
     event.status === "cleared" ? (event.retractsClientEventId?.toLowerCase() ?? null) : null,
+    event.physicalPresenceOnly === true,
   ]);
 }
 

@@ -9,6 +9,8 @@ import { expect, makeActivitySafe, test } from "./fixtures";
 import {
   manifestRow,
   offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
   openOnThisPhone,
   openTripFromBoard,
   openTripTab,
@@ -233,10 +235,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);
       await openTripTab(page, "Manifest");
-      await page
-        .getByRole("button", { name: "Emergency numbers & response plan" })
-        .filter({ visible: true })
-        .click();
+      await openDeckDetails(page);
       // The line itself, not just the heading — the whole point of the
       // capture is the state where there is nothing under it.
       await page.getByText("No emergency numbers recorded").waitFor();
@@ -253,6 +252,8 @@ for (const scheme of ["light", "dark"] as const) {
       await offlineCopySaved(page);
       const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
       await page.goto(`/offline-manifest?trip=${tripId}`);
+      await expect(page.getByRole("heading", { name: "Deck", exact: true })).toBeVisible();
+      await openDeckDetails(page);
       // The empty state's own words, not a timeout: the snapshot is primed in the
       // background from the staff manifest, and if it had been written before
       // the clear landed this frame would photograph a *populated* card under
@@ -501,15 +502,22 @@ for (const scheme of ["light", "dark"] as const) {
       await openOnThisPhone(page);
       await page.getByRole("link", { name: "Open offline roll call" }).click();
       await page.waitForURL(/offline-manifest/);
-      await expect(page.getByRole("heading", { name: "Ari Vale" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Deck", exact: true })).toBeVisible();
       await context.setOffline(true);
-      const crew = page
-        .getByRole("region", { name: "Crew aboard" })
-        .getByRole("listitem")
-        .filter({ hasText: state.crewName });
-      await crew
-        .getByRole("button", { name: staffCopy("manifest.crewMarkAboard"), exact: true })
+      await openDeckPerson(page, state.crewName);
+      await page
+        .getByRole("button", {
+          name: staffCopy("manifest.deck.record", { name: state.crewName }),
+          exact: true,
+        })
         .click();
+      const receipt = page.locator('[data-deck-screen="receipt"]');
+      await expect(
+        receipt.getByRole("heading", { name: state.crewName, exact: true }),
+      ).toBeVisible();
+      await expect(
+        receipt.getByText(staffCopy("manifest.deck.pendingReceipt"), { exact: true }),
+      ).toBeVisible();
       await expect(
         page.getByRole("status").filter({
           hasText: staffCopy("manifest.headCountOverTotalPersonsAboard", { aboard: 6, limit: 5 }),
@@ -530,7 +538,7 @@ for (const scheme of ["light", "dark"] as const) {
         [{ name: "operationalTrust", state: "ashore" }],
         { slug: privateShop.slug },
       );
-      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
+      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}?view=details`);
       await expect(
         page.getByText(
           staffCopy("manifest.buddyTeamCaution", {
@@ -544,8 +552,10 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("region", { name: staffCopy("manifest.buddyHeading") })
           .locator(":scope > details"),
       ).not.toHaveAttribute("open");
+      await capture(page, "manifest-buddy-planning-warnings", scheme);
+      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
       await expect(
-        manifestRow(page, "Bea Quill").getByText(
+        (await manifestRow(page, "Bea Quill")).getByText(
           staffCopy("shared.buddyTeam.ashoreNamed", { name: "Ari" }),
           { exact: true },
         ),
@@ -565,7 +575,7 @@ for (const scheme of ["light", "dark"] as const) {
         [{ name: "operationalTrust", state: "intro" }],
         { slug: privateShop.slug },
       );
-      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
+      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}?view=details`);
       await expect(
         page.getByText(
           staffCopy("manifest.buddyTeamCaution", {
@@ -578,7 +588,6 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("region", { name: staffCopy("manifest.buddyHeading") })
           .locator(":scope > details"),
       ).not.toHaveAttribute("open");
-      await offlineCopySaved(page);
       await capture(page, "manifest-buddy-intro-warning", scheme);
     });
 

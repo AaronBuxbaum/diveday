@@ -75,6 +75,7 @@ describe("the Features page", () => {
   it("lists every switch, once each, grouped in page order", async () => {
     expect(rowsIn(await renderFeatures("owner"))).toEqual([
       "divingOptions",
+      "buddyTeams",
       "hotelPickup",
       "publicConditions",
       "fieldGuide",
@@ -115,6 +116,7 @@ describe("the Features page", () => {
     const names = inputNamesIn(await renderFeatures("owner"));
     const switches = names.filter((name) => name.startsWith("feature:"));
     expect(switches).toEqual([
+      "feature:buddyTeams",
       "feature:hotelPickup",
       "feature:publicConditions",
       "feature:fieldGuide",
@@ -160,7 +162,7 @@ describe("the Features page", () => {
     expect(findElements(page, SubmitButton)).toHaveLength(1);
     // Every row the page drew is named, so the save knows which rows it may write.
     const [form] = findElements<{ children: unknown }>(page, "form");
-    expect(rowsIn(form)).toHaveLength(34);
+    expect(rowsIn(form)).toHaveLength(35);
   });
 
   it("does not render at all for a divemaster", async () => {

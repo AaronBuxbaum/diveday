@@ -8,15 +8,16 @@ import {
 import { DecompressionReminder } from "@/components/DecompressionReminder";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { sectionCardClass } from "@/components/ui/card";
-import { StatusMarkColumn } from "@/components/ui/StatusMark";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { signingDate } from "@/lib/guardian";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { rentalFitCompleteness } from "@/lib/rentals";
 import { issueCourseFormQrAction } from "../course-form-qr-action";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 import { CourseFormsQrProvider } from "./CourseFormsQr";
+import { GuestFolios } from "./GuestFolios";
 import { RosterAllClear } from "./RosterAllClear";
 import { RosterGroup, RosterGroupBand } from "./RosterGroupBand";
 import { RosterRow, type RosterRowContext } from "./RosterRow";
@@ -29,6 +30,9 @@ import {
   rosterPaymentStatusCopy,
   waiverControls,
 } from "./roster-model";
+import { rowNotices } from "./roster-row-notices";
+import { rowReasonLines } from "./roster-row-reasons";
+import { rosterSeat } from "./roster-seat";
 import type { RosterEntry } from "./types";
 
 export type {
@@ -99,8 +103,7 @@ export function RosterSection({
     controls,
     record,
   });
-  const { stillToClear, ready, here, notHere, hereMeta, blockedCount, sharedFacts, sailedMeta } =
-    groups;
+  const { stillToClear, blockedCount, sailedMeta } = groups;
   // A record never asks for action, so a finished departure carries no reminder.
   const showsDecompressionReminder =
     !record &&
@@ -141,6 +144,23 @@ export function RosterSection({
   const agencyCards = actions.agencyCheckAction
     ? roster.flatMap(({ person }) => rows.agencyCheckCardsByPerson?.get(person.id) ?? [])
     : [];
+  const overview = (
+    <>
+      {whoWantsInGroup}
+      {suggestionsGroup}
+      {/* One box, so `#add-diver` holds the form its links and specs
+              scope to; the box draws the group's rule (K-354). */}
+      {addDiverGroup ? (
+        <RosterGroup id="add-diver" label={t("trips.addDiver.heading")}>
+          {/* The masthead's "Add a booking" lands here (A31); the group
+                  keeps `#add-diver` for the doors elsewhere that open it. */}
+          <div id={ADD_A_BOOKING_ID} className="scroll-mt-20 px-4 py-5 sm:px-5">
+            {addDiverGroup}
+          </div>
+        </RosterGroup>
+      ) : null}
+    </>
+  );
   const section = (
     <CourseFormsQrProvider
       action={issueCourseFormQrAction.bind(null, trip.shopSlug, trip.tripId)}
@@ -161,7 +181,9 @@ export function RosterSection({
         className="scroll-mt-24"
       >
         {arrival?.instrument ? (
-          <div className="mb-10">{arrival.instrument(groups.deskWorkOpen)}</div>
+          <div className="mb-10 group-has-[[data-guest-folio]]/folio:hidden">
+            {arrival.instrument(groups.deskWorkOpen)}
+          </div>
         ) : null}
         {/* The departure page's H1 heads this tab. The moment the last blocker
           clears, nothing renders until an action on this page moves the count to
@@ -190,7 +212,8 @@ export function RosterSection({
           <div
             className={sectionCardClass({
               padding: "none",
-              className: "overflow-hidden",
+              className:
+                "overflow-hidden group-has-[[data-guest-folio]]/folio:overflow-visible group-has-[[data-guest-folio]]/folio:border-0 group-has-[[data-guest-folio]]/folio:bg-transparent group-has-[[data-guest-folio]]/folio:shadow-none",
             })}
           >
             {/* Inside the card, so mounting proves the rows a deep link scrolls
@@ -202,142 +225,143 @@ export function RosterSection({
                 {t("trips.roster.recordHomeNotCounted", { count: record.homeNotCounted })}
               </p>
             ) : null}
-            {/* The record's groups (UX review 2026-10-10, item 10): empty
+            {!record ? (
+              <div className="p-4 sm:p-6 group-has-[[data-guest-folio]]/folio:p-0">
+                <GuestFolios
+                  overview={overview}
+                  initialBookingId={
+                    rows.keepOpenBookingId ??
+                    rows.paymentMarkRetry?.bookingId ??
+                    rows.partyPreview?.leadBookingId
+                  }
+                  copy={{
+                    heading: t("trips.folio.heading"),
+                    search: t("trips.folio.search"),
+                    all: t("trips.folio.all"),
+                    next: t("trips.folio.next"),
+                    empty: t("trips.folio.empty"),
+                    party: t("trips.folio.party"),
+                    attention: t("trips.folio.attention"),
+                    requirementsMet: t("trips.folio.requirementsMet"),
+                  }}
+                  guests={roster.map((entry) => {
+                    const seat = rosterSeat(entry, false, {
+                      ...context,
+                      sharedAdvisoryTexts: new Set(),
+                    });
+                    const reasons = rowReasonLines({ ...seat, ...rowNotices(seat) }).reasonLines;
+                    const fit = rentalFitCompleteness(
+                      rows.rentalFitByBooking.get(entry.booking.id) ?? null,
+                      trip.shopRentalItems,
+                      entry.booking.participantType,
+                    );
+                    const fitNeedsAttention =
+                      !seat.identityUnconfirmed &&
+                      entry.booking.participantType !== "rider" &&
+                      (fit.state !== "complete" ||
+                        Boolean(rows.rentalFitByBooking.get(entry.booking.id)?.needsStaffFitAt));
+                    const lead = entry.booking.partyLeadBookingId ?? entry.booking.id;
+                    const companions = roster.filter(
+                      (other) =>
+                        other.booking.id !== entry.booking.id &&
+                        (other.booking.partyLeadBookingId ?? other.booking.id) === lead,
+                    );
+                    return {
+                      id: entry.booking.id,
+                      name: entry.person.fullName,
+                      summary: seat.blockerTexts.length
+                        ? t("trips.folio.beforeBoardingCount", { count: seat.blockerTexts.length })
+                        : undefined,
+                      status:
+                        [
+                          ...reasons.map((reason) => reason.text),
+                          ...(fitNeedsAttention ? [t("trips.folio.fitNeeded")] : []),
+                        ].join(" · ") || t("trips.folio.requirementsMet"),
+                      needsAttention:
+                        fitNeedsAttention ||
+                        stillToClear.some((other) => other.booking.id === entry.booking.id),
+                      party: companions.length
+                        ? companions.map((other) => other.person.fullName).join(" · ")
+                        : null,
+                      panel: (
+                        <RosterRow
+                          entry={entry}
+                          settled={false}
+                          context={{ ...context, sharedAdvisoryTexts: new Set() }}
+                          folio
+                        />
+                      ),
+                    };
+                  })}
+                />
+              </div>
+            ) : (
+              <>
+                {/* The record's groups (UX review 2026-10-10, item 10): empty
               unless the departure is finished, and then the only ones. */}
-            <RosterSeatGroup
-              label={t("trips.roster.groupUnaccounted")}
-              entries={groups.unaccounted}
-              settled={false}
-              context={context}
-            />
-            {groups.notCountedAfterDive.map(({ dive, entries }) => (
-              <RosterSeatGroup
-                key={dive}
-                label={t("trips.roster.groupNotCountedAfterDive", { dive })}
-                entries={entries}
-                settled={false}
-                context={context}
-              />
-            ))}
-            {crewNotCountedLines(record?.crewNotCountedAfterDive, locale).map(({ dive, names }) => (
-              <p key={dive} className="px-4 py-2 text-sm font-semibold text-danger">
-                {t("manifest.stage.crewNotCountedAfterDive", { dive, names })}
-              </p>
-            ))}
-            <RosterSeatGroup
-              label={t("trips.roster.groupSailed")}
-              entries={groups.sailed}
-              settled
-              context={context}
-            >
-              {sailedMeta ? <span className="text-xs text-muted">{sailedMeta}</span> : null}
-            </RosterSeatGroup>
-            <RosterSeatGroup
-              label={t("trips.roster.groupJoinedAtSite")}
-              entries={groups.joinedAtSite}
-              settled
-              context={context}
-            />
-            <RosterSeatGroup
-              label={t("trips.roster.groupDidNotSail")}
-              entries={groups.didNotSail}
-              settled={false}
-              context={context}
-            />
-            <RosterSeatGroup
-              label={t("trips.roster.groupTurnedAway")}
-              entries={record ? groups.turnedAway : []}
-              settled={false}
-              context={context}
-            />
-            <RosterSeatGroup
-              label={t("trips.roster.groupNotCounted")}
-              entries={groups.uncounted}
-              settled={false}
-              context={context}
-            />
-            <RosterSeatGroup
-              label={t("trips.roster.groupNoRollCall")}
-              entries={groups.unrecorded}
-              settled={false}
-              context={context}
-            />
-            <RosterSeatGroup
-              label={t("trips.roster.groupStillToClear")}
-              entries={stillToClear}
-              settled={false}
-              context={context}
-            >
-              {/* The facts much of the boat shares, said once in the group
-                band instead of photocopied down its rows (principle 9).
-                They move below the label on a phone so the state word keeps
-                its own readable line.
-
-                The band aligns its title on this column's first baseline,
-                so each line is `items-baseline` with its mark a column of
-                its own: the words set that baseline, not the mark's foot
-                (K-181: the title sat 5px under the first fact).
-
-                From `sm` the column sits at the band's end, put there by
-                the band's `justify-between`, but its lines start on one
-                edge so their marks form a column (K-267: right-aligned,
-                they stepped left line by line). */}
-              {sharedFacts.length > 0 ? (
-                <div className="flex w-full min-w-0 flex-col gap-1 text-xs sm:w-auto sm:max-w-[68%] sm:items-start">
-                  {sharedFacts.map(({ sentence, count }) => (
-                    <p
-                      key={sentence}
-                      className="flex min-w-0 items-baseline gap-1.5 text-warning-strong"
-                    >
-                      <StatusMarkColumn variant="warning" />
-                      <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
+                <RosterSeatGroup
+                  label={t("trips.roster.groupUnaccounted")}
+                  entries={groups.unaccounted}
+                  settled={false}
+                  context={context}
+                />
+                {groups.notCountedAfterDive.map(({ dive, entries }) => (
+                  <RosterSeatGroup
+                    key={dive}
+                    label={t("trips.roster.groupNotCountedAfterDive", { dive })}
+                    entries={entries}
+                    settled={false}
+                    context={context}
+                  />
+                ))}
+                {crewNotCountedLines(record?.crewNotCountedAfterDive, locale).map(
+                  ({ dive, names }) => (
+                    <p key={dive} className="px-4 py-2 text-sm font-semibold text-danger">
+                      {t("manifest.stage.crewNotCountedAfterDive", { dive, names })}
                     </p>
-                  ))}
-                </div>
-              ) : null}
-            </RosterSeatGroup>
-            <RosterSeatGroup
-              label={t("trips.roster.groupReady")}
-              entries={ready}
-              settled
-              context={context}
-            />
-            <RosterSeatGroup
-              label={t("trips.roster.groupCheckedIn")}
-              entries={here}
-              settled
-              context={context}
-            >
-              {/* Boarding is the group's fact, said once (principle 9): five
-                receipts each wearing "Boarded" is one word printed five
-                times. Nothing at all before anybody boards. */}
-              {hereMeta ? <span className="text-xs text-muted">{hereMeta}</span> : null}
-            </RosterSeatGroup>
-            <RosterSeatGroup
-              label={t("trips.roster.groupNotHere")}
-              entries={notHere}
-              settled={false}
-              context={context}
-            />
-            <RosterSeatGroup
-              label={t("trips.roster.groupTurnedAway")}
-              entries={record ? [] : groups.turnedAway}
-              settled={false}
-              context={context}
-            />
-            {whoWantsInGroup}
-            {suggestionsGroup}
-            {/* One box, so `#add-diver` holds the form its links and specs
-              scope to; the box draws the group's rule (K-354). */}
-            {addDiverGroup ? (
-              <RosterGroup id="add-diver" label={t("trips.addDiver.heading")}>
-                {/* The masthead's "Add a booking" lands here (A31); the group
-                  keeps `#add-diver` for the doors elsewhere that open it. */}
-                <div id={ADD_A_BOOKING_ID} className="scroll-mt-20 px-4 py-5 sm:px-5">
-                  {addDiverGroup}
-                </div>
-              </RosterGroup>
-            ) : null}
+                  ),
+                )}
+                <RosterSeatGroup
+                  label={t("trips.roster.groupSailed")}
+                  entries={groups.sailed}
+                  settled
+                  context={context}
+                >
+                  {sailedMeta ? <span className="text-xs text-muted">{sailedMeta}</span> : null}
+                </RosterSeatGroup>
+                <RosterSeatGroup
+                  label={t("trips.roster.groupJoinedAtSite")}
+                  entries={groups.joinedAtSite}
+                  settled
+                  context={context}
+                />
+                <RosterSeatGroup
+                  label={t("trips.roster.groupDidNotSail")}
+                  entries={groups.didNotSail}
+                  settled={false}
+                  context={context}
+                />
+                <RosterSeatGroup
+                  label={t("trips.roster.groupTurnedAway")}
+                  entries={record ? groups.turnedAway : []}
+                  settled={false}
+                  context={context}
+                />
+                <RosterSeatGroup
+                  label={t("trips.roster.groupNotCounted")}
+                  entries={groups.uncounted}
+                  settled={false}
+                  context={context}
+                />
+                <RosterSeatGroup
+                  label={t("trips.roster.groupNoRollCall")}
+                  entries={groups.unrecorded}
+                  settled={false}
+                  context={context}
+                />
+              </>
+            )}
+            {record ? overview : null}
           </div>
         ) : null}
       </section>

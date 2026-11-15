@@ -109,6 +109,8 @@ test("standalone manifest and log repeat visible departure context including upp
     const path = surface === "log" ? "log/print" : surface;
     await page.goto(`/shop/blue-mantis/trips/${id.toUpperCase()}/${path}`);
     await expect(page.locator("[data-departure-paper]")).toBeVisible();
+    // Deck's paper identity is rendered on its actual print sheet.
+    await page.emulateMedia({ media: "print" });
     await expect(page.getByRole("heading", { level: 1, name: REEF_TRIP })).toBeVisible();
     await verifyPaper(page, info, `standalone-${surface}`, [REEF_TRIP]);
   }
@@ -218,7 +220,7 @@ test("a paused session prints no departure information and retry restores the do
 }, info) => {
   const id = await seededTripId(page, "blue-mantis", REEF_TRIP);
   await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
-  await expect(page.getByRole("heading", { level: 1, name: REEF_TRIP })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Deck", exact: true })).toBeVisible();
   await page.emulateMedia({ media: "print" });
   await page.route("**/api/staff-activity", (route) => route.fulfill({ status: 401 }));
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
@@ -233,6 +235,9 @@ test("a paused session prints no departure information and retry restores the do
   await page.unroute("**/api/staff-activity");
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(0);
+  await page.emulateMedia({ media: "screen" });
+  await expect(page.getByRole("heading", { level: 1, name: "Deck", exact: true })).toBeVisible();
+  await page.emulateMedia({ media: "print" });
   await expect(page.getByRole("heading", { level: 1, name: REEF_TRIP })).toBeVisible();
   const restored = info.outputPath("restored-manifest.pdf");
   await page.pdf({ path: restored, format: "Letter", printBackground: true });

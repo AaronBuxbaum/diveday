@@ -97,6 +97,7 @@ function CrewFacts({
  */
 export function CrewRollCall({
   crew,
+  selectedPersonId,
   checkpoint,
   idPrefix,
   isDeparture,
@@ -115,6 +116,8 @@ export function CrewRollCall({
   t,
 }: {
   crew: TripManifest["crew"];
+  /** Render one person while keeping all crew results available to buddy references. */
+  selectedPersonId?: string;
   checkpoint: RollCallCheckpoint;
   /** Set when a document repeats this block per departure — see `scopedId`. */
   idPrefix?: string;
@@ -149,14 +152,17 @@ export function CrewRollCall({
   paper?: boolean;
   t: StaffTranslator;
 }) {
-  const crewAssigned = crew.length;
+  const visibleCrew = selectedPersonId
+    ? crew.filter((member) => member.id === selectedPersonId)
+    : crew;
+  const crewAssigned = visibleCrew.length;
   // How many named crew another departure still claims (issue #1779), on the
   // same terms as each row's own line below: at the departure checkpoint and
   // only for somebody nobody has tapped yet. The instruction is said once,
   // here; the rows say only which other boat (UX audit 2026-10-07, item 3 —
   // two crew members carried the same three-line paragraph each).
   const crewToConfirm = isDeparture
-    ? crew.filter((member) => !member.rollCall && (member.clashes ?? []).length > 0).length
+    ? visibleCrew.filter((member) => !member.rollCall && (member.clashes ?? []).length > 0).length
     : 0;
   return (
     <section>
@@ -219,7 +225,7 @@ export function CrewRollCall({
               className: "mt-3 overflow-hidden",
             })}
           >
-            {crew.map((member, index) => {
+            {visibleCrew.map((member, index) => {
               const rc = member.rollCall;
               const personTrail = personTrailWithCurrentRecord({
                 trail: todayTrailBySubject?.get(member.id) ?? [],

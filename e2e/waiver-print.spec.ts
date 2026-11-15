@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { openTripFromBoard, openTripTab } from "./helpers";
+import { openRosterDetails, openTripFromBoard, openTripTab, rosterRow } from "./helpers";
 
 /**
  * **A signed waiver prints as its own sheet** (issue #4142): the record's
@@ -16,10 +16,8 @@ async function openRowansWaiver(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
   await openTripTab(page, "Trip");
-  const diver = page
-    .locator("li")
-    .filter({ has: page.getByText("Rowan Pike", { exact: true }) })
-    .filter({ visible: true });
+  const diver = await rosterRow(page, "Rowan Pike");
+  await openRosterDetails(diver);
   await diver.getByRole("link", { name: "View signed record" }).click();
   await page.waitForURL(/\/divers\/[^/]+\/waivers\/[^/]+$/);
   await expect(page.getByRole("heading", { level: 1, name: "Signed waiver" })).toBeVisible();

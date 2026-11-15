@@ -4,6 +4,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
   openBoatCheck,
+  openDeckDetails,
   openTripFromBoard,
   openTripTab,
   seededTripId,
@@ -42,6 +43,7 @@ test("a snag noted on the boat check reaches that boat's next crew, who mark it 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Night Dive — City of Washington");
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   const carried = page.getByRole("region", { name: "Open on this boat" });
   await expect(carried.getByText("VHF radio checked: VHF crackles on 16")).toBeVisible();
   await carried.getByRole("button", { name: "Fixed" }).click();
@@ -57,6 +59,7 @@ test("the plan says what the reef was like the last time a boat went", async ({ 
   await expect(page.getByText(/Molasses Reef: last dived /).first()).toBeVisible();
 
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
   const plan = page.getByRole("region", { name: "The plan" });
   await expect(plan.getByText(/Molasses Reef: last dived /)).toBeVisible();
 });

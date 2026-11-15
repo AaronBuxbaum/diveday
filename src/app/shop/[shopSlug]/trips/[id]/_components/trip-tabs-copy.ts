@@ -32,7 +32,7 @@ export function tripTabsCopy(
     tabsLabel: t("trips.tabs.label"),
     tabs: {
       divers: t("trips.tabs.divers"),
-      boat: t("trips.tabs.boat"),
+      record: t("trips.tabs.record"),
       gear: t("trips.tabs.gear"),
       details: t("trips.tabs.details"),
     },

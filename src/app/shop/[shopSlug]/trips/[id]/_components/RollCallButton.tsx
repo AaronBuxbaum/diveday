@@ -2,6 +2,7 @@
 
 import { type ReactNode, useActionState, useEffect, useRef, useState } from "react";
 import { vibrate } from "@/components/haptics";
+import { useDeckMutation } from "@/components/offline-manifest/DeckFlow";
 import {
   refusePress,
   wasMultiTouch,
@@ -9,6 +10,7 @@ import {
 } from "@/components/roll-call-touch-guard";
 import { ErrorToast, SAFETY_TOAST_MS } from "@/components/Toast";
 import { textareaClassFor } from "@/components/ui/form";
+import { canonicalRollCallEvidenceId } from "@/lib/roll-call-causality";
 import { useRollCallCausalContext } from "./roll-call-causal-context";
 
 /**
@@ -17,7 +19,12 @@ import { useRollCallCausalContext } from "./roll-call-causal-context";
  * readiness is re-checked on the server at board time and can always win.
  */
 export type RollCallResult =
-  | { ok: true }
+  | {
+      ok: true;
+      observedAt?: string;
+      eventId?: string;
+      status?: "boarded" | "not_boarded" | "cleared";
+    }
   | { ok: false; reason: "not_ready" | "boat_full" | "superseded" | "error" }
   | null;
 
@@ -90,6 +97,8 @@ export function RollCallButton({
   copy,
   noteField,
   observabilityAction,
+  observedAt,
+  physicalPresenceOnly,
   retracts,
   reconcilesEvidence = false,
 }: {
@@ -173,10 +182,45 @@ export function RollCallButton({
   noteField?: { name: string; label: string; maxLength: number };
   /** Stable action label used by the app-wide mutation-duration reporter. */
   observabilityAction?: string;
+  observedAt?: string;
+  physicalPresenceOnly?: boolean;
 }) {
+  const deck = useDeckMutation();
+  const deckRef = useRef(deck);
+  deckRef.current = deck;
   const causal = useRollCallCausalContext(subject.field, subject.id);
   const eventIdInput = useRef<HTMLInputElement>(null);
-  const [result, formAction, isPending] = useActionState(action, null);
+  const [result, formAction, isPending] = useActionState(
+    async (previous: RollCallResult, formData: FormData) => {
+      const outcome = await action(previous, formData);
+      if (outcome) {
+        // The returned RSC tree may already have removed this conditional
+        // correction control. Notify from its action, before React publishes
+        // the result to a component that may no longer be mounted.
+        vibrate(outcome.ok ? 10 : [40, 40, 40]);
+        if (outcome.ok) {
+          const clientEventId = formData.get("clientEventId");
+          deckRef.current?.saved(subject.id, outcome.status ?? status, {
+            observedAt: outcome.observedAt,
+            eventId: outcome.eventId,
+            ...(outcome.eventId
+              ? {
+                  evidenceId: canonicalRollCallEvidenceId({
+                    id: outcome.eventId,
+                    clientEventId:
+                      typeof clientEventId === "string" && clientEventId
+                        ? clientEventId
+                        : undefined,
+                  }),
+                }
+              : {}),
+          });
+        }
+      }
+      return outcome;
+    },
+    null,
+  );
   const [occurrence, setOccurrence] = useState(0);
   const startedAt = useRef<number | null>(null);
   const sawPending = useRef(false);
@@ -203,13 +247,10 @@ export function RollCallButton({
   useEffect(() => watchRollCallTouches(), []);
 
   useEffect(() => {
-    if (result) {
-      // **Never the only carrier of a refusal.** The buzz is Android-only and
-      // switchable off, so the `role="alert"` text below is what actually
-      // tells a crew member the tap did not land (see @/components/haptics).
-      vibrate(result.ok ? 10 : [40, 40, 40]);
-    }
-  }, [result]);
+    deckRef.current?.setBusy(isPending);
+    return () => deckRef.current?.setBusy(false);
+  }, [isPending]);
+
   return (
     <>
       <form
@@ -226,7 +267,14 @@ export function RollCallButton({
             <input
               type="hidden"
               name="observedEvidenceIds"
-              value={JSON.stringify(causal.observedEvidenceIds)}
+              value={JSON.stringify([
+                ...new Set([
+                  ...causal.observedEvidenceIds,
+                  ...(status === "cleared" && !reconcilesEvidence && deck?.evidenceId
+                    ? [deck.evidenceId]
+                    : []),
+                ]),
+              ])}
             />
             <input type="hidden" name="meetingDay" value={causal.meetingDay} />
             <input type="hidden" name="reconcilesEvidence" value={String(reconcilesEvidence)} />
@@ -234,8 +282,14 @@ export function RollCallButton({
         ) : null}
         <input type="hidden" name={subject.field} value={subject.id} />
         <input type="hidden" name="status" value={status} />
-        {status === "cleared" && retracts ? (
-          <input type="hidden" name="retractsEventId" value={retracts} />
+        {status !== "cleared" && (observedAt ?? deck?.observedAt) ? (
+          <input type="hidden" name="observedAt" value={observedAt ?? deck?.observedAt} />
+        ) : null}
+        {physicalPresenceOnly ? (
+          <input type="hidden" name="physicalPresenceOnly" value="true" />
+        ) : null}
+        {status === "cleared" && (deck?.eventId ?? retracts) ? (
+          <input type="hidden" name="retractsEventId" value={deck?.eventId ?? retracts} />
         ) : null}
         {noteField ? (
           <p className="mb-2">

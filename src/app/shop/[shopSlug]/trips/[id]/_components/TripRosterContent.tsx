@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DisclosureRowList } from "@/components/ui/disclosure";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripGuests } from "@/features/trip-guests";
@@ -224,6 +224,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
   });
   const moveSeat = actions.moveSeat ? { ...actions.moveSeat, refusal: moveRefusal } : undefined;
   const whoWantsInGroups = whoWantsInGroupsOf({ guests, t, locale, timezone });
+  const addStatus = noticeForForm(context.tripNotice, "add-diver");
 
   return (
     // `contents`, so these blocks lie in the page's flow; `space-y-10` is the
@@ -247,11 +248,14 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           undoAction={actions.undoRemoveBookingAction}
         />
       )}
+      <FormStatus tone={addStatus?.tone}>{addStatus?.text}</FormStatus>
 
       {demand ? (
         // A card in a tone (`TONE_PANEL_CLASS`), not a 12px inset box: its
         // corners were tighter than every card's, its words 4px further in.
-        <section className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint`}>
+        <section
+          className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint group-has-[[data-guest-folio]]/folio:hidden`}
+        >
           <p className={groupLabelClass("warning")}>{t("trips.guests.demandSignal")}</p>
           {/* Balanced: at 390 it ended on "capacity" alone (K-504). */}
           <h2 className={`mt-1 text-balance ${SECTION_TITLE_CLASS}`}>
@@ -290,7 +294,9 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         </section>
       ) : null}
 
-      <TrainingPlanWithDepth context={context} />
+      <div className="group-has-[[data-guest-folio]]/folio:hidden">
+        <TrainingPlanWithDepth context={context} />
+      </div>
       <RosterSection
         trip={{
           shopSlug,
@@ -461,7 +467,6 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
     locale,
     timezone,
     shopRentalItems,
-    tripNotice,
     confirmName,
     confirmEmail,
     confirmPhone,
@@ -502,7 +507,6 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
           addKnownToWaitlistAction: actions.addKnownToWaitlistAction,
           addExistingDiverAction: actions.addExistingDiverAction,
           offerAction: actions.createDirectTripInvitationAction,
-          status: noticeForForm(tripNotice, "add-diver"),
           locale,
           timeZone: timezone,
           confirmName,
@@ -533,7 +537,11 @@ export function TripPromoteAndActivity({
   tripNotice,
   mayDiscount,
   more,
+  recordOnly = false,
+  dayOnly = false,
 }: {
+  recordOnly?: boolean;
+  dayOnly?: boolean;
   guests: TripGuests;
   shopSlug: string;
   locale: string;
@@ -552,7 +560,7 @@ export function TripPromoteAndActivity({
   // check at the page boundary prevents a client-rendered roster from ever
   // deciding whether money controls should exist.
   // Deals sent stay as history; the sender is the Divers tab's panel.
-  const showPromote = lastMinute.promos.length > 0 && mayDiscount;
+  const showPromote = !recordOnly && lastMinute.promos.length > 0 && mayDiscount;
   const canOffer = !cancelled && spotsRemaining(seatsOnSale(trip)) > 0;
   return (
     // A shop's taps and its audit trail, not the departure a staffer prints.
@@ -594,28 +602,30 @@ export function TripPromoteAndActivity({
           </AutoOpenDetails>
         ) : null}
 
-        <DepartureNoteSection locale={locale} shop={shop} trip={trip} />
+        {!recordOnly ? <DepartureNoteSection locale={locale} shop={shop} trip={trip} /> : null}
 
         {more}
 
-        <details className="group/activity">
-          <summary className={FOOT_ROW_SUMMARY}>
-            <span>{t("trips.guests.activityHeading")}</span>
-            <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />
-          </summary>
-          <div className={FOOT_ROW_BODY}>
-            <ActivityLog
-              events={activity.map((event) => ({
-                id: event.id,
-                message: activityLine(t, event),
-                occurredAt: event.occurredAt,
-              }))}
-              locale={locale}
-              timeZone={timezone}
-              emptyText={t("trips.guests.noActivity")}
-            />
-          </div>
-        </details>
+        {!dayOnly ? (
+          <details className="group/activity" open={recordOnly}>
+            <summary className={FOOT_ROW_SUMMARY}>
+              <span>{t("trips.guests.activityHeading")}</span>
+              <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />
+            </summary>
+            <div className={FOOT_ROW_BODY}>
+              <ActivityLog
+                events={activity.map((event) => ({
+                  id: event.id,
+                  message: activityLine(t, event),
+                  occurredAt: event.occurredAt,
+                }))}
+                locale={locale}
+                timeZone={timezone}
+                emptyText={t("trips.guests.noActivity")}
+              />
+            </div>
+          </details>
+        ) : null}
       </DisclosureRowList>
       {/* Today, Promotions and a held send link here at `#last-minute-deal`;
           the roster's own ScrollToHash is not on this tab. */}

@@ -1,7 +1,7 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { formatMoneyCents } from "../src/lib/format";
 import { expect, test } from "./fixtures";
-import { openRosterDetails } from "./helpers";
+import { openRosterDetails, rosterRow } from "./helpers";
 
 const t = staffTranslator("en-US");
 
@@ -44,7 +44,7 @@ test.describe("Stripe deposit with external balance", () => {
   }) => {
     const fact = privateShop.values.mixedDeposit as { tripId: string; name: string };
     await page.goto(`/shop/${privateShop.slug}/trips/${fact.tripId}`);
-    const row = page.locator("li").filter({ hasText: fact.name }).filter({ visible: true });
+    const row = await rosterRow(page, fact.name);
     await openRosterDetails(row);
     await expect(
       row.getByRole("combobox", { name: t("trips.roster.paymentStatusLabel") }),
@@ -73,6 +73,7 @@ test.describe("Stripe deposit with external balance", () => {
     await row.getByRole("radio", { name: "Cash", exact: true }).check();
     await row.getByRole("button", { name: "Update", exact: true }).click();
     await page.waitForURL(/notice=payment/);
+    await openRosterDetails(row);
     await expect(
       row.getByText(t("trips.roster.paymentSourceMixed"), { exact: false }),
     ).toBeVisible();
@@ -92,7 +93,7 @@ test.describe("external partial returns", () => {
   }) => {
     const fact = privateShop.values.mixedCashReceipt as { tripId: string; name: string };
     await page.goto(`/shop/${privateShop.slug}/trips/${fact.tripId}`);
-    const row = page.locator("li").filter({ hasText: fact.name }).filter({ visible: true });
+    const row = await rosterRow(page, fact.name);
     await openRosterDetails(row);
     const status = row.getByRole("combobox", { name: t("trips.roster.paymentStatusLabel") });
     await status.selectOption("refunded");
@@ -104,6 +105,7 @@ test.describe("external partial returns", () => {
       row.getByText(t("trips.roster.paymentSourceMixed"), { exact: false }),
     ).toBeVisible();
     await page.reload();
+    await rosterRow(page, fact.name);
     await openRosterDetails(row);
     await expect(status).toHaveValue("partly_refunded");
   });
@@ -114,7 +116,7 @@ test.describe("cash receipt after a partial return", () => {
   test("adds only new cash without erasing money still held", async ({ page, privateShop }) => {
     const fact = privateShop.values.cashReceipt as { tripId: string; name: string };
     await page.goto(`/shop/${privateShop.slug}/trips/${fact.tripId}`);
-    const row = page.locator("li").filter({ hasText: fact.name }).filter({ visible: true });
+    const row = await rosterRow(page, fact.name);
     await openRosterDetails(row);
     const status = row.getByRole("combobox", { name: t("trips.roster.paymentStatusLabel") });
     await status.selectOption("refunded");

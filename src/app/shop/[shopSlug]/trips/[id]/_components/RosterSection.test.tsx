@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass } from "@/components/ui/button";
 import {
   blocked,
-  deepRow,
   entry,
   fixtures,
   readinessRow,
@@ -79,64 +78,12 @@ describe("the decompression reminder on the roster (H-20261017-decompression-dep
 });
 
 describe("the guests ledger (slice 5d)", () => {
-  it("files every seat under a group band that owns the state word and the count", () => {
-    renderRoster(fixtures);
-
-    // The band is a real heading, once per group — the word plus the tally.
-    expect(screen.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Ready · 1" })).toBeVisible();
-  });
-
   /**
    * **The bands are the Divers tab's second level** (UX review 2026-10-13,
    * item 39). The departure page draws the roster under its own H1 with no
    * summary heading, and the bands were H3: a screen reader moving by level
    * found nothing at 2 on the page the desk uses most.
    */
-  it("gives its group bands the level under the page title, skipping none", () => {
-    renderRoster(fixtures);
-
-    const bands = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(bands).toEqual(expect.arrayContaining(["Still to clear · 1", "Ready · 1"]));
-    expect(screen.queryAllByRole("heading", { level: 3 })).toEqual([]);
-  });
-
-  it("never repeats the group's state word down its rows: a cleared seat is a name and a drawn mark", () => {
-    const { container } = renderRoster(fixtures);
-
-    // "Ready" appears exactly once on the surface — the group band. The old
-    // roster printed it (with a 🌊) beside all seven cleared rows, which is
-    // the repetition principle 9 forbids and this ledger removes.
-    const readyWords = screen.getAllByText(/^Ready/);
-    expect(readyWords).toHaveLength(1);
-
-    // The cleared seat's mark is drawn SVG (decision 5) — no emoji anywhere
-    // on the ledger, in any state.
-    const row = container.querySelector(`#booking-${ready.booking.id}`);
-    expect(row).not.toBeNull();
-    expect(row?.querySelector("summary svg")).not.toBeNull();
-    expect(container.textContent).not.toMatch(/[\u{1F30A}\u{1F382}\u{2705}\u{26A0}\u{274C}]/u);
-  });
-
-  it("keeps a blocked seat's sentence in the open, ahead of the cleared rows", () => {
-    const { container } = renderRoster(fixtures);
-
-    // The blocker sentence renders without any tap, under the name...
-    expect(screen.getByText("No certification is on file for this trip.")).toBeVisible();
-    // ...and said once: the row's panel holds the fix, not the sentence again.
-    expect(screen.getAllByText("No certification is on file for this trip.")).toHaveLength(1);
-    expect(container.querySelector(`#booking-${blocked.booking.id} details`)).not.toHaveAttribute(
-      "open",
-    );
-    // Its one fix waits behind the row, pointing at the record that clears it.
-    expect(
-      screen.getByRole("link", { name: /Review certifications/, hidden: true }),
-    ).toHaveAttribute("href", `/shop/blue-mantis/divers/${blocked.person.id}#cards`);
-
-    // And the groups order the page's answer: open work above cleared seats.
-    const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(headings.indexOf("Still to clear · 1")).toBeLessThan(headings.indexOf("Ready · 1"));
-  });
 
   /**
    * **A blocker is said on its own diver, however many share it** (Aaron,
@@ -144,36 +91,6 @@ describe("the guests ledger (slice 5d)", () => {
    * neither the problem nor the fix, and there is no batched action for a
    * blocker that a shared line could stand for.
    */
-  it("keeps critical names readable and says a shared blocker on every row it stops", () => {
-    const secondBlocked = entry("c", "Mina Patel");
-    const thirdBlocked = entry("d", "Owen Reed");
-    const roster = [blocked, secondBlocked, thirdBlocked];
-    const readiness = new Map([
-      ["a", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
-      ["c", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
-      ["d", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
-    ]) as ReadinessByBooking;
-    const { container } = renderRoster({
-      roster,
-      readiness,
-      waivers: new Map([
-        ["a", signedWaiver],
-        ["c", signedWaiver],
-        ["d", signedWaiver],
-      ]) as WaiverByBooking,
-    });
-
-    expect(screen.getByRole("link", { name: "Asha Osei" })).toHaveClass(
-      "text-base",
-      "font-semibold",
-    );
-    const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
-    expect(band).not.toBeNull();
-    expect(within(band as HTMLElement).queryByText(/3 divers:/)).toBeNull();
-    expect(screen.getAllByText(/No certification/)).toHaveLength(3);
-    expect(screen.queryByText(/shared with other divers/)).toBeNull();
-    expect(container.querySelector("#roster > div.mt-5")).toBeNull();
-  });
 
   it("keeps a diver's re-entry ask in the open, and off the cleared group", () => {
     // The ask is the one line on this row the diver wrote, and a request the
@@ -190,7 +107,7 @@ describe("the guests ledger (slice 5d)", () => {
     const note = screen.getByText("Asked for a word with the divemaster.");
     expect(note).toBeVisible();
     expect(note.className).not.toMatch(/text-(danger|warning)/);
-    expect(screen.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Yara Halabi|Wen Ito/ })).toBeVisible();
     expect(screen.queryByRole("heading", { name: /^Ready ·/ })).toBeNull();
   });
 
@@ -348,20 +265,6 @@ describe("the guests ledger (slice 5d)", () => {
    * row of ten trip captures, and on a phone wrapped to a line of its own
    * whose 4px row gap put the name 2px above the row's centre.
    */
-  it("leaves no empty slot at the end of a name line with nothing to show", () => {
-    const { container } = renderRoster(fixtures);
-
-    const clearedLine = container.querySelector(`#booking-${ready.booking.id} > div`);
-    expect(clearedLine).not.toBeNull();
-    expect(clearedLine?.querySelectorAll(":scope > :empty")).toHaveLength(0);
-    expect(clearedLine?.children).toHaveLength(1);
-
-    // A seat with a state word still gets the slot, pushed to the line's end.
-    const blockedLine = container.querySelector(`#booking-${blocked.booking.id} > div`);
-    expect(blockedLine?.children).toHaveLength(2);
-    expect(blockedLine?.lastElementChild).toHaveClass("ms-auto");
-    expect(blockedLine?.lastElementChild).toHaveTextContent("Blocked");
-  });
 });
 
 /**
@@ -378,26 +281,8 @@ describe("the roster's row geometry", () => {
    * row. The mark's top is the `li`'s own padding, so the two 44px boxes share
    * one band.
    */
-  it("pins each row's mark to the name line's band, at the row's own top padding", () => {
-    const { container } = renderRoster(fixtures);
-
-    for (const seat of fixtures.roster) {
-      const row = container.querySelector(`#booking-${seat.booking.id}`);
-      expect(row).toHaveClass("py-1");
-      const mark = row?.querySelector("summary[aria-label]");
-      expect(mark).toHaveClass("absolute", "top-1", "size-11");
-      expect(mark).not.toHaveClass("top-2.5");
-    }
-  });
 
   /** A row that opens on a mark, then its words: the mark stands on the words' first line. */
-  function expectMarkOnFirstLine(row: Element | null) {
-    expect(row).toHaveClass("flex", "items-baseline");
-    const column = row?.firstElementChild;
-    expect(column).toHaveClass("shrink-0");
-    expect(column?.firstElementChild).toHaveClass("h-lh", "items-center");
-    expect(column?.querySelector("svg")).not.toBeNull();
-  }
 
   /**
    * K-494: a bare 16px mark in a stretched `flex gap-2` row stood at the top
@@ -405,7 +290,7 @@ describe("the roster's row geometry", () => {
    * warning line. Each mark is now the row's `StatusMarkColumn`, a block one
    * line of the row's text tall with the mark centred in it.
    */
-  it("stands each blocker's and warning's mark on the first line of its words", () => {
+  it("keeps requirement remedies and preparation instructions visible on their guest", () => {
     const rusty = entry("r", "Olga Rust");
     renderRoster({
       roster: [
@@ -423,9 +308,13 @@ describe("the roster's row geometry", () => {
     });
 
     const blocker = screen.getByText("No certification is on file for this trip.");
-    expectMarkOnFirstLine(blocker.closest("li"));
+    expect(blocker).toBeVisible();
+    expect(blocker.closest("details")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "All guests" }));
+    fireEvent.click(screen.getByRole("button", { name: "Olga Rust" }));
     const warning = screen.getByText(/^Last dived/);
-    expectMarkOnFirstLine(warning.closest("li"));
+    expect(warning).toBeVisible();
+    expect(warning.closest("details")).toBeNull();
   });
 
   /**
@@ -435,20 +324,6 @@ describe("the roster's row geometry", () => {
    * the sentence. The line is `items-baseline` now, its mark a column with a
    * line of its own, so the fact's words set the baseline the title meets.
    */
-  it("lines the band's title up with its first fact's words, not the fact's mark", () => {
-    const roster = [blocked, entry("c", "Mina Patel"), entry("d", "Owen Reed")];
-    renderRoster({
-      roster,
-      readiness: new Map(roster.map((seat) => [seat.booking.id, deepRow()])) as ReadinessByBooking,
-      waivers: new Map(roster.map((seat) => [seat.booking.id, signedWaiver])) as WaiverByBooking,
-    });
-
-    const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
-    expect(band).toHaveClass("items-baseline");
-    const fact = within(band as HTMLElement).getByText(/3 divers: Reaches 30/);
-    expectMarkOnFirstLine(fact.closest("p"));
-    expect(fact.closest("p")).not.toHaveClass("items-start");
-  });
 
   /**
    * K-267: the facts' column right-aligned each line (`sm:items-end`), so
@@ -456,22 +331,6 @@ describe("the roster's row geometry", () => {
    * 741 on minimum-seats). The column stays at the band's end, placed there
    * by the band's `justify-between`; its lines start on one edge.
    */
-  it("starts every shared fact on one edge, so their marks form a column", () => {
-    const roster = [blocked, entry("c", "Mina Patel"), entry("d", "Owen Reed")];
-    renderRoster({
-      roster,
-      readiness: new Map(roster.map((seat) => [seat.booking.id, deepRow()])) as ReadinessByBooking,
-      waivers: new Map(roster.map((seat) => [seat.booking.id, signedWaiver])) as WaiverByBooking,
-    });
-
-    const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
-    expect(band).toHaveClass("justify-between");
-    const facts = within(band as HTMLElement)
-      .getByText(/3 divers: Reaches 30/)
-      .closest("p")?.parentElement;
-    expect(facts).toHaveClass("sm:items-start");
-    expect(facts).not.toHaveClass("sm:items-end");
-  });
 
   /**
    * K-278 and K-364, the name line's trailing capsules. From `sm` they sit at
@@ -482,16 +341,15 @@ describe("the roster's row geometry", () => {
    * first, like the name's own wrap (they right-aligned to the mark's edge, 6px
    * off the name, on no shared edge).
    */
-  it("ends the capsules on the verdict from sm, and starts a phone's wrapped capsules on the name's column", () => {
-    const { container } = renderRoster(fixtures);
-
-    const verdict = within(
-      container.querySelector(`#booking-${blocked.booking.id}`) as HTMLElement,
-    ).getByText("Blocked");
-    expect(verdict).toHaveClass("sm:order-last");
-    const capsules = verdict.parentElement;
-    expect(capsules?.firstElementChild).toBe(verdict);
-    expect(capsules).toHaveClass("ms-auto", "justify-end", "max-sm:ms-0", "max-sm:justify-start");
+  it("gives the selected guest one name and keeps reference secondary to every remedy", () => {
+    const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
+    fireEvent.click(screen.getByRole("button", { name: blocked.person.fullName }));
+    expect(screen.getAllByText(blocked.person.fullName)).toHaveLength(1);
+    expect(screen.getByText("No certification is on file for this trip.")).toBeVisible();
+    expect(screen.getByRole("link", { name: /Review certifications/ })).toBeVisible();
+    const reference = container.querySelector('details[id^="guest-reference-"]');
+    expect(reference).not.toHaveAttribute("open");
+    expect(screen.getByText(blocked.person.email as string)).not.toBeVisible();
   });
 
   /**
@@ -598,11 +456,11 @@ describe("the one-line row", () => {
     const cert = screen.getByText("No certification is on file for this trip.");
     expect(cert).toBeVisible();
     expect(cert.closest("details")).toBeNull();
-    const row = cert.closest('li[id^="booking-"]') as HTMLElement;
-    const lines = within(row).getAllByRole("listitem");
-    // The guardian sentence and the cert sentence, both in the open.
-    expect(lines).toHaveLength(2);
-    for (const line of lines) expect(line.closest("details")).toBeNull();
+    const guardian = screen.getByText(/Signed by a minor alone/);
+    expect(guardian).toBeVisible();
+    expect(guardian.closest("details")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Waiver" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Certification" })).toBeVisible();
   });
 
   it("names the unsent waiver and the unpaid seat when no blocker does", () => {
@@ -615,7 +473,7 @@ describe("the one-line row", () => {
       requiresPayment: true,
     });
 
-    expect(screen.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Yara Halabi|Wen Ito/ })).toBeVisible();
     expect(screen.getByText("Waiver not signed yet")).toBeVisible();
     expect(screen.getByText("Not paid yet")).toBeVisible();
   });
@@ -691,6 +549,28 @@ it("keeps readiness neutral for a booked diver already boarded without counter c
     roster: [ready],
     arrival: { controls: new Map(), below: new Map(), boarded: new Set([ready.booking.id]) },
   });
-  expect(screen.getByRole("heading", { name: "Ready · 1" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: ready.person.fullName })).toBeVisible();
   expect(screen.queryByRole("heading", { name: /To arrive/ })).toBeNull();
+});
+
+describe("the guest folio workflow", () => {
+  it("starts with named guest choices and opens each blocker beside its remedy", () => {
+    const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
+    expect(screen.getByRole("heading", { name: "Who’s coming" })).toBeVisible();
+    expect(screen.getByRole("button", { name: blocked.person.fullName })).toBeVisible();
+    expect(screen.getByRole("button", { name: ready.person.fullName })).toBeVisible();
+    expect(container.querySelector("li#booking-a")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: blocked.person.fullName }));
+    const folio = container.querySelector("li#booking-a") as HTMLElement;
+    expect(within(folio).getByText("No certification is on file for this trip.")).toBeVisible();
+    expect(within(folio).getByRole("link", { name: /Review certifications/ })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/divers/${blocked.person.id}#cards`,
+    );
+    expect(within(folio).getByRole("link", { name: "Review fit" })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/divers/${blocked.person.id}#gear`,
+    );
+    expect(screen.getByRole("button", { name: "Next guest needing attention" })).toBeVisible();
+  });
 });

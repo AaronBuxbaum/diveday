@@ -131,6 +131,11 @@ export default async function TripPrepPage({
         trip={trip}
         locale={locale}
         timeZone={shop.timezone}
+        actions={
+          <Link href={shopPath(shopSlug, "trips", tripId, "manifest")} className={buttonClass({})}>
+            {t("trips.folio.openDeck")}
+          </Link>
+        }
         badge={
           <>
             <TripStageBadge stage={shownStage?.stage ?? null} copy={tripTabsCopy(t)} />

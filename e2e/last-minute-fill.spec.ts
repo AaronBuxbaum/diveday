@@ -2,7 +2,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { HELD_SEND_TIMEOUT_MS, openDiverFileGroup, rosterRow, tripPathByTitle } from "./helpers";
+import { HELD_SEND_TIMEOUT_MS, openDiverFileGroup, tripPathByTitle } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 const diver = diverTranslator("en-US");
@@ -306,8 +306,9 @@ test.describe("staff and the list", () => {
     });
     await openWhoWantsIn(page);
 
-    await expect(rosterRow(page, "Owen Achebe").filter({ visible: true })).toBeVisible();
-    await expect(rosterRow(page, "Nell Byrne").filter({ visible: true })).toHaveCount(0);
+    const recipients = page.locator("#who-wants-in");
+    await expect(recipients.getByRole("listitem").filter({ hasText: "Owen Achebe" })).toBeVisible();
+    await expect(recipients.getByRole("listitem").filter({ hasText: "Nell Byrne" })).toHaveCount(0);
     await expect(page.getByText(/below this departure’s requirement/)).toHaveCount(0);
 
     // Other eligible recipients can still be offered a seat, each from their own row.

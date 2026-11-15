@@ -61,6 +61,11 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/shop/blue-mantis/staffing");
       const scope = page.getByRole("combobox", { name: staffCopy("staffing.filter.person") });
       await scope.selectOption("me");
+      await expect(page).toHaveURL(
+        (url) =>
+          url.pathname === "/shop/blue-mantis/staffing" && url.searchParams.get("person") === "me",
+      );
+      await expect(scope.locator("..")).toHaveAttribute("aria-busy", "false");
       await expect(scope).toHaveValue("me");
       await capture(page, "crew-personal-schedule", scheme);
     });

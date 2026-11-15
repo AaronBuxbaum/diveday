@@ -2,6 +2,7 @@ import { RollCallEvidencePanel } from "@/components/RollCallEvidencePanel";
 import { buttonClass } from "@/components/ui/button";
 import { offlineCausalContext } from "@/lib/roll-call-offline-causality";
 import type { OfflineTripControls } from "./controls";
+import { useDeckMutation } from "./DeckFlow";
 import type { OfflineTripView } from "./trip-view";
 
 export function OfflineCausalConflicts({
@@ -12,6 +13,7 @@ export function OfflineCausalConflicts({
   controls: OfflineTripControls;
 }) {
   const { t, locale } = controls;
+  const deck = useDeckMutation();
   const departure = view.checkpoint === "departure";
   const subjects = [
     ...view.manifest.divers.map((row) => ({
@@ -59,9 +61,24 @@ export function OfflineCausalConflicts({
               type="button"
               className={buttonClass({ variant: "secondary" })}
               disabled={view.expired || controls.busyBooking === row.id}
-              onClick={() =>
-                void controls.record(row.subject, { status, reconcilesEvidence: true })
-              }
+              onClick={async () => {
+                deck?.setBusy(true);
+                try {
+                  const result = await controls.record(row.subject, {
+                    status,
+                    reconcilesEvidence: true,
+                  });
+                  if (result === true || (typeof result === "object" && result.ok)) {
+                    deck?.saved(
+                      row.id,
+                      status,
+                      typeof result === "object" ? result : { pending: true },
+                    );
+                  }
+                } finally {
+                  deck?.setBusy(false);
+                }
+              }}
             >
               {t(
                 status === "boarded"

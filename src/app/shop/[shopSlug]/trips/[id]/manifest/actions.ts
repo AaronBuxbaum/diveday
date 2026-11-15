@@ -48,26 +48,11 @@ import { formShowedSpecies } from "./_components/species-shown";
 import { crewRollCallSchema, rollCallSchema } from "./roll-call-causal-fields";
 import { supersededOr } from "./roll-call-undo";
 
-/* -------------------------------------------------------------------------- *
- * The boat manifest's mutations
- *
- * Every one of these used to be an inline `"use server"` closure inside
- * `page.tsx`, capturing `tripId`, `checkpoint`, `back`, and `plannedDives` from
- * the render. At module scope they take that context as **one bound leading
- * argument** instead (the page binds it once and hands the bound action to the
- * section that renders it), which is the same channel a closure used — Next
- * serializes and seals what an action carries either way — and re-prove
- * anything the client can still reach: a private note is scoped to the bound
- * trip and booking by the database operation, and the two roll-call writers
- * re-prove the checkpoint inside their own transaction.
- *
- * The context is a **named object, not three positional strings**. `shopSlug`
- * and `tripId` are both opaque ids of the same shape, and at a `.bind` call
- * site swapping them is a silent, well-typed mistake that revalidates the
- * wrong route.
- *
- * Nothing about what these accept, refuse, record, or redirect to changed.
- * -------------------------------------------------------------------------- */
+/**
+ * Actions bind one named context object so shop and trip ids cannot be silently
+ * swapped at positional call sites. Database writes re-prove the subject's shop,
+ * trip and checkpoint independently of the bound UI context.
+ */
 
 /**
  * Where an action on this page is happening: whose shop's route to revalidate,
@@ -78,6 +63,7 @@ export type ManifestActionContext = {
   shopSlug: string;
   tripId: string;
   checkpoint: RollCallCheckpoint;
+  buddySurface?: "day";
 };
 
 /**
@@ -121,6 +107,9 @@ async function manifestStaff(ctx: ManifestTripContext) {
  * to arrive with it open.
  */
 function manifestBack(ctx: ManifestActionContext): string {
+  if (ctx.buddySurface === "day") {
+    return `${shopPath(ctx.shopSlug, "trips", ctx.tripId)}?view=details&buddies=open`;
+  }
   // `checkpoint` is escaped rather than interpolated raw: it reaches these
   // actions as a bound argument like the slug, and one carrying `&` would
   // append query params of its own to the URL a notice is then added to.
@@ -510,6 +499,8 @@ export async function rollCallAction(
   const staff = await manifestStaff(ctx);
   const parsed = rollCallSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, reason: "error" };
+  const occurredAt = parsed.data.observedAt ? new Date(parsed.data.observedAt) : nowDate();
+  let receipt: { eventId: string; observedAt?: string; status: typeof parsed.data.status };
   // A throw or dropped connection returns the worded rollback rather than
   // rejecting the action, which would silently revert the card on flaky Wi-Fi.
   try {
@@ -519,6 +510,8 @@ export async function rollCallAction(
       bookingId: parsed.data.bookingId,
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
+      physicalPresenceOnly: parsed.data.physicalPresenceOnly,
+      occurredAt,
       note: parsed.data.note,
       retractsEventId: parsed.data.retractsEventId,
       clientEventId: parsed.data.clientEventId,
@@ -537,12 +530,17 @@ export async function rollCallAction(
       if (outcome.reason === "boat_full") return { ok: false, reason: "boat_full" };
       return supersededOr(manifestPath(ctx), outcome.reason);
     }
+    receipt = {
+      eventId: outcome.eventId,
+      status: parsed.data.status,
+      ...(!outcome.duplicate ? { observedAt: occurredAt.toISOString() } : {}),
+    };
   } catch {
     return { ok: false, reason: "error" };
   }
   // Settle the card in place instead of a full-page redirect per tap.
   revalidatePath(manifestPath(ctx));
-  return { ok: true };
+  return { ok: true, ...receipt };
 }
 
 const preDepartureCheckSchema = z.object({
@@ -741,6 +739,8 @@ export async function crewRollCallAction(
   const staff = await manifestStaff(ctx);
   const parsed = crewRollCallSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, reason: "error" };
+  const occurredAt = parsed.data.observedAt ? new Date(parsed.data.observedAt) : nowDate();
+  let receipt: { eventId: string; observedAt?: string; status: typeof parsed.data.status };
   try {
     const outcome = await recordCrewRollCall(await getDb(), {
       shopId: staff.user.shopId,
@@ -748,6 +748,7 @@ export async function crewRollCallAction(
       personId: parsed.data.personId,
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
+      occurredAt,
       note: parsed.data.note,
       retractsEventId: parsed.data.retractsEventId,
       clientEventId: parsed.data.clientEventId,
@@ -762,11 +763,16 @@ export async function crewRollCallAction(
     // The distinctions (`crew_not_assigned`, `trip_unavailable`) are
     // server-side codes, not something to explain to someone with wet hands.
     if (!outcome.ok) return supersededOr(manifestPath(ctx), outcome.reason);
+    receipt = {
+      eventId: outcome.eventId,
+      status: parsed.data.status,
+      ...(!outcome.duplicate ? { observedAt: occurredAt.toISOString() } : {}),
+    };
   } catch {
     return { ok: false, reason: "error" };
   }
   revalidatePath(manifestPath(ctx));
-  return { ok: true };
+  return { ok: true, ...receipt };
 }
 
 /**

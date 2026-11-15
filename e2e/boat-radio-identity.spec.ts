@@ -4,7 +4,7 @@ import { expect, test } from "./fixtures";
 
 const staff = staffTranslator("en-US");
 
-import { tripPathByTitle } from "./helpers";
+import { openDeckDetails, tripPathByTitle } from "./helpers";
 
 const REEF = "Two-Tank Reef — Molasses & French";
 const BOAT = "Mantis I";
@@ -64,11 +64,9 @@ test("a boat's call sign, MMSI and working channel reach the emergency card of t
   await expect(boatRow(page, BOAT).getByLabel("Working channel")).toHaveValue("68");
 
   await page.goto(`${await tripPathByTitle(page, privateShop.slug, REEF)}/manifest`);
-  await page
-    .getByRole("button", { name: "Emergency numbers & response plan" })
-    .filter({ visible: true })
-    .click();
-  const card = page.getByRole("region", { name: "In an emergency" });
+  await openDeckDetails(page);
+  const card = page.getByRole("region", { name: staff("manifest.emergency.heading"), exact: true });
+  await expect(card).toBeVisible();
   await expect(card.getByText(`Vessel: ${BOAT}`)).toBeVisible();
   await expect(card.getByText("Call sign: WDM 3301")).toBeVisible();
   await expect(card.getByText("MMSI: 338012345")).toBeVisible();

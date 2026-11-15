@@ -35,6 +35,18 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * `pnpm e2e:run e2e/agency-check-extension.spec.ts --reporter=line`.
  */
 
+async function showAllGuests(page: Page) {
+  const all = page.getByRole("button", { name: "All guests", exact: true });
+  if (await all.count()) await all.click();
+}
+
+async function waitForAddedGuest(page: Page, name: string) {
+  await showAllGuests(page);
+  await expect(
+    page.locator("button[data-guest-open]").filter({ has: page.getByText(name, { exact: true }) }),
+  ).toBeVisible();
+}
+
 const SHOP = "blue-mantis";
 /** A seeded diver on this departure whose SSI card is still pending (`seed-divers.ts`). */
 const SEEDED_DIVER = "Tyler Brooks";
@@ -622,13 +634,18 @@ test("SSI cards are excluded from Check all", async ({ page, extensionId }) => {
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(newcomer);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-  await addDiver.getByRole("button", { name: `Add ${newcomer} to the trip` }).click();
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+    addDiver.getByRole("button", { name: `Add ${newcomer} to the trip` }).click(),
+  ]);
+  await waitForAddedGuest(page, newcomer);
   await expect(
-    rosterRow(page, newcomer).getByRole("button", { name: "Check with SSI" }),
+    (await rosterRow(page, newcomer)).getByRole("button", { name: "Check with SSI" }),
   ).toBeVisible();
   await expect(
-    rosterRow(page, SEEDED_DIVER).getByRole("button", { name: "Check with SSI" }),
+    (await rosterRow(page, SEEDED_DIVER)).getByRole("button", { name: "Check with SSI" }),
   ).toBeVisible();
+  await showAllGuests(page);
   await expect(page.getByRole("button", { name: /^Check all/ })).toHaveCount(0);
 });
 

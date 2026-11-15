@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
@@ -54,7 +55,8 @@ async function fullDeparture(page: Page): Promise<string> {
   await page.getByLabel("Email").fill(`call-fills-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
+  const added = staffTranslator("en-US")("trips.notices.diverAdded");
+  await expect(page.getByRole("alert").filter({ hasText: added })).toContainText(added);
   return title;
 }
 

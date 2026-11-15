@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 /**
  * **The emergency reference is on the manifest wherever the crew read it.**
  *
- * The manifest renders the card three times: in the phone header's menu, in
- * the desktop footer's disclosure, and in the print copy, which carries the
- * missing-diver procedure. What the card says is the same in all three.
+ * The manifest renders the card in Deck Details on phones and desktops, and
+ * in the print copy, which carries the
+ * missing-diver procedure. Both copies carry the same operational reference.
  *
  * Read off the source because this is a server page: there is no render to
  * inspect without a database, a request and a shop. The paper copy lives in
@@ -24,8 +24,8 @@ const CARDS = `${SOURCE}${PAPER}`
   .map((rest) => rest.slice(0, rest.indexOf("/>")));
 
 describe("the manifest's emergency reference", () => {
-  it("is rendered three times: the phone menu, the desktop footer and paper", () => {
-    expect(CARDS).toHaveLength(3);
+  it("is available in Deck Details and on paper", () => {
+    expect(CARDS).toHaveLength(2);
     expect(SOURCE.split("<PrintedBoatPaper")).toHaveLength(2);
   });
 

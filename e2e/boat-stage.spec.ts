@@ -1,6 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
+import { offlineCopySaved, openDeckDetails, openTripFromBoard, openTripTab } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 signedInAsOwner();
@@ -24,6 +24,7 @@ test("a tap on the manifest reaches the home and stays off the public schedule",
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
   await offlineCopySaved(page);
+  await openDeckDetails(page);
 
   const headingIn = page.getByRole("button", { name: "Heading in", exact: true });
   await headingIn.click();
@@ -79,6 +80,7 @@ for (const width of [390, 1280]) {
     await expect(page.getByRole("region", { name: "What today made" })).toBeVisible();
     await page.goto(`${tripPath}/manifest`);
     await offlineCopySaved(page);
+    await openDeckDetails(page);
     const underway = page.getByRole("button", { name: "Underway", exact: true });
     await underway.click();
     await expect(underway).toHaveAttribute("aria-pressed", "true");
@@ -102,8 +104,11 @@ for (const width of [390, 1280]) {
     });
     await page.goto(`${tripPath}/manifest`);
     await offlineCopySaved(page);
+    await openDeckDetails(page);
     await expect(underway).toHaveAttribute("aria-pressed", "true");
-    const home = page.getByRole("button", { name: "Home", exact: true });
+    const home = page
+      .locator('form:has(input[name="stage"][value="home"])')
+      .getByRole("button", { name: "Home", exact: true });
     await home.click();
     await expect(home).toHaveAttribute("aria-pressed", "true");
     await page.goto("/shop/blue-mantis");

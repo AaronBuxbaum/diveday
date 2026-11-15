@@ -11,18 +11,81 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { cachedFormatter } from "@/lib/intl-cache";
+import { offlineCausalContext } from "@/lib/roll-call-offline-causality";
 import { OfflineArrivalRefusals } from "./ArrivalRefusals";
+import { OfflineCausalConflicts } from "./CausalConflicts";
 import { OfflineChecklist, OfflineSnags } from "./Checklist";
 import { OfflineCheckpointNav } from "./CheckpointNav";
 import { OfflineCounter } from "./Counter";
 import type { OfflineTripControls } from "./controls";
+import { OfflineDeckSafety } from "./DeckNotices";
+import { OfflineDeckRollCall } from "./DeckRollCall";
 import { OfflineManifestSheet } from "./ManifestSheet";
 import { MissingRollCallRefusals } from "./MissingRollCallRefusals";
-import { OfflineRollCallSection } from "./RollCallSection";
 import { StatusMessage } from "./StatusMessage";
 import { OfflineTripFoot } from "./TripFoot";
 import { OfflineTripHeader } from "./TripHeader";
 import type { OfflineTripView } from "./trip-view";
+
+function hasCausalConflict(view: OfflineTripView): boolean {
+  const { snapshot } = view.envelope;
+  return (
+    view.manifest.divers.some(
+      (diver) =>
+        offlineCausalContext(
+          snapshot,
+          view.envelope.events,
+          { bookingId: diver.bookingId },
+          view.checkpoint,
+        ).conflict,
+    ) ||
+    view.manifest.crew.some((member) =>
+      member.id
+        ? offlineCausalContext(
+            snapshot,
+            view.envelope.events,
+            { crewPersonId: member.id },
+            view.checkpoint,
+          ).conflict
+        : false,
+    )
+  );
+}
+
+function OfflineCrewAttention({
+  view,
+  controls,
+}: {
+  view: OfflineTripView;
+  controls: OfflineTripControls;
+}) {
+  const { t } = controls;
+  const reason = view.completeness.crewReason;
+  return (
+    <>
+      {view.crewMissing ? (
+        <p className="font-semibold text-danger">
+          {t("shared.offlineManifest.single.crewNotBackAboard", {
+            count: view.crewCounts.crewNotBackAboard,
+          })}
+        </p>
+      ) : reason === "crew_none_assigned" || reason === "crew_none_aboard" ? (
+        <p className="font-semibold text-danger">
+          {t(
+            reason === "crew_none_assigned"
+              ? "shared.offlineManifest.single.crewNoneAssigned"
+              : "shared.offlineManifest.single.crewNoneAboard",
+          )}
+        </p>
+      ) : null}
+      {view.crewWithoutId > 0 ? (
+        <p className="font-semibold">
+          {t("shared.offlineManifest.single.crewOlderCopy", { count: view.crewWithoutId })}
+        </p>
+      ) : null}
+    </>
+  );
+}
 
 /** One saved trip on this device, as the crew works it with no signal. */
 export function OfflineTripScreen({
@@ -46,6 +109,8 @@ export function OfflineTripScreen({
 }) {
   const { envelope } = view;
   const { t } = controls;
+  const openedGap = view.previousGaps.get(view.checkpoint);
+  const priorMissing = openedGap?.kind === "unmarked" && openedGap.missing > 0;
   // **The saved copy's paper is a state of this page** (issue #2745): the
   // door swaps the screen for the sheet, so nothing that taps is ever on the
   // page the printer sees. Held here, never in the URL, because this page
@@ -83,7 +148,7 @@ export function OfflineTripScreen({
         )}
       </ScreenNotPrinted>
       <main data-roll-call-surface className="boat-mode w-full flex-1 bg-background">
-        <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+        <div className="mx-auto w-full max-w-3xl px-4 py-2 sm:px-6">
           <PullToRefresh onRefresh={reconcile}>
             <OfflineShellVersionBanner copy={shellVersionCopy} />
             {discardNotice}
@@ -97,110 +162,137 @@ export function OfflineTripScreen({
               </p>
             ) : null}
             <SkipLink
-              href="#offline-roll-call"
+              href="#deck-flow"
               label={t("shared.offlineManifest.single.skipLink")}
               level="page"
             />
-            <OfflineTripHeader view={view} controls={controls} />
-            {(envelope.snapshot.rollCallMeetingDays?.length ?? 0) > 1 ? (
-              <Field label={t("manifest.conflicts.meetingDay")} htmlFor="offline-meeting-day">
-                <select
-                  id="offline-meeting-day"
-                  className={controlClass}
-                  value={controls.selectedMeetingDay ?? 0}
-                  onChange={(event) => controls.setMeetingDay?.(Number(event.target.value))}
-                >
-                  {envelope.snapshot.rollCallMeetingDays?.map((day, index) => (
-                    <option key={day.startsAt} value={index}>
-                      {cachedFormatter("date", Intl.DateTimeFormat, controls.locale, {
-                        dateStyle: "full",
-                        timeZone: envelope.snapshot.shop.timezone,
-                      }).format(new Date(day.startsAt))}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            ) : null}
-            {noteLossMessage ? (
-              <p
-                className={`${OFFLINE_NOTICE_CLASS} mt-3 border-warning/40 bg-warning/10 text-pretty`}
-                role="status"
-                aria-live="polite"
-              >
-                <StatusMessage message={noteLossMessage} />
-              </p>
-            ) : null}
-            {!view.envelope.snapshot.juniorAdvisoriesChecked ? (
-              <p className="mt-3 text-base text-warning-strong">
-                {t("shared.offlineManifest.juniorChecksUnavailable")}
-              </p>
-            ) : null}
-            <a
-              href="#offline-roll-call-context"
-              className={buttonClass({
-                variant: "link",
-                flush: true,
-                className: "mt-2",
-              })}
-            >
-              {t("shared.offlineManifest.single.rollCallJump")}
-            </a>
-            {view.expired ? null : (
-              <p className="mt-2">
-                <button
-                  type="button"
-                  onClick={() => setPaper({ origin: window.location.origin })}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
-                >
-                  {t("shared.offlineManifest.sheet.door")}
-                </button>
-              </p>
-            )}
+            <OfflineDeckRollCall
+              view={view}
+              controls={controls}
+              attention={
+                view.overTotalPersons ||
+                priorMissing ||
+                hasCausalConflict(view) ||
+                view.notBackAboard > 0 ||
+                view.crewMissing ||
+                view.rejected > 0 ||
+                view.crewWithoutId > 0 ||
+                view.completeness.crewReason === "crew_none_assigned" ||
+                view.completeness.crewReason === "crew_none_aboard" ? (
+                  <>
+                    {view.overTotalPersons || priorMissing ? (
+                      <OfflineDeckSafety view={view} controls={controls} />
+                    ) : null}
+                    <OfflineCrewAttention view={view} controls={controls} />
+                    <OfflineCausalConflicts view={view} controls={controls} />
+                    <MissingRollCallRefusals view={view} controls={controls} />
+                  </>
+                ) : undefined
+              }
+              details={
+                <>
+                  <OfflineTripHeader view={view} controls={controls} />
+                  {(envelope.snapshot.rollCallMeetingDays?.length ?? 0) > 1 ? (
+                    <Field label={t("manifest.conflicts.meetingDay")} htmlFor="offline-meeting-day">
+                      <select
+                        id="offline-meeting-day"
+                        className={controlClass}
+                        value={controls.selectedMeetingDay ?? 0}
+                        onChange={(event) => controls.setMeetingDay?.(Number(event.target.value))}
+                      >
+                        {envelope.snapshot.rollCallMeetingDays?.map((day, index) => (
+                          <option key={day.startsAt} value={index}>
+                            {cachedFormatter("date", Intl.DateTimeFormat, controls.locale, {
+                              dateStyle: "full",
+                              timeZone: envelope.snapshot.shop.timezone,
+                            }).format(new Date(day.startsAt))}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  ) : null}
+                  {noteLossMessage ? (
+                    <p
+                      className={`${OFFLINE_NOTICE_CLASS} mt-3 border-warning/40 bg-warning/10 text-pretty`}
+                      role="status"
+                      aria-live="polite"
+                    >
+                      <StatusMessage message={noteLossMessage} />
+                    </p>
+                  ) : null}
+                  {!view.envelope.snapshot.juniorAdvisoriesChecked ? (
+                    <p className="mt-3 text-base text-warning-strong">
+                      {t("shared.offlineManifest.juniorChecksUnavailable")}
+                    </p>
+                  ) : null}
+                  <a
+                    href="#offline-roll-call-context"
+                    className={buttonClass({
+                      variant: "link",
+                      flush: true,
+                      className: "mt-2",
+                    })}
+                  >
+                    {t("shared.offlineManifest.single.rollCallJump")}
+                  </a>
+                  {view.expired ? null : (
+                    <p className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaper({ origin: window.location.origin })}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {t("shared.offlineManifest.sheet.door")}
+                      </button>
+                    </p>
+                  )}
 
-            {/* **Above the roster, deliberately.** This is the one document a crew has
+                  {/* **Above the roster, deliberately.** This is the one document a crew has
           with no signal, and the numbers on it are the ones you reach for while
           somebody is bent — not after the boat is back. Everything below is who
           is aboard; this is what to do about it. Rides in the snapshot, so it is
           here in airplane mode (issue #688). */}
-            <section id="offline-emergency-reference" tabIndex={-1} className="scroll-mt-24">
-              <EmergencyReferenceCard
-                className="mt-6"
-                // A snapshot saved before this field existed still decrypts, so it
-                // arrives without one. Falls back to the empty reference, which renders
-                // the "nothing recorded yet" prompt — the same thing a shop that has
-                // filled nothing in sees, and the only outcome that does not throw on
-                // the one surface a crew has offshore.
-                reference={envelope.snapshot.shop.emergencyReference ?? EMPTY_EMERGENCY_REFERENCE}
-                copy={{
-                  heading: t("manifest.emergency.heading"),
-                  empty: t("manifest.emergency.empty"),
-                  vesselLabel: t("manifest.emergency.vesselLabel"),
-                  callSignLabel: t("manifest.emergency.callSignLabel"),
-                  mmsiLabel: t("manifest.emergency.mmsiLabel"),
-                  workingChannelLabel: t("manifest.emergency.workingChannelLabel"),
-                  distressChannel: t("manifest.emergency.distressChannel"),
-                  shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
-                  planLabel: t("manifest.emergency.planLabel"),
-                }}
-              />
-            </section>
+                  <section id="offline-emergency-reference" tabIndex={-1} className="scroll-mt-24">
+                    <EmergencyReferenceCard
+                      className="mt-6"
+                      // A snapshot saved before this field existed still decrypts, so it
+                      // arrives without one. Falls back to the empty reference, which renders
+                      // the "nothing recorded yet" prompt — the same thing a shop that has
+                      // filled nothing in sees, and the only outcome that does not throw on
+                      // the one surface a crew has offshore.
+                      reference={
+                        envelope.snapshot.shop.emergencyReference ?? EMPTY_EMERGENCY_REFERENCE
+                      }
+                      copy={{
+                        heading: t("manifest.emergency.heading"),
+                        empty: t("manifest.emergency.empty"),
+                        vesselLabel: t("manifest.emergency.vesselLabel"),
+                        callSignLabel: t("manifest.emergency.callSignLabel"),
+                        mmsiLabel: t("manifest.emergency.mmsiLabel"),
+                        workingChannelLabel: t("manifest.emergency.workingChannelLabel"),
+                        distressChannel: t("manifest.emergency.distressChannel"),
+                        shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
+                        planLabel: t("manifest.emergency.planLabel"),
+                      }}
+                    />
+                  </section>
 
-            {/* Opt-in by presence, the same rule the gear register follows: a shop
+                  {/* Opt-in by presence, the same rule the gear register follows: a shop
           with no checklist items renders nothing here, not an empty card.
           Above the checkpoint switcher because the check happens once,
           before the boat leaves — not once per checkpoint. */}
-            {/* The hull's papers and safety kit as the live Boat tab said them at
+                  {/* The hull's papers and safety kit as the live Boat tab said them at
           the save, above the boat check for the same reason the live page
           puts them there. Words, not codes: nothing here can word them. */}
-            {envelope.snapshot.boatSafety ? (
-              <BoatSafetyNotices className="mt-6" {...envelope.snapshot.boatSafety} />
-            ) : null}
-            {/* What the last crew said about this hull, above the check it was
+                  {envelope.snapshot.boatSafety ? (
+                    <BoatSafetyNotices className="mt-6" {...envelope.snapshot.boatSafety} />
+                  ) : null}
+                  {/* What the last crew said about this hull, above the check it was
           written against, as the live page carries it. */}
-            <OfflineSnags view={view} />
-            <OfflineChecklist view={view} controls={controls} />
+                  <OfflineSnags view={view} />
+                  <OfflineChecklist view={view} controls={controls} />
 
-            {/* **The desk, with no signal** (ADR
+                  {/* **The desk, with no signal** (ADR
           20260907-the-counter-survives-offline). Above the checkpoint switcher
           for the same reason the checklist is: arriving happens once, before
           the boat leaves, not once per dive. It is deliberately a separate
@@ -208,17 +300,20 @@ export function OfflineTripScreen({
           rows — arrived and aboard are two different questions asked in two
           different places, and a row that answered both would be the first
           step toward a queue answering the second. */}
-            <OfflineCounter view={view} controls={controls} />
-            <OfflineArrivalRefusals view={view} controls={controls} />
-            <MissingRollCallRefusals view={view} controls={controls} />
+                  <OfflineCounter view={view} controls={controls} />
+                  <OfflineArrivalRefusals view={view} controls={controls} />
+                  <MissingRollCallRefusals view={view} controls={controls} />
 
-            <section id="offline-roll-call-context" tabIndex={-1} className="scroll-mt-24">
-              <OfflineCheckpointNav view={view} controls={controls} />
+                  <section id="offline-roll-call-context" tabIndex={-1} className="scroll-mt-24">
+                    <OfflineCheckpointNav view={view} controls={controls} />
 
-              <OfflineRollCallSection view={view} controls={controls} />
-            </section>
+                    <OfflineCausalConflicts view={view} controls={controls} />
+                  </section>
 
-            <OfflineTripFoot view={view} controls={controls} tripId={tripId} />
+                  <OfflineTripFoot view={view} controls={controls} tripId={tripId} />
+                </>
+              }
+            />
           </PullToRefresh>
         </div>
         {/* The words for a press the touch guard refused (issue #2328). */}

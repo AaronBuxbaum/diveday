@@ -7,6 +7,10 @@ import type { OfflineRollCallResult } from "@/lib/offline-manifests";
 import type { PreDepartureCheckStatus } from "@/lib/pre-departure-check";
 import type { OfflineStatement } from "./shared";
 
+export type OfflineRecordReceipt =
+  | { ok: true; observedAt: string; eventId: string; pending: boolean }
+  | { ok: false };
+
 /**
  * Why the roll call warns that this copy may differ from the live list: it
  * was reached without a live answer (`"unanswered"`), or the device has no
@@ -54,7 +58,8 @@ export type OfflineTripControls = {
     subject: { bookingId: string } | { crewPersonId: string },
     statement: OfflineStatement,
     standing?: Pick<OfflineRollCallResult, "state" | "implied">,
-  ) => Promise<void>;
+    // biome-ignore lint/suspicious/noConfusingVoidType: A callback without a confirmed outcome must never produce a receipt.
+  ) => Promise<OfflineRecordReceipt | boolean | void>;
   recordChecklistCheck: (checklistItemId: string, status: PreDepartureCheckStatus) => Promise<void>;
   recordArrival: (bookingId: string, status: ArrivalStatus) => Promise<void>;
 };

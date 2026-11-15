@@ -1,6 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, seededTripId } from "./helpers";
+import { offlineCopySaved, openDeckDetails, seededTripId } from "./helpers";
 
 signedInAsOwner();
 const t = staffTranslator("en-US");
@@ -55,7 +55,10 @@ test("early Home locks the plan but leaves conservation and safety evidence corr
   await expect(page.locator("#plan > summary")).toBeVisible();
   await page.goto(`${path}/manifest`);
   await offlineCopySaved(page);
-  const home = page.getByRole("button", { name: t("manifest.stage.tapHome"), exact: true });
+  await openDeckDetails(page);
+  const home = page
+    .locator('form:has(input[name="stage"][value="home"])')
+    .getByRole("button", { name: t("manifest.stage.tapHome"), exact: true });
   await home.click();
   await page.getByRole("button", { name: t("manifest.stage.homeConfirm"), exact: true }).click();
   await expect(home).toHaveAttribute("aria-pressed", "true");

@@ -111,7 +111,7 @@ test.describe("weather blow-out cascade", () => {
      * and a crew that now needs to put them back ashore and close the count.
      */
     const tabs = page.getByRole("navigation", { name: "Departure" });
-    await expect(tabs.getByRole("link", { name: "Boat" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open Deck", exact: true })).toBeVisible();
 
     /**
      * **And nothing is packed for a boat that is not going.** Every count on
@@ -120,7 +120,7 @@ test.describe("weather blow-out cascade", () => {
      * happening. Said rather than simply absent, because a list that vanishes
      * without a word reads as "nothing to pull".
      */
-    await tabs.getByRole("link", { name: "Gear" }).click();
+    await tabs.getByRole("link", { name: "Equipment" }).click();
     await expect(page).toHaveURL(/\/prep$/);
     await expect(page.getByText("The departure is canceled. Nothing to pack.")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Tanks", exact: true })).toHaveCount(0);
@@ -128,7 +128,7 @@ test.describe("weather blow-out cascade", () => {
 
     await page
       .getByRole("navigation", { name: "Departure" })
-      .getByRole("link", { name: "Divers" })
+      .getByRole("link", { name: "Guests" })
       .click();
     await page.getByRole("link", { name: "View cancellation record" }).click();
     await expect(

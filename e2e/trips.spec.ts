@@ -7,9 +7,12 @@ import {
   e2eNow,
   findTripOnBoard,
   openBookingActions,
+  openDeckDetails,
+  openGuestFolio,
   openTripAbout,
   openTripAboutRow,
   openTripMore,
+  rosterRow,
   seededTripId,
 } from "./helpers";
 
@@ -248,12 +251,11 @@ test.describe("trip pulse", () => {
     await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
     await expect(page.getByText(/\d+ blocked$/)).toBeVisible();
     await expect(page.getByRole("link", { name: /\d+ blocked$/ })).toHaveCount(0);
-    // The group band owns the state word; its count is every unsettled diver
-    // (blockers, advisories, birthdays), not just the one blocked seat.
-    await expect(page.getByRole("heading", { name: /^Still to clear ·/ })).toBeVisible();
-    // Exact: the band's folded rows also name her ("Priya Sharma · …"); this
-    // is her own row on the roster.
-    await expect(page.getByRole("link", { name: "Priya Sharma", exact: true })).toBeVisible();
+    // The named guest opens the actual requirements that keep this seat blocked.
+    await expect(page.getByRole("button", { name: "Priya Sharma", exact: true })).toBeVisible();
+    await expect(await rosterRow(page, "Priya Sharma")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Priya Sharma", exact: true })).toBeVisible();
+    await expect(page.getByText(/^\d+ requirements? before boarding$/)).toBeVisible();
   });
 
   test("the money fact's link opens an Orders index narrowed to that one departure", async ({
@@ -412,12 +414,15 @@ test.describe("undoing a removal after the trip is canceled", () => {
     await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
     // Prefix match: with no email provider configured the fleet gets the
     // honest "…but their waiver wasn't emailed" variant of this notice.
-    await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Diver added to the trip" }),
+    ).toContainText("Diver added to the trip");
 
     // A cancel inside a refund window moves real money, so the removal keeps
     // its blocking two-tap confirm (InlineConfirm) rather than landing behind
     // an undo toast.
-    const row = page.locator("#roster li").filter({ hasText: diver }).filter({ visible: true });
+    await openGuestFolio(page, diver);
+    const row = await rosterRow(page, diver);
     // One state sync, then single clicks: the page fixture has already settled
     // staff hydration after the `waitForURL` above, and the disclosure helpers
     // check `open` before clicking, so the arm-tap needs no retry (#3299).
@@ -455,7 +460,7 @@ test.describe("undoing a removal after the trip is canceled", () => {
       "Couldn’t undo. This trip has been canceled. Reinstate the trip first, then add them back.",
     );
     // Refused, not partially applied: the diver is still off the roster.
-    await expect(page.getByRole("link", { name: diver })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: diver, exact: true })).toHaveCount(0);
   });
 });
 
@@ -518,13 +523,23 @@ async function trackLineCount(page: import("@playwright/test").Page, ariaLabel: 
 }
 
 /** Every departure sub-page, measured at the narrowest viewport we design for. */
-async function assertNoSidewaysScroll(page: import("@playwright/test").Page, tripPath: string) {
+async function assertNoSidewaysScroll(
+  page: import("@playwright/test").Page,
+  tripPath: string,
+  locale = "en-US",
+) {
   await page.setViewportSize({ width: 390, height: 900 });
   for (const suffix of ["", "/manifest", "/prep"]) {
     await page.goto(`${tripPath}${suffix}`);
-    // The departure's own tabs, on every one of its pages. Waiting for the
-    // thing under test is what makes this deterministic rather than timed.
-    const tabs = page.locator("nav[data-trip-tabs] ul");
+    // Deck owns checkpoint navigation; Guests and Equipment own departure tabs.
+    if (suffix === "/manifest") await openDeckDetails(page, locale);
+    const tabs =
+      suffix === "/manifest"
+        ? page.getByRole("navigation", {
+            name: staffTranslator(locale)("manifest.checkpointNavAriaLabel"),
+            exact: true,
+          })
+        : page.locator("nav[data-trip-tabs] ul");
     await tabs.waitFor();
     expect(
       await tabs.evaluate((list) => list.scrollWidth - list.clientWidth),
@@ -545,6 +560,7 @@ test.describe("a departure's tab strip on a phone", () => {
     const tripPath = await seededTripPath(page);
     await page.setViewportSize({ width: 390, height: 900 });
     await page.goto(`${tripPath}/manifest`);
+    await openDeckDetails(page);
     expect(await trackLineCount(page, "Roll-call checkpoint")).toBe(1);
   });
 });
@@ -556,7 +572,7 @@ test.describe("a departure's tab strip on a phone, in Spanish", () => {
   signedInAsOwner();
 
   test("never needs a sideways drag either", async ({ page }) => {
-    await assertNoSidewaysScroll(page, await seededTripPath(page));
+    await assertNoSidewaysScroll(page, await seededTripPath(page), "es-ES");
   });
 
   // The measurement that decided the words. "Después de la inmersión 2" is
@@ -567,6 +583,7 @@ test.describe("a departure's tab strip on a phone, in Spanish", () => {
     const tripPath = await seededTripPath(page);
     await page.setViewportSize({ width: 390, height: 900 });
     await page.goto(`${tripPath}/manifest`);
+    await openDeckDetails(page, "es-ES");
     expect(await trackLineCount(page, "Punto de control del pase de lista")).toBe(1);
   });
 });

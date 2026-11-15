@@ -2,14 +2,16 @@ import type { Locator, Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { clearCourseForms } from "./course-form-only";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { expectFolioRemedyGeometry } from "./folio-remedy-geometry";
 import {
   bookOpenWaterSession,
   createTrip,
   daysFromNow,
   findTripOnBoard,
   openBoatCheck,
+  openDeckDetails,
+  openDeckPerson,
   openIfClosed,
-  openRosterDetails,
   openRosterNotes,
   openRosterRow,
   openTripAboutRow,
@@ -37,6 +39,7 @@ async function reefRoster(page: Page): Promise<Locator> {
 async function reefManifest(page: Page): Promise<void> {
   await page.goto(await tripPathByTitle(page, "blue-mantis", REEF));
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
 }
 
 /** The innermost disclosure containing a field, rather than its open roster ancestor. */
@@ -51,7 +54,7 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     test.use({ colorScheme: "light", viewport: { width: 1280, height: 800 } });
 
     test("the buddy team's inner builder exposes its person checkboxes", async ({ page }) => {
-      await reefManifest(page);
+      await page.goto(`${await tripPathByTitle(page, "blue-mantis", REEF)}?view=details`);
       const outer = page
         .locator("details")
         .filter({ has: page.locator("#buddy-teams-heading") })
@@ -118,6 +121,10 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
 
     test("a crew roll-call row opens the crew-specific person sheet", async ({ page }) => {
       await reefManifest(page);
+      await openDeckPerson(page, "Keiko Tanaka");
+      await page
+        .getByRole("button", { name: staff("manifest.deck.exception"), exact: true })
+        .click();
       const trigger = page.getByRole("button", {
         name: staff("manifest.openPersonDetails", { name: "Keiko Tanaka" }),
         exact: true,
@@ -138,8 +145,7 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     test("certifying a student exposes the agency award picker", async ({ page }) => {
       await (await findTripOnBoard(page, "blue-mantis", /Advanced Open Water Diver/)).click();
       await openTripTab(page, "Trip");
-      const student = page.locator('#roster li[id^="booking-"]').first();
-      await openRosterDetails(student);
+      const student = await openRosterRow(page, "Naledi Khumalo");
       const editor = fieldEditor(student, 'select[name="award"]');
       await openIfClosed(editor);
       await expect(editor.getByLabel(staff("trips.roster.certifyLevel"))).toBeVisible();
@@ -303,7 +309,9 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
         paper.getByLabel(staff("trips.roster.courseForms.signedOn"), { exact: true }),
       ).toBeVisible();
       await expect(paper.getByRole("checkbox")).toBeVisible();
-      await capture(page, "roster-paper-course-form-editor", "light");
+      await capture(page, "roster-paper-course-form-editor", "light", {
+        beforeShot: () => expectFolioRemedyGeometry(paper.locator("form")),
+      });
 
       const charterTitle = "Training dive — review charter";
       await createTrip(page, {

@@ -12,7 +12,13 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { assertCrewPdfPixels } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { bookASeatAndOpenThread, openTripFromBoard, seededTripId } from "./helpers";
+import {
+  bookASeatAndOpenThread,
+  openRosterDetails,
+  openTripFromBoard,
+  rosterRow,
+  seededTripId,
+} from "./helpers";
 import {
   assertPacketAttributionBelowKit,
   assertWaiverAttributionBelowAcknowledgement,
@@ -244,7 +250,8 @@ test.describe("print", () => {
     await openReefTrip(page);
     const tripPath = new URL(page.url()).pathname;
     await page.goto(`${tripPath}/manifest`);
-    await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
+    await page.getByRole("heading", { level: 1, name: staff("manifest.deck.title") }).waitFor();
+    await expect(page.locator(".paper-sheet h1")).toHaveText(/Two-Tank Reef/);
     await capturePrint(page, "manifest");
   });
 
@@ -338,10 +345,8 @@ test.describe("print", () => {
   test("a signed waiver prints as its sheet", async ({ page }, info) => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
-    const row = page
-      .locator("li")
-      .filter({ has: page.getByText("Rowan Pike", { exact: true }) })
-      .filter({ visible: true });
+    const row = await rosterRow(page, "Rowan Pike");
+    await openRosterDetails(row);
     await row.getByRole("link", { name: "View signed record" }).click();
     await page.getByRole("heading", { level: 1, name: "Signed waiver" }).waitFor();
     await page.getByRole("link", { name: staff("waiversStaff.record.print"), exact: true }).click();

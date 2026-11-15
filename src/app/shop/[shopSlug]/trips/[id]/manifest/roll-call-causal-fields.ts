@@ -1,10 +1,18 @@
 import { z } from "zod";
+import { nowMs } from "@/lib/clock";
 import { ROLL_CALL_NOTE_MAX } from "@/lib/manifests";
 import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 import { rollCallEvidenceIdPattern } from "@/lib/roll-call-causality";
 import { retractsEventIdSchema } from "./roll-call-undo";
 
 export const causalRollCallFields = {
+  observedAt: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.iso
+      .datetime()
+      .refine((value) => Date.parse(value) <= nowMs())
+      .optional(),
+  ),
   clientEventId: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().uuid().optional(),
@@ -27,6 +35,10 @@ export const causalRollCallFields = {
 export const rollCallSchema = z.object({
   ...causalRollCallFields,
   bookingId: z.string().uuid(),
+  physicalPresenceOnly: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
   status: z.enum(ROLL_CALL_EVENT_STATUSES),
   /**
    * What the crew observed about a person who is unaccounted for. Bounded here

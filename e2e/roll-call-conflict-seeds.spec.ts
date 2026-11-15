@@ -32,7 +32,10 @@ for (const role of ["diver", "crew"] as const) {
               exact: true,
             });
             await expect(resolve).toBeVisible();
-            const panel = page.locator("details").filter({ has: resolve });
+            const panel = page
+              .locator("details")
+              .filter({ has: resolve })
+              .filter({ visible: true });
             await expect(panel).toContainText(fact.fullName);
             await expect(panel.locator("ul > li > p.font-medium")).toHaveText(expected);
           }
@@ -40,10 +43,18 @@ for (const role of ["diver", "crew"] as const) {
         await page.goto(
           `/shop/${privateShop.slug}/trips/${fact.tripId}/manifest?checkpoint=after_dive_1`,
         );
+        await page
+          .getByRole("button", { name: staff("manifest.deck.review"), exact: true })
+          .click();
         await checkAtBothWidths();
         await offlineCopySaved(page);
         await page.goto(`/offline-manifest?trip=${fact.tripId}&checkpoint=after_dive_1`);
-        await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
+        await expect(
+          page.getByRole("heading", { name: staff("manifest.deck.title"), exact: true }),
+        ).toBeVisible();
+        await page
+          .getByRole("button", { name: staff("manifest.deck.review"), exact: true })
+          .click();
         await checkAtBothWidths();
       });
     }

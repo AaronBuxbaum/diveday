@@ -15,8 +15,8 @@ for (const width of [390, 1280]) {
     await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
     await offlineCopySaved(page);
     await expect(
-      page.locator("main").getByRole("link", { name: "Schedule", exact: true }),
-    ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
+      page.locator("main").getByRole("link", { name: "Return to Guests", exact: true }),
+    ).toHaveAttribute("href", `/shop/blue-mantis/trips/${id}`);
     await page.goBack();
     await expect(header.getByRole("heading", { level: 1 })).toBeVisible();
     await page.goForward();

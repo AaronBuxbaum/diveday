@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
+import { offlineCopySaved, openDeckPerson, openTripFromBoard, openTripTab } from "./helpers";
 
 signedInAsOwner();
 
@@ -11,9 +11,9 @@ signedInAsOwner();
  * record a real roll-call fact first, then check it appears on the document
  * with its attribution.
  *
- * The door is not the manifest: an authority-facing document standing beside
+ * The door lives on Record: an authority-facing document standing beside
  * "Mark boarded" put it on the surface a crew works at the rail. It is the
- * departure's Details tab, for every departure live or back, and the settled
+ * departure's Record tab, for every departure live or back, and the settled
  * station on the shop home once the boat is back (ADR
  * 20260804-incident-export-owner-gate, amendment 2026-10-07). The live Today
  * card is the day's briefing and no longer carries it.
@@ -30,28 +30,19 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
 
   // Put one recorded fact on the departure so the document carries a real
   // timeline entry (the per-test DB reset contains the write).
-  const markBoarded = page
-    .locator("#roll-call-list")
-    .getByRole("button", { name: "Mark boarded" })
-    .first();
-  await markBoarded.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  await markBoarded.click();
-  // The settled control's accessible name is its undo-bearing aria-label
-  // (PR #607 review), which replaces "Boarded ☑️" rather than extending it.
-  await expect(
-    page
-      .locator("#roll-call-list")
-      .getByRole("button", { name: "Boarded — tap again to undo" })
-      .first(),
-  ).toBeVisible();
+  await openDeckPerson(page, "Tom Okafor");
+  await page.getByRole("button", { name: "Record Tom Okafor aboard", exact: true }).click();
+  await expect(page.locator('[data-deck-screen="receipt"]')).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tom Okafor", exact: true })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Aboard recorded" })).toBeVisible();
 
   // The manifest keeps the printer and nothing else — this door moved.
   await expect(page.getByRole("link", { name: "Departure log" })).toHaveCount(0);
 
   // **A live departure, not only one that is back.** The seeded demo day is
   // mid-morning, so the reef trip is still live; an owner whose boat is
-  // overdue needs the record of who is on it, and Details is where it is.
-  await page.goto(`${tripPath}?view=details`);
+  // overdue needs the record of who is on it, and Record is where it is.
+  await page.goto(`${tripPath}?view=record`);
   await page.getByRole("link", { name: "Departure log" }).click();
   await page.waitForURL(/\/log$/);
 
@@ -181,8 +172,8 @@ test.describe("the log is the owner's to produce", () => {
     await offlineCopySaved(page);
     const tripUrl = new URL(page.url());
 
-    // The departure's Details tab is theirs to read; this one door is not on it.
-    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}?view=details`);
+    // The departure's Record tab is theirs to read; this one door is not on it.
+    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}?view=record`);
     await expect(page.getByRole("link", { name: "View public page" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Departure log" })).toHaveCount(0);
 

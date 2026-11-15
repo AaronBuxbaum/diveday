@@ -127,7 +127,7 @@ const incidentPersonForm = z.object({ who: typed(), involvement: typed(), outsid
 /** Start a draft on a departure and open it. */
 export async function startIncidentReportAction(shopSlug: string, tripId: string) {
   const { session, shop } = await requireShopSurface(shopSlug);
-  const tripPage = `${shopPath(shopSlug, "trips", tripId)}?view=details`;
+  const tripPage = `${shopPath(shopSlug, "trips", tripId)}?view=record`;
   if (!uuidParam(tripId)) redirect(noticeUrl(tripPage, "not-authorized"));
   const result = await startIncidentReport(await getDb(), {
     shopId: shop.id,
@@ -476,7 +476,7 @@ export async function discardIncidentDraftAction(
   if (result.ok) {
     revalidateAndRedirect(
       shopPath(shopSlug, "trips", tripId),
-      `${shopPath(shopSlug, "trips", tripId)}?view=details#incidents`,
+      `${shopPath(shopSlug, "trips", tripId)}?view=record#incidents`,
     );
   }
   settle(back, result, "saved", "discard");

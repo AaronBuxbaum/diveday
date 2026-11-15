@@ -100,6 +100,8 @@ export const rollCallEvents = pgTable(
       meetingDay?: number;
       retractsEventId?: string;
       retractsClientEventId?: string;
+      /** Explicit physical observation, preserving the independent readiness gate. */
+      physicalPresenceOnly?: boolean;
     }>(),
     /** Stable evidence IDs actually observed when the crew tapped; null proves no basis. */
     observedEvidenceIds: jsonb("observed_evidence_ids").$type<string[]>(),

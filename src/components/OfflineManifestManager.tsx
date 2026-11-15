@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
+import { useDeckMutation } from "@/components/offline-manifest/DeckFlow";
 import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
@@ -75,6 +76,7 @@ export function OfflineManifestManager({
   copy,
   idPrefix,
   children,
+  compact = false,
 }: {
   payload: OfflineManifestPayload;
   /** Set when a document repeats this block per departure — see `scopedId`. */
@@ -95,7 +97,10 @@ export function OfflineManifestManager({
    * copy of the row tones once already.
    */
   children?: ReactNode;
+  /** The Deck keeps device settings in Details while lifting problems into its routine. */
+  compact?: boolean;
 }) {
+  const deck = useDeckMutation();
   const { tripId, saved, message, busy, settled, refresh } = useOfflineManifestSync(payload, copy);
   const [, setExpiryTick] = useState(0);
   const expiresAt = saved?.snapshot.expiresAt;
@@ -180,6 +185,32 @@ export function OfflineManifestManager({
           { count: rejected },
         )
       : null;
+
+  const compactNotice =
+    [
+      rejectedNotice,
+      pending > 0
+        ? fill(
+            pluralForm(pending, { one: copy.pendingSummaryOne, other: copy.pendingSummaryOther }),
+            { count: pending },
+          )
+        : null,
+      expired || freshness === "stale" || freshness === "aging" ? freshnessLabel : null,
+      message &&
+      message !== copy.checkingDevice &&
+      message !== copy.savingMessage &&
+      message !== copy.reconcileCaughtUp
+        ? message
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || null;
+  const setDeviceNotice = deck?.setDeviceNotice;
+  useEffect(() => {
+    if (!compact) return;
+    setDeviceNotice?.(compactNotice);
+    return () => setDeviceNotice?.(null);
+  }, [compact, compactNotice, setDeviceNotice]);
 
   return (
     <>

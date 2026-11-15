@@ -41,8 +41,11 @@ test.describe("light mode", () => {
     const href = `/shop/${privateShop.slug}/trips/${fact.tripId}/manifest`;
     await page.goto(href);
     await expect(
-      page.getByRole("progressbar", { name: t("manifest.progressAriaLabel") }),
-    ).toHaveAttribute("aria-valuenow", "4");
+      page.getByText(
+        t("manifest.deck.progress", { count: fact.physicalTotal, total: fact.physicalTotal }),
+        { exact: true },
+      ),
+    ).toBeVisible();
     // Seven role records describe six people: this must not raise a false hull alarm.
     await expect(
       page.getByText(t("manifest.headCountOverTotalPersons", { limit: fact.physicalTotal }), {
@@ -50,24 +53,47 @@ test.describe("light mode", () => {
       }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole("heading", { name: t("manifest.rollCallComplete"), exact: true }),
+      page.getByRole("status").filter({ hasText: t("manifest.deck.complete") }),
     ).toBeVisible();
     await capture(page, "manifest-dual-role-departure", "light");
 
+    const confirmed = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/offline-manifests/${fact.tripId}/roster-confirmation` &&
+        response.request().method() === "POST" &&
+        response.request().postDataJSON()?.checkpoint === "after_dive_1" &&
+        response.status() === 204,
+    );
     await page.goto(`${href}?checkpoint=after_dive_1`);
+    await page.getByRole("button", { name: t("manifest.deck.review"), exact: true }).click();
     await expect(
       page
         .getByRole("list", { name: t("manifest.notBackAboardListLabel") })
         .getByText(fact.fullName, { exact: true }),
     ).toBeVisible();
     await expect(
-      page.locator(`#${crewRowId(fact.personId)} [data-mark-state="aboard"]`),
+      page.getByText(
+        t("manifest.deck.progress", { count: fact.physicalTotal - 1, total: fact.physicalTotal }),
+        { exact: true },
+      ),
     ).toBeVisible();
     await expect(
       page.getByRole("progressbar", { name: t("manifest.progressAriaLabel") }),
     ).toHaveAttribute("aria-valuenow", "3");
-    // The roster check answers after hydration; photograph the confirmed line, not the pending one.
-    await expect(page.getByText(t("manifest.rosterConfirmed"), { exact: true })).toBeVisible();
+    // Inspect the separate crew-role evidence for the same physical person.
+    await page.getByRole("button", { name: t("manifest.deck.find"), exact: true }).click();
+    await page
+      .getByRole("button", { name: `${fact.fullName} · ${t("manifest.deck.crew")}`, exact: true })
+      .click();
+    await page.getByRole("button", { name: t("manifest.deck.exception"), exact: true }).click();
+    await expect(
+      page.locator(`#${crewRowId(fact.personId)} [data-mark-state="aboard"]`),
+    ).toBeVisible();
+    await page.getByRole("button", { name: t("manifest.deck.attention"), exact: true }).click();
+    // Compact Deck omits routine confirmation copy; wait for the same live check's 204 receipt.
+    await confirmed;
+    await expect(page.getByText(t("manifest.rosterUnconfirmed"), { exact: true })).toHaveCount(0);
     await capture(page, "manifest-dual-role-missing", "light");
 
     await page.emulateMedia({ media: "print" });
