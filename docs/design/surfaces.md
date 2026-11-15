@@ -1245,3 +1245,11 @@ link together while evidence remains subordinate to the departure’s title.
 - **Dissolve controls:** the existing native disclosure owns its summary and the rows retain their own actions; a separate page or another navigation link would split the task. The stage words remain independent controls, not an automatic next step.
 - **Remove until it breaks:** removing the main Trip backlink does not remove Schedule from the shell; removing it from boat mode would leave a crew member without the same immediate escape. Removing stage separators makes the time relationship look like a tab switch; making all arrows one-way conceals the Out ↔ Surface loop on a two-dive trip.
 - **Phone geometry:** the equal navigation targets preserve full names and a 44px minimum; at enlarged text the rail scrolls rather than widening the document. Stage targets remain 56px, and neither the sequence marks nor the disclosure assert that a roll call is complete.
+
+### Computer dives on a person’s record
+
+The screen answers which personal computer recordings belong to this diver and what was imported.
+Staff arrive asking which files are readable, whether their dates and units are known, and whether a recording already exists.
+A separate upload wizard would hide history while a stacked card composition would spend a box on every recording.
+The chosen composition puts an explicit file review above a chronological ledger, with each recording’s profile, gases, notes and deletion controls in its own disclosure.
+Source local time and its offset or unknown zone stay visible in the recording details; confirmation names the person before any write.

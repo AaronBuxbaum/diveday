@@ -82,6 +82,10 @@ const NOT_READ_BACK: Record<string, string> = {
   "rental_fit.csv": PER_PERSON,
   "staff_credentials.csv": PER_PERSON,
   "prior_visits.csv": PER_PERSON,
+  "computer_import_batches.csv": PER_PERSON,
+  "computer_dives.csv": PER_PERSON,
+  "computer_dive_profiles.csv": PER_PERSON,
+
   "imported_payment_history.csv": PER_PERSON,
   "internal_notes.csv": PER_PERSON,
   "gear_items.csv": GEAR,

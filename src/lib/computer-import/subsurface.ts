@@ -106,6 +106,8 @@ export function parseSubsurface(root: XmlNode): ParsedComputerDive[] {
             ? `${dive.attrs.number}:${index}`
             : null,
         device,
+        deviceId: recording === dive ? null : (recording.attrs.deviceid ?? null),
+        recordingIndex: index,
         ...time,
         durationSeconds: duration(recording.attrs.duration ?? dive.attrs.duration),
         maxDepthMeters: quantity(rawDepth, "depth"),

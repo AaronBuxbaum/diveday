@@ -161,6 +161,12 @@ export const EXPORT_FILE_NOTES = {
     "Problems a crew wrote against a checklist line on one boat (a snag), oldest first, each carried to that boat's next departures until somebody marked it fixed. still_there_* is the newest crew who looked and found it still there; fixed_* closes it for good. Informs only: an open snag never stopped a departure.",
   "departure_boat_safety_snapshots.csv":
     "The boat's papers and kit as they stood at each departure's roll call, one row per departure, for the departure log: papers is the certificate limits and paper dates verbatim (JSON), notices the codes DiveDay raised about them on the departure's own day (judged_on, JSON). departure_starts_at is the saved scheduled departure instant; an unsailed reschedule can rebind it. Known-unsailed records may refresh on a departure count or hull change. A kept sailed record or one with unknown departure-time provenance is never rewritten. Informs only: nothing here ever stopped a departure.",
+  "computer_import_batches.csv":
+    "Confirmed personal computer imports: idempotency keys, selection hashes and result counts. No raw source files are retained.",
+  "computer_dives.csv":
+    "Personal computer recordings, normalized source data and provenance, staff annotations and reversible deletion stamps. These records never feed operational safety or recency calculations.",
+  "computer_dive_profiles.csv":
+    "Bounded profile samples for each personal computer recording: elapsed seconds, depth in meters and temperature in Celsius when present. An absent profile is unknown.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say canceled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
   "imported_payment_history.csv":

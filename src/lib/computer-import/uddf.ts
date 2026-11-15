@@ -6,7 +6,7 @@ import {
   type ParsedComputerDive,
   refuse,
 } from "./types";
-import { child, descendants, value, type XmlNode } from "./xml";
+import { child, children, descendants, localName, value, type XmlNode } from "./xml";
 export function parseUddf(root: XmlNode): ParsedComputerDive[] {
   const ids = new Map<string, XmlNode>();
   const visit = (node: XmlNode) => {
@@ -52,9 +52,23 @@ export function parseUddf(root: XmlNode): ParsedComputerDive[] {
       };
     });
     const tanks = descendants(node, "tankdata").map((tank) => {
-      const gasId = child(tank, "link")?.attrs.ref ?? null;
-      if (gasId && !mixes.has(gasId)) refuse("invalid_reference");
-      const volume = finite(value(tank, "tankvolume"), 0, 1);
+      let gasId: string | null = null;
+      let definition: XmlNode | undefined;
+      for (const link of children(tank, "link")) {
+        const ref = link.attrs.ref;
+        const target = ref ? ids.get(ref) : undefined;
+        if (!ref || !target) refuse("invalid_reference");
+        if (localName(target) === "mix") {
+          if (gasId !== null || !mixes.has(ref)) refuse("invalid_reference");
+          gasId = ref;
+        } else if (localName(target) === "tank") {
+          if (definition) refuse("invalid_reference");
+          definition = target;
+        } else refuse("invalid_reference");
+      }
+      const rawVolume =
+        value(tank, "tankvolume") ?? (definition ? value(definition, "tankvolume") : undefined);
+      const volume = finite(rawVolume, 0, 1);
       const start = finite(value(tank, "tankpressurebegin"), 0, 100_000_000);
       const end = finite(value(tank, "tankpressureend"), 0, 100_000_000);
       return {

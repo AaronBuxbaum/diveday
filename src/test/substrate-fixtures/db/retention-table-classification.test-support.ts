@@ -17,6 +17,11 @@
  * than a reason to add a name below.
  */
 export const OUTSIDE_RETENTION: readonly string[] = [
+  // Personal instrument history follows the person; requested erasure removes it.
+  "computer_import_batches",
+  "computer_dives",
+  "computer_dive_profiles",
+
   "wallet_passes", // booking snapshots are voided/soft-deleted on erasure; no independent age prune
 
   "today_read_mark_events", // junction rows cascade with the 30-day mark or event; no independent clock

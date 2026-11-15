@@ -124,7 +124,7 @@ describe("hostile and ambiguous input", () => {
     );
     const uddf = new TextDecoder().decode(fixture("si.uddf"));
     const points = Array.from(
-      { length: 20001 },
+      { length: 10001 },
       (_, i) => `<waypoint><divetime>${i}</divetime><depth>0</depth></waypoint>`,
     ).join("");
     expect(() =>

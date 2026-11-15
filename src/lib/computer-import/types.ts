@@ -16,6 +16,8 @@ export type ParsedComputerDive = {
   sourceFormat: ComputerSourceFormat;
   sourceId: string | null;
   device: string | null;
+  deviceId?: string | null;
+  recordingIndex?: number;
   localStart: string;
   startInstant: string | null;
   offsetMinutes: number | null;
@@ -34,7 +36,7 @@ export type ParsedComputerDive = {
 export const COMPUTER_IMPORT_LIMITS = {
   fileBytes: 5 * 1024 * 1024,
   dives: 500,
-  samplesPerDive: 20_000,
+  samplesPerDive: 10_000,
   samplesPerFile: 100_000,
   xmlDepth: 32,
   xmlNodes: 250_000,
