@@ -23,6 +23,13 @@ export async function seedStaffPortraits(
     await db
       .update(people)
       .set({ staffPhotoPath: DEMO_STAFF_PORTRAIT_PATHS[person.local] })
-      .where(and(eq(people.shopId, shopId), eq(people.id, person.id), isNull(people.deletedAt)));
+      .where(
+        and(
+          eq(people.shopId, shopId),
+          eq(people.id, person.id),
+          isNull(people.deletedAt),
+          isNull(people.staffPhotoPath),
+        ),
+      );
   }
 }

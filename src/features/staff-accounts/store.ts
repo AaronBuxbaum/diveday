@@ -26,6 +26,7 @@ import { isSpokenLanguageTag } from "../../lib/spoken-languages";
 export type StaffMember = {
   personId: string;
   fullName: string;
+  staffPhotoPath?: string | null;
   email: string;
   roles: Role[];
   userAccountId: string;
@@ -115,6 +116,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
     .select({
       personId: people.id,
       fullName: people.fullName,
+      staffPhotoPath: people.staffPhotoPath,
       email: people.email,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
@@ -147,6 +149,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
     byPerson.set(row.personId, {
       personId: row.personId,
       fullName: row.fullName,
+      staffPhotoPath: row.staffPhotoPath,
       email: row.email ?? "",
       roles: [row.role as Role],
       userAccountId: row.userAccountId,

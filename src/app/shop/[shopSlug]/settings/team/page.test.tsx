@@ -1,6 +1,7 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
@@ -11,6 +12,7 @@ import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import type { StaffMember } from "../../../../../features/staff-accounts/store";
+import { StaffIdentity } from "./_components/StaffIdentity";
 
 const ctx = fileScopedShopContext();
 
@@ -108,6 +110,32 @@ async function renderTeam(searchParams: Record<string, string> = {}) {
     searchParams: Promise.resolve(searchParams),
   });
 }
+
+it("shows the seeded portrait beside a team member and tolerates a missing photo", async () => {
+  const rows = staffRows(await renderTeam());
+  const dana = rows.find((row) => row.props.member.fullName === "Dana Reyes");
+  expect(dana).toBeDefined();
+  if (!dana) throw new Error("Dana missing from the team");
+  const [identity] = findElements<Parameters<typeof StaffIdentity>[0]>(
+    rowTree(dana),
+    StaffIdentity,
+  );
+  expect(identity).toBeDefined();
+  if (!identity) throw new Error("Staff identity missing");
+  const photos = findElements<{ src: string; alt: string }>(
+    StaffIdentity(identity.props),
+    StoredPhoto,
+  );
+  expect(photos.map((photo) => [photo.props.src, photo.props.alt])).toEqual([
+    ["/demo-staff/dana-reyes.webp", ""],
+  ]);
+  expect(
+    findElements(
+      StaffIdentity({ ...identity.props, member: { ...dana.props.member, staffPhotoPath: null } }),
+      StoredPhoto,
+    ),
+  ).toHaveLength(0);
+});
 
 /**
  * **The page's two sections speak at one volume** (K-314). "Invite someone" is
