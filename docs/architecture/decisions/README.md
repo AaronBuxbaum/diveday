@@ -469,6 +469,7 @@ script again.
 | 20261112-roll-call-observes-evidence | Resolve roll-call conflicts from observed… (proposed) |
 | 20261114-trip-folio-and-individual-deck | Organize the Trip around guest… |
 | 20261115-fit-personal-history | Decode personal FIT history with… |
+| 20261115-logbook-partner-protocol-adapters | Gate logbook API imports on… |
 | 20261115-online-logbook-file-interchange | Use explicit beta file interchange… |
 | 20261115-personal-computer-evidence | Keep imported computer evidence on… |
 
