@@ -285,7 +285,7 @@ export type DepartureSummary = {
   siteName: string | null;
   boatName: string | null;
   priceCents: number | null;
-  crew: { id: string; fullName: string; roles: string[] }[];
+  crew: { id: string; fullName: string; roles: string[]; staffPhotoPath?: string | null }[];
   /**
    * **The crew half of "is this checkpoint closed", from the one authority.**
    *
@@ -798,13 +798,14 @@ async function departureCardFacts(
             tripId: tripAssignments.tripId,
             personId: people.id,
             fullName: people.fullName,
+            staffPhotoPath: people.staffPhotoPath,
             tripRole: tripAssignments.tripRole,
             role: personRoles.role,
           })
           .from(tripAssignments)
           .innerJoin(people, eq(people.id, tripAssignments.personId))
           .leftJoin(personRoles, eq(personRoles.personId, people.id))
-          .where(inArray(tripAssignments.tripId, tripIds))
+          .where(and(inArray(tripAssignments.tripId, tripIds), eq(people.shopId, shopId)))
           // **By name, because otherwise there is no order at all.** Without
           // this the crew line renders in whatever order the database hands
           // back, which is not stable: the same departure read "Keiko Tanaka,
@@ -828,19 +829,26 @@ async function departureCardFacts(
   // list is true and misleading at once on a board whose whole question is "who
   // is doing what today", so it is worth exactly one implementation.
   const namesByPerson = new Map(assignments.map((row) => [row.personId, row.fullName] as const));
+  const photosByPerson = new Map(
+    assignments.map((row) => [row.personId, row.staffPhotoPath] as const),
+  );
   const rowsByTrip = new Map<string, typeof assignments>();
   for (const row of assignments) {
     const list = rowsByTrip.get(row.tripId) ?? [];
     list.push(row);
     rowsByTrip.set(row.tripId, list);
   }
-  const crewByTrip = new Map<string, { id: string; fullName: string; roles: string[] }[]>();
+  const crewByTrip = new Map<
+    string,
+    { id: string; fullName: string; roles: string[]; staffPhotoPath: string | null }[]
+  >();
   for (const [tripId, rows] of rowsByTrip) {
     crewByTrip.set(
       tripId,
       groupCrewAssignments(rows).map((member) => ({
         id: member.personId,
         fullName: namesByPerson.get(member.personId) ?? "",
+        staffPhotoPath: photosByPerson.get(member.personId) ?? null,
         roles: effectiveCrewRoles(member),
       })),
     );

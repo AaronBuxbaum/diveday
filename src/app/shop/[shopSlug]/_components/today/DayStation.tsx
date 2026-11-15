@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Badge } from "@/components/ui/badge";
@@ -174,7 +175,25 @@ export function DayStation({
                 {index > 0 ? (
                   <span className={firstOnPhone ? "max-sm:hidden" : undefined}>{" · "}</span>
                 ) : null}
-                {fact.text}
+                {fact.phone
+                  ? fact.text
+                  : station.crew.map((person, personIndex) => (
+                      // Names can repeat; the list is already ordered by person ID.
+                      // biome-ignore lint/suspicious/noArrayIndexKey: this display has no mutable state.
+                      <span key={personIndex}>
+                        {personIndex > 0 ? ", " : ""}
+                        {person.staffPhotoPath ? (
+                          <Image
+                            src={person.staffPhotoPath}
+                            alt=""
+                            width={24}
+                            height={24}
+                            className="mr-1 inline-block rounded-full align-middle"
+                          />
+                        ) : null}
+                        {person.fullName}
+                      </span>
+                    ))}
               </span>
             );
           })}

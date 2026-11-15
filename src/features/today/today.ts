@@ -932,7 +932,7 @@ export type SpineDeparture = {
   booked: number;
   boarded: number;
   blocked: number;
-  crew: readonly { fullName: string }[];
+  crew: readonly { fullName: string; staffPhotoPath?: string | null }[];
   /**
    * The crew half of the departure checkpoint — the one safety fact the card
    * still carries itself (issue #789). A blocked diver already aboard (issue
