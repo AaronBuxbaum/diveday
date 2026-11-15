@@ -56,7 +56,10 @@ for (const scheme of ["light", "dark"] as const) {
                   await expect(
                     row.getByRole("button", { name: t("shopHome.install.action") }),
                   ).toBeVisible();
-                } else await expect(row).toContainText(t("shopHome.install.safari"));
+                } else {
+                  await row.getByRole("button", { name: t("shopHome.install.action") }).click();
+                  await expect(row).toContainText(t("shopHome.install.scroll"));
+                }
               }
             },
           };

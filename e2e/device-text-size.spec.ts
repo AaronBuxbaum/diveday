@@ -360,9 +360,10 @@ test.describe("largest device body with the contextual install entry", () => {
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       ),
     ).toBeLessThanOrEqual(1);
-    const dismiss = entry.getByRole("button");
-    await expect(dismiss).toHaveCount(1);
-    await dismiss.click();
+    await expect(entry.getByRole("button")).toHaveCount(2);
+    await entry
+      .getByRole("button", { name: staffTranslator("en-US")("shopHome.install.dismiss") })
+      .click();
     await expect(entry).toHaveCount(0);
     await page.setViewportSize({ width: 1280, height: 844 });
     const horizon = page.getByRole("heading", { name: /^Tomorrow/, level: 2 });
