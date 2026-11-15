@@ -1245,3 +1245,19 @@ link together while evidence remains subordinate to the departure’s title.
 - **Dissolve controls:** the existing native disclosure owns its summary and the rows retain their own actions; a separate page or another navigation link would split the task. The stage words remain independent controls, not an automatic next step.
 - **Remove until it breaks:** removing the main Trip backlink does not remove Schedule from the shell; removing it from boat mode would leave a crew member without the same immediate escape. Removing stage separators makes the time relationship look like a tab switch; making all arrows one-way conceals the Out ↔ Surface loop on a two-dive trip.
 - **Phone geometry:** the equal navigation targets preserve full names and a 44px minimum; at enlarged text the rail scrolls rather than widening the document. Stage targets remain 56px, and neither the sequence marks nor the disclosure assert that a roll call is complete.
+
+### Computer dives on a person’s record
+
+The screen answers which personal computer recordings belong to this diver and what was imported.
+Staff arrive asking which files are readable, whether their dates and units are known, and whether a recording already exists.
+A separate upload wizard would hide history while a stacked card composition would spend a box on every recording.
+The chosen composition puts an explicit file review above a chronological ledger, with each recording’s profile, gases, notes and deletion controls in its own disclosure.
+Source local time and its offset or unknown zone stay visible in the recording details; confirmation names the person before any write.
+
+The controls stay attached to their objects: the native summary opens a recording, and its
+annotation and reversible deletion remain there. File review, timezone acknowledgement and target
+confirmation cannot dissolve into defaults because they establish which person's evidence is being
+imported. Removing individual record cards leaves the ledger readable; removing source units or the
+unknown-zone state would make the evidence misleading. The light review's pixel probe covered 24
+records with no flags; the independent critic's empty-state and duplicate-counter findings were
+reproduced and corrected.

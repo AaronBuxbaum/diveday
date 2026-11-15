@@ -1912,3 +1912,67 @@ export const DIVE_PACKAGE_ENTITLEMENTS_CSV = sharedFile<ShopRow<"entitlementRows
     note: "Prepaid dives this diver bought — spent and still owed.",
   },
 });
+
+/** Inert personal computer evidence, including records marked deleted. */
+export const COMPUTER_IMPORT_BATCHES_CSV = sharedFile<ShopRow<"computerImportBatchesRows">>({
+  file: "computer_import_batches.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "person_id", in: "both", value: (row) => row.personId },
+    { header: "request_key", in: "both", value: (row) => row.requestKey },
+    { header: "selection_hash", in: "both", value: (row) => row.selectionHash },
+    { header: "imported_count", in: "both", value: (row) => row.importedCount },
+    { header: "skipped_count", in: "both", value: (row) => row.skippedCount },
+    { header: "created_at", in: "both", value: (row) => row.createdAt },
+  ],
+  shop: {
+    rows: (context) => context.computerImportBatchesRows,
+    note: EXPORT_FILE_NOTES["computer_import_batches.csv"],
+  },
+  diver: {
+    rows: (context) => context.computerImportBatchesRows,
+    note: EXPORT_FILE_NOTES["computer_import_batches.csv"],
+  },
+});
+
+/** Inert personal computer evidence, including records marked deleted. */
+export const COMPUTER_DIVES_CSV = sharedFile<ShopRow<"computerDivesRows">>({
+  file: "computer_dives.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "person_id", in: "both", value: (row) => row.personId },
+    { header: "batch_id", in: "both", value: (row) => row.batchId },
+    { header: "fingerprint", in: "both", value: (row) => row.fingerprint },
+    { header: "record", in: "both", value: (row) => JSON.stringify(row.record) },
+    { header: "annotation", in: "both", value: (row) => row.annotation },
+    { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
+    { header: "created_at", in: "both", value: (row) => row.createdAt },
+  ],
+  shop: {
+    rows: (context) => context.computerDivesRows,
+    note: EXPORT_FILE_NOTES["computer_dives.csv"],
+  },
+  diver: {
+    rows: (context) => context.computerDivesRows,
+    note: EXPORT_FILE_NOTES["computer_dives.csv"],
+  },
+});
+
+/** Inert personal computer evidence, including records marked deleted. */
+export const COMPUTER_DIVE_PROFILES_CSV = sharedFile<ShopRow<"computerDiveProfilesRows">>({
+  file: "computer_dive_profiles.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "person_id", in: "both", value: (row) => row.personId },
+    { header: "dive_id", in: "both", value: (row) => row.diveId },
+    { header: "samples", in: "both", value: (row) => JSON.stringify(row.samples) },
+  ],
+  shop: {
+    rows: (context) => context.computerDiveProfilesRows,
+    note: EXPORT_FILE_NOTES["computer_dive_profiles.csv"],
+  },
+  diver: {
+    rows: (context) => context.computerDiveProfilesRows,
+    note: EXPORT_FILE_NOTES["computer_dive_profiles.csv"],
+  },
+});

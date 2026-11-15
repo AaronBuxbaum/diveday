@@ -231,6 +231,35 @@ describe("the registry's erase fates", () => {
       createdByPersonId: owner.id,
     });
     for (const seat of [erased, other]) {
+      const [batch] = await db
+        .insert(schema.computerImportBatches)
+        .values({
+          shopId: shop.id,
+          personId: seat.personId,
+          requestKey: seat.id,
+          selectionHash: seat.id,
+          importedCount: 1,
+          skippedCount: 0,
+        })
+        .returning();
+      if (!batch) throw new Error("computer batch fixture missing");
+      const [computerDive] = await db
+        .insert(schema.computerDives)
+        .values({
+          shopId: shop.id,
+          personId: seat.personId,
+          batchId: batch.id,
+          fingerprint: seat.id,
+          record: { localStart: "2026-01-01T10:00:00" },
+        })
+        .returning();
+      if (!computerDive) throw new Error("computer dive fixture missing");
+      await db.insert(schema.computerDiveProfiles).values({
+        shopId: shop.id,
+        personId: seat.personId,
+        diveId: computerDive.id,
+        samples: [{ seconds: 0, depthMeters: 0 }],
+      });
       await db
         .insert(schema.rentalFitProfiles)
         .values({ shopId: shop.id, personId: seat.personId, bcdSize: "M", finSize: "M" })

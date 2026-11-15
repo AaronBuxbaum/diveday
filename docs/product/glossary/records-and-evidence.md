@@ -301,3 +301,9 @@
   period and dated source, separate from an owner-selected budget. Neon diagnostics compare
   identity-preserving project consumption only against matching recent supplied observations;
   absent evidence stays unknown. Cumulative GiB-months are not instantaneous storage size.
+- **Computer dive** — a person's imported instrument recording, scoped to one shop and person.
+  A source dive may contain several computers; each recording keeps its own source identifier,
+  profile, gases and provenance. Missing measurements and timezone remain unknown. An import
+  batch records a confirmed selection and retry identity. These records never feed operational
+  safety, recency or shared executed dives. Annotations are separate from source evidence;
+  deletion is reversible and legal erasure removes the personal data.

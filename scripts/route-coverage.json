@@ -121,5 +121,9 @@
   "/shop/[shopSlug]/trips/[id]/log/print": {
     "e2e": ["departure-log.spec.ts"],
     "visual": ["departure-log"]
+  },
+  "/shop/[shopSlug]/divers/[personId]/computer-dives": {
+    "e2e": ["computer-dives.spec.ts"],
+    "visual": ["computer-dives-empty", "computer-dives-preview", "computer-dives-profile"]
   }
 }

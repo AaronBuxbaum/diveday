@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { personThread } from "@/db/inbound-messages";
 import type { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import type { loadDiverGear } from "@/features/diver-record";
@@ -171,6 +172,14 @@ export function DiverFile({
         t={t}
         status={noticeForForm(notice, "work-orders")}
       />
+      {!removed ? (
+        <Link
+          href={`/shop/${shopSlug}/divers/${personId}/computer-dives`}
+          className="flex min-h-13 items-center border-b border-border py-3 font-medium text-primary"
+        >
+          {t("computerDives.title")}
+        </Link>
+      ) : null}
       <DiverNotesSection
         notes={notes}
         shopSlug={shopSlug}

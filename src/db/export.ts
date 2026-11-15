@@ -323,6 +323,19 @@ async function readShopInbox(tx: AppTransaction, scope: ShopExportScope) {
   };
 }
 
+/** Personal instrument evidence shares the bundle's exact shop or subject scope. */
+async function readPersonalInstrumentHistory(
+  tx: AppTransaction,
+  scope: ShopExportScope | DiverExportScope,
+) {
+  return {
+    priorVisitRows: await readScoped(tx, "priorVisits", scope),
+    computerImportBatchesRows: await readScoped(tx, "computerImportBatches", scope),
+    computerDivesRows: await readScoped(tx, "computerDives", scope),
+    computerDiveProfilesRows: await readScoped(tx, "computerDiveProfiles", scope),
+  };
+}
+
 async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const [shop] = await tx.select().from(shops).where(eq(shops.id, shopId)).limit(1);
   if (!shop) return null;
@@ -746,7 +759,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     workOrderCareRows,
     workOrderEventRows,
     ...departureCheckRows,
-    priorVisitRows: await readScoped(tx, "priorVisits", scope),
+    ...(await readPersonalInstrumentHistory(tx, scope)),
     importedPaymentHistoryRows,
     boatRows,
     boatName,
@@ -1169,8 +1182,6 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
         .orderBy(asc(workOrderCare.createdAt), asc(workOrderCare.id))
     : [];
 
-  const priorVisitRows = await readScoped(tx, "priorVisits", scope);
-
   const importedPaymentHistoryRows = await readScoped(tx, "importedPaymentHistory", scope);
 
   const waiverRows = await readScoped(tx, "waiverRecords", scope);
@@ -1239,7 +1250,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     workOrderLineRows,
     workOrderCareRows,
     gearItemLabel,
-    priorVisitRows,
+    ...(await readPersonalInstrumentHistory(tx, scope)),
     importedPaymentHistoryRows,
     waiverRows,
     courseFormRecordRows,
@@ -1455,6 +1466,12 @@ export async function loadShopExportCounts(
     "departure_boat_safety_snapshots.csv": async () =>
       scoped("departure_boat_safety_snapshots.csv", "departureBoatSafetySnapshots"),
     "prior_visits.csv": async () => scoped("prior_visits.csv", "priorVisits"),
+    "computer_import_batches.csv": async () =>
+      scoped("computer_import_batches.csv", "computerImportBatches"),
+    "computer_dives.csv": async () => scoped("computer_dives.csv", "computerDives"),
+    "computer_dive_profiles.csv": async () =>
+      scoped("computer_dive_profiles.csv", "computerDiveProfiles"),
+
     "imported_payment_history.csv": async () =>
       scoped("imported_payment_history.csv", "importedPaymentHistory"),
     "orders.csv": async () => scoped("orders.csv", "orders"),

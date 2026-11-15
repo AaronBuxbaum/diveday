@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uddf version="3.2.3"><diver><owner><equipment><divecomputer id="computer"><name>Fixture computer</name></divecomputer></equipment></owner></diver>
+<gasdefinitions><mix id="air"><o2>0.21</o2><he>0</he></mix><mix id="ean"><o2>0.32</o2><he>0</he></mix></gasdefinitions>
+<profiledata><repetitiongroup><dive id="d1"><informationbeforedive><datetime>2026-11-01T23:50:00</datetime><link ref="computer"/></informationbeforedive>
+<tankdata><link ref="air"/><tankvolume>0.012</tankvolume><tankpressurebegin>20000000</tankpressurebegin><tankpressureend>5000000</tankpressureend></tankdata>
+<samples><waypoint><divetime>0</divetime><depth>0</depth></waypoint><waypoint><divetime>600</divetime><depth>20</depth><temperature>293.15</temperature><switchmix ref="ean"/></waypoint><waypoint><divetime>1800</divetime><depth>0</depth></waypoint></samples>
+<informationafterdive><greatestdepth>20</greatestdepth><diveduration>1800</diveduration></informationafterdive></dive></repetitiongroup></profiledata></uddf>
