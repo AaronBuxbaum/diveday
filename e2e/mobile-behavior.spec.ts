@@ -1,14 +1,22 @@
 import type { Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import {
   OFFLINE_MANIFEST_SHELL_VERSION,
   type OfflineManifestUpcomingResponse,
 } from "../src/lib/offline-manifests";
 import { ROLL_CALL_CAUSAL_HEADERS } from "../src/lib/roll-call-protocol";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openOnThisPhone, openThreadStep } from "./helpers";
+import {
+  offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
+  openOnThisPhone,
+  openThreadStep,
+} from "./helpers";
 
 const diver = diverTranslator("en-US");
+const staff = staffTranslator("en-US");
 const touchEvents = new WeakMap<Page, number>();
 
 test.beforeEach(async ({ page, browserName, isMobile, hasTouch }, testInfo) => {
@@ -45,11 +53,50 @@ test("touch navigation reaches the course catalog and returns to the schedule", 
   await expect(nav.getByRole("link", { name: "Schedule" })).toHaveAttribute("aria-current", "page");
 });
 
+test.describe("staff navigation on a phone", () => {
+  signedInAsOwner();
+
+  test("More remains open and its destination receives a tap after the animation", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis");
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    const more = nav.getByRole("button", { name: "More", exact: true });
+    const money = nav.getByRole("link", { name: "Money", exact: true });
+
+    await more.tap();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await expect(money).toBeVisible();
+    await money.locator("../..").evaluate(async (panel) => {
+      await Promise.all(panel.getAnimations().map((animation) => animation.finished));
+    });
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await expect(money).toBeVisible();
+    expect(
+      await money.evaluate((link) => {
+        const rect = link.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          rect.left + rect.width / 2,
+          rect.top + rect.height / 2,
+        );
+        return hit !== null && link.contains(hit);
+      }),
+      "the destination is hit-testable at its center",
+    ).toBe(true);
+    await money.tap();
+    await expect(page).toHaveURL(/\/orders$/);
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
 test("touch booking and guardian signing stay complete after reload", async ({ page }) => {
   await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-  const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
-  await expect(first).toContainText(/seats?/);
-  await first.getByRole("link").first().tap();
+  const trip = page
+    .getByRole("list", { name: "Upcoming trips" })
+    .getByRole("link", { name: /(?:[0-9]+ seats?|last seat)/i })
+    .first();
+  await expect(trip).toBeVisible();
+  await trip.tap();
   await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Mobile Minor");
@@ -81,8 +128,12 @@ test("a referred signer sees the physician step before returning to their bookin
   page,
 }) => {
   await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-  const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
-  await first.getByRole("link").first().tap();
+  const trip = page
+    .getByRole("list", { name: "Upcoming trips" })
+    .getByRole("link", { name: /(?:[0-9]+ seats?|last seat)/i })
+    .first();
+  await expect(trip).toBeVisible();
+  await trip.tap();
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Mobile Referral");
   await page.getByLabel("Email", { exact: true }).fill("mobile-referral@example.com");
@@ -142,6 +193,7 @@ test.describe("touch manifest", () => {
     await offlineCopySaved(page);
     await openOnThisPhone(page);
     await page.getByRole("link", { name: "Open offline roll call" }).tap();
+    await openDeckDetails(page);
     await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
     await expect
       .poll(() =>
@@ -161,19 +213,56 @@ test.describe("touch manifest", () => {
       .toBe(true);
     await context.setOffline(true);
     await page.reload();
+    await openDeckDetails(page);
     await expect(page.getByText("No signal · device copy")).toBeVisible();
     await page.getByRole("button", { name: "After dive 1" }).tap();
+    await openDeckPerson(page, person.fullName);
+    await page
+      .getByRole("button", {
+        name: staff("manifest.deck.record", { name: person.fullName }),
+        exact: true,
+      })
+      .tap();
+    const receipt = page.locator('[data-deck-screen="receipt"]');
+    await expect(
+      receipt.getByRole("heading", { name: person.fullName, exact: true }),
+    ).toBeVisible();
+    await expect(receipt).toContainText(staff("manifest.deck.savedAboard"));
+    await expect(
+      receipt.getByText(staff("manifest.deck.pendingReceipt"), { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("status")
+        .getByText(staff("shared.offlineManifest.reconcile.pendingWaiting", { count: 1 }), {
+          exact: true,
+        }),
+    ).toBeVisible();
+    await openDeckPerson(page, person.fullName);
+    await expect(page.locator('[data-deck-screen="person"]')).toContainText(
+      staff("manifest.deck.pendingReceipt"),
+    );
+    await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).tap();
     const crew = page
       .locator("#offline-crew-roll-call")
       .getByRole("listitem")
       .filter({ hasText: person.fullName });
-    await crew.getByRole("button", { name: "Mark aboard" }).tap();
     await expect(crew.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
-    await expect(
-      page.getByRole("status").filter({ hasText: "when you’re back in service" }),
-    ).toBeVisible();
     await page.reload({ waitUntil: "domcontentloaded" });
+    await openDeckDetails(page);
     await page.getByRole("button", { name: "After dive 1" }).tap();
+    await openDeckPerson(page, person.fullName);
+    await expect(page.locator('[data-deck-screen="person"]')).toContainText(
+      staff("manifest.deck.pendingReceipt"),
+    );
+    await expect(
+      page
+        .getByRole("status")
+        .getByText(staff("shared.offlineManifest.reconcile.pendingWaiting", { count: 1 }), {
+          exact: true,
+        }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).tap();
     await expect(crew.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
     await context.setOffline(false);
     await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
