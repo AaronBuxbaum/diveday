@@ -237,7 +237,20 @@ for (const scheme of ["light", "dark"] as const) {
               exact: true,
             }),
           ).toBeVisible();
-          await capture(page, "offline-manifest-roll-call", scheme, { locale: SPANISH });
+          // This connected saved-copy view photographs completed reconciliation,
+          // independently of mounting the named person's panel.
+          const reconciled = page
+            .locator('[data-deck-screen] > [role="status"]')
+            .getByText(staffTranslator(SPANISH)("shared.offlineManifest.reconcile.allCaughtUp"), {
+              exact: true,
+            });
+          await expect(reconciled).toBeVisible();
+          await capture(page, "offline-manifest-roll-call", scheme, {
+            locale: SPANISH,
+            beforeScreenshot: async () => {
+              await expect(reconciled).toBeVisible();
+            },
+          });
         });
 
         /**

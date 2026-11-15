@@ -26,6 +26,7 @@ import {
   writeCourseForm,
 } from "./helpers";
 import type { AuditCapture } from "./visual-audit-capture";
+import { liveRosterConfirmation } from "./visual-harness";
 
 const staff = staffTranslator("en-US");
 const REEF = "Two-Tank Reef — Molasses & French";
@@ -75,7 +76,14 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     });
 
     test("adding a dock rider exposes the rider and emergency contact fields", async ({ page }) => {
-      await reefManifest(page);
+      const path = await tripPathByTitle(page, "blue-mantis", REEF);
+      const confirmed = liveRosterConfirmation(page, {
+        tripId: path.slice(path.lastIndexOf("/") + 1),
+        checkpoint: "departure",
+      });
+      await page.goto(path);
+      await openTripTab(page, "Manifest");
+      await openDeckDetails(page);
       await openIfClosed(page.locator("#dock-rider"));
       const form = page.getByTestId("dock-rider-form");
       await form.getByLabel(staff("desk.dockRider.name"), { exact: true }).fill("Sam Rider");
@@ -83,7 +91,17 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
         form.getByLabel(staff("desk.dockRider.emergencyName"), { exact: true }),
       ).toBeVisible();
       await expect(form.getByRole("radio")).toHaveCount(2);
-      await capture(page, "manifest-dock-rider-editor", "light");
+      await confirmed;
+      await capture(page, "manifest-dock-rider-editor", "light", {
+        beforeScreenshot: async () => {
+          await expect(
+            page.getByText(staff("manifest.rosterUnconfirmed"), { exact: true }),
+          ).toHaveCount(0);
+          await expect(form.getByLabel(staff("desk.dockRider.name"), { exact: true })).toHaveValue(
+            "Sam Rider",
+          );
+        },
+      });
     });
 
     test("a boat check opens the problem note beside its equipment item", async ({ page }) => {
