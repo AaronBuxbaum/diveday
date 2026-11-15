@@ -1253,3 +1253,11 @@ Staff arrive asking which files are readable, whether their dates and units are 
 A separate upload wizard would hide history while a stacked card composition would spend a box on every recording.
 The chosen composition puts an explicit file review above a chronological ledger, with each recording’s profile, gases, notes and deletion controls in its own disclosure.
 Source local time and its offset or unknown zone stay visible in the recording details; confirmation names the person before any write.
+
+The controls stay attached to their objects: the native summary opens a recording, and its
+annotation and reversible deletion remain there. File review, timezone acknowledgement and target
+confirmation cannot dissolve into defaults because they establish which person's evidence is being
+imported. Removing individual record cards leaves the ledger readable; removing source units or the
+unknown-zone state would make the evidence misleading. The light review's pixel probe covered 24
+records with no flags; the independent critic's empty-state and duplicate-counter findings were
+reproduced and corrected.

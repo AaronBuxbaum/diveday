@@ -104,6 +104,7 @@ describe("computer file review", () => {
     expect(actions.commitAction).toHaveBeenCalledTimes(1);
     complete({ ok: true, value: { imported: 1, skipped: 0 } });
     await waitFor(() => expect(screen.getByRole("button", { name: copy.retry })).toBeEnabled());
+    expect(screen.getByText(copy.done).parentElement?.querySelectorAll("dt")).toHaveLength(3);
     await user.click(screen.getByRole("button", { name: copy.retry }));
     expect(actions.commitAction).toHaveBeenCalledTimes(2);
     const first = actions.commitAction.mock.calls[0][2] as FormData;
@@ -192,4 +193,9 @@ describe("computer file review", () => {
 it("withholds the export control when the staff member lacks export permission", () => {
   mount();
   expect(screen.queryByRole("button", { name: copy.export })).not.toBeInTheDocument();
+});
+
+it("gives an empty history its own section heading", () => {
+  mount();
+  expect(screen.getByRole("heading", { name: copy.empty })).toBeVisible();
 });

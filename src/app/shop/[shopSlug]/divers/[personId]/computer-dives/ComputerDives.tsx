@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState, useTransition } from "react";
+import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceRow, controlClass, Field, FormStatus, textareaClassFor } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -371,7 +372,7 @@ function HistoryLedger({
       </div>
       {canExport ? <p className="text-sm text-muted">{copy.exportHint}</p> : null}
       {!history.length ? (
-        <p className="text-muted">{copy.empty}</p>
+        <EmptyState title={copy.empty} titleAs="h3" icon={false} />
       ) : (
         history.map((dive) => (
           <details key={dive.id} className="border-t border-border">
@@ -531,7 +532,7 @@ export function ComputerDives({
           </dl>
           {hasFileErrors ? (
             <div>
-              <h3 className="font-medium">{copy.errors}</h3>
+              <h3 className="font-medium">{copy.fileErrors}</h3>
               <ul className="list-inside list-disc text-sm text-warning-strong">
                 {preview.files
                   .filter((file) => file.error)
@@ -660,11 +661,6 @@ export function ComputerDives({
                   <Fact
                     label={copy.fileErrors}
                     value={preview.files.filter((file) => file.error !== null).length}
-                    unknown={copy.unknown}
-                  />
-                  <Fact
-                    label={copy.errors}
-                    value={preview.files.filter((file) => file.error).length}
                     unknown={copy.unknown}
                   />
                 </dl>

@@ -56,6 +56,7 @@ for (const scheme of ["light", "dark"] as const) {
         .getByRole("button", { name: staffCopy("computerDives.commit"), exact: true })
         .click();
       await expect(page.getByText(staffCopy("computerDives.done"), { exact: true })).toBeVisible();
+      await capture(page, "computer-dives-result", scheme);
       await page
         .getByRole("button", { name: staffCopy("computerDives.cancel"), exact: true })
         .click();

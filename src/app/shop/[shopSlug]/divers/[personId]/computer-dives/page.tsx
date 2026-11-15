@@ -74,7 +74,6 @@ export default async function ComputerDivesPage({
     imported: t("computerDives.imported"),
     skipped: t("computerDives.skipped"),
     fileErrors: t("computerDives.fileErrors"),
-    errors: t("computerDives.errors"),
     done: t("computerDives.done"),
     saved: t("computerDives.saved"),
     error: t("computerDives.error"),
