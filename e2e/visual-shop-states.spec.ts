@@ -21,6 +21,7 @@ import {
   expectOverviewMapSites,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   REEF_TRIP,
   SPANISH,
   SURFACE_TIMEOUT_MS,
@@ -234,12 +235,26 @@ for (const scheme of ["light", "dark"] as const) {
 
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);
+      const emergencyTripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)/)?.[1];
+      if (!emergencyTripId)
+        throw new Error("The emergency reference capture must identify its trip");
+      const confirmed = liveRosterConfirmation(page, {
+        tripId: emergencyTripId,
+        checkpoint: "departure",
+      });
       await openTripTab(page, "Manifest");
       await openDeckDetails(page);
       // The line itself, not just the heading — the whole point of the
       // capture is the state where there is nothing under it.
       await page.getByText("No emergency numbers recorded").waitFor();
-      await capture(page, "manifest-emergency-empty", scheme);
+      await confirmed;
+      await capture(page, "manifest-emergency-empty", scheme, {
+        beforeScreenshot: async () => {
+          await expect(
+            page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+          ).toHaveCount(0);
+        },
+      });
 
       // The same absence, on the copy the boat falls back to. Straight to the
       // route with the trip's own id rather than through the manifest's "On
@@ -553,6 +568,10 @@ for (const scheme of ["light", "dark"] as const) {
           .locator(":scope > details"),
       ).not.toHaveAttribute("open");
       await capture(page, "manifest-buddy-planning-warnings", scheme);
+      const confirmed = liveRosterConfirmation(page, {
+        tripId: state.tripId,
+        checkpoint: "departure",
+      });
       await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
       await expect(
         (await manifestRow(page, "Bea Quill")).getByText(
@@ -561,7 +580,14 @@ for (const scheme of ["light", "dark"] as const) {
         ),
       ).toBeVisible();
       await offlineCopySaved(page);
-      await capture(page, "manifest-buddy-operational-warnings", scheme);
+      await confirmed;
+      await capture(page, "manifest-buddy-operational-warnings", scheme, {
+        beforeScreenshot: async () => {
+          await expect(
+            page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+          ).toHaveCount(0);
+        },
+      });
     });
 
     test(`an intro team's manual pairing caution is visible (${scheme})`, async ({

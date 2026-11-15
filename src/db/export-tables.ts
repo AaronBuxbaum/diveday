@@ -27,6 +27,9 @@ import {
   buddyTeamMembers,
   cards,
   certificationJuniorReviews,
+  computerDiveProfiles,
+  computerDives,
+  computerImportBatches,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -603,6 +606,24 @@ export const EXPORT_TABLES = {
     table: departureBoatSafetySnapshots,
     order: [asc(departureBoatSafetySnapshots.capturedAt), asc(departureBoatSafetySnapshots.id)],
     scope: { shopColumn: departureBoatSafetySnapshots.shopId },
+  },
+  computerImportBatches: {
+    table: computerImportBatches,
+    order: [asc(computerImportBatches.id)],
+    scope: {
+      shopColumn: computerImportBatches.shopId,
+      personColumn: computerImportBatches.personId,
+    },
+  },
+  computerDives: {
+    table: computerDives,
+    order: [asc(computerDives.id)],
+    scope: { shopColumn: computerDives.shopId, personColumn: computerDives.personId },
+  },
+  computerDiveProfiles: {
+    table: computerDiveProfiles,
+    order: [asc(computerDiveProfiles.id)],
+    scope: { shopColumn: computerDiveProfiles.shopId, personColumn: computerDiveProfiles.personId },
   },
   priorVisits: {
     table: priorVisits,

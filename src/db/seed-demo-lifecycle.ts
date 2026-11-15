@@ -25,6 +25,9 @@ import {
   capabilities,
   cards,
   collectionEntries,
+  computerDiveProfiles,
+  computerDives,
+  computerImportBatches,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -319,6 +322,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(cards).where(eq(cards.shopId, shopId));
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
+  await db.delete(computerDiveProfiles).where(eq(computerDiveProfiles.shopId, shopId));
+  await db.delete(computerDives).where(eq(computerDives.shopId, shopId));
+  await db.delete(computerImportBatches).where(eq(computerImportBatches.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));

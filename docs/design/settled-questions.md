@@ -96,3 +96,9 @@ measuring**. Without a written home, the next sweep spends the same afternoon re
 | --- | --- | --- |
 | Crew week content begins 8px before its phone page container | The week extends its hairlines into the gutter while its readable text aligns with the page heading; the 390px capture has no clipped control or horizontal overflow | `StaffingWeek.tsx`; `crew-personal-schedule` light phone capture (#4275) |
 | Desktop crew trip names end in ellipses | Seven-day columns keep dates and complete shift times readable; the full name remains in the title and accessible link text. Below 1280px the day list shows full names instead | `CrewChip` in `StaffingWeek.tsx`; `crew-personal-schedule` light desktop capture (#4275) |
+
+## Personal computer-file import
+
+| Looks wrong | Why it is right | Source of truth |
+| --- | --- | --- |
+| Desktop upload, confirmation and history buttons start at different horizontal positions | They belong to independent sections, not repeated ledger columns; history downloads sit beside their own heading and the upload/confirmation actions start at the content edge | `ComputerDives.tsx`, the independent-action-sections comment; `surfaces.md`, computer dives; capture-scoped pixel-probe settlement |

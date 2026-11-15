@@ -750,7 +750,13 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "work_orders",
     "lost_items",
   ],
-  history: ["prior_visits", "certification_junior_reviews"],
+  history: [
+    "prior_visits",
+    "certification_junior_reviews",
+    "computer_dive_profiles",
+    "computer_dives",
+    "computer_import_batches",
+  ],
   media: ["media_deletion_attempts"],
   lists: ["interests", "capabilities", "trip_blowout_divers"],
 } as const satisfies Record<string, readonly (typeof DIVER_HISTORY_TABLES)[number][]>;

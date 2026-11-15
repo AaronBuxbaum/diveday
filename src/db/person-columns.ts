@@ -145,6 +145,31 @@ export type PersonColumn = {
 
 const rows = [
   {
+    table: "computer_dive_profiles",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "delete",
+    export: "own",
+  },
+  {
+    table: "computer_dives",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "delete",
+    export: "own",
+  },
+  {
+    table: "computer_import_batches",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "delete",
+    export: "own",
+  },
+
+  {
     table: "trips",
     column: "course_teaching_note_by_person_id",
     kind: "actor",

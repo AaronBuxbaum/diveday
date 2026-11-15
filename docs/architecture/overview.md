@@ -20,6 +20,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Transactional email | AWS SES (`@aws-sdk/client-sesv2`) behind `src/lib/notifications/` | [20260803 SES sole provider](decisions/20260803-ses-sole-email-provider.md) |
 | Offline manifests | Encrypted IndexedDB snapshot + data-free service-worker shell | [20260718 offline manifests](decisions/20260718-offline-manifest-snapshots.md) |
 | Payments | Stripe Connect (Standard) behind `src/lib/payments/`; each shop brings its own account. Imported payment/receipt history stays outside live orders and is explicitly labelled as unverified source evidence. | [20260719 Stripe Connect](decisions/20260719-stripe-connect-orders.md), [20260816 imported evidence](decisions/20260816-imported-payment-history-is-evidence.md) |
+| Personal computer files | Inert person-scoped history; official `@garmin/fitsdk` server adapter and bounded XML/CSV parsers | [20261115 personal evidence](decisions/20261115-personal-computer-evidence.md), [20261115 FIT adapter](decisions/20261115-fit-personal-history.md) |
 | Marine outlook | Open-Meteo Marine API behind `src/lib/marine-forecast.ts` | [20260718 marine outlook](decisions/20260718-automated-marine-outlook.md) |
 | Claude assists | Anthropic API via `@anthropic-ai/sdk` behind `src/lib/claude/`, run through `runAssist` in `src/features/assists/store.ts`; dark without a key | [20261018 Claude assists](decisions/20261018-claude-assists.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |

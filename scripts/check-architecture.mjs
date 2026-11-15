@@ -228,6 +228,8 @@ export const seams = [
 
 /** Modules a client bundle must never reach, by value import, at any depth. */
 export const SERVER_ONLY_MODULES = [
+  // CSV setup shares header grammar; the complete vendor decoders stay on the server.
+  "src/lib/computer-import/index.ts",
   "src/features/phone-line-type/rules.ts",
   "src/lib/payments/stripe-keys.ts",
   "src/lib/payments/stripe-client.ts",
