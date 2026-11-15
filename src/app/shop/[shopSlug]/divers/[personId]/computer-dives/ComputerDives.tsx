@@ -161,6 +161,9 @@ function PreviewFacts({ record, copy }: { record: ParsedComputerDive; copy: Copy
   return (
     <div className="space-y-3">
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {record.startInstant !== null ? (
+          <Fact label={copy.instant} value={record.startInstant} unknown={copy.unknown} />
+        ) : null}
         <Fact
           label={copy.zone}
           value={record.offsetMinutes === null ? null : `${copy.offset}: ${record.offsetMinutes}`}
@@ -377,7 +380,8 @@ function HistoryLedger({
         history.map((dive) => (
           <details key={dive.id} className="border-t border-border">
             <summary className="min-h-12 cursor-pointer py-3 font-medium">
-              {dive.record.localStart} · {dive.record.device ?? copy.unknown}
+              {dive.record.localStart ?? dive.record.startInstant ?? copy.unknown} ·{" "}
+              {dive.record.device ?? copy.unknown}
               {dive.deletedAt ? ` · ${copy.deleted}` : ""}
             </summary>
             <div className="space-y-6 pb-6">
@@ -564,7 +568,9 @@ export function ComputerDives({
                     change();
                   }}
                 >
-                  {copy.selected}: {dive.record.localStart} · {dive.record.device ?? copy.unknown}
+                  {copy.selected}:{" "}
+                  {dive.record.localStart ?? dive.record.startInstant ?? copy.unknown} ·{" "}
+                  {dive.record.device ?? copy.unknown}
                 </ChoiceRow>
                 {dive.duplicate ? (
                   <p className="text-sm text-warning-strong">
@@ -583,7 +589,7 @@ export function ComputerDives({
                 {selected.has(dive.key) ? (
                   <div className="space-y-3">
                     <p className="text-sm text-muted">{copy.keepZone}</p>
-                    {dive.record.offsetMinutes === null ? (
+                    {dive.record.offsetMinutes === null && dive.record.localStart !== null ? (
                       <Field
                         label={copy.offset}
                         htmlFor={`offset-${index}`}

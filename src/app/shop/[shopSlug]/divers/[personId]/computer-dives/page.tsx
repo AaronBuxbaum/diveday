@@ -89,6 +89,9 @@ export default async function ComputerDivesPage({
     offsetHint: t("computerDives.offsetHint"),
     selectionHint: t("computerDives.selectionHint"),
     warningCodes: {
+      local_time_unknown: t("computerDives.warningCodes.local_time_unknown"),
+      duration_elapsed: t("computerDives.warningCodes.duration_elapsed"),
+      unmapped_fit_fields: t("computerDives.warningCodes.unmapped_fit_fields"),
       timezone_unknown: t("computerDives.warningCodes.timezone_unknown"),
       profile_absent: t("computerDives.warningCodes.profile_absent"),
       duration_unknown: t("computerDives.warningCodes.duration_unknown"),

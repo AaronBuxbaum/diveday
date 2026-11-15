@@ -109,7 +109,12 @@ export async function previewComputerFiles(db: AppDb, scope: ComputerScope, file
   const dives: PreviewDive[] = parsed.dives.map((dive) => {
     const duplicate = seen.has(dive.fingerprint)
       ? "exact"
-      : existing.some((row) => row.record.localStart === dive.record.localStart)
+      : existing.some(
+            (row) =>
+              (dive.record.startInstant !== null &&
+                row.record.startInstant === dive.record.startInstant) ||
+              (dive.record.localStart !== null && row.record.localStart === dive.record.localStart),
+          )
         ? "possible"
         : null;
     seen.add(dive.fingerprint);
@@ -148,6 +153,7 @@ export async function commitComputerFiles(
       throw new Error("invalid_timezone");
     let record = dive.record;
     if (offset !== null) {
+      if (record.localStart === null) throw new Error("invalid_timezone");
       if (record.offsetMinutes !== null && record.offsetMinutes !== offset)
         throw new Error("invalid_timezone");
       const wall = record.localStart.replace(/(?:Z|[+-]\d\d:\d\d)$/, "");
@@ -243,7 +249,7 @@ async function readHistory(db: DbExecutor, scope: ComputerScope, personName: str
     )
     .where(scopeWhere(scope))
     .orderBy(
-      sql`${computerDives.record}->>'localStart'`,
+      sql`coalesce(${computerDives.record}->>'localStart', ${computerDives.record}->>'startInstant')`,
       asc(computerDives.fingerprint),
       asc(computerDives.id),
     );

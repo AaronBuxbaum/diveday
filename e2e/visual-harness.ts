@@ -40,6 +40,16 @@ export const CATALOG_MAP_SITE_COUNT = DIVE_SITE_TEMPLATES.filter(
   ({ briefing }) => briefing.forecastLatitude != null && briefing.forecastLongitude != null,
 ).length;
 
+/** Start before navigation or a roster mutation; a saved copy alone is not live trust. */
+export async function liveRosterConfirmation(page: Page) {
+  await page.waitForResponse(
+    (response) => response.url().endsWith("/roster-confirmation") && response.status() === 204,
+  );
+  await expect(
+    page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+  ).toHaveCount(0);
+}
+
 export async function expectOverviewMapSites(page: Page, count: number) {
   await expect
     .poll(() =>

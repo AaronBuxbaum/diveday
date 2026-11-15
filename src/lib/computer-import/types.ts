@@ -1,5 +1,5 @@
 /** Parsed evidence only: no field is an operational safety input. */
-export type ComputerSourceFormat = "uddf" | "subsurface" | "csv";
+export type ComputerSourceFormat = "uddf" | "subsurface" | "csv" | "fit";
 export type ComputerSample = { seconds: number; depthMeters: number; temperatureC?: number };
 export type ComputerGas = {
   id: string;
@@ -18,7 +18,7 @@ export type ParsedComputerDive = {
   device: string | null;
   deviceId?: string | null;
   recordingIndex?: number;
-  localStart: string;
+  localStart: string | null;
   startInstant: string | null;
   offsetMinutes: number | null;
   durationSeconds: number | null;

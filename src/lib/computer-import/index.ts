@@ -1,4 +1,5 @@
 import { parseCsv } from "./csv";
+import { parseFit } from "./fit";
 import { parseSubsurface } from "./subsurface";
 import { COMPUTER_IMPORT_LIMITS as LIMIT, type ParsedComputerDive, refuse } from "./types";
 import { parseUddf } from "./uddf";
@@ -8,16 +9,18 @@ export { COMPUTER_CSV_TEMPLATE } from "./csv";
 export * from "./types";
 export function parseComputerFile(bytes: Uint8Array): ParsedComputerDive[] {
   if (bytes.byteLength > LIMIT.fileBytes) refuse("file_too_large");
-  if (bytes.length >= 12 && String.fromCharCode(...bytes.slice(8, 12)) === ".FIT")
-    refuse("unsupported_fit");
-  let text: string;
-  try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim();
-  } catch {
-    return refuse("invalid_encoding");
+  const isFit = bytes.length >= 12 && String.fromCharCode(...bytes.slice(8, 12)) === ".FIT";
+  let text = "";
+  if (!isFit) {
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim();
+    } catch {
+      return refuse("invalid_encoding");
+    }
   }
   let dives: ParsedComputerDive[];
-  if (text.startsWith("<")) {
+  if (isFit) dives = parseFit(bytes);
+  else if (text.startsWith("<")) {
     const root = parseXml(text);
     if (localName(root) === "uddf") dives = parseUddf(root);
     else if (

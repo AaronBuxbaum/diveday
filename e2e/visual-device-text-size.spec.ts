@@ -17,6 +17,7 @@ import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   SURFACE_TIMEOUT_MS,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
@@ -35,9 +36,11 @@ for (const bodySize of [34, 53]) {
       await exposeDeviceBody(page, bodySize);
       await page.goto("/shop/blue-mantis/schedule/board");
       await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
+      const confirmed = liveRosterConfirmation(page);
       await openTripTab(page, "Manifest");
       await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
       await offlineCopySaved(page);
+      await confirmed;
       if (bodySize === 34) await capture(page, "manifest-device-body-34", "light");
       else {
         await capture(page, "manifest-device-body-53", "light");

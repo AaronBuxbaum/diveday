@@ -199,3 +199,35 @@ it("gives an empty history its own section heading", () => {
   mount();
   expect(screen.getByRole("heading", { name: copy.empty })).toBeVisible();
 });
+
+it("shows the FIT UTC instant and unknown local clock without offering to reinterpret it", async () => {
+  actions.previewAction.mockResolvedValue({
+    ok: true,
+    value: {
+      ...preview,
+      dives: [
+        {
+          ...preview.dives[0],
+          record: {
+            ...record,
+            sourceFormat: "fit",
+            localStart: null,
+            startInstant: "2026-07-21T23:40:00.000Z",
+            warnings: ["local_time_unknown"],
+          },
+        },
+      ],
+    },
+  });
+  const user = userEvent.setup();
+  mount();
+  await openPreview(user);
+  expect(screen.getByRole("checkbox", { name: /2026-07-21T23:40:00.000Z/ })).toBeVisible();
+  expect(screen.queryByLabelText(copy.offset, { exact: true })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("checkbox", { name: copy.confirmZone }));
+  await user.click(screen.getByRole("checkbox", { name: new RegExp(copy.confirmTarget) }));
+  await user.click(screen.getByRole("button", { name: copy.commit }));
+  expect((actions.commitAction.mock.calls[0][2] as FormData).get("timeOffsets")).toBe(
+    '{"fixture-key":null}',
+  );
+});

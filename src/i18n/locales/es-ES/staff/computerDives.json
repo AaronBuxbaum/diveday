@@ -1,7 +1,7 @@
 {
   "title": "Buceos de computadora",
   "intro": "Importa un archivo al historial personal de computadora de este buceador.",
-  "formats": "UDDF, XML de Subsurface y la plantilla CSV con unidades. Aún no se han verificado exportaciones de fabricantes.",
+  "formats": "FIT de buceo Garmin (una exportación Descent/Connect verificada), UDDF, XML de Subsurface y la plantilla CSV con unidades. Otras exportaciones de fabricantes no están verificadas.",
   "files": "Archivos de buceo",
   "preview": "Ver vista previa",
   "previewHeading": "Revisar buceos",
@@ -67,10 +67,13 @@
     "profile_absent": "Este registro no tiene perfil de profundidad.",
     "duration_unknown": "Duración desconocida.",
     "depth_unknown": "Profundidad máxima desconocida.",
-    "multiple_recordings": "Este buceo tiene varios registros de computadora."
+    "multiple_recordings": "Este buceo tiene varios registros de computadora.",
+    "local_time_unknown": "Hora local y zona horaria originales desconocidas; se conserva el instante UTC registrado.",
+    "duration_elapsed": "La duración de la sesión puede incluir tiempo en superficie.",
+    "unmapped_fit_fields": "Los datos FIT adicionales no se importan. Conserva el archivo original."
   },
   "fileErrorCodes": {
-    "unsupported_fit": "La importación FIT aún no está disponible.",
+    "unsupported_fit": "Esta actividad o estructura de registro FIT no es compatible.",
     "unknown_units": "El archivo necesita unidades explícitas.",
     "unsafe_xml": "No se aceptan declaraciones ni entidades XML.",
     "file_too_large": "El archivo es demasiado grande.",
