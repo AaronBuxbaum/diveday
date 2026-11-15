@@ -223,23 +223,45 @@ test.describe("touch manifest", () => {
         exact: true,
       })
       .tap();
-    await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
-      staff("manifest.deck.savedAboard"),
-    );
+    const receipt = page.locator('[data-deck-screen="receipt"]');
+    await expect(
+      receipt.getByRole("heading", { name: person.fullName, exact: true }),
+    ).toBeVisible();
+    await expect(receipt).toContainText(staff("manifest.deck.savedAboard"));
+    await expect(
+      receipt.getByText(staff("manifest.deck.pendingReceipt"), { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("status")
+        .getByText(staff("shared.offlineManifest.reconcile.pendingWaiting", { count: 1 }), {
+          exact: true,
+        }),
+    ).toBeVisible();
     await openDeckPerson(page, person.fullName);
+    await expect(page.locator('[data-deck-screen="person"]')).toContainText(
+      staff("manifest.deck.pendingReceipt"),
+    );
     await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).tap();
     const crew = page
       .locator("#offline-crew-roll-call")
       .getByRole("listitem")
       .filter({ hasText: person.fullName });
     await expect(crew.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
-    await expect(
-      page.getByRole("status").filter({ hasText: "when you’re back in service" }),
-    ).toBeVisible();
     await page.reload({ waitUntil: "domcontentloaded" });
     await openDeckDetails(page);
     await page.getByRole("button", { name: "After dive 1" }).tap();
     await openDeckPerson(page, person.fullName);
+    await expect(page.locator('[data-deck-screen="person"]')).toContainText(
+      staff("manifest.deck.pendingReceipt"),
+    );
+    await expect(
+      page
+        .getByRole("status")
+        .getByText(staff("shared.offlineManifest.reconcile.pendingWaiting", { count: 1 }), {
+          exact: true,
+        }),
+    ).toBeVisible();
     await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).tap();
     await expect(crew.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
     await context.setOffline(false);
