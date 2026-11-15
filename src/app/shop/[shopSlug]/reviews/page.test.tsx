@@ -34,7 +34,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const { listOpenRecapPulses } = await import("../../../../features/recap/recap-pulses.store");
-const ReviewsPage = (await import("./page")).default;
+const ReviewsPage = (await import("../(inbox-section)/reviews/page")).default;
 
 async function open(role: Role, reviewsEnabled: boolean) {
   const db: AppDb = ctx.db;

@@ -26,7 +26,9 @@ function assertAttributionBelowWord(pdf: string, finalWord: string) {
       ),
     ];
     const finalWords = words.filter((word) => word[3] === finalWord);
-    const printed = words.filter((word) => word[3] === "Printed");
+    // The medical packet also has a "Printed <date>" heading. Only
+    // "Printed by" is an attribution footer.
+    const printed = words.filter((word, i) => word[3] === "Printed" && words[i + 1]?.[3] === "by");
     if (finalWords.length) lastBodyPage = index;
     if (printed.length) lastAttributionPage = index;
     // A footer may move to the following page, but may never run over body text.

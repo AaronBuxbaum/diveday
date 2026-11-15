@@ -11,7 +11,7 @@ import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 const ctx = fileScopedShopContext({ history: true });
 
 describe("conservation in the actual recap reader", () => {
-  it("seeds six distinct returned departures, leaving the pinned future boat unannotated", async () => {
+  it("seeds eight distinct returned departures, leaving the pinned future boat unannotated", async () => {
     const { db, shop } = ctx;
     const seeded = await db
       .select({
@@ -24,8 +24,8 @@ describe("conservation in the actual recap reader", () => {
       .from(tripConservation)
       .innerJoin(trips, eq(trips.id, tripConservation.tripId))
       .where(eq(tripConservation.shopId, shop.id));
-    expect(seeded).toHaveLength(6);
-    expect(new Set(seeded.map(({ tripId }) => tripId)).size).toBe(6);
+    expect(seeded).toHaveLength(8);
+    expect(new Set(seeded.map(({ tripId }) => tripId)).size).toBe(8);
     for (const departure of seeded) {
       expect(hasReturned(departure.endsAt, nowDate())).toBe(true);
       expect(departure.status).toBe("scheduled");

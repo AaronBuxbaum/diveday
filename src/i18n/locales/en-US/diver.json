@@ -4498,6 +4498,7 @@
     }
   },
   "brand": {
+    "demoBadge": "Fictional example: {badge}",
     "since": "Since {year}",
     "badges": {
       "padi_5_star": "PADI 5 Star Dive Center",

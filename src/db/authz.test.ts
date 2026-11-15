@@ -431,17 +431,19 @@ describe("the medical alert for the crew (canPersonReadMedicalAlertOnTrip, issue
 });
 
 describe("printing the medical alerts' words (canPersonPrintMedicalAlerts, issue #2990)", () => {
-  it("admits the owner and a manager, and refuses crew, an instructor and another shop's staff", async () => {
+  it("admits every staff role and refuses another shop's staff", async () => {
     const { db, shop } = ctx;
-    for (const role of ["owner", "manager"] as const) {
+    for (const role of [
+      "owner",
+      "manager",
+      "crew",
+      "instructor",
+      "divemaster",
+      "captain",
+    ] as const) {
       expect(
         await canPersonPrintMedicalAlerts(db, shop.id, await makeStaff(db, shop.id, [role])),
       ).toBe(true);
-    }
-    for (const role of ["crew", "instructor", "divemaster", "captain"] as const) {
-      expect(
-        await canPersonPrintMedicalAlerts(db, shop.id, await makeStaff(db, shop.id, [role])),
-      ).toBe(false);
     }
     const [elsewhere] = await db.select({ id: shops.id }).from(shops).where(ne(shops.id, shop.id));
     if (!elsewhere) throw new Error("expected a second seeded shop");

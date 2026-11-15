@@ -45,9 +45,8 @@ type TripPacketProps = Pick<ShopSurface, "shop" | "session"> & {
   locale: string;
   t: StaffTranslator;
   /**
-   * The medical alerts' words, only from "Print with medical alerts" (issue
-   * #2990), which checked the printer and recorded the print first. Every
-   * other caller (the packet, the day's paper) leaves it out: the flag only.
+   * The medical alerts' words, supplied by the trip packet after checking
+   * the printer and recording the print. The day's paper leaves them out.
    */
   printedMedicalAlerts?: PrintedMedicalAlerts;
 };
@@ -92,7 +91,7 @@ export type PacketSheets = (lead?: ReactNode) => ReactNode;
  * manifest under it, for the boat, and the morning packing list, for the gear
  * room.
  *
- * Shared by the trip packet, the medical-alerts packet and the day's paper
+ * Shared by the trip packet and the day's paper
  * (N-54), so the day is the *same* document repeated per departure rather
  * than a second assembly of the same facts.
  *

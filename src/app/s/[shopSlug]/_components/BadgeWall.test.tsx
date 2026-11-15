@@ -18,6 +18,15 @@ describe("BadgeWall", () => {
     expect(items).toEqual(["Since 1998", "Blue Star Operator", "PADI 5 Star Dive Center"]);
   });
 
+  it("marks each demo affiliation as an example", () => {
+    const { container } = render(
+      <BadgeWall badges={["blue_star", "padi_5_star"]} establishedYear={1998} isDemo t={t} />,
+    );
+    expect(screen.getByText("Fictional example: Blue Star Operator")).toBeInTheDocument();
+    expect(screen.getByText("Fictional example: PADI 5 Star Dive Center")).toBeInTheDocument();
+    expect(container).toHaveTextContent("Since 1998");
+  });
+
   it("draws a glyph, never an agency's image", () => {
     const { container } = render(
       <BadgeWall badges={["tripadvisor"]} establishedYear={null} t={t} />,
