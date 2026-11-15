@@ -83,9 +83,12 @@ test.describe("staff navigation on a phone", () => {
 
 test("touch booking and guardian signing stay complete after reload", async ({ page }) => {
   await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-  const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
-  await expect(first).toContainText(/seats?/);
-  await first.getByRole("link").first().tap();
+  const trip = page
+    .getByRole("list", { name: "Upcoming trips" })
+    .getByRole("link", { name: /(?:[0-9]+ seats?|last seat)/i })
+    .first();
+  await expect(trip).toBeVisible();
+  await trip.tap();
   await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Mobile Minor");
@@ -117,8 +120,12 @@ test("a referred signer sees the physician step before returning to their bookin
   page,
 }) => {
   await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-  const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
-  await first.getByRole("link").first().tap();
+  const trip = page
+    .getByRole("list", { name: "Upcoming trips" })
+    .getByRole("link", { name: /(?:[0-9]+ seats?|last seat)/i })
+    .first();
+  await expect(trip).toBeVisible();
+  await trip.tap();
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Mobile Referral");
   await page.getByLabel("Email", { exact: true }).fill("mobile-referral@example.com");
