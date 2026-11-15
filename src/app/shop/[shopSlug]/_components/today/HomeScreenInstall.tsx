@@ -135,7 +135,7 @@ export function HomeScreenInstall({ copy }: { copy: HomeScreenInstallCopy }) {
     <aside data-home-screen-install className="space-y-2 text-sm text-muted print:hidden">
       <p>{copy.body}</p>
       {failed ? <p role="status">{copy.promptFailed}</p> : null}
-      <div className="flex items-center gap-x-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <button
           type="button"
           disabled={busy}
