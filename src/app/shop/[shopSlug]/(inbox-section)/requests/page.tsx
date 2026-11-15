@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import { INTEREST_REPLY_DAILY_CAP, interestReplyRoute } from "@/features/interest-reply";
@@ -17,13 +15,16 @@ import { formatCalendarDate } from "@/lib/calendar-date";
 import { addDepartureHref } from "@/lib/date-requests";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { StaffSectionTabs } from "../_components/StaffSectionTabs";
-import { RequestDayGroup, requestAdviceLines } from "./_components/RequestDayGroup";
-import { RequestDayPlan } from "./_components/RequestDayPlan";
-import { RequestDoneRow } from "./_components/RequestDoneRow";
-import { RequestLedgerRow } from "./_components/RequestLedgerRow";
-import { RequestReferenceRow } from "./_components/RequestReferenceRow";
-import { type RequestReplyNotice, replyToRequestAction, setRequestOutcomeAction } from "./actions";
+import { RequestDayGroup, requestAdviceLines } from "../../requests/_components/RequestDayGroup";
+import { RequestDayPlan } from "../../requests/_components/RequestDayPlan";
+import { RequestDoneRow } from "../../requests/_components/RequestDoneRow";
+import { RequestLedgerRow } from "../../requests/_components/RequestLedgerRow";
+import { RequestReferenceRow } from "../../requests/_components/RequestReferenceRow";
+import {
+  type RequestReplyNotice,
+  replyToRequestAction,
+  setRequestOutcomeAction,
+} from "../../requests/actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — it is this segment's `loading.tsx` that stands in while the
@@ -210,16 +211,7 @@ export default async function RequestsPage({
     ) : null;
 
   return (
-    <StaffPage width="full">
-      <ShopPageHeader title={t("shared.shopSections.inbox")} />
-      <StaffSectionTabs
-        section="inbox"
-        current="requests"
-        roles={session.user.roles}
-        shop={shop}
-        t={t}
-      />
-
+    <>
       {logged ? (
         <StaffNoticeBanner tone="success" className="mt-6">
           {t("calls.notice.logged")}
@@ -389,6 +381,6 @@ export default async function RequestsPage({
         total={t("requests.pagination.total", { count: requestPage.total })}
         words={staffPagerWords(t)}
       />
-    </StaffPage>
+    </>
   );
 }
