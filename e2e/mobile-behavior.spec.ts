@@ -1,14 +1,22 @@
 import type { Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import {
   OFFLINE_MANIFEST_SHELL_VERSION,
   type OfflineManifestUpcomingResponse,
 } from "../src/lib/offline-manifests";
 import { ROLL_CALL_CAUSAL_HEADERS } from "../src/lib/roll-call-protocol";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openOnThisPhone, openThreadStep } from "./helpers";
+import {
+  offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
+  openOnThisPhone,
+  openThreadStep,
+} from "./helpers";
 
 const diver = diverTranslator("en-US");
+const staff = staffTranslator("en-US");
 const touchEvents = new WeakMap<Page, number>();
 
 test.beforeEach(async ({ page, browserName, isMobile, hasTouch }, testInfo) => {
@@ -185,6 +193,7 @@ test.describe("touch manifest", () => {
     await offlineCopySaved(page);
     await openOnThisPhone(page);
     await page.getByRole("link", { name: "Open offline roll call" }).tap();
+    await openDeckDetails(page);
     await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
     await expect
       .poll(() =>
@@ -204,19 +213,34 @@ test.describe("touch manifest", () => {
       .toBe(true);
     await context.setOffline(true);
     await page.reload();
+    await openDeckDetails(page);
     await expect(page.getByText("No signal · device copy")).toBeVisible();
     await page.getByRole("button", { name: "After dive 1" }).tap();
+    await openDeckPerson(page, person.fullName);
+    await page
+      .getByRole("button", {
+        name: staff("manifest.deck.record", { name: person.fullName }),
+        exact: true,
+      })
+      .tap();
+    await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
+      staff("manifest.deck.savedAboard"),
+    );
+    await openDeckPerson(page, person.fullName);
+    await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).tap();
     const crew = page
       .locator("#offline-crew-roll-call")
       .getByRole("listitem")
       .filter({ hasText: person.fullName });
-    await crew.getByRole("button", { name: "Mark aboard" }).tap();
     await expect(crew.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
     await expect(
       page.getByRole("status").filter({ hasText: "when you’re back in service" }),
     ).toBeVisible();
     await page.reload({ waitUntil: "domcontentloaded" });
+    await openDeckDetails(page);
     await page.getByRole("button", { name: "After dive 1" }).tap();
+    await openDeckPerson(page, person.fullName);
+    await page.getByRole("button", { name: staff("manifest.deck.exception"), exact: true }).tap();
     await expect(crew.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
     await context.setOffline(false);
     await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
