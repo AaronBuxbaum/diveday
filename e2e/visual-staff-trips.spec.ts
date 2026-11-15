@@ -399,6 +399,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`a trip's manifest renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
+        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)/)?.[1];
+        if (!tripId) throw new Error("The manifest capture must identify its trip");
+        const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "departure" });
         await openTripTab(page, "Manifest");
         await expect(
           page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
@@ -413,8 +416,15 @@ for (const scheme of ["light", "dark"] as const) {
         // 2) — so neither can change this capture's picture, and waiting on
         // them would only be waiting. The freshness pill above is the one piece
         // of that group's state on the summary line, and it is what this shot
-        // must not race.
-        await capture(page, "manifest", scheme);
+        // must not race. Live roster trust is a separate completed read.
+        await confirmed;
+        await capture(page, "manifest", scheme, {
+          beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
+          },
+        });
       });
 
       /**

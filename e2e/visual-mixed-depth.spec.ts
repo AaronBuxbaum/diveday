@@ -6,6 +6,7 @@ import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   SURFACE_TIMEOUT_MS,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
@@ -48,10 +49,22 @@ test.describe("mixed training depth warning", () => {
         await expect(page.getByText(staff("manifest.mixedTrainingDepthWarning"))).toBeVisible();
       },
     });
+    const confirmed = liveRosterConfirmation(page, {
+      tripId: mixedDepth.tripId,
+      checkpoint: "departure",
+    });
     await page.goto(`/shop/blue-mantis/trips/${mixedDepth.tripId}/manifest`);
     await openDeckDetails(page);
     await expect(page.getByText(staff("manifest.mixedTrainingDepthWarning"))).toBeVisible();
-    await capture(page, "trip-mixed-training-depth-manifest", "light");
+    await confirmed;
+    await capture(page, "trip-mixed-training-depth-manifest", "light", {
+      beforeScreenshot: async () => {
+        await expect(
+          page.getByText(staff("manifest.rosterUnconfirmed"), { exact: true }),
+        ).toHaveCount(0);
+        await expect(page.getByText(staff("manifest.mixedTrainingDepthWarning"))).toBeVisible();
+      },
+    });
     await page.emulateMedia({ media: "print" });
     await capturePrintPdfs(page, "trip-mixed-training-depth-manifest");
   });
