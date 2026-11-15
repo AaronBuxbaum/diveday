@@ -133,13 +133,13 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: "Roll call", exact: true }).click();
         await expect(page.locator("#offline-roll-call-context")).toBeFocused();
         await capture(page, "offline-manifest-roll-call-jump", scheme);
-        await page
-          .getByRole("link", {
+        // Emergency reference is directly in Details beside the checkpoint controls.
+        await expect(
+          page.getByRole("region", {
             name: staffTranslator("en-US")("manifest.emergency.heading"),
             exact: true,
-          })
-          .click();
-        await expect(page.locator("#offline-emergency-reference")).toBeFocused();
+          }),
+        ).toBeVisible();
       });
 
       /**

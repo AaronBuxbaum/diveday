@@ -1,5 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openDeckDetails } from "./helpers";
 import { capturePrintPdfs } from "./print-pdf";
 import { seedFacts } from "./shop-facts";
 import {
@@ -48,6 +49,7 @@ test.describe("mixed training depth warning", () => {
       },
     });
     await page.goto(`/shop/blue-mantis/trips/${mixedDepth.tripId}/manifest`);
+    await openDeckDetails(page);
     await expect(page.getByText(staff("manifest.mixedTrainingDepthWarning"))).toBeVisible();
     await capture(page, "trip-mixed-training-depth-manifest", "light");
     await page.emulateMedia({ media: "print" });

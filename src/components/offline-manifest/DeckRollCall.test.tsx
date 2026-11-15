@@ -33,7 +33,7 @@ describe("saved Deck receipts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Start roll call" }));
     fireEvent.click(screen.getByRole("button", { name: "Record Priya Shah aboard" }));
     await waitFor(() => expect(screen.getByText("Aboard recorded")).toBeVisible());
-    expect(screen.getByText("Saved on this device · Pending sync")).toBeVisible();
+    expect(screen.getByText(ctx.t("manifest.deck.pendingReceipt"))).toBeVisible();
     expect(screen.getByRole("heading", { name: "Priya Shah" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Undo Priya Shah’s record" }));
     await waitFor(() => expect(record).toHaveBeenCalledTimes(2));
@@ -79,7 +79,7 @@ describe("saved Deck receipts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Start roll call" }));
     fireEvent.click(screen.getByRole("button", { name: "Record Priya Shah aboard" }));
     await waitFor(() =>
-      expect(screen.getByText("Saved on this device · Pending sync")).toBeVisible(),
+      expect(screen.getByText(ctx.t("manifest.deck.pendingReceipt"))).toBeVisible(),
     );
     const synced = view();
     synced.localStates[0] = {
@@ -92,7 +92,7 @@ describe("saved Deck receipts", () => {
     };
     rerender(<OfflineDeckRollCall view={synced} controls={ctx} details={null} />);
     await waitFor(() =>
-      expect(screen.queryByText("Saved on this device · Pending sync")).toBeNull(),
+      expect(screen.queryByText(ctx.t("manifest.deck.pendingReceipt"))).toBeNull(),
     );
     expect(screen.getByRole("heading", { name: "Priya Shah" })).toBeVisible();
     expect(record).toHaveBeenCalledTimes(1);

@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DisclosureRowList } from "@/components/ui/disclosure";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripGuests } from "@/features/trip-guests";
@@ -224,6 +224,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
   });
   const moveSeat = actions.moveSeat ? { ...actions.moveSeat, refusal: moveRefusal } : undefined;
   const whoWantsInGroups = whoWantsInGroupsOf({ guests, t, locale, timezone });
+  const addStatus = noticeForForm(context.tripNotice, "add-diver");
 
   return (
     // `contents`, so these blocks lie in the page's flow; `space-y-10` is the
@@ -247,6 +248,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           undoAction={actions.undoRemoveBookingAction}
         />
       )}
+      <FormStatus tone={addStatus?.tone}>{addStatus?.text}</FormStatus>
 
       {demand ? (
         // A card in a tone (`TONE_PANEL_CLASS`), not a 12px inset box: its
@@ -465,7 +467,6 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
     locale,
     timezone,
     shopRentalItems,
-    tripNotice,
     confirmName,
     confirmEmail,
     confirmPhone,
@@ -506,7 +507,6 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
           addKnownToWaitlistAction: actions.addKnownToWaitlistAction,
           addExistingDiverAction: actions.addExistingDiverAction,
           offerAction: actions.createDirectTripInvitationAction,
-          status: noticeForForm(tripNotice, "add-diver"),
           locale,
           timeZone: timezone,
           confirmName,

@@ -398,8 +398,9 @@ test.describe("staff counts and intent", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    await expect(page.getByText("Ruth Okafor").first()).toBeVisible();
-    await expect(page.getByText("Asked for a word with the divemaster.")).toHaveCount(1);
+    const ruth = await rosterRow(page, "Ruth Okafor");
+    await expect(ruth).toBeVisible();
+    await expect(ruth.getByText("Asked for a word with the divemaster.")).toHaveCount(1);
   });
 
   test("a departure inside the day asks the question and offers nothing", async ({ page }) => {

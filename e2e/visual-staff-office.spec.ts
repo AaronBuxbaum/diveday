@@ -535,7 +535,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a seat's move to another departure, open (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-        const row = await rosterRow(page, "Tom Okafor");
+        // Tom is already checked in by seed-desk-handoff; Priya's seat can move.
+        const row = await rosterRow(page, "Priya Sharma");
         await openRosterDetails(row);
         await openBookingActions(row);
         await row.locator("summary", { hasText: "Move to another departure" }).click();

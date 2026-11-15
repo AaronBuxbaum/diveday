@@ -10,8 +10,10 @@ import {
   openDiverFileGroup,
   openFirstRosterRowWith,
   openManifestPerson,
+  openRosterDetails,
   openTripFromBoard,
   openTripTab,
+  rosterRow,
   sendWaiverForFirstDiver,
   waiverLinkFromToast,
   waiverRequestLinkAfterSend,
@@ -78,10 +80,8 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
   await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
   await openTripTab(page, "Trip");
 
-  const diver = page
-    .locator("li")
-    .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
-    .filter({ visible: true });
+  const diver = await rosterRow(page, "Morgan Vale");
+  await openRosterDetails(diver);
   // The hold is the row's reason line, with its doors under it (Aaron,
   // 2026-10-06): no tinted panel restating it.
   await expect(
@@ -288,6 +288,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.
   await page.goto(staffTripUrl);
+  await openRosterDetails(await rosterRow(page, "Priya Sharma"));
   await expect(
     diverSection.getByText("A medical answer needs a doctor’s sign-off before this diver dives."),
   ).toBeVisible();
@@ -1237,10 +1238,8 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   // and walking it twice put the test on its 15-second budget (issue #2366).
   const roster = page.url();
 
-  const diver = page
-    .locator("li")
-    .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
-    .filter({ visible: true });
+  const diver = await rosterRow(page, "Morgan Vale");
+  await openRosterDetails(diver);
   await expect(
     diver.getByText("A medical answer needs a doctor’s sign-off before this diver dives."),
   ).toBeVisible();
@@ -1295,10 +1294,8 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
 
   // And the block is gone where it actually mattered — on the boat's roster.
   await page.goto(roster);
-  const cleared = page
-    .locator("li")
-    .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
-    .filter({ visible: true });
+  const cleared = await rosterRow(page, "Morgan Vale");
+  await openRosterDetails(cleared);
   await expect(cleared.getByText("Medical review", { exact: true })).toHaveCount(0);
 });
 
@@ -1368,10 +1365,8 @@ test("a refused physician evaluation stops the chase without lifting the hold", 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
   await openTripTab(page, "Trip");
-  const row = page
-    .locator("li")
-    .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
-    .filter({ visible: true });
+  const row = await rosterRow(page, "Morgan Vale");
+  await openRosterDetails(row);
   await expect(row.getByText("A physician did not clear this diver to dive.")).toBeVisible();
   // The record has nowhere for a second answer to go, so its door is gone; the
   // way back is a fresh release (Aaron, 2026-10-06), offered to the owner.
@@ -1441,8 +1436,10 @@ test("a shop question is published, answered by the diver and shown on the signe
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
   const row = await openFirstRosterRowWith(page, "Send waiver");
-  const diverLink = row.locator('a[href*="/divers/"]').first();
-  const diverName = (await diverLink.innerText()).trim();
+  const diverName = (
+    await page.locator("[data-guest-folios]").getByRole("heading", { level: 2 }).innerText()
+  ).trim();
+  const diverLink = row.getByRole("link", { name: "Open guest profile", exact: true });
   const diverHref = await diverLink.getAttribute("href");
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
   const waiverHref = await waiverRequestLinkAfterSend(page, row);
@@ -1508,8 +1505,10 @@ test("a diver's medical alert for the crew is signed, flagged on the manifest an
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
   const row = await openFirstRosterRowWith(page, "Send waiver");
-  const diverLink = row.locator('a[href*="/divers/"]').first();
-  const diverName = (await diverLink.innerText()).trim();
+  const diverName = (
+    await page.locator("[data-guest-folios]").getByRole("heading", { level: 2 }).innerText()
+  ).trim();
+  const diverLink = row.getByRole("link", { name: "Open guest profile", exact: true });
   const diverHref = await diverLink.getAttribute("href");
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
   const waiverHref = await waiverRequestLinkAfterSend(page, row);

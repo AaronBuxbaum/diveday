@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, test } from "./fixtures";
-import { openSettingsRow } from "./helpers";
+import { openDeckDetails, openSettingsRow } from "./helpers";
 
 async function setUnits(page: Page, slug: string, unit: "meters" | "feet") {
   await page.goto(`/shop/${slug}/settings`);
@@ -12,6 +12,7 @@ async function setUnits(page: Page, slug: string, unit: "meters" | "feet") {
 
 async function openLog(page: Page, slug: string, tripId: string) {
   await page.goto(`/shop/${slug}/trips/${tripId}/manifest?checkpoint=after_dive_1`);
+  await openDeckDetails(page);
   await page.locator("summary").filter({ hasText: "Dive 1" }).click();
   return page.locator("form").filter({ hasText: "Dive 1" });
 }
@@ -30,6 +31,7 @@ for (const { unit, entered, meters } of [
       await log.getByRole("button", { name: "Save dive record" }).click();
       await expect(log.getByText("Dive record saved")).toBeVisible();
       await page.reload();
+      await openDeckDetails(page);
       await page.locator("summary").filter({ hasText: "Dive 1" }).click();
       await expect(log.locator('input[name="maxDepthMeters"]')).toHaveValue(String(meters));
       await expect(log.getByLabel("Visibility", { exact: true })).toHaveValue("Good");
@@ -52,6 +54,7 @@ test.describe("an open depth form", () => {
     await log.getByRole("button", { name: "Save dive record" }).click();
     await expect(log.getByText("Dive record saved")).toBeVisible();
     await page.reload();
+    await openDeckDetails(page);
     await page.locator("summary").filter({ hasText: "Dive 1" }).click();
     await expect(log.locator('input[name="maxDepthMeters"]')).toHaveValue("18.288");
     await settings.close();

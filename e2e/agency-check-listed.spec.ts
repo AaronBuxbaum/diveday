@@ -4,6 +4,19 @@ import { findTripOnBoard, openDiverFileGroup, openTripTab, rosterRow } from "./h
 
 signedInAsOwner();
 
+async function showAllGuests(page: Page) {
+  const all = page.getByRole("button", { name: "All guests", exact: true });
+  if (await all.count()) await all.click();
+}
+
+async function waitForAddedGuest(page: Page, name: string) {
+  // The completed add selects the new folio after its refreshed props commit.
+  // Wait for that landing before navigating back to the guest list.
+  await expect(
+    page.locator("[data-guest-folios]").getByRole("heading", { level: 2, name, exact: true }),
+  ).toBeVisible();
+}
+
 const SHOP = "blue-mantis";
 /** A seeded diver on this departure whose SSI card is still pending (`seed-divers.ts`, index 34). */
 const SEEDED_DIVER = "Tyler Brooks";
@@ -130,13 +143,24 @@ test("Check all leaves each diver's offer under their row once the run has finis
   const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(newcomer);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-  await addDiver.getByRole("button", { name: `Add ${newcomer} to the trip` }).click();
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+    addDiver.getByRole("button", { name: `Add ${newcomer} to the trip` }).click(),
+  ]);
+  await waitForAddedGuest(page, newcomer);
   await expect(await rosterRow(page, newcomer)).toBeVisible();
+  await showAllGuests(page);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(other);
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-  await addDiver.getByRole("button", { name: `Add ${other} to the trip` }).click();
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+    addDiver.getByRole("button", { name: `Add ${other} to the trip` }).click(),
+  ]);
+  await waitForAddedGuest(page, other);
   await expect(await rosterRow(page, other)).toBeVisible();
   await expect(await rosterRow(page, SEEDED_DIVER)).toBeVisible();
+
+  await showAllGuests(page);
 
   await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
 

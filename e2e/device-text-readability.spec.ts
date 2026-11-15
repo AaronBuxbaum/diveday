@@ -3,7 +3,14 @@ import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody, fragmentedWords } from "./device-text-size-fixture";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
+import {
+  manifestRow,
+  offlineCopySaved,
+  openBoatCheck,
+  openDeckDetails,
+  openTripFromBoard,
+  openTripTab,
+} from "./helpers";
 
 signedInAsOwner();
 test.use({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
@@ -38,10 +45,14 @@ test("largest phone checklist and status labels keep readable words", async ({ p
   await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
   await openTripTab(page, "Manifest");
   await offlineCopySaved(page);
+  await openBoatCheck(page);
   const oxygen = page.getByRole("button", { name: /Emergency oxygen kit aboard/ });
   await expect(oxygen).toBeVisible();
   expect.soft(await fragmentedWords(oxygen)).toEqual([]);
-  const depth = page.getByText("Depth advisory", { exact: true }).first();
+  const depth = (await manifestRow(page, "Diego Alvarez")).getByText("Depth advisory", {
+    exact: true,
+  });
+  await expect(depth).toBeVisible();
   expect.soft(await fragmentedWords(depth)).toEqual([]);
   const fresh = page.getByText(
     staffTranslator("en-US")("trips.offlineManifestManager.freshnessCurrent"),
@@ -50,7 +61,7 @@ test("largest phone checklist and status labels keep readable words", async ({ p
   expect.soft(await fragmentedWords(fresh)).toEqual([]);
   for (const width of [390, 820, 1280]) {
     await page.setViewportSize({ width, height: 844 });
-    const heading = page.locator("[data-roll-call-panel] h2");
+    const heading = page.getByRole("navigation", { name: "Roll-call checkpoint", exact: true });
     expect.soft(await fragmentedWords(heading), `checkpoint heading at ${width}`).toEqual([]);
   }
 });
@@ -126,6 +137,7 @@ for (const size of [34, 53]) {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
     await openTripTab(page, "Manifest");
+    await openDeckDetails(page);
     const action = page.getByRole("button", { name: "Got it", exact: true });
     await expect(action).toBeVisible();
     expect(await fragmentedWords(action)).toEqual([]);

@@ -235,7 +235,9 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await page.getByLabel("Email").fill(`contact-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Diver added to the trip" }),
+  ).toContainText("Diver added to the trip");
 
   const card = await rosterRow(page, diverName);
   await expect(
@@ -270,7 +272,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   // The diver's own record reads the same value straight through
   // `editDiver`/`recordBookingEmergencyContact` sharing the same columns —
   // one write path regardless of who fills it in.
-  await card.getByRole("link", { name: diverName }).click();
+  await card.getByRole("link", { name: staffCopy("trips.folio.openProfile"), exact: true }).click();
   await page.getByText("Contact details", { exact: true }).click();
   await expect(page.getByLabel("Emergency contact name")).toHaveValue("Robin Diver");
   await expect(page.getByLabel("Emergency contact phone")).toHaveValue("+1 305 555 0166");
@@ -320,7 +322,7 @@ test("a Guests card shows an emergency contact only when it is missing", async (
   ).toBeVisible();
   await openRosterDetails(missing);
   await expect(
-    missing.getByText("Add emergency contact", { exact: true }).filter({ visible: true }),
+    missing.locator("summary").filter({ hasText: /^Add emergency contact$/ }),
   ).toBeVisible();
 
   // Tom Okafor has one on file. It must not be on the face of the card — but

@@ -468,8 +468,8 @@ describe("the hidden bar's height", () => {
    */
   it("reacts only to a manifest on screen, never one Activity has hidden", () => {
     const css = readGlobalsCss();
-    const selectors = css.match(/:has\([^{]*div\.boat-mode[^{]*\{/g) ?? [];
-    expect(selectors.length, "the three manifest rules").toBe(3);
+    const selectors = css.match(/[^{}]*:has\([^{]*div\.boat-mode[^{]*\{/g) ?? [];
+    expect(selectors.length, "the four manifest rules, including Deck's phone inset").toBe(4);
     for (const selector of selectors) {
       expect(selector).toContain('main:not([style*="display: none"])');
       expect(selector).toContain('[data-departure-paper]:not([style*="display: none"])');

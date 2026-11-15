@@ -1476,11 +1476,14 @@ test("a course's learning materials reach the student's thread, and staff tick t
   await trip.click();
   await openTripTab(page, "Trip");
   const row = await rosterRow(page, diver);
-  await expect(row.getByText("Materials not done")).toBeVisible();
   await openRosterDetails(row);
+  await expect(row.getByRole("button", { name: "Mark materials done", exact: true })).toBeVisible();
   await row.getByRole("button", { name: "Mark materials done" }).click();
   await expect(page.getByText("Learning materials updated")).toBeVisible();
-  await expect(row.getByText("Materials not done")).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Mark materials done", exact: true })).toHaveCount(
+    0,
+  );
+  await expect(row.getByText(/^Materials done ·/)).toBeVisible();
 
   await diverPage.reload();
   await expect(diverPage.getByText("The shop has these marked done")).toBeVisible();

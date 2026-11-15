@@ -1,7 +1,11 @@
+import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
 import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { MINUTE_MS } from "../src/lib/clock";
+import { toDateInputValue, toTimeInputValue, utcToWallTime } from "../src/lib/zoned";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openDeckPerson, openGuestFolio } from "./helpers";
+import { offlineCopySaved, openDeckDetails, openDeckPerson, openGuestFolio } from "./helpers";
+import { E2E_FROZEN_CLOCK } from "./servers";
 import { seedFacts } from "./shop-facts";
 import { settleOfflineShellWorker } from "./visual-harness";
 
@@ -52,6 +56,23 @@ test("Deck records one named person and navigation creates no aboard evidence", 
   await page.goto(deck);
   await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
   await openDeckPerson(page, "Tom Okafor");
+  const observed = new Date(Date.parse(E2E_FROZEN_CLOCK) - 15 * MINUTE_MS);
+  const localTime = utcToWallTime(observed, DEMO_SHOP_TIMEZONE);
+  await openDeckDetails(page);
+  const deckWidth = await page.locator("#deck-flow").boundingBox();
+  const detailsWidth = await page
+    .locator("#deck-flow > div:last-child > details > div")
+    .boundingBox();
+  expect(detailsWidth?.width).toBe(deckWidth?.width);
+  await page
+    .getByLabel(`${t("manifest.deck.observe")} · ${DEMO_SHOP_TIMEZONE}`, { exact: true })
+    .fill(`${toDateInputValue(localTime)}T${toTimeInputValue(localTime)}`);
+  const observationScreenshot = test.info().outputPath("deck-observation-time.png");
+  await page.screenshot({ path: observationScreenshot, fullPage: true });
+  await test.info().attach("Deck observation time", {
+    path: observationScreenshot,
+    contentType: "image/png",
+  });
   const record = page.getByRole("button", {
     name: t("manifest.deck.record", { name: "Tom Okafor" }),
     exact: true,
@@ -59,6 +80,10 @@ test("Deck records one named person and navigation creates no aboard evidence", 
   await record.dblclick();
   const receipt = page.locator('[data-deck-screen="receipt"]');
   await expect(receipt.getByRole("heading", { name: "Tom Okafor", exact: true })).toBeVisible();
+  await expect(receipt.locator("time[datetime]")).toHaveAttribute(
+    "datetime",
+    observed.toISOString(),
+  );
   await expect(
     page.getByRole("button", {
       name: t("manifest.deck.undo", { name: "Tom Okafor" }),

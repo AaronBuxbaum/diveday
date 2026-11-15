@@ -9,6 +9,7 @@ import {
   openTripAbout,
   openTripAboutRow,
   openTripActivity,
+  rosterRow,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -95,7 +96,7 @@ test.describe("refunds", () => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
-    const noraRow = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
+    const noraRow = await rosterRow(page, "Nora Quinn");
     // The payment control is one of the row's fixes, behind its fold; the
     // save holds the row open on the way back.
     await openRosterDetails(noraRow);
@@ -107,7 +108,8 @@ test.describe("refunds", () => {
     await noraRow.getByRole("radio", { name: "Cash" }).check();
     await noraRow.getByRole("button", { name: "Update" }).click();
     await expect(page.getByRole("status")).toContainText("Payment status updated");
-    await expect(noraRow.getByText("Payment: Paid")).toBeVisible();
+    await openRosterDetails(noraRow);
+    await expect(noraRow.getByRole("combobox", { name: "Payment status" })).toHaveValue("paid");
     return noraRow;
   }
 

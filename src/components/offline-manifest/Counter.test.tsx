@@ -66,6 +66,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** The counter is saved reference under Deck Details, separate from person recording. */
+async function openDeckDetails() {
+  await screen.findByRole("heading", { name: "Deck" });
+  const summary = screen.getByText("Details", { selector: "summary" });
+  if (!summary.closest("details")?.open) fireEvent.click(summary);
+}
+
 /**
  * **The counter on the offline shell** (ADR 20260907-the-counter-survives-offline).
  *
@@ -83,7 +90,7 @@ describe("OfflineManifestView — the counter", () => {
   it("offers a check-in on a ready seat, and says which act it is", async () => {
     vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     const row = within(counter).getByRole("button", { name: /Priya Shah/ });
@@ -101,7 +108,8 @@ describe("OfflineManifestView — the counter", () => {
     vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
     vi.mocked(appendOfflineArrival).mockResolvedValue(envelope);
     render(<OfflineManifestView />);
-    const counter = await screen.findByRole("region", { name: "At the counter" });
+    await openDeckDetails();
+    const counter = screen.getByRole("region", { name: "At the counter" });
     const row = within(counter).getByRole("button", { name: `${fullName} Check in` });
     expect(within(row).getByText(fullName, { exact: true })).toBeVisible();
     fireEvent.click(row);
@@ -140,7 +148,7 @@ describe("OfflineManifestView — the counter", () => {
       ),
     );
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     fireEvent.click(within(counter).getByRole("button", { name: /Priya Shah/ }));
@@ -180,7 +188,7 @@ describe("OfflineManifestView — the counter", () => {
     );
     vi.mocked(appendOfflineArrival).mockResolvedValue(richEnvelope("trip-1"));
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     fireEvent.click(within(counter).getByRole("button", { name: /Priya Shah/ }));
@@ -207,7 +215,7 @@ describe("OfflineManifestView — the counter", () => {
       richEnvelope("trip-1", { readiness: "blocked" }),
     );
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     expect(within(counter).queryByRole("button", { name: /Priya Shah/ })).not.toBeInTheDocument();
@@ -233,7 +241,7 @@ describe("OfflineManifestView — the counter", () => {
       richEnvelope("trip-1", { notHere: true, turnedAway: true }),
     );
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
     const counter = screen.getByRole("region", { name: "At the counter" });
     // One status line, no "when saved": the page's banner says that once (B01).
     expect(within(counter).getByText("Turned away")).toBeInTheDocument();
@@ -244,7 +252,7 @@ describe("OfflineManifestView — the counter", () => {
   it("gives a released seat no check-in, and still lets the crew board them", async () => {
     vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1", { notHere: true }));
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     expect(within(counter).queryByRole("button", { name: /Priya Shah/ })).not.toBeInTheDocument();
@@ -257,9 +265,10 @@ describe("OfflineManifestView — the counter", () => {
     // control is gone and must not be borrowed as one.
     expect(within(counter).queryByText(/Blocked/)).toBeNull();
 
-    const row = document.getElementById("offline-roll-call-diver-priya");
-    if (!row) throw new Error("Priya's row missing");
-    expect(within(row).getByRole("button", { name: "Mark boarded" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
+    fireEvent.click(screen.getByRole("button", { name: "Priya Shah" }));
+    expect(screen.getByRole("button", { name: "Record Priya Shah aboard" })).toBeEnabled();
+    expect(appendOfflineRollCall).not.toHaveBeenCalled();
   });
 });
 
@@ -300,7 +309,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
       richEnvelope("trip-1", {}, { arrivalEvents: [rejected("not_ready")] }),
     );
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     // The refusal stands: the row is back to offering the tap, which is what
@@ -327,7 +336,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
       richEnvelope("trip-1", {}, { arrivalEvents: [rejected("not_bookable")] }),
     );
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     expect(within(counter).getByText(/no longer on the boat’s list/)).toBeInTheDocument();
@@ -351,7 +360,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     }
     vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     const row = within(counter).getByRole("button", { name: /Priya Shah/ });
@@ -371,7 +380,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
       ),
     );
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const row = within(screen.getByRole("region", { name: "At the counter" })).getByRole("button", {
       name: /Priya Shah/,
@@ -386,7 +395,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
       richEnvelope("trip-1", { readiness: "blocked" }),
     );
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     const name = within(counter).getByText("Priya Shah");
@@ -410,7 +419,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     }
     vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     const names = within(counter)
@@ -437,7 +446,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
       richEnvelope("trip-1", { notHere: true, withCarriedNotBoarded: true }),
     );
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     const counter = screen.getByRole("region", { name: "At the counter" });
     const rows = within(counter)
@@ -459,10 +468,11 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     }
     vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openDeckDetails();
 
     expect(screen.queryByRole("region", { name: "At the counter" })).not.toBeInTheDocument();
     // The roll call it was sitting on top of is still there.
-    expect(screen.getByRole("heading", { name: "Before departure roll call" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Deck" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Start roll call" })).toBeVisible();
   });
 });

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   listOfflineManifests,
@@ -51,6 +51,20 @@ beforeEach(() => {
   vi.mocked(syncOfflineManifest).mockReset();
   vi.stubGlobal("fetch", vi.fn());
 });
+
+/** Scope delivery feedback to the visible Deck, rather than its closed reference copy. */
+async function routineStatus() {
+  const deck = await screen.findByRole("region", { name: "Deck" });
+  const status = deck.querySelector<HTMLDivElement>(':scope > div[role="status"]');
+  if (!status) throw new Error("Expected the routine Deck delivery status");
+  expect(status).toBeVisible();
+  return within(status);
+}
+
+async function openDetails() {
+  await screen.findByRole("region", { name: "Deck" });
+  fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+}
 
 function savedWithDiscardedNote(tripId: string) {
   const saved = richEnvelope(tripId);
@@ -376,7 +390,7 @@ it("clears caught-up copy while reconnect waits for fresh tenant verification", 
 
   render(<OfflineManifestView />);
   expect(await screen.findByRole("heading", { name: "Two-Tank Reef" })).toBeInTheDocument();
-  expect(await screen.findByText("Everything’s sent.")).toBeInTheDocument();
+  expect(await (await routineStatus()).findByText("Everything’s sent.")).toBeVisible();
   await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalled());
 
   // Another tab writes after the success; reconnect now needs a fresh identity.
@@ -635,7 +649,8 @@ it("keeps the actionable note-loss notice beside retry feedback when identity lo
 
   render(<OfflineManifestView />);
 
-  expect(await screen.findByText(/Couldn’t reach DiveDay just now/)).toBeInTheDocument();
+  expect(await (await routineStatus()).findByText(/Couldn’t reach DiveDay just now/)).toBeVisible();
+  await openDetails();
   expect(
     await screen.findByText(/Older offline note text was removed after a data erasure/),
   ).toBeInTheDocument();
@@ -663,7 +678,8 @@ it("keeps the actionable note-loss notice beside retry feedback when sync fails"
 
   render(<OfflineManifestView />);
 
-  expect(await screen.findByText(/Couldn’t reach DiveDay just now/)).toBeInTheDocument();
+  expect(await (await routineStatus()).findByText(/Couldn’t reach DiveDay just now/)).toBeVisible();
+  await openDetails();
   expect(
     await screen.findByText(/Older offline note text was removed after a data erasure/),
   ).toBeInTheDocument();
@@ -722,13 +738,13 @@ it("keeps a newer sync failure authoritative over inventory captured before it",
 
   await act(async () => window.dispatchEvent(new Event("online")));
   await waitFor(() => expect(vi.mocked(syncOfflineManifest).mock.calls.length).toBeGreaterThan(1));
-  expect(await screen.findByText(/Couldn’t reach DiveDay just now/)).toBeInTheDocument();
+  expect(await (await routineStatus()).findByText(/Couldn’t reach DiveDay just now/)).toBeVisible();
 
   // This inventory was captured before either sync and still says pending.
   // It is evidence for foreign pending work, not the selected trip's outcome.
   await act(async () => inventoryReads[0]?.([saved]));
 
-  expect(screen.getByText(/Couldn’t reach DiveDay just now/)).toBeInTheDocument();
+  expect((await routineStatus()).getByText(/Couldn’t reach DiveDay just now/)).toBeVisible();
   expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
   expect(saved.events[0]?.syncStatus).toBe("pending");
@@ -791,7 +807,10 @@ it("quarantines a selected roster through failed verification, then scopes it af
   });
 
   render(<OfflineManifestView />);
-  expect(await screen.findByText("Dana Divemaster")).toBeInTheDocument();
+  await screen.findByRole("region", { name: "Deck" });
+  fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
+  fireEvent.click(screen.getByRole("button", { name: "Dana Divemaster" }));
+  expect(screen.getByRole("heading", { name: "Dana Divemaster" })).toBeVisible();
   await waitFor(() =>
     expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis", 1, {
       refreshWhenQuiet: true,

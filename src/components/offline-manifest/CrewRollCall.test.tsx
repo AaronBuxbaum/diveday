@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   appendOfflineRollCall,
   loadOfflineManifest,
@@ -61,6 +62,22 @@ beforeEach(() => {
   );
 });
 
+const t = staffTranslator("en-US");
+
+async function selectPerson(name: string, index = 0) {
+  await screen.findByRole("heading", { name: t("manifest.deck.title") });
+  fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.find") }));
+  const matches = screen.queryAllByRole("button", { name });
+  const button = matches[index] ?? screen.getAllByRole("button", { name: `${name} · Crew` })[index];
+  if (!button) throw new Error("named person missing");
+  fireEvent.click(button);
+}
+
+async function openCrew(name = "Dana Divemaster", index = 0) {
+  await selectPerson(name, index);
+  fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.exception") }));
+}
+
 /**
  * The crew rows a name heads, each with its one status line: the passenger
  * row's shape (visual review polish, B01).
@@ -118,21 +135,27 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     });
 
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await selectPerson("Priya Shah");
     // Priya is the only diver still awaiting (Marcus is carried not-boarded).
-    fireEvent.click(screen.getAllByRole("button", { name: "Mark boarded" })[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Record Priya Shah aboard" }));
     await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
 
     // Both divers now have a result — the old divers-only rule called this
     // complete, on both surfaces.
-    expect(await screen.findByText(/Saved on this phone/)).toBeInTheDocument();
-    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    expect(await screen.findByText(t("manifest.deck.pendingReceipt"))).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.home") }));
+    expect(screen.queryByText(t("manifest.deck.complete"))).not.toBeInTheDocument();
     // And it says why, rather than going quiet — naming the count that is
     // holding it open, in the same words the live manifest uses.
-    expect(screen.getByText(/2 crew members still to call/)).toBeInTheDocument();
+    await openCrew();
+    expect(screen.getByText(/2 crew members still to call/)).toBeVisible();
     // And the way to close it is right there, on this copy, with no signal:
     // one aboard control per crew member, which is the whole point of H-20260814-where-diveday-sit-between.
-    expect(screen.getAllByRole("button", { name: "Mark aboard" })).toHaveLength(2);
+    for (const name of ["Dana Divemaster", "Sal Ortiz"]) {
+      await selectPerson(name);
+      expect(screen.getByRole("button", { name: `Record ${name} aboard` })).toBeEnabled();
+    }
+    expect(appendOfflineRollCall).toHaveBeenCalledTimes(1);
   });
 
   it("reads complete once the saved snapshot has a result for every assigned crew member", async () => {
@@ -168,13 +191,16 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     });
 
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await selectPerson("Priya Shah");
     // The saved count is shown, attributed — a head count is never anonymous.
-    expect(screen.getByText(/All 2 crew accounted for/)).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Mark boarded" })[0] as HTMLElement);
+    await openCrew();
+    expect(screen.getByText(/All 2 crew accounted for/)).toBeVisible();
+    await selectPerson("Priya Shah");
+    fireEvent.click(screen.getByRole("button", { name: "Record Priya Shah aboard" }));
     await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
 
-    expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.home") }));
+    expect(await screen.findByText(t("manifest.deck.complete"))).toBeVisible();
   });
 
   /**
@@ -212,16 +238,19 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     });
 
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
-    fireEvent.click(screen.getAllByRole("button", { name: "Mark boarded" })[0] as HTMLElement);
+    await selectPerson("Priya Shah");
+    fireEvent.click(screen.getByRole("button", { name: "Record Priya Shah aboard" }));
     await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
 
     // Every diver counted, every crew member called — and still not complete.
-    expect(await screen.findByText(/Saved on this phone/)).toBeInTheDocument();
-    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
-    expect(screen.getByText(/1 crew member still to call/)).toBeInTheDocument();
+    expect(await screen.findByText(t("manifest.deck.pendingReceipt"))).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.home") }));
+    expect(screen.queryByText(t("manifest.deck.complete"))).not.toBeInTheDocument();
+    await openCrew("Sal Ortiz");
+    expect(screen.getByText(/1 crew member still to call/)).toBeVisible();
     // Named, not just counted: the captain nobody has tapped is on screen.
     expect(crewRowStates("Sal Ortiz")[0]).toMatch(/^Awaiting/);
+    await openCrew("Dana Divemaster");
     expect(crewRowStates("Dana Divemaster")[0]).toMatch(/^Boarded/);
   });
 });
@@ -248,9 +277,11 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
-    // Still open — the fail-closed rule is untouched.
-    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    await openCrew("Sal Ortiz");
+    // Check completion on Home, where completion is actually rendered.
+    fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.home") }));
+    expect(screen.queryByText(t("manifest.deck.complete"))).not.toBeInTheDocument();
+    await openCrew("Sal Ortiz");
     const note = screen.getByText(/1 crew member still to call/);
     const panel = note.closest("section");
     expect(panel).toBe(screen.getByRole("region", { name: "Crew aboard" }));
@@ -279,8 +310,10 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
-    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    await openCrew("Sal Ortiz");
+    fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.home") }));
+    expect(screen.queryByText(t("manifest.deck.complete"))).not.toBeInTheDocument();
+    await openCrew("Sal Ortiz");
     const note = screen.getByText(/2 crew members on this saved copy can’t be called here/);
     expect(note).toBeInTheDocument();
     const panel = note.closest("section");
@@ -289,6 +322,8 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     expect(panel?.className).not.toContain("danger");
     // No control for a person this copy cannot name to the server.
     expect(screen.queryByRole("button", { name: "Mark aboard" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Record Sal Ortiz aboard" })).toBeDisabled();
+    expect(appendOfflineRollCall).not.toHaveBeenCalled();
   });
 
   it("does alarm, in danger tone, when a named crew member is not back aboard", async () => {
@@ -302,7 +337,7 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    await openCrew("Sal Ortiz");
     const alarm = screen.getByText(/1 crew member is not back aboard/);
     expect(alarm.closest("section")?.className).toContain("danger");
     // This one is emphatically *not* "we can't record it here".
@@ -320,8 +355,15 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
 
     render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
-    const states = crewRowStates("Sal Ortiz");
+    await selectPerson("Priya Shah");
+    fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.find") }));
+    expect(screen.getAllByRole("button", { name: "Sal Ortiz · Crew" })).toHaveLength(2);
+    const states: string[] = [];
+    for (const index of [0, 1]) {
+      await openCrew("Sal Ortiz", index);
+      states.push(...crewRowStates("Sal Ortiz"));
+    }
+    expect(appendOfflineRollCall).not.toHaveBeenCalled();
     expect(states).toHaveLength(2);
     expect(states.some((state) => state.startsWith("Boarded"))).toBe(true);
     expect(states.some((state) => state.startsWith("Awaiting"))).toBe(true);

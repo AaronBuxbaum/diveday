@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { e2eNow, findTripOnBoard, openRosterDetails, openTripTab, rosterRow } from "./helpers";
+import { e2eNow, findTripOnBoard, openTripTab, rosterRow } from "./helpers";
 
 signedInAsOwner();
 
@@ -68,8 +68,11 @@ test("PADI showing the eLearning finished ticks the student's materials, and Und
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
   const row = await rosterRow(page, student);
-  await expect(row.getByText("Materials not done")).toBeVisible();
-  await openRosterDetails(row);
+  // The folio exposes the actual materials state through its next action.
+  const markDone = row.getByRole("button", { name: "Mark materials done", exact: true });
+  const markNotDone = row.getByRole("button", { name: "Mark not done", exact: true });
+  await expect(markDone).toBeVisible();
+  await expect(markNotDone).toHaveCount(0);
 
   await row.getByRole("button", { name: "Check eLearning with PADI" }).click();
 
@@ -77,8 +80,12 @@ test("PADI showing the eLearning finished ticks the student's materials, and Und
     .getByRole("status")
     .filter({ hasText: "PADI shows the eLearning finished. Materials marked done." });
   await expect(toast).toBeVisible();
-  await expect(row.getByText("Materials not done")).toHaveCount(0);
+  await expect(markDone).toHaveCount(0);
+  await expect(markNotDone).toBeVisible();
+  await expect(row.getByText(/^Materials done ·/)).toBeVisible();
 
   await toast.getByRole("button", { name: "Undo" }).click();
-  await expect(row.getByText("Materials not done")).toBeVisible();
+  await expect(markDone).toBeVisible();
+  await expect(markNotDone).toHaveCount(0);
+  await expect(row.getByText(/^Materials done ·/)).toHaveCount(0);
 });

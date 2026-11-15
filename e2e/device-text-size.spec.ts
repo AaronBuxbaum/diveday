@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody } from "./device-text-size-fixture";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
@@ -389,19 +390,38 @@ test.describe("largest device body with the contextual install entry", () => {
 
 test.describe("ordinary root with a reduced zoom viewport", () => {
   signedInAsOwner();
-  test.use({ viewport: { width: 390, height: 400 }, reducedMotion: "reduce" });
+  test.use({
+    privateShopSlug: "zoom-attention",
+    privateShopFacts: [{ name: "causalRollCallConflict", role: "crew" }],
+    storageState: { cookies: [], origins: [] },
+    viewport: { width: 390, height: 400 },
+    reducedMotion: "reduce",
+  });
   test("2x pinch zoom releases an oversized count panel and restores pinning when it fits", async ({
     page,
+    privateShop,
   }) => {
-    await page.goto("/shop/blue-mantis/schedule/board");
-    await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
-    await openTripTab(page, "Manifest");
+    const fact = privateShop.values.causalRollCallConflict as { tripId: string; fullName: string };
+    await page.goto(
+      `/shop/${privateShop.slug}/trips/${fact.tripId}/manifest?checkpoint=after_dive_1`,
+    );
+    const nameColumn = (await manifestRow(page, "Ari Vale")).locator("[data-person-row-name]");
+    await expect(nameColumn).not.toHaveCSS("flex-basis", "100%");
     const panel = page.locator("[data-roll-call-panel]");
-    await expect(panel).toBeVisible();
+    const review = async () => {
+      await page.getByRole("button", { name: "Needs attention", exact: true }).click();
+      await expect(panel).toBeVisible();
+      await expect(
+        page.getByText(
+          staffTranslator("en-US")("manifest.conflicts.heading", { name: fact.fullName }),
+          { exact: true },
+        ),
+      ).toBeVisible();
+    };
+    // Detailed count geometry belongs to Review; routine Deck shows one person.
+    await review();
     await expect(page.locator("html")).toHaveCSS("font-size", "16px");
     await expect(panel).toHaveCSS("position", "sticky");
-    const nameColumn = (await manifestRow(page, "Priya Sharma")).locator("[data-person-row-name]");
-    await expect(nameColumn).not.toHaveCSS("flex-basis", "100%");
     const session = await page.context().newCDPSession(page);
     await session.send("Emulation.setPageScaleFactor", { pageScaleFactor: 2 });
     await expect.poll(() => page.evaluate(() => window.visualViewport?.scale)).toBe(2);
@@ -413,7 +433,23 @@ test.describe("ordinary root with a reduced zoom viewport", () => {
     // The real visual viewport is200px, so this rendered panel and a boat target cannot fit.
     expect(zoomGeometry.panel + 4.5 * 16).toBeGreaterThan(zoomGeometry.viewport);
     await expect(panel).toHaveCSS("position", "static");
-    const boarding = page.getByRole("button", { name: "Mark boarded" }).first();
+    // Keep navigation in keyboard modality while the visual viewport is zoomed.
+    const find = page.getByRole("button", { name: "Find a person", exact: true });
+    await find.focus();
+    await find.press("Enter");
+    const list = page.locator('[data-deck-screen="find"]');
+    await list.getByRole("searchbox").fill("Ari Vale");
+    await list.getByRole("button", { name: "Ari Vale", exact: true }).press("Enter");
+    const exception = page.getByRole("button", {
+      name: staffTranslator("en-US")("manifest.deck.exception"),
+      exact: true,
+    });
+    await exception.focus();
+    await exception.press("Enter");
+    const boarding = page.locator('[data-deck-screen="person"]').getByRole("button", {
+      name: "Mark boarded",
+      exact: true,
+    });
     await boarding.focus();
     await expect(boarding).toBeFocused();
     const target = await boarding.evaluate((element) => {
@@ -441,23 +477,73 @@ test.describe("ordinary root with a reduced zoom viewport", () => {
       body: JSON.stringify(target, null, 2),
     });
     await boarding.press("Space");
+    const receipt = page.locator('[data-deck-screen="receipt"]');
+    await expect(receipt.getByRole("heading", { name: "Ari Vale", exact: true })).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Boarded — tap again to undo", exact: true }).first(),
+      receipt.getByText(staffTranslator("en-US")("manifest.deck.savedAboard"), { exact: true }),
+    ).toBeVisible();
+    await expect(
+      receipt.getByRole("button", {
+        name: staffTranslator("en-US")("manifest.deck.undo", { name: "Ari Vale" }),
+        exact: true,
+      }),
     ).toBeVisible();
     await session.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
+    await expect.poll(() => page.evaluate(() => window.visualViewport?.scale)).toBe(1);
+    await expect.poll(() => page.evaluate(() => window.visualViewport?.height)).toBe(400);
+    await review();
+    await expect(panel.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+    const restoredGeometry = await panel.evaluate((element) => ({
+      height: Math.max(element.scrollHeight, element.getBoundingClientRect().height),
+      top: Number.parseFloat(getComputedStyle(element).top),
+      viewport: window.visualViewport?.height ?? innerHeight,
+    }));
+    await test.info().attach("restored-count-geometry", {
+      contentType: "application/json",
+      body: JSON.stringify(restoredGeometry),
+    });
+    // The recorded person adds a count row: the updated panel no longer fits 400px.
+    expect(restoredGeometry.height + restoredGeometry.top + 4.5 * 16).toBeGreaterThan(
+      restoredGeometry.viewport,
+    );
+    await expect(panel).toHaveCSS("position", "static");
+    await page.setViewportSize({ width: 390, height: 600 });
+    await expect.poll(() => page.evaluate(() => window.visualViewport?.height)).toBe(600);
+    const fittingGeometry = await panel.evaluate((element) => ({
+      height: Math.max(element.scrollHeight, element.getBoundingClientRect().height),
+      top: Number.parseFloat(getComputedStyle(element).top),
+      viewport: window.visualViewport?.height ?? innerHeight,
+    }));
+    expect(fittingGeometry.height + fittingGeometry.top + 4.5 * 16).toBeLessThanOrEqual(
+      fittingGeometry.viewport,
+    );
     await expect(panel).toHaveCSS("position", "sticky");
+    await page.screenshot({ path: test.info().outputPath("restored-count.png") });
     await session.detach();
-    // Desktop chrome is a real inset, not extra room for the pinned panel.
+    // Desktop chrome returns above the phone breakpoint; wait for its resolved inset.
     await page.setViewportSize({ width: 1024, height: 240 });
+    await expect
+      .poll(() => panel.evaluate((element) => Number.parseFloat(getComputedStyle(element).top)))
+      .toBeGreaterThan(0);
     await expect(panel).toHaveCSS("position", "static");
     const desktop = await panel.evaluate((element) => ({
       top: Number.parseFloat(getComputedStyle(element).top),
       height: element.getBoundingClientRect().height,
       viewport: innerHeight,
+      width: innerWidth,
+      desktop: matchMedia("(min-width: 1024px)").matches,
+      chrome:
+        document.querySelector('[data-staff-chrome="true"]')?.getBoundingClientRect().height ?? 0,
+      chromeProperty: getComputedStyle(document.documentElement).getPropertyValue("--chrome-h"),
     }));
+    expect(desktop.width).toBe(1024);
+    expect(desktop.desktop).toBe(true);
     expect(desktop.top).toBeGreaterThan(0);
     expect(desktop.height + desktop.top + 4.5 * 16).toBeGreaterThan(desktop.viewport);
-    const next = page.getByRole("button", { name: "Mark boarded" }).first();
+    const next = (await manifestRow(page, "Bea Quill")).getByRole("button", {
+      name: "Mark boarded",
+      exact: true,
+    });
     await next.focus();
     await expect(next).toBeFocused();
     await next.scrollIntoViewIfNeeded();
@@ -475,6 +561,7 @@ test.describe("ordinary root with a reduced zoom viewport", () => {
       body: JSON.stringify(desktop),
     });
     await page.setViewportSize({ width: 1024, height: 844 });
+    await review();
     await expect(panel).toHaveCSS("position", "sticky");
   });
 });

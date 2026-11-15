@@ -1,11 +1,12 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, seededTripId } from "./helpers";
+import { offlineCopySaved, openDeckDetails, seededTripId } from "./helpers";
 
 signedInAsOwner();
 test("the stage strip keeps repeat and backward taps available", async ({ page }, testInfo) => {
   const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
+  await openDeckDetails(page);
   const strip = page.getByRole("region", { name: "Where the boat is" });
   await expect(strip).toBeVisible();
   await offlineCopySaved(page);
@@ -15,6 +16,10 @@ test("the stage strip keeps repeat and backward taps available", async ({ page }
   const separator = underway.locator("..").locator(":scope > span[aria-hidden=true]");
   await expect(separator).toHaveCSS("font-size", "16px");
   await underway.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(underway).toBeFocused();
+  expect(await underway.evaluate((element) => element.matches(":focus-visible"))).toBe(true);
   await expect(underway).toHaveCSS("outline-offset", "-3px");
   await expect(separator).toBeHidden();
   await strip.screenshot({ path: testInfo.outputPath("stage-focus-phone.png") });
@@ -32,6 +37,7 @@ test.describe("Spanish phone stage labels", () => {
   test("keeps the direction marks separate from the labels", async ({ page }, testInfo) => {
     const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
     await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
+    await openDeckDetails(page, "es-ES");
     const strip = page.getByRole("region", { name: "Dónde está el barco" });
     await expect(strip).toBeVisible();
     await offlineCopySaved(page, "es-ES");

@@ -1,6 +1,12 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
-import { offlineCopySaved, STAFF_DAY_HEADING, signInAs, signInAsOwner } from "./helpers";
+import {
+  offlineCopySaved,
+  openDeckDetails,
+  STAFF_DAY_HEADING,
+  signInAs,
+  signInAsOwner,
+} from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { seedFacts } from "./shop-facts";
 
@@ -78,7 +84,10 @@ test.describe("the evening on the home", () => {
 
     await page.goto(`/shop/blue-mantis/trips/${justIn.id}/manifest`);
     await offlineCopySaved(page);
-    const home = page.getByRole("button", { name: "Home", exact: true });
+    await openDeckDetails(page);
+    const home = page
+      .getByRole("region", { name: "Where the boat is", exact: true })
+      .getByRole("button", { name: "Home", exact: true });
     await home.click();
     // The strip's own pressed state is what the server sent back, so it is the
     // wait for the write rather than an optimistic paint — the same reading

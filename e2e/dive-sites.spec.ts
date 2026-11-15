@@ -900,7 +900,11 @@ test.describe("an owner's own library", () => {
     // reached through the door at the library ledger's tail (ADR
     // 20260827-the-shops-shelves), never a peer destination.
     await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("link", { name: "DiveDay catalog", exact: true }).click();
+    const views = page.getByRole("navigation", { name: staffCopy("diveSites.list.viewsLabel") });
+    // Run 43650058204 moved this track into a vertical stack during the click.
+    // Wait for its measured pill before targeting the server's unmeasured layout.
+    await expect(views.locator(':scope > span[aria-hidden="true"]')).toHaveCSS("opacity", "1");
+    await views.getByRole("link", { name: "DiveDay catalog", exact: true }).click();
     await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
     // The catalog pages, ordered by distance — this one is on the first page and
     // carries both of the things a one-tap import used to hand a shop sight

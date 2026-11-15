@@ -8,6 +8,8 @@ import {
   daysFromNow,
   findTripOnBoard,
   openBoatCheck,
+  openDeckDetails,
+  openDeckPerson,
   openIfClosed,
   openRosterNotes,
   openRosterRow,
@@ -36,6 +38,7 @@ async function reefRoster(page: Page): Promise<Locator> {
 async function reefManifest(page: Page): Promise<void> {
   await page.goto(await tripPathByTitle(page, "blue-mantis", REEF));
   await openTripTab(page, "Manifest");
+  await openDeckDetails(page);
 }
 
 /** The innermost disclosure containing a field, rather than its open roster ancestor. */
@@ -50,7 +53,7 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     test.use({ colorScheme: "light", viewport: { width: 1280, height: 800 } });
 
     test("the buddy team's inner builder exposes its person checkboxes", async ({ page }) => {
-      await reefManifest(page);
+      await page.goto(`${await tripPathByTitle(page, "blue-mantis", REEF)}?view=details`);
       const outer = page
         .locator("details")
         .filter({ has: page.locator("#buddy-teams-heading") })
@@ -117,6 +120,10 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
 
     test("a crew roll-call row opens the crew-specific person sheet", async ({ page }) => {
       await reefManifest(page);
+      await openDeckPerson(page, "Keiko Tanaka");
+      await page
+        .getByRole("button", { name: staff("manifest.deck.exception"), exact: true })
+        .click();
       const trigger = page.getByRole("button", {
         name: staff("manifest.openPersonDetails", { name: "Keiko Tanaka" }),
         exact: true,

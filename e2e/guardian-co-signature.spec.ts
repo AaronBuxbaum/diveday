@@ -1,5 +1,6 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   choosePartySize,
@@ -185,7 +186,12 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   // The paper form is the roster row's own, behind the row's disclosure.
   await page.goto(counterPath(SHOP, blockedMinor.tripId));
   const row = await rosterRow(page, "Lena Fischer");
-  await expect(row.getByText("Blocked", { exact: true })).toBeVisible();
+  await expect(
+    row.getByRole("region", {
+      name: staffTranslator("en-US")("trips.folio.beforeBoarding"),
+      exact: true,
+    }),
+  ).toBeVisible();
 
   const fillPaperForm = async () => {
     await row

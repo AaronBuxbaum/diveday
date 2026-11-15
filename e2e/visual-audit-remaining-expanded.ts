@@ -6,6 +6,8 @@ import {
   bookASeatAndOpenThread,
   choosePartySize,
   offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
   openIfClosed,
   openOnThisPhone,
   openThreadStep,
@@ -85,7 +87,8 @@ async function offlineReef(page: Page) {
   await openOnThisPhone(page);
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await page.waitForURL(/offline-manifest/);
-  await page.getByRole("heading", { name: "Priya Sharma", exact: true }).waitFor();
+  await expect(page.getByRole("heading", { name: "Deck", exact: true })).toBeVisible();
+  await openDeckPerson(page, "Priya Sharma");
 }
 
 /** Bodies hidden behind a second tap on otherwise covered light-mode pages. */
@@ -404,12 +407,10 @@ export function registerRemainingExpandedAuditCaptures(
     test("the saved roster opens the person's contact and rental facts", async ({ page }) => {
       test.setTimeout(flowTimeout);
       await offlineReef(page);
-      const row = page
-        .locator("#offline-roll-call li")
-        .filter({
-          has: page.getByRole("heading", { name: "Priya Sharma", exact: true }),
-        })
-        .first();
+      await page
+        .getByRole("button", { name: staff("manifest.deck.exception"), exact: true })
+        .click();
+      const row = page.locator('[data-deck-screen="person"] li[id^="offline-roll-call-"]');
       const facts = row.locator("details:not([data-roll-call-exception])").first();
       await openIfClosed(facts);
       await expect(facts.locator(":scope > div")).toBeVisible();
@@ -419,7 +420,10 @@ export function registerRemainingExpandedAuditCaptures(
     test("the saved roster opens its deliberate dock exception", async ({ page }) => {
       test.setTimeout(flowTimeout);
       await offlineReef(page);
-      const exception = page.locator("#offline-roll-call [data-roll-call-exception]").first();
+      await page
+        .getByRole("button", { name: staff("manifest.deck.exception"), exact: true })
+        .click();
+      const exception = page.locator('[data-deck-screen="person"] [data-roll-call-exception]');
       await openIfClosed(exception);
       await exception.getByRole("button").first().waitFor();
       await capture(page, "offline-dock-exception-open", "light");
@@ -430,8 +434,13 @@ export function registerRemainingExpandedAuditCaptures(
     }) => {
       test.setTimeout(flowTimeout);
       await offlineReef(page);
+      await openDeckDetails(page);
       await page.getByRole("button", { name: "After dive 1", exact: true }).click();
-      const exception = page.locator("#offline-roll-call [data-roll-call-exception]").first();
+      await openDeckPerson(page, "Priya Sharma");
+      await page
+        .getByRole("button", { name: staff("manifest.deck.exception"), exact: true })
+        .click();
+      const exception = page.locator('[data-deck-screen="person"] [data-roll-call-exception]');
       await openIfClosed(exception);
       await exception.getByRole("textbox").waitFor();
       await capture(page, "offline-after-dive-exception-open", "light");
@@ -446,6 +455,7 @@ export function registerRemainingExpandedAuditCaptures(
         Object.defineProperty(navigator, "vibrate", { configurable: true, value: () => true }),
       );
       await offlineReef(page);
+      await openDeckDetails(page);
       await openIfClosed(page.locator("#offline-phone-settings"));
       await page.locator("#offline-phone-settings").getByRole("switch").waitFor();
       await capture(page, "offline-phone-preferences-open", "light");

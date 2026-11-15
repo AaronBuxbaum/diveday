@@ -2,7 +2,7 @@
 
 import { createContext, type ReactNode, useContext, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClass, DateField } from "@/components/ui/form";
 import { ITEM_TITLE_CLASS, SHELL_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { formatDateTimeTz } from "@/lib/format";
 import { wallTimeToUtc } from "@/lib/zoned";
@@ -134,11 +134,11 @@ function DeckObservation({
       <label htmlFor="deck-observed-at" className="block text-sm font-semibold">
         {copy.observe} · {timeZone}
       </label>
-      <input
+      <DateField
         id="deck-observed-at"
         type="datetime-local"
         disabled={busy}
-        className={`${controlClass} mt-2`}
+        wrapperClassName="mt-2"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
@@ -234,7 +234,7 @@ export function DeckFlow({
     else setScreen("home");
   };
   const navigationClass = buttonClass({ variant: "secondary", size: "boat", className: "w-full" });
-  const primaryClass = buttonClass({ size: "boat", className: "min-h-18 w-full text-lg" });
+  const primaryClass = buttonClass({ size: "deck", className: "w-full" });
   return (
     <DeckMutationContext.Provider
       value={{
@@ -254,17 +254,18 @@ export function DeckFlow({
     >
       <section
         id="deck-flow"
+        data-device-text-deck
         data-deck-screen={screen}
         className="mx-auto w-full max-w-xl"
         aria-label={copy.title}
       >
-        <div className="flex items-center justify-between gap-3">
+        <div data-device-text-deck-header className="flex items-center justify-between gap-3">
           <h1 className={ITEM_TITLE_CLASS} aria-label={copy.title}>
             <button
               type="button"
               disabled={busy}
               aria-label={copy.home}
-              className={buttonClass({ variant: "link", flush: true, className: "min-w-11" })}
+              className={buttonClass({ variant: "link", flush: "padded" })}
               onClick={() => setScreen("home")}
             >
               {copy.title}
@@ -389,11 +390,11 @@ export function DeckFlow({
                   <p className="mt-2 text-sm font-semibold">{person.status}</p>
                 ) : null}
                 <div className="mt-5">{person.record}</div>
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div data-device-text-deck-pair className="mt-3 grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled={busy}
-                    className={buttonClass({ variant: "link", className: "min-h-11 w-full px-0" })}
+                    className={buttonClass({ variant: "link", flush: true, className: "w-full" })}
                     onClick={() => setException((value) => !value)}
                   >
                     {copy.exception}
@@ -401,7 +402,7 @@ export function DeckFlow({
                   <button
                     type="button"
                     disabled={busy}
-                    className={buttonClass({ variant: "link", className: "min-h-11 w-full px-0" })}
+                    className={buttonClass({ variant: "link", flush: true, className: "w-full" })}
                     onClick={next}
                   >
                     {copy.later}
@@ -436,7 +437,7 @@ export function DeckFlow({
               ))}
           </div>
         ) : null}
-        <div className="grid grid-cols-2 border-t border-border pt-2">
+        <div data-device-text-deck-pair className="grid grid-cols-2 border-t border-border pt-2">
           <button
             type="button"
             disabled={busy}
@@ -445,7 +446,7 @@ export function DeckFlow({
           >
             {copy.find}
           </button>
-          <details ref={detailsRef} className="contents">
+          <details ref={detailsRef} className="contents [&::details-content]:col-span-2">
             <summary className="flex min-h-11 cursor-pointer items-center justify-center font-semibold">
               {copy.details}
             </summary>

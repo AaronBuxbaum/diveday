@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { offlineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import {
@@ -57,6 +57,20 @@ const pendingMark = {
   syncStatus: "pending" as const,
 };
 
+/** Delivery feedback stays visible on the routine Deck, outside its reference disclosure. */
+async function routineStatus() {
+  const deck = await screen.findByRole("region", { name: "Deck" });
+  const status = deck.querySelector<HTMLDivElement>(':scope > div[role="status"]');
+  if (!status) throw new Error("Expected the routine Deck delivery status");
+  expect(status).toBeVisible();
+  return within(status);
+}
+
+async function openDetails() {
+  await screen.findByRole("region", { name: "Deck" });
+  fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+}
+
 /**
  * The header's offer, read from the status line that carries it. The foot's
  * own "Open live manifest" link is always there and is not the offer.
@@ -97,9 +111,12 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
 
     render(<OfflineManifestView />);
 
+    const status = await routineStatus();
+    expect(status.getByText(t("shared.connectivity.unansweredWithCopy"))).toBeVisible();
+    await openDetails();
     const banner = await screen.findByText(/DiveDay didn’t answer, so this is the list/);
     expect(banner).toHaveTextContent(/not the live one/);
-    expect(screen.getByText(t("shared.connectivity.unansweredWithCopy"))).toBeInTheDocument();
+    expect(banner).toBeVisible();
     expect(screen.queryByText(t("shared.connectivity.online"))).not.toBeInTheDocument();
     expect(
       screen.queryByText(t("shared.offlineManifest.freshnessPill.current")),
@@ -110,7 +127,8 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
   it("keeps asking the live manifest without waiting for an online event", async () => {
     searchParams = new URLSearchParams("trip=trip-1&fallback=slow");
     render(<OfflineManifestView />);
-    await screen.findByText(t("shared.connectivity.unansweredWithCopy"));
+    const status = await routineStatus();
+    expect(status.getByText(t("shared.connectivity.unansweredWithCopy"))).toBeVisible();
 
     await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS));
 
@@ -122,12 +140,15 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     liveAnswers = true;
     const before = window.location.href;
     render(<OfflineManifestView />);
-    await screen.findByText(t("shared.connectivity.unansweredWithCopy"));
+    const status = await routineStatus();
+    expect(status.getByText(t("shared.connectivity.unansweredWithCopy"))).toBeVisible();
+    await openDetails();
     expect(liveOffer()).toBeNull();
 
     await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS * 3));
 
     expect(liveOffer()).toHaveAttribute("href", LIVE);
+    expect(liveOffer()).toBeVisible();
     expect(window.location.href).toBe(before);
   });
 
@@ -140,11 +161,13 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     // The sync hangs: the mark stays pending, as it does on a slow link.
     vi.mocked(syncOfflineManifest).mockImplementation(() => new Promise(() => {}));
     render(<OfflineManifestView />);
-    await screen.findByText(t("shared.connectivity.unansweredWithCopy"));
+    const status = await routineStatus();
+    expect(status.getByText(t("shared.connectivity.unansweredWithCopy"))).toBeVisible();
 
     await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS * 3));
 
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(LIVE);
+    await openDetails();
     expect(liveOffer()).toBeNull();
   });
 
@@ -153,7 +176,8 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
 
     render(<OfflineManifestView />);
 
-    expect(await screen.findByText(/The saved manifest is current/)).toBeInTheDocument();
+    await openDetails();
+    expect(await screen.findByText(/The saved manifest is current/)).toBeVisible();
     // One chip says both (visual review 2026-10-24, B51): fresh, and online.
     expect(
       screen.getByText(t("shared.offlineManifest.freshnessPill.currentOnline")),
@@ -169,7 +193,8 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
 
     render(<OfflineManifestView />);
 
-    expect(await screen.findByText(t("shared.connectivity.offlineWithCopy"))).toBeInTheDocument();
+    await openDetails();
+    expect(await screen.findByText(t("shared.connectivity.offlineWithCopy"))).toBeVisible();
     // The age is still said, in the banner, once.
     expect(screen.getByText(/The saved manifest is current/)).toBeInTheDocument();
     expect(

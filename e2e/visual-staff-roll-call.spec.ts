@@ -17,6 +17,7 @@ import {
   openTripAbout,
   openTripFromBoard,
   openTripTab,
+  rosterRow,
   seededTripId,
 } from "./helpers";
 import { seedFacts } from "./shop-facts";
@@ -86,18 +87,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Night Dive — City of Washington");
         await openTripTab(page, "Trip");
-        const row = page
-          .locator("#roster li")
-          .filter({ hasText: "Booked as Hana Park" })
-          .filter({ visible: true })
-          .first();
+        const row = await rosterRow(page, "June Park");
         await row.getByText("Booked as Hana Park", { exact: false }).waitFor();
         await openRosterDetails(row);
         // The line that stands in for the withheld fields — waited on rather
         // than the panel, because the panel is open either way and it is this
         // sentence the baseline exists for.
         await expect(
-          row.getByText("Medical and gear details stay hidden until you confirm"),
+          row.getByText(staffCopy("trips.roster.identityWithheldDetails"), { exact: true }),
         ).toBeVisible();
         // The record's own email and phone, which stay out to ask with
         // (Aaron, 2026-10-06).
@@ -541,7 +538,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripTab(page, "Trip");
-        const row = page.locator("#roster li").filter({ visible: true }).first();
+        const row = await rosterRow(page, "Priya Sharma");
         const noteBody = "Visual regression seed note for the undo toast.";
         await openRosterNotes(row);
         await row.getByLabel("Add a note only staff can see").fill(noteBody);

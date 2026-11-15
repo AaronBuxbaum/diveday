@@ -54,8 +54,8 @@ function SavedPersonButton({
         aria-busy={pending}
         className={buttonClass({
           variant: undo ? "link" : "primary",
-          size: "boat",
-          className: undo ? "min-h-11" : "min-h-18 w-full text-lg",
+          size: undo ? "boat" : "deck",
+          className: undo ? "" : "w-full",
         })}
         onClick={async (event) => {
           if (wasMultiTouch()) {

@@ -3,7 +3,7 @@ import { AFTER_STATE_TEST_IDS } from "../src/app/(token)/ready/[token]/_componen
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openBookingActions, openRecapDoor, openSettingsRow, signOut } from "./helpers";
+import { openBookingActions, openRecapDoor, openSettingsRow, rosterRow, signOut } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
@@ -205,7 +205,7 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   const { tripId } = (await fixture.json()) as { tripId: string };
   expect(tripId).toMatch(/^[0-9a-f-]{36}$/i);
   await staffPage.goto(`/shop/blue-mantis/trips/${tripId}`);
-  const diverRow = staffPage.locator("li").filter({ hasText: "Priya Sharma" });
+  const diverRow = await rosterRow(staffPage, "Priya Sharma");
   // Removing a seat is administrative rather than the work of the day, so it
   // sits behind the card's own "Details" disclosure.
   // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
