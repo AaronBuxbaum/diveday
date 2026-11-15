@@ -188,7 +188,7 @@ export function DayStation({
                             alt=""
                             width={24}
                             height={24}
-                            className="mr-1 inline-block rounded-full align-middle"
+                            className="me-1 inline-block rounded-full align-middle"
                           />
                         ) : null}
                         {person.fullName}
