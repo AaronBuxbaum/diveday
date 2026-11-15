@@ -449,6 +449,26 @@ describe("syncOfflineManifest on a network that never answers", () => {
   });
 });
 
+it("retains pending roll call when sync returns 401", async () => {
+  const tripId = payload.manifests[0].trip.id;
+  await saveOfflineManifest(payload);
+  const queued = await appendOfflineRollCall(tripId, {
+    bookingId: payload.manifests[0].divers[0].bookingId,
+    checkpoint: "departure",
+    status: "not_boarded",
+  });
+  const pending = queued.events[0];
+  server.use(
+    http.post("/api/offline-manifests/sync", () =>
+      HttpResponse.json({ error: "authentication_required" }, { status: 401 }),
+    ),
+  );
+  await expect(syncOfflineManifest(tripId)).rejects.toBeDefined();
+  expect((await loadOfflineManifest(tripId))?.events).toContainEqual(
+    expect.objectContaining({ clientEventId: pending.clientEventId, syncStatus: "pending" }),
+  );
+});
+
 /**
  * DiveDay answers a sync with the departure's snapshot revision, and the
  * device keeps it on every event that answer settles: what later lets the

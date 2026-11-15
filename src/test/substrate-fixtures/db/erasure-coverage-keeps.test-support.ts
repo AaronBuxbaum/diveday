@@ -33,6 +33,8 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "which seats dived together, by id; the team's words live in `buddy_team_events`, which the erasure does redact",
   booking_checkout_bookings:
     "how one checkout's money split across the seats it paid for — four amounts and two ids",
+  boarding_observations:
+    "a dock sighting: which seat on which departure, when, and the staffers who recorded or dismissed it, with no diver column and no free text; the diver is reached only through the seat, and an erased diver's open sighting stops holding a place (#4474)",
   booking_arrival_events:
     "the arrival ledger for a seat: a status, a source and the staffer who recorded it, with no diver column and no free text",
   dive_package_entitlements:

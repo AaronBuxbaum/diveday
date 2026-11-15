@@ -6,10 +6,11 @@ import { getDb } from "@/db/client";
 import { withdrawCrewAwayAcknowledgement } from "@/db/crew-away-acknowledgements";
 import { recordTripActivity } from "@/db/operations";
 import { getShopPersonName } from "@/db/people";
-import { changeTripCrewOutcome, type TripCrewChange } from "@/db/trips";
+import { personClashesAfterMove } from "@/db/person-clashes";
+import { changeTripCrewOutcome, moveTripCrewMember, type TripCrewChange } from "@/db/trips";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { requireShopSurface } from "@/features/session";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
 export async function updateTripCrewAction(
@@ -74,4 +75,68 @@ export async function withdrawCrewAwayAcknowledgementAction(
   });
   revalidatePath(shopPath(shopSlug));
   revalidateAndRedirect(page, `${page}?view=details#crew`);
+}
+
+/**
+ * **Move a crew member to another boat in one step** (issue #4474): off this
+ * departure and onto the other, keeping their job aboard, or neither
+ * (`moveTripCrewMember`). Two crews on one person at once is refused there; a
+ * seat they hold on an overlapping boat is a warning, read after the move
+ * commits so whichever write landed last is the one that says it.
+ */
+export async function moveTripCrewAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+): Promise<void> {
+  const s = (await requireShopSurface(shopSlug)).session;
+  const page = shopPath(shopSlug, "trips", tripId);
+  const back = `${page}?view=details#crew`;
+  const personId = formData.get("personId");
+  const toTripId = formData.get("toTripId");
+  if (
+    !uuidParam(tripId) ||
+    typeof personId !== "string" ||
+    !uuidParam(personId) ||
+    typeof toTripId !== "string" ||
+    !uuidParam(toTripId)
+  ) {
+    revalidateAndRedirect(page, back);
+  }
+  const db = await getDb();
+  const shopId = s.user.shopId;
+  const moved = await moveTripCrewMember(
+    db,
+    shopId,
+    { personId, fromTripId: tripId, toTripId },
+    { actorPersonId: s.user.personId },
+  );
+  if (!moved.ok) {
+    revalidateAndRedirect(page, noticeUrl(back, "crew-conflict"));
+  }
+  const crewName = await getShopPersonName(db, shopId, personId);
+  if (crewName !== null) {
+    for (const [trip, code] of [
+      [tripId, "crew_removed"],
+      [toTripId, "crew_assigned"],
+    ] as const) {
+      await recordTripActivity(db, {
+        shopId,
+        tripId: trip,
+        actorPersonId: s.user.personId,
+        subjectPersonId: personId,
+        entry: { code, crew: crewName },
+      });
+    }
+  }
+  const clashes = await personClashesAfterMove(db, shopId, toTripId, personId);
+  revalidatePath(shopPath(shopSlug));
+  revalidatePath(shopPath(shopSlug, "schedule", "board"));
+  revalidatePath(shopPath(shopSlug, "trips", toTripId));
+  revalidatePath(shopPath(shopSlug, "trips", toTripId, "manifest"));
+  revalidatePath(shopPath(shopSlug, "trips", tripId, "manifest"));
+  revalidateAndRedirect(
+    page,
+    noticeUrl(back, clashes.length > 0 ? "crew-moved-clash" : "crew-moved"),
+  );
 }

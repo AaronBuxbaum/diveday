@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AssistFillButton } from "@/components/assists/AssistFillButton";
 import type { EditorSectionRef } from "@/components/editor/EditorSection";
@@ -77,6 +77,16 @@ export default async function EditCoursePage({
   const page = await getCourseEditPage(db, shop.id, slug, session.user.personId);
   if (!page) notFound();
   const { course, templateUpdate } = page;
+  // **Anyone who runs a course may schedule it; only an owner or manager
+  // rewrites it.** The editor is not drawn for anyone else: a course they may
+  // run lands on the board with it preselected, a hidden one on the roster.
+  if (!page.can.edit) {
+    redirect(
+      course.isActive
+        ? `/shop/${shopSlug}/schedule/board?course=${course.id}`
+        : shopPath(shopSlug, "courses"),
+    );
+  }
   const locale = await requestLocale(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
   const t = staffTranslator(locale);
@@ -85,9 +95,6 @@ export default async function EditCoursePage({
 
   // The catalog toggle's course, bound rather than posted (`setCourseVisibilityAction`).
   const visibilityAction = setCourseVisibilityAction.bind(null, slug, course.id);
-  // The same question the action asks, asked once for the reader: a control
-  // whose only outcome is a refusal is a control that should not be drawn.
-  const canSetVisibility = page.can.setVisibility;
   const canAssist = page.can.assist;
   const summaryTranslation = await loadTranslationBox(
     db,
@@ -95,15 +102,11 @@ export default async function EditCoursePage({
     { kind: "course", id: course.id, field: "summary" },
     course.summary,
   );
-  // The forms a course asks for are chosen by the same people who set its
-  // visibility, so the same answer draws the section (ADR 20261008-course-forms).
-  const formsPanel = canSetVisibility
-    ? await loadCourseFormsRequirement(
-        db,
-        { shopId: shop.id, courseId: course.id, personId: session.user.personId, notice },
-        t,
-      )
-    : null;
+  const formsPanel = await loadCourseFormsRequirement(
+    db,
+    { shopId: shop.id, courseId: course.id, notice },
+    t,
+  );
   const preserveTemplateAction = pullCourseTemplateUpdatesAction.bind(
     null,
     shopSlug,
@@ -159,16 +162,17 @@ export default async function EditCoursePage({
     closed: true,
     open: Boolean(notice?.startsWith("forms-")),
   };
-  // The unsaved sentence names the forms section too, when it is drawn.
-  const noteSections: readonly EditorSectionRef[] = formsPanel
-    ? [...sections, { id: formsSection.id, label: formsSection.label }]
-    : sections;
+  // The unsaved sentence names the forms section too.
+  const noteSections: readonly EditorSectionRef[] = [
+    ...sections,
+    { id: formsSection.id, label: formsSection.label },
+  ];
 
   // "Schedule a session" on every published course, for whoever may schedule
   // (#2561): the roster row shows "Schedule" only on a course the shop has run
   // (third UX review, item 35), so this is the first session's door; after it
   // the course has been on the board and the row shows "Schedule" by itself.
-  const offersSchedule = canSetVisibility && course.isActive;
+  const offersSchedule = course.isActive;
 
   const templateFieldLabels = courseTemplateFieldLabels(t);
 
@@ -324,14 +328,12 @@ export default async function EditCoursePage({
                   t={t}
                 />
                 <CourseFaqSection course={course} faq={faq} t={t} />
-                {formsPanel ? (
-                  <CourseFormsRequirement
-                    {...formsPanel}
-                    {...formsSection}
-                    waiversPath={shopPath(shopSlug, "waivers")}
-                    t={t}
-                  />
-                ) : null}
+                <CourseFormsRequirement
+                  {...formsPanel}
+                  {...formsSection}
+                  waiversPath={shopPath(shopSlug, "settings", "waivers")}
+                  t={t}
+                />
               </DisclosureRowList>
             </div>
 
@@ -364,22 +366,15 @@ export default async function EditCoursePage({
             and below it, because this is the page's rare act and Save is its
             frequent one. `secondary`, not primary: the editor has exactly one
             obvious next action and this is not it (principles §8). The word on
-            screen names what it does to the diver's catalog.
-
-            Drawn only for a reader whose roles allow it: for anybody else the
-            button's only outcome is the refusal. */}
-        {canSetVisibility ? (
-          <form action={visibilityAction} className="mt-8 border-t border-border pt-6">
-            <SubmitButton
-              pendingLabel="…"
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {course.isActive
-                ? t("courses.edit.hideFromCatalog")
-                : t("courses.edit.showInCatalog")}
-            </SubmitButton>
-          </form>
-        ) : null}
+            screen names what it does to the diver's catalog. */}
+        <form action={visibilityAction} className="mt-8 border-t border-border pt-6">
+          <SubmitButton
+            pendingLabel="…"
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {course.isActive ? t("courses.edit.hideFromCatalog") : t("courses.edit.showInCatalog")}
+          </SubmitButton>
+        </form>
       </div>
     </StaffPage>
   );

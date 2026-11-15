@@ -34,7 +34,7 @@ describe("the standing release row", () => {
     await rendered();
     expect(screen.getByRole("link", { name: "Read the release" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/waivers#release",
+      "/shop/blue-mantis/settings/waivers#release",
     );
   });
 

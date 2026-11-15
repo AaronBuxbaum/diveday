@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cardSummaryClass, PANEL_INNER_RADIUS } from "@/components/ui/card";
+import { nowMs } from "@/lib/clock";
 import {
   loadOfflineManifest,
   primeOfflineManifestShell,
@@ -14,8 +15,8 @@ import { identityResponse } from "./offline-manifest/view-fixtures";
 
 const copy: OfflineManifestManagerCopy = {
   checkingDevice: "Checking this device…",
-  reconcileRejectedOne: "1 change needs a look. Open the live manifest to sort it out.",
-  reconcileRejectedOther: "{count} changes need a look. Open the live manifest to sort it out.",
+  reconcileRejectedOne: "1 change needs a look.",
+  reconcileRejectedOther: "{count} changes need a look.",
   reconcilePendingOne: "1 change is still sending.",
   reconcilePendingOther: "{count} changes are still sending.",
   reconcileCaughtUp: "Everything’s sent.",
@@ -47,9 +48,12 @@ const copy: OfflineManifestManagerCopy = {
   connectivityOnline: "Online",
   connectivityOnlineTitle: "This device is online.",
   connectivityOfflineTitle: "This device has no connection right now.",
-  freshnessCurrent: "Fresh copy",
+  freshnessCurrent: "Recently saved copy",
   freshnessAging: "Aging copy",
   freshnessStale: "Stale copy",
+  freshnessExpired: "Expired copy",
+  pendingSummaryOne: "1 offline change pending",
+  pendingSummaryOther: "{count} offline changes pending",
   savedSummary: "Saved {date} · {pending} waiting to send · {rejected} need a look",
   refreshingLabel: "Refreshing…",
   refreshNowLabel: "Refresh now",
@@ -70,6 +74,7 @@ vi.mock("@/lib/offline-manifest-store", () => ({
   loadOfflineManifest: vi.fn(),
   primeOfflineManifestShell: vi.fn(),
   saveOfflineManifest: vi.fn(),
+  subscribeOfflineManifestChanges: vi.fn(() => () => {}),
   syncOfflineManifest: vi.fn(),
 }));
 
@@ -172,6 +177,99 @@ beforeEach(() => {
 });
 
 describe("OfflineManifestManager", () => {
+  it("shows all three pending queues in the closed device summary", async () => {
+    setOnline(false);
+    const queued = envelope();
+    queued.events = [
+      {
+        clientEventId: "rollcall-1",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: TRIP_ID,
+        crewPersonId: "crew-1",
+        checkpoint: "departure",
+        status: "boarded",
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "pending",
+      },
+    ];
+    queued.checklistEvents = [
+      {
+        clientEventId: "checklist-1",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: TRIP_ID,
+        checklistItemId: "check-1",
+        status: "checked",
+        note: null,
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "pending",
+      },
+    ];
+    queued.arrivalEvents = [
+      {
+        clientEventId: "arrival-1",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: TRIP_ID,
+        bookingId: "booking-1",
+        status: "arrived",
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "pending",
+      },
+    ];
+    vi.mocked(loadOfflineManifest).mockResolvedValue(queued);
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+    const summary = screen.getByText(copy.groupHeading).closest("summary");
+    if (!summary) throw new Error("missing device summary");
+    await waitFor(() =>
+      expect(within(summary).getByText("3 offline changes pending")).toBeVisible(),
+    );
+    vi.mocked(syncOfflineManifest).mockRejectedValue(new Error("network outcome unknown"));
+    setOnline(true);
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalled());
+    expect(within(summary).getByText("3 offline changes pending")).toBeVisible();
+  });
+
+  it("offers offline review for rejected checklist and arrival changes", async () => {
+    setOnline(false);
+    const rejected = envelope();
+    rejected.checklistEvents = [
+      {
+        clientEventId: "checklist-1",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: TRIP_ID,
+        checklistItemId: "check-1",
+        status: "checked",
+        note: null,
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "rejected",
+      },
+    ];
+    rejected.arrivalEvents = [
+      {
+        clientEventId: "arrival-1",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: TRIP_ID,
+        bookingId: "booking-1",
+        status: "arrived",
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "rejected",
+      },
+    ];
+    vi.mocked(loadOfflineManifest).mockResolvedValue(rejected);
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("2 changes need a look");
+    expect(within(alert).getByRole("link", { name: copy.openOfflineRollCall })).toHaveAttribute(
+      "href",
+      `/offline-manifest?trip=${TRIP_ID}`,
+    );
+  });
+
   it("coalesces overlapping reconcile triggers into one serialized follow-up instead of firing them concurrently", async () => {
     setOnline(true);
     vi.mocked(loadOfflineManifest).mockResolvedValue(null);
@@ -485,11 +583,11 @@ describe("OfflineManifestManager", () => {
       "[data-offline-copy]",
     );
     expect(card).toHaveAttribute("data-offline-copy", "pending");
-    expect(screen.queryByText("Fresh copy")).toBeNull();
+    expect(screen.queryByText("Recently saved copy")).toBeNull();
 
     save.resolve(envelope());
     await waitFor(() => expect(card).toHaveAttribute("data-offline-copy", "settled"));
-    expect(screen.getByText("Fresh copy")).toBeVisible();
+    expect(screen.getByText("Recently saved copy")).toBeVisible();
   });
 
   it("settles at once when there is no signal to save over", async () => {
@@ -500,5 +598,15 @@ describe("OfflineManifestManager", () => {
       "[data-offline-copy]",
     );
     await waitFor(() => expect(card).toHaveAttribute("data-offline-copy", "settled"));
+  });
+
+  it("labels an expired copy retained for pending work as expired", async () => {
+    setOnline(false);
+    const saved = envelope();
+    saved.snapshot.expiresAt = new Date(nowMs() - 1).toISOString();
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    render(<OfflineManifestManager payload={payload} locale="en-US" copy={copy} />);
+    expect(await screen.findByText("Expired copy")).toBeVisible();
+    expect(screen.queryByText("Recently saved copy")).toBeNull();
   });
 });

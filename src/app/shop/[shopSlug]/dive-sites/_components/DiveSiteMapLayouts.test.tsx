@@ -76,12 +76,62 @@ function installScrollSpy() {
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 
 const FOLLOW = {
-  followLabel: "Only sites in this map area",
+  followLabel: "Filter by map",
+  areaCount: "12 sites",
   scoped: false,
   baseHref: "/shop/blue-mantis/dive-sites",
 };
 
 describe("dive-site map layouts", () => {
+  it.each(["library", "catalog"] as const)(
+    "places the %s view control on the map and content after it",
+    (view) => {
+      const views = (
+        <nav aria-label="Site views">
+          <a href="/catalog">Catalog</a>
+        </nav>
+      );
+      const content = <div>Search and results</div>;
+      if (view === "library") {
+        render(
+          <SiteLibraryLayout
+            {...FOLLOW}
+            shopAnchor={null}
+            pins={pins}
+            clusterLabel="dive sites"
+            zoomHint="Zoom"
+            views={views}
+          >
+            {content}
+          </SiteLibraryLayout>,
+        );
+      } else {
+        render(
+          <CatalogMapLayout
+            {...FOLLOW}
+            shopAnchor={null}
+            pins={[]}
+            catalogPageHref="/catalog"
+            openSiteLabel="Open"
+            loadDetails={async () => null}
+            detailWords={{ loading: "Loading", unavailable: "Unavailable" }}
+            clusterLabel="dive sites"
+            zoomHint="Zoom"
+            views={views}
+          >
+            {content}
+          </CatalogMapLayout>,
+        );
+      }
+      const map = screen.getByTestId("map-container");
+      expect(map).toContainElement(screen.getByRole("navigation", { name: "Site views" }));
+      expect(
+        map.compareDocumentPosition(screen.getByText("Search and results")) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    },
+  );
+
   it("places the map before the library rows", () => {
     render(
       <SiteLibraryLayout
@@ -89,7 +139,7 @@ describe("dive-site map layouts", () => {
         shopAnchor={null}
         pins={pins}
         clusterLabel="dive sites"
-        catalog={<a href="/catalog">Catalog</a>}
+        zoomHint="Use ⌘ or Ctrl + scroll to zoom"
       >
         <div>Library rows</div>
       </SiteLibraryLayout>,
@@ -105,7 +155,13 @@ describe("dive-site map layouts", () => {
   it("selects a library pin without scrolling the page to its ledger row", () => {
     const scrollSpy = installScrollSpy();
     render(
-      <SiteLibraryLayout {...FOLLOW} shopAnchor={null} pins={pins} clusterLabel="dive sites">
+      <SiteLibraryLayout
+        {...FOLLOW}
+        shopAnchor={null}
+        pins={pins}
+        clusterLabel="dive sites"
+        zoomHint="Use ⌘ or Ctrl + scroll to zoom"
+      >
         <div id="site-row-reef-1">North Reef row</div>
       </SiteLibraryLayout>,
     );
@@ -121,6 +177,7 @@ describe("dive-site map layouts", () => {
     const scrollSpy = installScrollSpy();
     render(
       <CatalogMapLayout
+        {...FOLLOW}
         shopAnchor={null}
         pins={pins.map((pin) => ({ ...pin, slug: "north-reef" }))}
         catalogPageHref="/shop/demo/dive-sites?view=catalog"
@@ -128,6 +185,7 @@ describe("dive-site map layouts", () => {
         loadDetails={async () => null}
         detailWords={{ loading: "Loading", unavailable: "Unavailable" }}
         clusterLabel="dive sites"
+        zoomHint="Use ⌘ or Ctrl + scroll to zoom"
       >
         <div id="template-row-reef-1">North Reef row</div>
       </CatalogMapLayout>,
@@ -138,5 +196,44 @@ describe("dive-site map layouts", () => {
     expect(screen.getByTestId("selected-pin").textContent).toBe("reef-1");
     expect(scrollSpy.scrollIntoView).not.toHaveBeenCalled();
     scrollSpy.restore();
+  });
+
+  it.each([
+    [
+      "library",
+      () => (
+        <SiteLibraryLayout
+          {...FOLLOW}
+          shopAnchor={null}
+          pins={pins}
+          clusterLabel="dive sites"
+          zoomHint="Use ⌘ or Ctrl + scroll to zoom"
+        >
+          <div>Rows</div>
+        </SiteLibraryLayout>
+      ),
+    ],
+    [
+      "catalog",
+      () => (
+        <CatalogMapLayout
+          {...FOLLOW}
+          shopAnchor={null}
+          pins={pins.map((pin) => ({ ...pin, slug: "north-reef" }))}
+          catalogPageHref="/shop/demo/dive-sites?view=catalog"
+          openSiteLabel="Open site"
+          loadDetails={async () => null}
+          detailWords={{ loading: "Loading", unavailable: "Unavailable" }}
+          clusterLabel="dive sites"
+          zoomHint="Use ⌘ or Ctrl + scroll to zoom"
+        >
+          <div>Rows</div>
+        </CatalogMapLayout>
+      ),
+    ],
+  ])("draws Filter by map on the %s map, not under it", (_view, layout) => {
+    render(layout());
+    const map = screen.getByTestId("map-container");
+    expect(map).toContainElement(screen.getByRole("switch", { name: /Filter by map/ }));
   });
 });

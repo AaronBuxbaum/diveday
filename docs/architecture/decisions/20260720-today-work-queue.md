@@ -39,9 +39,9 @@ Rules that define the queue, encoded in [`src/features/today/today.ts`](../../..
   Send waivers"), which sent the desk to the roster to find out who; each is named, with every gap
   open for them on that boat (`oneRowPerDiver`). Two or more ashore sharing a waiver gap keep one
   boat row above them that sends every one ("3 waivers not signed · Send waivers",
-  `waiverBatchActions`). A busy departure still cannot bury the others: its
-  group shows five rows and folds the rest behind "and N more" (`foldBoatRows`), never a danger
-  row or a readiness blocker. A readiness blocker leads its diver's row with its own fix and
+  `waiverBatchActions`). Every row is shown; nothing sits behind "and N more"
+  (Aaron, 2026-11-13), and two or more divers with the same boat gap (no emergency contact, no
+  size, kit not asked, unverified nitrox) share one row naming them all. A readiness blocker leads its diver's row with its own fix and
   sentence, the other gaps after it ("Not cleared to dive by a physician; also waiver").
 - **Chronological, then severity.** The 07:00 boat's problems outrank the 14:00 boat's. Severity
   ranks by how long a fix takes to land — evidence that must come from a diver or a physician

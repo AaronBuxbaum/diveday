@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
 import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
 import {
+  appendOfflineArrival,
   appendOfflineChecklistCheck,
   appendOfflineRollCall,
   loadOfflineManifest,
@@ -332,5 +333,47 @@ describe("discarded offline roll-call notes", () => {
     expect(lateOlder.snapshot.snapshotId).toBe(newest.snapshot.snapshotId);
     expect(lateOlder.snapshot.manifests[0]?.trip.title).toBe("Newer board facts");
     expect(lateOlder.snapshot.savedAt).toBe(newest.snapshot.savedAt);
+  });
+
+  it("keeps pending work and the newer erased roster when an older tab saves and refresh fails", async () => {
+    const old = { ...payload, erasureEpochToken: `4.1.${"A".repeat(43)}` };
+    await saveOfflineManifest(old);
+    const roll = await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    const check = await appendOfflineChecklistCheck(tripId, {
+      checklistItemId,
+      status: "checked",
+      note: null,
+    });
+    const arrival = await appendOfflineArrival(tripId, { bookingId, status: "arrived" });
+    const newer: OfflineManifestPayload = {
+      ...old,
+      snapshotId: "66666666-6666-4666-8666-666666666666",
+      erasureEpochToken: `5.2.${"A".repeat(43)}`,
+      manifests: old.manifests.map((manifest) => ({
+        ...manifest,
+        divers: manifest.divers.map((diver) => ({ ...diver, fullName: OFFLINE_ERASED_NAME })),
+      })),
+    };
+    await saveOfflineManifest(newer);
+    const fromOldTab = await saveOfflineManifest(old);
+    expect(fromOldTab.snapshot.manifests[0]?.divers[0]?.fullName).toBe(OFFLINE_ERASED_NAME);
+    server.use(http.post("/api/offline-manifests/sync", () => HttpResponse.error()));
+    await expect(syncOfflineManifest(tripId)).rejects.toMatchObject({ code: "sync_unreachable" });
+    const afterFailure = await loadOfflineManifest(tripId);
+    expect(afterFailure?.snapshot.snapshotId).toBe(newer.snapshotId);
+    expect(afterFailure?.snapshot.manifests[0]?.divers[0]?.fullName).toBe(OFFLINE_ERASED_NAME);
+    expect(afterFailure?.events.map((event) => [event.clientEventId, event.syncStatus])).toEqual([
+      [roll.events[0]?.clientEventId, "pending"],
+    ]);
+    expect(
+      afterFailure?.checklistEvents.map((event) => [event.clientEventId, event.syncStatus]),
+    ).toEqual([[check.checklistEvents[0]?.clientEventId, "pending"]]);
+    expect(
+      afterFailure?.arrivalEvents?.map((event) => [event.clientEventId, event.syncStatus]),
+    ).toEqual([[arrival.arrivalEvents?.[0]?.clientEventId, "pending"]]);
   });
 });

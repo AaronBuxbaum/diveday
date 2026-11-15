@@ -45,7 +45,6 @@ export {
   diverBlockerAction,
   type FactOfScale,
   factOfScaleFor,
-  foldBoatRows,
   groupByDeparture,
   type NeedsYouReading,
   readNeedsYou,

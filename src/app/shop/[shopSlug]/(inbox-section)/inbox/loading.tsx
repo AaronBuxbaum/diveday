@@ -1,0 +1,45 @@
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
+
+/**
+ * Body-shaped skeleton for the inbox (design principle 1): a group label, then
+ * hairline rows on the page carrying a channel word, a name, and what was
+ * written. The same shape `InboxRow` renders, so the page landing under it
+ * does not jump.
+ */
+function MessageRows({ count }: { count: number }) {
+  return (
+    <div className="mt-2">
+      {Array.from({ length: count }, (_, index) => (
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: static bars, no identity of their own
+          key={index}
+          className={`flex items-center gap-3 py-3 ${ledgerRowBoxClass}`}
+        >
+          <Bone className="h-4 w-20 shrink-0" />
+          <Bone className="h-4 w-32 shrink-0 max-md:hidden" />
+          <div className="flex-1 space-y-2">
+            <Bone className="h-4 w-2/3" />
+            <Bone className="h-3 w-1/2" />
+          </div>
+          <Bone className="h-4 w-24 shrink-0" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function InboxLoading() {
+  return (
+    <Pending>
+      <div className="space-y-10">
+        {[3, 2].map((rows) => (
+          <div key={rows}>
+            <Bone className="h-4 w-40 max-w-full" />
+            <MessageRows count={rows} />
+          </div>
+        ))}
+      </div>
+    </Pending>
+  );
+}

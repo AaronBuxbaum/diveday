@@ -20,7 +20,15 @@ import { rentalRows } from "./rental-rows";
  * the counter's QR door, card checks and the packing list, the dock day's
  * rhythm, and what the shop rents (for the reader who may manage payments).
  */
-export function BookingsGroup({ view, canPayments }: { view: SettingsView; canPayments: boolean }) {
+export function BookingsGroup({
+  view,
+  canManageWaivers,
+  canPayments,
+}: {
+  view: SettingsView;
+  canManageWaivers: boolean;
+  canPayments: boolean;
+}) {
   const { shop, shopSlug, t, banner, activeSection, notSet } = view;
   const packingValue =
     shop.packingList.length > 0
@@ -29,6 +37,13 @@ export function BookingsGroup({ view, canPayments }: { view: SettingsView; canPa
   return (
     <SettingsGroup group={BOOKINGS_GROUP} label={t(BOOKINGS_GROUP.labelKey)}>
       <InsetGroup>
+        {canManageWaivers ? (
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/settings/waivers`}
+            heading={t("settings.main.waivers.heading")}
+          />
+        ) : null}
+
         {/* The counter's own door (issue #1236): a QR a shop prints and
             puts on the desk, so a walk-in who has booked nothing can put
             themselves on file before they reach the front of the queue.

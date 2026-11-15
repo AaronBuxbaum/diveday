@@ -136,18 +136,6 @@ export function tripPacketPath(shopSlug: string, tripId: string): string {
   return `${shopPath(shopSlug, "trips", tripId)}?print=1`;
 }
 
-/** The print state that carries the medical alerts' words. */
-export const MEDICAL_ALERTS_PRINT = "medical-alerts";
-
-/**
- * Where the packet with the medical alerts' words is drawn: the same print
- * state, with the alerts (#2736). Opened by a form's `window.open`, never a
- * prefetching link, because drawing it writes the trail.
- */
-export function tripMedicalAlertsPacketPath(shopSlug: string, tripId: string): string {
-  return `${shopPath(shopSlug, "trips", tripId)}?print=${MEDICAL_ALERTS_PRINT}`;
-}
-
 /**
  * Where a booking's paper pass is drawn.
  *

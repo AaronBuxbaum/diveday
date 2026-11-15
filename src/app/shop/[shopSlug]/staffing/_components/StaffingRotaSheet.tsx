@@ -106,7 +106,7 @@ export function StaffingRotaSheet({
         {week.people.map((person) => (
           <tr key={person.personId} className="border-b border-border">
             <th scope="row" className="py-2 pe-2 text-start align-top font-normal">
-              <PersonFace person={person} totals={words.personTotals?.[person.personId]} />
+              <PersonFace print person={person} totals={words.personTotals?.[person.personId]} />
             </th>
             {person.days.map((cell, index) => (
               <td key={cell.date} className={DAY_CELL}>

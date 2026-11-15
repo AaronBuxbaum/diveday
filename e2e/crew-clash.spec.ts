@@ -2,7 +2,14 @@ import type { Page } from "@playwright/test";
 import { weekStartOf } from "@/lib/week-board";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripAbout, tripPathByTitle } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openTripAbout,
+  selectCrewByName,
+  tripPathByTitle,
+} from "./helpers";
 
 signedInAsOwner();
 
@@ -81,7 +88,7 @@ test.describe("a standing crew clash", () => {
       // Every control in this panel is wired through React handlers, so a pick
       // made before hydration silently does nothing.
       await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
-      await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+      await selectCrewByName(page, "Marcus Webb");
       await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
       // Nothing is wrong yet: the two boats do not overlap, so neither panel
       // says a word about the other.

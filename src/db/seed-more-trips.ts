@@ -1,4 +1,5 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { withDemoCrewEvidence } from "@/db/seed-crew-evidence";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
@@ -932,7 +933,10 @@ async function seedDawnBoatRecord(
       occurredAt: dawnCheckpointAt(trip, index),
     })),
   );
-  if (crewRows.length > 0) await seedRollCallEvidence(db, crewRows, { observesPrevious: false });
+  if (crewRows.length > 0)
+    await seedRollCallEvidence(db, await withDemoCrewEvidence(db, shopId, crewRows), {
+      observesPrevious: false,
+    });
 
   // Both tanks logged at the reef's ordinary depth, each dive ending a few
   // minutes before the after-dive count that closes it.

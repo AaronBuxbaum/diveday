@@ -287,7 +287,9 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // "Saved … · 0 waiting to send" line already say it, and the card used to
   // carry all three at once (see OfflineManifestManager).
   await expect(page.getByRole("button", { name: "Refresh now" })).toBeVisible();
-  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await expect(
+    page.getByText(staff("trips.offlineManifestManager.freshnessCurrent")),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();
@@ -1237,7 +1239,9 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
   await offlineCopySaved(page);
   await openOnThisPhone(page);
   await page.getByRole("button", { name: "Refresh now" }).click();
-  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await expect(
+    page.getByText(staff("trips.offlineManifestManager.freshnessCurrent")),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
 
@@ -1420,7 +1424,9 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await offlineCopySaved(page);
   await openOnThisPhone(page);
   await page.getByRole("button", { name: "Refresh now" }).click();
-  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await expect(
+    page.getByText(staff("trips.offlineManifestManager.freshnessCurrent")),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
 
@@ -1600,8 +1606,7 @@ async function onDiverTrail(page: Page, diverName: string, line: string) {
 
 /**
  * Issue #2990, part 1: the owner prints the packet with the medical alerts'
- * words under each row, for a crew whose phone is dead at sea; the default
- * packet keeps the flag only; the print is on the diver's trail.
+ * words under each row, for a crew whose phone is dead at sea; the print is on the diver's trail.
  */
 test("an owner prints the packet with the medical alerts, and the print is on the diver's trail", async ({
   page,
@@ -1613,22 +1618,13 @@ test("an owner prints the packet with the medical alerts, and the print is on th
   await openTripAbout(page);
   const tripPath = new URL(page.url()).pathname;
 
-  // The default packet: the flag, never the words.
-  await page.goto(`${tripPath}?print=1`);
-  await page.emulateMedia({ media: "print" });
-  await expect(page.getByText(staff("manifest.medicalAlertPrinted")).first()).toBeVisible();
-  await expect(page.getByText(DEMO_MEDICAL_ALERT)).toHaveCount(0);
-  await page.emulateMedia({ media: "screen" });
-
-  await page.goto(tripPath);
-  await openTripAbout(page);
-  const choice = page.getByRole("button", { name: staff("trips.about.printWithMedicalAlerts") });
-  await expect(choice).toBeVisible();
+  const choice = page.getByRole("button", { name: staff("trips.about.printPacket") });
+  await expect(choice).toHaveCount(1);
   const popupPromise = page.waitForEvent("popup");
   await choice.click();
   const popup = await popupPromise;
   await popup.waitForLoadState("domcontentloaded");
-  await expect(popup).toHaveURL(new RegExp(`${tripPath}\\?print=medical-alerts$`));
+  await expect(popup).toHaveURL(new RegExp(`${tripPath}\\?print=1$`));
   await popup.emulateMedia({ media: "print" });
   await expect(popup.getByText(DEMO_MEDICAL_ALERT)).toBeVisible();
   await expect(

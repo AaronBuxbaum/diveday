@@ -70,6 +70,8 @@ const NOTICE_KEYS: Record<
   },
   crew: { form: "crew", tone: "success", key: "trips.notices.crew" },
   "crew-conflict": { form: "crew", tone: "danger", key: "trips.notices.crewConflict" },
+  "crew-moved": { form: "crew", tone: "success", key: "trips.notices.crewMoved" },
+  "crew-moved-clash": { form: "crew", tone: "warning", key: "trips.notices.crewMovedClash" },
   "note-added": { form: "roster", tone: "success", key: "trips.notices.noteAdded" },
   "note-deleted": { form: "roster", tone: "success", key: "trips.notices.noteDeleted" },
   "booking-removed": { form: "roster", tone: "success", key: "trips.notices.bookingRemoved" },

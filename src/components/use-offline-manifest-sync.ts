@@ -2,6 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  hasManifestRereadOwner,
+  markManifestReadStale,
+  requestManifestReread,
+  resetManifestRereadBudget,
+} from "@/components/manifest-stale-generation";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
 import {
@@ -17,7 +23,10 @@ import {
   OFFLINE_MANIFEST_STALE_READ,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
+  pendingOfflineEventCount,
+  rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
+import { useOfflineManifestSaved } from "./use-offline-manifest-saved";
 
 // Fallback only — see ADR 20260726-manifest-push-refresh. The SSE
 // subscription below is the primary trigger; this interval (plus
@@ -59,6 +68,48 @@ export interface OfflineManifestSyncCopy {
   refreshNoSignal: string;
 }
 
+function recordReload(
+  envelope: OfflineManifestEnvelope | null,
+  counters: {
+    pending: { current: number };
+    rejected: { current: number };
+    cutoff: { current: number };
+    unverified: { current: number };
+  },
+  copy: OfflineManifestSyncCopy,
+  setMessage: React.Dispatch<React.SetStateAction<string>>,
+  refresh: () => void,
+  externalSync: boolean,
+) {
+  const pending = envelope ? pendingOfflineEventCount(envelope) : 0;
+  const before = counters.pending.current;
+  counters.pending.current = pending;
+  counters.rejected.current = envelope ? rejectedOfflineEventCount(envelope) : 0;
+  counters.cutoff.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
+  counters.unverified.current = noteDispositionCount(envelope, "discarded_unverified_snapshot");
+  if (!navigator.onLine) setMessage(envelope ? copy.offlineWithSavedCopy : copy.offlineNoSavedCopy);
+  if (pending > 0) setMessage((current) => (current === copy.reconcileCaughtUp ? "" : current));
+  if (envelope && navigator.onLine && (externalSync || (before > 0 && pending === 0))) refresh();
+}
+
+function useSavedAndCounters(
+  tripId: string,
+  copy: OfflineManifestSyncCopy,
+  setMessage: React.Dispatch<React.SetStateAction<string>>,
+  refresh: () => void,
+) {
+  const counters = useRef({
+    pending: { current: 0 },
+    rejected: { current: 0 },
+    cutoff: { current: 0 },
+    unverified: { current: 0 },
+  }).current;
+  const state = useOfflineManifestSaved(tripId, (envelope, externalSync) =>
+    recordReload(envelope, counters, copy, setMessage, refresh, externalSync),
+  );
+  return { ...state, counters };
+}
+
 /**
  * Everything the "On this phone" card does to the device's offline copy: the
  * save, the pending-event reconcile, and the four refresh triggers (interval,
@@ -71,7 +122,6 @@ export function useOfflineManifestSync(
 ) {
   const router = useRouter();
   const tripId = payload.manifests[0]?.trip.id ?? "";
-  const [saved, setSaved] = useState<OfflineManifestEnvelope | null>(null);
   const [message, setMessage] = useState(copy.checkingDevice);
   const [busy, setBusy] = useState(false);
   const [settled, setSettled] = useState(false);
@@ -97,21 +147,25 @@ export function useOfflineManifestSync(
   // payload re-triggers the effect below, which reconciles again: an
   // unbounded loop. Comparing against the last-seen counts catches only a
   // genuine transition (something newly resolved, or newly rejected).
-  const lastPendingCount = useRef(0);
-  const lastRejectedCount = useRef(0);
-  const lastCutoffNoteCount = useRef(0);
-  const lastUnverifiedNoteCount = useRef(0);
+  const { saved, setSaved, savedRevision, counters } = useSavedAndCounters(
+    tripId,
+    copy,
+    setMessage,
+    () => {
+      resetManifestRereadBudget(tripId);
+      if (hasManifestRereadOwner(tripId)) requestManifestReread(tripId);
+      else router.refresh();
+    },
+  );
   // Set right before a manual "Refresh now" (or router.refresh() call below)
   // whose resulting save should show the loud confirmation instead of
   // passing silently, since the save itself only happens once the refreshed
   // payload actually lands as a prop (see the payload effect).
   const manualRefreshPending = useRef(false);
-  // Set when a stale claim asked for one re-read of the page (issue #4391), so
-  // a second stale claim in a row does not ask again.
-  const staleReread = useRef(false);
 
   const runReconcileOnce = useCallback(async () => {
     if (!tripId) return;
+    const savedAtStart = savedRevision.current;
     // Offline, or a reconcile that could not reach the server: hand the flush
     // to Background Sync so it happens when signal returns *even if this page
     // is gone by then* (ADR 20260804-manifest-web-push). Without this, roll
@@ -126,10 +180,10 @@ export function useOfflineManifestSync(
       void requestBackgroundFlush();
       return;
     }
-    const pendingBefore = lastPendingCount.current;
-    const rejectedBefore = lastRejectedCount.current;
-    const cutoffNotesBefore = lastCutoffNoteCount.current;
-    const unverifiedNotesBefore = lastUnverifiedNoteCount.current;
+    const pendingBefore = counters.pending.current;
+    const rejectedBefore = counters.rejected.current;
+    const cutoffNotesBefore = counters.cutoff.current;
+    const unverifiedNotesBefore = counters.unverified.current;
     try {
       const tenantRound = await beginOfflineTenantVerificationRound();
       const expectedShopSlug = payloadRef.current.shop.slug;
@@ -140,17 +194,20 @@ export function useOfflineManifestSync(
       }
       const envelope = await syncOfflineManifest(tripId, expectedShopSlug, tenantRound);
       if (envelope) {
-        setSaved(envelope);
-        const rejected = envelope.events.filter((event) => event.syncStatus === "rejected").length;
-        const pending = envelope.events.filter((event) => event.syncStatus === "pending").length;
+        if (!setSaved(envelope, savedAtStart)) {
+          if (pendingBefore > 0) router.refresh();
+          return;
+        }
+        const rejected = rejectedOfflineEventCount(envelope);
+        const pending = pendingOfflineEventCount(envelope);
         const cutoffNotes = noteDispositionCount(envelope, "discarded_erasure_cutoff");
         const unverifiedNotes = noteDispositionCount(envelope, "discarded_unverified_snapshot");
         const noteWasDiscarded =
           cutoffNotes > cutoffNotesBefore || unverifiedNotes > unverifiedNotesBefore;
-        lastPendingCount.current = pending;
-        lastRejectedCount.current = rejected;
-        lastCutoffNoteCount.current = cutoffNotes;
-        lastUnverifiedNoteCount.current = unverifiedNotes;
+        counters.pending.current = pending;
+        counters.rejected.current = rejected;
+        counters.cutoff.current = cutoffNotes;
+        counters.unverified.current = unverifiedNotes;
         // Only narrate/refresh the live page on a genuine transition this
         // round (something was pending before, or a new rejection landed) —
         // a snapshot with only long-resolved events stays silent forever.
@@ -189,7 +246,7 @@ export function useOfflineManifestSync(
       // Not awaited, for the same reason as above.
       void requestBackgroundFlush();
     }
-  }, [router, tripId, copy]);
+  }, [router, tripId, copy, setSaved, savedRevision, counters]);
 
   // A reconciling device applying a backlog of offline events publishes one
   // push signal per event (recordRollCall), and this same device is normally
@@ -236,6 +293,7 @@ export function useOfflineManifestSync(
 
   const runSaveOnce = useCallback(
     async (opts: { silent: boolean }) => {
+      const savedAtStart = savedRevision.current;
       if (!opts.silent) {
         setBusy(true);
         setMessage(copy.savingMessage);
@@ -255,7 +313,7 @@ export function useOfflineManifestSync(
           if (!existing || existing.snapshot.shop.slug !== currentPayload.shop.slug) {
             throw new Error(copy.saveErrorFallback);
           }
-          setSaved(existing);
+          setSaved(existing, savedAtStart);
           return;
         }
         // The page issues no snapshot (issue #4391): trade the epoch and
@@ -279,13 +337,16 @@ export function useOfflineManifestSync(
         if (readKey && savedReads.has(readKey)) {
           const existing = await loadOfflineManifest(tripId).catch(() => null);
           if (existing) {
-            setSaved(existing);
-            setMessage("");
+            if (setSaved(existing, savedAtStart)) setMessage("");
             return;
           }
           savedReads.delete(readKey);
         }
-        const claimed = await claimOfflineManifestSnapshot(currentPayload);
+        const claimed = await claimOfflineManifestSnapshot(currentPayload, {
+          onStale: () => {
+            markManifestReadStale(tripId);
+          },
+        });
         if (claimed === OFFLINE_MANIFEST_STALE_READ) {
           // The copy already on this device stands: drop "Saving…" rather
           // than leave it up if the re-read never lands.
@@ -293,29 +354,16 @@ export function useOfflineManifestSync(
             const existing = await loadOfflineManifest(tripId).catch(() => null);
             setMessage(existing ? "" : copy.saveErrorFallback);
           }
-          // One re-read per stale claim, never a loop: if the re-read's own
-          // claim is stale too, stop and leave it to the next refresh trigger.
-          if (staleReread.current) {
-            staleReread.current = false;
-          } else {
-            staleReread.current = true;
-            router.refresh();
-          }
           return;
         }
-        staleReread.current = false;
         if (!claimed) throw new Error(copy.saveErrorFallback);
         const envelope = await saveOfflineManifest(claimed, { tenantRound });
-        setSaved(envelope);
         if (readKey) savedReads.add(readKey);
-        lastPendingCount.current = envelope.events.filter(
-          (event) => event.syncStatus === "pending",
-        ).length;
-        lastRejectedCount.current = envelope.events.filter(
-          (event) => event.syncStatus === "rejected",
-        ).length;
-        lastCutoffNoteCount.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
-        lastUnverifiedNoteCount.current = noteDispositionCount(
+        if (!setSaved(envelope, savedAtStart)) return;
+        counters.pending.current = pendingOfflineEventCount(envelope);
+        counters.rejected.current = rejectedOfflineEventCount(envelope);
+        counters.cutoff.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
+        counters.unverified.current = noteDispositionCount(
           envelope,
           "discarded_unverified_snapshot",
         );
@@ -333,7 +381,7 @@ export function useOfflineManifestSync(
         if (!opts.silent) setBusy(false);
       }
     },
-    [copy, tripId, router],
+    [copy, tripId, setSaved, savedRevision, counters],
   );
 
   const save = useCallback(
@@ -378,28 +426,29 @@ export function useOfflineManifestSync(
     if (!tripId) return;
     let cancelled = false;
     (async () => {
+      const initialRevision = savedRevision.current;
       const envelope = await loadOfflineManifest(tripId).catch(() => null);
       if (cancelled) return;
-      setSaved(envelope);
+      const accepted = setSaved(envelope, initialRevision);
       // The pills and the saved-summary line take over the moment there is an
       // envelope for them to describe — "Checking this device…" only stands in
       // for a card with nothing on it yet, and left up beside "Fresh copy ·
       // Saved 9:30 AM" it is a fourth voice saying the same thing. A failure
       // from the save below still lands in this same region.
-      if (envelope) setMessage("");
+      if (accepted && envelope) setMessage("");
       // Reflects reality even when the branch below can't run yet (e.g. this
       // mount happens while offline) — otherwise reconcile()'s "did anything
       // just resolve/newly reject" check compares against a stale 0 once
       // connectivity returns, on a device that already had events from before.
-      lastPendingCount.current =
-        envelope?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
-      lastRejectedCount.current =
-        envelope?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
-      lastCutoffNoteCount.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
-      lastUnverifiedNoteCount.current = noteDispositionCount(
-        envelope,
-        "discarded_unverified_snapshot",
-      );
+      if (accepted) {
+        counters.pending.current = envelope ? pendingOfflineEventCount(envelope) : 0;
+        counters.rejected.current = envelope ? rejectedOfflineEventCount(envelope) : 0;
+        counters.cutoff.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
+        counters.unverified.current = noteDispositionCount(
+          envelope,
+          "discarded_unverified_snapshot",
+        );
+      }
       if (navigator.onLine) {
         const manual = manualRefreshPending.current;
         manualRefreshPending.current = false;
@@ -408,14 +457,14 @@ export function useOfflineManifestSync(
         setSettled(true);
         await reconcile();
       } else {
-        setMessage(envelope ? copy.offlineWithSavedCopy : copy.offlineNoSavedCopy);
+        if (accepted) setMessage(envelope ? copy.offlineWithSavedCopy : copy.offlineNoSavedCopy);
         setSettled(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [tripId, payload, save, reconcile]);
+  }, [tripId, payload, save, reconcile, savedRevision, setSaved]);
 
   // Refresh the *server* data this device would save, rather than
   // re-encrypting whatever `payload` happened to be captured at the last
@@ -432,6 +481,7 @@ export function useOfflineManifestSync(
         if (opts.manual) setMessage(copy.refreshNoSignal);
         return;
       }
+      resetManifestRereadBudget(tripId);
       if (opts.manual) {
         manualRefreshPending.current = true;
         setBusy(true);
@@ -440,13 +490,18 @@ export function useOfflineManifestSync(
       router.refresh();
       void reconcile();
     },
-    [router, reconcile, copy],
+    [router, reconcile, copy, tripId],
   );
 
   useEffect(() => {
     if (!tripId) return;
     const onOnline = () => {
-      if (navigator.onLine) refresh({ manual: false });
+      if (!navigator.onLine) return;
+      resetManifestRereadBudget(tripId);
+      // The freshness owner requests the correlated read on reconnect.
+      // Reconcile the queued events without issuing a second independent read.
+      if (hasManifestRereadOwner(tripId)) void reconcile();
+      else refresh({ manual: false });
     };
     const onVisible = () => {
       if (document.visibilityState === "visible" && navigator.onLine) refresh({ manual: false });
@@ -461,7 +516,7 @@ export function useOfflineManifestSync(
       document.removeEventListener("visibilitychange", onVisible);
       clearInterval(interval);
     };
-  }, [tripId, refresh]);
+  }, [tripId, refresh, reconcile]);
 
   // Primary trigger — see ADR 20260726-manifest-push-refresh. `EventSource`
   // reconnects on its own when the stream drops, and the route deliberately

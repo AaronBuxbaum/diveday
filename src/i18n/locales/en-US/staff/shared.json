@@ -1,7 +1,7 @@
 {
   "limits": {
     "sendLimit": "You have sent a lot of {thing, select, replies {replies} recaps {recaps} invites {invites} links {links} notes {notes} invoices {invoices} other {messages}} this hour. Nothing went out; try again in a little while.",
-    "ownerOrManager": "Only an owner or manager can {act, select, whatsapp {change WhatsApp settings} integrations {change integrations} backup {change backup settings} questionnaire {read the full questionnaire} invoice {send an invoice} bill {send a bill} courseForm {take a form off a course} other {do this}}."
+    "ownerOrManager": "Only an owner or manager can {act, select, whatsapp {change WhatsApp settings} integrations {change integrations} backup {change backup settings} questionnaire {read the full questionnaire} invoice {send an invoice} bill {send a bill} other {do this}}."
   },
   "operationalWindow": {},
   "padiChecksOff": "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Features.",
@@ -300,7 +300,8 @@
     "requests": "Date requests",
     "inbox": "Messages",
     "orders": "Orders",
-    "waivers": "Waivers",
+    "waivers": "Waivers and forms",
+    "signedWaivers": "Signed waivers",
     "reports": "Reports",
     "safety": "Safety",
     "promoCodes": "Discounts",
@@ -471,6 +472,7 @@
       "confirmAboard": "Confirm {name} is aboard",
       "markedElsewhere": "Recorded on another device or on the live manifest. Undo it there, not here.",
       "openLiveManifest": "Open live manifest",
+      "refusedMissingRollCall": "Roll-call change for reference {reference} at {checkpoint} was not accepted. Review it with the crew.",
       "record": {
         "expiredCannotRecord": "This saved copy has expired. Open the live manifest to record roll call.",
         "expiredRecordOnLive": "Expired — record on the live manifest",
@@ -481,11 +483,13 @@
       },
       "checklist": {
         "heading": "Before you leave the dock",
+        "rejectedItem": "{item}: this offline change was not accepted. Review the live checklist.",
         "checkedLabel": "Checked — press twice to clear",
         "confirmClear": "Tap again to clear",
         "uncheckedLabel": "Not checked — press to mark checked"
       },
       "counter": {
+        "refusedMissingSeat": "Arrival change for booking {reference} was not accepted. Review it with the desk.",
         "heading": "At the counter",
         "notCheckedInLabel": "Check in",
         "refusedNotReady": "Not checked in: readiness stopped clearing them after you tapped. Open the live counter before they board.",

@@ -1,66 +1,11 @@
 /**
  * Map URLs, built from a plain-text location query or coordinates.
  *
- * Provider-neutral, open mapping via OpenStreetMap: no proprietary keys, no tracking,
- * and no client SDK dependencies.
- *
- * The meeting point's frame on `/ready` consumes `osmMapEmbedUrl`, which targets
- * OpenStreetMap's standard export embed endpoint. Dive-site maps draw on the
- * shared basemap instead (`src/lib/basemap.ts`).
+ * The meeting point and dive-site maps draw on the shared basemap
+ * (`src/lib/basemap.ts`).
  *
  * Callers needing a link out for directions or maps exploration consume `openMapsUrl`.
  */
-
-/**
- * Bounds around a coordinate for OSM embed framing.
- * Delta in degrees roughly corresponding to standard zoom levels (0.01 deg ~= 1.1km at equator).
- */
-function zoomToDegreesDelta(zoom: number): number {
-  // Zoom 15 ~= ~0.015 degrees bbox width, zoom 16 ~= ~0.008, etc.
-  // Standard zoom level formula: 360 / (2^zoom)
-  return 360 / 2 ** zoom;
-}
-
-/**
- * The OpenStreetMap export embed URL for coordinate pairs (`lat,lng`).
- *
- * Renders an iframe src with a bounding box centered on the coordinate.
- * When `showMarker` is true, an OSM pin is placed at the center coordinate.
- */
-export function osmCoordsEmbedUrl(coordinates: string, zoom = 15, showMarker = false): string {
-  const parts = coordinates.split(",").map((p) => Number.parseFloat(p.trim()));
-  const lat = parts[0];
-  const lng = parts[1];
-
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return `https://www.openstreetmap.org/export/embed.html?layer=mapnik`;
-  }
-
-  const delta = zoomToDegreesDelta(zoom);
-  const minLng = (lng - delta).toFixed(5);
-  const minLat = (lat - delta / 2).toFixed(5);
-  const maxLng = (lng + delta).toFixed(5);
-  const maxLat = (lat + delta / 2).toFixed(5);
-  const bbox = `${minLng}%2C${minLat}%2C${maxLng}%2C${maxLat}`;
-
-  const markerParam = showMarker ? `&marker=${lat}%2C${lng}` : "";
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik${markerParam}`;
-}
-
-/**
- * The OpenStreetMap embed URL for a text query or coordinate string.
- * If query is coordinate format ("lat,lng"), produces a framed embed with a marker.
- * If textual, centers on a default view.
- */
-export function osmMapEmbedUrl(query: string): string {
-  const parts = query.split(",").map((p) => Number.parseFloat(p.trim()));
-  if (parts.length === 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
-    return osmCoordsEmbedUrl(query, 15, true);
-  }
-  // For free-text addresses, pass the query into the embed so that the location
-  // context is retained in the frame URL.
-  return `https://www.openstreetmap.org/export/embed.html?layer=mapnik&query=${encodeURIComponent(query.trim())}`;
-}
 
 /**
  * A link out to Google Maps for directions or map inspection.
@@ -128,13 +73,11 @@ export const openMapsUrl = googleMapsUrl;
  * of the box where routes or meeting points sit. A one-pixel read of the host
  * decides first.
  *
- * The route maps draw on the shared basemap (`src/lib/basemap.ts`), so they ask
- * its tile host. The meeting point's map on `/ready` is still an OpenStreetMap
- * embed of a typed address (no coordinates to place a tile map on), so it asks
- * OpenStreetMap.
+ * Both route and meeting point maps ask the shared basemap tile host.
  */
 export const MAP_REACHABILITY_PROBES = [
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/0/0/0",
 ] as const;
 
+// Retained by the existing CSP and network-policy tests until that policy is narrowed.
 export const ARRIVAL_MAP_PROBES = ["https://tile.openstreetmap.org/0/0/0.png"] as const;

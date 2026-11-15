@@ -45,12 +45,7 @@ import { formatWallTime } from "@/lib/forgiving-fields";
 import { formatTime } from "@/lib/format";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { minorToMajor } from "@/lib/money";
-import {
-  isValidWeekdaySet,
-  MAX_INTERVAL_WEEKS,
-  type WeekdaySet,
-  weekdaySetFrom,
-} from "@/lib/recurrence";
+import { isValidWeekdaySet, MAX_INTERVAL_WEEKS } from "@/lib/recurrence";
 import { shopPath } from "@/lib/staff-notices";
 import { laterHoursFromForm, MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
@@ -63,6 +58,7 @@ import type { BuilderPattern, BuilderTideWindowInput } from "./_components/Sched
 import { addRefusalLanding, landAfterAdd } from "./add-landing";
 import { attachRequestedInterests, requestsAskForCharter } from "./attach-interests";
 import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
+import { crewPersonIdsFrom, repeatWeekdaysFrom } from "./crew-form";
 
 const removeDepartureForm = z.object({ tripId: z.uuid() });
 
@@ -377,24 +373,6 @@ const addSchema = z.object({
   ),
 });
 
-/**
- * The crew chips the pattern offered, minus any the desk took off. Repeats of
- * one name, so read off the form directly like the weekday checkboxes.
- */
-function crewPersonIdsFrom(formData: FormData): string[] | null {
-  const parsed = z.array(z.uuid()).safeParse(formData.getAll("crewPersonIds"));
-  return parsed.success ? parsed.data : null;
-}
-
-/**
- * The weekday checkboxes, which a `FormData` carries as repeats of one name and
- * `Object.fromEntries` therefore collapses to the last one — so they are read
- * off the form directly rather than through the schema above.
- */
-function repeatWeekdaysFrom(formData: FormData): WeekdaySet {
-  return weekdaySetFrom(formData.getAll("repeatWeekday").map((value) => Number(value)));
-}
-
 export async function addDepartureAction(shopSlug: string, formData: FormData) {
   const back = `${boardPath(shopSlug)}?add=1`; // a refusal keeps the add panel open
   const submittedWeek = formData.get("boardWeek");
@@ -571,11 +549,14 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     if (!series) return await invalid();
     const firstTrip = series.trips[0];
     if (!firstTrip) return await invalid();
+    let crewIncomplete = false;
     for (const trip of series.trips) {
       if (crewPersonIds.length > 0) {
-        await setTripCrew(db, shop.id, trip.id, crewPersonIds, {
+        const assigned = await setTripCrew(db, shop.id, trip.id, crewPersonIds, {
           actorPersonId: session.user.personId,
+          requireScheduledShift: true,
         });
+        crewIncomplete ||= !assigned;
       }
     }
     // One line for the series, on its first instance, rather than one per
@@ -596,6 +577,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       series.trips.length,
       firstTrip.id,
       formData,
+      crewIncomplete,
     );
   }
 
@@ -612,10 +594,12 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     actorPersonId: session.user.personId,
     write: { code: "departure_added", tripId: created.id },
   });
+  let crewIncomplete = false;
   if (crewPersonIds.length > 0) {
-    await setTripCrew(db, shop.id, created.id, crewPersonIds, {
+    crewIncomplete = !(await setTripCrew(db, shop.id, created.id, crewPersonIds, {
       actorPersonId: session.user.personId,
-    });
+      requireScheduledShift: true,
+    }));
   }
   // A rehearsal answers nobody's request, and the writer skips it.
   await attachRequestedInterests(db, shop.id, created.id, session.user.personId, formData);
@@ -637,10 +621,20 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
           boats: boatId ? await listBoats(db, shop.id) : null,
           actorPersonId: session.user.personId,
         })
-      : false;
+      : { added: false, crewIncomplete: false };
+  crewIncomplete ||= addedAlso.crewIncomplete;
   await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
   await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
-  return await landAfterAdd(db, shop, shopSlug, title, addedAlso ? 2 : 1, created.id, formData);
+  return await landAfterAdd(
+    db,
+    shop,
+    shopSlug,
+    title,
+    addedAlso.added ? 2 : 1,
+    created.id,
+    formData,
+    crewIncomplete,
+  );
 }
 
 /**
@@ -667,7 +661,7 @@ async function addPatternDeparture(
     /** The staffer adding it, who is not told about their own crew choice. */
     actorPersonId: string;
   },
-): Promise<boolean> {
+): Promise<{ added: boolean; crewIncomplete: boolean }> {
   const { also, date, fallback } = input;
   const boatId = also.boatId ?? undefined;
   const boats = boatId ? (input.boats ?? (await listBoats(db, shop.id))) : null;
@@ -689,8 +683,9 @@ async function addPatternDeparture(
     },
     shop,
   );
-  if (!details.ok) return false;
-  if (also.lensId && !(await getTripLens(db, shop.id, also.lensId))) return false;
+  if (!details.ok) return { added: false, crewIncomplete: false };
+  if (also.lensId && !(await getTripLens(db, shop.id, also.lensId)))
+    return { added: false, crewIncomplete: false };
   // Issue #3915: the second departure refuses a hull in the yard as the first
   // does, in the write (#4009).
   const created = await createTripOrRefusal(db, {
@@ -711,17 +706,20 @@ async function addPatternDeparture(
     endsAt: details.patch.endsAt,
     scheduleDays: details.patch.scheduleDays,
   });
-  if (!created || "refusal" in created) return false;
+  if (!created || "refusal" in created) return { added: false, crewIncomplete: false };
   await recordShopActivity(db, {
     shopId: shop.id,
     actorPersonId: input.actorPersonId,
     write: { code: "departure_added", tripId: created.id },
   });
   const crew = also.crewPersonIds.length > 0 ? also.crewPersonIds : fallback.crewPersonIds;
-  if (crew.length > 0) {
-    await setTripCrew(db, shop.id, created.id, crew, { actorPersonId: input.actorPersonId });
-  }
-  return true;
+  const crewIncomplete =
+    crew.length > 0 &&
+    !(await setTripCrew(db, shop.id, created.id, crew, {
+      actorPersonId: input.actorPersonId,
+      requireScheduledShift: true,
+    }));
+  return { added: true, crewIncomplete };
 }
 
 /**

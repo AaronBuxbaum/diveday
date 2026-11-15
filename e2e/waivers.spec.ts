@@ -36,7 +36,7 @@ test.describe("signed out", () => {
   // signed-record ledger now shares the waiver page, so exercise that current
   // route directly rather than relying on template-editor coverage.
   test("an anonymous visitor is sent to sign in from the signed-waiver audit", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/waivers");
+    await page.goto("/shop/blue-mantis/divers/waivers");
     await expect(page).toHaveURL(/\/sign-in/);
   });
 });
@@ -48,7 +48,7 @@ test.describe("as captain", () => {
     // Editing the waiver (and the medical jurisdiction it presents) is
     // owner/manager work; a captain is bounced to Today with an explanation
     // rather than teleported there silently (task 82, UX persona 11 "Kai").
-    await page.goto("/shop/blue-mantis/waivers");
+    await page.goto("/shop/blue-mantis/settings/waivers");
     // Not a URL assertion: FlashParams strips `?notice=waivers-not-authorized`
     // via history.replaceState shortly after mount — the rendered banner is
     // the stable signal.
@@ -61,7 +61,7 @@ test.describe("as captain", () => {
   test("staff outside owner/manager can't reach the signed-waiver audit either", async ({
     page,
   }) => {
-    await page.goto("/shop/blue-mantis/waivers");
+    await page.goto("/shop/blue-mantis/divers/waivers");
     await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
     await expect(
       page.getByText("Editing the waiver is limited to owners and managers."),
@@ -952,7 +952,7 @@ test("a diver without a booking can receive an independent waiver from their rec
 });
 
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/waivers");
+  await page.goto("/shop/blue-mantis/settings/waivers");
 
   // The current version is shown under the title. The demo shop ships with two
   // superseded wordings already on file (src/db/seed-waiver-versions.ts), the
@@ -960,11 +960,8 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // rather than a bare version 1.
   await expect(page.getByText(/Version 3 ·/)).toBeVisible();
 
-  // The editor is a door, not a standing form: the signed-record log leads the
-  // page and the release opens in place from one control (slice E3-7). Nothing
-  // it does changed — only whether it is open before anybody asked.
-  await expect(page.getByRole("textbox", { name: "Release text" })).toHaveCount(0);
-  await page.getByText("Edit the release").click();
+  // The editor is a Settings page (Aaron, 2026-11-13): setup lives there, the
+  // signed records are read in Divers.
 
   // Editing pre-fills the current text and saves a new version rather than
   // mutating the one divers may already have signed. Title is immutable.
@@ -1047,7 +1044,7 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
 test("saving the release unchanged publishes nothing and says so", async ({ page }) => {
   // `#release` opens the editor on arrival — the fragment the Settings door
   // and any bounced-back notice both use.
-  await page.goto("/shop/blue-mantis/waivers#release");
+  await page.goto("/shop/blue-mantis/settings/waivers#release");
 
   await expect(page.getByText(/Version 3 ·/)).toBeVisible();
 
@@ -1075,7 +1072,7 @@ test("saving the release unchanged publishes nothing and says so", async ({ page
 test("the signature audit pages both ways, and keeps a pinned record while it does", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/waivers");
+  await page.goto("/shop/blue-mantis/divers/waivers");
   const pager = page.getByRole("navigation", { name: "Pages" });
   // Not "skip when there's nothing to page": the demo shop's signed history is
   // well past one page, so a missing pager is the regression, not a pass.
@@ -1113,7 +1110,7 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
   // must not drop it — the roster's "View signed record" link is exactly how a
   // reviewer arrives here, and losing the pin mid-audit strands them.
   const pinnedId = (await rows.first().getAttribute("id"))?.replace("waiver-record-", "");
-  await page.goto(`/shop/blue-mantis/waivers?record=${pinnedId}`);
+  await page.goto(`/shop/blue-mantis/divers/waivers?record=${pinnedId}`);
   const pinnedRow = page.locator(`details[id="waiver-record-${pinnedId}"]`);
   await expect(pinnedRow).toBeVisible();
   await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Next" }).click();
@@ -1127,7 +1124,7 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
  * medical view narrow the log and its count together, and keep each other.
  */
 test("the signed records search by diver and narrow to medical holds", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/waivers");
+  await page.goto("/shop/blue-mantis/divers/waivers");
   const pager = page.getByRole("navigation", { name: "Pages" });
   await expect(pager).toContainText(/Page 1 of \d+/);
   const rows = page.locator('details[id^="waiver-record-"]');
@@ -1404,7 +1401,7 @@ test("a shop question is published, answered by the diver and shown on the signe
   const PROMPT = "Which hotel are you staying at?";
   const ANSWER = "Casa Marina";
 
-  await page.goto("/shop/blue-mantis/waivers#release");
+  await page.goto("/shop/blue-mantis/settings/waivers#release");
   await expect(
     page.getByRole("heading", { name: staff("waiversStaff.questions.heading") }),
   ).toBeVisible();
@@ -1566,7 +1563,7 @@ test("a diver's medical alert for the crew is signed, flagged on the manifest an
 
 test.describe("the blank release", () => {
   test("an owner opens the current release blank, with the version on it", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/waivers/print");
+    await page.goto("/shop/blue-mantis/settings/waivers/print");
     const t = staffTranslator("en-US");
     await expect(page.getByText(/^Release version \d+$/)).toBeVisible();
     await expect(
@@ -1584,7 +1581,7 @@ test.describe("the blank release as captain", () => {
   signedInAs("captain");
 
   test("staff outside owner/manager can't print the release", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/waivers/print");
+    await page.goto("/shop/blue-mantis/settings/waivers/print");
     await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
     await expect(page.locator("[data-blank-release]")).toHaveCount(0);
   });

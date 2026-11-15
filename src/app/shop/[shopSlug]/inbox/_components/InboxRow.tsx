@@ -2,19 +2,16 @@ import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { z } from "zod";
 import { languageName } from "@/components/assists/language-name";
-import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { InboxSeat } from "@/features/inbox-seats";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type InboxIntent, isInboxIntent } from "@/lib/assists/inbox";
-import { mailtoHref } from "@/lib/contact-links";
 import { formatNearDay, formatShortDate, formatTime, formatWeekdayTime } from "@/lib/format";
 import { type InboxChannel, inboxMessageAnchor } from "@/lib/inbox";
 import { shopPath } from "@/lib/staff-notices";
-import { InboxResponseDraft } from "./InboxResponseDraft";
-import { InboxRowOpen, InboxRowToggle, InboxRowView } from "./InboxRowOpen";
+import { InboxRowActs } from "./InboxRowActs";
 
 /**
  * The channel a message came in on, in staff words. `src/db` hands over the
@@ -56,15 +53,11 @@ const INTENT_KEYS: Record<Exclude<InboxIntent, "other">, StaffMessageKey> = {
   late: "assistsFront.inbox.intent.late",
 };
 
-/** An act in the row's open view: one weight for every act, Delete in its own hue. */
-const ACT_CLASS = buttonClass({ variant: "secondary", size: "sm" });
-const DANGER_ACT_CLASS = buttonClass({ variant: "danger", size: "sm" });
-
 /**
  * The first line of what a diver wrote, for a list that is scanned rather than
  * read. The whole message is on their record one tap away, and a row carrying
  * three paragraphs would bury the twelve rows under it. A stranger has no
- * record, so their row wraps this instead of cutting it (`wordsCut` below).
+ * record, so their row wraps the complete message instead.
  */
 const EXCERPT_LENGTH = 140;
 
@@ -150,7 +143,7 @@ export function InboxRow({
     : null;
   // A diver's full message is one tap away, so the door row keeps a one-line
   // excerpt. A stranger has no record to open; let their words wrap in full.
-  // The excerpt's 140-character cap bounds the row.
+  // The excerpt's 140-character cap bounds linked rows.
   const wordsCut = message.personId ? "truncate" : "wrap-anywhere";
   // Each seat's own roster row, by the anchor that opens it (`RosterRow`),
   // and the same row with its move open (`SeatFootActions`). With more than
@@ -164,10 +157,6 @@ export function InboxRow({
   const lateSeats = seats.filter((seat) => seat.lateWindow);
   const severalLate = lateSeats.length > 1;
   const assisted = responseAction !== undefined;
-  const draftAction =
-    message.senderAuthenticated && !message.spamFlagged && message.channel !== "page"
-      ? responseAction
-      : undefined;
   // A keyword reply already says what it asked; Claude's tag would repeat it.
   const intent =
     assisted &&
@@ -243,174 +232,88 @@ export function InboxRow({
   ).filter((fact): fact is Fact => fact !== null);
 
   return (
-    <InboxRowOpen>
-      <LedgerRow
-        as="li"
-        stacked
-        pad="lg"
-        // The channel word and the date on the sender's line, not centred on
-        // the sender and the message together.
-        align="first-line"
-        kind={{ word: t(CHANNEL_KEYS[message.channel]), tone: "neutral" }}
-        trailing={
-          <div className="flex items-center gap-1">
-            <span className="text-sm text-muted tabular-nums">
-              {receivedWhen(message.receivedAt, { now, locale, timezone, t })}
-            </span>
-            <InboxRowToggle label={t("inbox.menu.label", { name })} />
-          </div>
-        }
-      >
-        {/* Beside the kind, date and menu, the name needs a wider row to leave
+    <LedgerRow
+      as="li"
+      stacked
+      pad="lg"
+      // The channel word and the date on the sender's line, not centred on
+      // the sender and the message together.
+      align="first-line"
+      kind={{ word: t(CHANNEL_KEYS[message.channel]), tone: "neutral" }}
+      trailing={
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted tabular-nums">
+            {receivedWhen(message.receivedAt, { now, locale, timezone, t })}
+          </span>
+          <InboxRowActs
+            message={message}
+            name={name}
+            email={email}
+            replySubject={replySubject}
+            quoted={quoted}
+            seats={seats}
+            lateSeats={lateSeats}
+            severalLate={severalLate}
+            lateAction={lateAction}
+            deleteAction={deleteAction}
+            doneAction={doneAction}
+            done={done}
+            t={t}
+            when={when}
+            seatHref={seatHref}
+          />
+        </div>
+      }
+    >
+      {/* Beside the kind, date and menu, the name needs a wider row to leave
           the message room. Below `md` it sits above the message, which then
           takes the body's full width. */}
-        <div className="flex min-w-0 flex-col gap-1 md:flex-row md:items-baseline md:gap-4">
-          <p className="min-w-0 truncate font-semibold md:w-44 md:shrink-0">{name}</p>
-          <div className="min-w-0 flex-1">
-            {/* A WhatsApp message has no subject and never will, so the row's
+      <div className="flex min-w-0 flex-col gap-1 md:flex-row md:items-baseline md:gap-4">
+        <p className="min-w-0 truncate font-semibold md:w-44 md:shrink-0">
+          {recordHref ? (
+            <Link href={recordHref} className={`${tapTargetLinkClass} hover:underline`}>
+              {name}
+            </Link>
+          ) : (
+            name
+          )}
+        </p>
+        <div className="min-w-0 flex-1">
+          {/* A WhatsApp message has no subject and never will, so the row's
               lead line is the diver's own first words rather than a slot
               apologising for an empty one. */}
-            {subject ? <p className="truncate font-medium">{subject}</p> : null}
-            {/* The diver's own words, and nothing added to them. An "Ask to
+          {subject ? <p className="truncate font-medium">{subject}</p> : null}
+          {/* The diver's own words, and nothing added to them. An "Ask to
               move" sent without a note has none; its facts say what it is. */}
-            {message.body.trim() ? (
-              <p className={subject ? `mt-0.5 ${wordsCut} text-sm text-muted` : wordsCut}>
-                {excerpt(message.body)}
-              </p>
-            ) : null}
-            {/* Claude's translation, under their words and never instead of them. */}
-            {translation && translatedFrom ? (
-              <p className={`mt-0.5 ${wordsCut} text-sm text-muted`}>
-                {t("assistsFront.inbox.translation", {
-                  language: translatedFrom,
-                  text: excerpt(translation),
-                })}
-              </p>
-            ) : null}
-            {/* A stranger's address may have no natural break; wrap it inside
+          {message.body.trim() ? (
+            <p className={subject ? `mt-0.5 ${wordsCut} text-sm text-muted` : wordsCut}>
+              {recordHref ? excerpt(message.body) : message.body}
+            </p>
+          ) : null}
+          {/* Claude's translation, under their words and never instead of them. */}
+          {translation && translatedFrom ? (
+            <p className={`mt-0.5 ${wordsCut} text-sm text-muted`}>
+              {t("assistsFront.inbox.translation", {
+                language: translatedFrom,
+                text: recordHref ? excerpt(translation) : translation,
+              })}
+            </p>
+          ) : null}
+          {/* A stranger's address may have no natural break; wrap it inside
               the column so the row keeps the full address. */}
-            {facts.length > 0 ? (
-              <p className="mt-0.5 wrap-anywhere text-sm text-muted">
-                {facts.map((fact, index) => (
-                  <Fragment key={fact.key}>
-                    {index > 0 ? " · " : null}
-                    {fact.node}
-                  </Fragment>
-                ))}
-              </p>
-            ) : null}
-            <InboxRowView>
-              {recordHref ? (
-                <Link
-                  href={recordHref}
-                  aria-label={t("inbox.openRecord", { name })}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
-                >
-                  {t("inbox.openRecordShort")}
-                </Link>
-              ) : !draftAction && isEmailAddress(message.fromAddress) ? (
-                // A stranger has no record to write from, so the reply starts in
-                // the staffer's own mail app. A phone number stays words.
-                <a
-                  href={mailtoHref(email ?? "", { subject: replySubject, body: `\n\n${quoted}` })}
-                  className={ACT_CLASS}
-                >
-                  {t("inbox.replyByEmail")}
-                </a>
-              ) : null}
-              {/* An "Ask to move" (H-20261014-ask-to-move) is about another date, never this
-              boat's lateness: its seat carries no late window. */}
-              {lateAction && message.channel !== "page"
-                ? lateSeats
-                    .filter((seat) => !seat.runningLateAt)
-                    .map((seat) => (
-                      <form key={seat.bookingId} action={lateAction}>
-                        <input type="hidden" name="messageId" value={message.id} />
-                        <input type="hidden" name="bookingId" value={seat.bookingId} />
-                        <SubmitButton
-                          pendingLabel={t("words.busy.saving")}
-                          className={ACT_CLASS}
-                          ariaLabel={
-                            severalLate
-                              ? t("inbox.late.actionForSeat", {
-                                  name,
-                                  trip: seat.title,
-                                  when: when(seat),
-                                })
-                              : t("inbox.late.actionFor", { name, trip: seat.title })
-                          }
-                        >
-                          {severalLate
-                            ? t("inbox.late.actionTrip", { trip: seat.title })
-                            : t("inbox.late.action")}
-                        </SubmitButton>
-                      </form>
-                    ))
-                : null}
-              {seats.map((seat) => (
-                <Link
-                  key={seat.bookingId}
-                  href={`${seatHref(seat)}#move-booking-${seat.bookingId}`}
-                  className={ACT_CLASS}
-                  aria-label={
-                    seats.length > 1
-                      ? t("inbox.moveSeatFor", { name, trip: seat.title, when: when(seat) })
-                      : t("inbox.moveFor", { name, trip: seat.title })
-                  }
-                >
-                  {seats.length > 1
-                    ? t("inbox.moveSeat", { trip: seat.title, when: when(seat) })
-                    : t("inbox.move")}
-                </Link>
+          {facts.length > 0 ? (
+            <p className="mt-0.5 wrap-anywhere text-sm text-muted">
+              {facts.map((fact, index) => (
+                <Fragment key={fact.key}>
+                  {index > 0 ? " · " : null}
+                  {fact.node}
+                </Fragment>
               ))}
-              <form action={doneAction}>
-                <input type="hidden" name="messageId" value={message.id} />
-                <input type="hidden" name="receivedAt" value={message.receivedAt.toISOString()} />
-                <input type="hidden" name="done" value={done ? "false" : "true"} />
-                <SubmitButton pendingLabel={t("words.busy.saving")} className={ACT_CLASS}>
-                  {done ? t("inbox.done.reopen") : t("inbox.done.action")}
-                </SubmitButton>
-              </form>
-              {message.personId ? null : (
-                <form action={deleteAction}>
-                  <input type="hidden" name="messageId" value={message.id} />
-                  <SubmitButton
-                    pendingLabel={t("words.busy.deleting")}
-                    className={DANGER_ACT_CLASS}
-                    confirmMessage={t("inbox.delete.confirm")}
-                    // One "Delete" per row would name them all the same, so the
-                    // accessible name carries the address the row is about.
-                    ariaLabel={t("inbox.delete.actionFor", { address: message.fromAddress })}
-                  >
-                    {t("inbox.delete.action")}
-                  </SubmitButton>
-                </form>
-              )}
-              {draftAction ? (
-                <InboxResponseDraft
-                  draft={draftAction.bind(null, message.id)}
-                  email={email}
-                  subject={replySubject}
-                  quoted={quoted}
-                  copy={{
-                    draft: t("assistsFront.inbox.draftResponse"),
-                    pending: t("assistsFront.conversation.drafting"),
-                    empty: t("assistsFront.inbox.responseEmpty"),
-                    label: t("assistsFront.inbox.responseLabel"),
-                    review: t("assistsFront.inbox.responseReview"),
-                    email: t("inbox.replyByEmail"),
-                    copy: t("assistsFront.inbox.copyResponse"),
-                    copied: t("words.did.copied"),
-                    failed: t("assistsFront.inbox.responseCopyFailed"),
-                    changed: t("assistsFront.inbox.responseChanged"),
-                  }}
-                />
-              ) : null}
-            </InboxRowView>
-          </div>
+            </p>
+          ) : null}
         </div>
-      </LedgerRow>
-    </InboxRowOpen>
+      </div>
+    </LedgerRow>
   );
 }
 

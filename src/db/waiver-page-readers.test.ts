@@ -2,7 +2,7 @@ import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { getSignedWaiverPage } from "../features/signed-waiver-page/store";
-import { getWaiversPage } from "../features/waivers-page/store";
+import { getSignedRecordsPage, getWaiversPage } from "../features/waivers-page/store";
 import { people, personRoles, waiverRecords } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -66,15 +66,24 @@ describe("getSignedWaiverPage", () => {
   });
 });
 
-describe("getWaiversPage", () => {
+describe("getSignedRecordsPage", () => {
   it("pins the named record and reads nothing pinned without one", async () => {
     const { db, shop, record } = await setup();
     const input = { page: 1, query: "", view: undefined };
-    const pinned = await getWaiversPage(db, shop.id, { ...input, record: record.id });
+    const pinned = await getSignedRecordsPage(db, shop.id, { ...input, record: record.id });
     expect(pinned.highlighted).toBeTruthy();
     expect(pinned.auditPage.entries.length).toBeGreaterThan(0);
-    const plain = await getWaiversPage(db, shop.id, input);
+    const plain = await getSignedRecordsPage(db, shop.id, input);
     expect(plain.highlighted).toBeNull();
-    expect(plain.current).toBeTruthy();
+  });
+});
+
+describe("getWaiversPage", () => {
+  it("reads the current release and what a new one would cost, never the log", async () => {
+    const { db, shop } = await setup();
+    const page = await getWaiversPage(db, shop.id);
+    expect(page.current).toBeTruthy();
+    expect(page.atRisk.divers).toBeGreaterThanOrEqual(0);
+    expect(page).not.toHaveProperty("auditPage");
   });
 });

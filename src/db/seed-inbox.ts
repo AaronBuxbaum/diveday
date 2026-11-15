@@ -3,6 +3,7 @@ import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { inboundMessages, type people, shops, staffReplies } from "./schema";
 import { hoursFromNow } from "./seed-clock";
+import { DEMO_SHOP_REPLY_NOTES } from "./seed-reply-notes";
 
 /**
  * What the desk phone has heard (ADR 20260907-two-way-inbox): the messages
@@ -119,9 +120,7 @@ export async function seedInbox(
   await db
     .update(shops)
     .set({
-      replyNotes:
-        // i18n-exempt: fixture text, the shop's own notes
-        "Park behind the shop by the tank racks. The gate opens at 7:15.\nWe rent 5mm wetsuits in every size, women's cuts too.",
+      replyNotes: DEMO_SHOP_REPLY_NOTES,
     })
     .where(eq(shops.id, shopId));
 }

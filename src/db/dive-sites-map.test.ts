@@ -159,6 +159,58 @@ function mapTemplate(slug: string, version = 1, latitude = 25): DiveSiteTemplate
   };
 }
 
+describe("narrowing the published catalog", () => {
+  it("answers the library's search and chips for the list, the count and the pins, and keeps the revision whole", async () => {
+    const db = await unseededTestDb();
+    await seedDiveSiteCatalog(db, [
+      {
+        ...mapTemplate("filter-wreck", 1, 10),
+        briefing: {
+          name: "Filter Wreck",
+          locationName: "Deep Bay",
+          forecastLatitude: 10,
+          forecastLongitude: 10,
+          difficultyLevel: "advanced",
+          requiredSpecialties: ["wreck"],
+          requiresNitrox: true,
+        },
+      },
+      {
+        ...mapTemplate("filter-shallows", 1, 40),
+        briefing: {
+          name: "Filter Shallows",
+          forecastLatitude: 40,
+          forecastLongitude: 40,
+          difficultyLevel: "beginner",
+        },
+      },
+    ]);
+    const whole = await listGlobalDiveSiteTemplates(db);
+    const names = async (filter: Parameters<typeof listGlobalDiveSiteMapRows>[1]) =>
+      (await listGlobalDiveSiteTemplates(db, { filter })).templates.map(
+        ({ version }) => version.briefing.name,
+      );
+    expect(await names({ difficulty: "advanced" })).toEqual(["Filter Wreck"]);
+    expect(await names({ query: "deep bay" })).toEqual(["Filter Wreck"]);
+    expect(await names({ need: "wreck" })).toEqual(["Filter Wreck"]);
+    expect(await names({ need: "nitrox" })).toEqual(["Filter Wreck"]);
+    expect(await names({ difficulty: "unrated", query: "Filter" })).toEqual([]);
+    const narrowed = await listGlobalDiveSiteTemplates(db, { filter: { difficulty: "beginner" } });
+    expect(narrowed.total).toBe(1);
+    expect(narrowed.mapRevision).toBe(whole.mapRevision);
+    expect(
+      (await listGlobalDiveSiteMapRows(db, { difficulty: "beginner" })).map((row) => row.name),
+    ).toEqual(["Filter Shallows"]);
+    expect(
+      (
+        await listGlobalDiveSiteTemplates(db, {
+          filter: { area: { south: 0, west: 0, north: 20, east: 20 } },
+        })
+      ).templates.map(({ version }) => version.briefing.name),
+    ).toEqual(["Filter Wreck"]);
+  });
+});
+
 describe("published catalog map revision", () => {
   it("shares one stable revision across pages and shop presentations without another query", async () => {
     const db = await unseededTestDb();

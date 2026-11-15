@@ -81,8 +81,7 @@ describe("pushDepartureRows", () => {
       ["dive_prep", "Ana Ruiz", ["rental size"]],
       ["dive_prep", "Ben Cole", ["kit"]],
       ["nitrox_gate", "Ana Ruiz", ["nitrox certification"]],
-      ["emergency_contact", "Ana Ruiz", ["emergency contact"]],
-      ["emergency_contact", "Cara Diaz", ["emergency contact"]],
+      ["emergency_contact", "Reef Drift", null],
       ["payment", "Reef Drift", null],
     ]);
     const prep = actions[0];
@@ -91,17 +90,19 @@ describe("pushDepartureRows", () => {
     // The packing list reads on the departure (ADR 20260919-one-idea, slice 23c).
     expect(prep?.href).toBe("/shop/blue-mantis/trips/t1/prep#packing-list");
     expect(actions[1]?.detail).toBe("Not asked about kit.");
+    // Two divers with no contact share one row naming both (Aaron 2026-11-13).
+    expect(actions[3]?.detail).toBe("Missing emergency contact: Ana Ruiz, Cara Diaz");
     expect(actions[3]?.href).toBe("/shop/blue-mantis/trips/t1");
     // Orders cannot name a person: one row about the boat.
-    expect(actions[5]?.aboutDeparture).toBe(true);
-    expect(actions[5]?.detail).toBe("2 orders awaiting payment");
+    expect(actions[4]?.aboutDeparture).toBe(true);
+    expect(actions[4]?.detail).toBe("2 orders awaiting payment");
 
-    // Then Ana is one row with everything open for her, the warning first,
-    // then her contact gap above her size (the rank, visual review A43).
+    // Then Ana is one row with everything open for her; her contact gap is on
+    // the boat's shared row, so it is not repeated.
     const folded = oneRowPerDiver(actions, staffTranslator("en-US"));
     expect(folded.filter((action) => action.subject === "Ana Ruiz")).toHaveLength(1);
     expect(folded.find((action) => action.subject === "Ana Ruiz")?.detail).toBe(
-      "nitrox certification, emergency contact, rental size",
+      "nitrox certification, rental size",
     );
     expect(folded).toHaveLength(4);
   });
@@ -607,7 +608,9 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     }
 
     const contactRows = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
-      rowsNaming(work.actions, reef.id, "emergency contact");
+      work.actions.filter(
+        (action) => action.departure?.tripId === reef.id && action.kind === "emergency_contact",
+      );
     const flagged = await getTodayWork(
       db,
       shop.id,
@@ -616,26 +619,17 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       undefined,
       staffTranslator("en-US"),
     );
-    // Every diver on the boat, by name and once each (UX delight sheet
-    // 2026-10-22, item 4), never "3 people have no emergency contact".
+    // One row for the boat naming every diver, never one per diver or
+    // "3 people have no emergency contact" (Aaron 2026-11-13).
+    const [group, ...others] = contactRows(flagged);
+    expect(others).toEqual([]);
+    expect(group?.kind).toBe("emergency_contact");
+    expect(group?.diver).toBeUndefined();
+    expect(group?.detail.startsWith("Missing emergency contact: ")).toBe(true);
     expect(
-      contactRows(flagged)
-        .map((action) => action.subject)
-        .sort(),
+      (group?.detail.replace("Missing emergency contact: ", "") ?? "").split(", ").sort(),
     ).toEqual(roster.map((entry) => entry.person.fullName).sort());
-    // Never a boarding blocker: a diver whose only gap it is gets the plain
-    // contact row, pointed at the roster to settle at the counter. A diver
-    // with a size open too is one row naming both, and since A43 their
-    // contact gap leads it, so that row is a contact row as well: the
-    // standalone nudge is the one naming nothing else.
-    const contactOnly = contactRows(flagged).find(
-      (action) => action.kind === "emergency_contact" && action.diver?.items.length === 1,
-    );
-    expect(contactOnly).toBeDefined();
-    if (contactOnly) {
-      expect(contactOnly.detail).toBe("No emergency contact.");
-      expect(contactOnly.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
-    }
+    expect(group?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
 
     // A name with no phone is unreachable in an incident — still flagged.
     for (const entry of roster) {
@@ -652,7 +646,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       undefined,
       staffTranslator("en-US"),
     );
-    expect(contactRows(nameOnly)).toHaveLength(roster.length);
+    expect(contactRows(nameOnly)).toHaveLength(1);
 
     // A contact is only "on file" with a reachable number, so fill both.
     for (const entry of roster) {
@@ -712,8 +706,15 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(needs?.map((action) => action.detail)).toEqual(onToday.map((action) => action.detail));
     // More than the boat's work: the contacts row is there, and so is every
     // row the boat's work never counted.
-    expect(rowsNaming(needs ?? [], reef.id, "emergency contact").length).toBeGreaterThan(0);
-    expect(needs?.some((action) => !/^(prep|nitrox|contact|orders):/.test(action.id))).toBe(true);
+    expect(needs?.some((action) => action.kind === "emergency_contact")).toBe(true);
+    expect(
+      needs?.some(
+        (action) =>
+          !/^(prep|nitrox|contact|orders|size-missing|kit-unasked|nitrox-group|contact-group):/.test(
+            action.id,
+          ),
+      ),
+    ).toBe(true);
   });
 
   it("gives no list for a boat outside Today's window, which Today does not show", async () => {

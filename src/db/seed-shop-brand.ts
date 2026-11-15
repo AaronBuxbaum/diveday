@@ -4,6 +4,7 @@ import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops } from "./schema";
 import { DEMO_SHOP_BRAND_COLOR } from "./seed-identifiers";
+import { DEMO_SHOP_REPLY_NOTES } from "./seed-reply-notes";
 
 /**
  * **Blue Mantis's profile and brand: everything a trading shop fills in on
@@ -68,19 +69,7 @@ const OPTIONAL_SEASICKNESS_SUPPLIES = "Seasickness supplies, if you use them";
  */
 export const DEMO_SHOP_DESK = {
   // i18n-exempt: a shop types its own notes for AI, like its packing list.
-  replyNotes: `Tone: warm, brief and plain. We are a small crew who knows our regulars by name. Sign off with "See you on the water" and the crew member's first name.
-
-Meeting spot: the Blue Mantis dock behind 100 Ocean Drive, Key Largo. Park behind the shop by the tank racks; the gate opens at 7:15. Check in 45 minutes before departure. The boat leaves on time.
-
-What a trip includes: tanks, weights, a certified guide, water and fruit. Nitrox is a $12 fill. A full rental set is $45; singles are priced on the rental page. Towels and a reef-safe sunscreen are on the packing list.
-
-Certification and medical: we need a valid card or a proof of certification from the diver. Anyone who answers yes to a medical question brings a doctor's note on the day. Do not give medical advice in a reply; point them to the waiver and the doctor.
-
-Cancellations and weather: the captain decides by 6:00 the evening before. If we cancel for wind or seas, the diver picks another date or a full refund, no fee. If the diver cancels more than 48 hours ahead, we move the booking or refund it. Inside 48 hours we move it once.
-
-Beginners: Discover Scuba runs in the pool first, then the reef. No certification needed; ages 10 and up. Open Water takes three days.
-
-Common questions: we dive Molasses, French, Pickles, Christ of the Abyss and Benwood, and the Spiegel Grove when the current allows. Water is 78 to 84°F. We rent GoPros.`,
+  replyNotes: DEMO_SHOP_REPLY_NOTES,
   // i18n-exempt: the shop's own packing list, like its notes for AI.
   packingList: [
     "Swimsuit and towel",

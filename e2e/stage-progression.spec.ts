@@ -34,7 +34,7 @@ test.describe("Spanish phone stage labels", () => {
     await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
     const strip = page.getByRole("region", { name: "Dónde está el barco" });
     await expect(strip).toBeVisible();
-    await expect(page.getByText(/Copia (actualizada|envejeciendo|desactualizada)/)).toBeVisible();
+    await offlineCopySaved(page, "es-ES");
     const forms = strip.locator("form").filter({ has: page.locator('input[name="stage"]') });
     await expect(forms).toHaveCount(5);
     const clear = await forms.evaluateAll((rows) => {

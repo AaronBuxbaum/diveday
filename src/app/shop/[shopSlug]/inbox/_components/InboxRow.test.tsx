@@ -66,16 +66,18 @@ function renderRow(
 }
 
 describe("a message on file", () => {
-  it("opens the diver's record on this very message, from the row's open view", async () => {
+  it("opens the conversation directly from the sender name, without nested actions", async () => {
     renderRow();
-    expect(screen.queryByRole("link", { name: "Open the record for Priya Sharma" })).toBeNull();
-    await userEvent.click(
-      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
-    );
-    expect(screen.getByRole("link", { name: "Open the record for Priya Sharma" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Priya Sharma" })).toHaveAttribute(
       "href",
       `/shop/blue-mantis/divers/af000000-1111-4222-8333-444444444444#message-${MESSAGE.id}`,
     );
+    expect(screen.queryByText("Open the record")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
+    expect(screen.queryByRole("button", { name: "More" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Mark done" })).toBeVisible();
   });
 
   it("says the channel, since that is where the answer goes", () => {
@@ -158,7 +160,7 @@ describe("a message from a stranger", () => {
     expect(remove.closest("form")?.querySelector('input[name="messageId"]')).toHaveValue(
       MESSAGE.id,
     );
-    expect(container.querySelector("[data-inbox-open-view]")).toContainElement(remove);
+    expect(container.querySelector("[data-row-menu]")).toContainElement(remove);
   });
 });
 
@@ -194,7 +196,9 @@ describe("where the row sets its date and its one control", () => {
     expect(trailing).toContainElement(
       screen.getByRole("button", { name: `More for the message from ${name ?? "Unknown sender"}` }),
     );
-    expect(trailing.querySelectorAll("button, a")).toHaveLength(1);
+    expect(
+      [...trailing.querySelectorAll("button, a")].filter((node) => !node.closest("[hidden]")),
+    ).toHaveLength(1);
     expect(trailing.nextElementSibling).toBeNull();
     expect(trailing.textContent).not.toMatch(/EDT|EST|CDT|CST/);
   });
@@ -227,6 +231,12 @@ describe("marking a message done", () => {
 /** A stranger has no record to open, so their complete excerpt wraps here. */
 describe("a stranger's message, which has no record to be read on", () => {
   const WORDS = "Hello, do you run night dives in October? Two of us, both AOW.";
+
+  it("shows the full long message when there is no conversation to open", () => {
+    const longMessage = `${"Please help with my booking. ".repeat(7)}The last detail matters.`;
+    renderRow({ personId: null, channel: "whatsapp", subject: null, body: longMessage }, null);
+    expect(screen.getByText(longMessage)).toBeInTheDocument();
+  });
 
   it("wraps the stranger's words whole instead of cutting them at a line", () => {
     renderRow({ personId: null, fromAddress: "marta.keller@example.net", body: WORDS }, null);

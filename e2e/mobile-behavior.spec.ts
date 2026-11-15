@@ -4,6 +4,7 @@ import {
   OFFLINE_MANIFEST_SHELL_VERSION,
   type OfflineManifestUpcomingResponse,
 } from "../src/lib/offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "../src/lib/roll-call-protocol";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { offlineCopySaved, openOnThisPhone, openThreadStep } from "./helpers";
 
@@ -118,8 +119,10 @@ test.describe("touch manifest", () => {
   }) => {
     // Read the seeded scenario through the real staff API; walking the board
     // is covered elsewhere and spends the offline journey's budget on setup.
-    const seed = await request.get("/api/offline-manifests/upcoming");
-    expect(seed.ok()).toBe(true);
+    const seed = await request.get("/api/offline-manifests/upcoming", {
+      headers: ROLL_CALL_CAUSAL_HEADERS,
+    });
+    expect(seed.status(), await seed.text()).toBe(200);
     const initial: OfflineManifestUpcomingResponse = await seed.json();
     const payload = initial.payloads.find((entry) =>
       entry.manifests.some(
@@ -176,8 +179,10 @@ test.describe("touch manifest", () => {
     await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
     // An IndexedDB reload alone can pass when the server acknowledges a write
     // it dropped. Read the same person's authoritative checkpoint afresh.
-    const response = await request.get("/api/offline-manifests/upcoming");
-    expect(response.ok()).toBe(true);
+    const response = await request.get("/api/offline-manifests/upcoming", {
+      headers: ROLL_CALL_CAUSAL_HEADERS,
+    });
+    expect(response.status(), await response.text()).toBe(200);
     const authoritative: OfflineManifestUpcomingResponse = await response.json();
     const recorded = authoritative.payloads
       .flatMap((entry) => entry.manifests)

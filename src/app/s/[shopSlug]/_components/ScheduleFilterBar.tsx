@@ -15,7 +15,7 @@ type Lens = { id: string; slug: string; name: string };
  */
 export function ScheduleFilterBar({
   month,
-  partySize = 1,
+  partySize = null,
   lenses,
   activeLens,
   lensHref,
@@ -26,7 +26,7 @@ export function ScheduleFilterBar({
   t,
 }: {
   month: string | null;
-  partySize?: number;
+  partySize?: number | null;
   lenses: readonly Lens[];
   activeLens: Lens | undefined | null;
   lensHref: (slug: string | null) => string;

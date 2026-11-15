@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "dcb6e5ed-166a-4a8e-a2bf-2705a266cca0",
+  "prevIds": [
+    "5d57ba9b-51f7-466c-8b1a-8b978e974a20"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "people",
+        "staff_photo_path"
+      ],
+      "writes": [
+        "s|col|public.people.staff_photo_path",
+        "n|col|public.people.staff_photo_path",
+        "e|col|public.people.staff_photo_path"
+      ],
+      "reads": [
+        "n|tbl|public.people",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "people",
+        "name": "staff_photo_path",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

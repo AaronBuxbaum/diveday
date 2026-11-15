@@ -1,1 +1,0 @@
-export { readScheduleDay } from "./store";

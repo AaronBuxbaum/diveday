@@ -198,3 +198,16 @@ for (const action of ["identity", "claim"] as const) {
     expect(vi.getTimerCount()).toBe(0);
   });
 }
+
+it("withdraws freshness at the 409 headers without waiting for its body", async () => {
+  const onStale = vi.fn();
+  const body = new ReadableStream({ start() {} });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>().mockResolvedValue(new Response(body, { status: 409 })),
+  );
+  expect(await claimOfflineManifestSnapshot(pagePayload(), { onStale })).toBe(
+    OFFLINE_MANIFEST_STALE_READ,
+  );
+  expect(onStale).toHaveBeenCalledOnce();
+});

@@ -328,6 +328,24 @@ export function kitUnaskedGroupDetailText(t: StaffTranslator, names: readonly st
   return t("today.detail.kitUnaskedGroup", { names: nameListText(t, names, names.length) });
 }
 
+/** A boat's divers with no rental size, on one row. Every name is said. */
+export function missingSizeGroupDetailText(t: StaffTranslator, names: readonly string[]): string {
+  return t("today.detail.missingSizeGroup", { names: names.join(", ") });
+}
+
+/** A boat's divers with no emergency contact, on one row: "Missing emergency contact: X, Y, Z". */
+export function missingContactGroupDetailText(
+  t: StaffTranslator,
+  names: readonly string[],
+): string {
+  return t("today.detail.missingContactGroup", { names: names.join(", ") });
+}
+
+/** A boat's nitrox divers with no verified card, on one row. Every name is said. */
+export function ungatedNitroxGroupDetailText(t: StaffTranslator, names: readonly string[]): string {
+  return t("today.detail.ungatedNitroxGroup", { names: names.join(", ") });
+}
+
 export function ungatedNitroxNamedDetailText(t: StaffTranslator): string {
   return t("today.detail.ungatedNitroxNamed");
 }

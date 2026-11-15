@@ -221,6 +221,17 @@ describe("flushPendingRollCall (the sync event)", () => {
     expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis", 1);
   });
 
+  it("keeps the background sync retry when the sync request is refused", async () => {
+    const pending = envelope("trip-mine", "blue-mantis", [pendingEvent("trip-mine")]);
+    vi.mocked(listOfflineManifests).mockResolvedValue([pending]);
+    vi.mocked(syncOfflineManifest).mockRejectedValueOnce(new Error("sync_unreachable"));
+    routeFetch({ identity: () => identityResponse("blue-mantis") });
+    const settled = await fireSync();
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis", 1);
+    expect(settled.map((result) => result.status)).toEqual(["rejected"]);
+    expect(pending.events[0].syncStatus).toBe("pending");
+  });
+
   it.each([
     ["the endpoint refuses the caller", () => new Response(null, { status: 401 })],
     ["the shop row is gone", () => new Response(null, { status: 404 })],

@@ -1,7 +1,6 @@
 "use server";
 
 import { notFound } from "next/navigation";
-import { canPersonEditDiveSiteAdmission } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { planDiveSitePhotoRelease } from "@/db/dive-site-photos";
 import {
@@ -16,12 +15,7 @@ import {
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
 import { recordDiveSiteClosure } from "@/features/dive-site-closures";
-import {
-  changedAdmissionFields,
-  type DiveSiteAdmission,
-  parseDiveSiteForm,
-  submittedValues,
-} from "@/features/dive-sites";
+import { parseDiveSiteForm, submittedValues } from "@/features/dive-sites";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { readRequiredSpecialties } from "@/features/requirement-form";
 import { requireStaffSession } from "@/features/session";
@@ -32,6 +26,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import type { SiteFormState, SiteSaveRefusal } from "../_components/SiteFormShell";
 import { siteFormExtras, templatePullMode } from "../site-forms";
+import { requireSiteEditor } from "../site-gate";
 import { planSpanishBoxes, writeSpanishBoxes } from "../spanish-boxes";
 
 /**
@@ -47,6 +42,7 @@ export async function saveDiveSiteAction(
   formData: FormData,
 ): Promise<SiteFormState> {
   const activeSession = await requireStaffSession();
+  await requireSiteEditor(activeSession);
   const id = uuidParam(siteId);
   if (!id) notFound();
   const back = shopPath(activeSession.user.shopSlug, "dive-sites");
@@ -77,50 +73,13 @@ export async function saveDiveSiteAction(
   // only ever tighten the write.
   const extras = siteFormExtras(formData);
   if (!extras) return refuse("invalid");
-  // **The admission fields are owner/manager work** (issue #3706). Everyone
-  // else's form shows them read-only and posts them back as shown; a post
-  // that would change one is refused whole, and an unchanged one keeps the
-  // stored values exactly, so a feet-to-metres round trip never moves them.
-  const submittedAdmission: DiveSiteAdmission = {
-    minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
-    requiredSpecialties: specialties,
-    requiresNitrox: extras.requiresNitrox,
-    maxDepthMeters: parsed.maxDepthMeters,
-  };
-  const mayEditAdmission = await canPersonEditDiveSiteAdmission(
-    activeDb,
-    activeSession.user.shopId,
-    activeSession.user.personId,
-  );
-  // **Checked before a single byte is uploaded**, and before the admission
-  // comparison, so a tab someone else saved over reads as a conflict and not
-  // as a forbidden change (security review of #3706). `dive-site-photos.ts`
-  // says why in its own words: refusing after storing four photos leaves
-  // objects nothing references. The authoritative check is still the one in
-  // the `where` below, which is atomic with the write; this only stops the
-  // wasted upload. A post from someone who may not change admission must
-  // carry the version: without it the write below would put back admission
-  // values read before a manager's change (security review of #3706).
-  if (
-    (extras.expectedVersion !== null && stored.rowVersion !== extras.expectedVersion) ||
-    (extras.expectedVersion === null && !mayEditAdmission)
-  ) {
+  // **Checked before a single byte is uploaded**: refusing after storing four
+  // photos leaves objects nothing references (`dive-site-photos.ts`). The
+  // authoritative check is the one in the `where` of the write, which is atomic
+  // with it; this only stops the wasted upload.
+  if (extras.expectedVersion !== null && stored.rowVersion !== extras.expectedVersion) {
     return refuse("conflict");
   }
-  const storedAdmission: DiveSiteAdmission = {
-    minimumCertificationLevel: stored.minimumCertificationLevel,
-    requiredSpecialties: stored.requiredSpecialties,
-    requiresNitrox: stored.requiresNitrox,
-    maxDepthMeters: stored.maxDepthMeters,
-  };
-  if (
-    !mayEditAdmission &&
-    changedAdmissionFields(storedAdmission, submittedAdmission, activeShop?.depthUnit ?? "meters")
-      .length > 0
-  ) {
-    return refuse("admissionManagersOnly");
-  }
-  const admission = mayEditAdmission ? submittedAdmission : storedAdmission;
   // **The briefing's Spanish rides the same Save** (visual review 2026-10-24,
   // A11), asked before anything is written: a box that would be refused has
   // to refuse the whole save while the briefing is still as it was.
@@ -178,13 +137,13 @@ export async function saveDiveSiteAction(
         words: planningNoteWords,
         byPersonId: activeSession.user.personId,
       },
-      minimumCertificationLevel: admission.minimumCertificationLevel,
-      requiredSpecialties: [...admission.requiredSpecialties],
-      requiresNitrox: admission.requiresNitrox,
+      minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
+      requiredSpecialties: [...specialties],
+      requiresNitrox: extras.requiresNitrox,
       difficultyLevel: parsed.difficultyLevel,
       snorkelSuitable: parsed.snorkelSuitable,
       depthRange: parsed.fields.depthRange,
-      maxDepthMeters: admission.maxDepthMeters,
+      maxDepthMeters: parsed.maxDepthMeters,
       depthMinMeters: parsed.depthMinMeters,
       expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
       currentNote: parsed.fields.currentNote,
@@ -233,6 +192,7 @@ export async function saveDiveSiteAction(
 
 export async function deleteDiveSiteAction(siteId: string) {
   const activeSession = await requireStaffSession();
+  await requireSiteEditor(activeSession);
   const id = uuidParam(siteId);
   if (!id) notFound();
   const back = shopPath(activeSession.user.shopSlug, "dive-sites");
@@ -242,8 +202,8 @@ export async function deleteDiveSiteAction(siteId: string) {
 
 /**
  * **Close a site for a while, or open it again** (loop 5, row 5). Two days and
- * a reason, both days blank to open it. Any staffer who may edit the site may
- * close it: the write is scoped to the session's shop, and a tampered id names
+ * a reason, both days blank to open it. Any staffer may close it, since a closure is
+ * something logged, not the briefing: the write is scoped to the session's shop, and a tampered id names
  * only another of its own sites.
  */
 export async function closeDiveSiteAction(siteId: string, formData: FormData) {
@@ -273,29 +233,12 @@ export async function closeDiveSiteAction(siteId: string, formData: FormData) {
   revalidateAndRedirect(page, `${noticeUrl(page, "closure-saved")}#site-closure-heading`);
 }
 
-/**
- * A template pull or its undo rewrites the briefing wholesale, admission
- * fields included, so both are owner/manager work (issue #3706): everyone else
- * is sent back to the site with the reason.
- */
-async function refuseTemplateWithoutAdmission(
-  session: Awaited<ReturnType<typeof requireStaffSession>>,
-  page: string,
-) {
-  const allowed = await canPersonEditDiveSiteAdmission(
-    await getDb(),
-    session.user.shopId,
-    session.user.personId,
-  );
-  if (!allowed) revalidateAndRedirect(page, noticeUrl(page, "admission-managers-only"));
-}
-
 export async function pullDiveSiteTemplateAction(siteId: string, formData: FormData) {
   const activeSession = await requireStaffSession();
   const id = uuidParam(siteId);
   if (!id) notFound();
   const back = shopPath(activeSession.user.shopSlug, "dive-sites");
-  await refuseTemplateWithoutAdmission(activeSession, `${back}/${id}`);
+  await requireSiteEditor(activeSession);
   const mode = templatePullMode(formData);
   if (mode !== "preserve-shop-edits" && mode !== "replace-template-copy") {
     revalidateAndRedirect(
@@ -328,7 +271,7 @@ export async function undoDiveSiteTemplateAction(siteId: string) {
   const id = uuidParam(siteId);
   if (!id) notFound();
   const back = shopPath(activeSession.user.shopSlug, "dive-sites");
-  await refuseTemplateWithoutAdmission(activeSession, `${back}/${id}`);
+  await requireSiteEditor(activeSession);
   const result = await undoDiveSiteTemplateUpdate(await getDb(), activeSession.user.shopId, id);
   revalidateAndRedirect(
     `${back}/${id}`,

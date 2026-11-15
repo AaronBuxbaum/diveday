@@ -1,7 +1,6 @@
 {
   "seatSealFailed": "Cambiada tras la firma",
-  "title": "Exenciones y registros firmados",
-  "editRelease": "Editar la exención",
+  "title": "Exenciones y formularios",
   "banner": {
     "savedNew": "Guardado como nueva versión",
     "savedFirst": "Tu exención está guardada.",
@@ -214,5 +213,8 @@
     "guardianNote": "Si el buceador es menor de edad, también firma su madre, padre o tutor.",
     "guardianName": "Nombre de la madre, el padre o el tutor, en letra de molde",
     "guardianSignature": "Firma de la madre, el padre o el tutor"
-  }
+  },
+  "signedTitle": "Exenciones firmadas",
+  "signedRecordsLink": "Ver quién ha firmado",
+  "editReleaseLink": "Editar la exención y los formularios"
 }
