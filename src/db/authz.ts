@@ -365,12 +365,19 @@ export const canPersonReadMedicalAlert = (db: DbExecutor, shopId: string, person
   );
 
 /**
- * The live check behind "Print with medical alerts" (`canPrintMedicalAlerts`,
- * issue #2990): the owner and a manager, read from `person_roles` now, so a
- * manager demoted this morning prints the flag only.
+ * The live staff-role check for a medical-inclusive packet. Disabled or
+ * removed staff and members of other shops are refused.
  */
-export const canPersonPrintMedicalAlerts = (db: DbExecutor, shopId: string, personId: string) =>
-  canPerson(db, shopId, personId, canPrintMedicalAlerts);
+export async function canPersonPrintMedicalAlerts(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+) {
+  // A packet can take several reads to assemble. Recheck the account and roles
+  // without React's request cache before disclosing and recording alert words.
+  const roles = await readActiveStaffRoles(db, shopId, personId);
+  return roles !== null && canPrintMedicalAlerts(roles);
+}
 
 /**
  * **Where one staffer stands for "Emergency: show the alert" on one

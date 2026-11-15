@@ -1,8 +1,5 @@
-import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ShopPageHeader, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { LedgerRow } from "@/components/ui/ledger";
 import { Bone, Pending } from "@/components/ui/pending";
-import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
  * Body-shaped skeleton for Reviews (design principle 1): the aggregate line
@@ -42,32 +39,20 @@ function LedgerRows({ count, quote }: { count: number; quote: "h-6" | "h-5" }) {
 
 export default function ReviewsLoading() {
   return (
-    <StaffPage width="full">
-      <Pending>
-        {/* The aggregate line wraps to two lines at 390px, one at 1280; the
-            "View public page" door stacks under it on a phone (K-86). */}
-        <ShopPageHeader
-          pending
-          eyebrow={false}
-          titleWidth="w-32"
-          description={false}
-          meta={
-            <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-72 max-w-full" />
-          }
-          actions
-        />
-        <StaffSectionTabsSkeleton section="inbox" />
-        <div className="space-y-10">
-          <div>
-            <Bone className="h-4 w-40" />
-            <LedgerRows count={2} quote="h-6" />
-          </div>
-          <div>
-            <Bone className="h-4 w-32" />
-            <LedgerRows count={4} quote="h-5" />
-          </div>
+    <Pending>
+      <div className="mb-6 flex justify-end">
+        <Bone className="h-11 w-36" />
+      </div>
+      <div className="space-y-10">
+        <div>
+          <Bone className="h-4 w-40" />
+          <LedgerRows count={2} quote="h-6" />
         </div>
-      </Pending>
-    </StaffPage>
+        <div>
+          <Bone className="h-4 w-32" />
+          <LedgerRows count={4} quote="h-5" />
+        </div>
+      </div>
+    </Pending>
   );
 }

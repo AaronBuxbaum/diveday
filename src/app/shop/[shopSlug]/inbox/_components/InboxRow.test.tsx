@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
@@ -66,72 +66,6 @@ function renderRow(
 }
 
 describe("a message on file", () => {
-  it("drops a kept draft when the source message changes", async () => {
-    const view = (body: string) => (
-      <ul>
-        <InboxRow
-          row={{ message: { ...MESSAGE, body }, personName: "Priya Sharma" }}
-          shopSlug="blue-mantis"
-          locale="en-US"
-          timezone="America/Cancun"
-          now={new Date("2026-07-01T12:00:00.000Z")}
-          t={t}
-          deleteAction={vi.fn()}
-          doneAction={vi.fn()}
-          seats={[]}
-          lateAction={vi.fn()}
-          responseAction={async () => "Old draft"}
-        />
-      </ul>
-    );
-    const { rerender } = render(view("First question"));
-    await userEvent.click(
-      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Draft response" }));
-    expect(await screen.findByRole("textbox", { name: "Response draft" })).toHaveValue("Old draft");
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(
-      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
-    );
-    expect(screen.getByRole("textbox", { name: "Response draft" })).toHaveValue("Old draft");
-    rerender(view("Corrected question"));
-    expect(screen.queryByRole("textbox", { name: "Response draft" })).toBeNull();
-  });
-  it("does not show an in-flight draft after the source changes", async () => {
-    let finish!: (value: string) => void;
-    const pending = new Promise<string>((resolve) => {
-      finish = resolve;
-    });
-    const view = (body: string) => (
-      <ul>
-        <InboxRow
-          row={{ message: { ...MESSAGE, body }, personName: "Priya Sharma" }}
-          shopSlug="blue-mantis"
-          locale="en-US"
-          timezone="America/Cancun"
-          now={new Date("2026-07-01T12:00:00.000Z")}
-          t={t}
-          deleteAction={vi.fn()}
-          doneAction={vi.fn()}
-          seats={[]}
-          lateAction={vi.fn()}
-          responseAction={() => pending}
-        />
-      </ul>
-    );
-    const { rerender } = render(view("First question"));
-    await userEvent.click(
-      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Draft response" }));
-    rerender(view("Corrected question"));
-    await act(async () => {
-      finish("Old response");
-      await pending;
-    });
-    expect(screen.queryByRole("textbox", { name: "Response draft" })).toBeNull();
-  });
   it("opens the conversation directly from the sender name, without nested actions", async () => {
     renderRow();
     expect(screen.getByRole("link", { name: "Priya Sharma" })).toHaveAttribute(

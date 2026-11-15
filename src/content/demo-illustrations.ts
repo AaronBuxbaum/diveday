@@ -1,6 +1,8 @@
 /** Fictional artwork approved for demo tenants in #4381, never catalog evidence. */
 export const DEMO_ILLUSTRATIONS = {
   boat: "A small dive boat tied to a wooden dock",
+  fleet: "A small dive boat on turquoise water",
+  shopfront: "A dive shop porch beside the water",
   dock: "Two adults talking beside fins at a coastal dock",
   briefing: "An instructor discussing a blank slate with adult guests",
   student: "An adult student and instructor talking in a training pool",
