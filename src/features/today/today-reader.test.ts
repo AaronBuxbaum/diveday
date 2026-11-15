@@ -90,6 +90,33 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(after?.crewAccountedFor).toBe(before.crewAccountedFor);
     expect(after?.crewReason).toBe(before.crewReason);
   });
+  it("keeps historical crew names but hides photos after deletion or removal of staff roles", async () => {
+    const { db, shop } = ctx;
+    const read = async () =>
+      (await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN)).departures[0];
+    const before = await read();
+    if (!before || before.crew.length < 2) throw new Error("seed departure needs two crew");
+    const [deleted, removed] = before.crew;
+    expect(deleted.staffPhotoPath).toBeTruthy();
+    expect(removed.staffPhotoPath).toBeTruthy();
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, deleted.id));
+    await db.delete(personRoles).where(eq(personRoles.personId, removed.id));
+    await db.insert(personRoles).values({ personId: removed.id, role: "diver" });
+    const after = await read();
+    for (const member of [deleted, removed]) {
+      const row = after?.crew.find((entry) => entry.id === member.id);
+      expect(row?.fullName).toBe(member.fullName);
+      expect(row?.staffPhotoPath).toBeNull();
+    }
+    await db.insert(personRoles).values({ personId: removed.id, role: "manager" });
+    await db
+      .update(people)
+      .set({ anonymizedAt: nowDate(), deletedAt: nowDate() })
+      .where(eq(people.id, removed.id));
+    expect(
+      (await read())?.crew.find((entry) => entry.id === removed.id)?.staffPhotoPath,
+    ).toBeNull();
+  });
   it("names every planned dive's site on the departure card, in dive order, once each", async () => {
     const { db, shop } = ctx;
     const [departure] = (await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN))

@@ -95,7 +95,7 @@ import {
 } from "@/i18n/today-labels";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import { raisedOnTodayBefore } from "@/lib/attempts";
-import type { Role } from "@/lib/authz";
+import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -799,6 +799,8 @@ async function departureCardFacts(
             personId: people.id,
             fullName: people.fullName,
             staffPhotoPath: people.staffPhotoPath,
+            deletedAt: people.deletedAt,
+            anonymizedAt: people.anonymizedAt,
             tripRole: tripAssignments.tripRole,
             role: personRoles.role,
           })
@@ -830,7 +832,11 @@ async function departureCardFacts(
   // is doing what today", so it is worth exactly one implementation.
   const namesByPerson = new Map(assignments.map((row) => [row.personId, row.fullName] as const));
   const photosByPerson = new Map(
-    assignments.map((row) => [row.personId, row.staffPhotoPath] as const),
+    assignments
+      .filter(
+        (row) => !row.deletedAt && !row.anonymizedAt && row.role && STAFF_ROLES.includes(row.role),
+      )
+      .map((row) => [row.personId, row.staffPhotoPath] as const),
   );
   const rowsByTrip = new Map<string, typeof assignments>();
   for (const row of assignments) {
