@@ -199,12 +199,16 @@
     "openRecord": "Open {name}’s record"
   },
   "install": {
-    "body": "Open DiveDay from your Home Screen.",
+    "body": "Open DiveDay in one tap, full screen like an app.",
     "action": "Add to Home Screen",
     "dismiss": "Dismiss",
-    "safari": "In Safari, tap Share, then Add to Home Screen.",
-    "otherIos": "Open this page in Safari, then tap Share and Add to Home Screen.",
-    "chrome": "In Chrome, open the menu, then Add to home screen.",
+    "stepsLabel": "How to add DiveDay to your Home Screen",
+    "openSafari": "Open this page in Safari.",
+    "share": "Tap Share in Safari’s toolbar.",
+    "scroll": "Scroll down and tap Add to Home Screen.",
+    "add": "Tap Add.",
+    "chromeMenu": "Tap the menu in Chrome’s top corner.",
+    "chromeAdd": "Tap Add to home screen, then Install.",
     "promptFailed": "The install prompt didn’t open. Use the browser menu instead."
   }
 }

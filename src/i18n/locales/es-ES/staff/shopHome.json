@@ -199,12 +199,16 @@
     "openRecord": "Abrir la ficha de {name}"
   },
   "install": {
-    "body": "Abre DiveDay desde la pantalla de inicio.",
+    "body": "Abre DiveDay con un toque, a pantalla completa como una app.",
     "action": "Agregar a la pantalla de inicio",
     "dismiss": "Descartar",
-    "safari": "En Safari, toca Compartir y luego Agregar a pantalla de inicio.",
-    "otherIos": "Abre esta página en Safari, toca Compartir y luego Agregar a pantalla de inicio.",
-    "chrome": "En Chrome, abre el menú y toca Agregar a pantalla de inicio.",
+    "stepsLabel": "Cómo agregar DiveDay a tu pantalla de inicio",
+    "openSafari": "Abre esta página en Safari.",
+    "share": "Toca Compartir en la barra de Safari.",
+    "scroll": "Desplázate y toca Agregar a pantalla de inicio.",
+    "add": "Toca Agregar.",
+    "chromeMenu": "Toca el menú en la esquina superior de Chrome.",
+    "chromeAdd": "Toca Agregar a pantalla de inicio y luego Instalar.",
     "promptFailed": "No se abrió la opción de instalación. Usa el menú del navegador."
   }
 }
