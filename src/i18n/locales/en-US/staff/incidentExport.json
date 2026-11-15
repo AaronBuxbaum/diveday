@@ -46,6 +46,7 @@
   "colEmergencyContact": "Emergency contact",
   "colRoles": "Roles",
   "crewHeading": "Crew",
+  "screenOnPaper": "This screen doesn’t print. Use Print to open the departure log sheet.",
   "crewNoTeams": "None recorded",
   "crewAwayAcknowledged": "{name} was away; acknowledged by {by} at {time}.",
   "crewAwayAcknowledgedNoActor": "{name} was away; acknowledged at {time}.",

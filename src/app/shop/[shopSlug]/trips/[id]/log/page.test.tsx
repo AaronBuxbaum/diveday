@@ -109,7 +109,13 @@ async function renderLog(print = true) {
 describe("the departure log", () => {
   it("opens a readable screen with a separate printable document", async () => {
     const { container } = await renderLog(false);
-    expect(container.querySelector(".paper-sheet")).toBeNull();
+    expect(container.querySelector("[data-paper-print-only]")).toHaveTextContent(
+      "This screen doesn’t print",
+    );
+    expect(container.querySelectorAll(".paper-sheet")).toHaveLength(1);
+    expect(
+      container.querySelector(".paper-sheet")?.closest("[data-paper-print-only]"),
+    ).toBeTruthy();
     expect(screen.getByRole("link", { name: "Print" })).toHaveAttribute(
       "href",
       `/shop/blue-mantis/trips/${TRIP_ID}/log/print`,

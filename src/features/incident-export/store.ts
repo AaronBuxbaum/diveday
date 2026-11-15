@@ -22,6 +22,7 @@ import { auditMarkFirst } from "../../db/roll-call-order";
 import { asCrewMark, asSeatMark, crewMarks, seatMarks } from "../../db/roll-call-subject";
 import { activityEvents, bookings, people, rollCallEvents } from "../../db/schema/index";
 import { getShopById } from "../../db/shops";
+import { listStaff } from "../../db/trips";
 import { ACTIVITY_REDACTED } from "../../lib/activity";
 import { nowDate } from "../../lib/clock";
 import {
@@ -91,13 +92,13 @@ function standingCertificationCaptures(
  * forgot to check" must not be the thing standing between a captain and the
  * document (security review 20260804).
  */
-export async function getIncidentExport(
+async function assembleIncidentExport(
   db: AppDb,
   shopId: string,
   tripId: string,
   generatedByPersonId: string,
   generatedAt: Date = nowDate(),
-): Promise<IncidentExportDocument | null> {
+): Promise<{ doc: IncidentExportDocument; crewIds: string[] } | null> {
   if (!(await canPersonExportIncidentRecord(db, shopId, generatedByPersonId))) return null;
   const manifests = await getTripManifests(db, shopId, tripId);
   const departure = manifests?.[0];
@@ -346,7 +347,7 @@ export async function getIncidentExport(
     createdAt: event.createdAt,
   }));
 
-  return buildIncidentExport({
+  const doc = buildIncidentExport({
     shop: {
       name: shop.name,
       slug: shop.slug,
@@ -433,6 +434,21 @@ export async function getIncidentExport(
     generatedAt,
     generatedByName,
   });
+  return { doc, crewIds: departure.crew.map((member) => member.id) };
+}
+
+/** The evidence document remains independent of its screen-only presentation. */
+export async function getIncidentExport(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  generatedByPersonId: string,
+  generatedAt: Date = nowDate(),
+): Promise<IncidentExportDocument | null> {
+  return (
+    (await assembleIncidentExport(db, shopId, tripId, generatedByPersonId, generatedAt))?.doc ??
+    null
+  );
 }
 
 /**
@@ -446,7 +462,19 @@ export async function getTripLogPage(
   shopId: string,
   tripId: string,
   personId: string,
-): Promise<{ allowed: false } | { allowed: true; doc: IncidentExportDocument | null }> {
+): Promise<
+  | { allowed: false }
+  | { allowed: true; doc: IncidentExportDocument | null; crewPhotos: (string | null)[] }
+> {
   if (!(await canPersonExportIncidentRecord(db, shopId, personId))) return { allowed: false };
-  return { allowed: true, doc: await getIncidentExport(db, shopId, tripId, personId) };
+  const result = await assembleIncidentExport(db, shopId, tripId, personId);
+  if (!result) return { allowed: true, doc: null, crewPhotos: [] };
+  const photos = new Map(
+    (await listStaff(db, shopId)).map(({ person }) => [person.id, person.staffPhotoPath ?? null]),
+  );
+  return {
+    allowed: true,
+    doc: result.doc,
+    crewPhotos: result.crewIds.map((id) => photos.get(id) ?? null),
+  };
 }

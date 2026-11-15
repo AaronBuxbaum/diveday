@@ -129,10 +129,29 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
   // The tamper-evidence code: a full SHA-256 in the footer, with its recipe's version.
   await expect(page.getByText("Integrity code (SHA-256) · version 4")).toBeVisible();
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible();
-  await expect(page.locator(".paper-sheet")).toHaveCount(0);
+  const screenPrintNotice = page.locator("[data-paper-print-only] .paper-sheet");
+  await expect(
+    page.locator(".paper-sheet-frame:not([data-paper-print-only]) .paper-sheet"),
+  ).toHaveCount(0);
+  await expect(screenPrintNotice).toHaveCount(1);
+  await expect(screenPrintNotice).toBeHidden();
+  const keikoPhoto = crewTable.getByRole("row").filter({ hasText: "Keiko Tanaka" }).locator("img");
+  await expect(keikoPhoto).toBeVisible();
+  await expect(keikoPhoto).toHaveAttribute("src", /keiko-tanaka\.webp/);
+  await page.emulateMedia({ media: "print" });
+  await expect(screenPrintNotice).toBeVisible();
+  await expect(page.locator("[data-departure-log]")).toBeHidden();
+  await page.emulateMedia({ media: "screen" });
   await page.getByRole("link", { name: "Print", exact: true }).click();
   await page.waitForURL(/\/log\/print$/);
-  await expect(page.locator(".paper-sheet")).toHaveCount(1);
+  await expect(
+    page.locator(".paper-sheet-frame:not([data-paper-print-only]) .paper-sheet"),
+  ).toHaveCount(1);
+  await expect(
+    page.locator(
+      '.paper-sheet-frame:not([data-paper-print-only]) section[aria-labelledby="incident-crew-heading"] img',
+    ),
+  ).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toBeVisible();
 });
 

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -19,6 +20,7 @@ export function CrewAtDeparture({
   checkpointText,
   checkpointClass,
   children,
+  crewPhotos = [],
 }: {
   doc: Pick<IncidentExportDocument, "crew" | "meta">;
   t: StaffTranslator;
@@ -26,6 +28,7 @@ export function CrewAtDeparture({
   checkpointText: (checkpoint: string) => string;
   checkpointClass: string;
   children?: ReactNode;
+  crewPhotos?: readonly (string | null)[];
 }) {
   return (
     <section aria-labelledby="incident-crew-heading">
@@ -41,6 +44,7 @@ export function CrewAtDeparture({
           dateTime={dateTime}
           checkpointText={checkpointText}
           checkpointClass={checkpointClass}
+          crewPhotos={crewPhotos}
         />
       )}
       {children}
@@ -54,6 +58,7 @@ type CrewTableProps = {
   dateTime: (value: string) => string;
   checkpointText: (value: string) => string;
   checkpointClass: string;
+  crewPhotos: readonly (string | null)[];
 };
 
 function CrewTables(props: CrewTableProps) {
@@ -81,6 +86,7 @@ function CrewTable({
   checkpointText,
   checkpointClass,
   checkpoints,
+  crewPhotos,
 }: CrewTableProps & {
   checkpoints: IncidentExportDocument["meta"]["checkpoints"];
 }) {
@@ -105,7 +111,18 @@ function CrewTable({
             // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
             key={index}
           >
-            <Td className="font-semibold">{member.fullName}</Td>
+            <Td className="font-semibold">
+              {crewPhotos[index] ? (
+                <Image
+                  src={crewPhotos[index]}
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="me-2 inline-block rounded-full align-middle"
+                />
+              ) : null}
+              {member.fullName}
+            </Td>
             <Td muted>{staffJobWithRatings(t, member.roles, member.currentRatings)}</Td>
             {/* Plural on purpose: one divemaster commonly leads
                     several groups on one boat, and this document must

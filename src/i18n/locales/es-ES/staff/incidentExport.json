@@ -46,6 +46,7 @@
   "colEmergencyContact": "Contacto de emergencia",
   "colRoles": "Funciones",
   "crewHeading": "Tripulación",
+  "screenOnPaper": "Esta pantalla no se imprime. Usa Imprimir para abrir la hoja del registro de la salida.",
   "crewNoTeams": "Ninguno registrado",
   "crewAwayAcknowledged": "{name} estaba ausente; lo confirmó {by} el {time}.",
   "crewAwayAcknowledgedNoActor": "{name} estaba ausente; se confirmó el {time}.",
