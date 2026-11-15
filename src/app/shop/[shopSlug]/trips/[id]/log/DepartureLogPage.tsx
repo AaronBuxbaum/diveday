@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
+import { ScreenNotPrinted } from "@/components/paper/ScreenNotPrinted";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -123,6 +124,7 @@ export async function DepartureLogPage({
 
       <CrewAtDeparture
         doc={doc}
+        crewPhotos={print ? [] : page.crewPhotos}
         t={t}
         dateTime={dateTime}
         checkpointText={checkpointText}
@@ -251,26 +253,29 @@ export async function DepartureLogPage({
   );
   if (!print)
     return (
-      <StaffPage width="full">
-        <ShopPageHeader
-          title={t("incidentExport.title")}
-          actions={
-            <Link
-              href={shopPath(shopSlug, "trips", tripId, "log", "print")}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("print.sheet.door")}
-            </Link>
-          }
-        />
-        <Link
-          href={`${shopPath(shopSlug, "trips", tripId)}?view=record`}
-          className={buttonClass({ variant: "link", flush: true })}
-        >
-          {t("trips.surfaces.trip")}
-        </Link>
-        {contents}
-      </StaffPage>
+      <>
+        <ScreenNotPrinted>{t("incidentExport.screenOnPaper")}</ScreenNotPrinted>
+        <StaffPage width="full">
+          <ShopPageHeader
+            title={t("incidentExport.title")}
+            actions={
+              <Link
+                href={shopPath(shopSlug, "trips", tripId, "log", "print")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("print.sheet.door")}
+              </Link>
+            }
+          />
+          <Link
+            href={`${shopPath(shopSlug, "trips", tripId)}?view=record`}
+            className={buttonClass({ variant: "link", flush: true })}
+          >
+            {t("trips.surfaces.trip")}
+          </Link>
+          {contents}
+        </StaffPage>
+      </>
     );
   return (
     <SheetDocument
