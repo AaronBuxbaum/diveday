@@ -36,6 +36,9 @@ import {
   capabilities,
   cards,
   collectionEntries,
+  computerDiveProfiles,
+  computerDives,
+  computerImportBatches,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -987,6 +990,9 @@ export async function clearDemoSchedule(
     })
     .where(eq(boats.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
+  await db.delete(computerDiveProfiles).where(eq(computerDiveProfiles.shopId, shopId));
+  await db.delete(computerDives).where(eq(computerDives.shopId, shopId));
+  await db.delete(computerImportBatches).where(eq(computerImportBatches.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
   // Course forms (ADR 20261008-course-forms), children first: a signed record

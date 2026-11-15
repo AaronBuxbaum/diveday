@@ -67,6 +67,10 @@ export const EXPECTED_FILES = [
   "boat_snags.csv",
   "departure_boat_safety_snapshots.csv",
   "prior_visits.csv",
+  "computer_import_batches.csv",
+  "computer_dives.csv",
+  "computer_dive_profiles.csv",
+
   "imported_payment_history.csv",
   "internal_notes.csv",
   "incident_reports.csv",
@@ -170,6 +174,10 @@ export const EXPORTED_TABLES = [
   "boat_snags",
   "departure_boat_safety_snapshots",
   "prior_visits",
+  "computer_import_batches",
+  "computer_dives",
+  "computer_dive_profiles",
+
   "imported_payment_history",
   "orders",
   "order_line_items",

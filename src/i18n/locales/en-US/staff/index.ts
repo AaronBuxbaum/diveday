@@ -1,3 +1,4 @@
+import computerDives from "./computerDives.json";
 // The staff message bundle for en-US, one namespace per file.
 //
 // Split from a single staff.json because that file was the repo's top merge
@@ -75,6 +76,7 @@ import whatsapp from "./whatsapp.json";
 import workOrders from "./workOrders.json";
 
 const staff = {
+  computerDives,
   assistsFront,
   benchFollowUp,
   calendar,

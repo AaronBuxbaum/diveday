@@ -468,5 +468,6 @@ script again.
 | 20261112-node-26-is-the-floor | DiveDay runs on Node 26,… |
 | 20261112-roll-call-observes-evidence | Resolve roll-call conflicts from observed… (proposed) |
 | 20261114-trip-folio-and-individual-deck | Organize the Trip around guest… |
+| 20261115-personal-computer-evidence | Keep imported computer evidence on… |
 
 <!-- adr-index:end -->

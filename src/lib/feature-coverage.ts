@@ -45,7 +45,9 @@ export const BOOKING_FLOW_COVERAGE = {
 
 export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCoverage> = {
   today: { core: "daily operations: the shop home" },
-  divers: { core: "daily operations: the people the shop dives with" },
+  divers: {
+    core: "daily operations: the people the shop dives with; computer-file evidence is an inert attachment explicitly uploaded on an existing person record",
+  },
   board: { core: "daily operations: the schedule" },
   addBooking: { core: "daily operations: seating a diver" },
   inbox: { core: "daily operations: what divers write" },
