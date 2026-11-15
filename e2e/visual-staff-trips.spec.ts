@@ -547,6 +547,10 @@ for (const scheme of ["light", "dark"] as const) {
           .locator("span.font-medium")
           .first()
           .innerText();
+        const confirmed = liveRosterConfirmation(page, {
+          tripId: crewClash.tripId,
+          checkpoint: "departure",
+        });
         await openTripTab(page, "Manifest");
         await openDeckPerson(page, clashingName);
         await page.getByRole("button", { name: "Not aboard / details", exact: true }).click();
@@ -556,7 +560,14 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .waitFor();
         await offlineCopySaved(page);
-        await capture(page, "manifest-crew-clash", scheme);
+        await confirmed;
+        await capture(page, "manifest-crew-clash", scheme, {
+          beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
+          },
+        });
       });
 
       /**

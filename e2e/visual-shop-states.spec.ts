@@ -21,6 +21,7 @@ import {
   expectOverviewMapSites,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   REEF_TRIP,
   SPANISH,
   SURFACE_TIMEOUT_MS,
@@ -553,6 +554,10 @@ for (const scheme of ["light", "dark"] as const) {
           .locator(":scope > details"),
       ).not.toHaveAttribute("open");
       await capture(page, "manifest-buddy-planning-warnings", scheme);
+      const confirmed = liveRosterConfirmation(page, {
+        tripId: state.tripId,
+        checkpoint: "departure",
+      });
       await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
       await expect(
         (await manifestRow(page, "Bea Quill")).getByText(
@@ -561,7 +566,14 @@ for (const scheme of ["light", "dark"] as const) {
         ),
       ).toBeVisible();
       await offlineCopySaved(page);
-      await capture(page, "manifest-buddy-operational-warnings", scheme);
+      await confirmed;
+      await capture(page, "manifest-buddy-operational-warnings", scheme, {
+        beforeScreenshot: async () => {
+          await expect(
+            page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+          ).toHaveCount(0);
+        },
+      });
     });
 
     test(`an intro team's manual pairing caution is visible (${scheme})`, async ({
