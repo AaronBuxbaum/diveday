@@ -4,14 +4,9 @@ on:
   schedule:
     - cron: "15 6 * * *"
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "e2e/mobile*.spec.ts"
-      - "playwright.mobile.config.ts"
-      - ".github/workflows/mobile-behavior.yml"
 
 concurrency:
-  group: mobile-behavior-${{ github.event.pull_request.number || github.ref }}
+  group: mobile-behavior
   cancel-in-progress: true
 
 permissions:
