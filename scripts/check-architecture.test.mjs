@@ -279,6 +279,19 @@ describe("the ratchet", () => {
 });
 
 describe("server-only modules stay out of client bundles", () => {
+  it("keeps partner OAuth credentials and clients out of browser bundles", async () => {
+    const root = await fixture({
+      "src/features/logbook-connections/index.ts":
+        "export const logbookProvider = 1; export type Config = string;",
+      "src/features/logbook-connections/README.md": "Server-only OAuth adapters.",
+      "src/app/Form.tsx":
+        '"use client";\nimport { logbookProvider } from "@/features/logbook-connections";',
+    });
+    expect(flat(await collectViolations(root))).toEqual([
+      expect.stringContaining("reaches server-only src/features/logbook-connections/index.ts"),
+    ]);
+  });
+
   const phone = 'import { parsePhoneNumberFromString } from "libphonenumber-js/mobile";\n';
   it("keeps the full computer-file decoder out of CSV setup client bundles", async () => {
     const root = await fixture({
