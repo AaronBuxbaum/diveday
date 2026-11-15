@@ -387,6 +387,7 @@ html[data-device-text-size] .device-text-settings-editor .size-24 {
 }
 html[data-device-text-size] .device-text-settings-editor .border-dashed {
   padding-inline: 0.25rem;
+  overflow-wrap: normal;
 }
 html[data-device-text-size] .device-text-settings-editor .content-start > * {
   min-inline-size: 0;

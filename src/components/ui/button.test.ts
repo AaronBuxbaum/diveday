@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { EDGE_PADDING, PADDED_SIZES, SIZES } from "@/test/button-sizes";
 import {
   type ButtonSize,
   type ButtonVariant,
@@ -9,7 +10,6 @@ import {
   proseLinkClass,
   tapTargetLineClass,
 } from "./button";
-import { EDGE_PADDING, PADDED_SIZES, SIZES } from "./button-test-sizes";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 

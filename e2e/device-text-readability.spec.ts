@@ -232,6 +232,7 @@ test("largest settings pane gives the actual rail and editor a readable measure"
   expect(mediaTarget.width).toBeGreaterThanOrEqual(44);
   expect(mediaTarget.height).toBeGreaterThanOrEqual(44);
   expect(mediaTarget.isHit).toBe(true);
+  await upload.screenshot({ path: test.info().outputPath("settings-upload-360.png") });
   await test.info().attach("settings-media-native-hit", {
     contentType: "application/json",
     body: JSON.stringify(mediaTarget),

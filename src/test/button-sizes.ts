@@ -1,4 +1,4 @@
-import type { ButtonSize } from "./button";
+import type { ButtonSize } from "@/components/ui/button";
 
 export const SIZES = [
   "sm",
