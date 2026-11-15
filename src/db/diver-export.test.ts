@@ -5,7 +5,11 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { formBuddyTeam } from "./buddy-teams";
-import { canPersonExportShopData, loadDiverExportBundleInput } from "./export";
+import {
+  canPersonExportShopData,
+  loadDiverExportBundleInput,
+  loadShopExportBundleInput,
+} from "./export";
 import { addDiverNote } from "./operations";
 import {
   bookings,
@@ -21,6 +25,23 @@ import { upcomingTripsWithCounts } from "./trips";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 const ctx = fileScopedShopContext();
+
+it("includes the staff portrait path in the person's and shop's exports", async () => {
+  const { db, shop } = ctx;
+  const personId = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
+  const path = "/demo-staff/dana-reyes.webp";
+  await db.update(people).set({ staffPhotoPath: path }).where(eq(people.id, personId));
+  const own = await loadDiverExportBundleInput(db, shop.id, personId);
+  const all = await loadShopExportBundleInput(db, shop.id);
+  const profile = own?.tables.find((table) => table.file === "profile.csv");
+  const peopleTable = all?.tables.find((table) => table.file === "people.csv");
+  if (!profile || !peopleTable) throw new Error("portrait export tables missing");
+  expect(profile.rows[0]?.[profile.header.indexOf("staff_photo_path")]).toBe(path);
+  const row = peopleTable.rows.find(
+    (entry) => entry[peopleTable.header.indexOf("id")] === personId,
+  );
+  expect(row?.[peopleTable.header.indexOf("staff_photo_path")]).toBe(path);
+});
 
 async function personIdForEmail(
   db: Awaited<ReturnType<typeof seededShopContext>>["db"],

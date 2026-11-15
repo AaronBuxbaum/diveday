@@ -575,10 +575,15 @@
       "description": "Shifts, days off, and who works each departure.",
       "save": "Save crew schedule",
       "saved": "Crew schedule saved",
-      "turnOn": "Turn on in Features"
+      "turnOn": "Turn on in Features",
+      "approval": "Crew days off need an owner or manager’s OK",
+      "approvalHint": "Owners and managers add their own without asking."
     },
     "team": {
       "heading": "Team"
+    },
+    "waivers": {
+      "heading": "Waivers and forms"
     },
     "safetyChecklist": {
       "heading": "Pre-departure checklist"

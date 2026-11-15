@@ -169,7 +169,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
             // `instrumentation.ts` and `instrumentation-client.ts`; the push
             // vendors are the endpoint allowlist in
             // `src/lib/notifications/web-push.ts`. (Note: embedded maps use
-            // Esri imagery tiles and an OpenStreetMap frame, which process no
+            // Esri imagery tiles, which process no
             // personal data).
             // A list that reads as exhaustive has to actually be exhaustive —
             // the next third party added anywhere in the app belongs here in

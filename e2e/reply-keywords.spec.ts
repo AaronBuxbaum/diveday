@@ -3,6 +3,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openNamedScheduleTrip,
   openTripFromBoard,
   signInAsOwner,
   signOut,
@@ -54,12 +55,7 @@ test.describe("reply keywords", () => {
     // `C` has one honest meaning.
     await signOut(page);
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-    await page
-      .getByRole("list", { name: "Upcoming trips" })
-      .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link")
-      .click();
+    await openNamedScheduleTrip(page, title);
     await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
       "data-hydrated",
       "true",
@@ -87,8 +83,7 @@ test.describe("reply keywords", () => {
     // The row names the seat she holds (fourth review, item 32) as its own
     // link, and opens in place on its record's door (visual review A15).
     await expect(row.getByRole("link", { name: new RegExp(`^Booked on ${title}`) })).toBeVisible();
-    await row.getByRole("button", { name: "More for the message from Nora Quinn" }).click();
-    await row.getByRole("link", { name: "Open the record for Nora Quinn" }).click();
+    await row.getByRole("link", { name: "Nora Quinn" }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\//);
 
     // The confirmation, in the diver's own thread — and the departure named in
@@ -148,12 +143,7 @@ test.describe("reply keywords", () => {
 
     await signOut(page);
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-    await page
-      .getByRole("list", { name: "Upcoming trips" })
-      .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link")
-      .click();
+    await openNamedScheduleTrip(page, title);
     await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
       "data-hydrated",
       "true",

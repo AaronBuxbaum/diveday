@@ -1,4 +1,8 @@
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { eq } from "drizzle-orm";
+import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { COURSE_TEMPLATES } from "@/content/course-templates";
 import { nowDate } from "@/lib/clock";
@@ -7,6 +11,7 @@ import { CORE_RENTAL_KINDS } from "@/lib/rentals";
 import { seededShopContext } from "@/test/db";
 import { courseForms, courseFormVersions, courses } from "./schema";
 import { courseTemplateDisplayTitle } from "./seed-catalog";
+import { SEED_COURSE_ILLUSTRATIONS } from "./seed-course-illustrations";
 
 /**
  * **A course's slug is its public URL, and the column it lives in is unique per
@@ -122,4 +127,44 @@ describe("seeded gear-included courses", () => {
       rows.filter((row) => !completeGear.includes(row) && row.includedRentalKinds.length),
     ).toEqual([]);
   }, 60_000);
+});
+
+describe("demo course illustrations", () => {
+  it.each([false, true])(
+    "assigns one distinct illustration to every course (history: %s)",
+    async (history) => {
+      const { db, shop } = await seededShopContext({ history });
+      const rows = await db.select().from(courses).where(eq(courses.shopId, shop.id));
+      expect(rows).toHaveLength(COURSE_TEMPLATES.length + 1);
+      const urls = rows.map((row) => row.heroImageUrl);
+      expect(new Set(urls).size).toBe(rows.length);
+      for (const row of rows) {
+        const key =
+          row.sourceTemplateSlug ??
+          (row.agency === "ssi" && row.title === "Nitrox 40" ? "ssi-nitrox-40" : "");
+        expect(SEED_COURSE_ILLUSTRATIONS[key], row.title).toEqual({
+          url: row.heroImageUrl,
+          alt: row.heroImageAlt,
+        });
+      }
+    },
+    60_000,
+  );
+
+  it("covers each template and the additional SSI course with distinct valid assets", async () => {
+    expect(Object.keys(SEED_COURSE_ILLUSTRATIONS).sort()).toEqual(
+      [...COURSE_TEMPLATES.map((template) => template.slug), "ssi-nitrox-40"].sort(),
+    );
+    const digests = new Set<string>();
+    for (const { url, alt } of Object.values(SEED_COURSE_ILLUSTRATIONS)) {
+      expect(url).toMatch(/^\/course-illustrations\/[a-z0-9-]+\.webp$/);
+      expect(alt).toMatch(/^Illustration: .+\.$/);
+      const bytes = await readFile(join(process.cwd(), "public", url));
+      expect(bytes.length).toBeLessThan(500_000);
+      const metadata = await sharp(bytes).metadata();
+      expect(metadata).toMatchObject({ format: "webp", width: 1536, height: 1024 });
+      digests.add(createHash("sha256").update(bytes).digest("hex"));
+    }
+    expect(digests.size).toBe(COURSE_TEMPLATES.length + 1);
+  });
 });

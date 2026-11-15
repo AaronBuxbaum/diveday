@@ -5,6 +5,7 @@ import { revalidateAndRedirect } from "@/features/navigation";
 import { requireStaffSession } from "@/features/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { importTemplateFromForm } from "./site-forms";
+import { requireSiteEditor } from "./site-gate";
 
 /**
  * Copy a DiveDay catalog template into the session's own shop and open the new
@@ -15,6 +16,7 @@ import { importTemplateFromForm } from "./site-forms";
  */
 export async function importDiveSiteTemplateAction(formData: FormData) {
   const active = await requireStaffSession();
+  await requireSiteEditor(active);
   const back = shopPath(active.user.shopSlug, "dive-sites");
   const site = await importTemplateFromForm(await getDb(), active.user.shopId, formData);
   if (!site) revalidateAndRedirect(back);

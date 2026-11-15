@@ -1,7 +1,6 @@
 {
   "seatSealFailed": "Changed after signing",
-  "title": "Waivers and signed records",
-  "editRelease": "Edit the release",
+  "title": "Waivers and forms",
   "banner": {
     "savedNew": "Saved as a new version",
     "savedFirst": "Your waiver is saved.",
@@ -214,5 +213,8 @@
     "guardianNote": "If the diver is a minor, a parent or guardian signs too.",
     "guardianName": "Parent or guardian’s printed name",
     "guardianSignature": "Parent or guardian’s signature"
-  }
+  },
+  "signedTitle": "Signed waivers",
+  "signedRecordsLink": "See who has signed",
+  "editReleaseLink": "Edit the release and forms"
 }

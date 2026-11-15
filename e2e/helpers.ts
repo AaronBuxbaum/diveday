@@ -12,6 +12,19 @@ import { E2E_FROZEN_CLOCK, E2E_STRIPE_TEST_WEBHOOK_SECRET } from "./servers";
 // lifetime; a changed value tells the fixture to sign in again.
 let staffStorageStateGeneration = 0;
 
+/** Select one named crew member whether their option also names a day-off warning. */
+export async function selectCrewByName(page: Page, name: string): Promise<void> {
+  const select = page.getByLabel("Assign crew");
+  const labels = await select.locator("option").allTextContents();
+  const matching = labels
+    .map((label) => label.trim())
+    .filter((label) => label === name || label.startsWith(`${name} — `));
+  expect(matching, `one crew option for ${name}`).toHaveLength(1);
+  const [label] = matching;
+  if (!label) throw new Error(`Missing crew option for ${name}`);
+  await select.selectOption({ label });
+}
+
 export function currentStaffStorageStateGeneration(): number {
   return staffStorageStateGeneration;
 }
@@ -93,6 +106,44 @@ export async function saveDiveIntent(page: Page, label: string) {
   await expect(
     page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
   ).toBeVisible();
+}
+
+/** Follow the schedule's pages to a named departure. */
+export async function findNamedScheduleTrip(
+  page: Page,
+  title: string,
+  locale: "en-US" | "es-ES" = "en-US",
+) {
+  const t = diverTranslator(locale);
+  const list = page.getByRole("list", { name: t("schedule.tripListLabel") });
+  await expect(list).toBeVisible();
+  const trip = list.getByRole("link", { name: title }).first();
+  while ((await trip.count()) === 0) {
+    const later = page.getByRole("link", { name: t("schedule.showLater") });
+    await expect(later).toBeVisible();
+    const previousUrl = page.url();
+    await later.click();
+    await page.waitForURL((url) => url.href !== previousUrl);
+    await expect(list).toBeVisible();
+  }
+  return trip;
+}
+
+/** Open a named departure through the schedule. */
+export async function openNamedScheduleTrip(
+  page: Page,
+  title: string,
+  locale: "en-US" | "es-ES" = "en-US",
+) {
+  await (await findNamedScheduleTrip(page, title, locale)).click();
+}
+
+/** Open a future departure with available seats from the schedule. */
+export async function openFirstBookableScheduleTrip(page: Page) {
+  const list = page.getByRole("list", { name: diverTranslator("en-US")("schedule.tripListLabel") });
+  const trip = list.getByRole("link", { name: /(?:[0-9]+ seats?|last seat)/i }).first();
+  await expect(trip).toBeVisible();
+  await trip.click();
 }
 
 /** Submit one booking on the open public trip and wait for its `/ready/<token>` thread. */
@@ -801,8 +852,16 @@ export function manifestRow(page: Page, name: string): Locator {
  * copy that looks current is the failure mode the whole mechanism exists to
  * prevent, so its state rides the summary line.
  */
-export async function offlineCopySaved(page: Page): Promise<void> {
-  await expect(page.getByText(/(Fresh|Aging|Stale) copy/)).toBeVisible();
+export async function offlineCopySaved(page: Page, locale = "en-US"): Promise<void> {
+  const t = staffTranslator(locale);
+  const labels = [
+    t("trips.offlineManifestManager.freshnessCurrent"),
+    t("trips.offlineManifestManager.freshnessAging"),
+    t("trips.offlineManifestManager.freshnessStale"),
+  ];
+  await expect(
+    page.getByText(new RegExp(`^(?:${labels.map(escapeRegExp).join("|")})$`)),
+  ).toBeVisible();
 }
 
 /**
@@ -915,22 +974,6 @@ export async function openCantFillASize(page: Page): Promise<void> {
 }
 
 /**
- * Open every boat's "and N more" under Today's Needs you (`foldBoatRows`).
- *
- * A boat with more than six rows shows five and folds its chores behind the
- * fold; a spec after a row that can fold (a bounced email, "seats open, N want
- * in") opens it first. Call after the page has rendered Needs you.
- */
-export async function openTodayBoatFolds(page: Page): Promise<void> {
-  await expect(page.getByRole("heading", { name: "Needs you", level: 2 })).toBeVisible();
-  const folds = page.locator("details").filter({
-    has: page.locator("> summary", { hasText: /^and \d+ more$/ }),
-  });
-  // diveday:allow-e2e-hygiene empty-all: no fold is a boat of six rows or fewer, all shown; the caller then waits for its own row, which fails loudly if it is missing.
-  for (const fold of await folds.all()) await openIfClosed(fold);
-}
-
-/**
  * Native `open` is DOM state React never touches, so check before toggling.
  *
  * `> summary`, not `summary`: these panels contain other disclosures (the
@@ -1035,7 +1078,7 @@ export async function openPaperWaiverForm(scope: Page | Locator) {
  * fields render once its summary is clicked, with no hydration to wait on.
  */
 export async function writeCourseForm(page: Page, title: string, body: string): Promise<void> {
-  await page.goto("/shop/blue-mantis/waivers#course-form-new");
+  await page.goto("/shop/blue-mantis/settings/waivers#course-form-new");
   // The fragment reveals both disclosures. Toggling while the client reveal
   // is still arriving can close the destination that this journey needs open.
   const definitions = page.locator("#course-forms").filter({ visible: true });

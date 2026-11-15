@@ -343,11 +343,17 @@ test.describe("owner, the Safety page", () => {
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/safety");
 
-    // Four counts, each the door to its list (visual review A05); a list
-    // renders only when it has rows, so the tiles are what is asserted.
+    // All four counts remain visible; a figure only links to a list that exists.
     const record = page.getByRole("region", { name: "This month’s safety record" });
     await expect(record).toBeVisible();
-    await expect(record.getByRole("link")).toHaveCount(4);
+    await expect(record.locator("dt")).toHaveCount(4);
+    await expect(record.locator('a[href*="/settings/activity"]')).toHaveCount(1);
+    const listLinks = record.locator('a[href^="#"]');
+    for (let index = 0; index < (await listLinks.count()); index += 1) {
+      const href = await listLinks.nth(index).getAttribute("href");
+      expect(href).toBeTruthy();
+      await expect(page.locator(href as string)).toBeVisible();
+    }
 
     // The Print door opens the month as a sheet of the shop's paper, with the
     // same four counts and no control on it.
@@ -376,9 +382,10 @@ test.describe("owner, the Safety page", () => {
 test.describe("owner, Safety's tabs", () => {
   signedInAsOwner();
 
-  // Drills and Waivers sit beside the month's record as tabs of Safety, and the
-  // Drills tab draws one tile per kind of drill with the days since it was run.
-  test("moves between Overview, Drills and Waivers, with four drill tiles", {
+  // Drills sits beside the month's record as a tab of Safety and draws one tile
+  // per kind of drill with the days since it was run. Waivers are not here:
+  // setup is in Settings, signatures are read in Divers (Aaron, 2026-11-13).
+  test("moves between Overview and Drills, with four drill tiles", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/safety");
@@ -389,9 +396,7 @@ test.describe("owner, Safety's tabs", () => {
     for (const kind of ["Emergency oxygen", "Missing diver", "Person overboard", "Fire"]) {
       await expect(page.getByText(kind, { exact: true }).first()).toBeVisible();
     }
-    await tabs.getByRole("link", { name: "Waivers" }).click();
-    await expect(page).toHaveURL(/\/waivers/);
-    await expect(page.getByRole("heading", { level: 1, name: "Safety" })).toBeVisible();
+    await expect(tabs.getByRole("link", { name: "Waivers" })).toHaveCount(0);
   });
 });
 

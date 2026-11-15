@@ -3,7 +3,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { Bone, Pending } from "@/components/ui/pending";
 import { ScheduleViewsSkeleton } from "../schedule/_components/ScheduleViews";
-import { WEEK_GRID, weekTailRowClass } from "./_components/StaffingWeek";
+import { WEEK_GRID } from "./_components/StaffingWeek";
 
 const DAYS = [0, 1, 2, 3, 4, 5, 6];
 
@@ -109,17 +109,6 @@ export default function StaffingLoading() {
             </div>
           ))}
         </div>
-
-        {/* "Add a shift" and "Add days away": 48px summaries,
-            each on its closing rule alone under the week, as the page draws
-            them. */}
-        {[0, 1].map((door) => (
-          <div key={door} className={weekTailRowClass}>
-            <div className="flex h-12 items-center">
-              <Bone className="h-4 w-36" />
-            </div>
-          </div>
-        ))}
 
         {/* The consent row, a 44px disclosure. */}
         <div className="mt-10 flex h-11 items-center">

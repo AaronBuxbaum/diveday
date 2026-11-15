@@ -37,7 +37,14 @@ export type AvailabilityBlock = {
   startsOn: CalendarDate;
   endsOn: CalendarDate;
   note: string | null;
+  /** Absent reads as `approved`: a row nobody had to answer. */
+  status?: AwayStatus;
+  /** The owner's reason, only as {@link awayNoteFor} lets the reader see it. */
+  decisionNote?: string | null;
 };
+
+/** Where a day off stands (`crew_availability_blocks.status`). */
+export type AwayStatus = "pending" | "approved" | "declined";
 
 /**
  * **Who may read why somebody is away** (issue #2673, decided by Aaron

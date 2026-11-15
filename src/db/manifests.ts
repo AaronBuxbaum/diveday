@@ -2184,7 +2184,10 @@ async function writeRollCall(
       // Only here: after a dive the body is on the boat, and the reclaim
       // below stays unrefusable.
       if (isTurnedAwaySeat(booking)) {
-        const held = await heldSeatCounts(tx, input.shopId, input.tripId);
+        // Its own dock sighting, if the desk recorded one, is this seat.
+        const held = await heldSeatCounts(tx, input.shopId, input.tripId, {
+          exceptBookingId: booking.id,
+        });
         const capacity = await sellableCapacity(tx, booking);
         if (seatRefusal(booking.participantType, { ...booking, capacity }, held)) {
           return refuse("boat_full");

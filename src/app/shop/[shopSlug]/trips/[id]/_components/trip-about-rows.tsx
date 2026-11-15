@@ -17,7 +17,13 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
-import { formatMoneyCents, formatShortDate, formatWeekdayTime, weekdayNames } from "@/lib/format";
+import {
+  formatMoneyCents,
+  formatShortDate,
+  formatTimeTz,
+  formatWeekdayTime,
+  weekdayNames,
+} from "@/lib/format";
 import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
@@ -28,7 +34,7 @@ import {
 } from "@/lib/temperature-units";
 import { laterMeetingDates, laterMeetingHours } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
-import { updateTripCrewAction } from "../crew-actions";
+import { moveTripCrewAction, updateTripCrewAction } from "../crew-actions";
 import type { DepartureDetailsSection } from "../departure-detail-sections";
 import { saveDetailsSection } from "../details-actions";
 import {
@@ -38,6 +44,7 @@ import {
 import { saveRequirementsAction } from "../terms-actions";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewAwayWorkingList } from "./CrewAwayWorkingList";
+import { CrewMoveForm } from "./CrewMoveForm";
 import { CrewSection } from "./CrewSection";
 import { DetailsEditor } from "./DetailsEditor";
 import type { departureConditionReads } from "./departure-conditions";
@@ -176,6 +183,15 @@ function departureEditor(context: TripAboutRowsContext, section: DepartureDetail
       }}
     />
   ) : undefined;
+}
+
+function crewRoleOptions(t: StaffTranslator) {
+  return {
+    instructor: t("trips.crew.roleInstructor"),
+    divemaster: t("trips.crew.roleDivemaster"),
+    captain: t("trips.crew.roleCaptain"),
+    crew: t("trips.crew.roleCrew"),
+  };
 }
 
 function departureDefinitionRows(context: TripAboutRowsContext) {
@@ -451,11 +467,9 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
             staff={staff}
             crewIds={crewIds}
             crewRoles={Object.fromEntries(tripRoleByPerson)}
-            // A cancelled departure isn't sailing, so its crew panel drops
-            // the live-trip nudges — the ratio gates, the shop's target,
-            // and the shift-coverage badges are all about a boat that will
-            // leave.
+            // Canceled departures have no live-trip staffing warnings.
             onShiftIds={cancelled ? null : onShiftIds}
+            awayPersonIds={cancelled ? [] : crew.awayPersonIds}
             clashes={liveClashes}
             crewGapCode={cancelled ? "none" : crewGap.code}
             bookingInstructorPresent={crew.rosterInWaterCrew.instructorCount > 0}
@@ -469,6 +483,7 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
               ratingLapsedNote: cancelled ? null : ratingLapsedNote,
               noStaff: t("trips.crew.noCrew"),
               notAssignedYet: t("trips.crew.notAssignedYet"),
+              awayWarning: t("trips.crew.awayWarning"),
               assignLabel: t("trips.crew.assignLabel"),
               assignOption: t("trips.crew.assignOption"),
               unassignAria: t.raw("trips.crew.unassignAria"),
@@ -481,17 +496,14 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
               clash: t.raw("trips.crew.clash"),
               roleAria: t.raw("trips.crew.roleAria"),
               roleUnspecified: t("trips.crew.roleUnspecified"),
-              roleOptions: {
-                instructor: t("trips.crew.roleInstructor"),
-                divemaster: t("trips.crew.roleDivemaster"),
-                captain: t("trips.crew.roleCaptain"),
-                crew: t("trips.crew.roleCrew"),
-              },
+              roleOptions: crewRoleOptions(t),
               onShift: t("trips.crew.onShift"),
               notOnShift: t("trips.crew.notOnShift"),
               manageShifts: shop.crewScheduleEnabled ? t("trips.crew.manageShifts") : null,
             }}
           />
+          {/* One step to another boat that day (issue #4474). */}
+          {crewMoveFormFor(context)}
           {/* "No longer working it" (#2678, dock review S2). */}
           <CrewAwayWorkingList
             shopSlug={shopSlug}
@@ -553,6 +565,34 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
         ) : undefined,
     },
   ];
+}
+
+/** "Move to another boat": the crew here and the day's other boats, while the departure is editable. */
+function crewMoveFormFor(context: TripAboutRowsContext) {
+  const { overview, shop, shopSlug, tripId, locale, t } = context;
+  if (overview.cancelled || context.detailsEditable === false) return null;
+  const { crewIds } = overview.crew;
+  return (
+    <CrewMoveForm
+      tripId={tripId}
+      crew={overview.staff
+        .filter((entry) => crewIds.includes(entry.person.id))
+        .map((entry) => ({ id: entry.person.id, fullName: entry.person.fullName }))}
+      targets={overview.crewMoveTargets.map((target) => ({
+        id: target.id,
+        label: `${formatTimeTz(target.startsAt, locale, shop.timezone)} · ${target.title}`,
+      }))}
+      action={moveTripCrewAction.bind(null, shopSlug, tripId)}
+      copy={{
+        trigger: t("trips.crew.move.trigger"),
+        who: t("trips.crew.move.who"),
+        to: t("trips.crew.move.to"),
+        choose: t("trips.crew.move.choose"),
+        submit: t("trips.crew.move.submit"),
+        pending: t("trips.crew.move.pending"),
+      }}
+    />
+  );
 }
 
 /** A completed departure keeps all facts but none of its definition editors. */

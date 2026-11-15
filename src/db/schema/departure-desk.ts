@@ -1,5 +1,15 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
@@ -113,6 +123,95 @@ export const departureNotes = pgTable(
   ],
 );
 
+/**
+ * Where a boarding observation stands (issue #4474). `pending` until the seat
+ * allocation runs under the departure's lock; `applied` once the seat is held
+ * again; `conflict` while the departure cannot take the diver back, which
+ * keeps the observation open and counted until someone sorts it out;
+ * `dismissed` when a staffer says it no longer stands.
+ */
+export const boardingObservationState = pgEnum("boarding_observation_state", [
+  "pending",
+  "applied",
+  "conflict",
+  "dismissed",
+]);
+
+/**
+ * **"They're here": a released diver seen at the dock** (issue #4474).
+ *
+ * Intake and allocation are two steps. The desk's tap writes this row and
+ * commits without waiting on the departure, the seat or any schedule write, so
+ * the physical observation is never lost behind a move or a crew edit. The seat
+ * is then allocated under the departure's lock (`settleBoardingObservations`,
+ * `src/db/boarding-observations.ts`): at once when the lock is free, otherwise
+ * by the retry after the response and the shop tick.
+ *
+ * While the row is open (`pending` or `conflict`) the seat counts as held in
+ * every capacity gate (`heldSeatCounts`), so the freed seat cannot be sold
+ * over the diver standing at the dock. A conflict stays open, on the departure
+ * and on the board, until the seat comes back or a staffer dismisses it.
+ *
+ * `trip_id` and `booking_id` carry **no foreign key on purpose**: an insert
+ * takes `FOR KEY SHARE` on every referenced row, and a move or a sale holds
+ * that departure and seat `FOR UPDATE`, so a key would make the observation
+ * wait behind exactly the schedule writes it must never wait behind. Both ids
+ * are read and proven this shop's before the insert, and neither row is ever
+ * hard-deleted.
+ *
+ * `client_key` makes intake idempotent: a retried or replayed tap names the
+ * same key and writes nothing new; the same key for another seat is refused.
+ */
+export const boardingObservations = pgTable(
+  "boarding_observations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id").notNull(),
+    bookingId: uuid("booking_id").notNull(),
+    clientKey: text("client_key").notNull(),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    observedAt: appNowTimestamp("observed_at").notNull(),
+    state: boardingObservationState("state").notNull().default("pending"),
+    /** Why the departure cannot take the diver back, while `conflict`. A code, never a sentence. */
+    conflictCode: text("conflict_code"),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+    dismissedByPersonId: uuid("dismissed_by_person_id").references(() => people.id),
+  },
+  (table) => [
+    uniqueIndex("boarding_observations_client_key_unique").on(table.shopId, table.clientKey),
+    // One open observation per seat: a second staffer's tap joins the first.
+    uniqueIndex("boarding_observations_open_seat_unique")
+      .on(table.bookingId)
+      .where(sql`${table.state} in ('pending', 'conflict')`),
+    index("boarding_observations_open_trip_idx")
+      .on(table.shopId, table.tripId)
+      .where(sql`${table.state} in ('pending', 'conflict')`),
+    check(
+      "boarding_observations_client_key_length",
+      sql`length(${table.clientKey}) between 8 and 100`,
+    ),
+    check(
+      "boarding_observations_conflict_has_code",
+      sql`(${table.state} = 'conflict') = (${table.conflictCode} is not null)`,
+    ),
+    check(
+      "boarding_observations_settled_unless_pending",
+      sql`(${table.state} = 'pending') = (${table.settledAt} is null)`,
+    ),
+    check(
+      "boarding_observations_dismissed_by",
+      sql`(${table.state} = 'dismissed') = (${table.dismissedByPersonId} is not null)`,
+    ),
+  ],
+);
+
+export type BoardingObservation = typeof boardingObservations.$inferSelect;
+export type BoardingObservationState = (typeof boardingObservationState.enumValues)[number];
 export type LostItem = typeof lostItems.$inferSelect;
 export type LostItemStatus = (typeof lostItemStatus.enumValues)[number];
 export type DepartureNote = typeof departureNotes.$inferSelect;

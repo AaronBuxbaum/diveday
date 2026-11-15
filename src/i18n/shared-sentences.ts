@@ -25,8 +25,7 @@ export type OwnerOrManagerAct =
   | "backup"
   | "questionnaire"
   | "invoice"
-  | "bill"
-  | "courseForm";
+  | "bill";
 
 /** A message key and the values it takes, for a notice table to carry. */
 export type StaffWords = { key: StaffMessageKey; values?: Record<string, string> };

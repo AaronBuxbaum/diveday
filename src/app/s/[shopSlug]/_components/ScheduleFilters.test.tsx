@@ -12,6 +12,7 @@ afterEach(cleanup);
 
 const copy: ScheduleFiltersCopy = {
   partySize: "How many of you?",
+  anyPartySize: "Any party size",
   fewerPeople: "Fewer people",
   morePeople: "More people",
   disclosure: "More filters",
@@ -20,7 +21,7 @@ const copy: ScheduleFiltersCopy = {
   funDive: "Fun dive",
   course: "Course",
   hasSpace: "Has space",
-  canDive: "What can you dive?",
+  canDive: "Existing certification",
   canDiveUnsaid: "Not saying",
   canDiveLevels: [{ value: "open_water", label: "Open Water" }],
   hideAboveLevel: "Hide trips above my level",
@@ -61,8 +62,8 @@ describe("the filter form's layout", () => {
     const row = screen.getByRole("combobox", { name: "Trip type" }).closest("[id] > div");
 
     for (const control of [
-      screen.getByRole("combobox", { name: "What can you dive?" }),
-      screen.getByRole("checkbox", { name: "Has space" }),
+      screen.getByRole("combobox", { name: "Existing certification" }),
+      screen.getByRole("combobox", { name: "How many of you?" }),
       screen.getByRole("checkbox", { name: "Hide trips above my level" }),
     ]) {
       expect(control.closest("[id] > div")).toBe(row);
@@ -123,15 +124,16 @@ describe("the collapsed filter selection", () => {
     expect(new FormData(form ?? undefined).get("lens")).toBe("wrecks");
     expect(new FormData(form ?? undefined).get("tripType")).toBe("fun_dive");
     fireEvent.click(toggle);
-    expect(screen.getByRole("checkbox", { name: "Has space" })).toBeChecked();
+    expect(screen.getByRole("combobox", { name: "How many of you?" })).toHaveValue("");
   });
 });
 
-it("offers the party stepper before the other filters and bounds it to eight", () => {
+it("offers the party count inside the filters and bounds it to eight", () => {
   filters(null);
-  expect(screen.getByRole("group", { name: "How many of you?" })).toBeVisible();
-  expect(screen.getByRole("button", { name: "Fewer people" })).toBeDisabled();
-  for (let n = 1; n < 8; n++) fireEvent.click(screen.getByRole("button", { name: "More people" }));
-  expect(screen.getByRole("status")).toHaveTextContent("8");
-  expect(screen.getByRole("button", { name: "More people" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "More filters" }));
+  const count = screen.getByRole("combobox", { name: "How many of you?" });
+  expect(count).toBeVisible();
+  expect(
+    screen.getAllByRole("option").filter((option) => option.closest("select") === count),
+  ).toHaveLength(9);
 });

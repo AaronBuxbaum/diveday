@@ -17,6 +17,7 @@ export const BUILDER_NOTICE_KEYS: Record<
   { tone: "success" | "danger" | "warning"; key: StaffMessageKey }
 > = {
   added: { tone: "success", key: "schedule.notices.added" },
+  "added-no-crew": { tone: "warning", key: "schedule.notices.addedNoCrew" },
   moved: { tone: "success", key: "schedule.notices.moved" },
   copied: { tone: "success", key: "schedule.notices.copied" },
   // Item 53: the departure copied, its crew refused as a whole.

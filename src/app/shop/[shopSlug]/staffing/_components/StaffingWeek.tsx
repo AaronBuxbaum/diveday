@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { formatTimeRangeTz } from "@/lib/format";
+import { CrewPortrait } from "./CrewPortrait";
 import { StaffingDepartureCrew } from "./StaffingDepartureCrew";
 import { StaffingPersonalRows } from "./StaffingPersonalRows";
 import { StaffingWeekHeader } from "./StaffingWeekHeader";
@@ -52,7 +54,7 @@ const CHIP_BOX = "flex w-full flex-col rounded-lg border px-2 py-1.5 text-start 
 
 const CHIP_KIND = {
   shift: "gap-px border-transparent",
-  crew: "gap-px border-primary/25 bg-primary-tint text-primary",
+  crew: "min-h-24 gap-px border-primary/25 bg-primary-tint text-primary",
   away: "gap-px border-dashed border-border bg-surface-sunken text-muted",
   gap: "gap-1 border-transparent bg-surface-sunken",
   loudGap: "gap-1 border-transparent bg-warning-tint",
@@ -146,7 +148,7 @@ function CrewChip({
       <span className="font-semibold tabular-nums">
         {windowOnThisDay(trip, words, locale, timeZone, "range")}
       </span>
-      <span className="block truncate font-medium" title={trip.title}>
+      <span className="font-medium" title={trip.title}>
         {trip.title}
       </span>
       {/* Conflicting crew times are advisory; the blackout warning below is
@@ -339,18 +341,23 @@ const GRID_CLASS = "grid grid-cols-[9rem_repeat(7,minmax(0,1fr))]";
 export function PersonFace({
   person,
   totals,
+  print = false,
 }: {
-  person: { name: string; roles: readonly string[] };
+  person: { name: string; roles: readonly string[]; photoUrl?: string | null };
   totals: string | undefined;
+  print?: boolean;
 }) {
   return (
-    <>
-      <p className="text-base font-semibold">{person.name}</p>
-      {person.roles.length > 0 ? (
-        <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
-      ) : null}
-      {totals ? <p className="text-xs text-muted tabular-nums">{totals}</p> : null}
-    </>
+    <div className="flex items-start gap-2">
+      {!print ? <CrewPortrait person={person} /> : null}
+      <div className="min-w-0">
+        <p className="break-words text-base font-semibold">{person.name}</p>
+        {person.roles.length > 0 ? (
+          <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
+        ) : null}
+        {totals ? <p className="text-xs text-muted tabular-nums">{totals}</p> : null}
+      </div>
+    </div>
   );
 }
 
@@ -359,9 +366,9 @@ export const WEEK_GRID = {
   personHead: "pe-2 py-2.5",
   dayHead: "border-s border-border px-1.5 py-2.5",
   person: "pe-2 py-3",
-  day: "flex flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+  day: "flex min-h-20 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
   // One person on screen: room to read their own week at a glance.
-  dayTall: "flex min-h-40 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+  dayTall: "flex min-h-32 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
   shiftChip: chipClass("shift"),
 } as const;
 
@@ -382,6 +389,7 @@ export function StaffingWeek({
   requestAction,
   decideRequestAction,
   dayParam,
+  picker,
 }: {
   week: StaffWeek;
   gapWords: GapWords;
@@ -398,6 +406,8 @@ export function StaffingWeek({
   decideRequestAction: (formData: FormData) => void;
   /** The raw `?day=`: the day opened under the phone calendar. */
   dayParam?: string;
+  /** The person scope control, on the pager's row so the week selector sits where every tab's does. */
+  picker?: ReactNode;
 }) {
   // Preserve calendar-day labels; shift instants are formatted in shop time.
   const dayFaces = weekDayFaces(week.days, locale);
@@ -445,6 +455,7 @@ export function StaffingWeek({
           thisWeekHref={links.thisWeekHref}
           words={words}
         />
+        {picker}
       </div>
 
       {/* Table semantics for the weekday and person headers; the rows lay

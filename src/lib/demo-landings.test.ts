@@ -68,7 +68,9 @@ describe("demoLandingPath", () => {
     // Only a form someone edited pairs a captain with the release settings;
     // Today greets them instead of a refusal notice.
     expect(demoLandingPath("demo-abc123", "captain", "waivers")).toBe("/shop/demo-abc123");
-    expect(demoLandingPath("demo-abc123", "owner", "waivers")).toBe("/shop/demo-abc123/waivers");
+    expect(demoLandingPath("demo-abc123", "owner", "waivers")).toBe(
+      "/shop/demo-abc123/settings/waivers",
+    );
     expect(demoLandingPath("demo-abc123", "captain", "today")).toBe("/shop/demo-abc123");
   });
 

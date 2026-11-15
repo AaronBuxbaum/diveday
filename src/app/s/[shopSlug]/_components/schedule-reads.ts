@@ -15,6 +15,7 @@ import { siteSightings } from "@/features/trip-sightings";
 import { EMPTY_REVIEW_AGGREGATE } from "@/lib/reviews";
 import { resolveLens } from "@/lib/trip-lenses";
 import { seatsOnSale } from "@/lib/trips";
+import { shopDayBounds } from "@/lib/zoned";
 
 /**
  * **Has this shop ever run a departure** — which is not what `hasUpcoming` asks.
@@ -55,7 +56,7 @@ export function listedDepartureSummaries(db: AppDb, shopId: string, tripIds: str
  */
 export async function readSchedulePage(
   db: AppDb,
-  shop: { id: string; reviewsEnabled: boolean; sightingsEnabled?: boolean },
+  shop: { id: string; timezone: string; reviewsEnabled: boolean; sightingsEnabled?: boolean },
   {
     isEmbed = false,
     lens,
@@ -63,6 +64,7 @@ export async function readSchedulePage(
     now,
     listMonthBounds,
     hasSpaceFilter,
+    partySize,
     tripTypeFilter,
   }: {
     /** The framed schedule's reader (`embed/calendar/page.tsx`): no lenses, shelf, fleet or rating. */
@@ -75,6 +77,7 @@ export async function readSchedulePage(
     /** The explicit month's bounds when the diver paged the rail to one. */
     listMonthBounds: { monthStart: Date; monthEnd: Date } | null;
     hasSpaceFilter: boolean;
+    partySize?: number;
     tripTypeFilter: "fun_dive" | "course" | undefined;
   },
 ) {
@@ -114,6 +117,8 @@ export async function readSchedulePage(
       cursor: cursor.after,
       before: cursor.before,
       now,
+      from: shopDayBounds(now, shop.timezone).from,
+      minSeats: partySize,
       ...listMonthBounds,
       hasSpace: hasSpaceFilter ? true : undefined,
       tripType: tripTypeFilter,

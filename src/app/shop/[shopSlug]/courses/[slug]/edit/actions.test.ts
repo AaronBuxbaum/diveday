@@ -33,8 +33,7 @@ vi.mock("../../../../../../features/session/rules", () => {
   };
 });
 vi.mock("@/db/authz", () => ({
-  canPersonConfigureTrips: vi.fn(async () => true),
-  canPersonManageWaiverTemplates: vi.fn(async () => true),
+  canPersonEditCourseTemplates: vi.fn(async () => true),
 }));
 vi.mock("@/db/shops", () => ({ getShopById: vi.fn(async () => ({ currency: "USD" })) }));
 vi.mock("@/db/media-deletions", () => ({ queueAndAttemptMediaDeletion: vi.fn() }));
@@ -60,13 +59,8 @@ const {
 } = await import("../../../../../../features/courses/store");
 const { readTranslations, recordTranslation } = await import("@/db/shop-text-translations");
 const { requireStaffSession } = await import("../../../../../../features/session/rules");
-const { canPersonConfigureTrips, canPersonManageWaiverTemplates } = await import("@/db/authz");
-const {
-  courseFormListRefusal,
-  listCourseFormAgeBounds,
-  listCourseFormRequirements,
-  setCourseFormRequirements,
-} = await import("@/db/course-forms");
+const { canPersonEditCourseTemplates } = await import("@/db/authz");
+const { courseFormListRefusal, setCourseFormRequirements } = await import("@/db/course-forms");
 const { pullCourseTemplateUpdatesAction, saveCourseContentAction, setCourseVisibilityAction } =
   await import("./actions");
 
@@ -149,6 +143,15 @@ describe("pullCourseTemplateUpdatesAction", () => {
       "preserve-shop-edits",
     );
     expect(revalidatePath).toHaveBeenCalledWith("/s/blue-mantis/courses/open-water-diver");
+  });
+
+  it("refuses a staffer who cannot edit course templates, and pulls nothing", async () => {
+    vi.mocked(canPersonEditCourseTemplates).mockResolvedValueOnce(false);
+
+    expect(await redirectedTo("replace-template-copy")).toBe(
+      "/shop/blue-mantis/courses/open-water-diver/edit?error=not-authorized",
+    );
+    expect(pullCourseTemplateUpdates).not.toHaveBeenCalled();
   });
 
   it("does not claim success when the source revision is unavailable", async () => {
@@ -283,11 +286,11 @@ describe("saveCourseContentAction, with the forms a course asks for", () => {
     );
   });
 
-  it("refuses a staffer who cannot configure trips, and writes nothing", async () => {
-    vi.mocked(canPersonConfigureTrips).mockResolvedValueOnce(false);
+  it("refuses a staffer who cannot edit course templates, and writes nothing", async () => {
+    vi.mocked(canPersonEditCourseTemplates).mockResolvedValueOnce(false);
 
     expect(await posted([["formId", FORM_A]])).toBe(
-      "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-not-authorized#forms",
+      "/shop/blue-mantis/courses/open-water-diver/edit?error=not-authorized",
     );
     expect(setCourseFormRequirements).not.toHaveBeenCalled();
     // The whole save is refused, the course page with it.
@@ -307,64 +310,6 @@ describe("saveCourseContentAction, with the forms a course asks for", () => {
       "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-invalid#forms",
     );
     expect(setCourseFormRequirements).not.toHaveBeenCalled();
-  });
-
-  it("lets an instructor add a form, but never take one off: that is an owner's or manager's call", async () => {
-    vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: true });
-    vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(false);
-    vi.mocked(listCourseFormRequirements).mockResolvedValue([FORM_A]);
-
-    // Adding B beside A saves.
-    expect(
-      await posted([
-        ["formId", FORM_A],
-        ["formId", FORM_B],
-      ]),
-    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=saved");
-    vi.mocked(setCourseFormRequirements).mockClear();
-
-    // Dropping A — even while adding B — is refused, and writes nothing.
-    expect(await posted([["formId", FORM_B]])).toBe(
-      "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-remove-not-authorized#forms",
-    );
-    expect(setCourseFormRequirements).not.toHaveBeenCalled();
-    vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(true);
-    vi.mocked(listCourseFormRequirements).mockResolvedValue([]);
-  });
-
-  it("lets an instructor raise or clear an age, never put one on or lower it (G1)", async () => {
-    vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: true });
-    vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(false);
-    vi.mocked(listCourseFormRequirements).mockResolvedValue([FORM_A, FORM_B]);
-    vi.mocked(listCourseFormAgeBounds).mockResolvedValue(new Map([[FORM_A, 11]]));
-    const both = (ages: [string, string]) =>
-      posted([
-        ["formId", FORM_A],
-        ["formId", FORM_B],
-        [`maxAge-${FORM_A}`, ages[0]],
-        [`maxAge-${FORM_B}`, ages[1]],
-      ]);
-    const refused =
-      "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-remove-not-authorized#forms";
-
-    // A bound on B, which asked everyone, and A lowered: each asks fewer students.
-    expect(await both(["11", "12"])).toBe(refused);
-    expect(await both(["10", ""])).toBe(refused);
-    expect(setCourseFormRequirements).not.toHaveBeenCalled();
-    // Raising A, or clearing it, asks more: theirs to do.
-    expect(await both(["14", ""])).toBe(
-      "/shop/blue-mantis/courses/open-water-diver/edit?notice=saved",
-    );
-    expect(setCourseFormRequirements).toHaveBeenLastCalledWith(
-      {},
-      expect.objectContaining({ mayNarrow: false }),
-    );
-    expect(await both(["", ""])).toBe(
-      "/shop/blue-mantis/courses/open-water-diver/edit?notice=saved",
-    );
-    vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(true);
-    vi.mocked(listCourseFormRequirements).mockResolvedValue([]);
-    vi.mocked(listCourseFormAgeBounds).mockResolvedValue(new Map());
   });
 
   it("says so when an age is put on a medical statement (G3)", async () => {
@@ -486,7 +431,7 @@ describe("setCourseVisibilityAction", () => {
 
   beforeEach(() => {
     vi.mocked(getCourseBySlug).mockResolvedValue(ACTIVE_COURSE as never);
-    vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
+    vi.mocked(canPersonEditCourseTemplates).mockResolvedValue(true);
   });
 
   it("flips the course in the session's shop and revalidates the editor and the roster", async () => {
@@ -503,7 +448,7 @@ describe("setCourseVisibilityAction", () => {
    * away. The action re-asks live roles and refuses; the row never moves.
    */
   it("refuses the post from a role that may not define trips", async () => {
-    vi.mocked(canPersonConfigureTrips).mockResolvedValue(false);
+    vi.mocked(canPersonEditCourseTemplates).mockResolvedValue(false);
     await expect(setCourseVisibilityAction("open-water-diver", COURSE_ID)).rejects.toThrow(
       "REDIRECT:/shop/blue-mantis/courses/open-water-diver/edit?error=not-authorized",
     );

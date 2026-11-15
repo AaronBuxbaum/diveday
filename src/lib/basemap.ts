@@ -74,7 +74,7 @@ const BASEMAP_SOURCES = "Esri, Maxar, Earthstar Geographics, and the GIS User Co
 export const BASEMAP_CREDIT = `Powered by Esri · ${BASEMAP_SOURCES}`;
 
 /** The credit with the provider linked, for Leaflet's attribution control. */
-export const BASEMAP_ATTRIBUTION = `<a href="https://www.esri.com" target="_blank" rel="noopener">Powered by Esri</a> · ${BASEMAP_SOURCES}`;
+export const BASEMAP_ATTRIBUTION = `<a href="https://www.esri.com" target="_blank" rel="noopener noreferrer">Powered by Esri</a> · ${BASEMAP_SOURCES}`;
 
 /**
  * The square a briefing frames around a site at a stored route zoom.

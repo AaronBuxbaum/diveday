@@ -1616,7 +1616,7 @@ export async function setSeriesStandingCrew(
       input.shopId,
       sibling.id,
       crew.map((member) => ({ personId: member.personId, tripRole: member.tripRole })),
-      { actorPersonId: input.actorPersonId, now },
+      { actorPersonId: input.actorPersonId, now, requireScheduledShift: true },
     );
     if (saved) updated += 1;
     else skipped += 1;

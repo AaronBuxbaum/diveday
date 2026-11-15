@@ -145,7 +145,7 @@ export function registerRemainingExpandedAuditCaptures(
     test("the course-form ledger opens an existing version's editable wording", async ({
       page,
     }) => {
-      await page.goto("/shop/blue-mantis/waivers");
+      await page.goto("/shop/blue-mantis/settings/waivers");
       await openIfClosed(page.locator("#course-forms"));
       const editor = page
         .locator('#course-forms details[id^="course-form-"]:not(#course-form-new)')
@@ -156,7 +156,7 @@ export function registerRemainingExpandedAuditCaptures(
     });
 
     test("adding a course form opens its blank wording and medical choice", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/waivers");
+      await page.goto("/shop/blue-mantis/settings/waivers");
       await openIfClosed(page.locator("#course-forms"));
       const editor = page.locator("#course-form-new");
       await openIfClosed(editor);

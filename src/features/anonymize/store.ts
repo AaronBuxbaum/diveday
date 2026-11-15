@@ -294,6 +294,7 @@ async function linkedToHeldIncident(
 /** Every column `listDiverSummaries` already refuses to ship to the browser, plus the rest. */
 const ERASED_PERSON_COLUMNS = {
   fullName: ANONYMIZED_PERSON_NAME,
+  staffPhotoPath: null,
   // Must be null, not a sentinel: `people_shop_email_unique` is a partial
   // unique index on lower(email) over the live rows, and while an erased
   // person is always soft-deleted (so outside that index), a shared sentinel

@@ -1,5 +1,6 @@
 /** ADR 20260907-in-your-hands 19d: simulated capability, real text geometry. */
 import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody, fragmentedWords } from "./device-text-size-fixture";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
@@ -42,7 +43,10 @@ test("largest phone checklist and status labels keep readable words", async ({ p
   expect.soft(await fragmentedWords(oxygen)).toEqual([]);
   const depth = page.getByText("Depth advisory", { exact: true }).first();
   expect.soft(await fragmentedWords(depth)).toEqual([]);
-  const fresh = page.getByText("Fresh copy", { exact: true });
+  const fresh = page.getByText(
+    staffTranslator("en-US")("trips.offlineManifestManager.freshnessCurrent"),
+    { exact: true },
+  );
   expect.soft(await fragmentedWords(fresh)).toEqual([]);
   for (const width of [390, 820, 1280]) {
     await page.setViewportSize({ width, height: 844 });

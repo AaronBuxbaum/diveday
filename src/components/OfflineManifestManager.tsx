@@ -1,13 +1,14 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { GroupLabel } from "@/components/ui/group-label";
 import { fill, pluralForm } from "@/i18n/fill";
+import { nowMs } from "@/lib/clock";
 import { scopedId } from "@/lib/element-id";
 import { formatDateTimeTz } from "@/lib/format";
 import {
@@ -15,6 +16,8 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
   offlineManifestFreshness,
+  pendingOfflineEventCount,
+  rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
 import { type OfflineManifestSyncCopy, useOfflineManifestSync } from "./use-offline-manifest-sync";
 
@@ -44,6 +47,9 @@ export interface OfflineManifestManagerCopy extends OfflineManifestSyncCopy {
   freshnessCurrent: string;
   freshnessAging: string;
   freshnessStale: string;
+  freshnessExpired: string;
+  pendingSummaryOne: string;
+  pendingSummaryOther: string;
   /** `{date}`, `{pending}`, `{rejected}` placeholders. */
   savedSummary: string;
   refreshingLabel: string;
@@ -91,9 +97,26 @@ export function OfflineManifestManager({
   children?: ReactNode;
 }) {
   const { tripId, saved, message, busy, settled, refresh } = useOfflineManifestSync(payload, copy);
+  const [, setExpiryTick] = useState(0);
+  const expiresAt = saved?.snapshot.expiresAt;
+  useEffect(() => {
+    if (!expiresAt) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const remaining = new Date(expiresAt).getTime() - nowMs();
+      if (!Number.isFinite(remaining)) return;
+      if (remaining <= 0) {
+        setExpiryTick((value) => value + 1);
+      } else {
+        timer = setTimeout(schedule, Math.min(remaining, 2_147_483_647));
+      }
+    };
+    schedule();
+    return () => clearTimeout(timer);
+  }, [expiresAt]);
 
-  const pending = saved?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
-  const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
+  const pending = saved ? pendingOfflineEventCount(saved) : 0;
+  const rejected = saved ? rejectedOfflineEventCount(saved) : 0;
   const noteEvents = saved ? [...saved.events, ...saved.checklistEvents] : [];
   const cutoffNoteEvents = noteEvents.filter(
     (event) => event.noteDisposition === "discarded_erasure_cutoff",
@@ -125,9 +148,16 @@ export function OfflineManifestManager({
         : copy.reconcileNoteMarkKept;
     return fill(copy.reconcileNoteEntry, { subject, checkpoint, result });
   };
-  const freshness = saved ? offlineManifestFreshness(new Date(saved.snapshot.savedAt)) : null;
-  const freshnessLabel =
-    freshness === "current"
+  const expiryMs = saved ? new Date(saved.snapshot.expiresAt).getTime() : null;
+  const expired = expiryMs !== null && (!Number.isFinite(expiryMs) || expiryMs <= nowMs());
+  const freshness = saved
+    ? expired
+      ? "stale"
+      : offlineManifestFreshness(new Date(saved.snapshot.savedAt))
+    : null;
+  const freshnessLabel = expired
+    ? copy.freshnessExpired
+    : freshness === "current"
       ? copy.freshnessCurrent
       : freshness === "aging"
         ? copy.freshnessAging
@@ -167,7 +197,10 @@ export function OfflineManifestManager({
             role="alert"
             className="pointer-events-auto max-w-2xl rounded-inset border border-danger/30 bg-danger-tint px-4 py-3 text-base font-semibold text-danger shadow-lg backdrop-blur"
           >
-            {rejectedNotice}
+            {rejectedNotice}{" "}
+            <a href={`/offline-manifest?trip=${tripId}`} className={proseLinkClass}>
+              {copy.openOfflineRollCall}
+            </a>
           </div>
         </div>
       ) : null}
@@ -246,6 +279,17 @@ export function OfflineManifestManager({
                     offlineTitle: copy.connectivityOfflineTitle,
                   }}
                 />
+                {pending > 0 ? (
+                  <span role="status" className="text-sm font-medium text-foreground">
+                    {fill(
+                      pluralForm(pending, {
+                        one: copy.pendingSummaryOne,
+                        other: copy.pendingSummaryOther,
+                      }),
+                      { count: pending },
+                    )}
+                  </span>
+                ) : null}
                 {freshness ? (
                   <OfflineFreshnessPill freshness={freshness}>
                     {freshnessLabel}

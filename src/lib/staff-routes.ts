@@ -45,7 +45,7 @@ const SETTINGS = "settings";
  * Every staff page. Keys are sorted as the file system lists them.
  *
  * The overrides fall into three families. The shop's registers (boats, trip
- * tags, safety checklist, waivers) sit at depth 1 for their own nav rows but
+ * tags, safety checklist) sit at depth 1 for their own nav rows but
  * are set up from Settings, so Settings is their parent until they move under
  * it. The board wears two URL segments (`/schedule` has no page), so every
  * reading of the schedule names it directly. And the faces and paper sheets say
@@ -64,6 +64,7 @@ export const STAFF_ROUTES = {
   "divers/[personId]/merge/[survivorId]": {},
   "divers/[personId]/waivers/[recordId]": { upHash: "#waiver" },
   "divers/[personId]/waivers/[recordId]/print": {},
+  "divers/waivers": {},
   gear: {},
   "gear/[id]": {},
   "gear/rentals/[ticketId]": {},
@@ -109,6 +110,8 @@ export const STAFF_ROUTES = {
   "settings/profile": {},
   "settings/rentals": {},
   "settings/team": {},
+  "settings/waivers": {},
+  "settings/waivers/print": {},
   "settings/whatsapp": {},
   staffing: {},
   "staffing/print": {},
@@ -122,8 +125,6 @@ export const STAFF_ROUTES = {
   "trips/[id]/party/[leadId]/waivers": {},
   "trips/[id]/party/[leadId]/waivers/[bookingId]/doctor": {},
   "trips/[id]/prep": { face: true },
-  waivers: { parent: SETTINGS },
-  "waivers/print": {},
 } as const satisfies Record<string, StaffRouteNode>;
 
 export type StaffRouteKey = keyof typeof STAFF_ROUTES;

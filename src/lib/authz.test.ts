@@ -8,7 +8,8 @@ import {
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
-  canEditDiveSiteAdmission,
+  canEditCourseTemplates,
+  canEditDiveSites,
   canEmergencyReadMedicalAlert,
   canErasePersonalData,
   canExportDisputeSheet,
@@ -102,7 +103,7 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canManageTripTags", canManageTripTags],
     ["canManageSafetyChecklist", canManageSafetyChecklist],
     // #3706: a dive site's level, specialties, nitrox and max depth.
-    ["canEditDiveSiteAdmission", canEditDiveSiteAdmission],
+    ["canEditDiveSites", canEditDiveSites],
   ] as const;
 
   for (const [name, gate] of gates) {
@@ -164,17 +165,9 @@ describe("canReadMedicalAlert (owner, manager, and the diver's own crew)", () =>
   });
 });
 
-describe("canPrintMedicalAlerts (owner and manager, issue #2990)", () => {
-  it("admits the owner and a manager", () => {
-    for (const role of ["owner", "manager"] as const) {
-      expect(canPrintMedicalAlerts([role])).toBe(true);
-    }
-  });
-
-  it("refuses every other staff role, a diver and nobody, crew included", () => {
-    for (const role of STAFF_ROLES.filter((role) => role !== "owner" && role !== "manager")) {
-      expect(canPrintMedicalAlerts([role])).toBe(false);
-    }
+describe("canPrintMedicalAlerts", () => {
+  it("admits every staff role but no diver or anonymous user", () => {
+    for (const role of STAFF_ROLES) expect(canPrintMedicalAlerts([role])).toBe(true);
     expect(canPrintMedicalAlerts(["diver"])).toBe(false);
     expect(canPrintMedicalAlerts([])).toBe(false);
     expect(canPrintMedicalAlerts(undefined)).toBe(false);
@@ -201,6 +194,17 @@ describe("canEmergencyReadMedicalAlert (any staffer, on the days of the trip, is
     expect(canEmergencyReadMedicalAlert(["diver"], today)).toBe(false);
     expect(canEmergencyReadMedicalAlert([], today)).toBe(false);
     expect(canEmergencyReadMedicalAlert(undefined, today)).toBe(false);
+  });
+});
+
+describe("canEditCourseTemplates (owner/manager)", () => {
+  it("admits owner and manager, and nobody who merely schedules a course", () => {
+    expect(canEditCourseTemplates(["owner"])).toBe(true);
+    expect(canEditCourseTemplates(["manager"])).toBe(true);
+    for (const role of ["instructor", "divemaster", "captain", "crew", "diver"] as const) {
+      expect(canEditCourseTemplates([role])).toBe(false);
+    }
+    expect(canEditCourseTemplates(undefined)).toBe(false);
   });
 });
 

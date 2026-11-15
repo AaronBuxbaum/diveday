@@ -17,6 +17,7 @@ vi.mock("../../../../features/staffing/store", () => ({
     view: await staffingView(),
     ...(await awayRead()),
     crewRequests: [],
+    pendingTimeOff: [],
   })),
 }));
 vi.mock("@/db/trips", () => ({ listStaff: duplicateStaffRead }));
@@ -28,6 +29,7 @@ vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }))
 vi.mock("../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("./actions", () => ({
   createShiftAction: vi.fn(),
+  decideAwayAction: vi.fn(),
   decideCrewRequestAction: vi.fn(),
   deleteAwayAction: vi.fn(),
   deleteShiftAction: vi.fn(),
@@ -36,7 +38,7 @@ vi.mock("./actions", () => ({
 }));
 vi.mock("./_components/StaffingWarnings", () => ({ StaffingWarnings: () => null }));
 vi.mock("./_components/StaffingWeek", () => ({
-  StaffingWeek: () => null,
+  StaffingWeek: ({ picker }: { picker?: React.ReactNode }) => picker ?? null,
   weekTailRowClass: "",
 }));
 vi.mock("./_components/CrewPageHeader", () => ({ CrewPageHeader: () => null }));
@@ -144,22 +146,15 @@ describe("staffing page roster snapshot", () => {
     expect(screen.getByRole("combobox", { name: "View a person" })).toHaveValue(OTHER_ID);
   });
 
-  it("uses the staffing view roster for both editing selectors, with public profile settings elsewhere", async () => {
+  it("uses the staffing view roster for every day's person selector, with public profile settings elsewhere", async () => {
     await renderPage(undefined, "plan");
 
-    const shiftOptions = within(screen.getAllByRole("combobox", { name: "Staff member" })[0])
+    const selectors = screen.getAllByRole("combobox", { name: "Staff member" });
+    expect(selectors).toHaveLength(7);
+    const options = within(selectors[0])
       .getAllByRole("option")
       .map((option) => ({ value: (option as HTMLOptionElement).value, text: option.textContent }));
-    expect(shiftOptions).toEqual([
-      { value: "", text: "Choose a person" },
-      { value: OTHER_ID, text: "Abe Able" },
-      { value: VIEWER_ID, text: "Zoe Zed" },
-    ]);
-
-    const awayOptions = within(screen.getAllByRole("combobox", { name: "Staff member" })[1])
-      .getAllByRole("option")
-      .map((option) => ({ value: (option as HTMLOptionElement).value, text: option.textContent }));
-    expect(awayOptions).toEqual([
+    expect(options).toEqual([
       { value: OTHER_ID, text: "Abe Able" },
       { value: VIEWER_ID, text: "Zoe Zed" },
     ]);

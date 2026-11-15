@@ -1,13 +1,13 @@
 import type { Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
 import { expect } from "./fixtures";
-import { bookASeatAndOpenThread, openThreadStep } from "./helpers";
+import { bookASeatAndOpenThread, openNamedScheduleTrip, openThreadStep } from "./helpers";
 
 const t = diverTranslator("en-US");
 
 export async function openCardAtCheckIn(page: Page) {
   await page.goto("/s/blue-mantis");
-  await page.getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" }).click();
+  await openNamedScheduleTrip(page, "Two-Tank Reef — Christ of the Abyss");
   await bookASeatAndOpenThread(page, "Casey Card", "casey-card@example.com");
   const step = await openThreadStep(page, "certification");
   const disclosure = step

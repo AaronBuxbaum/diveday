@@ -47,6 +47,7 @@ export const EXCLUDED_TABLES = [
   // draft state, never a signed record, out like the draft columns it replaces.
   "waiver_drafts",
   "notification_send_queue", // operational retry state, not shop records
+  "boarding_observations", // a dock tap waiting for its seat; the outcome is the seat and its activity line
   "email_bounces", // DiveDay's own record of mail SES bounced, for debugging delivery; not a shop record
   // What the bench told a customer and how it went (ADR
   // 20261008-work-order-follow-up): a kind, a channel and a delivery status,

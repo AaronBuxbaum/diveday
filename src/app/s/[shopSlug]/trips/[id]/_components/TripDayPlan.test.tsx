@@ -75,10 +75,10 @@ describe("TripDayPlan", () => {
     const { rerender } = render(<TripDayPlan {...props} content="itinerary" />);
     expect(screen.getByText("The day")).toBeInTheDocument();
     expect(screen.getByText("Dive 2")).toBeInTheDocument();
-    expect(screen.queryByText("Seen here this month")).not.toBeInTheDocument();
+    expect(screen.queryByText("Seen here in the last 30 days")).not.toBeInTheDocument();
     expect(screen.queryByTestId("trip-site-reviews")).not.toBeInTheDocument();
     rerender(<TripDayPlan {...props} content="reports" />);
-    expect(screen.getAllByText("Seen here this month")).toHaveLength(1);
+    expect(screen.getAllByText("Seen here in the last 30 days")).toHaveLength(1);
     expect(screen.getByTestId("trip-site-reviews")).toHaveTextContent("Calm briefing");
     expect(screen.queryByText("The day")).not.toBeInTheDocument();
     expect(screen.queryByText("Dive 1")).not.toBeInTheDocument();
@@ -467,7 +467,7 @@ describe("TripDayPlan's profile", () => {
         }
       />,
     );
-    expect(screen.getByText("Seen here this month")).toBeInTheDocument();
+    expect(screen.getByText("Seen here in the last 30 days")).toBeInTheDocument();
     expect(screen.queryByText(/what was seen/)).not.toBeInTheDocument();
     expect(screen.queryByText(/What the crew logged/)).not.toBeInTheDocument();
   });

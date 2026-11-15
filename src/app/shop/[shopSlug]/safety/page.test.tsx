@@ -11,6 +11,7 @@ import { nowDate } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+import { SAFETY_LIST_IDS, SafetyLists } from "./_components/SafetyLists";
 
 // Invoked directly, outside Next's request scope: the db handle, better-auth
 // and request headers are stubbed and nothing else. The gate re-reads the
@@ -82,6 +83,19 @@ function figuresIn(node: unknown): { label: string; value: string }[] {
   return figuresIn(node.props.children);
 }
 
+function safetyListsIn(node: unknown): Parameters<typeof SafetyLists>[0] | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = safetyListsIn(child);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!isValidElement<{ children?: unknown }>(node)) return null;
+  if (node.type === SafetyLists) return node.props as Parameters<typeof SafetyLists>[0];
+  return safetyListsIn(node.props.children);
+}
+
 function linksIn(node: unknown): string[] {
   if (Array.isArray(node)) return node.flatMap(linksIn);
   if (!isValidElement<{ children?: unknown; href?: string }>(node)) return [];
@@ -151,7 +165,8 @@ describe("the Safety page", () => {
    * links only when its underlying safety evidence needs staff attention.
    */
   it("reads the month as four counts, linking actionable evidence", async () => {
-    const figures = figuresIn(await renderTree(["owner"])) as unknown as {
+    const tree = await renderTree(["owner"]);
+    const figures = figuresIn(tree) as unknown as {
       key: string;
       label: string;
       href?: string;
@@ -162,14 +177,17 @@ describe("the Safety page", () => {
       "crew",
       "incidents",
     ]);
-    for (const figure of figures) {
-      if (figure.key === "crew") {
-        // Clean crew evidence offers no list to act on.
-        expect(figure.href).toBeUndefined();
-      } else {
-        expect(figure.href, figure.key).toBeTruthy();
-      }
-    }
+    const lists = safetyListsIn(tree);
+    expect(lists).not.toBeNull();
+    expect(figures.find((figure) => figure.key === "rollCalls")?.href).toBe(
+      lists?.month.openRollCalls.length ? `#${SAFETY_LIST_IDS.open}` : undefined,
+    );
+    expect(figures.find((figure) => figure.key === "incidents")?.href).toBe(
+      lists?.incidents.length ? `#${SAFETY_LIST_IDS.incidents}` : undefined,
+    );
+    expect(figures.find((figure) => figure.key === "certOverrides")?.href).toBeTruthy();
+    // Clean crew evidence offers no list to act on.
+    expect(figures.find((figure) => figure.key === "crew")?.href).toBeUndefined();
     const text = await renderAs(["owner"]);
     expect(text).not.toContain("What the shop recorded on departures");
     expect(text).not.toContain("The dock roll call won’t record");

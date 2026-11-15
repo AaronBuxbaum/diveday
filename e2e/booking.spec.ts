@@ -9,6 +9,8 @@ import {
   e2eNow,
   findTripOnBoard,
   openBookingActions,
+  openFirstBookableScheduleTrip,
+  openNamedScheduleTrip,
   openRosterDetails,
   openThreadStep,
   openTripAbout,
@@ -510,11 +512,7 @@ test.describe("as owner", () => {
 
     // Nora books the seeded reef trip under her email.
     await page.goto("/s/blue-mantis");
-    await page
-      .locator("li")
-      .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-      .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
-      .click();
+    await openNamedScheduleTrip(page, "Two-Tank Reef — Christ of the Abyss");
     // The booking form is controlled, so wait for hydration before typing.
     await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
       "data-hydrated",
@@ -569,11 +567,7 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
   page,
 }) => {
   await page.goto("/s/blue-mantis");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
-    .click();
+  await openNamedScheduleTrip(page, "Two-Tank Reef — Christ of the Abyss");
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByRole("textbox", { name: "Name" }).fill("Casey Ford");
@@ -621,14 +615,9 @@ test.describe("the shopfront on a phone", () => {
       page.getByText("Small-boat reef and wreck diving out of Key Largo."),
     ).toBeVisible();
 
-    // The next boat is the week's first row on the seeded board, so no card
-    // repeats it above the list (visual review 2026-10-24, B17): the row is the
-    // bookable object, one tap from the booking form. The card's own branch,
-    // a full boat first, is next-departure.spec.ts.
-    await expect(page.getByRole("region", { name: /Next boat with space/ })).toHaveCount(0);
-    const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
-    await expect(first).toContainText(/seats?/);
-    await first.getByRole("link").first().click();
+    const list = page.getByRole("list", { name: "Upcoming trips" });
+    await expect(list.getByText(diver("booking.sailedHeading")).first()).toBeVisible();
+    await openFirstBookableScheduleTrip(page);
 
     await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);
     await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
@@ -737,7 +726,7 @@ test("a diver's card payment at booking settles their Pay step", async ({
   const email = "carla.card@example.com";
 
   await page.goto(`/s/${SHOP}`);
-  await page.locator(`a[href^="/s/${SHOP}/trips/"]`).first().click();
+  await openFirstBookableScheduleTrip(page);
   await bookASeatAndOpenThread(page, "Carla Card", email);
   const thread = page.url();
   // Visible only: a preserved `<Activity>` copy of the thread carries the same

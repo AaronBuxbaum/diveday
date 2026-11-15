@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { MAX_DIVERS_PER_DIVEMASTER, MIN_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import { saveCrewScheduleAction } from "../../team-actions";
@@ -70,6 +70,16 @@ export function TeamGroup({ view, canManageTeam }: { view: SettingsView; canMana
                     className={controlClass}
                   />
                 </Field>
+                <ChoiceRow
+                  name="timeOffApproval"
+                  type="checkbox"
+                  defaultChecked={shop.timeOffApprovalEnabled}
+                >
+                  {t("settings.main.crewSchedule.approval")}
+                  <span className="block text-sm text-muted">
+                    {t("settings.main.crewSchedule.approvalHint")}
+                  </span>
+                </ChoiceRow>
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("words.busy.saving")}

@@ -1,0 +1,143 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { PACKET_PAPER } from "@/lib/print-sheets";
+import type { ShopQuestion } from "@/lib/waiver-questions";
+import { ShopSheet } from "../../../print/_components/ShopSheet";
+import { BlankRelease, type BlankReleaseCopy } from "./BlankRelease";
+
+afterEach(cleanup);
+
+const COPY: BlankReleaseCopy = {
+  version: "Release version {version}",
+  medicalHeading: "Medical questionnaire",
+  yes: "Yes",
+  no: "No",
+  followUp: "Answer if you said yes to question {number}.",
+  shopHeading: "Questions from Blue Mantis",
+  signatureHeading: "Signatures",
+  printedName: "Printed name",
+  diverSignature: "Diver signature",
+  guardianName: "Guardian name",
+  guardianSignature: "Guardian signature",
+  guardianNote: "Minors: a guardian signs too.",
+  date: "Date",
+};
+
+const QUESTIONS: ShopQuestion[] = [
+  { id: "a", kind: "yes_no", prompt: "Do you carry dive insurance?", required: false },
+  { id: "b", kind: "text", prompt: "How did you hear about us?", required: false },
+  { id: "c", kind: "choice", prompt: "Shirt size?", required: false, options: ["S", "M", "L"] },
+];
+
+function renderBlank(shopQuestions: ShopQuestion[] = QUESTIONS) {
+  return render(
+    <BlankRelease
+      version={7}
+      body={"I accept the risks.\nSecond paragraph."}
+      questionnaire={RSTC_QUESTIONNAIRE}
+      shopQuestions={shopQuestions}
+      copy={COPY}
+    />,
+  );
+}
+
+describe("the blank release", () => {
+  it("prints the version and the release text as published", () => {
+    const { container } = renderBlank();
+    expect(screen.getByText("Release version 7")).toBeTruthy();
+    expect(container.textContent).toContain("I accept the risks.\nSecond paragraph.");
+  });
+
+  it("repeats the version on every printed page, so a separated signature page still names its release", () => {
+    const { container } = renderBlank();
+    // A page-repeating header is the one thing a browser draws at the top of
+    // every printed page (a `thead` repeats; fixed boxes and margin boxes do
+    // not, in Chromium). The version is written once, and it lives there.
+    const header = container.querySelector("table > thead");
+    expect(header?.textContent).toBe("Release version 7");
+    expect(screen.getAllByText("Release version 7")).toHaveLength(1);
+    // Everything else the diver signs is in the body that header sits above.
+    const body = container.querySelector("table > tbody");
+    expect(body?.textContent).toContain("I accept the risks.");
+    expect(body?.textContent).toContain("Signatures");
+    expect(body?.textContent).not.toContain("Release version 7");
+    // It is layout, not data: a screen reader reads the release, not a grid.
+    expect(container.querySelector("table")?.getAttribute("role")).toBe("presentation");
+  });
+
+  it("gives every standard question empty yes and no boxes, never ticked", () => {
+    const { container } = renderBlank();
+    const primaries = RSTC_QUESTIONNAIRE.questions.filter((q) => q.section === "primary");
+    expect(primaries).toHaveLength(10);
+    for (const question of RSTC_QUESTIONNAIRE.questions) {
+      expect(screen.getByText(question.prompt, { exact: false })).toBeTruthy();
+    }
+    // One Yes and one No for every question, shop's yes/no question included.
+    const total = RSTC_QUESTIONNAIRE.questions.length + 1;
+    expect(screen.getAllByText("Yes")).toHaveLength(total);
+    expect(screen.getAllByText("No")).toHaveLength(total);
+    expect(container.querySelector("input")).toBeNull();
+    expect(container.querySelector("[checked], [aria-checked='true']")).toBeNull();
+  });
+
+  it("names the question each box follows", () => {
+    renderBlank();
+    expect(screen.getByText("Answer if you said yes to question 1.")).toBeTruthy();
+    expect(screen.getByText("Answer if you said yes to question 2.")).toBeTruthy();
+  });
+
+  it("prints the shop's questions with their blanks and options", () => {
+    renderBlank();
+    expect(screen.getByText("Questions from Blue Mantis")).toBeTruthy();
+    const section = screen.getByText("Questions from Blue Mantis").closest("section");
+    if (!section) throw new Error("no shop questions section");
+    expect(within(section).getByText("How did you hear about us?", { exact: false })).toBeTruthy();
+    for (const option of ["S", "M", "L"]) expect(within(section).getByText(option)).toBeTruthy();
+  });
+
+  it("leaves the shop's section out when it asks nothing", () => {
+    renderBlank([]);
+    expect(screen.queryByText("Questions from Blue Mantis")).toBeNull();
+  });
+
+  it("ends on the diver and guardian signature lines", () => {
+    renderBlank();
+    for (const line of ["Diver signature", "Guardian signature", "Printed name", "Guardian name"]) {
+      expect(screen.getByText(line)).toBeTruthy();
+    }
+    expect(screen.getAllByText("Date")).toHaveLength(2);
+  });
+});
+
+/** Issue #2745: the page prints the release as one sheet of the shop's paper. */
+describe("the blank release on the shop's paper", () => {
+  it("is one sheet with no control on it", () => {
+    const { container } = render(
+      <ShopSheet
+        paper={PACKET_PAPER}
+        shop={{ name: "Blue Mantis Divers", brandColor: null }}
+        shopSlug="blue-mantis"
+        printed={staffTranslator("en-US")("print.sheet.printed", { date: "Nov 3, 2026" })}
+      >
+        <BlankRelease
+          version={7}
+          body="I accept the risks."
+          questionnaire={RSTC_QUESTIONNAIRE}
+          shopQuestions={QUESTIONS}
+          copy={COPY}
+        />
+      </ShopSheet>,
+    );
+    const sheets = container.querySelectorAll(".paper-sheet");
+    expect(sheets).toHaveLength(1);
+    expect(sheets[0]?.querySelector("[data-blank-release]")).not.toBeNull();
+    expect(
+      sheets[0]?.querySelectorAll(
+        "a, button, input, select, textarea, form, [role='button'], [tabindex]",
+      ),
+    ).toHaveLength(0);
+  });
+});

@@ -26,7 +26,7 @@ import { addCustomerGearItem, createWorkOrder, setWorkOrderStatus } from "../wor
 import { ACTION_KIND_META, type TodayAction } from "./today";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { getTodayWork } from "./today-reader";
-import { rowsContext, rowsNaming } from "./today-rows-test-fixtures";
+import { rowsContext } from "./today-rows-test-fixtures";
 
 const emptyWave = {
   credentialRows: [],
@@ -133,12 +133,16 @@ describe("rental fits on the queue, read through getTodayWork", () => {
     const roster = await getTripRoster(db, shop.id, reef.id);
     if (roster.length === 0) throw new Error("demo bookings missing");
 
-    // Each diver's own row names their sizes job (UX delight sheet 2026-10-22,
-    // item 4); the row's door is pinned in `today-departure-rows.test.ts`.
-    const sizeRows = (work: Awaited<ReturnType<typeof getTodayWork>>) => [
-      ...rowsNaming(work.actions, reef.id, "rental size"),
-      ...rowsNaming(work.actions, reef.id, "kit"),
-    ];
+    // A diver's own row, or the boat's one shared row when two or more share
+    // the gap, names their sizes job; the row's door is pinned in
+    // `today-departure-rows.test.ts`.
+    const sizeRows = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
+      work.actions.filter(
+        (action) =>
+          action.departure?.tripId === reef.id &&
+          (action.diver?.items.some((item) => item === "rental size" || item === "kit") ||
+            /^(size-missing|kit-unasked):/.test(action.id)),
+      );
     const flagged = await getTodayWork(
       db,
       shop.id,
@@ -184,7 +188,7 @@ describe("rental fits on the queue, read through getTodayWork", () => {
       undefined,
       staffTranslator("en-US"),
     );
-    expect(rowsNaming(stillPartial.actions, reef.id, "rental size").length).toBeGreaterThan(0);
+    expect(sizeRows(stillPartial).length).toBeGreaterThan(0);
 
     for (const entry of roster) {
       await recordRentalFit(db, {

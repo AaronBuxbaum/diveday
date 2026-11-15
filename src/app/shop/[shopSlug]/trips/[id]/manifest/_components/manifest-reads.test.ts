@@ -101,6 +101,7 @@ describe("readManifestPage (in-memory PGlite)", () => {
 
     // Every roll-call tap re-renders this page: a render must be a read.
     expect(sent.length).toBeGreaterThan(0);
+    expect(sent[0]).toMatch(/offline_erasure_epoch/i);
     expect(sent.filter((query) => /^\s*(insert|update|delete)\b/i.test(query))).toEqual([]);
     expect(sent.filter((query) => /pg_advisory|for (key )?share|for update/i.test(query))).toEqual(
       [],
@@ -112,6 +113,7 @@ describe("readManifestPage (in-memory PGlite)", () => {
     expect(counters).toEqual([]);
     // It carries the epoch and revision its rows were read at, for the device's save.
     expect(reads.offlineRoster?.erasureEpoch).toBe(shop.offlineErasureEpoch);
+    expect(reads.renderErasureEpoch).toBe(shop.offlineErasureEpoch);
     expect(reads.offlineRoster?.snapshotRevision).toBe(0);
   });
 

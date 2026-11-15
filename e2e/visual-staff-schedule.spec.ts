@@ -19,6 +19,7 @@ import {
   openTripFromBoard,
   publicTripUrl,
   seededTripId,
+  selectCrewByName,
   tripPathByTitle,
 } from "./helpers";
 import { seedFacts } from "./shop-facts";
@@ -363,7 +364,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(await tripPathByTitle(page, "blue-mantis", title));
         await openTripAbout(page);
         await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
-        await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+        await selectCrewByName(page, "Marcus Webb");
         await page.getByRole("button", { name: "Unassign Marcus Webb" }).waitFor();
         await page.goto(`/shop/blue-mantis/schedule/board?week=${weekStartOf(day)}`);
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();

@@ -1,0 +1,58 @@
+import { LedgerRow } from "@/components/ui/ledger";
+import { Bone, Pending } from "@/components/ui/pending";
+
+/**
+ * Body-shaped skeleton for Reviews (design principle 1): the aggregate line
+ * under the title, then the worklist group and the published run beneath it,
+ * as hairline rows on the page rather than a stack of cards — the shape ADR
+ * 20260827-people-not-lists gave this page. The four stat tiles this used to
+ * draw are gone with the tiles themselves, and the meta bar stands in for the
+ * one line that replaced them, so the skeleton and the page agree on height.
+ *
+ * **Each row is `ReviewLedgerRow`'s own `LedgerRow`** — `stacked`, at the
+ * 12px `lg` inset — holding the row's stack: the 24px star line, a quote line
+ * (16px type waiting, 14px published) and the meta line, each `mt-1` under the
+ * last. Fixed `h-20` and `h-14` bars stood in for rows of 97 and 69–94px at
+ * 1280 and ignored the phone, where the row's act drops to a 44px line of its
+ * own, so every row under the first slid down on arrival (K-436).
+ */
+function LedgerRows({ count, quote }: { count: number; quote: "h-6" | "h-5" }) {
+  return (
+    <div className="mt-2">
+      {Array.from({ length: count }, (_, index) => (
+        <LedgerRow
+          as="div"
+          stacked
+          pad="lg"
+          // biome-ignore lint/suspicious/noArrayIndexKey: static bars, no identity of their own
+          key={index}
+          trailing={<Bone shape="control" className="h-11 w-28" />}
+        >
+          <Bone className="h-6 w-24" />
+          <Bone className={`mt-1 ${quote} w-full max-w-md`} />
+          <Bone className="mt-1 h-4 w-56 max-w-full" />
+        </LedgerRow>
+      ))}
+    </div>
+  );
+}
+
+export default function ReviewsLoading() {
+  return (
+    <Pending>
+      <div className="mb-6 flex justify-end">
+        <Bone className="h-11 w-36" />
+      </div>
+      <div className="space-y-10">
+        <div>
+          <Bone className="h-4 w-40" />
+          <LedgerRows count={2} quote="h-6" />
+        </div>
+        <div>
+          <Bone className="h-4 w-32" />
+          <LedgerRows count={4} quote="h-5" />
+        </div>
+      </div>
+    </Pending>
+  );
+}

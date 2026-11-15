@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -112,6 +112,7 @@ async function awayOnDeparture(
         eq(crewAvailabilityBlocks.shopId, input.shopId),
         eq(crewAvailabilityBlocks.personId, input.personId),
         isNull(crewAvailabilityBlocks.deletedAt),
+        ne(crewAvailabilityBlocks.status, "declined"),
         lte(crewAvailabilityBlocks.startsOn, calendarDateInTimezone(trip.endsAt, trip.timeZone)),
         gte(crewAvailabilityBlocks.endsOn, calendarDateInTimezone(trip.startsAt, trip.timeZone)),
       ),

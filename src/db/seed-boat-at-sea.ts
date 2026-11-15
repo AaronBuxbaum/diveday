@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, isNull, lte, notInArray } from "drizzle-orm";
+import { withDemoCrewEvidence } from "@/db/seed-crew-evidence";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters } from "@/lib/depth-units";
@@ -572,32 +573,36 @@ async function writeTheRecord(
   const lastGuideId = crew.filter((member) => member.tripRole === "divemaster").at(-1)?.personId;
   await seedRollCallEvidence(
     db,
-    crew.flatMap((member, index) =>
-      [
-        { checkpoint: "departure", occurredAt: plan.startsAt },
-        { checkpoint: "after_dive_1", occurredAt: plan.diveOne.countedAt },
-        ...(member.personId === lastGuideId && !("finishedAt" in plan)
-          ? []
-          : [
-              {
-                checkpoint: "after_dive_2",
-                occurredAt:
-                  "finishedAt" in plan && member.personId === lastGuideId
-                    ? new Date(plan.finishedAt.getTime() - 15_000)
-                    : firstGuideBack,
-              },
-            ]),
-      ].map(({ checkpoint, occurredAt }) => ({
-        shopId,
-        tripId: trip.id,
-        subjectKind: "crew" as const,
-        crewPersonId: member.personId,
-        recordedByPersonId: captainId,
-        status: "boarded" as const,
-        checkpoint,
-        source: "live" as const,
-        occurredAt: new Date(occurredAt.getTime() + (divers.length + index) * 1_000),
-      })),
+    await withDemoCrewEvidence(
+      db,
+      shopId,
+      crew.flatMap((member, index) =>
+        [
+          { checkpoint: "departure", occurredAt: plan.startsAt },
+          { checkpoint: "after_dive_1", occurredAt: plan.diveOne.countedAt },
+          ...(member.personId === lastGuideId && !("finishedAt" in plan)
+            ? []
+            : [
+                {
+                  checkpoint: "after_dive_2",
+                  occurredAt:
+                    "finishedAt" in plan && member.personId === lastGuideId
+                      ? new Date(plan.finishedAt.getTime() - 15_000)
+                      : firstGuideBack,
+                },
+              ]),
+        ].map(({ checkpoint, occurredAt }) => ({
+          shopId,
+          tripId: trip.id,
+          subjectKind: "crew" as const,
+          crewPersonId: member.personId,
+          recordedByPersonId: captainId,
+          status: "boarded" as const,
+          checkpoint,
+          source: "live" as const,
+          occurredAt: new Date(occurredAt.getTime() + (divers.length + index) * 1_000),
+        })),
+      ),
     ),
     { observesPrevious: false },
   );

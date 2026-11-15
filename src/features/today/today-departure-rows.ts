@@ -13,13 +13,16 @@ import {
   helpRequestActionText,
   helpRequestDetailText,
   kitUnaskedGroupDetailText,
+  missingContactGroupDetailText,
   missingContactNamedDetailText,
   missingFitNamedDetailText,
+  missingSizeGroupDetailText,
   offerSeatActionText,
   openOrdersActionText,
   openPrepListActionText,
   openTripActionText,
   seatWantedDetailText,
+  ungatedNitroxGroupDetailText,
   ungatedNitroxNamedDetailText,
 } from "@/i18n/today-labels";
 import { PREP_SECTION_ID } from "@/lib/element-id";
@@ -128,29 +131,29 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         });
         continue;
       }
-      // **Not asked about kit, one line per boat** (Aaron 2026-10-23): two or
-      // more divers nobody has asked share one row naming them, because the
-      // fix is the same walk down the prep list. One diver keeps their own row.
-      const kitGroup = item.code === "missing_sizes" && work.kitUnasked.length > 1;
-      if (kitGroup) {
+      // **One line per boat for the same gap** (Aaron 2026-10-23, 2026-11-13):
+      // two or more divers nobody has asked about kit, with no size, whose
+      // nitrox card is unverified or with no emergency contact share one row
+      // naming them, because the fix is the same walk down one list. One diver
+      // keeps their own row, which `oneRowPerDiver` merges with their other gaps.
+      const groups = boatWorkGroups(item.code, work, { tripHref, t });
+      for (const group of groups) {
         actions.push({
-          id: `kit-unasked:${trip.id}`,
-          kind: "dive_prep",
+          id: `${group.idPrefix}:${trip.id}`,
+          kind: group.kind,
           urgency: urgencyFor(trip.startsAt, now),
           subject: trip.title,
           context: when,
           departure,
           aboutDeparture: true,
-          detail: kitUnaskedGroupDetailText(
-            t,
-            work.kitUnasked.map((diver) => diver.fullName),
-          ),
-          actionLabel: openPrepListActionText(t),
-          href: `${tripHref}/prep#${PREP_SECTION_ID}`,
+          detail: group.detail,
+          actionLabel: group.actionLabel,
+          href: group.href,
           dueAt: trip.startsAt,
         });
       }
-      for (const gap of boatWorkGaps(item.code, work, { tripHref, t, kitGroup })) {
+      const grouped = new Set(groups.map((group) => group.list));
+      for (const gap of boatWorkGaps(item.code, work, { tripHref, t, grouped })) {
         actions.push({
           id: `${gap.idPrefix}:${trip.id}:${gap.diver.personId}`,
           kind: gap.kind,
@@ -255,17 +258,91 @@ type BoatWorkGap = {
   href: string;
 };
 
+/** The lists of a boat's work that name divers, and so can share one row. */
+type BoatWorkList = "missingSize" | "kitUnasked" | "ungatedNitrox" | "missingContact";
+
+/** One row naming every diver a list of a boat's work counts. */
+type BoatWorkGroup = {
+  list: BoatWorkList;
+  idPrefix: string;
+  kind: TodayAction["kind"];
+  detail: string;
+  actionLabel: string;
+  href: string;
+};
+
+/**
+ * The shared row for each list of a boat's work that names two or more divers.
+ * Every name is said: the row has no "and N more" to open.
+ */
+function boatWorkGroups(
+  code: Exclude<BoatWorkItem["code"], "open_orders">,
+  work: BoatWork,
+  { tripHref, t }: { tripHref: string; t: StaffTranslator },
+): BoatWorkGroup[] {
+  const prepHref = `${tripHref}/prep#${PREP_SECTION_ID}`;
+  const names = (divers: readonly BoatWorkDiver[]) => divers.map((diver) => diver.fullName);
+  const groups: BoatWorkGroup[] = [];
+  if (code === "missing_sizes") {
+    if (work.missingSize.length > 1) {
+      groups.push({
+        list: "missingSize",
+        idPrefix: "size-missing",
+        kind: "dive_prep",
+        detail: missingSizeGroupDetailText(t, names(work.missingSize)),
+        actionLabel: openPrepListActionText(t),
+        href: prepHref,
+      });
+    }
+    if (work.kitUnasked.length > 1) {
+      groups.push({
+        list: "kitUnasked",
+        idPrefix: "kit-unasked",
+        kind: "dive_prep",
+        detail: kitUnaskedGroupDetailText(t, names(work.kitUnasked)),
+        actionLabel: openPrepListActionText(t),
+        href: prepHref,
+      });
+    }
+  }
+  if (code === "ungated_nitrox" && work.ungatedNitrox.length > 1) {
+    groups.push({
+      list: "ungatedNitrox",
+      idPrefix: "nitrox-group",
+      kind: "nitrox_gate",
+      detail: ungatedNitroxGroupDetailText(t, names(work.ungatedNitrox)),
+      actionLabel: openPrepListActionText(t),
+      href: prepHref,
+    });
+  }
+  if (code === "missing_contact" && work.missingContact.length > 1) {
+    groups.push({
+      list: "missingContact",
+      idPrefix: "contact-group",
+      kind: "emergency_contact",
+      detail: missingContactGroupDetailText(t, names(work.missingContact)),
+      actionLabel: openTripActionText(t),
+      href: tripHref,
+    });
+  }
+  return groups;
+}
+
 /** Every diver an item of a boat's work names, each as their own gap. */
 function boatWorkGaps(
   code: Exclude<BoatWorkItem["code"], "open_orders">,
   work: BoatWork,
-  { tripHref, t, kitGroup }: { tripHref: string; t: StaffTranslator; kitGroup: boolean },
+  {
+    tripHref,
+    t,
+    grouped,
+  }: { tripHref: string; t: StaffTranslator; grouped: ReadonlySet<BoatWorkList> },
 ): BoatWorkGap[] {
   const prepHref = `${tripHref}/prep#${PREP_SECTION_ID}`;
   switch (code) {
     case "missing_sizes":
       return [
-        ...work.missingSize.map((diver) => ({
+        ...(grouped.has("missingSize") ? [] : work.missingSize).map((diver) => ({
           idPrefix: "prep",
           kind: "dive_prep" as const,
           diver,
@@ -275,7 +352,7 @@ function boatWorkGaps(
           href: prepHref,
         })),
         // A boat's unasked divers already have their one shared row.
-        ...(kitGroup ? [] : work.kitUnasked).map((diver) => ({
+        ...(grouped.has("kitUnasked") ? [] : work.kitUnasked).map((diver) => ({
           idPrefix: "prep",
           kind: "dive_prep" as const,
           diver,
@@ -286,7 +363,7 @@ function boatWorkGaps(
         })),
       ];
     case "ungated_nitrox":
-      return work.ungatedNitrox.map((diver) => ({
+      return (grouped.has("ungatedNitrox") ? [] : work.ungatedNitrox).map((diver) => ({
         idPrefix: "nitrox",
         kind: "nitrox_gate" as const,
         diver,
@@ -296,7 +373,7 @@ function boatWorkGaps(
         href: prepHref,
       }));
     case "missing_contact":
-      return work.missingContact.map((diver) => ({
+      return (grouped.has("missingContact") ? [] : work.missingContact).map((diver) => ({
         idPrefix: "contact",
         kind: "emergency_contact" as const,
         diver,
