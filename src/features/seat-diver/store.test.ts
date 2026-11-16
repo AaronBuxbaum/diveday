@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "../../db/client";
+import { createPerson } from "../../db/people";
 import { nowDate } from "../../lib/clock";
 import type { CertificationLevel } from "../../lib/readiness";
 import { fileScopedShopContext } from "../../test/db";
@@ -49,25 +50,15 @@ async function context() {
   return { db, shop, open, fullTrip, actorPersonId: staff.id };
 }
 
-/**
- * A seeded diver who is not already on `tripId` — the returning-diver picker's
- * own precondition, so a test can seat one by identity the way every picker
- * does.
- */
-async function bookableDiver(db: AppDb, shopId: string, tripId: string) {
-  const booked = await db
-    .select({ personId: bookings.personId })
-    .from(bookings)
-    .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
-  const bookedIds = new Set(booked.map((row) => row.personId));
-  const rows = await db
-    .select({ id: people.id, fullName: people.fullName })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "diver")));
-  const person = rows.find((row) => !bookedIds.has(row.id));
-  if (!person) throw new Error("seed has no bookable diver");
-  return person;
+/** An existing diver with no seats, signatures or cards before this case adds its evidence. */
+async function bookableDiver(db: AppDb, shopId: string) {
+  return createPerson(db, {
+    shopId,
+    fullName: "Returning Test Diver",
+    email: null,
+    phone: null,
+    origin: "counter",
+  });
 }
 
 async function activityLines(db: AppDb, tripId: string) {
@@ -122,7 +113,7 @@ afterEach(() => {
 describe("seatDiver (the one consequence path behind every staff door)", () => {
   it("refuses an unavailable date-request offer before creating the seat", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
 
     const result = await seatDiver(db, {
       shopId: shop.id,
@@ -158,7 +149,7 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
    */
   it("issues the waiver when a returning diver is seated by identity", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
 
     const result = await seatDiver(db, {
       shopId: shop.id,
@@ -178,7 +169,7 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
 
   it("leaves the trip's activity trail, phrased for the roster door", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
 
     await seatDiver(db, {
       shopId: shop.id,
@@ -220,7 +211,7 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
 
   it("names the person on the trail even when the door submitted no name", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
 
     const result = await seatDiver(db, {
       shopId: shop.id,
@@ -240,7 +231,7 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
 
   it("never stacks a second waiver link on a booking that already has one", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
     const first = await seatDiver(db, {
       shopId: shop.id,
       tripId: open.id,
@@ -567,7 +558,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
 describe("seatDiver identity reporting (what a door is allowed to claim)", () => {
   it("reports a held seat when the name prompt's tap disagrees with the row", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
 
     const result = await seatDiver(db, {
       shopId: shop.id,
@@ -589,7 +580,7 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
 
   it("reports an ordinary seat when a staffer picked the diver by identity", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
 
     const result = await seatDiver(db, {
       shopId: shop.id,
@@ -620,7 +611,7 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
    */
   it("holds nothing on a search-list seat, even with a namesake on file", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
     const [namesake] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: diver.fullName, phone: "+447700900123" })
@@ -646,7 +637,7 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
 
   it("seats a name typed against someone else's address on a record of its own", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
     await db.update(people).set({ email: DELIVERABLE_EMAIL }).where(eq(people.id, diver.id));
 
     const result = await seatDiver(db, {
@@ -724,7 +715,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
    */
   it("never collapses the two refusals the counter still acts on", async () => {
     const { db, shop, open, fullTrip, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
     await seatDiver(db, {
       shopId: shop.id,
       tripId: open.id,
@@ -790,7 +781,7 @@ describe("seatDiver trip admission (the boat's own cert gate reaches every staff
 
   it("refuses a staff seating for a diver whose cards cannot reach the trip's requirement", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
     await card(db, shop.id, diver.id, "open_water");
     await demandOf(db, shop.id, open.id, "divemaster");
 
@@ -823,7 +814,7 @@ describe("seatDiver trip admission (the boat's own cert gate reaches every staff
 
   it("collapses the same refusal to the counter's one blunt code", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
+    const diver = await bookableDiver(db, shop.id);
     await card(db, shop.id, diver.id, "open_water");
     await demandOf(db, shop.id, open.id, "divemaster");
 

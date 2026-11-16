@@ -170,38 +170,47 @@ export async function buddyReferrersForWindow(
   windowEnd: Date,
   limit = 3,
 ): Promise<BuddyReferrer[]> {
+  // Reduce eligible referrals before joining their referrer. DISTINCT preserves
+  // friend identity and keeps the history joins out of the outer name aggregate.
+  const eligibleFriends = db
+    .selectDistinct({
+      referredByBookingId: bookingReferrals.referredByBookingId,
+      personId: bookings.personId,
+    })
+    .from(bookingReferrals)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingReferrals.bookingId), eq(bookings.shopId, shopId)),
+    )
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .innerJoin(shops, and(eq(shops.id, bookingReferrals.shopId), eq(shops.buddyLinksEnabled, true)))
+    .where(
+      and(
+        liveTrip(),
+        eq(bookingReferrals.shopId, shopId),
+        sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
+        seatNotCancelled,
+      ),
+    )
+    .as("eligible_buddy_friends");
   const referrer = alias(bookings, "referrer");
-  const friends = sql<number>`count(distinct ${bookings.personId})`.mapWith(Number);
-  return (
-    db
-      .select({ personId: people.id, fullName: people.fullName, friends })
-      .from(bookingReferrals)
-      .innerJoin(referrer, eq(referrer.id, bookingReferrals.referredByBookingId))
-      .innerJoin(people, eq(people.id, referrer.personId))
-      .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      // Switched off, the shop's buddy counts read as none; every referral is kept.
-      .innerJoin(
-        shops,
-        and(eq(shops.id, bookingReferrals.shopId), eq(shops.buddyLinksEnabled, true)),
-      )
-      .where(
-        and(
-          liveTrip(),
-          eq(bookingReferrals.shopId, shopId),
-          eq(referrer.shopId, shopId),
-          eq(people.shopId, shopId),
-          eq(bookings.shopId, shopId),
-          eq(trips.shopId, shopId),
-          sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
-          seatNotCancelled,
-          ne(bookings.personId, referrer.personId),
-          isNull(people.deletedAt),
-          isNull(people.anonymizedAt),
-        ),
-      )
-      .groupBy(people.id, people.fullName)
-      .orderBy(desc(friends), asc(people.fullName))
-      .limit(limit)
-  );
+  const friends = sql<number>`count(distinct ${eligibleFriends.personId})`.mapWith(Number);
+  return db
+    .select({ personId: people.id, fullName: people.fullName, friends })
+    .from(eligibleFriends)
+    .innerJoin(
+      referrer,
+      and(eq(referrer.id, eligibleFriends.referredByBookingId), eq(referrer.shopId, shopId)),
+    )
+    .innerJoin(people, and(eq(people.id, referrer.personId), eq(people.shopId, shopId)))
+    .where(
+      and(
+        ne(eligibleFriends.personId, referrer.personId),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .groupBy(people.id, people.fullName)
+    .orderBy(desc(friends), asc(people.fullName))
+    .limit(limit);
 }

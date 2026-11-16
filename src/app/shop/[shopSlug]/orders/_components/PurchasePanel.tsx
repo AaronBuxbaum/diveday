@@ -57,9 +57,19 @@ async function PurchasePanelBody({
       {...{ currency, locale }}
       step={currencyFractionDigits(currency) === 0 ? "1" : "0.01"}
       customers={data.customers}
+      canCreateDue={data.canCreateDue}
       personId={personId}
       words={{
         title: t("orders.purchase.title"),
+        entryType: t("orders.purchase.entryType"),
+        received: t("orders.purchase.received"),
+        due: t("orders.localDue.open"),
+        dueHelp: t("orders.purchase.dueHelp"),
+        itemsHeading: t("orders.purchase.itemsHeading"),
+        paymentHeading: t("orders.purchase.paymentHeading"),
+        totalInvalid: t("orders.purchase.totalInvalid"),
+        submitDue: t("orders.localDue.submit"),
+        payerRequired: t("orders.localDue.payerRequired"),
         customer: t("orders.new.customerLabel"),
         choose: t("orders.purchase.walkIn"),
         method: t("orders.purchase.method"),
@@ -73,6 +83,7 @@ async function PurchasePanelBody({
         taxHint: t("orders.purchase.taxHint"),
         tip: t("orders.purchase.tip"),
         gross: t("orders.purchase.gross"),
+        grossDue: t("orders.localDue.gross"),
         add: t("orders.new.addItem"),
         remove: t("orders.new.removeItem"),
         submit: t("orders.purchase.submit"),

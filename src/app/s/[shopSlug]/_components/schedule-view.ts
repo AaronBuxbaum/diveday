@@ -420,6 +420,7 @@ export function scheduleZoneLine(
 }
 
 export type ScheduleQuery = {
+  recoveryActivity?: string;
   month?: string;
   after?: string;
   before?: string;

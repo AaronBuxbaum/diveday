@@ -67,7 +67,11 @@ export function ImportPreview({
   locale,
 }: {
   prepared: PreparedImport;
-  outcomes?: { rowNumber: number; outcome: "create" | "update" | "merge" | "skip" | "conflict" }[];
+  outcomes?: {
+    rowNumber: number;
+    outcome: "create" | "update" | "merge" | "skip" | "conflict";
+    visitOutcome?: "add" | "existing" | "duplicate" | "skip";
+  }[];
   previewRows: PreparedImport["rows"];
   hiddenRows: number;
   copy: ImportWizardCopy;
@@ -269,16 +273,10 @@ export function ImportPreview({
                 {row.rowNumber}
               </Td>
               <Td>
-                {outcomes ? (
-                  <p className="text-xs text-muted">
-                    {
-                      copy.outcomes[
-                        outcomes.find((entry) => entry.rowNumber === row.rowNumber)?.outcome ??
-                          "skip"
-                      ]
-                    }
-                  </p>
-                ) : null}
+                <RowMatchOutcome
+                  outcome={outcomes?.find((entry) => entry.rowNumber === row.rowNumber)}
+                  copy={copy}
+                />
                 {row.fullName || <span className="text-danger">{copy.table.noName}</span>}
                 {row.action === "skip" ? (
                   <span className="ms-2 rounded bg-danger-tint px-1.5 py-0.5 text-xs text-danger">
@@ -480,4 +478,25 @@ function previewImportCounts(
       (row) => row.action === "import" && !conflicts.has(row.rowNumber),
     ).length,
   };
+}
+
+function RowMatchOutcome({
+  outcome,
+  copy,
+}: {
+  outcome?: {
+    outcome: keyof ImportWizardCopy["outcomes"];
+    visitOutcome?: "add" | "existing" | "duplicate" | "skip";
+  };
+  copy: ImportWizardCopy;
+}) {
+  if (!outcome) return null;
+  return (
+    <>
+      <p className="text-xs text-muted">{copy.outcomes[outcome.outcome]}</p>
+      {outcome.visitOutcome ? (
+        <p className="text-xs text-muted">{copy.visitOutcomes?.[outcome.visitOutcome]}</p>
+      ) : null}
+    </>
+  );
 }

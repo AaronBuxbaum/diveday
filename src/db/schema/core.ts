@@ -1333,6 +1333,7 @@ export const people = pgTable(
   },
   (table) => [
     index("people_shop_idx").on(table.shopId),
+    uniqueIndex("people_shop_id_id_unique").on(table.shopId, table.id),
     check(
       "people_anonymized_stays_removed",
       sql`${table.anonymizedAt} is null or ${table.deletedAt} is not null`,

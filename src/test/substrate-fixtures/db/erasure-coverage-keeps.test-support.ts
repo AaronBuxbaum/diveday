@@ -16,6 +16,8 @@
  *   departure — is the shop's record of its own day.
  */
 export const ERASURE_KEEPS: Record<string, string> = {
+  trip_credit_entries:
+    "Promotional value and its economic journal retain anonymous beneficiary ids; erasure removes personal data from the person record, never changes outstanding balances (ADR 20261116-promotional-trip-credit-ledger).",
   // --- staff prose that may mention a diver: not their data, so not swept ----
   // Owner, 2026-11-01: erasure removes a person's own data only. The person is
   // reached by a pointer, and a mention of them in words somebody else wrote is
@@ -125,6 +127,14 @@ export const ERASURE_KEEPS: Record<string, string> = {
   trip_stage_events: "the crew moving a departure through its stages",
   safety_drills: "a drill the shop held, for its insurer",
   safety_drill_participants: "a crew member who took part in a drill",
+  recovery_activities:
+    "non-diving activity arrangements; staff names resolve live to anonymized people",
+  recovery_activity_offers:
+    "immutable nonpersonal prepared facts and source IDs; no contact payload or recipient name",
+  recovery_activity_participants:
+    "id-only allocation evidence; anonymized subjects cannot be newly confirmed; promised places remain held until explicit cancellation",
+  recovery_activity_events:
+    "immutable id-only transitions and staff attribution; names resolve live",
   trip_blowouts: "who called a departure off, and when",
   marine_life_requests: "a staff member’s search for a species DiveDay does not carry",
   integration_oauth_states:

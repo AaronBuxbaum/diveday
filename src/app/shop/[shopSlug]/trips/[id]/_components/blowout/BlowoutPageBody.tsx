@@ -20,7 +20,9 @@ import {
   resumeBlowoutAction,
 } from "../../blowout-actions";
 import { BlowoutConfirmation } from "./BlowoutConfirmation";
+import { ClassroomRecovery } from "./ClassroomRecovery";
 import { HeldRefundsCard } from "./HeldRefundsCard";
+import { nonBoatPickerCopy, nonBoatPickerOptions } from "./non-boat-picker-copy";
 import { RecoveryGroups } from "./RecoveryGroups";
 import { blowoutTitleKey } from "./title";
 
@@ -28,6 +30,7 @@ const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey
   called: { tone: "success", key: "blowout.notices.called" },
   resumed: { tone: "success", key: "blowout.notices.resumed" },
   departed: { tone: "danger", key: "blowout.notices.departed" },
+  "alternatives-invalid": { tone: "danger", key: "blowout.alternatives.invalid" },
   "recovery-saved": { tone: "success", key: "blowout.recovery.saved" },
   "recovery-busy": { tone: "danger", key: "blowout.recovery.busy" },
   "recovery-stale": { tone: "danger", key: "blowout.recovery.stale" },
@@ -64,6 +67,7 @@ export async function BlowoutPageBody({
     trip,
     blowout,
     roster,
+    nonBoatOffers,
     can: { callDay: canCallDay, refund: mayRefund },
   } = page;
   const t = staffTranslator(locale);
@@ -123,6 +127,8 @@ export async function BlowoutPageBody({
             : null
         }
         roster={roster}
+        alternativeOptions={nonBoatPickerOptions(nonBoatOffers, locale, shop.timezone, t)}
+        alternativeCopy={nonBoatPickerCopy(t)}
         call={callBlowoutAction.bind(null, shopSlug, tripId)}
         t={t}
       />
@@ -192,6 +198,17 @@ export async function BlowoutPageBody({
         </a>
       </div>
 
+      <ClassroomRecovery
+        page={page}
+        shopSlug={shopSlug}
+        tripId={tripId}
+        locale={locale}
+        timezone={shop.timezone}
+        dateRequestsEnabled={shop.dateRequestsEnabled}
+        contactEmail={shop.contactEmail}
+        contactPhone={shop.contactPhone}
+        t={t}
+      />
       {divers.length === 0 ? (
         <EmptyState title={t("blowout.record.empty")} className="mt-6" />
       ) : (

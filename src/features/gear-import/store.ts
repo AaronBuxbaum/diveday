@@ -12,6 +12,7 @@ export async function commitGearImport(
   importedByPersonId: string,
 ) {
   return db.transaction(async (tx) => {
+    const rowResults: { rowNumber: number; issues: string[] }[] = [];
     let unitsCreated = 0;
     let unitsMatched = 0;
     let eventsAdded = 0;
@@ -21,6 +22,8 @@ export async function commitGearImport(
     let assignmentsUnmatched = 0;
     for (const row of prepared.rows) {
       const unitIssues = row.issues.filter((issue) => !issue.includes("assignment"));
+      const result = { rowNumber: row.rowNumber, issues: [...row.issues] };
+      rowResults.push(result);
       if (unitIssues.length > 0 || !row.label) continue;
       let [item] = await tx
         .select()
@@ -92,8 +95,10 @@ export async function commitGearImport(
             ),
           )
           .limit(1);
-        if (existing.length) eventsSkipped++;
-        else {
+        if (existing.length) {
+          eventsSkipped++;
+          result.issues.push("service_already_recorded");
+        } else {
           await tx.insert(gearServiceEvents).values({
             shopId,
             gearItemId: item.id,
@@ -136,9 +141,10 @@ export async function commitGearImport(
           !row.assignedFrom ||
           !row.assignedUntil ||
           row.issues.some((issue) => issue.includes("assignment"))
-        )
+        ) {
           assignmentsUnmatched++;
-        else {
+          result.issues.push("assignment_unmatched_or_invalid");
+        } else {
           const dedupeKey =
             row.assignmentReference ??
             [row.assignedFrom, row.assignedUntil, row.assignmentStatus, row.assignmentNote]
@@ -161,11 +167,15 @@ export async function commitGearImport(
             .onConflictDoNothing()
             .returning({ id: priorGearAssignments.id });
           if (inserted.length) assignmentsAdded++;
-          else assignmentsSkipped++;
+          else {
+            assignmentsSkipped++;
+            result.issues.push("assignment_already_recorded");
+          }
         }
       }
     }
     return {
+      rowResults,
       unitsCreated,
       unitsMatched,
       eventsAdded,

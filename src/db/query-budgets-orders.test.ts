@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { people, trips } from "@/db/schema";
+import { people, trips, userAccounts } from "@/db/schema";
 import { countingShopContext } from "@/test/query-count";
 import {
   SEEDED_CAPTAIN_EMAIL,
@@ -47,11 +47,38 @@ describe("what the Orders index costs", () => {
       tripFilter: trip.id,
     });
     expect(index.can.reconcilePayments).toBe(true);
+    expect(index.purchaseDay).not.toBeNull();
     const used = ctx.count();
     expect(
       used,
       `the Orders index sent ${used} queries; see this test's comment before raising the ceiling`,
     ).toBeLessThanOrEqual(ORDERS_INDEX_QUERY_CEILING);
+  });
+
+  it("rechecks the shared permissions after an account is disabled", async () => {
+    const ctx = await countingShopContext();
+    const ownerId = await seededStaffPersonId(ctx.uncounted, ctx.shop.id, SEEDED_OWNER_EMAIL);
+    const input = {
+      filter: {},
+      page: 1,
+      imported: null,
+      personFilter: undefined,
+      tripFilter: undefined,
+    };
+    const before = await getOrdersIndex(ctx.db, ctx.shop, ownerId, input);
+    expect(before.can).toEqual({ reconcilePayments: true, manageOrders: true, exportOrders: true });
+    await ctx.uncounted
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, ownerId));
+    const after = await getOrdersIndex(ctx.db, ctx.shop, ownerId, input);
+    expect(after.can).toEqual({
+      reconcilePayments: false,
+      manageOrders: false,
+      exportOrders: false,
+    });
+    expect(after.purchaseDay).toBeNull();
+    expect(after.backOffice.stuckPaymentOperations).toEqual([]);
   });
 
   it("never reads the back office for someone who may not reconcile payments", async () => {

@@ -568,6 +568,10 @@ export const bookings = pgTable(
      * with no course (`recordCourseMaterialsDone`), the same LMS boundary as the
      * next step above. Both columns move together.
      */
+    /** Staff-owned preparation follow-up only; never a readiness or certification fact. */
+    courseFollowupByPersonId: uuid("course_followup_by_person_id").references(() => people.id),
+    courseFollowupAt: timestamp("course_followup_at", { withTimezone: true }),
+    courseFollowupRevision: integer("course_followup_revision").notNull().default(0),
     courseMaterialsDoneAt: timestamp("course_materials_done_at", { withTimezone: true }),
     courseMaterialsDoneByPersonId: uuid("course_materials_done_by_person_id").references(
       () => people.id,
@@ -681,6 +685,7 @@ export const bookings = pgTable(
     // every shop's rows; a (shop_id, …) composite cannot serve that probe.
     // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
     index("bookings_person_id_idx").on(table.personId),
+    index("bookings_course_followup_person_idx").on(table.courseFollowupByPersonId, table.shopId),
     uniqueIndex("bookings_trip_person_unique").on(table.tripId, table.personId),
     // Enriched air is a gas a diver breathes; a snorkeler or a rider asking for
     // it is a write that went wrong somewhere, and the prep list would pack it.
@@ -711,6 +716,11 @@ export const bookings = pgTable(
       "bookings_course_materials_done_attributed",
       sql`(${table.courseMaterialsDoneAt} is null) = (${table.courseMaterialsDoneByPersonId} is null)`,
     ),
+    check(
+      "bookings_course_followup_attributed",
+      sql`(${table.courseFollowupAt} is null) = (${table.courseFollowupByPersonId} is null)`,
+    ),
+    check("bookings_course_followup_revision", sql`${table.courseFollowupRevision} >= 0`),
     // Every referral stamp has its author, and a paper is only collected for a
     // seat that is a referral at all.
     check(

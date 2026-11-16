@@ -1,0 +1,9 @@
+# Complimentary classroom recovery
+
+A cancelled departure can have a separate non-diving classroom arrangement. Staff attest that the room and coordinator are arranged, prepare immutable offers, and explicitly confirm places after contact. This does not send a message, reserve a trip seat, alter refunds/credit/packages, record boarding/attendance, or satisfy course requirements.
+
+Activity-row locks serialize capacity, confirmation, cancellation and revisions. Durable UUID operations store a request fingerprint and original result; retries never revive a subsequently cancelled place. Person locks are NOWAIT after the activity lock so identity merge and erasure, which lock people first, cannot deadlock. Merge reconciles duplicate allocations under activity locks before repointing subjects; immutable identity events retain scoped provenance. Staff must explicitly release a place: erasure alone establishes no absence.
+
+Prepared offers have no recipient names or contacts. Public activity context returns only title, time and location after an offer exists. The existing date-request action revalidates it and creates an unassigned inquiry. It never identifies a customer, merges people or confirms a place. Disabled requests fall back to existing shop contact details or an honest manually relayed message.
+
+Evidence stays with the original cancellation under the existing operational-record retention classification. Erasure resolves person references to the anonymized identity. A diver exports only their own allocation rows; the shop exports arrangements, offers, allocations and transition evidence, excluding retry machinery. No provider, key or external calendar validation is required. Coordinator overlaps in DiveDay are shown for staff review; the attestation is not an external availability guarantee.

@@ -340,6 +340,9 @@ export const paymentEventOperation = pgEnum("payment_event_operation", [
   "package_consumed",
   /** A cancellation returned prepaid package tanks to the diver. */
   "package_released",
+  "trip_credit_redeemed",
+  "trip_credit_released",
+  "trip_credit_reopened",
   /** A staff order was refunded through Stripe. */
   "order_refunded",
   /** The automated cancellation-window refund reversed a Stripe capture. */
@@ -591,6 +594,7 @@ export const orderStatus = pgEnum("order_status", [
  */
 export const orderCollection = pgEnum("order_collection", [
   "stripe_invoice",
+  "local_invoice",
   "cash",
   "card_machine",
   "bank_transfer",
@@ -760,6 +764,16 @@ export const orders = pgTable(
       and ${table.status}::text in ('paid', 'partly_refunded', 'refunded', 'void')
       and ${table.stripeInvoiceId} is null and ${table.stripeCustomerId} is null
       and ${table.stripePaymentIntentId} is null and ${table.stripeAccountId} is null
+    )`,
+    ),
+    check(
+      "orders_local_invoice_unpaid",
+      sql`${table.collection}::text <> 'local_invoice' or (
+      ${table.personId} is not null and ${table.bookingId} is null and ${table.source}::text = 'staff'
+      and ${table.status}::text in ('open', 'void') and ${table.amountPaidCents} = 0
+      and ${table.counterReceipt} is null and ${table.totalCents} > 0
+      and ${table.stripeAccountId} is null and ${table.stripeCustomerId} is null
+      and ${table.stripeInvoiceId} is null and ${table.stripePaymentIntentId} is null
     )`,
     ),
     check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
@@ -6,6 +7,7 @@ import type { BlowoutDiverState } from "@/db/blowouts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { RECOVERY_OUTCOMES } from "@/lib/disruption-recovery";
 import { formatDateTimeTz } from "@/lib/format";
+import { shopPath } from "@/lib/staff-notices";
 import { recordRecoveryFollowUpAction } from "../../blowout-actions";
 
 export function RecoveryFollowUp({
@@ -31,6 +33,13 @@ export function RecoveryFollowUp({
         {t("blowout.recovery.forDiver", { name: diver.fullName })}
       </summary>
       <p className="mt-2 text-muted">{t("blowout.recovery.boundary")}</p>
+      <p className="mt-2 text-muted">{t("blowout.recovery.creditBoundary")}</p>
+      <Link
+        className="mt-1 inline-flex min-h-11 items-center text-primary hover:underline"
+        href={`${shopPath(shopSlug, "divers", diver.personId)}#trip-credit`}
+      >
+        {t("blowout.recovery.creditLink")}
+      </Link>
       {diver.canRecordRecovery ? (
         <form
           action={recordRecoveryFollowUpAction.bind(null, shopSlug, tripId)}

@@ -682,7 +682,7 @@ const tripMinimumNotMetSchema = z.object({
    * only so a message queued before ADR 20260813-shop-cancellation-refunds-itself
    * still parses on retry; the sweep always states it.
    */
-  paymentStory: z.enum(["none", "refunded", "refund_owed"]).optional(),
+  paymentStory: z.enum(["none", "refunded", "refund_owed", "credit_returned"]).optional(),
   /** Back to the shop's own schedule, to find another day. */
   scheduleUrl: z.url().max(2_000),
 });
@@ -726,7 +726,7 @@ const tripBlowoutSchema = z.object({
    * `paid`/`deposit` are the pre-refund codes and stay parseable: a message
    * queued for retry before that change still carries one.
    */
-  paymentStory: z.enum(["none", "deposit", "paid", "refunded", "refund_owed"]),
+  paymentStory: z.enum(["none", "deposit", "paid", "refunded", "refund_owed", "credit_returned"]),
   /** Soonest-first, already admission-filtered for this diver (src/lib/blowout.ts). */
   alternatives: z
     .array(
@@ -778,6 +778,7 @@ const bookingCancelledSchema = z.object({
     z.object({ story: z.literal("none") }),
     z.object({ story: z.literal("forfeit") }),
     z.object({ story: z.literal("shop_will_follow_up") }),
+    z.object({ story: z.literal("credit_returned") }),
     z.object({
       story: z.literal("refunded"),
       amountCents: z.number().int().min(1).max(100_000_000),

@@ -60,3 +60,9 @@ describe("paymentSourceLine", () => {
     expect(paymentSourceLine(null, null)).toBeNull();
   });
 });
+
+it("distinguishes promotional credit and its current return from counter money", () => {
+  expect(paymentSourceLine("paid", "trip_credit")).toBe("credit");
+  expect(paymentSourceLine("unpaid", "trip_credit_returned")).toBe("credit_returned");
+  expect(paymentSourceLine("refunded", "trip_credit_returned")).toBeNull();
+});

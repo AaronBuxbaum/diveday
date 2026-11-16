@@ -12,6 +12,7 @@ const COLLECTION_KEYS: Record<(typeof orders.$inferSelect)["collection"], StaffM
   bank_transfer: "orders.collection.bank_transfer",
   other: "orders.collection.other",
   room_charge: "orders.collection.room_charge",
+  local_invoice: "orders.collection.local_invoice",
   stripe_invoice: "counterRentals.ticket.payment.invoice",
 };
 

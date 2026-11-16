@@ -697,5 +697,36 @@
     "save": "Guardar",
     "clear": "Quitar",
     "clearing": "Quitando…"
+  },
+  "tripCredit": {
+    "title": "Crédito para salidas",
+    "grant": "Otorgar crédito promocional",
+    "more": "Otorgar más crédito",
+    "amount": "Importe ({currency})",
+    "reason": "Motivo",
+    "goodwill": "Cortesía",
+    "promotion": "Promoción",
+    "apply": "Aplicar {amount} de crédito",
+    "eligible": "Aplicar a una reserva pendiente de pago",
+    "noEligible": "No hay reservas pendientes de pago aptas.",
+    "policy": "Solo las tarifas básicas pendientes de pago en la misma moneda permiten usar crédito promocional. No se combina con cursos, paquetes, otros pagos, impuestos, cargos adicionales, nitrox ni alquileres.",
+    "granted": "Se otorgaron {amount} de crédito promocional. Saldo: {balance}.",
+    "applied": "Se aplicaron {amount} de crédito a la tarifa. Saldo: {balance}.",
+    "history": "Historial reciente de crédito",
+    "unavailable": "El saldo necesita revisión",
+    "kinds": {
+      "grant": "Otorgado",
+      "redeem": "Aplicado a la tarifa",
+      "restore": "Devuelto"
+    },
+    "errors": {
+      "invalid": "Revisa el importe y el motivo del crédito.",
+      "notAuthorized": "No tienes permiso para esta acción de crédito.",
+      "notFound": "Este buzo o esta reserva ya no están disponibles.",
+      "unavailable": "Esta reserva o este saldo no permiten usar crédito. Revisa el historial de pagos.",
+      "insufficient": "No hay crédito suficiente para la tarifa completa.",
+      "changed": "La tarifa o la solicitud cambió. Actualiza el registro e inténtalo de nuevo.",
+      "busy": "Este registro se está actualizando. Inténtalo de nuevo."
+    }
   }
 }

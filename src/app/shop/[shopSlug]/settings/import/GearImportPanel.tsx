@@ -1,12 +1,12 @@
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { NoticeTone } from "@/components/ui/tone";
+import { GEAR_IMPORT_ALIASES, GEAR_IMPORT_COLUMNS } from "@/features/gear-import";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { CsvFileInput } from "../_components/CsvFileInput";
-import { importGearServiceHistoryAction } from "./gear-actions";
+import { ExistingImportReview } from "./ExistingImportReview";
+import { existingImportCopy } from "./existing-import-copy";
 
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "import-empty": { tone: "danger", key: "gear.notice.importEmpty" },
@@ -58,27 +58,12 @@ export function GearImportPanel({ t, notice }: { t: StaffTranslator; notice?: st
         >
           {t("gear.import.downloadTemplate")}
         </a>
-        <form
-          action={importGearServiceHistoryAction}
-          className="mt-5 flex flex-wrap items-end gap-3"
-        >
-          {/* The same control the Divers tab uses, not the operating system's
-              grey "Choose File / No file chosen". */}
-          <CsvFileInput
-            name="file"
-            required
-            copy={{
-              choose: t("gear.import.chooseFile"),
-              chooseAnother: t("gear.import.chooseDifferentFile"),
-            }}
-          />
-          <SubmitButton
-            pendingLabel={t("words.busy.importing")}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("gear.import.submit")}
-          </SubmitButton>
-        </form>
+        <ExistingImportReview
+          kind="gear"
+          columns={{ gear: GEAR_IMPORT_COLUMNS }}
+          aliases={GEAR_IMPORT_ALIASES}
+          copy={existingImportCopy(t, "gear")}
+        />
       </SectionCard>
     </>
   );

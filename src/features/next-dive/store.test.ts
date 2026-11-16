@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { createBooking } from "../../db/bookings";
 import { readCertificationEvidence } from "../../db/certification-evidence";
+import { createPerson } from "../../db/people";
 import { createCertification, upsertTripRequirements } from "../../db/readiness";
 import { bookings, cards, courses, people, tripAssignments, trips } from "../../db/schema/index";
 import { createTrip, listStaff } from "../../db/trips";
@@ -36,12 +37,14 @@ const AT = (hoursFromNow: number) => new Date(NOW.getTime() + hoursFromNow * 60 
 
 async function boardContext() {
   const { db, shop } = ctx;
-  const [diver] = await db
-    .select({ id: people.id })
-    .from(people)
-    .where(eq(people.shopId, shop.id))
-    .limit(1);
-  if (!diver) throw new Error("seeded person missing");
+  // Each case owns this person's evidence; an unordered demo person may already hold AOW.
+  const diver = await createPerson(db, {
+    shopId: shop.id,
+    fullName: "Next Dive Test Diver",
+    email: null,
+    phone: null,
+    origin: "counter",
+  });
   return { db, shop, diverId: diver.id };
 }
 

@@ -195,3 +195,8 @@ export function publicGroupRequestPath(
   });
   return `${publicSchedulePath(shopSlug)}?${query}#request-a-date`;
 }
+
+/** Activity IDs carry public inquiry context, never authority to identify a person or allocate a place. */
+export function publicRecoveryActivityRequestPath(shopSlug: string, activityId: string): string {
+  return `${publicSchedulePath(shopSlug)}?${new URLSearchParams({ recoveryActivity: activityId })}#classroom-request`;
+}

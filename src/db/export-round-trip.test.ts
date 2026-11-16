@@ -122,6 +122,12 @@ const NOT_READ_BACK: Record<string, string> = {
   "boat_snags.csv": SCHEDULE,
   "certification_junior_reviews.csv": EVIDENCE,
   "disruption_recovery_events.csv": EVIDENCE,
+  "trip_credit_entries.csv": EVIDENCE, // monetary operation evidence must never be imported as a fresh grant or redemption
+  "recovery_activities.csv": EVIDENCE,
+  "recovery_activity_offers.csv": EVIDENCE,
+  "recovery_activity_participants.csv": EVIDENCE,
+  "recovery_activity_events.csv": EVIDENCE,
+
   "trip_change_events.csv": EVIDENCE,
   "trip_stage_events.csv": EVIDENCE,
   "safety_drills.csv": EVIDENCE,

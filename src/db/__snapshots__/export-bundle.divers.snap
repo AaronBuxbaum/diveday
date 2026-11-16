@@ -1,4 +1,5 @@
 diver Camila Rojas (12 seats) at blue-mantis America/New_York
+recovery_activity_participants.csv 0 rows ef90731d4323d1c4 [id,activity_id,person_id,blowout_diver_id,status,revision,confirmed_at]
 profile.csv 1 rows 05a65c742046d870 [id,full_name,staff_photo_path,public_staff_profile_enabled,public_staff_profile,email,phone,date_of_birth,dive_insurance,roles,emergency_contact_name,emergency_contact_phone,courtesy_email_opt_out_at,no_certification_declared_at,no_certification_cleared_at,adult_attested_at,deleted_at,created_at]
 cards.csv 1 rows 93d68d942b86c058 [id,kind,agency,level,specialty,identifier,declared_identifier,status,junior_status,junior_status_verified_at,junior_status_verified_by_name,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
 certification_junior_reviews.csv 0 rows 42b49fa3f7c379b0 [id,certification_id,recorded_by_name,junior_status,recorded_at]
@@ -23,6 +24,7 @@ work_orders.csv 0 rows e6426118b568db39 [id,number,status,reported_problem,promi
 work_order_lines.csv 0 rows 3e89338136881443 [id,work_order_id,kind,quantity_hundredths,unit_amount_cents,deleted_at,created_at]
 work_order_care.csv 0 rows c4327c2d0bf32e6b [id,work_order_id,customer_gear_item_id,kind,passed,performed_on,next_due_on]
 prior_visits.csv 0 rows cfd8ce7dcd229190 [id,visited_on,title,status_label,amount_label,source_label,imported_at]
+trip_credit_entries.csv 0 rows a33e7863466604fe [id,kind,amount_cents,currency,reason,booking_id,restores_entry_id,occurred_at]
 computer_import_batches.csv 0 rows b1b7b84f4de26ff5 [id,person_id,request_key,selection_hash,imported_count,skipped_count,created_at]
 computer_dives.csv 0 rows 9f1f43688b34361f [id,person_id,batch_id,fingerprint,record,annotation,deleted_at,created_at]
 computer_dive_profiles.csv 0 rows faf5e76f32cc393c [id,person_id,dive_id,samples]
@@ -39,6 +41,7 @@ dive_package_entitlements.csv 5 rows 50bdf0eb36c6a03b [id,package_name,booking_i
 photos: 0 e3b0c44298fc1c14
 
 diver Cosima Weber (11 seats) at blue-mantis America/New_York
+recovery_activity_participants.csv 0 rows ef90731d4323d1c4 [id,activity_id,person_id,blowout_diver_id,status,revision,confirmed_at]
 profile.csv 1 rows b0325cfe4d7577cd [id,full_name,staff_photo_path,public_staff_profile_enabled,public_staff_profile,email,phone,date_of_birth,dive_insurance,roles,emergency_contact_name,emergency_contact_phone,courtesy_email_opt_out_at,no_certification_declared_at,no_certification_cleared_at,adult_attested_at,deleted_at,created_at]
 cards.csv 1 rows b0c10abd05801991 [id,kind,agency,level,specialty,identifier,declared_identifier,status,junior_status,junior_status_verified_at,junior_status_verified_by_name,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
 certification_junior_reviews.csv 0 rows 42b49fa3f7c379b0 [id,certification_id,recorded_by_name,junior_status,recorded_at]
@@ -63,6 +66,7 @@ work_orders.csv 0 rows e6426118b568db39 [id,number,status,reported_problem,promi
 work_order_lines.csv 0 rows 3e89338136881443 [id,work_order_id,kind,quantity_hundredths,unit_amount_cents,deleted_at,created_at]
 work_order_care.csv 0 rows c4327c2d0bf32e6b [id,work_order_id,customer_gear_item_id,kind,passed,performed_on,next_due_on]
 prior_visits.csv 0 rows cfd8ce7dcd229190 [id,visited_on,title,status_label,amount_label,source_label,imported_at]
+trip_credit_entries.csv 0 rows a33e7863466604fe [id,kind,amount_cents,currency,reason,booking_id,restores_entry_id,occurred_at]
 computer_import_batches.csv 0 rows b1b7b84f4de26ff5 [id,person_id,request_key,selection_hash,imported_count,skipped_count,created_at]
 computer_dives.csv 0 rows 9f1f43688b34361f [id,person_id,batch_id,fingerprint,record,annotation,deleted_at,created_at]
 computer_dive_profiles.csv 0 rows faf5e76f32cc393c [id,person_id,dive_id,samples]
@@ -79,6 +83,7 @@ dive_package_entitlements.csv 0 rows c0aaa67ac61eb509 [id,package_name,booking_i
 photos: 0 e3b0c44298fc1c14
 
 diver Grace Halloran (11 seats) at blue-mantis America/New_York
+recovery_activity_participants.csv 0 rows ef90731d4323d1c4 [id,activity_id,person_id,blowout_diver_id,status,revision,confirmed_at]
 profile.csv 1 rows 936c4ae0071990af [id,full_name,staff_photo_path,public_staff_profile_enabled,public_staff_profile,email,phone,date_of_birth,dive_insurance,roles,emergency_contact_name,emergency_contact_phone,courtesy_email_opt_out_at,no_certification_declared_at,no_certification_cleared_at,adult_attested_at,deleted_at,created_at]
 cards.csv 1 rows 8c8ef79d20b5bf26 [id,kind,agency,level,specialty,identifier,declared_identifier,status,junior_status,junior_status_verified_at,junior_status_verified_by_name,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
 certification_junior_reviews.csv 0 rows 42b49fa3f7c379b0 [id,certification_id,recorded_by_name,junior_status,recorded_at]
@@ -103,6 +108,7 @@ work_orders.csv 0 rows e6426118b568db39 [id,number,status,reported_problem,promi
 work_order_lines.csv 0 rows 3e89338136881443 [id,work_order_id,kind,quantity_hundredths,unit_amount_cents,deleted_at,created_at]
 work_order_care.csv 0 rows c4327c2d0bf32e6b [id,work_order_id,customer_gear_item_id,kind,passed,performed_on,next_due_on]
 prior_visits.csv 0 rows cfd8ce7dcd229190 [id,visited_on,title,status_label,amount_label,source_label,imported_at]
+trip_credit_entries.csv 0 rows a33e7863466604fe [id,kind,amount_cents,currency,reason,booking_id,restores_entry_id,occurred_at]
 computer_import_batches.csv 0 rows b1b7b84f4de26ff5 [id,person_id,request_key,selection_hash,imported_count,skipped_count,created_at]
 computer_dives.csv 0 rows 9f1f43688b34361f [id,person_id,batch_id,fingerprint,record,annotation,deleted_at,created_at]
 computer_dive_profiles.csv 0 rows faf5e76f32cc393c [id,person_id,dive_id,samples]

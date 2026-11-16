@@ -284,7 +284,11 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
     shopId: s.user.shopId,
     bookingId,
   });
-  if (refund.status !== "no_policy" && refund.status !== "unpaid") {
+  if (
+    refund.status !== "no_policy" &&
+    refund.status !== "unpaid" &&
+    refund.status !== "credit_returned"
+  ) {
     await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
   }
   // The refund rode on this staffer's removal; the activity log names them,

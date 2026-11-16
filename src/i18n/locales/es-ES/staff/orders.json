@@ -54,7 +54,8 @@
     "card_machine": "Terminal de pago",
     "room_charge": "Cargo a la habitación",
     "bank_transfer": "Transferencia bancaria",
-    "other": "Otro pago externo"
+    "other": "Otro pago externo",
+    "local_invoice": "Pendiente en el centro"
   },
   "detail": {
     "fallbackDescription": "Pedido",
@@ -279,7 +280,7 @@
   },
   "purchase": {
     "title": "Registrar compra",
-    "explanation": "Registra dinero ya recibido. DiveDay no cobra una tarjeta ni envía una factura.",
+    "explanation": "Registra alquileres y compras pequeñas. DiveDay no cobra tarjetas.",
     "method": "Pagado con",
     "reference": "Recibo externo o referencia (opcional)",
     "item": "Artículo",
@@ -300,6 +301,44 @@
     "includedTax": "Impuesto incluido",
     "includedTip": "Propina incluida",
     "receiptReference": "Recibo externo o referencia",
-    "walkIn": "Cliente sin registrar"
+    "walkIn": "Cliente sin registrar",
+    "entryType": "Registro de compra",
+    "received": "Ya recibido",
+    "dueHelp": "Guarda el importe pendiente de este buzo. Registra un recibo cuando llegue el pago completo.",
+    "itemsHeading": "Artículos",
+    "paymentHeading": "Pago recibido",
+    "totalInvalid": "Ingresa importes válidos"
+  },
+  "localDue": {
+    "gross": "Total pendiente",
+    "open": "Importe pendiente en el centro",
+    "help": "Registra el total completo solo después de recibir el dinero. DiveDay no cobra tarjetas.",
+    "record": "Registrar pago recibido",
+    "void": "Anular importe pendiente",
+    "invalid": "No se cambió nada. Revisa el pedido y los datos del recibo.",
+    "receiptSaved": "Pago recibido y recibo registrado.",
+    "voided": "Se anuló el importe pendiente.",
+    "taxHint": "Los impuestos y la propina ya están incluidos en el total. Deja el impuesto en blanco si no lo sabes.",
+    "method": "Recibido por",
+    "reference": "Referencia del recibo",
+    "payerRequired": "Elige un buzo registrado para guardar un importe pendiente.",
+    "submit": "Guardar importe pendiente"
+  },
+  "purchaseDay": {
+    "title": "Día de compras registradas",
+    "day": "Fecha del recibo",
+    "show": "Mostrar día",
+    "scope": "Recibos de todo el centro agrupados por el método de pago original. Revisa tus registros de pago para conciliar.",
+    "count": "Recibos",
+    "gross": "Total recibido",
+    "tax": "Impuesto incluido registrado",
+    "tip": "Propina incluida registrada",
+    "returns": "Devoluciones externas registradas",
+    "returnScope": "No se registraron los métodos de devolución; estos importes se muestran aparte de los totales por método del recibo.",
+    "unknown": "Incompleto",
+    "pruned": "Es posible que se haya eliminado parte del historial de devoluciones de esta fecha.",
+    "empty": "No hay recibos de compra registrados en esta fecha.",
+    "unknownTax": "{count, plural, one {Impuesto desconocido en # recibo.} other {Impuesto desconocido en # recibos.}}",
+    "voided": "{count, plural, one {Se excluye # recibo anulado.} other {Se excluyen # recibos anulados.}}"
   }
 }

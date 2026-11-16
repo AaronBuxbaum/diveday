@@ -697,5 +697,36 @@
     "save": "Save",
     "clear": "Clear",
     "clearing": "Clearing…"
+  },
+  "tripCredit": {
+    "title": "Trip credit",
+    "grant": "Grant promotional credit",
+    "more": "Grant more credit",
+    "amount": "Amount ({currency})",
+    "reason": "Reason",
+    "goodwill": "Goodwill",
+    "promotion": "Promotion",
+    "apply": "Apply {amount} credit",
+    "eligible": "Apply to an unpaid booking",
+    "noEligible": "No eligible unpaid bookings.",
+    "policy": "Only basic unpaid departure fares in the same currency can use promotional credit. It can’t combine with course, package, other payment, tax, fee, nitrox, or rental charges.",
+    "granted": "Granted {amount} promotional credit. Balance: {balance}.",
+    "applied": "Applied {amount} trip credit to the fare. Balance: {balance}.",
+    "history": "Recent credit history",
+    "unavailable": "Balance needs review",
+    "kinds": {
+      "grant": "Granted",
+      "redeem": "Applied to fare",
+      "restore": "Returned"
+    },
+    "errors": {
+      "invalid": "Check the credit amount and reason.",
+      "notAuthorized": "You don’t have permission for this credit action.",
+      "notFound": "This diver or booking is no longer available.",
+      "unavailable": "This booking or balance can’t use trip credit. Review its payment history.",
+      "insufficient": "There isn’t enough credit for the full fare.",
+      "changed": "The fare or request changed. Refresh the record and try again.",
+      "busy": "This record is being updated. Try again."
+    }
   }
 }

@@ -276,7 +276,8 @@
     "courseFormEnded": "This session is over, so a paper form can’t be recorded for it.",
     "paymentCurrency": "This receipt uses a different currency from the shop’s current currency. Record the new payment separately in Orders.",
     "paymentRefundAmount": "Enter the amount returned, greater than zero and no more than the external money still held.",
-    "detailsFinished": "Departure plan is now read-only."
+    "detailsFinished": "Departure plan is now read-only.",
+    "bookingRemovedCreditReturned": "Booking removed. Its promotional trip credit was returned."
   },
   "pulse": {
     "seats": "{booked} of {capacity} booked · {open, plural, one {# seat open} other {# seats open}}",
@@ -775,7 +776,9 @@
     "preparationHeading": "Preparation and reference",
     "paymentSourceMixed": "Paid online and externally · Refund each part by its original method",
     "paymentRefundAmountLabel": "External amount returned now",
-    "paymentRefundHint": "Record money already returned by its original payment method. This does not send a payment."
+    "paymentRefundHint": "Record money already returned by its original payment method. This does not send a payment.",
+    "paymentSourceCredit": "Paid with promotional trip credit",
+    "paymentSourceCreditReturned": "Trip credit returned"
   },
   "offlineManifestManager": {
     "checkingDevice": "Checking this device…",
@@ -1012,7 +1015,18 @@
       "not_found": "This departure is no longer available.",
       "not_a_course_session": "This departure has no course."
     },
-    "undoFailed": "This note could not be restored. It may have changed, or Undo is no longer available."
+    "undoFailed": "This note could not be restored. It may have changed, or Undo is no longer available.",
+    "followup": {
+      "owner": "Follow-up: {name}",
+      "unassigned": "Unassigned",
+      "take": "Take follow-up",
+      "release": "Release follow-up",
+      "inProgress": "In progress",
+      "changed": "This follow-up changed. Reload before trying again.",
+      "unavailable": "This student’s follow-up is no longer available.",
+      "takeFor": "Take follow-up for {name}",
+      "releaseFor": "Release follow-up for {name}"
+    }
   },
   "conservation": {
     "heading": "Conservation records",

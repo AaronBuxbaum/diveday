@@ -469,6 +469,7 @@ export async function createTrip(
     capacity?: number;
     price?: number;
     cancellationWindowHours?: number;
+    diveMode?: "boat" | "shore" | "pool";
     minimumBookings?: number;
     minimumDecisionHours?: number;
     /** A boat from the shop's fleet, by name (the option reads "<name> (<seats> seats)"). */
@@ -485,6 +486,8 @@ export async function createTrip(
   await page.getByLabel("Date").fill(options.date);
   await page.getByLabel("Departs").fill(options.departsAt);
   await page.getByLabel("Returns").fill(options.returnsAt);
+  if (options.diveMode !== undefined)
+    await page.locator('select[name="diveMode"]').selectOption(options.diveMode);
   if (options.boat !== undefined) {
     // Selecting a boat initializes capacity to its total-occupant capacity.
     const select = page.locator('select[name="boatId"]');

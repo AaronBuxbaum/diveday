@@ -1,3 +1,4 @@
+import { EXPORT_FILE_NOTES } from "@/lib/export";
 import type { DiverExportContext } from "./export";
 import {
   BOOKING_ARRIVAL_EVENTS_CSV,
@@ -31,6 +32,7 @@ import {
   STAFF_CREDENTIALS_CSV,
   STAFF_REPLIES_CSV,
   TIPS_CSV,
+  TRIP_CREDIT_CSV,
   TRIP_REVIEWS_CSV,
   WAIVER_RECORDS_CSV,
   WORK_ORDER_CARE_CSV,
@@ -57,6 +59,29 @@ import type { ExportFileSpec } from "./export-tables";
  */
 
 export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
+  {
+    file: "recovery_activity_participants.csv",
+    header: [
+      "id",
+      "activity_id",
+      "person_id",
+      "blowout_diver_id",
+      "status",
+      "revision",
+      "confirmed_at",
+    ],
+    rows: ({ recoveryActivityParticipantRows }) =>
+      recoveryActivityParticipantRows.map((row) => [
+        row.id,
+        row.activityId,
+        row.personId,
+        row.blowoutDiverId,
+        row.status,
+        row.revision,
+        row.confirmedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["recovery_activity_participants.csv"],
+  },
   {
     file: "profile.csv",
     header: [
@@ -142,6 +167,7 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
   diverFile(WORK_ORDER_LINES_CSV),
   diverFile(WORK_ORDER_CARE_CSV),
   diverFile(PRIOR_VISITS_CSV),
+  diverFile(TRIP_CREDIT_CSV),
   diverFile(COMPUTER_IMPORT_BATCHES_CSV),
   diverFile(COMPUTER_DIVES_CSV),
   diverFile(COMPUTER_DIVE_PROFILES_CSV),

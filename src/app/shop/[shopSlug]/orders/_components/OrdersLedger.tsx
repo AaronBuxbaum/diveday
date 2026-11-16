@@ -84,10 +84,11 @@ export function OrdersLedger({
 function Row({ row }: { row: OrderLedgerRow }) {
   return (
     <LedgerRow
+      stacked
       href={row.href}
       linkLabel={row.linkLabel}
       trailing={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {row.status ? (
             <Badge tone={row.status.tone} size="sm">
               {row.status.word}
@@ -102,9 +103,11 @@ function Row({ row }: { row: OrderLedgerRow }) {
       }
     >
       {/* Align names at a fixed measure on wider screens; stack name and title
-          on phones so both remain readable beside the amount. */}
+          on phones so the identity has its own line above payment facts. */}
       <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-4">
-        <span className="truncate text-base font-medium sm:w-56 sm:shrink-0">{row.diver}</span>
+        <span className="break-words text-base font-medium sm:w-56 sm:shrink-0 sm:truncate">
+          {row.diver}
+        </span>
         {/* Critical text stays 16px on phones (`scripts/check-critical-text.mjs`).
             Titles wrap there so shared departure prefixes remain distinguishable;
             from `sm` up they truncate on one line to keep row height stable. */}

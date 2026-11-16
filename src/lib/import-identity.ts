@@ -7,7 +7,7 @@ export function sameImportIdentity(left: string, right: string): boolean {
   return normalize(left) === normalize(right);
 }
 
-export function manualIdentityConflicts(
+export function importIdentityConflicts(
   rows: PreparedRow[],
   existing: { email: string | null; fullName: string }[] = [],
 ): Set<string> {
@@ -27,8 +27,8 @@ export function manualIdentityConflicts(
   return conflicts;
 }
 
-export function refuseManualIdentityConflicts(rows: PreparedRow[]): void {
-  const conflicts = manualIdentityConflicts(rows);
+export function refuseImportIdentityConflicts(rows: PreparedRow[]): void {
+  const conflicts = importIdentityConflicts(rows);
   for (const row of rows) {
     if (!row.email || !conflicts.has(row.email.toLowerCase())) continue;
     row.action = "skip";
@@ -37,8 +37,8 @@ export function refuseManualIdentityConflicts(rows: PreparedRow[]): void {
   }
 }
 
-export function partitionImportRows(rows: PreparedRow[], manuallyMapped: boolean) {
-  if (manuallyMapped) refuseManualIdentityConflicts(rows);
+export function partitionImportRows(rows: PreparedRow[]) {
+  refuseImportIdentityConflicts(rows);
   return {
     importable: rows.filter((row) => row.action === "import"),
     merged: rows.filter((row) => row.action === "merge"),

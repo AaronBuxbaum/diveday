@@ -2392,7 +2392,7 @@ export function prepareContactImport(
       issues,
     };
   });
-  const { importable, merged } = partitionImportRows(rows, manuallyMapped);
+  const { importable, merged } = partitionImportRows(rows);
   // Evidence counts span both, because a merge row's whole purpose is its cards.
   const written = [...importable, ...merged];
   return {

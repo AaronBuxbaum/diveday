@@ -1278,3 +1278,17 @@ history download beside its heading need not align with the upload or confirmati
 ## Local customer-import mapping (2026-11-16)
 
 The screen’s one idea is the file becoming an explicit preview before any roster write. Staff arrive asking which source column is the customer’s name or email, which rows already match the roster, and how to correct skipped rows. A separate mapping page was considered; inline column selectors keep each correction attached to its source header and the resulting preview. Roster outcomes appear in the existing row, recovery downloads contain only rows needing attention, and an explicit notice explains the reduced authority of manually mapped evidence. Mobile selectors stack and the existing preview retains its horizontal-scroll affordance; rendered mobile and desktop review remains pending because this session’s browser, port, and artifact actions are restricted.
+
+## Course preparation follow-up — 2026-11-16
+
+The existing Course preparation band answers who still needs help before this session and who is working with them. Students remain one row each, with missing preparation categories derived from the existing readiness and materials records; attention comes first, completed rows are quieter, and textual gaps wrap on phones. An inline claim or release control keeps ownership beside the student; a separate task board was considered, but would split ownership from the records that clear the work. Claiming shows work in progress and never marks forms, payment, certification, or materials complete. The private instructor/manager audience, category-only held-identity and medical follow-up, live session recomputation, and existing feature switch remain in force.
+
+## Promotional trip credit (2026-11-16)
+
+The diver file’s credit row answers how much promotional value remains in each original currency. Opening it shows the same diver’s eligible unpaid fare rows, credit history, and the owner/manager’s explicit grant action. A separate credit settings page was considered; keeping actions in the diver file preserves customer identity and puts the fare beside the action that consumes value. Granting again requires an explicit new intent, and successful settlement names applied credit and the remaining balance without claiming cash was received. The narrow fare limits remain visible; mobile uses wrapped fare rows and stacked fields, while rendered mobile/desktop verification remains restricted in this session.
+
+## Complimentary classroom recovery (2026-11-16)
+
+Source-based implementation of Astra’s classroom recovery design. Cancellation and refund status stay first; a separate classroom section shows arrangements, capacity and coordinator, then distinct prepared offers and confirmed places. Activity management is separate from departure cancellation. Existing fields, choice groups, typography and status primitives carry the form; facts and controls stack on phones and wrap long names and Spanish labels. Refusals preserve drafts, and confirmation only appears after persistence. Anonymous promised places remain visible and require explicit cancellation.
+
+The public schedule shows only activity title, time and location with a neutral person-less inquiry. It never displays the roster or coordinator’s private name. Disabled requests fall back to existing shop contact information or a manually relayed message. Browser/port/artifact restrictions prevented a rendered phone/desktop audit; authored functional and visual specs are not execution or geometry evidence.

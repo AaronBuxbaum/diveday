@@ -1160,7 +1160,8 @@
     "groupDifferentDeparture": "Some group seats are on another departure.",
     "groupSummary": "{total, plural, one {# seat in your group} other {# seats in your group}} · {unclaimed, plural, one {# unclaimed} other {# unclaimed}}",
     "doctorNeeds": "What your doctor needs",
-    "waiverSigned": "Waiver signed."
+    "waiverSigned": "Waiver signed.",
+    "tripCreditApplied": "{amount} trip credit applied · {balance} credit left"
   },
   "thread": {
     "stepsDone": "{done} of {total} done",
@@ -3404,6 +3405,14 @@
       "unavailable": "This course isn’t available right now.",
       "contactRequired": "Leave an email or a phone number so we can reply.",
       "interestRequired": "Tell us what you’d like to dive before sending."
+    },
+    "classroom": {
+      "heading": "Ask about a classroom activity",
+      "intro": "Complimentary · No diving or course credit. A request does not reserve a place.",
+      "people": "People",
+      "send": "Request a place",
+      "sent": "Request received. The shop will confirm your place.",
+      "unavailable": "This classroom activity is no longer available. Contact the shop."
     }
   },
   "account": {
@@ -3929,7 +3938,8 @@
       "body": "We run {tripTitle} on {date} with at least {minimum, plural, one {# diver} other {# divers}}, and it had {booked, plural, one {# booking} other {# bookings}} by the time we said we’d decide, so it’s off. Your seat is released, and there’s nothing you need to do.",
       "moneyRefunded": "You’ve been refunded in full. The money is on its way back to the card you paid with, and can take a few days to land.",
       "moneyRefundOwed": "You’re owed a full refund, and we’ll be in touch to get it back to you.",
-      "findAnother": "See what else is running"
+      "findAnother": "See what else is running",
+      "moneyCreditReturned": "Your promotional trip credit is available again in your balance."
     },
     "bookingCancelled": {
       "subject": "Booking canceled: {tripTitle}",
@@ -3940,7 +3950,8 @@
       "moneyFollowUp": "We’ll be in touch about what you paid.",
       "partyCancelled": "{count, plural, one {The # party seat you booked is canceled with yours.} other {The # party seats you booked are canceled with yours.}}",
       "partyStayed": "{count, plural, one {# party seat stays booked: its diver has already claimed it or checked in.} other {# party seats stay booked: their divers have already claimed them or checked in.}}",
-      "findAnother": "See what else is running"
+      "findAnother": "See what else is running",
+      "moneyCreditReturned": "Your promotional trip credit is available again in your balance."
     },
     "partyPaymentReceipt": {
       "subject": "Receipt: {tripTitle}",
@@ -3966,7 +3977,8 @@
       "alternativesIntro": "Want to get back in the water? Here are upcoming trips you already qualify for:",
       "alternativeLine": "{title} — {when}",
       "noAlternatives": "None of the upcoming departures match your certifications right now, but new trips are added all the time.",
-      "seeSchedule": "See the full schedule"
+      "seeSchedule": "See the full schedule",
+      "moneyCreditReturned": "Your promotional trip credit is available again in your balance."
     },
     "bookingConfirmation": {
       "subject": "You’re on the boat: {tripTitle}",

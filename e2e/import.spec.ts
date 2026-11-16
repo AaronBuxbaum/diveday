@@ -596,3 +596,50 @@ test.describe("as captain", () => {
     await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveCount(0);
   });
 });
+
+test("owner reviews mapped gear history and sees repeat-import and correction outcomes", async ({
+  page,
+  privateShop,
+}) => {
+  const copy = staffTranslator("en-US");
+  await page.goto(`/shop/${privateShop.slug}/settings/import?what=gear`);
+  const input = page.locator('input[type="file"]');
+  const upload = {
+    name: "service.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("Tag,serviced_on\nCSV-REVIEW-REG,2026-01-01\nCSV-REVIEW-BAD,not-a-date"),
+  };
+  await input.setInputFiles(upload);
+  await page.getByLabel("1. Tag", { exact: true }).selectOption("gear_label");
+  await page.getByRole("button", { name: copy("gear.import.existing.review") }).click();
+  await expect(
+    page.getByRole("link", { name: copy("gear.import.existing.correction") }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: `${copy("gear.import.existing.submit")} (1)` }).click();
+  await expect(page.getByText(copy("gear.import.existing.result"))).toBeVisible();
+  await expect(
+    page.getByText(copy("gear.import.existing.eventsAdded"), { exact: true }).locator(".."),
+  ).toContainText("1");
+  await expect(
+    page.getByText(copy("gear.import.existing.rowsSkipped"), { exact: true }).locator(".."),
+  ).toContainText("1");
+  await input.setInputFiles(upload);
+  await page.getByLabel("1. Tag", { exact: true }).selectOption("gear_label");
+  await page.getByRole("button", { name: copy("gear.import.existing.review") }).click();
+  const repeatedOutcome = page
+    .getByRole("row")
+    .filter({ hasText: "CSV-REVIEW-REG" })
+    .getByRole("cell")
+    .nth(1);
+  await expect(repeatedOutcome).toContainText(copy("gear.import.existing.duplicate"));
+  await expect(repeatedOutcome).toContainText(
+    copy("gear.import.existing.issues.service_already_recorded"),
+  );
+  await expect(repeatedOutcome).not.toContainText("service_already_recorded");
+  const correction = page.getByRole("link", { name: copy("gear.import.existing.correction") });
+  await expect(correction).toBeVisible();
+  const correctionCsv = decodeURIComponent((await correction.getAttribute("href")) ?? "");
+  expect(correctionCsv).toContain("CSV-REVIEW-REG");
+  expect(correctionCsv).toContain("service_already_recorded");
+  expect(correctionCsv).toContain("invalid_service_date");
+});

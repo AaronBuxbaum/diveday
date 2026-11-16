@@ -58,7 +58,7 @@ import { calendarDateToUtcMidnight } from "../../lib/calendar-date";
 import { nowDate } from "../../lib/clock";
 import type { RentalItemKind } from "../../lib/dive-prep";
 import { type PreparedImport, type PreparedRow, parseImportedMoney } from "../../lib/import";
-import { manualIdentityConflicts, sameImportIdentity } from "../../lib/import-identity";
+import { importIdentityConflicts, sameImportIdentity } from "../../lib/import-identity";
 import { phoneForStorage } from "../../lib/phone";
 import { NOTHING_RENTED } from "../../lib/rentals";
 import { storeImportReceiptDocument, storeImportWaiverDocument } from "../../lib/storage/index";
@@ -361,10 +361,7 @@ export async function commitContactImport(
           .orderBy(asc(people.id))
           .for("no key update")
       : [];
-    const manuallyMapped = prepared.mapping.some((entry) => entry.manual);
-    const identityConflicts = manuallyMapped
-      ? manualIdentityConflicts(rows, lockedPeople)
-      : new Set<string>();
+    const identityConflicts = importIdentityConflicts(rows, lockedPeople);
     const lockedEmails = new Map(
       lockedPeople.map((person) => [person.id, person.email?.toLowerCase()]),
     );
@@ -493,7 +490,7 @@ export async function commitContactImport(
       // once for the whole file, above, rather than per row.
       const phone = phoneForStorage(row.phone, shop?.country);
 
-      // Non-destructive update: identity name refreshes, contact fields only
+      // Matching identity may refresh presentation; contact fields only
       // fill in where the import actually carries a value.
       const applyUpdate = async (id: string) => {
         const [before] = phone
@@ -584,7 +581,7 @@ export async function commitContactImport(
             .limit(1)
             .for("no key update");
           if (!winner) throw error;
-          if (manuallyMapped && !sameImportIdentity(winner.fullName, row.fullName)) {
+          if (!sameImportIdentity(winner.fullName, row.fullName)) {
             if (emailKey) identityConflicts.add(emailKey);
             summary.rowsSkipped += 1;
             summary.identityConflicts = (summary.identityConflicts ?? 0) + 1;

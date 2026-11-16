@@ -25,6 +25,7 @@ import { DiverStory } from "./_components/DiverStory";
 import { FoundItemLine } from "./_components/FoundItemLine";
 import { DiverFormStatus, NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
+import { TripCreditGroup } from "./_components/TripCreditGroup";
 import { bookingPageNumber, DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
 import { deletePersonAction } from "./record-actions";
 
@@ -325,6 +326,21 @@ export default async function DiverDetailPage({
           activityPage={activityPage}
           lastDive={lastDive}
           computerDiveCount={computerDiveCount}
+          creditGroup={
+            <TripCreditGroup
+              shopId={shop.id}
+              personId={personId}
+              currency={shop.currency}
+              timezone={shop.timezone}
+              locale={locale}
+              canGrant={
+                !removed &&
+                session.user.roles.some((role) => role === "owner" || role === "manager")
+              }
+              removed={removed}
+              t={t}
+            />
+          }
         />
         <DiverStory
           diver={diver}

@@ -47,6 +47,13 @@ export const EXPORT_FILE_NOTES = {
     "Staff sightings of junior or full card status, including corrections.",
   "trips.csv":
     "Every trip ever scheduled, including canceled ones, with predicted conditions; its sites are in trip_dives.csv.",
+  "recovery_activities.csv":
+    "Complimentary classroom arrangements, never trip or course completion.",
+  "recovery_activity_offers.csv": "Prepared offers only; no delivery or acceptance implied.",
+  "recovery_activity_participants.csv":
+    "Classroom place allocation; canceled activities have no active places.",
+  "recovery_activity_events.csv":
+    "Immutable classroom recovery transitions; no payment or training evidence.",
   "disruption_recovery_events.csv":
     "Staff recovery follow-up for canceled departures, oldest first. Original and replacement booking ids link to bookings.csv. Outcomes record follow-up only, independently of notification delivery, refunds, or boarding readiness. Corrections append; actor ids resolve through people.csv.",
   "trip_change_events.csv":
@@ -166,6 +173,8 @@ export const EXPORT_FILE_NOTES = {
     "The boat's papers and kit as they stood at each departure's roll call, one row per departure, for the departure log: papers is the certificate limits and paper dates verbatim (JSON), notices the codes DiveDay raised about them on the departure's own day (judged_on, JSON). departure_starts_at is the saved scheduled departure instant; an unsailed reschedule can rebind it. Known-unsailed records may refresh on a departure count or hull change. A kept sailed record or one with unknown departure-time provenance is never rewritten. Informs only: nothing here ever stopped a departure.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say canceled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
+  "trip_credit_entries.csv":
+    "Promotional trip credit grants, fare redemptions, and restorations. Amounts are native-currency value, not cash collected or refunded. Identity merges can repoint the beneficiary; economic entries remain unchanged.",
   "computer_import_batches.csv":
     "Confirmed personal computer imports: idempotency keys, selection hashes, and result counts. No raw source files are retained.",
   "computer_dives.csv":

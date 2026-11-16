@@ -24,6 +24,7 @@ import { publicAvailabilityPath, publicCoursesPath, publicSchedulePath } from "@
 import type { ReviewAggregate } from "@/lib/reviews";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
+import { ClassroomRequest } from "./_components/ClassroomRequest";
 import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { identityBand, monthRailSides } from "./_components/identity-band";
 import { MonthRail } from "./_components/MonthRail";
@@ -57,7 +58,6 @@ import {
 } from "./_components/schedule-view";
 import { SHOP_MAIN_CLASS } from "./_components/shop-main";
 import { WeekLedger } from "./_components/WeekLedger";
-
 // Request reads stream inside the loading boundary (ADR 20260804-instant-navigation).
 export const instant = true;
 
@@ -281,7 +281,7 @@ export default async function SchedulePage({
 
   return (
     <main className={SHOP_MAIN_CLASS}>
-      {/* On paper the page is this sheet alone (#2745). */}
+      <ClassroomRequest shop={shop} query={query} locale={locale} />
       <SchedulePaperSheet
         shop={shop}
         shopSlug={shopSlug}

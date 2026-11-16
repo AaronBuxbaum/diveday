@@ -9,25 +9,18 @@ import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { ShopNotice } from "@/components/ui/outcome";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
-import type { NoticeTone } from "@/components/ui/tone";
 import { getOrdersIndex, ORDER_DEFAULT_RANGE_DAYS, ORDER_STATUSES } from "@/features/orders-index";
 import { requireShopSurface } from "@/features/session";
 import { ORDER_STATUS_KEYS } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import {
-  calendarDateInTimezone,
-  calendarDateToUtcMidnight,
-  formatCalendarDate,
-  isValidCalendarDate,
-} from "@/lib/calendar-date";
+import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
 import { StaffListPagination } from "../_components/StaffListPagination";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
-import { orderLedgerRow } from "./_components/ledger-row";
 import { newOrderDoorFor, OrdersAddPanel } from "./_components/NewOrderPanel";
 import {
   FACT_SEPARATOR,
@@ -36,7 +29,7 @@ import {
   OPEN_TRIP_LINK,
 } from "./_components/notice-rows";
 import { InvoiceDoor, OrdersHeader } from "./_components/OrdersHeader";
-import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
+import { OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersSeatLines } from "./_components/OrdersSeatLines";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { OwedLine } from "./_components/OwedLine";
@@ -44,6 +37,9 @@ import { MoneyOwedQueues } from "./_components/OwedMoneyQueues";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 import { PayoutLines } from "./_components/PayoutLines";
 import { PurchasePanel } from "./_components/PurchasePanel";
+import { RecordedPurchaseDaySummary } from "./_components/RecordedPurchaseDaySummary";
+import { orderLedgerDays } from "./_lib/order-ledger-days";
+import { ORDERS_INDEX_NOTICES as NOTICES } from "./_lib/orders-index-notices";
 import type { OrdersSearch } from "./_lib/orders-search";
 import { type OrdersHrefOverrides, orderIndexFilter, ordersIndexHref } from "./order-index-filter";
 
@@ -74,38 +70,6 @@ function safeImportedDocumentUrl(url: string | null): string | null {
 
 /** Keep refusals from creating an order on the order surface, where every staff
  * role can still read orders and find payment guidance. */
-const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
-  "purchase-refund-invalid": { tone: "danger", key: "orders.purchase.refundInvalid" },
-  "payment-not-connected": { tone: "warning", key: "orders.index.notice.paymentNotConnected" },
-  "not-authorized": { tone: "danger", key: "orders.index.notice.notAuthorized" },
-  "not-authorized-refund": { tone: "danger", key: "orders.index.notice.notAuthorizedRefund" },
-  "paid-after-close-refunded": {
-    tone: "success",
-    key: "orders.index.notice.paidAfterCloseRefunded",
-  },
-  "paid-after-close-in-progress": {
-    tone: "neutral",
-    key: "orders.index.notice.paidAfterCloseInProgress",
-  },
-  "paid-after-close-needs-check": {
-    tone: "warning",
-    key: "orders.index.notice.paidAfterCloseNeedsCheck",
-  },
-  "paid-after-close-not-connected": {
-    tone: "warning",
-    key: "orders.index.notice.paidAfterCloseNotConnected",
-  },
-  "paid-after-close-failed": { tone: "danger", key: "orders.index.notice.paidAfterCloseFailed" },
-  "stripe-refund-matched": { tone: "success", key: "orders.index.notice.stripeRefundMatched" },
-  "stripe-refund-partly-matched": {
-    tone: "neutral",
-    key: "orders.index.notice.stripeRefundPartlyMatched",
-  },
-  "stripe-refund-not-matched": {
-    tone: "warning",
-    key: "orders.index.notice.stripeRefundNotMatched",
-  },
-};
 
 /** The day ledger groups orders with the date, count and currency-specific
  * subtotal in each header; imported history remains a separate disclosure. */
@@ -140,19 +104,7 @@ export default async function OrdersIndexPage({
   const showAll = selectedRange === "all";
   const customRange = selectedRange === "custom";
 
-  // The panel re-checks payment setup; hiding the new-order door avoids a
-  // dead end. Unconfirmed Stripe operations are money work and remain
-  // conspicuous here.
-  //
-  // Keep the DB-backed permissions separate: reconciliation is payment-manager
-  // only, order creation has its own gate, and exports follow report access.
-  // Unauthorized staff never trigger the privileged reconciliation read; each
-  // destination also enforces its own permission.
-  //
-  // A non-numeric or missing `?page=` reads as page 1 rather than NaN;
-  // `offsetPage` clamps it into range either way. The filter labels resolve
-  // independently so empty results still name the filter; the trip lookup is
-  // shop-scoped.
+  // DB-backed permissions gate each reconciliation, creation and export read.
   const {
     paymentsConnected,
     can,
@@ -161,8 +113,10 @@ export default async function OrdersIndexPage({
     importedHistoryPage,
     filteredPersonName,
     filteredTripTitle,
+    purchaseDay,
   } = await getOrdersIndex(db, shop, session.user.personId, {
     filter: orderFilter,
+    receiptDay: search.receiptDay,
     page: Number.parseInt(page ?? "", 10),
     // Imported history has no local trip or order status: honor diver and explicit
     // date filters, omit the live-order default window, and hide it for trip views.
@@ -209,39 +163,20 @@ export default async function OrdersIndexPage({
       path,
     );
 
-  const hasFilters = Boolean(
-    statusFilter ||
-      personFilter ||
-      trimmedQuery ||
-      tripFilter ||
-      from ||
-      to ||
-      showAll ||
-      customRange ||
-      range === "recent",
-  );
+  const hasFilters = [
+    statusFilter,
+    personFilter,
+    trimmedQuery,
+    tripFilter,
+    from,
+    to,
+    showAll,
+    customRange,
+    range === "recent",
+  ].some(Boolean);
   const clearHref = `/shop/${shopSlug}/orders`;
 
-  const today = calendarDateInTimezone(nowDate(), shop.timezone);
-  const days: OrderLedgerDay[] = ledger.groups.map((group) => {
-    // Format date-only ledger headers at UTC midnight in UTC to avoid shifting
-    // them to the prior day in the shop's timezone.
-    const date = formatShortDate(calendarDateToUtcMidnight(group.day), locale, "UTC");
-    const named = group.day === today ? t("orders.index.ledger.today", { date }) : date;
-    return {
-      key: group.day,
-      // Mark a day continued across pages; its subtotal still covers the whole day.
-      label: group.continued ? t("orders.index.ledger.continued", { day: named }) : named,
-      meta: t("orders.index.ledger.dayMeta", {
-        count: group.count,
-        // Preserve each order's stored currency if a day spans a shop currency change.
-        subtotal: group.subtotals
-          .map((entry) => formatMoneyCents(entry.cents, entry.currency, locale))
-          .join(" · "),
-      }),
-      rows: group.orders.map((row) => orderLedgerRow(row, { t, locale, shopSlug })),
-    };
-  });
+  const days = orderLedgerDays(ledger.groups, { timezone: shop.timezone, locale, t, shopSlug });
 
   // Avoid an empty toolbar until there are orders, history, or active filters.
   const showToolbar = hasFilters || orderPage.total > 0 || hasImportedHistory;
@@ -263,6 +198,13 @@ export default async function OrdersIndexPage({
       />
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
+      <RecordedPurchaseDaySummary
+        data={purchaseDay}
+        search={search}
+        shopSlug={shopSlug}
+        locale={locale}
+        t={t}
+      />
       <PurchasePanel
         open={search.purchase === "1"}
         surface={{ db, shop, session }}

@@ -83,3 +83,13 @@ As Dana, I see the takings once every boat is back, and the crew does not see th
 **Done when**
 - Takings are held back while a boat is still out and read to an owner afterward.
 - A captain sees no takings.
+
+### OWN-09 An instructor owns cohort preparation follow-up
+
+As the assigned instructor or shop manager, I can see each student’s missing preparation and take responsibility for helping them finish it.
+
+**Done when**
+- Students needing help appear first, with textual missing items that wrap on phones.
+- Staff can take or release a student’s follow-up without marking forms, cards, payment, or materials complete.
+- A manager can take over work from an inactive staff member, and a stale tab cannot overwrite a newer claim.
+- Complete preparation comes from the existing records and makes no certification or boarding promise.

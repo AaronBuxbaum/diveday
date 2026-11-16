@@ -89,6 +89,7 @@ export function DateRequestForm({
   headingClassName = LEAD_TITLE_CLASS,
   offerCharter = false,
   copy,
+  recoveryActivity,
 }: {
   submitRequest: (prevState: InquiryFormState, formData: FormData) => Promise<InquiryFormState>;
   /** True on the schedule page, where there is no course to be about. */
@@ -129,6 +130,7 @@ export function DateRequestForm({
    */
   offerCharter?: boolean;
   copy: DateRequestCopy;
+  recoveryActivity?: { id: string; title: string };
 }) {
   const t = useTranslations();
   const [pending, startTransition] = useTransition();
@@ -148,18 +150,14 @@ export function DateRequestForm({
   const [message, setMessage] = useState("");
   const [charter, setCharter] = useState(false);
   useEffect(() => {
-    if (!askInterest) return;
-    const query = new URLSearchParams(window.location.search);
-    const trip = query.get("groupTrip")?.trim().slice(0, 120);
-    if (!trip) return;
-    setInterest(trip);
-    const date = query.get("groupDate");
-    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) setPreferredDate(date);
-    const count = Number(query.get("groupSize"));
-    if (Number.isInteger(count) && count >= 1 && count <= MAX_PUBLIC_PARTY_SIZE)
-      setDiversInput(String(count));
+    if (!askInterest || recoveryActivity) return;
+    const group = groupRequestContext(window.location.search);
+    if (!group) return;
+    setInterest(group.trip);
+    if (group.date) setPreferredDate(group.date);
+    if (group.count) setDiversInput(String(group.count));
     setCharter(offerCharter);
-  }, [askInterest, offerCharter]);
+  }, [askInterest, offerCharter, recoveryActivity]);
   const [contactMissing, setContactMissing] = useState(false);
   const [interestMissing, setInterestMissing] = useState(false);
 
@@ -189,6 +187,7 @@ export function DateRequestForm({
     if (!requireAnswerable()) return;
     const formData = new FormData();
     if (askInterest && interest) formData.set("interest", interest);
+    if (recoveryActivity) formData.set("recoveryActivityId", recoveryActivity.id);
     if (name) formData.set("name", name);
     if (email) formData.set("email", email);
     if (phone) formData.set("phone", phone);
@@ -272,28 +271,30 @@ export function DateRequestForm({
               the wrapper the hard rule names, and its subgrid is what puts
               captions and boxes on shared rows so a pair reads as a pair rather
               than as two boxes that happen to be adjacent. */}
-          <fieldset className="sm:col-span-2">
-            <legend className={ITEM_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
-            <FieldGrid columns={2} className="mt-3 gap-y-5">
-              <Field label={copy.preferredDate}>
-                <DateField
-                  name="preferredDate"
-                  value={preferredDate}
-                  onChange={(event) => setPreferredDate(event.target.value)}
-                />
-              </Field>
-              <Field label={copy.whenSuits}>
-                <input
-                  name="timing"
-                  maxLength={200}
-                  value={timing}
-                  onChange={(event) => setTiming(event.target.value)}
-                  placeholder={copy.whenSuitsPlaceholder}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-          </fieldset>
+          {recoveryActivity ? null : (
+            <fieldset className="sm:col-span-2">
+              <legend className={ITEM_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
+              <FieldGrid columns={2} className="mt-3 gap-y-5">
+                <Field label={copy.preferredDate}>
+                  <DateField
+                    name="preferredDate"
+                    value={preferredDate}
+                    onChange={(event) => setPreferredDate(event.target.value)}
+                  />
+                </Field>
+                <Field label={copy.whenSuits}>
+                  <input
+                    name="timing"
+                    maxLength={200}
+                    value={timing}
+                    onChange={(event) => setTiming(event.target.value)}
+                    placeholder={copy.whenSuitsPlaceholder}
+                    className={controlClass}
+                  />
+                </Field>
+              </FieldGrid>
+            </fieldset>
+          )}
           <Field label={copy.yourName}>
             <input
               name="name"
@@ -382,30 +383,34 @@ export function DateRequestForm({
             {copy.moreDetails}
           </summary>
           <FieldGrid columns={2} className="mt-4 content-start gap-y-5">
-            <Field label={copy.alternateDate}>
-              <DateField
-                name="alternateDate"
-                value={alternateDate}
-                onChange={(event) => setAlternateDate(event.target.value)}
-              />
-            </Field>
-            <Field label={copy.whereYouAreUpTo}>
-              <select
-                name="experience"
-                value={experience}
-                onChange={(event) =>
-                  setExperience(event.target.value as CourseInquiryExperience | "")
-                }
-                className={controlClass}
-              >
-                <option value="">{copy.chooseOne}</option>
-                {COURSE_INQUIRY_EXPERIENCE.map((option) => (
-                  <option key={option} value={option}>
-                    {t(COURSE_INQUIRY_EXPERIENCE_KEYS[option])}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            {recoveryActivity ? null : (
+              <Field label={copy.alternateDate}>
+                <DateField
+                  name="alternateDate"
+                  value={alternateDate}
+                  onChange={(event) => setAlternateDate(event.target.value)}
+                />
+              </Field>
+            )}
+            {recoveryActivity ? null : (
+              <Field label={copy.whereYouAreUpTo}>
+                <select
+                  name="experience"
+                  value={experience}
+                  onChange={(event) =>
+                    setExperience(event.target.value as CourseInquiryExperience | "")
+                  }
+                  className={controlClass}
+                >
+                  <option value="">{copy.chooseOne}</option>
+                  {COURSE_INQUIRY_EXPERIENCE.map((option) => (
+                    <option key={option} value={option}>
+                      {t(COURSE_INQUIRY_EXPERIENCE_KEYS[option])}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label={copy.anythingElse} className="sm:col-span-2">
               <textarea
                 name="message"
@@ -538,4 +543,18 @@ function DateRequestContactLine({
       .
     </p>
   ) : null;
+}
+
+/** URL context only prefills a request; it never identifies or reserves anyone. */
+function groupRequestContext(search: string) {
+  const query = new URLSearchParams(search);
+  const trip = query.get("groupTrip")?.trim().slice(0, 120);
+  if (!trip) return null;
+  const date = query.get("groupDate");
+  const count = Number(query.get("groupSize"));
+  return {
+    trip,
+    date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
+    count: Number.isInteger(count) && count >= 1 && count <= MAX_PUBLIC_PARTY_SIZE ? count : null,
+  };
 }

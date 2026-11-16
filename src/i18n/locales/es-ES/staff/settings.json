@@ -963,7 +963,12 @@
       "courses": "Catálogo de cursos",
       "shop_text_translations": "Traducciones del centro",
       "trip_conservation": "Acciones de conservación medidas por salida, con su estado de corrección y eliminación.",
-      "disruption_recovery_events": "Seguimiento de recuperación de cancelaciones"
+      "disruption_recovery_events": "Seguimiento de recuperación de cancelaciones",
+      "trip_credit_entries": "Créditos promocionales para salidas, aplicaciones a tarifas y devoluciones.",
+      "recovery_activities": "Preparativos de actividades en aula sin costo",
+      "recovery_activity_offers": "Ofertas de aula preparadas, sin evidencia de envío",
+      "recovery_activity_participants": "Asignaciones de cupos en aula",
+      "recovery_activity_events": "Historial de recuperación en aula"
     }
   },
   "crewSheet": {
@@ -1212,6 +1217,12 @@
         "seeRoster": "Ver el listado",
         "identityConflictsOne": "Se omitió {count} fila porque los nombres no coinciden. Confirma la persona y corrige el archivo antes de reintentarlo.",
         "identityConflictsOther": "Se omitieron {count} filas porque los nombres no coinciden. Confirma cada persona y corrige el archivo antes de reintentarlo."
+      },
+      "visitOutcomes": {
+        "add": "Reserva pasada: agregar solo al historial",
+        "existing": "Reserva pasada: ya está en el historial",
+        "duplicate": "Reserva pasada: repetida en este archivo",
+        "skip": "Reserva pasada: no se importará al historial"
       }
     },
     "issues": {

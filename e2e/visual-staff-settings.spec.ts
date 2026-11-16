@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 /**
  * Visual captures: settings, orders, data export and import, and the team.
  *
@@ -535,6 +536,18 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/settings/import?what=gear");
         await page.getByRole("link", { name: "Download gear CSV template" }).waitFor();
+        await page.locator('input[type="file"]').setInputFiles({
+          name: "gear.csv",
+          mimeType: "text/csv",
+          buffer: Buffer.from("Tag,serviced_on\nPREVIEW-TANK,2026-01-01\nBROKEN,no-date"),
+        });
+        await page.getByLabel("1. Tag", { exact: true }).selectOption("gear_label");
+        await page
+          .getByRole("button", { name: staffTranslator("en-US")("gear.import.existing.review") })
+          .click();
+        await page
+          .getByRole("link", { name: staffTranslator("en-US")("gear.import.existing.correction") })
+          .waitFor();
         await capture(page, "settings-gear-import", scheme);
       });
 
@@ -542,7 +555,17 @@ for (const scheme of ["light", "dark"] as const) {
       // library for a year while nothing could read one back (issue #1771).
       test(`the dive-site import tab renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/import?what=dive-sites");
-        await page.getByRole("button", { name: "Import dive sites" }).waitFor();
+        await page
+          .getByRole("button", { name: staffTranslator("en-US")("gear.import.existing.review") })
+          .waitFor();
+        await page.locator('input[type="file"]').setInputFiles({
+          name: "sites.csv",
+          mimeType: "text/csv",
+          buffer: Buffer.from(
+            "name,description\nPreview Reef,A long description for a desktop and mobile mapping preview",
+          ),
+        });
+        await page.getByRole("heading", { name: "sites.csv" }).waitFor();
         await capture(page, "settings-dive-site-import", scheme);
       });
 

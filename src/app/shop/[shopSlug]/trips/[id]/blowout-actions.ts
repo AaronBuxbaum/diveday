@@ -9,10 +9,15 @@ import { recordTripActivity } from "@/db/operations";
 import { refundBookingsForShopCancelledTrip } from "@/db/refunds";
 import { getTripWithBooked } from "@/db/trips";
 import { recordRecoveryFollowUp } from "@/features/disruption-recovery";
+import { createRecoveryActivity, transitionRecoveryActivity } from "@/features/recovery-activities";
 import { requireShopSurface } from "@/features/session";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
+import { parseBlowoutPreferences } from "@/lib/blowout-preferences";
 import { isRecoveryOutcome } from "@/lib/disruption-recovery";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { blowoutPath } from "./_components/blowout/blowout-path";
 
 /**
@@ -29,14 +34,21 @@ import { blowoutPath } from "./_components/blowout/blowout-path";
  * Safe to re-run: the cascade resumes pending rows and re-sends nobody
  * (`callTripBlowout`'s idempotency contract).
  */
-export async function callBlowoutAction(shopSlug: string, tripId: string) {
+export async function callBlowoutAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData = new FormData(),
+) {
   const back = blowoutPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
+  const preferredAlternativeTripIds = parseBlowoutPreferences(formData.getAll("alternativeTripId"));
+  if (!preferredAlternativeTripIds) redirect(noticeUrl(back, "alternatives-invalid"));
   const outcome = await callTripBlowout(db, {
     shopId: s.user.shopId,
     tripId,
     calledByPersonId: s.user.personId,
+    preferredAlternativeTripIds,
     refunds: (await canPersonRefund(db, s.user.shopId, s.user.personId)) ? "release" : "queue",
   });
   if (!outcome.ok) {
@@ -153,4 +165,75 @@ export async function recordRecoveryFollowUpAction(
             : "recovery-invalid",
     ),
   );
+}
+
+/** Classroom actions do not call the cancellation, notification, money, seat or course writers. */
+export async function createClassroomActivityAction(
+  shopSlug: string,
+  tripId: string,
+  _previous: { error?: string },
+  form: FormData,
+): Promise<{ error?: string }> {
+  const { db, shop, session } = await requireShopSurface(shopSlug);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const text = (name: string) => String(form.get(name) ?? "");
+  const start = parseWallTime(text("date"), text("startTime"));
+  const end = parseWallTime(text("endDate"), text("endTime"));
+  if (!start || !end) return { error: t("blowout.classroom.invalid") };
+  const result = await createRecoveryActivity(db, {
+    shopId: shop.id,
+    tripId,
+    actorPersonId: session.user.personId,
+    attemptId: text("attemptId"),
+    title: text("title"),
+    location: text("location"),
+    startsAt: wallTimeToUtc(start, shop.timezone),
+    endsAt: wallTimeToUtc(end, shop.timezone),
+    capacity: Number(text("capacity")),
+    coordinatorPersonId: text("coordinatorPersonId"),
+    arrangementsConfirmed: form.get("arrangementsConfirmed") === "on",
+  });
+  if (!result.ok) return { error: t(`blowout.classroom.${result.reason}`) };
+  refreshBlowoutSurfaces(shopSlug, tripId);
+  return {};
+}
+
+export async function transitionClassroomActivityAction(
+  shopSlug: string,
+  tripId: string,
+  _previous: { error?: string },
+  form: FormData,
+): Promise<{ error?: string }> {
+  const { db, shop, session } = await requireShopSurface(shopSlug);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const text = (name: string) => String(form.get(name) ?? "");
+  const context = {
+    shopId: shop.id,
+    tripId,
+    actorPersonId: session.user.personId,
+    attemptId: text("attemptId"),
+    activityId: text("activityId"),
+    expectedRevision: Number(text("revision")),
+  };
+  const kind = text("kind");
+  const input =
+    kind === "offer"
+      ? ({ ...context, kind, blowoutDiverId: text("blowoutDiverId") } as const)
+      : kind === "confirm" || kind === "cancel_place"
+        ? ({
+            ...context,
+            kind,
+            blowoutDiverId: text("blowoutDiverId"),
+            participantRevision: Number(text("participantRevision")),
+          } as const)
+        : kind === "capacity"
+          ? ({ ...context, kind, capacity: Number(text("capacity")) } as const)
+          : kind === "cancel_activity"
+            ? ({ ...context, kind } as const)
+            : null;
+  if (!input) return { error: t("blowout.classroom.invalid") };
+  const result = await transitionRecoveryActivity(db, input);
+  if (!result.ok) return { error: t(`blowout.classroom.${result.reason}`) };
+  refreshBlowoutSurfaces(shopSlug, tripId);
+  return {};
 }

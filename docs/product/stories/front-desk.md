@@ -107,3 +107,38 @@ return, and past the deadline says the money is forfeit.
 **Done when**
 - Inside the window, the booking is flagged for a manual refund.
 - Past the deadline, the refund is forfeited and the page says so.
+
+### DESK-10 Offer an existing shore or pool departure after a weather call
+
+As Chloe, when a boat departure is canceled, I can prioritize existing shore or pool departures
+without moving a diver or changing what money is owed.
+
+**Done when**
+- Nothing is selected by default, and each diver receives only eligible available booking links.
+- The selection survives an interrupted call; sent and queued offers retain their history.
+- Departures affected by the same weather call are excluded from its offers.
+
+### DESK-11 Record a local amount due and the receipt separately
+
+As Chloe, I can add a rental or purchase to a named diver's unpaid order without connecting a
+payment provider, then record how the full amount was received.
+
+**Done when**
+- Amount due and Already received are separate choices; walk-ins retain the received-only flow.
+- An ancillary amount due never clears a trip fare, reserves equipment, or charges a card.
+- Repeated or simultaneous receipt submissions create one receipt and one collection entry.
+- Original receipt totals are grouped by method and shop-local day; returns with an unknown method
+  remain separate and missing return amounts are visibly incomplete.
+
+### DESK-12 Arrange complimentary classroom recovery after a cancellation
+
+As Chloe, I can arrange a separate classroom activity, prepare offers and confirm places after contact while the original refunds continue.
+
+**Done when**
+- Staff confirm the room and coordinator arrangements; time, location and the shop’s place limit are explicit.
+- Prepared offers, sent messages, confirmed places and original refunds remain distinct facts.
+- Prepared message inquiry links use the canonical absolute public URL so they work when copied into email or text; unavailable origins fall back to shop contact.
+- A public request is an unassigned inquiry; it does not identify a diver or allocate a place.
+- Concurrent confirmations cannot exceed the limit; retries never revive a canceled place.
+- Erasure leaves anonymous promised places held until staff explicitly cancel them.
+- This does not create a diving booking, record attendance, satisfy course requirements or change money.

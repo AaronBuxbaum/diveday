@@ -1,27 +1,8 @@
-import {
-  and,
-  asc,
-  count,
-  countDistinct,
-  eq,
-  gt,
-  gte,
-  inArray,
-  isNull,
-  lt,
-  lte,
-  ne,
-  notInArray,
-  sql,
-} from "drizzle-orm";
+import { and, asc, count, countDistinct, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { cache } from "react";
-import {
-  BLOWOUT_OFFER_HORIZON_DAYS,
-  type BlowoutCandidateTrip,
-  qualifyingAlternatives,
-} from "@/lib/blowout";
+import { parseBlowoutPreferences } from "@/lib/blowout-preferences";
 import { nowDate } from "@/lib/clock";
-import { departureUnderway } from "@/lib/day-blowout";
+import { dayBlowoutCallable, departureUnderway } from "@/lib/day-blowout";
 import type { RecoveryEvent } from "@/lib/disruption-recovery";
 import { log } from "@/lib/log";
 import {
@@ -34,6 +15,12 @@ import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { departureMayBeAtSea } from "./aboard-at-sea";
 import { canPersonCallDayBlowout, canPersonRefund } from "./authz";
+import {
+  currentBlowoutOffers,
+  listNonBoatOfferOptions,
+  scopedNonBoatPreferenceIds,
+  scopedWeatherCallTripIds,
+} from "./blowout-alternatives";
 import { bookingRecipient } from "./booking-address";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { readCertificationEvidence } from "./certification-evidence";
@@ -44,7 +31,7 @@ import { publishManifestEvent } from "./manifest-events";
 import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
 import { queryAll } from "./query-helpers";
-import { getTripRequirements, getTripSiteRequirement } from "./readiness";
+import { readRecoveryActivities } from "./recovery-activities";
 import {
   queueBookingRefundOnShopCancellation,
   refundBookingOnShopCancellation,
@@ -63,9 +50,10 @@ import {
   trips,
 } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
+import { listStaff } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { getTripRoster } from "./trips-manifest";
-import { seatHeld, seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
+import { seatHeld, seatNotCancelled } from "./trips-queries";
 import { getTripWithBooked, rollCallStartedOn, setTripStatus } from "./trips-record";
 
 /**
@@ -118,7 +106,7 @@ export type CallBlowoutOutcome =
        * (`departureUnderway`). `failed`: a day call's setup for this departure
        * threw; it was not cancelled (`callDayBlowout`).
        */
-      reason: "not_found" | "trip_departed" | "failed";
+      reason: "not_found" | "trip_departed" | "failed" | "invalid_alternatives";
     };
 
 /**
@@ -144,6 +132,7 @@ export type CallBlowoutInput = {
    */
   cause?: BlowoutCause;
   /** Whether the refunds go back now or wait for a refund holder. Release unless said. */
+  preferredAlternativeTripIds?: readonly string[];
   refunds?: BlowoutRefundMode;
   /** Injectable for tests; defaults to the environment-configured provider. */
   provider?: NotificationProvider;
@@ -155,6 +144,8 @@ export async function callTripBlowout(
   db: AppDb,
   input: CallBlowoutInput,
 ): Promise<CallBlowoutOutcome> {
+  const selected = parseBlowoutPreferences(input.preferredAlternativeTripIds ?? []);
+  if (!selected) return { ok: false, reason: "invalid_alternatives" };
   const now = input.now ?? nowDate();
   const setup = await setUpTripBlowout(db, input, now);
   if (!setup.ok) return setup;
@@ -170,7 +161,12 @@ type BlowoutSetup = Extract<Awaited<ReturnType<typeof setUpTripBlowout>>, { ok: 
  * Phase one: the durable facts (trip canceled, blow-out recorded, roster
  * snapshotted) land together or not at all.
  */
-async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
+async function setUpTripBlowout(
+  db: AppDb,
+  input: CallBlowoutInput,
+  now: Date,
+  alsoCalled: readonly string[] = [],
+) {
   return db.transaction(async (tx) => {
     // Match reschedule dispatch ordering: fence before taking the trip row.
     await lockTripRevisionNotificationFence(tx, input.shopId, input.tripId, "revision-write");
@@ -183,7 +179,12 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
     if (!trip) return { ok: false as const, reason: "not_found" as const };
 
     const [existing] = await tx
-      .select({ id: tripBlowouts.id, cause: tripBlowouts.cause })
+      .select({
+        id: tripBlowouts.id,
+        cause: tripBlowouts.cause,
+        preferredAlternativeTripIds: tripBlowouts.preferredAlternativeTripIds,
+        sameCallTripIds: tripBlowouts.sameCallTripIds,
+      })
       .from(tripBlowouts)
       .where(and(eq(tripBlowouts.tripId, input.tripId), eq(tripBlowouts.shopId, input.shopId)))
       .limit(1);
@@ -222,13 +223,24 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
       }
     }
 
+    let blowoutId = existing?.id;
+    // A recorded call keeps its original preference intent, even when resumed with different form data.
+    const preferredAlternativeTripIds =
+      existing?.preferredAlternativeTripIds ??
+      (await scopedNonBoatPreferenceIds(tx, input.shopId, input.preferredAlternativeTripIds ?? [], [
+        input.tripId,
+        ...alsoCalled,
+      ]));
+    if (preferredAlternativeTripIds === null)
+      return { ok: false as const, reason: "invalid_alternatives" as const };
+    const sameCallTripIds =
+      existing?.sameCallTripIds ?? (await scopedWeatherCallTripIds(tx, input.shopId, alsoCalled));
     if (trip.status === "scheduled") {
       await setTripStatus(tx, input.shopId, input.tripId, "cancelled", now, {
         actorPersonId: input.calledByPersonId,
       });
     }
 
-    let blowoutId = existing?.id;
     // A resume keeps the cause the call was made with; a fresh call on a
     // reinstated date says why it is off *now* (a run cancel after an old
     // weather call is `run_ended`, never the weather).
@@ -246,6 +258,8 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
           calledByPersonId: input.calledByPersonId,
           calledAt: now,
           cause,
+          preferredAlternativeTripIds,
+          sameCallTripIds,
         })
         .returning({ id: tripBlowouts.id });
       blowoutId = created.id;
@@ -278,7 +292,15 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
         .onConflictDoNothing({ target: tripBlowoutDivers.bookingId });
     }
 
-    return { ok: true as const, blowoutId, trip, cause, resumed: !freshCall };
+    return {
+      ok: true as const,
+      blowoutId,
+      trip,
+      cause,
+      preferredAlternativeTripIds,
+      sameCallTripIds,
+      resumed: !freshCall,
+    };
   });
 }
 
@@ -304,11 +326,12 @@ async function finishTripBlowout(
     blowoutId: setup.blowoutId,
     trip: setup.trip,
     cause: setup.cause,
+    preferredAlternativeTripIds: setup.preferredAlternativeTripIds,
     now,
     provider: input.provider,
     checkout: input.checkout,
     refunds: input.refunds,
-    alsoCalled,
+    alsoCalled: [...new Set([...setup.sameCallTripIds, ...alsoCalled])],
   });
 
   const [{ total }] = await db
@@ -352,13 +375,22 @@ export async function callDayBlowout(
   db: AppDb,
   input: DayBlowoutInput,
 ): Promise<DayBlowoutResult[]> {
+  const selected = parseBlowoutPreferences(input.preferredAlternativeTripIds ?? []);
+  if (!selected)
+    return input.tripIds.map((tripId) => ({
+      tripId,
+      outcome: { ok: false, reason: "invalid_alternatives" },
+    }));
   const now = input.now ?? nowDate();
   const tripIds = [...new Set(input.tripIds)];
   const setups: { tripId: string; setup: Awaited<ReturnType<typeof setUpTripBlowout>> | null }[] =
     [];
   for (const tripId of tripIds) {
     try {
-      setups.push({ tripId, setup: await setUpTripBlowout(db, { ...input, tripId }, now) });
+      setups.push({
+        tripId,
+        setup: await setUpTripBlowout(db, { ...input, tripId }, now, tripIds),
+      });
     } catch (error) {
       log("blowout.day_setup_failed", "error", {
         tripId,
@@ -381,7 +413,7 @@ export async function callDayBlowout(
     try {
       results.push({
         tripId,
-        outcome: await finishTripBlowout(db, { ...input, tripId }, setup, now, called),
+        outcome: await finishTripBlowout(db, { ...input, tripId }, setup, now, tripIds),
       });
     } catch (error) {
       // Canceled and recorded; its unsent rows are the cascade's to resume.
@@ -407,6 +439,27 @@ export async function callDayBlowout(
   // The crews of every boat called off hear it now, in one message each.
   await flushUrgentCrewNotices(db, { shopId: input.shopId, tripIds: called, now });
   return results;
+}
+
+/** The day review reads its departures and optional offers through one surface reader. */
+export async function getDayBlowoutPage(
+  db: AppDb,
+  shopId: string,
+  input: {
+    bounds: { from: Date; to: Date };
+    submitted: readonly string[];
+    reviewing: boolean;
+    now: Date;
+  },
+) {
+  const departures = await listDayBlowoutDepartures(db, shopId, input.bounds);
+  const reviewed = input.reviewing
+    ? dayBlowoutCallable(departures, input.submitted, input.now).callable
+    : [];
+  const nonBoatOffers = reviewed.length
+    ? await listNonBoatOfferOptions(db, shopId, input.now, reviewed)
+    : [];
+  return { departures, nonBoatOffers };
 }
 
 /** One departure of a shop day, as the day call's page lists it. */
@@ -487,64 +540,6 @@ export async function listDayBlowoutDepartures(
   }));
 }
 
-/**
- * Every departure the cascade could offer, with the requirement data the pure
- * filter needs. Gathered once per cascade, not per diver — the trips are the
- * same for everyone; only the admission answer differs.
- */
-async function blowoutCandidates(
-  db: DbExecutor,
-  shopId: string,
-  now: Date,
-  alsoCalled: readonly string[] = [],
-): Promise<BlowoutCandidateTrip[]> {
-  const horizonEnd = new Date(now.getTime() + BLOWOUT_OFFER_HORIZON_DAYS * 24 * 60 * 60 * 1_000);
-  const rows = await db
-    .select({
-      trip: trips,
-      sellableCapacity: tripSellableSeatsSql(),
-      activeBookings: count(bookings.id),
-      activeDivers:
-        sql<number>`count(*) filter (where ${bookings.participantType} = 'diver')`.mapWith(Number),
-    })
-    .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatNotCancelled))
-    .where(
-      and(
-        liveTrip(),
-        eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
-        gt(trips.startsAt, now),
-        lte(trips.startsAt, horizonEnd),
-        alsoCalled.length > 0 ? notInArray(trips.id, [...alsoCalled]) : undefined,
-      ),
-    )
-    .groupBy(trips.id);
-  return queryAll(
-    db,
-    rows.map((row) => async () => {
-      const [requirement, siteRequirement] = await queryAll(db, [
-        () => getTripRequirements(db, shopId, row.trip.id),
-        () => getTripSiteRequirement(db, shopId, row.trip.id),
-      ]);
-      return {
-        id: row.trip.id,
-        startsAt: row.trip.startsAt,
-        status: row.trip.status,
-        capacity: row.sellableCapacity,
-        activeBookings: row.activeBookings,
-        activeDivers: row.activeDivers,
-        diverCapacity: row.trip.diverCapacity,
-        snorkelerPriceCents: row.trip.snorkelerPriceCents,
-        riderPriceCents: row.trip.riderPriceCents,
-        courseSession: Boolean(row.trip.courseId),
-        requirement,
-        siteRequirement,
-      };
-    }),
-  );
-}
-
 type SendSummary = { sent: number; queued: number; failed: number; noEmail: number };
 
 /**
@@ -559,6 +554,7 @@ async function sendPendingBlowoutMessages(
     blowoutId: string;
     trip: typeof trips.$inferSelect;
     cause: BlowoutCause;
+    preferredAlternativeTripIds: readonly string[];
     now: Date;
     provider?: NotificationProvider;
     checkout?: CheckoutProvider;
@@ -593,24 +589,6 @@ async function sendPendingBlowoutMessages(
     return summary;
   }
 
-  const candidates = await blowoutCandidates(db, input.shopId, input.now, input.alsoCalled);
-  const candidateTitles = new Map(
-    (
-      await db
-        .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
-        .from(trips)
-        .where(
-          and(
-            liveTrip(),
-            eq(trips.shopId, input.shopId),
-            inArray(
-              trips.id,
-              candidates.map((candidate) => candidate.id),
-            ),
-          ),
-        )
-    ).map((row) => [row.id, row]),
-  );
   for (const row of pending) {
     // Claim the row before doing anything with it: pending → sending,
     // conditionally. A concurrent second call ("did you call it?" — "I'll
@@ -657,10 +635,12 @@ async function sendPendingBlowoutMessages(
         () => readCertificationEvidence(db, input.shopId, row.diver.personId),
         () => listCourseSeatsInTraining(db, input.shopId, [row.diver.personId]),
       ]);
-      const offeredTripIds = qualifyingAlternatives({
-        cancelledTripId: input.trip.id,
+      const offers = await currentBlowoutOffers(db, {
+        shopId: input.shopId,
+        tripId: input.trip.id,
         now: input.now,
-        candidates,
+        preferredTripIds: input.preferredAlternativeTripIds,
+        alsoCalled: input.alsoCalled ?? [],
         diver: {
           evidence,
           identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
@@ -669,6 +649,7 @@ async function sendPendingBlowoutMessages(
           courseSeats,
         },
       });
+      const offeredTripIds = offers.map((offer) => offer.id);
 
       if (!row.person.email) {
         await db
@@ -695,21 +676,11 @@ async function sendPendingBlowoutMessages(
         timezone: shop.timezone,
         cause: input.cause,
         paymentStory: shopCancellationPaymentStory(refund),
-        alternatives: offeredTripIds.flatMap((tripId) => {
-          const candidate = candidateTitles.get(tripId);
-          return candidate
-            ? [
-                {
-                  title: candidate.title,
-                  startsAt: candidate.startsAt,
-                  // The slug comes from the shop row, never from a caller: a
-                  // link mailed to a diver must not be buildable from a
-                  // tampered route param (security review of this slice).
-                  bookingUrl: new URL(publicTripPath(shop.slug, tripId), `${origin}/`).toString(),
-                },
-              ]
-            : [];
-        }),
+        alternatives: offers.map((offer) => ({
+          title: offer.title,
+          startsAt: offer.startsAt,
+          bookingUrl: new URL(publicTripPath(shop.slug, offer.id), `${origin}/`).toString(),
+        })),
         scheduleUrl: new URL(publicSchedulePath(shop.slug), `${origin}/`).toString(),
       };
 
@@ -1120,6 +1091,21 @@ export async function getBlowoutPage(db: AppDb, shopId: string, tripId: string, 
     canPersonRefund(db, shopId, personId),
   ]);
   if (!trip) return null;
-  const roster = blowout ? [] : await getTripRoster(db, shopId, tripId);
-  return { trip, blowout, roster, can: { callDay, refund } };
+  const [roster, nonBoatOffers] = blowout
+    ? [[], []]
+    : await Promise.all([
+        getTripRoster(db, shopId, tripId),
+        listNonBoatOfferOptions(db, shopId, nowDate(), [tripId]),
+      ]);
+  const classroomActivities = blowout ? await readRecoveryActivities(db, shopId, blowout.id) : [];
+  const classroomCoordinators = blowout ? await listStaff(db, shopId) : [];
+  return {
+    trip,
+    blowout,
+    roster,
+    nonBoatOffers,
+    classroomActivities,
+    classroomCoordinators,
+    can: { callDay, refund },
+  };
 }

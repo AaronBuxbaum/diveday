@@ -361,6 +361,14 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.courseMaterialsDoneByPersonId,
     },
+    // Private staff ownership, not a student’s completion evidence.
+    {
+      header: "course_followup_by_person_id",
+      in: "shop",
+      value: (row) => row.courseFollowupByPersonId,
+    },
+    { header: "course_followup_at", in: "shop", value: (row) => row.courseFollowupAt },
+    { header: "course_followup_revision", in: "shop", value: (row) => row.courseFollowupRevision },
     // A referral student (loop 5, row 10): who marked the seat, and who
     // collected the referral form and the eLearning record, and when.
     { header: "referred_in_at", in: "shop", value: (row) => row.referredInAt },
@@ -1974,5 +1982,29 @@ export const COMPUTER_DIVE_PROFILES_CSV = sharedFile<ShopRow<"computerDiveProfil
   diver: {
     rows: (context) => context.computerDiveProfilesRows,
     note: EXPORT_FILE_NOTES["computer_dive_profiles.csv"],
+  },
+});
+
+export const TRIP_CREDIT_CSV = sharedFile<ShopRow<"tripCreditRows">>({
+  file: "trip_credit_entries.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "person_id", in: "shop", value: (row) => row.personId },
+    { header: "kind", in: "both", value: (row) => row.kind },
+    { header: "amount_cents", in: "both", value: (row) => row.amountCents },
+    { header: "currency", in: "both", value: (row) => row.currency },
+    { header: "reason", in: "both", value: (row) => row.reason },
+    { header: "booking_id", in: "both", value: (row) => row.bookingId },
+    { header: "restores_entry_id", in: "both", value: (row) => row.restoresEntryId },
+    { header: "actor_person_id", in: "shop", value: (row) => row.actorPersonId },
+    { header: "occurred_at", in: "both", value: (row) => row.occurredAt },
+  ],
+  shop: {
+    rows: ({ tripCreditRows }) => tripCreditRows,
+    note: EXPORT_FILE_NOTES["trip_credit_entries.csv"],
+  },
+  diver: {
+    rows: ({ tripCreditRows }) => tripCreditRows,
+    note: EXPORT_FILE_NOTES["trip_credit_entries.csv"],
   },
 });

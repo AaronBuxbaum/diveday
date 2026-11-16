@@ -75,3 +75,25 @@ test("a private teaching note can be deleted, restored and deleted again", async
   await page.reload();
   await expect(note).toHaveValue("");
 });
+
+// story: OWN-09
+test("course preparation follow-up is owned on the student row and can be released", async ({
+  page,
+}) => {
+  await openCourseDeparture(page);
+  const section = page.locator('section[aria-labelledby="course-preparation"]');
+  const initialRow = section
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("button", { name: /Take follow-up for /, exact: true }) })
+    .first();
+  const href = await initialRow.getByRole("link").getAttribute("href");
+  const row = section.getByRole("listitem").filter({ has: page.locator(`a[href="${href}"]`) });
+  const gaps = await row.locator("span.text-muted").first().innerText();
+  await row.getByRole("button", { name: /Take follow-up for /, exact: true }).click();
+  await expect(
+    row.getByText(t("trips.coursePulse.followup.inProgress"), { exact: false }),
+  ).toBeVisible();
+  await expect(row.locator("span.text-muted").first()).toHaveText(gaps);
+  await row.getByRole("button", { name: /Release follow-up for /, exact: true }).click();
+  await expect(row.getByRole("button", { name: /Take follow-up for /, exact: true })).toBeVisible();
+});

@@ -784,10 +784,22 @@ export const tripBlowouts = pgTable(
     calledAt: timestamp("called_at", { withTimezone: true }).notNull(),
     /** What the diver is told the cancellation was; see `blowoutCause`. */
     cause: blowoutCause("cause").notNull().default("weather"),
+    /** Scoped source departures of this call; retained so a resume cannot offer a reinstated sister. */
+    sameCallTripIds: uuid("same_call_trip_ids").array().notNull().default(sql`'{}'::uuid[]`),
+    /** Staff preference intent, recorded once; diver offer snapshots remain on the cascade rows. */
+    preferredAlternativeTripIds: uuid("preferred_alternative_trip_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_blowouts_trip_unique").on(table.tripId),
+    uniqueIndex("trip_blowouts_shop_id_id_unique").on(table.shopId, table.id),
+    check(
+      "trip_blowouts_preferred_alternatives_cap",
+      sql`cardinality(${table.preferredAlternativeTripIds}) <= 3`,
+    ),
     index("trip_blowouts_shop_called_idx").on(table.shopId, table.calledAt),
   ],
 );

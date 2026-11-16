@@ -86,6 +86,21 @@ const aliases = {
   assignmentNote: ["assignment_note", "rental_note", "rental_notes"],
 } as const;
 
+export const GEAR_IMPORT_ALIASES = Object.fromEntries(
+  Object.values(aliases).flatMap((names) => names.map((name) => [name, names[0]])),
+);
+
+export const GEAR_IMPORT_COLUMNS = Object.values(aliases).map((names) => names[0]);
+
+export function gearImportColumn(header: string): string {
+  const normalized = normalizeImportKey(header);
+  return (
+    Object.values(aliases).find((names) =>
+      (names as readonly string[]).includes(normalized),
+    )?.[0] ?? ""
+  );
+}
+
 function text(value: string | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;

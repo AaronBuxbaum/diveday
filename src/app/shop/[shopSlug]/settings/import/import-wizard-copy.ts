@@ -17,6 +17,7 @@ export type ImportWizardCopy = {
   chooseDifferentFile: string;
   columnTitle: string;
   fileReadFailed: string;
+  visitOutcomes?: Record<"add" | "existing" | "duplicate" | "skip", string>;
   checkMatches: string;
   checkingMatches: string;
   matchesStale: string;
@@ -252,6 +253,12 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
     chooseDifferentFile: t("settings.import.wizard.chooseDifferentFile"),
     columnTitle: t.raw("settings.import.wizard.columnTitle"),
     fileReadFailed: t("settings.import.wizard.fileReadFailed"),
+    visitOutcomes: {
+      add: t("settings.import.wizard.visitOutcomes.add"),
+      existing: t("settings.import.wizard.visitOutcomes.existing"),
+      duplicate: t("settings.import.wizard.visitOutcomes.duplicate"),
+      skip: t("settings.import.wizard.visitOutcomes.skip"),
+    },
     checkMatches: t("settings.import.wizard.checkMatches"),
     checkingMatches: t("settings.import.wizard.checkingMatches"),
     matchesStale: t("settings.import.wizard.matchesStale"),

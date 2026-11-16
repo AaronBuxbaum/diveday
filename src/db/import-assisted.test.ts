@@ -113,47 +113,60 @@ describe("commitContactImport — what an assisted column may change", () => {
   });
 });
 
-it("refuses a manually mapped household email before changing the existing identity", async () => {
-  const importer = await accountPersonId(DEV_STAFF_LOGINS.owner.email);
-  await commitContactImport(
-    ctx.db,
-    ctx.shop.id,
-    prepareContactImport(
-      "full_name,email,certification_level,certification_number,waiver_accepted\nFather Senior,manual.household@example.com,Open Water,FATHER-CARD,yes",
-    ),
-    importer,
-  );
-  const before = await personByEmail(ctx.shop.id, "manual.household@example.com");
-  if (!before) throw new Error("expected imported father");
-  const beforeCards = await ctx.db.select().from(cards).where(eq(cards.personId, before.id));
-  const beforeWaivers = await ctx.db
-    .select()
-    .from(waiverRecords)
-    .where(eq(waiverRecords.personId, before.id));
-  expect(beforeCards).toHaveLength(1);
-  expect(beforeWaivers).toHaveLength(1);
-  const result = await commitContactImport(
-    ctx.db,
-    ctx.shop.id,
-    prepareManual(
-      "Guest,Mailbox,internal_notes\nDifferent Child,manual.household@example.com,child facts",
-      { today: "2026-07-21", manual: { Guest: "full_name", Mailbox: "email" } },
-    ),
-    importer,
-  );
-  expect((await personByEmail(ctx.shop.id, "manual.household@example.com"))?.fullName).toBe(
-    before?.fullName,
-  );
-  expect(result.peopleUpdated).toBe(0);
-  expect(result.rowsSkipped).toBe(1);
-  expect(result.identityConflicts).toBe(1);
-  expect(await ctx.db.select().from(cards).where(eq(cards.personId, before.id))).toEqual(
-    beforeCards,
-  );
-  expect(
-    await ctx.db.select().from(waiverRecords).where(eq(waiverRecords.personId, before.id)),
-  ).toEqual(beforeWaivers);
-  expect(
-    await ctx.db.select().from(internalNotes).where(eq(internalNotes.personId, before.id)),
-  ).toHaveLength(0);
-});
+it.each(["recognized", "assisted", "manual"] as const)(
+  "refuses a %s household email before changing identity or evidence",
+  async (mode) => {
+    const importer = await accountPersonId(DEV_STAFF_LOGINS.owner.email);
+    await commitContactImport(
+      ctx.db,
+      ctx.shop.id,
+      prepareContactImport(
+        "full_name,email,certification_level,certification_number,waiver_accepted\nFather Senior,manual.household@example.com,Open Water,FATHER-CARD,yes",
+      ),
+      importer,
+    );
+    const before = await personByEmail(ctx.shop.id, "manual.household@example.com");
+    if (!before) throw new Error("expected imported father");
+    const beforeCards = await ctx.db.select().from(cards).where(eq(cards.personId, before.id));
+    const beforeWaivers = await ctx.db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.personId, before.id));
+    expect(beforeCards).toHaveLength(1);
+    expect(beforeWaivers).toHaveLength(1);
+    const result = await commitContactImport(
+      ctx.db,
+      ctx.shop.id,
+      prepareManual(
+        mode === "manual"
+          ? "Guest,Mailbox,internal_notes\nDifferent Child,manual.household@example.com,child facts"
+          : `${mode === "assisted" ? "full_name,email,Extra" : "full_name,email,internal_notes"},certification_level,certification_number,waiver_accepted\nDifferent Child,manual.household@example.com,child facts,Divemaster,CHILD-CARD,yes`,
+        {
+          today: "2026-07-21",
+          ...(mode === "manual"
+            ? { manual: { Guest: "full_name" as const, Mailbox: "email" as const } }
+            : {}),
+          ...(mode === "assisted"
+            ? { assist: { headers: { Extra: "internal_notes" as const }, levels: {} } }
+            : {}),
+        },
+      ),
+      importer,
+    );
+    expect((await personByEmail(ctx.shop.id, "manual.household@example.com"))?.fullName).toBe(
+      before?.fullName,
+    );
+    expect(result.peopleUpdated).toBe(0);
+    expect(result.rowsSkipped).toBe(1);
+    expect(result.identityConflicts).toBe(1);
+    expect(await ctx.db.select().from(cards).where(eq(cards.personId, before.id))).toEqual(
+      beforeCards,
+    );
+    expect(
+      await ctx.db.select().from(waiverRecords).where(eq(waiverRecords.personId, before.id)),
+    ).toEqual(beforeWaivers);
+    expect(
+      await ctx.db.select().from(internalNotes).where(eq(internalNotes.personId, before.id)),
+    ).toHaveLength(0);
+  },
+);
