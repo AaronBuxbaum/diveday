@@ -171,7 +171,20 @@ test.describe("light mode largest device body after-dive warnings", () => {
       element.scrollIntoView({ block: "center", inline: "nearest" }),
     );
     await expect(count).toBeInViewport({ ratio: 1 });
-    await capture(page, "manifest-warnings-device-body-53", "light");
+    // Reassert the live warning scenario at each photographed width. The cause
+    // of the earlier small RGB variation remains unknown; no pixels are normalized.
+    await capture(page, "manifest-warnings-device-body-53", "light", {
+      beforeScreenshot: async () => {
+        await expect(
+          panel.getByText(copy("manifest.notBackAboardOpen", { count: 1 }), { exact: true }),
+        ).toBeVisible();
+        await expect(
+          panel.getByText(copy("manifest.crewNotBackAboard", { count: 1 }), { exact: true }),
+        ).toBeVisible();
+        await expect(panel.getByRole("link", { name: "Ari Vale", exact: true })).toBeVisible();
+        await expect(panel.getByRole("link").filter({ hasText: state.crewName })).toBeVisible();
+      },
+    });
     const deck = page.getByRole("region", { name: copy("manifest.deck.title"), exact: true });
     const navigation = [
       ["Deck home", deck.getByRole("button", { name: copy("manifest.deck.home"), exact: true })],

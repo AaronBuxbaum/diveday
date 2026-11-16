@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { type APIRequestContext, expect, type Locator, type Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { LOCALE_COOKIE } from "../src/i18n/locale-cookie";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { E2E_FROZEN_CLOCK, E2E_STRIPE_TEST_WEBHOOK_SECRET } from "./servers";
@@ -289,9 +290,15 @@ export function daysFromNow(days: number): string {
 /** Sign in through the dev credential form as any seeded staff login. */
 export async function signInAs(page: Page, login: { email: string; password: string }) {
   await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(login.email);
-  await page.getByLabel("Password").fill(login.password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  // Reader choice overrides browser preferences, including setup deliberately
+  // kept in English while the subject flow runs in a Spanish browser.
+  const reader = (await page.context().cookies(page.url())).find(
+    (cookie) => cookie.name === LOCALE_COOKIE,
+  );
+  const words = diverTranslator(reader?.value ?? (await page.locator("html").getAttribute("lang")));
+  await page.getByLabel(words("account.common.email"), { exact: true }).fill(login.email);
+  await page.getByLabel(words("account.common.password"), { exact: true }).fill(login.password);
+  await page.getByRole("button", { name: words("account.signIn.submit"), exact: true }).click();
   await expect(page).toHaveURL(/\/shop/);
 }
 
