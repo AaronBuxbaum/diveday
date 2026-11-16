@@ -62,15 +62,14 @@ test.describe("as owner", () => {
     // Sub-route rows select by pathname — the half of the selection model the
     // scroll-spy must never touch.
     await expect(rail.getByRole("link", { name: "Team" })).toHaveAttribute("aria-current", "true");
-    await expect(
-      rail.getByRole("link", { name: "Export, import, backups, and integrations" }),
-    ).not.toHaveAttribute("aria-current", "true");
+    await expect(rail.getByRole("link", { name: "Export", exact: true })).not.toHaveAttribute(
+      "aria-current",
+      "true",
+    );
     // The directory is beside the page, not inside it: `main` still holds only
     // the destination's own content.
     await expect(
-      page
-        .getByRole("main")
-        .getByRole("link", { name: "Export, import, backups, and integrations" }),
+      page.getByRole("main").getByRole("link", { name: "Export", exact: true }),
     ).toHaveCount(0);
 
     // Scoped to `main`: the nav's "Set up" group carries its own Settings

@@ -11,7 +11,6 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { IMPORT_HONESTY_TABLE, type ImportScopeRowId } from "@/lib/import";
 import { getMigrationGuide } from "@/lib/migration-guides";
-import { DataTabs } from "../_components/DataTabs";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { DiveSiteImportPanel } from "./DiveSiteImportPanel";
 import { GearImportPanel } from "./GearImportPanel";
@@ -168,9 +167,7 @@ export default async function ImportPage({
   return (
     <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
-      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.data.title")} />
-
-      <DataTabs t={t} shopSlug={shopSlug} current="import" />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.data.import")} />
 
       <ImportKindTabs t={t} base={base} current={tab} website={assists.website} />
 

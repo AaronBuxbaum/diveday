@@ -331,13 +331,29 @@ export async function DataGroup({
         ))}
       </InsetGroup>
 
-      {/* One door: Export, Backups, Import and Integrations are the tabs of
-          one "Your data" page set (`DataTabs`, issue #2813). The door opens the
-          first tab this reader may use; each page re-checks its own gate. */}
+      {/* Four doors, one per page; each page re-checks its own gate. */}
       <InsetGroup>
+        {canExport ? (
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/settings/export`}
+            heading={t("settings.data.export")}
+          />
+        ) : null}
+        {canExport ? (
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/settings/backups`}
+            heading={t("settings.data.backups")}
+          />
+        ) : null}
+        {canImport ? (
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/settings/import`}
+            heading={t("settings.data.import")}
+          />
+        ) : null}
         <SettingsDoorRow
-          href={`/shop/${shopSlug}/settings/${canExport ? "export" : canImport ? "import" : "integrations"}`}
-          heading={t("settings.main.yourData.heading")}
+          href={`/shop/${shopSlug}/settings/integrations`}
+          heading={t("settings.data.integrations")}
           state={
             connections.some(
               (c) =>

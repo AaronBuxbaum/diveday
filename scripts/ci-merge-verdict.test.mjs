@@ -206,6 +206,38 @@ describe("CI merge verdict", () => {
     needs["visual-flakes"].result = "skipped";
     expect(ciMergeVerdict(needs, context)).toEqual(["visual-flakes: skipped"]);
   });
+  it("accepts the browser skips on a superseded main code push, but not failures", () => {
+    const needs = green();
+    for (const id of [
+      "unit-tests-docs",
+      "real-postgres",
+      "build",
+      "playwright",
+      "fast-lane",
+      "visual-plan",
+      "visual",
+      "visual-publish",
+      "visual-report",
+      "visual-flakes",
+    ])
+      needs[id].result = "skipped";
+    const context = {
+      code: "true",
+      db: "false",
+      safety: "true",
+      browser: "false",
+      event: "push",
+      ref: "refs/heads/main",
+    };
+    expect(ciMergeVerdict(needs, context)).toEqual([]);
+    for (const result of ["failure", "cancelled"]) {
+      needs["visual-flakes"].result = result;
+      expect(ciMergeVerdict(needs, context)).toContain(`visual-flakes: ${result}`);
+    }
+    needs["visual-flakes"].result = "skipped";
+    for (const browser of ["true", "", "invalid", undefined])
+      expect(ciMergeVerdict(needs, { ...context, browser })).toContain("visual-flakes: skipped");
+  });
   it("allows the publisher job to skip on a fork PR while requiring the report job", () => {
     const needs = green();
     needs["unit-tests-docs"].result = "skipped";

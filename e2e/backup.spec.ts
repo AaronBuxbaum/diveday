@@ -2,12 +2,12 @@ import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 /**
- * The Backups tab of Your data (docs ADR 20260806-one-data-out-surface, tabs
- * since issue #2813): scheduled delivery lives at `/settings/export/backups`,
+ * The Backups page of Your data (docs ADR 20260806-one-data-out-surface, tabs
+ * since issue #2813): scheduled delivery lives at `/settings/backups`,
  * beside the download it schedules and behind the identical gate.
  */
-const BACKUP_SETTINGS = "/shop/blue-mantis/settings/export/backups";
-const backupSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/export/backups`;
+const BACKUP_SETTINGS = "/shop/blue-mantis/settings/backups";
+const backupSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/backups`;
 
 /**
  * The shop-owned backup settings surface (docs ADR
@@ -61,19 +61,19 @@ test.describe("backup settings", () => {
   test("one place: the bundle you would download, and the copy that keeps happening", async ({
     page,
   }) => {
-    // Both halves answer "how do I get my data out?" and are tabs of the same
-    // "Your data" page: one tap apart, under one title.
+    // Both answer "how do I get my data out?" and are neighboring pages in
+    // the Settings rail.
     await page.goto("/shop/blue-mantis/settings/export");
-    await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Export" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Download export" })).toBeVisible();
     await expect(
       page.getByRole("heading", { level: 2, name: "What’s in the bundle" }),
     ).toBeVisible();
 
-    const tabs = page.getByRole("navigation", { name: "Your data sections" });
-    await tabs.getByRole("link", { name: "Backups" }).click();
-    await expect(page).toHaveURL("/shop/blue-mantis/settings/export/backups");
-    await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toBeVisible();
+    const rail = page.getByRole("navigation", { name: "Settings sections" });
+    await rail.getByRole("link", { name: "Backups" }).click();
+    await expect(page).toHaveURL("/shop/blue-mantis/settings/backups");
+    await expect(page.getByRole("heading", { level: 1, name: "Backups" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
   });
 

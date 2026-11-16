@@ -8,7 +8,7 @@ import {
 } from "./fixtures";
 import { holdClientChunk } from "./hold-client-chunk";
 
-const DATA_DOOR = "Export, import, backups, and integrations";
+const DATA_DOOR = "Export";
 
 test.describe("Settings fragment hydration", () => {
   signedInAs("owner");
@@ -21,10 +21,10 @@ test.describe("Settings fragment hydration", () => {
     const selection = page.locator("[data-settings-selection-root]");
     await expect(selection).toHaveAttribute("data-hydrated", "true");
     await expect(selection).toHaveAttribute("data-settings-selection", "group:data");
-    const link = page.getByRole("main").getByRole("link", { name: DATA_DOOR });
+    const link = page.getByRole("main").getByRole("link", { name: DATA_DOOR, exact: true });
     await expect(link).toBeVisible();
     await link.click();
-    await expect(page).toHaveURL(/\/settings\/(export|import|integrations)(?:\?|$)/);
+    await expect(page).toHaveURL(/\/settings\/export(?:\?|$)/);
   });
 
   test("keeps the Your data click when slow hydration selects the fragment", {
@@ -39,7 +39,9 @@ test.describe("Settings fragment hydration", () => {
       });
       await chunk.requested;
       const selection = browserPage.locator("[data-settings-selection-root]");
-      const link = browserPage.getByRole("main").getByRole("link", { name: DATA_DOOR });
+      const link = browserPage
+        .getByRole("main")
+        .getByRole("link", { name: DATA_DOOR, exact: true });
       await expect(link).toBeVisible();
       await link.scrollIntoViewIfNeeded();
       const box = await link.boundingBox();
@@ -52,7 +54,7 @@ test.describe("Settings fragment hydration", () => {
       await expect(selection).toHaveAttribute("data-selection-pending", "true");
       await expect(selection).not.toHaveAttribute("data-settings-selection", "group:data");
       await browserPage.mouse.up();
-      await expect(browserPage).toHaveURL(/\/settings\/(export|import|integrations)(?:\?|$)/);
+      await expect(browserPage).toHaveURL(/\/settings\/export(?:\?|$)/);
     } finally {
       chunk.release();
       await browserPage.unrouteAll({ behavior: "wait" });
