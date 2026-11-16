@@ -534,6 +534,25 @@ describe("retrying an owed delete", () => {
     expect(stillOwed.map((row) => row.target)).toEqual(["stripe_invoice_snapshot"]);
   });
 
+  it("keeps draining when one obligation's attempt throws", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    await recordProcessorErasureObligations(db, {
+      shopId: shop.id,
+      personId: ownerId,
+      targets: [CUSTOMER("cus_throws"), CUSTOMER("cus_fine")],
+    });
+    const provider: CustomerProvider = {
+      deleteCustomer: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("socket hang up"))
+        .mockResolvedValue({ status: "deleted" }),
+    };
+    expect(await retryPendingProcessorErasures(db, { provider })).toEqual({
+      attempted: 2,
+      discharged: 1,
+    });
+  });
+
   it("leaves a checkout session out of the nightly drain, forever", async () => {
     const { db, shop, ownerId } = await twoShops();
     await recordProcessorErasureObligations(db, {
