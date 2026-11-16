@@ -79,6 +79,41 @@ describe("authenticate", () => {
     expect(await landing(form({ email: "owner@example.com", password: "pw" }))).toBe("/shop");
   });
 
+  it("returns the staffer to the page the edge bounced them from, inside their shop", async () => {
+    expect(
+      await landing(
+        form({
+          email: "owner@example.com",
+          password: "pw",
+          callbackUrl: "/shop/blue-mantis/trips/abc",
+        }),
+      ),
+    ).toBe("/shop/blue-mantis/trips/abc");
+  });
+
+  it("keeps the target through the code step", async () => {
+    hoisted.signInDiveDayCredentials.mockResolvedValueOnce({ pending: true, shopSlug: null });
+    expect(
+      await landing(
+        form({ email: "o@example.com", password: "pw", callbackUrl: "/shop/blue-mantis/trips" }),
+      ),
+    ).toBe("/sign-in?error=two-factor&callbackUrl=%2Fshop%2Fblue-mantis%2Ftrips");
+    await expect(
+      confirmSignIn(form({ totpCode: "123456", callbackUrl: "/shop/blue-mantis/trips" })),
+    ).rejects.toThrow("REDIRECT:/shop/blue-mantis/trips");
+  });
+
+  it("honors no foreign target: another origin, another shop or traversal land on the shop home", async () => {
+    for (const callbackUrl of [
+      "https://evil.example/phish",
+      "/shop/other-shop/trips",
+      "/shop/blue-mantis/../../evil",
+    ])
+      expect(await landing(form({ email: "o@example.com", password: "pw", callbackUrl }))).toBe(
+        "/shop/blue-mantis",
+      );
+  });
+
   it("honors no request-supplied target: a callbackUrl field changes nothing", async () => {
     expect(
       await landing(
