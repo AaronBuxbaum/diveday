@@ -11,6 +11,10 @@ describe("eventBridgeCron", () => {
     ["7 13 2,3 * *", "cron(7 13 2,3 * ? *)"],
     ["8 14,18,22 2,3 * *", "cron(8 14,18,22 2,3 * ? *)"],
     ["7 4 * * 1", "cron(7 4 ? * 2 *)"],
+    // 7 is Sunday in a crontab; a range ending in it must wrap to EventBridge's 1.
+    ["0 9 * * 7", "cron(0 9 ? * 1 *)"],
+    ["0 9 * * 5-7", "cron(0 9 ? * 6-7,1 *)"],
+    ["0 9 * * 1,7", "cron(0 9 ? * 2,1 *)"],
   ])("%s", (crontab, expected) => {
     expect(eventBridgeCron(crontab)).toBe(expected);
   });
