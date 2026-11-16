@@ -10,6 +10,7 @@ import {
   type RateLimitStore,
   rateLimitKey,
   rateLimitStoreFromEnvironment,
+  refundRateLimit,
   upstashRateLimitStore,
 } from "./rate-limit";
 
@@ -94,6 +95,7 @@ describe("checkRateLimit — fail-open", () => {
       take() {
         throw new Error("store unavailable");
       },
+      refund() {},
     };
     const result = await checkRateLimit("k", config, 0, throwingStore);
     expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
@@ -104,6 +106,7 @@ describe("checkRateLimit — fail-open", () => {
       async take() {
         throw new Error("network timeout");
       },
+      refund() {},
     };
     const result = await checkRateLimit("k", config, 0, throwingStore);
     expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
@@ -123,6 +126,7 @@ describe("checkRateLimitFailClosed", () => {
       async take() {
         throw new Error("network timeout");
       },
+      refund() {},
     };
     vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await checkRateLimitFailClosed("k", config, 0, throwingStore)).toMatchObject({
@@ -150,6 +154,7 @@ describe("checkRateLimit — fail-open is observable", () => {
     take() {
       throw new TypeError("fetch failed");
     },
+    refund() {},
   };
 
   async function freshLimiter() {
@@ -627,6 +632,49 @@ describe("upstashRateLimitStore", () => {
     expect(vi.getTimerCount()).toBe(0);
     await expect(store.take("k", config, 0)).rejects.toThrow("Upstash Redis responded 500");
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("refundRateLimit", () => {
+  it("gives back one spent token, never past capacity, and ignores a key it never saw", async () => {
+    const store = inMemoryRateLimitStore();
+    await refundRateLimit("unseen", config, 0, store);
+    for (let i = 0; i < 3; i++) await store.take("k", config, 0);
+    expect((await store.take("k", config, 0)).allowed).toBe(false);
+    await refundRateLimit("k", config, 0, store);
+    expect((await store.take("k", config, 0)).allowed).toBe(true);
+    expect((await store.take("k", config, 0)).allowed).toBe(false);
+    await refundRateLimit("k", config, 0, store);
+    await refundRateLimit("k", config, 0, store);
+    await refundRateLimit("k", config, 0, store);
+    await refundRateLimit("k", config, 0, store);
+    for (let i = 0; i < 3; i++) expect((await store.take("k", config, 0)).allowed).toBe(true);
+    expect((await store.take("k", config, 0)).allowed).toBe(false);
+  });
+
+  it("never throws when the store does", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const store: RateLimitStore = {
+      take: () => ({ allowed: true, retryAfterMs: 0 }),
+      refund() {
+        throw new Error("network timeout");
+      },
+    };
+    await expect(refundRateLimit("k", config, 0, store)).resolves.toBeUndefined();
+  });
+
+  it("sends the Upstash store's refund as its own script", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ result: [1, "3"] }) }));
+    const store = upstashRateLimitStore(
+      { url: "https://example.upstash.io", token: "test-token" },
+      fetchMock as unknown as typeof fetch,
+    );
+    await store.refund("k", config, 0);
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    );
+    expect(body[0]).toBe("EVAL");
+    expect(body[1]).toContain("elapsed * refillPerMs + 1");
   });
 });
 

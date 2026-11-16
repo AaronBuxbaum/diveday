@@ -1,6 +1,9 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { waiverDeliveries, waiverRecords } from "@/db/schema";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { insertShop } from "../test/substrate-fixtures/db/gear-counter-rentals-test-fixtures";
 import { waiverContextFor } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import {
   getDiverWaiverChannelStates,
@@ -31,6 +34,20 @@ async function outstandingLink() {
 }
 
 describe("a request's delivery, per channel and overall", () => {
+  it("writes nothing for a waiver record that belongs to another shop", async () => {
+    const { db, recordId } = await outstandingLink();
+    const stranger = await insertShop(db, "delivery-stranger");
+    await recordWaiverDelivery(db, {
+      shopId: stranger.id,
+      waiverRecordId: recordId,
+      channel: "email",
+      delivery: { status: "failed", detail: "not ours" },
+    });
+    const [record] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
+    expect(record?.deliveryStatus).not.toBe("failed");
+    expect(await db.select().from(waiverDeliveries)).toEqual([]);
+  });
+
   it("says nothing was sent, on every channel, for a diver with no outstanding link", async () => {
     const { db, shop } = await waiverContext();
     const nobody = "00000000-0000-4000-8000-000000000000";
