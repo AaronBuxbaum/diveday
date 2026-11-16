@@ -147,6 +147,7 @@ async function activeShellState(page: Page, expectedVersion: string, priorCache:
   );
 }
 
+// story: ROLL-01
 test("live manifest retains blocked divers and records an explicit not-boarded result", async ({
   page,
 }) => {
@@ -215,6 +216,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   ).toBeVisible();
 });
 
+// story: ROLL-02
 test("captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call", async ({
   page,
   context,
@@ -406,6 +408,7 @@ test("a new shell worker replaces the older cache without losing encrypted roll 
   }
 });
 
+// story: ROLL-02
 test("a captain who lost the saved copy to storage eviction still lands on a page after a failed reload", async ({
   page,
   context,
@@ -551,6 +554,7 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   await context.setOffline(false);
 });
 
+// story: ROLL-02
 test("the offline fallback never reaches beyond the manifest route", async ({ page, context }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
@@ -642,6 +646,7 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   await context.setOffline(false);
 });
 
+// story: ROLL-02
 test("the live manifest response never enters Cache Storage", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
@@ -849,6 +854,7 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
   await context.setOffline(false);
 });
 
+// story: ROLL-04
 test("a checkpoint with every diver counted stays open until the crew are called too", async ({
   page,
 }) => {
@@ -1007,6 +1013,7 @@ test("the active checkpoint stays visible while selecting named Deck people", as
   }
 });
 
+// story: ROLL-01
 test("resolving a blocker from the manifest lands on that diver, under the blocked filter", async ({
   page,
 }) => {
@@ -1099,6 +1106,7 @@ test("a crew member checks a pre-departure item on the live manifest, and two re
   await expect(page.getByText(/Checked by .* · /)).not.toBeVisible();
 });
 
+// story: ROLL-07
 test("a checklist tap made offline queues, then syncs once signal returns", async ({
   page,
   context,
@@ -1298,6 +1306,7 @@ test("a transposed dive log entry is refused out loud and keeps what was typed",
  * can: the tap works with the network cut, and the seat is genuinely checked
  * in on the live counter once signal returns.
  */
+// story: ROLL-11
 test("a counter check-in made offline queues, then syncs and lands on the live counter", async ({
   page,
   context,
@@ -1383,6 +1392,7 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
  * staffer who reloads the counter with no signal lands on the saved copy of
  * the departure they were working, not the browser's offline error.
  */
+// story: ROLL-11
 test("a failed reload of the counter lands on this device's saved copy", async ({
   page,
   context,
@@ -1415,6 +1425,7 @@ test("a failed reload of the counter lands on this device's saved copy", async (
  * words, and the read is on the diver's trail. The seeded alert is on
  * tomorrow's crewed departure (`src/db/seed-medical-alert.ts`).
  */
+// story: ROLL-08
 test("a departure's crew opens a diver's medical alert, and the read is on their trail", async ({
   page,
   browser,
@@ -1502,6 +1513,7 @@ async function onDiverTrail(page: Page, diverName: string, line: string) {
  * Issue #2990, part 1: the owner prints the packet with the medical alerts'
  * words under each row, for a crew whose phone is dead at sea; the print is on the diver's trail.
  */
+// story: ROLL-08
 test("an owner prints the packet with the medical alerts, and the print is on the diver's trail", async ({
   page,
 }) => {
@@ -1544,6 +1556,7 @@ test("an owner prints the packet with the medical alerts, and the print is on th
  * rule refuses opens a diver's alert in an emergency, behind a confirm step,
  * and the owner finds the read on the diver's trail.
  */
+// story: ROLL-08
 test("an instructor off the crew opens a medical alert in an emergency today, and the read is on the diver's trail", async ({
   page,
   browser,

@@ -98,6 +98,14 @@ Renaming a journey's test renames its row in the same change.
 | A deleted diver can be erased | `e2e/divers.spec.ts` | erase is absent on a live diver's record and appears once they are deleted |
 | The shop exports its data | `e2e/export.spec.ts` | staff download the whole shop as documented CSVs |
 
+## User stories
+
+[product/stories/](../product/stories/README.md) writes down what each persona can do, one id per
+story with a plain "Done when" list. A test claims a story with `// story: ID` on the line above
+it, in `e2e/` or `src/`; `pnpm check:stories` (in `check:repo`) fails on a story nothing proves and
+nothing owns, and on a marker naming a story that does not exist. `pnpm stories` prints the
+coverage report. A behavior change edits its story in the same PR.
+
 ## What runs when
 
 | When | What runs |

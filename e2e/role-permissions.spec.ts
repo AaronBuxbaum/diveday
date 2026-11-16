@@ -56,6 +56,7 @@ test.describe("H-20260724-staff-role-reach role permissions", () => {
   test.describe("captain", () => {
     signedInAs("captain");
 
+    // story: OWN-02
     test("the daily crew (captain) is denied money, legal, deletion, and trip config", {
       tag: READ_ONLY,
     }, async ({ page }) => {
@@ -148,6 +149,7 @@ test.describe("H-20260724-staff-role-reach role permissions", () => {
      * recognized — a code the destination does not handle renders nothing and
      * fails here.
      */
+    // story: OWN-02
     test("a refused surface lands somewhere that says why", { tag: READ_ONLY }, async ({
       page,
     }) => {
@@ -312,6 +314,7 @@ test.describe("H-20260724-staff-role-reach role permissions", () => {
   test.describe("owner", () => {
     signedInAs("owner");
 
+    // story: OWN-02
     test("the owner reaches every gated surface", { tag: READ_ONLY }, async ({ page }) => {
       // Setup is in Settings; who has signed is read in Divers.
       await page.goto(`/shop/${SHOP}/settings/waivers`);

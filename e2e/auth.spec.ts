@@ -20,6 +20,7 @@ test("unauthenticated /shop redirects to sign-in", { tag: READ_ONLY }, async ({ 
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
 });
 
+// story: OWN-01
 test("wrong password shows a friendly error and stays signed out", { tag: READ_ONLY }, async ({
   page,
 }) => {
@@ -35,6 +36,7 @@ test("wrong password shows a friendly error and stays signed out", { tag: READ_O
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
+// story: OWN-01
 test("staff sign-in lands on the shop dashboard and sign-out locks it again", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);

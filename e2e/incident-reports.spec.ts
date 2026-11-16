@@ -10,6 +10,7 @@ signedInAsOwner();
  * again on the Safety tab beside Reports. Safety-critical record, so the
  * whole path runs in a browser.
  */
+// story: ROLL-10
 test("a report is written, filed, amended and found on the Safety tab", async ({ page }) => {
   // Board → trip → report, five writes, then Reports: several full round trips.
   test.setTimeout(60_000);

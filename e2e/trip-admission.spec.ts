@@ -57,6 +57,7 @@ const COURSE = { daysOut: 29 };
 test.describe("as owner", () => {
   signedInAsOwner();
 
+  // story: BOOK-03
   test("the public trip page states what the charter requires above the form, and says so again when the booking is refused", async ({
     page,
   }) => {
@@ -106,6 +107,7 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toHaveCount(0);
   });
 
+  // story: BOOK-03
   test("a diver the shop knows nothing about is not screened at the sale", async ({ page }) => {
     // The other half of the test above, and the line this gate now draws.
     // There, the shortfall rests on the shop's own *record* — a verified Open
@@ -231,6 +233,7 @@ test.describe("as owner", () => {
     await expect(banner).not.toContainText("charter requires");
   });
 
+  // story: CERT-02
   test("the global Add-booking door says a missing specialty certification is missing, whatever the diver's level", async ({
     page,
   }) => {
@@ -311,6 +314,7 @@ test.describe("as owner", () => {
     await expect(page.locator("#roster").getByText("Odile Marchand")).toHaveCount(0);
   });
 
+  // story: CERT-02
   test("the counter names the same refusal, with the signed gate detail", async ({ page }) => {
     // A same-day departure, so the counter's own case is a boat inside its
     // arrivals window — the shape check-in.spec.ts's full-boat refusal
@@ -450,6 +454,7 @@ test.describe("as owner", () => {
 test.describe("with Accept-Language: es", () => {
   test.use({ locale: "es-ES" });
 
+  // story: BOOK-04
   test("a diver books a seat end to end and every word of it is Spanish", async ({ page }) => {
     test.setTimeout(30_000);
     await page.goto("/s/blue-mantis");

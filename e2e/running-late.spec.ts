@@ -34,6 +34,7 @@ async function bookOnTodaysBoat(page: Page, name: string, email: string) {
   await expect(page).toHaveURL(/\/ready\//);
 }
 
+// story: READY-03
 test("a diver taps Running late on their link, and the desk sees when they said it", async ({
   page,
 }) => {
@@ -64,6 +65,7 @@ test("a diver taps Running late on their link, and the desk sees when they said 
   await expect(row.getByText(/^Running late, said \d/)).toBeVisible();
 });
 
+// story: READY-03
 test("a diver who said Running late by mistake takes it back from the same link", async ({
   page,
 }) => {
@@ -83,6 +85,7 @@ test("a diver who said Running late by mistake takes it back from the same link"
   await expect(page.getByText(/^Running late, said \d/)).toHaveCount(0);
 });
 
+// story: READY-03
 test("a LATE reply marks the seat, and the inbox says what the word meant", async ({
   page,
   request,
@@ -111,6 +114,7 @@ test("a LATE reply marks the seat, and the inbox says what the word meant", asyn
   await expect(message.getByText(/On the manifest: running late, said \d/)).toBeVisible();
 });
 
+// story: READY-03
 test("a diver says it in their own words, and the desk marks it from the inbox row", async ({
   page,
   request,

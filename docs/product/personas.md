@@ -6,6 +6,9 @@ into evergreen guidance. Use this doc to evaluate *new* UX work — "how does th
 — not to look up what was already fixed. The original [story backlog](archive/story-backlog-20261110.md) is historical. Current follow-on
 work lives in scoped GitHub issues, each naming the persona it serves.
 
+**What each persona can do** is written as numbered stories in [stories/](stories/README.md), each
+proven by a test or owned by an issue; this document stays the frame for judging new work.
+
 **How to use this doc.** Before shipping a diver- or staff-facing change, skim the personas whose
 surfaces it touches and check the change against their "what to hold the line on" list. When you
 find a new gap for a persona, file or reuse a GitHub issue rather than editing the narrative here

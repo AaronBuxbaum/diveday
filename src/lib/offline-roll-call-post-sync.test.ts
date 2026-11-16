@@ -93,6 +93,7 @@ function receivedConflict(
 }
 
 for (const role of ["diver", "crew"] as const) {
+  // story: ROLL-03
   it(`receives the server's opposing evidence on the same device after successful ${role} sync`, async () => {
     const copy = role === "crew" ? crewSnapshot() : snapshot();
     copy.erasureEpochToken = token(1);

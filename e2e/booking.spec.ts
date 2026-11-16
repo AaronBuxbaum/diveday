@@ -53,6 +53,7 @@ test("thread status ignores hidden streamed and preserved copies", async ({ page
 test.describe("staff", () => {
   signedInAsOwner();
 
+  // story: BOOK-01, OWN-05
   test("full loop: staff schedules, visitor books, staff sees the roster", async ({ page }) => {
     // Chains several sequential navigations and status-toast waits — same
     // aggregate-cost reasoning as the visual specs' test.setTimeout and the
@@ -187,6 +188,7 @@ test.describe("staff", () => {
     await expect(page.getByText(/removed Nora Quinn from the trip/)).toBeVisible();
   });
 
+  // story: OWN-05
   test("a crew conditions hold pauses public booking and explains the final-call state", async ({
     page,
   }) => {
@@ -231,6 +233,7 @@ test.describe("staff", () => {
     await expect(page.getByLabel("People", { exact: true })).toHaveCount(0);
   });
 
+  // story: OWN-05
   test("staff edits a trip and canceling removes it from the public schedule", async ({ page }) => {
     // Same aggregate sequential-navigation cost as this file's other heavy
     // tests — see the comment on "full loop" above.
@@ -433,6 +436,7 @@ test.describe("staff counts and intent", () => {
   });
 });
 
+// story: BOOK-02
 test("a full boat lets a diver join the wait list without taking a seat", async ({ page }) => {
   // Same aggregate sequential-navigation cost as this file's other heavy
   // tests — see the comment on "full loop" above.
@@ -564,6 +568,7 @@ test.describe("as owner", () => {
 // authorized by a signed `readiness` capability in the path, never by a raw
 // booking id — a tampered token must reveal nothing, and the `?booking=` branch
 // it replaced must be gone rather than merely unused.
+// story: READY-02
 test("a tampered readiness token reveals nothing, and ?booking= no longer opens a door", async ({
   page,
 }) => {
@@ -608,6 +613,7 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
 test.describe("the shopfront on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
+  // story: BOOK-07
   test("leads with the shop, then the next boat, then the booking form", async ({ page }) => {
     await page.goto("/s/blue-mantis");
 
@@ -665,6 +671,7 @@ test.describe("the shopfront on a phone", () => {
  * refusal a person reads and a refusal a machine reads are two facts, and this
  * test only ever checked one of them.
  */
+// story: BOOK-08
 test("a dead departure link keeps the diver at the shop they were trying to reach", async ({
   page,
 }) => {
@@ -692,6 +699,7 @@ test("a dead departure link keeps the diver at the shop they were trying to reac
  * homepage" button into DiveDay's sales site, for a diver who was on a shop's
  * link. The edge now refuses it as the shop's own.
  */
+// story: BOOK-08
 test("a mistyped page under a shop keeps the diver at that shop", async ({ page }) => {
   const dead = "/s/blue-mantis/anything-wrong";
   const response = await page.goto(dead);
@@ -717,6 +725,7 @@ test("a mistyped page under a shop keeps the diver at that shop", async ({ page 
  * A shop of its own (ADR 20260815-per-test-private-shops): connecting a
  * Stripe account is shop configuration.
  */
+// story: PAY-01
 test("a diver's card payment at booking settles their Pay step", async ({
   page,
   request,

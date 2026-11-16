@@ -26,6 +26,7 @@ import { seedFacts } from "./shop-facts";
  * clock, which is process-wide (`e2e/servers.ts`).
  */
 test.describe("the evening on the home", () => {
+  // story: PAY-08
   test("holds the takings back while a boat is still out", async ({ page }) => {
     // The pin, end to end. At the fleet's frozen 09:30 shop-local the demo has
     // a first-light boat home and a later one still on the water — so the
@@ -139,6 +140,7 @@ test.describe("the evening on the home", () => {
    * test is what Playwright already gives, and a failure then names the role
    * it happened to.
    */
+  // story: PAY-08
   test("reads the day's takings to an owner", async ({ page, request }) => {
     // A seed write, then a signed-in evening render.
     test.setTimeout(45_000);
@@ -157,6 +159,7 @@ test.describe("the evening on the home", () => {
     await expect(page.getByRole("button", { name: /^Close the day/ })).toHaveCount(0);
   });
 
+  // story: PAY-08
   test("withholds the day's takings from a captain", async ({ page, request }) => {
     // A seed write, then a signed-in evening render.
     test.setTimeout(45_000);
