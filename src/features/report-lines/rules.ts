@@ -124,15 +124,29 @@ export function checkoutKeptRatio(checkout: {
 export function revenueByLine(
   parts: readonly RevenueLinePart[],
 ): Array<{ line: RevenueLine; cents: number }> {
-  const totals = new Map<RevenueLine, number>();
+  const exact = new Map<RevenueLine, number>();
   for (const part of parts) {
-    const kept = Math.round(part.cents * clampRatio(part.keptRatio));
-    totals.set(part.line, (totals.get(part.line) ?? 0) + kept);
+    const kept = part.cents * clampRatio(part.keptRatio);
+    exact.set(part.line, (exact.get(part.line) ?? 0) + kept);
   }
-  return REVENUE_LINES.flatMap((line) => {
-    const cents = totals.get(line) ?? 0;
-    return cents > 0 ? [{ line, cents }] : [];
+  // Round the month once: each line floors, and the cents the floors dropped go
+  // to the lines with the biggest fractions, so the lines add up to the month's
+  // kept total instead of drifting a cent per charge.
+  const rows = REVENUE_LINES.flatMap((line) => {
+    const value = exact.get(line) ?? 0;
+    if (value <= 0) return [];
+    const cents = Math.floor(value + 1e-9);
+    return [{ line, cents, fraction: value - cents }];
   });
+  let spare =
+    Math.round([...exact.values()].reduce((sum, value) => sum + value, 0)) -
+    rows.reduce((sum, row) => sum + row.cents, 0);
+  for (const row of [...rows].sort((a, b) => b.fraction - a.fraction)) {
+    if (spare <= 0) break;
+    row.cents += 1;
+    spare -= 1;
+  }
+  return rows.filter((row) => row.cents > 0).map(({ line, cents }) => ({ line, cents }));
 }
 
 /**
