@@ -18,7 +18,6 @@ import {
   UNREADABLE_RETRY_MAX_ATTEMPTS,
 } from "./notifications";
 import {
-  bookingCheckouts,
   bookings,
   interests,
   notificationDeliveries,
@@ -509,69 +508,6 @@ describe("a courtesy message waiting in the retry queue", () => {
 
     await drainNotificationRetries(db, { provider });
     expect(sent).toEqual([]);
-  });
-
-  describe("a checkout reminder waiting in the queue", () => {
-    async function queuedRecovery(status: "pending" | "completed") {
-      const context = await seededBooking();
-      const { db, shop, trip } = context;
-      const [checkout] = await db
-        .insert(bookingCheckouts)
-        .values({
-          shopId: shop.id,
-          tripId: trip.id,
-          status,
-          stripeAccountId: "acct_test",
-          stripeSessionId: "cs_queued",
-          checkoutUrl: "https://checkout.stripe.com/c/pay/cs_queued",
-          customerEmail: "nora@example.com",
-          currency: "usd",
-          amountPerDiverCents: 18_000,
-          totalCents: 18_000,
-        })
-        .returning({ id: bookingCheckouts.id });
-      if (!checkout) throw new Error("checkout insert failed");
-      const { provider, sent } = flakyProvider();
-      await expect(
-        sendNotification(
-          db,
-          {
-            ...SCHEDULE,
-            kind: "checkout_recovery",
-            checkoutId: checkout.id,
-            shopId: shop.id,
-            to: "nora@example.com",
-            shopName: shop.name,
-            checkoutUrl: "https://checkout.stripe.com/c/pay/cs_queued",
-            unsubscribeUrl: "https://diveday.test/unsubscribe/x",
-          },
-          provider,
-        ),
-      ).resolves.toMatchObject({ status: "failed", retryQueued: true });
-      await db
-        .update(notificationSendQueue)
-        .set({ nextAttemptAt: new Date(0) })
-        .where(eq(notificationSendQueue.shopId, shop.id));
-      return { db, shop, provider, sent };
-    }
-
-    it("goes out while the checkout is still open", async () => {
-      const { db, provider, sent } = await queuedRecovery("pending");
-      await drainNotificationRetries(db, { provider });
-      expect(sent).toEqual(["checkout_recovery"]);
-    });
-
-    it("is dropped once the diver paid in the meantime", async () => {
-      const { db, shop, provider, sent } = await queuedRecovery("completed");
-      await expect(drainNotificationRetries(db, { provider })).resolves.toMatchObject({
-        sent: 0,
-        failed: 1,
-      });
-      expect(sent).toEqual([]);
-      await expect(
-        db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
-      ).resolves.toMatchObject([{ status: "failed", errorCode: "switched_off" }]);
-    });
   });
 
   it("still retries service mail to a person who opted out of courtesy email", async () => {

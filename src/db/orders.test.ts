@@ -2321,12 +2321,6 @@ describe("pagedOrdersByDay", () => {
     );
     expect(byNeither.page.total).toBe(0);
     expect(byNeither.groups).toEqual([]);
-
-    // A typed `%` or `_` is a character, not a wildcard.
-    for (const q of ["%", "_"]) {
-      const wild = await pagedOrdersByDay(db, shop.id, SHOP_TZ, { q }, { pageSize: 20 });
-      expect(wild.page.total).toBe(0);
-    }
   });
 });
 

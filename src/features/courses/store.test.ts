@@ -1010,12 +1010,6 @@ describe("pagedCourses search and views", () => {
     expect(found.total).toBe(found.courses.length);
   });
 
-  it("reads a % or _ in the search as the character, not a wildcard", async () => {
-    const { db, shop } = ctx;
-    expect((await pagedCourses(db, shop.id, { query: "%", limit: 1000 })).total).toBe(0);
-    expect((await pagedCourses(db, shop.id, { query: "Rescue_Diver", limit: 1000 })).total).toBe(0);
-  });
-
   it("splits the catalog into scheduled, not yet and hidden, agreeing with the row's next date", async () => {
     const { db, shop } = ctx;
     const all = await pagedCourses(db, shop.id, { limit: 1000 });

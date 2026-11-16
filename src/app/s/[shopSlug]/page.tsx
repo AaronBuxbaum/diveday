@@ -24,22 +24,18 @@ import { publicAvailabilityPath, publicCoursesPath, publicSchedulePath } from "@
 import type { ReviewAggregate } from "@/lib/reviews";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
-import { CoursesShelf } from "./_components/CoursesShelf";
 import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { identityBand, monthRailSides } from "./_components/identity-band";
 import { MonthRail } from "./_components/MonthRail";
-import { MonthSightingsSection } from "./_components/MonthSightingsShelf";
 import { MoreWaysRows } from "./_components/MoreWaysRows";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { OurYearSection } from "./_components/OurYear";
 import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
-import { PublicStaffProfiles } from "./_components/PublicStaffProfiles";
 import { ScheduleFilterBar } from "./_components/ScheduleFilterBar";
 import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { SchedulePaperSheet, scheduleSheetEmpty } from "./_components/SchedulePaperSheet";
-import { ShopfrontStory } from "./_components/ShopfrontStory";
-import { BoatsShelf } from "./_components/ShopPhotoStrip";
+import { ScheduleShelves } from "./_components/ScheduleShelves";
 import { ShopWelcome } from "./_components/ShopWelcome";
 import { readSchedulePage } from "./_components/schedule-reads";
 import { seatPriceLabel, shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
@@ -429,30 +425,18 @@ export default async function SchedulePage({
         runningLines={runningLines}
         className={SECTION_GAP}
       />
-      {/* **The shelves.** What the shop teaches, then what divers said about
-          it — the two things a diver weighs after the boats and before the
-          three asks below. Neither renders inside the frame, which stays the
-          compact booking widget (docs ADR 20260726-schedule-embed). The courses
-          shelf renders on any shop with an active course, including one with no
-          departures at all: a course-led shop with an empty board is a real
-          day-zero shape, and the shelf is the only thing on that page with
-          something to sell. */}
-      <CoursesShelf
-        courses={shelfCourses}
-        allCoursesHref={publicCoursesPath(shopSlug)}
-        className={SECTION_GAP}
-        dates={{ shopSlug, locale, timeZone: shop.timezone, t }}
-      />
-      <ShopfrontStory
+      <ScheduleShelves
         shop={shop}
-        aggregate={reviewAggregate}
+        shopSlug={shopSlug}
         locale={locale}
         t={t}
+        tz={tz}
+        courses={shelfCourses}
+        aggregate={reviewAggregate}
+        staffProfiles={staffProfiles}
+        boats={boats}
         className={SECTION_GAP}
       />
-      <PublicStaffProfiles profiles={staffProfiles} locale={locale} />
-      <BoatsShelf boats={boats} t={t} className={SECTION_GAP} />
-      <MonthSightingsSection shop={shop} tz={tz} locale={locale} t={t} />
       {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget
           (docs ADR 20260726-schedule-embed), and staff moderate from /shop/[shopSlug]/reviews
           rather than reading them here. The published-review list streams in behind the shell and
