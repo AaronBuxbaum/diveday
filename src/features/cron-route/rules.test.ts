@@ -128,6 +128,8 @@ describe("cronRoute pass", () => {
     // The log line names the scan, never the error's text (it can quote a diver).
     expect(log).toHaveBeenCalledWith("cron_daily_sweeps.scan_failed", "error", {
       scan: "daily-sweeps",
+      errorName: "Error",
+      errorCode: undefined,
     });
     expect(sentry.captureCheckIn).toHaveBeenLastCalledWith({
       checkInId: "check-in-id",

@@ -177,9 +177,9 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "Sentry's cron monitors answer 'did the tick run at all'. This answers the different question of " +
       "whether the pass that ran actually did its work -- a scan that failed halfway still checks in.",
     events: [
-      "cron_reminders.tick_failed",
       "cron_reminders.scan_failed",
       "cron_retention.prune_failed",
+      "cron_retention.scan_failed",
       // A table still over its window after the run's whole 45-second budget
       // (fourth review, row 18): the pass ran and did not do its work, which is
       // this alarm's meaning. One run rather than two running: the run is
@@ -188,9 +188,10 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // backlog growing faster than the prune.
       "cron_retention.prune_capped",
       "cron_dietary_retention.clear_failed",
+      "cron_dietary_retention.scan_failed",
       "cron_dietary_retention.clear_capped",
       "cron_usage.scan_failed",
-      "cron_backup_export.pass_failed",
+      "cron_backup_export.scan_failed",
       // Added to this signal rather than given its own: a new counted signal is
       // $0.40/month (see the pricing note at the top of this file), and "a
       // scheduled pass failed" is already exactly what this alarm means. The
@@ -198,13 +199,13 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // nothing actually lands in the bucket -- is not visible from a log line
       // at all, and is watched from the AWS side instead (infra-stack.ts S19).
       "cron_platform_backup.pass_failed",
-      "cron_trip_series.roll_failed",
-      "cron_demo_refresh.pass_failed",
+      "cron_trip_series.scan_failed",
+      "cron_demo_refresh.scan_failed",
       // Every other pass's failure code. Before these were listed, a daily
       // pass failing once reached at most AppErrors' three-in-fifteen-minutes,
       // which one failure never does; here one is enough.
       "cron_bookkeeper.scan_failed",
-      "cron_founder_metrics.failed",
+      "cron_founder_metrics.scan_failed",
       "cron_integrations.scan_failed",
       "cron_platform_backup.census_failed",
       // Every shop cadence is a scan of the hourly shop tick (issue #2715); the

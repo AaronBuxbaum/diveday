@@ -37,6 +37,7 @@ const { clearFinishedRehearsals } = await import("@/db/rehearsals");
 const { voidStalePublicPackageInvoices } = await import(
   "../../../../features/stale-package-invoices/store"
 );
+const { rollSailedSeriesInterests } = await import("../../../../features/interest-roll/store");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 
@@ -164,7 +165,7 @@ describe("GET /api/cron/trip-series — reporting", () => {
 
     expect(summaryLine()).toEqual(
       expect.objectContaining({
-        event: "cron_trip_series.roll_complete",
+        event: "cron_trip_series.scan_complete",
         level: "info",
         seriesConsidered: 4,
         seriesExtended: 2,
@@ -223,11 +224,11 @@ describe("GET /api/cron/trip-series — reporting", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
     expect(summaryLine()).toEqual(
-      expect.objectContaining({ event: "cron_trip_series.roll_complete", tripsCreated: 0 }),
+      expect.objectContaining({ event: "cron_trip_series.scan_complete", tripsCreated: 0 }),
     );
   });
 
-  it("answers 500 and flags the monitor when a run could not be rolled", async () => {
+  it("flags the monitor, and still answers, when a run could not be rolled", async () => {
     vi.mocked(rollAllSeriesForward).mockResolvedValue({
       seriesConsidered: 3,
       seriesExtended: 1,
@@ -235,12 +236,29 @@ describe("GET /api/cron/trip-series — reporting", () => {
       failures: 2,
     } as never);
     const response = await GET(cronRequest(`Bearer ${secret}`));
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     expect(summaryLine()).toEqual(expect.objectContaining({ seriesFailed: 2 }));
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ tags: { series_failures: "2" } }),
     );
+    expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: "error" }),
+    );
+  });
+
+  it("keeps the other steps going when the roll or a sweep throws, and says which failed", async () => {
+    vi.mocked(rollAllSeriesForward).mockRejectedValue(new Error("roll down"));
+    vi.mocked(clearFinishedRehearsals).mockRejectedValue(new Error("rehearsals down"));
+    vi.mocked(clearPassedReopensOn).mockResolvedValueOnce(3);
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ stepsFailed: "roll,rehearsals" });
+    // The steps after the failures still ran.
+    expect(clearPassedReopensOn).toHaveBeenCalledWith(FAKE_DB);
+    expect(rollSailedSeriesInterests).toHaveBeenCalled();
+    expect(voidStalePublicPackageInvoices).toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalledTimes(2);
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "error" }),
     );

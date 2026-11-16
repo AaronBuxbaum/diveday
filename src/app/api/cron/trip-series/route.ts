@@ -1,15 +1,12 @@
-import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { clearFinishedRehearsals } from "@/db/rehearsals";
 import { clearPassedReopensOn } from "@/db/shops";
 import { rollAllSeriesForward } from "@/db/trips";
-import { requireCronSecret } from "@/features/cron-auth";
+import { cronRoute } from "@/features/cron-route";
 import { rollSailedSeriesInterests } from "@/features/interest-roll";
-import { flushLogs } from "@/features/log-shipping";
 import { sentry } from "@/features/sentry-server";
 import { voidStalePublicPackageInvoices } from "@/features/stale-package-invoices";
 import { nowDate } from "@/lib/clock";
-import { log } from "@/lib/log";
 import { SERIES_HORIZON_DAYS } from "@/lib/recurrence";
 
 /**
@@ -17,32 +14,25 @@ import { SERIES_HORIZON_DAYS } from "@/lib/recurrence";
  * at most a handful of rows — a weekly series adds seven dates on the day it
  * crosses the horizon and nothing on the six days either side. 60s is far above
  * the observed tick and still kills a pass that has wedged. Raise it only with
- * evidence from `cron_trip_series.roll_complete`.
+ * evidence from `cron_trip_series.scan_complete`.
  */
 export const maxDuration = 60;
 
 /**
- * Sentry Cron Monitor identity for the nightly horizon roll. Separate from the
- * other passes' monitors on purpose: a series that stops being extended is a
- * schedule going quietly empty four months out, which is a different incident
- * with a different urgency from a missed reminder or a missed prune.
+ * Run one step of the nightly pass so its failure costs the others nothing: a
+ * throw is reported to Sentry under the step's name, the step is recorded in
+ * `stepsFailed`, and the pass carries on with `fallback`. Every step is
+ * idempotent, so tomorrow's pass tries again.
  */
-const CRON_MONITOR_SLUG =
-  process.env.SENTRY_TRIP_SERIES_CRON_MONITOR_SLUG || "diveday-trip-series-roll";
-
-/**
- * Must stay in lockstep with the `crons` entry in vercel.json — Sentry uses it
- * to decide when a check-in is *missing*, which is the whole point of the
- * dead-man's switch. `checkinMargin` is generous because the horizon is
- * `SERIES_HORIZON_DAYS` wide: a roll being a day or two late costs a shop
- * nothing a diver can see.
- */
-const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "7 3 * * *" },
-  checkinMargin: 240,
-  maxRuntime: 5,
-  timezone: "Etc/UTC",
-} as const;
+async function isolated<T>(step: string, failed: string[], fallback: T, run: () => Promise<T>) {
+  try {
+    return await run();
+  } catch (error) {
+    failed.push(step);
+    await sentry.captureException(error, { tags: { cron_scan: `trip_series_${step}` } });
+    return fallback;
+  }
+}
 
 /**
  * Keep every open-ended series' next `SERIES_HORIZON_DAYS` on the board.
@@ -56,45 +46,52 @@ const CRON_MONITOR_CONFIG = {
  *
  * Daily rather than weekly: the roll is cheap and idempotent, and a daily pass
  * means the board's far edge advances by a day at a time instead of arriving in
- * a lump — which is also what keeps a single pass small enough to be boring.
+ * a lump.
  *
- * Fails closed exactly like the other scheduled routes: `CRON_SECRET` must be
- * configured and presented as a bearer token, or the endpoint answers 503
- * (unconfigured) / 401 (wrong or missing token) and writes nothing. The auth
- * gate runs *before* the Sentry check-in so an unauthorized probe can never
- * tell the monitor the roll happened.
+ * The five steps are isolated from each other (`isolated`): the roll, the
+ * rehearsal sweep, the reopen-date sweep, the waitlist roll and the stale
+ * invoice void. One failing is named in `stepsFailed`, flags the monitor, and
+ * leaves the rest of the night's work done. `checkinMargin` is generous because
+ * a roll a day or two late costs a shop nothing a diver can see.
  */
-export async function GET(request: Request) {
-  const refusal = requireCronSecret(request);
-  if (refusal) return refusal;
-
-  const checkInId = await sentry.captureCheckIn(
-    { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
-    CRON_MONITOR_CONFIG,
-  );
-
-  try {
+export const GET = cronRoute({
+  id: "trip-series",
+  monitorSlug: "diveday-trip-series-roll",
+  crontab: "7 3 * * *",
+  checkinMargin: 240,
+  maxRuntime: 5,
+  run: async () => {
     const db = await getDb();
-    const summary = await rollAllSeriesForward(db);
-    // The same nightly pass takes finished rehearsals off the board once
-    // fly-safe no longer reads them (ADR 20261012-rehearsal-departures).
-    const rehearsalsCleared = await clearFinishedRehearsals(db);
-    // A "Back on the water" date that has passed comes off Settings
-    // (`clearPassedReopensOn`); the storefront had already stopped reading it.
-    const reopensCleared = await clearPassedReopensOn(db);
+    const failed: string[] = [];
+    const none = {
+      seriesConsidered: 0,
+      seriesExtended: 0,
+      tripsCreated: 0,
+      failures: 0,
+      deferred: 0,
+      yardDatesLeftOff: 0,
+    };
+    const summary = await isolated("roll", failed, none, () => rollAllSeriesForward(db));
+    // Finished rehearsals come off the board once fly-safe no longer reads
+    // them (ADR 20261012-rehearsal-departures).
+    const rehearsalsCleared = await isolated("rehearsals", failed, 0, () =>
+      clearFinishedRehearsals(db),
+    );
+    // A "Back on the water" date that has passed comes off Settings; the
+    // storefront had already stopped reading it.
+    const reopensCleared = await isolated("reopens", failed, 0, () => clearPassedReopensOn(db));
     // Interests nobody invited on a series date that sailed roll onto the run's
     // next date (third UX review, item 12).
-    const waitlist = await rollSailedSeriesInterests(db);
+    const waitlist = await isolated("waitlist", failed, { rolled: 0, invited: 0 }, () =>
+      rollSailedSeriesInterests(db),
+    );
     // A dive package bought on the public pages and left unpaid past its
-    // window is voided at Stripe and on the order (issue #2304). Its own
-    // failure never fails the roll: tomorrow's pass tries again.
-    const staleInvoices = await voidStalePublicPackageInvoices(db, { now: nowDate() }).catch(
-      async (error: unknown) => {
-        await sentry.captureException(error, {
-          tags: { cron_scan: "stale_package_invoices" },
-        });
-        return { considered: 0, voided: 0, refreshed: 0, failed: 0, unread: 0, stuck: 0 };
-      },
+    // window is voided at Stripe and on the order (issue #2304).
+    const staleInvoices = await isolated(
+      "stale_package_invoices",
+      failed,
+      { considered: 0, voided: 0, refreshed: 0, failed: 0, unread: 0, stuck: 0 },
+      () => voidStalePublicPackageInvoices(db, { now: nowDate() }),
     );
     // An invoice Stripe has refused to void night after night needs a person:
     // raised once, on the night it reaches the limit.
@@ -104,32 +101,26 @@ export async function GET(request: Request) {
         tags: { stale_invoices_stuck: String(staleInvoices.stuck) },
       });
     }
-
-    // A series that cannot be rolled is not a transient blip: it has had every
-    // instance deleted, or its course was archived under it, and it will fail
-    // the same way every night until somebody looks. Named as a warning rather
-    // than an error because the shop's existing dates are all still on the
-    // board — nothing a diver can see is broken yet.
+    // A series that cannot be rolled will fail the same way every night until
+    // somebody looks (every instance deleted, its course archived). A warning,
+    // not an error: the shop's existing dates are all still on the board.
     if (summary.failures > 0) {
       await sentry.captureMessage("trip series could not be rolled forward", {
         level: "warning",
         tags: { series_failures: String(summary.failures) },
       });
     }
-
-    log("cron_trip_series.roll_complete", "info", {
+    return {
       horizonDays: SERIES_HORIZON_DAYS,
       seriesConsidered: summary.seriesConsidered,
       seriesExtended: summary.seriesExtended,
       tripsCreated: summary.tripsCreated,
       seriesFailed: summary.failures,
       // Never silently capped: a pass that hit `SERIES_SWEEP_LIMIT` says how
-      // many runs it left for tomorrow, so a deployment that has outgrown one
-      // nightly pass is visible in the log rather than as boards that advance
-      // more slowly than they should.
+      // many runs it left for tomorrow.
       seriesDeferred: summary.deferred,
-      // Dates a hull in the yard kept off the board (issue #3948): the roll
-      // leaves them off rather than closing them, so they read again nightly.
+      // Dates a hull in the yard kept off the board (issue #3948): left off
+      // rather than closed, so they read again nightly.
       yardDatesLeftOff: summary.yardDatesLeftOff,
       rehearsalsCleared,
       reopensCleared,
@@ -139,32 +130,8 @@ export async function GET(request: Request) {
       staleInvoicesRefreshed: staleInvoices.refreshed,
       staleInvoicesFailed: staleInvoices.failed,
       staleInvoicesUnread: staleInvoices.unread,
-    });
-
-    await sentry.captureCheckIn({
-      checkInId,
-      monitorSlug: CRON_MONITOR_SLUG,
-      status: summary.failures > 0 ? "error" : "ok",
-    });
-
-    // Some series rolled and some did not, so the invocation log should agree
-    // with Sentry that this run was not clean. The pass is idempotent, so a
-    // retry re-attempts only what is still missing.
-    return NextResponse.json(
-      { ...summary, rehearsalsCleared, waitlistRolled: waitlist.rolled },
-      { status: summary.failures > 0 ? 500 : 200 },
-    );
-  } catch (error) {
-    // Only reachable before any series is touched — `getDb()` failing to
-    // connect or migrate. The check-in still has to be closed out or the
-    // monitor would read this as a run that is somehow still in progress.
-    await sentry.captureException(error, {
-      tags: { cron_scan: "trip_series_bootstrap" },
-    });
-    log("cron_trip_series.roll_failed", "error", { scan: "bootstrap" });
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
-    return NextResponse.json({ error: "roll_unavailable" }, { status: 503 });
-  } finally {
-    await flushLogs();
-  }
-}
+      stepsFailed: failed.join(",") || undefined,
+    };
+  },
+  healthy: (summary) => summary.seriesFailed === 0 && summary.stepsFailed === undefined,
+});

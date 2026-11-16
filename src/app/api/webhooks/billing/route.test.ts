@@ -23,6 +23,13 @@ vi.mock("../../../../features/shop-subscriptions/store", async (importOriginal) 
     await importOriginal<typeof import("../../../../features/shop-subscriptions/store")>();
   return { ...actual, applyBillingEffect: vi.fn(actual.applyBillingEffect) };
 });
+vi.mock("../../../../features/webhook-events/store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../features/webhook-events/store")>();
+  return {
+    ...actual,
+    releaseStripeWebhookEventClaim: vi.fn(actual.releaseStripeWebhookEventClaim),
+  };
+});
 // The routes report only where a DSN is configured; the suite runs without one.
 vi.mock("../../../../features/sentry-dsn/rules", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
@@ -30,6 +37,7 @@ vi.mock("../../../../features/sentry-dsn/rules", () => ({
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
+const webhookEvents = await import("../../../../features/webhook-events/store");
 const subscriptions = await import("../../../../features/shop-subscriptions/store");
 const actualApply = (
   await vi.importActual<typeof import("../../../../features/shop-subscriptions/store")>(
@@ -278,5 +286,29 @@ describe("POST /api/webhooks/billing — applies what Stripe says, once", () => 
     expect((await deliver(paid, signed(paid))).status).toBe(200);
     expect((await getShopSubscription(db, shopId))?.firstPaidAt).toBeInstanceOf(Date);
     expect((await getShopSubscription(db, shopId))?.paidTotalCents).toBe(9_900);
+  });
+
+  it("still answers 503 and reports a claim it could not give back for a not-yet-linked invoice", async () => {
+    vi.mocked(Sentry.captureException).mockReset();
+    vi.mocked(webhookEvents.releaseStripeWebhookEventClaim).mockRejectedValueOnce(
+      new Error("db down"),
+    );
+    const paid = JSON.stringify({
+      id: "evt_early_release_fails",
+      type: "invoice.paid",
+      created: nowSeconds(),
+      livemode: false,
+      data: {
+        object: {
+          customer: "cus_a",
+          amount_paid: 9_900,
+          parent: { subscription_details: { subscription: "sub_a" } },
+        },
+      },
+    });
+    expect((await deliver(paid, signed(paid))).status).toBe(503);
+    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+      tags: expect.objectContaining({ billing_webhook_stage: "claim_release" }),
+    });
   });
 });

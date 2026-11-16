@@ -117,12 +117,12 @@ describe("GET /api/cron/demo-refresh — reporting", () => {
 
     expect(summaryLine()).toEqual(
       expect.objectContaining({
-        event: "cron_demo_refresh.pass_complete",
+        event: "cron_demo_refresh.scan_complete",
         level: "info",
         minRunwayDays: DEMO_SCHEDULE_MIN_RUNWAY_DAYS,
         runwayDays: 58,
         refreshed: false,
-        demoShopFound: true,
+        found: true,
       }),
     );
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
@@ -139,7 +139,7 @@ describe("GET /api/cron/demo-refresh — reporting", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
     expect(summaryLine()).toEqual(
-      expect.objectContaining({ runwayDays: 0, refreshed: true, demoShopFound: true }),
+      expect.objectContaining({ runwayDays: 0, refreshed: true, found: true }),
     );
   });
 
@@ -154,7 +154,7 @@ describe("GET /api/cron/demo-refresh — reporting", () => {
     } as never);
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
-    expect(summaryLine()).toEqual(expect.objectContaining({ demoShopFound: false }));
+    expect(summaryLine()).toEqual(expect.objectContaining({ found: false }));
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "ok" }),
     );
@@ -165,7 +165,7 @@ describe("GET /api/cron/demo-refresh — reporting", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(503);
     expect(failureLine()).toEqual(
-      expect.objectContaining({ event: "cron_demo_refresh.pass_failed", level: "error" }),
+      expect.objectContaining({ event: "cron_demo_refresh.scan_failed", level: "error" }),
     );
     expect(Sentry.captureException).toHaveBeenCalled();
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
@@ -185,7 +185,7 @@ describe("GET /api/cron/demo-refresh — reporting", () => {
     await GET(cronRequest(`Bearer ${secret}`));
     const line = failureLine();
     expect(line).toEqual(
-      expect.objectContaining({ errorName: "DrizzleQueryError", sqlState: "42P01" }),
+      expect.objectContaining({ errorName: "DrizzleQueryError", errorCode: "42P01" }),
     );
     expect(JSON.stringify(line)).not.toContain("relation divers does not exist");
   });
@@ -195,8 +195,8 @@ describe("GET /api/cron/demo-refresh — reporting", () => {
     await GET(cronRequest(`Bearer ${secret}`));
     const line = failureLine();
     expect(line).toEqual(expect.objectContaining({ errorName: "Error" }));
-    // Omitted rather than written as null: nothing supplied a SQLSTATE.
-    expect(line).not.toHaveProperty("sqlState");
+    // Omitted rather than written as null: nothing supplied a driver code.
+    expect(line).not.toHaveProperty("errorCode");
   });
 });
 

@@ -14,6 +14,7 @@ vi.mock("../../../../features/sentry-dsn/rules", () => ({
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureMessage: vi.fn(),
+  captureException: vi.fn(),
 }));
 vi.mock("../../../../features/log-shipping/index", () => ({ flushLogs: vi.fn() }));
 
@@ -47,6 +48,7 @@ beforeEach(() => {
     .mockResolvedValue({ deleted: 3, capped: false, failed: false });
   vi.mocked(Sentry.captureCheckIn).mockClear();
   vi.mocked(Sentry.captureMessage).mockClear();
+  vi.mocked(Sentry.captureException).mockClear();
   vi.mocked(flushLogs).mockClear();
 });
 
@@ -105,7 +107,7 @@ describe("daily dietary retention outcomes", () => {
       );
       expect(eventLines("log")).toEqual([
         expect.objectContaining({
-          event: "cron_dietary_retention.clear_complete",
+          event: "cron_dietary_retention.scan_complete",
           cleared,
           capped: false,
           failed: false,
@@ -115,14 +117,14 @@ describe("daily dietary retention outcomes", () => {
     },
   );
 
-  it("keeps partial counts, answers 500, alarms and flags the monitor on statement failure", async () => {
+  it("keeps partial counts, alarms and flags the monitor on statement failure", async () => {
     vi.mocked(drainExpiredDietaryNotes).mockResolvedValue({
       cleared: 2,
       capped: false,
       failed: true,
     });
     const response = await GET(request(`Bearer ${secret}`));
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       cleared: 2,
       capped: false,
@@ -169,10 +171,13 @@ describe("daily dietary retention outcomes", () => {
     vi.mocked(getDb).mockRejectedValue(new Error(privateText));
     const response = await GET(request(`Bearer ${secret}`));
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: "dietary_retention_unavailable" });
+    expect(await response.json()).toEqual({ error: "scan_unavailable" });
     expect(eventLines("error")).toEqual([
-      expect.objectContaining({ event: "cron_dietary_retention.clear_failed", scan: "bootstrap" }),
+      expect.objectContaining({ event: "cron_dietary_retention.scan_failed" }),
     ]);
+    // Sentry still learns the error class, as a fresh error that cannot carry the text.
+    const reported = vi.mocked(Sentry.captureException).mock.calls[0]?.[0] as Error;
+    expect(reported.message).toBe("dietary_retention_Error");
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "error" }),
     );
@@ -181,19 +186,20 @@ describe("daily dietary retention outcomes", () => {
         eventLines("log"),
         eventLines("error"),
         vi.mocked(Sentry.captureMessage).mock.calls,
+        vi.mocked(Sentry.captureException).mock.calls.map(([error]) => String(error)),
       ]),
     ).not.toContain(privateText);
     expect(flushLogs).toHaveBeenCalledOnce();
   });
 
-  it("drains Claude call content daily, and a failed drain answers 500 and flags the monitor", async () => {
+  it("drains Claude call content daily, and a failed drain flags the monitor", async () => {
     vi.mocked(drainExpiredClaudeCallContent).mockResolvedValue({
       deleted: 1,
       capped: false,
       failed: true,
     });
     const response = await GET(request(`Bearer ${secret}`));
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     expect(drainExpiredDietaryNotes).toHaveBeenCalledOnce();
     expect(eventLines("error")).toEqual([
       expect.objectContaining({ event: "cron_claude_content_retention.prune_failed", deleted: 1 }),
