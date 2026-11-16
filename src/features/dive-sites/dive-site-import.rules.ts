@@ -1,4 +1,5 @@
 import { isMarineLifeSlug, type MarineLifeSlug } from "../../db/marine-life-catalog";
+import { unguardFormula } from "../../lib/csv-formula";
 import { MAX_ENTERED_DEPTH_METERS } from "../../lib/depth-units";
 import { DIVE_SITE_DIFFICULTIES, type DiveSiteDifficulty } from "../../lib/dive-site-difficulty";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "../../lib/dive-site-landmarks";
@@ -180,6 +181,15 @@ export const DIVE_SITE_IMPORT_COLUMNS = [
 ] as const;
 
 type Column = (typeof DIVE_SITE_IMPORT_COLUMNS)[number];
+
+/**
+ * One cell as the shop typed it: our export guards text that would open as a
+ * formula with a leading apostrophe, and `parseCsv` turned the carriage return
+ * that guard can precede into a line feed (see `src/lib/import.ts`).
+ */
+function readCell(value: string | undefined): string | undefined {
+  return value === undefined ? undefined : unguardFormula(value.replace(/^'\n/, "'\r"));
+}
 
 function text(value: string | undefined): string | null {
   const trimmed = value?.trim();
@@ -383,7 +393,7 @@ export function prepareDiveSiteImport(
 
   const read = (cells: string[], column: Column): string | null => {
     const index = indexes.get(column);
-    return index === undefined ? null : text(cells[index]);
+    return index === undefined ? null : text(readCell(cells[index]));
   };
 
   const rows = grid.slice(1).map((cells, index): PreparedDiveSiteImportRow => {
@@ -631,7 +641,7 @@ export function prepareDiveSiteCreaturesImport(csv: string): PreparedDiveSiteCre
 
   const read = (cells: string[], column: CreatureColumn): string | null => {
     const index = indexes.get(column);
-    return index === undefined ? null : text(cells[index]);
+    return index === undefined ? null : text(readCell(cells[index]));
   };
 
   const rows = grid.slice(1).map((cells, index): PreparedDiveSiteCreatureRow => {

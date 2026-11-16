@@ -202,3 +202,28 @@ describe("CSV inspection and untrusted options", () => {
     expect(validateComputerParseOptions({ csvMapping: mapping })).toEqual({ csvMapping: mapping });
   });
 });
+
+describe("re-importing our own computer-dive export", () => {
+  it.each(["=SUM(A1)", "@cmd", "  =x", "＝x", "'Tis"])(
+    "returns the device %j as typed",
+    async (device) => {
+      const { buildCsv } = await import("../csv");
+      const csv = buildCsv(
+        ["local_start", "utc_offset", "device", "source_id", "duration_seconds", "max_depth_m"],
+        [["2026-01-01T12:00:00", "unknown", device, "=7", 1800, 20]],
+      );
+      const [dive] = parseComputerFile(bytes(csv));
+      expect(dive).toMatchObject({ device: device.trim(), sourceId: "=7" });
+    },
+  );
+
+  it("unguards mapped device and source columns", () => {
+    const [dive] = parseComputerFile(
+      bytes("When,Minutes,Feet,Offset,Unit,Id\n03/04/2026,60,100,Z,'=Shearwater,'@9"),
+      {
+        csvMapping: { ...mapping, columns: { ...mapping.columns, device: "Unit", sourceId: "Id" } },
+      },
+    );
+    expect(dive).toMatchObject({ device: "=Shearwater", sourceId: "@9" });
+  });
+});
