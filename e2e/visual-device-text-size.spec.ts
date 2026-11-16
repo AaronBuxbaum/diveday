@@ -218,6 +218,13 @@ test.describe("light mode largest device body after-dive warnings", () => {
                   "fontStretch",
                   "lineHeight",
                   "letterSpacing",
+                  "fontVariantNumeric",
+                  "fontFeatureSettings",
+                  "textRendering",
+                  "webkitFontSmoothing",
+                  "transform",
+                  "transformOrigin",
+                  "opacity",
                   "color",
                   "backgroundColor",
                   "borderTopWidth",
@@ -251,6 +258,41 @@ test.describe("light mode largest device body after-dive warnings", () => {
             const crew = [...root.querySelectorAll("a")].find(
               (link) => link.textContent?.trim() === labels.crew,
             );
+            // SummaryPanel's HeadCount draws the large numeral inside the
+            // progressbar; its separate dl/dd figures hold the smaller counts.
+            const ancestors = (element: Element) => {
+              const result = [];
+              for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+                const computed = getComputedStyle(parent);
+                result.push({
+                  tag: parent.tagName,
+                  role: parent.getAttribute("role"),
+                  rect: rect(parent.getBoundingClientRect()),
+                  transform: computed.transform,
+                  transformOrigin: computed.transformOrigin,
+                  opacity: computed.opacity,
+                });
+              }
+              return result;
+            };
+            const numericTargets = (scope: Element, selector: string) =>
+              [...scope.querySelectorAll(selector)]
+                .filter(
+                  (element) =>
+                    /^\d+$/.test(element.textContent?.trim() ?? "") &&
+                    ![...element.children].some(
+                      (child) => child.textContent?.trim() === element.textContent?.trim(),
+                    ),
+                )
+                .map((element) => ({
+                  tag: element.tagName,
+                  rect: rect(element.getBoundingClientRect()),
+                  clientRects: [...element.getClientRects()].map(rect),
+                  text: textRects(element),
+                  style: style(element),
+                  ancestors: ancestors(element),
+                }));
+            const progress = root.querySelector('[role="progressbar"]');
             const active = document.activeElement;
             const stateOf = (element: Element) => ({
               hover: element.matches(":hover"),
@@ -259,6 +301,17 @@ test.describe("light mode largest device body after-dive warnings", () => {
             });
             return {
               warnings,
+              progress: progress
+                ? {
+                    rect: rect(progress.getBoundingClientRect()),
+                    style: style(progress),
+                    valueNow: progress.getAttribute("aria-valuenow"),
+                    valueMax: progress.getAttribute("aria-valuemax"),
+                    numerals: numericTargets(progress, "*"),
+                    ancestors: ancestors(progress),
+                  }
+                : null,
+              summaryNumerals: numericTargets(root, "dd"),
               crew: crew
                 ? {
                     label: labels.crew,
