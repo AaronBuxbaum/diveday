@@ -36,7 +36,7 @@ export const BAHAMAS_NEW_PROVIDENCE: DiveSiteTemplate[] = [
       divePlan:
         "Start on the Tears of Allah, swim the short distance north to the bomber frame, and return along the same line. Stay outside the hull.",
       fitTone: "welcoming",
-      fitNote: "Shallow, bright and close together. One tank covers both props.",
+      fitNote: "Shallow, bright, and close together. One tank covers both props.",
       landmarks: [
         {
           name: "Tears of Allah",
@@ -94,7 +94,7 @@ export const BAHAMAS_NEW_PROVIDENCE: DiveSiteTemplate[] = [
         "Drop to the deck, follow the hull to the propeller, loop through the reef around the wreck, and ascend with reserve gas. Stay outside the hull.",
       fitTone: "welcoming",
       fitNote:
-        "Mid-depth, with room to stay shallower on the reef. Night: with a guide, a primary and a backup light; no diving while a ship is alongside.",
+        "Mid-depth, with room to stay shallower on the reef. Night: with a guide, a primary, and a backup light; no diving while a ship is alongside.",
       landmarks: [
         {
           name: "Propeller",

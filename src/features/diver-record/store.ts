@@ -1,4 +1,5 @@
 import { assistsAvailable } from "@/features/assists";
+import { countComputerDives } from "@/features/computer-dives";
 import type { DiverProfile } from "@/features/diver-profile";
 import {
   bookingIsAhead,
@@ -297,34 +298,43 @@ export async function getDiverRecord(
     canManageOrders: can.canManageOrders,
     paymentsConnected,
   });
-  const [mergeCandidates, status, departures, guardianEmails, found, lastDive] = await Promise.all([
-    can.canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
-    // The readiness of the departure this diver is next on, read through the
-    // entry the Today queue and the manifest already use — never a second
-    // detector.
-    diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
-    // The picker pages eligible departures after excluding this diver's seats.
-    offsetUpcomingTripsWithCounts(db, shop.id, {
-      hasSpace: true,
-      excludeBookedForPersonId: personId,
-      includeDepartureBuffer: true,
-      limit: PAGE_SIZE.section,
-      page: input.bookingPage,
-      now,
-    }),
-    // The co-signing guardians' addresses, for the owner's control that erases
-    // one on the guardian's request (H-20261007-guardian-email-erasure).
-    can.canErase ? listGuardianEmails(db, shop.id, personId) : [],
-    openLostItemsByPerson(db, shop.id, [personId]),
-    lastKnownDive(db, {
-      shopId: shop.id,
-      personId,
-      timezone: shop.timezone,
-      now,
-      recorded: diver.person.lastDiveOn,
-      reportedOn: diver.person.lastDiveReportedOn,
-    }),
-  ]);
+  const [mergeCandidates, status, departures, guardianEmails, found, lastDive, computerDiveCount] =
+    await Promise.all([
+      can.canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
+      // The readiness of the departure this diver is next on, read through the
+      // entry the Today queue and the manifest already use — never a second
+      // detector.
+      diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
+      // The picker pages eligible departures after excluding this diver's seats.
+      offsetUpcomingTripsWithCounts(db, shop.id, {
+        hasSpace: true,
+        excludeBookedForPersonId: personId,
+        includeDepartureBuffer: true,
+        limit: PAGE_SIZE.section,
+        page: input.bookingPage,
+        now,
+      }),
+      // The co-signing guardians' addresses, for the owner's control that erases
+      // one on the guardian's request (H-20261007-guardian-email-erasure).
+      can.canErase ? listGuardianEmails(db, shop.id, personId) : [],
+      openLostItemsByPerson(db, shop.id, [personId]),
+      lastKnownDive(db, {
+        shopId: shop.id,
+        personId,
+        timezone: shop.timezone,
+        now,
+        recorded: diver.person.lastDiveOn,
+        reportedOn: diver.person.lastDiveReportedOn,
+      }),
+      // The row's count; a removed diver's file draws no row.
+      removed
+        ? 0
+        : countComputerDives(db, {
+            shopId: shop.id,
+            personId,
+            actorPersonId: input.viewerPersonId,
+          }),
+    ]);
   return {
     kind: "record" as const,
     diver,
@@ -344,5 +354,6 @@ export async function getDiverRecord(
     guardianEmails,
     found,
     lastDive,
+    computerDiveCount,
   };
 }

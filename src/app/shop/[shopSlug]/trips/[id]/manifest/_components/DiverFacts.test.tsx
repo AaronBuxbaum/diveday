@@ -152,7 +152,7 @@ describe("a held seat on the manifest", () => {
     }
     // The sheet says why, rather than "Not on file".
     expect(container).toHaveTextContent(
-      "Their contact, age and other details wait until the desk confirms who this is.",
+      "Their contact, age, and other details wait until the desk confirms who this is.",
     );
     expect(container).not.toHaveTextContent("Not on file");
   });
@@ -206,7 +206,7 @@ describe("a held seat on the manifest", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent(
-      "Their contact, age and other details wait until the desk confirms who this is.",
+      "Their contact, age, and other details wait until the desk confirms who this is.",
     );
     expect(dialog).not.toHaveTextContent("Asha Iyer");
     expect(dialog).toHaveTextContent("Diver · not yet confirmed");

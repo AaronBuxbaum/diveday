@@ -79,7 +79,7 @@ describe("e2eClaudeFixtureProvider", () => {
       urgent: true,
     },
     {
-      body: "Hello, do you run night dives in October? Two of us, both Advanced. Thanks, Marta",
+      body: "Hello, do you run night dives next month? Two of us, both Advanced. Thanks, Marta",
       intent: "question",
       urgent: false,
     },

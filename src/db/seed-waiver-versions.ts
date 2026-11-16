@@ -27,11 +27,9 @@ import { at } from "./seed-clock";
  *
  * **Runs first in `seedDemoSchedule`, before anything issues a waiver.**
  * `getCurrentWaiverTemplate` picks the highest version, and every
- * later scenario (bookings, the month's other sailings, the cert-gate boats,
- * the history back-fill) snapshots whatever that returns. Moving this after any
- * of them would leave records claiming a version the shop is no longer on, and
- * `isCompletedWaiverCurrent` would read every one of them as signed against
- * superseded terms.
+ * later scenario initially snapshots whatever that returns. The final evidence
+ * pass assigns dated signatures to the wording that existed when they signed;
+ * all three fictional versions share the same material generation.
  */
 
 /**
@@ -53,7 +51,7 @@ const SUPERSEDED_RELEASES: { body: string; createdAt: () => Date }[] = [
       "",
       "Knowing these risks, I accept them and release the dive shop, its staff, and the vessel from any claim arising from my participation.",
     ].join("\n"),
-    createdAt: () => at(-430, 9),
+    createdAt: () => at(-500, 9),
   },
   {
     // The revision that added the health/impairment disclosure after the shop

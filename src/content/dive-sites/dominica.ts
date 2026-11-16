@@ -46,7 +46,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
         "Circle the reef in the shallows, follow the gentle wall at 10 m, and finish the safety stop in the shallows beside, not in, the bubble field.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, warm and slow. A calm place to practice buoyancy over rocks you should not touch.",
+        "Shallow, warm, and slow. A calm place to practice buoyancy over rocks you should not touch.",
       creatureSlugs: [
         "porcupinefish",
         "greater-soapfish",
@@ -138,7 +138,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
         "Down the mooring to the pinnacle, once around it no deeper than 30 m, and up the mooring line or an SMB with reserve gas. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
-        "Open water, a possible current and a wall. A dive for experienced divers on a good day.",
+        "Open water, a possible current, and a wall. A dive for experienced divers on a good day.",
       // Gate: the sources call it a current dive for experienced divers in open water.
       minimumCertificationLevel: "advanced_open_water",
       creatureSlugs: [
@@ -171,7 +171,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
       forecastLatitude: 15.2146,
       forecastLongitude: -61.3715,
       description:
-        "A colorful wall on the sheltered bay side of Scotts Head, reached over sand and coral heads. Vase, tube and icing sponges cover it from about 12 m down, and the nooks hold lobster and cleaner shrimp. A shelf at about 40 m and the crater below it lie past the plan.",
+        "A colorful wall on the sheltered bay side of Scotts Head, reached over sand and coral heads. Vase, tube, and icing sponges cover it from about 12 m down, and the nooks hold lobster and cleaner shrimp. A shelf at about 40 m and the crater below it lie past the plan.",
       marineLife: "Vase sponges · tube sponges · lobster · cleaner shrimp · frogfish",
       marineLifeDescription:
         "Small life lives in the nooks of the wall. Look for frogfish and shrimp rather than across the blue.",
@@ -309,7 +309,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
       forecastLatitude: 15.2409,
       forecastLongitude: -61.373,
       description:
-        "A gently sloping reef just north of Coral Gardens, good for small life. Seahorses, frogfish, nudibranchs and sea slugs turn up on the slope, and turtles visit in season.",
+        "A gently sloping reef just north of Coral Gardens, good for small life. Seahorses, frogfish, nudibranchs, and sea slugs turn up on the slope, and turtles visit in season.",
       marineLife: "Seahorses · frogfish · turtles · sea slugs",
       marineLifeDescription:
         "Go slowly and look at the small things. Frogfish and seahorses reward a patient eye.",

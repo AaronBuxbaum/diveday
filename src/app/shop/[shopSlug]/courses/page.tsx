@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
@@ -80,6 +81,8 @@ export default async function CoursesPage({
   // The session's own shop, refused (`notFound()`) when the URL names another:
   // the permission check below joins the session's personId against it.
   const { db, shop, session } = await requireShopSurface(shopSlug);
+  // Switched off on the Features page: no roster, and no error either.
+  if (!shop.coursesEnabled) redirect(`/shop/${shopSlug}`);
 
   const locale = await requestLocale(shop.defaultLocale);
   const st = staffTranslator(locale);

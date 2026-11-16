@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
-import { MoreMenuTrace } from "@/components/MoreMenuTrace";
 import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { MENU_PANEL } from "@/components/ui/menu";
@@ -187,11 +186,6 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
     (item) => !(STAFF_PHONE_TABS as readonly StaffSection[]).includes(item.section),
   );
   const moreActive = rest.some((item) => item.section === current);
-  const tracing = useSyncExternalStore(
-    subscribeNever,
-    () => new URLSearchParams(window.location.search).has("moreTrace"),
-    () => false,
-  );
   // biome-ignore lint/correctness/useExhaustiveDependencies: hydration replaces the keyed rail.
   useLayoutEffect(() => {
     const rail = tabScrollRef.current;
@@ -306,7 +300,6 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
             ) : null}
           </span>
         ) : null}
-        {tracing ? <MoreMenuTrace /> : null}
         {rest.length > 0 ? (
           <MoreMenu
             hydratedKey={hydratedKey}

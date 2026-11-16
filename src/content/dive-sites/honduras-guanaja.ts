@@ -24,7 +24,7 @@ export const HONDURAS_GUANAJA: DiveSiteTemplate[] = [
         "A 73 m (240 ft) refrigerated freighter sunk in 1987, resting upright on a sand shelf beside the barrier wall, between 24 and 33 m (80–110 ft). Coral pinnacles stand nearby. Stay outside the hull.",
       marineLife: "Green moray · groupers · yellowtail snapper",
       marineLifeDescription:
-        "Morays, groupers and yellowtail snapper are reported around the hull.",
+        "Morays, groupers, and yellowtail snapper are reported around the hull.",
       difficultyLevel: "advanced",
       depthMinMeters: 24,
       maxDepthMeters: 33,
@@ -93,7 +93,7 @@ export const HONDURAS_GUANAJA: DiveSiteTemplate[] = [
       forecastLatitude: 16.3949,
       forecastLongitude: -85.8906,
       description:
-        "A steep drop on the barrier reef wall. The top of the wall is near 11 m (35 ft), and it falls to about 51 m (160 ft), far past the plan, before a sand shelf and a second drop.",
+        "A steep drop on the barrier reef wall. The top of the wall is near 11 m (35 ft), and it falls to about 51 m (160 ft), far past the plan, before a sand shelf, and a second drop.",
       marineLife: "Black crinoids · sponges · gorgonians",
       marineLifeDescription:
         "The wall is hung with crinoids and sponges, and the dive is as much about the edge as about what lives on it.",
@@ -131,7 +131,7 @@ export const HONDURAS_GUANAJA: DiveSiteTemplate[] = [
         "A wall dive on the southeast side. A tunnel runs along the wall near 21 m (70 ft); it is an overhead, so stay out of it. The wall falls on beyond the plan.",
       marineLife: "Groupers · yellowtail snapper · green moray · silversides",
       marineLifeDescription:
-        "Groupers, yellowtails and a green moray are reported along the wall and the sandy ground beside it.",
+        "Groupers, yellowtails, and a green moray are reported along the wall and the sandy ground beside it.",
       difficultyLevel: "intermediate",
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",

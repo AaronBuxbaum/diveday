@@ -32,10 +32,10 @@ describe("seeded requests", () => {
       personId: expect.any(String),
       preferredDate: dateAt(12),
     });
-    expect(page.rows.find((row) => row.name === "Marisol Vega")).toMatchObject({
+    expect(page.rows.find((row) => row.name === "Erica Santos")).toMatchObject({
       courseTitle: "Open Water Diver",
       personId: null,
-      email: "marisol.vega@mail.example",
+      email: "erica.santos@mail.example",
     });
     expect(page.rows.find((row) => row.name === null)).toMatchObject({
       courseTitle: "Nitrox Diver",

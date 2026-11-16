@@ -151,6 +151,7 @@ export default async function DiverDetailPage({
     guardianEmails,
     found,
     lastDive,
+    computerDiveCount,
   } = record;
   /**
    * The page's `?notice=` resolved once, to words *and* to the group those
@@ -323,6 +324,7 @@ export default async function DiverDetailPage({
           notes={notes}
           activityPage={activityPage}
           lastDive={lastDive}
+          computerDiveCount={computerDiveCount}
         />
         <DiverStory
           diver={diver}

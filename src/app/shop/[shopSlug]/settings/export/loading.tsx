@@ -1,11 +1,10 @@
-import { SectionTabs } from "@/components/SectionTabs";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
 import { Bone, Pending } from "@/components/ui/pending";
 import { settingsPaneClass } from "../_components/settings-pane";
 
 /**
- * Header, the four tabs of Your data, the bundle's (collapsed) summary card and
+ * Header, the bundle's (collapsed) summary card and
  * the crew-sheet card, so the route never blocks blank.
  *
  * The bundle's file list used to be modelled here as eight card-shaped bars,
@@ -20,7 +19,6 @@ export default function Loading() {
       <Pending>
         {/* The download button sits beside the title. */}
         <ShopPageHeader pending titleWidth="w-56" description={false} actions />
-        <SectionTabs pending count={4} />
         <div className="space-y-10">
           <SectionCard as="div" pending padding="lg">
             <Bone className="h-5 w-44" />

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { canPersonManageShopSettings, getEmbedSettingsPage } from "@/features/embed-settings-page";
 import { requireShopSurface } from "@/features/session";
@@ -38,6 +39,8 @@ export default async function EmbedSettingsPage({
     allow: canPersonManageShopSettings,
     refusal: { notice: "settings-not-authorized" },
   });
+  // Switched off on the Features page: no snippets, and no error either.
+  if (!shop.embedsEnabled) redirect(`/shop/${shopSlug}/settings/features#embeds`);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const origin = publicAppUrl();

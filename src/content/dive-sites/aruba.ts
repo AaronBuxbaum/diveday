@@ -25,15 +25,15 @@ export const ARUBA: DiveSiteTemplate[] = [
         "A German freighter scuttled by her own crew on 10 May 1940, about 120 m long. She lies on her port side on sand in Malmok Bay, with tube sponges and coral over the steel. Storms broke her in two long ago. Stay outside the hull.",
       marineLife: "Tube sponges · green turtles · moray eels · octopus",
       marineLifeDescription:
-        "Tube sponges and coral on the steel, with turtles, morays and octopus around the wreck.",
+        "Tube sponges and coral on the steel, with turtles, morays, and octopus around the wreck.",
       difficultyLevel: "intermediate",
       maxDepthMeters: 20,
       currentNote:
-        "Not dived as a drift. Dive boats, jet skis and parasail boats work this coast, so carry an SMB and listen for engines.",
+        "Not dived as a drift. Dive boats, jet skis, and parasail boats work this coast, so carry an SMB and listen for engines.",
       divePlan:
         "Down to the hull, along the outside of the wreck, and back up the same side with reserve gas.",
       fitTone: "demanding",
-      fitNote: "Large, old and broken. The outside of the hull is the dive.",
+      fitNote: "Large, old, and broken. The outside of the hull is the dive.",
       // Sources give 16.5 m, 17 m, 18 m and 20 m. The deeper figure is the ceiling, and 20 m is past
       // the Open Water limit, so the gate is Advanced Open Water. The upper hull is shallower, so
       // a shop running Open Water divers on it can lower the gate.
@@ -64,14 +64,14 @@ export const ARUBA: DiveSiteTemplate[] = [
       forecastLatitude: 12.5788,
       forecastLongitude: -70.0585,
       description:
-        "The midsection of an oil tanker torpedoed by a German submarine in 1942, lying in about 8 m off Palm Beach. Cabin pieces, washbasins and pipework are scattered between the coral heads. Stay outside the hull.",
+        "The midsection of an oil tanker torpedoed by a German submarine in 1942, lying in about 8 m off Palm Beach. Cabin pieces, washbasins, and pipework are scattered between the coral heads. Stay outside the hull.",
       marineLife: "Stingrays · turtles · lobster · grunts",
       marineLifeDescription:
         "Stingrays and turtles over the sand, with grunts and goatfish schooling around the wreckage.",
       difficultyLevel: "beginner",
       maxDepthMeters: 8,
       currentNote:
-        "Shallow and open to the sea. Jet skis, parasail boats and dive boats work the Palm Beach coast, so carry an SMB and listen for engines.",
+        "Shallow and open to the sea. Jet skis, parasail boats, and dive boats work the Palm Beach coast, so carry an SMB and listen for engines.",
       fitTone: "welcoming",
       fitNote: "Shallow, scattered wreck among coral. A relaxed one for a new wreck diver.",
       creatureSlugs: [
@@ -351,7 +351,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       forecastLatitude: 12.4987,
       forecastLongitude: -70.0283,
       description:
-        "A sloping reef known for its sponges in many colors: elephant ears, tubes, vases and baskets, with plate and leaf corals between them. Turtles are often seen.",
+        "A sloping reef known for its sponges in many colors: elephant ears, tubes, vases, and baskets, with plate, and leaf corals between them. Turtles are often seen.",
       marineLife: "Elephant-ear sponges · tube sponges · vase sponges · turtles",
       marineLifeDescription: "Sponges of many shapes on the slope, with turtles passing through.",
       difficultyLevel: "advanced",
@@ -390,7 +390,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       forecastLatitude: 12.4825,
       forecastLongitude: -70.0104,
       description:
-        "A reef named for the coral-encrusted tires once here. Black coral, sea whips and gorgonians cover the slope, and green morays and eagle rays are seen now and then. Maximum depth 27 m.",
+        "A reef named for the coral-encrusted tires once here. Black coral, sea whips, and gorgonians cover the slope, and green morays and eagle rays are seen now and then. Maximum depth 27 m.",
       marineLife: "Black coral · sea fans · green moray · eagle rays",
       marineLifeDescription: "Black coral and gorgonians on the reef.",
       difficultyLevel: "advanced",
@@ -513,7 +513,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       currentNote:
         "The slope runs to great depths, past the plan's floor. Dived as a drift, so carry an SMB.",
       divePlan:
-        "Drift along the slope no deeper than 30 m (100 ft), looking up now and then, and ascend with the boat following your marker.",
+        "Drift along the slope no deeper than 30 m (100 ft), looking up now, and then, and ascend with the boat following your marker.",
       fitTone: "demanding",
       fitNote:
         "A drift down a slope that runs to great depths. Look up for the rays and keep the gauge in view.",
@@ -701,13 +701,13 @@ export const ARUBA: DiveSiteTemplate[] = [
       forecastLatitude: 12.5798,
       forecastLongitude: -70.062,
       description:
-        "A cargo ship sunk in August 2000 in front of the Palm Beach high-rise strip, lying close to upside down with her propeller the shallowest point. Coral is starting to grow, and schools of grunts, snapper and goatfish have moved in. Stay outside the hull.",
+        "A cargo ship sunk in August 2000 in front of the Palm Beach high-rise strip, lying close to upside down with her propeller the shallowest point. Coral is starting to grow, and schools of grunts, snapper, and goatfish have moved in. Stay outside the hull.",
       marineLife: "Grunts · snapper · blue tang · goatfish",
-      marineLifeDescription: "Schools of grunts, snapper and goatfish around the hull.",
+      marineLifeDescription: "Schools of grunts, snapper, and goatfish around the hull.",
       difficultyLevel: "advanced",
       maxDepthMeters: 20,
       currentNote:
-        "Open water off the Palm Beach coast, where jet skis, parasail boats and dive boats work. Carry an SMB and listen for engines.",
+        "Open water off the Palm Beach coast, where jet skis, parasail boats, and dive boats work. Carry an SMB and listen for engines.",
       divePlan:
         "Down to the propeller, around the outside of the hull, and back up with reserve gas, no deeper than 20 m.",
       fitTone: "demanding",

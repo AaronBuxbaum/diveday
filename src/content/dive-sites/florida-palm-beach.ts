@@ -68,7 +68,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A shore dive in a shallow lagoon under a road bridge, and one of the best muck-diving sites in the world. Nothing here is big. Everything here is strange.",
       marineLife: "Frogfish · seahorses · octopus · batfish · nudibranchs",
       marineLifeDescription:
-        "Sand, rubble, pilings and snorkel trail. The find of the dive is usually two centimeters long and pretending to be a leaf.",
+        "Sand, rubble, pilings, and snorkel trail. The find of the dive is usually two centimeters long and pretending to be a leaf.",
       difficultyLevel: "beginner",
       depthMinMeters: 1,
       maxDepthMeters: 6,
@@ -297,7 +297,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       description:
         "A low limestone ledge mixed with sandy patches and coral heads, about 600 m long, off one of the busiest sea turtle nesting beaches in the country. The name tells you what you will meet.",
       marineLife:
-        "Loggerhead, green and hawksbill turtles · yellowhead jawfish · southern stingrays · green morays",
+        "Loggerhead, green, and hawksbill turtles · yellowhead jawfish · southern stingrays · green morays",
       marineLifeDescription:
         "Turtles are the point, most of all from March to October. Look in the sand patches for rays and jawfish hovering over their burrows.",
       difficultyLevel: "intermediate",
@@ -525,7 +525,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       description:
         "A section of the Breakers reef line crossed by a straight cut about 4 m wide, made through the reef decades ago. Morays live along it, which is where the other name comes from.",
       marineLife:
-        "Green, spotted, purplemouth and goldentail morays · yellowhead jawfish · sea turtles",
+        "Green, spotted, purplemouth, and goldentail morays · yellowhead jawfish · sea turtles",
       marineLifeDescription:
         "Check the sand on the trench floor for jawfish hovering over their burrows.",
       difficultyLevel: "intermediate",
@@ -912,7 +912,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "The Gulf Stream usually runs hard here, so it is a drift with a negative entry and an SMB. The hull is broken and unstable; stay outside it. Inlet boat traffic is heavy, so surface under your dive flag or SMB.",
       fitTone: "demanding",
       fitNote:
-        "Deep, big and fast. Divers not ready for the hull can drift the reef just north of it instead.",
+        "Deep, big, and fast. Divers not ready for the hull can drift the reef just north of it instead.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       landmarks: [
@@ -952,7 +952,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       forecastLatitude: 26.7512,
       forecastLongitude: -80.0099,
       description:
-        "Four coastal freighters seized in a Miami River smuggling crackdown and sunk together south of the Lake Worth Inlet in 2002: the Shasha Boekanier, St. Jacques, Gilbert Sea and Thozina. Rock corridors link them, so one drift can take in more than one hull.",
+        "Four coastal freighters seized in a Miami River smuggling crackdown and sunk together south of the Lake Worth Inlet in 2002: the Shasha Boekanier, St. Jacques, Gilbert Sea, and Thozina. Rock corridors link them, so one drift can take in more than one hull.",
       marineLife: "Sea turtles · sharks · goliath grouper · tropical fish",
       marineLifeDescription:
         "Twenty years of growth have covered the hulls, and the fish and turtles move along the rock piles between them.",
@@ -1807,7 +1807,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         {
           name: "The worm gear",
           kind: "wreckFeature",
-          note: "Midships, among deck beams, fasteners and hanging knees.",
+          note: "Midships, among deck beams, fasteners, and hanging knees.",
         },
         {
           name: "The mast section",
@@ -1939,7 +1939,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       depthMinMeters: 18,
       maxDepthMeters: 40,
       currentNote:
-        "Well offshore and open to the Gulf Stream, so current, visibility and seas change by the day. The upper side starts at about 18 m and the main deck is near 29 m; the sand at 40 m or a little deeper is past most recreational plans. Carry an SMB and stay outside the hull.",
+        "Well offshore and open to the Gulf Stream, so current, visibility, and seas change by the day. The upper side starts at about 18 m and the main deck is near 29 m; the sand at 40 m or a little deeper is past most recreational plans. Carry an SMB and stay outside the hull.",
       divePlan:
         "Descend to the upper side of the hull, follow it at a planned depth, and ascend on the line or under an SMB before the no-stop limit.",
       fitTone: "demanding",
@@ -2021,7 +2021,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLife:
         "Reef sharks · loggerhead and hawksbill turtles · goliath grouper · spadefish · barracuda",
       marineLifeDescription:
-        "Sharks early, turtles and big green morays along the ledge, and jacks and barracuda working the current above it.",
+        "Sharks early, turtles, and big green morays along the ledge, and jacks and barracuda working the current above it.",
       difficultyLevel: "advanced",
       depthMinMeters: 21,
       maxDepthMeters: 28,
@@ -2065,7 +2065,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A high, west-facing ledge off Jupiter named after a battle-scarred green moray that lived on it. The top is a run of shallow bowls packed with reef fish, often around sixty species on one dive.",
       marineLife: "Green morays · loggerhead turtles · nurse sharks · angelfish · spadefish",
       marineLifeDescription:
-        "Tropicals in the bowls on top; turtles, nurse sharks and big morays under the ledge.",
+        "Tropicals in the bowls on top; turtles, nurse sharks, and big morays under the ledge.",
       difficultyLevel: "intermediate",
       depthMinMeters: 20,
       maxDepthMeters: 26,
@@ -2130,7 +2130,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         {
           name: "The Donut Hole",
           kind: "reefFormation",
-          note: "The far north end of the site, reached only on a good current or a nitrox dive. Reef sharks, nurse sharks and goliaths shelter here.",
+          note: "The far north end of the site, reached only on a good current or a nitrox dive. Reef sharks, nurse sharks, and goliaths shelter here.",
         },
       ],
       creatureSlugs: [

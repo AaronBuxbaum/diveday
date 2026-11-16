@@ -27,7 +27,7 @@ for (const scheme of ["light", "dark"] as const) {
         privateShop,
       }) => {
         await seedFacts(request, ["backupFailed"], { slug: privateShop.slug });
-        await page.goto(`/shop/${privateShop.slug}/settings/export/backups`);
+        await page.goto(`/shop/${privateShop.slug}/settings/backups`);
         await page.getByText(/Latest delivery: Failed/).waitFor();
         await page
           .getByText(staffCopy("backup.deliveryError.network_unreachable"), { exact: true })

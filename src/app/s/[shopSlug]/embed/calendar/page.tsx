@@ -65,6 +65,7 @@ export default async function EmbeddedSchedulePage({
   const db = await getDb();
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
+  if (!shop.embedsEnabled) notFound();
 
   const tz = shop.timezone;
   const { locale, t } = await requestTranslator(shop.defaultLocale);
