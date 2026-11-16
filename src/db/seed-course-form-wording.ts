@@ -34,7 +34,7 @@ const SHOP_FORM_WORDING: Record<string, string> = {
   "Release of Liability/Assumption of Risk/Non-agency Acknowledgment Form – General Training": [
     "{courseTitle} at {shopName}",
     "",
-    "I understand that this course includes training in a pool and in open water, and that diving and boat travel carry risks, including decompression illness, barotrauma, drowning and injury from equipment or marine life.",
+    "I understand that this course includes training in a pool and in open water, and that diving and boat travel carry risks, including decompression illness, barotrauma, drowning, and injury from equipment or marine life.",
     "",
     "I understand that {shopName} and my instructors ({instructorNames}) run this course as an independent business, and that the training agency whose card I may earn is not responsible for how it is run.",
     "",
@@ -54,7 +54,7 @@ const SHOP_FORM_WORDING: Record<string, string> = {
   "Youth Diving: Responsibility and Risks Acknowledgment": [
     "{courseTitle} at {shopName}: for a student aged 11 or under",
     "",
-    "I have talked with my parent or guardian about the risks of diving, including decompression illness, barotrauma and drowning, and about why I must follow the rules my instructors ({instructorNames}) give me.",
+    "I have talked with my parent or guardian about the risks of diving, including decompression illness, barotrauma, and drowning, and about why I must follow the rules my instructors ({instructorNames}) give me.",
     "",
     "I will always dive with an adult, stay within the depth my instructor sets, never hold my breath, and tell an adult straight away if I feel unwell, cold or scared.",
     "",
@@ -65,7 +65,7 @@ const SHOP_FORM_WORDING: Record<string, string> = {
     "",
     "I hold the certification this course requires, and I will dive within the limits of my training and of this course's plan as briefed by {instructorNames}.",
     "",
-    "I understand that training dives carry risks, including decompression illness, barotrauma and drowning, and I will tell my instructor before any session if my health changes.",
+    "I understand that training dives carry risks, including decompression illness, barotrauma, and drowning, and I will tell my instructor before any session if my health changes.",
     "",
     "I understand that {shopName} runs this course as an independent business. Knowing these risks, I accept them and release {shopName}, its instructors and crew from any claim arising from my training, except for gross negligence or willful misconduct.",
   ].join("\n"),

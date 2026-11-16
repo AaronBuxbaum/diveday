@@ -558,7 +558,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           startTime: "08:00",
           endTime: "14:00",
           items: [
-            "Scenario 1: missing diver, search and recovery",
+            "Scenario 1: missing diver, search, and recovery",
             "Scenario 2: unresponsive diver at the surface, full sequence",
             "Debrief and certification paperwork",
           ],
@@ -2537,7 +2537,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     certifiesLevel: null,
     content: {
       ...blank,
-      summary: "Capture crisp, colorful underwater photos and video without harming the reef",
+      summary: "Capture crisp, colorful underwater photos, and video without harming the reef",
       overview:
         "Underwater photography and videography allow you to share the beauty of the ocean with friends and family. The SSI Photo & Video program teaches you the techniques needed to take great digital photos and video underwater.\n\nYou will learn camera system preparation, housing maintenance, strobe and video light positioning, composition, and white balance settings in aquatic environments.\n\nAcross two training dives, you will practice capturing macro and wide-angle subjects while maintaining neutral buoyancy and reef-safe diving habits.",
       heroImageUrl: bundledImage("French Angelfish Molasses Reef 20080309.jpg"),
@@ -2870,7 +2870,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Confined-water training sessions",
         "Four open-water training dives",
       ],
-      excludes: ["Personal mask, fins and snorkel", "Transport to the site"],
+      excludes: ["Personal mask, fins, and snorkel", "Transport to the site"],
       scheduleDays: [
         {
           title: "Day one — academics and confined water",
@@ -3151,7 +3151,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           items: [
             "Gas planning without a buddy's reserve in the arithmetic",
             "Redundancy: configuring and drilling a second gas supply",
-            "Dives: self-rescue, valve and regulator failures, and honest turn-pressure discipline",
+            "Dives: self-rescue, valve, and regulator failures, and honest turn-pressure discipline",
           ],
         },
       ],
@@ -3203,7 +3203,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           items: [
             "What the mix changes, and what it does not",
             "Oxygen exposure limits and the depth ceiling your mix carries",
-            "Analyzing, labeling and logging a cylinder — every time",
+            "Analyzing, labeling, and logging a cylinder — every time",
             "Setting your computer for the mix, and two dives on it",
           ],
         },
@@ -3222,7 +3222,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 3,
     title: "Deep Diver",
     agency: "sdi",
-    description: "Plan, manage and enjoy the deeper end of recreational diving.",
+    description: "Plan, manage, and enjoy the deeper end of recreational diving.",
     minimumCertificationLevel: "open_water",
     certifiesLevel: null,
     content: {
@@ -3399,7 +3399,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       includes: [
         "SDI digital certification card",
         "Four wreck dives",
-        "Reels, lines and lights for the course",
+        "Reels, lines, and lights for the course",
       ],
       excludes: ["Personal gear rental", "Enriched-air fills"],
       scheduleDays: [
@@ -3470,7 +3470,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           items: [
             "Reading current, planning a live-boat drift, and negative entries",
             "Deploying a surface marker from depth without going up with it",
-            "Two drifts, ascending and surfacing as one group",
+            "Two drifts, ascending, and surfacing as one group",
           ],
         },
       ],
@@ -3618,7 +3618,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Two to three photo dives",
         "Image review sessions with your instructor",
       ],
-      excludes: ["Camera, housing and lighting", "Personal gear rental"],
+      excludes: ["Camera, housing, and lighting", "Personal gear rental"],
       scheduleDays: [
         {
           title: "Underwater Photography",
@@ -3787,7 +3787,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           endTime: "15:00",
           items: [
             "Three dives, adjusting the rig between each",
-            "Entries, exits and ladder work with cylinders off",
+            "Entries, exits, and ladder work with cylinders off",
           ],
         },
       ],

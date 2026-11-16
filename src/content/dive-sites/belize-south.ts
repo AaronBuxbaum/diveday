@@ -24,7 +24,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
         "A point of the barrier reef where fish spawn in the spring, and the whale sharks arrive to feed on the eggs. The dive is in open water off the reef, in groups with a licensed guide.",
       marineLife: "Spawning snappers · bull sharks · dolphins · whale sharks",
       marineLifeDescription:
-        "The spawning snappers are the event, with jacks, bull sharks and dolphins coming to feed on the eggs. A whale shark is unpredictable: one operator logged no sightings in several recent seasons, so treat one as a bonus.",
+        "The spawning snappers are the event, with jacks, bull sharks, and dolphins coming to feed on the eggs. A whale shark is unpredictable: one operator logged no sightings in several recent seasons, so treat one as a bonus.",
       conservationNote:
         "Time slots are allocated to licensed operators, guides are trained by the Southern Environmental Association, and groups are capped at 12 divers with their guides. Keep the distance the guide sets and never touch or chase an animal.",
       difficultyLevel: "advanced",
@@ -32,7 +32,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       currentNote:
         "Carry an SMB and surface with it deployed, because the boat picks divers up in open water. This is a blue-water drift outside the reef with no visual reference to the reef or bottom. Current is not documented; ask the crew on the day.",
       divePlan:
-        "Staff confirm the diver’s log before boarding. Mid-water in the group, no deeper than 24 m (80 ft). Below the plan the wall keeps sloping and then drops into deep water. Watch your gauge, because nothing in view shows depth. Around any shark, whale sharks and bull sharks alike, stay put and keep the group together, keep nothing dangling, never chase or touch, and follow the guide’s briefing. Out of season it is a blue-water dive without the event, and no animal is promised.",
+        "Staff confirm the diver’s log before boarding. Mid-water in the group, no deeper than 24 m (80 ft). Below the plan the wall keeps sloping and then drops into deep water. Watch your gauge, because nothing in view shows depth. Around any shark, whale sharks and bull sharks alike, stay put and keep the group together, keep nothing dangling, never chase, or touch, and follow the guide’s briefing. Out of season it is a blue-water dive without the event, and no animal is promised.",
       fitTone: "demanding",
       fitNote:
         "Open-ocean diving with nothing to hold on to, so buoyancy has to be good. The season runs March to June, from about two days before the full moon to ten days after. Medical care is far; confirm the boat’s oxygen and plan.",
@@ -69,7 +69,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
         "Coral mounds split by patches of sand, southeast of Laughing Bird Caye. It is known for the variety of its corals, and the fish and small animals around them. The mounds rise from deep water to within 10 to 12 m (30 to 40 ft) of the surface.",
       marineLife: "Spotted drums · spiny lobsters · cleaner shrimp · arrow crabs",
       marineLifeDescription:
-        "Spotted drums, big lobsters, cleaner shrimp and arrow crabs live among the mounds, with plenty of smaller reef fish.",
+        "Spotted drums, big lobsters, cleaner shrimp, and arrow crabs live among the mounds, with plenty of smaller reef fish.",
       difficultyLevel: "intermediate",
       depthMinMeters: 10,
       maxDepthMeters: 21,
@@ -133,7 +133,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
     ],
     briefing: {
       name: "North Wall, Silk Cayes",
-      locationName: "Silk Cayes, Gladden Spit and Silk Cayes Marine Reserve",
+      locationName: "Silk Cayes, Gladden Spit, and Silk Cayes Marine Reserve",
       // Approximate pin: the Silk Cayes (the mapped caye outlines span 16.499 to 16.521 N and -88.292
       // to -88.275 W in OpenStreetMap). The site's name puts it on the north side of the cayes, so the
       // pin is in the water about 350 m north of the northernmost outline. Good to about 2 km.
@@ -145,7 +145,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
         "A wall off the north side of the Silk Cayes, among the busiest dives out of Placencia. Operators run it as a multi-level dive from the wall up onto the reef crest.",
       marineLife: "Black groupers · hawksbill turtles · spotted eagle rays · morays",
       marineLifeDescription:
-        "Big black groupers, hawksbills, eagle rays and schools of jacks and schoolmasters work the wall. Reef sharks and mantas are occasional in the blue.",
+        "Big black groupers, hawksbills, eagle rays, and schools of jacks and schoolmasters work the wall. Reef sharks and mantas are occasional in the blue.",
       difficultyLevel: "advanced",
       depthMinMeters: 12,
       maxDepthMeters: 24,
@@ -177,7 +177,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
     ],
     briefing: {
       name: "Turtle Canyons, Silk Cayes",
-      locationName: "Silk Cayes, Gladden Spit and Silk Cayes Marine Reserve",
+      locationName: "Silk Cayes, Gladden Spit, and Silk Cayes Marine Reserve",
       // Approximate pin: both sources place it just north of North Wall, so the pin sits about 300 m
       // north of that site's pin (16.5245, -88.28). Good to about 2 km. Not checked against the
       // reserve map, so a shop confirms the mooring.
@@ -187,7 +187,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
         "Canyons just north of North Wall where hawksbill and loggerhead turtles rest. The dive stays in and around the canyons.",
       marineLife: "Hawksbill turtles · loggerhead turtles · spotted drums · cleaner shrimp",
       marineLifeDescription:
-        "Turtles rest in the canyons, and juvenile spotted drums, cleaner shrimp and arrow crabs give macro photographers plenty to do.",
+        "Turtles rest in the canyons, and juvenile spotted drums, cleaner shrimp, and arrow crabs give macro photographers plenty to do.",
       difficultyLevel: "intermediate",
       depthMinMeters: 15,
       maxDepthMeters: 18,
@@ -225,7 +225,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
         "A short ride from South Water Caye, between two reef structures with sandy bottom between them. Named for a longtime resident of the caye.",
       marineLife: "Southern stingrays · nurse sharks · spotted eagle rays · turtles",
       marineLifeDescription:
-        "Stingrays and nurse sharks rest on the sand between the structures, with eagle rays, turtles and schools of tarpon passing through.",
+        "Stingrays and nurse sharks rest on the sand between the structures, with eagle rays, turtles, and schools of tarpon passing through.",
       difficultyLevel: "intermediate",
       depthMinMeters: 14,
       maxDepthMeters: 18,
@@ -265,7 +265,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
         "A wall with small crevices along its face in the South Water Caye Marine Reserve. The wall starts at about 12 m (45 ft) and falls past 30 m (100 ft).",
       marineLife: "Spiny lobsters · spotted eels · eagle rays · hawksbill turtles",
       marineLifeDescription:
-        "Lobsters and big crabs sit in the crevices, with eels, eagle rays and turtles along the face.",
+        "Lobsters and big crabs sit in the crevices, with eels, eagle rays, and turtles along the face.",
       difficultyLevel: "advanced",
       depthMinMeters: 12,
       maxDepthMeters: 30,
@@ -306,7 +306,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       forecastLatitude: 16.8159,
       forecastLongitude: -88.077,
       description:
-        "A sheer wall that starts at about 12 m (40 ft) and drops into deep blue water. Overhangs, black coral and several gorgonians line the face, and visibility often passes 30 m (100 ft).",
+        "A sheer wall that starts at about 12 m (40 ft) and drops into deep blue water. Overhangs, black coral, and several gorgonians line the face, and visibility often passes 30 m (100 ft).",
       marineLife: "Spotted eagle rays · hawksbill turtles · nurse sharks · spiny lobsters",
       marineLifeDescription:
         "Lobsters hide in the overhangs, nurse sharks and turtles cruise past, and eagle rays patrol the face while blue wrasse school in open water.",
@@ -341,7 +341,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
     ],
     briefing: {
       name: "White Hole, Silk Cayes",
-      locationName: "Silk Cayes, Gladden Spit and Silk Cayes Marine Reserve",
+      locationName: "Silk Cayes, Gladden Spit, and Silk Cayes Marine Reserve",
       // Approximate pin: both sources place it among the Silk Cayes (mapped in OpenStreetMap
       // between 16.499 and 16.521 N) without a direction. The earlier pin fell inside that span and
       // could have been on a caye, so this one is moved south of the span, in open water, about
@@ -354,7 +354,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
         "A white sand patch at about 10 m (30 ft) among coral heads, named for how it looks from the surface. The reef beyond it slopes to an outer wall at about 21 m (70 ft), which then drops steeply.",
       marineLife: "Southern stingrays · nurse sharks · green moray eels · yellowtail snappers",
       marineLifeDescription:
-        "Stingrays, morays and nurse sharks rest in the sand and coral patches, with snappers and groupers over the reef and eagle rays sometimes in the blue.",
+        "Stingrays, morays, and nurse sharks rest in the sand and coral patches, with snappers and groupers over the reef and eagle rays sometimes in the blue.",
       difficultyLevel: "intermediate",
       depthMinMeters: 10,
       maxDepthMeters: 21,

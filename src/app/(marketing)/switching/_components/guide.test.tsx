@@ -469,7 +469,7 @@ describe("FareHarbor transfer honesty", () => {
       ),
     ).toBeVisible();
     expect(
-      screen.getByText(/Staff reconcile new bookings, changes and cancellations/),
+      screen.getByText(/Staff reconcile new bookings, changes, and cancellations/),
     ).toBeVisible();
     expect(screen.getByText(/does not replace FareHarbor’s distribution network/)).toBeVisible();
     expect(screen.getByRole("link", { name: "Check the transfer scope" })).toHaveAttribute(

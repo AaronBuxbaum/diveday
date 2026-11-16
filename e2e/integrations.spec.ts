@@ -43,7 +43,7 @@ test.describe("shop integrations settings", () => {
     await expect(page.locator('[data-settings-selection="group:data"]')).toBeVisible();
     await page
       .getByRole("main")
-      .getByRole("link", { name: "Export, import, backups and integrations" })
+      .getByRole("link", { name: "Export, import, backups, and integrations" })
       .click();
     await page
       .getByRole("navigation", { name: "Your data sections" })

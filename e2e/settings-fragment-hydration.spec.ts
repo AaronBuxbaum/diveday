@@ -8,7 +8,7 @@ import {
 } from "./fixtures";
 import { holdClientChunk } from "./hold-client-chunk";
 
-const DATA_DOOR = "Export, import, backups and integrations";
+const DATA_DOOR = "Export, import, backups, and integrations";
 
 test.describe("Settings fragment hydration", () => {
   signedInAs("owner");
