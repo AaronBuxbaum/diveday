@@ -3,7 +3,15 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { callTripBlowout, getTripBlowout } from "../../db/blowouts";
 import { createBooking } from "../../db/bookings";
-import { bookings, disruptionRecoveryEvents, people, trips } from "../../db/schema";
+import { createPerson } from "../../db/people";
+import {
+  bookings,
+  disruptionRecoveryEvents,
+  people,
+  personRoles,
+  trips,
+  userAccounts,
+} from "../../db/schema";
 import { createTrip } from "../../db/trips";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
@@ -233,5 +241,46 @@ describe("explicit disruption recovery", () => {
     expect(
       await recordRecoveryFollowUp(db, { ...input, attemptId: randomUUID(), expectedRevision: 1 }),
     ).toEqual({ ok: false, reason: "not_found" });
+  });
+  it("retains id-only audit evidence while resolving an erased former actor anonymously", async () => {
+    const { db, shop, owner, source, input } = await setup();
+    const actor = await createPerson(db, {
+      shopId: shop.id,
+      fullName: "Former recovery coordinator",
+      email: null,
+      phone: null,
+      origin: "counter",
+      roles: ["divemaster"],
+    });
+    await db.insert(userAccounts).values({
+      personId: actor.id,
+      email: "former-recovery@example.com",
+      hashedPassword: "unused",
+      status: "active",
+    });
+    expect((await recordRecoveryFollowUp(db, { ...input, actorPersonId: actor.id })).ok).toBe(true);
+    const before = await db
+      .select()
+      .from(disruptionRecoveryEvents)
+      .where(eq(disruptionRecoveryEvents.blowoutDiverId, input.blowoutDiverId));
+    await db.delete(personRoles).where(eq(personRoles.personId, actor.id));
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, actor.id));
+    expect(
+      (await anonymizeDiver(db, { shopId: shop.id, personId: actor.id, actorPersonId: owner })).ok,
+    ).toBe(true);
+    expect(
+      await db
+        .select()
+        .from(disruptionRecoveryEvents)
+        .where(eq(disruptionRecoveryEvents.blowoutDiverId, input.blowoutDiverId)),
+    ).toEqual(before);
+    const [erasedActor] = await db.select().from(people).where(eq(people.id, actor.id));
+    expect(erasedActor.anonymizedAt).not.toBeNull();
+    const record = await getTripBlowout(db, shop.id, source.id);
+    expect(record?.divers[0].recoveryActors[actor.id]).toBe(erasedActor.fullName);
+    expect(record?.divers[0].recoveryActors[actor.id]).not.toBe("Former recovery coordinator");
   });
 });
