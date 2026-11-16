@@ -181,6 +181,20 @@ describe("stripQuotedReply", () => {
     );
   });
 
+  it("cuts Outlook's localized header blocks", () => {
+    const blocks = [
+      "Von: Blue Mantis\nGesendet: Samstag, 18. Juli 2026 09:12\nAn: mich",
+      "De: Blue Mantis\nEnviado: sábado, 18 de julio de 2026 9:12\nPara: mí",
+      "Da: Blue Mantis\nInviato: sabato 18 luglio 2026 09:12\nA: me",
+      "De : Blue Mantis\nEnvoyé : samedi 18 juillet 2026 09:12\nÀ : moi",
+      "De: Blue Mantis\nEnviada em: sábado, 18 de julho de 2026 09:12\nPara: mim",
+    ];
+    for (const block of blocks) {
+      expect(stripQuotedReply(`Ja, gern.\n\n${block}\nBetreff: Re: trip`)).toBe("Ja, gern.");
+    }
+    expect(stripQuotedReply("Ok\n\nDe: Ana\nnos vemos")).toBe("Ok\n\nDe: Ana\nnos vemos");
+  });
+
   it("keeps a reply that is only quoted text rather than filing it empty", () => {
     expect(stripQuotedReply("> is this still on?")).toBe("> is this still on?");
   });
