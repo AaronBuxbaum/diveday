@@ -230,7 +230,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       currentNote:
         "Exposed to swell and surge, with a rough surface and hazy water on some days; the force lessens a few meters down. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Stay on the east side reef or hold the faces at no deeper than 30 m (100 ft), whatever the sheer drop shows. If sharks appear, stay put, nothing dangling, no chasing, or touching, group together, and follow the crew's briefing. Safety stop under your SMB. Staff confirm the diver's log before boarding.",
+        "Stay on the east side reef or hold the faces at no deeper than 30 m (100 ft), whatever the sheer drop shows. If sharks appear, stay put, nothing dangling, no chasing or touching, group together, and follow the crew's briefing. Safety stop under your SMB. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "An exposed offshore dive with a drop-off beside you. For divers who keep their depth.",
@@ -403,7 +403,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       currentNote:
         "A drift that is strong at times on the Atlantic side of Little Tobago. Carry an SMB so the boat can pick you up at the end of the drift. The Guyana Current can bring strong, cloudy water to the Atlantic side. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Drift with the group to the brain coral at about 18 m (60 ft) on the sandy slope and keep fins and hands off it. Do not go beneath it. If sharks are resting, stay put, keep nothing dangling, do not chase, or touch them, group together, and follow the crew's briefing. The slope runs deeper, so hold the depth the crew sets and do a safety stop under your SMB. Staff confirm the diver's log before boarding.",
+        "Drift with the group to the brain coral at about 18 m (60 ft) on the sandy slope and keep fins and hands off it. Do not go beneath it. If sharks are resting, stay put, keep nothing dangling, do not chase or touch them, group together and follow the crew's briefing. The slope runs deeper, so hold the depth the crew sets and do a safety stop under your SMB. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A drift to one famous coral. Look from a body-length away and keep moving with the group.",
@@ -498,7 +498,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       currentNote:
         "Not documented. It is a shore entry from a beach, so ask the crew about the entry and the surf on the day.",
       divePlan:
-        "Enter from the beach, swim out to the cannons, and circle the site slowly. Look, do not touch, or lift anything, and finish with a safety stop and reserve gas. Stay outside any wreckage.",
+        "Enter from the beach, swim out to the cannons, and circle the site slowly. Look, do not touch or lift anything, and finish with a safety stop and reserve gas. Stay outside any wreckage.",
       fitTone: "welcoming",
       fitNote: "Shallow, close to shore, and a good first dive on Tobago's Caribbean side.",
       creatureSlugs: [

@@ -93,7 +93,7 @@ export const HONDURAS_GUANAJA: DiveSiteTemplate[] = [
       forecastLatitude: 16.3949,
       forecastLongitude: -85.8906,
       description:
-        "A steep drop on the barrier reef wall. The top of the wall is near 11 m (35 ft), and it falls to about 51 m (160 ft), far past the plan, before a sand shelf, and a second drop.",
+        "A steep drop on the barrier reef wall. The top of the wall is near 11 m (35 ft), and it falls to about 51 m (160 ft), far past the plan, before a sand shelf and a second drop.",
       marineLife: "Black crinoids · sponges · gorgonians",
       marineLifeDescription:
         "The wall is hung with crinoids and sponges, and the dive is as much about the edge as about what lives on it.",

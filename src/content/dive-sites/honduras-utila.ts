@@ -623,7 +623,7 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
         "A round sand crater ringed by shallow reef, close to the south shore. Staghorn and elkhorn coral grow on the rim, and seahorses and octopus turn up around the sand.",
       marineLife: "Longsnout seahorses · octopus · nurse sharks · green moray eels · stingrays",
       marineLifeDescription:
-        "Look low over the sand and into the coral on the rim. The reef top is shallow and bright, with the light reaching the coral. Keep hands clear of the coral and look, don't reach. Nurse sharks are not promised; if one is near, stay with the group, keep nothing dangling, do not chase, or touch, and follow the crew's briefing.",
+        "Look low over the sand and into the coral on the rim. The reef top is shallow and bright, with the light reaching the coral. Keep hands clear of the coral and look, don't reach. Nurse sharks are not promised; if one is near, stay with the group, keep nothing dangling, do not chase or touch, and follow the crew's briefing.",
       difficultyLevel: "beginner",
       depthMinMeters: 4,
       maxDepthMeters: 18,

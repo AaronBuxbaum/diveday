@@ -783,7 +783,7 @@ export const BVI: DiveSiteTemplate[] = [
       divePlan:
         "Down the mooring to the boulder, along the rock face and scattered boulders, and no deeper than 26 m (85 ft). Back up the line.",
       fitTone: "demanding",
-      fitNote: "Exposed, with current, and depth to 26 m. Advanced Open Water.",
+      fitNote: "Exposed, with current and depth to 26 m. Advanced Open Water.",
       minimumCertificationLevel: "advanced_open_water",
       creatureSlugs: [
         "horse-eye-jack",

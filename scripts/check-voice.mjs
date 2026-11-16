@@ -1008,8 +1008,10 @@ const OXFORD_PATTERN = new RegExp(
 );
 const OXFORD_CLAUSE_OPENERS =
   /^(?:if|when|once|after|before|because|while|although|unless|since|as|until|whether|though|so|in|on|at|during|for|yes|no)\b/i;
-/** A part that opens on one of these is a clause ("so stay outside"), not an item. */
-const OXFORD_CLAUSE_OPENERS_INNER = /^(?:so|when|where|which|who|because|while|then|but)\b/i;
+const OXFORD_NEGATED_ITEM = /^(?:do not|don’t|never|not|nor|without|no [\p{L}]+ing)(?![\p{L}-])/iu;
+const OXFORD_CLAUSE_ITEM =
+  /^(?:so|but|then|where|which|who|while|because|before|after|now|with)\b/i;
+const OXFORD_DIRECTIONS = new Set(["north", "south", "east", "west", "up", "down", "back", "out"]);
 const OXFORD_LIST_INTRODUCERS = new Set("by including like of plus between across".split(" "));
 
 /**
@@ -1073,6 +1075,8 @@ export const OXFORD_PHRASES = [
   "a long ride west and south",
   "a swim out and back",
   "wet or dry?",
+  "now and then",
+  "square and triangle search patterns",
   "strange animals and a colorful wall",
   "A warm, patient crew and a brilliant final drift",
   "practice clearing your mask and recovering your regulator",
@@ -1081,6 +1085,10 @@ export const OXFORD_PHRASES = [
   "first aid and wound care",
   "running over and around it",
 ];
+
+function before0(value, index) {
+  return value.slice(Math.max(0, value.lastIndexOf(". ", index) + 1), index);
+}
 
 export function oxfordCommas(value, key = "") {
   const found = [];
@@ -1098,6 +1106,11 @@ export function oxfordCommas(value, key = "") {
     const conjunctionAt = match.index + match[0].length - conjunction.length - 1;
     if (phrases.some(([start, end]) => conjunctionAt >= start && conjunctionAt < end)) continue;
     if (/^not\b/.test(value.slice(match.index + match[0].length))) continue;
+    // A negated pair ("do not chase or touch", "no chasing or touching"), an
+    // "either … or", and a direction ("north or south") are not lists.
+    if (OXFORD_NEGATED_ITEM.test(item) || OXFORD_CLAUSE_ITEM.test(item)) continue;
+    if (/\beither\b/i.test(`${before0(value, match.index)} ${item}`)) continue;
+    if (OXFORD_DIRECTIONS.has(item.toLowerCase())) continue;
     if (/^(?:and|or)$/i.test(itemWords[0])) continue;
     if (/ed$/i.test(itemWords[0]) || /ed$/i.test(itemWords[itemWords.length - 1])) continue;
     // Inside an ICU argument ("{count, plural, one {…}"), the comma is syntax.
@@ -1110,10 +1123,9 @@ export function oxfordCommas(value, key = "") {
     if (OXFORD_CLAUSE_OPENERS.test(sentence) && !sentence.includes(",")) continue;
     const parts = [...sentence.split(", "), item];
     const previous = parts[parts.length - 2];
-    if (OXFORD_CLAUSE_OPENERS_INNER.test(previous.trim())) continue;
     let list = false;
     if (parts.length >= 3) {
-      list = wordCount(previous) <= 4;
+      list = wordCount(previous) <= 5;
     } else {
       const lead = previous.trim().split(/\s+/);
       list =

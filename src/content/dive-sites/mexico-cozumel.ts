@@ -1253,7 +1253,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.2896,
       forecastLongitude: -87.0127,
       description:
-        "A deep, little-visited reef of coral heads separated by sand, south of Punta Sur, where rays, and flounder lie on the sand.",
+        "A deep, little-visited reef of coral heads separated by sand, south of Punta Sur, where rays and flounder lie on the sand.",
       marineLife: "Spotted eagle rays · peacock flounder · groupers",
       marineLifeDescription:
         "Rays and flounder use the sand between the heads, with groupers around the heads.",
