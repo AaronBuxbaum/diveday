@@ -1,11 +1,10 @@
-import { SectionTabs } from "@/components/SectionTabs";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
 import { Bone, Pending } from "@/components/ui/pending";
-import { settingsPaneClass } from "../../_components/settings-pane";
+import { settingsPaneClass } from "../_components/settings-pane";
 
 /**
- * Header, the four tabs of Your data and the backups half (status card and
+ * Header and the backups page (status card and
  * destination form), so the route never blocks blank.
  */
 export default function Loading() {
@@ -13,7 +12,6 @@ export default function Loading() {
     <main className={settingsPaneClass()}>
       <Pending>
         <ShopPageHeader pending titleWidth="w-56" description={false} />
-        <SectionTabs pending count={4} />
         <div>
           <Bone className="h-5 w-28" />
           <div className="mt-4 space-y-6">

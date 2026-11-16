@@ -20,7 +20,6 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
-import { DataTabs } from "../_components/DataTabs";
 import { settingsPaneClass } from "../_components/settings-pane";
 import {
   startQuickBooksConnectionAction,
@@ -115,8 +114,10 @@ export default async function IntegrationsSettingsPage({
 
   return (
     <main className={settingsPaneClass()}>
-      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.data.title")} />
-      <DataTabs t={t} shopSlug={session.user.shopSlug} current="integrations" />
+      <ShopPageHeader
+        eyebrow={t("settings.main.eyebrow")}
+        title={t("settings.data.integrations")}
+      />
       {syncBanner ? (
         <StaffNoticeBanner tone={syncBanner.tone}>{syncBanner.text}</StaffNoticeBanner>
       ) : null}
