@@ -4418,26 +4418,46 @@ async function expireGroupHoldsOnTrip(tx: DbExecutor, shopId: string, tripId: st
   return expired;
 }
 
-/** Hourly catch-up; new bookings also release due seats under their existing capacity lock. */
-export async function expireGroupHolds(db: AppDb, now: Date = nowDate()): Promise<number> {
-  const due = await db
-    .selectDistinct({ shopId: bookings.shopId, tripId: bookings.tripId })
-    .from(bookings)
-    .where(and(seatHeld, lte(bookings.groupHoldUntil, now)))
-    .orderBy(asc(bookings.shopId), asc(bookings.tripId))
-    .limit(200);
+/**
+ * Hourly catch-up; new bookings also release due seats under their existing capacity lock.
+ * Walks every due (shop, trip) pair in keyset pages, so a pair whose seats cannot cancel
+ * never starves the pairs after it.
+ */
+export async function expireGroupHolds(
+  db: AppDb,
+  now: Date = nowDate(),
+  pageSize = 200,
+): Promise<number> {
   let expired = 0;
-  for (const trip of due) {
-    expired += await db.transaction(async (tx) => {
-      await boundLockWaits(tx);
-      await tx
-        .select({ id: trips.id })
-        .from(trips)
-        // diveday:allow-deleted-trips: expiry releases a due reservation, even on a deleted departure.
-        .where(and(eq(trips.shopId, trip.shopId), eq(trips.id, trip.tripId)))
-        .for("no key update");
-      return expireGroupHoldsOnTrip(tx, trip.shopId, trip.tripId, now);
-    });
+  let after: { shopId: string; tripId: string } | null = null;
+  for (;;) {
+    const due: { shopId: string; tripId: string }[] = await db
+      .selectDistinct({ shopId: bookings.shopId, tripId: bookings.tripId })
+      .from(bookings)
+      .where(
+        and(
+          seatHeld,
+          lte(bookings.groupHoldUntil, now),
+          after
+            ? sql`(${bookings.shopId}, ${bookings.tripId}) > (${after.shopId}, ${after.tripId})`
+            : undefined,
+        ),
+      )
+      .orderBy(asc(bookings.shopId), asc(bookings.tripId))
+      .limit(pageSize);
+    for (const trip of due) {
+      expired += await db.transaction(async (tx) => {
+        await boundLockWaits(tx);
+        await tx
+          .select({ id: trips.id })
+          .from(trips)
+          // diveday:allow-deleted-trips: expiry releases a due reservation, even on a deleted departure.
+          .where(and(eq(trips.shopId, trip.shopId), eq(trips.id, trip.tripId)))
+          .for("no key update");
+        return expireGroupHoldsOnTrip(tx, trip.shopId, trip.tripId, now);
+      });
+    }
+    if (due.length < pageSize) return expired;
+    after = due[due.length - 1];
   }
-  return expired;
 }
