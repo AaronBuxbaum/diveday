@@ -45,12 +45,9 @@ jobs:
           node-version: 26.13.1
       - run: node scripts/ci-health.mjs --summary "$GITHUB_STEP_SUMMARY" --file-issue --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-  # Supply chain: no dependency carries a known high or critical advisory (issue #3651). The whole
-  # tree, not only production: dev tooling is what runs on the runners that hold the reg-suit keys
-  # and the deploy role. Weekly rather than per pull request because main itself carried a high
-  # advisory on 2026-11-02 (zod < 4.6.6 under `vercel` and `next-devtools-mcp`), and a per-PR
-  # check would redden every pull request for a fix none of them owns (#2826). It opens one
-  # `needs-triage` issue and never fails the run on a finding.
+  # Audit the whole tree, including dev tools used by CI. Report high and critical advisories in
+  # the weekly summary, and open or update a `needs-triage` issue only for critical findings.
+  # Findings do not fail the run; an unreadable audit does (#3651).
   audit:
     name: Audit dependencies
     runs-on: ubuntu-24.04

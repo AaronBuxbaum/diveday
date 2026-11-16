@@ -6,8 +6,8 @@
 // switched off "until #2826 lands" and stayed dark after #2826 closed. On 2026-11-02 main still
 // carried one high advisory (zod < 4.6.6, dev-only, through `vercel` and `next-devtools-mcp`), so
 // turning it back on per pull request would redden every PR for a fix no PR owns. This runs the
-// same audit weekly from ci-health.yml and opens one `needs-triage` issue (or comments on the open
-// one), and never fails the run: an advisory is a finding, not a broken pipeline.
+// same audit weekly from ci-health.yml, reports high and critical findings, and files or updates
+// one `needs-triage` issue only for critical findings. Findings never fail the run.
 //
 //   node scripts/audit-health.mjs [--summary <file>] [--file-issue] [--dry-run] [--run-url <url>]
 //
@@ -21,7 +21,7 @@ import { renderFollowUpBody } from "./file-follow-up.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { tracker as defaultTracker } from "./tracker.mjs";
 
-export const ISSUE_TITLE = "Dependencies carry a high or critical advisory";
+export const ISSUE_TITLE = "Dependencies carry a critical advisory";
 const BLOCKING = new Set(["high", "critical"]);
 
 /**
@@ -78,29 +78,32 @@ export function issueBody(list, runUrl) {
     effort: "S",
     touches: ["scripts/audit-health.mjs", ".github/workflows/ci-health.yml"],
     noticed:
-      `The weekly audit (\`.github/workflows/ci-health.yml\`, \`scripts/audit-health.mjs\`) found ${list.length} high or critical advisory(ies) in the tree:\n\n${renderAdvisories(list)}\n${runUrl ? `Run: ${runUrl}` : ""}`.trim(),
+      `The weekly audit (\`.github/workflows/ci-health.yml\`, \`scripts/audit-health.mjs\`) found ${list.length} critical advisory(ies) in the tree:\n\n${renderAdvisories(list)}\n${runUrl ? `Run: ${runUrl}` : ""}`.trim(),
     why: "The audit is not a per-pull-request check because one unpatched dev dependency would redden every pull request for a fix none of them owns (#2826); the weekly run is how a new advisory is seen at all.",
     proposed:
-      "Bump or override the vulnerable package to a patched release (`overrides` in pnpm-workspace.yaml), or, when no patched release exists, review it into `auditConfig.ignoreGhsas` with the reason and a revisit date. Whether the advisory reaches production code is stated per line above.",
+      "Upgrade affected consumers or use a compatible, narrowly scoped fix. Whether the advisory reaches production code is stated per line above.",
     prompt:
-      "Read `scripts/audit-health.mjs` and `pnpm-workspace.yaml` (`auditConfig` and the overrides). Run `pnpm audit --audit-level high`, then patch each listed advisory by upgrading or overriding the package, or review it into `auditConfig.ignoreGhsas` with a reason and a revisit date. Run `pnpm install --frozen-lockfile`, `pnpm typecheck` and `pnpm check:repo`. Done is `pnpm audit --audit-level high` exiting 0. A security-reviewer run is required; name it in the PR body. Close this issue when the work lands.",
+      "Read `scripts/audit-health.mjs` and `pnpm-workspace.yaml`. Run `pnpm audit --audit-level critical`, then fix each critical advisory by upgrading consumers or applying a compatible, narrowly scoped fix. Run `pnpm install --frozen-lockfile`, `pnpm typecheck` and `pnpm check:repo`. Done is `pnpm audit --audit-level critical` exiting 0. A security-reviewer run is required; name it in the PR body. Close this issue when the work lands.",
   });
 }
 
 /** Opens the issue, comments on the open one, or does nothing. */
 export function reconcile({ list, runUrl, tracker, dryRun = false, log }) {
-  if (list.length === 0) return "nothing";
-  const open = tracker
-    .listIssues({ label: TRIAGE_LABEL })
-    .find((issue) => issue.title === ISSUE_TITLE);
+  const critical = list.filter((advisory) => advisory.severity === "critical");
+  if (critical.length === 0) return "nothing";
+  const open = tracker.listIssues().find((issue) => issue.title === ISSUE_TITLE);
   if (open) {
-    tracker.comment(open.number, `Still failing this week:\n\n${renderAdvisories(list)}`, {
-      dryRun,
-    });
+    tracker.comment(
+      open.number,
+      `Critical advisories this week:\n\n${renderAdvisories(critical)}`,
+      {
+        dryRun,
+      },
+    );
     log(`audit-health: commented on #${open.number}.`);
     return "commented";
   }
-  const body = issueBody(list, runUrl);
+  const body = issueBody(critical, runUrl);
   const { problems } = findIssueProblems({ number: 0, title: ISSUE_TITLE, body });
   if (problems.length > 0) {
     throw new Error(`audit-health: the issue body fails check:follow-ups:\n${problems.join("\n")}`);
