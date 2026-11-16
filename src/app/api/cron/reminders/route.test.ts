@@ -258,7 +258,7 @@ describe("GET /api/cron/reminders — dead-man's switch", () => {
     vi.mocked(console.error).mockRestore();
   });
 
-  it("opens an in-progress check-in carrying the schedule vercel.json declares", async () => {
+  it("opens an in-progress check-in carrying the schedule config/crons.json declares", async () => {
     await GET(cronRequest(`Bearer ${secret}`));
 
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(

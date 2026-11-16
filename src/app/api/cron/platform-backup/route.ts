@@ -41,7 +41,7 @@ const CRON_MONITOR_SLUG =
   process.env.SENTRY_PLATFORM_BACKUP_CRON_MONITOR_SLUG || "diveday-platform-backup";
 
 /**
- * Must stay in lockstep with the `crons` entry in vercel.json. Generous
+ * Must stay in lockstep with the `crons` entry in config/crons.json. Generous
  * `checkinMargin` for the same reason as the shop-owned pass -- a weekly backup
  * running hours late is not an incident -- and `maxRuntime` above `maxDuration`
  * so a platform-killed run reads as timed-out rather than still running.

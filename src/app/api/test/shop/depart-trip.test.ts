@@ -189,7 +189,7 @@ describe("the departTrip fact", () => {
     // Ids are unique, so nothing a caller can send makes the select clear one
     // trip and the update reach another: the shop filter on the write is
     // defence in depth and invisible at runtime. Pinned where it lives, the
-    // way the trip-series route pins its crontab against vercel.json — the
+    // way the trip-series route pins its crontab against config/crons.json — the
     // alternative is a rule stated in a comment and enforced by nothing.
     const { readFileSync } = await import("node:fs");
     const path = await import("node:path");

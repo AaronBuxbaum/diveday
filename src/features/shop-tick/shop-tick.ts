@@ -23,7 +23,7 @@ import { sweepMinimumSeats } from "./minimum-seats";
  *
  * Seven hourly routes used to wake at seven minutes of every hour, each with
  * its own monitor, its own `maxDuration` and its own crontab constant tested
- * against vercel.json. Each was the same promise: a shop's work that a fixed
+ * against config/crons.json. Each was the same promise: a shop's work that a fixed
  * UTC hour cannot serve, decided per shop in the shop's own day (the send
  * window, the desk's hours, a departure's printed decision time). They are now
  * scans of one tick. Platform cadences (retention, backups, the daily retry

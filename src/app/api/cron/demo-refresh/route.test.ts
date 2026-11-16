@@ -203,7 +203,7 @@ describe("GET /api/cron/demo-refresh — reporting", () => {
 describe("the deployed schedule", () => {
   it("matches the Sentry monitor's own crontab", async () => {
     // The monitor's `schedule` is what decides when a check-in counts as
-    // *missing*, so a schedule changed in vercel.json and not here would turn
+    // *missing*, so a schedule changed in config/crons.json and not here would turn
     // the dead-man's switch into a nightly false alarm (or, worse, silence it).
     const { readFileSync } = await import("node:fs");
     const path = await import("node:path");

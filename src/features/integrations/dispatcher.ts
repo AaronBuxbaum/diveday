@@ -34,7 +34,7 @@ const MINIMUM_USEFUL_DELIVERY_SLICE_MS = 1_000;
  * at the next hour, or at the next write that drains, so the dead-letter
  * horizon is longer than a shorter poll would give.
  *
- * Mirrors `vercel.json`; `src/lib/cron-schedule.test.ts` fails if the two
+ * Mirrors `config/crons.json`; `src/lib/cron-schedule.test.ts` fails if the two
  * drift.
  */
 export const INTEGRATIONS_CRON_CRONTAB = "3 * * * *";

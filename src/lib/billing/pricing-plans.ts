@@ -181,6 +181,6 @@ export function parsePricingPlanArgs(
  * recorded on the 1st is in. The 2nd's later runs retry a lost answer inside
  * Stripe's 24-hour identifier window; the 3rd's are the last resort, and ask
  * the meter before they send (`REPORT_RECHECK_AFTER_MS`). Restated in
- * vercel.json, and `src/lib/cron-schedule.test.ts` holds the two together.
+ * config/crons.json, and `src/lib/cron-schedule.test.ts` holds the two together.
  */
 export const PRICING_CLOSE_CRONTAB = "8 14,18,22 2,3 * *";

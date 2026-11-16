@@ -40,7 +40,7 @@ import { log } from "../../lib/log";
 export type CronRouteOptions<Summary = unknown> = {
   /** Kebab-case name: the monitor `diveday-<id>`, the log `cron_<id_>` and the `cron_scan` tag. */
   id: string;
-  /** The deployed schedule (vercel.json); Sentry reads it to decide a check-in is missing. */
+  /** The deployed schedule (config/crons.json); Sentry reads it to decide a check-in is missing. */
   crontab: string;
   /** Minutes late before Sentry calls the check-in missing. */
   checkinMargin?: number;

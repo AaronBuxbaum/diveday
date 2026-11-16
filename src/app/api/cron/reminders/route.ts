@@ -75,7 +75,7 @@ function resultOf<T>(outcome: ScanOutcome<T>): T | undefined {
 /**
  * The scheduled pre-trip-notification entry point. The app holds no timer by
  * design (docs ADR 20260721-scheduled-reminder-cadence); an external scheduler
- * (Vercel Cron, see vercel.json) hits this daily and the scans do their
+ * (EventBridge, see config/crons.json) hits this daily and the scans do their
  * idempotent work. Post-trip recaps have their own hourly route: a daily pass
  * cannot keep the four-hour floor visible on Close-out meaningful.
  *
