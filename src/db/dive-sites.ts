@@ -152,6 +152,15 @@ export async function listDiveSites(db: AppDb, shopId: string) {
     .orderBy(asc(diveSites.name));
 }
 
+/** How many live sites a shop has, without loading their briefings. */
+export async function countDiveSites(db: AppDb, shopId: string) {
+  const [row] = await db
+    .select({ total: count() })
+    .from(diveSites)
+    .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)));
+  return row?.total ?? 0;
+}
+
 /** Live site names for the manifest's executed-dive picker, without briefing payloads. */
 export async function listDiveSiteNames(db: AppDb, shopId: string) {
   return db
