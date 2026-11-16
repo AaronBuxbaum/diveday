@@ -245,6 +245,39 @@ describe("the divers who bring friends", () => {
     expect(await friendsBroughtBy(db, shop.id, await personOf(db, priya.bookingId))).toBe(2);
   });
 
+  it("counts the same friend on two departures once and excludes a self-referral", async () => {
+    const { db, shop, open } = await context();
+    const priya = await book(db, shop.id, open.id, "Priya Sharma");
+    const friend = await book(db, shop.id, open.id, "Ines Costa");
+    const later = await createTrip(db, {
+      shopId: shop.id,
+      title: "Another buddy departure",
+      startsAt: new Date(open.startsAt.getTime() + 24 * 60 * 60 * 1000),
+      endsAt: new Date(open.startsAt.getTime() + 27 * 60 * 60 * 1000),
+      capacity: 6,
+    });
+    if (!later) throw new Error("later departure refused");
+    const returningFriend = await book(db, shop.id, later.id, "Ines Costa");
+    const self = await book(db, shop.id, later.id, "Priya Sharma");
+    for (const seat of [friend, returningFriend, self]) {
+      await recordBuddyReferral(db, {
+        shopId: shop.id,
+        bookingId: seat.bookingId,
+        referredByBookingId: priya.bookingId,
+      });
+    }
+    expect(
+      await buddyReferrersForWindow(
+        db,
+        shop.id,
+        new Date(open.startsAt.getTime() - 1),
+        new Date(later.startsAt.getTime() + 1),
+      ),
+    ).toEqual([
+      { personId: await personOf(db, priya.bookingId), fullName: "Priya Sharma", friends: 1 },
+    ]);
+  });
+
   it("counts nothing for a friend's canceled seat, and leaves out an erased referrer", async () => {
     const { db, shop, open } = await context();
     const priya = await book(db, shop.id, open.id, "Priya Sharma");
