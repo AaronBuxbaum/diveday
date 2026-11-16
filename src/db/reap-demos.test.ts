@@ -7,9 +7,9 @@ import { seededTestDb } from "@/test/db";
 import { tipsOf } from "@/test/tips";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import {
+  accountSessions,
   bookings,
   globalDiveSites,
-  accountSessions,
   people,
   personRoles,
   shops,
