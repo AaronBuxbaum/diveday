@@ -934,11 +934,21 @@
     "buying": "Abriendo el pago…",
     "invoiceLine": "{packageName}, {count, plural, one {# inmersión} other {# inmersiones}}",
     "afterPaying": "Cuando esté pagado, tus inmersiones estarán listas la próxima vez que reserves con este correo.",
+    "gift": {
+      "toggle": "Es un regalo",
+      "yourName": "Tu nombre",
+      "yourEmail": "Tu correo electrónico",
+      "recipientName": "Su nombre",
+      "recipientEmail": "Su correo electrónico",
+      "sendOn": "Enviar el correo del regalo el",
+      "afterPaying": "Cuando esté pagado, las inmersiones quedan en su correo y el aviso del regalo sale en la fecha que elegiste. El recibo es tuyo."
+    },
     "error": {
       "invalid": "Agrega tu nombre y un correo en el que podamos localizarte.",
       "notOnSale": "Ese paquete ya no está a la venta.",
       "unavailable": "{shopName} no puede cobrar este pago en línea ahora mismo. Ponte en contacto y lo resolverán.",
-      "failed": "La página de pago no se abrió. No se ha cobrado nada. Inténtalo de nuevo en un momento."
+      "failed": "La página de pago no se abrió. No se ha cobrado nada. Inténtalo de nuevo en un momento.",
+      "gift": "Agrega su nombre, su correo y una fecha desde hoy."
     },
     "introWithScope": "{intro} {scope}."
   },
@@ -4460,6 +4470,12 @@
       "card": "{agency} te enviará la tarjeta; este registro ya cuenta en {shopName}.",
       "cardAnyAgency": "Tu agencia de certificación te enviará la tarjeta; este registro ya cuenta en {shopName}.",
       "next": "Tu siguiente curso: {course}"
+    },
+    "packageGift": {
+      "subject": "{giver} te regaló {count, plural, one {# inmersión} other {# inmersiones}} en {shopName}",
+      "body": "{firstName}, {giver} te compró {packageName} en {shopName}: {count, plural, one {# inmersión ya pagada} other {# inmersiones ya pagadas}}.",
+      "ready": "Ya están en este correo. Reserva con él y se usan a medida que buceas.",
+      "book": "Mira las salidas de {shopName}"
     },
     "smsCourseCertified": {
       "body": "{shopName}: ya tienes tu certificación {code, select, open_water {Open Water} advanced_open_water {Advanced Open Water} rescue {Rescue Diver} divemaster {Divemaster} other {Instructor}}.",

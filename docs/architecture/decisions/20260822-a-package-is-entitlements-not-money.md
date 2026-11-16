@@ -134,6 +134,22 @@ money block on `/ready` says "Uses 2 of your 5 package dives, one per tank"
 (`countDivesSpentOnBooking`, `src/db/dive-packages.ts`). The demo's packages are priced as a deal
 against the single-tank fare: $200 for five, $375 for ten.
 
+## Amendment, 2026-11-16: a package can be a gift
+
+Aaron decided (issue #4629, option A) how a diver gives a package. "This is a gift" on
+`/s/<shop>/packages` asks for the recipient's name and email and a date to send it, today by
+default in the shop's zone. The buyer is still the order's person: they pay on Stripe's page and
+keep the receipt. A `package_gifts` row names the recipient, the person at the typed email (made
+under the typed name when there is none), and `grantPackageEntitlementsForPaidOrder` grants the
+dives to that person when the order is paid. There is no claim step and no code: the recipient
+books like any diver with dives waiting.
+
+The gift email goes out from the shop tick on the chosen date, inside the shop's send window, once
+the order is paid. The unit, the backing rule and the refund rule are unchanged: a full refund or a
+lost dispute takes back the recipient's unspent dives as it would the buyer's, and before the send
+date it also means no email. A package the shop stops selling before that date still sends it,
+because the dives were bought and granted already.
+
 ## What this decision does not settle
 
 Two questions in the originating issue are **not** engineering calls and are deliberately left open

@@ -31,15 +31,21 @@ const INITIAL_STATE: PackagePurchaseState = {};
  * buys one package at a time, and a name and an email asked once read as one
  * purchase, not as a row of forms. The button names the price of whichever
  * package is picked, so what the diver taps is what Stripe will ask for.
+ *
+ * "This is a gift" (issue #4629) asks for the recipient and the day their
+ * email goes out, today by default in the shop's zone.
  */
 export function PackagePurchaseForm({
   shopSlug,
   offers,
   scopeDescriptionId,
+  today,
 }: {
   shopSlug: string;
   offers: readonly PackageOffer[];
   scopeDescriptionId?: string;
+  /** Today in the shop's zone: the gift email's earliest and default date. */
+  today: string;
 }) {
   const t = useTranslations();
   const tankNoteId = useId();
@@ -57,6 +63,12 @@ export function PackagePurchaseForm({
   }
   // The flag the e2e suite waits on before it taps Buy, as on the staff forms:
   // the button's price follows the picked package only once React is running.
+  const [giving, setGiving] = useState(state.gift === "yes");
+  const [postedGift, setPostedGift] = useState(state.gift);
+  if (state.gift !== postedGift) {
+    setPostedGift(state.gift);
+    setGiving(state.gift === "yes");
+  }
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const selected = offers.find((offer) => offer.id === selectedId) ?? offers[0];
@@ -110,29 +122,79 @@ export function PackagePurchaseForm({
         ) : null}
       </fieldset>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t("common.name")}>
-          <input
-            name="name"
-            required
-            maxLength={120}
-            autoComplete="name"
-            defaultValue={state.name}
-            className={controlClass}
-          />
-        </Field>
-        <Field label={t("common.email")}>
-          <input
-            name="email"
-            type="email"
-            required
-            maxLength={200}
-            inputMode="email"
-            autoComplete="email"
-            defaultValue={state.email}
-            className={controlClass}
-          />
-        </Field>
+      <div className="flex flex-col gap-4">
+        <ChoicePill
+          type="checkbox"
+          size="md"
+          name="gift"
+          value="yes"
+          checked={giving}
+          onChange={(event) => setGiving(event.target.checked)}
+        >
+          {t("packages.gift.toggle")}
+        </ChoicePill>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={giving ? t("packages.gift.yourName") : t("common.name")}>
+            <input
+              name="name"
+              required
+              maxLength={120}
+              autoComplete="name"
+              defaultValue={state.name}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={giving ? t("packages.gift.yourEmail") : t("common.email")}>
+            <input
+              name="email"
+              type="email"
+              required
+              maxLength={200}
+              inputMode="email"
+              autoComplete="email"
+              defaultValue={state.email}
+              className={controlClass}
+            />
+          </Field>
+        </div>
+        {/* The recipient, and when they hear (issue #4629). Their dives land
+            on this email when the order is paid; there is no claim step. */}
+        {giving ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t("packages.gift.recipientName")}>
+              <input
+                name="recipientName"
+                required
+                maxLength={120}
+                autoComplete="off"
+                defaultValue={state.recipientName}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("packages.gift.recipientEmail")}>
+              <input
+                name="recipientEmail"
+                type="email"
+                required
+                maxLength={200}
+                inputMode="email"
+                autoComplete="off"
+                defaultValue={state.recipientEmail}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("packages.gift.sendOn")}>
+              <input
+                name="sendOn"
+                type="date"
+                required
+                min={today}
+                defaultValue={state.sendOn ?? today}
+                className={controlClass}
+              />
+            </Field>
+          </div>
+        ) : null}
       </div>
 
       <FormStatus>{state.error}</FormStatus>
@@ -141,7 +203,9 @@ export function PackagePurchaseForm({
         <SubmitButton pendingLabel={t("packages.buying")} className={buttonClass({})}>
           {t("packages.buy", { amount: selected.priceText })}
         </SubmitButton>
-        <p className="text-sm text-muted">{t("packages.afterPaying")}</p>
+        <p className="text-sm text-muted">
+          {giving ? t("packages.gift.afterPaying") : t("packages.afterPaying")}
+        </p>
       </div>
     </form>
   );

@@ -41,10 +41,10 @@ const FOLDED_TABLES = [
   "person_roles", // people.csv / trip_assignments.csv `roles`
   "booking_referrals", // bookings.csv `referred_by_booking_id`
   "review_replies", // trip_reviews.csv `shop_reply`, the one live reply per review
+  "package_gifts", // dive_package_entitlements.csv: recipient `person_id` beside `order_id`
 ];
 
-// One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+// One seeded database for the file and a rolled-back transaction per test (src/test/db.ts), never committed.
 const ctx = fileScopedShopContext();
 
 describe("schema coverage", () => {

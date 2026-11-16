@@ -817,6 +817,49 @@ export const orders = pgTable(
 );
 
 /**
+ * **A dive package bought for someone else** (issue #4629, ADR
+ * 20260822-a-package-is-entitlements-not-money, amendment 2026-11-16). One row
+ * per gifted order. The buyer is the order's `person_id`: they pay and get the
+ * receipt. The dives go straight to `recipient_person_id`, the person at the
+ * email the buyer typed, when the order is paid; there is no claim step and no
+ * code, so the recipient books like any diver with dives waiting.
+ *
+ * `send_on` is the shop-local calendar date the gift mail goes out, from the
+ * shop's send window that day on; `sent_at` is stamped when the shop tick
+ * claims it. A refund or a lost dispute before that date means no mail, since
+ * the dives are no longer there to give (`packageOrderStillBacks`).
+ */
+export const packageGifts = pgTable(
+  "package_gifts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id),
+    /** The recipient: the person at the email the buyer typed. */
+    recipientPersonId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    sendOn: date("send_on").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("package_gifts_order_unique").on(table.orderId),
+    // Leads on the person column, like every other people FK
+    // (`people-fk-indexes.test.ts`).
+    index("package_gifts_person_idx").on(table.recipientPersonId),
+    // The shop tick's read: gifts still to send.
+    index("package_gifts_unsent_idx").on(table.sendOn).where(sql`${table.sentAt} is null`),
+  ],
+);
+
+export type PackageGift = typeof packageGifts.$inferSelect;
+
+/**
  * A ledger of every Stripe webhook event this app has ever accepted, keyed by
  * Stripe's own globally-unique event id. The row does **two separate jobs**,
  * and they are deliberately carried by two different columns:

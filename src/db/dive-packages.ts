@@ -29,6 +29,7 @@ import {
   divePackages,
   orderLineItems,
   orders,
+  packageGifts,
   paymentDisputes,
   shops,
   trips,
@@ -546,6 +547,14 @@ export async function grantPackageEntitlementsForPaidOrder(
     .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
     .limit(1);
   if (order?.status !== "paid" || !order.personId) return [];
+  // A gift's dives go straight to its recipient (issue #4629); the buyer
+  // keeps the order and its receipt.
+  const [gift] = await db
+    .select({ personId: packageGifts.recipientPersonId })
+    .from(packageGifts)
+    .where(and(eq(packageGifts.shopId, input.shopId), eq(packageGifts.orderId, input.orderId)))
+    .limit(1);
+  const holder = gift?.personId ?? order.personId;
   const lines = await db
     .select({ packageId: orderLineItems.packageId, quantity: orderLineItems.quantity })
     .from(orderLineItems)
@@ -581,7 +590,7 @@ export async function grantPackageEntitlementsForPaidOrder(
       ...(await grantPackageEntitlements(db, {
         shopId: input.shopId,
         packageId: pkg.id,
-        personId: order.personId,
+        personId: holder,
         orderId: input.orderId,
         diveCount: pkg.diveCount * line.quantity,
         validUntil: pkg.validUntil,

@@ -36,6 +36,7 @@ import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { recordOrderCollection } from "./collection-ledger";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
+import { type PackageGiftInput, recordPackageGift } from "./package-gifts";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
 import {
   awaitingStripeReconciliation,
@@ -1356,6 +1357,12 @@ export async function createDiverPackageOrder(
     email: string;
     /** The invoice line, composed by the caller from its own bundle. */
     lineDescription: string;
+    /**
+     * A gift (issue #4629): the dives go to this person's email when the order
+     * is paid, and the gift mail on `sendOn`. The buyer above pays and keeps
+     * the receipt.
+     */
+    gift?: PackageGiftInput;
   },
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
 ): Promise<DiverPackageOrderOutcome> {
@@ -1416,7 +1423,18 @@ export async function createDiverPackageOrder(
       ...(buyer.attached ? {} : { customerEmail: input.email }),
     },
   );
-  if (outcome.ok) return outcome;
+  if (outcome.ok) {
+    // After the order exists, so a refused one leaves no recipient behind; and
+    // long before it can be paid, which only happens on Stripe's page.
+    if (input.gift) {
+      await recordPackageGift(db, {
+        shopId: input.shopId,
+        orderId: outcome.order.id,
+        recipient: input.gift,
+      });
+    }
+    return outcome;
+  }
   // Stripe refused, or something after it did: the emailless record this
   // request made was only ever for this order.
   if (!buyer.attached) await discardUnusedBuyer(db, input.shopId, buyer.personId);
