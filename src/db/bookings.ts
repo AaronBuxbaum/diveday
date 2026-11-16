@@ -116,6 +116,11 @@ import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
 import { markableTrainingDives, trainingDiveReachOn } from "./training-mark-resolve";
 import { dropTrainingMarkWithin } from "./training-marks";
+import { currentTripCreditCoverage } from "./trip-credit-ledger";
+import {
+  releaseTripCreditForBooking,
+  resetReturnedTripCreditForReopenedBooking,
+} from "./trip-credit-release";
 import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
 import {
@@ -971,7 +976,10 @@ export async function releasePackageCoverageForBooking(
   tx: DbExecutor,
   shopId: string,
   bookingId: string,
+  releasePromotionalCredit = true,
 ) {
+  // Promotional value is restored independently; it is never a package tank or a cash refund.
+  if (releasePromotionalCredit) await releaseTripCreditForBooking(tx, shopId, bookingId, true);
   const released = await releaseEntitlementsForBooking(tx, shopId, bookingId);
   if (released.length === 0) return released;
   const [payment] = await tx
@@ -1348,6 +1356,7 @@ async function writeSeat(
     if (!rowCanBeReactivated(existing.status, trip.startsAt)) {
       return { ok: false, reason: "already_booked" };
     }
+    await resetReturnedTripCreditForReopenedBooking(tx, req.shopId, existing.id);
     await tx
       .update(bookings)
       .set({
@@ -2057,6 +2066,7 @@ export async function restoreBooking(
     // sells a different departure). A course session is the exception above:
     // its gates are the session's only admission rule.
 
+    await resetReturnedTripCreditForReopenedBooking(tx, shopId, bookingId);
     await tx
       .update(bookings)
       // A seat back on the boat carries no turned-away reason from its last
@@ -2300,6 +2310,10 @@ async function moveBookingIn(
   // trail. A plain no-show does not move: that is the day's own record.
   const turnedAway = booking.status === "no_show" && booking.turnedAwayAt !== null;
   if (booking.status !== "booked" && !turnedAway) return { ok: false, reason: "not_movable" };
+  // Credit-to-new-fare allocation is unsupported; preserve the source payment
+  // and all boarding evidence rather than releasing it as part of a move.
+  if ((await getBookingPayment(tx, shopId, booking.id))?.provider === "trip_credit")
+    return { ok: false, reason: "not_movable" };
   // A diver the desk has checked in on this departure does not move off it:
   // the sighting belongs to this boat, and a move would leave them on the
   // new one as still to come (issue #2702).
@@ -2958,6 +2972,13 @@ async function changeParticipantType(
       return { ok: false, reason: "trip_unavailable" };
     }
     const atSea = now >= trip.startsAt;
+    const existingPayment = await getBookingPayment(tx, shopId, booking.id);
+    if (existingPayment?.provider === "trip_credit") {
+      const coverage = await currentTripCreditCoverage(tx, shopId, booking.id);
+      const nextFare = seatListPriceCents(trip, null, to);
+      if (!coverage || nextFare === null || nextFare > coverage.amountCents)
+        return { ok: false, reason: "participant_type_unavailable" };
+    }
     // On a course session the divers are the students (issue #2226). A student
     // never stops being one by a type change, and a passenger never becomes
     // one: that would skip the course's card, age and ratio gates. Between
@@ -3029,7 +3050,7 @@ async function changeParticipantType(
     if (!isDiver(to)) {
       // Nor a training dive: the seat is asked none of a course's forms now.
       await dropTrainingMarkWithin(tx, { shopId, bookingId: booking.id, actorPersonId, now });
-      await releasePackageCoverageForBooking(tx, shopId, booking.id);
+      await releasePackageCoverageForBooking(tx, shopId, booking.id, false);
       // And the tagged units the seat will not use now: a rider holds none, a
       // snorkeler the surface kit. Unclaimed only, as a cancellation does;
       // a unit already handed over is with the person and comes home the

@@ -34,6 +34,7 @@ export const EXPORT_PURPOSE_KEYS = {
   "interests.csv": "settings.export.filePurposes.interests",
   "date_request_offer_bookings.csv": "settings.export.filePurposes.date_request_offer_bookings",
   "trip_last_minute_promos.csv": "settings.export.filePurposes.trip_last_minute_promos",
+  "trip_credit_entries.csv": "settings.export.filePurposes.trip_credit_entries",
   "booking_payment_events.csv": "settings.export.filePurposes.booking_payment_events",
   "booking_checkouts.csv": "settings.export.filePurposes.booking_checkouts",
   "booking_checkout_bookings.csv": "settings.export.filePurposes.booking_checkout_bookings",

@@ -1,6 +1,7 @@
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import type { getDb } from "@/db/client";
 import { getBookingPayment } from "@/db/payments";
+import { tripCreditReceipt } from "@/features/trip-credit";
 import type { ShopCurrency } from "@/lib/money";
 
 /**
@@ -41,9 +42,25 @@ export async function resolvePaymentReceipt(
    */
   shopCurrency: ShopCurrency,
 ): Promise<PaymentReceipt> {
-  const receipt = (settled: Awaited<ReturnType<typeof getBookingPayment>>): PaymentReceipt => {
+  const receipt = async (
+    settled: Awaited<ReturnType<typeof getBookingPayment>>,
+  ): Promise<PaymentReceipt> => {
     if (settled?.status !== "paid" && settled?.status !== "deposit_paid") return null;
     const isDeposit = settled.status === "deposit_paid";
+    if (settled.provider === "trip_credit") {
+      const credit = settled.providerRef
+        ? await tripCreditReceipt(db, shopId, bookingId, settled.providerRef)
+        : null;
+      return credit && credit.currency === settled.currency
+        ? {
+            amountCents: 0,
+            currency: settled.currency,
+            isDeposit: false,
+            balanceDueCents: 0,
+            tripCredit: { amountCents: credit.amountCents, balanceCents: credit.balanceCents },
+          }
+        : null;
+    }
     return {
       amountCents: settled.amountCents ?? null,
       currency: settled.currency ?? shopCurrency,
@@ -70,6 +87,7 @@ export async function resolvePaymentReceipt(
 
 /** A settled charge, as this page states it back. Null when nothing has settled. */
 export type PaymentReceipt = {
+  tripCredit?: { amountCents: number; balanceCents: number };
   amountCents: number | null;
   currency: string;
   /** True when only a deposit has been paid; a balance is still owed. */

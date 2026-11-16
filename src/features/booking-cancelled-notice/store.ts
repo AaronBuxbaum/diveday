@@ -48,6 +48,8 @@ export function cancellationMoney(
       return payment
         ? { story: "refunded", amountCents: refund.amountCents, currency: payment.currency }
         : { story: "shop_will_follow_up" };
+    case "credit_returned":
+      return { story: "credit_returned" };
     case "forfeit":
       return { story: "forfeit" };
     case "unpaid":

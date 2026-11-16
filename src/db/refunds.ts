@@ -38,6 +38,7 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { findStripePaymentTarget } from "./stripe-payment-targets";
 import { checkoutProviderFromEnvironment } from "./stripe-providers";
 import { recordTipRefund } from "./tip-reversals";
+import { releaseTripCreditForBooking } from "./trip-credit-release";
 import { seatNotCancelled } from "./trips-queries";
 
 /**
@@ -46,6 +47,7 @@ import { seatNotCancelled } from "./trips-queries";
  * untouched so a "refunded" status never outruns an actual Stripe reversal.
  */
 export type CancellationRefundOutcome =
+  | { status: "credit_returned" }
   | { status: "refunded"; amountCents: number }
   /** Inside no window, or past a stated deadline — the seat is non-refundable. */
   | { status: "forfeit" }
@@ -428,6 +430,13 @@ export async function refundBookingOnCancellation(
     db,
     { shopId: input.shopId, bookingId: input.bookingId, staleBefore: input.staleBefore },
     async (tx, payment) => {
+      const credit = await releaseTripCreditForBooking(tx, input.shopId, input.bookingId);
+      if (
+        credit.currentCreditReturned &&
+        (payment?.provider === "trip_credit" || !isCapturedPaymentStatus(payment?.status))
+      ) {
+        return { proceed: false, outcome: { status: "credit_returned" } };
+      }
       if (!isCapturedPaymentStatus(payment?.status)) {
         return { proceed: false, outcome: { status: "unpaid" } };
       }
@@ -535,6 +544,7 @@ export async function refundBookingOnCancellation(
  * (ADR 20260813-shop-cancellation-refunds-itself).
  */
 export type ShopCancellationRefundOutcome =
+  | { status: "credit_returned" }
   | { status: "refunded"; amountCents: number }
   /** Package tanks were returned; no cash refund is owed. */
   | { status: "dive_returned" }
@@ -604,7 +614,14 @@ export async function refundBookingOnShopCancellation(
     db,
     input,
     async (tx, payment) => {
+      const credit = await releaseTripCreditForBooking(tx, input.shopId, input.bookingId);
       const released = await releasePackageCoverageForBooking(tx, input.shopId, input.bookingId);
+      if (
+        credit.currentCreditReturned &&
+        (payment?.provider === "trip_credit" || !isCapturedPaymentStatus(payment?.status))
+      ) {
+        return { proceed: false, outcome: { status: "credit_returned" } };
+      }
       if (released.length > 0 && payment?.provider === "dive_package") {
         return { proceed: false, outcome: { status: "dive_returned" } };
       }
@@ -710,7 +727,15 @@ export async function queueBookingRefundOnShopCancellation(
   db: AppDb,
   input: { shopId: string; bookingId: string },
 ): Promise<ShopCancellationRefundOutcome> {
+  const credit = await db.transaction((tx) =>
+    releaseTripCreditForBooking(tx, input.shopId, input.bookingId),
+  );
   const payment = await getBookingPayment(db, input.shopId, input.bookingId);
+  if (
+    credit.currentCreditReturned &&
+    (payment?.provider === "trip_credit" || !isCapturedPaymentStatus(payment?.status))
+  )
+    return { status: "credit_returned" };
   if (payment?.status === "refunded") return { status: "already_refunded" };
   if (isCapturedPaymentStatus(payment?.status)) {
     return payment?.provider === "dive_package"
@@ -747,7 +772,8 @@ export async function queueBookingRefundOnShopCancellation(
  */
 export function shopCancellationPaymentStory(
   outcome: ShopCancellationRefundOutcome,
-): "none" | "refunded" | "refund_owed" {
+): "none" | "refunded" | "refund_owed" | "credit_returned" {
+  if (outcome.status === "credit_returned") return "credit_returned";
   if (outcome.status === "unpaid" || outcome.status === "dive_returned") return "none";
   // `already_refunded` reads the same to the diver as a reversal this pass made
   // — the money is on its way back either way, and a resumed cascade must not

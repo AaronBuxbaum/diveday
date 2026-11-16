@@ -145,6 +145,25 @@ export type PersonColumn = {
 
 const rows = [
   {
+    table: "trip_credit_entries",
+    column: "person_id",
+    export: "own",
+    kind: "subject",
+    merge: "move",
+    erase: "keep",
+    eraseWhy:
+      "promotional value and its economic history retain anonymous ids; identity merge is audited and changes no amount",
+  },
+  {
+    table: "trip_credit_entries",
+    column: "actor_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who explicitly granted or redeemed promotional value; actor names resolve from the current person record",
+    erase: "keep",
+  },
+
+  {
     table: "computer_dive_profiles",
     column: "person_id",
     kind: "subject",

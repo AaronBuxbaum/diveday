@@ -331,6 +331,7 @@ async function readPersonalInstrumentHistory(
 ) {
   return {
     priorVisitRows: await readScoped(tx, "priorVisits", scope),
+    tripCreditRows: await readScoped(tx, "tripCreditEntries", scope),
     computerImportBatchesRows: await readScoped(tx, "computerImportBatches", scope),
     computerDivesRows: await readScoped(tx, "computerDives", scope),
     computerDiveProfilesRows: await readScoped(tx, "computerDiveProfiles", scope),
@@ -1394,6 +1395,7 @@ export async function loadShopExportCounts(
           .where(and(eq(bookings.shopId, shopId), exclusion("bookings.csv", bookings))),
       ),
     "trip_help_requests.csv": async () => scoped("trip_help_requests.csv", "tripHelpRequests"),
+    "trip_credit_entries.csv": async () => scoped("trip_credit_entries.csv", "tripCreditEntries"),
     "booking_payment_events.csv": async () =>
       scoped("booking_payment_events.csv", "bookingPaymentEvents"),
     "booking_checkouts.csv": async () => scoped("booking_checkouts.csv", "bookingCheckouts"),

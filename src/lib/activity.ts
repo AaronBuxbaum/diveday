@@ -398,6 +398,8 @@ type ActivityParamShapes = {
    */
   order_refunded: { actor: string };
   purchase_recorded: { actor: string };
+  local_order_opened: { actor: string };
+  local_order_voided: { actor: string };
   course_followup_claimed: { actor: string };
   course_followup_released: { actor: string };
   /**
@@ -661,6 +663,8 @@ export const ACTIVITY_CODES = [
   "running_late_from_message",
   "order_refunded",
   "purchase_recorded",
+  "local_order_opened",
+  "local_order_voided",
   "course_followup_claimed",
   "course_followup_released",
   "order_paid_cash",

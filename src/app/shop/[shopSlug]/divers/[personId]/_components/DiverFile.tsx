@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { personThread } from "@/db/inbound-messages";
 import type { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import type { loadDiverGear } from "@/features/diver-record";
@@ -50,6 +51,7 @@ export function DiverFile({
   activityPage,
   lastDive,
   computerDiveCount,
+  creditGroup,
 }: {
   diver: DiverProfile;
   shop: Shop;
@@ -73,6 +75,7 @@ export function DiverFile({
   activityPage: Awaited<ReturnType<typeof pagedDiverActivity>>;
   lastDive: LastKnownDive;
   computerDiveCount: number;
+  creditGroup?: ReactNode;
 }) {
   return (
     <div>
@@ -165,6 +168,7 @@ export function DiverFile({
         status={noticeForForm(notice, "fit")}
         canAssist={gear.canAssist}
       />
+      {creditGroup}
       <WorkOrdersGroup
         shopSlug={shop.slug}
         timezone={shop.timezone}

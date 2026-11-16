@@ -172,6 +172,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - First paid month
 - Free term
 - Late cancel
+- Local amount due
 - Mixed payment
 - Month-end email
 - Owed
@@ -182,8 +183,10 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Payments restricted
 - Payout
 - Pricing configuration
+- Promotional trip credit
 - Recorded collection
 - Recorded purchase
+- Recorded receipt day summary
 - Room charge
 - Square receipt link
 - Stale package invoice

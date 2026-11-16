@@ -185,3 +185,14 @@ describe("saved rental estimate beside the seat amount", () => {
     ]);
   });
 });
+
+it("states promotional fare coverage and remaining credit instead of a zero-dollar cash receipt", () => {
+  const line = payStepLines(
+    t,
+    money,
+    { ...receipt, amountCents: 0, tripCredit: { amountCents: 18_000, balanceCents: 5_000 } },
+    none,
+  );
+  expect(line.paidLine).toBe("$180 trip credit applied · $50 credit left");
+  expect(line.depositBalanceLine).toBeNull();
+});

@@ -408,7 +408,7 @@ export type TripMinimumNotMetEmailInput = {
   minimumBookings: number;
   bookedCount: number;
   /** What happened to this seat's money; absent only on a pre-refund retry. */
-  paymentStory?: "none" | "refunded" | "refund_owed";
+  paymentStory?: "none" | "refunded" | "refund_owed" | "credit_returned";
   scheduleUrl: string;
 };
 
@@ -450,11 +450,13 @@ export function tripMinimumNotMetEmail(input: TripMinimumNotMetEmailInput): Noti
   // a paragraph about money (design/principles.md #9 — never render "None" as a
   // status). A pre-refund retry carries no code and reads the same way.
   const money =
-    input.paymentStory === "refunded"
-      ? t("notifications.tripMinimumNotMet.moneyRefunded")
-      : input.paymentStory === "refund_owed"
-        ? t("notifications.tripMinimumNotMet.moneyRefundOwed", { shopName: input.shopName })
-        : null;
+    input.paymentStory === "credit_returned"
+      ? t("notifications.tripMinimumNotMet.moneyCreditReturned")
+      : input.paymentStory === "refunded"
+        ? t("notifications.tripMinimumNotMet.moneyRefunded")
+        : input.paymentStory === "refund_owed"
+          ? t("notifications.tripMinimumNotMet.moneyRefundOwed", { shopName: input.shopName })
+          : null;
   return {
     subject: t("notifications.tripMinimumNotMet.subject", { tripTitle: input.tripTitle }),
     text: `${greeting.text}\n\n${body}\n${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
@@ -471,7 +473,7 @@ export type BookingCancelledEmailInput = {
   timezone: string;
   cancelledBy: "diver" | "shop";
   money:
-    | { story: "none" | "forfeit" | "shop_will_follow_up" }
+    | { story: "none" | "forfeit" | "shop_will_follow_up" | "credit_returned" }
     | { story: "refunded"; amountCents: number; currency: string };
   /** A party lead's cancel: seats that went with it and seats that stayed booked. */
   party?: { cancelled: number; stayed: number };
@@ -500,15 +502,17 @@ export function bookingCancelledEmail(input: BookingCancelledEmailInput): Notifi
     date: escapeHtml(date),
   });
   const money =
-    input.money.story === "refunded"
-      ? t("notifications.bookingCancelled.moneyRefunded", {
-          amount: formatMoneyCents(input.money.amountCents, input.money.currency, input.locale),
-        })
-      : input.money.story === "forfeit"
-        ? t("notifications.bookingCancelled.moneyForfeit", { shopName: input.shopName })
-        : input.money.story === "shop_will_follow_up"
-          ? t("notifications.bookingCancelled.moneyFollowUp", { shopName: input.shopName })
-          : null;
+    input.money.story === "credit_returned"
+      ? t("notifications.bookingCancelled.moneyCreditReturned")
+      : input.money.story === "refunded"
+        ? t("notifications.bookingCancelled.moneyRefunded", {
+            amount: formatMoneyCents(input.money.amountCents, input.money.currency, input.locale),
+          })
+        : input.money.story === "forfeit"
+          ? t("notifications.bookingCancelled.moneyForfeit", { shopName: input.shopName })
+          : input.money.story === "shop_will_follow_up"
+            ? t("notifications.bookingCancelled.moneyFollowUp", { shopName: input.shopName })
+            : null;
   // A lead's party, said in counts: the seats that went with theirs, and,
   // separately, the ones that stay booked because their own diver has them.
   const partyLines = [
@@ -537,7 +541,7 @@ export type TripBlowoutEmailInput = {
   /** Weather unless the shop cancelled a repeating trip's upcoming dates together. */
   cause?: "weather" | "run_ended";
   /** Codes, not amounts — see the kind's schema (docs ADR 20260804-blowout-cascade). */
-  paymentStory: "none" | "deposit" | "paid" | "refunded" | "refund_owed";
+  paymentStory: "none" | "deposit" | "paid" | "refunded" | "refund_owed" | "credit_returned";
   /** Soonest-first, admission-filtered for this diver; empty is a real answer. */
   alternatives: { title: string; startsAt: Date; bookingUrl: string }[];
   scheduleUrl: string;
@@ -555,8 +559,11 @@ function blowoutMoneyKey(
   | "notifications.tripBlowout.moneyPaid"
   | "notifications.tripBlowout.moneyDeposit"
   | "notifications.tripBlowout.moneyRefunded"
-  | "notifications.tripBlowout.moneyRefundOwed" {
+  | "notifications.tripBlowout.moneyRefundOwed"
+  | "notifications.tripBlowout.moneyCreditReturned" {
   switch (story) {
+    case "credit_returned":
+      return "notifications.tripBlowout.moneyCreditReturned";
     case "refunded":
       return "notifications.tripBlowout.moneyRefunded";
     case "refund_owed":

@@ -276,7 +276,8 @@
     "courseFormEnded": "Esta sesión ya terminó, así que no se puede registrar un formulario en papel.",
     "paymentCurrency": "Este recibo usa una moneda distinta de la moneda actual del centro. Registra el nuevo pago por separado en Pedidos.",
     "paymentRefundAmount": "Indica el importe devuelto, mayor que cero y no superior al dinero externo que aún se conserva.",
-    "detailsFinished": "El plan de esta salida ahora es de solo lectura."
+    "detailsFinished": "El plan de esta salida ahora es de solo lectura.",
+    "bookingRemovedCreditReturned": "Reserva eliminada. Se devolvió su crédito promocional para salidas."
   },
   "pulse": {
     "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",
@@ -775,7 +776,9 @@
     "preparationHeading": "Preparación y referencia",
     "paymentSourceMixed": "Pagado en línea y por otro medio · Reembolsa cada parte por su medio original",
     "paymentRefundAmountLabel": "Importe externo devuelto ahora",
-    "paymentRefundHint": "Registra dinero ya devuelto por su método de pago original. Esto no envía ningún pago."
+    "paymentRefundHint": "Registra dinero ya devuelto por su método de pago original. Esto no envía ningún pago.",
+    "paymentSourceCredit": "Pagado con crédito promocional para salidas",
+    "paymentSourceCreditReturned": "Crédito para salidas devuelto"
   },
   "offlineManifestManager": {
     "checkingDevice": "Verificando este dispositivo…",

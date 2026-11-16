@@ -36,6 +36,7 @@ type CounterCollection = Exclude<OrderCollection, "stripe_invoice">;
  * are excluded and have no collection label.
  */
 export const ORDER_COLLECTION_KEYS: Record<CounterCollection, StaffMessageKey> = {
+  local_invoice: "orders.collection.local_invoice",
   cash: "orders.collection.cash",
   card_machine: "orders.collection.card_machine",
   bank_transfer: "orders.collection.bank_transfer",
@@ -45,7 +46,7 @@ export const ORDER_COLLECTION_KEYS: Record<CounterCollection, StaffMessageKey> =
 
 /** Room charges use `paidAtCounterLine`, which includes the room. */
 export const ORDER_PAID_AT_COUNTER_KEYS: Record<
-  Exclude<CounterCollection, "room_charge">,
+  Exclude<CounterCollection, "room_charge" | "local_invoice">,
   StaffMessageKey
 > = {
   cash: "orders.detail.paidAtCounter.cash",
@@ -67,6 +68,7 @@ export function paidAtCounterLine(
     roomHotel?: string | null;
   },
 ): string {
+  if (input.collection === "local_invoice") return t("orders.collection.local_invoice");
   if (input.collection === "room_charge") {
     const room = input.roomNumber ?? "";
     return input.roomHotel

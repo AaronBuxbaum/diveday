@@ -132,7 +132,9 @@
     "bookkeeper_email_stopped": "El contador dejó los archivos de fin de mes con el enlace de uno de ellos",
     "purchase_recorded": "{actor} registró una compra",
     "course_followup_claimed": "{actor} tomó el seguimiento de preparación del curso",
-    "course_followup_released": "{actor} dejó el seguimiento de preparación del curso"
+    "course_followup_released": "{actor} dejó el seguimiento de preparación del curso",
+    "local_order_opened": "{actor} guardó un importe pendiente",
+    "local_order_voided": "{actor} anuló un importe pendiente"
   },
   "unknown": "Una entrada anterior",
   "review": {

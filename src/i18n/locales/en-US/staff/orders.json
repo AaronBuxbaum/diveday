@@ -54,7 +54,8 @@
     "card_machine": "Card machine",
     "room_charge": "Room charge",
     "bank_transfer": "Bank transfer",
-    "other": "Other external payment"
+    "other": "Other external payment",
+    "local_invoice": "Due at the shop"
   },
   "detail": {
     "fallbackDescription": "Order",
@@ -279,7 +280,7 @@
   },
   "purchase": {
     "title": "Record purchase",
-    "explanation": "Record money already received. DiveDay does not charge a card or send an invoice.",
+    "explanation": "Record rentals and small purchases. DiveDay does not charge a card.",
     "method": "Paid by",
     "reference": "External receipt or reference (optional)",
     "item": "Item",
@@ -300,6 +301,43 @@
     "includedTax": "Included tax",
     "includedTip": "Included tip",
     "receiptReference": "External receipt or reference",
-    "walkIn": "Walk-in customer"
+    "walkIn": "Walk-in customer",
+    "entryType": "Purchase record",
+    "received": "Already received",
+    "dueHelp": "Save the amount due for this diver. Record a receipt when the full payment arrives.",
+    "itemsHeading": "Items",
+    "paymentHeading": "Payment received",
+    "totalInvalid": "Enter valid amounts"
+  },
+  "localDue": {
+    "open": "Amount due at the shop",
+    "help": "Record the full total only after money is received. DiveDay does not charge a card.",
+    "record": "Record payment received",
+    "void": "Void amount due",
+    "invalid": "Nothing was changed. Check this order and the receipt details.",
+    "receiptSaved": "Payment received and receipt recorded.",
+    "voided": "The unpaid amount was voided.",
+    "taxHint": "Tax and tip are already included in the total. Leave tax blank if unknown.",
+    "method": "Received by",
+    "reference": "Receipt reference",
+    "payerRequired": "Choose a named diver to save an amount due.",
+    "submit": "Save amount due"
+  },
+  "purchaseDay": {
+    "title": "Recorded purchase day",
+    "day": "Receipt date",
+    "show": "Show day",
+    "scope": "Shop-wide receipts grouped by their original payment method. Check your payment records to reconcile.",
+    "count": "Receipts",
+    "gross": "Gross received",
+    "tax": "Recorded included tax",
+    "tip": "Recorded included tip",
+    "returns": "External returns logged",
+    "returnScope": "Return methods were not recorded; these amounts are separate from receipt-method totals.",
+    "unknown": "Incomplete",
+    "pruned": "Return history may have been pruned for this date.",
+    "empty": "No recorded purchase receipts on this date.",
+    "unknownTax": "{count, plural, one {Tax unknown on # receipt.} other {Tax unknown on # receipts.}}",
+    "voided": "{count, plural, one {# voided receipt excluded.} other {# voided receipts excluded.}}"
   }
 }

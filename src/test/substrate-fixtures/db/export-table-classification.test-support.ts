@@ -166,6 +166,7 @@ export const EXCLUDED_TABLES = [
  */
 export const GLOBAL_SEQ_TABLES = [
   "disruption_recovery_events",
+  "trip_credit_entries",
   "trip_stage_events",
   "trip_change_events",
   "staff_credential_history",

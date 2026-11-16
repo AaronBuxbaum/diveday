@@ -738,7 +738,12 @@ export const DIVER_MERGE_COUNT_GROUPS = {
   // 20261008-course-forms), so the preview counts it with them.
   releases: ["waiver_records", "course_form_records"],
   cards: ["cards"],
-  orders: ["orders", "dive_package_entitlements", "imported_payment_history"],
+  orders: [
+    "orders",
+    "dive_package_entitlements",
+    "imported_payment_history",
+    "trip_credit_entries",
+  ],
   notes: ["internal_notes"],
   messages: ["inbound_messages", "staff_replies", "customer_gear_notices"],
   reviews: ["trip_reviews", "recap_pulses"],

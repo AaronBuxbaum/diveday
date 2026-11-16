@@ -11,6 +11,7 @@ import type { CancellationRefundOutcome } from "@/db/refunds";
  */
 const REFUND_NOTICE: Record<CancellationRefundOutcome["status"], string> = {
   refunded: "booking-removed-refunded",
+  credit_returned: "booking-removed-credit-returned",
   forfeit: "booking-removed-forfeit",
   failed: "booking-removed-refund-failed",
   manual: "booking-removed-refund-manual",

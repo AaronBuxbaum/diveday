@@ -132,7 +132,9 @@
     "bookkeeper_email_stopped": "The bookkeeper stopped month-end files with the link in one",
     "purchase_recorded": "{actor} recorded a purchase",
     "course_followup_claimed": "{actor} took course preparation follow-up",
-    "course_followup_released": "{actor} released course preparation follow-up"
+    "course_followup_released": "{actor} released course preparation follow-up",
+    "local_order_opened": "{actor} saved an amount due",
+    "local_order_voided": "{actor} voided an unpaid amount"
   },
   "unknown": "An earlier entry",
   "review": {

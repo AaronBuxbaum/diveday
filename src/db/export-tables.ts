@@ -78,6 +78,7 @@ import {
   staffReplies,
   tripChangeEvents,
   tripConservation,
+  tripCreditEntries,
   tripHelpRequests,
   tripLenses,
   tripRequirements,
@@ -316,6 +317,11 @@ export const EXPORT_TABLES = {
   // booking also folds into bookings.csv as its payment_* columns — the
   // state as it stands. Oldest first in write order, so a reader replaying
   // the file in order arrives at that folded state.
+  tripCreditEntries: {
+    table: tripCreditEntries,
+    order: [asc(tripCreditEntries.occurredAt), asc(tripCreditEntries.seq)],
+    scope: { shopColumn: tripCreditEntries.shopId, personColumn: tripCreditEntries.personId },
+  },
   bookingPaymentEvents: {
     table: bookingPaymentEvents,
     order: [asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.seq)],

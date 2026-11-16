@@ -37,6 +37,7 @@ export * from "./passkeys";
 export * from "./payments";
 export * from "./retention";
 export * from "./reviews";
+export * from "./trip-credit";
 export * from "./trips";
 export * from "./waivers";
 export * from "./wallet-passes";

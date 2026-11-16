@@ -44,6 +44,8 @@ function paymentMarkForSeat(
         : null,
     handMarkRefused:
       paymentSourceCode === "package" ||
+      paymentSourceCode === "credit" ||
+      paymentSourceCode === "credit_returned" ||
       ((paymentSourceCode === "online" ||
         (paymentSourceCode === "mixed" && markFacts?.onlineHeldCents !== 0)) &&
         paymentStatus !== "deposit_paid"),
@@ -176,13 +178,6 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   // The Paid mark's own record (batch 6 item 1): a counter payment says how
   // much, how, and who took it, where it used to say only "at the counter".
   const markFacts = paymentMarksByBooking?.get(booking.id) ?? null;
-  const counterMark =
-    paymentSourceCode === "counter" && markFacts?.mark
-      ? {
-          amount: formatMoneyCents(markFacts.mark.amountCents, markFacts.mark.currency, locale),
-          method: markFacts.mark.method,
-        }
-      : null;
   const markCurrency =
     markFacts?.paymentCurrency ?? markFacts?.shopCurrency ?? markFacts?.mark?.currency ?? "usd";
   const paymentMark = paymentMarkForSeat(
@@ -219,24 +214,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
           preview: partyPreview?.leadBookingId === booking.id ? partyPreview : null,
         }
       : null;
-  const paymentSource = counterMark
-    ? markFacts?.mark?.recordedByName
-      ? t("trips.roster.paymentMarkLine", {
-          ...counterMark,
-          name: markFacts.mark.recordedByName,
-        })
-      : t("trips.roster.paymentMarkLineUnnamed", counterMark)
-    : paymentSourceCode === "mixed"
-      ? t("trips.roster.paymentSourceMixed")
-      : paymentSourceCode === "online"
-        ? t("trips.roster.paymentSourceOnline")
-        : paymentSourceCode === "package"
-          ? t("trips.roster.paymentSourcePackage")
-          : paymentSourceCode === "counter"
-            ? t("trips.roster.paymentSourceCounter")
-            : paymentSourceCode === "waived"
-              ? t("trips.roster.paymentSourceWaived")
-              : null;
+  const paymentSource = paymentSourceText(paymentSourceCode, markFacts, locale, t);
   const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
   // **The seat's waiver word is the diver record's** (`seatWaiverStanding`,
   // issue #3775): a release the diver outlived reads lapsed, a minor's solo
@@ -453,3 +431,40 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
 }
 
 export type RosterSeat = ReturnType<typeof rosterSeat>;
+
+function paymentSourceText(
+  paymentSourceCode: ReturnType<typeof paymentSourceLine>,
+  markFacts: PaymentMarkFacts | null,
+  locale: string,
+  t: RosterRowContext["t"],
+) {
+  const counterMark =
+    paymentSourceCode === "counter" && markFacts?.mark
+      ? {
+          amount: formatMoneyCents(markFacts.mark.amountCents, markFacts.mark.currency, locale),
+          method: markFacts.mark.method,
+        }
+      : null;
+  return paymentSourceCode === "credit"
+    ? t("trips.roster.paymentSourceCredit")
+    : paymentSourceCode === "credit_returned"
+      ? t("trips.roster.paymentSourceCreditReturned")
+      : counterMark
+        ? markFacts?.mark?.recordedByName
+          ? t("trips.roster.paymentMarkLine", {
+              ...counterMark,
+              name: markFacts.mark.recordedByName,
+            })
+          : t("trips.roster.paymentMarkLineUnnamed", counterMark)
+        : paymentSourceCode === "mixed"
+          ? t("trips.roster.paymentSourceMixed")
+          : paymentSourceCode === "online"
+            ? t("trips.roster.paymentSourceOnline")
+            : paymentSourceCode === "package"
+              ? t("trips.roster.paymentSourcePackage")
+              : paymentSourceCode === "counter"
+                ? t("trips.roster.paymentSourceCounter")
+                : paymentSourceCode === "waived"
+                  ? t("trips.roster.paymentSourceWaived")
+                  : null;
+}

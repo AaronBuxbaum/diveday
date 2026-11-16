@@ -101,6 +101,7 @@ import {
   tripBlowouts,
   tripChangeEvents,
   tripConservation,
+  tripCreditEntries,
   tripDives,
   tripHelpRequests,
   tripRecapPhotos,
@@ -1100,6 +1101,7 @@ export async function clearDemoSchedule(
   // blow-out — the reset then aborted half-done and the e2e fleet failed in
   // whichever spec next read the wreckage, exactly as the last-minute-list
   // comment above describes (ADR 20260804-blowout-cascade).
+  await db.delete(tripCreditEntries).where(eq(tripCreditEntries.shopId, shopId));
   await db.delete(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shopId));
   await db.delete(tripBlowouts).where(eq(tripBlowouts.shopId, shopId));
   await db.delete(tripHelpRequests).where(eq(tripHelpRequests.shopId, shopId));
