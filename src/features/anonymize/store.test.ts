@@ -152,7 +152,7 @@ describe("anonymizeDiver — the private word (ADR 20260904-reef-all-the-way-dow
       .limit(2);
     const [live, withdrawn] = seats;
     if (!live || !withdrawn) throw new Error("expected two seeded bookings");
-
+    await db.delete(recapPulses).where(inArray(recapPulses.bookingId, [live.id, withdrawn.id]));
     await db.insert(recapPulses).values([
       {
         shopId: shop.id,
