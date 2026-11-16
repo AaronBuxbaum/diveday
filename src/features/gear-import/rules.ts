@@ -8,6 +8,7 @@ import {
   parseCsv,
   widestRow,
 } from "../../lib/import";
+import { unguardFormula } from "../../lib/csv-formula";
 import { normalizeImportKey } from "../../lib/import-key";
 
 export type PreparedGearImportRow = {
@@ -149,7 +150,7 @@ export function prepareGearImport(csv: string): PreparedGearImport {
 
   const value = (cells: string[], field: string) => {
     const index = indexes.get(field);
-    return index === undefined ? null : text(cells[index]);
+    return index === undefined ? null : text(unguardFormula(cells[index] ?? ""));
   };
   const rows = grid.slice(1).map((cells, index) => {
     const issues: string[] = [];

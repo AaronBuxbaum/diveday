@@ -88,6 +88,7 @@ import type { CertificationAgency, DiveSpecialty } from "@/db/schema";
 import { isPlausibleDateOfBirth } from "./age";
 import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
 import { CERTIFICATION_AGENCIES } from "./certification-options";
+import { unguardFormula } from "./csv-formula";
 import { normalizeImportKey } from "./import-key";
 import { currencyMinorUnits, isShopCurrency } from "./money";
 import { RENTAL_FIT_TEXT_LIMITS, type SizedRentalKind } from "./rentals";
@@ -578,7 +579,7 @@ export const IMPORT_HONESTY_TABLE: {
  * fields, embedded commas, doubled quotes and quoted line breaks. What stays
  * here, outside the library: the BOM, line endings, and the trailing empty row.
  * The callers keep the byte, row, column and cell bounds, blank-row filtering
- * and the formula unguard ({@link unguardCell}).
+ * and the formula unguard ({@link unguardFormula}).
  *
  * Malformed quoting is read leniently and never refused, so the preview shows
  * what will be imported: an unclosed quote takes the rest of the file into
@@ -616,15 +617,6 @@ export function widestRow(grid: readonly (readonly string[])[]): number {
   let widest = 0;
   for (const row of grid) if (row.length > widest) widest = row.length;
   return widest;
-}
-
-/**
- * Undo the export's formula-injection guard: a leading "'" before =,+,-,@, a
- * tab or a line break is presentational. The export guards a leading CR, which
- * {@link parseCsv} reads as LF.
- */
-function unguardCell(value: string): string {
-  return /^'[=+\-@\t\r\n]/.test(value) ? value.slice(1) : value;
 }
 
 /**
@@ -1917,7 +1909,7 @@ export function prepareContactImport(
     const index = indexOf(field);
     if (index < 0) return undefined;
     const cell = cells[index];
-    return cell === undefined ? undefined : unguardCell(cell);
+    return cell === undefined ? undefined : unguardFormula(cell);
   };
 
   const hasIdentity =
