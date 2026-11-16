@@ -864,6 +864,11 @@
     "pulseEmpty": "Elige primero de qué se trata.",
     "pulseFailed": "No se ha enviado. Inténtalo de nuevo en un momento.",
     "nextDiveHeading": "Tu próxima inmersión",
+    "whatsNext": {
+      "course": "Tu próximo curso",
+      "courseFrom": "Tu próximo curso, desde el {date}",
+      "package": "{count, plural, one {# inmersión prepagada} other {# inmersiones prepagadas}}"
+    },
     "bookedNext": "Ya tienes lugar: {date} · {title}, {time}.",
     "nextDiveCrewNamedSite": "Tu tripulación mencionó {site}.",
     "nextDiveCourseSession": "La próxima sesión de {course}",

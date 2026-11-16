@@ -7,5 +7,5 @@ export {
   ladderExclusion,
   nextCourseFor,
 } from "./rules";
-export type { LadderPerson, LadderStep } from "./store";
-export { getCourseLadder, ladderInviteRefusal } from "./store";
+export type { DiverNextCourse, LadderPerson, LadderStep } from "./store";
+export { getCourseLadder, ladderInviteRefusal, nextCourseForDiver } from "./store";

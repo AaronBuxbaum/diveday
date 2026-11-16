@@ -864,6 +864,11 @@
     "pulseEmpty": "Pick what it was about first.",
     "pulseFailed": "That didn’t send. Try again in a moment.",
     "nextDiveHeading": "Your next dive",
+    "whatsNext": {
+      "course": "Your next course",
+      "courseFrom": "Your next course, from {date}",
+      "package": "{count, plural, one {# prepaid dive} other {# prepaid dives}}"
+    },
     "bookedNext": "You’re booked: {date} · {title}, {time}.",
     "nextDiveCrewNamedSite": "Your crew mentioned {site}.",
     "nextDiveCourseSession": "The next session of {course}",
