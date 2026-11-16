@@ -1,11 +1,13 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
+import { crewMarks } from "./roll-call-subject";
 import {
   diveSites,
   executedDives,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
+  rollCallEvents,
   tripAssignments,
   tripDives,
   trips,
@@ -42,6 +44,21 @@ export async function seedSailedRecords(db: DbExecutor, shopId: string): Promise
     .select()
     .from(tripAssignments)
     .where(inArray(tripAssignments.tripId, tripIds));
+  const existingCounts = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      personId: rollCallEvents.crewPersonId,
+      checkpoint: rollCallEvents.checkpoint,
+    })
+    .from(rollCallEvents)
+    .where(
+      and(eq(rollCallEvents.shopId, shopId), crewMarks(), inArray(rollCallEvents.tripId, tripIds)),
+    );
+  const recorded = new Set(
+    existingCounts.map(({ tripId, personId, checkpoint }) =>
+      JSON.stringify([tripId, personId, checkpoint]),
+    ),
+  );
   const checklist = await db
     .select({ id: preDepartureChecklistItems.id })
     .from(preDepartureChecklistItems)
@@ -106,6 +123,7 @@ export async function seedSailedRecords(db: DbExecutor, shopId: string): Promise
     });
     for (const member of members) {
       rollCallCheckpoints(trip.plannedDives).forEach((checkpoint, index) => {
+        if (recorded.has(JSON.stringify([trip.id, member.personId, checkpoint]))) return;
         const occurredAt = new Date(trip.startsAt.getTime() + index * 90 * 60_000);
         counts.push({
           shopId,
@@ -127,7 +145,7 @@ export async function seedSailedRecords(db: DbExecutor, shopId: string): Promise
   }
   if (logs.length) await db.insert(executedDives).values(logs);
   if (checks.length) await db.insert(preDepartureCheckEvents).values(checks);
-  // Current demo credentials were reviewed at the seed clock. A count made
-  // months earlier cannot truthfully snapshot that later evidence.
+  // Keep any evidence authored by an earlier demo scenario, including its
+  // fictional credential snapshots, instead of writing a second crew mark.
   await seedRollCallEvidence(db, counts, { observesPrevious: false });
 }

@@ -43,22 +43,30 @@ export type MonthFigure = {
 };
 
 /** Breakpoint-specific hairlines and gutters align figures with ledger rows (K-573); shared with the loading skeleton. */
-export function figureCellClass(index: number): string {
+export function figureCellClass(index: number, columns = 5, paper = false): string {
   const rule =
     index === 0
       ? ""
       : // Second figure: its own row on a phone, beside the first from `sm` up.
         index === 1
         ? "border-t border-border sm:border-t-0"
-        : "border-t border-border xl:border-t-0";
+        : index < columns
+          ? "border-t border-border xl:border-t-0"
+          : "border-t border-border";
   const gutter =
     index === 0
       ? ""
       : // Odd figures are second-in-row at two columns and stay so at five.
         index % 2 === 1
-        ? "sm:border-s sm:border-border sm:ps-6"
-        : "xl:border-s xl:border-border xl:ps-6";
-  return `py-5 ps-2 pe-2 sm:pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
+        ? index % columns === 0
+          ? "sm:border-s sm:border-border sm:ps-6 xl:border-s-0 xl:ps-2"
+          : "sm:border-s sm:border-border sm:ps-6"
+        : index % columns === 0
+          ? ""
+          : "xl:border-s xl:border-border xl:ps-6";
+  return `${paper ? "py-1" : "py-5"} ps-2 pe-2 sm:pe-6 ${rule} ${gutter}`
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** Literal Tailwind grids shared by month and year rows (ADR 20260908-one-hand, decision 6, lever T; UX review 4, item 25). */
@@ -74,6 +82,7 @@ export function MonthFigures({
   figures,
   caption,
   columns = 5,
+  paper = false,
 }: {
   label: string;
   /** One quiet line under the row, said once: the month's basis (visual review A06). */
@@ -82,6 +91,8 @@ export function MonthFigures({
   figures: MonthFigure[];
   /** How many the row holds at `xl`. The hairline rules read the index alone and need no telling. */
   columns?: keyof typeof FIGURE_COLUMNS;
+  /** Denser figures for a printed sheet. */
+  paper?: boolean;
 }) {
   // The page's empty state replaces an empty figure row.
   if (figures.length === 0) return null;
@@ -92,7 +103,7 @@ export function MonthFigures({
         {figures.map((figure, index) => (
           <div
             key={figure.key}
-            className={`${figureCellClass(index)}${
+            className={`${figureCellClass(index, columns, paper)}${
               // Span the final figure when an odd count leaves it alone at `sm`.
               lastSpansTheRow && index === figures.length - 1 ? " sm:col-span-2 xl:col-span-1" : ""
             }`}

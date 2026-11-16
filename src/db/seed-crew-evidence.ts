@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import type { DbExecutor } from "./client";
 import { staffCredentials } from "./schema";
 import type { SeedRollCallEvidenceInput } from "./seed-roll-call-evidence";
@@ -8,6 +9,7 @@ export async function withDemoCrewEvidence(
   db: DbExecutor,
   shopId: string,
   events: readonly SeedRollCallEvidenceInput[],
+  options?: { historicalTimeZone: string },
 ): Promise<SeedRollCallEvidenceInput[]> {
   if (events.some((event) => event.shopId !== shopId)) throw new Error("Mixed demo shops");
   const ids = [
@@ -57,7 +59,17 @@ export async function withDemoCrewEvidence(
           credential.reviewNote ===
             "Fictional demo credential; no real credential or policy is represented.",
       )
-      .map(({ kind, issuedAt, renewsAt }) => ({ kind, issuedAt, renewsAt }));
+      .map(({ kind, issuedAt, renewsAt }) => {
+        const sailingDay = options
+          ? calendarDateInTimezone(event.occurredAt, options.historicalTimeZone)
+          : null;
+        const beforeCurrentRenewal = sailingDay && issuedAt && issuedAt > sailingDay;
+        return {
+          kind,
+          issuedAt: beforeCurrentRenewal ? shiftCalendarDate(issuedAt, -730) : issuedAt,
+          renewsAt: beforeCurrentRenewal ? shiftCalendarDate(issuedAt, -1) : renewsAt,
+        };
+      });
     if (snapshot.length === 0) return event;
     return {
       ...event,

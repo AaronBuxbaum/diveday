@@ -4,15 +4,7 @@ import type { MonthFigure } from "../../reports/_components/MonthFigures";
 import { crewSafetyValue } from "./crew-safety-value";
 import { SAFETY_LIST_IDS } from "./SafetyLists";
 
-/**
- * **The month is four doors** (visual review A05): the counts that move
- * month to month, each the link to the list behind it. "Boarded at the
- * dock" goes as a tile, but a seat never marked there is still said, as
- * attention under the roll calls it belongs to; a boat with no crew on
- * record keeps its own list below, and a month with no crew on record at all
- * says so in one line. The year keeps every figure: it prints
- * for a broker and has no lists to point at.
- */
+/** The same figures as the year, with links to the month's lists. */
 export function safetyMonthTiles({
   t,
   safety,
@@ -20,7 +12,6 @@ export function safetyMonthTiles({
   drafts,
   activityHref,
   staffingHref,
-  teamHref,
 }: {
   t: StaffTranslator;
   safety: SafetyMonth;
@@ -29,7 +20,6 @@ export function safetyMonthTiles({
   activityHref: string;
   /** The crew schedule, or null when the shop runs without it. */
   staffingHref: string | null;
-  teamHref?: string;
 }): MonthFigure[] {
   // Not drawn when no crew is on record, so it is not read then.
   const crew = safety.noCrewOnRecord ? null : crewSafetyValue(safety, t);
@@ -44,6 +34,11 @@ export function safetyMonthTiles({
         back: safety.departuresBack,
       }),
       ...(safety.openRollCalls.length > 0 ? { href: `#${SAFETY_LIST_IDS.open}` } : {}),
+    },
+    {
+      key: "boarded",
+      label: t("incidents.safety.boarded"),
+      value: String(safety.boardedAtDock),
       ...attention(
         safety.unmarkedAtDock > 0
           ? t("incidents.safety.boardedDetail", { count: safety.unmarkedAtDock })
@@ -80,11 +75,22 @@ export function safetyMonthTiles({
                 href: `#${safety.lapsedSailings.length > 0 ? SAFETY_LIST_IDS.lapsed : SAFETY_LIST_IDS.unrecorded}`,
               }
             : {}),
-          ...(safety.unknownCredentialSailings && teamHref
-            ? { link: { href: teamHref, label: t("incidents.safety.currentCrewCredentials") } }
-            : {}),
           detail: crew.detail,
           detailTone: crew.attention ? "attention" : "quiet",
+        },
+    safety.noCrewOnRecord
+      ? {
+          key: "noCrew",
+          label: t("incidents.safety.noCrew"),
+          value: "—",
+          detail: t("incidents.safety.noCrewNone"),
+          detailTone: "quiet" as const,
+        }
+      : {
+          key: "noCrew",
+          label: t("incidents.safety.noCrew"),
+          value: String(safety.noCrewDepartures.length),
+          ...(safety.noCrewDepartures.length > 0 ? { href: `#${SAFETY_LIST_IDS.noCrew}` } : {}),
         },
     {
       key: "incidents",

@@ -1,6 +1,7 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   capture,
+  capturePrint,
   installVisualBuildGuard,
   SURFACE_TIMEOUT_MS,
   staffCopy,
@@ -45,17 +46,31 @@ test.describe("light mode", () => {
       await referenceNumber.evaluate((input) => input.blur());
       await capture(page, "team-credential-renewal-editor", "light");
     });
-    test("Safety names unavailable crew evidence and links to current credentials", async ({
-      page,
-    }) => {
+    test("Safety shows the demo crew's credentials", async ({ page }) => {
       await page.goto("/shop/blue-mantis/safety");
-      await expect(page.getByText(/Credential history unavailable/).first()).toBeVisible();
-      await expect(
-        page
-          .getByRole("link", { name: staffCopy("incidents.safety.currentCrewCredentials") })
-          .first(),
-      ).toBeVisible();
-      await capture(page, "safety-crew-evidence-unavailable", "light");
+      const crew = page.locator("dl > div").filter({ hasText: "Credentialed crew" });
+      await expect(crew).toBeVisible();
+      await expect(crew).toContainText("6 of 6");
+      await expect(page.getByText(/Credential history unavailable/)).toHaveCount(0);
+      await expect(page.getByText("Current credentials on Team")).toHaveCount(0);
+      await expect(page.getByText(staffCopy("incidents.safety.boarded"))).toBeVisible();
+      await expect(page.getByText(staffCopy("incidents.safety.noCrew"))).toBeVisible();
+      await capture(page, "safety-credentialed-crew", "light");
+    });
+    test("Safety shows the demo crew's yearly credentials", async ({ page }) => {
+      await page.goto("/shop/blue-mantis/safety");
+      await page.getByRole("link", { name: staffCopy("reports.year.thisYear") }).click();
+      const crew = page.locator("dl > div").filter({ hasText: "Credentialed crew" });
+      await expect(crew).toContainText("6 of 6");
+      await expect(page.getByText(/Credential history unavailable/)).toHaveCount(0);
+      await capture(page, "safety-credentialed-crew-year", "light");
+    });
+    test("Safety prints the complete monthly record", async ({ page }) => {
+      await page.goto("/shop/blue-mantis/safety/print");
+      const record = page.getByRole("region", { name: staffCopy("incidents.safety.figuresLabel") });
+      await expect(record.locator("dt")).toHaveCount(6);
+      await expect(record).toContainText("Credentialed crew");
+      await capturePrint(page, "safety-credentialed-crew-month");
     });
   });
 });

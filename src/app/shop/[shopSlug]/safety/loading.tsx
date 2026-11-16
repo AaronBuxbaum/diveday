@@ -8,7 +8,7 @@ import { figureCellClass } from "../reports/_components/MonthFigures";
 /**
  * The Safety page's skeleton, in the page's own order: the page's title, the
  * one-line intro, the month heading and its stepper (as Reports draws
- * it), the five figures, and the three list cards.
+ * it), the six figures, and the three list cards.
  */
 export default function SafetyReportLoading() {
   return (
@@ -25,12 +25,9 @@ export default function SafetyReportLoading() {
           <Bone className="h-7 w-40" />
           <Bone shape="control" className="size-12" />
         </div>
-        <div className="-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5">
-          {[0, 1, 2, 3, 4].map((index) => (
-            <div
-              key={index}
-              className={`${figureCellClass(index)}${index === 4 ? " sm:col-span-2 lg:col-span-1" : ""}`}
-            >
+        <div className="-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map((index) => (
+            <div key={index} className={figureCellClass(index, 3)}>
               <Bone className="h-3 w-20" />
               <Bone className="mt-3 h-8 w-28" />
               <Bone className="mt-3 h-3 w-24" />

@@ -36,6 +36,7 @@ import { seedDivers } from "./seed-divers";
 import { seedFrontDesk, seedFrontDeskLists } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
+import { seedHistoryCrew } from "./seed-history-crew";
 import { seedHistoryTimeline } from "./seed-history-timeline";
 import { seedHulls } from "./seed-hulls";
 import { seedInbox } from "./seed-inbox";
@@ -467,12 +468,22 @@ const THE_DAY: readonly SeedStep[] = [
   // private shop; on for the demo shop, a visitor's mint and the e2e fleet.
   history((db, c) => seedHistory(db, c.shopId, c.staff.instructor.id)),
   history((db, c) =>
+    seedHistoryCrew(db, c.shopId, c.shop.timezone, c.initialStaffRota, [
+      { personId: c.staff.owner.id, tripRole: "crew", staffRole: "owner" },
+      { personId: c.staff.reliefInstructor.id, tripRole: "instructor", staffRole: "instructor" },
+    ]),
+  ),
+  history((db, c) =>
     seedHistoryTimeline(
       db,
       c.shopId,
-      [c.staff.owner.id, c.staff.instructor.id, c.staff.captainId, c.staff.divemasterId].filter(
-        (id): id is string => !!id,
-      ),
+      [
+        c.staff.owner.id,
+        c.staff.instructor.id,
+        c.staff.reliefInstructor.id,
+        c.staff.captainId,
+        c.staff.divemasterId,
+      ].filter((id): id is string => !!id),
     ),
   ),
   history((db, c) => seedReturningDivers(db, c.shopId, c.staff.instructor.id, c.customers)),

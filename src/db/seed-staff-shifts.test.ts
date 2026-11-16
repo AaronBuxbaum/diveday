@@ -1,4 +1,4 @@
-import { and, eq, gte, isNull, lt } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { crewShiftCoverage } from "../features/staffing/store";
@@ -310,6 +310,60 @@ it("does not assign a weekly boat outside the shifts retained at reset", async (
   for (const { trip, personId } of weekly) {
     expect((await crewShiftCoverage(db, shop.id, trip, [personId]))?.has(personId)).toBe(true);
   }
+});
+
+it("respects retained shifts and active days off when seeding fictional history", async () => {
+  const { db, shop } = await seededShopContext({ history: true });
+  const { crewAvailabilityBlocks, people, staffShifts } = await import("./schema");
+  const { calendarDateInTimezone } = await import("@/lib/calendar-date");
+  const { DAY_MS, nowDate } = await import("@/lib/clock");
+  const { OWNER_NAME, RELIEF_INSTRUCTOR_NAME } = await import("./seed-cast");
+  const staff = await db.select().from(people).where(eq(people.shopId, shop.id));
+  const owner = staff.find((person) => person.fullName === OWNER_NAME);
+  const relief = staff.find((person) => person.fullName === RELIEF_INSTRUCTOR_NAME);
+  if (!owner || !relief) throw new Error("demo crew missing");
+  await db
+    .delete(staffShifts)
+    .where(and(eq(staffShifts.shopId, shop.id), eq(staffShifts.personId, owner.id)));
+  await resetDemoSchedule(db, shop.id, "history");
+  const historyCrew = await db
+    .select({ tripId: trips.id, personId: tripAssignments.personId })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(
+      and(
+        eq(trips.shopId, shop.id),
+        eq(trips.description, "Sailed. Kept in the log for the shop's monthly numbers."),
+      ),
+    );
+  expect(historyCrew.some(({ personId }) => personId === owner.id)).toBe(false);
+  expect(historyCrew.some(({ personId }) => personId === relief.id)).toBe(true);
+
+  const historyTripIds = [...new Set(historyCrew.map(({ tripId }) => tripId))];
+  await db
+    .delete(tripAssignments)
+    .where(
+      and(inArray(tripAssignments.tripId, historyTripIds), eq(tripAssignments.personId, relief.id)),
+    );
+  const now = nowDate();
+  await db.insert(crewAvailabilityBlocks).values({
+    shopId: shop.id,
+    personId: relief.id,
+    startsOn: calendarDateInTimezone(new Date(now.getTime() - 32 * DAY_MS), shop.timezone),
+    endsOn: calendarDateInTimezone(now, shop.timezone),
+    createdByPersonId: owner.id,
+  });
+  const { seedHistoryCrew } = await import("./seed-history-crew");
+  await seedHistoryCrew(db, shop.id, shop.timezone, false, [
+    { personId: relief.id, tripRole: "instructor", staffRole: "instructor" },
+  ]);
+  const assignments = await db
+    .select({ tripId: tripAssignments.tripId })
+    .from(tripAssignments)
+    .where(
+      and(inArray(tripAssignments.tripId, historyTripIds), eq(tripAssignments.personId, relief.id)),
+    );
+  expect(assignments).toEqual([]);
 });
 
 it("does not oversell a reset weekly boat when a standing guide has been deleted", async () => {

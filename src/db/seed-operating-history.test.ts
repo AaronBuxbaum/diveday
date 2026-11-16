@@ -104,12 +104,16 @@ describe("a shop with an operating history", () => {
             count.status === "boarded",
         );
         expect(marks.length).toBe(trip.plannedDives + 1);
+        expect(marks.every((mark) => mark.createdAt.getTime() === mark.occurredAt.getTime())).toBe(
+          true,
+        );
         expect(
-          marks.every(
-            (mark) =>
-              mark.createdAt.getTime() === mark.occurredAt.getTime() &&
-              mark.credentialSnapshot === null,
-          ),
+          marks.find((mark) => mark.checkpoint === "departure")?.credentialSnapshot?.length,
+        ).toBeGreaterThan(0);
+        expect(
+          marks
+            .filter((mark) => mark.checkpoint !== "departure")
+            .every((mark) => mark.credentialSnapshot === null),
         ).toBe(true);
         expect(
           staff.some(

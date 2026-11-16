@@ -144,21 +144,9 @@ export async function readSafetyReport({
     {
       key: "crew",
       label: t("incidents.safety.crew"),
-      // A zero over crew with nothing on file is not a clean record: the
-      // lapsed count stands over the sailings it judged, the detail says how
-      // much it could not judge, and a month with nothing on file at all
-      // shows no ratio (third review, item 2).
       value: crew.value,
       detail: crew.detail,
       detailTone: crew.attention ? "attention" : "quiet",
-      ...(safety.unknownCredentialSailings
-        ? {
-            link: {
-              href: shopPath(shopSlug, "settings", "team"),
-              label: t("incidents.safety.currentCrewCredentials"),
-            },
-          }
-        : {}),
     },
     // **A boat nobody is recorded driving is a figure, not a silence**
     // (fourth review, item 13): such a departure never reaches the crew check,
@@ -199,7 +187,6 @@ export async function readSafetyReport({
     drafts: draftReports,
     activityHref,
     staffingHref: shop.crewScheduleEnabled ? shopPath(shopSlug, "staffing") : null,
-    teamHref: shopPath(shopSlug, "settings", "team"),
   });
 
   function noCrewDetail(): Pick<MonthFigure, "detail" | "detailTone"> {

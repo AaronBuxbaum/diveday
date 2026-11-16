@@ -256,8 +256,9 @@
   `src/lib/safety-drills.ts`, writer and readers in `src/features/safety-drills/store.ts`.
 - **Safety year** — the Safety report over a whole year (`/shop/<slug>/safety?year=`; fifth loop,
   item 33), the one page an insurer or broker is handed at renewal instead of twelve. Figures only,
-  each the sum of that year's month views read by their own rules (`getSafetyYear`,
-  `summarizeSafetyYear`; dive-domain review F1), with the boarding caveat under them. Printed, it
+  summing the year's months except the credentialed crew figure, which counts each person once across
+  the year (`getSafetyYear`, `summarizeSafetyYear`; dive-domain review F1). A crew member counts as
+  credentialed when every sailing has recorded credentials with no lapse or missing record. Printed, it
   names the shop, the days it covers and the zone ("January 1 to October 16, 2026 · Eastern
   Daylight Time") and the day it was printed, because an undated "so far" is worthless a month
   later. Incident reports count filed reports, with drafts named beside them ("3 filed · 1 draft"):

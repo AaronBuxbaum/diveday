@@ -343,10 +343,10 @@ test.describe("owner, the Safety page", () => {
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/safety");
 
-    // All four counts remain visible; a figure only links to a list that exists.
+    // All six counts remain visible; a figure only links to a list that exists.
     const record = page.getByRole("region", { name: "This month’s safety record" });
     await expect(record).toBeVisible();
-    await expect(record.locator("dt")).toHaveCount(4);
+    await expect(record.locator("dt")).toHaveCount(6);
     await expect(record.locator('a[href*="/settings/activity"]')).toHaveCount(1);
     const listLinks = record.locator('a[href^="#"]');
     for (let index = 0; index < (await listLinks.count()); index += 1) {
@@ -356,11 +356,14 @@ test.describe("owner, the Safety page", () => {
     }
 
     // The Print door opens the month as a sheet of the shop's paper, with the
-    // same four counts and no control on it.
+    // same six counts and no control on it.
     await page.getByRole("link", { name: "Print month" }).click();
     await expect(page).toHaveURL(/\/safety\/print\?month=\d{4}-\d{2}/);
     const sheet = page.locator(".paper-sheet");
     await expect(sheet.getByRole("region", { name: "This month’s safety record" })).toBeVisible();
+    await expect(
+      sheet.getByRole("region", { name: "This month’s safety record" }).locator("dt"),
+    ).toHaveCount(6);
     await expect(sheet.getByRole("link")).toHaveCount(0);
     await expect(sheet.getByRole("button")).toHaveCount(0);
     await page.goto("/shop/blue-mantis/safety");
