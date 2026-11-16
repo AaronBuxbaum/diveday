@@ -146,6 +146,20 @@ describe("createShopPromotion", () => {
     expect(promoForm.has("expires_at")).toBe(false);
   });
 
+  it("shortens a long staff label to the 40 characters Stripe takes for a coupon name", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(ok({ id: "coupon_3" }))
+      .mockResolvedValueOnce(ok({ id: "promo_3" }));
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    await provider.createShopPromotion({
+      ...shopRequest,
+      name: "Returning divers get this every single season they dive with us".repeat(2),
+    });
+    const couponForm = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
+    expect(couponForm.get("name")?.length).toBe(40);
+  });
+
   it("passes the bounds through when the shop did set them", async () => {
     const fetchImpl = vi
       .fn()
