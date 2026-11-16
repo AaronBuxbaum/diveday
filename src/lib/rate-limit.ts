@@ -690,7 +690,7 @@ export const RATE_LIMITS = {
   /** The same attempts per IP, so one attacker cannot fan out across accounts. */
   secondFactorByIp: per15Min(20),
   /** Public booking submissions, per IP. */
-  booking: perHour(10),
+  booking: perHour(30),
   /**
    * Any write behind a booking capability token (readiness, waiver,
    * schedule-confirmation actions) — per IP, keyed by the action's shared

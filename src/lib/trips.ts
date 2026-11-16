@@ -85,7 +85,7 @@ export function hasReturned(endsAt: Date, now: Date): boolean {
  * in that loop is linear and a bound can be set against it. Twenty seats hold
  * the trip row for about a third of a second, which is the number that decides
  * this: it is a page load, not an outage, and the per-IP booking bucket
- * (`RATE_LIMITS.booking`, 10/hour) bounds how often anyone can spend it.
+ * (`RATE_LIMITS.booking`, 30/hour) bounds how often anyone can spend it.
  *
  * **Twenty, because that is the largest party that was measured** — not
  * because twenty is a meaningful group size. Raising it further means running
