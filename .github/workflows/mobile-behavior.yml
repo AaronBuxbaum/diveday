@@ -2,7 +2,7 @@ name: Mobile behavior
 
 on:
   schedule:
-    - cron: "15 6 * * *"
+    - cron: "15 6 * * 1"
   workflow_dispatch:
 
 concurrency:
