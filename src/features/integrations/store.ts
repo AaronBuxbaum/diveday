@@ -393,6 +393,24 @@ export async function getIntegrationSyncRecord(db: DbExecutor, key: IntegrationS
   return row ?? null;
 }
 
+/** Every mapping of one operation in one query, keyed `sourceType:sourceId`. */
+export async function listIntegrationSyncRecords(
+  db: DbExecutor,
+  key: Pick<IntegrationSyncKey, "shopId" | "provider" | "operation">,
+) {
+  const rows = await db
+    .select()
+    .from(integrationSyncRecords)
+    .where(
+      and(
+        eq(integrationSyncRecords.shopId, key.shopId),
+        eq(integrationSyncRecords.provider, key.provider),
+        eq(integrationSyncRecords.operation, key.operation),
+      ),
+    );
+  return new Map(rows.map((row) => [`${row.sourceType}:${row.sourceId}`, row]));
+}
+
 export async function upsertIntegrationSyncRecord(
   db: DbExecutor,
   input: IntegrationSyncKey & { externalId: string },
