@@ -3,6 +3,7 @@ import { ageOnDate, JUNIOR_AGE_END } from "@/lib/age";
 import { MIN_CARD_NUMBER_LENGTH } from "@/lib/card-number";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import type { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
+import { escapeRegExp } from "@/lib/escape-regexp";
 
 type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
 
@@ -999,10 +1000,6 @@ function withoutNameSuffix(line: string, last: string, levelWording: readonly st
     out = `${out.slice(0, at)} ${last} ${after}`;
   }
   return out.replace(/ +/g, " ").trim();
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function evidence(lines: readonly string[]): string {
