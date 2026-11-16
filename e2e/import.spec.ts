@@ -626,7 +626,11 @@ test("owner reviews mapped gear history and sees repeat-import and correction ou
   await input.setInputFiles(upload);
   await page.getByLabel("1. Tag", { exact: true }).selectOption("gear_label");
   await page.getByRole("button", { name: copy("gear.import.existing.review") }).click();
-  await expect(
-    page.getByText(copy("gear.import.existing.duplicate"), { exact: true }),
-  ).toBeVisible();
+  const repeatedOutcome = page
+    .getByRole("row")
+    .filter({ hasText: "CSV-REVIEW-REG" })
+    .getByRole("cell")
+    .nth(1);
+  await expect(repeatedOutcome).toContainText(copy("gear.import.existing.duplicate"));
+  await expect(repeatedOutcome).toContainText("service_already_recorded");
 });

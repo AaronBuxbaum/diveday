@@ -53,6 +53,12 @@ export const recoveryActivities = pgTable(
   (t) => [
     uniqueIndex("recovery_activities_shop_id_id_unique").on(t.shopId, t.id),
     index("recovery_activities_blowout_idx").on(t.shopId, t.blowoutId),
+    index("recovery_activities_coordinator_idx").on(t.coordinatorPersonId, t.shopId),
+    index("recovery_activities_created_by_idx").on(t.createdByPersonId, t.shopId),
+    index("recovery_activities_arrangements_by_idx").on(
+      t.arrangementsConfirmedByPersonId,
+      t.shopId,
+    ),
     foreignKey({
       columns: [t.shopId, t.blowoutId],
       foreignColumns: [tripBlowouts.shopId, tripBlowouts.id],
@@ -90,6 +96,7 @@ export const recoveryActivityOffers = pgTable(
     preparedAt: appNowTimestamp("prepared_at").notNull(),
   },
   (t) => [
+    index("recovery_activity_offers_actor_idx").on(t.actorPersonId, t.shopId),
     uniqueIndex("recovery_activity_offers_activity_diver_unique").on(
       t.shopId,
       t.activityId,
@@ -134,6 +141,8 @@ export const recoveryActivityParticipants = pgTable(
       .references(() => people.id),
   },
   (t) => [
+    index("recovery_activity_participants_person_idx").on(t.personId, t.shopId),
+    index("recovery_activity_participants_confirmed_by_idx").on(t.confirmedByPersonId, t.shopId),
     uniqueIndex("recovery_activity_participants_shop_id_id_unique").on(t.shopId, t.id),
     uniqueIndex("recovery_activity_participants_person_unique")
       .on(t.shopId, t.activityId, t.personId)
@@ -195,6 +204,7 @@ export const recoveryActivityEvents = pgTable(
     recordedAt: appNowTimestamp("recorded_at").notNull(),
   },
   (t) => [
+    index("recovery_activity_events_actor_idx").on(t.actorPersonId, t.shopId),
     foreignKey({
       columns: [t.shopId, t.activityId],
       foreignColumns: [recoveryActivities.shopId, recoveryActivities.id],

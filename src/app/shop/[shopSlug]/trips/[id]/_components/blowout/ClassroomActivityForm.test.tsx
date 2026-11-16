@@ -29,6 +29,7 @@ it("keeps the draft and original attempt on a refusal, then uses a new attempt a
   });
   fireEvent.click(screen.getByRole("button", { name: "Create" }));
   await screen.findByText("No place was confirmed");
+  await waitFor(() => expect(screen.getByRole("button", { name: "Create" })).toBeEnabled());
   expect(screen.getByLabelText("Location")).toHaveValue("Sala con nombre largo");
   fireEvent.click(screen.getByRole("button", { name: "Create" }));
   await waitFor(() => expect(action).toHaveBeenCalledTimes(2));

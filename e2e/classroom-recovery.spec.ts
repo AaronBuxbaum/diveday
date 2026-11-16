@@ -1,4 +1,5 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { escapeRegExp } from "../src/lib/escape-regexp";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, tripPathByTitle } from "./helpers";
 
@@ -30,7 +31,13 @@ test("DESK-12 arranges a separate complimentary classroom activity after cancell
   await page
     .getByLabel(t("blowout.classroom.location"), { exact: true })
     .fill("Shop classroom by the dock");
-  await page.getByLabel(t("blowout.classroom.capacity"), { exact: true }).fill("8");
+  await page
+    .getByRole("spinbutton", {
+      name: new RegExp(
+        `^${escapeRegExp(t("blowout.classroom.capacity"))}\\s*${escapeRegExp(t("blowout.classroom.capacityHint"))}$`,
+      ),
+    })
+    .fill("8");
   await page
     .getByLabel(t("blowout.classroom.coordinator"), { exact: true })
     .selectOption({ label: "Dana Reyes" });

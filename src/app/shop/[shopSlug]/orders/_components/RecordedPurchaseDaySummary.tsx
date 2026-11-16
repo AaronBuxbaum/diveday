@@ -1,5 +1,5 @@
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field } from "@/components/ui/form";
+import { DateField, Field } from "@/components/ui/form";
 import type { RecordedPurchaseDay } from "@/features/recorded-purchases";
 import { ORDER_COLLECTION_KEYS } from "@/i18n/order-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
@@ -46,13 +46,7 @@ export function RecordedPurchaseDaySummary({
             <input key={key} type="hidden" name={key} value={value} />
           ))}
         <Field label={t("orders.purchaseDay.day")}>
-          <input
-            type="date"
-            name="receiptDay"
-            defaultValue={data.day}
-            required
-            className={controlClass}
-          />
+          <DateField name="receiptDay" defaultValue={data.day} required />
         </Field>
         <button type="submit" className={buttonClass({ variant: "secondary" })}>
           {t("orders.purchaseDay.show")}

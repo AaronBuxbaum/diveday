@@ -69,6 +69,7 @@ import {
 } from "./mint-tokens";
 import { operationalTrustArgs, seedOperationalTrustFact } from "./operational-trust";
 import { makeRoomForPartyWaiverCaptures } from "./party-waiver-capacity-state";
+import { prepareWeatherAlternatives } from "./prepare-weather-alternatives";
 import { introduceAssignedInstructor } from "./public-staff-profile";
 import { putARehearsalOnTomorrow } from "./put-a-rehearsal-on-tomorrow";
 import { putOneUnitOutToday } from "./put-one-unit-out-today";
@@ -184,6 +185,7 @@ function requestOf(context: FactContext) {
 }
 
 const FACTS = {
+  weatherAlternatives: ({ db, shop, now }) => prepareWeatherAlternatives(db, shop.id, now),
   noCardDeclared: ({ db, shop, now }) => declareNoCard(db, shop.id, now),
   stuckPayment: ({ db, shop, now }) => leavePaymentUnconfirmed(db, shop.id, now),
   owedMoney: ({ db, shop, now }) => seedOwedMoney(db, shop.id, now),

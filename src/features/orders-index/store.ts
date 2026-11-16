@@ -5,10 +5,9 @@ import {
 } from "@/features/imported-payment-history";
 import { latestShopPayouts } from "@/features/payouts";
 import { recordedPurchaseDay } from "@/features/recorded-purchases";
-import { canPersonViewShopReports } from "@/features/reporting";
 import { roomChargesByHotel } from "@/features/room-charges";
 import { listUnattributedRefunds } from "@/features/unattributed-refunds";
-import { canPersonManageOrders, canPersonManagePaymentSettings } from "../../db/authz";
+import { readActiveStaffRoles } from "../../db/authz";
 import type { AppDb } from "../../db/client";
 import { pagedOrdersByDay, type ShopOrderFilter } from "../../db/orders";
 import { getShopPersonName } from "../../db/people";
@@ -16,6 +15,7 @@ import { orderStatus } from "../../db/schema/index";
 import { canAcceptPayments, getShopStripeAccount } from "../../db/stripe-accounts";
 import { getShopTripTitle } from "../../db/trips";
 import { readUnfinished } from "../../db/unfinished";
+import { canManageOrders, canManagePaymentSettings, canViewShopReports } from "../../lib/authz";
 import { nowDate } from "../../lib/clock";
 import { shopMonthBounds, utcToWallTime } from "../../lib/zoned";
 
@@ -101,11 +101,14 @@ export async function getOrdersIndex(
     receiptDay?: string;
   },
 ) {
+  // Share a fresh authorization snapshot for this surface, never a render-cached result.
+  const roles = await readActiveStaffRoles(db, shop.id, personId);
+  const reconcile = roles !== null && canManagePaymentSettings(roles);
+  const manageOrders = roles !== null && canManageOrders(roles);
+  const exportOrders = roles !== null && canViewShopReports(roles);
   const [
     stripeAccount,
-    [reconcile, backOffice],
-    manageOrders,
-    exportOrders,
+    backOffice,
     ledger,
     importedHistoryPage,
     filteredPersonName,
@@ -113,11 +116,7 @@ export async function getOrdersIndex(
     purchaseDay,
   ] = await Promise.all([
     getShopStripeAccount(db, shop.id),
-    canPersonManagePaymentSettings(db, shop.id, personId).then(
-      async (visible) => [visible, await readBackOffice(db, shop, visible)] as const,
-    ),
-    canPersonManageOrders(db, shop.id, personId),
-    canPersonViewShopReports(db, shop.id, personId),
+    readBackOffice(db, shop, reconcile),
     pagedOrdersByDay(db, shop.id, shop.timezone, input.filter, { page: input.page }),
     input.imported
       ? listImportedPaymentHistory(db, shop.id, input.imported.filter, {

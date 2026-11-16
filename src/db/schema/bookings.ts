@@ -685,6 +685,7 @@ export const bookings = pgTable(
     // every shop's rows; a (shop_id, …) composite cannot serve that probe.
     // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
     index("bookings_person_id_idx").on(table.personId),
+    index("bookings_course_followup_person_idx").on(table.courseFollowupByPersonId, table.shopId),
     uniqueIndex("bookings_trip_person_unique").on(table.tripId, table.personId),
     // Enriched air is a gas a diver breathes; a snorkeler or a rider asking for
     // it is a write that went wrong somewhere, and the prep list would pack it.

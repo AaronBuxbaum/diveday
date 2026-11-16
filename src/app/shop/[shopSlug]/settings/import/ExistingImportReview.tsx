@@ -247,13 +247,11 @@ export function ExistingImportReview({
           >
             <Table minWidth="40rem">
               <THead>
-                <Tr>
-                  <Th>{copy.row}</Th>
-                  <Th>{copy.outcome}</Th>
-                  {(file.grid[0] ?? []).map((header, at) => (
-                    <Th key={`${at}-${header}`}>{header}</Th>
-                  ))}
-                </Tr>
+                <Th>{copy.row}</Th>
+                <Th>{copy.outcome}</Th>
+                {(file.grid[0] ?? []).map((header, at) => (
+                  <Th key={`${at}-${header}`}>{header}</Th>
+                ))}
               </THead>
               <TBody>
                 {file.grid.slice(1, 61).map((row, at) => {

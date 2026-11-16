@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ExistingImportCopy, ExistingImportReview } from "./ExistingImportReview";
@@ -55,6 +55,21 @@ async function pick(upload: File) {
 }
 
 describe("existing import review generations", () => {
+  it("renders one valid header row with each mapped column heading", async () => {
+    const { container } = render(
+      <ExistingImportReview kind="gear" columns={columns} copy={copy} />,
+    );
+    await pick(file("headers.csv", "gear_label,service_note\nA,checked"));
+    expect(container.querySelectorAll("thead tr tr")).toHaveLength(0);
+    expect(container.querySelectorAll("thead > tr")).toHaveLength(1);
+    expect(screen.getAllByRole("columnheader").map((heading) => heading.textContent)).toEqual([
+      "Row",
+      "Outcome",
+      "gear_label",
+      "service_note",
+    ]);
+    expect(container.querySelectorAll("tbody > tr")).toHaveLength(1);
+  });
   it("requires explicit mapping of every column and resets a completed result for a new file", async () => {
     vi.mocked(reviewExistingImportAction)
       .mockResolvedValueOnce({ rows: [[{ rowNumber: 2, outcome: "create", issues: [] }]] })
@@ -74,6 +89,32 @@ describe("existing import review generations", () => {
     expect(screen.queryByText("Actual results")).toBeNull();
     expect(screen.queryByRole("button", { name: "Import rows (1)" })).toBeNull();
     expect(screen.getByRole("button", { name: "Check outcomes" })).toBeEnabled();
+  });
+  it("shows the repeated gear outcome and its evidence after reviewing the same file again", async () => {
+    vi.mocked(reviewExistingImportAction)
+      .mockResolvedValueOnce({ rows: [[{ rowNumber: 2, outcome: "create", issues: [] }]] })
+      .mockResolvedValueOnce({
+        completed: true,
+        counts: { unitsCreated: 1 },
+        rows: [[{ rowNumber: 2, outcome: "processed", issues: [] }]],
+      })
+      .mockResolvedValueOnce({
+        rows: [[{ rowNumber: 2, outcome: "duplicate", issues: ["service_already_recorded"] }]],
+      });
+    render(<ExistingImportReview kind="gear" columns={columns} copy={copy} />);
+    await pick(file("service.csv", "gear_label\nCSV-REVIEW-REG"));
+    await userEvent.click(screen.getByRole("button", { name: "Check outcomes" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Import rows (1)" }));
+    await screen.findByText("Actual results");
+    await pick(file("service.csv", "gear_label\nCSV-REVIEW-REG"));
+    expect(screen.queryByText("Actual results")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Check outcomes" }));
+    const row = await screen.findByRole("row", { name: /CSV-REVIEW-REG/ });
+    const outcome = within(row).getAllByRole("cell")[1];
+    // Playwright's exact text locator includes the issue paragraph in this cell.
+    expect(outcome.textContent).toBe("Repeatedservice_already_recorded");
+    expect(outcome).toHaveTextContent("Repeated");
+    expect(outcome).toHaveTextContent("service_already_recorded");
   });
   it("ignores a late review after selecting a different file", async () => {
     let resolve!: (value: Awaited<ReturnType<typeof reviewExistingImportAction>>) => void;

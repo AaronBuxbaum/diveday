@@ -40,6 +40,8 @@ export const tripCreditEntries = pgTable(
   (table) => [
     uniqueIndex("trip_credit_entries_scoped_id_unique").on(table.shopId, table.id),
     uniqueIndex("trip_credit_entries_restore_once").on(table.restoresEntryId),
+    index("trip_credit_entries_person_idx").on(table.personId, table.shopId),
+    index("trip_credit_entries_actor_idx").on(table.actorPersonId, table.shopId),
     index("trip_credit_entries_balance_idx").on(
       table.shopId,
       table.personId,

@@ -1,13 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import {
-  bookASeatAndOpenThread,
-  createTrip,
-  daysFromNow,
-  openTripMore,
-  publicTripUrl,
-  tripPathByTitle,
-} from "./helpers";
+import { openTripMore } from "./helpers";
 
 signedInAsOwner();
 const t = staffTranslator("en-US");
@@ -15,27 +8,13 @@ const t = staffTranslator("en-US");
 test("prioritizes an existing shore departure without moving the canceled booking", async ({
   page,
 }) => {
-  const charter = "Weather alternative source";
+  const setup = await page.request.post("/api/test/shop", {
+    data: { facts: ["weatherAlternatives"] },
+  });
+  expect(setup.ok()).toBe(true);
+  const { values } = await setup.json();
   const shore = "Weather alternative shore";
-  await createTrip(page, {
-    title: charter,
-    date: daysFromNow(9),
-    departsAt: "08:00",
-    returnsAt: "10:00",
-    price: 120,
-  });
-  await createTrip(page, {
-    title: shore,
-    date: daysFromNow(10),
-    departsAt: "09:00",
-    returnsAt: "11:00",
-    price: 80,
-    diveMode: "shore",
-  });
-  const path = await tripPathByTitle(page, "blue-mantis", charter);
-  await page.goto(publicTripUrl(path));
-  await bookASeatAndOpenThread(page, "Shore Recovery Diver");
-  await page.goto(path);
+  await page.goto(`/shop/blue-mantis/trips/${values.weatherAlternatives.sourceTripId}`);
   await openTripMore(page);
   await page.getByRole("link", { name: "Weather blow-out…" }).click();
   await page.getByText(t("blowout.alternatives.title"), { exact: true }).click();
@@ -48,6 +27,15 @@ test("prioritizes an existing shore departure without moving the canceled bookin
   ).toBeVisible();
   await expect(page.getByRole("link", { name: new RegExp(shore) })).toBeVisible();
   await expect(
-    page.getByText(t("blowout.record.unresolvedBadge"), { exact: true }).first(),
+    page
+      .getByRole("row")
+      .filter({
+        has: page.locator(
+          `a[href="/shop/blue-mantis/divers/${values.weatherAlternatives.personId}"]`,
+        ),
+      })
+      .getByText(t("blowout.record.unresolvedBadge"), { exact: true })
+      .filter({ visible: true })
+      .first(),
   ).toBeVisible();
 });

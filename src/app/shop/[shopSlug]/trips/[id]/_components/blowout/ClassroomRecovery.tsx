@@ -1,5 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { ChoiceFieldset, ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoiceRow,
+  controlClass,
+  DateField,
+  Field,
+  FieldGrid,
+} from "@/components/ui/form";
 import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { getBlowoutPage } from "@/db/blowouts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -25,7 +32,7 @@ export function ClassroomRecovery({
   contactPhone,
   t,
 }: {
-  page: Page;
+  page: Pick<Page, "classroomActivities" | "classroomCoordinators" | "blowout">;
   shopSlug: string;
   tripId: string;
   locale: string;
@@ -232,16 +239,16 @@ export function ClassroomRecovery({
           <p className="text-base text-muted">{t("blowout.classroom.timezone", { timezone })}</p>
           <FieldGrid columns={2}>
             <Field label={t("blowout.classroom.date")}>
-              <input name="date" type="date" required className={controlClass} />
+              <DateField name="date" type="date" required />
             </Field>
             <Field label={t("blowout.classroom.start")}>
-              <input name="startTime" type="time" required className={controlClass} />
+              <DateField name="startTime" type="time" required />
             </Field>
             <Field label={t("blowout.classroom.endDate")}>
-              <input name="endDate" type="date" required className={controlClass} />
+              <DateField name="endDate" type="date" required />
             </Field>
             <Field label={t("blowout.classroom.end")}>
-              <input name="endTime" type="time" required className={controlClass} />
+              <DateField name="endTime" type="time" required />
             </Field>
           </FieldGrid>
           <Field label={t("blowout.classroom.location")}>
