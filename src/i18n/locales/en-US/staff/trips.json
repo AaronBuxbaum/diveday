@@ -366,7 +366,7 @@
     "hoursBeforeSuffix": "hours before",
     "coursePrice": "{amount} per diver, the course’s price",
     "coursePriceHint": "Set on the course, with its eLearning fee",
-    "diveDetails": "Name, ride and details",
+    "diveDetails": "Name, ride, and details",
     "editBoat": "Edit boat"
   },
   "conditions": {
@@ -481,7 +481,7 @@
   "addDiver": {
     "heading": "Add a booking",
     "mixedTrainingTitle": "Possible training overlap",
-    "mixedTrainingBody": "If students from these sessions train together on one departure, check instructor groups, the intro ratio and the intro program’s depth limit before the dive.",
+    "mixedTrainingBody": "If students from these sessions train together on one departure, check instructor groups, the intro ratio, and the intro program’s depth limit before the dive.",
     "fullDescription": "The boat is full.",
     "fullRequestStaysOpen": "Wait-listing leaves this request open in Date requests.",
     "findLabel": "Find a returning diver",
@@ -611,7 +611,7 @@
     "depthWarningJuniorCard": "Reaches {site} {unit}, deeper than the {limit} {unit} limit on their junior card. Plan shallower or confirm the guide keeps them within limits.",
     "depthWarningUnconfirmed": "The site reaches {site} {unit}. Check this diver’s depth limit.",
     "depthVerificationCard": "Check whether the card is junior or full before planning the dive.",
-    "depthVerificationLimits": "Check age, depth and supervision requirements with the instructor.",
+    "depthVerificationLimits": "Check age, depth, and supervision requirements with the instructor.",
     "depthWarningNoCard": "Reaches {site} {unit} with no certification on file to measure against; {limit} {unit} is the entry-level limit. This is not a block: check what they hold, or confirm the guide keeps them within limits.",
     "detailsSummaryLabel": "Details for {name}",
     "editPickup": "Edit pickup",
@@ -697,7 +697,7 @@
     "moveSeatTo": "Departure",
     "moveSeatSubmit": "Move",
     "moveSeatPending": "Moving…",
-    "moveSeatNote": "The order, payment and waiver go with the seat. Nothing is charged or refunded, and the diver gets the new time.",
+    "moveSeatNote": "The order, payment, and waiver go with the seat. Nothing is charged or refunded, and the diver gets the new time.",
     "moveSeatParty": "This seat leads a party of {count}. All {count} move together and each gets the new time.",
     "removeBookingConfirmButton": "Yes, remove booking",
     "rentalFitColumnHeading": "Rental fit",
@@ -882,7 +882,7 @@
   "rehearsal": {
     "label": "Rehearsal",
     "title": "Practice departure for training day",
-    "body": "Nothing about it is sent, charged, shown publicly or counted in reports. It is deleted {days, plural, one {# day} other {# days}} after it comes home, once no later boat counts its dives toward the wait before flying.",
+    "body": "Nothing about it is sent, charged, shown publicly, or counted in reports. It is deleted {days, plural, one {# day} other {# days}} after it comes home, once no later boat counts its dives toward the wait before flying.",
     "kept": "This rehearsal has a roll call, a logged dive or an incident report, so it is not deleted on its own."
   },
   "siteHistory": {

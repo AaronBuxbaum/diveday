@@ -51,7 +51,7 @@
   "setup": {
     "tab": "Website",
     "heading": "Set up from your website",
-    "intro": "Paste your site and AI reads it for your tagline, phone, desk hours, prices and departures. Nothing changes until you accept a line.",
+    "intro": "Paste your site and AI reads it for your tagline, phone, desk hours, prices, and departures. Nothing changes until you accept a line.",
     "siteLabel": "Your website",
     "read": "Read the site",
     "reading": "Reading the site…",

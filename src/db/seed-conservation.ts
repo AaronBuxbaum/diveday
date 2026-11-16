@@ -32,7 +32,7 @@ const HISTORY = [
     kind: "litter_items",
     quantity: 23,
     location: "Christ of the Abyss",
-    note: "Cans, a tarp and rope from the mooring field.",
+    note: "Cans, a tarp, and rope from the mooring field.",
   },
   {
     kind: "lionfish_count",

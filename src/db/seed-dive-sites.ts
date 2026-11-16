@@ -84,7 +84,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         ],
         fitTone: "welcoming" as const,
         fitNote:
-          "Shallow, bright and forgiving — a good first ocean dive after a pool course, and still worth a hundredth.",
+          "Shallow, bright, and forgiving — a good first ocean dive after a pool course, and still worth a hundredth.",
         // Sharp, correctly located Commons reef photo; the cover now shows the fictional boat.
         imageUrls: [
           commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
