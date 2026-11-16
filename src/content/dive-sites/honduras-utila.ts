@@ -321,7 +321,7 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
         "A seamount off a small uninhabited cay, with a wide sand patch in the shallows and a narrow channel leading to the outer wall. The wall falls beyond the plan.",
       marineLife: "Gray angelfish · hawksbill turtles · spotted eagle rays · black coral",
       marineLifeDescription:
-        "Gray angelfish come up to look at divers. Pillar coral, black coral and crinoids grow on the wall, and hawksbills feed on the sponges in the shallows.",
+        "Gray angelfish come up to look at divers. Pillar coral, black coral, and crinoids grow on the wall, and hawksbills feed on the sponges in the shallows.",
       difficultyLevel: "intermediate",
       maxDepthMeters: 30,
       currentNote: "The wall can be run either way depending on the current. Carry an SMB.",
@@ -426,10 +426,10 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       forecastLatitude: 16.0753,
       forecastLongitude: -86.9381,
       description:
-        "A small sheltered cove on the south side, with a wide shallow sand patch and a wall to either side. Seahorses, garden eels and other small animals live on the sand.",
+        "A small sheltered cove on the south side, with a wide shallow sand patch and a wall to either side. Seahorses, garden eels, and other small animals live on the sand.",
       marineLife: "Longsnout seahorses · garden eels · gray snapper · reef squid",
       marineLifeDescription:
-        "Seahorses, hermit crabs and garden eels share the sand patch, while schools of snappers and creole wrasse gather on the walls.",
+        "Seahorses, hermit crabs, and garden eels share the sand patch, while schools of snappers and creole wrasse gather on the walls.",
       difficultyLevel: "beginner",
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
@@ -578,11 +578,11 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
         "An offshore seamount with coral formations, run only on days the sea allows. Currents can be strong, on the surface and below.",
       marineLife: "Horse-eye jacks · groupers · spadefish",
       marineLifeDescription:
-        "Jacks, spadefish and groupers gather on the formations, and a silky shark is an occasional visitor in the open water around the seamount.",
+        "Jacks, spadefish, and groupers gather on the formations, and a silky shark is an occasional visitor in the open water around the seamount.",
       difficultyLevel: "advanced",
       maxDepthMeters: 30,
       currentNote:
-        "Strong current, on the surface and down the seamount. Expect a drift; every diver carries an SMB and surfaces with it deployed for pickup.",
+        "Strong current, on the surface, and down the seamount. Expect a drift; every diver carries an SMB and surfaces with it deployed for pickup.",
       divePlan:
         "Staff confirm the diver’s log before boarding. Down the line to the top of the seamount, along the formations no deeper than 30 m (100 ft), and a slow ascent with reserve gas. The overhangs and swim-throughs on the formations are overheads; stay out.",
       fitTone: "demanding",
@@ -623,14 +623,14 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
         "A round sand crater ringed by shallow reef, close to the south shore. Staghorn and elkhorn coral grow on the rim, and seahorses and octopus turn up around the sand.",
       marineLife: "Longsnout seahorses · octopus · nurse sharks · green moray eels · stingrays",
       marineLifeDescription:
-        "Look low over the sand and into the coral on the rim. The reef top is shallow and bright, with the light reaching the coral. Keep hands clear of the coral and look, don't reach. Nurse sharks are not promised; if one is near, stay with the group, keep nothing dangling, do not chase or touch, and follow the crew's briefing.",
+        "Look low over the sand and into the coral on the rim. The reef top is shallow and bright, with the light reaching the coral. Keep hands clear of the coral and look, don't reach. Nurse sharks are not promised; if one is near, stay with the group, keep nothing dangling, do not chase, or touch, and follow the crew's briefing.",
       difficultyLevel: "beginner",
       depthMinMeters: 4,
       maxDepthMeters: 18,
       currentNote:
         "Current not documented; ask the crew on the day, and carry an SMB. The wall beside the crater has caverns, crevices and swim-throughs. They are overhead; stay out.",
       divePlan:
-        "Drop to the reef top at 4 to 7 m, circle the sand crater at its 11 m floor, and follow the rim no deeper than 18 m (60 ft). Turn on your gauge, not the wall: its depth is not documented and it falls away from the rim. The caverns, crevices and swim-throughs along the wall (6 to 12 m) are overheads; stay out. Keep the safety stop on the mooring line or an SMB.",
+        "Drop to the reef top at 4 to 7 m, circle the sand crater at its 11 m floor, and follow the rim no deeper than 18 m (60 ft). Turn on your gauge, not the wall: its depth is not documented and it falls away from the rim. The caverns, crevices, and swim-throughs along the wall (6 to 12 m) are overheads; stay out. Keep the safety stop on the mooring line or an SMB.",
       fitTone: "welcoming",
       fitNote:
         "A bowl of light and sand that is easy to read, rated for entry-level divers and skills practice.",

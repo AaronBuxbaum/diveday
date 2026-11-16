@@ -8,6 +8,7 @@ export type {
 export {
   annotateComputerDive,
   commitComputerFiles,
+  countComputerDives,
   deleteComputerDive,
   exportComputerDiveSummaryCsv,
   exportComputerDives,

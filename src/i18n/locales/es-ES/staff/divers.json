@@ -628,6 +628,7 @@
   "file": {
     "conversationUnanswered": "{count, plural, one {# sin responder} other {# sin responder}}",
     "noteCount": "{count, plural, one {# nota} other {# notas}}",
+    "computerDiveCount": "{count, plural, one {# inmersión} other {# inmersiones}}",
     "noneOnFile": "Sin datos",
     "certificationsNone": "Ninguna registrada",
     "gearHeading": "Equipo y tallas",

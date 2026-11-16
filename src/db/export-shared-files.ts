@@ -203,7 +203,7 @@ export const CARDS_CSV = sharedFile<ShopRow<"cardRows">>({
   },
   diver: {
     rows: ({ cardRows }) => cardRows,
-    note: "Every card this shop holds on file (level, specialty and nitrox), with its verification status.",
+    note: "Every card this shop holds on file (level, specialty, and nitrox), with its verification status.",
   },
 });
 
@@ -1194,7 +1194,7 @@ export const STAFF_CREDENTIALS_CSV = sharedFile<ShopRow<"staffCredentialRows">>(
   },
   diver: {
     rows: ({ staffCredentialRows }) => staffCredentialRows,
-    note: "This person's own pro cards on file as staff: ratings, insurance and safety credentials, with their renewal dates.",
+    note: "This person's own pro cards on file as staff: ratings, insurance, and safety credentials, with their renewal dates.",
   },
 });
 
@@ -1333,7 +1333,7 @@ export const INBOUND_MESSAGES_CSV = sharedFile<ShopRow<"inboundMessageRows">>({
   },
   diver: {
     rows: ({ inboundMessageRows }) => inboundMessageRows,
-    note: "Every message this diver sent the shop, by email, text or WhatsApp, in the words they wrote. A row with deleted_at is one the shop took off its inbox.",
+    note: "Every message this diver sent the shop, by email, text, or WhatsApp, in the words they wrote. A row with deleted_at is one the shop took off its inbox.",
   },
 });
 

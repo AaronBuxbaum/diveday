@@ -225,7 +225,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       depthMinMeters: 15,
       maxDepthMeters: 20,
       currentNote:
-        "Open water south of Key West, so current is possible. Storm damage has left sharp, loose metal: look, but stay off and out of it.",
+        "Open water south of Key West, so current is possible. Storm damage has left sharp, loose metal: look, but stay off, and out of it.",
       divePlan:
         "Circle the tug from the mooring, then spend the rest of the dive on the reef that surrounds it.",
       fitNote: "A good first wreck for a diver already comfortable at 20 m.",
@@ -267,7 +267,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       divePlan:
         "Follow one coral finger out from the mooring, cross a sand channel, and come back along the next.",
       fitTone: "welcoming",
-      fitNote: "Shallow, clear and easy to navigate. Good for new divers and snorkelers together.",
+      fitNote: "Shallow, clear, and easy to navigate. Good for new divers and snorkelers together.",
       landmarks: [
         {
           name: "Coral fingers",
@@ -301,7 +301,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       forecastLatitude: 24.4549,
       forecastLongitude: -81.8581,
       description:
-        "A small bank reef a mile east of Sand Key Light, packing coral fingers, sand canyons and a rubble zone into a short swim. It is a Sanctuary Preservation Area, and the fish behave like it.",
+        "A small bank reef a mile east of Sand Key Light, packing coral fingers, sand canyons, and a rubble zone into a short swim. It is a Sanctuary Preservation Area, and the fish behave like it.",
       marineLife: "Parrotfish · grunts · snapper · sea fans",
       difficultyLevel: "beginner",
       depthMinMeters: 2,
@@ -391,7 +391,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       forecastLatitude: 24.6146,
       forecastLongitude: -81.9195,
       description:
-        "Shallow sponge and sand bottom off a small key northwest of Key West, the northernmost of the Mule Keys. A gentle, easy swim where rays and turtles turn up among the sponges.",
+        "Shallow sponge and sand bottom off a small key northwest of Key West, the northernmost of the Mule Keys. A gentle, easy swim where rays, and turtles turn up among the sponges.",
       marineLife: "Sponges · rays · sea turtles · tropical fish",
       difficultyLevel: "beginner",
       depthMinMeters: 2,
@@ -426,7 +426,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       forecastLatitude: 24.4721,
       forecastLongitude: -81.7642,
       description:
-        "A shallow reef south of Key West named for the marker stake that once stood on it. Easy, clear and close to town, it is a common first dive and a favorite with photographers.",
+        "A shallow reef south of Key West named for the marker stake that once stood on it. Easy, clear, and close to town, it is a common first dive and a favorite with photographers.",
       marineLife: "Green morays · parrotfish · grunts · snapper",
       difficultyLevel: "beginner",
       depthMinMeters: 2,
@@ -470,7 +470,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
         "Current is usually limited, but boats run past the marker: fly a dive flag and surface by the boat. Not a preservation area, so you may share it with fishing boats.",
       divePlan: "Swim a coral finger out from the mooring and return along the next one.",
       fitTone: "welcoming",
-      fitNote: "Shallow, easy and close to town.",
+      fitNote: "Shallow, easy, and close to town.",
       landmarks: [
         {
           name: "Marker 32",

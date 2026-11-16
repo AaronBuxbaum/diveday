@@ -27,14 +27,14 @@ export const CURACAO: DiveSiteTemplate[] = [
         "A small tug lying intact in 1–5 m of water beside Director's Bay, furred with sponge and coral. Shallow enough to snorkel over. Stay outside the hull.",
       marineLife: "Blue tang · yellow goatfish · trumpetfish · seahorses",
       marineLifeDescription:
-        "Blue tang, goatfish and trumpetfish live on the wreck. Seahorses and frogfish turn up with some luck.",
+        "Blue tang, goatfish, and trumpetfish live on the wreck. Seahorses and frogfish turn up with some luck.",
       difficultyLevel: "beginner",
       depthMinMeters: 1,
       maxDepthMeters: 5,
       currentNote: "Sheltered water, but boats work this coast. Tow an inflated surface marker.",
       divePlan: "A short surface swim from the beach to the tug, then circle it in the shallows.",
       fitTone: "welcoming",
-      fitNote: "Shallow, close to the beach and easy to read. Good for a first look at a wreck.",
+      fitNote: "Shallow, close to the beach, and easy to read. Good for a first look at a wreck.",
       creatureSlugs: [
         "blue-tang",
         "yellow-goatfish",
@@ -61,7 +61,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.0657,
       forecastLongitude: -68.8601,
       description:
-        "A narrow sand shelf, then a drop-off about 6 m from the shoreline and a steep wall below it. Sand gullies, sponges, yellow pencil coral and giant anemones along the edge, with old surge-fence panels now crusted in coral.",
+        "A narrow sand shelf, then a drop-off about 6 m from the shoreline and a steep wall below it. Sand gullies, sponges, yellow pencil coral, and giant anemones along the edge, with old surge-fence panels now crusted in coral.",
       marineLife: "Seahorses · frogfish · moray eels · octopus",
       marineLifeDescription:
         "East along the wall, the rubble and fence hold the small animals. Look slowly, not far.",
@@ -204,7 +204,7 @@ export const CURACAO: DiveSiteTemplate[] = [
         "Down to the superstructure, along the deck on the outside of the hull, and back up with reserve gas. Watch the no-decompression clock near 30 m.",
       fitTone: "demanding",
       fitNote:
-        "Deep, with current and a berth that closes when ships dock. For divers with the card and the gas for it.",
+        "Deep, with current, and a berth that closes when ships dock. For divers with the card and the gas for it.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       creatureSlugs: ["tarpon", "great-barracuda", "horse-eye-jack", "sea-plume", "black-sea-rod"],
@@ -268,7 +268,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.0903,
       forecastLongitude: -68.9057,
       description:
-        "A shore dive out of a small bay onto the drop-off, then left along the wall to the Car Pile: cars, trucks, metal beams and a small wreck sunk as an artificial reef. The pile starts at about 15 m, a barge lies near 30 m, and the debris runs on below 40 m.",
+        "A shore dive out of a small bay onto the drop-off, then left along the wall to the Car Pile: cars, trucks, metal beams, and a small wreck sunk as an artificial reef. The pile starts at about 15 m, a barge lies near 30 m, and the debris runs on below 40 m.",
       marineLife: "Porcupinefish · tarpon · moray eels · lionfish",
       marineLifeDescription:
         "Morays shelter under the beams and tarpon watch from a distance. Lionfish hide in the scrap.",
@@ -451,7 +451,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.1579,
       forecastLongitude: -69.0048,
       description:
-        "Cars, trucks and a pontoon barge sunk as a reef project, scattered between 20 and 50 m. A buoy at 5 m marks the wrecks after a surface swim of ten to twenty minutes from Kokomo Beach. A tugboat wreck lies nearby, and one guide puts it at 50 m. Stay outside the hulls.",
+        "Cars, trucks, and a pontoon barge sunk as a reef project, scattered between 20 and 50 m. A buoy at 5 m marks the wrecks after a surface swim of ten to twenty minutes from Kokomo Beach. A tugboat wreck lies nearby, and one guide puts it at 50 m. Stay outside the hulls.",
       marineLife: "Black coral · reef fish",
       marineLifeDescription:
         "Black coral grows on the deeper metal. The wrecks are deep and the swim out is long.",
@@ -640,7 +640,7 @@ export const CURACAO: DiveSiteTemplate[] = [
         "A house reef 100 feet straight out from the end of a pier. A reference rope leads from the pier down to the coral. The reef starts shallow and slopes past 30 m.",
       marineLife: "Green moray · lobster · lettuce sea slug · parrotfish · turtles",
       marineLifeDescription:
-        "Morays, lobster and sea slugs under the pier and along the rope. Turtles and the odd eagle ray over the reef.",
+        "Morays, lobster, and sea slugs under the pier and along the rope. Turtles and the odd eagle ray over the reef.",
       difficultyLevel: "beginner",
       depthMinMeters: 5,
       maxDepthMeters: 30,
@@ -806,7 +806,7 @@ export const CURACAO: DiveSiteTemplate[] = [
         "Coral-covered walls on the open blue, inside the Curaçao Marine Park and reached only by boat. Schools of snapper and grunts pour over the reef, with barracuda and eagle rays passing the edge.",
       marineLife: "Snapper · grunts · barracuda · eagle rays",
       marineLifeDescription:
-        "Walls of coral, sponge and sea fan with schools along them. Nurse sharks are reported.",
+        "Walls of coral, sponge, and sea fan with schools along them. Nurse sharks are reported.",
       difficultyLevel: "advanced",
       depthMinMeters: 5,
       maxDepthMeters: 30,
@@ -929,7 +929,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.0516,
       forecastLongitude: -68.837,
       description:
-        "A sloping drop-off with a sandy and rubble plateau outside the Fuikbaai breakwater, between Eel Valley and Newport. A good place to learn sponges: barrel, tube, rope and vase.",
+        "A sloping drop-off with a sandy and rubble plateau outside the Fuikbaai breakwater, between Eel Valley and Newport. A good place to learn sponges: barrel, tube, rope, and vase.",
       marineLife: "Barrel sponges · tube sponges · eagle rays · turtles",
       marineLifeDescription:
         "Sponges of many kinds on the slope, with juvenile fish among the boulder corals.",
@@ -985,7 +985,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       divePlan:
         "Down the sand chutes to the drop-off, along the wall no deeper than 30 m (100 ft), and back up over the coral heads.",
       fitTone: "demanding",
-      fitNote: "Sand, garden eels and stingrays above a wall that runs below the plan's floor.",
+      fitNote: "Sand, garden eels, and stingrays above a wall that runs below the plan's floor.",
       // The operator pages disagree on the level, so the gate is the stricter one.
       // The wall falls past recreational depth; the plan holds a 30 m floor, so the gate is Advanced Open
       // Water without the Deep specialty (walls rule). A shop that runs the shallow terrace as Open
@@ -1012,7 +1012,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       description:
         "Dense boulder coral, gorgonians and coral fields on the east point of the Caracasbaai peninsula, across the channel from a resort. The reef eases down to 15 m before it steepens. Often a drift toward Director's Bay.",
       marineLife: "Barracuda · green turtles · horse-eye jacks · parrotfish",
-      marineLifeDescription: "Turtles, jacks and barracuda over the coral fields.",
+      marineLifeDescription: "Turtles, jacks, and barracuda over the coral fields.",
       difficultyLevel: "advanced",
       depthMinMeters: 5,
       maxDepthMeters: 30,
@@ -1161,7 +1161,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.2685,
       forecastLongitude: -69.1369,
       description:
-        "A field of soft coral in the shallows, then a drop-off with hard coral on the face. Porcupinefish, rays, morays and lobster in the reef. Sharks have been seen here.",
+        "A field of soft coral in the shallows, then a drop-off with hard coral on the face. Porcupinefish, rays, morays, and lobster in the reef. Sharks have been seen here.",
       marineLife: "Porcupinefish · rays · moray eels · lobster",
       marineLifeDescription:
         "Soft coral shallows and a hard coral face, with rays and morays in the reef.",
@@ -1203,7 +1203,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.2708,
       forecastLongitude: -69.1402,
       description:
-        "A steep wall off Soto, named for the strong current at the nearby point. The mooring has been moved west of the point to calmer water. Brain coral, tube sponges, large gorgonians and schooling jacks.",
+        "A steep wall off Soto, named for the strong current at the nearby point. The mooring has been moved west of the point to calmer water. Brain coral, tube sponges, large gorgonians, and schooling jacks.",
       marineLife: "Jacks · barracuda · turtles · morays",
       marineLifeDescription:
         "Gorgonians and brain coral on the wall with schools of jacks along it.",
@@ -1247,7 +1247,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.2834,
       forecastLongitude: -69.1509,
       description:
-        "A boat dive between Rediho and Playa Hulu on a densely covered reef. Sea rods, star and brain coral, big orange elephant-ear sponges and gorgonians fill it, and the folds of the reef shelter octopus, arrow crabs and eels. A memorial plaque is fixed at the mooring.",
+        "A boat dive between Rediho and Playa Hulu on a densely covered reef. Sea rods, star, and brain coral, big orange elephant-ear sponges, and gorgonians fill it, and the folds of the reef shelter octopus, arrow crabs and eels. A memorial plaque is fixed at the mooring.",
       marineLife: "Angelfish · octopus · eagle rays · arrow crabs",
       marineLifeDescription: "Angelfish in numbers, with octopus and eagle rays in the reef folds.",
       difficultyLevel: "advanced",
@@ -1369,7 +1369,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.0441,
       forecastLongitude: -68.736,
       description:
-        "The fringing reef at the island's eastern tip, reached only by boat. Tarpon Bridge, a natural coral arch about 7 m high and 12 m wide at roughly 20 m, shelters a school of tarpon. Eagle rays, large barracuda and turtles are seen here, and sharks are possible.",
+        "The fringing reef at the island's eastern tip, reached only by boat. Tarpon Bridge, a natural coral arch about 7 m high and 12 m wide at roughly 20 m, shelters a school of tarpon. Eagle rays, large barracuda, and turtles are seen here, and sharks are possible.",
       marineLife: "Tarpon · eagle rays · barracuda · turtles",
       marineLifeDescription:
         "A school of tarpon at the bridge, with rays and barracuda around the reef.",
@@ -1483,7 +1483,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.0759,
       forecastLongitude: -68.8824,
       description:
-        "An easy entry to a sandy plateau and gentle slope, with coral gardens, sea fans and the wreck of the sailboat Strea inside the bay.",
+        "An easy entry to a sandy plateau and gentle slope, with coral gardens, sea fans, and the wreck of the sailboat Strea inside the bay.",
       marineLife: "Turtles · reef squid · donkey dung sea cucumbers · long-spined urchins",
       marineLifeDescription: "Turtles and squid over the slope, small animals on the sand.",
       difficultyLevel: "intermediate",
@@ -1592,7 +1592,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.3348,
       forecastLongitude: -69.1545,
       description:
-        "Big hard coral colonies and colorful sponges between Kleine Knip and Playa Jeremi, with barracuda, green morays and lobster. A small cave along the shoreline is an overhead space and not part of this plan.",
+        "Big hard coral colonies and colorful sponges between Kleine Knip and Playa Jeremi, with barracuda, green morays, and lobster. A small cave along the shoreline is an overhead space and not part of this plan.",
       marineLife: "Barracuda · green morays · lobster · hard coral",
       marineLifeDescription:
         "Barracuda over the coral, with morays and lobster among the colonies.",
@@ -1787,7 +1787,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.1982,
       forecastLongitude: -69.0795,
       description:
-        "A resort house reef reached from the pier. Coral heads with parrotfish, puffers, trumpetfish, barracuda and turtles.",
+        "A resort house reef reached from the pier. Coral heads with parrotfish, puffers, trumpetfish, barracuda, and turtles.",
       marineLife: "Parrotfish · puffers · trumpetfish · barracuda · turtles",
       marineLifeDescription:
         "Fish moving around the coral heads, with deep-water visitors now and then.",
@@ -1900,7 +1900,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.2277,
       forecastLongitude: -69.093,
       description:
-        "A shore dive from a large white-sand beach onto a fringing reef a few fin kicks out. Eagle rays, stingrays, turtles, morays, seahorses and frogfish.",
+        "A shore dive from a large white-sand beach onto a fringing reef a few fin kicks out. Eagle rays, stingrays, turtles, morays, seahorses, and frogfish.",
       marineLife: "Eagle rays · stingrays · turtles · morays · seahorses",
       marineLifeDescription:
         "A fringing reef with rays and turtles over it, and small animals in it.",
@@ -2045,7 +2045,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.3413,
       forecastLongitude: -69.153,
       description:
-        "A shore dive from a small, popular beach, heading for the drop-off along the cliffs. Gorgonians, orange cup coral and schools of fingerlings.",
+        "A shore dive from a small, popular beach, heading for the drop-off along the cliffs. Gorgonians, orange cup coral, and schools of fingerlings.",
       marineLife: "Gorgonians · orange cup coral · fingerlings · turtles",
       marineLifeDescription: "Gorgonians and cup coral, with turtles and squid.",
       difficultyLevel: "intermediate",
@@ -2080,7 +2080,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.2598,
       forecastLongitude: -69.1203,
       description:
-        "A shore dive east of Santa Martha Bay. Head out at 240 degrees to a drop-off close to shore, with a reef slope of about 45 degrees. Sandy valleys give easy landmarks. Large gorgonians, stovepipe and elephant-ear sponges.",
+        "A shore dive east of Santa Martha Bay. Head out at 240 degrees to a drop-off close to shore, with a reef slope of about 45 degrees. Sandy valleys give easy landmarks. Large gorgonians, stovepipe, and elephant-ear sponges.",
       marineLife: "Gorgonians · stovepipe sponges · elephant-ear sponges",
       marineLifeDescription: "Sponge and gorgonian groups mark the entry point.",
       difficultyLevel: "advanced",

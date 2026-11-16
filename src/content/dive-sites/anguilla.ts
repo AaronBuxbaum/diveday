@@ -64,7 +64,7 @@ export const ANGUILLA: DiveSiteTemplate[] = [
         "A reef beside a tiny island off the west end of Anguilla. Three mini-walls with ledges run along it, and a reef begins near 12 m and slopes into deeper water. The small caves are overhead; stay out.",
       marineLife: "Southern stingrays · spotted morays · turtles · eagle rays",
       marineLifeDescription:
-        "Stingrays, morays, lobsters and turtles use the ledges, with schools of jacks and barracuda along the wall and an occasional eagle ray.",
+        "Stingrays, morays, lobsters, and turtles use the ledges, with schools of jacks and barracuda along the wall and an occasional eagle ray.",
       conservationNote:
         "Anguilla’s marine parks and mooring permits protect its dive sites. Use the moorings, never an anchor on the reef.",
       difficultyLevel: "intermediate",
@@ -234,10 +234,10 @@ export const ANGUILLA: DiveSiteTemplate[] = [
       forecastLatitude: 18.1984,
       forecastLongitude: -63.1407,
       description:
-        "A Dutch cargo ship sunk upright in 1990 and still well preserved, lying close to a soft coral reef. The skeleton of a Volkswagen sits near the stern, and stingrays, garden eels and turtles share the sand around it. Night dives need staff approval and a briefed plan.",
+        "A Dutch cargo ship sunk upright in 1990 and still well preserved, lying close to a soft coral reef. The skeleton of a Volkswagen sits near the stern, and stingrays, garden eels, and turtles share the sand around it. Night dives need staff approval and a briefed plan.",
       marineLife: "Southern stingrays · garden eels · green turtles · barracuda",
       marineLifeDescription:
-        "Stingrays, turtles, lobsters, morays, barracuda and bar jacks are commonly seen, with reef sharks and eagle rays sometimes.",
+        "Stingrays, turtles, lobsters, morays, barracuda, and bar jacks are commonly seen, with reef sharks and eagle rays sometimes.",
       conservationNote:
         "Anguilla’s marine parks and mooring permits protect its dive sites. Use the moorings, never an anchor on the reef. This is part of Anguilla’s underwater heritage: leave everything where it lies, and note that exporting antiquities is against the law.",
       difficultyLevel: "intermediate",

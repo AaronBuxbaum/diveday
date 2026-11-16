@@ -33,7 +33,7 @@
   },
   "fields": {
     "code": "Code",
-    "codeHint": "letters, numbers, - and _",
+    "codeHint": "letters, numbers, -, and _",
     "codePlaceholder": "REEF20",
     "discount": "Discount",
     "discountKind": "Discount type",
