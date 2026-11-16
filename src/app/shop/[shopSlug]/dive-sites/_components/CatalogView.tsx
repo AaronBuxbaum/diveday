@@ -161,6 +161,7 @@ export async function CatalogView({
             carry={{ q: query, difficulty: filters.difficulty, need: filters.need }}
             t={t}
             className=""
+            fill
           />
         }
         followLabel={t("diveSites.list.followMap")}

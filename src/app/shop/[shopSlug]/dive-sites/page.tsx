@@ -269,6 +269,7 @@ export default async function DiveSitesPage({
                 carry={{ q: query, difficulty: filters.difficulty, need: filters.need }}
                 t={t}
                 className=""
+                fill
               />
             ) : null
           }
