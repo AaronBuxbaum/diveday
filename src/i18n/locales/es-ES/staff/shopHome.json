@@ -185,6 +185,10 @@
     "ladder": "Ver quién podría tomarlo",
     "minimum": "Cambiar el mínimo"
   },
+  "quietSuggestions": {
+    "heading": "Buceadores pendientes para la semana siguiente",
+    "blocked": "{count, plural, one {# bloqueado} other {# bloqueados}}"
+  },
   "quietAddDeparture": "Agregar una salida",
   "quietNextDepartureLabel": "Próxima salida",
   "arrivals": {

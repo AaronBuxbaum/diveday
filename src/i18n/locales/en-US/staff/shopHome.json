@@ -185,6 +185,10 @@
     "ladder": "See who could take it",
     "minimum": "Change the minimum"
   },
+  "quietSuggestions": {
+    "heading": "Divers to clear for the week after",
+    "blocked": "{count, plural, one {# blocked} other {# blocked}}"
+  },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",
   "arrivals": {

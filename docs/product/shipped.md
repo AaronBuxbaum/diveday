@@ -7,6 +7,14 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A quiet day names the week after's blocked boats (built 2026-11-16)
+
+Issue #4257. On a quiet day (`spineIsQuiet`), Today lists at most two departures of the week past
+the queue's one-week horizon that already have a blocked diver, soonest first, each linking to its
+guests (`src/features/today/quiet-day-suggestions.ts`). Nothing shows when nothing is blocked, so
+the quiet pair stays the whole message. Course inquiries are not suggested here: an open one is an
+unanswered-messages row, so the day is not quiet while it waits.
+
 ## Expiring group holds and organizer ledger (built 2026-11-10)
 
 Issue #4209, merged in [#4222](https://github.com/AaronBuxbaum/diveday/pull/4222). Merge evidence is not production activation.
