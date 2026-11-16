@@ -830,7 +830,8 @@ async function scrubPersonRecord(
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId, now } = ctx;
-  const profileOwners = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
+  const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
+  const profileOwners = [personId, ...mergedShellIds];
   const profileRows = await tx
     .select({ profile: people.publicStaffProfile })
     .from(people)
@@ -866,7 +867,6 @@ async function scrubPersonRecord(
   // (ADR 20260820-every-delete-is-soft). What goes is the identity, not the row,
   // so the merge audit trail (`merged_into_person_id`, `merged_at`,
   // `merged_by_person_id`) is deliberately left in place.
-  const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
   for (const shellId of mergedShellIds) {
     await tx
       .update(people)

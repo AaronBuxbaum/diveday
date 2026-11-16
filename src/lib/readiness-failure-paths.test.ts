@@ -77,7 +77,7 @@ describe("a lower verified card beside a higher pending one", () => {
         certifications: [lower, higher],
         requirement: {
           ...requirement,
-          minimumCertificationLevel: "rescue_diver",
+          minimumCertificationLevel: "rescue",
         } as TripRequirement,
       }),
     ).toEqual(["certification_insufficient"]);
