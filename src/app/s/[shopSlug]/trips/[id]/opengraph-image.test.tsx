@@ -38,6 +38,38 @@ describe("trip Open Graph image", () => {
     expect(mocks.allowSvgRasterization).not.toHaveBeenCalled();
   });
 
+  it("words the seats line in the shop's own language", async () => {
+    mocks.getDb.mockResolvedValue({});
+    mocks.getShopBySlug.mockResolvedValue({
+      id: "shop-1",
+      name: "Azul Buceo",
+      logoUrl: null,
+      defaultLocale: "es-ES",
+      timezone: "Europe/Madrid",
+      currency: "EUR",
+    });
+    mocks.getTripWithBooked.mockResolvedValue({
+      title: "Dos tanques",
+      startsAt: new Date("2026-12-05T09:00:00Z"),
+      isRehearsal: false,
+      conditionsHold: false,
+      capacity: 8,
+      sellableCapacity: 8,
+      booked: 5,
+      priceCents: null,
+      course: null,
+    });
+    const card = (await TripOpenGraphImage({
+      params: Promise.resolve({
+        shopSlug: "azul-buceo",
+        id: "7b0a3c3e-5d2f-4a8e-9c1d-2e3f4a5b6c7d",
+      }),
+    })) as unknown as { body: unknown };
+    const text = JSON.stringify(card.body);
+    expect(text).toContain("Quedan 3 plazas");
+    expect(text).not.toContain("spots left");
+  });
+
   // Each crawler fetch read the shop, the trip with its booked list, and
   // rasterized, under Next's default `max-age=0` (code review 2026-10-13b,
   // item 27). The card carries a seat count, so it is held as long as

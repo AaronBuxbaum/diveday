@@ -1,6 +1,7 @@
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import type { TripManifest } from "@/lib/manifests";
 
 /**
@@ -37,7 +38,9 @@ export function PrintedMedicalAlertsNote({
       <p className="mt-1 text-sm">{t("manifest.medicalAlertNotReviewed")}</p>
       {onSheet.length > 0 ? (
         <p className="mt-1 text-sm font-medium">
-          {t("manifest.medicalAlertsPrintedOnSheet", { divers: onSheet.join(", ") })}
+          {t("manifest.medicalAlertsPrintedOnSheet", {
+            divers: cachedListFormat(locale, { type: "conjunction" }).format(onSheet),
+          })}
         </p>
       ) : null}
       <p className="mt-1 text-sm">

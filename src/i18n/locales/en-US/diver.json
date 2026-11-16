@@ -152,6 +152,7 @@
     "recentSighting": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}} in the past 30 days"
   },
   "trip": {
+    "seatsLeftCard": "{count, plural, one {# seat left} other {# seats left}}",
     "coursePlanHeading": "Your course plan",
     "boatYoullBeOn": "You’ll be on {name}",
     "courseSession": "Course session",
