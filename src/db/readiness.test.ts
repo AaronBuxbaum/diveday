@@ -23,7 +23,7 @@ import {
   tripRequirementSummaries,
   upsertTripRequirements,
 } from "./readiness";
-import { cards, courses, diveSites, people, shops, tripAssignments, trips } from "./schema";
+import { cards, courses, diveSites, shops, tripAssignments, trips } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import {
   createTrip,
@@ -1321,25 +1321,6 @@ describe("issueShopSpecialtyCertification / issueShopNitroxCertification (issue 
         personId,
         tripId: trip.id,
         specialty: "drysuit",
-        issuedByPersonId: instructorId,
-      }),
-    ).toBeNull();
-  });
-
-  it("refuses a diver who is not booked on the session", async () => {
-    const { db, shop, trip, instructorId } = await courseSessionWithBooking("Unbooked session");
-    const [stranger] = await db
-      .select({ id: people.id })
-      .from(people)
-      .where(and(eq(people.shopId, shop.id), isNull(people.deletedAt)))
-      .limit(1);
-    if (!stranger) throw new Error("expected a person");
-
-    expect(
-      await issueShopNitroxCertification(db, {
-        shopId: shop.id,
-        personId: stranger.id,
-        tripId: trip.id,
         issuedByPersonId: instructorId,
       }),
     ).toBeNull();

@@ -367,12 +367,22 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripTab(page, "Manifest");
         await openDeckDetails(page);
         await offlineCopySaved(page);
+        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\/manifest/)?.[1];
+        if (!tripId) throw new Error("The reef trip manifest must identify its trip");
+        // Capture the intended fresh roster, confirmed by the real scoped 204 response after
+        // checkpoint navigation and each write, rather than a transient withdrawal.
+        const checkpointConfirmed = liveRosterConfirmation(page, {
+          tripId,
+          checkpoint: "after_dive_1",
+        });
         await page
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
         await openDeckDetails(page);
+        await checkpointConfirmed;
         await openDeckPerson(page, "Tom Okafor");
+        const tomConfirmed = liveRosterConfirmation(page, { tripId, checkpoint: "after_dive_1" });
         await page
           .getByRole("button", {
             name: staffCopy("manifest.deck.record", { name: "Tom Okafor" }),
@@ -382,7 +392,9 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
           staffCopy("manifest.deck.savedAboard"),
         );
+        await tomConfirmed;
         await openManifestPerson(await manifestRow(page, "Lena Fischer"));
+        const lenaConfirmed = liveRosterConfirmation(page, { tripId, checkpoint: "after_dive_1" });
         await page
           .getByRole("dialog")
           .getByRole("button", { name: "Mark not back aboard", exact: true })
@@ -390,10 +402,18 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
           staffCopy("manifest.deck.savedMissing"),
         );
+        await lenaConfirmed;
         const tomRow = await manifestRow(page, "Tom Okafor");
         await expect(tomRow.getByText("Lena not back aboard", { exact: true })).toBeVisible();
         await page.mouse.move(0, 0);
-        await capture(page, "manifest-buddy-divergence", scheme);
+        await capture(page, "manifest-buddy-divergence", scheme, {
+          beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
+            await expect(tomRow.getByText("Lena not back aboard", { exact: true })).toBeVisible();
+          },
+        });
       });
 
       test(`the manifest stage controls keep keyboard focus visible at both track edges (${scheme})`, async ({
