@@ -13,7 +13,8 @@ import { normalizeImportKey } from "../../lib/import-key";
 export type PreparedGearImportRow = {
   rowNumber: number;
   label: string;
-  kind: GearItemKind;
+  /** Null when the file names no kind or one we do not know: a matched unit keeps its own. */
+  kind: GearItemKind | null;
   size: string | null;
   serialNumber: string | null;
   brandModel: string | null;
@@ -62,7 +63,7 @@ const aliases = {
   label: ["gear_label", "gear_tag", "tag", "unit", "unit_label", "equipment", "asset"],
   kind: ["gear_kind", "gear_type", "kind", "type", "category"],
   size: ["gear_size", "size"],
-  serialNumber: ["serial_number", "serial", "serial_no", "serial_number"],
+  serialNumber: ["serial_number", "serial", "serial_no"],
   brandModel: ["brand_model", "brand", "model", "equipment_model"],
   purchasedOn: ["purchased_on", "purchase_date", "acquired_on"],
   serviceKind: ["service_kind", "service_type", "maintenance_type", "event_type"],
@@ -89,7 +90,7 @@ function text(value: string | undefined) {
   return trimmed ? trimmed : null;
 }
 
-function kind(value: string | null): GearItemKind {
+function kind(value: string | null): GearItemKind | null {
   const normalized = normalizeImportKey(value ?? "");
   const aliasesByKind: Partial<Record<GearItemKind, string[]>> = {
     bcd: ["bcd", "buoyancy_compensator"],
@@ -105,7 +106,7 @@ function kind(value: string | null): GearItemKind {
     other: ["other", "misc"],
   };
   return (
-    GEAR_KIND_ORDER.find((candidate) => aliasesByKind[candidate]?.includes(normalized)) ?? "other"
+    GEAR_KIND_ORDER.find((candidate) => aliasesByKind[candidate]?.includes(normalized)) ?? null
   );
 }
 
