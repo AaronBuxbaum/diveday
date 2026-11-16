@@ -7,6 +7,7 @@ import { callDayBlowout, listDayBlowoutDepartures } from "@/db/blowouts";
 import { recordTripActivity } from "@/db/operations";
 import { requireShopSurface } from "@/features/session";
 import { trackEvent } from "@/lib/analytics";
+import { parseBlowoutPreferences } from "@/lib/blowout-preferences";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { dayBlowoutBounds, dayBlowoutCallable } from "@/lib/day-blowout";
@@ -39,6 +40,8 @@ export async function callDayBlowoutAction(shopSlug: string, date: string, formD
     refusal: { notice: "day-blowout-not-authorized" },
   });
   if (!isValidCalendarDate(date)) redirect(noticeUrl(back, "error"));
+  const preferredAlternativeTripIds = parseBlowoutPreferences(formData.getAll("alternativeTripId"));
+  if (!preferredAlternativeTripIds) redirect(noticeUrl(back, "alternatives-invalid"));
   const submitted = [
     ...new Set(
       formData
@@ -63,6 +66,7 @@ export async function callDayBlowoutAction(shopSlug: string, date: string, formD
           tripIds: callable,
           calledByPersonId: session.user.personId,
           now,
+          preferredAlternativeTripIds,
           // A captain may call the day; only a refund holder moves the money (H-20261013-call-off-queues-refunds).
           refunds: (await canPersonRefund(db, shop.id, session.user.personId))
             ? "release"

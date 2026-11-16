@@ -7,6 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import {
+  NonBoatAlternativesPicker,
+  type NonBoatPickerCopy,
+  type NonBoatPickerOption,
+} from "./NonBoatAlternativesPicker";
 
 /** The deliberate confirmation is a reading surface; the resulting report scans wider. */
 export function BlowoutConfirmation({
@@ -17,6 +22,8 @@ export function BlowoutConfirmation({
   mayRefund,
   dayHref,
   roster,
+  alternativeOptions,
+  alternativeCopy,
   call,
   t,
 }: {
@@ -30,7 +37,9 @@ export function BlowoutConfirmation({
     booking: { id: string };
     person: { fullName: string; email: string | null };
   }[];
-  call: () => Promise<void>;
+  alternativeOptions: NonBoatPickerOption[];
+  alternativeCopy: NonBoatPickerCopy;
+  call: (formData: FormData) => Promise<void>;
   t: StaffTranslator;
 }) {
   return (
@@ -80,6 +89,7 @@ export function BlowoutConfirmation({
           <p className="mt-6 text-sm font-medium text-danger">{t("blowout.confirm.departed")}</p>
         ) : (
           <form action={call} className="mt-6">
+            <NonBoatAlternativesPicker options={alternativeOptions} copy={alternativeCopy} />
             <SubmitButton
               pendingLabel={t("blowout.confirm.calling")}
               className={buttonClass({ variant: "danger" })}

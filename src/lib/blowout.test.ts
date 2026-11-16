@@ -289,3 +289,35 @@ describe("qualifyingAlternatives — the seat's own type (ADR 20261007-participa
     expect(offers([gated], openWaterDiver({ participantType: "rider" }))).toEqual([gated.id]);
   });
 });
+
+it("prioritizes staff-selected eligible shore/pool departures without displacing eligibility", () => {
+  const ordinary = candidate({ id: "boat", startsAt: daysFromNow(1), diveMode: "boat" });
+  const shore = candidate({ id: "shore", startsAt: daysFromNow(5), diveMode: "shore" });
+  const pool = candidate({ id: "pool", startsAt: daysFromNow(4), diveMode: "pool" });
+  const full = candidate({
+    id: "full-pool",
+    startsAt: daysFromNow(2),
+    diveMode: "pool",
+    capacity: 2,
+    activeBookings: 2,
+  });
+  expect(
+    qualifyingAlternatives({
+      cancelledTripId: CANCELLED_TRIP_ID,
+      now: NOW,
+      candidates: [ordinary, shore, pool, full],
+      diver: openWaterDiver(),
+      preferredTripIds: [shore.id, pool.id, full.id],
+      maxOffers: 2,
+    }),
+  ).toEqual([pool.id, shore.id]);
+  expect(
+    qualifyingAlternatives({
+      cancelledTripId: CANCELLED_TRIP_ID,
+      now: NOW,
+      candidates: [ordinary, shore, pool],
+      diver: openWaterDiver(),
+      preferredTripIds: [],
+    }),
+  ).toEqual([ordinary.id, pool.id, shore.id]);
+});

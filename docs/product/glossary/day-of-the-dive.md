@@ -200,3 +200,8 @@
   of standing shop commitments, site briefing notes and conservation fees.
 
 **Recovery follow-up** — The shop’s recorded follow-through with a diver affected by a canceled departure: awaiting contact or a decision, no replacement requested, or an explicitly confirmed replacement booking. Its history does not establish that a notification arrived, a refund completed, or a diver is ready to board.
+
+- **Priority recovery alternative** — An existing shore or pool departure staff choose to put first
+  among a canceled departure’s rebooking options. It is offered only to divers who qualify while
+  space remains; it reserves neither a place nor a facility. Choosing it does not move a booking,
+  change a refund, or establish that the diver has accepted it.

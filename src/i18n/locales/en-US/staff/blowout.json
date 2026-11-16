@@ -99,5 +99,12 @@
     "invalid": "Follow-up was not saved. Check the selection and the diver’s existing bookings.",
     "busy": "Recovery is being updated. Try again in a moment.",
     "forDiver": "Record follow-up for {name}"
+  },
+  "alternatives": {
+    "title": "Prioritize shore or pool departures (optional)",
+    "legend": "Existing departures",
+    "help": "Choose up to three. Eligible choices lead each diver’s booking links; no seats or facilities are reserved. Unavailable choices are left out.",
+    "limit": "Three selected. Clear a choice to select another.",
+    "invalid": "Choose up to three existing shore or pool departures. Nothing was canceled."
   }
 }

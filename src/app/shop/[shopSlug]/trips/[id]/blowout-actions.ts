@@ -11,6 +11,7 @@ import { getTripWithBooked } from "@/db/trips";
 import { recordRecoveryFollowUp } from "@/features/disruption-recovery";
 import { requireShopSurface } from "@/features/session";
 import { trackEvent } from "@/lib/analytics";
+import { parseBlowoutPreferences } from "@/lib/blowout-preferences";
 import { isRecoveryOutcome } from "@/lib/disruption-recovery";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { blowoutPath } from "./_components/blowout/blowout-path";
@@ -29,14 +30,21 @@ import { blowoutPath } from "./_components/blowout/blowout-path";
  * Safe to re-run: the cascade resumes pending rows and re-sends nobody
  * (`callTripBlowout`'s idempotency contract).
  */
-export async function callBlowoutAction(shopSlug: string, tripId: string) {
+export async function callBlowoutAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData = new FormData(),
+) {
   const back = blowoutPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
+  const preferredAlternativeTripIds = parseBlowoutPreferences(formData.getAll("alternativeTripId"));
+  if (!preferredAlternativeTripIds) redirect(noticeUrl(back, "alternatives-invalid"));
   const outcome = await callTripBlowout(db, {
     shopId: s.user.shopId,
     tripId,
     calledByPersonId: s.user.personId,
+    preferredAlternativeTripIds,
     refunds: (await canPersonRefund(db, s.user.shopId, s.user.personId)) ? "release" : "queue",
   });
   if (!outcome.ok) {

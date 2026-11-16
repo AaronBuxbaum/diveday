@@ -15,7 +15,7 @@ import { ChoiceRow } from "@/components/ui/form";
 import {
   canPersonCallDayBlowout,
   type DayBlowoutDepartureRow,
-  listDayBlowoutDepartures,
+  getDayBlowoutPage,
 } from "@/db/blowouts";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
@@ -35,6 +35,15 @@ import { formatTimeRangeTz } from "@/lib/format";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { blowoutPath } from "../../../../trips/[id]/_components/blowout/blowout-path";
+import {
+  NonBoatAlternativesPicker,
+  type NonBoatPickerCopy,
+  type NonBoatPickerOption,
+} from "../../../../trips/[id]/_components/blowout/NonBoatAlternativesPicker";
+import {
+  nonBoatPickerCopy,
+  nonBoatPickerOptions,
+} from "../../../../trips/[id]/_components/blowout/non-boat-picker-copy";
 import { callDayBlowoutAction } from "./actions";
 
 // The blow-out family's contract (ADR 20260804-instant-navigation): this
@@ -49,6 +58,7 @@ const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   "day-called": { tone: "success", key: "blowout.notices.dayCalled" },
   "day-partly": { tone: "warning", key: "blowout.notices.dayPartly" },
   "day-none": { tone: "danger", key: "blowout.notices.dayNone" },
+  "alternatives-invalid": { tone: "danger", key: "blowout.alternatives.invalid" },
   error: { tone: "danger", key: "blowout.notices.error" },
 };
 
@@ -108,15 +118,17 @@ export default async function DayBlowoutPage({
   const t = staffTranslator(locale);
   const now = nowDate();
 
-  const departures = await listDayBlowoutDepartures(
-    db,
-    shop.id,
-    dayBlowoutBounds(date, shop.timezone),
-  );
+  const { departures, nonBoatOffers } = await getDayBlowoutPage(db, shop.id, {
+    bounds: dayBlowoutBounds(date, shop.timezone),
+    submitted: tripIdsParam(query.tripId),
+    reviewing: query.step === "confirm",
+    now,
+  });
   const callable = departures.filter((row) => dayBlowoutBlock(row, now) === null);
   const submitted = tripIdsParam(query.tripId);
   const review = query.step === "confirm" ? dayBlowoutCallable(departures, submitted, now) : null;
   const reviewed = review && review.callable.length > 0 ? review.callable : null;
+  const alternativeOptions = nonBoatPickerOptions(nonBoatOffers, locale, shop.timezone, t);
   const pick: DayBlowoutPick | null = isDayBlowoutPick(query.pick) ? query.pick : null;
   // A selection carried back from the review wins over a preset; neither means
   // nothing is selected.
@@ -172,6 +184,8 @@ export default async function DayBlowoutPage({
 
         {reviewed ? (
           <ReviewStep
+            alternativeOptions={alternativeOptions}
+            alternativeCopy={nonBoatPickerCopy(t)}
             rows={departures.filter((row) => reviewed.includes(row.id))}
             describe={describe}
             action={callDayBlowoutAction.bind(null, shopSlug, date)}
@@ -270,12 +284,16 @@ export default async function DayBlowoutPage({
 
 /** The second step: exactly what will be cancelled, and the one button that does it. */
 function ReviewStep({
+  alternativeOptions,
+  alternativeCopy,
   rows,
   describe,
   action,
   back,
   t,
 }: {
+  alternativeOptions: NonBoatPickerOption[];
+  alternativeCopy: NonBoatPickerCopy;
   rows: DayBlowoutDepartureRow[];
   describe: (row: DayBlowoutDepartureRow) => ReactNode;
   action: (formData: FormData) => Promise<void>;
@@ -294,6 +312,9 @@ function ReviewStep({
           </li>
         ))}
       </ul>
+      <div className="mt-5">
+        <NonBoatAlternativesPicker options={alternativeOptions} copy={alternativeCopy} />
+      </div>
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <SubmitButton
           pendingLabel={t("blowout.confirm.calling")}

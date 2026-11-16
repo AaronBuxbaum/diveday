@@ -112,3 +112,27 @@ record. The history belongs to and is retained with the existing cancellation ev
 The shop’s full export includes `disruption_recovery_events.csv`, with original and replacement
 booking references. Personal exports continue to withhold staff cancellation follow-up, matching the
 existing cancellation-diver record policy; the diver’s bookings remain in their personal bundle.
+
+## Amendment 2026-11-16: staff-selected shore and pool offers
+
+Staff may optionally prioritize up to three existing, non-course shore or pool departures on the
+single-trip confirmation or the day call’s review. Nothing starts selected. No selection retains the
+automatic near-future alternatives. A preference never grants admission or reserves a seat or a
+facility; each diver still receives at most three eligible public booking links.
+
+The cancellation records its original preference intent once. A resume cannot replace that intent,
+and sent or durably queued messages keep their original offer snapshots. The source departures of a
+day call remain excluded when that call resumes, even if a sister departure was reinstated later.
+Malformed or foreign preference ids refuse the call before cancellation; a same-shop choice that
+became unavailable is omitted from offers without preventing an otherwise valid weather call.
+
+Each recipient’s send reads current scheduled departures, seat/crew-adjusted sellable capacity,
+participant-type availability, underway evidence, admission requirements and the diver’s evidence.
+Selected eligible shore/pool choices lead; the remaining places use the existing soonest-first
+order. Requirement reads stop once three eligible options are found. Final booking performs its own
+checks again. Pool or shore facility reservations are not modeled, so no facility hold is claimed.
+
+This implements existing shore/pool departure selection only. Classroom is not a dive mode, and a
+course session remains excluded from charter replacement offers. A non-diving classroom activity
+needs its own capacity, resources, consent and participation model without recording a dive,
+redeeming a dive entitlement, or granting course completion. Issue #4244 remains open for that gap.
