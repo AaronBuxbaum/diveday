@@ -229,6 +229,41 @@ describe("expiring party holds", () => {
     expect(seats.every((seat) => seat.status === "cancelled")).toBe(true);
   });
 
+  it("keeps a paid seat's checkout pointer when its hold expires", async () => {
+    const { db, shop, until, member } = await heldParty();
+    const { startPaymentOperation } = await import("./payment-operations");
+    const intent = await startPaymentOperation(db, {
+      shopId: shop.id,
+      bookingId: member.bookingId,
+      kind: "checkout_session",
+    });
+    await db
+      .update(paymentOperationIntents)
+      .set({ startedAt: new Date(until.getTime() - PAYMENT_CLAIM_STALE_AFTER_MS - 1) })
+      .where(eq(paymentOperationIntents.id, intent.id));
+    await db
+      .update(bookings)
+      .set({ pendingCheckoutIntentId: intent.id })
+      .where(eq(bookings.id, member.bookingId));
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: member.bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 10_000,
+    });
+    // Capture normally clears the hold; put it back to prove the expiry never touches a paid seat.
+    await db
+      .update(bookings)
+      .set({ groupHoldUntil: until })
+      .where(eq(bookings.id, member.bookingId));
+    await expireGroupHolds(db, until);
+    expect((await tripSeats()).find((seat) => seat.id === member.bookingId)).toMatchObject({
+      status: "booked",
+      pendingCheckoutIntentId: intent.id,
+    });
+  });
+
   it("never revives a readiness link revoked before expiry", async () => {
     const { db, shop, until, lead } = await heldParty();
     const link = await issueBookingCapability(db, {
