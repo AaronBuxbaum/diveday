@@ -316,6 +316,7 @@ test.describe("as owner", () => {
     );
   }
 
+  // story: PAY-02
   test("a diver on a payable trip gets the promo box, and the shop's live code is accepted", async ({
     page,
     request,
@@ -385,6 +386,7 @@ test.describe("as owner", () => {
    * REEF10 stays live so the box is on the form at all (`tripMayTakeACode`);
    * the spent real code is OPENWATER25, seeded already expired.
    */
+  // story: PAY-02
   test("a spent code and a code that never existed are refused identically", async ({
     page,
     request,
@@ -427,6 +429,7 @@ test.describe("as owner", () => {
    * would only send divers hunting for a discount that does not exist (ADR
    * 20261005-optional-shop-features).
    */
+  // story: PAY-02
   test("a payable trip shows no promo box while the shop has no live code", async ({
     page,
     request,

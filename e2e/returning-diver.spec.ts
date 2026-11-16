@@ -18,6 +18,7 @@ async function storedMemory(page: import("@playwright/test").Page, shopSlug: str
   );
 }
 
+// story: BOOK-06
 test("a device that just booked prefills the next booking form, with a one-tap way out", async ({
   page,
 }) => {
@@ -65,6 +66,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   await expect(page.getByText("Booking as", { exact: false })).not.toBeVisible();
 });
 
+// story: BOOK-06
 test("the embed widget never prefills or remembers a booker", async ({ page }) => {
   await page.goto("/s/blue-mantis/embed/calendar");
   await openTripInEmbed(page, "Discover Scuba — Pool & Reef");
@@ -129,6 +131,7 @@ test("a successful booking without opt-in and a forged confirmation flag do not 
   await expect.poll(() => storedMemory(page, "blue-mantis")).toBeNull();
 });
 
+// story: BOOK-06
 test("a refused repeat booking cannot create device memory", async ({ page }) => {
   await page.goto("/s/blue-mantis");
   await page

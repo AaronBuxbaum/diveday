@@ -139,6 +139,7 @@ test("staff adds a walk-in diver, and keeps a private note about them", async ({
   await expect(page.getByText(/deleted a private note about Walk-in Wanda/).first()).toBeVisible();
 });
 
+// story: DESK-05
 test("staff wait-lists a diver once the trip is full, and invites them to a seat", async ({
   page,
 }) => {
@@ -243,6 +244,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
  * match fires on genuinely different people, so the fix is to make a wrong pick
  * harmless rather than to make the matching cleverer.
  */
+// story: DESK-04
 test("a diver seated off the name prompt is blocked until staff confirm it is them", async ({
   page,
 }) => {
@@ -469,6 +471,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await expect(page.getByRole("heading", { name: "Phoned In Pat", exact: true })).toBeVisible();
 });
 
+// story: DESK-05
 test("a full boat's add band offers the wait list, never a seat", async ({ page }) => {
   // Two tabs, a trip, a hand entry, a refused stale pick and a reload, each
   // its own navigation or status wait.

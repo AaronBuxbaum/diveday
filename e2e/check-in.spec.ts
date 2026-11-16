@@ -63,6 +63,7 @@ const DID_NOT_SAIL_BAND = /^Didn’t sail · \d+$/;
 /** A seeded boat still ahead of the frozen clock and inside the counter's window. */
 const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
 
+// story: DESK-01
 test("counter check-in finds a diver's boat, confirms live readiness, and keeps blocked rows out of the line", async ({
   page,
 }) => {
@@ -96,6 +97,7 @@ test("counter check-in finds a diver's boat, confirms live readiness, and keeps 
  * lists each blocker on its own line under the name, money included (#890: a
  * staff surface withholds nothing from staff), and still offers no tap.
  */
+// story: DESK-02
 test("a diver blocked five ways shows every reason and no check-in", async ({ page }) => {
   await openCounterFor(page, "blue-mantis", "Tomás Ferreira");
 
@@ -115,6 +117,7 @@ test("a diver blocked five ways shows every reason and no check-in", async ({ pa
  * assertion below is on the final DOM — the group's band and the undo control
  * on the row — never on motion, which `pnpm check:e2e-hygiene` refuses.
  */
+// story: DESK-03
 test("a ready diver checks in with one tap, sinks into the checked-in group, and a re-tap undoes it", async ({
   page,
 }) => {
@@ -207,6 +210,7 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
  * clear", says somebody can't board yet, and draws no "Everyone's checked in".
  * The rule is unit-tested in `CounterInstrument.test.tsx`; this is the browser.
  */
+// story: DESK-02
 test("a checked-in diver who is blocked again stays still to clear", async ({ page, request }) => {
   const seeded = await seedFacts(request, ["troublePanels", "checkedInBlocked"]);
   const { checkedInBlocked } = seeded as {
@@ -229,6 +233,7 @@ test("a checked-in diver who is blocked again stays still to clear", async ({ pa
   await expect(page.getByText("Everyone’s checked in")).toHaveCount(0);
 });
 
+// story: DESK-04
 test("a diver added by name alone books straight onto a boat with no email required", async ({
   page,
 }) => {
@@ -270,6 +275,7 @@ test("a diver added by name alone books straight onto a boat with no email requi
  * the rest of the party, each with an "Under 18" tick, and seats them all
  * together on the boat.
  */
+// story: DESK-04
 test("a family is seated together from one form", async ({ page }) => {
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   const counter = counterPath("blue-mantis", tripId);
@@ -323,6 +329,7 @@ test("a family is seated together from one form", async ({ page }) => {
  * The whole loop in one pass, because the loop is the feature: the guess, the
  * held row, the attestation on that row, and the boarding it releases.
  */
+// story: DESK-04
 test("a walk-in seated off the name prompt is confirmed and checked in without leaving the roster", async ({
   page,
 }) => {
@@ -436,6 +443,7 @@ test("a pass for a booking the shop does not hold prints nothing", async ({ page
   }
 });
 
+// story: DESK-05
 test("a full boat refuses another add with the wait-list nudge", async ({ page }) => {
   // A same-day, one-seat trip so it's inside the counter's arrivals window
   // and trivially fillable in one step.
@@ -501,6 +509,7 @@ test("a full boat refuses another add with the wait-list nudge", async ({ page }
  * paper" control — the same one the Divers tab always had — and with the desk
  * open the same row then offers the check-in, without leaving the list.
  */
+// story: DESK-06
 test("a paper waiver recorded on the roster row makes the diver checkable in place", async ({
   page,
 }) => {
@@ -578,6 +587,7 @@ test("the desk shows no diver's email on the roster's face", async ({ page }) =>
  * is why it never turned up by accident: on any working connection the failed
  * mutation and the failed render are the same event.
  */
+// story: DESK-09
 test("a dropped signal at the counter fails on the row, not on the page", async ({
   page,
   context,
@@ -630,6 +640,7 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
  * (eight-second undo, composer fallback). Sending one also moves the desk's
  * offer on, since `noShowSalvage` counts only entries nobody has chased.
  */
+// story: DESK-07
 test("the counter releases a no-show's seat, offers it to the wait list, and the boat sells it again", async ({
   page,
   request,
@@ -791,6 +802,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
  * from their own row, and the seat is free before the boat leaves — where
  * "Not here" is still closed.
  */
+// story: DESK-08
 test("the desk turns a blocked diver away before the boat leaves, says why, and frees the seat", async ({
   page,
 }) => {
@@ -878,6 +890,7 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
  * through the checklist and the Pay step says one thing: the shop released
  * the seat, talk to the desk. No reason, no Pay, no checklist.
  */
+// story: DESK-08
 test("a diver turned away before the boat leaves is told the seat was released, and offered nothing to pay", async ({
   page,
   browser,
@@ -930,6 +943,7 @@ test("a diver turned away before the boat leaves is told the seat was released, 
  * here, exactly as a staffer would — a literal would pass while the printer and
  * the matcher drifted apart again.
  */
+// story: DESK-01
 test("a phone number read off a diver's record finds their seat at the counter", async ({
   page,
 }) => {

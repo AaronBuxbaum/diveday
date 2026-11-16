@@ -34,6 +34,7 @@ function captureForm(page: Page) {
     .filter({ visible: true });
 }
 
+// story: CERT-01
 test("staff captures and verifies level and specialty certifications before either can be trusted", async ({
   page,
 }) => {
@@ -256,6 +257,7 @@ test("a fun dive's roster offers no certification and no next step", async ({ pa
   await expect(page.getByText("Certify", { exact: true })).toHaveCount(0);
 });
 
+// story: CERT-01
 test("a diver record keeps card refusals visible and clears a wrong no-card stamp", async ({
   page,
   request,
@@ -358,6 +360,7 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
  * record — the whole point is that it reaches the staff review that already
  * existed, not that it clears anything.
  */
+// story: READY-04
 test("a diver types their card in from the readiness page, and staff verify it there", async ({
   page,
 }) => {
@@ -467,6 +470,7 @@ test("a diver types their card in from the readiness page, and staff verify it t
  * an honest answer instead: the seat stays Blocked under its own reason, the
  * page points at the shop's try-it course, and the diver record says it.
  */
+// story: READY-04
 test("a diver with no card says so on the readiness page, and the desk sees why", async ({
   page,
 }) => {

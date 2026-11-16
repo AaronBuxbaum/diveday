@@ -46,6 +46,7 @@ test.describe("signed out", () => {
 test.describe("as captain", () => {
   signedInAs("captain");
 
+  // story: WAIV-12
   test("staff outside owner/manager can't reach the waiver editor", async ({ page }) => {
     // Editing the waiver (and the medical jurisdiction it presents) is
     // owner/manager work; a captain is bounced to Today with an explanation
@@ -60,6 +61,7 @@ test.describe("as captain", () => {
     ).toBeVisible();
   });
 
+  // story: WAIV-12
   test("staff outside owner/manager can't reach the signed-waiver audit either", async ({
     page,
   }) => {
@@ -97,6 +99,7 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
   await expect(page.getByRole("heading", { name: "What they signed" })).toBeVisible();
 });
 
+// story: WAIV-01
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
   page,
 }) => {
@@ -314,6 +317,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await expect(page.getByRole("button", { name: "Show answers" })).toHaveCount(0);
 });
 
+// story: WAIV-02
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({
   page,
 }) => {
@@ -367,6 +371,7 @@ test("the medical questionnaire refuses to complete with an unanswered question,
  * splice it exists to stop, are written out over `EmergencyContactSubmission`
  * in `src/lib/contact.ts`.
  */
+// story: WAIV-02
 test("a contact with one box filled and the other cleared is refused, not spliced", async ({
   page,
 }) => {
@@ -425,6 +430,7 @@ test("a contact with one box filled and the other cleared is refused, not splice
  * characters, so a release could be executed under a name that was nobody's
  * and still read as signed on the manifest.
  */
+// story: WAIV-03
 test("a waiver signed under someone else's name is refused, and the link stays signable", async ({
   page,
 }) => {
@@ -573,6 +579,7 @@ test("a keyboard-focused medical answer rings its pill, not its dot", async ({ p
   expect(ring.labelRadius).not.toBe("0px");
 });
 
+// story: WAIV-05
 test("a non-English visitor sees a notice that the waiver text itself stays in English", async ({
   page,
   workerBaseURL,
@@ -610,6 +617,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   await visitorContext.close();
 });
 
+// story: WAIV-04
 test("saving a draft preserves partial conditional questionnaire answers", async ({ page }) => {
   // A held send counts eight seconds down before it leaves (ADR
   // 20260906-before-you-ask, decision 2); this test sends one, so it takes
@@ -655,6 +663,7 @@ test("saving a draft preserves partial conditional questionnaire answers", async
  * The existing draft test above walks straight past it: no Box is open on
  * reload, so the phantom answers are never rendered and never counted.
  */
+// story: WAIV-04
 test("a Box opened after a draft reload asks its questions rather than answering them", async ({
   page,
 }) => {
@@ -952,6 +961,7 @@ test("a diver without a booking can receive an independent waiver from their rec
   await openCopiedWaiverLink(page, secondHref);
 });
 
+// story: WAIV-10
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
   await page.goto("/shop/blue-mantis/settings/waivers");
 
@@ -1042,6 +1052,7 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
  * the assertion, not a shortcut: if this regresses, the save it makes is a real
  * one. The version number below is what catches it either way.
  */
+// story: WAIV-10
 test("saving the release unchanged publishes nothing and says so", async ({ page }) => {
   // `#release` opens the editor on arrival — the fragment the Settings door
   // and any bounced-back notice both use.
@@ -1070,6 +1081,7 @@ test("saving the release unchanged publishes nothing and says so", async ({ page
  * pager now (ADR 20260803-one-pagination-model), and what this proves is the
  * capability that was missing — going back one page lands where you came from.
  */
+// story: WAIV-12
 test("the signature audit pages both ways, and keeps a pinned record while it does", async ({
   page,
 }) => {
@@ -1124,6 +1136,7 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
  * The demo holds hundreds of signed records; a search on the diver and a
  * medical view narrow the log and its count together, and keep each other.
  */
+// story: WAIV-12
 test("the signed records search by diver and narrow to medical holds", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers/waivers");
   const pager = page.getByRole("navigation", { name: "Pages" });
@@ -1228,6 +1241,7 @@ See https://example.com/policies/liability-release-and-assumption-of-risk-2026-r
  * happened. This walks the whole path: the roster's own way out, the form's
  * refusals, and the block actually lifting.
  */
+// story: WAIV-11
 test("a physician's clearance ends a medical hold, and the roster leads to it", async ({
   page,
 }) => {
@@ -1310,6 +1324,7 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
  * refusal recording, the block explicitly *not* lifting, and the record
  * refusing a later clearance on top of it.
  */
+// story: WAIV-11
 test("a refused physician evaluation stops the chase without lifting the hold", async ({
   page,
 }) => {
@@ -1384,6 +1399,7 @@ test("a refused physician evaluation stops the chase without lifting the hold", 
  * On the demo shop, like the editor test above, because the send needs a
  * booked diver; the per-test reset restores the release.
  */
+// story: WAIV-10
 test("a shop question is published, answered by the diver and shown on the signed record", async ({
   page,
 }) => {
@@ -1491,6 +1507,7 @@ test("a shop question is published, answered by the diver and shown on the signe
  * gates nothing, the boat's manifest shows the chip on their row, and the
  * owner reads it on the signed record through a recorded tap.
  */
+// story: WAIV-06
 test("a diver's medical alert for the crew is signed, flagged on the manifest and read on the record", async ({
   page,
 }) => {

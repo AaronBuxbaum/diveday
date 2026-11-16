@@ -230,6 +230,7 @@ test.describe("as owner", () => {
     );
   });
 
+  // story: PAY-07
   test("an invoice with no priced line, or an out-of-bounds one, is refused before Stripe", async ({
     page,
     request,
@@ -471,6 +472,7 @@ test.describe("as captain", () => {
    * A captain keeps *reading* orders, which is why the landing is the Orders
    * index with the reason rather than Today: the door is closed, not the room.
    */
+  // story: PAY-07
   test("a captain is turned away from the order form and told why", async ({ page, request }) => {
     await seedFacts(request, ["stripeAccount"]);
     await page.goto(NEW_ORDER);

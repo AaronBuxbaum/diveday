@@ -142,6 +142,7 @@ test.describe("staff-prepared trip", () => {
     return title;
   }
 
+  // story: READY-01
   test("a booked diver's readiness page lets them act and answers its questions", async ({
     page,
   }) => {
@@ -222,6 +223,7 @@ test.describe("staff-prepared trip", () => {
     await expect(page.getByText("More than five years ago")).toBeVisible();
   });
 
+  // story: BOOK-05
   test("a booked diver releases their own seat, and the dead link still names the shop", async ({
     page,
   }) => {
@@ -288,6 +290,7 @@ test.describe("staff-prepared trip", () => {
   });
 });
 
+// story: READY-02
 test("a tampered readiness token reveals nothing, and still leaves a door", async ({ page }) => {
   await page.goto("/ready/not-a-real-token");
   await expect(page.getByRole("heading", { name: /This link no longer works/ })).toBeVisible();

@@ -57,6 +57,7 @@ const STAFF_PATHS = [
   "/print",
 ];
 
+// story: OWN-03
 test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async ({ page }) => {
   // Onboarding, then ~19 sequential navigations. Same aggregate-cost
   // reasoning as booking.spec.ts's chained flows: each step is fast, the sum

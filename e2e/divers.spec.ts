@@ -554,6 +554,7 @@ test("staff delete a diver, find them again in the Deleted view, and restore the
  * Walked as an owner, the only role that may erase at all: for anyone else the
  * control is absent in both states and the test would prove nothing.
  */
+// story: OWN-04
 test("erase is absent on a live diver's record and appears once they are deleted", async ({
   page,
 }) => {

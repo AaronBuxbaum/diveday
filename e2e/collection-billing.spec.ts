@@ -7,6 +7,7 @@ const t = staffTranslator("en-US");
 
 test.describe("recorded collection statements", () => {
   test.use({ privateShopFacts: ["collectionBilling"], privateShopDemo: false });
+  // story: PAY-07
   test("shows original-rate credits and native currencies without combining them", async ({
     page,
     privateShop,
@@ -38,6 +39,7 @@ test.describe("recorded collection statements", () => {
 
 test.describe("Stripe deposit with external balance", () => {
   test.use({ privateShopFacts: ["mixedDeposit"] });
+  // story: PAY-07
   test("records only the new money and preserves the online payment on repeated Update", async ({
     page,
     privateShop,

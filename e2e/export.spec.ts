@@ -15,6 +15,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 test.describe("full-shop data export", () => {
   signedInAsOwner();
 
+  // story: OWN-04
   test("staff download the whole shop as documented CSVs", { tag: READ_ONLY }, async ({
     page,
     request,
@@ -251,6 +252,7 @@ test("a diver's own export never leaves without a staff session", { tag: READ_ON
   expect(response.headers().location).toContain("/sign-in");
 });
 
+// story: OWN-04
 test("the export never leaves without a staff session", { tag: READ_ONLY }, async ({ request }) => {
   const response = await request.get("/shop/blue-mantis/settings/export/download", {
     maxRedirects: 0,

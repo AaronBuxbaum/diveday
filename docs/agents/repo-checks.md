@@ -482,6 +482,10 @@ Two policy rules from the 2026-10-14 test review ride in `scripts/check-e2e-hygi
 
 `scripts/check-critical-journeys.mjs` reads the "Critical journeys" table in [docs/engineering/testing.md](../engineering/testing.md#critical-journeys) and fails when a row's spec is gone, or no `test(…)` in it carries the row's title, or that test is `.skip`/`.fixme`. The table replaced the AGENTS.md rule "every important flow gets an `e2e/` spec, every important surface a capture" (test review decision 2, 2026-10-14): that rule grew ten-plus "add captures" issues by rule while naming no walk that mattered more than another. A `test.describe` of the same name does not count. Renaming a journey's test renames its row in the same change.
 
+### stories
+
+`scripts/check-stories.mjs` reads the stories in [docs/product/stories/](../product/stories/README.md) and the `// story: ID` comments above `test(`, `it(` and `describe(` lines in `e2e/` and `src/`. It fails on a story with no proof, no `**Gap:** #N` issue and no `**Judged:**` line; a marker naming an unknown id or sitting above a non-test; a story claimed only by a skipped test; a stale `Gap` or `Judged` line on a story that now has proof; and a duplicate id. A comment, not a title tag, so no test is renamed and the critical-journeys table and capture baselines keep working. `pnpm stories` prints the coverage report; it is derived on demand and never committed, since a generated table in a shared doc is the file every branch conflicts on (the human-decision index lesson).
+
 ### pre-hydration-click
 
 A press on a server-rendered staff page before React owns it is lost: the button has no handler yet, so nothing is sent and the spec waits on an answer that never comes. It was the flake class of 2026-10-12/13 (code re-review 2026-10-13, item 15): `dive-sites`, `schedule-builder`, `staffing` and `blowout` each lost one, four red runs in 21, and each was being fixed by its own hand-written wait on some `data-hydrated` flag.

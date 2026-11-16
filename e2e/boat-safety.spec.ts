@@ -118,6 +118,7 @@ test("an MMSI refusal reopens the existing boat editor", async ({ page, privateS
  * page in as the minted shop's own owner, and a blue-mantis session in the
  * same context would race it for the cookie.
  */
+// story: ROLL-09
 test("a boat's papers and the kit aboard it reach the departure that sails on it", async ({
   page,
   privateShop,
@@ -233,6 +234,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
 test.describe("a seeded lapse on the demo's reef boat", () => {
   signedInAsOwner();
 
+  // story: ROLL-09
   test("names the missing oxygen, the expired flares and the AED pads coming due", async ({
     page,
     request,
