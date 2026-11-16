@@ -1066,6 +1066,21 @@
       "chooseFile": "Elegir archivo CSV",
       "chooseDifferentFile": "Elegir otro archivo",
       "columnTitle": "Columna “{header}”",
+      "fileReadFailed": "No se pudo leer este archivo. Vuelve a elegirlo.",
+      "checkMatches": "Verificar coincidencias",
+      "checkingMatches": "Verificando lista…",
+      "matchesStale": "Las coincidencias se verifican otra vez al importar. Las filas sin email crean un buzo nuevo cada vez.",
+      "matchFailed": "No se pudo verificar la lista. Inténtalo de nuevo.",
+      "outcomes": {
+        "create": "Buzo nuevo",
+        "update": "Actualizar buzo existente",
+        "merge": "Combinar con fila anterior",
+        "skip": "Omitir"
+      },
+      "manualMapping": "Relacionar columnas",
+      "ignoreColumn": "Omitir",
+      "manualEvidenceNotice": "Los archivos con columnas relacionadas manualmente importan las certificaciones para revisión y omiten la aceptación previa de exenciones. Recopila una exención firmada en DiveDay.",
+      "recoveryDownload": "Descargar filas para corregir",
       "fieldLabels": {
         "first_name": "Nombre",
         "last_name": "Apellido",
@@ -1232,6 +1247,7 @@
     "errors": {
       "notOwnerOrManager": "Importar contactos está limitado al propietario o gerente del centro.",
       "csvRequired": "Elige un archivo CSV para importar.",
+      "invalidMapping": "Revisa las columnas relacionadas e inténtalo de nuevo.",
       "noImportableRows": "No se pudo importar ninguna fila. A todas les faltaba un nombre o estaban duplicadas.",
       "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb} MB.",
       "fileEmpty": "El archivo está vacío.",

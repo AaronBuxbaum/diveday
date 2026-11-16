@@ -171,20 +171,19 @@
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
   `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
   A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified** or an **Agency check** certifies it.
-  (A card brought in by the contact importer is *not* claimed — see **Imported certification**.)
+  (A trusted-template import can arrive verified; reduced-authority imports remain pending — see **Imported certification**.)
 - **Imported certification** — a card the contact importer brought in from a shop's prior system or
   spreadsheet. It lands `verified` (DiveDay assumes the shop's own system already checked it) but is
   permanently flagged `imported` (a non-null `importedAt`, with an optional prior-shop
   `importedFromLabel`), so it is never mistaken for a card this shop carded on sight. A level card
   satisfies readiness and clears depth gates on import; staff get a soft one-tap **Confirm card** nudge (which stamps `reviewedAt`) but boarding does not wait
-  on it — the confirm is record-keeping, not a gate, and the only thing that holds a level card is the source file's own downgrade at the foot of this entry. **Two gates do wait for that confirm.** The **enriched-air fill**: an imported nitrox card
+  on it — the confirm is record-keeping, not a gate, and the pending exceptions are listed at the foot of this entry. **Two gates do wait for that confirm.** The **enriched-air fill**: an imported nitrox card
   gives plain air until it, because a wrong fill is the highest-consequence failure
   (ADR 20260724-import-verified-cards). And any **specialty** gate: an
   imported specialty card is `verified` but does not clear the dive it authorizes until a staffer
   confirms it, because a specialty is what permits a materially riskier dive (deep gates depth past
   18 m) and a spreadsheet cell is not a card sighting (H-20260725-owner-asked-move-rows,
-  ADR 20260725-import-specialty-cards). One thing imports `pending` rather than `verified`: a card
-  the source file's own status column marks unverified.
+  ADR 20260725-import-specialty-cards). Cards import `pending` rather than `verified` when the source file marks them unverified, an optional mapping assist supplies a card column or its level spelling, or staff manually map any column in the file. Manually mapped files also omit prior waiver acceptance (ADR 20261116-local-customer-import-mapping).
 - **Confirm to clear** — the display state of an imported specialty or nitrox card no staffer has
   confirmed yet: on file, `verified`, and still holding its gate (for nitrox, the fill). One fact,
   two tones. On the card's own row

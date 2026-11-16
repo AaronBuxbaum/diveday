@@ -16,6 +16,7 @@ import { revalidateAndRedirect } from "@/features/navigation";
 import { requireStaffSession } from "@/features/session";
 import { majorToMinor, minorToMajor, toShopCurrency } from "@/lib/money";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /**
  * Promo codes discount real money on the shop's own Stripe account, so they
@@ -43,20 +44,25 @@ async function requirePromoManager() {
   return { session, promos };
 }
 
-/** A local date-time from the form to a `Date`, or null for an empty box. */
-function parseInstant(raw: FormDataEntryValue | null): Date | null | undefined {
+/**
+ * A window edge from the form to a `Date`, null for an empty box, undefined for
+ * anything that is not a time. The `datetime-local` box posts a wall time with
+ * no zone, which is the shop's (the page shows every edge back in it); the undo
+ * toast posts the instant it read, which names its own.
+ */
+function parseInstant(raw: FormDataEntryValue | null, timeZone: string): Date | null | undefined {
   const value = String(raw ?? "").trim();
   if (!value) return null;
+  const wall = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2})?$/.exec(value);
+  if (wall) {
+    const parsed = parseWallTime(wall[1], wall[2]);
+    return parsed ? wallTimeToUtc(parsed, timeZone) : undefined;
+  }
+  if (!/(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)) return undefined;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-/**
- * The form's two discount boxes: a number, and whether it is a percent or an
- * amount of the shop's currency in whole units. The range is checked once, by
- * `createShopPromoCode`, whose refusal lands on the discount box; here a value
- * only has to be a number at all.
- */
 const promoFormSchema = z.object({
   code: z.string().trim().min(1).max(40),
   description: z.string().trim().max(200),
@@ -76,6 +82,12 @@ async function discountFromForm(
   return { discountAmountCents: majorToMinor(form.discount, currency) };
 }
 
+/** The zone a code's window is typed in. */
+async function shopZone(shopId: string): Promise<{ timezone: string }> {
+  const shop = await getShopById(await getDb(), shopId);
+  return { timezone: shop?.timezone ?? "UTC" };
+}
+
 /** A code's window, read raw for `parseInstant` to narrow. */
 const promoWindowForm = z.object({ startsAt: formValue(), expiresAt: formValue() });
 const promoIdForm = z.object({ promoId: text(), enable: checkbox("true") });
@@ -86,8 +98,9 @@ export async function createPromoAction(formData: FormData) {
   const parsed = promoFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   const window = readForm(promoWindowForm, formData);
-  const startsAt = parseInstant(window.startsAt);
-  const expiresAt = parseInstant(window.expiresAt);
+  const { timezone } = await shopZone(session.user.shopId);
+  const startsAt = parseInstant(window.startsAt, timezone);
+  const expiresAt = parseInstant(window.expiresAt, timezone);
   if (startsAt === undefined || expiresAt === undefined) {
     revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
   }
@@ -200,8 +213,9 @@ export async function restorePromoAction(formData: FormData) {
   const parsed = promoFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(promos, noticeUrl(promos, "restore-failed"));
   const window = readForm(promoWindowForm, formData);
-  const startsAt = parseInstant(window.startsAt);
-  const expiresAt = parseInstant(window.expiresAt);
+  const { timezone } = await shopZone(session.user.shopId);
+  const startsAt = parseInstant(window.startsAt, timezone);
+  const expiresAt = parseInstant(window.expiresAt, timezone);
   if (startsAt === undefined || expiresAt === undefined) {
     revalidateAndRedirect(promos, noticeUrl(promos, "restore-failed"));
   }

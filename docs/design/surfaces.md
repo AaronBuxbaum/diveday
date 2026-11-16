@@ -1274,3 +1274,7 @@ After saving, “Import more files” resets the review without suggesting it un
 record deletion stays in each record's disclosure. Empty history has no downloads; populated or
 soft-deleted history retains both authorised exports. Each section owns its actions, so a desktop
 history download beside its heading need not align with the upload or confirmation button.
+
+## Local customer-import mapping (2026-11-16)
+
+The screen’s one idea is the file becoming an explicit preview before any roster write. Staff arrive asking which source column is the customer’s name or email, which rows already match the roster, and how to correct skipped rows. A separate mapping page was considered; inline column selectors keep each correction attached to its source header and the resulting preview. Roster outcomes appear in the existing row, recovery downloads contain only rows needing attention, and an explicit notice explains the reduced authority of manually mapped evidence. Mobile selectors stack and the existing preview retains its horizontal-scroll affordance; rendered mobile and desktop review remains pending because this session’s browser, port, and artifact actions are restricted.

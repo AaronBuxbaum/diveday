@@ -33,7 +33,9 @@ describe("the public schedule's Our year panel", () => {
  */
 describe("the public pages with sightings switched off", () => {
   it("draws no month shelf on the schedule", () => {
-    expect(SOURCE).toContain("<MonthSightingsSection shop={shop}");
+    expect(routeSource(import.meta.dirname, "_components/ScheduleShelves.tsx")).toContain(
+      "<MonthSightingsSection shop={shop}",
+    );
     expect(routeSource(import.meta.dirname, "MonthSightingsShelf.tsx")).toContain(
       "if (!shop.sightingsEnabled) return null;",
     );
@@ -65,7 +67,8 @@ describe("the public schedule's welcome band", () => {
   it("stands above the timetable, and the full story stays below it", () => {
     expect(positionOf("<ShopWelcome")).toBeGreaterThan(-1);
     expect(positionOf("<ShopWelcome")).toBeLessThan(positionOf("<WeekLedger"));
-    expect(positionOf("<ShopfrontStory")).toBeGreaterThan(positionOf("<WeekLedger"));
+    // The story renders inside the shelves, which follow the ledger.
+    expect(positionOf("<ScheduleShelves")).toBeGreaterThan(positionOf("<WeekLedger"));
   });
 
   it("jumps to the board only when there is one and to courses only when the shop teaches", () => {

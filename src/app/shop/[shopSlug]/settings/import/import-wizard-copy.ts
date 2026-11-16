@@ -16,6 +16,16 @@ export type ImportWizardCopy = {
   chooseFile: string;
   chooseDifferentFile: string;
   columnTitle: string;
+  fileReadFailed: string;
+  checkMatches: string;
+  checkingMatches: string;
+  matchesStale: string;
+  matchFailed: string;
+  outcomes: Record<"create" | "update" | "merge" | "skip", string>;
+  manualMapping: string;
+  ignoreColumn: string;
+  manualEvidenceNotice: string;
+  recoveryDownload: string;
   fieldLabels: Record<ImportField, string>;
   ignoredMedicalColumns: string;
   unmappedColumns: string;
@@ -222,6 +232,7 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
   const errors: Record<ImportActionErrorCode, string> = {
     not_owner_or_manager: t("settings.import.errors.notOwnerOrManager"),
     csv_required: t("settings.import.errors.csvRequired"),
+    invalid_mapping: t("settings.import.errors.invalidMapping"),
     no_importable_rows: t("settings.import.errors.noImportableRows"),
     file_too_large: t.raw("settings.import.errors.fileTooLarge"),
     file_empty: t("settings.import.errors.fileEmpty"),
@@ -237,6 +248,21 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
     chooseFile: t("settings.import.wizard.chooseFile"),
     chooseDifferentFile: t("settings.import.wizard.chooseDifferentFile"),
     columnTitle: t.raw("settings.import.wizard.columnTitle"),
+    fileReadFailed: t("settings.import.wizard.fileReadFailed"),
+    checkMatches: t("settings.import.wizard.checkMatches"),
+    checkingMatches: t("settings.import.wizard.checkingMatches"),
+    matchesStale: t("settings.import.wizard.matchesStale"),
+    matchFailed: t("settings.import.wizard.matchFailed"),
+    outcomes: {
+      create: t("settings.import.wizard.outcomes.create"),
+      update: t("settings.import.wizard.outcomes.update"),
+      merge: t("settings.import.wizard.outcomes.merge"),
+      skip: t("settings.import.wizard.outcomes.skip"),
+    },
+    manualMapping: t("settings.import.wizard.manualMapping"),
+    ignoreColumn: t("settings.import.wizard.ignoreColumn"),
+    manualEvidenceNotice: t("settings.import.wizard.manualEvidenceNotice"),
+    recoveryDownload: t("settings.import.wizard.recoveryDownload"),
     fieldLabels,
     ignoredMedicalColumns: t.raw("settings.import.wizard.ignoredMedicalColumns"),
     unmappedColumns: t.raw("settings.import.wizard.unmappedColumns"),

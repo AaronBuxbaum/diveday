@@ -1066,6 +1066,21 @@
       "chooseFile": "Choose CSV file",
       "chooseDifferentFile": "Choose a different file",
       "columnTitle": "Column “{header}”",
+      "fileReadFailed": "Could not read this file. Choose it again.",
+      "checkMatches": "Check roster matches",
+      "checkingMatches": "Checking roster…",
+      "matchesStale": "Roster matches are checked again when you import. Rows without email create a new diver each time.",
+      "matchFailed": "Could not check the roster. Try again.",
+      "outcomes": {
+        "create": "New diver",
+        "update": "Update existing diver",
+        "merge": "Merge with earlier row",
+        "skip": "Skip"
+      },
+      "manualMapping": "Match columns",
+      "ignoreColumn": "Leave out",
+      "manualEvidenceNotice": "Manually mapped files import cards for review and leave prior waiver acceptance behind. Collect a signed waiver in DiveDay.",
+      "recoveryDownload": "Download rows to correct",
       "fieldLabels": {
         "first_name": "First name",
         "last_name": "Last name",
@@ -1232,6 +1247,7 @@
     "errors": {
       "notOwnerOrManager": "Importing contacts is limited to the shop’s owner or manager.",
       "csvRequired": "Choose a CSV file to import.",
+      "invalidMapping": "Check the column mapping and try again.",
       "noImportableRows": "No rows could be imported. Every row was missing a name or duplicated.",
       "fileTooLarge": "The file is too large. The limit is {limitMb} MB.",
       "fileEmpty": "The file is empty.",

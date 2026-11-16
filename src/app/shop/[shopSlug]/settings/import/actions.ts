@@ -9,6 +9,7 @@ import {
   canPersonImportShopData,
   commitContactImport,
   type ImportSummary,
+  previewContactImportMatches,
 } from "@/features/import";
 import { requireStaffSession } from "@/features/session";
 import { declinedSizeNote } from "@/i18n/import-notes";
@@ -17,6 +18,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { ImportFatalCode, ImportFatalParams } from "@/lib/import";
 import { prepareContactImport } from "@/lib/import";
+import { parseManualImportMapping } from "@/lib/import-manual-mapping";
 
 /** The pasted or uploaded CSV, as text the client read off the file. */
 const contactsForm = z.object({
@@ -25,18 +27,21 @@ const contactsForm = z.object({
   // through its own schema below and never trusted further than the importer
   // trusts any header.
   assist: z.string().max(20_000).optional(),
+  manual: z.string().max(20_000).optional(),
+  requestId: z.string().max(100).optional(),
 });
 
 export type ImportActionErrorCode =
   | ImportFatalCode
   | "not_owner_or_manager"
   | "csv_required"
-  | "no_importable_rows";
+  | "no_importable_rows"
+  | "invalid_mapping";
 
 export type ImportActionState =
   | { status: "idle" }
   | { status: "error"; code: ImportActionErrorCode; params?: ImportFatalParams }
-  | { status: "done"; summary: ImportSummary };
+  | { status: "done"; summary: ImportSummary; requestId?: string };
 
 /**
  * Commits a pasted/uploaded contacts CSV. The client previews with the same
@@ -56,6 +61,9 @@ export async function importContactsAction(
   }
 
   const parsed = parseForm(contactsForm, formData);
+  if (!parsed.ok) return { status: "error", code: "invalid_mapping" };
+  const manual = parsed.data.manual ? parseManualImportMapping(parsed.data.manual) : undefined;
+  if (manual === null) return { status: "error", code: "invalid_mapping" };
   const csv = parsed.ok ? parsed.data.csv : "";
   if (!csv.trim()) return { status: "error", code: "csv_required" };
 
@@ -65,6 +73,7 @@ export async function importContactsAction(
   const today = calendarDateInTimezone(nowDate(), shop?.timezone ?? "UTC");
   const prepared = prepareContactImport(csv, {
     today,
+    manual,
     assist: parseImportAssist(parsed.ok ? parsed.data.assist : null),
   });
   if (prepared.fatal) {
@@ -83,5 +92,29 @@ export async function importContactsAction(
   );
   // The roster and its counts change; refresh the divers surface.
   revalidatePath(`/shop/${session.user.shopSlug}/divers`);
-  return { status: "done", summary };
+  return { status: "done", summary, requestId: parsed.data.requestId };
+}
+
+/** No customer data leaves this shop; preview returns only outcomes for the submitted rows. */
+export async function previewContactImportAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  if (!(await canPersonImportShopData(db, session.user.shopId, session.user.personId))) {
+    return { status: "error" as const };
+  }
+  const parsed = parseForm(contactsForm, formData);
+  if (!parsed.ok) return { status: "error" as const };
+  const manual = parsed.data.manual ? parseManualImportMapping(parsed.data.manual) : undefined;
+  if (manual === null) return { status: "error" as const };
+  const shop = await getShopById(db, session.user.shopId);
+  const prepared = prepareContactImport(parsed.data.csv, {
+    today: calendarDateInTimezone(nowDate(), shop?.timezone ?? "UTC"),
+    manual,
+    assist: parseImportAssist(parsed.data.assist),
+  });
+  if (prepared.fatal) return { status: "error" as const };
+  return {
+    status: "ready" as const,
+    rows: await previewContactImportMatches(db, session.user.shopId, prepared),
+  };
 }

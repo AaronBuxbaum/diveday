@@ -472,5 +472,6 @@ script again.
 | 20261115-logbook-partner-protocol-adapters | Gate logbook API imports on… |
 | 20261115-online-logbook-file-interchange | Use explicit beta file interchange… |
 | 20261115-personal-computer-evidence | Keep imported computer evidence on… |
+| 20261116-local-customer-import-mapping | Map customer exports locally with… |
 
 <!-- adr-index:end -->
