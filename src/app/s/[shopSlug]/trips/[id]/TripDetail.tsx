@@ -55,6 +55,7 @@ import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
 import { fullFootLabel } from "./_lib/foot-bar-label";
 import { bookingFormTrip, readTripPage } from "./_lib/page-reads";
+import { publicChangeEvents } from "./_lib/public-change-events";
 import { publicForecast } from "./_lib/public-forecast";
 import { requirementSentenceFor } from "./_lib/requirement-sentence";
 import { offerHandoff } from "./actions";
@@ -448,7 +449,7 @@ export async function TripDetailPage({
             />
             {confirmed ? conditionsLine : null}
             <TripChangeLedger
-              events={changeEvents}
+              events={publicChangeEvents(changeEvents, Boolean(confirmed), trip.startsAt)}
               locale={locale}
               timeZone={shop.timezone}
               revealArrivalDetails={false}
