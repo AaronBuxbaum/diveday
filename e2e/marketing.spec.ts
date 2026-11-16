@@ -154,6 +154,11 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   ).toBeVisible();
   await expect(stepsBand.getByRole("img", { name: /roll call after dive 1/i })).toHaveCount(0);
   await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toHaveCount(0);
+  // The owner who still carries paper learns it on the roll-call step, whose
+  // link is the page that lists the packet (issue #4322).
+  await expect(
+    stepsBand.getByText(diverTranslator("en-US")("marketing.home.steps.aboard.note3")),
+  ).toBeVisible();
 
   // Each step ends in its feature page, in the booking's order, and none of
   // them is a door into the demo: the page it links to opens the demo on that
