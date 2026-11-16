@@ -26,7 +26,7 @@ cannot see it.
 | "Try the live demo" (mints a seeded demo shop) | `src/app/actions/demo.ts` | IP | `RATE_LIMITS.demoCreate` (10/hour) |
 | Marking a browser as the founder's, so its demos send no alert | `src/app/api/demo/quiet/route.ts` | IP | `RATE_LIMITS.demoQuiet` (10/hour) |
 | The demo banner's role switch | `src/app/actions/demo.ts` `switchDemoRoleAction` | IP, checked before the slug is looked up | `RATE_LIMITS.demoSwitch` (30/hour); a staff role also needs a session in that shop or the signed demo seat (`src/features/demo-seat/rules.ts`) |
-| Sign-in | `src/lib/auth.ts` `authorize()` | IP **and** attempted email | `RATE_LIMITS.signInByIp` (60/15min) + `RATE_LIMITS.signInByEmail` (8/15min) |
+| Sign-in | `src/lib/auth.ts` `authorize()` | IP **and** attempted email | `RATE_LIMITS.signInByIp` (60/15min) + `RATE_LIMITS.signInByEmail` (8/15min). The IP bucket is spent by every attempt, so a shop's wifi at opening time (password, then second factor, two tries each) has room for the whole crew. The email bucket is for guessing: a right password and a second-factor sign-in return their try (`refundRateLimit`), so only failures count against it |
 | Password-reset request | `src/app/forgot-password/actions.ts` | IP **and** requested email, checked concurrently | `RATE_LIMITS.passwordResetRequestByIp` (30/hour) + `RATE_LIMITS.passwordResetRequestByEmail` (3/15min) |
 | "Can't find your link?" request | `src/app/s/[shopSlug]/actions.ts` `requestFindMyBookingAction` (IP) + `src/features/find-my-booking/store.ts` `sendFindMyBookingLinks` (email) | IP, checked synchronously; requested email, checked only once at least one matching booking actually needs a fresh mint | `RATE_LIMITS.findMyBookingByIp` (30/hour) + `RATE_LIMITS.findMyBookingByEmail` (3/15min) |
 | Account-token actions (verify, reset submit, invite accept, unsubscribe confirm) | `src/app/(token)/verify/[token]/actions.ts`, `reset-password/[token]/actions.ts`, `invite/[token]/actions.ts`, `unsubscribe/[token]/actions.ts` | IP, checked before the token is looked up | `RATE_LIMITS.accountTokenAction` (20/hour) |
@@ -298,7 +298,7 @@ tests that have no actual bug.
 
 `pnpm dev` sets it too (`package.json`), for the same reason one step earlier:
 `node scripts/screenshot.mjs` signs in through the real form against that
-server, and the `signInByEmail` budget of 8 per 15 minutes was refusing the
+server, and the `signInByEmail` budget of 8 failed tries per 15 minutes was refusing the
 second look of an afternoon — a refusal the script then waited out in
 silence. The script now signs in once per run and reports a refusal by name;
 the dev switch is what stops it happening at all. To watch the limiter itself
@@ -317,12 +317,12 @@ involved; `upstashRateLimitStore` calls Upstash's REST API directly with
 for the atomicity design (one `EVAL`'d Lua script per check) and
 [20260724-rate-limiting ADR](../architecture/decisions/20260724-rate-limiting.md)
 for why the in-memory store shipped first. `RateLimitStore` is a small
-interface (`take(key, config, now)`); a future store other than Upstash can
+interface (`take(key, config, now)` and `refund(key, config, now)`, which returns one try); a future store other than Upstash can
 implement it and be passed as `checkRateLimit`'s fourth argument (or swap the
 module-level default) without touching any call site.
 
 Until it is provisioned, be precise about what the per-instance gap costs. It
-does not disable a policy; it multiplies it. A limit of 8 sign-ins per 15
+does not disable a policy; it multiplies it. A limit of 8 failed sign-ins per 15
 minutes per email is, across N warm instances, up to 8N — because each instance
 counts that email's bucket independently, and an attacker who keeps enough
 connections in flight is spread across all of them. The dual IP-and-email
