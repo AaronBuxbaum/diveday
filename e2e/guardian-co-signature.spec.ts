@@ -39,6 +39,7 @@ const SHOP = DEMO_SHOP_SLUG;
 
 signedInAsOwner();
 
+// story: GUARD-01
 test("a minor's release asks for a parent, refuses without one, and names who co-signed", async ({
   page,
 }) => {
@@ -167,6 +168,7 @@ test("a minor's release asks for a parent, refuses without one, and names who co
  * still refused, because online the shop has no evidence a second person is
  * in the room. `src/db/waivers.test.ts` holds the adversarial version.
  */
+// story: GUARD-04
 test("a namesake parent can co-sign on paper, on the staffer's own attestation", async ({
   page,
   request,
@@ -269,6 +271,7 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
  * is exactly the untrusted input a staffer could reach this state with by
  * hand: if the checkbox is drawn for anyone, it is drawn here.
  */
+// story: GUARD-05
 test("the diver record refuses a namesake co-signer and offers no tick", async ({ page }) => {
   const stamp = Date.now();
   const diver = `Namesake E2E Diver ${stamp}`;
@@ -315,6 +318,7 @@ test("the diver record refuses a namesake co-signer and offers no tick", async (
  * release alone. Ticked, the seat asks for a parent on the same release page a
  * known minor's does.
  */
+// story: GUARD-02
 test("a seat booked as under 18 asks for a parent on its release", async ({ page }) => {
   test.setTimeout(90_000);
   const stamp = Date.now();
@@ -352,6 +356,7 @@ test("a seat booked as under 18 asks for a parent on its release", async ({ page
  * "Sign Mia's waiver", which opens Mia's release with the guardian's card on
  * the parent's own link. Mia's claim link says a parent signs with her.
  */
+// story: GUARD-03
 test("a parent signs the release of a child they booked, from their own page", async ({ page }) => {
   test.setTimeout(90_000);
   const stamp = Date.now();

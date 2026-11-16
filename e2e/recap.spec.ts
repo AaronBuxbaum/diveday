@@ -45,6 +45,7 @@ test("an oversize recap photo is rejected client-side before it ever reaches the
 test.describe("as owner", () => {
   signedInAsOwner();
 
+  // story: RECAP-01
   test("the external review ask appears once, right after any on-page rating (task 57, #2095)", async ({
     page,
   }) => {

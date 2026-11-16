@@ -40,6 +40,7 @@ export const GUARDS = [
   ["e2e-fixtures", "check-e2e-fixtures.mjs"],
   ["e2e-hygiene", "check-e2e-hygiene.mjs"],
   ["critical-journeys", "check-critical-journeys.mjs"],
+  ["stories", "check-stories.mjs"],
   ["route-coverage", "check-route-coverage.mjs"],
   ["loading-skeletons", "check-loading-skeletons.mjs"],
   ["staff-widths", "check-staff-widths.mjs"],

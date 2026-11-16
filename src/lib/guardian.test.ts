@@ -50,6 +50,7 @@ describe("a seat its booker marked Under 18 (decision 2026-10-13)", () => {
     expect(guardianSignatureRequired("2012-01-01", "2026-07-18", false)).toBe(true);
   });
 
+  // story: GUARD-01
   it("blocks a release the declared minor signed alone, and clears a co-signed one", () => {
     const declared = { dateOfBirth: null, minorDeclared: true, timezone: TZ };
     expect(guardianSignatureMissing(record(), declared)).toBe(true);
@@ -82,6 +83,7 @@ describe("guardianSignatureMissing", () => {
     expect(guardianSignatureMissing(record(), unknown)).toBe(false);
   });
 
+  // story: GUARD-01
   it("measures minority on the signing day: a diver who turned 18 the day after still signed as a minor", () => {
     const eighteenOnThe19th = { dateOfBirth: "2008-07-19", minorDeclared: false, timezone: TZ };
     expect(guardianSignatureMissing(record(), eighteenOnThe19th)).toBe(true);

@@ -102,7 +102,10 @@ export default async function PublicCoursesPage({
   if (!shop.coursesEnabled) redirect(publicSchedulePath(shopSlug));
 
   const { locale, t } = await requestTranslator(shop.defaultLocale);
-  const agencies = await activeCourseAgencies(db, shop.id);
+  const [agencies, activeCourses] = await Promise.all([
+    activeCourseAgencies(db, shop.id),
+    listActiveCourses(db, shop.id),
+  ]);
   // An unknown `?agency=` reads as the shop's first agency rather than as an
   // empty catalog — the value is attacker- (and typo-) supplied on a public
   // page, and a catalog that silently shows nothing is indistinguishable from
@@ -115,9 +118,7 @@ export default async function PublicCoursesPage({
   // before anything on this page reads a field — the same one-shot pass the
   // course page itself makes (src/lib/courses.ts).
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
-  const catalog = (await listActiveCourses(db, shop.id)).map((course) =>
-    resolveCourseContentDepths(course, depthFormat),
-  );
+  const catalog = activeCourses.map((course) => resolveCourseContentDepths(course, depthFormat));
   const doors = courseDoors(catalog);
   const courseList = catalog.filter(
     (course) => !selectedAgency || course.agency.trim().toLowerCase() === selectedAgency,

@@ -10,6 +10,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | Doc | What it holds | Update when… |
 | --- | --- | --- |
 | [product/vision.md](product/vision.md) | Why this product exists, who it serves, what "delight-first" means | positioning or personas change |
+| [product/stories/](product/stories/README.md) | What each persona can do, one id per story, and the tests that prove it (`pnpm check:stories`, `pnpm stories`) | a behavior is added, changed or removed |
 | [product/personas.md](product/personas.md) | The standing UX-persona eval frame — fifteen personas plus two cross-cutting lenses, each with a "hold the line on" checklist | a persona's actual needs or context change (new findings become scoped GitHub issues, not persona edits) |
 | [product/glossary.md](product/glossary.md) | Dive-industry domain terms and how we model them: a generated index of the domain files in [product/glossary/](product/glossary/) | you introduce or rename a domain concept (edit the domain file, then `node scripts/check-glossary.mjs --write`) |
 | [product/features/](product/features/roadmap.md) | Direction and where to find work; GitHub owns implementation scope, claims and status | a priority or approved scope changes; do not duplicate issue checklists |

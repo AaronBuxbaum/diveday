@@ -113,6 +113,7 @@ test.describe("refunds", () => {
     return noraRow;
   }
 
+  // story: PAY-06
   test("canceling a paid counter booking inside the free-cancellation window flags a manual refund", async ({
     page,
   }) => {
@@ -149,6 +150,7 @@ test.describe("refunds", () => {
     await expect(page.getByText(/removed Nora Quinn from the trip/)).toBeVisible();
   });
 
+  // story: PAY-06
   test("canceling a paid booking past the cancellation deadline forfeits the refund", async ({
     page,
   }) => {

@@ -27,6 +27,7 @@ const SAILED = "Dawn Two-Tank — Molasses Reef";
 
 signedInAsOwner();
 
+// story: ROLL-06
 test("a captain adds a rider at the dock, who counts at once and only once", async ({ page }) => {
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -129,6 +130,7 @@ test("the crew records something left aboard and the shop hands it back", async 
  * off the roster. The dawn boat is home with its sailed seats boarded, so a
  * sailed row's Remove says why and offers no confirm; the seat stays.
  */
+// story: ROLL-05
 test("Remove on a diver marked aboard a boat that has left says why and changes nothing", async ({
   page,
 }) => {

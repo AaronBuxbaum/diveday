@@ -33,6 +33,7 @@ async function openFirstOpenOrder(page: Page) {
 test.describe("the counter payment hold", () => {
   signedInAsOwner();
 
+  // story: PAY-05
   test("Undo inside the hold records nothing", async ({ page }) => {
     await openFirstOpenOrder(page);
     await page.getByRole("button", { name: "Cash", exact: true }).click();
@@ -47,6 +48,7 @@ test.describe("the counter payment hold", () => {
     await expect(page.getByRole("button", { name: "Card machine", exact: true })).toBeEnabled();
   });
 
+  // story: PAY-05
   test("the hold running out records the payment once", async ({ page }) => {
     // The hold is eight seconds by decision (H-20260906-diveday-fill-already-knows). The page clock runs the
     // countdown's ticks instead of spending eight real seconds of the budget.
@@ -94,6 +96,7 @@ test.describe("the counter payment hold", () => {
     ).toBeVisible();
   });
 
+  // story: PAY-05
   test("leaving inside the hold records the payment then, not at the hourly sweep", async ({
     page,
   }) => {
