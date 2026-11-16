@@ -36,10 +36,10 @@ for (const viewport of [
       await page.getByText(t("orders.purchaseDay.title"), { exact: false }).click();
       await expect(page.getByText(t("orders.purchaseDay.scope"), { exact: true })).toBeVisible();
       await expect(page.getByText("$50.00", { exact: true }).first()).toBeVisible();
-      await expect(page.getByText("$10.00", { exact: true }).first()).toBeVisible();
-      await expect(
-        page.getByRole("heading", { name: t("orders.purchaseDay.returns"), exact: true }),
-      ).toBeVisible();
+      const returns = page
+        .getByRole("heading", { name: t("orders.purchaseDay.returns"), exact: true })
+        .locator("..");
+      await expect(returns.getByRole("listitem")).toHaveText("USD · $10.00");
       await capture(page, `recorded-receipt-day-${viewport.name}`, "light");
       const fact = privateShop.values.operationsVisual as { orderId: string };
       await page.goto(`/shop/${privateShop.slug}/orders/${fact.orderId}`);
