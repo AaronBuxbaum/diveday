@@ -105,7 +105,7 @@ export const ST_VINCENT_GRENADINES: DiveSiteTemplate[] = [
       currentNote:
         "Run as a drift; strength and direction are not documented, so carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Drift along the reef at about 15 m, the depth the operator gives, and do a safety stop on your SMB line. Staff confirm the diver can deploy an SMB before boarding. If sharks are resting on the sand, stay put and give them room: nothing dangling, no chasing or touching, group together and follow the crew's briefing.",
+        "Drift along the reef at about 15 m, the depth the operator gives, and do a safety stop on your SMB line. Staff confirm the diver can deploy an SMB before boarding. If sharks are resting on the sand, stay put and give them room: nothing dangling, no chasing, or touching, group together, and follow the crew's briefing.",
       minimumCertificationLevel: "advanced_open_water",
       fitTone: "unknown",
       fitNote:
@@ -136,7 +136,7 @@ export const ST_VINCENT_GRENADINES: DiveSiteTemplate[] = [
       forecastLatitude: 12.6385,
       forecastLongitude: -61.376,
       description:
-        "A broad coral reef off Mayreau, dived as a drift. Crinoids, garden eels and flamingo tongues are common.",
+        "A broad coral reef off Mayreau, dived as a drift. Crinoids, garden eels, and flamingo tongues are common.",
       marineLife: "Garden eels · flamingo tongues · crinoids · sea fans",
       marineLifeDescription:
         "Look low in the sand for garden eels and on the sea fans for flamingo tongues. Crinoids perch on the high points.",

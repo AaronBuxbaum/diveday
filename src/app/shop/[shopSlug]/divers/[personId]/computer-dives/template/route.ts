@@ -6,7 +6,8 @@ export async function GET(
   { params }: { params: Promise<{ shopSlug: string; personId: string }> },
 ) {
   const { shopSlug } = await params;
-  await requireShopSurface(shopSlug);
+  const { shop } = await requireShopSurface(shopSlug);
+  if (!shop.computerDivesEnabled) return new Response(null, { status: 404 });
   return new Response(COMPUTER_CSV_TEMPLATE, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

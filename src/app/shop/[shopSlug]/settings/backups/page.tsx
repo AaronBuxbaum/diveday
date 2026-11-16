@@ -10,10 +10,9 @@ import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { NoticeCodeOf } from "@/lib/staff-notices";
-import { DataTabs } from "../../_components/DataTabs";
-import { settingsPaneClass } from "../../_components/settings-pane";
-import { BackupsSection, deliveryErrorText } from "../_components/BackupsSection";
-import type { Notice } from "../actions";
+import { settingsPaneClass } from "../_components/settings-pane";
+import { BackupsSection, deliveryErrorText } from "../export/_components/BackupsSection";
+import type { Notice } from "../export/actions";
 
 // See the sibling pages of Your data (ADR 20260804-instant-navigation).
 export const instant = true;
@@ -81,13 +80,11 @@ export default async function BackupsSettingsPage({
   const t = staffTranslator(locale);
   const banner = noticeFrom(notice);
 
-  const basePath = `/shop/${session.user.shopSlug}/settings/export/backups`;
+  const basePath = `/shop/${session.user.shopSlug}/settings/backups`;
 
   return (
     <main className={settingsPaneClass()}>
-      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.data.title")} />
-
-      <DataTabs t={t} shopSlug={session.user.shopSlug} current="backups" />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.data.backups")} />
 
       {/* Page-level on purpose, even though every code below is a backup-form
           outcome: the form that produced it sits far down a long page, and a

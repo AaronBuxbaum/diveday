@@ -20,7 +20,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.2703,
       forecastLongitude: -86.6029,
       description:
-        "A wall at the southwest tip of the island, one of the four sites of The Point, where the flows along the island’s two coasts converge. The mooring sits at about 15 m (50 ft) and the wall below it falls away past recreational depth, with black coral, barrel sponges and sea fans along its face.",
+        "A wall at the southwest tip of the island, one of the four sites of The Point, where the flows along the island’s two coasts converge. The mooring sits at about 15 m (50 ft) and the wall below it falls away past recreational depth, with black coral, barrel sponges, and sea fans along its face.",
       marineLife: "Black coral · barrel sponges · barracuda · creole wrasse",
       marineLifeDescription:
         "Sea fans and sponges crowd the wall, and schooling fish gather where the current is strongest.",
@@ -40,7 +40,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         {
           name: "The wall",
           kind: "reefFormation",
-          note: "A wall that starts near 15 m (50 ft), hung with black coral, barrel sponges and sea fans.",
+          note: "A wall that starts near 15 m (50 ft), hung with black coral, barrel sponges, and sea fans.",
         },
       ],
       creatureSlugs: [
@@ -84,7 +84,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         "Cross the sand patch to the wall and turn back along the crest. The short swim-through is an overhead; stay out of it. Watch the eels from the edge of the sand, which lies near 20 m (65 ft), and hold your depth there.",
       fitTone: "unknown",
       fitNote:
-        "Shallow, clear and gentle along the crest, but the eel field sits at 20 m, so the site is held to Advanced Open Water.",
+        "Shallow, clear, and gentle along the crest, but the eel field sits at 20 m, so the site is held to Advanced Open Water.",
       // The eel field and the base of the wall are at about 20 m, past the 18 m Open Water limit, so the gate is Advanced Open Water. A shop that dives only the crest at 18 m or less can lower it.
       minimumCertificationLevel: "advanced_open_water",
       landmarks: [
@@ -121,10 +121,10 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.2786,
       forecastLongitude: -86.6042,
       description:
-        "Sand patches and coral platforms on a shallow bank, with the wall further out. Pipefish, flounder and tube anemones live in the sand, and the coral platform is a place to look for turtles.",
+        "Sand patches and coral platforms on a shallow bank, with the wall further out. Pipefish, flounder, and tube anemones live in the sand, and the coral platform is a place to look for turtles.",
       marineLife: "Pipefish · flounder · stingrays · jacks",
       marineLifeDescription:
-        "Slow, close looking pays off on the sand, with jacks, snapper and parrotfish over the coral.",
+        "Slow, close looking pays off on the sand, with jacks, snapper, and parrotfish over the coral.",
       difficultyLevel: "beginner",
       depthMinMeters: 12,
       maxDepthMeters: 18,
@@ -219,7 +219,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         "Follow the ridge along its length at 9 to 15 m (30 to 50 ft) and return along the same line.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, easy to navigate and calm, which makes it a common first reef dive for new divers.",
+        "Shallow, easy to navigate, and calm, which makes it a common first reef dive for new divers.",
       landmarks: [
         {
           name: "Coral outplant area",
@@ -249,7 +249,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       description:
         "A shallow reef beside the West End channel, with a sand patch and a vertical wall nearby. A short boat ride from West End, and a common site for students.",
       marineLife: "Hawksbill turtles · black grouper · blue tang",
-      marineLifeDescription: "Turtles, groupers and schools of blue tang work the shallow top.",
+      marineLifeDescription: "Turtles, groupers, and schools of blue tang work the shallow top.",
       difficultyLevel: "beginner",
       depthMinMeters: 6,
       maxDepthMeters: 18,
@@ -330,7 +330,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.3065,
       forecastLongitude: -86.5974,
       description:
-        "One of three moorings on the wall off West End, running from the shallows to well past recreational depth. Gorgonians, orange elephant ear sponges and overhangs line the deeper face, and flamingo tongues sit on the fans in the shallows.",
+        "One of three moorings on the wall off West End, running from the shallows to well past recreational depth. Gorgonians, orange elephant ear sponges, and overhangs line the deeper face, and flamingo tongues sit on the fans in the shallows.",
       marineLife: "Gorgonians · elephant ear sponges · lobsters · flamingo tongues",
       marineLifeDescription:
         "Lobsters and crabs sit in the crevices, and flamingo tongue snails are on the sea fans in the shallows.",
@@ -438,10 +438,10 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.3263,
       forecastLongitude: -86.5809,
       description:
-        "A pinnacle of coral standing off the wall at about 27 m (90 ft), between Overheat Reef and the El Aguila wreck. A drift in either direction along the top of the wall, with fish crowded along the edge.",
+        "A pinnacle of coral standing off the wall at about 27 m (90 ft), between Overheat Reef, and the El Aguila wreck. A drift in either direction along the top of the wall, with fish crowded along the edge.",
       marineLife: "Pillar coral · grunts · parrotfish · blue tang",
       marineLifeDescription:
-        "Schools of sergeant majors, grunts and chubs stack up along the top of the wall.",
+        "Schools of sergeant majors, grunts, and chubs stack up along the top of the wall.",
       difficultyLevel: "intermediate",
       depthMinMeters: 11,
       maxDepthMeters: 30,
@@ -529,7 +529,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         "An old river gorge that links the murky lagoon to the outer reef, named for its low light. The channel is narrow and about 29 m (95 ft) deep, and its walls close to a gap only about 1.5 m (5 ft) wide near the surface. The dive here stays on the outer reef at the mouth, because the channel itself is an overhead dive.",
       marineLife: "Starfish · lobsters · snapper · barracuda",
       marineLifeDescription:
-        "The channel itself holds little life. Snapper, grouper and barracuda wait near the mooring on the outer reef.",
+        "The channel itself holds little life. Snapper, grouper, and barracuda wait near the mooring on the outer reef.",
       difficultyLevel: "advanced",
       depthMinMeters: 11,
       maxDepthMeters: 30,
@@ -627,7 +627,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         "A round patch of white sand at 11 m (35 ft) surrounded by coral heads, with the wall beyond. The reef forms a plateau near 18 m (60 ft) and then falls off the wall.",
       marineLife: "Shrimp · anemones · lobsters · schooling fish",
       marineLifeDescription:
-        "Anemones, shrimp and lobsters live on the coral heads, and big schools come in from the blue along the wall.",
+        "Anemones, shrimp, and lobsters live on the coral heads, and big schools come in from the blue along the wall.",
       difficultyLevel: "intermediate",
       depthMinMeters: 11,
       maxDepthMeters: 30,
@@ -686,7 +686,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         "Down the mooring to the stern, forward along the outside of the wreck for about 15 minutes, then up the wall to the reef for the stop. Stay outside the hull. The small cave and the cavern on the wall are overheads; stay out.",
       fitTone: "demanding",
       fitNote:
-        "Deep, popular and busy. A deep wreck for a diver with the card who tracks gas and no-stop time.",
+        "Deep, popular, and busy. A deep wreck for a diver with the card who tracks gas and no-stop time.",
       // Sand at 33 m (110 ft), so Advanced Open Water and Deep. Sources give 30 to 33 m for the sand; the deeper is used.
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -756,7 +756,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         {
           name: "The stern",
           kind: "wreckFeature",
-          note: "The stern, almost upright and the deepest point at about 37 m (120 ft).",
+          note: "The stern, almost upright, and the deepest point at about 37 m (120 ft).",
         },
       ],
       creatureSlugs: [
@@ -886,10 +886,10 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.2933,
       forecastLongitude: -86.5188,
       description:
-        "A sloping offshore bank roughly 800 m south of the main reef. The crest starts at about 16 m (52 ft) and then plunges toward the deep trench, with black coral, pillar coral and boulder coral along the wall.",
+        "A sloping offshore bank roughly 800 m south of the main reef. The crest starts at about 16 m (52 ft) and then plunges toward the deep trench, with black coral, pillar coral, and boulder coral along the wall.",
       marineLife: "Black coral · pillar coral · triggerfish · barracuda",
       marineLifeDescription:
-        "Triggerfish, hogfish and barracuda cruise the crest, and the wall holds many kinds of coral.",
+        "Triggerfish, hogfish, and barracuda cruise the crest, and the wall holds many kinds of coral.",
       difficultyLevel: "intermediate",
       depthMinMeters: 16,
       maxDepthMeters: 30,
@@ -1058,7 +1058,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.351,
       forecastLongitude: -86.4396,
       description:
-        "A reef top at 3 to 9 m (10 to 30 ft) that slopes out like fingers to a large sand slope, thick with elkhorn, staghorn and lettuce coral. The mooring lies in 8 to 12 m (25 to 40 ft), depending on the source.",
+        "A reef top at 3 to 9 m (10 to 30 ft) that slopes out like fingers to a large sand slope, thick with elkhorn, staghorn, and lettuce coral. The mooring lies in 8 to 12 m (25 to 40 ft), depending on the source.",
       marineLife: "Elkhorn coral · staghorn coral · lettuce coral",
       marineLifeDescription: "Shallow, dense coral with plenty of small fish.",
       difficultyLevel: "beginner",
@@ -1158,7 +1158,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.3581,
       forecastLongitude: -86.4246,
       description:
-        "A shallow wall that winds along the reef, hung with rope, tube and barrel sponges. In the 2009 earthquake a large stretch of reef broke away into deep water.",
+        "A shallow wall that winds along the reef, hung with rope, tube, and barrel sponges. In the 2009 earthquake a large stretch of reef broke away into deep water.",
       marineLife: "Rope sponges · tube sponges · barrel sponges",
       marineLifeDescription: "Sponges and cascading corals make up the wall.",
       difficultyLevel: "beginner",
@@ -1226,7 +1226,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.3686,
       forecastLongitude: -86.3891,
       description:
-        "The upper part of the wall is a gently sloped plateau between 9 and 12 m (30 and 40 ft). Currents here let deep-water sea fans grow in large numbers, with schools of creole wrasse, yellowtail snapper, blue chromis and black durgon over them.",
+        "The upper part of the wall is a gently sloped plateau between 9 and 12 m (30 and 40 ft). Currents here let deep-water sea fans grow in large numbers, with schools of creole wrasse, yellowtail snapper, blue chromis, and black durgon over them.",
       marineLife: "Sea fans · creole wrasse · blue chromis · black durgon",
       marineLifeDescription: "Schools of creole wrasse and chromis hang over the sea fans.",
       difficultyLevel: "advanced",
@@ -1365,10 +1365,10 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.2656,
       forecastLongitude: -86.6033,
       description:
-        "A vertical coral wall on the island’s western end. The face starts at about 15 m (50 ft) and keeps falling past recreational depth, with black coral, black gorgonians and big barrel sponges on it. Sharks and eagle rays pass on occasion.",
+        "A vertical coral wall on the island’s western end. The face starts at about 15 m (50 ft) and keeps falling past recreational depth, with black coral, black gorgonians, and big barrel sponges on it. Sharks and eagle rays pass on occasion.",
       marineLife: "Black coral · barrel sponges · barracuda · eagle rays",
       marineLifeDescription:
-        "Barracuda, trumpetfish, snapper and jacks school along the wall, and a nurse or reef shark turns up now and then.",
+        "Barracuda, trumpetfish, snapper, and jacks school along the wall, and a nurse or reef shark turns up now and then.",
       difficultyLevel: "advanced",
       depthMinMeters: 15,
       maxDepthMeters: 30,
@@ -1569,10 +1569,10 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.3092,
       forecastLongitude: -86.5961,
       description:
-        "A small semicircular wall almost directly off the West End beach. The reef starts at about 5 m (15 ft) and the wall drops past 45 m (150 ft). Black coral, gorgonians and orange elephant ear sponges hang on the sides, with flamingo tongue snails on the fans.",
+        "A small semicircular wall almost directly off the West End beach. The reef starts at about 5 m (15 ft) and the wall drops past 45 m (150 ft). Black coral, gorgonians, and orange elephant ear sponges hang on the sides, with flamingo tongue snails on the fans.",
       marineLife: "Eagle rays · groupers · creole wrasse · blue chromis",
       marineLifeDescription:
-        "Eagle rays cruise along the reef, and groupers, chromis and creole wrasse work the sides of the wall.",
+        "Eagle rays cruise along the reef, and groupers, chromis, and creole wrasse work the sides of the wall.",
       difficultyLevel: "intermediate",
       depthMinMeters: 5,
       maxDepthMeters: 30,
@@ -1718,7 +1718,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       forecastLatitude: 16.3292,
       forecastLongitude: -86.5772,
       description:
-        "A wall just north of the El Aguila wreck, with nooks, crevices and mini canyons over a slanting sand slope. Reef formations and sand patches lie at about 14 m (45 ft), and the wall holds big groupers.",
+        "A wall just north of the El Aguila wreck, with nooks, crevices, and mini canyons over a slanting sand slope. Reef formations and sand patches lie at about 14 m (45 ft), and the wall holds big groupers.",
       marineLife: "Groupers · dog snapper · creole wrasse · eagle rays",
       marineLifeDescription:
         "At least four big groupers hold on the wall, with dog snapper and creole wrasse beside them.",
@@ -1816,7 +1816,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         "A freighter of about 43 m (140 ft) sitting upright on sand, covered in soft coral, in front of a resort. Her bow and aft decks carry forests of soft coral. Divers stay outside the hull.",
       marineLife: "Eagle rays · southern stingrays · squid · soft corals",
       marineLifeDescription:
-        "Eagle rays, southern stingrays and squid pass along the hull, and the sand holds small life.",
+        "Eagle rays, southern stingrays, and squid pass along the hull, and the sand holds small life.",
       difficultyLevel: "intermediate",
       depthMinMeters: 12,
       maxDepthMeters: 24,
@@ -1826,7 +1826,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         "Down the line to the hull, along the outside of the deck from stern to bow, then back over the sand. Stay outside the hull.",
       fitTone: "demanding",
       fitNote:
-        "Upright, tidy and covered in coral. Sources disagree on the depth (65 ft to 80 ft), so plan for the deeper.",
+        "Upright, tidy, and covered in coral. Sources disagree on the depth (65 ft to 80 ft), so plan for the deeper.",
       // Sources give 40 to 80 ft (12 to 24 m); the deeper figure is used, with Advanced Open Water.
       minimumCertificationLevel: "advanced_open_water",
       landmarks: [
@@ -2481,7 +2481,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
         {
           name: "Nursery Ridge",
           kind: "reefFormation",
-          note: "A shallow, sunny crest of staghorn and fire coral alive with juvenile fish.",
+          note: "A shallow, sunny crest of staghorn, and fire coral alive with juvenile fish.",
         },
       ],
       creatureSlugs: [

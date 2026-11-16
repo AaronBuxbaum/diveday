@@ -68,7 +68,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
-        "A busy public beach: snorkelers, swimmers and SNUBA divers share the water off the sand. Surface well clear of them with an SMB. Usually light; it can change, so carry an SMB. Exit by the same sandy entry.",
+        "A busy public beach: snorkelers, swimmers, and SNUBA divers share the water off the sand. Surface well clear of them with an SMB. Usually light; it can change, so carry an SMB. Exit by the same sandy entry.",
       divePlan:
         "Walk in from the sand, follow the reef out, and return to the same entry. Keep the beach in sight on the way back.",
       fitTone: "welcoming",
@@ -98,7 +98,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       // Approximate pin: the west end of Congo Cay (Aqua Action, NPS). The pin is in open water about 150 m off the cay's western end. Landmark positions from OpenStreetMap; no operator publishes coordinates, so the pin is good to about 2 km.
       // Depth: NPS gives a wall to 80–90 ft off Congo Point, the deepest of the sources. Gated AOW for the tidal current the NPS names around the point; visitusvi.com calls the shallow reefs ideal for beginners, but the plan here covers the wall off the point and holds 27 m. The sand chute's foot is not sourced, so the chute is left out of the plan.
       name: "Congo Cay",
-      locationName: "Congo Cay, St Thomas and St John",
+      locationName: "Congo Cay, St Thomas, and St John",
       forecastLatitude: 18.3678,
       forecastLongitude: -64.8066,
       description:
@@ -158,7 +158,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
         "Drop on the sheltered south side, let the current take you around the rock, past the formations and canyon, and return through the shallow coral gardens. No deeper than 24 m (80 ft).",
       fitTone: "demanding",
       fitNote:
-        "Experienced divers only: stiff current, a deep wall and an open-water return. Advanced Open Water.",
+        "Experienced divers only: stiff current, a deep wall, and an open-water return. Advanced Open Water.",
       minimumCertificationLevel: "advanced_open_water",
       creatureSlugs: [
         "tarpon",
@@ -230,7 +230,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
         "Reef on the slopes around Mingo Cay, in the middle of three cays between St Thomas and St John. Small coral heads on a 45-degree slope pocked with small holes, and a western end with a coral canyon.",
       marineLife: "Squid · barracuda · crinoids · tube worms",
       marineLifeDescription:
-        "Tube worms, crinoids and urchins in the small holes of the slope, and squid and a barracuda over the coral canyon at the west end.",
+        "Tube worms, crinoids, and urchins in the small holes of the slope, and squid and a barracuda over the coral canyon at the west end.",
       difficultyLevel: "beginner",
       depthMinMeters: 5,
       maxDepthMeters: 14,
@@ -272,7 +272,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
         "Two rocks off the south side of St Thomas with ridges, canyons and arches. Cow Rock has swim-throughs, which are overhead; stay out of them. Calf Rock has a long ledge with no swim-throughs. Soft and hard corals grow on both.",
       marineLife: "Lobsters · green morays · turtles · nurse sharks",
       marineLifeDescription:
-        "Lobsters and brittle stars sit between the rocks, and turtles, tarpon and nurse sharks cruise the ledges.",
+        "Lobsters and brittle stars sit between the rocks, and turtles, tarpon, and nurse sharks cruise the ledges.",
       conservationNote: "The rocks sit inside a marine preserve.",
       difficultyLevel: "intermediate",
       depthMinMeters: 8,
@@ -318,7 +318,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       forecastLatitude: 18.3088,
       forecastLongitude: -64.8338,
       description:
-        "A string of volcanic fingers and big boulders that straggle off Great St James, cut by canyons. An open-water feel, with eels, octopus and lobsters in the walls.",
+        "A string of volcanic fingers and big boulders that straggle off Great St James, cut by canyons. An open-water feel, with eels, octopus, and lobsters in the walls.",
       marineLife: "Eagle rays · eels · octopus · lobsters",
       marineLifeDescription:
         "Spotted eagle rays pass overhead, and the canyon walls hold eels, octopus and lobster condos.",
@@ -358,7 +358,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       forecastLatitude: 18.3004,
       forecastLongitude: -64.8312,
       description:
-        "On the west side of Little St James, ledges, overhangs and undercuts where the sand has washed from beneath the coral ridges. Do not reach under the ledges. The ledges run at two depths, with low reef around them.",
+        "On the west side of Little St James, ledges, overhangs, and undercuts where the sand has washed from beneath the coral ridges. Do not reach under the ledges. The ledges run at two depths, with low reef around them.",
       marineLife: "Turtles · eagle rays · nurse sharks · yellowtail snapper",
       marineLifeDescription:
         "Hawksbill turtles and spotted eagle rays are regular, nurse sharks sleep under the ledges, and big schools of yellowtail snapper hang over the reef.",
@@ -401,7 +401,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
         "A bowl-shaped slope off the south side of the strip joining Buck and Capella Islands. Tiers of hard and soft coral rise like an amphitheater from the sand at about 17 m to sea fans at about 6 m.",
       marineLife: "Sharks · southern stingrays · nurse sharks · Nassau grouper",
       marineLifeDescription:
-        "Sharks and southern stingrays gather over the sandy center, and lobsters, eels and nurse sharks sit in the ledges.",
+        "Sharks and southern stingrays gather over the sandy center, and lobsters, eels, and nurse sharks sit in the ledges.",
       difficultyLevel: "intermediate",
       depthMinMeters: 9,
       maxDepthMeters: 24,
@@ -494,7 +494,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
         "A small pinnacle in the cut between St Thomas and Buck Island, where a mail packet hit the rocks in 1816. Rocks run from a few feet below the surface down to about 18 m, with a ship’s cauldron on the southeast side.",
       marineLife: "Barracuda · French angelfish · queen angelfish · hawksbill turtles",
       marineLifeDescription:
-        "Schools of barracuda, big angelfish and hawksbill turtles over the rocks, with grunts and yellowtail on the north ledges. Roofing tiles, pottery shards and clay pipes lie in the reef; leave them.",
+        "Schools of barracuda, big angelfish, and hawksbill turtles over the rocks, with grunts and yellowtail on the north ledges. Roofing tiles, pottery shards, and clay pipes lie in the reef; leave them.",
       difficultyLevel: "intermediate",
       depthMinMeters: 1,
       maxDepthMeters: 18,

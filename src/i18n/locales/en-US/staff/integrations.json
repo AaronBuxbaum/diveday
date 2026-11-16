@@ -118,7 +118,7 @@
       "location_mismatch": "This payment belongs to a different Square location. Nothing changed here.",
       "amount_mismatch": "The currency, original total, or tip differs. Check the purchase and Square receipt. Nothing changed here.",
       "refund_mismatch": "Square and DiveDay show different refund totals. Record money already returned in DiveDay, or check the refund in Square, then check again.",
-      "deleted": "Receipt link deleted. The purchase, refund record and DiveDay fee are unchanged."
+      "deleted": "Receipt link deleted. The purchase, refund record, and DiveDay fee are unchanged."
     },
     "deleteLink": "Delete receipt link",
     "deleting": "Deleting link…"

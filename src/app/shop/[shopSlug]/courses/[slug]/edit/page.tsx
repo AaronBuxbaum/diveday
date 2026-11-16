@@ -74,6 +74,7 @@ export default async function EditCoursePage({
   const { shopSlug, slug } = await params;
   const { notice, error, field } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
+  if (!shop.coursesEnabled) redirect(`/shop/${shopSlug}`);
   const page = await getCourseEditPage(db, shop.id, slug, session.user.personId);
   if (!page) notFound();
   const { course, templateUpdate } = page;

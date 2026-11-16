@@ -63,7 +63,7 @@ export async function seedInbox(
     channel: "email",
     toAddress: lena.email.toLowerCase(),
     // i18n-exempt: fixture text — what a staffer typed, stored verbatim
-    body: "We do. I've put a women's medium aside under your name for Saturday.",
+    body: "We have women's medium 3mm suits available. You're welcome to bring a thicker suit if you prefer.",
     locale: "en-US",
     sentByPersonId: repliedByPersonId,
     status: "sent",
@@ -106,9 +106,9 @@ export async function seedInbox(
       channel: "email",
       fromAddress: demoEmail("marta.keller"),
       // i18n-exempt: fixture text — what a stranger typed, stored verbatim
-      subject: "Night dives in October?",
+      subject: "Night dives next month?",
       // i18n-exempt: fixture text — what a stranger typed, stored verbatim
-      body: "Hello, do you run night dives in October? Two of us, both Advanced. Thanks, Marta",
+      body: "Hello, do you run night dives next month? Two of us, both Advanced. Thanks, Marta",
       receivedAt: hoursFromNow(-26),
       senderAuthenticated: true,
       providerMessageId: `seed-inbox-${shopId}-marta`,

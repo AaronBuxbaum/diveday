@@ -198,7 +198,7 @@ for (const locale of ["en-US", "es-ES"] as const) {
           "href",
           provider === "padi"
             ? "https://www.padi.com/scuba-diving-mobile-apps"
-            : "https://www.divessi.com/en/join-ssi/register-free/myssi-app",
+            : "https://www.divessi.com/en/blog/blog/blog/scubapro-logtrak-myssi-app-integration-10251.html",
         );
       }
       const guideTarget = await page

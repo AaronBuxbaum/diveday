@@ -99,6 +99,7 @@ function shop(contactEmail: string | null, contactPhone: string | null): Shop {
     contactEmail,
     contactPhone,
     reviewsEnabled: false,
+    coursesEnabled: true,
     // This setting controls the general schedule request, not course inquiries.
     dateRequestsEnabled: false,
   } as Shop;

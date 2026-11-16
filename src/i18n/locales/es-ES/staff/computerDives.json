@@ -127,7 +127,7 @@
     },
     "ssi": {
       "label": "SSI · transferencia manual CSV",
-      "hint": "Transferencia manual CSV beta. Copia tus registros a la plantilla o asigna las columnas de una hoja de cálculo que ya tengas. El formato nativo de SSI y una integración pública general no están verificados."
+      "hint": "Para DiveDay, copia tus registros a la plantilla CSV o asigna las columnas de tu hoja de cálculo. La guía de SSI explica cómo vincular SCUBAPRO LogTRAK con MySSI, elegir buceos y usar “Share with SSI”. DiveDay no lee tu historial de MySSI."
     },
     "garmin": {
       "label": "Garmin",
