@@ -225,6 +225,9 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripTab(page, "Manifest");
         await openDeckDetails(page);
         await offlineCopySaved(page);
+        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\/manifest/)?.[1];
+        if (!tripId) throw new Error("The reef trip manifest must identify its trip");
+        const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "after_dive_1" });
         await page
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
@@ -234,6 +237,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText("Dive 1 — not recorded yet").click();
         // Waits on a control the open form renders and the closed one does not.
         await page.getByLabel("Why the plan changed").waitFor();
+        await confirmed;
         await page.mouse.move(0, 0);
         await capture(page, "manifest-plan-change", scheme);
       });

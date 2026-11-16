@@ -2,7 +2,9 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { type ExistingImportCopy, ExistingImportReview } from "./ExistingImportReview";
+import { existingImportCopy } from "./existing-import-copy";
 import { reviewExistingImportAction } from "./review-actions";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/shop/test/settings/import" }));
@@ -39,6 +41,8 @@ const copy: ExistingImportCopy = {
     processed: "Processed",
   },
   errors: {},
+  issues: { service_already_recorded: "This service is already recorded." },
+  unknownIssue: "Check this row in the correction CSV, then review it again.",
   mappingRequired: "Map each column once",
   counts: { unitsCreated: "Units created" },
 };
@@ -112,9 +116,9 @@ describe("existing import review generations", () => {
     const row = await screen.findByRole("row", { name: /CSV-REVIEW-REG/ });
     const outcome = within(row).getAllByRole("cell")[1];
     // Playwright's exact text locator includes the issue paragraph in this cell.
-    expect(outcome.textContent).toBe("Repeatedservice_already_recorded");
+    expect(outcome.textContent).toBe("RepeatedThis service is already recorded.");
     expect(outcome).toHaveTextContent("Repeated");
-    expect(outcome).toHaveTextContent("service_already_recorded");
+    expect(outcome).not.toHaveTextContent("service_already_recorded");
   });
   it("ignores a late review after selecting a different file", async () => {
     let resolve!: (value: Awaited<ReturnType<typeof reviewExistingImportAction>>) => void;
@@ -149,3 +153,59 @@ describe("existing import review generations", () => {
     );
   });
 });
+
+for (const [locale, guidance] of [
+  ["en-US", "Enter the service date as YYYY-MM-DD."],
+  ["es-ES", "Ingresa la fecha de servicio como AAAA-MM-DD."],
+] as const) {
+  it(`translates review diagnostics in ${locale} while retaining correction evidence`, async () => {
+    vi.mocked(reviewExistingImportAction).mockResolvedValue({
+      rows: [
+        [
+          {
+            rowNumber: 2,
+            outcome: "skip",
+            issues: ["invalid_service_date", "unexpected_private_detail", "constructor", ""],
+          },
+        ],
+      ],
+    });
+    const words = existingImportCopy(staffTranslator(locale), "gear");
+    render(<ExistingImportReview kind="gear" columns={columns} copy={words} />);
+    await pick(file("dates.csv", "gear_label,service_note\nA,bad"));
+    await userEvent.click(screen.getByRole("button", { name: words.review }));
+    expect(await screen.findByText((text) => text.includes(guidance))).toBeVisible();
+    const row = screen.getByRole("row", { name: /A bad/ });
+    expect(row).toHaveTextContent(words.unknownIssue);
+    expect(row).not.toHaveTextContent("invalid_service_date");
+    expect(row).not.toHaveTextContent("unexpected_private_detail");
+    const csv = decodeURIComponent(
+      screen.getByRole("link", { name: words.correction }).getAttribute("href") ?? "",
+    );
+    expect(csv).toContain("invalid_service_date");
+    expect(csv).toContain("unexpected_private_detail");
+    expect(csv).toContain("A,bad");
+  });
+}
+
+for (const locale of ["en-US", "es-ES"] as const) {
+  it(`renders guidance for every supported diagnostic in ${locale}`, async () => {
+    const words = existingImportCopy(staffTranslator(locale), "sites");
+    const issues = Object.keys(words.issues);
+    vi.mocked(reviewExistingImportAction).mockResolvedValue({
+      rows: [[{ rowNumber: 2, outcome: "skip", issues }]],
+    });
+    render(<ExistingImportReview kind="gear" columns={columns} copy={words} />);
+    await pick(file("diagnostics.csv", "gear_label\nReview item"));
+    await userEvent.click(screen.getByRole("button", { name: words.review }));
+    const row = await screen.findByRole("row", { name: /Review item/ });
+    await waitFor(() => expect(row).toHaveTextContent(words.issues.invalid_service_date));
+    for (const [code, guidance] of Object.entries(words.issues)) {
+      expect(guidance).not.toBe(code);
+      expect(guidance.trim()).not.toBe("");
+      expect(row).toHaveTextContent(guidance);
+      expect(row).not.toHaveTextContent(code);
+    }
+    expect(row).not.toHaveTextContent(words.unknownIssue);
+  });
+}

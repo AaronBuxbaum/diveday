@@ -1,34 +1,25 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, tripPathByTitle } from "./helpers";
 import { capture, FLOW_TIMEOUT_MS, installVisualBuildGuard } from "./visual-harness";
 
 installVisualBuildGuard();
 signedInAsOwner();
+test.use({ privateShopFacts: ["operationsVisual"] });
 test.describe.configure({ timeout: FLOW_TIMEOUT_MS });
 const t = staffTranslator("en-US");
-test("classroom recovery arrangements on phone and desktop (light)", async ({ page }) => {
-  await createTrip(page, {
-    title: "Classroom arrangement capture",
-    date: daysFromNow(9),
-    departsAt: "08:00",
-    returnsAt: "10:00",
-    price: 120,
-  });
-  await page.goto(
-    `${await tripPathByTitle(page, "blue-mantis", "Classroom arrangement capture")}?blowout=1`,
-  );
-  await page.getByRole("button", { name: t("blowout.confirm.button"), exact: true }).click();
+test("classroom recovery arrangements on phone and desktop (light)", async ({
+  page,
+  privateShop,
+}) => {
+  const fact = privateShop.values.operationsVisual as { sourceTripId: string };
+  await page.goto(`/shop/${privateShop.slug}/trips/${fact.sourceTripId}?blowout=1`);
   await expect(
-    page.getByRole("heading", { name: t("blowout.classroom.heading"), exact: true }),
+    page.getByRole("heading", { name: "Reef photography in the classroom", exact: true }),
   ).toBeVisible();
-  await page.getByText(t("blowout.classroom.add"), { exact: true }).click();
-  await page
-    .getByLabel(t("blowout.classroom.title"), { exact: true })
-    .fill("Reef photography in the classroom");
-  await page
-    .getByLabel(t("blowout.classroom.location"), { exact: true })
-    .fill("The classroom beside the dock and equipment workshop");
+  await page.getByText(t("blowout.classroom.divers"), { exact: true }).click();
+  await expect(page.getByText(t("blowout.classroom.confirmed"), { exact: true })).toBeVisible();
+  await expect(page.getByText(t("blowout.classroom.prepared"), { exact: true })).toBeVisible();
+  await expect(page.getByText("Shore Recovery Diver", { exact: true }).first()).toBeVisible();
   for (const viewport of [
     { name: "phone", width: 390, height: 844 },
     { name: "desktop", width: 1280, height: 800 },

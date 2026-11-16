@@ -35,6 +35,8 @@ export type ExistingImportCopy = {
   counts: Record<string, string>;
   errors: Record<string, string>;
   mappingRequired: string;
+  issues: Record<string, string>;
+  unknownIssue: string;
 };
 type Picked = { file: File; grid: string[][]; mapping: string[]; type: string };
 
@@ -265,7 +267,13 @@ export function ExistingImportReview({
                         {outcome ? copy.outcomes[outcome.outcome] : copy.stale}
                         {outcome?.issues.length ? (
                           <p className="break-words text-xs text-muted">
-                            {outcome.issues.join(", ")}
+                            {outcome.issues
+                              .map(
+                                (issue) =>
+                                  (Object.hasOwn(copy.issues, issue) && copy.issues[issue]) ||
+                                  copy.unknownIssue,
+                              )
+                              .join(" ")}
                           </p>
                         ) : null}
                       </Td>

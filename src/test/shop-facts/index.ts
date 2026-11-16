@@ -68,6 +68,7 @@ import {
   mintASetupLink,
 } from "./mint-tokens";
 import { operationalTrustArgs, seedOperationalTrustFact } from "./operational-trust";
+import { prepareOperationsVisual } from "./operations-visual";
 import { makeRoomForPartyWaiverCaptures } from "./party-waiver-capacity-state";
 import { prepareWeatherAlternatives } from "./prepare-weather-alternatives";
 import { introduceAssignedInstructor } from "./public-staff-profile";
@@ -185,6 +186,9 @@ function requestOf(context: FactContext) {
 }
 
 const FACTS = {
+  operationsVisual: privateOnly(({ db, shop, actorId, now }) =>
+    prepareOperationsVisual(db, shop, actorId, now),
+  ),
   weatherAlternatives: ({ db, shop, now }) => prepareWeatherAlternatives(db, shop.id, now),
   noCardDeclared: ({ db, shop, now }) => declareNoCard(db, shop.id, now),
   stuckPayment: ({ db, shop, now }) => leavePaymentUnconfirmed(db, shop.id, now),
