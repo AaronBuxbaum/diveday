@@ -29,6 +29,7 @@ import {
   type InvoicingProvider,
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
+import { ancillaryTotals } from "@/lib/purchase-lines";
 import { isUuid } from "@/lib/uuid";
 import { canPersonManageOrders, loadActiveStaffRoles } from "./authz";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
@@ -622,15 +623,9 @@ export async function recordCounterOrder(
     if (!payer) return invalid;
   }
 
-  const totalCents = input.lineItems.reduce(
-    (total, item) => total + item.quantity * item.unitAmountCents,
-    0,
-  );
-  const passThroughCents = input.lineItems.reduce(
-    (total, item) =>
-      total + (item.kind === "pass_through_fee" ? item.quantity * item.unitAmountCents : 0),
-    0,
-  );
+  const lineTotals = ancillaryTotals(input.lineItems, currency);
+  if (!lineTotals) return invalid;
+  const { totalCents, passThroughCents } = lineTotals;
   const taxCents = input.taxCents ?? 0;
   const tipCents = input.tipCents ?? 0;
   if (

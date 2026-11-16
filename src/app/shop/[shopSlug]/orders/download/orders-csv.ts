@@ -47,6 +47,7 @@ export const ORDERS_CSV_HEADER = [
 /** The method code a row carries: how the money was taken. */
 const METHOD_CODES = {
   stripe_invoice: "stripe",
+  local_invoice: "local_invoice",
   cash: "cash",
   card_machine: "card_machine",
   bank_transfer: "bank_transfer",

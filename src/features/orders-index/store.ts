@@ -4,6 +4,7 @@ import {
   listImportedPaymentHistory,
 } from "@/features/imported-payment-history";
 import { latestShopPayouts } from "@/features/payouts";
+import { recordedPurchaseDay } from "@/features/recorded-purchases";
 import { canPersonViewShopReports } from "@/features/reporting";
 import { roomChargesByHotel } from "@/features/room-charges";
 import { listUnattributedRefunds } from "@/features/unattributed-refunds";
@@ -97,6 +98,7 @@ export async function getOrdersIndex(
     imported: { filter: ImportedPaymentHistoryFilter; page: number } | null;
     personFilter: string | undefined;
     tripFilter: string | undefined;
+    receiptDay?: string;
   },
 ) {
   const [
@@ -108,6 +110,7 @@ export async function getOrdersIndex(
     importedHistoryPage,
     filteredPersonName,
     filteredTripTitle,
+    purchaseDay,
   ] = await Promise.all([
     getShopStripeAccount(db, shop.id),
     canPersonManagePaymentSettings(db, shop.id, personId).then(
@@ -123,6 +126,7 @@ export async function getOrdersIndex(
       : null,
     input.personFilter ? getShopPersonName(db, shop.id, input.personFilter) : null,
     input.tripFilter ? getShopTripTitle(db, shop.id, input.tripFilter) : null,
+    recordedPurchaseDay(db, shop, personId, input.receiptDay),
   ]);
   return {
     paymentsConnected: canAcceptPayments(stripeAccount),
@@ -132,5 +136,6 @@ export async function getOrdersIndex(
     importedHistoryPage,
     filteredPersonName,
     filteredTripTitle,
+    purchaseDay,
   };
 }

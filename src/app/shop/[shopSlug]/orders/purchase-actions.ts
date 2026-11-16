@@ -4,36 +4,32 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import type { NewOrderLineItem } from "@/db/orders";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { createLocalOrder } from "@/features/local-orders";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { recordPurchase, recordPurchaseRefund } from "@/features/recorded-purchases";
 import { stepUpChallengeUrl } from "@/features/security-step-up";
 import { requireStaffSession } from "@/features/session";
 import { hasRequiredStepUp } from "@/features/step-up";
-import { currencyFractionDigits, majorToMinor } from "@/lib/money";
+import { purchaseAmount } from "@/lib/purchase-lines";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { orderRowsFromForm } from "./_lib/order-form";
 
 export type PurchaseActionState = { error: "invalid" | "not_authorized" | null };
 const fields = z.object({
+  intent: z.enum(["received", "due"]),
   attemptId: z.uuid(),
   personId: z
     .union([z.uuid(), z.literal("walk-in")])
     .transform((value) => (value === "walk-in" ? null : value)),
   currency: z.string().regex(/^[a-z]{3}$/),
-  collection: z.enum(["cash", "card_machine", "bank_transfer", "other"]),
+  collection: z.enum(["cash", "card_machine", "bank_transfer", "other", "local_invoice"]),
   receiptReference: z.string().trim().max(100),
   description: z.string().trim().max(200),
   tax: z.string(),
   tip: z.string(),
 });
 
-/** Exact decimal notation only: never silently round a counter receipt. */
-function amount(value: string, currency: string): number | null {
-  if (!/^\d+(?:\.\d+)?$/.test(value)) return null;
-  if ((value.split(".")[1]?.length ?? 0) > currencyFractionDigits(currency)) return null;
-  const cents = majorToMinor(Number(value), currency);
-  return Number.isSafeInteger(cents) && cents >= 0 && cents <= 2_147_483_647 ? cents : null;
-}
+const amount = purchaseAmount;
 
 export async function recordPurchaseAction(
   _state: PurchaseActionState,
@@ -72,15 +68,34 @@ export async function recordPurchaseAction(
   const taxCents = input.tax.trim() ? amount(input.tax.trim(), input.currency) : undefined;
   const tipCents = input.tip.trim() ? amount(input.tip.trim(), input.currency) : 0;
   if (taxCents === null || tipCents === null) return { error: "invalid" };
-  const outcome = await recordPurchase(await getDb(), {
-    ...input,
-    shopId: session.user.shopId,
-    createdByPersonId: session.user.personId,
-    lineItems,
-    taxCents,
-    tipCents,
-  });
-  if (!outcome.ok) return { error: "invalid" };
+  const db = await getDb();
+  if ((input.intent === "due") !== (input.collection === "local_invoice"))
+    return { error: "invalid" };
+  const outcome =
+    input.intent === "due"
+      ? input.personId === null
+        ? null
+        : await createLocalOrder(db, {
+            shopId: session.user.shopId,
+            personId: input.personId,
+            actorPersonId: session.user.personId,
+            attemptId: input.attemptId,
+            currency: input.currency,
+            lineItems,
+            description: input.description,
+          })
+      : input.collection === "local_invoice"
+        ? null
+        : await recordPurchase(db, {
+            ...input,
+            collection: input.collection,
+            shopId: session.user.shopId,
+            createdByPersonId: session.user.personId,
+            lineItems,
+            taxCents,
+            tipCents,
+          });
+  if (!outcome?.ok) return { error: "invalid" };
   dispatchIntegrationsAfterResponse();
   const back = shopPath(session.user.shopSlug, "orders");
   revalidateAndRedirect(back, shopPath(session.user.shopSlug, "orders", outcome.order.id));
