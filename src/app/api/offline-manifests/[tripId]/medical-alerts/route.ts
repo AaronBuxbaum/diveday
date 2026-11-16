@@ -1,7 +1,7 @@
 import { getDb } from "@/db/client";
 import { medicalAlertsForOfflineSave } from "@/db/medical-alerts";
 import { getShopById } from "@/db/shops";
-import { isCrossSiteRequest } from "@/features/same-origin";
+import { isCrossSiteHeaders } from "@/features/same-origin";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { supportsCausalRollCall } from "@/lib/roll-call-protocol";
@@ -26,11 +26,11 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
  *
  * POST, not GET: it writes the trail, and nothing should prefetch or replay
  * it. A request from another site is refused before anything is read
- * (`isCrossSiteRequest`): a route handler gets no server-action origin check.
+ * (`isCrossSiteHeaders`): a route handler gets no server-action origin check.
  * Every refusal says nothing about whether an alert exists.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
-  if (isCrossSiteRequest(request)) {
+  if (isCrossSiteHeaders(request.headers)) {
     return Response.json({ error: "forbidden" }, { status: 403, headers: NO_STORE });
   }
   const session = await auth();
