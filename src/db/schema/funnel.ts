@@ -52,7 +52,14 @@ export const setupRequests = pgTable(
     shopName: text("shop_name").notNull(),
     /** Town or region, as typed. */
     region: text("region").notNull(),
+    /**
+     * What the shop runs, as the form's three boxes (issue #4319): boat dives,
+     * shore dives, pool sessions. Any mix, none included: a training shop with
+     * no boat is as welcome as a liveaboard.
+     */
     runsBoat: boolean("runs_boat").notNull(),
+    runsShore: boolean("runs_shore").notNull().default(false),
+    runsPool: boolean("runs_pool").notNull().default(false),
     /** A `SetupCurrentSystem` code (`src/lib/setup-requests.ts`). */
     currentSystem: text("current_system").notNull(),
     /**

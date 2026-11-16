@@ -31,6 +31,8 @@ describe("parseSetupRequest", () => {
         shopName: "Reef Line Divers",
         region: "Key Largo, FL",
         runsBoat: true,
+        runsShore: false,
+        runsPool: false,
         currentSystem: "spreadsheet",
         contactName: "Ana Ruiz",
         email: "ana@reefline.example",
@@ -49,10 +51,22 @@ describe("parseSetupRequest", () => {
     expect(setupSentPath("/get-set-up/sent", parsed.data.currentSystem)).toBe("/get-set-up/sent");
   });
 
-  it("reads 'no' as a shop without a boat and keeps a phone that was given", () => {
-    const parsed = parseSetupRequest({ ...complete, runsBoat: "no", phone: " +1 305 555 0100 " });
+  it("welcomes a shop with no boat: unticked boxes are a pool shop, not a refusal (issue 4319)", () => {
+    const parsed = parseSetupRequest({
+      ...complete,
+      runsBoat: "",
+      runsPool: "yes",
+      phone: " +1 305 555 0100 ",
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.data).toMatchObject({ runsBoat: false, runsShore: false, runsPool: true });
+    expect(parsed.data.phone).toBe("+1 305 555 0100");
+  });
+
+  it("accepts a request with no box ticked at all", () => {
+    const parsed = parseSetupRequest({ ...complete, runsBoat: undefined });
     expect(parsed.ok && parsed.data.runsBoat).toBe(false);
-    expect(parsed.ok && parsed.data.phone).toBe("+1 305 555 0100");
   });
 
   it("names every missing required field, and only those", () => {
@@ -62,7 +76,6 @@ describe("parseSetupRequest", () => {
       fieldErrors: {
         shopName: "required",
         region: "required",
-        runsBoat: "required",
         contactName: "required",
         email: "required",
       },
@@ -83,7 +96,8 @@ describe("parseSetupRequest", () => {
     expect(parsed.fieldErrors.shopName).toBe("invalid");
     // An answer that is not one of the offered ones is the same as no answer.
     expect(parsed.fieldErrors.currentSystem).toBe("invalid");
-    expect(parsed.fieldErrors.runsBoat).toBe("required");
+    // A box posts `yes` or nothing; anything else is an unticked box.
+    expect(parsed.fieldErrors.runsBoat).toBeUndefined();
   });
 
   it("treats a field that arrived as anything but a string as blank", () => {

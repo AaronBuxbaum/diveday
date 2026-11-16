@@ -1028,6 +1028,8 @@ const setupRequestAlertSchema = z.object({
   shopName: setupAnswerSchema(SETUP_TEXT_MAX),
   region: setupAnswerSchema(SETUP_TEXT_MAX),
   runsBoat: z.boolean(),
+  runsShore: z.boolean().optional(),
+  runsPool: z.boolean().optional(),
   currentSystem: z.enum(SETUP_CURRENT_SYSTEMS).optional(),
   /** Which system, as a switching guide's slug, when the requester named one. */
   currentSystemGuide: z

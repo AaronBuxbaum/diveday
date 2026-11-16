@@ -61,7 +61,8 @@ function ResolvedEntryShell({
   /** Small uppercase line above the title (a shop's name, "Founding shop"). */
   eyebrow?: string;
   title: string;
-  description?: string;
+  /** A sentence, or a short list of them (`/get-set-up`'s what-happens-next). */
+  description?: ReactNode;
   /** `sm` for the two-field doors, `lg` for onboarding's two-section form. */
   width?: "sm" | "lg";
   /** `false` when the whole action is one button — no box around a control. */
@@ -84,8 +85,10 @@ function ResolvedEntryShell({
             (ADR 20260827-the-divers-thread, decision 1). `width` still decides
             the column; it no longer decides the type. */}
         <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
-        {description ? (
+        {typeof description === "string" ? (
           <p className="mx-auto mt-2 max-w-prose text-balance text-muted">{description}</p>
+        ) : description ? (
+          <div className="mx-auto mt-2 max-w-prose text-balance text-muted">{description}</div>
         ) : null}
       </header>
       {panel ? (

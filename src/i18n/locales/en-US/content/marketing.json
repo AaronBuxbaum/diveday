@@ -1434,12 +1434,20 @@
   },
   "setUp": {
     "title": "Get your shop set up",
-    "description": "Tell us about your shop. We’ll help you set it up for the way your crew works.",
+    "next": {
+      "reply": "Someone from DiveDay replies within one working day.",
+      "asks": "The first reply asks about your trips, dive sites, and schedule.",
+      "ready": "Your shop can take its first booking the same week.",
+      "free": "Asking costs nothing, and setup needs no card."
+    },
     "shopName": "Shop name",
     "region": "Town or region",
-    "runsBoat": "Do you run a boat?",
-    "yes": "Yes",
-    "no": "No",
+    "runs": "What do you run?",
+    "runsAnswers": {
+      "boat": "Boat dives",
+      "shore": "Shore dives",
+      "pool": "Pool sessions"
+    },
     "currentSystem": "Current tool (optional)",
     "notSpecified": "Not specified",
     "current": {
@@ -1464,7 +1472,7 @@
     "sent": {
       "title": "Request sent",
       "support": "Contact DiveDay",
-      "body": "We’ll write to you to set up your shop. The demo is open while you wait.",
+      "body": "Someone from DiveDay replies within one working day to ask about your trips, dive sites, and schedule. Your shop can take its first booking the same week. The demo is open while you wait.",
       "paper": "Paper? Bring a photo of one day’s clipboard to our first call.",
       "spreadsheet": "Save your diver list as a CSV. We’ll read it with you.",
       "spreadsheetLink": "What we read in it",
