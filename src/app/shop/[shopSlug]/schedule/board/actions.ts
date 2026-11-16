@@ -808,6 +808,11 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}${on}`);
   }
   await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "ok" });
+  // The departure already held this time (a second tap, or the panel saved
+  // untouched): nothing moved, so there is nothing to log and nobody to tell.
+  if (outcome.previousStartsAt.getTime() === outcome.trip.startsAt.getTime()) {
+    revalidateAndRedirect(back, `${back}?builder=moved`);
+  }
   await recordShopActivity(db, {
     shopId: shop.id,
     actorPersonId: session.user.personId,
