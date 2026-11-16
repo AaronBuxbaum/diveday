@@ -606,3 +606,42 @@ describe("a shop-asked interest and a diver's own ask are one row", () => {
     expect(after).toMatchObject({ askedBy: "shop", partySize: 1 });
   });
 });
+
+/** Booking stays open through the sailing grace hour (`hasSailed`); so does the wait list on a full boat. */
+describe("askForDeparture in the sailing grace hour", () => {
+  it("takes a join on a full boat that left ten minutes ago, refuses once the grace is over", async () => {
+    const { db, shop } = ctx;
+    const make = async (title: string, minutesAgo: number, fill = true) => {
+      const startsAt = new Date(nowMs() - minutesAgo * 60_000);
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        title,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+        capacity: 1,
+      });
+      if (!trip) throw new Error("trip not created");
+      if (!fill) return trip;
+      const booked = await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Seat Holder",
+        email: `holder-${title.length}@example.com`,
+      });
+      if (!booked.ok) throw new Error(`setup booking refused: ${booked.reason}`);
+      return trip;
+    };
+    const justLeft = await make("Just left", 10);
+    expect(
+      await askForDeparture(db, { shopId: shop.id, tripId: justLeft.id, ...visitor }),
+    ).toMatchObject({ ok: true });
+    const long = await make("Long gone", 3 * 60, false);
+    expect(
+      await askForDeparture(db, { shopId: shop.id, tripId: long.id, ...visitor }),
+    ).toMatchObject({
+      ok: false,
+      reason: "trip_unavailable",
+    });
+  });
+});

@@ -18,7 +18,7 @@ import {
 import { rowCanBeReactivated } from "@/lib/no-show";
 import { seatRefusal } from "@/lib/participant-types";
 import { unionRequirements } from "@/lib/requirement";
-import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
+import { hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { courseStudentSeatCap } from "./bookings";
 import { issueCapability, verifyCapability } from "./capabilities";
@@ -303,7 +303,7 @@ async function lockFullDeparture(
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip(), notRehearsal()))
     .limit(1)
     .for("update");
-  if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
+  if (trip?.status !== "scheduled" || hasSailed(trip.startsAt, nowDate())) {
     return { ok: false, reason: "trip_unavailable" };
   }
   // A wait-list party is clipped to the same passenger places the booking
