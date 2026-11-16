@@ -661,6 +661,64 @@ describe("retrying an owed delete", () => {
   });
 });
 
+describe("an attestation racing the automatic attempt", () => {
+  it("keeps the owner's attestation when Stripe's answer lands after it", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    const [obligation] = await recordProcessorErasureObligations(db, {
+      shopId: shop.id,
+      personId: ownerId,
+      targets: [CUSTOMER("cus_race")],
+    });
+    if (!obligation) throw new Error("obligation missing");
+    const provider: CustomerProvider = {
+      deleteCustomer: vi.fn(async () => {
+        await dischargeProcessorErasure(db, {
+          shopId: shop.id,
+          obligationId: obligation.id,
+          actorPersonId: ownerId,
+        });
+        return { status: "deleted" } as const;
+      }),
+    };
+
+    await attemptProcessorErasure(db, obligation, provider);
+
+    expect(await rowById(db, obligation.id)).toMatchObject({
+      status: "discharged",
+      dischargedByPersonId: ownerId,
+      attempts: 0,
+    });
+  });
+
+  it("does not burn an attempt on a row the owner already closed", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    const [obligation] = await recordProcessorErasureObligations(db, {
+      shopId: shop.id,
+      personId: ownerId,
+      targets: [CUSTOMER("cus_race2")],
+    });
+    if (!obligation) throw new Error("obligation missing");
+    const provider: CustomerProvider = {
+      deleteCustomer: vi.fn(async () => {
+        await dischargeProcessorErasure(db, {
+          shopId: shop.id,
+          obligationId: obligation.id,
+          actorPersonId: ownerId,
+        });
+        return { status: "failed", error: "boom" } as never;
+      }),
+    };
+
+    await attemptProcessorErasure(db, obligation, provider);
+
+    expect(await rowById(db, obligation.id)).toMatchObject({
+      status: "discharged",
+      attempts: 0,
+      lastError: null,
+    });
+  });
+});
+
 describe("discharging by attestation", () => {
   it("closes a manual obligation and records who attested it", async () => {
     const { db, shop, ownerId } = await twoShops();

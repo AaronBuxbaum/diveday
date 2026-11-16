@@ -14,7 +14,7 @@ import { deliverZapierEvent } from "./zapier";
 
 /** Leave room inside the route's 300-second platform ceiling to settle a claim. */
 export const INTEGRATIONS_CRON_BUDGET_MS = 240_000;
-export const INTEGRATION_DELIVERY_MAX_MS = 60_000;
+const INTEGRATION_DELIVERY_MAX_MS = 60_000;
 export const INTEGRATION_DELIVERY_SETTLEMENT_RESERVE_MS = 1_000;
 const MINIMUM_USEFUL_DELIVERY_SLICE_MS = 1_000;
 
