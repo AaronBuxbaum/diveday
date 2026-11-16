@@ -865,7 +865,7 @@ async function scrubPersonRecord(
   // so the merge audit trail (`merged_into_person_id`, `merged_at`,
   // `merged_by_person_id`) is deliberately left in place.
   const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
-  for (const shellId of mergedShellIds) {
+  if (mergedShellIds.length)
     await tx
       .update(people)
       .set({
@@ -873,8 +873,7 @@ async function scrubPersonRecord(
         anonymizedAt: now,
         anonymizedByPersonId: ctx.actorPersonId,
       })
-      .where(eq(people.id, shellId));
-  }
+      .where(inArray(people.id, mergedShellIds));
 
   // Retry rows now carry a durable subject handle even for person-only
   // notifications with no booking or contact address. Sweep that binding
@@ -1178,11 +1177,11 @@ async function scrubCertificationEvidence(
   // The level-only columns (the diver's own claimed number, the junior wording)
   // are null on the other kinds already, so clearing them on every row is the
   // same act for each.
-  for (const card of personCards) {
+  if (personCards.length)
     await tx
       .update(cards)
       .set({
-        identifier: redactedUniqueValue("redacted"),
+        identifier: sql<string>`'redacted-' || gen_random_uuid()::text`,
         // The diver's own claimed number is theirs too, and it is the one a
         // staffer never overwrote — so erasure has to reach it explicitly.
         declaredIdentifier: null,
@@ -1191,12 +1190,16 @@ async function scrubCertificationEvidence(
         juniorStatus: null,
         juniorStatusVerifiedAt: null,
         juniorStatusVerifiedByPersonId: null,
-        deletedAt: card.deletedAt ?? now,
+        deletedAt: sql`coalesce(${cards.deletedAt}, ${now.toISOString()}::timestamptz)`,
         // Erased with its diver: no card's Undo reaches it (#3701).
         deletionKind: "system",
       })
-      .where(eq(cards.id, card.id));
-  }
+      .where(
+        inArray(
+          cards.id,
+          personCards.map((card) => card.id),
+        ),
+      );
   return [];
 }
 
@@ -1955,7 +1958,7 @@ async function scrubImportedHistory(
     .select({ id: priorVisits.id })
     .from(priorVisits)
     .where(and(eq(priorVisits.shopId, shopId), eq(priorVisits.personId, personId)));
-  for (const visit of visits) {
+  if (visits.length)
     await tx
       .update(priorVisits)
       .set({
@@ -1964,10 +1967,14 @@ async function scrubImportedHistory(
         amountLabel: null,
         sourceLabel: null,
         sourceReference: null,
-        dedupeKey: redactedUniqueValue("redacted"),
+        dedupeKey: sql<string>`'redacted-' || gen_random_uuid()::text`,
       })
-      .where(eq(priorVisits.id, visit.id));
-  }
+      .where(
+        inArray(
+          priorVisits.id,
+          visits.map((visit) => visit.id),
+        ),
+      );
 
   // The payment trail beside those visits, and the larger of the two. Every
   // label on it is the prior system's words about this diver's money, the
@@ -1992,8 +1999,9 @@ async function scrubImportedHistory(
     .where(
       and(eq(importedPaymentHistory.shopId, shopId), eq(importedPaymentHistory.personId, personId)),
     );
-  for (const payment of importedPayments) {
+  for (const payment of importedPayments)
     await retire("payment_receipt", payment.receiptDocumentUrl);
+  if (importedPayments.length)
     await tx
       .update(importedPaymentHistory)
       .set({
@@ -2006,10 +2014,14 @@ async function scrubImportedHistory(
         sourceLabel: null,
         sourceReference: null,
         stripeReference: null,
-        dedupeKey: redactedUniqueValue("redacted"),
+        dedupeKey: sql<string>`'redacted-' || gen_random_uuid()::text`,
       })
-      .where(eq(importedPaymentHistory.id, payment.id));
-  }
+      .where(
+        inArray(
+          importedPaymentHistory.id,
+          importedPayments.map((payment) => payment.id),
+        ),
+      );
 
   // The imported rental history, the same shape one table over: `note`,
   // `status_label` and `source_reference` are the prior system's free text
@@ -2022,17 +2034,21 @@ async function scrubImportedHistory(
     .where(
       and(eq(priorGearAssignments.shopId, shopId), eq(priorGearAssignments.personId, personId)),
     );
-  for (const assignment of priorAssignments) {
+  if (priorAssignments.length)
     await tx
       .update(priorGearAssignments)
       .set({
         statusLabel: null,
         sourceReference: null,
         note: null,
-        dedupeKey: redactedUniqueValue("redacted"),
+        dedupeKey: sql<string>`'redacted-' || gen_random_uuid()::text`,
       })
-      .where(eq(priorGearAssignments.id, assignment.id));
-  }
+      .where(
+        inArray(
+          priorGearAssignments.id,
+          priorAssignments.map((assignment) => assignment.id),
+        ),
+      );
   return [];
 }
 
