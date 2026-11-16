@@ -2946,8 +2946,9 @@ is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than b
 - **Intro sessions cap at 2 students per instructor with no assistant bonus** (DOM-H2), the PADI
   Instructor Manual's open-water Discover Scuba figure obtained under HD-6, replacing the Open Water
   training ratio (8, +2 per assistant, ceiling 12) that had been applied to DSD for lack of a real
-  number. DiveDay's trip model has no confined-water session type, so the Manual's 4:1 confined figure
-  is recorded and deliberately unenforced. The cap is **agency-agnostic** — zero prior water time does
+  number. An intro session on a pool departure (`trips.dive_mode = 'pool'`) takes the Manual's 4:1
+  confined figure instead, still with no assistant bonus, and the pool session of an Open Water
+  course keeps its 8/+2/12 cap (Aaron, issue #4633, 2026-11-16). The cap is **agency-agnostic** — zero prior water time does
   not depend on whose logo is on the course — while the cited 8/+2/12 entry-level figure stays
   PADI-scoped; `courses.agency` comparisons are normalized, closing the case where a shop typing
   `"PADI"` silently lost the cap entirely (DATA-L2). `restoreBooking` re-checks the ratio, and a crew

@@ -16,7 +16,7 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import { asLevelCard } from "@/lib/card-ledger";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { courseSeatCapacity } from "@/lib/course-ratios";
+import { courseSeatCapacity, courseSession } from "@/lib/course-ratios";
 import { offerMailClass } from "@/lib/interests";
 import { generateLastMinutePromoCode, lastMinuteDealDiscount } from "@/lib/last-minute-list";
 import { minorToMajor } from "@/lib/money";
@@ -1008,7 +1008,11 @@ export async function departureOpenToDiver(
     if (!course) return false;
     const { instructorCount, assistantCount } = await tripCourseCrewCounts(db, trip.id);
     if (instructorCount === 0) return false;
-    const seatCap = courseSeatCapacity(course, instructorCount, assistantCount);
+    const seatCap = courseSeatCapacity(
+      courseSession(course, trip.diveMode),
+      instructorCount,
+      assistantCount,
+    );
     // The students, its divers: a priced rider is a passenger (G5 of #2226).
     if (seatCap !== null && held.divers >= seatCap) return false;
     if (course.minimumCertificationLevel) {

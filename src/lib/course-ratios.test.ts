@@ -9,6 +9,7 @@ import {
   DSD_RATIO,
   ENTRY_LEVEL_COURSE_RATIO,
   INTRO_COURSE_RATIO,
+  POOL_INTRO_COURSE_RATIO,
   trainingCourseRatioRule,
 } from "./course-ratios";
 
@@ -16,28 +17,33 @@ const padiEntryLevel: CourseCrewGapCourse = {
   agency: "padi",
   minimumCertificationLevel: null,
   isIntroCourse: false,
+  poolSession: false,
 };
 const padiAdvanced: CourseCrewGapCourse = {
   agency: "padi",
   minimumCertificationLevel: "open_water",
   isIntroCourse: false,
+  poolSession: false,
 };
 const ssiEntryLevel: CourseCrewGapCourse = {
   agency: "ssi",
   minimumCertificationLevel: null,
   isIntroCourse: false,
+  poolSession: false,
 };
 /** A Discover Scuba Diving taster: nobody aboard holds a card. */
 const padiIntro: CourseCrewGapCourse = {
   agency: "padi",
   minimumCertificationLevel: null,
   isIntroCourse: true,
+  poolSession: false,
 };
 /** An SSI Try Scuba: the same hazard as a DSD, under a different logo. */
 const ssiIntro: CourseCrewGapCourse = {
   agency: "ssi",
   minimumCertificationLevel: null,
   isIntroCourse: true,
+  poolSession: false,
 };
 
 describe("courseRatioCapacity", () => {
@@ -165,6 +171,7 @@ describe("courseRatioRule", () => {
         agency: "padi",
         minimumCertificationLevel: "open_water",
         isIntroCourse: true,
+        poolSession: false,
       }),
     ).toEqual(INTRO_COURSE_RATIO);
   });
@@ -382,5 +389,80 @@ describe("courseCrewGap", () => {
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 3, booked: 3 }),
     ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
+  });
+});
+
+/**
+ * Issue #4633 (Aaron, 2026-11-16, option A): a pool session of an intro course
+ * takes the Instructor Manual's confined-water DSD figure (HD-6), 4 per
+ * instructor with no assistant bonus. Every open-water cap stays as it was,
+ * and so does the pool half of an Open Water course.
+ */
+describe("a pool session (trips.dive_mode = 'pool')", () => {
+  const padiPoolIntro: CourseCrewGapCourse = { ...padiIntro, poolSession: true };
+  const ssiPoolIntro: CourseCrewGapCourse = { ...ssiIntro, poolSession: true };
+  const padiPoolEntryLevel: CourseCrewGapCourse = { ...padiEntryLevel, poolSession: true };
+
+  it("gates an intro pool session at the 4:1 confined-water figure, derived from HD-6", () => {
+    expect(courseRatioRule(padiPoolIntro)).toEqual(POOL_INTRO_COURSE_RATIO);
+    expect(POOL_INTRO_COURSE_RATIO).toEqual({
+      baseStudentsPerInstructor: 4,
+      assistantBonusPerInstructor: 0,
+      maxStudentsPerInstructor: 4,
+    });
+    expect(POOL_INTRO_COURSE_RATIO.baseStudentsPerInstructor).toBe(
+      DSD_RATIO.confinedWaterStudentsPerInstructor,
+    );
+  });
+
+  it("is still an intro session, for every agency", () => {
+    expect(courseRatioKind(padiPoolIntro)).toBe("intro");
+    expect(courseRatioRule(ssiPoolIntro)).toEqual(POOL_INTRO_COURSE_RATIO);
+    expect(courseRatioRule({ ...ssiPoolIntro, agency: "" })).toEqual(POOL_INTRO_COURSE_RATIO);
+  });
+
+  it("seats 4 per instructor and never credits an assistant", () => {
+    expect(courseSeatCapacity(padiPoolIntro, 1, 0)).toBe(4);
+    expect(courseSeatCapacity(padiPoolIntro, 1, 3)).toBe(4);
+    expect(courseSeatCapacity(padiPoolIntro, 2, 1)).toBe(8);
+    expect(courseSeatCapacity(padiPoolIntro, 0, 4)).toBe(0);
+  });
+
+  it("leaves a boat or shore intro session at 2 per instructor", () => {
+    expect(courseSeatCapacity(padiIntro, 1, 0)).toBe(2);
+    expect(courseSeatCapacity(ssiIntro, 2, 2)).toBe(4);
+  });
+
+  it("keeps the confined half of an Open Water course at its 8/+2/12 cap", () => {
+    expect(courseRatioRule(padiPoolEntryLevel)).toEqual(ENTRY_LEVEL_COURSE_RATIO);
+    expect(courseSeatCapacity(padiPoolEntryLevel, 1, 0)).toBe(8);
+    expect(courseSeatCapacity(padiPoolEntryLevel, 1, 2)).toBe(12);
+    expect(courseSeatCapacity(padiPoolEntryLevel, 1, 5)).toBe(12);
+  });
+
+  it("gates nothing new: a pool session of an ungated course stays ungated", () => {
+    expect(courseRatioRule({ ...padiAdvanced, poolSession: true })).toBeNull();
+    expect(courseRatioRule({ ...ssiEntryLevel, poolSession: true })).toBeNull();
+  });
+
+  it("is within ratio at exactly 4 and over it at 5, and only an instructor closes the gap", () => {
+    expect(
+      courseCrewGap({ course: padiPoolIntro, instructorCount: 1, assistantCount: 2, booked: 4 }),
+    ).toEqual({ code: "none" });
+    expect(
+      courseCrewGap({ course: padiPoolIntro, instructorCount: 1, assistantCount: 2, booked: 5 }),
+    ).toEqual({ code: "over_ratio", booked: 5, capacity: 4, ratio: "intro", remedy: "instructor" });
+  });
+
+  it("holds a marked training dive to the open-water figure whatever the session's mode", () => {
+    expect(
+      trainingCourseRatioRule({
+        agency: "padi",
+        minimumLevel: null,
+        certifiesLevel: null,
+        intro: true,
+        sourceTemplateSlug: "discover-scuba-diving",
+      }),
+    ).toEqual(INTRO_COURSE_RATIO);
   });
 });

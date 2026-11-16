@@ -1038,12 +1038,9 @@ describe("a standing crew clash", () => {
  * leave the week saying a boat is fine while Today says it is short.
  */
 describe("crewGapFor", () => {
-  const entryLevel: CourseCrewGapCourse = {
-    agency: "padi",
-    minimumCertificationLevel: null,
-    isIntroCourse: false,
-  };
-  const intro: CourseCrewGapCourse = { ...entryLevel, isIntroCourse: true };
+  const course = { agency: "padi", minimumCertificationLevel: null, poolSession: false };
+  const entryLevel: CourseCrewGapCourse = { ...course, isIntroCourse: false };
+  const intro: CourseCrewGapCourse = { ...course, isIntroCourse: true };
   const gap = (input: {
     course?: CourseCrewGapCourse;
     instructors?: number;

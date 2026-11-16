@@ -94,7 +94,12 @@ describe("the target and the agency caps are different things", () => {
    * separately rather than one feeding the other.
    */
   it("leaves an entry-level course session's published cap alone", () => {
-    const course = { agency: "PADI", minimumCertificationLevel: null, isIntroCourse: false };
+    const course = {
+      agency: "PADI",
+      minimumCertificationLevel: null,
+      isIntroCourse: false,
+      poolSession: false,
+    };
     // One instructor, nine students: inside PADI's 8/+2/12 only with help, so
     // the agency gate fires — while a lenient 10:1 shop target is content.
     expect(
@@ -106,7 +111,12 @@ describe("the target and the agency caps are different things", () => {
   });
 
   it("can be short while the agency cap is satisfied", () => {
-    const course = { agency: "PADI", minimumCertificationLevel: null, isIntroCourse: false };
+    const course = {
+      agency: "PADI",
+      minimumCertificationLevel: null,
+      isIntroCourse: false,
+      poolSession: false,
+    };
     expect(courseCrewGap({ course, instructorCount: 1, assistantCount: 0, booked: 8 })).toEqual({
       code: "none",
     });
@@ -158,7 +168,12 @@ describe("a self-guided departure", () => {
     // The boundary the mark must never cross. `courseCrewGap` reads agency
     // published figures and really does refuse a seat in `createBookingRecord`;
     // it takes no `selfGuided` and must never grow one.
-    const course = { agency: "PADI", minimumCertificationLevel: null, isIntroCourse: false };
+    const course = {
+      agency: "PADI",
+      minimumCertificationLevel: null,
+      isIntroCourse: false,
+      poolSession: false,
+    };
     expect(courseCrewGap({ course, instructorCount: 0, assistantCount: 0, booked: 4 })).not.toEqual(
       {
         code: "none",

@@ -12,6 +12,7 @@ import {
   uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
 } from "@/i18n/today-labels";
+import { courseSession } from "@/lib/course-ratios";
 import type { InWaterCrewCount } from "@/lib/crew-roles";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import type { TodayAction } from "./today";
@@ -53,7 +54,7 @@ export function pushCrewGapRows(
   const counts = courseCrewCounts.get(trip.id) ?? NO_SUPERVISION;
   const decide = (claim: InWaterCrewCount) =>
     crewGapFor({
-      course: trip.course,
+      course: courseSession(trip.course, trip.diveMode),
       counts: claim,
       booked: trip.booked,
       bookedDivers: trip.bookedDivers,
