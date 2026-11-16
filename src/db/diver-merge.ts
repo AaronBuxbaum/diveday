@@ -42,6 +42,7 @@ import {
 import { contactReplaced, revokeLinksSentToOldContact } from "./contact-change";
 import { refileCourseFormRecords } from "./course-forms";
 import { retireRecapLinks } from "./recap-links";
+import { reconcileRecoveryActivityIdentity } from "./recovery-activities-merge";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import { refileWaiverRecords, setAsideImportedOverHold } from "./waiver-refile";
@@ -627,6 +628,18 @@ async function assessMerge(
       return refuse("staff_record");
     }
   }
+  // Named classroom coordination is a staff record even after the role is removed.
+  for (const person of [source, survivor]) {
+    if (
+      await hasPersonRow(
+        db,
+        { table: "recovery_activities", column: "coordinator_person_id" },
+        shopId,
+        person.id,
+      )
+    )
+      return refuse("staff_record");
+  }
   for (const tableName of STAFF_PERSON_ONLY_TABLES) {
     if (
       (await hasPersonOnlyRow(db, tableName, source.id)) ||
@@ -763,7 +776,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "computer_import_batches",
   ],
   media: ["media_deletion_attempts"],
-  lists: ["interests", "capabilities", "trip_blowout_divers"],
+  lists: ["interests", "capabilities", "trip_blowout_divers", "recovery_activity_participants"],
 } as const satisfies Record<string, readonly (typeof DIVER_HISTORY_TABLES)[number][]>;
 export type DiverMergeCountGroup = keyof typeof DIVER_MERGE_COUNT_GROUPS;
 
@@ -1222,6 +1235,12 @@ export async function mergeDiverRecords(input: {
             eq(notificationSendQueue.recipientPersonId, source.id),
           ),
         );
+      await reconcileRecoveryActivityIdentity(tx, {
+        shopId: input.shopId,
+        sourcePersonId: source.id,
+        survivorPersonId: survivor.id,
+        actorPersonId: input.actorPersonId,
+      });
       for (const tableName of DIVER_HISTORY_TABLES) {
         if (tableName === "waiver_records" || tableName === "course_form_records") continue;
         // A seat that is already over, on a departure the kept record also

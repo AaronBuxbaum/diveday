@@ -32,6 +32,9 @@ export const BOOKING_FLOW_COVERAGE = {
   tripCredit: {
     core: "a promotional settlement option in core booking payments; outstanding balances and their audit history must stay visible once granted",
   },
+  classroomRecovery: {
+    core: "a complimentary follow-up outcome within the existing cancellation workspace, never a booking or training service",
+  },
   groupSeatSharing: {
     core: "a narrower invitation into existing companion seat claims, never a separate booking or readiness authority",
   },

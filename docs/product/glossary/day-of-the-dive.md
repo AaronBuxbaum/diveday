@@ -205,3 +205,5 @@
   among a canceled departure’s rebooking options. It is offered only to divers who qualify while
   space remains; it reserves neither a place nor a facility. Choosing it does not move a booking,
   change a refund, or establish that the diver has accepted it.
+
+- **Classroom recovery activity** — A complimentary, non-diving activity arranged after a departure cancellation. A prepared offer is neither sent nor accepted. Staff confirm a place after contact; this is not attendance, a booking, course completion or certification, and the original refund process continues. Erasure does not release a promised place; staff cancel it explicitly.

@@ -472,6 +472,7 @@ script again.
 | 20261115-logbook-partner-protocol-adapters | Gate logbook API imports on… |
 | 20261115-online-logbook-file-interchange | Use explicit beta file interchange… |
 | 20261115-personal-computer-evidence | Keep imported computer evidence on… |
+| 20261116-complimentary-classroom-recovery | Keep classroom recovery separate from… |
 | 20261116-local-ancillary-amount-due | Record named ancillary amounts due… |
 | 20261116-local-customer-import-mapping | Map customer exports locally with… |
 | 20261116-promotional-trip-credit-ledger | Settle plain booking fares with… |

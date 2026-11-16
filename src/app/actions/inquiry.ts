@@ -8,6 +8,7 @@ import { sendNotification } from "@/db/notifications";
 import { getShopBySlug } from "@/db/shops";
 import { getCourseBySlug } from "@/features/courses";
 import { blankAsAbsent, formValue, parseForm } from "@/features/form-parse";
+import { publicRecoveryActivity } from "@/features/recovery-activities";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { toDiverLocale } from "@/i18n/settings";
@@ -22,6 +23,7 @@ import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 const calendarDate = z.string().refine(isValidCalendarDate);
 
 const inquirySchema = z.object({
+  recoveryActivityId: blankAsAbsent(z.uuid()),
   interest: blankAsAbsent(z.string().trim().max(200)),
   name: blankAsAbsent(z.string().trim().max(120)),
   email: blankAsAbsent(z.email().max(200)),
@@ -91,6 +93,10 @@ export async function submitInquiryAction(
   // A course page's own inquiry is not: that is how a course converts.
   if (!courseSlug && !shop.dateRequestsEnabled) return { error: t("inquiry.errors.unavailable") };
 
+  const activityId = parsed.data.recoveryActivityId;
+  if (activityId && courseSlug) return { error: t("inquiry.errors.unavailable") };
+  const activity = activityId ? await publicRecoveryActivity(db, shop.id, activityId) : null;
+  if (activityId && !activity) return { error: t("inquiry.classroom.unavailable") };
   const course = courseSlug ? await getCourseBySlug(db, shop.id, courseSlug) : null;
   // A hidden course isn't offered anymore, from a diver's point of view —
   // the form itself only renders on the visible page, so reaching here for one
@@ -113,12 +119,12 @@ export async function submitInquiryAction(
   // The either-or, in the diver's own words rather than as a constraint
   // violation: a request with no course in the URL and nothing typed into
   // "what would you like to dive?" is about nothing.
-  if (!course && !interest) return { error: t("inquiry.errors.interestRequired") };
+  if (!course && !activity && !interest) return { error: t("inquiry.errors.interestRequired") };
 
   const record = await askForDate(db, {
     shopId: shop.id,
     courseId: course?.id ?? null,
-    interest: course ? null : interest,
+    interest: course ? null : activity ? `${activity.title} [${activity.id}]` : interest,
     name,
     email,
     phone,
@@ -131,7 +137,7 @@ export async function submitInquiryAction(
     // A private charter (loop 5, row 11): only off the shopfront's own form,
     // at a shop that runs boats and keeps charters on. Anything else is an
     // ordinary request, whatever the form carried.
-    charter: charter && !course && shop.privateChartersEnabled && shop.hasBoatDiving,
+    charter: charter && !course && !activity && shop.privateChartersEnabled && shop.hasBoatDiving,
   });
 
   // Best-effort: a stalled or failed send must never risk timing out the
@@ -154,8 +160,8 @@ export async function submitInquiryAction(
         to: contactEmail,
         locale: toDiverLocale(shop.defaultLocale),
         shopName: shop.name,
-        // With no course, what the diver typed is what the mail is about.
-        courseTitle: course?.title ?? (interest as string),
+        // Classroom context comes from the scoped live activity, never a posted title.
+        courseTitle: course?.title ?? activity?.title ?? (interest as string),
         inquirerName: name,
         inquirerEmail: email,
         inquirerPhone: phone,

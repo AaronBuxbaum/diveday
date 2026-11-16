@@ -68,6 +68,10 @@ import {
   preDepartureChecklistItems,
   priorVisits,
   recapPhotos,
+  recoveryActivities,
+  recoveryActivityEvents,
+  recoveryActivityOffers,
+  recoveryActivityParticipants,
   rentalFitProfiles,
   rollCallEvents,
   safetyDrillParticipants,
@@ -250,6 +254,29 @@ export const EXPORT_TABLES = {
     table: customerGearReminderSettings,
     order: [asc(customerGearReminderSettings.createdAt), asc(customerGearReminderSettings.id)],
     scope: { shopColumn: customerGearReminderSettings.shopId },
+  },
+  recoveryActivities: {
+    table: recoveryActivities,
+    order: [asc(recoveryActivities.createdAt), asc(recoveryActivities.id)],
+    scope: { shopColumn: recoveryActivities.shopId },
+  },
+  recoveryActivityOffers: {
+    table: recoveryActivityOffers,
+    order: [asc(recoveryActivityOffers.preparedAt), asc(recoveryActivityOffers.id)],
+    scope: { shopColumn: recoveryActivityOffers.shopId },
+  },
+  recoveryActivityParticipants: {
+    table: recoveryActivityParticipants,
+    order: [asc(recoveryActivityParticipants.confirmedAt), asc(recoveryActivityParticipants.id)],
+    scope: {
+      shopColumn: recoveryActivityParticipants.shopId,
+      personColumn: recoveryActivityParticipants.personId,
+    },
+  },
+  recoveryActivityEvents: {
+    table: recoveryActivityEvents,
+    order: [asc(recoveryActivityEvents.recordedAt), asc(recoveryActivityEvents.id)],
+    scope: { shopColumn: recoveryActivityEvents.shopId },
   },
   disruptionRecoveryEvents: {
     table: disruptionRecoveryEvents,

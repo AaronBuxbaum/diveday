@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
@@ -9,6 +10,9 @@ import type { InquiryFormState } from "@/lib/course-inquiry";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { getCourseBySlug } from "../../features/courses/store";
+import { classroomFixture } from "../../features/recovery-activities/fixture.test-support";
+import { transitionRecoveryActivity } from "../../features/recovery-activities/store";
+import { notificationSchema } from "../../lib/notifications/kinds";
 
 const ctx = fileScopedShopContext();
 
@@ -291,5 +295,34 @@ describe("the flexible-dates flag", () => {
     expect(await submit(form)).toEqual({ success: true });
     const page = await listOpenDateInterests(db, ctx.shop.id);
     expect(page.rows.find((row) => row.email === email)?.dateFlexible).toBe(false);
+  });
+});
+
+describe("classroom context is an inquiry, not identity or allocation", () => {
+  it("uses server-resolved activity title in the normal verified-mailbox inquiry notification", async () => {
+    const f = await classroomFixture(db, ctx.shop);
+    await transitionRecoveryActivity(db, { ...f.confirm, kind: "offer", attemptId: randomUUID() });
+    await db
+      .update(shops)
+      .set({
+        contactEmail: "desk@example.com",
+        contactEmailConfirmedAt: nowDate(),
+        dateRequestsEnabled: true,
+      })
+      .where(eq(shops.id, ctx.shop.id));
+    const form = new FormData();
+    form.set("email", "classroom-inquiry@example.com");
+    form.set("recoveryActivityId", f.create.attemptId);
+    expect(await submit(form)).toEqual({ success: true });
+    const message = vi
+      .mocked(sendNotification)
+      .mock.calls.map(([, row]) => row)
+      .find((row) => row.kind === "interest_received");
+    expect(message).toMatchObject({ courseTitle: f.create.title });
+    expect(notificationSchema.safeParse(message).success).toBe(true);
+    const requests = await listOpenDateInterests(db, ctx.shop.id);
+    expect(
+      requests.rows.find((row) => row.email === "classroom-inquiry@example.com"),
+    ).toMatchObject({ personId: null });
   });
 });

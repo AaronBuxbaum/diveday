@@ -114,6 +114,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Back from the boat
 - Blow-out
 - Change ledger
+- Classroom recovery activity
 - Conditions hold
 - Conservation record
 - Day load-out

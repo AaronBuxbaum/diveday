@@ -3405,6 +3405,14 @@
       "unavailable": "Este curso no está disponible en este momento.",
       "contactRequired": "Déjanos un correo o un teléfono para poder responderte.",
       "interestRequired": "Cuéntanos qué te gustaría bucear antes de enviar."
+    },
+    "classroom": {
+      "heading": "Consultar una actividad en aula",
+      "intro": "Sin costo · Sin buceo ni crédito del curso. Una solicitud no reserva un cupo.",
+      "people": "Personas",
+      "send": "Solicitar un cupo",
+      "sent": "Solicitud recibida. El centro confirmará tu cupo.",
+      "unavailable": "Esta actividad en aula ya no está disponible. Contacta al centro."
     }
   },
   "account": {

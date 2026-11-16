@@ -31,6 +31,7 @@ import { publishManifestEvent } from "./manifest-events";
 import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
 import { queryAll } from "./query-helpers";
+import { readRecoveryActivities } from "./recovery-activities";
 import {
   queueBookingRefundOnShopCancellation,
   refundBookingOnShopCancellation,
@@ -49,6 +50,7 @@ import {
   trips,
 } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
+import { listStaff } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { getTripRoster } from "./trips-manifest";
 import { seatHeld, seatNotCancelled } from "./trips-queries";
@@ -1095,5 +1097,15 @@ export async function getBlowoutPage(db: AppDb, shopId: string, tripId: string, 
         getTripRoster(db, shopId, tripId),
         listNonBoatOfferOptions(db, shopId, nowDate(), [tripId]),
       ]);
-  return { trip, blowout, roster, nonBoatOffers, can: { callDay, refund } };
+  const classroomActivities = blowout ? await readRecoveryActivities(db, shopId, blowout.id) : [];
+  const classroomCoordinators = blowout ? await listStaff(db, shopId) : [];
+  return {
+    trip,
+    blowout,
+    roster,
+    nonBoatOffers,
+    classroomActivities,
+    classroomCoordinators,
+    can: { callDay, refund },
+  };
 }

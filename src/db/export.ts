@@ -1093,6 +1093,11 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     : [];
 
   const entitlementRows = await readScoped(tx, "divePackageEntitlements", scope);
+  const recoveryActivityParticipantRows = await readScoped(
+    tx,
+    "recoveryActivityParticipants",
+    scope,
+  );
   const packageIds = [...new Set(entitlementRows.map((row) => row.packageId))];
   const packageRows = packageIds.length
     ? await tx
@@ -1235,6 +1240,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     recapPulseRows,
     reviewModerationRows,
     entitlementRows,
+    recoveryActivityParticipantRows,
     packageName,
     rentalFitRows,
     staffCredentialRows,
@@ -1308,6 +1314,13 @@ export async function loadShopExportCounts(
           .from(trips)
           .where(and(eq(trips.shopId, shopId), exclusion("trips.csv", trips))),
       ),
+    "recovery_activities.csv": async () => scoped("recovery_activities.csv", "recoveryActivities"),
+    "recovery_activity_offers.csv": async () =>
+      scoped("recovery_activity_offers.csv", "recoveryActivityOffers"),
+    "recovery_activity_participants.csv": async () =>
+      scoped("recovery_activity_participants.csv", "recoveryActivityParticipants"),
+    "recovery_activity_events.csv": async () =>
+      scoped("recovery_activity_events.csv", "recoveryActivityEvents"),
     "disruption_recovery_events.csv": async () =>
       scoped("disruption_recovery_events.csv", "disruptionRecoveryEvents"),
     "trip_change_events.csv": async () => scoped("trip_change_events.csv", "tripChangeEvents"),

@@ -129,3 +129,15 @@ payment provider, then record how the full amount was received.
 - Repeated or simultaneous receipt submissions create one receipt and one collection entry.
 - Original receipt totals are grouped by method and shop-local day; returns with an unknown method
   remain separate and missing return amounts are visibly incomplete.
+
+### DESK-12 Arrange complimentary classroom recovery after a cancellation
+
+As Chloe, I can arrange a separate classroom activity, prepare offers and confirm places after contact while the original refunds continue.
+
+**Done when**
+- Staff confirm the room and coordinator arrangements; time, location and the shop’s place limit are explicit.
+- Prepared offers, sent messages, confirmed places and original refunds remain distinct facts.
+- A public request is an unassigned inquiry; it does not identify a diver or allocate a place.
+- Concurrent confirmations cannot exceed the limit; retries never revive a canceled place.
+- Erasure leaves anonymous promised places held until staff explicitly cancel them.
+- This does not create a diving booking, record attendance, satisfy course requirements or change money.

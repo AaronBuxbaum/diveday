@@ -313,6 +313,15 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "deleted_at",
     "created_at",
   ],
+  "recovery_activity_participants.csv": [
+    "id",
+    "activity_id",
+    "person_id",
+    "blowout_diver_id",
+    "status",
+    "revision",
+    "confirmed_at",
+  ],
   "rental_fit.csv": [
     "rents_bcd",
     "rents_regulator",
@@ -404,6 +413,16 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "amount_cents",
     "completed_at",
     "created_at",
+  ],
+  "trip_credit_entries.csv": [
+    "id",
+    "kind",
+    "amount_cents",
+    "currency",
+    "reason",
+    "booking_id",
+    "restores_entry_id",
+    "occurred_at",
   ],
   "trip_reviews.csv": [
     "id",

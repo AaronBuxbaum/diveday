@@ -20,6 +20,7 @@ import {
   resumeBlowoutAction,
 } from "../../blowout-actions";
 import { BlowoutConfirmation } from "./BlowoutConfirmation";
+import { ClassroomRecovery } from "./ClassroomRecovery";
 import { HeldRefundsCard } from "./HeldRefundsCard";
 import { nonBoatPickerCopy, nonBoatPickerOptions } from "./non-boat-picker-copy";
 import { RecoveryGroups } from "./RecoveryGroups";
@@ -197,6 +198,17 @@ export async function BlowoutPageBody({
         </a>
       </div>
 
+      <ClassroomRecovery
+        page={page}
+        shopSlug={shopSlug}
+        tripId={tripId}
+        locale={locale}
+        timezone={shop.timezone}
+        dateRequestsEnabled={shop.dateRequestsEnabled}
+        contactEmail={shop.contactEmail}
+        contactPhone={shop.contactPhone}
+        t={t}
+      />
       {divers.length === 0 ? (
         <EmptyState title={t("blowout.record.empty")} className="mt-6" />
       ) : (

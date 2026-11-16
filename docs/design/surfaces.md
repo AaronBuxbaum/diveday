@@ -1286,3 +1286,9 @@ The existing Course preparation band answers who still needs help before this se
 ## Promotional trip credit (2026-11-16)
 
 The diver file’s credit row answers how much promotional value remains in each original currency. Opening it shows the same diver’s eligible unpaid fare rows, credit history, and the owner/manager’s explicit grant action. A separate credit settings page was considered; keeping actions in the diver file preserves customer identity and puts the fare beside the action that consumes value. Granting again requires an explicit new intent, and successful settlement names applied credit and the remaining balance without claiming cash was received. The narrow fare limits remain visible; mobile uses wrapped fare rows and stacked fields, while rendered mobile/desktop verification remains restricted in this session.
+
+## Complimentary classroom recovery (2026-11-16)
+
+Source-based implementation of Astra’s classroom recovery design. Cancellation and refund status stay first; a separate classroom section shows arrangements, capacity and coordinator, then distinct prepared offers and confirmed places. Activity management is separate from departure cancellation. Existing fields, choice groups, typography and status primitives carry the form; facts and controls stack on phones and wrap long names and Spanish labels. Refusals preserve drafts, and confirmation only appears after persistence. Anonymous promised places remain visible and require explicit cancellation.
+
+The public schedule shows only activity title, time and location with a neutral person-less inquiry. It never displays the roster or coordinator’s private name. Disabled requests fall back to existing shop contact information or a manually relayed message. Browser/port/artifact restrictions prevented a rendered phone/desktop audit; authored functional and visual specs are not execution or geometry evidence.

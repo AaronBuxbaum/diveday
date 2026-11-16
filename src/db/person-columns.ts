@@ -145,6 +145,61 @@ export type PersonColumn = {
 
 const rows = [
   {
+    table: "recovery_activities",
+    column: "created_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "classroom recovery staff attribution resolves against the live anonymizable person",
+  },
+  {
+    table: "recovery_activities",
+    column: "arrangements_confirmed_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "classroom recovery staff attribution resolves against the live anonymizable person",
+  },
+  {
+    table: "recovery_activity_offers",
+    column: "actor_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "classroom recovery staff attribution resolves against the live anonymizable person",
+  },
+  {
+    table: "recovery_activity_participants",
+    column: "confirmed_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "classroom recovery staff attribution resolves against the live anonymizable person",
+  },
+  {
+    table: "recovery_activity_events",
+    column: "actor_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "classroom recovery staff attribution resolves against the live anonymizable person",
+  },
+  {
+    table: "recovery_activities",
+    column: "coordinator_person_id",
+    kind: "crew",
+    merge: "leave",
+    erase: "keep",
+    export: "withheld",
+    exportWhy: "an activity assignment, not the coordinator’s customer record",
+    why: "classroom coordinator attribution stays with the staff record; merge assessment explicitly refuses either assigned coordinator",
+  },
+  {
+    table: "recovery_activity_participants",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "keep",
+    eraseWhy:
+      "id-only allocation evidence resolves to the anonymized subject; erased people cannot receive new confirmations; existing promised places remain held until explicit staff cancellation",
+    export: "own",
+  },
+  {
     table: "trip_credit_entries",
     column: "person_id",
     export: "own",

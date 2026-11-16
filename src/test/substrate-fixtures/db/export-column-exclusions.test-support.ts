@@ -10,6 +10,8 @@ import { ROLL_CALL_SPLIT } from "./export-test-fixtures";
  * bundle, so a table that excludes nothing else needs no entry. */
 export const SHOP_SCOPED = "shop_id";
 export const EXCLUDED_COLUMNS: Record<string, string[]> = {
+  recovery_activity_events: ["request_hash", "result_revision"], // durable retry machinery, not the shop’s activity evidence
+
   inbound_messages: ["email_message_id", "in_reply_to_delivery_id", "assisted_at"], // threading plumbing
   roll_call_events: [...ROLL_CALL_SPLIT, "seq"], // seq: as GLOBAL_SEQ_TABLES
   // `shop_id` is the same value on every row of a single-shop bundle.

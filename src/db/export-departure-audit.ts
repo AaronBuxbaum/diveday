@@ -6,6 +6,14 @@ import { tripBlowoutDivers, tripBlowouts } from "./schema";
 /** Export the staff's audit with original booking references, independently of send coordination. */
 export async function readDepartureAuditExportContext(tx: DbExecutor, scope: ShopExportScope) {
   const { shopId } = scope;
+  const recoveryActivityRows = await readScoped(tx, "recoveryActivities", scope);
+  const recoveryActivityOfferRows = await readScoped(tx, "recoveryActivityOffers", scope);
+  const recoveryActivityParticipantRows = await readScoped(
+    tx,
+    "recoveryActivityParticipants",
+    scope,
+  );
+  const recoveryActivityEventRows = await readScoped(tx, "recoveryActivityEvents", scope);
   const disruptionRecoveryEventRows = await readScoped(tx, "disruptionRecoveryEvents", scope);
   const sources = await tx
     .select({
@@ -22,6 +30,10 @@ export async function readDepartureAuditExportContext(tx: DbExecutor, scope: Sho
   const tripChangeEventRows = await readScoped(tx, "tripChangeEvents", scope);
   const tripStageEventRows = await readScoped(tx, "tripStageEvents", scope);
   return {
+    recoveryActivityRows,
+    recoveryActivityOfferRows,
+    recoveryActivityParticipantRows,
+    recoveryActivityEventRows,
     tripChangeEventRows,
     tripStageEventRows,
     disruptionRecoveryEventRows,

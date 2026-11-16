@@ -3405,6 +3405,14 @@
       "unavailable": "This course isn’t available right now.",
       "contactRequired": "Leave an email or a phone number so we can reply.",
       "interestRequired": "Tell us what you’d like to dive before sending."
+    },
+    "classroom": {
+      "heading": "Ask about a classroom activity",
+      "intro": "Complimentary · No diving or course credit. A request does not reserve a place.",
+      "people": "People",
+      "send": "Request a place",
+      "sent": "Request received. The shop will confirm your place.",
+      "unavailable": "This classroom activity is no longer available. Contact the shop."
     }
   },
   "account": {

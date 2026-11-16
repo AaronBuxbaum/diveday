@@ -795,6 +795,7 @@ export const tripBlowouts = pgTable(
   },
   (table) => [
     uniqueIndex("trip_blowouts_trip_unique").on(table.tripId),
+    uniqueIndex("trip_blowouts_shop_id_id_unique").on(table.shopId, table.id),
     check(
       "trip_blowouts_preferred_alternatives_cap",
       sql`cardinality(${table.preferredAlternativeTripIds}) <= 3`,

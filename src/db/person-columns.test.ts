@@ -15,9 +15,10 @@ async function referencesToPeople(): Promise<string[]> {
     join pg_class cl on cl.oid = con.conrelid
     join pg_class ref on ref.oid = con.confrelid
     join pg_namespace ns on ns.oid = cl.relnamespace
-    cross join lateral unnest(con.conkey) as k(attnum)
+    cross join lateral unnest(con.conkey, con.confkey) as k(attnum, refattnum)
+    join pg_attribute target on target.attrelid = con.confrelid and target.attnum = k.refattnum
     join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k.attnum
-    where con.contype = 'f' and ref.relname = 'people' and ns.nspname = 'public'
+    where con.contype = 'f' and ref.relname = 'people' and target.attname = 'id' and ns.nspname = 'public'
   `);
   const byName = await ctx.db.execute(sql`
     select table_name, column_name
@@ -42,6 +43,22 @@ describe("the person-column registry", () => {
     expect(inSchema.length).toBeGreaterThan(100);
     const registered = new Set(PERSON_COLUMNS.map(personColumnKey));
     expect(inSchema.filter((pair) => !registered.has(pair))).toEqual([]);
+  });
+
+  it("pairs composite FK columns with the referenced identity and keeps the tenant key separate", async () => {
+    const paired = getTableConfig(schema.recoveryActivityParticipants)
+      .foreignKeys.map((key) => key.reference())
+      .find(
+        (reference) =>
+          reference.foreignTable === schema.people &&
+          reference.columns.some((column) => column.name === "person_id") &&
+          reference.columns.length === 2,
+      );
+    expect(paired?.columns.map((column) => column.name)).toEqual(["shop_id", "person_id"]);
+    expect(paired?.foreignColumns.map((column) => column.name)).toEqual(["shop_id", "id"]);
+    const registered = await referencesToPeople();
+    expect(registered).toContain("recovery_activity_participants.person_id");
+    expect(registered).not.toContain("recovery_activity_participants.shop_id");
   });
 
   it("names only columns the schema still has", async () => {

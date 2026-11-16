@@ -49,6 +49,13 @@ export const EXPORT_FILE_NOTES = {
     "Staff sightings of junior or full card status, including corrections.",
   "trips.csv":
     "Every trip ever scheduled, including canceled ones, with predicted conditions; its sites are in trip_dives.csv.",
+  "recovery_activities.csv":
+    "Complimentary classroom arrangements, never trip or course completion.",
+  "recovery_activity_offers.csv": "Prepared offers only; no delivery or acceptance implied.",
+  "recovery_activity_participants.csv":
+    "Classroom place allocation; canceled activities have no active places.",
+  "recovery_activity_events.csv":
+    "Immutable classroom recovery transitions; no payment or training evidence.",
   "disruption_recovery_events.csv":
     "Staff recovery follow-up for canceled departures, oldest first. Original and replacement booking ids link to bookings.csv. Outcomes record follow-up only, independently of notification delivery, refunds, or boarding readiness. Corrections append; actor ids resolve through people.csv.",
   "trip_change_events.csv":
