@@ -27,6 +27,7 @@ import {
   staffShifts,
   tripAssignments,
   tripSeries,
+  tripSightings,
   trips,
   userAccounts,
 } from "./schema";
@@ -251,6 +252,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     await db
       .delete(safetyDrillParticipants)
       .where(eq(safetyDrillParticipants.personId, relief[0].id));
+    await db.delete(tripSightings).where(eq(tripSightings.recordedByPersonId, relief[0].id));
     await db.delete(personRoles).where(eq(personRoles.personId, relief[0].id));
     await db.delete(people).where(eq(people.id, relief[0].id));
     await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);
