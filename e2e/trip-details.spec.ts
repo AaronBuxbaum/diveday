@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { offlineCopySaved, openDeckDetails, seededTripId } from "./helpers";
@@ -46,13 +47,10 @@ test("Details only folds its action links when their actual widths do not fit", 
   }
 });
 
-test("early Home locks the plan but leaves conservation and safety evidence correction available", async ({
-  page,
-}) => {
+/** The seeded departure sent Home early from the Deck, then its Details page. */
+async function sendSeededTripHomeEarly(page: Page): Promise<void> {
   const id = await seededTripId(page, "blue-mantis", title);
   const path = `/shop/blue-mantis/trips/${id}`;
-  await page.goto(`${path}?view=details`);
-  await expect(page.locator("#plan > summary")).toBeVisible();
   await page.goto(`${path}/manifest`);
   await offlineCopySaved(page);
   await openDeckDetails(page);
@@ -63,6 +61,13 @@ test("early Home locks the plan but leaves conservation and safety evidence corr
   await page.getByRole("button", { name: t("manifest.stage.homeConfirm"), exact: true }).click();
   await expect(home).toHaveAttribute("aria-pressed", "true");
   await page.goto(`${path}?view=details`);
+}
+
+test("early Home locks the plan but leaves conservation correction available", async ({ page }) => {
+  const id = await seededTripId(page, "blue-mantis", title);
+  await page.goto(`/shop/blue-mantis/trips/${id}?view=details`);
+  await expect(page.locator("#plan > summary")).toBeVisible();
+  await sendSeededTripHomeEarly(page);
   await expect(page.getByText(t("trips.notices.detailsFinished"), { exact: true })).toBeVisible();
   await expect(page.locator("#plan > summary")).toHaveCount(0);
   await expect(
@@ -72,6 +77,11 @@ test("early Home locks the plan but leaves conservation and safety evidence corr
   ).toBeVisible();
   await expect(page.locator("#conservation-add > summary")).toBeVisible();
   await expect(page.locator("#about-more")).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+});
+
+test("early Home leaves safety evidence correction available", async ({ page }) => {
+  await sendSeededTripHomeEarly(page);
   const safety = page.locator("#safety-record");
   await expect(safety.locator(":scope > summary > div > :nth-child(2)")).toHaveCSS(
     "font-size",
@@ -91,5 +101,4 @@ test("early Home locks the plan but leaves conservation and safety evidence corr
   await expect(
     safety.getByText(t("trips.safetyRecord.decompression"), { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
 });

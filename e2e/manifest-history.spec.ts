@@ -5,6 +5,21 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { manifestRow, openDeckDetails } from "./helpers";
 
+/**
+ * The first visit's device copy, claimed and saved: the snapshot POST answered. A return
+ * through history before that claims the same read a second time, reads as superseded,
+ * and re-reads the roster inside the window these specs count.
+ */
+function deviceCopyClaimed(page: Page) {
+  return page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/api/offline-manifests/") &&
+      response.url().endsWith("/snapshot") &&
+      response.ok(),
+  );
+}
+
 signedInAsOwner();
 
 type ReadShape = { rscKey: number; prefetch: boolean; segmentPrefetch: boolean; nextUrl: boolean };
@@ -120,6 +135,7 @@ for (const width of [390, 1280]) {
       const manifestTab = page.getByRole("link", { name: "Open Deck", exact: true });
       const copy = staffTranslator("en-US");
       await manifestReadCounter(page, "reset");
+      const copyClaimed = deviceCopyClaimed(page);
       try {
         if (direction === "forward") {
           await page.goto(trip);
@@ -134,6 +150,7 @@ for (const width of [390, 1280]) {
         await expect
           .poll(async () => (await manifestReadCounter(page, "read")).count)
           .toBeGreaterThan(0);
+        await copyClaimed;
         if (direction === "forward") await page.goBack();
         else await tripTab.click();
         await expect(page).toHaveURL(trip);
@@ -184,6 +201,7 @@ test("a roster refresh preserves an open person sheet without a document navigat
   const manifest = `${trip}/manifest`;
   const copy = staffTranslator("en-US");
   await manifestReadCounter(page, "reset");
+  const copyClaimed = deviceCopyClaimed(page);
   try {
     await page.goto(manifest);
     await expect(
@@ -192,6 +210,7 @@ test("a roster refresh preserves an open person sheet without a document navigat
     await expect
       .poll(async () => (await manifestReadCounter(page, "read")).count)
       .toBeGreaterThan(0);
+    await copyClaimed;
     const tripTab = page
       .getByRole("link", { name: copy("manifest.deck.return"), exact: true })
       .and(page.locator(`#deck-flow a[href="${trip}"]`));
@@ -378,10 +397,12 @@ test("a person sheet survives a held roster read alongside route prefetch", asyn
   const trip = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}`;
   const manifest = `${trip}/manifest`;
   const copy = staffTranslator("en-US");
+  const copyClaimed = deviceCopyClaimed(page);
   await page.goto(manifest);
   await expect(
     page.getByText(copy("manifest.rosterUnconfirmed"), { exact: true }),
   ).not.toBeVisible();
+  await copyClaimed;
   const tripTab = page
     .getByRole("link", { name: copy("manifest.deck.return"), exact: true })
     .and(page.locator(`#deck-flow a[href="${trip}"]`));
@@ -450,6 +471,7 @@ test("a cached return observes one roster read through confirmation with route p
     return (await response.json()) as { count: number | null };
   };
   await counter("reset");
+  const copyClaimed = deviceCopyClaimed(page);
   try {
     await page.goto(manifest);
     await expect(
@@ -457,6 +479,7 @@ test("a cached return observes one roster read through confirmation with route p
     ).not.toBeVisible();
     // This proves the test route and server-rendered page share a counter.
     await expect.poll(async () => (await counter("read")).count).toBeGreaterThan(0);
+    await copyClaimed;
     const tripTab = page
       .getByRole("link", { name: copy("manifest.deck.return"), exact: true })
       .and(page.locator(`#deck-flow a[href="${trip}"]`));
