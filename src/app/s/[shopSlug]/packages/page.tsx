@@ -6,11 +6,12 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { listPackagesOnSale } from "@/db/dive-packages";
+import { listPackagesOnSale, singleDivePriceOnSale } from "@/db/dive-packages";
 import { shopBySlugCached } from "@/features/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestTranslator } from "@/i18n/request";
 import { formatCalendarDate } from "@/lib/calendar-date";
+import { packageSavingCents } from "@/lib/dive-packages";
 import { formatMoneyScanned } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicPackagesPath, publicSchedulePath } from "@/lib/public-routes";
@@ -60,7 +61,10 @@ export default async function PublicPackagesPage({
   // Switched off on the Features page: no price list, like any other page a
   // shop does not offer.
   if (!shop?.divePackagesEnabled) notFound();
-  const packages = await listPackagesOnSale(db, shop.id);
+  const [packages, singleDiveCents] = await Promise.all([
+    listPackagesOnSale(db, shop.id),
+    singleDivePriceOnSale(db, shop.id),
+  ]);
 
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   if (packages.length === 0) {
@@ -88,25 +92,34 @@ export default async function PublicPackagesPage({
   const sharedScope = packages.every((pkg) => pkg.scope === packages[0]?.scope)
     ? (packages[0]?.scope ?? null)
     : null;
-  const offers: PackageOffer[] = packages.map((pkg) => ({
-    id: pkg.id,
-    name: pkg.name,
-    priceText: money(pkg.priceCents),
-    facts: [
-      t("packages.dives", { count: pkg.diveCount }),
-      t("packages.perDive", { amount: money(Math.round(pkg.priceCents / pkg.diveCount)) }),
-      // Whether the card runs out is part of a few-hundred-dollar decision, so it is said
-      // either way (third UX review, item 28).
-      pkg.validUntil
-        ? t("packages.useBy", { date: formatCalendarDate(pkg.validUntil, locale) })
-        : t("packages.noExpiry"),
-      // What it covers, on the card only when the cards differ; said once in
-      // the intro when every card says the same (visual review 2026-10-24, B39).
-      ...(sharedScope ? [] : [scopeText(pkg.scope)]),
-    ],
-    // A dive is one tank (H-20261014-package-dive-is-a): said on the card, where the $200 is decided.
-    tankNote: t("packages.diveIsATank"),
-  }));
+  const offers: PackageOffer[] = packages.map((pkg) => {
+    // What the card saves against the same dives bought singly, computed from
+    // the schedule's own prices and never typed; no line when nothing on the
+    // schedule compares honestly (issue #4388).
+    const saving = packageSavingCents(pkg, singleDiveCents);
+    return {
+      id: pkg.id,
+      name: pkg.name,
+      priceText: money(pkg.priceCents),
+      facts: [
+        t("packages.dives", { count: pkg.diveCount }),
+        t("packages.perDive", { amount: money(Math.round(pkg.priceCents / pkg.diveCount)) }),
+        ...(saving === null
+          ? []
+          : [t("packages.saves", { amount: money(saving), count: pkg.diveCount })]),
+        // Whether the card runs out is part of a few-hundred-dollar decision, so it is said
+        // either way (third UX review, item 28).
+        pkg.validUntil
+          ? t("packages.useBy", { date: formatCalendarDate(pkg.validUntil, locale) })
+          : t("packages.noExpiry"),
+        // What it covers, on the card only when the cards differ; said once in
+        // the intro when every card says the same (visual review 2026-10-24, B39).
+        ...(sharedScope ? [] : [scopeText(pkg.scope)]),
+      ],
+      // A dive is one tank (H-20261014-package-dive-is-a): said on the card, where the $200 is decided.
+      tankNote: t("packages.diveIsATank"),
+    };
+  });
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
