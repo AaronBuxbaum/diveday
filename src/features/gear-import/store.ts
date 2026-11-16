@@ -51,7 +51,7 @@ export async function commitGearImport(
           .insert(gearItems)
           .values({
             shopId,
-            kind: row.kind,
+            kind: row.kind ?? "other",
             label: row.label,
             size: row.size,
             serialNumber: row.serialNumber,
@@ -65,7 +65,7 @@ export async function commitGearImport(
         [item] = await tx
           .update(gearItems)
           .set({
-            kind: row.kind,
+            kind: row.kind ?? item.kind,
             size: row.size ?? item.size,
             serialNumber: row.serialNumber ?? item.serialNumber,
             brandModel: row.brandModel ?? item.brandModel,
