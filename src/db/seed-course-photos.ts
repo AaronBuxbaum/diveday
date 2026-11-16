@@ -9,7 +9,7 @@ export const OPEN_WATER_GALLERY = [
   "An instructor and student look at a mask beside a pool",
   "Two learners carry fins toward a dock",
   "Students chat aboard a moored dive boat",
-  "Fins, masks and towels on a bench",
+  "Fins, masks, and towels on a bench",
   "An instructor speaks with students on a beach",
   "A turtle and fish swim over a fictional coral reef",
   "Two learners celebrate on a dock",
