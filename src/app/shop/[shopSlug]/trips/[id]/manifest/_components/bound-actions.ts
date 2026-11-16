@@ -15,13 +15,13 @@ import {
   markTripCaughtUpAction,
   noteSnagAction,
   preDepartureCheckAction,
-  recordDeckCountAction,
   removeBuddyTeamMemberAction,
   rollCallAction,
   saveExecutedDiveAction,
   setTripStageAction,
   teamUpPartiesAction,
 } from "../actions";
+import { recordDeckCountAction } from "../deck-count-action";
 import {
   emergencyShowSeatMedicalAlertAction,
   showSeatMedicalAlertAction,

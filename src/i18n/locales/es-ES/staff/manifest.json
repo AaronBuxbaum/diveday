@@ -168,11 +168,10 @@
   "deckCount": {
     "label": "Personas contadas en cubierta, tripulación incluida",
     "save": "Guardar recuento",
-    "saving": "Guardando…",
     "invalid": "Escribe el número que contaste, de 0 a 999.",
     "error": "No se guardó. Revisa la conexión y vuelve a tocar.",
     "matches": "{counted} en cubierta, igual que el pase de lista.",
-    "differs": "{counted} contadas en cubierta, {aboard} marcadas a bordo."
+    "differs": "{counted, plural, one {# contada} other {# contadas}} en cubierta, {aboard, plural, one {# marcada} other {# marcadas}} a bordo."
   },
   "notOnFile": "No registrado",
   "identityWithheldDetails": "Su contacto, su edad y sus demás datos esperan a que el mostrador confirme de quién se trata.",

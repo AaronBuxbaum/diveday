@@ -14,7 +14,6 @@ vi.mock("../actions", () => {
       "markTripCaughtUpAction",
       "noteSnagAction",
       "preDepartureCheckAction",
-      "recordDeckCountAction",
       "removeBuddyTeamMemberAction",
       "rollCallAction",
       "saveExecutedDiveAction",
@@ -23,6 +22,12 @@ vi.mock("../actions", () => {
     ].map((name) => [name, named(name)]),
   );
 });
+
+vi.mock("../deck-count-action", () => ({
+  recordDeckCountAction: {
+    bind: (_: unknown, context: unknown) => ({ name: "recordDeckCountAction", context }),
+  },
+}));
 
 vi.mock("../../incidents/actions", () => {
   const bound = (name: string) => ({

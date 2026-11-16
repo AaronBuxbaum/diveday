@@ -47,7 +47,7 @@ export function DeckCountPanel({
         copy={{
           label: t("manifest.deckCount.label"),
           save: t("manifest.deckCount.save"),
-          saving: t("manifest.deckCount.saving"),
+          saving: t("words.busy.saving"),
           invalid: t("manifest.deckCount.invalid"),
           error: t("manifest.deckCount.error"),
         }}
