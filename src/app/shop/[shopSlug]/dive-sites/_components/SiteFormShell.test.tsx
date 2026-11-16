@@ -175,3 +175,41 @@ describe("SiteFormShell", () => {
     expect(details.open).toBe(true);
   });
 });
+
+describe("new site leave warning", () => {
+  it("protects edited work when navigating and after a refused save", async () => {
+    const navigation = new EventTarget();
+    Object.defineProperty(window, "navigation", { configurable: true, value: navigation });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    try {
+      render(
+        <SiteFormShell action={refusing("invalid")} errorMessages={MESSAGES} leaveWarning="Leave?">
+          <label htmlFor="new-name">Name</label>
+          <input id="new-name" name="name" />
+          <button type="submit">Save</button>
+        </SiteFormShell>,
+      );
+      const navigate = () => {
+        const event = new Event("navigate", { cancelable: true });
+        Object.defineProperty(event, "destination", {
+          value: { url: "http://localhost/elsewhere", sameDocument: true },
+        });
+        navigation.dispatchEvent(event);
+        return event;
+      };
+      expect(navigate().defaultPrevented).toBe(false);
+      await userEvent.type(screen.getByLabelText("Name"), "Reef");
+      expect(navigate().defaultPrevented).toBe(true);
+      const unload = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(unload);
+      expect(unload.defaultPrevented).toBe(true);
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await screen.findByRole("alert");
+      expect(navigate().defaultPrevented).toBe(true);
+      expect(confirm).toHaveBeenCalledWith("Leave?");
+    } finally {
+      confirm.mockRestore();
+      Reflect.deleteProperty(window, "navigation");
+    }
+  });
+});

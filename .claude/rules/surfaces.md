@@ -28,8 +28,9 @@ schedule builder, date requests, site briefings, bearer-token routes). What they
   when shared; inline is the exception and names why (ADR 20260803-invoicing-role-gate). A staff
   mutation is a `defineAction` declaration (`src/features/server-action`) where its area moved;
   an Undo is an undo offer (`src/features/undo/rules.ts`) with a registry inverse. Seating a diver: `src/app/actions/seat-diver.ts`.
-- **Adding one is a panel on its object's index**, opened by `?add=` and landing back there with
-  `?notice=` (`src/components/AddPanel.tsx`, `src/lib/add-panel.ts`); never a `/new` route.
+- **Adding one usually uses a panel on its object's index**, opened by `?add=`
+  (`src/components/AddPanel.tsx`, `src/lib/add-panel.ts`). Long forms that warrant draft protection
+  can use a create page; the dive-site editor is one.
 - **The builder is the one place a trip is created**; another reading of the schedule is a view in
   `schedule/_components/ScheduleViews.tsx`.
 - **A departure has four folio tabs** drawn by `_components/TripTabs.tsx`: Guests, Equipment, The day and Record. Open Deck enters the focused individual roll call (ADR 20261114-trip-folio-and-individual-deck); add ordinary work to its tab.

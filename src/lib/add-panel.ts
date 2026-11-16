@@ -1,7 +1,7 @@
 /**
  * **"Add one" is one grammar** (issue #2737): a thing is added on its own
  * index, in a panel the URL opens with `?add=`, and the form lands back on
- * that same URL with `?notice=`. There is no `/new` segment under `/shop`.
+ * that same URL with `?notice=`. Long create forms may have their own page.
  *
  * This module is the framework-free half: how a page reads the panel's open
  * state off its URL, and how it spells the links that open and close it.
