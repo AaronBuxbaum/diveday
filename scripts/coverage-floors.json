@@ -70,12 +70,6 @@
       "files": {
         "src/features/seat-diver/store.ts": "79.59 -> 79.38"
       }
-    },
-    {
-      "why": "The fuller demo shop (#4560) seeds dated waivers, so one waivers-audit branch the old seed reached is no longer hit by a suite-wide test; CI measured 85% against 86.66%. Measured values copied from the job log because the coverage artifact cannot be downloaded from an agent session.",
-      "files": {
-        "src/db/waivers-audit.ts": "86.66 -> 85"
-      }
     }
   ],
   "src/db/aboard-at-sea.ts": 96.66,
@@ -111,7 +105,7 @@
   "src/db/waiver-seal-acknowledgements.ts": 86.95,
   "src/db/waiver-seal-checks.ts": 95,
   "src/db/waiver-signing.ts": 100,
-  "src/db/waivers-audit.ts": 85,
+  "src/db/waivers-audit.ts": 86.66,
   "src/db/waivers-completion.ts": 89.83,
   "src/db/waivers-delivery-status.ts": 97.67,
   "src/db/waivers-in-person.ts": 87.69,
