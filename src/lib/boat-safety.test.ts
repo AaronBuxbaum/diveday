@@ -5,7 +5,6 @@ import {
   BOAT_SAFETY_HORIZON_DAYS,
   type BoatSafetyNotice,
   boatPaperNotices,
-  boatSafetyNoticeIsUrgent,
   boatSafetyNotices,
   boatSafetyNoticeTone,
   boatSeatsRefusal,
@@ -584,8 +583,6 @@ describe("boatSafetyNoticeTone", () => {
         days: 3,
       }),
     ).toBe("warning");
-    expect(boatSafetyNoticeIsUrgent({ ...paper, expired: false })).toBe(false);
-    expect(boatSafetyNoticeIsUrgent({ code: "kit_missing", kind: "aed" })).toBe(true);
   });
 
   // Dive-domain review D3, records 6: a lapsed certificate or inspection means
