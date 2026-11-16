@@ -1217,6 +1217,7 @@
   each after-dive count, divers and crew alike, is recorded back aboard; **open** when any of that
   is missing; **none** when the departure has no roll-call event of either kind. A date nobody
   booked and nobody counted is an empty occurrence and is left out.
+- **Emergency text** — a drafted text message to a diver's emergency contact, opened from the manifest or roll call in one tap. It carries the shop, the person's name, the trip, the date and the captain, and asks for a call back; never medical answers or what happened. A draft link, never sent by DiveDay.
 - **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
   an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
   invented, and it is **only "on file" when both the name and the phone are present** — a name with
