@@ -155,6 +155,16 @@ export async function resolveWeeklyDigestUnsubscribeToken(
   db: DbExecutor,
   token: string,
 ): Promise<WeeklyDigestUnsubscribeContext | null> {
+  const resolved = await resolveUnsubscribe(db, token);
+  if (!resolved) return null;
+  const { shopId: _shopId, ...context } = resolved;
+  return context;
+}
+
+async function resolveUnsubscribe(
+  db: DbExecutor,
+  token: string,
+): Promise<(WeeklyDigestUnsubscribeContext & { shopId: string }) | null> {
   const capability = await verifyCapability(db, { purpose: "weekly_digest_unsubscribe", token });
   if (!capability) return null;
   const [row] = await db
@@ -179,7 +189,12 @@ export async function resolveWeeklyDigestUnsubscribeToken(
   // The capability's own shop must be its person's: a resolved identity is
   // never trusted past that check.
   if (!row || capability.shopId !== row.personShopId) return null;
-  return { shopName: row.shopName, personId: row.personId, alreadyOff: row.choice === false };
+  return {
+    shopName: row.shopName,
+    personId: row.personId,
+    shopId: row.personShopId,
+    alreadyOff: row.choice === false,
+  };
 }
 
 /** The one-click opt-out: idempotent, and it only ever turns the email off. */
@@ -187,11 +202,9 @@ export async function turnOffWeeklyDigestByToken(
   db: DbExecutor,
   input: { token: string },
 ): Promise<WeeklyDigestUnsubscribeContext | null> {
-  const context = await resolveWeeklyDigestUnsubscribeToken(db, input.token);
-  if (!context) return null;
-  await db
-    .update(userAccounts)
-    .set({ weeklyDigest: false })
-    .where(eq(userAccounts.personId, context.personId));
+  const resolved = await resolveUnsubscribe(db, input.token);
+  if (!resolved) return null;
+  const { shopId, ...context } = resolved;
+  await setWeeklyDigestChoice(db, { shopId, personId: context.personId, wanted: false });
   return context;
 }

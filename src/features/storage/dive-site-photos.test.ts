@@ -94,7 +94,7 @@ describe("uploadDiveSitePhotos", () => {
       form(Array.from({ length: 5 }, () => ["siteImageFiles", pick("reef.jpg")] as [string, File])),
       existing,
     );
-    expect(result).toEqual({ ok: false, reason: "rejected" });
+    expect(result).toEqual({ ok: false, reason: "rejected", stored: [] });
     expect(storeDiveSiteImage).not.toHaveBeenCalled();
   });
 
@@ -121,14 +121,14 @@ describe("uploadDiveSitePhotos", () => {
       form([["satelliteImageFile", pick("map.jpg")]]),
       existing,
     );
-    expect(unconfigured).toEqual({ ok: false, reason: "not_configured" });
+    expect(unconfigured).toEqual({ ok: false, reason: "not_configured", stored: [] });
 
     storeDiveSiteImage.mockResolvedValueOnce({ status: "failed" });
     const rejected = await uploadDiveSitePhotos(
       form([["satelliteImageFile", pick("map.jpg")]]),
       existing,
     );
-    expect(rejected).toEqual({ ok: false, reason: "rejected" });
+    expect(rejected).toEqual({ ok: false, reason: "rejected", stored: [] });
   });
 
   it("starts from nothing on the create form, where there is no existing briefing", async () => {

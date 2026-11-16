@@ -816,20 +816,6 @@ export async function retirePendingCheckoutIfRepriced(
 }
 
 /**
- * Retire a pending session whose figure no longer matches, so nothing can hand
- * it back and no later completion can attribute its stale price to these seats.
- *
- * `pending → expired` is the existing terminal for "this local checkout is no
- * longer payable" — the same one `rescheduleBooking` and
- * `markCheckoutPaymentFailedBySessionId` write. Scoped to `pending` so a
- * completion that landed between the read above and this write is never
- * demoted: money that already moved outranks a stale quote.
- *
- * Deliberately touches no `booking_payments` row and no booking. The seats were
- * committed before checkout ever ran (docs ADR 20260721-checkout-at-booking) and
- * this is a quote being withdrawn, not a payment being reversed.
- */
-/**
  * How long a session spending a capped discount's one-off coupon stays
  * payable. Stripe's floor is 30 minutes out; one more keeps the request clear
  * of it whatever the round trip takes.
@@ -864,6 +850,20 @@ async function retireOverlappingPendingCheckouts(
   for (const { checkout } of overlapping) await retireStaleCheckout(db, checkout);
 }
 
+/**
+ * Retire a pending session whose figure no longer matches, so nothing can hand
+ * it back and no later completion can attribute its stale price to these seats.
+ *
+ * `pending → expired` is the existing terminal for "this local checkout is no
+ * longer payable" — the same one `rescheduleBooking` and
+ * `markCheckoutPaymentFailedBySessionId` write. Scoped to `pending` so a
+ * completion that landed between the read above and this write is never
+ * demoted: money that already moved outranks a stale quote.
+ *
+ * Deliberately touches no `booking_payments` row and no booking. The seats were
+ * committed before checkout ever ran (docs ADR 20260721-checkout-at-booking) and
+ * this is a quote being withdrawn, not a payment being reversed.
+ */
 async function retireStaleCheckout(db: AppDb, existing: BookingCheckout): Promise<void> {
   await db
     .update(bookingCheckouts)
@@ -878,13 +878,6 @@ async function retireStaleCheckout(db: AppDb, existing: BookingCheckout): Promis
   });
 }
 
-/** The most recent checkout linked to any of these bookings. */
-/**
- * A pending session is only safe to hand out again if it covers exactly the
- * requested party. A changed composition (someone cancelled, someone joined)
- * means a different quantity and total — and completing the old session would
- * mark the *old* linked bookings paid, not the party the diver is looking at.
- */
 /**
  * Whether the pending row still has a hosted page, minted for this address.
  * No page (erased, above) is not reusable; and a seat's claimer is a different
@@ -898,6 +891,12 @@ function hasPageFor(checkout: BookingCheckout, customerEmail: string): boolean {
   );
 }
 
+/**
+ * A pending session is only safe to hand out again if it covers exactly the
+ * requested party. A changed composition (someone cancelled, someone joined)
+ * means a different quantity and total — and completing the old session would
+ * mark the *old* linked bookings paid, not the party the diver is looking at.
+ */
 async function checkoutCoversExactly(
   db: DbExecutor,
   shopId: string,
@@ -922,6 +921,7 @@ async function checkoutCoversExactly(
   return linked.every((row) => requested.has(row.bookingId));
 }
 
+/** The most recent checkout linked to any of these bookings. */
 async function latestCheckoutForBookingIds(
   db: DbExecutor,
   shopId: string,

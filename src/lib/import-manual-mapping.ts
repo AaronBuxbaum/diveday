@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { buildCsv } from "./export";
+import { buildCsv } from "./csv";
 import {
   type ImportField,
   MANUAL_MAPPABLE_FIELDS,
@@ -34,9 +34,17 @@ export function manualImportColumns(csv: string): string[] {
 }
 
 /** Correct only the rows needing attention; every exported cell uses shared formula protection. */
-export function importRecoveryCsv(csv: string, prepared: PreparedImport): string | null {
+export function importRecoveryCsv(
+  csv: string,
+  prepared: PreparedImport,
+  conflictRows: number[] = [],
+): string | null {
+  const conflicts = new Set(conflictRows);
   const rows = prepared.rows.filter(
-    (row) => row.action === "skip" || row.issues.some((issue) => issue.level !== "info"),
+    (row) =>
+      conflicts.has(row.rowNumber) ||
+      row.action === "skip" ||
+      row.issues.some((issue) => issue.level !== "info"),
   );
   if (rows.length === 0) return null;
   const grid = parseCsv(csv).filter((row) => row.some((cell) => cell.trim() !== ""));
@@ -47,7 +55,10 @@ export function importRecoveryCsv(csv: string, prepared: PreparedImport): string
     rows.map((row) => [
       ...headers.map((_, index) => grid[row.rowNumber]?.[index] ?? ""),
       row.rowNumber,
-      row.issues.map((issue) => issue.code).join("; "),
+      [
+        ...row.issues.map((issue) => issue.code),
+        ...(conflicts.has(row.rowNumber) ? ["manual_identity_conflict"] : []),
+      ].join("; "),
     ]),
   );
 }

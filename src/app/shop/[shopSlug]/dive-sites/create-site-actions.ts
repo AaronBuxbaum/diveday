@@ -7,7 +7,11 @@ import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/fe
 import { revalidateAndRedirect } from "@/features/navigation";
 import { readRequiredSpecialties } from "@/features/requirement-form";
 import { requireStaffSession } from "@/features/session";
-import { uploadDiveSitePhotos } from "@/features/storage";
+import {
+  abandonDiveSitePhotos,
+  addedDiveSitePhotos,
+  uploadDiveSitePhotos,
+} from "@/features/storage";
 import { shopPath } from "@/lib/staff-notices";
 import type { SiteFormState } from "./_components/SiteFormShell";
 import { siteFormExtras } from "./site-forms";
@@ -44,8 +48,11 @@ export async function createDiveSiteAction(
   if (!specialties || !extras) return refuse("invalid");
   // Uploaded from the staffer's own device straight into first-party
   // storage — there is no pasted URL for a public page to fetch (CR-020).
+  const db = await getDb();
+  const shopId = activeSession.user.shopId;
   const photos = await uploadDiveSitePhotos(formData);
   if (!photos.ok) {
+    await abandonDiveSitePhotos(db, shopId, photos.stored);
     return refuse(photos.reason === "not_configured" ? "imagesUnconfigured" : "images");
   }
   // `minDepth`, `maxDepth` and `expectedBottomTime` are the form's own fields,
@@ -59,7 +66,7 @@ export async function createDiveSiteAction(
     planningNote: planningNoteWords,
     ...siteFields
   } = parsed.fields;
-  const site = await createDiveSiteForForm(await getDb(), {
+  const site = await createDiveSiteForForm(db, {
     shopId: activeSession.user.shopId,
     ...siteFields,
     forecastLatitude: parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
@@ -97,6 +104,9 @@ export async function createDiveSiteAction(
   // The name is the one rule the parse above could not check — it takes the
   // whole shop's library to know, and an archived site still holds its name —
   // so the database refuses it and the briefing comes back to the form.
-  if (site === SITE_NAME_TAKEN) return refuse("nameTaken");
+  if (site === SITE_NAME_TAKEN) {
+    await abandonDiveSitePhotos(db, shopId, addedDiveSitePhotos(undefined, photos.photos));
+    return refuse("nameTaken");
+  }
   revalidateAndRedirect(back, `${back}/${site.id}`);
 }

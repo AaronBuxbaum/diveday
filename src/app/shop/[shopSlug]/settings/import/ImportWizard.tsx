@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FormStatus } from "@/components/ui/form";
+import { ChoiceFieldset, controlClass, Field, FormStatus } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 import { importAssistSample } from "@/lib/assists/import-mapping";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -223,7 +223,16 @@ export function ImportWizard({
     prepared && (!prepared.fatal || prepared.fatal.code === "no_name_column")
       ? manualImportColumns(csvText)
       : [];
-  const recovery = prepared && !prepared.fatal ? importRecoveryCsv(csvText, prepared) : null;
+  const recovery =
+    prepared && !prepared.fatal
+      ? importRecoveryCsv(
+          csvText,
+          prepared,
+          matches?.status === "ready"
+            ? matches.rows.filter((row) => row.outcome === "conflict").map((row) => row.rowNumber)
+            : [],
+        )
+      : null;
   const hasManual = prepared?.mapping.some((entry) => entry.manual) ?? false;
   const previewRows = prepared?.rows.slice(0, PREVIEW_LIMIT) ?? [];
   const hiddenRows = (prepared?.rows.length ?? 0) - previewRows.length;
@@ -258,8 +267,7 @@ export function ImportWizard({
 
       {/* The source column carries its own correction, above the preview it changes. */}
       {columns.length > 0 ? (
-        <fieldset className="mt-4 space-y-3">
-          <legend className="text-sm font-medium">{copy.manualMapping}</legend>
+        <ChoiceFieldset className="mt-4" legend={copy.manualMapping}>
           <div className="grid gap-3 sm:grid-cols-2">
             {columns.map((header) => (
               <Field key={header} label={header}>
@@ -283,7 +291,7 @@ export function ImportWizard({
               </Field>
             ))}
           </div>
-        </fieldset>
+        </ChoiceFieldset>
       ) : null}
       {hasManual ? <p className="mt-3 text-sm text-warning">{copy.manualEvidenceNotice}</p> : null}
       {recovery ? (
