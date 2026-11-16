@@ -104,7 +104,9 @@ option A on issue #4633:
 - An **intro session on a pool departure** takes the Manual's confined-water figure, **4 students
   per instructor, no assistant bonus** (`POOL_INTRO_COURSE_RATIO`, derived from
   `DSD_RATIO.confinedWaterStudentsPerInstructor`). Every agency, as before.
-- Every other intro session (boat or shore) keeps the 2:1 open-water figure.
+- Every other intro session (boat or shore) keeps the 2:1 open-water figure. A DSD that also dives
+  in open water is a boat or shore departure (2:1); the builder's pool option reads "Pool only
+  (confined water)" to say so. No gate refuses a pool DSD that later dives in open water.
 - The **pool session of an Open Water course** keeps the entry-level 8/+2/12 cap; no open-water cap
   changes.
 - A marked training dive on another departure keeps the open-water figure whatever mode its

@@ -175,7 +175,7 @@ export const COPY: BuilderCopy = {
   diveModeLabel: "Dive mode",
   modeBoat: "Boat dive",
   modeShore: "Shore dive",
-  modePool: "Pool session",
+  modePool: "Pool only (confined water)",
   boatSelectLabel: "Assigned boat",
   unassignedBoat: "Any / unassigned",
   lensLabel: "Trip tag",

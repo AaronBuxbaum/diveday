@@ -776,6 +776,7 @@ describe("staffGapForCourseGap", () => {
         booked: 3,
         capacity: 2,
         ratio: "intro",
+        perInstructor: 2,
         remedy: "instructor",
       }),
     ).toBe("over_intro_ratio");
@@ -785,6 +786,7 @@ describe("staffGapForCourseGap", () => {
         booked: 9,
         capacity: 8,
         ratio: "entry_level",
+        perInstructor: 12,
         remedy: "assistant",
       }),
     ).toBe("over_ratio");
@@ -799,6 +801,7 @@ describe("staffGapForCourseGap", () => {
         booked: 13,
         capacity: 12,
         ratio: "entry_level",
+        perInstructor: 12,
         remedy: "instructor",
       }),
     ).toBe("over_ratio_instructor");

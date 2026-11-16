@@ -761,6 +761,12 @@
         }
       },
       {
+        "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
+        "files": {
+          "src/features/staffing-week/rules.test.ts": "1115 -> 1125"
+        }
+      },
+      {
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
@@ -964,7 +970,7 @@
     "src/features/retention/store.test.ts": 1024,
     "src/features/reviews/store.test.ts": 997,
     "src/features/seat-claims/store.test.ts": 1524,
-    "src/features/staffing-week/rules.test.ts": 1122,
+    "src/features/staffing-week/rules.test.ts": 1125,
     "src/features/staffing/store.test.ts": 939,
     "src/features/today/today.test.ts": 1274,
     "src/features/work-order-follow-up/store.test.ts": 1177,

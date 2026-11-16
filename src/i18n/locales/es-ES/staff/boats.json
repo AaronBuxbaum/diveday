@@ -30,7 +30,7 @@
   "diveModeLabel": "Modo de inmersión",
   "modeBoat": "Inmersión en barco",
   "modeShore": "Inmersión desde costa",
-  "modePool": "Sesión en piscina",
+  "modePool": "Solo piscina (aguas confinadas)",
   "boatSelectLabel": "Embarcación asignada",
   "unassignedBoat": "Cualquiera / sin asignar",
   "requestBoatSuggestion": "Embarcación sugerida: {boatName} ({capacity, plural, one {# persona en total} other {# personas en total}})",

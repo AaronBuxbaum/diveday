@@ -1,4 +1,4 @@
-import { type CourseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
+import type { CourseCrewGap } from "@/lib/course-ratios";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 type OverRatio = Extract<CourseCrewGap, { code: "over_ratio" }>;
@@ -9,20 +9,14 @@ type OverRatio = Extract<CourseCrewGap, { code: "over_ratio" }>;
  * certified assistant raises it; the intro cap is PADI's tighter published
  * Discover Scuba open-water figure (HD-6) that an assistant does not move. One
  * generic string told a DSD manager to add a divemaster, which cannot work, and
- * cited the wrong PADI number at them. The per-instructor figure is
- * interpolated from `DSD_RATIO` so the sentence cannot drift away from the cap
- * the gate actually enforces. Past the 12-per-instructor ceiling an assistant
+ * cited the wrong PADI number at them. The intro sentence quotes no figure, so
+ * it holds for the pool's 4 and open water's 2 alike (issue #4633). Past the 12-per-instructor ceiling an assistant
  * buys no seat, so that case names an instructor (issue #1677).
  */
 export function overRatioWarningText(t: StaffTranslator, gap: CourseCrewGap): string | null {
   if (gap.code !== "over_ratio") return null;
   const counts = { booked: gap.booked, cap: gap.capacity };
-  if (gap.ratio === "intro") {
-    return t("trips.detail.overRatioWarningIntro", {
-      ...counts,
-      perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
-    });
-  }
+  if (gap.ratio === "intro") return t("trips.detail.overRatioWarningIntro", counts);
   return gap.remedy === "instructor"
     ? t("trips.detail.overRatioWarningCeiling", counts)
     : t("trips.detail.overRatioWarning", counts);
