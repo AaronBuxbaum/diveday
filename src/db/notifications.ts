@@ -76,6 +76,7 @@ import { readReminderFlySafeHours } from "./fly-safe-plan";
 import { latestDeliveryOnly } from "./latest-delivery";
 import { isTransactionExecutor } from "./query-helpers";
 import {
+  bookingCheckouts,
   bookingPayments,
   bookings,
   courses,
@@ -1062,6 +1063,25 @@ async function switchedOffSinceQueued(db: AppDb, notification: Notification): Pr
       return notification.governedBy
         ? !(await shopHasFeatureOn(db, notification.shopId, notification.governedBy))
         : false;
+    // "Finish paying" is only true while the checkout is still open: a diver who
+    // paid, or whose session expired, while the first send waited in the queue
+    // is not nudged. A switch turned off since is refused like every other.
+    case "checkout_recovery": {
+      const [checkout] = await db
+        .select({ status: bookingCheckouts.status })
+        .from(bookingCheckouts)
+        .where(
+          and(
+            eq(bookingCheckouts.id, notification.checkoutId),
+            eq(bookingCheckouts.shopId, notification.shopId),
+          ),
+        )
+        .limit(1);
+      return (
+        checkout?.status !== "pending" ||
+        !(await shopHasFeatureOn(db, notification.shopId, "checkoutRecovery"))
+      );
+    }
     case "trip_reminder_7d":
       return notification.open === 0 && !notification.medicalReview
         ? !(await shopHasFeatureOn(db, notification.shopId, "weekOutReminder"))
