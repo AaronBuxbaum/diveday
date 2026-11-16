@@ -18,8 +18,8 @@ import { personSearchMatch } from "../../db/person-search";
 import { courses, diveSites, gearItems, orders, people, trips } from "../../db/schema/index";
 import { tripPrimarySiteId } from "../../db/trip-primary-site";
 import { nowDate } from "../../lib/clock";
-import { containsPattern } from "../../lib/like-pattern";
 import { formatDateTimeTz, formatMoneyCents, formatShortDate } from "../../lib/format";
+import { containsPattern } from "../../lib/like-pattern";
 import type { RecentRef } from "../../lib/recent-refs";
 
 const PER_GROUP = 8;

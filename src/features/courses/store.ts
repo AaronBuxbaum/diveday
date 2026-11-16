@@ -26,7 +26,6 @@ import { offsetPage, PAGE_SIZE } from "../../db/paging";
 import type { Course } from "../../db/schema/index";
 import { courses, shops, trips } from "../../db/schema/index";
 import { HOUR_MS, nowDate } from "../../lib/clock";
-import { containsPattern } from "../../lib/like-pattern";
 import {
   type CourseTemplateDiff,
   type CourseTemplateSnapshot,
@@ -38,6 +37,7 @@ import {
   parseCourseTemplateSnapshot,
 } from "../../lib/course-template-sync";
 import { type CourseContent, canonicalAgency } from "../../lib/courses";
+import { containsPattern } from "../../lib/like-pattern";
 import { REFRESHER_TEMPLATE_SLUGS } from "../../lib/re-entry";
 import type { CertificationLevel } from "../../lib/readiness";
 import { type RentableItemKind, toIncludedRentalKinds } from "../../lib/rentals";

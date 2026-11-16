@@ -30,7 +30,8 @@ function importedPaymentHistoryWhere(shopId: string, filter: ImportedPaymentHist
   // never make another shop's diver name visible in Orders.
   const conditions = [eq(importedPaymentHistory.shopId, shopId), eq(people.shopId, shopId)];
   if (filter.personId) conditions.push(eq(importedPaymentHistory.personId, filter.personId));
-  if (filter.personQuery) conditions.push(ilike(people.fullName, containsPattern(filter.personQuery)));
+  if (filter.personQuery)
+    conditions.push(ilike(people.fullName, containsPattern(filter.personQuery)));
   if (filter.from) conditions.push(gte(importedPaymentHistory.occurredOn, filter.from));
   if (filter.to) conditions.push(lte(importedPaymentHistory.occurredOn, filter.to));
   return and(...conditions);
