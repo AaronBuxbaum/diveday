@@ -1012,7 +1012,18 @@
       "not_found": "Esta salida ya no está disponible.",
       "not_a_course_session": "Esta salida no tiene un curso."
     },
-    "undoFailed": "No se pudo restaurar esta nota. Puede haber cambiado o la opción Deshacer ya no está disponible."
+    "undoFailed": "No se pudo restaurar esta nota. Puede haber cambiado o la opción Deshacer ya no está disponible.",
+    "followup": {
+      "owner": "Seguimiento: {name}",
+      "unassigned": "Sin asignar",
+      "take": "Tomar seguimiento",
+      "release": "Dejar seguimiento",
+      "inProgress": "En curso",
+      "changed": "Este seguimiento cambió. Vuelve a cargar antes de intentarlo de nuevo.",
+      "unavailable": "El seguimiento de este estudiante ya no está disponible.",
+      "takeFor": "Tomar el seguimiento de {name}",
+      "releaseFor": "Dejar el seguimiento de {name}"
+    }
   },
   "conservation": {
     "heading": "Registros de conservación",

@@ -1012,7 +1012,18 @@
       "not_found": "This departure is no longer available.",
       "not_a_course_session": "This departure has no course."
     },
-    "undoFailed": "This note could not be restored. It may have changed, or Undo is no longer available."
+    "undoFailed": "This note could not be restored. It may have changed, or Undo is no longer available.",
+    "followup": {
+      "owner": "Follow-up: {name}",
+      "unassigned": "Unassigned",
+      "take": "Take follow-up",
+      "release": "Release follow-up",
+      "inProgress": "In progress",
+      "changed": "This follow-up changed. Reload before trying again.",
+      "unavailable": "This student’s follow-up is no longer available.",
+      "takeFor": "Take follow-up for {name}",
+      "releaseFor": "Release follow-up for {name}"
+    }
   },
   "conservation": {
     "heading": "Conservation records",

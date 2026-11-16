@@ -2435,3 +2435,5 @@
   recorded for the crew; that size is a request, never a fit guarantee.
 
 - **Group seat link** — one invitation an organizer shares for an existing booking party. The separate `group_claim` capability opens only a picker of unclaimed companion seats on the organizer’s departure. Each choice enters the existing single-seat claim transaction; it never exposes the organizer’s readiness link, private preparation, medical answers or payment details. An unnamed companion starts as a fresh Guest record, held for identity until claimed, never matched by an organizer-supplied email.
+
+- **Course preparation follow-up** — A staff member’s responsibility for helping one booked student finish preparation for one course session. Claiming the follow-up records ownership and shows work in progress; completing preparation is derived from the existing forms, card, payment, and materials records. The claim is private to authorized staff and does not certify training, verify an agency record, or authorize boarding.

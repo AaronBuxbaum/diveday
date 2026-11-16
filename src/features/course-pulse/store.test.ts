@@ -28,6 +28,17 @@ async function fixture() {
 }
 
 describe("private course preparation", () => {
+  it("keeps the Advanced course browser fixture actionable without changing source prep", async () => {
+    const { db, shop, personId } = await fixture();
+    const course = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find((trip) =>
+      trip.title.includes("Advanced Open Water Diver"),
+    );
+    if (!course) throw new Error("Missing Advanced course departure");
+    const pulse = await getCoursePulse(db, shop.id, course.id, personId);
+    expect(pulse?.rows.some((row) => row.items.length > 0)).toBe(true);
+    const groups = pulse?.rows.map((row) => Number(row.items.length > 0)) ?? [];
+    expect(groups).toEqual([...groups].sort((left, right) => right - left));
+  });
   it("saves, attributes, rejects stale overwrites and deletes a departure note", async () => {
     const { db, shop, course, personId } = await fixture();
     const input = { shopId: shop.id, tripId: course.id, personId };

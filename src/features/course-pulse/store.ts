@@ -1,10 +1,10 @@
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { livePerson, liveTrip } from "@/db/trips";
 import { courseMaterialsDoneByPerson } from "@/features/course-materials";
 import { loadTripSharedReads, type TripSharedReads } from "@/features/trip-shared-reads";
 import { readActiveStaffRoles } from "../../db/authz";
 import type { AppDb } from "../../db/client";
-import { people, shops, tripAssignments, trips } from "../../db/schema/index";
+import { bookings, people, shops, tripAssignments, trips } from "../../db/schema/index";
 import { MINUTE_MS, nowDate } from "../../lib/clock";
 import { COURSE_TEACHING_NOTE_MAX } from "../../lib/course-pulse";
 import { readLearningMaterials } from "../../lib/courses";
@@ -84,6 +84,51 @@ export async function getCoursePulse(
           materialsDone: materials.has(row.person.id),
         }),
   }));
+  // Stable within each group: attention first without rearranging the teaching roster.
+  rows.sort((left, right) => Number(right.items.length > 0) - Number(left.items.length > 0));
+  const followups = rows.length
+    ? await db
+        .select({
+          bookingId: bookings.id,
+          ownerId: bookings.courseFollowupByPersonId,
+          at: bookings.courseFollowupAt,
+          revision: bookings.courseFollowupRevision,
+          ownerName: people.fullName,
+        })
+        .from(bookings)
+        .leftJoin(
+          people,
+          and(
+            eq(people.id, bookings.courseFollowupByPersonId),
+            eq(people.shopId, shopId),
+            livePerson(),
+          ),
+        )
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            eq(bookings.tripId, tripId),
+            inArray(
+              bookings.id,
+              rows.map((row) => row.bookingId),
+            ),
+          ),
+        )
+    : [];
+  const roles = await readActiveStaffRoles(db, shopId, personId);
+  const manages = roles?.some((role) => role === "owner" || role === "manager") ?? false;
+  const followupByBooking = new Map(
+    followups.map((row) => [
+      row.bookingId,
+      {
+        ownerId: row.ownerId,
+        ownerName: row.ownerName,
+        at: row.at,
+        revision: row.revision,
+        canRelease: !!row.ownerId && (row.ownerId === personId || manages),
+      },
+    ]),
+  );
   const [privateNote] = await db
     .select({
       note: trips.courseTeachingNote,
@@ -104,6 +149,7 @@ export async function getCoursePulse(
     : [];
   return {
     rows,
+    followupByBooking,
     complete: rows.filter((row) => row.items.length === 0).length,
     note: privateNote.deletedAt ? null : privateNote.note,
     noteAt: privateNote.deletedAt ? null : privateNote.at,

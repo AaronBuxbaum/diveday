@@ -756,6 +756,14 @@ const rows = [
     merge: "leave",
     why: "which staffer marked the materials done",
   },
+  {
+    table: "bookings",
+    column: "course_followup_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which instructor took responsibility for this session’s preparation follow-up",
+    export: "withheld",
+  },
   // Loop 5, row 10: who marked a referral student, and who collected each paper.
   {
     table: "bookings",

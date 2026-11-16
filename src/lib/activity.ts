@@ -398,6 +398,8 @@ type ActivityParamShapes = {
    */
   order_refunded: { actor: string };
   purchase_recorded: { actor: string };
+  course_followup_claimed: { actor: string };
+  course_followup_released: { actor: string };
   /**
    * A staffer recorded an open invoice as paid over the counter, in cash or on
    * the shop's card machine (`recordPaymentOnOpenOrder`), or a bench ticket as
@@ -659,6 +661,8 @@ export const ACTIVITY_CODES = [
   "running_late_from_message",
   "order_refunded",
   "purchase_recorded",
+  "course_followup_claimed",
+  "course_followup_released",
   "order_paid_cash",
   "order_paid_card_machine",
   "order_paid_room_charge",

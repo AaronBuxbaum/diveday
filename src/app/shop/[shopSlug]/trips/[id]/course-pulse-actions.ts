@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { type CourseTeachingNoteResult, recordCourseTeachingNote } from "@/features/course-pulse";
+import {
+  type CourseFollowupResult,
+  type CourseTeachingNoteResult,
+  claimCourseFollowup,
+  recordCourseTeachingNote,
+} from "@/features/course-pulse";
 import { requireStaffSession } from "@/features/session";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -27,6 +32,36 @@ export async function saveCourseTeachingNoteAction(
     personId: session.user.personId,
     note: form.get("intent") === "delete" ? "" : note,
     expectedNote: expectedNote || null,
+  });
+  if (result.ok) revalidatePath(shopPath(session.user.shopSlug, "trips", tripId));
+  return result;
+}
+
+export async function claimCourseFollowupAction(
+  tripId: string,
+  bookingId: string,
+  _previous: CourseFollowupResult | null,
+  form: FormData,
+): Promise<CourseFollowupResult> {
+  const session = await requireStaffSession();
+  const parsed = z
+    .object({
+      tripId: z.uuid(),
+      bookingId: z.uuid(),
+      expectedRevision: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+      intent: z.enum(["claim", "release"]),
+    })
+    .safeParse({
+      tripId,
+      bookingId,
+      expectedRevision: form.get("expectedRevision"),
+      intent: form.get("intent"),
+    });
+  if (!parsed.success) return { ok: false, reason: "unavailable" };
+  const result = await claimCourseFollowup(await getDb(), {
+    ...parsed.data,
+    shopId: session.user.shopId,
+    personId: session.user.personId,
   });
   if (result.ok) revalidatePath(shopPath(session.user.shopSlug, "trips", tripId));
   return result;

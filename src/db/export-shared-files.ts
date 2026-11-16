@@ -361,6 +361,14 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.courseMaterialsDoneByPersonId,
     },
+    // Private staff ownership, not a student’s completion evidence.
+    {
+      header: "course_followup_by_person_id",
+      in: "shop",
+      value: (row) => row.courseFollowupByPersonId,
+    },
+    { header: "course_followup_at", in: "shop", value: (row) => row.courseFollowupAt },
+    { header: "course_followup_revision", in: "shop", value: (row) => row.courseFollowupRevision },
     // A referral student (loop 5, row 10): who marked the seat, and who
     // collected the referral form and the eLearning record, and when.
     { header: "referred_in_at", in: "shop", value: (row) => row.referredInAt },

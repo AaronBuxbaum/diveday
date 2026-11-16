@@ -4,7 +4,8 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { CoursePulse as CoursePulseData } from "@/features/course-pulse";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { saveCourseTeachingNoteAction } from "../course-pulse-actions";
+import { claimCourseFollowupAction, saveCourseTeachingNoteAction } from "../course-pulse-actions";
+import { CourseFollowupForm } from "./CourseFollowupForm";
 import { CourseTeachingNoteForm } from "./CourseTeachingNoteForm";
 
 export function CoursePulse({
@@ -45,24 +46,66 @@ export function CoursePulse({
       </p>
       {pulse.rows.length ? (
         <ul className="mt-3 space-y-2 text-base">
-          {pulse.rows.map((row) => (
-            <li
-              key={row.bookingId}
-              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1"
-            >
-              <Link
-                href={`#booking-${row.bookingId}`}
-                className="inline-flex min-h-11 items-center underline underline-offset-4"
+          {pulse.rows.map((row) => {
+            const followup = pulse.followupByBooking.get(row.bookingId);
+            return (
+              <li
+                key={row.bookingId}
+                className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 ${row.items.length ? "" : "text-muted"}`}
               >
-                {row.fullName}
-              </Link>
-              <span className="text-muted">
-                {row.items.length
-                  ? row.items.map((item) => t(`trips.coursePulse.items.${item}`)).join(" · ")
-                  : t("trips.coursePulse.complete")}
-              </span>
-            </li>
-          ))}
+                <Link
+                  href={`#booking-${row.bookingId}`}
+                  className="inline-flex min-h-11 items-center underline underline-offset-4"
+                >
+                  {row.fullName}
+                </Link>
+                <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="min-w-0 max-w-full break-words text-muted">
+                    {row.items.length
+                      ? row.items.map((item) => t(`trips.coursePulse.items.${item}`)).join(" · ")
+                      : t("trips.coursePulse.complete")}
+                  </span>
+                  {row.items.length && followup ? (
+                    <>
+                      <span className="text-sm text-muted">
+                        {followup.ownerId
+                          ? t("trips.coursePulse.followup.owner", {
+                              name: followup.ownerName ?? t("trips.coursePulse.items.staff"),
+                            })
+                          : t("trips.coursePulse.followup.unassigned")}
+                        {followup.ownerId
+                          ? ` · ${t("trips.coursePulse.followup.inProgress")}`
+                          : null}
+                      </span>
+                      {!followup.ownerId || followup.canRelease ? (
+                        <CourseFollowupForm
+                          action={claimCourseFollowupAction.bind(null, tripId, row.bookingId)}
+                          revision={followup.revision}
+                          intent={followup.ownerId ? "release" : "claim"}
+                          words={{
+                            label: t(
+                              followup.ownerId
+                                ? "trips.coursePulse.followup.release"
+                                : "trips.coursePulse.followup.take",
+                            ),
+                            busy: t("words.busy.saving"),
+                            ariaLabel: t(
+                              followup.ownerId
+                                ? "trips.coursePulse.followup.releaseFor"
+                                : "trips.coursePulse.followup.takeFor",
+                              { name: row.fullName },
+                            ),
+                            changed: t("trips.coursePulse.followup.changed"),
+                            unavailable: t("trips.coursePulse.followup.unavailable"),
+                          }}
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p className="mt-3 text-sm text-muted">{t("trips.coursePulse.empty")}</p>

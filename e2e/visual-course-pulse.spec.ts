@@ -26,4 +26,16 @@ test("course preparation and a private teaching note (light)", async ({ page }) 
     page.getByRole("status").filter({ hasText: t("trips.coursePulse.saved") }),
   ).toBeHidden();
   await capture(page, "course-preparation-note", "light");
+  const section = page.locator('section[aria-labelledby="course-preparation"]');
+  await section
+    .getByRole("button", { name: /Take follow-up for / })
+    .first()
+    .click();
+  await expect(
+    section.getByText(t("trips.coursePulse.followup.inProgress"), { exact: false }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await capture(page, "course-preparation-followup-phone", "light");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await capture(page, "course-preparation-followup-desktop", "light");
 });
