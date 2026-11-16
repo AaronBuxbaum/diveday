@@ -15,7 +15,9 @@ vi.mock("@/features/wallet-pass", () => ({
   configuredWalletPlatforms: mocks.platforms,
   pushChangedWalletPasses: mocks.push,
 }));
-vi.mock("@/features/sentry-server", () => ({ sentry: { captureCheckIn: mocks.checkIn, captureException: mocks.capture } }));
+vi.mock("@/features/sentry-server", () => ({
+  sentry: { captureCheckIn: mocks.checkIn, captureException: mocks.capture },
+}));
 vi.mock("@/features/log-shipping", () => ({ flushLogs: mocks.flush }));
 
 import { GET, maxDuration } from "./route";
