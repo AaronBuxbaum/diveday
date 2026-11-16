@@ -58,6 +58,7 @@ import { calendarDateToUtcMidnight } from "../../lib/calendar-date";
 import { nowDate } from "../../lib/clock";
 import type { RentalItemKind } from "../../lib/dive-prep";
 import { type PreparedImport, type PreparedRow, parseImportedMoney } from "../../lib/import";
+import { manualIdentityConflicts, sameImportIdentity } from "../../lib/import-identity";
 import { phoneForStorage } from "../../lib/phone";
 import { NOTHING_RENTED } from "../../lib/rentals";
 import { storeImportReceiptDocument, storeImportWaiverDocument } from "../../lib/storage/index";
@@ -116,6 +117,7 @@ export type ImportSummary = {
    */
   sizesDeclined: number;
   rowsSkipped: number;
+  identityConflicts?: number;
 };
 
 /**
@@ -293,6 +295,9 @@ export async function commitContactImport(
     notesAdded: 0,
     sizesDeclined: 0,
     rowsSkipped: prepared.rows.length - preparedRows.length,
+    identityConflicts: prepared.rows.filter((row) =>
+      row.issues.some((issue) => issue.code === "manual_identity_conflict"),
+    ).length,
   };
   if (preparedRows.length === 0) return summary;
 
@@ -341,7 +346,7 @@ export async function commitContactImport(
     // People created below are already owned by this transaction.
     const lockedPeople = existingPeople.length
       ? await tx
-          .select({ id: people.id })
+          .select({ id: people.id, email: people.email, fullName: people.fullName })
           .from(people)
           .where(
             and(
@@ -356,13 +361,21 @@ export async function commitContactImport(
           .orderBy(asc(people.id))
           .for("no key update")
       : [];
-    const lockedIds = new Set(lockedPeople.map((person) => person.id));
+    const manuallyMapped = prepared.mapping.some((entry) => entry.manual);
+    const identityConflicts = manuallyMapped
+      ? manualIdentityConflicts(rows, lockedPeople)
+      : new Set<string>();
+    const lockedEmails = new Map(
+      lockedPeople.map((person) => [person.id, person.email?.toLowerCase()]),
+    );
     // An erasure or removal can commit while the lock waits. Do not use the
     // earlier lookup to write back into that record or recreate it in this
     // import; skip every row for that now-unavailable match.
     const unavailableEmails = new Set(
       existingPeople.flatMap((person) =>
-        person.email && !lockedIds.has(person.id) ? [person.email.toLowerCase()] : [],
+        person.email && lockedEmails.get(person.id) !== person.email.toLowerCase()
+          ? [person.email.toLowerCase()]
+          : [],
       ),
     );
     const personIdByEmail = new Map(
@@ -434,8 +447,10 @@ export async function commitContactImport(
 
     for (const row of rows) {
       const emailKey = row.email?.toLowerCase();
-      if (emailKey && unavailableEmails.has(emailKey)) {
+      if (emailKey && (unavailableEmails.has(emailKey) || identityConflicts.has(emailKey))) {
         summary.rowsSkipped += 1;
+        if (identityConflicts.has(emailKey))
+          summary.identityConflicts = (summary.identityConflicts ?? 0) + 1;
         continue;
       }
       let personId = emailKey ? personIdByEmail.get(emailKey) : undefined;
@@ -557,7 +572,7 @@ export async function commitContactImport(
         } catch (error) {
           if (!isUniqueConstraintViolation(error)) throw error;
           const [winner] = await tx
-            .select({ id: people.id })
+            .select({ id: people.id, fullName: people.fullName })
             .from(people)
             .where(
               and(
@@ -566,8 +581,15 @@ export async function commitContactImport(
                 isNull(people.deletedAt),
               ),
             )
-            .limit(1);
+            .limit(1)
+            .for("no key update");
           if (!winner) throw error;
+          if (manuallyMapped && !sameImportIdentity(winner.fullName, row.fullName)) {
+            if (emailKey) identityConflicts.add(emailKey);
+            summary.rowsSkipped += 1;
+            summary.identityConflicts = (summary.identityConflicts ?? 0) + 1;
+            continue;
+          }
           personId = winner.id;
           await applyUpdate(personId);
           summary.peopleUpdated += 1;

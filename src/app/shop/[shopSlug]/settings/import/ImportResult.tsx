@@ -20,7 +20,10 @@ export function ImportResult({
 }) {
   return (
     <div className="mt-6">
-      <ShopNotice tone="success" persistent>
+      <ShopNotice
+        tone={(state.summary.identityConflicts ?? 0) > 0 ? "warning" : "success"}
+        persistent
+      >
         <p className="font-medium">
           {/* Two counts, so two pairs and a template holding only their
                   order — see the same shape on the departure board's boarding
@@ -42,6 +45,17 @@ export function ImportResult({
             ),
           })}
         </p>
+        {(state.summary.identityConflicts ?? 0) > 0 ? (
+          <p className="mt-1 text-sm">
+            {fill(
+              pluralForm(state.summary.identityConflicts ?? 0, {
+                one: copy.result.identityConflictsOne,
+                other: copy.result.identityConflictsOther,
+              }),
+              { count: state.summary.identityConflicts ?? 0 },
+            )}
+          </p>
+        ) : null}
         <p className="mt-1 text-sm">
           {/* `{cards}` is a *formatted list* ("3 certifications and 1
                   nitrox"), not a count — so the sentence around it agrees with

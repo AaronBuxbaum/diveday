@@ -19,7 +19,12 @@ import { parseDiveSiteForm, submittedValues } from "@/features/dive-sites";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { readRequiredSpecialties } from "@/features/requirement-form";
 import { requireStaffSession } from "@/features/session";
-import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/features/storage";
+import {
+  abandonDiveSitePhotos,
+  addedDiveSitePhotos,
+  supersededDiveSitePhotos,
+  uploadDiveSitePhotos,
+} from "@/features/storage";
 import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
 import { parseServiceWindow } from "@/lib/service-window";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -98,8 +103,12 @@ export async function saveDiveSiteAction(
   // storage — there is no pasted URL for a public page to fetch (CR-020).
   const photos = await uploadDiveSitePhotos(formData, stored);
   if (!photos.ok) {
+    await abandonDiveSitePhotos(activeDb, activeSession.user.shopId, photos.stored);
     return refuse(photos.reason === "not_configured" ? "imagesUnconfigured" : "images");
   }
+  // Stored before the row is written: whichever way the write refuses, these
+  // objects have no row, and the form comes back with its file inputs empty.
+  const addedPhotos = addedDiveSitePhotos(stored, photos.photos);
   // `minDepth`, `maxDepth` and `expectedBottomTime` are the form's own fields,
   // not columns — they became `parsed.depthMinMeters` / `parsed.maxDepthMeters` /
   // `parsed.expectedBottomTimeMinutes`, so none may reach the spread.
@@ -165,12 +174,21 @@ export async function saveDiveSiteAction(
   // post. Refused rather than merged, and `refuse` hands back everything that
   // was typed, so the message announcing that nothing was lost is not itself
   // what loses it (issue #820).
-  if (updated === SITE_EDIT_CONFLICT) return refuse("conflict");
+  if (updated === SITE_EDIT_CONFLICT) {
+    await abandonDiveSitePhotos(activeDb, activeSession.user.shopId, addedPhotos);
+    return refuse("conflict");
+  }
   // The name is the one rule the parse above could not check — it takes the
   // whole shop's library to know — so the database refuses it and the
   // briefing comes back to the form like any other refusal.
-  if (updated === SITE_NAME_TAKEN) return refuse("nameTaken");
-  if (!updated) notFound();
+  if (updated === SITE_NAME_TAKEN) {
+    await abandonDiveSitePhotos(activeDb, activeSession.user.shopId, addedPhotos);
+    return refuse("nameTaken");
+  }
+  if (!updated) {
+    await abandonDiveSitePhotos(activeDb, activeSession.user.shopId, addedPhotos);
+    notFound();
+  }
   await writeSpanishBoxes(
     activeDb,
     activeSession.user.shopId,

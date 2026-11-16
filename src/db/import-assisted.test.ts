@@ -1,10 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { prepareContactImport as prepareManual } from "@/lib/import";
 import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
 import { commitContactImport } from "@/test/words-wiring";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { cards, people, userAccounts, waiverRecords } from "./schema";
+import { cards, internalNotes, people, userAccounts, waiverRecords } from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -110,4 +111,49 @@ describe("commitContactImport — what an assisted column may change", () => {
       await db.select().from(waiverRecords).where(eq(waiverRecords.personId, ana.id)),
     ).toHaveLength(0);
   });
+});
+
+it("refuses a manually mapped household email before changing the existing identity", async () => {
+  const importer = await accountPersonId(DEV_STAFF_LOGINS.owner.email);
+  await commitContactImport(
+    ctx.db,
+    ctx.shop.id,
+    prepareContactImport(
+      "full_name,email,certification_level,certification_number,waiver_accepted\nFather Senior,manual.household@example.com,Open Water,FATHER-CARD,yes",
+    ),
+    importer,
+  );
+  const before = await personByEmail(ctx.shop.id, "manual.household@example.com");
+  if (!before) throw new Error("expected imported father");
+  const beforeCards = await ctx.db.select().from(cards).where(eq(cards.personId, before.id));
+  const beforeWaivers = await ctx.db
+    .select()
+    .from(waiverRecords)
+    .where(eq(waiverRecords.personId, before.id));
+  expect(beforeCards).toHaveLength(1);
+  expect(beforeWaivers).toHaveLength(1);
+  const result = await commitContactImport(
+    ctx.db,
+    ctx.shop.id,
+    prepareManual(
+      "Guest,Mailbox,internal_notes\nDifferent Child,manual.household@example.com,child facts",
+      { today: "2026-07-21", manual: { Guest: "full_name", Mailbox: "email" } },
+    ),
+    importer,
+  );
+  expect((await personByEmail(ctx.shop.id, "manual.household@example.com"))?.fullName).toBe(
+    before?.fullName,
+  );
+  expect(result.peopleUpdated).toBe(0);
+  expect(result.rowsSkipped).toBe(1);
+  expect(result.identityConflicts).toBe(1);
+  expect(await ctx.db.select().from(cards).where(eq(cards.personId, before.id))).toEqual(
+    beforeCards,
+  );
+  expect(
+    await ctx.db.select().from(waiverRecords).where(eq(waiverRecords.personId, before.id)),
+  ).toEqual(beforeWaivers);
+  expect(
+    await ctx.db.select().from(internalNotes).where(eq(internalNotes.personId, before.id)),
+  ).toHaveLength(0);
 });

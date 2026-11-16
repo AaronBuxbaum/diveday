@@ -247,6 +247,31 @@ describe("dispatchDueIntegrationDeliveries", () => {
     expect(row?.status).toBe("connected");
   });
 
+  it("settles a delivery that throws and carries on with the ones behind it", async () => {
+    const { db, shop } = historyCtx;
+    await connectZapier(db, shop.id);
+    const first = await queueOrderPaid(db, shop.id, "order:paid:throws", nowMs() - 20_000);
+    const second = await queueOrderPaid(db, shop.id, "order:paid:behind", nowMs() - 10_000);
+    // The listing is the first select; the first delivery's hydration is the second.
+    let selects = 0;
+    const flaky = new Proxy(db, {
+      get(target, prop, receiver) {
+        if (prop === "select" && ++selects === 2) throw new Error("connection dropped");
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+
+    const summary = await dispatchDueIntegrationDeliveries(flaky, {
+      fetchImpl: vi.fn(async () => jsonResponse(204)),
+    });
+
+    expect(summary).toMatchObject({ delivered: 1, retried: 1 });
+    const status = async (id: string) =>
+      (await db.select().from(integrationDeliveries).where(eq(integrationDeliveries.id, id)))[0];
+    expect((await status(first.delivery.id))?.status).toBe("pending");
+    expect((await status(second.delivery.id))?.status).toBe("delivered");
+  });
+
   it("errors the integration on a refusal it will never outgrow", async () => {
     const { db, shop } = historyCtx;
     const integration = await connectZapier(db, shop.id);

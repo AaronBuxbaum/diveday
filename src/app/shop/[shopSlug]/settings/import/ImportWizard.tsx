@@ -223,7 +223,16 @@ export function ImportWizard({
     prepared && (!prepared.fatal || prepared.fatal.code === "no_name_column")
       ? manualImportColumns(csvText)
       : [];
-  const recovery = prepared && !prepared.fatal ? importRecoveryCsv(csvText, prepared) : null;
+  const recovery =
+    prepared && !prepared.fatal
+      ? importRecoveryCsv(
+          csvText,
+          prepared,
+          matches?.status === "ready"
+            ? matches.rows.filter((row) => row.outcome === "conflict").map((row) => row.rowNumber)
+            : [],
+        )
+      : null;
   const hasManual = prepared?.mapping.some((entry) => entry.manual) ?? false;
   const previewRows = prepared?.rows.slice(0, PREVIEW_LIMIT) ?? [];
   const hiddenRows = (prepared?.rows.length ?? 0) - previewRows.length;

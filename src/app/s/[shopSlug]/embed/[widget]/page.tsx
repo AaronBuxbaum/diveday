@@ -32,6 +32,7 @@ import {
   publicTripPath,
 } from "@/lib/public-routes";
 import { acceptsNewDivers, capacityLabel, seatsOnSale } from "@/lib/trips";
+import { uuidParam } from "@/lib/uuid";
 import { DepartureCard } from "./_components/DepartureCard";
 import { EmbedHeightReporter } from "./_components/EmbedHeightReporter";
 
@@ -207,7 +208,9 @@ export default async function EmbedWidgetPage({
       </section>
     );
   } else if (widget === "departure") {
-    const trip = showId ? await getTripWithBooked(db, shop.id, showId) : null;
+    // A malformed id names no trip: the same 404, without asking a uuid column.
+    const tripId = uuidParam(showId);
+    const trip = tripId ? await getTripWithBooked(db, shop.id, tripId) : null;
     if (!trip || trip.isPrivate) notFound();
     body = (
       <DepartureCard

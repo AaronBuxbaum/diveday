@@ -69,6 +69,7 @@ const ISSUE_CODES: ImportIssueCode[] = [
   "payment_history_date_unreadable",
   "payment_history_no_date",
   "no_name",
+  "manual_identity_conflict",
   "merged_duplicate",
   "no_email_new_record",
   "size_too_long",
@@ -98,7 +99,13 @@ const COPY = {
   checkingMatches: "Checking roster",
   matchesStale: "Roster matches are checked again when you import.",
   matchFailed: "Could not check the roster.",
-  outcomes: { create: "New diver", update: "Update existing diver", merge: "Merge", skip: "Skip" },
+  outcomes: {
+    conflict: "Name conflict",
+    create: "New diver",
+    update: "Update existing diver",
+    merge: "Merge",
+    skip: "Skip",
+  },
   manualMapping: "Match columns",
   ignoreColumn: "Leave out",
   manualEvidenceNotice: "Cards need review; collect a new waiver.",
@@ -178,6 +185,8 @@ const COPY = {
     cardsNitroxOther: "{count} nitrox",
     rowsMergedNote: " ({count} merged)",
     cardsSkippedNote: " ({count} skipped)",
+    identityConflictsOne: "{count} name conflict",
+    identityConflictsOther: "{count} name conflicts",
     rowsSkippedNote: " ({count} rows skipped)",
     cardsHeldByAnother: "{count} cards already held by another diver",
     specialtyGateNote: "Specialty cards need review",
@@ -473,4 +482,26 @@ it("drops a roster snapshot that finishes after the file changes", async () => {
   resolve({ status: "ready", rows: [{ rowNumber: 1, outcome: "update" }] });
   await waitFor(() => expect(screen.getByText("Other Diver")).toBeInTheDocument());
   expect(screen.queryByText("Update existing diver")).not.toBeInTheDocument();
+});
+
+it("offers roster conflict rows for correction and excludes them from the submit count", async () => {
+  vi.mocked(previewContactImportAction).mockResolvedValueOnce({
+    status: "ready",
+    rows: [{ rowNumber: 1, outcome: "conflict" }],
+  });
+  render(
+    <ImportWizard
+      diversHref="/shop/blue-mantis/divers"
+      intro="Upload"
+      copy={COPY}
+      locale="en-US"
+      timeZone="America/New_York"
+    />,
+  );
+  await chooseFile(screen.getByLabelText(/choose a file/i, { selector: "input" }), CSV);
+  await userEvent.click(screen.getByRole("button", { name: COPY.checkMatches }));
+  await screen.findByText("Name conflict");
+  expect(screen.getByRole("button", { name: "Import 0 divers" })).toBeDisabled();
+  const link = screen.getByRole("link", { name: COPY.recoveryDownload });
+  expect(decodeURIComponent(link.getAttribute("href") ?? "")).toContain("manual_identity_conflict");
 });
