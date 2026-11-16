@@ -54,7 +54,7 @@ export async function recordWaiverDelivery(
         : ("failed" as const);
   const detail = input.delivery.status === "failed" ? (input.delivery.detail ?? null) : null;
   const attemptedAt = input.now ?? nowDate();
-  await db
+  const [owned] = await db
     .update(waiverRecords)
     .set({
       deliveryStatus,
@@ -63,7 +63,11 @@ export async function recordWaiverDelivery(
       deliveryProviderStatusAt: null,
       deliveryError: detail,
     })
-    .where(eq(waiverRecords.id, input.waiverRecordId));
+    // The shop is the caller's, not the record's: an id from another shop
+    // writes nothing here and gets no delivery row below.
+    .where(and(eq(waiverRecords.id, input.waiverRecordId), eq(waiverRecords.shopId, input.shopId)))
+    .returning({ id: waiverRecords.id });
+  if (!owned) return;
   // Current state per channel, so a second send on the same channel replaces
   // its row rather than stacking one. Any provider verdict already on the row
   // is cleared: it belonged to the message this attempt just superseded.
