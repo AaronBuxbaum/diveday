@@ -146,7 +146,8 @@ export function stripePromotionProvider(
               amount_off: String(Math.max(1, Math.round(request.discount.amountCents))),
               currency: request.currency,
             }),
-        name: request.name,
+        // Stripe refuses a coupon name past 40 characters; a staff label runs to 200.
+        name: request.name.slice(0, 40),
       });
       const coupon = couponResponseSchema.safeParse(
         await postOnAccount(request.stripeAccountId, {
