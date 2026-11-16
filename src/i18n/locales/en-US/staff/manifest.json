@@ -160,6 +160,11 @@
   "heldEmergencyContactLabel": "Emergency contact, from the desk",
   "crewClashDetail": "Also scheduled on {departures} at these hours.",
   "crewClashConfirm": "{count, plural, one {# of the crew is also scheduled on another boat at these hours.} other {# of the crew are also scheduled on other boats at these hours.}} Confirm who sails.",
+  "emergencyText": {
+    "label": "Draft a text",
+    "body": "This is {shop}, about {person} on our {trip} departure, {date}. Please call us back as soon as you can.",
+    "bodyWithCaptain": "This is {shop}, about {person} on our {trip} departure, {date}, with Captain {captain}. Please call us back as soon as you can."
+  },
   "notOnFile": "Not on file",
   "identityWithheldDetails": "Their contact, age, and other details wait until the desk confirms who this is.",
   "heldSeatNotConfirmed": "{moreHolds, select, yes {Not confirmed. The desk must settle who this is before boarding. Other holds may still apply.} other {Not confirmed. The desk must settle who this is before boarding.}}",

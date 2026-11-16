@@ -7,6 +7,7 @@ import type { PrivateNoteAction } from "@/components/PrivateNoteForm";
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ManifestBuddyTeam, RollCallCheckpoint, TripManifest } from "@/lib/manifests";
+import type { EmergencyTextFacts } from "./emergency-text";
 import type { MissingDiverRowActions } from "./missing-diver-controls";
 import type { PersonTrailEntry } from "./PersonSheet";
 import type { ManifestNote } from "./StaffNotes";
@@ -83,5 +84,10 @@ export type DiverRollCallContext = {
    * mark to tap. Absent on the live manifest.
    */
   paper?: boolean;
+  /**
+   * The departure's facts for "Draft a text" under each emergency contact on
+   * the person sheet (issue #4256). Absent on paper.
+   */
+  emergencyText?: EmergencyTextFacts;
   t: StaffTranslator;
 };
