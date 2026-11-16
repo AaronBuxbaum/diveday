@@ -66,3 +66,15 @@ it("keeps recovery row numbers aligned with blank rows and quoted multiline valu
   expect(recovery).toContain("missing@example.com,3,no_name");
   expect(recovery).not.toContain("Healthy");
 });
+
+it("bundles local mapping and recovery for a browser without server-only dependencies", async () => {
+  const { build } = await import("esbuild");
+  const result = await build({
+    entryPoints: ["src/lib/import-manual-mapping.ts"],
+    bundle: true,
+    platform: "browser",
+    write: false,
+    logLevel: "silent",
+  });
+  expect(result.errors).toEqual([]);
+});
