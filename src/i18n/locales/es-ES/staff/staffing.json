@@ -164,8 +164,6 @@
     "tabDayOff": "Día libre",
     "needsOk": "Un propietario o gerente aprueba los días libres. Verás su respuesta aquí.",
     "statusPending": "Esperando aprobación",
-    "statusApproved": "Aprobado",
-    "statusDeclined": "Rechazado",
     "reason": "Motivo: {reason}",
     "approvalsHeading": "Días libres esperando tu respuesta",
     "asked": "{person} pidió {dates}",

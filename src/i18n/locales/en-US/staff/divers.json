@@ -155,7 +155,6 @@
     "noticeInvalid": "Check the diver’s name, email, and phone number.",
     "newDiverTitle": "Add a diver",
     "newDiverLead": "A name is enough to start. Add contact details when you have them.",
-    "addDiverWithName": "Add diver",
     "addToWaitlistButton": "Add to who’s waiting",
     "addToTripButton": "Add to trip",
     "fullNameLabel": "Full name",
@@ -226,7 +225,6 @@
   },
   "header": {
     "noContactDetails": "No contact details yet",
-    "diveInsurancePrefix": "Dive insurance: ",
     "diveInsuranceOnFile": "DAN insurance on file",
     "fullNameLabel": "Full name",
     "emailLabel": "Email",
@@ -421,7 +419,6 @@
     "heading": "Diver notes",
     "description": "Staff-only context about this diver, shared with crew on their boat manifest.",
     "fromTrip": "From {trip} · {date}",
-    "appliesEverywhere": "Applies across this diver’s departures",
     "addLabel": "Add a note",
     "placeholder": "What should the next staff member know?",
     "add": "Add note",
