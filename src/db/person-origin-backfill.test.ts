@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { expect, it } from "vitest";
+import { closePglite } from "./close-pglite";
 
 // The column defaults to 'seed', so every row that existed before it did would read as seed
 // data. A diver who registered themselves was already marked by `self_registered_at`; the
@@ -16,19 +17,22 @@ it("backfills origin from self_registered_at in the migration that adds the colu
     .filter(Boolean);
 
   const db = new PGlite();
-  await db.exec(
-    `CREATE TABLE people (id int PRIMARY KEY, self_registered_at timestamptz);
-     INSERT INTO people VALUES (1, now()), (2, NULL), (3, now());`,
-  );
-  for (const statement of statements) await db.exec(statement);
+  try {
+    await db.exec(
+      `CREATE TABLE people (id int PRIMARY KEY, self_registered_at timestamptz);
+       INSERT INTO people VALUES (1, now()), (2, NULL), (3, now());`,
+    );
+    for (const statement of statements) await db.exec(statement);
 
-  const { rows } = await db.query<{ id: number; origin: string }>(
-    "SELECT id, origin FROM people ORDER BY id",
-  );
-  expect(rows).toEqual([
-    { id: 1, origin: "self_registration" },
-    { id: 2, origin: "seed" },
-    { id: 3, origin: "self_registration" },
-  ]);
-  await db.close();
+    const { rows } = await db.query<{ id: number; origin: string }>(
+      "SELECT id, origin FROM people ORDER BY id",
+    );
+    expect(rows).toEqual([
+      { id: 1, origin: "self_registration" },
+      { id: 2, origin: "seed" },
+      { id: 3, origin: "self_registration" },
+    ]);
+  } finally {
+    await closePglite(db);
+  }
 });
