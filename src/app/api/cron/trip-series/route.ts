@@ -7,6 +7,8 @@ import { rollSailedSeriesInterests } from "@/features/interest-roll";
 import { sentry } from "@/features/sentry-server";
 import { voidStalePublicPackageInvoices } from "@/features/stale-package-invoices";
 import { nowDate } from "@/lib/clock";
+import { errorClassToken } from "@/lib/error-token";
+import { log } from "@/lib/log";
 import { SERIES_HORIZON_DAYS } from "@/lib/recurrence";
 
 /**
@@ -30,6 +32,8 @@ async function isolated<T>(step: string, failed: string[], fallback: T, run: () 
   } catch (error) {
     failed.push(step);
     await sentry.captureException(error, { tags: { cron_scan: `trip_series_${step}` } });
+    // The CloudWatch CronPassFailures alarm reads this line, not Sentry.
+    log("cron_trip_series.scan_failed", "error", { scan: step, errorName: errorClassToken(error) });
     return fallback;
   }
 }

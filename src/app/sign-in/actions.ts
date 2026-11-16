@@ -45,7 +45,7 @@ function signInPath(error: string, formData: FormData): string {
 export async function authenticate(formData: FormData) {
   // A form that is not three strings is a wrong password, said the same way.
   const parsed = parseForm(signInForm, formData);
-  if (!parsed.ok) redirect("/sign-in?error=1");
+  if (!parsed.ok) redirect(signInPath("1", formData));
   const { email, password } = parsed.data;
   let shopSlug: string | null;
   let pendingSignIn = false;
@@ -62,7 +62,7 @@ export async function authenticate(formData: FormData) {
     shopSlug = signedIn.shopSlug;
   } catch (error) {
     if (error instanceof APIError) {
-      redirect("/sign-in?error=1");
+      redirect(signInPath("1", formData));
     }
     throw error;
   }

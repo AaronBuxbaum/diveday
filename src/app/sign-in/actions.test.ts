@@ -143,6 +143,19 @@ describe("authenticate", () => {
     );
   });
 
+  it("keeps the page a staffer was bounced from through a mistyped password", async () => {
+    hoisted.signInDiveDayCredentials.mockRejectedValueOnce(new APIError("UNAUTHORIZED"));
+    expect(
+      await landing(
+        form({
+          email: "owner@example.com",
+          password: "nope",
+          callbackUrl: "/shop/blue-mantis/trips/abc",
+        }),
+      ),
+    ).toBe("/sign-in?error=1&callbackUrl=%2Fshop%2Fblue-mantis%2Ftrips%2Fabc");
+  });
+
   it("sends pending credentials to the code step without a dashboard redirect", async () => {
     hoisted.signInDiveDayCredentials.mockResolvedValueOnce({ pending: true, shopSlug: null });
     expect(await landing(form({ email: "owner@example.com", password: "pw" }))).toBe(

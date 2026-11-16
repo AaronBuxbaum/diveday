@@ -254,6 +254,12 @@ describe("GET /api/cron/trip-series — reporting", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ stepsFailed: "roll,rehearsals" });
+    // The CloudWatch alarm reads this log line, so each failed step writes one.
+    expect(
+      vi
+        .mocked(console.error)
+        .mock.calls.filter(([line]) => String(line).includes("cron_trip_series.scan_failed")),
+    ).toHaveLength(2);
     // The steps after the failures still ran.
     expect(clearPassedReopensOn).toHaveBeenCalledWith(FAKE_DB);
     expect(rollSailedSeriesInterests).toHaveBeenCalled();
