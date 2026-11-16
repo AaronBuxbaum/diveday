@@ -32,6 +32,10 @@ describe("suggestEmailTypo", () => {
     expect(suggestEmailTypo("avery@gmx.com")).toBeNull();
     expect(suggestEmailTypo("avery@me.com")).toBeNull();
     expect(suggestEmailTypo("avery@fastmail.com")).toBeNull();
+    // One edit from gmail.com, and real providers.
+    expect(suggestEmailTypo("avery@mail.com")).toBeNull();
+    expect(suggestEmailTypo("avery@email.com")).toBeNull();
+    expect(suggestEmailTypo("avery@ymail.com")).toBeNull();
     expect(suggestEmailTypo("diver@blue-mantis.com")).toBeNull();
   });
 

@@ -256,14 +256,23 @@ export function formatByteSize(bytes: number, locale = "en-US"): string {
     { unit: "megabyte", threshold: 1e6 },
     { unit: "kilobyte", threshold: 1e3 },
   ] as const;
-  const match = units.find((candidate) => bytes >= candidate.threshold);
+  const digitsFor = (value: number) => (value >= 100 ? 0 : 1);
+  // Rounded first: 999,950 bytes is "1,000 kB" once printed to one decimal, which
+  // is a megabyte said in the wrong unit.
+  const reads = (candidate: (typeof units)[number], at: number) =>
+    at >= candidate.threshold &&
+    (candidate.unit === "gigabyte" ||
+      Number((at / candidate.threshold).toFixed(digitsFor(at / candidate.threshold))) < 1000);
+  const index = units.findIndex((candidate) => bytes >= candidate.threshold);
+  const promoted = index > 0 && !reads(units[index], bytes) ? units[index - 1] : units[index];
+  const match = promoted;
   const unit = match?.unit ?? "byte";
   const value = match ? bytes / match.threshold : bytes;
   return cachedFormatter("num", Intl.NumberFormat, locale, {
     style: "unit",
     unit,
     unitDisplay: "short",
-    maximumFractionDigits: value >= 100 ? 0 : 1,
+    maximumFractionDigits: digitsFor(value),
   }).format(value);
 }
 
