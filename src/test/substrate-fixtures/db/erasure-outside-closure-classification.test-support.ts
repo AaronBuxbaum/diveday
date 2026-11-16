@@ -92,6 +92,8 @@ export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   setup_requests:
     "a shop owner asking DiveDay to set them up: their name, address and phone, sent to DiveDay rather than to any shop. A diver is never on it. It leaves by `deleteSetupRequestsByEmail` / `deleteSetupRequestsByPhone` when that owner asks DiveDay to forget them",
   demo_entries: "someone opening the demo: a source, a role and a time, and no person",
+  demo_previews:
+    "a demo built for one prospect shop and whether its link was opened: a business name, a website and times, and no person",
   shop_milestones:
     "when a shop reached a step of getting started, and whether a stall alert went out. A shop and a date, no diver",
 

@@ -60,6 +60,8 @@ import { markTwoDepthsOnOneCharter } from "./mark-two-depths-on-one-charter";
 import { mergeCandidatesState } from "./merge-candidates-state";
 import {
   accountTokenArgs,
+  buildADemoPreview,
+  demoPreviewArgs,
   emailArgs,
   mintAContactEmailConfirmation,
   mintACourtesyEmailUnsubscribe,
@@ -324,6 +326,7 @@ const FACTS = {
   ),
   accountToken: withArgs(accountTokenArgs, ({ db }, args) => mintAnAccountToken(db, args)),
   contactEmailConfirmation: ({ db, shop }) => mintAContactEmailConfirmation(db, shop.id),
+  demoPreview: withArgs(demoPreviewArgs, ({ db, now }, args) => buildADemoPreview(db, args, now)),
   courtesyEmailUnsubscribe: withArgs(emailArgs, ({ db, shop }, args) =>
     mintACourtesyEmailUnsubscribe(db, shop.id, args),
   ),

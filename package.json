@@ -111,6 +111,7 @@
     "db:migrate": "dotenv -c -- drizzle-kit migrate --config drizzle.config.prod.ts",
     "db:reset": "node scripts/db-reset.mjs",
     "billing:free-term": "dotenv -c -- tsx scripts/billing-free-term.ts",
+    "preview": "dotenv -c -- tsx scripts/preview.ts",
     "billing:pricing-plan": "dotenv -c -- tsx scripts/billing-pricing-plan.ts",
     "billing:pricing-report": "dotenv -c -- tsx scripts/billing-pricing-report.ts",
     "build:sw": "node scripts/build-service-worker.mjs",

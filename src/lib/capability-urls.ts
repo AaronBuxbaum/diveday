@@ -51,6 +51,9 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // URL unattended for as long as the subscription exists, so one leaked copy
   // in telemetry replays the whole shop's schedule indefinitely.
   "calendar",
+  // A prospect's preview link (ADR 20261116-demo-previews): `/preview/[token]`
+  // signs whoever holds it into one demo shop of seeded divers for a week.
+  "preview",
   // Email unsubscribe and stop tokens (the five unsubscribe purposes of
   // `capabilities`, all resolved by /unsubscribe/[token]). Found missing by
   // the OPS-L1 review: the tenth capability route, and the only one this list

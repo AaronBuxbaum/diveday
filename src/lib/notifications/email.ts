@@ -1204,6 +1204,31 @@ export function demoStartedAlertEmail(input: DemoStartedAlertEmailInput): Notifi
   };
 }
 
+type PreviewActiveAlertEmailInput = {
+  prospectName: string;
+  shopSlug: string;
+  fetchCount: number;
+  openCount: number;
+};
+
+/**
+ * Internal and English, like `demoStartedAlertEmail` above: somebody is using
+ * the preview built for their shop (ADR 20261116-demo-previews). The two
+ * counts sit beside the news so the founder can tell a shop that came straight
+ * in from one whose mail scanner fetched the link a dozen times first.
+ */
+export function previewActiveAlertEmail(input: PreviewActiveAlertEmailInput): NotificationEmail {
+  const name = escapeHtml(input.prospectName);
+  const slug = escapeHtml(input.shopSlug);
+  const counts = `Link requested ${input.fetchCount} time(s), opened in a browser ${input.openCount} time(s).`;
+
+  return {
+    subject: `Preview in use: ${input.prospectName}`,
+    text: `Somebody is using the preview built for ${input.prospectName}. Their shop is /shop/${input.shopSlug}.\n${counts}\n`,
+    html: `<p>Somebody is using the preview built for <strong>${name}</strong>. Their shop is <code>/shop/${slug}</code>.</p><p>${counts}</p>`,
+  };
+}
+
 type UsageCeilingAlertEmailInput = {
   ceilingId: string;
   provider: string;

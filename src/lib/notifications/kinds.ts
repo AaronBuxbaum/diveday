@@ -938,6 +938,31 @@ const demoStartedAlertSchema = z.object({
 });
 
 /**
+ * Somebody is using a preview built for their shop (ADR 20261116-demo-previews):
+ * the founder alert for the one outreach signal that is a person. Sent once per
+ * preview, on the first real input inside its demo shop, never on a fetch of
+ * the link (a mail scanner does that) and never on the open alone.
+ *
+ * Names a business, never a person: the prospect's shop name is what the
+ * founder typed when the preview was built. `shopId` is the minted demo's own
+ * row, for the reason `demoStartedAlertSchema` gives.
+ */
+const previewActiveAlertSchema = z.object({
+  kind: z.literal("operator_alert"),
+  event: z.literal("preview_active"),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  /** The preview's row id, which is what keys the send. */
+  previewId: z.uuid(),
+  prospectName: z.string().trim().min(1).max(120),
+  shopSlug: z.string().trim().min(1).max(120),
+  /** How many times the link's page was requested, scanners included. */
+  fetchCount: z.number().int().min(0),
+  /** How many times a browser entered the shop from the link. */
+  openCount: z.number().int().min(0),
+});
+
+/**
  * A provider ceiling this deployment is approaching or past (docs ADR
  * 20260806-provider-usage-guardrails). The third founder-only alert, on the
  * same SES pipeline and in the same inbox as the two above — English, no
@@ -2130,6 +2155,7 @@ export type NotificationSender = z.infer<typeof notificationSenderSchema>;
 const operatorAlertSchema = z.discriminatedUnion("event", [
   newAccountAlertSchema,
   demoStartedAlertSchema,
+  previewActiveAlertSchema,
   usageCeilingAlertSchema,
   setupRequestAlertSchema,
   founderDigestSchema,
@@ -2355,6 +2381,8 @@ function operatorAlertKey(notification: Extract<Notification, { kind: "operator_
       return `new-account-alert/${notification.userAccountId}`;
     case "demo_started":
       return `demo-started-alert/${notification.shopSlug}`;
+    case "preview_active":
+      return `preview-active-alert/${notification.previewId}`;
     case "usage_ceiling":
       return `usage-ceiling/${notification.ceilingId}/${notification.periodKey}/${notification.level}`;
     case "setup_request":
