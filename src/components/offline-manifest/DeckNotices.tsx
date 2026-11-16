@@ -138,6 +138,14 @@ export function OfflineDeckDelivery({
           : t("manifest.deck.copyCaveat")}
       </p>
       {pending ? <p>{pending}</p> : null}
+      {controls.servedWithoutAnswer && controls.liveOffer ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm font-medium">{t("shared.offlineManifest.single.liveAnswering")}</p>
+          <a href={controls.liveOffer} className={buttonClass({ size: "boat" })}>
+            {t("shared.offlineManifest.single.openLiveManifest")}
+          </a>
+        </div>
+      ) : null}
       {view.rejected > 0 ? (
         <p className="font-semibold text-danger">
           {t("shared.offlineManifest.reconcile.pendingRejectedSingle", { count: view.rejected })}
