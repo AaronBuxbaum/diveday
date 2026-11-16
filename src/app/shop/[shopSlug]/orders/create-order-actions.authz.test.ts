@@ -93,8 +93,10 @@ function invoiceFor(personId: string) {
 
 /** Any seeded diver at the shop — who is billed doesn't matter here. */
 async function seededCustomer(db: AppDb, shopId: string) {
-  const { listOrderableCustomers } = await import("@/db/orders");
-  const [customer] = await listOrderableCustomers(db, shopId);
+  const { searchOrderableCustomers } = await import("@/db/orders");
+  const {
+    customers: [customer],
+  } = await searchOrderableCustomers(db, shopId, "a");
   if (!customer) throw new Error("seeded shop has no people to invoice");
   return customer.id;
 }

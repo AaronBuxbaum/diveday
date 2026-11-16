@@ -2,6 +2,7 @@ import type { Page, Request as PlaywrightRequest } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { counterPath, openBookingActions, rosterRow, seededTripId } from "./helpers";
+import { chooseOrderCustomer, chosenOrderCustomer } from "./order-customer";
 import { seedFacts } from "./shop-facts";
 
 /**
@@ -38,7 +39,7 @@ import { seedFacts } from "./shop-facts";
 const staffCopy = staffTranslator("en-US");
 const NEW_ORDER = "/shop/blue-mantis/orders?add=1";
 // `${fullName} — ${email}`, both deterministic in the seed (src/db/seed.ts).
-const CUSTOMER = "Priya Sharma — priya.sharma@mail.example";
+const CUSTOMER = "Priya Sharma";
 // A seeded departure with divers on it, so the roster has a seat to open.
 const ROSTER_TRIP = "Two-Tank Reef — Molasses & French";
 
@@ -62,7 +63,7 @@ async function postedInvoiceFieldsMatch(
 
 async function submitRefusedDraft(page: Page, description: string) {
   await page.goto(NEW_ORDER);
-  await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
+  await chooseOrderCustomer(page, CUSTOMER);
   await page.locator('input[name="description-0"]').filter({ visible: true }).fill(description);
   await page.locator('input[name="unitAmount-0"]').filter({ visible: true }).fill("12");
   const submittedRequest = page.waitForRequest(
@@ -148,7 +149,7 @@ test.describe("as owner", () => {
     await page.goto(NEW_ORDER);
     await expect(page.getByRole("heading", { level: 2, name: "New order" })).toBeVisible();
 
-    await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
+    await chooseOrderCustomer(page, CUSTOMER);
     await page.getByLabel("Order note").fill("Two-tank reef trip + rental set");
     // The initial line keeps stable posted names as more lines are added.
     const firstRow = page.locator('select[name="kind-0"]').filter({ visible: true });
@@ -240,7 +241,7 @@ test.describe("as owner", () => {
     // A customer but no line items at all: refused by the action itself, no
     // payment intent and no Stripe call.
     await page.goto(NEW_ORDER);
-    await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
+    await chooseOrderCustomer(page, CUSTOMER);
     await page.getByRole("button", { name: "Create and send invoice" }).click();
     await expect(page.getByRole("alert").filter({ hasText: "Pick a customer" })).toContainText(
       "Pick a customer and at least one line item with an amount.",
@@ -255,7 +256,7 @@ test.describe("as owner", () => {
     // previous banner would pass without the second submission ever happening.
     await page.goto(NEW_ORDER);
     await expect(page.getByRole("alert").filter({ hasText: "Pick a customer" })).toHaveCount(0);
-    await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
+    await chooseOrderCustomer(page, CUSTOMER);
     await page
       .locator('input[name="description-0"]')
       .filter({ visible: true })
@@ -276,7 +277,7 @@ test.describe("as owner", () => {
   }) => {
     await seedFacts(request, ["stripeAccount"]);
     await page.goto(NEW_ORDER);
-    await page.getByLabel("Customer").selectOption({ label: CUSTOMER });
+    await chooseOrderCustomer(page, CUSTOMER);
     await page.getByLabel("Order note").fill("Twenty-line test invoice");
     await page
       .getByLabel(staffCopy("orders.new.addressLine1"), { exact: true })
@@ -356,13 +357,7 @@ test.describe("as owner", () => {
       .filter({ visible: true })
       .fill("Target A edited fee");
     await page.getByLabel("Order note").fill("Target A note");
-    const customerBName = (
-      await page
-        .getByLabel("Customer")
-        .locator(`option[value="${targetB.searchParams.get("personId")}"]`)
-        .textContent()
-    )?.split(" — ")[0];
-    if (!customerBName) throw new Error("target B customer missing from the shop selector");
+    const customerBName = "Lena Fischer";
     const formA = await page
       .locator('form:has([name="lineItemCount"])')
       .filter({ visible: true })
@@ -381,7 +376,7 @@ test.describe("as owner", () => {
     await expect(formB.locator('input[name="bookingId"]')).toHaveValue(
       targetB.searchParams.get("bookingId") ?? "",
     );
-    await expect(page.getByLabel("Customer")).toHaveValue(
+    await expect(chosenOrderCustomer(formB)).toHaveValue(
       targetB.searchParams.get("personId") ?? "",
     );
     await expect(page.getByLabel("Order note")).toHaveValue("");
@@ -408,7 +403,7 @@ test.describe("as owner", () => {
     await expect(formB.locator('input[name="bookingId"]')).toHaveValue(
       targetB.searchParams.get("bookingId") ?? "",
     );
-    await expect(page.getByLabel("Customer")).toHaveValue(
+    await expect(chosenOrderCustomer(formB)).toHaveValue(
       targetB.searchParams.get("personId") ?? "",
     );
     await expect(page.getByLabel("Order note")).toHaveValue("Target B retained note");
