@@ -280,3 +280,16 @@ describe("a private charter ask", () => {
     expect(await storedCharter(email)).toBe(false);
   });
 });
+
+describe("the flexible-dates flag", () => {
+  // The form says it in the "when suits" words; no field sends a flag, and a
+  // stray `dateFlexible=false` must not read as true (any string was truthy).
+  it("never turns a posted dateFlexible string into a flexible request", async () => {
+    const email = "flexible-flag@example.com";
+    const form = requestForm(email);
+    form.set("dateFlexible", "false");
+    expect(await submit(form)).toEqual({ success: true });
+    const page = await listOpenDateInterests(db, ctx.shop.id);
+    expect(page.rows.find((row) => row.email === email)?.dateFlexible).toBe(false);
+  });
+});

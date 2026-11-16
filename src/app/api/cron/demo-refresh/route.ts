@@ -1,11 +1,6 @@
-import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SCHEDULE_MIN_RUNWAY_DAYS, refreshCanonicalDemoSchedule } from "@/db/demo-refresh";
-import { sqlStateOf } from "@/db/query-helpers";
-import { requireCronSecret } from "@/features/cron-auth";
-import { flushLogs } from "@/features/log-shipping";
-import { sentry } from "@/features/sentry-server";
-import { log } from "@/lib/log";
+import { cronRoute } from "@/features/cron-route";
 
 /**
  * Most passes are one indexed aggregate and no write at all. The pass that does
@@ -14,29 +9,6 @@ import { log } from "@/lib/log";
  * rather than the 60s the read-only passes get by.
  */
 export const maxDuration = 300;
-
-/** Separate Sentry monitor from the other crons -- a demo nobody can book from is its own incident. */
-const CRON_MONITOR_SLUG =
-  process.env.SENTRY_DEMO_REFRESH_CRON_MONITOR_SLUG || "diveday-demo-refresh";
-
-/**
- * Must stay in lockstep with the `crons` entry in vercel.json. 09:08 UTC is
- * 4:08 to 5:08 AM in the demo shop's zone, before its day: the today pass
- * moves a boat onto `demoTodayDepartureStart(now)`, and run in the shop's
- * evening (it was 03:45 UTC) that boat sailed at 11:46 PM (issue #2440). The
- * minute is the one after the usage pass, so the 09:xx dailies wake the
- * database once (`src/lib/cron-schedule.test.ts`). `checkinMargin`
- * is generous because the pass only has to act before the board runs out, which
- * `DEMO_SCHEDULE_MIN_RUNWAY_DAYS` leaves three weeks for; `maxRuntime` sits
- * above `maxDuration` so a platform-killed run reads as timed-out rather than
- * still running.
- */
-const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "8 9 * * *" },
-  checkinMargin: 240,
-  maxRuntime: 10,
-  timezone: "Etc/UTC",
-} as const;
 
 /**
  * Keep the canonical demo shop's schedule from aging out from under its seed.
@@ -60,66 +32,21 @@ const CRON_MONITOR_CONFIG = {
  * shop -- and it runs *before* the Sentry check-in so an unauthorized probe can
  * never tell the monitor the pass happened.
  */
-export async function GET(request: Request) {
-  const refusal = requireCronSecret(request);
-  if (refusal) return refusal;
-
-  const checkInId = await sentry.captureCheckIn(
-    { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
-    CRON_MONITOR_CONFIG,
-  );
-
-  try {
+export const GET = cronRoute({
+  id: "demo-refresh",
+  // 09:08 UTC is 4:08 to 5:08 AM in the demo shop's zone, before its day: the
+  // today pass moves a boat onto `demoTodayDepartureStart(now)`, and run in the
+  // shop's evening (it was 03:45 UTC) that boat sailed at 11:46 PM (issue
+  // #2440). The minute is the one after the usage pass, so the 09:xx dailies
+  // wake the database once (`src/lib/cron-schedule.test.ts`). `checkinMargin`
+  // is generous because the pass only has to act before the board runs out,
+  // which `DEMO_SCHEDULE_MIN_RUNWAY_DAYS` leaves three weeks for.
+  crontab: "8 9 * * *",
+  checkinMargin: 240,
+  maxRuntime: 10,
+  run: async () => {
     const db = await getDb();
     const summary = await refreshCanonicalDemoSchedule(db);
-
-    log("cron_demo_refresh.pass_complete", "info", {
-      minRunwayDays: DEMO_SCHEDULE_MIN_RUNWAY_DAYS,
-      // The runway *before* this pass acted: read over time it says how fast
-      // the demo board is consumed, and a value that never falls means the
-      // restore is running but the threshold is never being crossed.
-      runwayDays: summary.runwayDays,
-      refreshed: summary.refreshed,
-      // What it took to keep a boat on today's board: "already" on most days,
-      // "moved" when the narrow pass pulled the next departure onto today,
-      // "restored" when the full rebuild covered it. A run of "no_candidate"
-      // means the board is healthy but every upcoming trip is a series instance
-      // the nudge refuses to move, which is worth seeing rather than guessing at.
-      todayDeparture: summary.today,
-      // A database with no canonical demo is a legitimate state (one seeded
-      // around an existing shop), not a failure -- but it is worth being able
-      // to tell apart from a pass that found a healthy board.
-      demoShopFound: summary.found,
-    });
-
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "ok" });
-    return NextResponse.json(summary);
-  } catch (error) {
-    // Either the database was unreachable or the restore itself failed. The
-    // restore runs in one transaction, so the demo is whatever it was before
-    // this pass -- an aging board, not a half-wiped shop -- and tomorrow's tick
-    // re-attempts it.
-    await sentry.captureException(error, {
-      tags: { cron_pass: "demo_refresh" },
-    });
-    // The payload used to be `{}`, which said a pass failed and nothing about
-    // why -- the line that sent someone to Sentry to learn even the shape of
-    // the failure (issue #517). Both fields are closed vocabularies rather
-    // than prose: an error class name and Postgres's own SQLSTATE. Neither can
-    // carry a row value, so this stays inside the no-PII-in-logs rule that
-    // keeps the message itself out.
-    //
-    // `sqlStateOf`, not `error.code`: drizzle wraps every driver error in a
-    // `DrizzleQueryError` that carries no `code` of its own, so reading the top
-    // level logged `sqlState: undefined` for exactly the failures the field was
-    // added to explain. The whole point of the field is the query error.
-    log("cron_demo_refresh.pass_failed", "error", {
-      errorName: error instanceof Error ? error.name : "unknown_error",
-      sqlState: sqlStateOf(error),
-    });
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
-    return NextResponse.json({ error: "refresh_unavailable" }, { status: 503 });
-  } finally {
-    await flushLogs();
-  }
-}
+    return { ...summary, minRunwayDays: DEMO_SCHEDULE_MIN_RUNWAY_DAYS };
+  },
+});

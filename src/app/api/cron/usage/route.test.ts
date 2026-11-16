@@ -187,8 +187,8 @@ describe("GET /api/cron/usage — alerting", () => {
     );
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(releaseUsageAlert).toHaveBeenCalledTimes(1);
-    // The run was not clean, and the scheduler's log should agree with Sentry.
-    expect(response.status).toBe(500);
+    // The run was not clean: the monitor says so, the body still answers.
+    expect(response.status).toBe(200);
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "error" }),
     );

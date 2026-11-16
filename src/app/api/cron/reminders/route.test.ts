@@ -196,21 +196,18 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
     vi.mocked(retryPendingMediaDeletions).mockRejectedValue(new Error("boom"));
 
     const response = await GET(cronRequest(`Bearer ${secret}`));
-    const body = (await response.json()) as Record<string, { status: string; result?: unknown }>;
+    const body = (await response.json()) as Record<string, unknown>;
 
-    expect(response.status).toBe(500);
-    expect(body.mediaDeletions).toEqual({ status: "error" });
-    expect(body.notificationRetries).toEqual({
-      status: "ok",
-      result: { scanned: 1, sent: 1, queued: 0, failed: 0, held: { sent: 0, failed: 0 } },
-    });
+    expect(response.status).toBe(200);
+    expect(body.failedScans).toBe("mediaDeletions");
+    expect(body.mediaDeletionsAttempted).toBeUndefined();
+    expect(body.notificationRetriesScanned).toBe(1);
   });
 
   it("answers 200 when every scan ran", async () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
-    const body = (await response.json()) as Record<string, { status: string }>;
-    expect(Object.values(body).every((outcome) => outcome.status === "ok")).toBe(true);
+    await expect(response.json()).resolves.toMatchObject({ scansFailed: 0 });
   });
 
   it("reports each failed scan to Sentry tagged with its name", async () => {
@@ -263,7 +260,7 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
 
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     expect(sendDueCheckoutRecoveries).toHaveBeenCalledTimes(1);
     expect(summaryLine()).toEqual(
       expect.objectContaining({ scansFailed: 2, failedScans: "notificationRetries,demoShops" }),
@@ -339,7 +336,7 @@ describe("GET /api/cron/reminders — dead-man's switch", () => {
       status: "error",
     });
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
-      tags: { cron_scan: "bootstrap" },
+      tags: { cron_scan: "reminders" },
     });
     expect(drainNotificationRetries).not.toHaveBeenCalled();
   });

@@ -198,10 +198,10 @@ export async function bookSpot(
   // (unknown code, wrong scope, expired, not started) — reusing that here
   // keeps this check from becoming a second oracle for enumerating a shop's
   // live codes; it only ever says "doesn't apply".
+  const tripForGear = await getTripWithBooked(dbi, shopNow.id, tripId);
   let tripPromo: Awaited<ReturnType<typeof getActiveTripPromoByCode>> = null;
   let shopPromo: Awaited<ReturnType<typeof getRedeemableShopPromo>> = null;
   if (promoCodeInput) {
-    const tripForPromo = await getTripWithBooked(dbi, shopNow.id, tripId);
     tripPromo = await getActiveTripPromoByCode(dbi, {
       shopId: shopNow.id,
       tripId,
@@ -212,7 +212,7 @@ export async function bookSpot(
       : await getRedeemableShopPromo(dbi, {
           shopId: shopNow.id,
           code: promoCodeInput,
-          kind: tripForPromo?.courseId ? "course" : "trip",
+          kind: tripForGear?.courseId ? "course" : "trip",
         });
     if (!tripPromo && !shopPromo) {
       return {
@@ -231,7 +231,6 @@ export async function bookSpot(
   // only renders (and only submits `gear-${index}-*`/`nitrox-${index}` fields)
   // under that same condition, so parsing them under a looser one here would
   // read every checkbox as unchecked and silently zero out the diver's fit.
-  const tripForGear = await getTripWithBooked(dbi, shopNow.id, tripId);
   // What each person is coming as (ADR 20261007-participant-types), checked
   // against what this departure sells rather than trusted from the form.
   const parsedTypes = parsePartyTypes(

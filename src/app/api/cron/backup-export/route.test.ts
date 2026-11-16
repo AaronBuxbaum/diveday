@@ -142,7 +142,7 @@ describe("GET /api/cron/backup-export — the weekly pass", () => {
 
     expect(summaryLine()).toEqual(
       expect.objectContaining({
-        event: "cron_backup_export.pass_complete",
+        event: "cron_backup_export.scan_complete",
         delivered: 2,
         failed: 0,
       }),
@@ -152,7 +152,7 @@ describe("GET /api/cron/backup-export — the weekly pass", () => {
     );
   });
 
-  it("keeps going past a failing shop, reports 500, and names the failure by code", async () => {
+  it("keeps going past a failing shop, flags the monitor, and names the failure by code", async () => {
     vi.mocked(listShopsDueForBackup).mockResolvedValue([
       dueShop("broken-bucket"),
       dueShop("fine-shop"),
@@ -171,7 +171,7 @@ describe("GET /api/cron/backup-export — the weekly pass", () => {
       } as never);
 
     const response = await GET(cronRequest(`Bearer ${secret}`));
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       delivered: 1,
       failed: 1,
@@ -213,7 +213,7 @@ describe("GET /api/cron/backup-export — the weekly pass", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
     expect(summaryLine()).toEqual(
-      expect.objectContaining({ event: "cron_backup_export.pass_complete", shopsDue: 0 }),
+      expect.objectContaining({ event: "cron_backup_export.scan_complete", shopsDue: 0 }),
     );
   });
 

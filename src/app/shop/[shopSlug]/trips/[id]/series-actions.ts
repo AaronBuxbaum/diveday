@@ -124,21 +124,24 @@ export async function cancelSeriesAction(shopSlug: string, tripId: string, serie
   }
   // One line on each date's own log, so a departure that disappeared from the
   // board says who took it and why.
-  for (const tripOfRun of result.tripIds) {
-    try {
-      await recordTripActivity(db, {
-        shopId: s.user.shopId,
-        tripId: tripOfRun,
-        actorPersonId: s.user.personId,
-        entry: { code: "series_cancelled" },
-      });
-    } catch (error) {
-      log("series.cancel_activity_failed", "error", {
-        tripId: tripOfRun,
-        errorCode: error instanceof Error ? error.name : "unknown_error",
-      });
-    }
-  }
+  // Concurrent: a run of a hundred dates is one round trip, not a hundred.
+  await Promise.all(
+    result.tripIds.map(async (tripOfRun) => {
+      try {
+        await recordTripActivity(db, {
+          shopId: s.user.shopId,
+          tripId: tripOfRun,
+          actorPersonId: s.user.personId,
+          entry: { code: "series_cancelled" },
+        });
+      } catch (error) {
+        log("series.cancel_activity_failed", "error", {
+          tripId: tripOfRun,
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
+      }
+    }),
+  );
   revalidatePath(shopPath(shopSlug, "schedule", "board"));
   revalidatePath(shopPath(shopSlug));
   revalidateAndRedirect(

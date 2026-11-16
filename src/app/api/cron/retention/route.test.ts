@@ -124,12 +124,14 @@ describe("GET /api/cron/retention — reporting", () => {
 
     expect(summaryLine()).toEqual(
       expect.objectContaining({
-        event: "cron_retention.prune_complete",
+        event: "cron_retention.scan_complete",
         level: "info",
         totalDeleted: 15,
-        tablesFailed: 0,
-        stripe_webhook_events_deleted: 12,
-        activity_events_deleted: 3,
+        failedTables: [],
+        outcomes: expect.arrayContaining([
+          expect.objectContaining({ table: "stripe_webhook_events", deleted: 12 }),
+          expect.objectContaining({ table: "activity_events", deleted: 3 }),
+        ]),
       }),
     );
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
@@ -149,7 +151,7 @@ describe("GET /api/cron/retention — reporting", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
     expect(summaryLine()).toEqual(
-      expect.objectContaining({ event: "cron_retention.prune_complete", totalDeleted: 0 }),
+      expect.objectContaining({ event: "cron_retention.scan_complete", totalDeleted: 0 }),
     );
   });
 
@@ -174,7 +176,6 @@ describe("GET /api/cron/retention — reporting", () => {
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "error" }),
     );
-    expect(summaryLine()).toEqual(expect.objectContaining({ tablesCapped: "activity_events" }));
     const warned = vi.mocked(console.warn).mock.calls.map((call) => JSON.parse(String(call[0])));
     expect(warned).toEqual([
       expect.objectContaining({
@@ -185,9 +186,8 @@ describe("GET /api/cron/retention — reporting", () => {
     ]);
   });
 
-  // A partial pass answers 500 so the scheduler's invocation log and Sentry
-  // agree with each other that this run was not clean.
-  it("answers 500 and flags the monitor when an arm failed", async () => {
+  // A partial pass flags the monitor; the body still answers with what it did.
+  it("flags the monitor when an arm failed", async () => {
     vi.mocked(pruneExpiredRecords).mockResolvedValue({
       outcomes: [
         {
@@ -204,10 +204,8 @@ describe("GET /api/cron/retention — reporting", () => {
       skippedTables: [],
     } as never);
     const response = await GET(cronRequest(`Bearer ${secret}`));
-    expect(response.status).toBe(500);
-    expect(summaryLine()).toEqual(
-      expect.objectContaining({ tablesFailed: 1, failedTables: "account_sessions" }),
-    );
+    expect(response.status).toBe(200);
+    expect(summaryLine()).toEqual(expect.objectContaining({ failedTables: ["account_sessions"] }));
     expect(
       vi.mocked(console.error).mock.calls.map((call) => JSON.parse(String(call[0]))),
     ).toContainEqual(
@@ -236,7 +234,7 @@ describe("GET /api/cron/retention — reporting", () => {
     await expect(response.json()).resolves.toMatchObject({
       skippedTables: ["stripe_webhook_events"],
     });
-    expect(summaryLine()).toMatchObject({ tablesSkipped: "stripe_webhook_events" });
+    expect(summaryLine()).toMatchObject({ skippedTables: ["stripe_webhook_events"] });
     expect(
       vi.mocked(console.warn).mock.calls.map((call) => JSON.parse(String(call[0]))),
     ).toContainEqual(

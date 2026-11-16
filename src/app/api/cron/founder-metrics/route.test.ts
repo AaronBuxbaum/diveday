@@ -143,6 +143,7 @@ describe("every night", () => {
     expect(await response.json()).toEqual({
       weekStart: "2026-10-12",
       diveDays: 1,
+      diveDayShops: 1,
       digest: "not_today",
     });
     expect(metrics.syncShopMilestones).toHaveBeenCalledTimes(1);
@@ -215,7 +216,7 @@ describe("Monday's digest", () => {
   it("gives the week back and marks no stall when the mail did not leave", async () => {
     vi.mocked(notify).mockResolvedValue({ status: "not_configured" });
     const response = await authorized();
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     expect(metrics.releaseFounderDigest).toHaveBeenCalledWith(expect.anything(), "2026-10-05");
     expect(metrics.markStallsAlerted).not.toHaveBeenCalled();
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
