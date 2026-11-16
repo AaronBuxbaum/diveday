@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   platforms: vi.fn(),
   push: vi.fn(),
   checkIn: vi.fn(),
+  capture: vi.fn(),
   flush: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: mocks.getDb }));
@@ -14,7 +15,7 @@ vi.mock("@/features/wallet-pass", () => ({
   configuredWalletPlatforms: mocks.platforms,
   pushChangedWalletPasses: mocks.push,
 }));
-vi.mock("@/features/sentry-server", () => ({ sentry: { captureCheckIn: mocks.checkIn } }));
+vi.mock("@/features/sentry-server", () => ({ sentry: { captureCheckIn: mocks.checkIn, captureException: mocks.capture } }));
 vi.mock("@/features/log-shipping", () => ({ flushLogs: mocks.flush }));
 
 import { GET, maxDuration } from "./route";
@@ -80,10 +81,13 @@ describe("the ten-minute native Wallet pass", () => {
     expect(mocks.flush).toHaveBeenCalledOnce();
   });
   it("closes its monitor and returns a code without exposing a bootstrap error", async () => {
-    mocks.getDb.mockRejectedValueOnce(new Error("private provider detail"));
+    const failure = new Error("private provider detail");
+    mocks.getDb.mockRejectedValueOnce(failure);
     const response = await GET(request());
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "wallet_unavailable" });
+    // The real error reaches Sentry, tagged; only the response body stays coded.
+    expect(mocks.capture).toHaveBeenCalledWith(failure, { tags: { cron_scan: "wallet_passes" } });
     expect(mocks.checkIn).toHaveBeenLastCalledWith({
       checkInId: "test-check-in",
       monitorSlug: "diveday-wallet-passes",

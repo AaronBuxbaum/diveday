@@ -31,7 +31,8 @@ export async function GET(request: Request) {
       status: summary.failed ? "error" : "ok",
     });
     return Response.json(summary, { status: summary.failed ? 500 : 200 });
-  } catch {
+  } catch (error) {
+    await sentry.captureException(error, { tags: { cron_scan: "wallet_passes" } });
     await sentry.captureCheckIn({ checkInId, monitorSlug, status: "error" });
     return Response.json({ error: "wallet_unavailable" }, { status: 503 });
   } finally {
