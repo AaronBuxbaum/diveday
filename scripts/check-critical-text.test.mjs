@@ -10,7 +10,7 @@ const surfaces = () => ({
     '<input className="w-full px-5 py-4 text-base outline-none focus-ring-inset" />\n',
   "src/components/PublicShopNav.tsx": 'const linkClass =\n  "rounded px-3 py-2 text-base";\n',
   "src/app/shop/[shopSlug]/orders/_components/OrdersLedger.tsx": [
-    '<span className="truncate text-base font-medium sm:w-56 sm:shrink-0" />',
+    '<span className="break-words text-base font-medium sm:w-56 sm:shrink-0 sm:truncate" />',
     '<span className="text-base text-muted text-pretty sm:truncate sm:text-sm" />',
     '<span className="min-w-20 text-end text-base font-semibold tabular-nums" />',
   ].join("\n"),
@@ -56,7 +56,7 @@ describe("check-critical-text", () => {
   it("names the orders ledger cell that lost its size", () => {
     const { stderr } = run({
       "src/app/shop/[shopSlug]/orders/_components/OrdersLedger.tsx":
-        '<span className="truncate text-base font-medium sm:w-56 sm:shrink-0" />\n',
+        '<span className="break-words text-base font-medium sm:w-56 sm:shrink-0 sm:truncate" />\n',
     });
     expect(stderr).toContain("orders phone trip titles must be 16px on phones");
     expect(stderr).toContain("orders amounts must be 16px on phones");
