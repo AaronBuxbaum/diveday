@@ -9,6 +9,7 @@ import { sendFindMyBookingLinks } from "@/features/find-my-booking";
 import { blankAsAbsent, parseForm } from "@/features/form-parse";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { isValidCalendarDate } from "@/lib/calendar-date";
 import {
   declarationWithinPersonBudget,
   diveDeclarationInput,
@@ -25,8 +26,9 @@ const joinSchema = z.object({
   fullName: diverNameSchema,
   email: diverEmailSchema,
   phone: blankAsAbsent(diverPhoneSchema),
-  availableFrom: blankAsAbsent(z.string()),
-  availableUntil: blankAsAbsent(z.string()),
+  // A real day, or nothing: a picker-less browser posts whatever was typed.
+  availableFrom: blankAsAbsent(z.string().refine(isValidCalendarDate)),
+  availableUntil: blankAsAbsent(z.string().refine(isValidCalendarDate)),
 });
 
 export type LastMinuteListFormState = { error?: string; success?: boolean };
