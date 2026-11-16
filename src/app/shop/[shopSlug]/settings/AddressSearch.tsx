@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useId, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import {
@@ -244,6 +244,13 @@ export function AddressSearch({
   }
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Leaving the page with a keystroke still settling must not spend a billed lookup.
+  useEffect(
+    () => () => {
+      if (debounce.current) clearTimeout(debounce.current);
+    },
+    [],
+  );
   function onQueryChange(value: string) {
     setQuery(value);
     if (debounce.current) clearTimeout(debounce.current);
