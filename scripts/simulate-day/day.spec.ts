@@ -13,6 +13,8 @@ import { BROWSER_CLOCK_COOKIE, pinBrowserClock } from "../../e2e/browser-clock";
 import { makeActivitySafe } from "../../e2e/fixtures";
 import {
   offlineCopySaved,
+  openDeckDetails,
+  openDeckPerson,
   openManifestPerson,
   openThreadStep,
   STAFF_DAY_HEADING,
@@ -183,6 +185,7 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       );
       await staff.goto(manifestPath());
       await offlineCopySaved(staff);
+      await openDeckDetails(staff);
       const plannedDives = await staff.getByRole("link", { name: /^After dive \d+$/ }).count();
       const sailAt = demoTodayDepartureStart(dayStart, DEMO_SHOP_TIMEZONE);
       const endsAt = new Date(sailAt.getTime() + SEEDED_DEPARTURE_MS);
@@ -335,7 +338,11 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       await advanceClock(at(id));
       await staff.goto(manifestPath());
       await offlineCopySaved(staff);
-      const tap = staff.getByRole("button", { name: word, exact: true });
+      // The five stage taps live under the Deck's Details.
+      await openDeckDetails(staff);
+      const tap = staff
+        .getByRole("button", { name: word, exact: true })
+        .and(staff.locator("[aria-pressed]"));
       await tap.click();
       await expect(tap).toHaveAttribute("aria-pressed", "true");
       const shots = [await snap(staff, index, id)];
@@ -373,7 +380,7 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       await offlineCopySaved(staff);
       const counted = await countEveryone(staff, { checkpoint: "departure" });
       day.boardedNames = counted.boarded;
-      await expect(staff.getByRole("heading", { name: "Roll call complete" })).toBeVisible();
+      await expect(staff.getByText(/^(\d+) of \1 people accounted for$/)).toBeVisible();
       return {
         note: `${counted.boarded.length} divers boarded, ${counted.notBoarded.length} recorded not boarded (${counted.notBoarded.join(", ") || "none"}), ${counted.crew} crew aboard`,
         screenshots: [await snap(staff, index, id)],
@@ -391,6 +398,7 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
         // Between dives the crew say where the boat is — the one word with no
         // state of its own on the timeline.
         if (dive === 0) {
+          await openDeckDetails(staff);
           const surface = staff.getByRole("button", { name: "Surface", exact: true });
           await surface.click();
           await expect(surface).toHaveAttribute("aria-pressed", "true");
@@ -399,7 +407,7 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
           checkpoint: `after_dive_${dive + 1}`,
           onlyNames: day.boardedNames,
         });
-        await expect(staff.getByRole("heading", { name: "Roll call complete" })).toBeVisible();
+        await expect(staff.getByText(/^(\d+) of \1 people accounted for$/)).toBeVisible();
         shots.push(await snap(staff, index, id, `dive-${dive + 1}`));
         notes.push(
           `after dive ${dive + 1}: ${counted.boarded.length} divers and ${counted.crew} crew back aboard`,
@@ -433,7 +441,10 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
         if (tripIdFromPath(href) === day.tripId) continue;
         await staff.goto(`${href}/manifest`);
         await offlineCopySaved(staff);
-        const home = staff.getByRole("button", { name: "Home", exact: true });
+        await openDeckDetails(staff);
+        const home = staff
+          .getByRole("button", { name: "Home", exact: true })
+          .and(staff.locator("[aria-pressed]"));
         await home.click();
         await expect(home).toHaveAttribute("aria-pressed", "true");
       }
@@ -484,70 +495,79 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
 }
 
 /**
- * Record everybody at one checkpoint, the way the crew does: every diver with
- * a boarding control is boarded; at departure a diver *without* one (blocked,
- * still on the dock) is recorded not boarded from their own panel — the
- * two-step the manifest insists on; then every crew member is called aboard.
- * After a dive only the divers who boarded are counted — a straggler who never
- * got on the boat is not "back aboard" because somebody's thumb slipped.
+ * Record everybody at one checkpoint on the Deck, the way the crew does: each
+ * diver with a record control is recorded aboard; at departure a diver
+ * *without* one (blocked, still on the dock) is recorded not boarded from
+ * their own panel under "Not aboard / details" — the two-step the manifest
+ * insists on; then every crew member is recorded aboard. After a dive only the
+ * divers who boarded are counted — a straggler who never got on the boat is
+ * not "back aboard" because somebody's thumb slipped.
  */
 async function countEveryone(
   page: Page,
   options: { checkpoint: string; onlyNames?: string[] },
 ): Promise<{ boarded: string[]; notBoarded: string[]; crew: number }> {
-  const rows = page.locator("#roll-call-list > ul > li");
-  await rows.first().waitFor();
+  const find = page.locator('[data-deck-screen="find"]');
+  const people = async (role: "Guest" | "Crew"): Promise<string[]> => {
+    await page.getByRole("button", { name: "Find a person", exact: true }).click();
+    await expect(find).toBeVisible();
+    return find
+      .locator("li")
+      .filter({ hasText: role })
+      .getByRole("button")
+      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label") ?? ""));
+  };
+  const record = async (name: string): Promise<boolean> => {
+    await openDeckPerson(page, name);
+    const aboard = page.getByRole("button", { name: `Record ${name} aboard`, exact: true });
+    if ((await aboard.count()) === 0) {
+      return (
+        (await page.getByRole("button", { name: `Undo ${name}’s record`, exact: true }).count()) > 0
+      );
+    }
+    await aboard.click();
+    await expect(
+      page.locator('[data-deck-screen="receipt"]').getByRole("heading", { name, exact: true }),
+    ).toBeVisible();
+    return true;
+  };
   const boarded: string[] = [];
   const notBoarded: string[] = [];
-  const total = await rows.count();
-  for (let i = 0; i < total; i += 1) {
-    const row = rows.nth(i);
-    const name = await rowName(row);
+  const guests = await people("Guest");
+  const crewNames = await people("Crew");
+  for (const name of guests) {
     if (options.onlyNames && !options.onlyNames.includes(name)) continue;
-    const settled = row.getByRole("button", { name: "Boarded — tap again to undo" });
-    if (await settled.count()) {
-      boarded.push(name);
-      continue;
-    }
-    const board = row.getByRole("button", { name: "Mark boarded" });
-    if (await board.count()) {
-      const before = await page
-        .getByRole("button", { name: "Boarded — tap again to undo" })
-        .count();
-      await board.evaluate((button) => button.scrollIntoView({ block: "center" }));
-      await board.click();
-      await expect(page.getByRole("button", { name: "Boarded — tap again to undo" })).toHaveCount(
-        before + 1,
-      );
+    if (await record(name)) {
       boarded.push(name);
       continue;
     }
     if (options.checkpoint === "departure") {
+      await page.getByRole("button", { name: "Not aboard / details", exact: true }).click();
+      const row = page
+        .locator("#roll-call-list > ul > li")
+        .filter({ has: page.locator('button[aria-haspopup="dialog"]', { hasText: name }) })
+        .filter({ visible: true });
       await openManifestPerson(row);
       const dialog = page.getByRole("dialog");
       const notBoard = dialog.getByRole("button", { name: "Mark not boarded" });
       await notBoard.evaluate((button) => button.scrollIntoView({ block: "center" }));
       await notBoard.click();
-      await expect(
-        dialog.getByRole("button", { name: "Not boarded — tap again to undo" }),
-      ).toBeVisible();
-      await dialog.getByRole("button", { name: "Close person details" }).click();
-      await expect(dialog).toHaveCount(0);
+      const receipt = page.locator('[data-deck-screen="receipt"]');
+      await expect(receipt.getByRole("heading", { name, exact: true })).toBeVisible();
+      await expect(receipt.getByText("Staying ashore recorded", { exact: true })).toBeVisible();
       notBoarded.push(name);
     }
   }
-  const crewAboard = page.getByRole("button", { name: "Mark aboard" });
-  let crew = await page.getByRole("button", { name: "Aboard — tap again to undo" }).count();
-  for (let guard = 0; guard < 12; guard += 1) {
-    if ((await crewAboard.count()) === 0) break;
-    const settled = page.getByRole("button", { name: "Aboard — tap again to undo" });
-    const before = await settled.count();
-    const next = crewAboard.first();
-    await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
-    await next.click();
-    await expect(settled).toHaveCount(before + 1);
-    crew = before + 1;
+  let crew = 0;
+  for (const name of crewNames) {
+    if (await record(name)) crew += 1;
   }
+  // The boat's own "Home" word (under Details) is a pressed-state toggle; the
+  // Deck's way back to its home screen is the one that is not.
+  await page
+    .getByRole("button", { name: "Home", exact: true })
+    .and(page.locator(":not([aria-pressed])"))
+    .click();
   return { boarded, notBoarded, crew };
 }
 
@@ -563,16 +583,6 @@ function status(): Locator {
 
 async function statusText(): Promise<string> {
   return (await status().innerText()).replace(/\s+/g, " ").trim();
-}
-
-/** The person a roll-call row is about: the name on its own panel trigger. */
-async function rowName(row: Locator): Promise<string> {
-  // The trigger's accessible name is "Open details for {name}"
-  // (`manifest.openPersonDetails`); its visible text starts with the row's
-  // index, which is not a person.
-  const trigger = row.locator('button[aria-haspopup="dialog"]').first();
-  const label = (await trigger.getAttribute("aria-label")) ?? "";
-  return label.replace(/^Open details for\s+/, "").trim();
 }
 
 /** Move the server's clock and the browsers' clocks to `instant`, together. */
