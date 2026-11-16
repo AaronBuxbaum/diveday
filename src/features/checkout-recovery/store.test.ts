@@ -220,7 +220,8 @@ describe("sendDueCheckoutRecoveries", () => {
       emailProvider: email.provider,
       checkoutProvider: fakeCheckoutProvider(stillOpen),
     });
-    expect(night).toMatchObject({ sent: 0, deferred: 1 });
+    // A sleeping shop is not read at all, so it cannot take a slot from a shop that is awake.
+    expect(night).toMatchObject({ scanned: 0, sent: 0, deferred: 0 });
     expect(email.sent).toHaveLength(0);
 
     // 22:00 UTC is 08:00 the next morning there.
@@ -235,6 +236,21 @@ describe("sendDueCheckoutRecoveries", () => {
       .from(bookingCheckouts)
       .where(eq(bookingCheckouts.id, checkoutId));
     expect(row?.abandonedRecoverySentAt).not.toBeNull();
+  });
+
+  it("never sends at 3 AM shop time, however large the batch", async () => {
+    const { db, shop } = await pendingCheckoutContext(3);
+    // 12:00 UTC is 03:00 at UTC-9.
+    await setShopTimezone(db, shop.id, "Etc/GMT+9");
+    const email = fakeEmail();
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+      batchLimit: 1,
+    });
+    expect(summary).toMatchObject({ scanned: 0, sent: 0 });
+    expect(email.sent).toHaveLength(0);
   });
 
   it("holds the claim while sending, so an overlapping run cannot send the same nudge", async () => {
