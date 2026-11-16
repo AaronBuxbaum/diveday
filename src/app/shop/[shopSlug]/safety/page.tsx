@@ -96,13 +96,17 @@ export default async function SafetyReportPage({
       ) : year ? (
         // The year is the figures alone: the lists behind them stay on each
         // month. This is the page printed for a third party.
-        <MonthFigures label={t("incidents.safety.year.figuresLabel")} figures={figures} />
+        <MonthFigures
+          label={t("incidents.safety.year.figuresLabel")}
+          figures={figures}
+          columns={3}
+        />
       ) : (
         <div className="space-y-10">
           <MonthFigures
             label={t("incidents.safety.figuresLabel")}
             figures={monthTiles}
-            columns={4}
+            columns={3}
           />
           <SafetyLists
             month={safety}

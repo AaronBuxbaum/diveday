@@ -4,20 +4,17 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 /** Unknown historical records do not count as clean or as proof of no card. */
 export function crewSafetyValue(safety: SafetyMonth, t: StaffTranslator) {
   const unknown = safety.unknownCredentialSailings;
-  const allUnavailable = safety.crewSailings > 0 && safety.checkedSailings === 0 && unknown > 0;
+  const people = safety.crewCredentialStates;
   const value =
-    safety.crewSailings > 0 && safety.checkedSailings === 0
-      ? unknown > 0
+    people.length === 0
+      ? "—"
+      : safety.crewSailings === unknown
         ? t("incidents.safety.crewHistoryUnavailableValue")
-        : t("staffing.credentials.noneOnFile")
-      : t("incidents.safety.crewValue", {
-          lapsed: safety.lapsedSailings.length,
-          sailings: safety.checkedSailings,
-        });
+        : t("incidents.safety.crewValue", {
+            credentialed: people.filter((person) => person.credentialed).length,
+            crew: people.length,
+          });
   const detail = [
-    safety.crewSailings > safety.unknownCredentialSailings
-      ? t("incidents.safety.crewObservation")
-      : null,
     unknown > 0 ? t("incidents.safety.crewHistoryUnavailable", { count: unknown }) : null,
     safety.unrecordedSailings > 0
       ? t("incidents.safety.crewDetailUnrecorded", {
@@ -30,11 +27,7 @@ export function crewSafetyValue(safety: SafetyMonth, t: StaffTranslator) {
     .join(" · ");
   return {
     value,
-    detail:
-      detail ||
-      (allUnavailable
-        ? t("incidents.safety.crewHistoryUnavailable", { count: unknown })
-        : t("incidents.safety.crewDetail", { sailings: safety.crewSailings })),
+    detail,
     attention: Boolean(unknown || safety.unrecordedSailings || safety.lapsedSailings.length),
   };
 }

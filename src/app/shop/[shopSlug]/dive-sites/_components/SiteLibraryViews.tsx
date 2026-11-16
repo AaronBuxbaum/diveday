@@ -15,17 +15,21 @@ export function SiteLibraryViews({
   carry = {},
   t,
   className = "my-4",
+  fill = false,
 }: {
   shopSlug: string;
   current: "library" | "catalog";
   carry?: { q?: string } & Pick<SiteListFilters, "difficulty" | "need">;
   t: StaffTranslator;
   className?: string;
+  /** Span the container; the map overlay gives it a fixed width so the two never wrap. */
+  fill?: boolean;
 }) {
   const library = shopPath(shopSlug, "dive-sites");
   return (
     <SegmentedControl
       className={className}
+      fill={fill}
       ariaLabel={t("diveSites.list.viewsLabel")}
       currentKey={current}
       ariaCurrentValue="true"

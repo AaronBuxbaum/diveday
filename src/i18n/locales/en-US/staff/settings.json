@@ -366,11 +366,11 @@
     },
     "counterQr": {
       "heading": "The counter card",
-      "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification and sizes, and their release goes out, all before they reach the front of the queue."
+      "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification, and sizes, and their release goes out, all before they reach the front of the queue."
     },
     "certCheck": {
       "heading": "Card checks",
-      "description": "The DiveDay browser extension checks NAUI, SDI, GUE and CMAS cards, and PADI when “PADI checks (beta)” is on. For SSI, it opens a prefilled form for you to complete. Use Chrome or Edge on a computer.",
+      "description": "The DiveDay browser extension checks NAUI, SDI, GUE, and CMAS cards, and PADI when “PADI checks (beta)” is on. For SSI, it opens a prefilled form for you to complete. Use Chrome or Edge on a computer.",
       "added": "Added to this browser ({version})",
       "notAdded": "Not added",
       "outdated": "Update the extension: this browser has {version}, DiveDay needs {minimum}.",
@@ -460,7 +460,7 @@
       "workOrders": {
         "heading": "Gear servicing",
         "label": "Service divers’ own gear",
-        "description": "Work orders, tags and a ready email for gear divers bring in."
+        "description": "Work orders, tags, and a ready email for gear divers bring in."
       },
       "promoCodes": {
         "heading": "Promo codes",
@@ -540,7 +540,7 @@
       "publicConditions": {
         "heading": "Public conditions",
         "label": "Show divers the automated forecast",
-        "description": "The water, sea and wind outlook on each trip page."
+        "description": "The water, sea, and wind outlook on each trip page."
       },
       "fieldGuide": {
         "heading": "Field guide",
@@ -572,6 +572,21 @@
         "heading": "Buddy planning",
         "label": "Plan buddy teams for each trip",
         "description": "Keep optional buddy planning in The day"
+      },
+      "computerDives": {
+        "heading": "Computer dives",
+        "label": "Keep dive computer files on a diver’s record",
+        "description": "Upload a diver’s computer log and keep its dives beside their file."
+      },
+      "courses": {
+        "heading": "Courses",
+        "label": "Teach courses",
+        "description": "Courses and Certifications for staff, and the course catalog divers book from."
+      },
+      "embeds": {
+        "heading": "Website widgets",
+        "label": "Let your own website show your schedule",
+        "description": "Frames for your site: the calendar, departures, courses, and reviews."
       }
     },
     "crewSchedule": {
@@ -850,7 +865,7 @@
     "rowCount": "{count, plural, one {# row} other {# rows}}",
     "notIncluded": {
       "label": "Not included, on purpose:",
-      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the buddy-team trail, weather-cancellation state, DiveDay’s own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course interests <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export. See the README."
+      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the buddy-team trail, weather-cancellation state, DiveDay’s own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions, and course interests <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export. See the README."
     },
     "filePurposes": {
       "shop": "Shop profile",
@@ -1418,7 +1433,7 @@
     "bookButton": {
       "buttonText": "Book a dive"
     },
-    "footer": "Every embed points at <link>your public schedule</link>. Trip edits, new departures and price changes show up the moment a diver loads it.",
+    "footer": "Every embed points at <link>your public schedule</link>. Trip edits, new departures, and price changes show up the moment a diver loads it.",
     "snippetField": {
       "copy": "Copy",
       "failed": "Couldn’t copy. Select the code above instead."

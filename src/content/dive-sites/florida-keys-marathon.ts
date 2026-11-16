@@ -80,7 +80,7 @@ export const FLORIDA_KEYS_MARATHON: DiveSiteTemplate[] = [
         "Down the mooring to the superstructure, forward along the deck to the cable reel, and back up the line with reserve gas.",
       fitTone: "demanding",
       fitNote:
-        "Upright, tidy and deep. A very good first deep wreck for a diver with the card for it, ideally on nitrox.",
+        "Upright, tidy, and deep. A very good first deep wreck for a diver with the card for it, ideally on nitrox.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       landmarks: [

@@ -40,14 +40,14 @@ const preview = {
   dives: [{ key: "fixture-key", fingerprint: "fixture-fingerprint", record, duplicate: null }],
 };
 const personId = "0a3e23c8-b66c-46a1-959d-cce58a546093";
-function mount(history: Parameters<typeof ComputerDives>[0]["history"] = []) {
+function mount(history: Parameters<typeof ComputerDives>[0]["history"] = [], words = copy) {
   return render(
     <ComputerDives
       shopSlug="blue-mantis"
       personId={personId}
       personName="Priya Sharma"
       history={history}
-      copy={copy}
+      copy={words}
     />,
   );
 }
@@ -234,6 +234,24 @@ it("shows the FIT UTC instant and unknown local clock without offering to reinte
     '{"fixture-key":null}',
   );
 });
+
+it.each(["en-US", "es-ES"] as const)(
+  "shows SSI transfer guidance without importing or connecting in %s",
+  async (locale) => {
+    const words = staffMessagesFor(locale).computerDives;
+    const user = userEvent.setup();
+    mount([], words);
+    await user.selectOptions(screen.getByLabelText(words.provider), "ssi");
+    expect(screen.getByText(words.providers.ssi.hint)).toBeVisible();
+    expect(screen.getByRole("link", { name: words.providerGuide })).toHaveAttribute(
+      "href",
+      "https://www.divessi.com/en/blog/blog/blog/scubapro-logtrak-myssi-app-integration-10251.html",
+    );
+    expect(actions.previewAction).not.toHaveBeenCalled();
+    expect(actions.commitAction).not.toHaveBeenCalled();
+    expect(actions.changeAction).not.toHaveBeenCalled();
+  },
+);
 
 it("labels online sources beta and preserves the chosen manual source through review and retries", async () => {
   const user = userEvent.setup();

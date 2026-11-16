@@ -65,10 +65,10 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       forecastLatitude: 17.7885,
       forecastLongitude: -64.7585,
       description:
-        "Tall pinnacles and swim-throughs, cuts, ledges and sand chutes, and a wall that drops almost sheer into the deep.",
+        "Tall pinnacles and swim-throughs, cuts, ledges, and sand chutes, and a wall that drops almost sheer into the deep.",
       marineLife: "Eagle rays · groupers · barracuda · sharks",
       marineLifeDescription:
-        "Rays glide around the pinnacles, creole wrasse and squirrelfish shelter under the ledges, and jacks, permit and larger sharks pass the edge.",
+        "Rays glide around the pinnacles, creole wrasse and squirrelfish shelter under the ledges, and jacks, permit, and larger sharks pass the edge.",
       conservationNote:
         "Salt River Bay is a national historical park and ecological preserve. Use the moorings provided at the East and West Walls, display a diver-down flag, and collect nothing.",
       difficultyLevel: "advanced",
@@ -118,7 +118,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
         "On the top of the Salt River drop-off, two big anchors from the Danish colonial period, one lying on the reef and the other on the side of a ledge overgrown with coral. The reef itself is well developed, with staghorn coral to the deeper side.",
       marineLife: "Reef sharks · parrotfish · lobsters · staghorn coral",
       marineLifeDescription:
-        "Reef sharks, parrotfish and lobsters, with a field of staghorn coral past the anchors.",
+        "Reef sharks, parrotfish, and lobsters, with a field of staghorn coral past the anchors.",
       conservationNote:
         "Salt River Bay is a national historical park and ecological preserve. Leave the anchors where they lie, and collect nothing.",
       difficultyLevel: "intermediate",
@@ -170,7 +170,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
         "From the beach, swim out to the mooring buoy at about 8 m, follow sand chutes between coral gardens, and reach the lip of a wall that drops thousands of meters.",
       marineLife: "Reef sharks · turtles · barracuda · black coral",
       marineLifeDescription:
-        "Reef sharks, stingrays and sea turtles are regular, black coral and large deep-water fish live on the wall, and nineteenth-century anchors lie along it.",
+        "Reef sharks, stingrays, and sea turtles are regular, black coral, and large deep-water fish live on the wall, and nineteenth-century anchors lie along it.",
       difficultyLevel: "advanced",
       depthMinMeters: 8,
       maxDepthMeters: 30,
@@ -219,7 +219,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
         "A shore dive on the north shore with a difficult entry and no sand channel to walk out on. The reward is a wall 75 yards from shore in 8 m of water, falling away almost vertically, with big elkhorn coral and sharks.",
       marineLife: "Reef sharks · elkhorn coral · jacks · mackerel",
       marineLifeDescription:
-        "Reef sharks along the wall, large elkhorn corals in the shallows, and schools of tangs, wrasse and triggerfish.",
+        "Reef sharks along the wall, large elkhorn corals in the shallows, and schools of tangs, wrasse, and triggerfish.",
       difficultyLevel: "advanced",
       depthMinMeters: 8,
       maxDepthMeters: 30,
@@ -259,10 +259,10 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       forecastLatitude: 17.7139,
       forecastLongitude: -64.886,
       description:
-        "A shore dive under the pier at Frederiksted, with decades of sponge and coral on the pilings. A macro and night dive, where seahorses, frogfish, batfish and octopus live among the pillars, and a free-standing pair of mooring dolphins just south of the pier.",
+        "A shore dive under the pier at Frederiksted, with decades of sponge and coral on the pilings. A macro and night dive, where seahorses, frogfish, batfish, and octopus live among the pillars, and a free-standing pair of mooring dolphins just south of the pier.",
       marineLife: "Seahorses · frogfish · octopus · barracuda",
       marineLifeDescription:
-        "Seahorses, frogfish, arrow crabs and batfish among the pilings, with tarpon alongside them.",
+        "Seahorses, frogfish, arrow crabs, and batfish among the pilings, with tarpon alongside them.",
       difficultyLevel: "intermediate",
       depthMinMeters: 6,
       maxDepthMeters: 27,
@@ -311,7 +311,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
         "Three wrecks in Butler Bay: the Suffolk Maid trawler, the Northwind tug and the Virgin Islander oil barge, with the Aegir underwater habitat. All are encrusted with coral and sponge, and schools of reef fish swarm them.",
       marineLife: "Barracuda · snapper · moray eels · turtles",
       marineLifeDescription:
-        "Barracuda, snapper and angelfish around the wrecks, large groupers and stingrays beside the barge, and green and hawksbill turtles near the Northwind.",
+        "Barracuda, snapper, and angelfish around the wrecks, large groupers, and stingrays beside the barge, and green and hawksbill turtles near the Northwind.",
       difficultyLevel: "intermediate",
       depthMinMeters: 5,
       maxDepthMeters: 24,

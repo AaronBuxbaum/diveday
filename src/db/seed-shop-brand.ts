@@ -40,7 +40,12 @@ export const DEMO_SHOP_BRAND = {
   // Fictional examples, labelled as such wherever a demo renders them.
   brandBadges: ["padi_5_star", "padi_idc", "green_fins", "blue_star", "dan_partner", "tripadvisor"],
   // Fictional demo scenes, never claimed as photographs of the operator.
-  shopfrontPhotoUrls: [...ORIGINAL_PHOTO_STRIP, demoIllustration("shopfront").url],
+  shopfrontPhotoUrls: [
+    ...ORIGINAL_PHOTO_STRIP,
+    demoIllustration("shopfront").url,
+    demoIllustration("porch").url,
+    demoIllustration("sunset-boat").url,
+  ],
 } satisfies Partial<typeof shops.$inferInsert>;
 
 /**

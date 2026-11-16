@@ -152,7 +152,7 @@ describe("anonymizeDiver — the private word (ADR 20260904-reef-all-the-way-dow
       .limit(2);
     const [live, withdrawn] = seats;
     if (!live || !withdrawn) throw new Error("expected two seeded bookings");
-
+    await db.delete(recapPulses).where(inArray(recapPulses.bookingId, [live.id, withdrawn.id]));
     await db.insert(recapPulses).values([
       {
         shopId: shop.id,
@@ -185,7 +185,7 @@ describe("anonymizeDiver — the private word (ADR 20260904-reef-all-the-way-dow
     const rows = await db
       .select({ id: recapPulses.id, note: recapPulses.note, categories: recapPulses.categories })
       .from(recapPulses)
-      .where(eq(recapPulses.shopId, shop.id));
+      .where(inArray(recapPulses.bookingId, [live.id, withdrawn.id]));
     expect(rows.length).toBe(2);
     // The words are the diver's and go.
     expect(rows.every((row) => row.note === null)).toBe(true);

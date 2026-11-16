@@ -20,10 +20,10 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       forecastLatitude: 18.0416,
       forecastLongitude: -63.141,
       description:
-        "A barge sunk on purpose in 1993 that rolled over as it went down and now lies upside down. Soft coral and barrel sponges cover it and the reef around it, and the fish, turtles and lobsters shelter underneath.",
+        "A barge sunk on purpose in 1993 that rolled over as it went down and now lies upside down. Soft coral and barrel sponges cover it and the reef around it, and the fish, turtles, and lobsters shelter underneath.",
       marineLife: "Sergeant majors · trumpetfish · barracuda · spotted eagle rays",
       marineLifeDescription:
-        "The wreck is crumbling and teems with small fish and their eggs. Eagle rays, Caribbean reef sharks and sea turtles pass, and lobsters come out at night. Night dives need staff approval and a briefed plan.",
+        "The wreck is crumbling and teems with small fish and their eggs. Eagle rays, Caribbean reef sharks, and sea turtles pass, and lobsters come out at night. Night dives need staff approval and a briefed plan.",
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "intermediate",
@@ -104,7 +104,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       forecastLatitude: 18.0289,
       forecastLongitude: -63.1279,
       description:
-        "A tugboat of unknown history that sits upright on a sandy bottom, leaning a little to starboard. Sponges cover her, and soldierfish, hogfish and stingrays work the area.",
+        "A tugboat of unknown history that sits upright on a sandy bottom, leaning a little to starboard. Sponges cover her, and soldierfish, hogfish, and stingrays work the area.",
       marineLife: "Blackbar soldierfish · Spanish hogfish · bar jacks · southern stingrays",
       marineLifeDescription:
         "Soldierfish and hogfish gather around the wreck, with stingrays on the sand and the odd toadfish and reef shark.",
@@ -152,7 +152,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       difficultyLevel: "beginner",
       maxDepthMeters: 6,
       currentNote:
-        "Boats and yachts use the Simpson Bay lagoon and its bridge channel, so listen for engines, carry an SMB and come up the line. Current not documented; ask the crew on the day.",
+        "Boats and yachts use the Simpson Bay lagoon and its bridge channel, so listen for engines, carry an SMB, and come up the line. Current not documented; ask the crew on the day.",
       divePlan: "Down to the boat, around the outside, and back up. Stay outside the hull.",
       fitTone: "welcoming",
       fitNote: "A very shallow wreck for a first or refresher dive.",
@@ -185,7 +185,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
         "Several purpose-sunk installations on seagrass and sand near the Dutch entrance of the Simpson Bay lagoon: the remains of the old bridge, a small sailboat lying on its side and a floating bar re-sunk after Irma. Each draws different life, so the site takes several dives.",
       marineLife: "Southern stingrays · sand tilefish · tomtate · barracuda",
       marineLifeDescription:
-        "Stingrays lie buried in the sand and sergeant majors guard their eggs. Reef sharks, nurse sharks and turtles pass, and an anemone in the sailboat’s bow holds shrimp.",
+        "Stingrays lie buried in the sand and sergeant majors guard their eggs. Reef sharks, nurse sharks, and turtles pass, and an anemone in the sailboat’s bow holds shrimp.",
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
@@ -267,7 +267,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
         "A shallow reef on hard-packed sand with rocky features, a treasure hunt for nursery fish. Sunlight dapples the water, and baby animals hide in every crevice.",
       marineLife: "Ocean surgeonfish · French grunts · lionfish · baby nurse sharks",
       marineLifeDescription:
-        "Surgeonfish, grunts and damselfish fill the shallows, with spotted morays and young nurse sharks in the crevices.",
+        "Surgeonfish, grunts, and damselfish fill the shallows, with spotted morays and young nurse sharks in the crevices.",
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
@@ -307,7 +307,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
         "An inter-island roll-on roll-off cargo ship lost in a hurricane in 1996 and found later, resting upright on sand among seagrass at the edge of the marine park. Reef balls east of the wreck are full of life.",
       marineLife: "Tomtate · bluestriped grunts · southern stingrays · green turtles",
       marineLifeDescription:
-        "Snapper, grunts and soldierfish school over the wreck, with stingrays, reef sharks and queen triggerfish around, and a bottlenose dolphin in winter months.",
+        "Snapper, grunts, and soldierfish school over the wreck, with stingrays, reef sharks, and queen triggerfish around, and a bottlenose dolphin in winter months.",
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "intermediate",
@@ -347,7 +347,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
         "A cargo ferry that sank in 1991 and has been broken down by storms. The propeller is still visible, and the wreck’s bones attract eels, nurse sharks and masses of marine life.",
       marineLife: "Yellowtail snapper · green morays · spotted eagle rays · porcupinefish",
       marineLifeDescription:
-        "Snappers, morays and porcupinefish live in the wreckage, with turtles, rays, reef sharks and octopus around.",
+        "Snappers, morays, and porcupinefish live in the wreckage, with turtles, rays, reef sharks, and octopus around.",
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
@@ -393,10 +393,10 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       forecastLatitude: 17.9895,
       forecastLongitude: -63.0583,
       description:
-        "The British frigate that struck Man of War Shoal in 1801. No wood is left, but coral-encrusted cannons, barrel hoops and massive anchors lie scattered over the shoal, which tops out near 5 m.",
+        "The British frigate that struck Man of War Shoal in 1801. No wood is left, but coral-encrusted cannons, barrel hoops, and massive anchors lie scattered over the shoal, which tops out near 5 m.",
       marineLife: "Barracuda · porcupinefish · ocean surgeonfish · nurse sharks",
       marineLifeDescription:
-        "Many of the island’s reef fish live here, with a few resident reef sharks, spotted eagle rays, jawfish and sea slugs near the mooring.",
+        "Many of the island’s reef fish live here, with a few resident reef sharks, spotted eagle rays, jawfish, and sea slugs near the mooring.",
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings. This is a historic wreck site: leave every cannon and artifact where it lies.",
       difficultyLevel: "beginner",
@@ -412,7 +412,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
         {
           name: "Cannons and anchors",
           kind: "reefHistory",
-          note: "Coral-encrusted cannons, barrel hoops and several large anchors from the 1801 wreck.",
+          note: "Coral-encrusted cannons, barrel hoops, and several large anchors from the 1801 wreck.",
         },
       ],
       creatureSlugs: [
@@ -488,7 +488,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
         "One of the prettiest and shallowest sites in the marine park, small coral canyons with arches and bridges. The swim-throughs are overhead; stay out. The Nature Foundation used it for its coral restoration project.",
       marineLife: "French angelfish · gray angelfish · Bermuda chub · foureye butterflyfish",
       marineLifeDescription:
-        "Angelfish, chubs and spiny lobsters fill the canyons. Elkhorn and staghorn coral grow here, and eagle rays and nurse sharks pass.",
+        "Angelfish, chubs, and spiny lobsters fill the canyons. Elkhorn and staghorn coral grow here, and eagle rays and nurse sharks pass.",
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
@@ -613,7 +613,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
         "Three rocks at the surface that look like a hen and two chicks, and below them a rocky ledge dropping to sand and a crater-like hole where waves break and surge. The hole and its caves are surge and overhead; stay out. A gully at the back leads to a shallow reef on the east side.",
       marineLife: "Angelfish · surgeonfish · tarpon · spotted morays",
       marineLifeDescription:
-        "Healthy coral and schools of grunts and snappers line the ledge, with sea slugs, sweepers and peacock flounder.",
+        "Healthy coral and schools of grunts and snappers line the ledge, with sea slugs, sweepers, and peacock flounder.",
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "advanced",

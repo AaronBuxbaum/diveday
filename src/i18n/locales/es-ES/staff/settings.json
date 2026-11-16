@@ -572,6 +572,21 @@
         "heading": "Planificación de compañeros",
         "label": "Planificar compañeros para cada salida",
         "description": "Mostrar la planificación opcional de compañeros en El día"
+      },
+      "computerDives": {
+        "heading": "Computadoras de buceo",
+        "label": "Guardar los archivos de la computadora de buceo en la ficha",
+        "description": "Sube el registro de la computadora de un buceador y guarda sus inmersiones junto a su ficha."
+      },
+      "courses": {
+        "heading": "Cursos",
+        "label": "Impartir cursos",
+        "description": "Cursos y Certificaciones para el equipo, y el catálogo de cursos que reservan los buceadores."
+      },
+      "embeds": {
+        "heading": "Widgets para tu web",
+        "label": "Mostrar tu agenda en tu propia web",
+        "description": "Marcos para tu sitio: el calendario, las salidas, los cursos y las opiniones."
       }
     },
     "crewSchedule": {

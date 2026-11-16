@@ -4,6 +4,10 @@ These are fictional editorial scenes generated for demo seed data, not customer 
 
 The following records preserve the exact prompt for each selected image. Generation is nondeterministic; these instructions describe the selected generation, not a guarantee of identical output.
 
+## Open Water gallery, 2026-11-15
+
+Eight additional fictional scenes in `public/course-illustrations/open-water-gallery/` fill the Open Water Diver gallery. They depict a classroom, a poolside mask discussion, learners at the dock, a boat gathering, gear on a bench, a beach conversation, a fictional reef, and a dockside celebration, respectively. The user requested expanded unique imagery. Each was generated separately with OpenAI image generation as a sun-washed gouache illustration of a fictional Key Largo dive shop, without lettering, logos, diagrams, technical instructions, or identifiable real places. Masters are 1536 × 1024 PNGs; delivery assets are WebP at quality 75. These are fictional illustrations, not evidence of real people or places.
+
 ## advanced-open-water-diver
 
 - Asset: `public/course-illustrations/advanced-open-water-diver.webp`

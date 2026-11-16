@@ -9,7 +9,7 @@
     "said": "The crew said so at {time}."
   },
   "common": {
-    "smsConsent": "By giving a mobile number, you agree to texts from DiveDay about your bookings and courses: reminders, waiver links, trip changes, notes from the crew, lost property and recaps. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help. <a>Privacy policy</a>",
+    "smsConsent": "By giving a mobile number, you agree to texts from DiveDay about your bookings and courses: reminders, waiver links, trip changes, notes from the crew, lost property, and recaps. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help. <a>Privacy policy</a>",
     "backToSchedule": "Back to the schedule",
     "needHelpContact": "Need help? <link>Contact {shop}</link>.",
     "needHelpPlain": "Need help? Contact {shop} directly.",
@@ -1740,7 +1740,7 @@
       },
       "black-tunicate": {
         "name": "Black tunicate",
-        "description": "A smooth, glossy black sac about the size of a fist, with two openings, stuck to rock, pilings or mangrove roots.",
+        "description": "A smooth, glossy black sac about the size of a fist, with two openings, stuck to rock, pilings, or mangrove roots.",
         "tip": "Watch its two siphons pump water, and keep your hands off; touched, it clenches and squirts."
       },
       "blackbar-soldierfish": {
@@ -1756,12 +1756,12 @@
       "blacknose-shark": {
         "name": "Blacknose shark",
         "description": "A small, slim gray shark with a short, rounded snout marked by a dark smudge at the tip, and no other bold marks on the fins.",
-        "tip": "Usually met over sand and shallow reef, mostly in warm months. On a provisioned dive, follow the crew’s briefing to the letter; anywhere else, treat it as an unplanned encounter: stay calm, keep your hands in and let it pass."
+        "tip": "Usually met over sand and shallow reef, mostly in warm months. On a provisioned dive, follow the crew’s briefing to the letter; anywhere else, treat it as an unplanned encounter: stay calm, keep your hands in, and let it pass."
       },
       "blacktip-shark": {
         "name": "Blacktip shark",
         "description": "A slim, fast gray-bronze shark with black tips on most fins, notably the second dorsal and the tail.",
-        "tip": "Met in shallow water, more in winter and spring around the Bahamas and Florida. Stay calm, keep your hands in and let it pass."
+        "tip": "Met in shallow water, more in winter and spring around the Bahamas and Florida. Stay calm, keep your hands in, and let it pass."
       },
       "blade-fire-coral": {
         "name": "Blade fire coral",
@@ -1780,7 +1780,7 @@
       },
       "blue-dartfish": {
         "name": "Blue dartfish",
-        "description": "A slim, pale-blue fish with a long, low dorsal fin and fins thinly edged in red, hovering in pairs over a burrow in sand or rubble.",
+        "description": "A slim, pale-blue fish with a long, low dorsal fin, and fins thinly edged in red, hovering in pairs over a burrow in sand or rubble.",
         "tip": "Usually deeper than 20 meters on sandy slopes. Settle low a few body lengths away and wait; a pair dives into the burrow at any sudden move."
       },
       "blue-parrotfish": {
@@ -1895,8 +1895,8 @@
       },
       "bull-shark": {
         "name": "Bull shark",
-        "description": "A stocky gray shark with a short, blunt snout, small eyes and no markings on its fins.",
-        "tip": "On a provisioned shark dive, follow the operator’s briefing exactly; anywhere else, treat it as an unplanned encounter: stay calm, keep it in view and end the dive."
+        "description": "A stocky gray shark with a short, blunt snout, small eyes, and no markings on its fins.",
+        "tip": "On a provisioned shark dive, follow the operator’s briefing exactly; anywhere else, treat it as an unplanned encounter: stay calm, keep it in view, and end the dive."
       },
       "butter-hamlet": {
         "name": "Butter hamlet",
@@ -2140,7 +2140,7 @@
       },
       "florida-horse-conch": {
         "name": "Florida horse conch",
-        "description": "A huge, spindle-shaped shell up to 60 cm long, with a brick-orange animal inside, on sand and seagrass.",
+        "description": "A huge, spindle-shaped shell up to 60 cm long, with a brick-orange animal inside, on sand, and seagrass.",
         "tip": "Watch it hunt other snails, and leave every live shell where it lies."
       },
       "flying-gurnard": {
@@ -2300,7 +2300,7 @@
       },
       "green-razorfish": {
         "name": "Green razorfish",
-        "description": "A small, flat-sided wrasse with a steep blunt head, green to mottled, hovering over sand and seagrass. Males carry a dark spot mid-body.",
+        "description": "A small, flat-sided wrasse with a steep blunt head, green to mottled, hovering over sand, and seagrass. Males carry a dark spot mid-body.",
         "tip": "Approach slowly over open sand. If it feels crowded it dives headfirst into the sand and stays there."
       },
       "green-sea-turtle": {
@@ -2415,7 +2415,7 @@
       },
       "lesser-starlet-coral": {
         "name": "Lesser starlet coral",
-        "description": "Small crusts and fist-sized lumps with deep, crisp cups, scattered over sand, rubble and seagrass in shallow water.",
+        "description": "Small crusts and fist-sized lumps with deep, crisp cups, scattered over sand, rubble, and seagrass in shallow water.",
         "tip": "Easy to miss on a shallow entry. Look at your feet in the first few meters, and keep them off the bottom."
       },
       "lettuce-coral": {
@@ -2480,7 +2480,7 @@
       },
       "lumpy-overgrowing-sponge": {
         "name": "Lumpy overgrowing sponge",
-        "description": "A soft pink to lavender mass of lumps riddled with holes, spreading over sea rods, sponges and rock.",
+        "description": "A soft pink to lavender mass of lumps riddled with holes, spreading over sea rods, sponges, and rock.",
         "tip": "Follow a sea rod down to its base. This sponge often swallows the lower branches whole."
       },
       "mahogany-snapper": {
@@ -2871,7 +2871,7 @@
       "scalloped-hammerhead": {
         "name": "Scalloped hammerhead",
         "description": "A gray-brown shark with a wide, flat head whose front edge is notched in the middle. Rare in the Caribbean.",
-        "tip": "If you see one, hold your position, breathe slowly and let it pass."
+        "tip": "If you see one, hold your position, breathe slowly, and let it pass."
       },
       "scamp": {
         "name": "Scamp",
@@ -2935,7 +2935,7 @@
       },
       "sheepshead": {
         "name": "Sheepshead",
-        "description": "A silver-gray porgy with five or six bold black bars and a mouth of human-looking teeth, around pilings, jetties and wrecks.",
+        "description": "A silver-gray porgy with five or six bold black bars and a mouth of human-looking teeth, around pilings, jetties, and wrecks.",
         "tip": "Check the barnacle-covered legs of piers and bridges, where it crunches crabs and shellfish off the posts."
       },
       "shortstripe-goby": {
@@ -2951,7 +2951,7 @@
       "silky-shark": {
         "name": "Silky shark",
         "description": "A sleek, open-ocean shark, dark bronze-gray above and pale below, with a small ridge along the back and long, curved pectoral fins with dark tips.",
-        "tip": "Mostly a blue-water species, met off steep walls and on drifting-rope or bluewater dives. On a provisioned dive, follow the crew’s briefing to the letter; anywhere else, treat it as an unplanned encounter: stay calm, keep it in view and end the dive."
+        "tip": "Mostly a blue-water species, met off steep walls and on drifting-rope or bluewater dives. On a provisioned dive, follow the crew’s briefing to the letter; anywhere else, treat it as an unplanned encounter: stay calm, keep it in view, and end the dive."
       },
       "silver-porgy": {
         "name": "Silver porgy",
@@ -2960,7 +2960,7 @@
       },
       "slate-pencil-urchin": {
         "name": "Slate pencil urchin",
-        "description": "A small urchin with a few thick, blunt spines like pencil stubs, often crusted with algae and sponge.",
+        "description": "A small urchin with a few thick, blunt spines like pencil stubs, often crusted with algae, and sponge.",
         "tip": "Look in crevices and under rubble at night, when it comes out to graze."
       },
       "slipper-lobster": {
@@ -2970,7 +2970,7 @@
       },
       "slippery-dick": {
         "name": "Slippery dick",
-        "description": "A pale greenish wrasse with a dark stripe from snout to tail, cruising low over sand, seagrass and rubble.",
+        "description": "A pale greenish wrasse with a dark stripe from snout to tail, cruising low over sand, seagrass, and rubble.",
         "tip": "One of the most common wrasses in the shallows. Settle near a sand patch and it will work right past your fins."
       },
       "smallmouth-grunt": {
@@ -2990,7 +2990,7 @@
       },
       "social-feather-duster": {
         "name": "Social feather duster",
-        "description": "Clusters of small feather dusters, each crown a soft brown, purple or white fan, crowded together on reef rock.",
+        "description": "Clusters of small feather dusters, each crown a soft brown, purple, or white fan, crowded together on reef rock.",
         "tip": "Hang still beside a cluster; if they pull in, wait and they reopen one by one."
       },
       "southern-sennet": {
@@ -3040,7 +3040,7 @@
       },
       "sponge-brittle-star": {
         "name": "Sponge brittle star",
-        "description": "Long, thin, spiny arms in purple, pink or red, with a dark stripe, draped over sponges and sea fans.",
+        "description": "Long, thin, spiny arms in purple, pink, or red, with a dark stripe, draped over sponges and sea fans.",
         "tip": "Check the surface of large sponges, best at night, when the arms reach out to feed."
       },
       "spot-winged-comb-jelly": {
@@ -3170,7 +3170,7 @@
       },
       "three-rowed-sea-cucumber": {
         "name": "Three-rowed sea cucumber",
-        "description": "A firm, warty cucumber in tan, orange or brown, dotted with dark chocolate spots, on sand and seagrass.",
+        "description": "A firm, warty cucumber in tan, orange, or brown, dotted with dark chocolate spots, on sand, and seagrass.",
         "tip": "Watch it sift the sand with its feeding tentacles, and leave it on the bottom."
       },
       "threespot-damselfish": {
@@ -3186,7 +3186,7 @@
       "tiger-shark": {
         "name": "Tiger shark",
         "description": "A big, blunt-snouted shark with dark vertical bars along its flanks that fade with age.",
-        "tip": "On a provisioned shark dive, follow the operator’s briefing exactly; anywhere else, treat it as an unplanned encounter: stay calm, keep it in view and end the dive."
+        "tip": "On a provisioned shark dive, follow the operator’s briefing exactly; anywhere else, treat it as an unplanned encounter: stay calm, keep it in view, and end the dive."
       },
       "tobaccofish": {
         "name": "Tobaccofish",
@@ -3200,7 +3200,7 @@
       },
       "true-tulip": {
         "name": "True tulip",
-        "description": "A smooth, spindle-shaped snail shell, cream to tan or orange, with dark brown blotches and many thin dark lines spiraling around each whorl, on sand and seagrass.",
+        "description": "A smooth, spindle-shaped snail shell, cream to tan, or orange, with dark brown blotches and many thin dark lines spiraling around each whorl, on sand and seagrass.",
         "tip": "Look for its trail across the sand. It hunts other snails and clams, so give it room and watch from above."
       },
       "trumpetfish": {
@@ -3225,7 +3225,7 @@
       },
       "variegated-sea-urchin": {
         "name": "Variegated sea urchin",
-        "description": "A round urchin with short spines in green, white, purple or red, often holding bits of seagrass and shell over itself.",
+        "description": "A round urchin with short spines in green, white, purple, or red, often holding bits of seagrass and shell over itself.",
         "tip": "Look in seagrass beds; it wears that debris as a sunshade, so leave its cover in place."
       },
       "vase-sponge": {
@@ -3300,7 +3300,7 @@
       },
       "yellowbelly-hamlet": {
         "name": "Yellowbelly hamlet",
-        "description": "Dark blue-brown on the back, with a yellow belly, yellow pelvic fins and a yellow tail.",
+        "description": "Dark blue-brown on the back, with a yellow belly, yellow pelvic fins, and a yellow tail.",
         "tip": "Hamlets keep to a small patch. Find one near a coral head and wait rather than following it."
       },
       "yellowcheek-wrasse": {

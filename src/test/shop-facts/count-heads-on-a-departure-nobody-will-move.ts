@@ -1,8 +1,8 @@
-import { and, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { recordRollCall } from "../../db/manifests";
-import { bookings, people, personRoles, trips } from "../../db/schema/index";
-import { STAFF_ROLES } from "../../lib/authz";
+import { bookings, trips } from "../../db/schema/index";
+import { anActiveStaffPerson } from "./active-staff";
 
 /**
  * **A departure the Move panel refuses outright** (issue #1786) — the
@@ -40,12 +40,7 @@ export async function countHeadsOnADepartureNobodyWillMove(
   // `boardADiverThenBlockThem` states below: `recordRollCall` answers
   // `staff_not_found` for anyone else, and the shared actor is whichever row
   // came first.
-  const [crew] = await db
-    .select({ id: people.id })
-    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
-    .limit(1);
+  const crew = await anActiveStaffPerson(db, shopId);
   if (!crew) return null;
 
   const seats = await db

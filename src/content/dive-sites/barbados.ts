@@ -78,12 +78,12 @@ export const BARBADOS: DiveSiteTemplate[] = [
       depthMinMeters: 3,
       maxDepthMeters: 8,
       currentNote:
-        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
+        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo, and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines, and surface on the line. No current is documented here.",
       divePlan:
         "Descend at the wreck and circle it slowly. Return to the line and ascend; if you move on to a neighboring wreck, surface only under an SMB. Stay outside the hull.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, calm and easy to hold a depth on. Good for a first wreck or a relaxed second dive.",
+        "Shallow, calm, and easy to hold a depth on. Good for a first wreck or a relaxed second dive.",
       // Depth: B 25 ft, G 8 m; A and D give the top at 2-3 m.
       creatureSlugs: [
         "longlure-frogfish",
@@ -117,7 +117,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       difficultyLevel: "beginner",
       maxDepthMeters: 14,
       currentNote:
-        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
+        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo, and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines, and surface on the line. No current is documented here.",
       divePlan:
         "Down to the wreck and once around it at its own depth. Return to the line and ascend; if you move on, surface only under an SMB. Stay outside the hull.",
       fitTone: "welcoming",
@@ -156,7 +156,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       difficultyLevel: "beginner",
       maxDepthMeters: 17,
       currentNote:
-        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
+        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo, and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines, and surface on the line. No current is documented here.",
       divePlan:
         "Down to the wreck, along the hull and back, with a safety stop on the line. Stay outside the hull.",
       fitTone: "welcoming",
@@ -194,7 +194,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       depthMinMeters: 9,
       maxDepthMeters: 12,
       currentNote:
-        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
+        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo, and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines, and surface on the line. No current is documented here.",
       divePlan:
         "Descend and circle the wreck once. Return to the line and ascend; if you move on to a neighboring wreck, surface only under an SMB. Stay outside the hull.",
       fitTone: "welcoming",
@@ -231,7 +231,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       difficultyLevel: "beginner",
       maxDepthMeters: 5,
       currentNote:
-        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
+        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo, and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines, and surface on the line. No current is documented here.",
       divePlan:
         "Circle the wreck at depth. Return to the line and ascend; if you move on to a neighboring site, surface only under an SMB. Stay outside the hull.",
       fitTone: "welcoming",
@@ -264,7 +264,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       depthMinMeters: 3,
       maxDepthMeters: 5,
       currentNote:
-        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
+        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo, and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines, and surface on the line. No current is documented here.",
       divePlan: "Circle the barge at depth and move on. Stay outside the hull.",
       fitTone: "welcoming",
       fitNote: "Very shallow. A good first wreck and one for a relaxed hour.",
@@ -295,7 +295,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       depthMinMeters: 6,
       maxDepthMeters: 24,
       currentNote:
-        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
+        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo, and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines, and surface on the line. No current is documented here.",
       divePlan:
         "Descend the line, look around the outside of the wreck, then return with a safety stop on the line. Open Water divers turn at 18 m. Stay outside the hull.",
       fitTone: "unknown",
@@ -327,7 +327,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
-        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
+        "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo, and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines, and surface on the line. No current is documented here.",
       divePlan:
         "Down the line, a slow loop over the slope, then back up with a safety stop on the line. Leave what you find where it lies.",
       fitTone: "unknown",
@@ -353,7 +353,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       forecastLatitude: 13.0715,
       forecastLongitude: -59.6125,
       description:
-        "A shallow barrier reef off Needham's Point, with small reef fish, old cannonballs and antique bottles among the coral.",
+        "A shallow barrier reef off Needham's Point, with small reef fish, old cannonballs, and antique bottles among the coral.",
       marineLife: "Small reef fish · coral · cannonballs",
       marineLifeDescription:
         "Look in the cracks and sand pockets for historic debris and small fish.",
@@ -394,7 +394,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote:
-        "The reef lies just south of Carlisle Bay and Bridgetown's port, where cruise ship, cargo and small boat traffic is busy. No diving while a ship is moving or alongside, carry an SMB and listen for engines. Sources describe a drift dive.",
+        "The reef lies just south of Carlisle Bay and Bridgetown's port, where cruise ship, cargo, and small boat traffic is busy. No diving while a ship is moving or alongside, carry an SMB and listen for engines. Sources describe a drift dive.",
       divePlan:
         "Drop onto the reef and drift along its length. Make the safety stop on an SMB or the boat's line.",
       fitTone: "unknown",
@@ -453,7 +453,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       forecastLatitude: 13.0675,
       forecastLongitude: -59.599,
       description:
-        "A barrier reef off Hastings with drop-offs on both sides, schooling snapper, barracuda and cavalli.",
+        "A barrier reef off Hastings with drop-offs on both sides, schooling snapper, barracuda, and cavalli.",
       marineLife: "Barracuda · snapper · jacks",
       marineLifeDescription: "Schools gather along the edge of the reef.",
       difficultyLevel: "intermediate",
@@ -552,7 +552,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       forecastLatitude: 13.0645,
       forecastLongitude: -59.5795,
       description:
-        "A drift dive over a reef off Sandy Beach, with turtles, eagle rays and a small sunken Coast Guard boat.",
+        "A drift dive over a reef off Sandy Beach, with turtles, eagle rays, and a small sunken Coast Guard boat.",
       marineLife: "Turtles · eagle rays · reef fish",
       marineLifeDescription: "Turtles and rays pass over the reef.",
       difficultyLevel: "intermediate",
@@ -596,7 +596,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       forecastLatitude: 13.06,
       forecastLongitude: -59.583,
       description:
-        "A deep, little-visited barrier reef off Worthing, with a standout sponge, horse-eye jacks and barracuda.",
+        "A deep, little-visited barrier reef off Worthing, with a standout sponge, horse-eye jacks, and barracuda.",
       marineLife: "Horse-eye jacks · barracuda · sponges",
       marineLifeDescription: "Jacks and barracuda patrol the outer reef.",
       difficultyLevel: "intermediate",
@@ -778,14 +778,14 @@ export const BARBADOS: DiveSiteTemplate[] = [
       forecastLatitude: 13.1215,
       forecastLongitude: -59.644,
       description:
-        "A bank off Brighton Beach and the Bridgetown harbor, with horse-eye jacks, eels and barracuda. A tourist submarine works the site.",
+        "A bank off Brighton Beach and the Bridgetown harbor, with horse-eye jacks, eels, and barracuda. A tourist submarine works the site.",
       marineLife: "Horse-eye jacks · eels · barracuda · yellowtail snapper",
       marineLifeDescription: "Jacks and barracuda hold along the reef.",
       difficultyLevel: "advanced",
       depthMinMeters: 9,
       maxDepthMeters: 40,
       currentNote:
-        "The bank lies close to Bridgetown's port, with cruise ship and cargo traffic, and a tourist submarine works the site and may circle divers. No diving while a ship is moving or alongside, carry an SMB, listen for engines and stay clear of the submarine. Current not documented; ask the crew on the day.",
+        "The bank lies close to Bridgetown's port, with cruise ship and cargo traffic, and a tourist submarine works the site and may circle divers. No diving while a ship is moving or alongside, carry an SMB, listen for engines, and stay clear of the submarine. Current not documented; ask the crew on the day.",
       divePlan:
         "Drop onto the bank and hold the 24 m (80 ft) dive depth the sources give; 40 m (130 ft) is a hard floor. The bank falls past 49 m, beyond this plan. Ascend only on an SMB, clear of the submarine, with a safety stop. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
@@ -819,7 +819,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       forecastLatitude: 13.187,
       forecastLongitude: -59.647,
       description:
-        "A popular west-coast reef inside the Folkestone Marine Park, with coral heads, schooling fish, turtles and barracuda.",
+        "A popular west-coast reef inside the Folkestone Marine Park, with coral heads, schooling fish, turtles, and barracuda.",
       marineLife: "Turtles · barracuda · bar jacks · moray eels",
       marineLifeDescription:
         "Turtles and barracuda patrol the reef, and eels rest in the sand patches.",
@@ -905,7 +905,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       divePlan:
         "Descend the line, circle the wreck, and finish with a safety stop on the line. Stay outside the hull.",
       fitTone: "welcoming",
-      fitNote: "Calm, clear and a good first wreck.",
+      fitNote: "Calm, clear, and a good first wreck.",
       // Depth 18 m (B, E); D gives 16-18 m; scubadiving.bb gives 16-18 m (51-60 ft); the deeper is used.
       creatureSlugs: [
         "longlure-frogfish",
@@ -970,7 +970,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       depthMinMeters: 18,
       maxDepthMeters: 40,
       currentNote:
-        "Open water off Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
+        "Open water off Bridgetown's port, with cruise ship, cargo, and small boat traffic. No diving while a ship is moving or alongside, carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
       divePlan:
         "Drop onto the reef and hold the reef depth the sources give (24 to 27 m); 40 m (130 ft) is a hard floor. Ascend with a safety stop on an SMB. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
@@ -1036,7 +1036,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       forecastLatitude: 13.2915,
       forecastLongitude: -59.658,
       description:
-        "Large coral reefs separated by white sand channels at the northern tip of the west coast, with rays, barracuda and sponge formations.",
+        "Large coral reefs separated by white sand channels at the northern tip of the west coast, with rays, barracuda, and sponge formations.",
       marineLife: "Rays · barracuda · hogfish · Bermuda chub",
       marineLifeDescription: "Rays rest in the sand channels between the reefs.",
       difficultyLevel: "advanced",

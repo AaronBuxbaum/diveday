@@ -726,6 +726,9 @@ export async function openCounterFor(page: Page, shopSlug: string, diverName: st
     .filter({ hasText: "Schedule", visible: true })
     .first()
     .waitFor();
+  // The shared header can hydrate before this departure's client roster. An
+  // arrival lookup always opens an active guest folio, not the sailed record.
+  await page.locator("[data-guest-folios]").waitFor({ state: "visible" });
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([0-9a-f-]{36})$/)?.[1];
   if (!tripId) throw new Error(`no trip id in ${page.url()} after opening ${diverName}'s counter`);
   return tripId;

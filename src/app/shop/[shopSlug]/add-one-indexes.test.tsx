@@ -117,7 +117,6 @@ function everyHref(node: unknown, found: string[] = [], seen = new Set<unknown>(
 const INDEXES = [
   { name: "divers", add: "1", load: () => import("./divers/page"), path: "/divers" },
   { name: "orders", add: "1", load: () => import("./orders/page"), path: "/orders" },
-  { name: "dive sites", add: "1", load: () => import("./dive-sites/page"), path: "/dive-sites" },
   { name: "the register", add: "rental", load: () => import("./gear/page"), path: "/gear" },
   {
     name: "the repair bench",

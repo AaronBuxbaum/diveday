@@ -68,7 +68,7 @@
   "departuresAboveCertificateError": "{count, plural, one {# upcoming departure on this boat sells more seats than the certificate’s {limit}. Lower its capacity first.} other {# upcoming departures on this boat sell more seats than the certificate’s {limit}. Lower their capacity first.}}",
   "departuresAboveCertificateDatedError": "{count, plural, one {The departure on {dates} sells more seats than the certificate’s {limit}. Lower its capacity first.} other {# upcoming departures on this boat sell more seats than the certificate’s {limit}, including {dates}. Lower their capacity first.}}",
   "boatChannelDistress": "Channels 16 and 70 are for distress and calling. Enter the channel this boat works on.",
-  "boatRadioInvalid": "Check the call sign (letters, numbers, spaces and hyphens), the MMSI (nine digits) and the working channel (a VHF channel from 1 to 88, such as 68).",
+  "boatRadioInvalid": "Check the call sign (letters, numbers, spaces, and hyphens), the MMSI (nine digits) and the working channel (a VHF channel from 1 to 88, such as 68).",
   "radioIdentityMissing": "{count, plural, one {# boat has no call sign or MMSI} other {# boats have no call sign or MMSI}}",
   "peopleAboard": "{count, plural, one {# person aboard} other {# people aboard}}"
 }

@@ -41,7 +41,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       divePlan:
         "Down the line to the wreck, along the outside of the hull, and out to the bulldozer in the grass.",
       fitTone: "welcoming",
-      fitNote: "Shallow, open and photogenic, with traffic in the harbor beside it.",
+      fitNote: "Shallow, open, and photogenic, with traffic in the harbor beside it.",
       creatureSlugs: [
         "yellowtail-snapper",
         "sergeant-major",
@@ -124,7 +124,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       currentNote:
         "Open water about 3 km out, with mild current reported. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Down the mooring to the reef top at 15 m, across the reef and along the slope, and back up with reserve gas. The slope reaches 40 m; the plan holds 30 m unless the crew briefs a deeper profile for divers carrying the Deep specialty. If sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together and follow the crew's briefing. Staff confirm the diver's log before boarding.",
+        "Down the mooring to the reef top at 15 m, across the reef and along the slope, and back up with reserve gas. The slope reaches 40 m; the plan holds 30 m unless the crew briefs a deeper profile for divers carrying the Deep specialty. If sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together, and follow the crew's briefing. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A reef two miles out, with a slope that reaches 40 m. For divers who hold depth well.",
@@ -173,7 +173,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       currentNote:
         "Open water about 3 km out, with mild current reported. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Down the mooring to the boulder and the reef top at 15 m, then down the slope, and back up with reserve gas. The slope reaches 40 m; the plan holds 30 m unless the crew briefs a deeper profile for divers carrying the Deep specialty. If sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together and follow the crew's briefing. Staff confirm the diver's log before boarding.",
+        "Down the mooring to the boulder and the reef top at 15 m, then down the slope, and back up with reserve gas. The slope reaches 40 m; the plan holds 30 m unless the crew briefs a deeper profile for divers carrying the Deep specialty. If sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together, and follow the crew's briefing. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A reef top at 15 m that invites you down a slope to 40 m. Watch the gauge and stay with the group.",
@@ -209,7 +209,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       forecastLatitude: 17.257,
       forecastLongitude: -62.674,
       description:
-        "An easy reef about a mile off South Friars beach. Juvenile angelfish, big lobsters and spotted morays live on it, and stingrays lie in the sand along its edges.",
+        "An easy reef about a mile off South Friars beach. Juvenile angelfish, big lobsters, and spotted morays live on it, and stingrays lie in the sand along its edges.",
       marineLife: "Spotted morays · lobster · stingrays · turtles",
       marineLifeDescription:
         "Rays lie buried at the edge of the reef and turtles are common. The reef rewards a slow pass.",
@@ -243,7 +243,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       forecastLatitude: 17.27,
       forecastLongitude: -62.695,
       description:
-        "Two narrow reefs split by a strip of sand, a short run off Frigate Bay beach. Rays and garden eels work the sand, and lobsters, eels and turtles shelter on the reef.",
+        "Two narrow reefs split by a strip of sand, a short run off Frigate Bay beach. Rays and garden eels work the sand, and lobsters, eels, and turtles shelter on the reef.",
       marineLife: "Turtles · lobster · eels · rays · garden eels",
       marineLifeDescription:
         "The sand strip is the place to look for garden eels, and the reef edges hold turtles and lobster.",
@@ -280,7 +280,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       forecastLatitude: 17.229,
       forecastLongitude: -62.666,
       description:
-        "A volcanic reef with tube sponges, barrel sponges, large sea fans and black coral trees, cut by cracks and crevices where lobsters sit. Southern stingrays and spotted eagle rays are common.",
+        "A volcanic reef with tube sponges, barrel sponges, large sea fans, and black coral trees, cut by cracks, and crevices where lobsters sit. Southern stingrays and spotted eagle rays are common.",
       marineLife: "Lobster · southern stingrays · spotted eagle rays · small grouper",
       marineLifeDescription:
         "Lobsters fill the cracks and rays glide through clear water. There is little hard coral, so the fans and sponges do the work.",

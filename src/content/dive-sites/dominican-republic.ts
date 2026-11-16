@@ -24,7 +24,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 19.7664,
       forecastLongitude: -70.5505,
       description:
-        "A wall that follows the coast for 1 to 2 km in front of Puerto Plata’s airport, from about 5 to 10 m down to roughly 26 to 30 m, with coral-covered ledges, pinnacles and tunnels. It faces open water, which brings bigger fish along the wall.",
+        "A wall that follows the coast for 1 to 2 km in front of Puerto Plata’s airport, from about 5 to 10 m down to roughly 26 to 30 m, with coral-covered ledges, pinnacles, and tunnels. It faces open water, which brings bigger fish along the wall.",
       marineLife: "Goliath grouper · great barracuda · spotted eagle ray · cleaner shrimp",
       marineLifeDescription:
         "Hard and soft corals and whip corals crowd the wall, and cleaner shrimp work the cracks.",
@@ -111,7 +111,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 19.7747,
       forecastLongitude: -70.5172,
       description:
-        "A sloping reef beyond Three Rocks, with patches of soft coral, sea fans and whips scattered across the sand. Operators usually dive it as a second leg after Three Rocks.",
+        "A sloping reef beyond Three Rocks, with patches of soft coral, sea fans, and whips scattered across the sand. Operators usually dive it as a second leg after Three Rocks.",
       marineLife: "Sea fans · sea whips · garden eels · sand snake eels",
       marineLifeDescription:
         "Garden eels dot the sand as you leave Three Rocks, and a sand snake eel lies low with only its eyes showing.",
@@ -249,7 +249,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 19.7604,
       forecastLongitude: -70.5207,
       description:
-        "A healthy reef and wall about 30 seconds by boat from shore. Three cannons from an old galleon rest on the reef near the top of the wall, and grunts, wrasse and snapper hang over the edge.",
+        "A healthy reef and wall about 30 seconds by boat from shore. Three cannons from an old galleon rest on the reef near the top of the wall, and grunts, wrasse, and snapper hang over the edge.",
       marineLife: "French grunts · wrasse · yellowtail snapper",
       marineLifeDescription:
         "Fish stack up at the top of the wall, and more hide beneath the ledges when you drop over the edge.",
@@ -423,7 +423,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 19.3626,
       forecastLongitude: -69.2185,
       description:
-        "A coral tower just north of Cabo Cabrón, also called the Tower, that rises from far below recreational depth to within 7 m of the surface. Sponges, giant gorgonians and coral cover the rock, and turtles, jacks and creole wrasse circle it.",
+        "A coral tower just north of Cabo Cabrón, also called the Tower, that rises from far below recreational depth to within 7 m of the surface. Sponges, giant gorgonians, and coral cover the rock, and turtles, jacks, and creole wrasse circle it.",
       marineLife: "Hawksbill turtle · horse-eye jack · creole wrasse · porcupinefish",
       marineLifeDescription:
         "Turtles and shoals of jacks and wrasse pass the rock, and sponges and gorgonians cover its sides.",
@@ -540,7 +540,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 18.6544,
       forecastLongitude: -68.3468,
       description:
-        "An 1880s French cargo ship that ran aground on the reef about half a mile off the coast. The propeller, part of the engine, the boiler and the rail material she carried still lie on the reef, and small, narrow gaps between the wreck and the reef shelter fish and lobster.",
+        "An 1880s French cargo ship that ran aground on the reef about half a mile off the coast. The propeller, part of the engine, the boiler, and the rail material she carried still lie on the reef, and small, narrow gaps between the wreck and the reef shelter fish and lobster.",
       marineLife: "Spiny lobster · tropical reef fish · hard coral",
       marineLifeDescription: "Lobster and fish hide in the gaps between the wreck and the reef.",
       difficultyLevel: "intermediate",
@@ -558,7 +558,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
         {
           name: "Propeller and boiler",
           kind: "wreckFeature",
-          note: "The propeller, engine parts and boiler are still visible on the reef.",
+          note: "The propeller, engine parts, and boiler are still visible on the reef.",
         },
       ],
       creatureSlugs: ["spiny-lobster", "yellowtail-snapper", "french-angelfish", "sergeant-major"],
@@ -586,7 +586,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
         "A set of coral-covered rock ridges, five to ten by one count, runs out from the coast over a sandy floor. It is a calm, easy dive over the rocks.",
       marineLife: "Sea turtles · spiny lobster · reef squid",
       marineLifeDescription:
-        "Turtles, lobster and squid are often seen between and over the ridges.",
+        "Turtles, lobster, and squid are often seen between and over the ridges.",
       difficultyLevel: "beginner",
       depthMinMeters: 10,
       maxDepthMeters: 12,
@@ -716,7 +716,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 18.3692,
       forecastLongitude: -68.8523,
       description:
-        "A former tourist cruise ship, about 30 m long, that ran aground in 2008 and sank on her own in May 2009 close to Bayahibe. Storms have flattened her top, and the reef around her, split by sand channels, holds seahorses, rays and parrotfish.",
+        "A former tourist cruise ship, about 30 m long, that ran aground in 2008 and sank on her own in May 2009 close to Bayahibe. Storms have flattened her top, and the reef around her, split by sand channels, holds seahorses, rays, and parrotfish.",
       marineLife: "Parrotfish · seahorses · stingrays · sergeant majors",
       marineLifeDescription:
         "Silvery fish gather along her sides and in the cracks, and rays and garden eels settle in the sand channels.",
@@ -935,7 +935,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 18.3321,
       forecastLongitude: -68.818,
       description:
-        "Soft and hard coral on a bed of sand at the west end of the national park, where the reef system begins that runs on toward Saona. Cannons, cannonballs and muskets from sunken Spanish ships were moved here for divers to see.",
+        "Soft and hard coral on a bed of sand at the west end of the national park, where the reef system begins that runs on toward Saona. Cannons, cannonballs, and muskets from sunken Spanish ships were moved here for divers to see.",
       marineLife: "Sea fans · sponges · reef fish",
       marineLifeDescription:
         "Gorgonians and sponges cover the reef, with small creatures in every nook.",
@@ -954,7 +954,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
         {
           name: "Cannons and muskets",
           kind: "reefHistory",
-          note: "Cannons, cannonballs and muskets from sunken Spanish ships were moved here for divers.",
+          note: "Cannons, cannonballs, and muskets from sunken Spanish ships were moved here for divers.",
         },
       ],
       creatureSlugs: ["common-sea-fan", "sea-plume", "branching-tube-sponge", "french-grunt"],
@@ -979,10 +979,10 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 18.3387,
       forecastLongitude: -68.8288,
       description:
-        "A coral restoration reef about 500 m off the beach, where fragments grow on ropes, tables and sculptures before they are planted out. Statues and a coral garden sit among a colorful local reef.",
+        "A coral restoration reef about 500 m off the beach, where fragments grow on ropes, tables, and sculptures before they are planted out. Statues and a coral garden sit among a colorful local reef.",
       marineLife: "Reef octopus · reef squid · seahorses · reef fish",
       marineLifeDescription:
-        "Octopus, squid and seahorses use the structures for cover, and the slow, careful diver sees the most.",
+        "Octopus, squid, and seahorses use the structures for cover, and the slow, careful diver sees the most.",
       conservationNote:
         "A coral restoration site run with FUNDEMAR. Keep hands and fins off the ropes, tables and sculptures.",
       difficultyLevel: "beginner",
@@ -1062,7 +1062,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 18.3749,
       forecastLongitude: -69.0058,
       description:
-        "A coral-covered terrace, 1.5 to 6 m deep, on the east side of Catalina Island ends at a wall that drops away past recreational depth. Sponges and corals cover every part of the face, and rays, turtles and larger fish pass in the blue.",
+        "A coral-covered terrace, 1.5 to 6 m deep, on the east side of Catalina Island ends at a wall that drops away past recreational depth. Sponges and corals cover every part of the face, and rays, turtles, and larger fish pass in the blue.",
       marineLife: "Spotted eagle ray · hawksbill turtle · sea fans · barrel sponges",
       marineLifeDescription:
         "The wall’s crevices are full of reef life, and bigger animals pass along the edge.",

@@ -26,7 +26,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthMinMeters: 26,
       maxDepthMeters: 44,
       currentNote:
-        "Open Gulf, 22 miles out. Current, visibility and the boat ride all decide the day together.",
+        "Open Gulf, 22 miles out. Current, visibility, and the boat ride all decide the day together.",
       divePlan:
         "The island tower only, on a recreational dive: down the line to about 26–30 m, one section of the superstructure, and back up the line. The flight deck is a technical dive.",
       fitTone: "demanding",
@@ -125,7 +125,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       divePlan:
         "Circle the hull on the sand, look in through the holes in her sides, then come up over the deck and the push pads before the ascent.",
       fitTone: "welcoming",
-      fitNote: "Shallow, upright and small enough to see whole. A good first Gulf wreck.",
+      fitNote: "Shallow, upright, and small enough to see whole. A good first Gulf wreck.",
       landmarks: [
         {
           name: "The push pads",
@@ -302,7 +302,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 26 m steel tug sunk in 2001 as the Bob Reay Reef, a memorial to a supporter of Okaloosa County's reef program. Her stern has settled deep into the sand, so she looks as if she is still going down.",
       marineLife: "Blue angelfish · rock hind · amberjack · slipper lobster",
       marineLifeDescription:
-        "Bait swarms around the pilot house, with angelfish, hinds and lobsters tucked into the hull.",
+        "Bait swarms around the pilot house, with angelfish, hinds, and lobsters tucked into the hull.",
       difficultyLevel: "advanced",
       depthMinMeters: 23,
       maxDepthMeters: 34,
@@ -444,7 +444,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.1557,
       forecastLongitude: -86.3704,
       description:
-        "A 15 m steel tug sunk in 2011 in the middle of the Conch Reef patch, a spread of limestone reef pyramids set down around her that summer. Small, deep and busy with fish.",
+        "A 15 m steel tug sunk in 2011 in the middle of the Conch Reef patch, a spread of limestone reef pyramids set down around her that summer. Small, deep, and busy with fish.",
       marineLife: "Snapper · grouper · amberjack · bait schools",
       difficultyLevel: "advanced",
       depthMinMeters: 30,
@@ -1320,7 +1320,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Down the line to the bow, along the main deck at about 20 m, a look into the open holds from above, and back up the line. Bring a light.",
       fitTone: "welcoming",
       fitNote:
-        "Upright, intact and close to the pass. A good first wreck for a diver comfortable at 20 m and in murky water.",
+        "Upright, intact, and close to the pass. A good first wreck for a diver comfortable at 20 m and in murky water.",
       landmarks: [
         {
           name: "The bow",
@@ -1455,7 +1455,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthMinMeters: 18,
       maxDepthMeters: 31,
       currentNote:
-        "Open Gulf, about 12 nautical miles out. Current, visibility and a summer thermocline change by the day, and the sand sits at about 30 m.",
+        "Open Gulf, about 12 nautical miles out. Current, visibility, and a summer thermocline change by the day, and the sand sits at about 30 m.",
       fitTone: "demanding",
       fitNote: "A deep offshore wreck. Most of the dive happens on the hull, well above the sand.",
       minimumCertificationLevel: "advanced_open_water",
@@ -1537,7 +1537,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthMinMeters: 19,
       maxDepthMeters: 32,
       currentNote:
-        "Open Gulf. Current, visibility and a summer thermocline change by the day, and the sand is past 30 m.",
+        "Open Gulf. Current, visibility, and a summer thermocline change by the day, and the sand is past 30 m.",
       fitTone: "demanding",
       fitNote:
         "A deep offshore wreck with plenty of height, so most of the dive can stay well above the sand.",
@@ -1615,7 +1615,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 29.3114,
       forecastLongitude: -85.3538,
       description:
-        "A 142 m British tanker carrying fuel for the Allies, torpedoed by a German U-boat on 29 June 1942 about 21 miles south of Cape San Blas. The Coast Guard later blasted the stern and bridge to clear the shipping lane, so what remains is a broad field of bow, boilers, shaft and hull plating.",
+        "A 142 m British tanker carrying fuel for the Allies, torpedoed by a German U-boat on 29 June 1942 about 21 miles south of Cape San Blas. The Coast Guard later blasted the stern and bridge to clear the shipping lane, so what remains is a broad field of bow, boilers, shaft, and hull plating.",
       marineLife: "Snapper · grouper · barracuda · bait fish",
       conservationNote:
         "Thirty-three of her crew died in the attack. A historic wreck and a grave: look, and leave everything.",
@@ -1626,7 +1626,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A long open-Gulf run with nothing near it. Current and a strong summer thermocline are both common, and the low, scattered wreck gives little to hide behind.",
       fitTone: "demanding",
       fitNote:
-        "Deep, remote and spread out. A dive for a diver who plans gas and turn time carefully.",
+        "Deep, remote, and spread out. A dive for a diver who plans gas and turn time carefully.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       creatureSlugs: ["gray-snapper", "great-barracuda", "atlantic-spadefish", "lionfish", "cobia"],
@@ -1778,7 +1778,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthMinMeters: 26,
       maxDepthMeters: 33,
       currentNote:
-        "Open Gulf, well offshore, with the sand past 30 m. Current, visibility and a summer thermocline vary by the day.",
+        "Open Gulf, well offshore, with the sand past 30 m. Current, visibility, and a summer thermocline vary by the day.",
       fitTone: "demanding",
       fitNote: "Deep from the first breath: the top of the wreck is already at about 26 m.",
       minimumCertificationLevel: "advanced_open_water",
@@ -1912,7 +1912,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthMinMeters: 28,
       maxDepthMeters: 31,
       currentNote:
-        "Open Gulf, about 11 nautical miles from the pass, with the sand at about 30 m. Current, visibility and a summer thermocline vary by the day.",
+        "Open Gulf, about 11 nautical miles from the pass, with the sand at about 30 m. Current, visibility, and a summer thermocline vary by the day.",
       fitTone: "demanding",
       fitNote: "Low structure at full depth: the whole dive happens close to 30 m.",
       minimumCertificationLevel: "advanced_open_water",
@@ -1976,7 +1976,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.0828,
       forecastLongitude: -85.7353,
       description:
-        "One of the first reef sites off Panama City: a steel tank, tires and concrete rubble from 1978, with scrap, more rubble and slabs of the old Hathaway Bridge added through the 1980s. A sprawling, low site close to the pass.",
+        "One of the first reef sites off Panama City: a steel tank, tires and concrete rubble from 1978, with scrap, more rubble, and slabs of the old Hathaway Bridge added through the 1980s. A sprawling, low site close to the pass.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "intermediate",
       depthMinMeters: 14,
@@ -2016,7 +2016,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       currentNote:
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
       fitTone: "welcoming",
-      fitNote: "Shallow, flat and close to the pass.",
+      fitNote: "Shallow, flat, and close to the pass.",
       creatureSlugs: [
         "gray-snapper",
         "atlantic-spadefish",
@@ -2048,7 +2048,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthMinMeters: 17,
       maxDepthMeters: 30,
       currentNote:
-        "Open Gulf, about 11 nautical miles from the pass. Current, visibility and a summer thermocline vary by the day.",
+        "Open Gulf, about 11 nautical miles from the pass. Current, visibility, and a summer thermocline vary by the day.",
       fitTone: "demanding",
       fitNote: "Close to 30 m on the sand, on an offshore run.",
       // Advanced Open Water below 30 m: the sand is at 27 m, past an Open Water
@@ -2085,7 +2085,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthMinMeters: 17,
       maxDepthMeters: 30,
       currentNote:
-        "Open Gulf, about 11 nautical miles from the pass. Current, visibility and a summer thermocline vary by the day.",
+        "Open Gulf, about 11 nautical miles from the pass. Current, visibility, and a summer thermocline vary by the day.",
       fitTone: "demanding",
       fitNote: "Close to 30 m on the sand, on an offshore run.",
       // Advanced Open Water below 30 m: the sand is at 27 m, past an Open Water
@@ -2148,7 +2148,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       forecastLatitude: 30.0347,
       forecastLongitude: -85.7315,
       description:
-        "A steel truss span from the old Hathaway Bridge, sunk in May 1988 at the Midway site about 5 nautical miles south of the pass. Other spans, boxcars, culverts and tires were dropped around the same area over the years.",
+        "A steel truss span from the old Hathaway Bridge, sunk in May 1988 at the Midway site about 5 nautical miles south of the pass. Other spans, boxcars, culverts, and tires were dropped around the same area over the years.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "intermediate",
       depthMinMeters: 14,
@@ -2275,7 +2275,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       currentNote:
         "Close to the pass, so the tide and outflow from the bay set the visibility. Fifty years and many hurricanes have left the barges broken and partly buried; the county rates their condition very poor.",
       fitTone: "welcoming",
-      fitNote: "Shallow, close in and forgiving. A common first Gulf wreck for new divers.",
+      fitNote: "Shallow, close in, and forgiving. A common first Gulf wreck for new divers.",
       creatureSlugs: [
         "gray-snapper",
         "atlantic-spadefish",
@@ -2316,12 +2316,12 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Down the line to the deck at about 11 m, a slow lap of the sculptures, then the sand around the barge for shells and sand dollars.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, compact and full of things to look at. A good dive for new divers; a Junior Open Water diver under 12 stays on the deck at 11 m, not the sand.",
+        "Shallow, compact, and full of things to look at. A good dive for new divers; a Junior Open Water diver under 12 stays on the deck at 11 m, not the sand.",
       landmarks: [
         {
           name: "The sculpture deck",
           kind: "underwaterMonument",
-          note: "Metal artwork welded along the deck, with a mock bar, stools and beer mugs.",
+          note: "Metal artwork welded along the deck, with a mock bar, stools, and beer mugs.",
         },
       ],
       creatureSlugs: ["atlantic-spadefish", "gray-snapper", "sergeant-major", "lionfish"],
@@ -2694,7 +2694,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       divePlan:
         "Down to the stack, across to the intact stern at about 27 m, and back up the line before reaching the sand.",
       fitTone: "demanding",
-      fitNote: "Deep, broken and far offshore. For an experienced diver on a conservative plan.",
+      fitNote: "Deep, broken, and far offshore. For an experienced diver on a conservative plan.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       landmarks: [
@@ -3067,7 +3067,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       depthMinMeters: 3,
       maxDepthMeters: 4,
       currentNote:
-        "Not tide dependent, but surf, surge and longshore current can be strong; check the beach flags before going in. There are no lifeguards at the reef, and a dive flag is required.",
+        "Not tide dependent, but surf, surge, and longshore current can be strong; check the beach flags before going in. There are no lifeguards at the reef, and a dive flag is required.",
       fitTone: "welcoming",
       creatureSlugs: ["sergeant-major", "atlantic-spadefish", "sheepshead"],
     },

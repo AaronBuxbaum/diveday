@@ -162,6 +162,7 @@ beforeEach(() => {
     session: { user: { shopId: SHOP_ID, shopSlug: "blue-mantis", personId: "staff" } },
     db: {},
     shop: {
+      coursesEnabled: true,
       id: SHOP_ID,
       slug: "blue-mantis",
       defaultLocale: "en-US",

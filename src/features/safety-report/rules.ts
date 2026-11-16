@@ -112,6 +112,8 @@ export type SafetyMonth = {
   certOverrides: number;
   /** One crew member on one departure. */
   crewSailings: number;
+  /** Each person once; all their sailings must have current credential evidence. */
+  crewCredentialStates: { personId: string; credentialed: boolean }[];
   /** Live boarding observations with a credential lapsed by the departure's final local day. */
   lapsedSailings: {
     tripId: string;
@@ -314,6 +316,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
   let boardedAtDock = 0;
   let unmarkedAtDock = 0;
   let crewSailings = 0;
+  const crewCredentialStates = new Map<string, boolean>();
   const openRollCalls: SafetyMonth["openRollCalls"] = [];
   const lapsedSailings: SafetyMonth["lapsedSailings"] = [];
   const unrecorded = new Map<string, SafetyMonth["unrecordedCrew"][number]>();
@@ -356,6 +359,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
       // A crew member recorded ashore at the dock did not sail.
       if (crewResult(departure.tripId, personId, dock) === "not_boarded") continue;
       crewSailings += 1;
+      if (!crewCredentialStates.has(personId)) crewCredentialStates.set(personId, true);
       // A live mark observes a committed state that may differ from actual sailing.
       const recorded = credentialsByPerson.get(personId) ?? [];
       const observation = crewObservations.get(`${departure.tripId}\0${personId}`);
@@ -392,6 +396,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
         // cannot establish either the starting-day file or an empty file.
         if (snapshot.some((card) => card.issuedAt && card.issuedAt > sailingDay)) {
           unknownCredentialSailings += 1;
+          crewCredentialStates.set(personId, false);
           continue;
         }
         onFile = snapshot.map((card) => ({ ...card, personId }));
@@ -402,6 +407,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
           recorded.some((card) => card.credentialId)
         ) {
           unknownCredentialSailings += 1;
+          crewCredentialStates.set(personId, false);
           continue;
         }
         // Qualification is judged through the final local dive day below, but
@@ -413,6 +419,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
       // assignment cannot establish what credential answered the role then.
       if (hasObservedState ? onFile.length === 0 : !answersTheirJob(tripRole, shopRoles, onFile)) {
         unrecordedSailings += 1;
+        crewCredentialStates.set(personId, false);
         const entry = unrecorded.get(personId) ?? {
           personId,
           name: input.personNames.get(personId) ?? "",
@@ -424,6 +431,7 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
       if (onFile.length === 0) continue;
       const kinds = lapsedCredentialKinds(onFile, lastLocalDiveDay);
       if (kinds.length > 0) {
+        crewCredentialStates.set(personId, false);
         lapsedSailings.push({
           tripId: departure.tripId,
           title: departure.title,
@@ -456,6 +464,10 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     unmarkedAtDock,
     certOverrides: input.certOverrides,
     crewSailings,
+    crewCredentialStates: [...crewCredentialStates].map(([personId, credentialed]) => ({
+      personId,
+      credentialed,
+    })),
     lapsedSailings,
     unrecordedSailings,
     unrecordedCrew: [...unrecorded.values()],
@@ -472,6 +484,13 @@ export function summarizeSafetyYear(months: readonly SafetyMonth[]): SafetyYear 
   const sum = (pick: (month: SafetyMonth) => number) =>
     months.reduce((total, month) => total + pick(month), 0);
   const unrecorded = new Map<string, SafetyMonth["unrecordedCrew"][number]>();
+  const crewCredentialStates = new Map<string, boolean>();
+  for (const { personId, credentialed } of months.flatMap((month) => month.crewCredentialStates)) {
+    crewCredentialStates.set(
+      personId,
+      (crewCredentialStates.get(personId) ?? true) && credentialed,
+    );
+  }
   for (const row of months.flatMap((month) => month.unrecordedCrew)) {
     const entry = unrecorded.get(row.personId) ?? { ...row, sailings: 0 };
     entry.sailings += row.sailings;
@@ -487,6 +506,10 @@ export function summarizeSafetyYear(months: readonly SafetyMonth[]): SafetyYear 
     unmarkedAtDock: sum((month) => month.unmarkedAtDock),
     certOverrides: sum((month) => month.certOverrides),
     crewSailings: sum((month) => month.crewSailings),
+    crewCredentialStates: [...crewCredentialStates].map(([personId, credentialed]) => ({
+      personId,
+      credentialed,
+    })),
     lapsedSailings: months.flatMap((month) => month.lapsedSailings),
     unknownCredentialSailings: sum((month) => month.unknownCredentialSailings),
     unrecordedSailings: sum((month) => month.unrecordedSailings),

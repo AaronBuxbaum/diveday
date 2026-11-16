@@ -1,14 +1,16 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { DAY_MS, nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { getMonthlyReport, getShopYear } from "../features/reporting/store";
 import { getTripManifest } from "./manifests";
 import {
   bookings,
   cards,
   diveSites,
+  people,
   rollCallEvents,
   tripAssignments,
   tripDives,
@@ -16,6 +18,7 @@ import {
   trips as tripsTable,
 } from "./schema";
 import { resetDemoSchedule } from "./seed";
+import { staffDefs } from "./seed-cast";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { tripPrimarySiteId } from "./trip-primary-site";
 
@@ -233,6 +236,92 @@ describe("seeded history manifests", () => {
  * 0" crew sailings, the emptiest record reading cleanest.
  */
 describe("seeded history crew", () => {
+  it("records current fictional credential evidence for every historical crew sailing", async () => {
+    const { db, shop } = await seededShopContext({ history: true });
+    const { getSafetyMonth } = await import("@/features/safety-report/store");
+    const now = nowDate();
+    const report = await getSafetyMonth(
+      db,
+      shop.id,
+      new Date(now.getTime() - 450 * DAY_MS),
+      now,
+      shop.timezone,
+      now,
+    );
+    expect(report.crewSailings).toBeGreaterThan(0);
+    expect(report.unknownCredentialSailings).toBe(0);
+    expect(report.unrecordedSailings).toBe(0);
+    expect(report.lapsedSailings).toEqual([]);
+
+    const events = await db
+      .select({
+        personId: rollCallEvents.crewPersonId,
+        startsAt: tripsTable.startsAt,
+        snapshot: rollCallEvents.credentialSnapshot,
+      })
+      .from(rollCallEvents)
+      .innerJoin(tripsTable, eq(tripsTable.id, rollCallEvents.tripId))
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shop.id),
+          eq(tripsTable.description, HISTORY_DESCRIPTION),
+          eq(rollCallEvents.subjectKind, "crew"),
+          eq(rollCallEvents.checkpoint, "departure"),
+        ),
+      )
+      .orderBy(asc(tripsTable.startsAt));
+    const oldest = events[0];
+    if (!oldest) throw new Error("historical crew evidence missing");
+    const earlySailings = events.filter(
+      (event) =>
+        event.personId === oldest.personId &&
+        event.startsAt.getTime() < now.getTime() - 366 * DAY_MS,
+    );
+    expect(earlySailings.length).toBeGreaterThan(1);
+    expect(earlySailings[1]?.snapshot).toEqual(earlySailings[0]?.snapshot);
+
+    const today = utcToWallTime(now, shop.timezone);
+    const { from, to } = shopMonthBounds({ year: today.year, month: today.month }, shop.timezone);
+    const current = await getSafetyMonth(db, shop.id, from, to, shop.timezone, now);
+    const members = await db
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(
+        inArray(
+          people.id,
+          current.crewCredentialStates.map(({ personId }) => personId),
+        ),
+      );
+    expect(members.map(({ fullName }) => fullName).sort()).toEqual(
+      staffDefs.map(({ fullName }) => fullName).sort(),
+    );
+    expect(current.crewCredentialStates.every(({ credentialed }) => credentialed)).toBe(true);
+
+    const { crewBusyElsewhere } = await import("./trips-crew");
+    const extras = await db
+      .select({
+        tripId: tripsTable.id,
+        startsAt: tripsTable.startsAt,
+        endsAt: tripsTable.endsAt,
+        personId: tripAssignments.personId,
+      })
+      .from(tripAssignments)
+      .innerJoin(tripsTable, eq(tripsTable.id, tripAssignments.tripId))
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .where(
+        and(
+          eq(tripsTable.shopId, shop.id),
+          eq(tripsTable.description, HISTORY_DESCRIPTION),
+          inArray(people.fullName, ["Dana Reyes", "Talia Okonkwo"]),
+        ),
+      );
+    expect(extras).toHaveLength(2);
+    for (const extra of extras) {
+      expect(await crewBusyElsewhere(db, shop.id, extra.tripId, [extra.personId], [extra])).toEqual(
+        new Set(),
+      );
+    }
+  });
   it("puts a captain and a divemaster on every sailed history boat", async () => {
     const { db, shop } = ctx;
     await resetDemoSchedule(db, shop.id, "history");
@@ -252,7 +341,7 @@ describe("seeded history crew", () => {
         .filter((row) => row.tripId === trip.id)
         .map((row) => row.tripRole)
         .sort();
-      expect(roles, trip.id).toEqual(["captain", "divemaster"]);
+      expect(roles, trip.id).toEqual(expect.arrayContaining(["captain", "divemaster"]));
     }
   });
 });

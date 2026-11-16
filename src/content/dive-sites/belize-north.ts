@@ -26,7 +26,7 @@ export const BELIZE_NORTH: DiveSiteTemplate[] = [
         "A cut through the barrier reef south of San Pedro, and the name means little channel. The reserve is shallow and busy with fish.",
       marineLife: "Nurse sharks · spotted eagle rays · green moray eels · spiny lobsters",
       marineLifeDescription:
-        "Large groupers, turtles and morays sit among the coral, with eagle rays and nurse sharks working the sand. Southern stingrays turn up on the night dive, which needs a guide.",
+        "Large groupers, turtles, and morays sit among the coral, with eagle rays and nurse sharks working the sand. Southern stingrays turn up on the night dive, which needs a guide.",
       conservationNote: "A marine reserve: look, but do not touch or take anything.",
       difficultyLevel: "intermediate",
       depthMinMeters: 6,
@@ -71,7 +71,7 @@ export const BELIZE_NORTH: DiveSiteTemplate[] = [
         "Coral ridges separated by sand-floored canyons on the reef off San Pedro. A local operator runs it as a 45-minute dive to 21 m.",
       marineLife: "Nurse sharks · black groupers · green moray eels · snappers",
       marineLifeDescription:
-        "Nurse sharks, groupers and turtles turn up along the ridges, snappers gather in schools, and green moray eels live in the crevices.",
+        "Nurse sharks, groupers, and turtles turn up along the ridges, snappers gather in schools, and green moray eels live in the crevices.",
       difficultyLevel: "intermediate",
       maxDepthMeters: 21,
       currentNote:

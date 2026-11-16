@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { AddPanel } from "@/components/AddPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import type { MapPin } from "@/components/map/SiteMap";
@@ -26,11 +25,9 @@ import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
 import { canEditDiveSites } from "@/lib/authz";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { CatalogView } from "./_components/CatalogView";
-import { NewSitePanel } from "./_components/NewSitePanel";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
 import { SiteLibraryViews } from "./_components/SiteLibraryViews";
@@ -70,8 +67,6 @@ export default async function DiveSitesPage({
 }: {
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{
-    /** `1`: the new-site panel is open (`NewSitePanel`). */
-    add?: string;
     notice?: string;
     q?: string;
     page?: string;
@@ -89,8 +84,7 @@ export default async function DiveSitesPage({
   const surface = await requireShopSurface(shopSlug);
   const { db, shop } = surface;
   const libraryPath = shopPath(shopSlug, "dive-sites");
-  const adding = addPanelOpen(search.add);
-  const addHref = addPanelHref(libraryPath);
+  const addHref = `${libraryPath}/new`;
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // A template's field guide is diver copy, so the catalog preview reads it
@@ -205,7 +199,7 @@ export default async function DiveSitesPage({
         // owns them until there is a library to act on.
         //
         actions={
-          !mayEdit || librarySize === 0 || adding ? undefined : (
+          !mayEdit || librarySize === 0 ? undefined : (
             <Link href={addHref} className={buttonClass()}>
               {t("diveSites.list.createSite")}
             </Link>
@@ -215,22 +209,12 @@ export default async function DiveSitesPage({
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
-      <AddPanel
-        open={adding && mayEdit}
-        title={t("diveSites.new.title")}
-        description={t("diveSites.new.description")}
-        closeHref={addPanelCloseHref(libraryPath, search)}
-        closeLabel={t("shared.addPanel.close")}
-      >
-        <NewSitePanel surface={surface} shopSlug={shopSlug} t={t} locale={locale} />
-      </AddPanel>
-
       {librarySize === 0 ? (
         <EmptyState
           title={query ? t("diveSites.list.noMatchHeading") : t("diveSites.list.emptyHeading")}
           body={t("diveSites.list.emptyBody")}
           action={
-            !mayEdit || query || librarySize > 0 || adding ? null : (
+            !mayEdit || query || librarySize > 0 ? null : (
               // The only place these two doors exist on an empty library: the
               // header drops its actions when the library is empty precisely so
               // this card owns them, and a shop reading "start with a site your
@@ -269,6 +253,7 @@ export default async function DiveSitesPage({
                 carry={{ q: query, difficulty: filters.difficulty, need: filters.need }}
                 t={t}
                 className=""
+                fill
               />
             ) : null
           }

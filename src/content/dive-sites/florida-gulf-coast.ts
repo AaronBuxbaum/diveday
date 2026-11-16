@@ -203,7 +203,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       currentNote:
         "Shallow and close to shore, so wind and runoff decide the visibility more than current does. Boats fish here often; fly a flag and watch for line.",
       fitTone: "welcoming",
-      fitNote: "Shallow, close in and full of structure. A good place for new divers.",
+      fitNote: "Shallow, close in, and full of structure. A good place for new divers.",
       landmarks: [
         {
           name: "The barge",
@@ -282,7 +282,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
         {
           name: "Circle of Heroes",
           kind: "underwaterMonument",
-          note: "Statues of soldiers, sailors, airmen, Marines and Coast Guard members standing in a circle on the sand.",
+          note: "Statues of soldiers, sailors, airmen, Marines, and Coast Guard members standing in a circle on the sand.",
         },
         {
           name: "The barges",
@@ -345,7 +345,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote:
-        "A long open-Gulf run with no shelter, so current, visibility and sea state all decide the day. Moored at bow and stern. Stay outside the hull.",
+        "A long open-Gulf run with no shelter, so current, visibility, and sea state all decide the day. Moored at bow and stern. Stay outside the hull.",
       fitTone: "demanding",
       fitNote:
         "Far offshore and close to 30 m on the sand. Plan it as a deep dive with a hard turn pressure.",

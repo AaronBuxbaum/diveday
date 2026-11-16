@@ -24,7 +24,7 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
         "A shore dive from a busy beach, under and around an old navy pier. The pilings and a few free-standing piers are covered in sea life, with turtles and plenty of small fish.",
       marineLife: "Sergeant majors · angelfish · trumpetfish · sea turtles",
       marineLifeDescription:
-        "Fish shelter under the pier. Sea turtles, octopus and squid turn up now and then.",
+        "Fish shelter under the pier. Sea turtles, octopus, and squid turn up now and then.",
       difficultyLevel: "intermediate",
       depthMinMeters: 0,
       maxDepthMeters: 25,
@@ -79,7 +79,7 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
         "A small uninhabited island about 12 miles out, with reef all around it and water that often clears past 30 m. Diving around the island is allowed. The island itself is closed to the public.",
       marineLife: "Reef fish · crustaceans · turtles · sharks",
       marineLifeDescription:
-        "Healthy reef with a wide cast: fish, lobsters and turtles, with sharks and dolphins reported. Humpback whales pass in winter, sometimes heard underwater.",
+        "Healthy reef with a wide cast: fish, lobsters, and turtles, with sharks and dolphins reported. Humpback whales pass in winter, sometimes heard underwater.",
       difficultyLevel: "advanced",
       depthMinMeters: 18,
       maxDepthMeters: 28,
@@ -133,7 +133,7 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
       forecastLatitude: 17.8783,
       forecastLongitude: -67.0621,
       description:
-        "A long wall that the shelf drops into a few miles south of La Parguera. The top lies between about 17 and 20 m, with trenches, elkhorn, gorgonians and black coral, and visibility often past 30 m. The wall steps down and then falls away, far past the plan’s floor.",
+        "A long wall that the shelf drops into a few miles south of La Parguera. The top lies between about 17 and 20 m, with trenches, elkhorn, gorgonians, and black coral, and visibility often past 30 m. The wall steps down and then falls away, far past the plan’s floor.",
       marineLife: "Gorgonians · black coral · barracuda · reef fish",
       marineLifeDescription:
         "Sponges and gorgonians crowd the wall, and the water column holds medium-sized fish with the odd barracuda.",
@@ -152,7 +152,7 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
         {
           name: "The wall",
           kind: "reefFormation",
-          note: "The shelf edge, with trenches, elkhorn coral and gorgonians along its top.",
+          note: "The shelf edge, with trenches, elkhorn coral, and gorgonians along its top.",
         },
       ],
       creatureSlugs: [
@@ -186,10 +186,10 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
       forecastLatitude: 18.149,
       forecastLongitude: -65.5148,
       description:
-        "A former military pier and breakwater on the north shore, with a shore entry and sheltered water. Turtles, rays, lobsters, eels, octopus and tarpon use it, with a nurse shark now and then.",
+        "A former military pier and breakwater on the north shore, with a shore entry and sheltered water. Turtles, rays, lobsters, eels, octopus, and tarpon use it, with a nurse shark now and then.",
       marineLife: "Hawksbill turtles · eagle rays · tarpon · nurse sharks",
       marineLifeDescription:
-        "Hawksbill and green turtles live along the pilings. Rays, morays and lobsters sit under the structure.",
+        "Hawksbill and green turtles live along the pilings. Rays, morays, and lobsters sit under the structure.",
       difficultyLevel: "beginner",
       depthMinMeters: 0,
       maxDepthMeters: 13,

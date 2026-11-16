@@ -123,7 +123,7 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       currentNote:
         "Exposed to the Atlantic and often run as a drift despite a mooring, so carry an SMB. The rock is awash in swell. The wall continues deeper than the plan, so the floor is the diver's to hold. A split runs through the rock itself; it is overhead, so stay out of it.",
       divePlan:
-        "Drop down the outside of the rock, drift along the wall no deeper than 25 m, and ascend on an SMB or the mooring line, away from the rock. If reef sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
+        "Drop down the outside of the rock, drift along the wall no deeper than 25 m, and ascend on an SMB or the mooring line, away from the rock. If reef sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together, and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "The furthest site on the windward side, exposed and walled. For divers comfortable drifting in open water.",

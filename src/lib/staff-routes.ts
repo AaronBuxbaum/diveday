@@ -58,6 +58,7 @@ export const STAFF_ROUTES = {
   certifications: {},
   "courses/[slug]/edit": {},
   "dive-sites": {},
+  "dive-sites/new": {},
   "dive-sites/[id]": {},
   divers: {},
   "divers/[personId]": {},

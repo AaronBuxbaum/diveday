@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  addOxfordCommas,
   BRITISH_SPELLINGS,
   ENCRYPTION_ALLOWLIST,
   EXCLAMATION_ALLOWLIST,
@@ -9,6 +10,7 @@ import {
   housePhrases,
   metadataStrings,
   mirroredPairs,
+  oxfordCommas,
   pageOf,
   proseDashes,
   RULES,
@@ -762,5 +764,72 @@ describe("the four shapes (2026-09-24)", () => {
       ),
     ).toEqual([]);
     expect(() => housePhrases([], "fr-FR")).toThrow(/stopword/);
+  });
+});
+
+describe("the Oxford comma", () => {
+  const missing = (value, key = "") => oxfordCommas(value, key).map((tell) => tell.text);
+
+  it("names a list of three that skips the comma before its conjunction", () => {
+    expect(missing("Bookings, forms and trip details stay together.")).toEqual([", forms and"]);
+    expect(missing("Search by name, phone or email.")).toEqual([", phone or"]);
+    expect(missing("Revenue, bookings, seat fill and tips")).toEqual([", seat fill and"]);
+    expect(findTells("Export, import and backups", "en-US").map((tell) => tell.rule)).toContain(
+      "oxford-comma",
+    );
+  });
+
+  it("accepts a list that has it", () => {
+    expect(missing("Bookings, forms, and trip details stay together.")).toEqual([]);
+    expect(missing("Export, import, backups, and integrations")).toEqual([]);
+  });
+
+  it("leaves a pair, two verbs, a clause opener, and a name alone", () => {
+    expect(missing("Every diver aboard, signal or not")).toEqual([]);
+    expect(missing("Starter pages from PADI, SSI, or SDI, copied in and made yours")).toEqual([]);
+    expect(
+      missing("If you prepare the trip in DiveDay, staff create it and add the divers."),
+    ).toEqual([]);
+    expect(missing("In January 1998, Tom and Eileen went out.")).toEqual([]);
+    expect(missing("Sunk upright, so stay outside and watch.")).toEqual([]);
+    expect(missing("West Caicos, Turks and Caicos")).toEqual([]);
+    expect(
+      missing("{count, plural, one {a diver and a guide} other {# divers and guides}}"),
+    ).toEqual([]);
+  });
+
+  it("leaves paired phrases and negated verbs alone", () => {
+    expect(missing("Keep nothing dangling, do not chase or touch, stay together.")).toEqual([]);
+    expect(missing("Look, but do not touch or take anything.")).toEqual([]);
+    expect(missing("Stay calm, never chase or touch the animal.")).toEqual([]);
+    expect(missing("Keep your distance, with no chasing or touching, group together.")).toEqual([]);
+    expect(missing("Looking up now and then, and ascending.")).toEqual([]);
+    expect(missing("Diabetes, either drug or diet controlled")).toEqual([]);
+    expect(missing("Follow the ridge, north or south along the edge.")).toEqual([]);
+    expect(missing("Open Gulf, so current and visibility vary.")).toEqual([]);
+    expect(missing("Eagle rays, southern stingrays, and squid pass along the wall.")).toEqual([]);
+  });
+
+  it("still names the list that follows a negated pair", () => {
+    expect(
+      missing("Keep nothing dangling, do not chase or touch, stay together and follow the crew"),
+    ).toEqual([", stay together and"]);
+    expect(missing("Never chase, touch or reach for a shark")).toEqual([", touch or"]);
+  });
+
+  it("is English only", () => {
+    expect(
+      findTells("Reservas, formularios y detalles del viaje", "es-ES").map((t) => t.rule),
+    ).not.toContain("oxford-comma");
+  });
+
+  it("puts the comma back where the check finds it missing", () => {
+    expect(addOxfordCommas("Bookings, forms and trip details")).toBe(
+      "Bookings, forms, and trip details",
+    );
+  });
+
+  it("skips a value its key exempts", () => {
+    expect(missing("a, b and c", "main.profile.heroHint")).toEqual([]);
   });
 });
