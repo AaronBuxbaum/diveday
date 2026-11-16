@@ -962,7 +962,8 @@
       "shop_promo_codes": "Discount codes",
       "courses": "Course catalog",
       "shop_text_translations": "Shop translations",
-      "trip_conservation": "Measured conservation actions per departure, with correction and deletion state."
+      "trip_conservation": "Measured conservation actions per departure, with correction and deletion state.",
+      "disruption_recovery_events": "Cancellation recovery follow-up"
     }
   },
   "crewSheet": {

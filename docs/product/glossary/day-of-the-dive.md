@@ -198,3 +198,5 @@
   Settings → Features controls every editor and recap door without deleting the records.
   The shop export includes the record, recorder, revision and deletion state. This is independent
   of standing shop commitments, site briefing notes and conservation fees.
+
+**Recovery follow-up** — The shop’s recorded follow-through with a diver affected by a canceled departure: awaiting contact or a decision, no replacement requested, or an explicitly confirmed replacement booking. Its history does not establish that a notification arrived, a refund completed, or a diver is ready to board.

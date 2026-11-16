@@ -5,6 +5,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -17,6 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { BoatPaperRecord, BoatRadioRecord, BoatSafetyNotice } from "@/lib/boat-safety";
 import type { CrewCredentialSnapshot } from "@/lib/crew-credential-snapshot";
+import type { RecoveryOutcome } from "@/lib/disruption-recovery";
 import type { IncidentCertificationEvidence } from "@/lib/incident-export";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
@@ -825,6 +827,53 @@ export const tripBlowoutDivers = pgTable(
     // booking alone is the natural key — the send loop's resume guarantee.
     uniqueIndex("trip_blowout_divers_booking_unique").on(table.bookingId),
     index("trip_blowout_divers_blowout_idx").on(table.blowoutId),
+    uniqueIndex("trip_blowout_divers_shop_id_id_unique").on(table.shopId, table.id),
+  ],
+);
+
+/** Staff follow-up history, separate from notification/refund evidence. Corrections append. */
+export const disruptionRecoveryEvents = pgTable(
+  "disruption_recovery_events",
+  {
+    id: uuid("id").primaryKey(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    blowoutDiverId: uuid("blowout_diver_id")
+      .notNull()
+      .references(() => tripBlowoutDivers.id, { onDelete: "cascade" }),
+    actorPersonId: uuid("actor_person_id")
+      .notNull()
+      .references(() => people.id),
+    outcome: text("outcome").$type<RecoveryOutcome>().notNull(),
+    replacementBookingId: uuid("replacement_booking_id").references(() => bookings.id),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "disruption_recovery_events_scoped_diver_fk",
+      columns: [table.shopId, table.blowoutDiverId],
+      foreignColumns: [tripBlowoutDivers.shopId, tripBlowoutDivers.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "disruption_recovery_events_scoped_replacement_fk",
+      columns: [table.shopId, table.replacementBookingId],
+      foreignColumns: [bookings.shopId, bookings.id],
+    }),
+    index("disruption_recovery_events_diver_seq_idx").on(
+      table.shopId,
+      table.blowoutDiverId,
+      table.seq,
+    ),
+    check(
+      "disruption_recovery_events_outcome",
+      sql`${table.outcome} in ('pending', 'contacted', 'declined', 'rebooked')`,
+    ),
+    check(
+      "disruption_recovery_events_link",
+      sql`(${table.outcome} = 'rebooked') = (${table.replacementBookingId} is not null)`,
+    ),
   ],
 );
 

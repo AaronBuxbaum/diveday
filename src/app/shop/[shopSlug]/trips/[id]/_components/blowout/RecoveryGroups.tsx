@@ -9,6 +9,8 @@ import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 
+import { RecoveryFollowUp } from "./RecoveryFollowUp";
+
 const TITLE_DATE_JOIN = " — ";
 const PAYMENT_KEY: Record<PaymentStatus, StaffMessageKey> = {
   unpaid: "divers.shared.paymentStatus.unpaid",
@@ -35,12 +37,14 @@ const MESSAGE_BADGE: Record<
 export function RecoveryGroups({
   divers,
   shopSlug,
+  tripId,
   locale,
   timezone,
   t,
 }: {
   divers: readonly BlowoutDiverState[];
   shopSlug: string;
+  tripId: string;
   locale: string;
   timezone: string;
   t: StaffTranslator;
@@ -49,7 +53,14 @@ export function RecoveryGroups({
     {
       id: "unresolved-recovery",
       title: t("blowout.record.unresolved"),
-      rows: divers.filter((diver) => !diver.rebooked),
+      rows: divers.filter(
+        (diver) => !diver.rebooked && diver.recoveryEvents.at(-1)?.outcome !== "declined",
+      ),
+    },
+    {
+      id: "declined-recovery",
+      title: t("blowout.recovery.declined"),
+      rows: divers.filter((diver) => diver.recoveryEvents.at(-1)?.outcome === "declined"),
     },
     {
       id: "rebooked-recovery",
@@ -101,7 +112,9 @@ export function RecoveryGroups({
                             {t(
                               diver.rebooked
                                 ? "blowout.record.rebookedBadge"
-                                : "blowout.record.unresolvedBadge",
+                                : diver.recoveryEvents.at(-1)?.outcome === "declined"
+                                  ? "blowout.recovery.declined"
+                                  : "blowout.record.unresolvedBadge",
                             )}
                           </Badge>
                         </div>
@@ -195,7 +208,11 @@ export function RecoveryGroups({
                           </Badge>
                         ) : (
                           <Badge tone="warning" size="sm">
-                            {t("blowout.record.unresolvedBadge")}
+                            {t(
+                              diver.recoveryEvents.at(-1)?.outcome === "declined"
+                                ? "blowout.recovery.declined"
+                                : "blowout.record.unresolvedBadge",
+                            )}
                           </Badge>
                         )}
                       </Td>
@@ -204,6 +221,19 @@ export function RecoveryGroups({
                 })}
               </TBody>
             </Table>
+            <div className="mt-4 divide-y divide-border">
+              {group.rows.map((diver) => (
+                <RecoveryFollowUp
+                  key={diver.id}
+                  diver={diver}
+                  shopSlug={shopSlug}
+                  tripId={tripId}
+                  locale={locale}
+                  timezone={timezone}
+                  t={t}
+                />
+              ))}
+            </div>
           </section>
         ))}
     </div>

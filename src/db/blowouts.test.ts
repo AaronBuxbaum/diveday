@@ -541,7 +541,7 @@ describe("callTripBlowout — what the message says", () => {
     expect(refundCalls).toBe(1);
   });
 
-  it("the cascade record reports a diver as rebooked once they hold another upcoming seat", async () => {
+  it("an unrelated upcoming seat does not resolve cancellation recovery", async () => {
     const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
     const email = fakeEmail();
     await callTripBlowout(ctx.db, callInput(ctx, email.provider));
@@ -568,7 +568,7 @@ describe("callTripBlowout — what the message says", () => {
     expect(rebook.ok).toBe(true);
 
     record = await getTripBlowout(ctx.db, ctx.shop.id, ctx.trip.id);
-    expect(record?.divers[0].rebooked).toBe(true);
+    expect(record?.divers[0].rebooked).toBe(false);
   });
 });
 

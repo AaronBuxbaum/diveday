@@ -47,6 +47,8 @@ export const EXPORT_FILE_NOTES = {
     "Staff sightings of junior or full card status, including corrections.",
   "trips.csv":
     "Every trip ever scheduled, including canceled ones, with predicted conditions; its sites are in trip_dives.csv.",
+  "disruption_recovery_events.csv":
+    "Staff recovery follow-up for canceled departures, oldest first. Original and replacement booking ids link to bookings.csv. Outcomes record follow-up only, independently of notification delivery, refunds, or boarding readiness. Corrections append; actor ids resolve through people.csv.",
   "trip_change_events.csv":
     "The public-safe change ledger for departures: what meeting point or conditions snapshot changed, the before and after values, broad source, and timestamp. No readiness, waiver, contact, or capability state is included.",
   "trip_stage_events.csv":

@@ -962,7 +962,8 @@
       "shop_promo_codes": "Códigos de descuento",
       "courses": "Catálogo de cursos",
       "shop_text_translations": "Traducciones del centro",
-      "trip_conservation": "Acciones de conservación medidas por salida, con su estado de corrección y eliminación."
+      "trip_conservation": "Acciones de conservación medidas por salida, con su estado de corrección y eliminación.",
+      "disruption_recovery_events": "Seguimiento de recuperación de cancelaciones"
     }
   },
   "crewSheet": {

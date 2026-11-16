@@ -64,13 +64,13 @@ test.describe("weather blow-out cascade", () => {
     // "Not sent" and every diver is unresolved — the retry affordance shows.
     await expect(
       page
-        .getByRole("region", { name: /^Unresolved/ })
+        .getByRole("region", { name: /^Needs follow-up/ })
         .getByRole("columnheader", { name: "Diver" }),
     ).toBeVisible();
     const rows = page.locator("tbody tr");
     expect(await rows.count()).toBeGreaterThan(0);
     await expect(page.getByText("Not sent").first()).toBeVisible();
-    await expect(page.getByText("Unresolved").first()).toBeVisible();
+    await expect(page.getByText("Follow-up needed", { exact: true }).first()).toBeVisible();
 
     // Offers were computed per diver even though the sends failed: at least
     // one row names an alternative departure, and none of them is the
@@ -79,6 +79,26 @@ test.describe("weather blow-out cascade", () => {
     const offersText = (await offersColumn.allTextContents()).join(" · ");
     expect(offersText.length).toBeGreaterThan(0);
     expect(offersText).not.toContain(REEF_TRIP);
+
+    // A staff follow-up is explicit and independent of the delivery failure.
+    const recoveryRow = page
+      .locator("details")
+      .filter({ has: page.getByText(/^Record follow-up for /) })
+      .first();
+    await recoveryRow.locator("summary").click();
+    await recoveryRow.locator('select[name="outcome"]').selectOption("contacted");
+    await recoveryRow.getByRole("button", { name: "Save follow-up", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("Recovery follow-up saved.");
+    await page
+      .locator("details")
+      .filter({ has: page.getByText(/^Record follow-up for /) })
+      .first()
+      .locator("summary")
+      .click();
+    await expect(page.getByRole("list", { name: "Follow-up history" })).toContainText(
+      "Contacted; awaiting decision",
+    );
+    await expect(page.getByText("Not sent").first()).toBeVisible();
 
     // Resume is idempotent from the surface too: retrying re-walks only the
     // unsent rows and lands back on the same record.

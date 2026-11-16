@@ -102,6 +102,8 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "interest_replies",
   "trip_blowouts",
   "trip_blowout_divers",
+  // Part of the cancellation record: explicit follow-up and corrections stay with its parent.
+  "disruption_recovery_events",
   // One row per departure, read as part of its departure log (#2300).
   "departure_boat_safety_snapshots",
   // What the bench told a customer and the orders it raised (ADR

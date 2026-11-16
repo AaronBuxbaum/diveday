@@ -229,6 +229,7 @@ async function recordDeletedTables(
  * them, and a spec writing any other one needs a private shop too.
  */
 const RESET_KEEPS: Record<string, string> = {
+  disruption_recovery_events: "ON DELETE CASCADE from trip_blowout_divers clears it",
   account_passkeys: "staff authentication survives schedule reset; purged accounts cascade it",
   account_passkey_challenges:
     "staff ceremonies survive schedule reset; purged accounts cascade them",
@@ -339,6 +340,7 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
  * survivor here is a bug unless it is genuinely shared.
  */
 const CASCADE_KEEPS: Record<string, string> = {
+  disruption_recovery_events: "ON DELETE CASCADE from trip_blowout_divers clears it",
   account_passkeys: "ON DELETE CASCADE from shops clears it",
   account_passkey_challenges:
     "ON DELETE CASCADE from shops and accounts clears their bound challenges",

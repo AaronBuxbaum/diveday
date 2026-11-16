@@ -17,10 +17,10 @@
     "calledBy": "Llamada por {name} · {when}",
     "notified": "Avisados",
     "rebooked": "Reservaron de nuevo",
-    "rebookedDetail": "tienen plaza en otra salida",
-    "unresolved": "Sin resolver",
-    "unresolvedDetail": "aún sin plaza nueva, así que la cancelación no ha terminado",
-    "allResolvedDetail": "todos tienen adónde ir",
+    "rebookedDetail": "reservas de reemplazo vinculadas explícitamente",
+    "unresolved": "Requieren seguimiento",
+    "unresolvedDetail": "sin decisión de recuperación registrada",
+    "allResolvedDetail": "seguimiento registrado para todos",
     "table": {
       "diver": "Buceador",
       "message": "Mensaje",
@@ -36,7 +36,7 @@
     "callThem": "Llamar al {phone}",
     "noOffers": "Sin fechas que cumplan, así que se envió el calendario",
     "rebookedBadge": "Reservó de nuevo",
-    "unresolvedBadge": "Sin resolver",
+    "unresolvedBadge": "Requiere seguimiento",
     "noPayment": "Sin pago registrado",
     "heldHeading": "{count, plural, one {# pago sigue retenido.} other {# pagos siguen retenidos.}}",
     "heldRelease": "Los pagos con tarjeta vuelven a la tarjeta. Lo cobrado en el mostrador te toca devolverlo a ti.",
@@ -81,5 +81,23 @@
     "confirmTitle": "¿Cancelar estas salidas?",
     "confirmButton": "{departures, plural, one {Cancelar # salida} other {Cancelar # salidas}}, {divers, plural, one {# buceador} other {# buceadores}}",
     "changeSelection": "Cambiar la selección"
+  },
+  "recovery": {
+    "boundary": "El seguimiento registra la elección del buzo. Los reembolsos y mensajes mantienen su propio estado.",
+    "outcome": "Decisión de recuperación",
+    "pending": "Requiere seguimiento",
+    "contacted": "Contactado; esperando decisión",
+    "declined": "No solicita reemplazo",
+    "rebooked": "Reserva de reemplazo confirmada",
+    "booking": "Reserva de reemplazo existente",
+    "chooseBooking": "Selecciona una reserva existente",
+    "save": "Guardar seguimiento",
+    "history": "Historial de seguimiento",
+    "bookingUnavailable": "La reserva vinculada ya no está disponible para la recuperación. Revisa los planes del buzo.",
+    "saved": "Seguimiento de recuperación guardado.",
+    "stale": "Alguien actualizó el seguimiento de este buzo. Revisa el historial y vuelve a intentarlo.",
+    "invalid": "No se guardó el seguimiento. Revisa la selección y las reservas existentes del buzo.",
+    "busy": "Se está actualizando la recuperación. Vuelve a intentarlo en un momento.",
+    "forDiver": "Registrar seguimiento de {name}"
   }
 }

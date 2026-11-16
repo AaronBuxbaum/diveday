@@ -28,6 +28,10 @@ const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey
   called: { tone: "success", key: "blowout.notices.called" },
   resumed: { tone: "success", key: "blowout.notices.resumed" },
   departed: { tone: "danger", key: "blowout.notices.departed" },
+  "recovery-saved": { tone: "success", key: "blowout.recovery.saved" },
+  "recovery-busy": { tone: "danger", key: "blowout.recovery.busy" },
+  "recovery-stale": { tone: "danger", key: "blowout.recovery.stale" },
+  "recovery-invalid": { tone: "danger", key: "blowout.recovery.invalid" },
   error: { tone: "danger", key: "blowout.notices.error" },
   "refunds-released": { tone: "success", key: "blowout.notices.refundsReleased" },
   "refund-not-authorized": { tone: "danger", key: "blowout.notices.refundNotAuthorized" },
@@ -128,7 +132,9 @@ export async function BlowoutPageBody({
   const divers = blowout.divers;
   const sent = divers.filter((diver) => diver.messageStatus === "sent").length;
   const rebooked = divers.filter((diver) => diver.rebooked).length;
-  const unresolved = divers.length - rebooked;
+  const unresolved = divers.filter(
+    (diver) => !diver.rebooked && diver.recoveryEvents.at(-1)?.outcome !== "declined",
+  ).length;
   // `sending` is normally transient, but a crashed pass can strand it — the
   // retry control reclaims those rows too (see resumeTripBlowout).
   const retryable = divers.some(
@@ -164,7 +170,13 @@ export async function BlowoutPageBody({
           tone={rebooked > 0 ? "success" : "default"}
         />
         <a
-          href={unresolved > 0 ? "#unresolved-recovery" : "#rebooked-recovery"}
+          href={
+            unresolved > 0
+              ? "#unresolved-recovery"
+              : rebooked > 0
+                ? "#rebooked-recovery"
+                : "#declined-recovery"
+          }
           className="grid row-span-2 grid-rows-subgrid rounded-lg"
         >
           <ShopStat
@@ -186,6 +198,7 @@ export async function BlowoutPageBody({
         <RecoveryGroups
           divers={divers}
           shopSlug={shopSlug}
+          tripId={tripId}
           locale={locale}
           timezone={shop.timezone}
           t={t}

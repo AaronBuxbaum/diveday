@@ -798,6 +798,35 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["trips.csv"],
   },
   {
+    file: "disruption_recovery_events.csv",
+    header: [
+      "id",
+      "shop_id",
+      "blowout_diver_id",
+      "original_booking_id",
+      "original_trip_id",
+      "actor_person_id",
+      "outcome",
+      "replacement_booking_id",
+      "recorded_at",
+      "seq",
+    ],
+    rows: ({ disruptionRecoveryEventRows, recoverySource }) =>
+      disruptionRecoveryEventRows.map((row) => [
+        row.id,
+        row.shopId,
+        row.blowoutDiverId,
+        recoverySource.get(row.blowoutDiverId)?.bookingId,
+        recoverySource.get(row.blowoutDiverId)?.tripId,
+        row.actorPersonId,
+        row.outcome,
+        row.replacementBookingId,
+        row.recordedAt,
+        row.seq,
+      ]),
+    note: EXPORT_FILE_NOTES["disruption_recovery_events.csv"],
+  },
+  {
     file: "trip_change_events.csv",
     header: [
       "id",

@@ -91,3 +91,24 @@ past the stated deadline, which is exactly when a weather call happens.
 - No marketing surface gains a "handles weather" claim from this slice (claims policy, HD-25).
 
 [20260803-trip-admission-at-booking]: 20260803-trip-admission-at-booking.md
+
+
+## Amendment 2026-11-16: explicit recovery follow-up
+
+The cancellation record no longer infers recovery from any other upcoming booking. Staff record
+contact, an outstanding decision, no replacement requested, or an explicitly linked existing booking.
+Corrections append to `disruption_recovery_events`; stale forms cannot overwrite a newer decision.
+The replacement must belong to the same confirmed diver at the same shop, and remain active on a
+scheduled departure. A later cancellation or identity change reopens follow-up without removing the
+original link. A linked booking remains recovery evidence after its departure time passes.
+
+Delivery, payment and recovery remain independent. Recording no replacement requested does not waive
+an owed refund; linking a booking does not move a seat, move money, or grant boarding clearance.
+Refund guarantees and the role split in H-20261013-call-off-queues-refunds remain unchanged. Follow-up
+history contains codes and foreign keys only; names resolve live through the erasure-aware person
+record. The history belongs to and is retained with the existing cancellation evidence.
+
+
+The shop’s full export includes `disruption_recovery_events.csv`, with original and replacement
+booking references. Personal exports continue to withhold staff cancellation follow-up, matching the
+existing cancellation-diver record policy; the diver’s bookings remain in their personal bundle.

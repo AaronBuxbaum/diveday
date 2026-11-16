@@ -42,6 +42,7 @@ import {
   deals,
   departureBoatSafetySnapshots,
   departureNotes,
+  disruptionRecoveryEvents,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -248,6 +249,11 @@ export const EXPORT_TABLES = {
     table: customerGearReminderSettings,
     order: [asc(customerGearReminderSettings.createdAt), asc(customerGearReminderSettings.id)],
     scope: { shopColumn: customerGearReminderSettings.shopId },
+  },
+  disruptionRecoveryEvents: {
+    table: disruptionRecoveryEvents,
+    order: [asc(disruptionRecoveryEvents.seq), asc(disruptionRecoveryEvents.id)],
+    scope: { shopColumn: disruptionRecoveryEvents.shopId },
   },
   tripChangeEvents: {
     table: tripChangeEvents,
