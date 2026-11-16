@@ -47,7 +47,13 @@ export function ImportResult({
         </p>
         {(state.summary.identityConflicts ?? 0) > 0 ? (
           <p className="mt-1 text-sm">
-            {fill(copy.result.identityConflicts, { count: state.summary.identityConflicts ?? 0 })}
+            {fill(
+              pluralForm(state.summary.identityConflicts ?? 0, {
+                one: copy.result.identityConflictsOne,
+                other: copy.result.identityConflictsOther,
+              }),
+              { count: state.summary.identityConflicts ?? 0 },
+            )}
           </p>
         ) : null}
         <p className="mt-1 text-sm">
