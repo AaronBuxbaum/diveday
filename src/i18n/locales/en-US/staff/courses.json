@@ -183,7 +183,7 @@
     "questionLabel": "Question {number}",
     "questionPlaceholder": "Is gear included?",
     "answerLabel": "Answer",
-    "answerPlaceholder": "Yes. Mask, fins, wetsuit and tanks are all part of the course fee.",
+    "answerPlaceholder": "Yes. Mask, fins, wetsuit, and tanks are all part of the course fee.",
     "removeFaq": "Remove question {number}",
     "addFaq": "Add a question",
     "faqsMaxOne": "{max} question is the most a course page holds.",

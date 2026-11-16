@@ -9,7 +9,7 @@ type Copy = StaffMessages["computerDives"];
 const guides: Partial<Record<ComputerLogbookProvider, string>> = {
   oceanic: "https://www.oceanicworldwide.com/faqs/",
   padi: "https://www.padi.com/scuba-diving-mobile-apps",
-  ssi: "https://www.divessi.com/en/join-ssi/register-free/myssi-app",
+  ssi: "https://www.divessi.com/en/blog/blog/blog/scubapro-logtrak-myssi-app-integration-10251.html",
   garmin: "https://support.garmin.com/en-US/?faq=NxZWyZYGqL17VNBMKDUjb5",
   shearwater: "https://shearwater.com/pages/shearwater-cloud",
   subsurface: "https://subsurface-divelog.org/subsurface-user-manual/",

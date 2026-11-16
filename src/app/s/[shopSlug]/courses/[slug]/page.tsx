@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { submitInquiryAction } from "@/app/actions/inquiry";
 import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
@@ -29,7 +29,7 @@ import { nowDate } from "@/lib/clock";
 import { courseTotalCents, resolveCourseContentDepths, resolveCourseDepths } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import { publicCoursePath } from "@/lib/public-routes";
+import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { coursePageJsonLd } from "@/lib/structured-data";
 import { PublicStaffProfiles } from "../../_components/PublicStaffProfiles";
@@ -111,6 +111,7 @@ export default async function CoursePage({
   const db = await getDb();
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
+  if (!shop.coursesEnabled) redirect(publicSchedulePath(shopSlug));
   const stored = await getCourseBySlug(db, shop.id, slug);
   if (!stored) notFound();
 

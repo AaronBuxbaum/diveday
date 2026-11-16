@@ -24,7 +24,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "A round sinkhole about 300 m across in the middle of Lighthouse Reef, where a collapsed cave roof left a sheer-sided blue pit well over 120 m deep. The dive follows the wall and rim of the hole down to 40 m (130 ft).",
       marineLife: "Blacktip sharks · groupers · snappers · horse-eye jacks",
       marineLifeDescription:
-        "Groupers, snappers and jacks swim up to inspect divers near the top of the wall. Blacktip sharks patrol the deeper water.",
+        "Groupers, snappers, and jacks swim up to inspect divers near the top of the wall. Blacktip sharks patrol the deeper water.",
       conservationNote: "Protected as a Natural Monument, within the World Heritage reef system.",
       difficultyLevel: "advanced",
       depthMinMeters: 5,
@@ -35,7 +35,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "Staff confirm the diver’s log (30 or more dives, recent deep dives) before boarding. Down the open wall, no deeper than 40 m (130 ft). The crew briefs the ledge depth; the ledge that begins near 33 m is an overhead, so stay out from under it. The no-stop time on air at 40 m is short, and the plan’s bottom time is about eight minutes. Then up the wall to the rim for the safety stop.",
       fitTone: "demanding",
       fitNote:
-        "Deep, short and far from help. The boat ride to the atoll runs from about an hour out of Turneffe to nearly four hours out of Placencia, and medical care is at least that far away; confirm the boat’s oxygen and plan. One operator takes only Advanced divers with 30 or more dives, and good buoyancy matters for the stop.",
+        "Deep, short, and far from help. The boat ride to the atoll runs from about an hour out of Turneffe to nearly four hours out of Placencia, and medical care is at least that far away; confirm the boat’s oxygen and plan. One operator takes only Advanced divers with 30 or more dives, and good buoyancy matters for the stop.",
       // 40 m is the plan's limit, so Advanced Open Water with the Deep specialty. The stalactites
       // hang from a ledge that starts near 33 m (110 to 120 ft in the sources): the plan stays outside
       // it and does not offer it as a draw. The hole lies well past 120 m; the dive does not.
@@ -63,10 +63,10 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
       forecastLatitude: 17.2012,
       forecastLongitude: -87.535,
       description:
-        "One of the best-known walls in Belize, off Half Moon Caye. The top starts shallow, with gullies and overhangs, gorgonians and sponges, and a sandy flat above the reef where garden eels live.",
+        "One of the best-known walls in Belize, off Half Moon Caye. The top starts shallow, with gullies and overhangs, gorgonians, and sponges, and a sandy flat above the reef where garden eels live.",
       marineLife: "Eagle rays · tarpon · garden eels · hogfish",
       marineLifeDescription:
-        "Eagle rays, sharks and tarpon pass along the wall, with stingrays and hogfish working the sand above it and a colony of garden eels beyond.",
+        "Eagle rays, sharks, and tarpon pass along the wall, with stingrays and hogfish working the sand above it and a colony of garden eels beyond.",
       conservationNote: "Half Moon Caye is a Natural Monument. Take nothing and touch nothing.",
       difficultyLevel: "advanced",
       depthMinMeters: 6,
@@ -188,7 +188,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
       forecastLatitude: 17.2212,
       forecastLongitude: -87.591,
       description:
-        "A shallow dive over the reef top and the lip of the wall off Long Caye, named for the crowds of fish. Star-coral heads, orange elephant ear sponges and blue tunicates cover the wall.",
+        "A shallow dive over the reef top and the lip of the wall off Long Caye, named for the crowds of fish. Star-coral heads, orange elephant ear sponges, and blue tunicates cover the wall.",
       marineLife: "Schoolmaster snappers · creole wrasse · queen angelfish · banded butterflyfish",
       marineLifeDescription:
         "Schoolmasters and creole wrasse fill the water over the coral, and decorator and neck crabs cling to the sea fans.",
@@ -272,7 +272,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "A field of tall coral pinnacles standing on the sand at the southwest corner of the atoll. They are crowded with sponges, plate corals and gorgonians, and sand channels run between them.",
       marineLife: "Schoolmaster snappers · hog snappers · reef sharks · barracuda · tarpon",
       marineLifeDescription:
-        "Hog snappers and schoolmasters hold in the sand channels. Reef sharks, tarpon and barracuda pass through now and then.",
+        "Hog snappers and schoolmasters hold in the sand channels. Reef sharks, tarpon, and barracuda pass through now and then.",
       conservationNote: "Glover’s Reef is a marine reserve and part of the World Heritage site.",
       difficultyLevel: "advanced",
       depthMinMeters: 8,
@@ -363,7 +363,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
       forecastLatitude: 16.7125,
       forecastLongitude: -87.847,
       description:
-        "A wall of stony corals south of Southwest Caye, reached over sand. Great star, boulder star and mound corals grow in broad masses with grooves between them, and the sand below holds conch.",
+        "A wall of stony corals south of Southwest Caye, reached over sand. Great star, boulder star, and mound corals grow in broad masses with grooves between them, and the sand below holds conch.",
       marineLife: "Nurse sharks · black groupers · queen conchs",
       marineLifeDescription:
         "Nurse sharks and big groupers shelter in the coral. Conchs crawl across the sand at the start of the dive.",

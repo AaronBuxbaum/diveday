@@ -25,6 +25,7 @@ function recorders({
     setBusyBooking: vi.fn(),
     setBusyChecklistItem: vi.fn(),
     setBusyArrival: vi.fn(),
+    setActiveWrites: vi.fn(),
     dispatchSaved: vi.fn(),
     setMessage: vi.fn(),
     reconcile: vi.fn(async () => {}),

@@ -35,7 +35,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
         "Enter from the cove, follow the slope out from shore, no deeper than 30 m (100 ft), and return along the shallower reef.",
       fitTone: "demanding",
       fitNote:
-        "Remote, with a rough track, no facilities and stones at the waterline, so it suits experienced divers. The reef drops past this plan's 30 m floor. Check with STINAPA that this coast is open.",
+        "Remote, with a rough track, no facilities, and stones at the waterline, so it suits experienced divers. The reef drops past this plan's 30 m floor. Check with STINAPA that this coast is open.",
       minimumCertificationLevel: "advanced_open_water",
       creatureSlugs: [
         "rainbow-parrotfish",
@@ -656,7 +656,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       forecastLatitude: 12.1883,
       forecastLongitude: -68.297,
       description:
-        "Next to Andrea II, with anemones, soft corals and seahorses. Three kinds of large parrotfish feed in the shallows.",
+        "Next to Andrea II, with anemones, soft corals, and seahorses. Three kinds of large parrotfish feed in the shallows.",
       marineLife: "Seahorses · parrotfish · anemones",
       marineLifeDescription: "The shallows are good snorkeling too.",
       conservationNote:
@@ -2070,7 +2070,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       forecastLatitude: 12.0277,
       forecastLongitude: -68.2368,
       description:
-        "At the southern tip, with schooling fish, lobsters under the corals and the odd turtle or tarpon. Strong current can make the shore entry rough.",
+        "At the southern tip, with schooling fish, lobsters under the corals, and the odd turtle or tarpon. Strong current can make the shore entry rough.",
       marineLife: "Schooling fish · lobsters · turtles · tarpon",
       marineLifeDescription: "Lobsters hide under the corals.",
       conservationNote:
@@ -2197,7 +2197,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       forecastLatitude: 12.1649,
       forecastLongitude: -68.2972,
       description:
-        "Known for turtles and rays, with crinoids, elephant ear sponges and fern-like black coral. The mooring sits in deep water, and no source gives its depth.",
+        "Known for turtles and rays, with crinoids, elephant ear sponges, and fern-like black coral. The mooring sits in deep water, and no source gives its depth.",
       marineLife: "Turtles · eagle rays · stingrays · black coral",
       marineLifeDescription: "Rays and turtles, with sponge and black coral gardens.",
       conservationNote:
@@ -2278,7 +2278,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       forecastLatitude: 12.1538,
       forecastLongitude: -68.2931,
       description:
-        "The point of Klein closest to Bonaire. A deep mooring and a short swim reach healthy coral on pale sand, with purple sea fans, black coral and large tube sponges at depth.",
+        "The point of Klein closest to Bonaire. A deep mooring and a short swim reach healthy coral on pale sand, with purple sea fans, black coral, and large tube sponges at depth.",
       marineLife: "Sea fans · mountain coral · tube sponges · black coral",
       marineLifeDescription: "Healthy coral on pale sand, with sea fans and tube sponges.",
       conservationNote:
@@ -2518,7 +2518,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       forecastLatitude: 12.1497,
       forecastLongitude: -68.3201,
       description:
-        "Groupers, plus bar jacks and horse-eye jacks that feed on schools of boga just off the reef.",
+        "Groupers, plus bar jacks, and horse-eye jacks that feed on schools of boga just off the reef.",
       marineLife: "Groupers · bar jacks · horse-eye jacks",
       marineLifeDescription: "Jacks work the schools of boga off the reef.",
       conservationNote:
@@ -2589,7 +2589,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       forecastLatitude: 12.1572,
       forecastLongitude: -68.3267,
       description:
-        "On Klein's southwest corner, with the mooring close to shore. Elkhorn, staghorn and soft corals, big groupers, and basket stars for night dives.",
+        "On Klein's southwest corner, with the mooring close to shore. Elkhorn, staghorn, and soft corals, big groupers, and basket stars for night dives.",
       marineLife: "Groupers · basket stars · elkhorn coral",
       marineLifeDescription: "Basket stars come out on night dives.",
       conservationNote:

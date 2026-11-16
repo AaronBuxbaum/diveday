@@ -64,7 +64,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.5477,
       forecastLongitude: -86.9341,
       description:
-        "A broad reef top of finger and lettuce coral, sponges, ledges and overhangs on the north coast, outside the national park. Lovely when the sea is calm, and a hard drift when it is not.",
+        "A broad reef top of finger and lettuce coral, sponges, ledges, and overhangs on the north coast, outside the national park. Lovely when the sea is calm, and a hard drift when it is not.",
       marineLife: "French grunts · schoolmaster snapper · nurse sharks · lettuce coral",
       marineLifeDescription:
         "Grunts and snapper stack up over the ledges, with nurse sharks resting under the overhangs.",
@@ -158,7 +158,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.4696,
       forecastLongitude: -86.9822,
       description:
-        "The first reef inside the national park south of town. Three low parallel coral ridges in shallow water, used for checkouts, second dives and night dives.",
+        "The first reef inside the national park south of town. Three low parallel coral ridges in shallow water, used for checkouts, second dives, and night dives.",
       marineLife: "Splendid toadfish · spiny lobster · octopus · queen angelfish",
       marineLifeDescription:
         "Toadfish and octopus come out at night, and the crevices hold lobster and eels.",
@@ -173,7 +173,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
         "From the mooring, cross the ridges toward the sand, turn, and return along the next ridge.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, close and forgiving, and a good first look at Cozumel's reef. Check the ship schedule before you go.",
+        "Shallow, close, and forgiving, and a good first look at Cozumel's reef. Check the ship schedule before you go.",
       // Sources run 9 to 14 m; the deepest figure, 45 ft, is used.
       creatureSlugs: [
         "splendid-toadfish",
@@ -345,7 +345,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.4164,
       forecastLongitude: -87.0182,
       description:
-        "A dense, low reef of sponges and overhangs scoured by sand. A busy dive for its depth, and a regular second tank.",
+        "A dense, low reef of sponges, and overhangs scoured by sand. A busy dive for its depth, and a regular second tank.",
       marineLife: "Spiny lobster · banded coral shrimp · nurse sharks · angelfish",
       marineLifeDescription:
         "Small life fills the overhangs, with turtles and nurse sharks working the edges.",
@@ -524,7 +524,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.3806,
       forecastLongitude: -87.0291,
       description:
-        "A classic wall that starts near 15 m and falls away, with towering coral columns, sand canyons and tunnels cut through the reef crest. One of the island's most popular first tanks.",
+        "A classic wall that starts near 15 m and falls away, with towering coral columns, sand canyons, and tunnels cut through the reef crest. One of the island's most popular first tanks.",
       marineLife: "Spotted eagle rays · green turtles · groupers · horse-eye jacks",
       marineLifeDescription:
         "Eagle rays and turtles patrol the wall, and groupers hold along the buttresses.",
@@ -658,7 +658,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.3448,
       forecastLongitude: -87.0279,
       description:
-        "A shallow reef of crests, cuts and small overhangs, usually a second tank and a favorite for photography.",
+        "A shallow reef of crests, cuts and small overhangs, usually a second tank, and a favorite for photography.",
       marineLife: "Splendid toadfish · nurse sharks · southern stingrays · turtles",
       marineLifeDescription:
         "Toadfish hide in the cuts, with stingrays and nurse sharks on the sand.",
@@ -848,7 +848,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
         "Along the formations at the sand edge, no deeper than 27 m (90 ft), and ascend over the reef with the SMB out.",
       fitTone: "demanding",
       fitNote:
-        "Sand, coral and open water beyond. A lovely dive for divers watching depth and gas.",
+        "Sand, coral, and open water beyond. A lovely dive for divers watching depth and gas.",
       // Sources run to 40 m; the plan floors at 27 m. Gated Advanced Open Water for the depth and the slope.
       minimumCertificationLevel: "advanced_open_water",
       creatureSlugs: [
@@ -881,7 +881,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
         "A clear, shallow garden of dense coral heads in turquoise water, favored by photographers and long bottom times.",
       marineLife: "Green turtles · southern stingrays · spiny lobster · blue tang",
       marineLifeDescription:
-        "Turtles, rays and lobster work the garden, with toadfish in the crevices.",
+        "Turtles, rays, and lobster work the garden, with toadfish in the crevices.",
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "beginner",
@@ -921,7 +921,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.3125,
       forecastLongitude: -87.025,
       description:
-        "Towering pinnacles divided by sand chutes that fall into deep blue water, with swim-throughs, soft corals and sponges.",
+        "Towering pinnacles divided by sand chutes that fall into deep blue water, with swim-throughs, soft corals, and sponges.",
       marineLife: "Green turtles · groupers · spotted eagle rays · great barracuda",
       marineLifeDescription:
         "Turtles and rays pass along the pinnacles, and groupers hold in the chutes.",
@@ -1014,7 +1014,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
         "The southernmost named dive, on the exposed southeast of the island: a sand and rubble terrace with coral heads that leads to a steep wall.",
       marineLife: "Spotted eagle rays · groupers · loggerhead turtles · sharks",
       marineLifeDescription:
-        "Rays, turtles and sharks pass the terrace edge, and groupers hold in the heads.",
+        "Rays, turtles, and sharks pass the terrace edge, and groupers hold in the heads.",
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "advanced",
@@ -1092,7 +1092,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.456,
       forecastLongitude: -86.9905,
       description:
-        "A steep slope dropping from the reef edge at about 12 m into deeper water, with sponges, small coral heads and soft corals.",
+        "A steep slope dropping from the reef edge at about 12 m into deeper water, with sponges, small coral heads, and soft corals.",
       marineLife: "Spiny lobster · green turtles · eagle rays · splendid toadfish",
       marineLifeDescription:
         "Lobster and toadfish use the heads, and turtles and rays cruise along the slope.",
@@ -1136,7 +1136,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.4365,
       forecastLongitude: -87.0062,
       description:
-        "A deeper reef of rounded, separated coral heads, offshore and slightly south of the Chankanaab shallows.",
+        "A deeper reef of rounded, separated coral heads, offshore, and slightly south of the Chankanaab shallows.",
       marineLife: "Spiny lobster · crabs · sponges · reef fish",
       marineLifeDescription: "Lobster and crabs live in the heads, with sponges between them.",
       conservationNote:
@@ -1253,7 +1253,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       forecastLatitude: 20.2896,
       forecastLongitude: -87.0127,
       description:
-        "A deep, little-visited reef of coral heads separated by sand, south of Punta Sur, where rays and flounder lie on the sand.",
+        "A deep, little-visited reef of coral heads separated by sand, south of Punta Sur, where rays, and flounder lie on the sand.",
       marineLife: "Spotted eagle rays · peacock flounder · groupers",
       marineLifeDescription:
         "Rays and flounder use the sand between the heads, with groupers around the heads.",

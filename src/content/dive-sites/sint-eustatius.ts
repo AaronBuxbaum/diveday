@@ -115,7 +115,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       forecastLatitude: 17.5066,
       forecastLongitude: -63.0059,
       description:
-        "An isolated rock in a wide field of sand and seagrass, drawing fish like an oasis. Sponges, coral and anemones cover the rock, sergeant majors feed over its top, and garden eels and southern stingrays share the sand around it.",
+        "An isolated rock in a wide field of sand and seagrass, drawing fish like an oasis. Sponges, coral, and anemones cover the rock, sergeant majors feed over its top, and garden eels and southern stingrays share the sand around it.",
       marineLife: "Sergeant majors · southern stingrays · garden eels · green turtles",
       marineLifeDescription:
         "Small fish crowd the rock, turtles graze and rest nearby, and scorpionfish and morays sit in the cracks. Nudibranchs are common.",
@@ -159,7 +159,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
         "Despite the name, there is no hull to see. Two trading ships were lost here some 300 years ago, and what is left is a handful of ballast piles on sand, grown over with sponges and coral, plus two big anchors. The site is compact, so you can take your time with the small stuff.",
       marineLife: "Southern stingrays · blennies · green turtles · seahorses",
       marineLifeDescription:
-        "Big, calm southern stingrays guard the site, a family of tiny blennies lives in one anchor, and cleaning stations, seahorses and frogfish reward a slow look.",
+        "Big, calm southern stingrays guard the site, a family of tiny blennies lives in one anchor, and cleaning stations, seahorses, and frogfish reward a slow look.",
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. This is a historic wreck site: leave the ballast stones and artifacts where they lie.",
       difficultyLevel: "intermediate",
@@ -204,10 +204,10 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       forecastLatitude: 17.4803,
       forecastLongitude: -62.9948,
       description:
-        "A historic site that reads like an underwater museum. Coral and sponges cover the ballast stones, and the sand around them holds pottery, bottles, barrel hoops, an anchor or two and a cannon, along with yellow Dutch bricks.",
+        "A historic site that reads like an underwater museum. Coral and sponges cover the ballast stones, and the sand around them holds pottery, bottles, barrel hoops, an anchor or two, and a cannon, along with yellow Dutch bricks.",
       marineLife: "Octopus · seahorses · frogfish · scorpionfish",
       marineLifeDescription:
-        "Small, strange animals use the wreckage: fingerprint cyphoma, octopus, squid, scorpionfish, seahorses and frogfish, and sailfin blennies in the old bottles.",
+        "Small, strange animals use the wreckage: fingerprint cyphoma, octopus, squid, scorpionfish, seahorses, and frogfish, and sailfin blennies in the old bottles.",
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. This is a historic wreck site: leave the ballast stones and artifacts where they lie.",
       difficultyLevel: "intermediate",
@@ -249,7 +249,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
         "A Taiwanese long-line fishing vessel sunk as an artificial reef in 2004, sitting upright on the sand of Oranje Bay with its top near 15 m. Orange cup coral covers the wreck. Night dives need staff approval and a briefed plan.",
       marineLife: "Horse-eye jacks · great barracuda · southern stingrays · sea turtles",
       marineLifeDescription:
-        "Jacks, barracuda and stingrays are the day’s regulars, spotted eagle rays sometimes sail over the top in current, and sea turtles bed down here at night.",
+        "Jacks, barracuda, and stingrays are the day’s regulars, spotted eagle rays sometimes sail over the top in current, and sea turtles bed down here at night.",
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "intermediate",
@@ -380,10 +380,10 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       forecastLatitude: 17.4659,
       forecastLongitude: -62.9857,
       description:
-        "Old lava grown over with coral and sponges, with coral gardens, sandy patches and overhangs. Do not go under the overhangs. Yellowtail damselfish live on a pillar coral here, and a small Caribbean reef shark often patrols; watch it without approaching.",
+        "Old lava grown over with coral and sponges, with coral gardens, sandy patches, and overhangs. Do not go under the overhangs. Yellowtail damselfish live on a pillar coral here, and a small Caribbean reef shark often patrols; watch it without approaching.",
       marineLife: "Spiny lobsters · spotted drums · four angelfish species · queen conch",
       marineLifeDescription:
-        "Jawfish, flounders and conch live on the sandy patch, lobsters share the lava with drums and morays, and a single dive can show four species of angelfish.",
+        "Jawfish, flounders, and conch live on the sandy patch, lobsters share the lava with drums and morays, and a single dive can show four species of angelfish.",
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "beginner",
@@ -503,10 +503,10 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       forecastLatitude: 17.4788,
       forecastLongitude: -62.9916,
       description:
-        "A muck-and-history dive between the old harbor and the reefs on the island’s southern corner. Coral heads, sand and seagrass hide pike and sailfin blennies, scorpionfish and mantis shrimp, and legend says the blue trade beads find you.",
+        "A muck-and-history dive between the old harbor and the reefs on the island’s southern corner. Coral heads, sand, and seagrass hide pike and sailfin blennies, scorpionfish and mantis shrimp, and legend says the blue trade beads find you.",
       marineLife: "Flying gurnards · sailfin blennies · scorpionfish · mantis shrimp",
       marineLifeDescription:
-        "The sought-after residents are the flying gurnards, whose fins match the blue of the beads, with blennies, scorpionfish and mantis shrimp in the rubble.",
+        "The sought-after residents are the flying gurnards, whose fins match the blue of the beads, with blennies, scorpionfish, and mantis shrimp in the rubble.",
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "beginner",
@@ -679,7 +679,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       forecastLatitude: 17.4635,
       forecastLongitude: -62.9793,
       description:
-        "A reef top with schools of creole wrasse leads to a vertical cliff covered in deepwater sea fans and wire coral. Hamlets and lettuce sea slugs live on the reef top, and reef sharks, eagle rays and oceanic triggerfish pass in the blue.",
+        "A reef top with schools of creole wrasse leads to a vertical cliff covered in deepwater sea fans and wire coral. Hamlets and lettuce sea slugs live on the reef top, and reef sharks, eagle rays, and oceanic triggerfish pass in the blue.",
       marineLife: "Creole wrasse · hamlets · lettuce sea slugs · Caribbean reef sharks",
       marineLifeDescription:
         "The reef top has wrasse and hamlets, and big animals cruise along the cliff.",

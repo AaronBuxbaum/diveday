@@ -402,6 +402,14 @@ briefing is plain sentences in the order the day happens, and the confidence is 
   standing in for: a full stop, a comma, a colon, or "so"/"and"/"because". A dash that survives is
   a label separator in a short string ("Boarded — tap again to undo", "Checked in — 2"), never a
   hinge inside a sentence. `pnpm check:voice` refuses the rest.
+- **The Oxford comma, always.** A list of three or more takes a comma before its "and" or "or":
+  "Bookings, forms, and trip details", "by name, phone, or email". Aaron always uses it, and a
+  list that skips it reads as two writers. It applies to English only; Spanish takes no comma
+  before "y", "e", "o" or "u". `pnpm check:voice` refuses the missing comma in the en-US bundles,
+  route metadata, and every prose literal under `src/`. It is conservative on purpose: it names a
+  list only when the parts look like one, and leaves a pair ("signal or not"), two verbs ("edited
+  and rolled forward"), and a name ("Turks and Caicos") alone. The few phrases that are not lists
+  sit in `OXFORD_PHRASES` and `OXFORD_ALLOWLIST` in `scripts/check-voice.mjs`, each with a reason.
 - **A colon introduces a list, not a punchline.** "A file, not a project: the importer shows…" is a
   drum roll. Say the fact.
 - **A sentence fragment is not emphasis.** "One sitting, not a project plan." "Plainly." A fragment

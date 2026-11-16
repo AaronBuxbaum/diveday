@@ -67,7 +67,7 @@ export const BVI: DiveSiteTemplate[] = [
         "A group of granite pinnacles off the western tip of Brewers Bay, rising steeply from the sea floor, some to within 30 ft of the surface. Too far from the beach for a shore dive, and best in summer when there is no north swell.",
       marineLife: "Eagle rays · turtles · jacks · tarpon",
       marineLifeDescription:
-        "Big jacks, eagle rays and turtles pass the pinnacles, and tarpon gather in summer when the baitfish are thick.",
+        "Big jacks, eagle rays, and turtles pass the pinnacles, and tarpon gather in summer when the baitfish are thick.",
       difficultyLevel: "advanced",
       depthMinMeters: 8,
       maxDepthMeters: 34,
@@ -164,7 +164,7 @@ export const BVI: DiveSiteTemplate[] = [
         "A small shoal of reef between Spanish Town and the Baths, piled with rocks and ledges. Pillar coral and big schools of reef fish for the size of the site.",
       marineLife: "French grunts · sergeant majors · blue tang · nurse sharks",
       marineLifeDescription:
-        "Sergeant majors, blue tang and chromis fill the water above the rocks, and nurse sharks nap under the larger ledges.",
+        "Sergeant majors, blue tang, and chromis fill the water above the rocks, and nurse sharks nap under the larger ledges.",
       difficultyLevel: "beginner",
       depthMinMeters: 5,
       maxDepthMeters: 11,
@@ -309,7 +309,7 @@ export const BVI: DiveSiteTemplate[] = [
         "Swim slowly over the coral mounds, then cross to the sand patch for the aircraft sculptures. They are wrecks: stay outside the hull of each one.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, calm and good for slow looking. A local non-profit asks a small donation from divers visiting the sharks.",
+        "Shallow, calm, and good for slow looking. A local non-profit asks a small donation from divers visiting the sharks.",
       landmarks: [
         {
           name: "Sharkplaneo",
@@ -345,7 +345,7 @@ export const BVI: DiveSiteTemplate[] = [
       forecastLatitude: 18.492,
       forecastLongitude: -64.4584,
       description:
-        "A pinnacle off Cockroach Island that comes within a dozen feet of the surface, with a slope of big gorgonians and sea fans going down to a line of ledges and small caves. Rays, turtles and sharks pass in the open water.",
+        "A pinnacle off Cockroach Island that comes within a dozen feet of the surface, with a slope of big gorgonians and sea fans going down to a line of ledges and small caves. Rays, turtles, and sharks pass in the open water.",
       marineLife: "Barracuda · eagle rays · bigeyes · angelfish",
       marineLifeDescription:
         "A large barracuda holds the top of the pinnacle, and the ledges below hold schools of bigeyes, highhats and snappers.",
@@ -440,7 +440,7 @@ export const BVI: DiveSiteTemplate[] = [
       forecastLatitude: 18.5075,
       forecastLongitude: -64.4308,
       description:
-        "Two small islands and a breaking rock at the northeast edge of the group, open to the Atlantic. Boulders, canyons and swim-throughs under the cliffs, a slope of soft sponges, and the open blue beside it.",
+        "Two small islands and a breaking rock at the northeast edge of the group, open to the Atlantic. Boulders, canyons, and swim-throughs under the cliffs, a slope of soft sponges, and the open blue beside it.",
       marineLife: "Pelagic jacks · mackerel · eagle rays · butterflyfish",
       marineLifeDescription:
         "Plankton-rich water brings in passing jacks and mackerel, an eagle ray or two, and shoals of butterflyfish that follow divers.",
@@ -453,7 +453,7 @@ export const BVI: DiveSiteTemplate[] = [
         "The bottom under the mooring is about 8 m and slopes away. Follow the cliff base and the boulder canyons, stay clear of the breaking rock (do not go to it), and come back up the line with reserve gas.",
       fitTone: "demanding",
       fitNote:
-        "Open-ocean exposure, depth to 26 m and current. For divers who like their blue-water diving.",
+        "Open-ocean exposure, depth to 26 m, and current. For divers who like their blue-water diving.",
       minimumCertificationLevel: "advanced_open_water",
       creatureSlugs: [
         "horse-eye-jack",
@@ -783,7 +783,7 @@ export const BVI: DiveSiteTemplate[] = [
       divePlan:
         "Down the mooring to the boulder, along the rock face and scattered boulders, and no deeper than 26 m (85 ft). Back up the line.",
       fitTone: "demanding",
-      fitNote: "Exposed, with current and depth to 26 m. Advanced Open Water.",
+      fitNote: "Exposed, with current, and depth to 26 m. Advanced Open Water.",
       minimumCertificationLevel: "advanced_open_water",
       creatureSlugs: [
         "horse-eye-jack",
@@ -856,7 +856,7 @@ export const BVI: DiveSiteTemplate[] = [
       forecastLatitude: 18.3697,
       forecastLongitude: -64.511,
       description:
-        "Four small wrecks in a row on a sandy bottom beside a natural reef slope, off Cooper Island: the Marie L, the Pat, the Beata and the Island Seal. Sunk on purpose as artificial reefs, and now covered in growth.",
+        "Four small wrecks in a row on a sandy bottom beside a natural reef slope, off Cooper Island: the Marie L, the Pat, the Beata, and the Island Seal. Sunk on purpose as artificial reefs, and now covered in growth.",
       marineLife: "Garden eels · southern stingrays · angelfish · conch",
       marineLifeDescription:
         "A bed of garden eels grows on the sand, stingrays glide through the group, and big angelfish stand guard on the hulls.",
@@ -917,7 +917,7 @@ export const BVI: DiveSiteTemplate[] = [
       divePlan:
         "Swim around the point along the shore, over the ridge, and across the craters on the far side.",
       fitTone: "unknown",
-      fitNote: "Shallow, lit and varied, with some current deeper along the point.",
+      fitNote: "Shallow, lit, and varied, with some current deeper along the point.",
       creatureSlugs: [
         "queen-angelfish",
         "sergeant-major",
@@ -992,10 +992,10 @@ export const BVI: DiveSiteTemplate[] = [
       forecastLatitude: 18.3709,
       forecastLongitude: -64.5343,
       description:
-        "The Royal Mail steamship that went down in the October 1867 hurricane, off Black Rock Point on Salt Island. Her bow lies on its side in the deeper water, and the broken stern, boilers and propeller are spread across the shallows. Two dives cover her, and the film The Deep was shot here.",
+        "The Royal Mail steamship that went down in the October 1867 hurricane, off Black Rock Point on Salt Island. Her bow lies on its side in the deeper water, and the broken stern, boilers, and propeller are spread across the shallows. Two dives cover her, and the film The Deep was shot here.",
       marineLife: "Barracuda · sea turtles · stingrays · angelfish",
       marineLifeDescription:
-        "Schools of sennet and a large barracuda meet you at the bow. Turtles, stingrays and snappers move over the stern, and orange cup corals cover the holds.",
+        "Schools of sennet and a large barracuda meet you at the bow. Turtles, stingrays, and snappers move over the stern, and orange cup corals cover the holds.",
       conservationNote:
         "The Rhone lies in a British Virgin Islands National Parks Trust marine park. Boats tie to a Trust mooring buoy; ask the operator what permit applies today. Take nothing from the wreck.",
       difficultyLevel: "advanced",
@@ -1013,7 +1013,7 @@ export const BVI: DiveSiteTemplate[] = [
         {
           name: "Bow section",
           kind: "wreckFeature",
-          note: "The prow, mast and lifeboat davits, lying on its side in the deeper water. Stay outside the hull.",
+          note: "The prow, mast, and lifeboat davits, lying on its side in the deeper water. Stay outside the hull.",
         },
         {
           name: "Stern and propeller",
@@ -1050,10 +1050,10 @@ export const BVI: DiveSiteTemplate[] = [
       forecastLatitude: 18.3691,
       forecastLongitude: -64.5504,
       description:
-        "A pair of pinnacles in the open Salt Island Passage, rising from about 60 ft to within 15 ft of the surface, with the dive starting in an amphitheater. Coral-covered ledges, overhangs and swim-throughs sit on a gorgonian plateau.",
+        "A pair of pinnacles in the open Salt Island Passage, rising from about 60 ft to within 15 ft of the surface, with the dive starting in an amphitheater. Coral-covered ledges, overhangs, and swim-throughs sit on a gorgonian plateau.",
       marineLife: "Turtles · jacks · barracuda · sharks and rays",
       marineLifeDescription:
-        "The only large feature in the passage draws turtles, schools of jacks, cobia and barracuda, and the occasional shark.",
+        "The only large feature in the passage draws turtles, schools of jacks, cobia, and barracuda, and the occasional shark.",
       difficultyLevel: "advanced",
       depthMinMeters: 3,
       maxDepthMeters: 20,
@@ -1103,7 +1103,7 @@ export const BVI: DiveSiteTemplate[] = [
       divePlan:
         "Follow the ridges and canyons out from the island. The arch at the end of one of the canyons is a short swim-through. Overhead; stay out.",
       fitTone: "welcoming",
-      fitNote: "Colorful, close in and shallow, with some swell in the canyons.",
+      fitNote: "Colorful, close in, and shallow, with some swell in the canyons.",
       landmarks: [
         {
           name: "The arch",
@@ -1142,7 +1142,7 @@ export const BVI: DiveSiteTemplate[] = [
         "An offshore pinnacle south of Norman Island that rises from the depths to within 20 ft of the surface. A sink hole drops about 25 ft to sand, the south side is a wall of sea fans and gorgonians, and the top is craggy fire coral.",
       marineLife: "Sharks · turtles · eagle rays · barracuda",
       marineLifeDescription:
-        "Pelagic fish and sharks pass the pinnacle, with turtles, eagle rays and Atlantic spadefish on the walls.",
+        "Pelagic fish and sharks pass the pinnacle, with turtles, eagle rays, and Atlantic spadefish on the walls.",
       difficultyLevel: "advanced",
       depthMinMeters: 6,
       maxDepthMeters: 30,
@@ -1179,7 +1179,7 @@ export const BVI: DiveSiteTemplate[] = [
       forecastLatitude: 18.3311,
       forecastLongitude: -64.6282,
       description:
-        "Four rock pinnacles that rise from a sandy bottom to the surface, off Norman Island, with ledges, steep walls and a shallow pool between two of them. Coral gardens and an abundance of reef fish.",
+        "Four rock pinnacles that rise from a sandy bottom to the surface, off Norman Island, with ledges, steep walls, and a shallow pool between two of them. Coral gardens and an abundance of reef fish.",
       marineLife: "Hawksbill turtles · queen angelfish · reef fish · nudibranchs",
       marineLifeDescription: "Turtles on the deeper sections and nudibranchs in the pond.",
       difficultyLevel: "intermediate",

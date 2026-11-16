@@ -127,11 +127,11 @@
     },
     "ssi": {
       "label": "SSI · manual CSV transfer",
-      "hint": "Beta manual CSV transfer. Copy your own entries into the template, or map a spreadsheet you already have. SSI’s native export format and a general public integration are unverified."
+      "hint": "Copy entries into the CSV template or map your spreadsheet for DiveDay. SSI’s guide covers linking SCUBAPRO LogTRAK with MySSI, selecting dives and choosing “Share with SSI”. DiveDay cannot read your MySSI logbook."
     },
     "garmin": {
       "label": "Garmin",
-      "hint": "One Descent/Connect single-session dive FIT export is verified. Other devices, sessions and export variants are beta."
+      "hint": "One Descent/Connect single-session dive FIT export is verified. Other devices, sessions, and export variants are beta."
     },
     "shearwater": {
       "label": "Shearwater Cloud",

@@ -47,7 +47,7 @@
     "medicalNotCleared": "Not cleared",
     "flaggedAnswersHeading": "Flagged answers",
     "searchLabel": "Search signed records",
-    "searchPlaceholder": "Diver name, email or phone",
+    "searchPlaceholder": "Diver name, email, or phone",
     "searchClear": "Clear search",
     "noMatch": "No signed records match",
     "views": {

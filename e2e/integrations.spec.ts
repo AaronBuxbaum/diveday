@@ -16,7 +16,7 @@ test.describe("shop integrations settings", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto(INTEGRATIONS_SETTINGS);
-    await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Integrations" })).toBeVisible();
     // The fleet has the secret key Zapier needs and no Shopify or Intuit
     // credentials: a card for the one it can connect, and no card at all for
     // the two it cannot (visual review 2026-10-24, A20). No control appears
@@ -34,21 +34,14 @@ test.describe("shop integrations settings", () => {
     await expect(page.getByRole("button", { name: "Connect Zapier" })).toBeVisible();
   });
 
-  test("is reachable from Your data, the Settings group's one door", { tag: READ_ONLY }, async ({
+  test("is reachable from its door in the Your data group", { tag: READ_ONLY }, async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings#data");
     // The hub renders all groups until the fragment selection hydrates. Wait
     // for that selection before clicking a door that would otherwise move.
     await expect(page.locator('[data-settings-selection="group:data"]')).toBeVisible();
-    await page
-      .getByRole("main")
-      .getByRole("link", { name: "Export, import, backups and integrations" })
-      .click();
-    await page
-      .getByRole("navigation", { name: "Your data sections" })
-      .getByRole("link", { name: "Integrations" })
-      .click();
+    await page.getByRole("main").getByRole("link", { name: "Integrations", exact: true }).click();
     await expect(page).toHaveURL(INTEGRATIONS_SETTINGS);
   });
 });
@@ -59,6 +52,6 @@ test.describe("shop integrations authorization", () => {
   test("a captain cannot reach provider credentials", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto(INTEGRATIONS_SETTINGS);
     await expect(page.getByText("Only an owner or manager can change integrations.")).toBeVisible();
-    await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 1, name: "Integrations" })).toHaveCount(0);
   });
 });

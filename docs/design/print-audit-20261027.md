@@ -59,7 +59,7 @@ Staff review covered 73 route templates and inspected 125 pages from 67 unique P
 | `/shop/[shopSlug]/settings/embed` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/settings/emergency-reference` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/settings/export` | Seeded or disposable PDF reviewed before final changes |
-| `/shop/[shopSlug]/settings/export/backups` | Seeded or disposable PDF reviewed before final changes |
+| `/shop/[shopSlug]/settings/backups` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/settings/features` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/settings/import` | Seeded or disposable PDF reviewed before final changes |
 | `/shop/[shopSlug]/settings/integrations` | Seeded or disposable PDF reviewed before final changes |

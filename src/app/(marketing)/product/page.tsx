@@ -28,7 +28,7 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Dive shop software features — DiveDay",
   description:
-    "Every DiveDay feature for dive shops, each with its own page: online booking, waivers and medical forms, certification checks, check-in, the boat manifest, rental gear, courses and payments.",
+    "Every DiveDay feature for dive shops, each with its own page: online booking, waivers, medical forms, certification checks, check-in, the boat manifest, rental gear, courses, and payments.",
   alternates: { canonical: "/product" },
   openGraph: {
     ...sharedLinkCard,

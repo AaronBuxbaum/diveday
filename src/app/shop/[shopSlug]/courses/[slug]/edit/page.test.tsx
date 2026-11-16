@@ -117,6 +117,7 @@ describe("EditCoursePage template update panel", () => {
       session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
       db: {},
       shop: {
+        coursesEnabled: true,
         id: COURSE.shopId,
         slug: "blue-mantis",
         defaultLocale: "en-US",
@@ -163,6 +164,7 @@ describe("EditCoursePage sections", () => {
       session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
       db: {},
       shop: {
+        coursesEnabled: true,
         id: COURSE.shopId,
         slug: "blue-mantis",
         defaultLocale: "en-US",
@@ -257,6 +259,7 @@ describe("EditCoursePage nitrox box", () => {
       session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
       db: {},
       shop: {
+        coursesEnabled: true,
         id: COURSE.shopId,
         slug: "blue-mantis",
         defaultLocale: "en-US",
