@@ -264,6 +264,22 @@ describe("expiring party holds", () => {
     });
   });
 
+  it("moves past a stuck paid seat to expire the holds after it", async () => {
+    const stuck = await heldParty(4);
+    await setBookingPayment(stuck.db, {
+      shopId: stuck.shop.id,
+      bookingId: stuck.member.bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 10_000,
+    });
+    const other = await heldParty(4);
+    expect(await expireGroupHolds(stuck.db, other.until, 1)).toBe(3);
+    const seats = await tripSeats();
+    expect(seats.find((seat) => seat.id === stuck.member.bookingId)?.status).toBe("booked");
+    expect(seats.find((seat) => seat.id === other.member.bookingId)?.status).toBe("cancelled");
+  });
+
   it("never revives a readiness link revoked before expiry", async () => {
     const { db, shop, until, lead } = await heldParty();
     const link = await issueBookingCapability(db, {
