@@ -614,6 +614,17 @@
     },
     "whoCanEnroll": "Who can enroll",
     "fromTheShop": "From the shop",
+    "medicalQuestionsLink": "Read the medical questions first",
+    "medicalQuestions": {
+      "title": "The medical questions",
+      "lede": "{shopName} asks these on the waiver before you dive. If a doctor needs to sign off, that can take a few days, so read them before you book.",
+      "yesNeedsDoctor": "A yes means a doctor has to sign off before you dive.",
+      "yesOpensFollowUps": "A yes on its own doesn’t need a doctor. It opens follow-up questions.",
+      "followUps": "The follow-up questions",
+      "followUpsNeedDoctor": "A yes to any of these means a doctor has to sign off before you dive.",
+      "askShop": "Not sure about an answer? Ask {shopName} before you book.",
+      "back": "Back to {course}"
+    },
     "feeCovers": "What the fee covers",
     "templateCopy": {
       "openWaterCertificationFees": "PADI certification fees",
