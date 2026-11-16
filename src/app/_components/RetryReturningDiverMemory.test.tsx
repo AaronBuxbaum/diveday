@@ -2,6 +2,7 @@
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { nowMs } from "@/lib/clock";
 import {
   forgetReturningDiver,
   getReturningDiverDeviceSlots,
@@ -29,7 +30,7 @@ const receiptCleared = "00000000-0000-4000-8000-000000000013";
 const slotKey = "diveday:returning-diver:device:v1:blue-mantis";
 
 function addSlot() {
-  sessionStorage.setItem(slotKey, JSON.stringify({ token, expiresAt: Date.now() + 86_400_000 }));
+  sessionStorage.setItem(slotKey, JSON.stringify({ token, expiresAt: nowMs() + 86_400_000 }));
 }
 
 function memory(receiptId: string, receiptOrder = "38") {
@@ -40,7 +41,7 @@ function memory(receiptId: string, receiptOrder = "38") {
     deviceGeneration: null,
     shopSlug: "blue-mantis",
     diver: { fullName: "Marco Reyes", email: "marco@example.com" },
-    expiresAt: Date.now() + 86_400_000,
+    expiresAt: nowMs() + 86_400_000,
   };
 }
 

@@ -300,9 +300,11 @@ describe("previewWeeklyDigest", () => {
         now: nowDate(),
       });
       // The request, if one went out, starts a tick after the queue returns.
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      vi.useFakeTimers();
+      await vi.advanceTimersByTimeAsync(20);
       expect(fetcher).not.toHaveBeenCalled();
     } finally {
+      vi.useRealTimers();
       fetcher.mockRestore();
     }
   });
