@@ -614,6 +614,17 @@
     },
     "whoCanEnroll": "Quién puede matricularse",
     "fromTheShop": "Del centro",
+    "medicalQuestionsLink": "Lee primero las preguntas médicas",
+    "medicalQuestions": {
+      "title": "Las preguntas médicas",
+      "lede": "{shopName} las hace en la exención antes de bucear. Si un médico tiene que dar su visto bueno, puede tardar unos días, así que léelas antes de reservar.",
+      "yesNeedsDoctor": "Un “sí” significa que un médico tiene que darte el visto bueno antes de bucear.",
+      "yesOpensFollowUps": "Un “sí” por sí solo no requiere médico. Abre preguntas de seguimiento.",
+      "followUps": "Las preguntas de seguimiento",
+      "followUpsNeedDoctor": "Un “sí” a cualquiera de estas significa que un médico tiene que darte el visto bueno antes de bucear.",
+      "askShop": "¿Tienes dudas con alguna respuesta? Pregunta a {shopName} antes de reservar.",
+      "back": "Volver a {course}"
+    },
     "feeCovers": "Qué cubre el precio",
     "templateCopy": {
       "openWaterCertificationFees": "Tarifas de certificación de PADI",
