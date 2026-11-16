@@ -1,4 +1,4 @@
-import { type AnyColumn, asc, desc, gt, sql } from "drizzle-orm";
+import { type AnyColumn, asc, desc, gt } from "drizzle-orm";
 import { rollCallEvents } from "./schema";
 
 /**
@@ -27,13 +27,6 @@ export function oldestMarkFirst(table: OrderedMarks = rollCallEvents) {
 /** True where `newer` was recorded after `older`, for a "no newer mark exists" anti-join. */
 export function isNewerMark(newer: OrderedMarks, older: OrderedMarks) {
   return gt(newer.seq, older.seq);
-}
-
-/** Original crew intent for a timeline or audit export, separate from risk projection. */
-export function originalRollCallStatus() {
-  return sql<
-    (typeof rollCallEvents.$inferSelect)["status"]
-  >`coalesce(${rollCallEvents.statementStatus}, ${rollCallEvents.status})`;
 }
 
 /** Capture timestamps order an audit trail only, never evidence supersession. */

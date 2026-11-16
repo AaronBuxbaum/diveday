@@ -1462,6 +1462,14 @@ export const paymentOperationIntents = pgTable(
     index("payment_operation_intents_stripe_object_idx")
       .on(table.stripeObjectId)
       .where(sql`${table.stripeObjectId} is not null`),
+    // The in-flight lookups by seat or order (`payments.ts`, `refunds.ts`, `orders.ts`)
+    // read one booking's or one order's intents out of a table every Stripe call appends to.
+    index("payment_operation_intents_booking_idx")
+      .on(table.bookingId)
+      .where(sql`${table.bookingId} is not null`),
+    index("payment_operation_intents_order_idx")
+      .on(table.orderId)
+      .where(sql`${table.orderId} is not null`),
     index("payment_operation_intents_stale_scan_idx")
       .on(table.kind, table.startedAt)
       .where(sql`${table.status} = 'started'`),

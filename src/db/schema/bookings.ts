@@ -968,6 +968,7 @@ export const bookingReferrals = pgTable(
   (table) => [
     // The month's count on Reports.
     index("booking_referrals_shop_idx").on(table.shopId),
+    index("booking_referrals_referrer_idx").on(table.referredByBookingId),
   ],
 );
 

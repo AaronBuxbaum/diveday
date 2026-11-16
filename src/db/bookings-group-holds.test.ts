@@ -218,6 +218,17 @@ describe("expiring party holds", () => {
     ]);
   });
 
+  it("sweeps every due trip even when a page holds fewer than all of them", async () => {
+    const first = await heldParty();
+    const second = await heldParty();
+    await expireGroupHolds(first.db, second.until, 1);
+    const seats = (await tripSeats()).filter(
+      (seat) => seat.tripId === first.trip.id || seat.tripId === second.trip.id,
+    );
+    expect(seats).toHaveLength(4);
+    expect(seats.every((seat) => seat.status === "cancelled")).toBe(true);
+  });
+
   it("never revives a readiness link revoked before expiry", async () => {
     const { db, shop, until, lead } = await heldParty();
     const link = await issueBookingCapability(db, {
