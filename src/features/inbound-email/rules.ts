@@ -219,6 +219,19 @@ export function htmlToText(html: string): string {
 }
 
 /**
+ * The attribution line a mail client writes above a quoted reply, in the
+ * languages divers write from: English "On … wrote:", Spanish "El … escribió:",
+ * French "Le … a écrit :", German "Am … schrieb …:", Italian "Il … ha scritto:",
+ * Portuguese "Em … escreveu:", Dutch "Op … schreef …:".
+ */
+const ATTRIBUTION_LINE =
+  /^(?:On .{0,200}wrote:|El .{0,200}escribió:|Le .{0,200}a écrit\s?:|Am .{0,200}schrieb\b.{0,200}:|Il .{0,200}ha scritto:|Em .{0,200}escreveu:|Op .{0,200}schreef\b.{0,200}:)$/s;
+/** The first half of one that wrapped, and the line that finishes it. */
+const ATTRIBUTION_OPENER = /^(?:On|El|Le|Am|Il|Em|Op) .{0,200}$/;
+const ATTRIBUTION_TAIL =
+  /^.{0,120}(?:wrote:|escribió:|a écrit\s?:|schrieb\b.{0,200}:|ha scritto:|escreveu:|schreef\b.{0,200}:)$/;
+
+/**
  * Cut the quoted history off a reply: everything from the first `>`-quoted
  * block, an "On … wrote:" attribution line, a `-----Original Message-----`
  * divider, or a `From:` header block a client pasted in. What survives is what
@@ -234,15 +247,17 @@ export function stripQuotedReply(text: string): string {
     if (
       trimmed.startsWith(">") ||
       /^-{2,}\s*Original Message\s*-{2,}$/i.test(trimmed) ||
-      /^On .{0,200}wrote:$/s.test(trimmed) ||
-      /^El .{0,200}escribió:$/s.test(trimmed) ||
+      ATTRIBUTION_LINE.test(trimmed) ||
       (/^From:\s/i.test(trimmed) && /^(Sent|Date|To):\s/i.test((lines[index + 1] ?? "").trim()))
     ) {
       cutAt = index;
       break;
     }
     // A wrapped "On <date>, <name>" line whose "wrote:" landed on the next line.
-    if (/^On .{0,200}$/.test(trimmed) && /^.{0,120}wrote:$/.test((lines[index + 1] ?? "").trim())) {
+    if (
+      ATTRIBUTION_OPENER.test(trimmed) &&
+      ATTRIBUTION_TAIL.test((lines[index + 1] ?? "").trim())
+    ) {
       cutAt = index;
       break;
     }
@@ -257,8 +272,9 @@ export function stripQuotedReply(text: string): string {
  * helpers and this file's own text reduction alike, so no throw from any of
  * them can reach the webhook as a 500 and an SNS retry.
  */
-export async function parseInboundEmail(raw: string): Promise<ParsedInboundEmail> {
-  if (Buffer.byteLength(raw, "utf8") > MAX_INBOUND_MESSAGE_BYTES) {
+export async function parseInboundEmail(raw: string | Uint8Array): Promise<ParsedInboundEmail> {
+  const bytes = typeof raw === "string" ? Buffer.byteLength(raw, "utf8") : raw.byteLength;
+  if (bytes > MAX_INBOUND_MESSAGE_BYTES) {
     log("email_inbound.unreadable", "warn", { reason: "too_large" });
     return UNREADABLE;
   }
