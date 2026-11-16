@@ -22,6 +22,7 @@ import {
   validateComputerParseOptions,
 } from "@/lib/computer-import";
 import { computerHistorySummaryCsv } from "./summary-csv";
+import { createDuplicateIndex } from "./duplicate-index";
 
 export type ComputerScope = { shopId: string; personId: string; actorPersonId: string };
 export type ComputerFile = { name: string; bytes: Uint8Array };
@@ -174,40 +175,19 @@ export async function previewComputerFiles(
     .from(computerDives)
     .where(scopeWhere(scope));
   const seen = new Set(existing.map((row) => row.fingerprint));
-  const priorRecords: ParsedComputerDive[] = [];
+  const prior = createDuplicateIndex();
+  for (const row of existing) prior.add(row.record);
   const dives: PreviewDive[] = parsed.dives.map((dive) => {
     const duplicate = seen.has(dive.fingerprint)
       ? "exact"
-      : existing.some((row) => possibleDuplicate(dive.record, row.record)) ||
-          priorRecords.some(
-            (prior) =>
-              Boolean(dive.record.localDate || prior.localDate) &&
-              possibleDuplicate(dive.record, prior),
-          )
+      : prior.matches(dive.record)
         ? "possible"
         : null;
     seen.add(dive.fingerprint);
-    priorRecords.push(dive.record);
+    prior.add(dive.record);
     return { ...dive, duplicate };
   });
   return { personName: person.fullName, files: parsed.files, dives };
-}
-
-function originalDate(record: { localDate?: unknown; localStart?: unknown }) {
-  if (typeof record.localDate === "string") return record.localDate;
-  return typeof record.localStart === "string" ? record.localStart.slice(0, 10) : null;
-}
-function possibleDuplicate(
-  record: ParsedComputerDive,
-  prior: { localStart?: unknown; localDate?: unknown; startInstant?: unknown },
-) {
-  return (
-    (record.startInstant !== null && record.startInstant === prior.startInstant) ||
-    (record.localStart !== null && record.localStart === prior.localStart) ||
-    (Boolean(record.localDate || prior.localDate) &&
-      originalDate(record) !== null &&
-      originalDate(record) === originalDate(prior))
-  );
 }
 
 export type CommitComputerInput = {
