@@ -10,7 +10,7 @@ As Priya, my child's waiver asks for me, refuses to finish without me, and names
 **Done when**
 - A minor's release asks for a parent or guardian and refuses without one.
 - The signed record names who co-signed.
-- A diver who turned 18 the day after still signed as a minor.
+- Age is measured on the signing day: the release of a diver who turned 18 the day after still needs, and keeps, the guardian co-signature.
 
 ### GUARD-02 A seat booked as under 18 asks for a parent
 
@@ -31,7 +31,7 @@ As Priya, I sign my child's release from my own page, with no second account.
 As Chloe, when a parent signs on paper at the counter, I record it on my own attestation.
 
 **Done when**
-- A parent who shares the child's name can co-sign on paper and is marked as staff-attested.
+- A parent who shares the child's name can co-sign on paper, on the staffer's own attestation, and is marked as staff-attested. (The quick tick on the diver record is refused: GUARD-05.)
 
 ### GUARD-05 Staff cannot tick a lookalike co-signer
 

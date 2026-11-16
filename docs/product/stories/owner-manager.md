@@ -49,12 +49,13 @@ As Maren, I can change the shop's waiver and each change is kept as a version.
 - An edit makes a new version and saving it unchanged publishes nothing.
 - A shop question is published, answered by the diver and shown on the signed record.
 
-### WAIV-11 A medical hold ends only with a physician's clearance
+### WAIV-11 A medical hold ends with a recorded physician's clearance
 
-As Dana, a diver on medical hold stays held until a physician clears them.
+As Dana, a diver on medical hold does not board until staff record a physician's clearance.
 
 **Done when**
-- A physician's clearance ends the hold and the roster leads to it.
+- Staff recording a physician's clearance ends the hold; nothing else lifts it, and the diver does not board while it stands.
+- The roster leads to the record.
 - A refused evaluation stops the chase without lifting the hold.
 
 ### WAIV-12 The signed waiver audit is findable and owner-only

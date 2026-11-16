@@ -29,7 +29,7 @@ the refusal, so I never wonder whether it was a mistake.
 **Done when**
 - The trip page says what the charter asks of divers before the form.
 - A refused booking names that same requirement.
-- A diver the shop knows nothing about is not screened at the sale.
+- A diver the shop knows nothing about is not screened at the sale; boarding readiness still gates them.
 
 ### BOOK-04 Booking works in Spanish
 
@@ -115,6 +115,7 @@ reassurance and a follow-up, not a cancelled trip.
 **Done when**
 - One send gives the diver a link they can resume.
 - A medical yes surfaces follow-up to the shop and is never pre-answered.
+- The diver does not board until the shop records a physician's clearance: a yes is a block, not a warning.
 
 ### WAIV-02 The medical form cannot be skipped
 

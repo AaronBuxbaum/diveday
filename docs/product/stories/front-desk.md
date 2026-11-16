@@ -51,6 +51,7 @@ As Chloe, when a diver signs on paper I record it on their row and they become c
 
 **Done when**
 - Recording the paper waiver on the roster row clears the waiver blocker without leaving the page.
+- It never clears a medical hold, and for a minor it never clears the missing guardian signature.
 
 ### DESK-07 A no-show's seat goes back on sale
 

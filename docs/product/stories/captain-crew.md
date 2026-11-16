@@ -29,7 +29,7 @@ As the shop, an old saved copy can never override what the shop knows now.
 
 **Done when**
 - An expired saved copy refuses new writes.
-- Reconciliation on sync is the final authority over what the phone recorded.
+- Sync never replaces newer live history; a mark that conflicts with it keeps the count open until crew reconcile it.
 
 ### ROLL-04 A checkpoint stays open until everyone is counted
 
@@ -57,7 +57,8 @@ As Sal, a last-minute rider counts at once, and only once.
 As Sal, a checklist tap made offline queues, syncs when the signal returns, and two taps undo it.
 
 **Done when**
-- An offline tap queues and then syncs to the live manifest.
+- An offline tap queues and then syncs to the live manifest, and two taps undo it.
+- A late sync never overrides a newer live mark.
 
 ### ROLL-08 The crew can open a medical alert, and it is logged
 
