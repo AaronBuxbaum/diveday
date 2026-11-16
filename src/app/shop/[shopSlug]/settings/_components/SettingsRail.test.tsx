@@ -193,22 +193,15 @@ describe("the selection model", () => {
     ).toBeNull();
   });
 
-  it("lights Your data on any of its four tabs", () => {
-    // Export, Backups, Import and Integrations are one rail row (issue #2813):
-    // standing on any of the four pages is standing on it.
-    for (const path of [
-      "/settings/export",
-      "/settings/export/backups",
-      "/settings/import",
-      "/settings/integrations",
-    ]) {
+  it("lights its own row on each of the four Your data pages", () => {
+    for (const id of ["export", "backups", "import", "integrations"]) {
       expect(
         currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
-          pathname: `${BASE}${path}`,
+          pathname: `${BASE}/settings/${id}`,
           basePath: BASE,
         }),
-        path,
-      ).toBe("yourData");
+        id,
+      ).toBe(id);
     }
   });
 });
@@ -234,7 +227,7 @@ describe("the rail as it renders", () => {
   it("keeps the current section selected in the rail", () => {
     pathname = `${BASE}/settings/import`;
     renderRail();
-    expect(screen.getByRole("link", { name: "yourData" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("link", { name: "import" })).toHaveAttribute("aria-current", "true");
   });
 
   it("shows every section link in the horizontal rail", () => {
@@ -718,7 +711,7 @@ describe("what the rail hides", () => {
     // And keeps the ones nobody is gated out of, so an empty gate set is not
     // simply an empty rail.
     expect(ids.has("diveSites")).toBe(false);
-    expect(ids.has("yourData")).toBe(true);
+    expect(ids.has("integrations")).toBe(true);
   });
 
   it("carries the gate the hub carries, row by row", () => {

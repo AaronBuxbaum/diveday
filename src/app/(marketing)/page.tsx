@@ -43,13 +43,13 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Dive shop software, from booking to roll call — DiveDay",
   description:
-    "Online booking, waivers and medical forms, certification checks, check-in and a boat manifest that works with no signal, in one app for dive shops. Every screen runs in a live demo with no sign-up.",
+    "Online booking, waivers, medical forms, certification checks, check-in, and a boat manifest that works with no signal, in one app for dive shops. Every screen runs in a live demo with no sign-up.",
   alternates: { canonical: "/" },
   openGraph: {
     ...sharedLinkCard,
     title: "DiveDay — dive shop software, from booking to roll call",
     description:
-      "Online booking, waivers, certification checks, check-in and the boat manifest, in one app for dive shops.",
+      "Online booking, waivers, certification checks, check-in, and the boat manifest, in one app for dive shops.",
     url: "/",
   },
   // `summary_large_image`: the shared link card resolves here, and this page
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "DiveDay — dive shop software, from booking to roll call",
     description:
-      "Online booking, waivers, certification checks, check-in and the boat manifest, in one app for dive shops.",
+      "Online booking, waivers, certification checks, check-in, and the boat manifest, in one app for dive shops.",
   },
 };
 

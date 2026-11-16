@@ -68,7 +68,9 @@ export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCover
   rentOut: {
     core: "shown by presence: a shop with no rental items never sees rental, and nitrox lives in the rental items",
   },
-  certifications: "courses",
+  certifications: {
+    core: "the desk's list of cards to validate and send to the agency covers every diver, taught here or not",
+  },
   courses: "courses",
   reviews: "reviews",
   requests: "dateRequests",

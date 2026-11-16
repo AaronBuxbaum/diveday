@@ -32,7 +32,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       forecastLatitude: 14.5264,
       forecastLongitude: -61.0926,
       description:
-        "Green turtles glide over a rubble plateau just off the beach, then a slope runs down past boulders where hawksbills take over. Moray eels, lobsters and French angelfish live in the rocks.",
+        "Green turtles glide over a rubble plateau just off the beach, then a slope runs down past boulders where hawksbills take over. Moray eels, lobsters, and French angelfish live in the rocks.",
       marineLife:
         "Green turtles · hawksbill turtles · French angelfish · porcupinefish · moray eels",
       marineLifeDescription:
@@ -220,7 +220,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       forecastLatitude: 14.5105,
       forecastLongitude: -61.1025,
       description:
-        "Turquoise water over pale rocks and sand, nicknamed the pool. Sergeant majors and damselfish crowd the rocks, and jacks, parrotfish and turtles pass through.",
+        "Turquoise water over pale rocks and sand, nicknamed the pool. Sergeant majors and damselfish crowd the rocks, and jacks, parrotfish, and turtles pass through.",
       marineLife: "Sergeant majors · jacks · parrotfish · lobster · spider crabs",
       marineLifeDescription:
         "Sergeant majors and damselfish crowd the rocks, and jacks and turtles pass over the sand.",
@@ -301,7 +301,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
         "Three coral plateaus in three moods on the flank of Cap Salomon. The first is a field of sea plumes and sponges, the second a gentle stroll at 12 m to 15 m, and the third ends on a wall.",
       marineLife: "Moray eels · lobster · royal grammas · sea plumes",
       marineLifeDescription:
-        "Bright, shallow and full of detail. It suits photographers and anyone who likes to look closely.",
+        "Bright, shallow, and full of detail. It suits photographers and anyone who likes to look closely.",
       difficultyLevel: "beginner",
       // Sources run the third plateau onto a wall; clubs dive the gardens as an all-levels outing,
       // so the plan holds an 18 m floor and the wall lies beyond it.
@@ -329,7 +329,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       forecastLatitude: 14.4982,
       forecastLongitude: -61.0904,
       description:
-        "A coral cliff full of cracks, sheltered from current by Pointe Burgos. Lobsters, frogfish and seahorses live in the fissures, and squid gather near the surface.",
+        "A coral cliff full of cracks, sheltered from current by Pointe Burgos. Lobsters, frogfish, and seahorses live in the fissures, and squid gather near the surface.",
       marineLife: "Lobster · frogfish · seahorses · squid · nudibranchs",
       marineLifeDescription:
         "A site of small, strange animals and a colorful wall right beside the mooring.",
@@ -382,7 +382,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       divePlan:
         "Along the wall at 6 m, out to the coral garden at 12 m, and back along the wall. Stay out of the cavity.",
       fitTone: "welcoming",
-      fitNote: "Sheltered, shallow and colorful, with a wall to look at slowly.",
+      fitNote: "Sheltered, shallow, and colorful, with a wall to look at slowly.",
       creatureSlugs: [
         "orange-cup-coral",
         "longlure-frogfish",
@@ -445,7 +445,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       forecastLatitude: 14.4931,
       forecastLongitude: -61.0936,
       description:
-        "Volcanic ridges stepping down in terraces like an alpine range, with bowls of white sand between. A big school of jacks sits over the edge, and turtles, mackerel and stingrays pass.",
+        "Volcanic ridges stepping down in terraces like an alpine range, with bowls of white sand between. A big school of jacks sits over the edge, and turtles, mackerel, and stingrays pass.",
       marineLife: "Jacks · turtles · barracuda · stingrays",
       marineLifeDescription:
         "A school of big-eyed jacks stays over the edge, and turtles and rays work the sand.",
@@ -552,10 +552,10 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       forecastLatitude: 14.4418,
       forecastLongitude: -61.041,
       description:
-        "A 175 m volcanic rock standing alone in the sea. Its walls and terraces are covered in large gorgonians, with turtles, morays and tropical fish.",
+        "A 175 m volcanic rock standing alone in the sea. Its walls and terraces are covered in large gorgonians, with turtles, morays, and tropical fish.",
       marineLife: "Hawksbill turtles · moray eels · gorgonians · surgeonfish",
       marineLifeDescription:
-        "Terraced rock, big gorgonians and hawksbills. The wall is the draw, not the surface.",
+        "Terraced rock, big gorgonians, and hawksbills. The wall is the draw, not the surface.",
       difficultyLevel: "advanced",
       depthMinMeters: 6,
       maxDepthMeters: 30,
@@ -593,10 +593,10 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       forecastLatitude: 14.8414,
       forecastLongitude: -61.2284,
       description:
-        "A lone volcanic rock about 2.8 km off the coast, with a plateau on top and a wall that circles it. Turtles, barracuda and jacks gather in the current among black gorgonians.",
+        "A lone volcanic rock about 2.8 km off the coast, with a plateau on top and a wall that circles it. Turtles, barracuda, and jacks gather in the current among black gorgonians.",
       marineLife: "Turtles · barracuda · jacks · parrotfish · black gorgonians",
       marineLifeDescription:
-        "Barracuda, jacks and turtles hold in the current among the black gorgonians.",
+        "Barracuda, jacks, and turtles hold in the current among the black gorgonians.",
       difficultyLevel: "advanced",
       depthMinMeters: 16,
       maxDepthMeters: 30,
@@ -605,7 +605,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       divePlan:
         "Down onto the plateau, around the wall no deeper than 30 m, and back up on the SMB with reserve gas. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
-      fitNote: "Remote, current-swept and rewarding. For experienced divers who drift well.",
+      fitNote: "Remote, current-swept, and rewarding. For experienced divers who drift well.",
       // The wall falls to 60 m; the 30 m floor is the plan's. Strong, often open-water current takes
       // the Advanced Open Water gate.
       minimumCertificationLevel: "advanced_open_water",

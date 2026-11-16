@@ -45,12 +45,12 @@ export const BAHAMAS_ELEUTHERA: DiveSiteTemplate[] = [
         {
           name: "Cienfuegos",
           kind: "pointOfInterest",
-          note: "A steamer lost here in 1895, lying flattened, with the bow, engine and boilers still recognizable. Stay outside the hull and the boilers.",
+          note: "A steamer lost here in 1895, lying flattened, with the bow, engine, and boilers still recognizable. Stay outside the hull and the boilers.",
         },
         {
           name: "Train Wreck",
           kind: "pointOfInterest",
-          note: "Wheels, trucks and boiler plates from a barge that carried a locomotive in 1865, in about 5 m (15 ft).",
+          note: "Wheels, trucks, and boiler plates from a barge that carried a locomotive in 1865, in about 5 m (15 ft).",
         },
       ],
       creatureSlugs: [

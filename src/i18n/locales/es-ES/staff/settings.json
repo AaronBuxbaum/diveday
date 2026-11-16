@@ -724,9 +724,6 @@
         "disconnected": "Desconectado"
       },
       "lastSeen": "funcionó por última vez el {date}"
-    },
-    "yourData": {
-      "heading": "Exportar, importar, respaldos e integraciones"
     }
   },
   "dockDay": {
@@ -1471,14 +1468,10 @@
     "viewReport": "Ver informe"
   },
   "data": {
-    "title": "Tus datos",
-    "tabs": {
-      "label": "Secciones de tus datos",
-      "export": "Exportar",
-      "backups": "Respaldos",
-      "import": "Importar",
-      "integrations": "Integraciones"
-    }
+    "export": "Exportar",
+    "backups": "Respaldos",
+    "import": "Importar",
+    "integrations": "Integraciones"
   },
   "features": {
     "title": "Funciones",

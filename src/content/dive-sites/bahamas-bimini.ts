@@ -126,7 +126,7 @@ export const BAHAMAS_BIMINI: DiveSiteTemplate[] = [
         "A thin reef line about 90 m (100 yards) long and barely 5 m wide, standing 3 m high on open sand. Everything lives on it, which makes it a busy dive by day or night.",
       marineLife: "Reef octopus · spotted moray · spiny lobster · nurse sharks",
       marineLifeDescription:
-        "Octopus, morays and lobsters work the coral heads. Nurse sharks and southern stingrays rest on the sand around it.",
+        "Octopus, morays, and lobsters work the coral heads. Nurse sharks and southern stingrays rest on the sand around it.",
       difficultyLevel: "beginner",
       depthMinMeters: 8,
       maxDepthMeters: 13,
@@ -171,10 +171,10 @@ export const BAHAMAS_BIMINI: DiveSiteTemplate[] = [
       forecastLatitude: 25.7499,
       forecastLongitude: -79.3066,
       description:
-        "A reef off North Bimini named for the green morays that have long lived in it. Yellowtail snapper, Nassau grouper, trumpetfish and grunts live on it, with blue tangs swarming the reef and black durgons in midwater.",
+        "A reef off North Bimini named for the green morays that have long lived in it. Yellowtail snapper, Nassau grouper, trumpetfish, and grunts live on it, with blue tangs swarming the reef and black durgons in midwater.",
       marineLife: "Green moray · yellowtail snapper · Nassau grouper · southern stingrays",
       marineLifeDescription:
-        "Morays live in the reef; do not feed, touch or corner them. Snappers, groupers and schooling grunts are residents, and stingrays turn up on the sand.",
+        "Morays live in the reef; do not feed, touch or corner them. Snappers, groupers, and schooling grunts are residents, and stingrays turn up on the sand.",
       difficultyLevel: "intermediate",
       depthMinMeters: 15,
       maxDepthMeters: 25,
@@ -215,7 +215,7 @@ export const BAHAMAS_BIMINI: DiveSiteTemplate[] = [
       forecastLatitude: 25.4818,
       forecastLongitude: -79.2703,
       description:
-        "A long reef line on the edge of the Great Bahama Bank, with sloping wall, ridges and terraces that were once shorelines. The slope runs from about 15 m to a second ridge near 21 m, then steps down and falls away past recreational depth into the Straits of Florida. Tuna Alley, next door, is named for the spring migration of bluefin tuna.",
+        "A long reef line on the edge of the Great Bahama Bank, with sloping wall, ridges, and terraces that were once shorelines. The slope runs from about 15 m to a second ridge near 21 m, then steps down and falls away past recreational depth into the Straits of Florida. Tuna Alley, next door, is named for the spring migration of bluefin tuna.",
       marineLife: "Sea fans · sponges · bluefin tuna (spring) · reef fish",
       marineLifeDescription:
         "The slope is thick with coral and sponge. Bluefin tuna pass in spring.",

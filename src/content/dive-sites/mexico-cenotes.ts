@@ -133,7 +133,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       description:
         "A cavern 5 km south of Puerto Aventuras, decorated with stalactites and stalagmites, with a halocline in the deeper areas. The dive covers only the lit chamber.",
       marineLife: "Fossils · limestone formations",
-      marineLifeDescription: "Fossil shells, corals and urchin skeletons sit in the walls.",
+      marineLifeDescription: "Fossil shells, corals, and urchin skeletons sit in the walls.",
       difficultyLevel: "intermediate",
       depthMinMeters: 0,
       maxDepthMeters: 15,
@@ -305,7 +305,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       forecastLatitude: 20.2745,
       forecastLongitude: -87.4863,
       description:
-        "Also called Aktun Ha, where taxi drivers once washed their cars. Roots, lily pads and a cavern lit through the water, with a layer of algae at the surface that gives the light a green tint.",
+        "Also called Aktun Ha, where taxi drivers once washed their cars. Roots, lily pads, and a cavern lit through the water, with a layer of algae at the surface that gives the light a green tint.",
       marineLife: "Fish · fossils · lily pads",
       marineLifeDescription:
         "Fossils sit in the walls, and the algae layer at the surface shapes the light.",
@@ -339,7 +339,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       forecastLatitude: 20.1375,
       forecastLongitude: -87.578,
       description:
-        "A round cenote that drops straight down, far past the plan's floor. At roughly 30 m a hydrogen sulfide cloud forms a layer like a river, with branches reaching up through it; the branches, the cloud and the dark salt water below are past the plan. Hydrogen sulfide is toxic, smells of rotten eggs and damages gear.",
+        "A round cenote that drops straight down, far past the plan's floor. At roughly 30 m a hydrogen sulfide cloud forms a layer like a river, with branches reaching up through it; the branches, the cloud, and the dark salt water below are past the plan. Hydrogen sulfide is toxic, smells of rotten eggs and damages gear.",
       marineLife: "Few animals · clear water",
       marineLifeDescription:
         "Almost no animals in the clear water above the plan. The branches and the sulfide cloud lie below the plan.",
@@ -377,7 +377,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       description:
         "Two circular cenotes, 'two eyes'. The guided dive is a lit loop in the first eye, in daylight. The through-route to the second eye and the dark chambers lie past the light and are out of scope.",
       marineLife: "Freshwater catfish · limestone formations",
-      marineLifeDescription: "Few animals, but columns and stalactites in the lit chamber.",
+      marineLifeDescription: "Few animals, but columns, and stalactites in the lit chamber.",
       difficultyLevel: "intermediate",
       depthMinMeters: 0,
       maxDepthMeters: 12,

@@ -6,7 +6,7 @@ import { sharedLinkCard } from "@/lib/marketing";
 const flatMetadata: Metadata = {
   title: "Pricing — one flat price per shop | DiveDay",
   description:
-    "One flat price per shop location, line by line: no setup fee, no per-seat charge, no feature tiers and no cut of your bookings. A three-week trial with no card.",
+    "One flat price per shop location, line by line: no setup fee, no per-seat charge, no feature tiers, and no cut of your bookings. A three-week trial with no card.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     ...sharedLinkCard,

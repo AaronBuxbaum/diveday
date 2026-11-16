@@ -96,7 +96,7 @@ export const DIVE_AREAS = [
   { code: "mexico-cozumel", label: "Cozumel", region: QUINTANA_ROO },
   {
     code: "mexico-riviera-maya",
-    label: "Cancún, Isla Mujeres and the Riviera Maya",
+    label: "Cancún, Isla Mujeres, and the Riviera Maya",
     region: QUINTANA_ROO,
   },
   {
@@ -144,17 +144,17 @@ export const DIVE_AREAS = [
   { code: "bahamas-bimini", label: "Bimini", region: BAHAMAS },
   {
     code: "bahamas-out-islands",
-    label: "Long Island, San Salvador, Cat Island and the southern Bahamas",
+    label: "Long Island, San Salvador, Cat Island, and the southern Bahamas",
     region: BAHAMAS,
   },
   {
     code: "turks-caicos-providenciales",
-    label: "Providenciales, West Caicos and French Cay",
+    label: "Providenciales, West Caicos, and French Cay",
     region: TURKS_AND_CAICOS,
   },
   {
     code: "turks-caicos-grand-turk",
-    label: "Grand Turk, Salt Cay and South Caicos",
+    label: "Grand Turk, Salt Cay, and South Caicos",
     region: TURKS_AND_CAICOS,
   },
   { code: "puerto-rico", label: "Puerto Rico", region: country("PR", "America/Puerto_Rico") },

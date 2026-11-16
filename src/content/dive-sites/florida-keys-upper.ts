@@ -73,7 +73,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       forecastLatitude: 25.0353,
       forecastLongitude: -80.3494,
       description:
-        "The swim-through reef. Ledges, overhangs and short tunnels cut through a shallow spur-and-groove system, so the dive happens as much under the coral as over it.",
+        "The swim-through reef. Ledges, overhangs, and short tunnels cut through a shallow spur-and-groove system, so the dive happens as much under the coral as over it.",
       marineLife: "Nurse sharks · green morays · parrotfish · barracuda",
       marineLifeDescription:
         "The overhangs hide sleeping nurse sharks and squirrelfish. Check the ceilings, not just the sand.",
@@ -464,7 +464,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       divePlan:
         "Drift the coral ridge from the mooring, pause over the barrel casks, then loop back over the sand.",
       fitTone: "welcoming",
-      fitNote: "Quiet, shallow and rarely crowded — a good second tank after something deeper.",
+      fitNote: "Quiet, shallow, and rarely crowded — a good second tank after something deeper.",
       landmarks: [
         {
           name: "The cement barrels",
@@ -515,7 +515,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       divePlan:
         "Swim the reef edge from the mooring to Minnow Cave, look in from outside, and finish over the shallow coral heads.",
       fitTone: "welcoming",
-      fitNote: "Bright, shallow and quieter than the Dry Rocks next door.",
+      fitNote: "Bright, shallow, and quieter than the Dry Rocks next door.",
       landmarks: [
         {
           name: "Minnow Cave",
@@ -716,7 +716,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       divePlan:
         "Follow the ledge from the mooring with it on one shoulder, look under it for sharks and eels, and turn back along the top.",
       fitTone: "welcoming",
-      fitNote: "Shallow, easy and full of fish. A favorite second tank.",
+      fitNote: "Shallow, easy, and full of fish. A favorite second tank.",
       landmarks: [
         {
           name: "The ledge",

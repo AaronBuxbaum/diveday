@@ -4,13 +4,12 @@ import { SectionCard } from "@/components/ui/card";
 import { Bone, Pending } from "@/components/ui/pending";
 import { settingsPaneClass } from "../_components/settings-pane";
 
-/** Header, tabs and honesty-table skeleton, so the route never blocks blank. */
+/** Header, kind tabs and honesty-table skeleton, so the route never blocks blank. */
 export default function Loading() {
   return (
     <main className={settingsPaneClass()}>
       <Pending>
         <ShopPageHeader pending description={false} />
-        <SectionTabs pending count={4} />
         <SectionTabs pending count={3} />
         <SectionCard as="div" pending padding="lg">
           <Bone className="h-5 w-44" />

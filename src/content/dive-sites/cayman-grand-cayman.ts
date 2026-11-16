@@ -97,7 +97,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
         "Tour boats and snorkelers crowd the surface above. Surface at the mooring line and carry an SMB. The North Sound is sheltered.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, sandy and sheltered. Stay low, keep your hands to yourself and let the rays pass.",
+        "Shallow, sandy, and sheltered. Stay low, keep your hands to yourself and let the rays pass.",
       creatureSlugs: ["southern-stingray", "spotted-goatfish", "sand-tilefish", "peacock-flounder"],
     },
   },
@@ -156,7 +156,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.3838,
       forecastLongitude: -81.3249,
       description:
-        "A deep coral chasm leading to the wall, with towering heads, arches and narrow crevices full of sponges, fans and black coral. Eagle rays often cruise the wall face.",
+        "A deep coral chasm leading to the wall, with towering heads, arches, and narrow crevices full of sponges, fans and black coral. Eagle rays often cruise the wall face.",
       marineLife: "Eagle rays · black coral · sponges · gorgonians",
       marineLifeDescription:
         "Eagle rays gather along the wall, and the chasm is crowded with black coral and sponge.",
@@ -538,7 +538,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.3585,
       forecastLongitude: -81.1235,
       description:
-        "Spur and groove reef beyond the barrier reef off Barefoot Beach, with large barrel sponges, feather plumes and an overhang east of the pin. The remains of a 1930 schooner lie in shallow water inshore.",
+        "Spur and groove reef beyond the barrier reef off Barefoot Beach, with large barrel sponges, feather plumes, and an overhang east of the pin. The remains of a 1930 schooner lie in shallow water inshore.",
       marineLife: "Spotted drums · spiny lobsters · bluehead wrasse",
       marineLifeDescription:
         "Lobsters sit in the barrel sponges, and juvenile bluehead wrasse school round the yellow tube sponges.",
@@ -669,7 +669,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.3576,
       forecastLongitude: -81.1054,
       description:
-        "Sandy channels, rolling coral gardens and freestanding heads, closer inshore than Black Rock Drop-Off. Chub, snapper and barracuda mill right below the boat.",
+        "Sandy channels, rolling coral gardens, and freestanding heads, closer inshore than Black Rock Drop-Off. Chub, snapper, and barracuda mill right below the boat.",
       marineLife: "Bermuda chub · yellowtail snapper · reef squid",
       marineLifeDescription:
         "A school of reef squid often holds north of the boat and turns white if you press in.",
@@ -931,7 +931,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.3441,
       forecastLongitude: -81.0778,
       description:
-        "A labyrinth of swim-throughs, tunnels, crevasses and arches in the rock, all overhead; stay out of them and dive the open reef. An 1872 anchor leans on a coral head outside.",
+        "A labyrinth of swim-throughs, tunnels, crevasses, and arches in the rock, all overhead; stay out of them and dive the open reef. An 1872 anchor leans on a coral head outside.",
       marineLife: "Schoolmaster snapper · bluestriped grunts · porkfish · green morays",
       marineLifeDescription:
         "Snapper and grunts school over the reef, and porkfish sit under the ledges.",
@@ -968,7 +968,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.3429,
       forecastLongitude: -81.078,
       description:
-        "A ridge with a drop on either side, cut by tunnels, nooks and alcoves, and named for a coral outcrop shaped like a dragon's head. Stay out of the tunnels. Depending on the wind, the boat can sit over a reef top no deeper than 6 m.",
+        "A ridge with a drop on either side, cut by tunnels, nooks, and alcoves, and named for a coral outcrop shaped like a dragon's head. Stay out of the tunnels. Depending on the wind, the boat can sit over a reef top no deeper than 6 m.",
       marineLife: "French angelfish · queen parrotfish · bluestriped grunts · star coral",
       marineLifeDescription:
         "Angelfish and parrotfish work the ridge, with grunts in the shade of the coral.",
@@ -1037,7 +1037,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       description:
         "A protected grouper spawning zone on the windswept southeast corner. Narrow rocky passages join low tunnels; stay out of them. The deeper reef to the south opens into soft corals and sponges.",
       marineLife: "Groupers · eagle rays · reef fish",
-      marineLifeDescription: "Coney, graysby, Nassau, black and tiger groupers live here.",
+      marineLifeDescription: "Coney, graysby, Nassau, black, and tiger groupers live here.",
       difficultyLevel: "intermediate",
       depthMinMeters: 9,
       maxDepthMeters: 18,
@@ -1206,7 +1206,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.294,
       forecastLongitude: -81.0923,
       description:
-        "A shallow shelf at 12 to 14 m above the wall, cut by narrow canyons, buttresses and pinnacles. A bright sand bowl beside the pin gives easy extra time.",
+        "A shallow shelf at 12 to 14 m above the wall, cut by narrow canyons, buttresses, and pinnacles. A bright sand bowl beside the pin gives easy extra time.",
       marineLife: "Sharks · scorpionfish · reef fish",
       marineLifeDescription: "Scorpionfish blend into the reef. Look, don't touch.",
       difficultyLevel: "intermediate",
@@ -1281,7 +1281,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       description:
         "Three freestanding coral heads sit in a row under the boat, joined by a figure-eight route. It is a good site for star coral spawning each autumn and for yellow stingrays on the rubble.",
       marineLife: "Yellow stingrays · jacks · chub",
-      marineLifeDescription: "Chub, bar jacks and creole wrasse make the safety stop a show.",
+      marineLifeDescription: "Chub, bar jacks, and creole wrasse make the safety stop a show.",
       difficultyLevel: "beginner",
       depthMinMeters: 10,
       maxDepthMeters: 18,
@@ -1318,7 +1318,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       depthMinMeters: 12,
       maxDepthMeters: 18,
       fitTone: "welcoming",
-      fitNote: "Quiet, shallow and easy to navigate.",
+      fitNote: "Quiet, shallow, and easy to navigate.",
       landmarks: [
         {
           name: "1794 anchor",
@@ -1612,7 +1612,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.2914,
       forecastLongitude: -81.1436,
       description:
-        "A tangle of ridges, canyons, arches and tunnels. One tunnel, called The Throat, passes through a cavern full of glassy sweepers. The tunnels and cavern are overhead; stay out of them and dive the open reef.",
+        "A tangle of ridges, canyons, arches, and tunnels. One tunnel, called The Throat, passes through a cavern full of glassy sweepers. The tunnels and cavern are overhead; stay out of them and dive the open reef.",
       marineLife: "Queen parrotfish · French angelfish · bluestriped grunts",
       marineLifeDescription:
         "Parrotfish and angelfish work the ridges, with grunts over the coral.",
@@ -1773,7 +1773,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.2911,
       forecastLongitude: -81.1543,
       description:
-        "Swim-throughs, overhangs and archways, with large coral meadows south of the miniwall. The swim-throughs are overhead; stay out of them. You finish on top of the miniwall at 8 m.",
+        "Swim-throughs, overhangs, and archways, with large coral meadows south of the miniwall. The swim-throughs are overhead; stay out of them. You finish on top of the miniwall at 8 m.",
       marineLife: "Star corals · gobies · blennies",
       marineLifeDescription: "A good place for star coral spawning each autumn.",
       difficultyLevel: "intermediate",
@@ -1979,7 +1979,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
         "A small landing craft sunk off a George Town hotel, now crusted with coral. It sits on sand at about 20 m, a short swim from the hotel's house reef. Stay outside the hull.",
       marineLife: "Purple finger sponges · yellow tube sponges · angelfish · snappers",
       marineLifeDescription:
-        "Coral growth has covered the hull, with sponges, angelfish and snappers around it.",
+        "Coral growth has covered the hull, with sponges, angelfish, and snappers around it.",
       difficultyLevel: "intermediate",
       depthMinMeters: 18,
       maxDepthMeters: 20,
@@ -2022,7 +2022,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       description:
         "A hotel house reef reached from its pier. The reef starts near 9 m and slopes to about 15 m, cut by canyons, with a bronze mermaid statue at its base in about 17 m and a wreck a short swim away.",
       marineLife: "Sea turtles · eels · nurse sharks",
-      marineLifeDescription: "Resident turtles, eels and nurse sharks share the reef.",
+      marineLifeDescription: "Resident turtles, eels, and nurse sharks share the reef.",
       difficultyLevel: "beginner",
       depthMinMeters: 9,
       maxDepthMeters: 17,
@@ -2061,7 +2061,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       description:
         "Next to Eden Rock, a second network of caves and tunnels a short swim from the same shore entry. Coral heads are large. The swim-throughs are overhead; stay out of the tunnels and look in from the doorway.",
       marineLife: "Tarpon · barracuda · groupers · lobsters",
-      marineLifeDescription: "Tarpon, groupers and the odd barracuda hold around the coral heads.",
+      marineLifeDescription: "Tarpon, groupers, and the odd barracuda hold around the coral heads.",
       difficultyLevel: "intermediate",
       depthMinMeters: 6,
       maxDepthMeters: 12,
@@ -2101,7 +2101,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       description:
         "A shore dive from South Church Street, a short swim to a reef of tunnels and swim-throughs that rise from a 12 m sand floor. The swim-throughs are overhead; stay out of the tunnels and look in from the doorway.",
       marineLife: "Tarpon · barracuda · groupers · lobsters",
-      marineLifeDescription: "Tarpon, groupers and the odd barracuda hold around the coral heads.",
+      marineLifeDescription: "Tarpon, groupers, and the odd barracuda hold around the coral heads.",
       difficultyLevel: "intermediate",
       depthMinMeters: 6,
       maxDepthMeters: 12,
@@ -2136,7 +2136,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.2972,
       forecastLongitude: -81.3864,
       description:
-        "The scattered remains of a freighter that sank in a 1932 hurricane, with coral, sponges and tarpon on the wreckage. It lies in the main channel between the George Town dock and the cruise ships, which makes it harder to dive. Stay outside the hull.",
+        "The scattered remains of a freighter that sank in a 1932 hurricane, with coral, sponges, and tarpon on the wreckage. It lies in the main channel between the George Town dock and the cruise ships, which makes it harder to dive. Stay outside the hull.",
       marineLife: "Tarpon · sponges · coral",
       marineLifeDescription: "Tarpon hold over the relics. Most of the ship has gone.",
       difficultyLevel: "intermediate",
@@ -2165,7 +2165,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.3217,
       forecastLongitude: -81.3931,
       description:
-        "A table-topped reef with its top at about 9 m and its base at 15 to 17 m. Ledges on the sides hold cleaning stations, and the top is busy with jacks, chub, barracuda and snapper.",
+        "A table-topped reef with its top at about 9 m and its base at 15 to 17 m. Ledges on the sides hold cleaning stations, and the top is busy with jacks, chub, barracuda, and snapper.",
       marineLife: "Groupers · jacks · chub · barracuda · snapper",
       marineLifeDescription:
         "Watch a grouper being cleaned at the ledges, then finish among the schools on top.",
@@ -2205,7 +2205,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
         "A shallow reef known for pillar coral on the edge of the miniwall, about 6 m north-east of the mooring line. One of very few places in the Cayman Islands where it grows. The miniwall drops off beyond the mooring.",
       marineLife: "Pillar coral · grunts · snappers · parrotfish · octopus",
       marineLifeDescription:
-        "Grunts, snappers and parrotfish work the reef, with octopus in the crevices.",
+        "Grunts, snappers, and parrotfish work the reef, with octopus in the crevices.",
       conservationNote: "Pillar coral is rare and fragile. Keep fins and hands clear.",
       difficultyLevel: "beginner",
       depthMinMeters: 9,
@@ -2430,7 +2430,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.3449,
       forecastLongitude: -81.391,
       description:
-        "Coral fingers lead out over sand, where garden eels, stingrays and the odd eagle ray work the bottom. You finish on top of the reef among schools of tang, squirrelfish, jacks and snapper.",
+        "Coral fingers lead out over sand, where garden eels, stingrays, and the odd eagle ray work the bottom. You finish on top of the reef among schools of tang, squirrelfish, jacks, and snapper.",
       marineLife: "Garden eels · stingrays · eagle rays · tang · jacks",
       marineLifeDescription: "The sand and the reef top are both busy with fish.",
       difficultyLevel: "beginner",
@@ -2468,7 +2468,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
         "An 80 ft former Japanese cable-laying ship, sunk on purpose as an artificial reef. She lies on white sand at about 18 m with good water clarity. Stay outside the hull.",
       marineLife: "Sea fans · sponges · reef fish",
       marineLifeDescription:
-        "Coral, sponges and fans have settled on the hull, and the clear water suits photographers.",
+        "Coral, sponges, and fans have settled on the hull, and the clear water suits photographers.",
       difficultyLevel: "intermediate",
       depthMinMeters: 15,
       maxDepthMeters: 18,

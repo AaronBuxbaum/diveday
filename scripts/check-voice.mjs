@@ -980,6 +980,175 @@ export function implementationWords(value, locale, key = "") {
 }
 
 /**
+ * **The Oxford comma** (2026-11-16): an English list of three or more takes a
+ * comma before its "and" or "or": "Bookings, forms, and trip details".
+ * Spanish does not (RAE: no comma before "y", "e", "o", "u"), so this rule is
+ * en-US only.
+ *
+ * The check is conservative: it would rather miss a list than call a clause a
+ * list. It reads the sentence up to a bare ` and ` or ` or ` and splits it on
+ * commas, and it names the conjunction only when the parts look like a list:
+ *
+ * - **Three or more parts**, each of the last two of one to four words, so
+ *   "tips, tax and fees" and "go in, wait and watch" count.
+ * - **Two parts** ("Bookings, forms and trip details") only when the first is
+ *   one or two words, or follows a word that introduces a list ("by name,
+ *   phone or email", "including rentals, servicing and courses").
+ *
+ * It leaves alone a pair ("signal or not"), two participles ("edited and
+ * rolled forward"), an item already behind a conjunction, a sentence that
+ * opens on a subordinator (the comma ends the clause), and anything inside an
+ * ICU argument. Anything else that is not a list takes `OXFORD_ALLOWLIST`,
+ * keyed by the matched text, each with its reason.
+ */
+const WORD = String.raw`[\p{L}\p{N}’-]+`;
+const OXFORD_PATTERN = new RegExp(
+  `(?<=[\\p{L}\\p{N}’)]), (${WORD}(?: ${WORD}){0,3}) (and|or) `,
+  "gu",
+);
+const OXFORD_CLAUSE_OPENERS =
+  /^(?:if|when|once|after|before|because|while|although|unless|since|as|until|whether|though|so|in|on|at|during|for|yes|no)\b/i;
+/** A part that opens on one of these is a clause ("so stay outside"), not an item. */
+const OXFORD_CLAUSE_OPENERS_INNER = /^(?:so|when|where|which|who|because|while|then|but)\b/i;
+const OXFORD_LIST_INTRODUCERS = new Set("by including like of plus between across".split(" "));
+
+/**
+ * Values whose "and" or "or" is not closing a list, by bundle key, each with
+ * its reason. A key here exempts the whole value, so a value that also holds a
+ * real list is written with its commas by hand.
+ */
+export const OXFORD_ALLOWLIST = new Map([
+  [
+    "marketing.featurePages.onlineBooking.step2Body",
+    "'pay in full or leave a deposit' joins two verbs",
+  ],
+  [
+    "marketing.featurePages.certifications.step1Body",
+    "'on the departure or on its sites' is a pair of places",
+  ],
+  ["marineLife.species.black-tunicate.tip", "'it clenches and squirts' joins two verbs"],
+  ["marineLife.species.boga.description", "'above and silver below' is a clause, not an item"],
+  ["marineLife.species.golden-coral-shrimp.tip", "'with a light and never a hand' is a pair"],
+  [
+    "marineLife.species.lavender-rope-sponge.description",
+    "'upright or trailing' is a pair of adjectives",
+  ],
+  [
+    "marineLife.species.leatherback-sea-turtle.description",
+    "'ridged lengthwise and flecked white' joins two descriptions",
+  ],
+  ["marineLife.species.massive-starlet-coral.tip", "'keep hands and fins off' is a pair"],
+  ["marineLife.species.silky-shark.description", "'above and pale below' is a clause, not an item"],
+  ["main.notice.deskPaymentInvalid", "'card and cash' is one option in the list"],
+  ["main.profile.heroHint", "'1600 px wide or more' is one phrase"],
+  ["import.issues.dobInvalid", "'1900 or later' is one phrase"],
+  ["form.endpointHint", "'no bucket or path' is one phrase"],
+  ["thread.next.gear", "'renting or bringing your own' is one choice"],
+  ["notifications.bookkeeperConfirmation.body", "'divers’ and crew names' is one phrase"],
+  ["questions.alreadyAsked", "'the certification card and agency' is one item"],
+]);
+
+function wordCount(text) {
+  return text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+}
+
+/**
+ * Phrases where "and" or "or" belongs to a name or a fixed pair, so the
+ * comma before it would be wrong. A match whose conjunction sits inside one of
+ * these is skipped.
+ */
+export const OXFORD_PHRASES = [
+  "Turks and Caicos",
+  "St Vincent and the Grenadines",
+  "soft and hard corals",
+  "green and hawksbill turtles",
+  "hard and soft coral",
+  "an anchor or two",
+  "north and south of the beach",
+  "with or without a guide",
+  "sunk upright in 1997 and painted",
+  "stay outside and watch",
+  "baitfish gather and the big",
+  "work along it and over the edge",
+  "a long ride west and south",
+  "a swim out and back",
+  "wet or dry?",
+  "strange animals and a colorful wall",
+  "A warm, patient crew and a brilliant final drift",
+  "practice clearing your mask and recovering your regulator",
+  "weighting and buoyancy",
+  "strobe and video light positioning",
+  "first aid and wound care",
+  "running over and around it",
+];
+
+export function oxfordCommas(value, key = "") {
+  const found = [];
+  if (OXFORD_ALLOWLIST.has(key)) return found;
+  const phrases = OXFORD_PHRASES.flatMap((phrase) =>
+    [...value.matchAll(new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))].map((m) => [
+      m.index,
+      m.index + phrase.length,
+    ]),
+  );
+  for (const match of value.matchAll(OXFORD_PATTERN)) {
+    const [, item, conjunction] = match;
+    const text = `, ${item} ${conjunction}`;
+    const itemWords = item.split(" ");
+    const conjunctionAt = match.index + match[0].length - conjunction.length - 1;
+    if (phrases.some(([start, end]) => conjunctionAt >= start && conjunctionAt < end)) continue;
+    if (/^not\b/.test(value.slice(match.index + match[0].length))) continue;
+    if (/^(?:and|or)$/i.test(itemWords[0])) continue;
+    if (/ed$/i.test(itemWords[0]) || /ed$/i.test(itemWords[itemWords.length - 1])) continue;
+    // Inside an ICU argument ("{count, plural, one {…}"), the comma is syntax.
+    const before = value.slice(0, match.index);
+    const open = before.lastIndexOf("{");
+    if (open !== -1 && open > before.lastIndexOf("}")) continue;
+    // The sentence so far, split on its commas; the last part is `item`.
+    const cut = Math.max(...[". ", "? ", ": ", "; ", "("].map((mark) => before.lastIndexOf(mark)));
+    const sentence = before.slice(cut + 1).trim();
+    if (OXFORD_CLAUSE_OPENERS.test(sentence) && !sentence.includes(",")) continue;
+    const parts = [...sentence.split(", "), item];
+    const previous = parts[parts.length - 2];
+    if (OXFORD_CLAUSE_OPENERS_INNER.test(previous.trim())) continue;
+    let list = false;
+    if (parts.length >= 3) {
+      list = wordCount(previous) <= 4;
+    } else {
+      const lead = previous.trim().split(/\s+/);
+      list =
+        lead.length <= 2 ||
+        (lead.length <= 4 &&
+          lead.slice(0, -1).some((word) => OXFORD_LIST_INTRODUCERS.has(word.toLowerCase())));
+    }
+    if (!list) continue;
+    found.push({
+      rule: "oxford-comma",
+      text,
+      index: match.index + match[0].length - conjunction.length - 2,
+    });
+  }
+  return found;
+}
+
+/**
+ * Source files whose literals no reader sees as copy: the instructions given
+ * to the model, the data dictionary of what erasure keeps, and the support
+ * files tests read. Their lists are written for a machine or a maintainer.
+ */
+export const OXFORD_EXEMPT_FILES =
+  /^src\/(?:features\/[^/]+\/rules\.ts|lib\/assists\/|db\/person-columns\.ts)|\.test-support\.ts$/;
+
+/** The value with every Oxford comma the rule names put back. */
+export function addOxfordCommas(value, key = "") {
+  let out = value;
+  for (const hit of oxfordCommas(value, key).sort((a, b) => b.index - a.index)) {
+    out = `${out.slice(0, hit.index)},${out.slice(hit.index)}`;
+  }
+  return out;
+}
+
+/**
  * Every tell in one bundle value, for one locale. The shape rules apply only
  * to a key under `SHAPE_SCOPES`; a call with no key measures words and
  * typography alone.
@@ -994,6 +1163,9 @@ export function findTells(value, locale, key = "") {
     ...threeDots(value),
     ...(inShapeScope(key) ? shapeTells(value) : []),
     ...implementationWords(value, locale, key),
+    ...(locale === "en-US"
+      ? oxfordCommas(value, key).map(({ rule, text }) => ({ rule, text }))
+      : []),
   ];
   for (const [rule, pattern] of Object.entries(rules)) {
     pattern.lastIndex = 0;
@@ -1027,7 +1199,7 @@ export const APP_DIR = "src/app";
  * remove without an exemption. Brace matching is the cheap way to be sure the
  * string was in the block.
  */
-function metadataBlocks(source) {
+export function metadataBlocks(source) {
   const blocks = [];
   const declaration = /export\s+(?:const\s+metadata\b|(?:async\s+)?function\s+generateMetadata\b)/g;
   for (const match of source.matchAll(declaration)) {
@@ -1226,6 +1398,9 @@ export async function scanSourceSpelling() {
       for (const match of value.matchAll(BRITISH_PATTERN)) {
         hits.push({ key: "literal", rule: "spelling", text: match[0] });
       }
+      for (const tell of OXFORD_EXEMPT_FILES.test(file) ? [] : oxfordCommas(value)) {
+        hits.push({ key: "literal", rule: tell.rule, text: tell.text });
+      }
     }
     if (hits.length > 0) {
       counts.set(file, hits.length);
@@ -1236,7 +1411,7 @@ export async function scanSourceSpelling() {
 }
 
 /** Every non-test `.ts`/`.tsx` under a directory, bundles excluded. */
-async function sourceFiles(relativeDirectory) {
+export async function sourceFiles(relativeDirectory) {
   const entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
