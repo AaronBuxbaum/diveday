@@ -1,11 +1,11 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, test } from "./fixtures";
 import { capture, FLOW_TIMEOUT_MS, installVisualBuildGuard } from "./visual-harness";
 
 installVisualBuildGuard();
-signedInAsOwner();
 test.describe.configure({ timeout: FLOW_TIMEOUT_MS });
-test.use({ privateShopFacts: ["operationsVisual"] });
+// privateShop performs the real owner login in a fresh browser context.
+test.use({ privateShopSlug: "promotional-credit-review", privateShopFacts: ["operationsVisual"] });
 const t = staffTranslator("en-US");
 test("populated promotional trip credit on phone and desktop (light)", async ({
   page,

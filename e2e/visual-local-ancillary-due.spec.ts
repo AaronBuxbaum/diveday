@@ -1,5 +1,5 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, test } from "./fixtures";
 import {
   capture,
   installVisualBuildGuard,
@@ -16,8 +16,11 @@ for (const viewport of [
   { name: "desktop", width: 1280, height: 800 },
 ]) {
   test.describe(viewport.name, () => {
-    signedInAsOwner();
-    test.use({ privateShopFacts: ["operationsVisual"] });
+    // privateShop performs the real owner login in a fresh browser context.
+    test.use({
+      privateShopSlug: `recorded-receipt-${viewport.name}-review`,
+      privateShopFacts: ["operationsVisual"],
+    });
     test.use({
       viewport: { width: viewport.width, height: viewport.height },
       colorScheme: "light",

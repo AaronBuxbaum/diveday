@@ -1,10 +1,10 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, test } from "./fixtures";
 import { capture, FLOW_TIMEOUT_MS, installVisualBuildGuard } from "./visual-harness";
 
 installVisualBuildGuard();
-signedInAsOwner();
-test.use({ privateShopFacts: ["operationsVisual"] });
+// privateShop performs the real owner login in a fresh browser context.
+test.use({ privateShopSlug: "classroom-recovery-review", privateShopFacts: ["operationsVisual"] });
 test.describe.configure({ timeout: FLOW_TIMEOUT_MS });
 const t = staffTranslator("en-US");
 test("classroom recovery arrangements on phone and desktop (light)", async ({
