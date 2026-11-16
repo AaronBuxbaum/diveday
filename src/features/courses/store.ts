@@ -26,6 +26,7 @@ import { offsetPage, PAGE_SIZE } from "../../db/paging";
 import type { Course } from "../../db/schema/index";
 import { courses, shops, trips } from "../../db/schema/index";
 import { HOUR_MS, nowDate } from "../../lib/clock";
+import { containsPattern } from "../../lib/like-pattern";
 import {
   type CourseTemplateDiff,
   type CourseTemplateSnapshot,
@@ -459,7 +460,7 @@ export async function pagedCourses(
   const query = options.query?.trim();
   const scope = and(
     eq(courses.shopId, shopId),
-    query ? ilike(courses.title, `%${query}%`) : undefined,
+    query ? ilike(courses.title, containsPattern(query)) : undefined,
     courseListViewWhere(db, shopId, options.view, options.now ?? nowDate()),
   );
 
