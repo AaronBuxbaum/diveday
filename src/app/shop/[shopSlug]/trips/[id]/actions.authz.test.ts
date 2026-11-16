@@ -68,6 +68,7 @@ const { removeBookingAction, setParticipantTypeAction } = await import("./roster
 const { reinstateTripAction } = await import("./details-actions");
 const { saveRequirementsAction } = await import("./terms-actions");
 const { certifyDiverFromRosterAction } = await import("./course-actions");
+const { trackEvent } = await import("@/lib/analytics");
 
 /**
  * A seeded ordinary charter (not a course session, whose rules are frozen) that
@@ -411,6 +412,68 @@ describe("certifying from an intro session's roster", () => {
   });
 });
 
+describe("a second tap on Certify", () => {
+  async function courseSeat(db: Awaited<ReturnType<typeof context>>["db"], shopId: string) {
+    const [seat] = await db
+      .select({
+        tripId: trips.id,
+        courseId: trips.courseId,
+        bookingId: bookings.id,
+        personId: bookings.personId,
+      })
+      .from(trips)
+      .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
+      .where(and(eq(trips.shopId, shopId), isNotNull(trips.courseId)))
+      .limit(1);
+    if (!seat?.courseId) throw new Error("seeded shop has no booked course session");
+    return { ...seat, courseId: seat.courseId };
+  }
+
+  it("says the diver already holds the level, and writes no second card", async () => {
+    const { db, shop, owner } = await context();
+    const seat = await courseSeat(db, shop.id);
+    signIn(shop, owner);
+    const post = () => {
+      const formData = new FormData();
+      formData.set("bookingId", seat.bookingId);
+      formData.set("personId", seat.personId);
+      formData.set("award", "open_water");
+      return redirectedTo(() => certifyDiverFromRosterAction(shop.slug, seat.tripId, formData));
+    };
+    await post();
+    const held = async () =>
+      (
+        await db
+          .select({ id: cards.id })
+          .from(cards)
+          .where(and(eq(cards.kind, "level"), eq(cards.personId, seat.personId)))
+      ).length;
+    const before = await held();
+
+    const to = await post();
+
+    expect(to).toContain("notice=already-certified");
+    expect(await held()).toBe(before);
+  });
+
+  it("still refuses with the failure notice when the diver does not hold the level", async () => {
+    const { db, shop, owner } = await context();
+    const seat = await courseSeat(db, shop.id);
+    await db.update(courses).set({ isIntroCourse: true }).where(eq(courses.id, seat.courseId));
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("bookingId", seat.bookingId);
+    formData.set("personId", seat.personId);
+    formData.set("award", "open_water");
+
+    const to = await redirectedTo(() =>
+      certifyDiverFromRosterAction(shop.slug, seat.tripId, formData),
+    );
+
+    expect(to).toContain("notice=certify-failed");
+  });
+});
+
 describe("putting a canceled trip back on the board", () => {
   it("refuses a captain — canceling today's charter is the crew's call, un-canceling is not", async () => {
     const { db, shop, tripId, captain } = await context();
@@ -472,6 +535,27 @@ describe("removing a paid diver from the manifest", () => {
     expect((await bookingRow(db, bookingId)).status).toBe("cancelled");
     // And no money moved under a role that may not move it.
     expect(refundBookingOnCancellation).not.toHaveBeenCalled();
+  });
+
+  it("counts the cancellation once when the same removal is submitted twice", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await paidBookingId(db, shop.id, tripId);
+    vi.mocked(refundBookingOnCancellation).mockResolvedValue({ status: "refunded" } as never);
+    vi.mocked(trackEvent).mockClear();
+    signIn(shop, owner);
+    const post = () => {
+      const formData = new FormData();
+      formData.set("bookingId", bookingId);
+      return redirectedTo(() => removeBookingAction(shop.slug, tripId, formData));
+    };
+
+    await post();
+    await post();
+
+    const cancelled = vi
+      .mocked(trackEvent)
+      .mock.calls.filter(([event]) => event.name === "booking_cancelled");
+    expect(cancelled).toHaveLength(1);
   });
 
   it("runs the refund when an owner removes the same booking", async () => {

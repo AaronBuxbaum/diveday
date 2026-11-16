@@ -523,6 +523,33 @@ export async function studentOnSeat(
   return row?.personId ?? null;
 }
 
+/**
+ * Whether this diver already holds a verified card at this level, so a second
+ * Certify tap can say "already" rather than that nothing saved.
+ */
+export async function holdsVerifiedLevel(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  level: NewShopIssuedCertification["level"],
+): Promise<boolean> {
+  const [existing] = await db
+    .select({ id: cards.id })
+    .from(cards)
+    .where(
+      and(
+        eq(cards.kind, "level"),
+        eq(cards.shopId, shopId),
+        eq(cards.personId, personId),
+        eq(cards.level, level),
+        eq(cards.status, "verified"),
+        isNull(cards.deletedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(existing);
+}
+
 export async function issueShopCertification(
   db: AppDb,
   input: NewShopIssuedCertification,

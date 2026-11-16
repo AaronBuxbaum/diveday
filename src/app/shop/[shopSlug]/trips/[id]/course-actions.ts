@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
 import {
   courseCertifiesOnTrip,
+  holdsVerifiedLevel,
   issueShopCertification,
   issueShopNitroxCertification,
   issueShopSpecialtyCertification,
@@ -131,14 +132,16 @@ export async function certifyDiverFromRosterAction(
     });
   }
 
-  revalidateAndRedirect(
-    back,
-    noticeUrl(
-      back,
-      written ? (level ? "certified" : "certified-awaiting-card") : "certify-failed",
-      { bid: bookingId },
-    ),
-  );
+  // A second tap on a level the diver already holds is not a failure: the
+  // card the first tap wrote is there.
+  const notice = written
+    ? level
+      ? "certified"
+      : "certified-awaiting-card"
+    : level && (await holdsVerifiedLevel(db, s.user.shopId, personId, level))
+      ? "already-certified"
+      : "certify-failed";
+  revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
 }
 
 /**

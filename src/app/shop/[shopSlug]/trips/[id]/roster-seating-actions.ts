@@ -257,7 +257,9 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
   // Refused, with nothing sent, for a diver marked aboard at sea (H-20261015-aboard-diver-removal-at).
   const from = await removeSeat(dbi, s.user.shopId, bookingId, back, s.user.personId);
-  await trackEvent({ name: "booking_cancelled", source: "staff" });
+  // `removeSeat` answers "cancelled" for a seat already cancelled (a double
+  // tap): that removal was counted the first time.
+  if (from !== "cancelled") await trackEvent({ name: "booking_cancelled", source: "staff" });
   // Freeing the seat is roster work any staff member does, but moving money is
   // owner/manager work (H-20260724-staff-role-reach, ADR 20260724-role-authorization). A crew member
   // can cancel the booking; the auto-refund below only fires when the actor may

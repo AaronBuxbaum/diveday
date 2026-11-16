@@ -153,6 +153,8 @@ export default async function BoatsSettingsPage({
                       type="number"
                       required
                       min={1}
+                      max={999}
+                      step={1}
                       defaultValue={boat.capacity}
                       className={`${controlClass} tabular-nums`}
                     />
@@ -282,6 +284,8 @@ export default async function BoatsSettingsPage({
                 type="number"
                 required
                 min={1}
+                max={999}
+                step={1}
                 className={`${controlClass} tabular-nums`}
               />
             </Field>

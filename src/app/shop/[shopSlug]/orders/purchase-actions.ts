@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import type { NewOrderLineItem } from "@/db/orders";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
@@ -101,6 +102,10 @@ export async function recordPurchaseRefundAction(form: FormData) {
   if (!input.success) revalidateAndRedirect(orders, noticeUrl(orders, "purchase-refund-invalid"));
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", input.data.orderId);
+  // Before the step-up: a crew member the store would refuse should not be
+  // walked through a challenge, then told the form was invalid.
+  if (!(await canPersonRefund(db, session.user.shopId, session.user.personId)))
+    revalidateAndRedirect(back, noticeUrl(back, "not-authorized"));
   if (!(await hasRequiredStepUp(db, session, "money")))
     revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
   const cents = amount(input.data.amount, input.data.currency);

@@ -191,6 +191,7 @@
     "newWaiverFailed": "No se pudo enviar la nueva exención. Verifica que la reserva sigue en esta salida.",
     "certified": "Certificado. Puede reservar el siguiente nivel sin más revisión.",
     "certifiedAwaitingCard": "Registrado. No abrirá ninguna puerta hasta que alguien lo confirme con la tarjeta delante.",
+    "alreadyCertified": "Ya está certificado en ese nivel. No hay nada más que hacer.",
     "certifyFailed": "Eso no se guardó. Verifica que sigue en esta salida y que elegiste el nivel, luego inténtalo de nuevo.",
     "contactSaved": "Contacto de emergencia guardado",
     "contactIncomplete": "Un contacto necesita nombre y teléfono antes de que la tripulación pueda localizar a alguien.",
