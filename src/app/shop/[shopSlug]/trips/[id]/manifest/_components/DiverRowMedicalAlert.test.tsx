@@ -433,7 +433,7 @@ describe("the manifest printed with the medical alerts", () => {
     );
     expect(
       screen.getByText(
-        t("manifest.medicalAlertsPrintedOnSheet", { divers: "02 Siobhan Doyle, 04 Kai Mendes" }),
+        t("manifest.medicalAlertsPrintedOnSheet", { divers: "02 Siobhan Doyle and 04 Kai Mendes" }),
       ),
     ).toBeInTheDocument();
     expect(container).not.toHaveTextContent("03 Held Seat");
