@@ -60,6 +60,8 @@ const {
 const { readTranslations, recordTranslation } = await import("@/db/shop-text-translations");
 const { requireStaffSession } = await import("../../../../../../features/session/rules");
 const { canPersonEditCourseTemplates } = await import("@/db/authz");
+const { queueAndAttemptMediaDeletion } = await import("@/db/media-deletions");
+const { storeCourseImage } = await import("@/lib/storage");
 const { courseFormListRefusal, setCourseFormRequirements } = await import("@/db/course-forms");
 const { pullCourseTemplateUpdatesAction, saveCourseContentAction, setCourseVisibilityAction } =
   await import("./actions");
@@ -372,6 +374,52 @@ describe("saveCourseContentAction, with the gear the fee includes", () => {
   it("saves none when gear included is unticked, whatever its hidden boxes still hold", async () => {
     await savedTo(coursePage([["includedRentalKind", "bcd"]]));
     expect(includedSaved()).toEqual([]);
+  });
+});
+
+describe("saveCourseContentAction, with photos a refused save uploaded", () => {
+  const UPLOADED = "https://blob.example/course-hero-new.jpg";
+  const withHero = (fields: [string, string][] = []) => {
+    const formData = coursePage(fields);
+    formData.append("heroImageFile", new File(["x"], "hero.jpg", { type: "image/jpeg" }));
+    return formData;
+  };
+  const deleted = () =>
+    vi.mocked(queueAndAttemptMediaDeletion).mock.calls.map(([, input]) => input.url);
+
+  beforeEach(() => {
+    vi.mocked(storeCourseImage).mockResolvedValue({ status: "stored", url: UPLOADED } as never);
+  });
+
+  it("deletes the upload when the save conflicts with a newer edit", async () => {
+    vi.mocked(editCourseContent).mockResolvedValue({ ok: false, reason: "conflict" } as never);
+    const result = await saveCourseContentAction("blue-mantis", "open-water-diver", withHero());
+    expect(result).toEqual({ ok: false, reason: "conflict" });
+    expect(deleted()).toEqual([UPLOADED]);
+    expect(queueAndAttemptMediaDeletion).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ shopId: SHOP_ID, kind: "course_photo" }),
+    );
+  });
+
+  it("deletes the upload when the course vanished under the save", async () => {
+    vi.mocked(editCourseContent).mockResolvedValue({ ok: false, reason: "missing" } as never);
+    await expect(
+      saveCourseContentAction("blue-mantis", "open-water-diver", withHero()),
+    ).rejects.toThrow("NOT_FOUND");
+    expect(deleted()).toEqual([UPLOADED]);
+  });
+
+  it("deletes the upload when a later check refuses the save", async () => {
+    const to = await savedTo(withHero([["summary", "Dive to {depth 18"]]));
+    expect(to).toContain("error=depth-placeholder");
+    expect(editCourseContent).not.toHaveBeenCalled();
+    expect(deleted()).toEqual([UPLOADED]);
+  });
+
+  it("keeps the upload when the save lands", async () => {
+    await savedTo(withHero());
+    expect(deleted()).toEqual([]);
   });
 });
 

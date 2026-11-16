@@ -146,6 +146,62 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const extras = readForm(courseExtrasForm, formData);
   const hero = await uploadImage(extras.heroImageFile);
   const gallery = await Promise.all(newGalleryFiles.map(uploadImage));
+  // Everything stored by this request. If the save is refused or loses a
+  // conflict nothing points at these, so they are queued for deletion (retried
+  // by `retryPendingMediaDeletions` if storage is down) rather than orphaned.
+  const uploadedUrls = [hero, ...gallery]
+    .map((image) => image.url)
+    .filter((url): url is string => Boolean(url));
+  const progress = { landed: false };
+  try {
+    return await persistCourseContent({
+      db,
+      staff,
+      base,
+      course,
+      value,
+      currency,
+      formData,
+      extras,
+      hero,
+      gallery,
+      progress,
+    });
+  } finally {
+    if (!progress.landed) {
+      for (const url of uploadedUrls) {
+        await queueAndAttemptMediaDeletion(db, {
+          shopId: staff.user.shopId,
+          kind: "course_photo",
+          url,
+        });
+      }
+    }
+  }
+}
+
+type SavedImage = Awaited<ReturnType<typeof uploadImage>>;
+
+/**
+ * Everything after the photos are stored: the checks that can still refuse the
+ * save and the writes. `progress.landed` flips once the content row holds the
+ * new photo URLs; until then the caller owns the uploads and deletes them.
+ */
+async function persistCourseContent(input: {
+  db: Awaited<ReturnType<typeof getDb>>;
+  staff: Awaited<ReturnType<typeof requireStaffSession>>;
+  base: string;
+  course: NonNullable<Awaited<ReturnType<typeof getCourseBySlug>>>;
+  value: z.infer<ReturnType<typeof contentSchemaFor>>;
+  currency: ReturnType<typeof toShopCurrency>;
+  formData: FormData;
+  extras: z.infer<typeof courseExtrasForm>;
+  hero: SavedImage;
+  gallery: SavedImage[];
+  progress: { landed: boolean };
+}) {
+  const { db, staff, base, course, value, currency, formData, extras, hero, gallery, progress } =
+    input;
   if (hero.failed || gallery.some((image) => image.failed)) redirect(`${base}?error=upload`);
 
   // Photos are managed by upload now: new files append to the gallery, and the
@@ -314,6 +370,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   // the staffer their edit saved. `notFound()` is what the page itself does
   // when the row disappears out from under it.
   if (!saved.ok) notFound();
+  progress.landed = true;
   // Pricing, the nitrox answer and the included gear are the shop's own decisions rather than
   // marketing copy, but the editor saves everything in one submit, so they land
   // together with the page.
