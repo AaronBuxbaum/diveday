@@ -164,6 +164,8 @@
     "tabDayOff": "Day off",
     "needsOk": "An owner or manager approves days off. You’ll see their answer here.",
     "statusPending": "Waiting for an OK",
+    "statusApproved": "Approved",
+    "statusDeclined": "Declined",
     "reason": "Why: {reason}",
     "approvalsHeading": "Days off waiting for you",
     "asked": "{person} asked for {dates}",
