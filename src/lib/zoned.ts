@@ -40,7 +40,9 @@ function tzOffsetMs(date: Date, timeZone: string): number {
     Number(parts.minute),
     Number(parts.second),
   );
-  return asUtc - date.getTime();
+  // Whole seconds only: `formatToParts` drops the milliseconds, so measuring from the
+  // raw instant would leave a negative sliver (and `-00:00` in UTC).
+  return asUtc - Math.floor(date.getTime() / 1000) * 1000;
 }
 
 /**

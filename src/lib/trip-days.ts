@@ -86,24 +86,6 @@ export function isTripDayCount(value: number): boolean {
   return Number.isInteger(value) && value >= MIN_TRIP_DAYS && value <= MAX_TRIP_DAYS;
 }
 
-/**
- * The `dayCount` consecutive meeting days a trip runs, given the wall-clock
- * window of its first day. Returns `null` rather than a guess for a day count
- * outside the supported range — the caller refuses the whole submission, so a
- * forged form can never write a trip whose day rows disagree with its own
- * `startsAt`/`endsAt`.
- *
- * Day 1 is always the window it was handed back, unchanged: a one-day trip
- * through here is exactly the trip it would have been without it.
- */
-export function tripMeetingDays(day: MeetingDayWall, dayCount: number): MeetingDayWall[] | null {
-  if (!isTripDayCount(dayCount)) return null;
-  return Array.from({ length: dayCount }, (_, offset) => ({
-    start: addCalendarDays(day.start, offset),
-    end: addCalendarDays(day.end, offset),
-  }));
-}
-
 export type MeetingDaysResult =
   | { ok: true; days: MeetingDayWall[] }
   | { ok: false; reason: "invalid" | "days_out_of_order" | "end_before_start" };
@@ -352,18 +334,6 @@ export function rollCallDayOf(dayStarts: readonly number[], instant: Date): numb
     if (at >= (dayStarts[index] ?? Number.POSITIVE_INFINITY)) day = index;
   }
   return day;
-}
-
-/**
- * Where the roll call a manifest shows now begins: the boundary of the meeting
- * day whose results are being taken, or `null` on day one (everything counts).
- * Between two meeting days the earlier one's record stays on screen until the
- * halfway point, then the later day's count starts empty.
- */
-export function rollCallRecordSince(windows: readonly DayWindow[], now: Date): Date | null {
-  const starts = rollCallDayStarts(windows);
-  const day = rollCallDayOf(starts, now);
-  return day === 0 ? null : new Date(starts[day] as number);
 }
 
 /**

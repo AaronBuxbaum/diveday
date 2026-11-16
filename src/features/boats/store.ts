@@ -315,24 +315,6 @@ async function recordPaperChanges(
   }
 }
 
-export async function editBoat(
-  db: AppDb,
-  shopId: string,
-  boatId: string,
-  name: string,
-  capacity: number,
-  description: string | null = null,
-  /** Absent leaves the papers as they were; the fleet row always sends them. */
-  papers?: BoatPapersInput,
-): Promise<Boat | null> {
-  const [boat] = await db
-    .update(boats)
-    .set({ name, capacity, description, ...papers })
-    .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId), isNull(boats.deletedAt)))
-    .returning();
-  return boat ?? null;
-}
-
 export type BoatSaveOutcome =
   | { ok: true; boat: Boat }
   | { ok: false; reason: "not_found" }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { countQueries } from "@/test/query-count";
-import { createBoat, deleteBoat, editBoat, getBoatById } from "../features/boats/store";
+import { createBoat, deleteBoat, getBoatById } from "../features/boats/store";
+import { editBoat } from "../features/boats/store.test-support";
 import {
   departureBoatSafety,
   departureBoatSafetyFor,

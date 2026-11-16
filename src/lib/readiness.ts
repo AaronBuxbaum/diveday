@@ -1113,7 +1113,7 @@ export function levelStanding(
 }
 
 /** The standing against one specialty, at a threshold. Null when it clears. */
-export function specialtyStanding(
+function specialtyStanding(
   specialty: DiveSpecialty,
   evidence: StandingEvidence,
   threshold: StandingThreshold,
@@ -1129,7 +1129,7 @@ export function specialtyStanding(
 }
 
 /** The standing against nitrox, at a threshold. Null when it clears. */
-export function nitroxStanding(
+function nitroxStanding(
   evidence: StandingEvidence,
   threshold: StandingThreshold,
 ): ReadinessBlocker | null {

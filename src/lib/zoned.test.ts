@@ -279,3 +279,14 @@ describe("shopDaysBounds", () => {
     expect(to.getTime() - from.getTime()).toBe(25 * 60 * 60 * 1000);
   });
 });
+
+describe("zonedIsoString with milliseconds", () => {
+  it("keeps a clean +00:00 offset for an instant that has milliseconds", () => {
+    expect(zonedIsoString(new Date("2026-01-15T12:00:00.500Z"), "UTC")).toBe(
+      "2026-01-15T12:00:00+00:00",
+    );
+    expect(zonedIsoString(new Date("2026-01-15T12:00:00.999Z"), "Europe/London")).toBe(
+      "2026-01-15T12:00:00+00:00",
+    );
+  });
+});
