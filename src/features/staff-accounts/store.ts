@@ -515,12 +515,32 @@ export type StaffMutationResult = { ok: true } | { ok: false; reason: "last_owne
  */
 export async function setStaffRoles(
   db: AppDb,
-  input: { shopId: string; personId: string; roles: Role[] },
-): Promise<StaffMutationResult> {
+  input: { shopId: string; personId: string; roles: Role[]; baseline?: undefined },
+): Promise<StaffMutationResult>;
+/**
+ * With a `baseline` (the roles the caller's screen was rendered with), the
+ * write also refuses with `roles_conflict` when the person's roles are no
+ * longer exactly that. The comparison runs under the shop lock, so two saves
+ * from the same baseline cannot both pass.
+ */
+export async function setStaffRoles(
+  db: AppDb,
+  input: { shopId: string; personId: string; roles: Role[]; baseline: readonly string[] },
+): Promise<StaffMutationResult | { ok: false; reason: "roles_conflict" }>;
+export async function setStaffRoles(
+  db: AppDb,
+  input: { shopId: string; personId: string; roles: Role[]; baseline?: readonly string[] },
+): Promise<StaffMutationResult | { ok: false; reason: "roles_conflict" }> {
   return db.transaction(async (tx) => {
     await lockDemoShopIdentityChanges(tx, input.shopId);
     if (!(await personInShop(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "not_found" };
+    }
+    if (input.baseline) {
+      const held = await getStaffRoles(tx, input.shopId, input.personId);
+      if ([...held].sort().join(",") !== [...input.baseline].sort().join(",")) {
+        return { ok: false, reason: "roles_conflict" };
+      }
     }
     if (!input.roles.includes("owner") && (await isLastOwner(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "last_owner" };
