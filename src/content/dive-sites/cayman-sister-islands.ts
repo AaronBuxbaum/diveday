@@ -701,7 +701,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       forecastLatitude: 19.6927,
       forecastLongitude: -79.8914,
       description:
-        "Several sandy channels lead to the reef wall and its drop-off. The top of the reef averages about 15 m (50 ft), with many cleaning stations, and barrel sponges.",
+        "Several sandy channels lead to the reef wall and its drop-off. The top of the reef averages about 15 m (50 ft), with many cleaning stations and barrel sponges.",
       marineLife: "Cleaner fish · barrel sponges · reef fish",
       marineLifeDescription:
         "Cleaning stations along the channels are good places to watch fish queue up.",

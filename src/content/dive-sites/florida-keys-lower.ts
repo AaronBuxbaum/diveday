@@ -79,7 +79,7 @@ export const FLORIDA_KEYS_LOWER: DiveSiteTemplate[] = [
         "Down the line to the wheelhouse at about 21 m, one lap of the exterior, and back up on gas.",
       fitTone: "demanding",
       fitNote:
-        "Deep, but compact, and upright — one of the friendlier deep wrecks once the card is there.",
+        "Deep, but compact and upright — one of the friendlier deep wrecks once the card is there.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       landmarks: [

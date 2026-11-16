@@ -170,7 +170,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
         "From the beach, swim out to the mooring buoy at about 8 m, follow sand chutes between coral gardens, and reach the lip of a wall that drops thousands of meters.",
       marineLife: "Reef sharks · turtles · barracuda · black coral",
       marineLifeDescription:
-        "Reef sharks, stingrays, and sea turtles are regular, black coral and large deep-water fish live on the wall, and nineteenth-century anchors lie along it.",
+        "Reef sharks, stingrays, and sea turtles are regular, black coral, and large deep-water fish live on the wall, and nineteenth-century anchors lie along it.",
       difficultyLevel: "advanced",
       depthMinMeters: 8,
       maxDepthMeters: 30,
@@ -216,7 +216,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       forecastLatitude: 17.7686,
       forecastLongitude: -64.8216,
       description:
-        "A shore dive on the north shore with a difficult entry and no sand channel to walk out on. The reward is a wall 75 yards from shore in 8 m of water, falling away almost vertically, with big elkhorn coral, and sharks.",
+        "A shore dive on the north shore with a difficult entry and no sand channel to walk out on. The reward is a wall 75 yards from shore in 8 m of water, falling away almost vertically, with big elkhorn coral and sharks.",
       marineLife: "Reef sharks · elkhorn coral · jacks · mackerel",
       marineLifeDescription:
         "Reef sharks along the wall, large elkhorn corals in the shallows, and schools of tangs, wrasse, and triggerfish.",
@@ -311,7 +311,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
         "Three wrecks in Butler Bay: the Suffolk Maid trawler, the Northwind tug and the Virgin Islander oil barge, with the Aegir underwater habitat. All are encrusted with coral and sponge, and schools of reef fish swarm them.",
       marineLife: "Barracuda · snapper · moray eels · turtles",
       marineLifeDescription:
-        "Barracuda, snapper, and angelfish around the wrecks, large groupers and stingrays beside the barge, and green and hawksbill turtles near the Northwind.",
+        "Barracuda, snapper, and angelfish around the wrecks, large groupers, and stingrays beside the barge, and green and hawksbill turtles near the Northwind.",
       difficultyLevel: "intermediate",
       depthMinMeters: 5,
       maxDepthMeters: 24,

@@ -377,7 +377,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       description:
         "Two circular cenotes, 'two eyes'. The guided dive is a lit loop in the first eye, in daylight. The through-route to the second eye and the dark chambers lie past the light and are out of scope.",
       marineLife: "Freshwater catfish · limestone formations",
-      marineLifeDescription: "Few animals, but columns, and stalactites in the lit chamber.",
+      marineLifeDescription: "Few animals, but columns and stalactites in the lit chamber.",
       difficultyLevel: "intermediate",
       depthMinMeters: 0,
       maxDepthMeters: 12,
