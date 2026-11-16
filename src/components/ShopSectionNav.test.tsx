@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { act } from "@testing-library/react";
+import { Activity, useEffect } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,10 +11,15 @@ import {
   staffNavSections,
   staffShopRoot,
 } from "@/lib/staff-destinations";
+import { LIVE_REFRESH_INTERVAL_MS, LiveRefresh } from "./LiveRefresh";
 import { type ShopSectionNavCopy, ShopSidebar, ShopTabBar } from "./ShopSectionNav";
 
 const location = vi.hoisted(() => ({ pathname: "" }));
-vi.mock("next/navigation", () => ({ usePathname: () => location.pathname }));
+const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => location.pathname,
+  useRouter: () => router,
+}));
 
 const root = staffShopRoot("blue-mantis");
 const gates: StaffDestinationGates = {
@@ -186,14 +192,103 @@ describe("More stays where a tap put it", () => {
     expect(container.querySelector("[aria-expanded]")).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("survives its dismissal effect running again at the same address", async () => {
-    const { container, reactRoot } = await openMore();
-    // A kept-alive route un-hiding or a replay after hydration re-runs effects
-    // without moving the address; it must not read as a navigation.
+  it("keeps More open when Activity replays effects, then closes on a changed address", async () => {
+    location.pathname = root;
+    const container = document.createElement("div");
+    document.body.append(container);
+    const reactRoot = createRoot(container);
+    const effects = vi.fn();
+    function EffectProbe() {
+      useEffect(() => {
+        effects();
+      }, []);
+      return null;
+    }
+    const draw = (mode: "visible" | "hidden") => (
+      <Activity mode={mode}>
+        <EffectProbe />
+        <ShopTabBar {...props} />
+      </Activity>
+    );
     await act(async () => {
-      reactRoot.render(<ShopTabBar {...props} copy={{ ...props.copy }} />);
+      reactRoot.render(draw("visible"));
     });
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>("[aria-expanded]")?.click();
+    });
+    await act(async () => {
+      reactRoot.render(draw("hidden"));
+    });
+    await act(async () => {
+      reactRoot.render(draw("visible"));
+    });
+    expect(effects).toHaveBeenCalledTimes(2);
     expect(container.querySelector("[aria-expanded]")).toHaveAttribute("aria-expanded", "true");
+    await act(async () => {
+      reactRoot.render(draw("hidden"));
+    });
+    location.pathname = `${root}/safety-checklist`;
+    await act(async () => {
+      reactRoot.render(draw("visible"));
+    });
+    expect(effects).toHaveBeenCalledTimes(3);
+    expect(container.querySelector("[aria-expanded]")).toHaveAttribute("aria-expanded", "false");
+    await act(async () => {
+      reactRoot.unmount();
+    });
+  });
+
+  it("keeps More open while the visible page refreshes with fresh props", async () => {
+    vi.useFakeTimers();
+    location.pathname = root;
+    const container = document.createElement("div");
+    document.body.append(container);
+    const reactRoot = createRoot(container);
+    const draw = (blocked: number) => (
+      <>
+        <ShopTabBar
+          {...props}
+          blocked={blocked}
+          copy={{ ...props.copy, more: blocked ? "More refreshed" : "More" }}
+        />
+        <LiveRefresh />
+      </>
+    );
+    router.refresh.mockImplementation(() => reactRoot.render(draw(3)));
+    try {
+      await act(async () => {
+        reactRoot.render(draw(0));
+      });
+      await act(async () => {
+        container.querySelector<HTMLButtonElement>("[aria-expanded]")?.click();
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(LIVE_REFRESH_INTERVAL_MS);
+      });
+      expect(router.refresh).toHaveBeenCalledTimes(1);
+      expect(container.querySelector("[aria-expanded]")).toHaveAttribute("aria-expanded", "true");
+      expect(link(container, "Money")).toBeVisible();
+      expect(container).toHaveTextContent("More refreshed");
+      await act(async () => {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+      const trigger = container.querySelector<HTMLButtonElement>("[aria-expanded]");
+      expect(trigger).toHaveAttribute("aria-expanded", "false");
+      expect(trigger).toHaveFocus();
+      await act(async () => {
+        trigger?.click();
+      });
+      await act(async () => {
+        document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      });
+      expect(trigger).toHaveAttribute("aria-expanded", "false");
+    } finally {
+      await act(async () => {
+        reactRoot.unmount();
+      });
+      router.refresh.mockReset();
+      vi.useRealTimers();
+    }
   });
 
   it("closes when the address moves", async () => {
