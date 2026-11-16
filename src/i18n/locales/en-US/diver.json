@@ -904,6 +904,7 @@
     "dives": "{count, plural, one {# dive} other {# dives}}",
     "diveIsATank": "One dive is one tank, so a two-tank trip uses two",
     "perDive": "{amount} a dive",
+    "saves": "Saves {amount} against {count, plural, one {# single dive} other {# single dives}}",
     "scopeAll": "Courses included",
     "scopeFunDives": "Courses not included",
     "useBy": "Use by {date}",

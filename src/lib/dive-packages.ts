@@ -209,3 +209,44 @@ export function packageOnSale(
   const expiry = entitlementExpiry(pkg.validUntil);
   return expiry === null || expiry.getTime() > now.getTime();
 }
+
+/**
+ * **What one dive costs bought singly** (issue #4388): the per-tank price most
+ * of the shop's departures on sale charge, a dive being one tank
+ * (H-20261014-package-dive-is-a). A tie takes the lower price, so the saving a
+ * package claims against it is never overstated. Null when no departure
+ * carries a price to compare with; then the package says nothing about saving.
+ * Fractional cents are kept: a three-tank $100 day is $33.333… a tank, and
+ * only the saving is rounded.
+ */
+export function singleDivePrice(
+  departures: readonly { priceCents: number | null; plannedDives: number }[],
+): number | null {
+  const tally = new Map<number, number>();
+  for (const { priceCents, plannedDives } of departures) {
+    if (!priceCents || priceCents <= 0 || plannedDives <= 0) continue;
+    const perTank = priceCents / plannedDives;
+    tally.set(perTank, (tally.get(perTank) ?? 0) + 1);
+  }
+  let best: { perTank: number; count: number } | null = null;
+  for (const [perTank, count] of tally) {
+    if (!best || count > best.count || (count === best.count && perTank < best.perTank)) {
+      best = { perTank, count };
+    }
+  }
+  return best?.perTank ?? null;
+}
+
+/**
+ * What a package saves against its dives bought singly, in whole cents. Null
+ * when nothing compares or it saves nothing: a package is never said to save
+ * a negative amount, and no saving is typed by hand.
+ */
+export function packageSavingCents(
+  pkg: { priceCents: number; diveCount: number },
+  singleDiveCents: number | null,
+): number | null {
+  if (singleDiveCents === null) return null;
+  const saving = Math.floor(singleDiveCents * pkg.diveCount - pkg.priceCents);
+  return saving > 0 ? saving : null;
+}

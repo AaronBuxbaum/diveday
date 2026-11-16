@@ -904,6 +904,7 @@
     "dives": "{count, plural, one {# inmersión} other {# inmersiones}}",
     "diveIsATank": "Una inmersión es un tanque, así que una salida de dos tanques usa dos",
     "perDive": "{amount} por inmersión",
+    "saves": "Ahorras {amount} frente a {count, plural, one {# inmersión suelta} other {# inmersiones sueltas}}",
     "scopeAll": "Incluye cursos",
     "scopeFunDives": "No incluye cursos",
     "useBy": "Úsalas antes del {date}",
