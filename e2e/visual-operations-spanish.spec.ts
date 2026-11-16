@@ -187,6 +187,26 @@ test.describe("contact import", () => {
     await expect(
       page.getByRole("button", { name: t("settings.import.wizard.submitOne"), exact: true }),
     ).toBeEnabled();
+    await page.goto(`/shop/${privateShop.slug}/settings/import?what=gear`);
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "gear.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from("Tag,serviced_on\nPREVIEW-TANK,2026-01-01\nBROKEN,no-date"),
+    });
+    await page.getByLabel("1. Tag", { exact: true }).selectOption("gear_label");
+    await page.getByRole("button", { name: t("gear.import.existing.review"), exact: true }).click();
+    await expect(
+      page.getByRole("link", { name: t("gear.import.existing.correction"), exact: true }),
+    ).toBeVisible();
+    const gearPreview = page.getByRole("region", {
+      name: `${t("gear.import.existing.preview")}: gear.csv`,
+      exact: true,
+    });
+    await expect(
+      gearPreview.getByText(t("gear.import.existing.issues.invalid_service_date"), { exact: true }),
+    ).toBeVisible();
+    await expect(gearPreview.getByText("invalid_service_date", { exact: false })).toHaveCount(0);
+    await photograph(page, "operations-import-correction");
   });
 });
 

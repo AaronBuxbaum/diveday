@@ -949,7 +949,7 @@
     "src/db/notifications.test.ts": 1860,
     "src/db/orders.test.ts": 3174,
     "src/db/participant-types.test.ts": 1196,
-    "src/db/readiness.test.ts": 1347,
+    "src/db/readiness.test.ts": 1328,
     "src/db/refunds.test.ts": 1150,
     "src/db/rental-fit.test.ts": 1236,
     "src/db/self-declared-cards.test.ts": 1869,
