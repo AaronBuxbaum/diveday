@@ -295,6 +295,12 @@ export type CourseCrewGap =
       booked: number;
       capacity: number;
       ratio: CourseRatioKind;
+      /**
+       * The per-instructor ceiling the gap was measured at — 2 for an intro
+       * session in open water, 4 in a pool — so a sentence quoting the figure
+       * quotes the one the session carries (issue #4633).
+       */
+      perInstructor: number;
       remedy: CourseCrewRemedy;
     };
 
@@ -336,6 +342,7 @@ export function courseCrewGap(input: {
       booked: input.booked,
       capacity,
       ratio: kind,
+      perInstructor: rule.maxStudentsPerInstructor,
       remedy: assistantsCanClose ? "assistant" : "instructor",
     };
   }

@@ -491,7 +491,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
     expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([staying]);
 
     // Loudly, not silently: the same gap the trip page and Today surface.
-    expect(await crewGapFor(db, shop.id, trip.id, course)).toEqual({
+    expect(await crewGapFor(db, shop.id, trip.id, course)).toMatchObject({
       code: "over_ratio",
       booked: 4,
       capacity: 2,
@@ -518,7 +518,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
 
     expect(await setTripCrew(db, shop.id, trip.id, [staying])).toBe(true);
     expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([staying]);
-    expect(await crewGapFor(db, shop.id, trip.id, course)).toEqual({
+    expect(await crewGapFor(db, shop.id, trip.id, course)).toMatchObject({
       code: "over_ratio",
       booked: 4,
       capacity: 2,

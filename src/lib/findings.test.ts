@@ -50,6 +50,7 @@ function everyAdvisory(): Advisory[] {
       booked: 9,
       capacity: 8,
       ratio: "entry_level",
+      perInstructor: 12,
       remedy: "assistant",
     }),
     divemasterFinding(

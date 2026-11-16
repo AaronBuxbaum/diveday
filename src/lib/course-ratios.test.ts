@@ -253,6 +253,7 @@ describe("courseCrewGap", () => {
       booked: 9,
       capacity: 8,
       ratio: "entry_level",
+      perInstructor: 12,
       remedy: "assistant",
     });
   });
@@ -271,6 +272,7 @@ describe("courseCrewGap", () => {
       booked: 12,
       capacity: 10,
       ratio: "entry_level",
+      perInstructor: 12,
       remedy: "assistant",
     });
     expect(
@@ -280,6 +282,7 @@ describe("courseCrewGap", () => {
       booked: 13,
       capacity: 12,
       ratio: "entry_level",
+      perInstructor: 12,
       remedy: "instructor",
     });
     // Two instructors: the ceiling is 24, so 17 booked is still an assistant's.
@@ -302,6 +305,7 @@ describe("courseCrewGap", () => {
       booked: 11,
       capacity: 10,
       ratio: "entry_level",
+      perInstructor: 12,
       remedy: "assistant",
     });
   });
@@ -312,7 +316,14 @@ describe("courseCrewGap", () => {
     ).toEqual({ code: "none" });
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 3,
+      capacity: 2,
+      ratio: "intro",
+      perInstructor: 2,
+      remedy: "instructor",
+    });
   });
 
   // Which rule the gap was measured against, so the warning can say "2 per
@@ -330,6 +341,7 @@ describe("courseCrewGap", () => {
       booked: 3,
       capacity: 2,
       ratio: "intro",
+      perInstructor: 2,
       remedy: "instructor",
     });
   });
@@ -339,7 +351,14 @@ describe("courseCrewGap", () => {
     // certify a 3-student DSD with a divemaster aboard as compliant.
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 3, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 3,
+      capacity: 2,
+      ratio: "intro",
+      perInstructor: 2,
+      remedy: "instructor",
+    });
   });
 
   it("gates a non-PADI intro session exactly like a PADI one", () => {
@@ -351,7 +370,14 @@ describe("courseCrewGap", () => {
     ).toEqual({ code: "none" });
     expect(
       courseCrewGap({ course: ssiIntro, instructorCount: 1, assistantCount: 0, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 3,
+      capacity: 2,
+      ratio: "intro",
+      perInstructor: 2,
+      remedy: "instructor",
+    });
     expect(
       courseCrewGap({ course: ssiIntro, instructorCount: 1, assistantCount: 4, booked: 12 }),
     ).toEqual({
@@ -359,6 +385,7 @@ describe("courseCrewGap", () => {
       booked: 12,
       capacity: 2,
       ratio: "intro",
+      perInstructor: 2,
       remedy: "instructor",
     });
   });
@@ -371,7 +398,14 @@ describe("courseCrewGap", () => {
         assistantCount: 0,
         booked: 3,
       }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 3,
+      capacity: 2,
+      ratio: "intro",
+      perInstructor: 2,
+      remedy: "instructor",
+    });
   });
 
   it("holds a DSD session to the tighter 2:1 open-water ratio, not the OW 8:1 figure", () => {
@@ -382,13 +416,27 @@ describe("courseCrewGap", () => {
     ).toEqual({ code: "none" });
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 3,
+      capacity: 2,
+      ratio: "intro",
+      perInstructor: 2,
+      remedy: "instructor",
+    });
   });
 
   it("does not credit assistants toward a DSD session's ratio (no published bonus)", () => {
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 3, booked: 3 }),
-    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro", remedy: "instructor" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 3,
+      capacity: 2,
+      ratio: "intro",
+      perInstructor: 2,
+      remedy: "instructor",
+    });
   });
 });
 
@@ -451,7 +499,14 @@ describe("a pool session (trips.dive_mode = 'pool')", () => {
     ).toEqual({ code: "none" });
     expect(
       courseCrewGap({ course: padiPoolIntro, instructorCount: 1, assistantCount: 2, booked: 5 }),
-    ).toEqual({ code: "over_ratio", booked: 5, capacity: 4, ratio: "intro", remedy: "instructor" });
+    ).toEqual({
+      code: "over_ratio",
+      booked: 5,
+      capacity: 4,
+      ratio: "intro",
+      perInstructor: 4,
+      remedy: "instructor",
+    });
   });
 
   it("holds a marked training dive to the open-water figure whatever the session's mode", () => {
