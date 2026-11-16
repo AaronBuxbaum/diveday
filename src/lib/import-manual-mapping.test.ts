@@ -78,3 +78,15 @@ it("bundles local mapping and recovery for a browser without server-only depende
   });
   expect(result.errors).toEqual([]);
 });
+
+it("exports roster conflicts for correction with shared formula protection", async () => {
+  const { importRecoveryCsv } = await import("./import-manual-mapping");
+  const source = "Guest,Mailbox\n=Child,household@example.com\nHealthy,healthy@example.com";
+  const prepared = prepareContactImport(source, {
+    today,
+    manual: { Guest: "full_name", Mailbox: "email" },
+  });
+  const recovery = importRecoveryCsv(source, prepared, [1]);
+  expect(recovery).toContain("'=Child,household@example.com,1,manual_identity_conflict");
+  expect(recovery).not.toContain("Healthy");
+});

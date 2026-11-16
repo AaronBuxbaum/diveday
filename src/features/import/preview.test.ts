@@ -93,3 +93,35 @@ it("rechecks advisory matches at commit and repeats a manually mapped file witho
     await db.select().from(rentalFitProfiles).where(eq(rentalFitProfiles.personId, person.id)),
   ).toHaveLength(1);
 });
+
+it("shows manual name conflicts and revalidates a roster change after preview", async () => {
+  const { prepareContactImport: prepare } = await import("@/lib/import");
+  const { commitContactImport } = await import("@/test/words-wiring");
+  const { userAccounts } = await import("@/db/schema");
+  const { DEV_STAFF_LOGINS } = await import("@/db/dev-credentials");
+  const [account] = await ctx.db
+    .select()
+    .from(userAccounts)
+    .where(eq(userAccounts.email, DEV_STAFF_LOGINS.owner.email));
+  const person = await createPerson(ctx.db, {
+    shopId: ctx.shop.id,
+    fullName: "Original Diver",
+    email: "stale-name@example.com",
+    phone: null,
+    origin: "import",
+  });
+  const prepared = prepare("Guest,Mailbox\nOriginal Diver,stale-name@example.com", {
+    today: "2026-11-16",
+    manual: { Guest: "full_name", Mailbox: "email" },
+  });
+  expect((await previewContactImportMatches(ctx.db, ctx.shop.id, prepared))[0].outcome).toBe(
+    "update",
+  );
+  await ctx.db.update(people).set({ fullName: "Different Person" }).where(eq(people.id, person.id));
+  expect((await previewContactImportMatches(ctx.db, ctx.shop.id, prepared))[0].outcome).toBe(
+    "conflict",
+  );
+  const result = await commitContactImport(ctx.db, ctx.shop.id, prepared, account.personId);
+  expect(result.peopleUpdated).toBe(0);
+  expect(result.identityConflicts).toBe(1);
+});

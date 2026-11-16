@@ -1,3 +1,4 @@
+import { partitionImportRows } from "./import-identity";
 /**
  * Contact CSV importer — the intake side of the portability wedge
  * (docs/product/competitive-strategy.md; the export ADR
@@ -627,6 +628,7 @@ export function widestRow(grid: readonly (readonly string[])[]): number {
  * `ReadinessBlockerCode` in `src/lib/readiness.ts`).
  */
 export type ImportIssueCode =
+  | "manual_identity_conflict"
   | "email_invalid"
   | "card_marked_unverified"
   | "specialty_not_gated"
@@ -2390,9 +2392,7 @@ export function prepareContactImport(
       issues,
     };
   });
-
-  const importable = rows.filter((row) => row.action === "import");
-  const merged = rows.filter((row) => row.action === "merge");
+  const { importable, merged } = partitionImportRows(rows, manuallyMapped);
   // Evidence counts span both, because a merge row's whole purpose is its cards.
   const written = [...importable, ...merged];
   return {
