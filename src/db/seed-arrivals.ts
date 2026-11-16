@@ -17,6 +17,7 @@ export async function seedArrivals(
     bookingId: string;
     recordedByPersonId: string;
     occurredAt: Date;
+    createdAt?: Date;
   }[],
 ): Promise<void> {
   if (rows.length === 0) return;

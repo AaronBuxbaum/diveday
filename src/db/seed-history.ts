@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
-import { DAY_MS } from "@/lib/clock";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { demoEmail } from "@/lib/simulator-email";
 import { utcToWallTime } from "@/lib/zoned";
@@ -1143,9 +1143,14 @@ function demoTipRows(
     .map((plan, i) => {
       const booking = bookingRows[i];
       if (!booking || plan.status !== "dived") return null;
-      const state: SeedTip["status"] =
-        i % 11 === 0 ? "expired" : i % 7 === 0 ? "pending" : "completed";
       const createdAt = new Date(plan.createdAt.getTime() + 2 * 60 * 60 * 1000);
+      const expiresAt = new Date(createdAt.getTime() + DAY_MS);
+      const state: SeedTip["status"] =
+        i % 11 === 0 || (i % 7 === 0 && expiresAt <= nowDate())
+          ? "expired"
+          : i % 7 === 0
+            ? "pending"
+            : "completed";
       return {
         shopId,
         bookingId: booking.id,
@@ -1156,7 +1161,7 @@ function demoTipRows(
         checkoutUrl: state === "pending" ? "https://checkout.stripe.com/c/pay/demo-tip" : null,
         currency: "usd",
         amountCents: i % 3 === 0 ? 2_500 : 1_500,
-        expiresAt: state === "pending" ? new Date(createdAt.getTime() + DAY_MS) : null,
+        expiresAt: state === "pending" ? expiresAt : null,
         completedAt: state === "completed" ? new Date(createdAt.getTime() + 15 * 60 * 1000) : null,
         createdAt,
       };

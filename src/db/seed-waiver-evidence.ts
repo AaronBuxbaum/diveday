@@ -6,7 +6,7 @@ import {
   waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
-import { bookings, trips, type WaiverRecord, waiverRecords } from "./schema";
+import { bookings, trips, type WaiverRecord, waiverRecords, waiverTemplates } from "./schema";
 import { at, withinDeskHours } from "./seed-clock";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -43,8 +43,8 @@ import { seatNotCancelled } from "./trips-queries";
  * different reason too: a seal covers the record's *final* stored metadata, so
  * anything that still had a waiver row to write must already have written it.
  *
- * The re-dated signatures stay inside `WAIVER_SIGNATURE_VALIDITY_MS` and keep
- * their template version. Referrals stay native and sealed; paper imports
+ * The re-dated signatures stay inside `WAIVER_SIGNATURE_VALIDITY_MS` and name
+ * the template in force at signing. Referrals stay native and sealed; paper imports
  * carry no questionnaire answers. A changed sealed release still fails the
  * real seal check.
  */
@@ -172,6 +172,11 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
   const sealFrom = SEAL_ENABLED_AT().getTime();
 
   const departsAt = await earliestDepartureByPerson(db, shopId);
+  const versions = await db
+    .select()
+    .from(waiverTemplates)
+    .where(eq(waiverTemplates.shopId, shopId))
+    .orderBy(asc(waiverTemplates.version));
   let spreadIndex = 0;
   const updates: { id: string; next: WaiverRecord }[] = [];
   for (const record of records) {
@@ -183,6 +188,11 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
       inDeskHours && stampedNow
         ? signedBeforeDeparture(inDeskHours, departsAt.get(record.personId) ?? null, spreadIndex)
         : inDeskHours;
+    // Pick the wording that existed on the final signature date. This must
+    // happen before sealing: the wording and version are part of the evidence.
+    const wording = signedAt
+      ? [...versions].reverse().find((version) => version.createdAt <= signedAt)
+      : undefined;
     if (stampedNow) spreadIndex += 1;
     const sealed =
       Boolean(record.integrityHash && record.integrityVersion) ||
@@ -194,6 +204,15 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
     // demo of an integrity check must never show for untampered evidence.
     const next: WaiverRecord = {
       ...record,
+      ...(wording
+        ? {
+            templateId: wording.id,
+            templateTitle: wording.title,
+            templateVersion: wording.version,
+            templateGeneration: wording.materialGeneration,
+            templateBody: wording.body,
+          }
+        : {}),
       signedAt,
       // A release is consented to and completed in the same sitting it is
       // signed in; the seeded rows already tie the three together (completion
@@ -241,7 +260,7 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
 }
 
 /**
- * How many rows one `UPDATE … FROM (VALUES …)` carries. Twelve bound parameters
+ * How many rows one `UPDATE … FROM (VALUES …)` carries. Seventeen bound parameters
  * per row, so this is nowhere near Postgres's 65535-parameter ceiling; it is
  * sized to keep one statement's plan small rather than to dodge a limit.
  */
@@ -273,7 +292,7 @@ async function applyEvidence(
     const rows = sql.join(
       chunk.map(
         ({ id, next }) =>
-          sql`(${id}::uuid, ${next.signedAt}::timestamptz, ${next.consentedAt}::timestamptz, ${next.completedAt}::timestamptz, ${next.createdAt}::timestamptz, ${next.integrityHash}::text, ${next.integrityVersion}::integer, ${next.integrityValid}::boolean, ${next.integrityCheckedAt}::timestamptz, ${next.signatureMethod}::text, ${next.importedFromLabel}::text, ${next.medicalAnswers ? JSON.stringify(next.medicalAnswers) : null}::jsonb)`,
+          sql`(${id}::uuid, ${next.signedAt}::timestamptz, ${next.consentedAt}::timestamptz, ${next.completedAt}::timestamptz, ${next.createdAt}::timestamptz, ${next.integrityHash}::text, ${next.integrityVersion}::integer, ${next.integrityValid}::boolean, ${next.integrityCheckedAt}::timestamptz, ${next.signatureMethod}::text, ${next.importedFromLabel}::text, ${next.medicalAnswers ? JSON.stringify(next.medicalAnswers) : null}::jsonb, ${next.templateId}::uuid, ${next.templateTitle}::text, ${next.templateVersion}::integer, ${next.templateGeneration}::integer, ${next.templateBody}::text)`,
       ),
       sql`, `,
     );
@@ -289,10 +308,16 @@ async function applyEvidence(
         integrity_checked_at = source.integrity_checked_at,
         signature_method = source.signature_method,
         imported_from_label = source.imported_from_label,
-        medical_answers = source.medical_answers
+        medical_answers = source.medical_answers,
+        template_id = source.template_id,
+        template_title = source.template_title,
+        template_version = source.template_version,
+        template_generation = source.template_generation,
+        template_body = source.template_body
       from (values ${rows}) as source (
         id, signed_at, consented_at, completed_at, created_at, integrity_hash, integrity_version,
-        integrity_valid, integrity_checked_at, signature_method, imported_from_label, medical_answers
+        integrity_valid, integrity_checked_at, signature_method, imported_from_label, medical_answers,
+        template_id, template_title, template_version, template_generation, template_body
       )
       where target.id = source.id
     `);
