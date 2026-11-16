@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { blockCoversMeetings } from "@/lib/crew-requests";
 import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
@@ -443,7 +444,15 @@ export async function crewMoveConflicts(
   }
 
   const crew = new Set(crewIds);
-  const awayIds = [...new Set(blocks.filter((b) => crew.has(b.personId)).map((b) => b.personId))];
+  // Each proposed leg on its own: a course with gaps between meeting days is
+  // away-flagged only for a blackout that touches a leg, not the gap between.
+  const awayIds = [
+    ...new Set(
+      blocks
+        .filter((b) => crew.has(b.personId) && blockCoversMeetings(b, proposed, timeZone))
+        .map((b) => b.personId),
+    ),
+  ];
   const names =
     awayIds.length === 0
       ? []
