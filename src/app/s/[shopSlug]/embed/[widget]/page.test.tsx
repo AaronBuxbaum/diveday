@@ -300,7 +300,7 @@ describe("the courses widget's catalog", () => {
  */
 describe("the departure card", () => {
   const trip = (booked: number) => ({
-    id: "trip-1",
+    id: "11111111-1111-4111-8111-111111111111",
     title: "Wreck Trip",
     isPrivate: false,
     status: "scheduled",
@@ -327,7 +327,7 @@ describe("the departure card", () => {
     render(
       await EmbedWidgetPage({
         params: Promise.resolve({ shopSlug: "blue-mantis", widget: "departure" }),
-        searchParams: Promise.resolve({ show: "trip-1" }),
+        searchParams: Promise.resolve({ show: "11111111-1111-4111-8111-111111111111" }),
       }),
     );
   }
@@ -364,7 +364,7 @@ describe("the departure card", () => {
       await expect(
         EmbedWidgetPage({
           params: Promise.resolve({ shopSlug: "blue-mantis", widget: "departure" }),
-          searchParams: Promise.resolve({ show: "trip-1" }),
+          searchParams: Promise.resolve({ show: "11111111-1111-4111-8111-111111111111" }),
         }),
       ).rejects.toThrow();
     },
@@ -376,7 +376,7 @@ describe("the departure card", () => {
     expect(screen.getByText("Full")).toHaveClass("text-muted");
     expect(screen.getByRole("link", { name: "Ask to be told" })).toHaveAttribute(
       "href",
-      "/s/blue-mantis/trips/trip-1#book",
+      "/s/blue-mantis/trips/11111111-1111-4111-8111-111111111111#book",
     );
   });
 

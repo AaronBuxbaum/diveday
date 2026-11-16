@@ -1,5 +1,5 @@
 import type { AppDb } from "../../db/client";
-import { listDiveSites } from "../../db/dive-sites";
+import { countDiveSites } from "../../db/dive-sites";
 import type { Shop, ShopStripeAccount } from "../../db/schema/index";
 import { canAcceptPayments } from "../../db/stripe-accounts";
 import { getCurrentWaiverTemplate } from "../../db/waivers-templates";
@@ -45,15 +45,15 @@ export async function loadFirstRunFacts(
   >,
   stripeAccount: ShopStripeAccount | null,
 ): Promise<FirstRunFacts> {
-  const [diveSites, release] = await Promise.all([
-    listDiveSites(db, shop.id),
+  const [diveSiteCount, release] = await Promise.all([
+    countDiveSites(db, shop.id),
     getCurrentWaiverTemplate(db, shop.id),
   ]);
   const steps: FirstRunSteps = {
     contactDone: Boolean(shop.contactEmail || shop.contactPhone),
     profileDone: Boolean(shop.tagline || shop.description || shop.logoUrl),
     unitsDone: Boolean(shop.unitsConfirmedAt),
-    diveSiteCount: diveSites.length,
+    diveSiteCount,
     releaseDone: !isSampleRelease(release?.body),
     emergencyDone: emergencyCardHasNumbers(shop.emergencyReference),
     stripeDone: canAcceptPayments(stripeAccount),
