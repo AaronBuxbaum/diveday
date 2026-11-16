@@ -20,7 +20,9 @@
  *
  * Shop-scoped on every table it reads, each join on its own `shop_id`.
  */
+
 import { and, eq, gte, ilike, inArray, isNull, lt, ne, or, type SQL, sql } from "drizzle-orm";
+import { containsPattern } from "@/lib/like-pattern";
 import { fareCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import type { ShopOrderFilter } from "./orders";
@@ -85,10 +87,14 @@ export function seatPaymentWhere(shopId: string, filter: ShopOrderFilter): SQL |
     } else conditions.push(sql`false`);
   }
   if (filter.personId) conditions.push(eq(bookings.personId, filter.personId));
-  if (filter.personQuery) conditions.push(ilike(people.fullName, `%${filter.personQuery}%`));
+  if (filter.personQuery)
+    conditions.push(ilike(people.fullName, containsPattern(filter.personQuery)));
   if (filter.q) {
     conditions.push(
-      or(ilike(people.fullName, `%${filter.q}%`), ilike(trips.title, `%${filter.q}%`)),
+      or(
+        ilike(people.fullName, containsPattern(filter.q)),
+        ilike(trips.title, containsPattern(filter.q)),
+      ),
     );
   }
   if (filter.tripId) conditions.push(eq(bookingCheckouts.tripId, filter.tripId));

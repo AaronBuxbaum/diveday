@@ -23,8 +23,8 @@ import {
   upsertIntegrationSyncRecord,
 } from "./store";
 
-export const QUICKBOOKS_AUTHORIZATION_URL = "https://appcenter.intuit.com/connect/oauth2";
-export const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
+const QUICKBOOKS_AUTHORIZATION_URL = "https://appcenter.intuit.com/connect/oauth2";
+const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
 
 /**
  * A per-request ceiling on every outbound call.
@@ -36,11 +36,11 @@ export const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1
  * is a failure that retries, not a queue that stops.
  */
 const REQUEST_TIMEOUT_MS = 15_000;
-export const QUICKBOOKS_SCOPE = "com.intuit.quickbooks.accounting";
+const QUICKBOOKS_SCOPE = "com.intuit.quickbooks.accounting";
 
 class QuickBooksRefreshTimeoutError extends Error {}
 
-export type QuickBooksEnvironment = "sandbox" | "production";
+type QuickBooksEnvironment = "sandbox" | "production";
 
 export type QuickBooksConfig = {
   clientId: string;
@@ -54,7 +54,7 @@ export type QuickBooksCredentials = {
   expiresAt: number;
 };
 
-export type QuickBooksOrderPayload = {
+type QuickBooksOrderPayload = {
   source?: SaleSource;
   orderId: string;
   customer: { id: string; name: string; email: string | null } | null;

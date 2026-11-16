@@ -32,6 +32,8 @@ describe("narrowing the library", () => {
     expect(await names({ query: "Filter", need: "wreck" })).toEqual(["Filter Wreck"]);
     expect(await names({ query: "Filter", need: "nitrox" })).toEqual(["Filter Wreck"]);
     expect(await names({ query: "Filter", need: "night" })).toEqual([]);
+    expect(await names({ query: "%" })).toEqual([]);
+    expect(await names({ query: "_" })).toEqual([]);
     // A site with no map point is never inside a map area.
     expect(
       await names({ query: "Filter", area: { south: 0, west: 0, north: 20, east: 20 } }),

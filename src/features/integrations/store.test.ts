@@ -16,6 +16,8 @@ import {
   getIntegrationSyncRecord,
   getShopIntegration,
   listShopIntegrations,
+  markIntegrationError,
+  markIntegrationHealthy,
   readIntegrationCredentials,
   recordShopIntegration,
   upsertIntegrationSyncRecord,
@@ -205,6 +207,19 @@ describe("disconnect and reconnect", () => {
     const row = rows[0];
     if (!row) throw new Error("expected the stamped row");
     expect(await readIntegrationCredentials(row)).toEqual({ status: "invalid_credentials" });
+  });
+
+  it("lets a delivery that finishes after Disconnect change nothing", async () => {
+    const { db, shop } = ctx;
+    const row = await connectQuickBooks(db, shop.id);
+    await disconnectShopIntegration(db, shop.id, "quickbooks");
+
+    await markIntegrationHealthy(db, row.id);
+    await markIntegrationError(db, row.id, "auth_failed");
+
+    const [after] = await db.select().from(shopIntegrations).where(eq(shopIntegrations.id, row.id));
+    expect(after?.lastError).toBeNull();
+    expect(after?.lastSyncedAt).toBeNull();
   });
 
   it("hides a disconnected provider from every active read", async () => {

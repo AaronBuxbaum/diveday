@@ -266,14 +266,14 @@ export async function markIntegrationError(
   await db
     .update(shopIntegrations)
     .set({ status: "error", lastError: errorCode.slice(0, 200), updatedAt: now() })
-    .where(eq(shopIntegrations.id, integrationId));
+    .where(and(eq(shopIntegrations.id, integrationId), liveIntegration()));
 }
 
 export async function markIntegrationHealthy(db: DbExecutor, integrationId: string): Promise<void> {
   await db
     .update(shopIntegrations)
     .set({ status: "connected", lastError: null, lastSyncedAt: now(), updatedAt: now() })
-    .where(eq(shopIntegrations.id, integrationId));
+    .where(and(eq(shopIntegrations.id, integrationId), liveIntegration()));
 }
 
 /**

@@ -3,9 +3,9 @@ import { nowMs } from "@/lib/clock";
 
 /** Read-only receipt evidence. No payment, refund, customer or catalog write scope. */
 export const SQUARE_SCOPES = ["PAYMENTS_READ", "MERCHANT_PROFILE_READ"] as const;
-export const SQUARE_API_VERSION = "2026-09-16";
+const SQUARE_API_VERSION = "2026-09-16";
 const REQUEST_TIMEOUT_MS = 15_000;
-export type SquareEnvironment = "sandbox" | "production";
+type SquareEnvironment = "sandbox" | "production";
 export type SquareConfig = {
   clientId: string;
   clientSecret: string;
@@ -45,7 +45,7 @@ export type SquareReceipt = {
   currency: string;
   receiptNumber: string | null;
 };
-export type SquareLocation = { id: string; name: string; currency: string; merchantId: string };
+type SquareLocation = { id: string; name: string; currency: string; merchantId: string };
 const locationSchema = z.object({
   id: squareId,
   name: z.string().max(255),
@@ -66,7 +66,7 @@ export function squareConfigFromEnvironment(
   return { clientId, clientSecret, environment };
 }
 
-export function squareApiOrigin(environment: SquareEnvironment) {
+function squareApiOrigin(environment: SquareEnvironment) {
   return environment === "sandbox"
     ? "https://connect.squareupsandbox.com"
     : "https://connect.squareup.com";
