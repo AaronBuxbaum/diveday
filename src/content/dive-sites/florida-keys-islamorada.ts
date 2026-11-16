@@ -405,7 +405,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       currentNote:
         "Shallow and in Hawk Channel, so watch for boat traffic and fly a dive flag. A state Underwater Archaeological Preserve: every stone and brick stays exactly where it lies.",
       divePlan:
-        "Circle the ballast mound slowly, find the plaque, then the cannons, and anchor. An easy dive and a good snorkel.",
+        "Circle the ballast mound slowly, find the plaque, then the cannons and anchor. An easy dive and a good snorkel.",
       fitTone: "welcoming",
       fitNote: "Shallow, calm, and full of history. Anyone certified can enjoy it.",
       landmarks: [

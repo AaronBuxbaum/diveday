@@ -441,7 +441,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Changing, medium to strong current.",
       divePlan:
-        "Drop at the south end, drift north along the wall no deeper than 30 m, and ascend with reserve gas. Bull sharks are seasonal, and out of season it is a wall dive without them; no animal is promised. If one appears, stay put, keep the group together, keep nothing dangling, never chase, or touch, and follow the crew's briefing.",
+        "Drop at the south end, drift north along the wall no deeper than 30 m, and ascend with reserve gas. Bull sharks are seasonal, and out of season it is a wall dive without them; no animal is promised. If one appears, stay put, keep the group together, keep nothing dangling, never chase or touch, and follow the crew's briefing.",
       fitTone: "demanding",
       fitNote: "A drift along a wall at depth. Good air management and a plan for the surface.",
       minimumCertificationLevel: "advanced_open_water",
@@ -696,7 +696,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Medium to strong current, running south to north.",
       divePlan:
-        "Start at the south end, drift with the current, hold 18 to 22 m (60 to 70 ft), and stay no deeper than 30 m. Bull sharks are seasonal, and out of season it is a drift without them; no animal is promised. If one appears, stay put, keep the group together, keep nothing dangling, never chase, or touch, and follow the crew's briefing.",
+        "Start at the south end, drift with the current, hold 18 to 22 m (60 to 70 ft), and stay no deeper than 30 m. Bull sharks are seasonal, and out of season it is a drift without them; no animal is promised. If one appears, stay put, keep the group together, keep nothing dangling, never chase or touch, and follow the crew's briefing.",
       fitTone: "demanding",
       fitNote: "A drift over a slope that goes deeper than you should. Hold your depth.",
       minimumCertificationLevel: "advanced_open_water",
@@ -761,7 +761,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
         "A seasonal bull shark dive, five minutes by boat from Playa del Carmen. Pregnant females visit the waters off town from about mid-November to mid-February, tapering through March. Divers descend a fixed line to a sandy bottom and watch.",
       marineLife: "Bull sharks in season · southern stingrays · green morays",
       marineLifeDescription:
-        "Observation only, with no bait, and no feeding. Sharks are seasonal and never certain. Out of season the dive is a sand dive at 27 m with no sharks.",
+        "Observation only, with no bait and no feeding. Sharks are seasonal and never certain. Out of season the dive is a sand dive at 27 m with no sharks.",
       difficultyLevel: "advanced",
       maxDepthMeters: 28,
       currentNote:

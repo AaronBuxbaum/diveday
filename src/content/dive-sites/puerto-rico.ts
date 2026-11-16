@@ -79,7 +79,7 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
         "A small uninhabited island about 12 miles out, with reef all around it and water that often clears past 30 m. Diving around the island is allowed. The island itself is closed to the public.",
       marineLife: "Reef fish · crustaceans · turtles · sharks",
       marineLifeDescription:
-        "Healthy reef with a wide cast: fish, lobsters, and turtles, with sharks, and dolphins reported. Humpback whales pass in winter, sometimes heard underwater.",
+        "Healthy reef with a wide cast: fish, lobsters, and turtles, with sharks and dolphins reported. Humpback whales pass in winter, sometimes heard underwater.",
       difficultyLevel: "advanced",
       depthMinMeters: 18,
       maxDepthMeters: 28,
