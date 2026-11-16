@@ -1,16 +1,7 @@
 import { ilike, or, type SQL, sql } from "drizzle-orm";
+import { containsPattern } from "@/lib/like-pattern";
 import { MIN_PHONE_SEARCH_DIGITS, phoneDigits } from "@/lib/person-fields";
 import { people } from "./schema";
-
-/**
- * A typed needle as `like` reads it literally: `%`, `_` and the escape
- * character itself each take Postgres's default `like` escape, a backslash.
- * Unescaped, a lone `%` in a search box listed every person in the shop
- * (security review of #2579).
- */
-function escapeLikePattern(text: string): string {
-  return text.replace(/[\\%_]/g, "\\$&");
-}
 
 /**
  * Literal, case-insensitive substring search across name, email and phone.
@@ -33,7 +24,7 @@ function escapeLikePattern(text: string): string {
 export function personSearchMatch(rawQuery: string): SQL | undefined {
   const query = rawQuery.trim();
   if (!query) return undefined;
-  const like = `%${escapeLikePattern(query)}%`;
+  const like = containsPattern(query);
   const digits = phoneDigits(query);
   const phoneMatch =
     digits.length >= MIN_PHONE_SEARCH_DIGITS

@@ -362,11 +362,8 @@ export async function retryPendingProcessorErasures(
     .orderBy(asc(processorErasureObligations.createdAt))
     .limit(limit);
 
-  let discharged = 0;
-  for (const obligation of eligible) {
-    const outcome = await attemptProcessorErasure(db, obligation, provider);
-    if (outcome.status === "discharged") discharged += 1;
-  }
+  // One obligation's throw must not leave the rest of the night's queue undrained.
+  const { discharged } = await attemptProcessorErasures(db, eligible, provider);
   return { attempted: eligible.length, discharged };
 }
 
