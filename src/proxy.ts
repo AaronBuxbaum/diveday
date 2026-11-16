@@ -145,7 +145,7 @@ async function authGateResponse(req: NextRequest): Promise<Response | undefined>
   ) {
     return NextResponse.redirect(new URL(`/shop/${shopSlug}`, req.nextUrl));
   }
-  if (pathname.startsWith(STAFF_PREFIX)) {
+  if (pathname === STAFF_PREFIX || pathname.startsWith(`${STAFF_PREFIX}/`)) {
     if (!hasSession) {
       // `callbackUrl` is what src/app/sign-in/page.tsx reads
       // (`shopSlugFromStaffUrl`) to offer a diver who followed a dead staff

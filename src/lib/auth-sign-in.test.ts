@@ -21,12 +21,12 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.9") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
-  return { ...actual, checkRateLimit: vi.fn() };
+  return { ...actual, checkRateLimit: vi.fn(), refundRateLimit: vi.fn(async () => {}) };
 });
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn(async () => {}) }));
 
 const { getDb } = await import("@/db/client");
-const { checkRateLimit, rateLimitKey } = await import("@/lib/rate-limit");
+const { checkRateLimit, rateLimitKey, refundRateLimit } = await import("@/lib/rate-limit");
 const { createAuth } = await import("@/lib/auth");
 
 const OWNER = DEV_STAFF_LOGINS.owner;
@@ -89,6 +89,18 @@ describe("signing in with DiveDay credentials", () => {
       signIn({ email: "nobody@demo.invalid", password: OWNER.password }),
     ).rejects.toMatchObject({ message: "invalid_credentials" });
     expect(await sessionsFor(db, account.id)).toBe(before);
+  });
+
+  it("spends the address bucket on a wrong password only, and returns the try of a right one", async () => {
+    const { signIn } = await harness();
+    const emailKey = rateLimitKey("sign-in-email", OWNER.email.toLowerCase());
+    vi.mocked(refundRateLimit).mockClear();
+
+    await expect(signIn({ email: OWNER.email, password: "not-it" })).rejects.toBeDefined();
+    expect(refundRateLimit).not.toHaveBeenCalled();
+
+    await signIn(OWNER);
+    expect(vi.mocked(refundRateLimit).mock.calls.map((call) => call[0])).toEqual([emailKey]);
   });
 
   it("refuses a rate-limited attempt before it checks the password", async () => {
@@ -230,6 +242,7 @@ describe("signing in with DiveDay credentials", () => {
       expect(started).toBeNull();
       const cookie = await pending(h);
       const before = await sessionsFor(h.db, h.account.id);
+      vi.mocked(refundRateLimit).mockClear();
       expect(
         await h.auth.api.completeDiveDaySignIn({
           body: { totpCode: "malformed" },
@@ -237,6 +250,7 @@ describe("signing in with DiveDay credentials", () => {
         }),
       ).toEqual({ status: "invalid_code" });
       expect(await sessionsFor(h.db, h.account.id)).toBe(before);
+      expect(refundRateLimit).not.toHaveBeenCalled();
       const { response, headers } = await h.auth.api.completeDiveDaySignIn({
         body: { totpCode: totpCode(h.secret) },
         headers: cookie.headers,
@@ -247,6 +261,9 @@ describe("signing in with DiveDay credentials", () => {
       expect(headers.get("set-cookie")).toContain("session_token");
       expect(headers.get("set-cookie")).toMatch(/pending_sign_in=;[^,]*Max-Age=0/i);
       expect(await sessionsFor(h.db, h.account.id)).toBe(before + 1);
+      expect(vi.mocked(refundRateLimit).mock.calls.map((call) => call[0])).toEqual([
+        rateLimitKey("sign-in-email", OWNER.email.toLowerCase()),
+      ]);
       expect(
         await h.auth.api.completeDiveDaySignIn({
           body: { totpCode: totpCode(h.secret) },
