@@ -87,6 +87,36 @@ test.describe("staff navigation on a phone", () => {
     await expect(page).toHaveURL(/\/orders$/);
     await expect(more).toHaveAttribute("aria-expanded", "false");
   });
+
+  test("More's panel is painted and stays open for two seconds", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    const more = nav.getByRole("button", { name: "More", exact: true });
+    const panel = nav.getByRole("link", { name: "Money", exact: true }).locator("../..");
+    await expect(nav).toHaveAttribute("data-hydrated", "true");
+
+    await more.tap();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await panel.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+    // diveday:allow-e2e-hygiene sleep: the bug is the panel vanishing seconds after opening; only elapsed time can show it
+    await page.waitForTimeout(2000);
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    const box = await panel.boundingBox();
+    expect(box, "the panel has a box").not.toBeNull();
+    if (!box) return;
+    const viewport = page.viewportSize();
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport?.width ?? 0);
+    const open = await page.screenshot({ clip: box });
+
+    await more.tap();
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+    await expect(panel).toHaveCount(0);
+    const closed = await page.screenshot({ clip: box });
+    // Painted pixels, not DOM visibility: the open panel must differ from the
+    // page behind it, or the menu is in the tree but not on the glass.
+    expect(open.equals(closed), "the open panel paints over the page").toBe(false);
+  });
 });
 
 test("touch booking and guardian signing stay complete after reload", async ({ page }) => {
