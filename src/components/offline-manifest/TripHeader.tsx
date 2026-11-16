@@ -2,7 +2,6 @@ import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { buttonClass } from "@/components/ui/button";
 import { useOnline } from "@/components/use-online";
 import type { OfflineTripControls } from "./controls";
 import { offlineHeaderChip } from "./header-chip";
@@ -21,7 +20,7 @@ export function OfflineTripHeader({
   controls: OfflineTripControls;
 }) {
   const { manifest, expired, freshness, pending, rejected, savedAtHeader } = view;
-  const { t, message, servedWithoutAnswer, liveOffer } = controls;
+  const { t, message, servedWithoutAnswer } = controls;
   const chip = offlineHeaderChip({ online: useOnline(), servedWithoutAnswer, freshness });
   const noteLossVisible = [...view.envelope.events, ...view.envelope.checklistEvents].some(
     (event) =>
@@ -87,14 +86,6 @@ export function OfflineTripHeader({
               )}
         </p>
       )}
-      {servedWithoutAnswer && liveOffer ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3" role="status" aria-live="polite">
-          <p className="text-sm font-medium">{t("shared.offlineManifest.single.liveAnswering")}</p>
-          <a href={liveOffer} className={buttonClass({ size: "boat" })}>
-            {t("shared.offlineManifest.single.openLiveManifest")}
-          </a>
-        </div>
-      ) : null}
       <p className="mt-3 text-sm font-medium" role="status" aria-live="polite">
         <StatusMessage message={message} />
       </p>
