@@ -90,9 +90,7 @@ describe("the dive-site catalog", () => {
   // distance logic (issue #4597). The Pompano pair now carries the FWC reef
   // layer's own points (BO0042/BO0043). The Roatan pair still shares one, waiting
   // on a sourced coordinate; the list only shrinks.
-  const SHARES_A_POINT_PENDING_SOURCE = new Set([
-    "half-moon-bay-wall-roatan|verns-dropoff-roatan",
-  ]);
+  const SHARES_A_POINT_PENDING_SOURCE = new Set(["half-moon-bay-wall-roatan|verns-dropoff-roatan"]);
 
   it("gives no two sites in an area the same point", () => {
     const byPoint = new Map<string, string[]>();
