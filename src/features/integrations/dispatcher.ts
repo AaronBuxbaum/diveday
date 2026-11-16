@@ -7,6 +7,7 @@ import {
   markIntegrationDeliveryDelivered,
   markIntegrationDeliveryFailed,
 } from "@/db/integration-events";
+import { log } from "@/lib/log";
 import { IntegrationDeliveryDeadlineError } from "./delivery-deadline";
 import { deliverQuickBooksEvent, quickBooksConfigFromEnvironment } from "./quickbooks";
 import { markIntegrationError, markIntegrationHealthy } from "./store";
@@ -137,11 +138,15 @@ export async function dispatchDueIntegrationDeliveries(
         throw new IntegrationDeliveryDeadlineError();
       }
     } catch (error) {
-      if (!(error instanceof IntegrationDeliveryDeadlineError)) {
-        clearTimeout(deliveryTimeout);
-        throw error;
+      // A delivery that throws is a failed attempt like any other: rethrowing would strand every
+      // delivery behind it, and a stale `processing` row re-enters the queue with no attempt
+      // ceiling, so one poison row would abort each hourly pass at the same place for good.
+      if (error instanceof IntegrationDeliveryDeadlineError) {
+        result = { status: "failed", code: "integration_delivery_timeout", retryable: true };
+      } else {
+        log("integrations.delivery_threw", "error", { provider: candidate.integration.provider });
+        result = { status: "failed", code: "integration_delivery_error", retryable: true };
       }
-      result = { status: "failed", code: "integration_delivery_timeout", retryable: true };
     } finally {
       clearTimeout(deliveryTimeout);
     }

@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lt } from "drizzle-orm";
+import { and, asc, eq, exists, gte, lt, sql } from "drizzle-orm";
 import type { DbExecutor } from "@/db/client";
 import { courses, diveSites, people, tripAssignments, tripScheduleDays, trips } from "@/db/schema";
 import { liveTrip, notRehearsal, tripPrimarySiteId } from "@/db/trips";
@@ -44,6 +44,13 @@ export async function listFeedTrips(
     gte(trips.endsAt, from),
     lt(trips.startsAt, until),
   ];
+  // A crew member's own feed reads only their trips; the joins below still fold in the whole crew.
+  if (input.scope !== "shop_trips")
+    conditions.push(
+      exists(
+        sql`(select 1 from ${tripAssignments} as mine where mine.trip_id = ${trips.id} and mine.person_id = ${input.personId})`,
+      ),
+    );
 
   const rows = await db
     .select({
