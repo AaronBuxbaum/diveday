@@ -64,7 +64,7 @@ export async function refreshCausalRollCall(db: DbExecutor, subject: RollCallCau
     .map((row) => canonicalRollCallEvidenceId(row));
   const groups = new Map<number, typeof rows>();
   for (const row of rows) {
-    const day = row.meetingDay ?? (await causalMeetingDay(db, subject.tripId));
+    const day = row.meetingDay ?? fallbackDay;
     const group = groups.get(day) ?? [];
     group.push(row);
     groups.set(day, group);

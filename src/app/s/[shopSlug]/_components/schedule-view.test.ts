@@ -174,6 +174,18 @@ describe("scheduleDayWords", () => {
     expect(whenWord(new Date("2026-07-22T11:00:00Z"))).toMatch(/tomorrow/i);
     expect(whenWord(new Date("2026-07-28T11:00:00Z"))).not.toMatch(/tomorrow|today/i);
   });
+
+  it("finds tomorrow on the calendar, not 24 hours on, across a clock change", () => {
+    // Clocks go back on 2026-11-01: that day has 25 hours, so 24 hours after
+    // 00:30 is still the same day.
+    const fallBack = scheduleDayWords(new Date("2026-11-01T04:30:00Z"), "en-US", TZ);
+    expect(fallBack.whenWord(new Date("2026-11-02T15:00:00Z"))).toMatch(/tomorrow/i);
+    // Clocks go forward on 2026-03-08: that day has 23 hours, so 24 hours after
+    // 23:30 the evening before lands on the day after tomorrow.
+    const springForward = scheduleDayWords(new Date("2026-03-08T04:30:00Z"), "en-US", TZ);
+    expect(springForward.whenWord(new Date("2026-03-08T15:00:00Z"))).toMatch(/tomorrow/i);
+    expect(springForward.whenWord(new Date("2026-03-09T15:00:00Z"))).not.toMatch(/tomorrow/i);
+  });
 });
 
 describe("scheduleSeatState", () => {

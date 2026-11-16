@@ -5,7 +5,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { addMonths, type MonthRef, monthKey } from "@/lib/calendar";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { formatRelativeDay, formatShortDate } from "@/lib/format";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
@@ -192,7 +192,8 @@ export function scheduleMonthRail({
 export function scheduleDayWords(now: Date, locale: string, tz: string) {
   const dayKeyOf = (date: Date) => toDateInputValue(utcToWallTime(date, tz));
   const nowDayKey = dayKeyOf(now);
-  const tomorrowDayKey = dayKeyOf(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+  // Calendar arithmetic, not 24 hours on: a clock-change day is 23 or 25 hours.
+  const tomorrowDayKey = shiftCalendarDate(nowDayKey, 1);
   const whenWord = (date: Date) =>
     dayKeyOf(date) === nowDayKey || dayKeyOf(date) === tomorrowDayKey
       ? formatRelativeDay(date, now, locale, tz)
