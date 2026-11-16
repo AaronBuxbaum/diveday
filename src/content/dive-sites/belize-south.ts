@@ -32,7 +32,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       currentNote:
         "Carry an SMB and surface with it deployed, because the boat picks divers up in open water. This is a blue-water drift outside the reef with no visual reference to the reef or bottom. Current is not documented; ask the crew on the day.",
       divePlan:
-        "Staff confirm the diver’s log before boarding. Mid-water in the group, no deeper than 24 m (80 ft). Below the plan the wall keeps sloping and then drops into deep water. Watch your gauge, because nothing in view shows depth. Around any shark, whale sharks and bull sharks alike, stay put and keep the group together, keep nothing dangling, never chase, or touch, and follow the guide’s briefing. Out of season it is a blue-water dive without the event, and no animal is promised.",
+        "Staff confirm the diver’s log before boarding. Mid-water in the group, no deeper than 24 m (80 ft). Below the plan the wall keeps sloping and then drops into deep water. Watch your gauge, because nothing in view shows depth. Around any shark, whale sharks and bull sharks alike, stay put and keep the group together, keep nothing dangling, never chase or touch, and follow the guide’s briefing. Out of season it is a blue-water dive without the event, and no animal is promised.",
       fitTone: "demanding",
       fitNote:
         "Open-ocean diving with nothing to hold on to, so buoyancy has to be good. The season runs March to June, from about two days before the full moon to ten days after. Medical care is far; confirm the boat’s oxygen and plan.",

@@ -219,7 +219,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       currentNote:
         "Usually very little current and long bottom times. It is run as a buoy dive or a gentle drift; either way, a dive flag is the law here and boats pass close inshore.",
       divePlan:
-        "From any buoy, follow the ridge north, or south along the eastern ledge and turn back on gas.",
+        "From any buoy, follow the ridge north or south along the eastern ledge and turn back on gas.",
       fitTone: "welcoming",
       creatureSlugs: [
         "bluestriped-grunt",
@@ -1396,7 +1396,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       depthMinMeters: 17,
       maxDepthMeters: 21,
       currentNote:
-        "The barge lies upside down with holes in its hull; stay outside and watch your head around the edges. Pleasure boats pass over the site, so surface under your divers-down flag, which Florida law requires.",
+        "The barge lies upside down with holes in its hull; stay outside, and watch your head around the edges. Pleasure boats pass over the site, so surface under your divers-down flag, which Florida law requires.",
       fitTone: "welcoming",
       landmarks: [
         {

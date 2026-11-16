@@ -204,7 +204,7 @@ export const CURACAO: DiveSiteTemplate[] = [
         "Down to the superstructure, along the deck on the outside of the hull, and back up with reserve gas. Watch the no-decompression clock near 30 m.",
       fitTone: "demanding",
       fitNote:
-        "Deep, with current, and a berth that closes when ships dock. For divers with the card and the gas for it.",
+        "Deep, with current and a berth that closes when ships dock. For divers with the card and the gas for it.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       creatureSlugs: ["tarpon", "great-barracuda", "horse-eye-jack", "sea-plume", "black-sea-rod"],
@@ -765,7 +765,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.2961,
       forecastLongitude: -69.1569,
       description:
-        "A gently sloping wall beside Mushroom Forest and the Blue Room, covered in orange elephant-ear sponges, large barrel sponges and purple stovepipes. A boat dive.",
+        "A gently sloping wall beside Mushroom Forest and the Blue Room, covered in orange elephant-ear sponges, large barrel sponges, and purple stovepipes. A boat dive.",
       marineLife: "Elephant-ear sponges · barrel sponges · stovepipe sponges",
       marineLifeDescription:
         "Sponges of every size on the wall, with fish moving through them. Good for wide-angle.",
@@ -846,7 +846,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       forecastLatitude: 12.0402,
       forecastLongitude: -68.8107,
       description:
-        "A boat drift east along a wall, from Smokey's to Kathy's Paradise, past coral overhangs and sharp drop-offs inside the Curaçao Marine Park. Not reachable from land.",
+        "A boat drift east along a wall, from Smokey's to Kathy's Paradise, past coral overhangs, and sharp drop-offs inside the Curaçao Marine Park. Not reachable from land.",
       marineLife: "Stingrays · turtles · sea fans",
       marineLifeDescription:
         "Dense coral overhangs along the wall, with rays and turtles in the open water beside it.",

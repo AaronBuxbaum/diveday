@@ -255,7 +255,7 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
       "box_f",
       "q8",
       3,
-      "Diabetes, either drug, or diet controlled, or gestational diabetes within the last 12 months.",
+      "Diabetes, either drug or diet controlled, or gestational diabetes within the last 12 months.",
     ),
     box("box_f", "q8", 4, "An uncorrected hernia that limits my physical abilities."),
     box(
