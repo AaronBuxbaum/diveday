@@ -7,6 +7,17 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The count on deck beside the roll call (built 2026-11-16)
+
+Issue #4248. In the manifest's details, a crew member types the heads they counted on deck at the
+open checkpoint, crew included (`roll_call_deck_counts`, append-only, newest wins). When it differs
+from everyone the roll call marked aboard, the deck screen says "11 counted on deck, 12 marked
+aboard" under its progress, in warning ink; when it matches, the details say so. It never gates a
+departure or a checkpoint. Live manifest only, not the offline copy. Exported as
+`roll_call_deck_counts.csv`. ADR
+[20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md),
+amendment 2026-11-16.
+
 ## A drafted emergency text from the manifest (built 2026-11-16)
 
 Issue #4256. Under an emergency contact in the manifest's person sheet, diver or crew, "Draft a

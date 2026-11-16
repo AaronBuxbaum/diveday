@@ -438,6 +438,48 @@ export const preDepartureCheckEvents = pgTable(
 );
 
 /**
+ * **A deck count** (issue #4248): the number of heads the captain counted on
+ * deck at one roll-call checkpoint, crew included, as they typed it. The
+ * manifest compares the newest one with the people marked aboard and says so
+ * calmly when they differ. It informs and never gates: no checkpoint waits on
+ * it, and the per-person roll call stays the head count (ADR
+ * 20260804-crew-roll-call-is-per-person, amended for this).
+ *
+ * Append-only; the newest row per (trip, checkpoint) is the count. A recount is
+ * a new row, so the trail keeps every number somebody said.
+ */
+export const rollCallDeckCounts = pgTable(
+  "roll_call_deck_counts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** `departure` or `after_dive_N`, validated against the trip's planned dives. */
+    checkpoint: text("checkpoint").notNull(),
+    counted: integer("counted").notNull(),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
+    /** Final tiebreak for "the newest", since `recorded_at` ties under a frozen clock. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("roll_call_deck_counts_shop_trip_checkpoint_idx").on(
+      table.shopId,
+      table.tripId,
+      table.checkpoint,
+      table.seq,
+    ),
+    check("roll_call_deck_counts_counted_range", sql`${table.counted} between 0 and 999`),
+  ],
+);
+
+/**
  * **A snag**: a problem the crew wrote against one checklist line on one boat
  * ("VHF crackles on 16"), carried to that boat's next departures until somebody
  * says it is fixed (fifth-loop ideas, item 1; glossary "Snag").

@@ -1334,6 +1334,13 @@
   a result. Once somebody has one they **cannot be taken off the trip's crew**, and **leaving the
   shop does not remove them from trips they already crewed**: either would let a checkpoint that is
   open because they did not come back read complete. Employment ends; who was on the boat does not.
+- **Deck count** — the number of heads a crew member counted on deck at one roll-call checkpoint,
+  crew included, typed into the manifest's details (`roll_call_deck_counts`, issue #4248). The
+  newest count at a checkpoint is compared with everyone the roll call marked aboard there, and a
+  difference is said calmly beside the progress ("11 counted on deck, 12 marked aboard"). It
+  **informs and never gates**: no checkpoint opens, closes or waits on it, and the per-person roll
+  call stays the head count. Not the retired crew attestation, which was a typed number that closed
+  the crew half (ADR 20260804-crew-roll-call-is-per-person, amendment 2026-11-16).
 - **Buddy team** — two or more people staff group together on one departure, so roll call can say
   the thing a deck actually watches for: **someone is back aboard and someone on their team is
   not**. Planning lives in The day behind the shop's default-on `buddyTeamsEnabled` feature switch;

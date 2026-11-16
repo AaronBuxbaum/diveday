@@ -165,6 +165,15 @@
     "body": "This is {shop}, about {person} on our {trip} departure, {date}. Please call us back as soon as you can.",
     "bodyWithCaptain": "This is {shop}, about {person} on our {trip} departure, {date}, with Captain {captain}. Please call us back as soon as you can."
   },
+  "deckCount": {
+    "label": "Heads counted on deck, crew included",
+    "save": "Save count",
+    "saving": "Saving…",
+    "invalid": "Enter the number you counted, from 0 to 999.",
+    "error": "That didn’t save. Check your connection and tap again.",
+    "matches": "{counted} on deck, the same as the roll call.",
+    "differs": "{counted} counted on deck, {aboard} marked aboard."
+  },
   "notOnFile": "Not on file",
   "identityWithheldDetails": "Their contact, age, and other details wait until the desk confirms who this is.",
   "heldSeatNotConfirmed": "{moreHolds, select, yes {Not confirmed. The desk must settle who this is before boarding. Other holds may still apply.} other {Not confirmed. The desk must settle who this is before boarding.}}",

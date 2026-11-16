@@ -81,6 +81,7 @@ import {
   rentalFitProfiles,
   reviewModerationEvents,
   reviewReplies,
+  rollCallDeckCounts,
   rollCallEvents,
   safetyDrillParticipants,
   safetyDrills,
@@ -232,6 +233,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // A snag names its boat, its departures and its checklist line, none cascading.
   await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db.delete(rollCallDeckCounts).where(eq(rollCallDeckCounts.shopId, shopId));
   await db
     .delete(departureBoatSafetySnapshots)
     .where(eq(departureBoatSafetySnapshots.shopId, shopId));

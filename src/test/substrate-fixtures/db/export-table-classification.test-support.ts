@@ -177,5 +177,6 @@ export const GLOBAL_SEQ_TABLES = [
   "booking_arrival_events",
   "booking_payment_events",
   "pre_departure_check_events",
+  "roll_call_deck_counts",
   "work_order_bills",
 ] as const;
