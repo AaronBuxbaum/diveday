@@ -34,24 +34,3 @@ export type MotionRung = keyof typeof MOTION_RUNGS;
 export function motionMs(rung: MotionRung): number {
   return MOTION_RUNGS[rung];
 }
-
-/**
- * Whether this reader asked for reduced motion, answered safely anywhere.
- *
- * The stylesheet's kill-switch shortens every duration and delay to nothing,
- * which is the whole answer for anything CSS drives. It is not the answer for
- * motion a component *computes* — a FLIP slide measuring positions, a figure
- * deciding whether to roll — where the honest response is to skip the work
- * rather than to run it at 0.01ms.
- *
- * Fails toward motion, like every other "cannot tell" default in this app:
- * `matchMedia` is absent on the server and undefined in jsdom, and a reader who
- * has expressed no preference is the common case.
- */
-export function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}

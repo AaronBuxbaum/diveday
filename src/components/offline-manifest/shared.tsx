@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { textareaClassFor } from "@/components/ui/form";
 import { StatusMark, type StatusMarkVariant } from "@/components/ui/StatusMark";
@@ -299,30 +298,5 @@ export function DiscardedRecordsNotice({
         {t("shared.offlineManifest.discarded.acknowledge")}
       </button>
     </section>
-  );
-}
-
-/**
- * The saved team a dock-copy row wears — names only, never a verdict. There is
- * deliberately no tone variant: this copy cannot know who came back, so it must
- * never look like it is telling you (ADR 20260804-buddy-teams).
- *
- * The neutral `Badge` for the same reason as the state word beside it: its
- * edge, an inset ring, is what shows the chip's box on the sunken awaiting row.
- */
-export function OfflineBuddyTeamChip({
-  t,
-  locale,
-  names,
-}: {
-  t: OfflineManifestTranslator;
-  locale: string;
-  names?: string[];
-}) {
-  if (!names || names.length === 0) return null;
-  return (
-    <Badge tone="neutral" className={BUDDY_NAMES_WRAP}>
-      {t("shared.buddyTeam.with", { names: buddyNamesList(locale, names) })}
-    </Badge>
   );
 }

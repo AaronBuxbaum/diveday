@@ -39,7 +39,6 @@ import {
   listWorkOrdersForPerson,
   recordWorkOrder,
   recordWorkOrderWork,
-  restoreCustomerGearItem,
   restoreWorkOrder,
   setWorkOrderStatus,
   workOrderBoard,
@@ -205,7 +204,7 @@ describe("a customer's own gear", () => {
     ).toEqual({ ok: false, reason: "not_found" });
   });
 
-  it("deletes a piece softly, keeps it off the live list, and restores it", async () => {
+  it("deletes a piece softly and keeps it off the live list", async () => {
     const { db, shop } = await workOrderShopContext();
     const maya = await diver(db, shop.id, "Maya Pressure");
     const piece = await customerPiece(db, shop.id, maya.id);
@@ -222,11 +221,6 @@ describe("a customer's own gear", () => {
       .from(customerGearItems)
       .where(eq(customerGearItems.id, piece.id));
     expect(row?.deletedAt).not.toBeNull();
-
-    expect(
-      (await restoreCustomerGearItem(db, { shopId: shop.id, customerGearItemId: piece.id })).ok,
-    ).toBe(true);
-    expect(await listCustomerGearItems(db, shop.id, maya.id)).toHaveLength(1);
   });
 
   it("refuses to delete a piece that is on an open ticket", async () => {

@@ -280,7 +280,6 @@
   },
   "pulse": {
     "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",
-    "seatsFull": "Barco completo — {capacity, plural, one {la # plaza reservada} other {las # plazas reservadas}}",
     "aboard": "{count} a bordo",
     "blocked": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "needsInstructor": "El curso necesita instructor",
@@ -292,7 +291,6 @@
     "boatClash": "{boat} también está asignado a {departure}"
   },
   "detail": {
-    "viewBookingPage": "Ver página de reserva",
     "copyBookingLink": "Copiar enlace",
     "linkCopyFailed": "No se pudo copiar. Selecciona el enlace de arriba.",
     "cancelledBadge": "Cancelada",
@@ -300,14 +298,11 @@
     "dayLabel": "Día {number}: {date} · {timeRange}",
     "courseSession": "Sesión de curso · <course>{title}</course>",
     "diveSiteLabel": "{count, plural, one {Sitio de buceo:} other {Sitios de buceo:}}",
-    "divesWithoutSite": "{count, plural, one {# inmersión aún sin sitio} other {# inmersiones aún sin sitio}}",
-    "seriesPart": "Una fecha de una salida repetida · {summary}. Los cambios aquí solo se aplican a esta fecha; quedan {count} en el calendario.",
     "overRatioWarning": "{booked, plural, one {# reservado} other {# reservados}}, la tripulación cubre {cap}: 8 por instructor, +2 por asistente certificado, hasta 12 por instructor. Asigna otro divemaster o asistente de instructor antes de que zarpe; las reservas existentes no se ven afectadas.",
     "overRatioWarningCeiling": "{booked, plural, one {# reservado} other {# reservados}}, la tripulación cubre {cap}: hasta 12 por instructor, con los asistentes que haya. Solo otro instructor agrega plazas. Asigna uno antes de que zarpe; las reservas existentes no se ven afectadas.",
     "overRatioWarningIntro": "{booked, plural, one {# reservado} other {# reservados}} en este bautismo, la tripulación cubre {cap}. Solo otro instructor agrega plazas; un asistente certificado no. Asigna uno antes de que zarpe; las reservas existentes no se ven afectadas.",
     "reinstate": "Reactivar salida",
     "reinstating": "Reactivando…",
-    "cancelTrip": "Cancelar salida",
     "cancelHint": "La quita del calendario público y notifica a los buceadores con reserva.",
     "cancelConfirm": "Sí, cancelar esta salida",
     "weatherBlowout": "Cancelación por mal tiempo…",

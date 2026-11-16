@@ -11,7 +11,3 @@
 export const DESK_PAYMENTS = ["card", "cash", "card_and_cash"] as const;
 
 export type DeskPayment = (typeof DESK_PAYMENTS)[number];
-
-export function isDeskPayment(value: unknown): value is DeskPayment {
-  return typeof value === "string" && (DESK_PAYMENTS as readonly string[]).includes(value);
-}

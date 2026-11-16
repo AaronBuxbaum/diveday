@@ -57,14 +57,6 @@ export function offerMailClass(input: {
   return parent === null || parent === "date" ? "service" : "commercial";
 }
 
-/**
- * Whether a departure interest is on the wait list as staff read it: the diver
- * asked for this boat. A cold invitation (`shop`) is outreach, not a wait.
- */
-export function isWaiting(interest: { scope: InterestScope; askedBy: InterestAskedBy }): boolean {
-  return interest.scope === "departure" && interest.askedBy === "diver";
-}
-
 /** The name and address to show for an interest: the person's, else the snapshot it kept. */
 export function interestContact(row: {
   interest: { name: string | null; email: string | null };

@@ -280,7 +280,6 @@
   },
   "pulse": {
     "seats": "{booked} of {capacity} booked · {open, plural, one {# seat open} other {# seats open}}",
-    "seatsFull": "Full boat — {capacity, plural, one {the # seat is booked} other {all # seats booked}}",
     "aboard": "{count} aboard",
     "blocked": "{count} blocked",
     "needsInstructor": "Course needs instructor",
@@ -292,7 +291,6 @@
     "boatClash": "{boat} is also on {departure}"
   },
   "detail": {
-    "viewBookingPage": "View booking page",
     "copyBookingLink": "Copy link",
     "linkCopyFailed": "Couldn’t copy. Select the link above instead.",
     "cancelledBadge": "Canceled",
@@ -300,14 +298,11 @@
     "dayLabel": "Day {number}: {date} · {timeRange}",
     "courseSession": "Course session · <course>{title}</course>",
     "diveSiteLabel": "{count, plural, one {Dive site:} other {Dive sites:}}",
-    "divesWithoutSite": "{count, plural, one {# dive has no site yet} other {# dives have no site yet}}",
-    "seriesPart": "One date of a repeating trip · {summary}. Changes here apply to this date only; {count} still on the schedule.",
     "overRatioWarning": "{booked} booked, crew covers {cap}: 8 per instructor, +2 per certified assistant, up to 12 per instructor. Assign another divemaster or assistant instructor before this session sails; existing bookings are unaffected.",
     "overRatioWarningCeiling": "{booked} booked, crew covers {cap}: up to 12 per instructor, however many assistants. Only another instructor adds seats. Assign one before this session sails; existing bookings are unaffected.",
     "overRatioWarningIntro": "{booked} booked on this intro session, crew covers {cap}. Only another instructor adds seats; a certified assistant does not. Assign one before this session sails; existing bookings are unaffected.",
     "reinstate": "Reinstate trip",
     "reinstating": "Reinstating…",
-    "cancelTrip": "Cancel trip",
     "cancelHint": "Takes it off the public schedule and notifies booked divers.",
     "cancelConfirm": "Yes, cancel this departure",
     "weatherBlowout": "Weather blow-out…",

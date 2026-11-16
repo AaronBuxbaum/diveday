@@ -268,24 +268,6 @@ export async function deleteCustomerGearItem(
   });
 }
 
-/** Put a deleted piece back, which is what the undo beside the delete calls. */
-export async function restoreCustomerGearItem(
-  db: AppDb,
-  input: { shopId: string; customerGearItemId: string },
-): Promise<SaveCustomerGearItemOutcome> {
-  const [item] = await db
-    .update(customerGearItems)
-    .set({ deletedAt: null, deletedByPersonId: null, updatedAt: nowDate() })
-    .where(
-      and(
-        eq(customerGearItems.id, input.customerGearItemId),
-        eq(customerGearItems.shopId, input.shopId),
-      ),
-    )
-    .returning();
-  return item ? { ok: true, item } : { ok: false, reason: "not_found" };
-}
-
 /** One diver's own pieces, oldest first — the order they were recorded in. */
 export async function listCustomerGearItems(
   db: AppDb,

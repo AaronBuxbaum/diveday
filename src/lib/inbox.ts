@@ -2,6 +2,7 @@ import { HOUR_MS } from "@/lib/clock";
 import { phoneDigits } from "@/lib/person-fields";
 import { toE164 } from "@/lib/phone";
 import { hasSailed } from "@/lib/trips";
+import { isUuid } from "@/lib/uuid";
 
 /**
  * The rules of the shop inbox, free of any framework (ADR
@@ -69,8 +70,6 @@ export const WHATSAPP_REPLY_WINDOW_MS = 24 * HOUR_MS;
 
 /** The local-part prefix of every shop's inbound reply address. */
 export const INBOUND_REPLY_PREFIX = "reply+";
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * The bare address out of anything an email header carries — `Priya Sharma
@@ -191,7 +190,7 @@ export function parseInboundReplyToken(
   const local = normalized.slice(0, at);
   if (!local.startsWith(INBOUND_REPLY_PREFIX)) return null;
   const token = local.slice(INBOUND_REPLY_PREFIX.length);
-  return UUID_PATTERN.test(token) ? token : null;
+  return isUuid(token) ? token : null;
 }
 
 /**

@@ -33,7 +33,6 @@ export {
   listWorkOrdersForPerson,
   recordWorkOrder,
   recordWorkOrderWork,
-  restoreCustomerGearItem,
   restoreWorkOrder,
   searchWorkOrderCustomers,
   setWorkOrderStatus,

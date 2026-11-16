@@ -576,15 +576,6 @@ export function loadReturningDiver(shopSlug: string, now: Date = nowDate()): Ret
   return record ? { fullName: record.fullName, email: record.email } : null;
 }
 
-/** Check for a stored candidate without judging its expiry on the device clock. */
-export function hasStoredReturningDiver(shopSlug: string): boolean {
-  try {
-    return memoryKeys(shopSlug).some((key) => localStorage.getItem(key) !== null);
-  } catch {
-    return false;
-  }
-}
-
 /** Check whether this device has any shop-scoped memory that may need expiry cleanup. */
 export function hasAnyStoredReturningDiver(): boolean {
   try {
