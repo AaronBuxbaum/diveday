@@ -1,4 +1,5 @@
 import { isValidCalendarDate } from "../../lib/calendar-date";
+import { unguardFormula } from "../../lib/csv-formula";
 import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "../../lib/gear";
 import {
   MAX_IMPORT_BYTES,
@@ -150,7 +151,7 @@ export function prepareGearImport(csv: string): PreparedGearImport {
 
   const value = (cells: string[], field: string) => {
     const index = indexes.get(field);
-    return index === undefined ? null : text(cells[index]);
+    return index === undefined ? null : text(unguardFormula(cells[index] ?? ""));
   };
   const rows = grid.slice(1).map((cells, index) => {
     const issues: string[] = [];

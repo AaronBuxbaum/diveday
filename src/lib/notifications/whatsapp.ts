@@ -5,6 +5,7 @@ import { thrownErrorToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import { safeJson } from "@/lib/safe-json";
 import type { CourtesyDelivery, CourtesyMessage, CourtesyProvider } from "./courtesy";
+import { smsRecipient } from "./sms";
 
 /**
  * WhatsApp delivery through **Meta's WhatsApp Cloud API**, using each shop's
@@ -93,9 +94,8 @@ export const DEFAULT_WHATSAPP_TEMPLATE_NAME = "diveday_courtesy_update";
  * so the message is skipped rather than sent to the wrong person.
  */
 export function whatsAppRecipient(phone: string | null | undefined): string | null {
-  if (!phone) return null;
-  const cleaned = phone.replace(/[\s().-]/g, "");
-  return /^\+[1-9]\d{6,14}$/.test(cleaned) ? cleaned.slice(1) : null;
+  const e164 = smsRecipient(phone);
+  return e164 ? e164.slice(1) : null;
 }
 
 /**

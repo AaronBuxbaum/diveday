@@ -58,13 +58,12 @@ divers' emails may be linked).
   It carries `checkoutId`, not `bookingId`, so — like `welcome`/`staff_invite` — it's excluded from
   `TrackedNotification` by construction (`Extract<Notification, { bookingId: string }>`); there's no
   per-booking delivery-dashboard row to misattribute to one arbitrary diver in the party.
-- **Rides the existing daily cron, not a new schedule.** `sendDueCheckoutRecoveries` is one more call
-  in `GET /api/cron/reminders` alongside the pre-trip reminder and recap scans
-  ([20260721-scheduled-reminder-cadence](20260721-scheduled-reminder-cadence.md)) — no new Vercel Cron
-  slot, no new timer in the app. The honest cost: on a daily cadence, a recovery fires *at least*
-  `RECOVERY_DELAY_HOURS` after abandonment but with cron-alignment jitter on top (same-day to
-  next-tick), looser than FareHarbor's tighter scheduler-driven ~2 hours. Never duplicated (the dedup
-  row) and never sent for a session that already paid or expired (the reconciliation step).
+- **Rides the hourly shop tick, inside the shop's waking hours.** `sendDueCheckoutRecoveries` is the
+  `checkout-recovery` scan of `GET /api/cron/shop-tick`, so a recovery fires *at least*
+  `RECOVERY_DELAY_HOURS` after abandonment, at the first tick after that which falls in the shop's
+  send window (`src/lib/send-window.ts`); a nudge never reaches a diver at 3 AM shop time. Never
+  duplicated (the send is claimed on the row before it goes, and released only when it failed with no
+  retry queued) and never sent for a session that already paid or expired (the reconciliation step).
 
 ## Alternatives considered
 
@@ -89,5 +88,5 @@ divers' emails may be linked).
   audit flagged.
 - The feature is inert until a shop both connects Stripe and takes online payment at booking; nothing
   changes for a book-now-pay-later shop.
-- Recovery timing is coarser than FareHarbor's on the shipped daily cron; a future paid-tier scheduler
-  running more often would tighten it for free, since `dueCheckoutRecovery`'s rule doesn't change.
+- Recovery timing is bounded by the hourly tick and the shop's send window; `dueCheckoutRecovery`'s
+  rule decides when a checkout is old enough, and the tick decides when it may go.

@@ -127,6 +127,28 @@ describe("parseInboundEmail", () => {
     expect((await parseInboundEmail(raw)).subject).toBe("Re: Estás reservada");
   });
 
+  it("honors the charset the message declares rather than assuming UTF-8", async () => {
+    const head =
+      "From: a@example.com\r\nContent-Type: text/plain; charset=iso-8859-1\r\nContent-Transfer-Encoding: 8bit\r\n\r\n";
+    const bytes = Buffer.concat([
+      Buffer.from(head),
+      Buffer.from([0x53, 0xed, 0x2c, 0x20, 0x6e, 0xe3, 0x6f]),
+    ]);
+    expect((await parseInboundEmail(bytes)).text).toBe("Sí, não");
+  });
+
+  it.each([
+    ["Le lun. 3 août 2026 à 10:00, Priya <p@example.com> a écrit :"],
+    ["Am Mo., 3. Aug. 2026 um 10:00 schrieb Priya <p@example.com>:"],
+    ["Il giorno lun 3 ago 2026 alle ore 10:00 Priya <p@example.com> ha scritto:"],
+    ["Em seg., 3 de ago. de 2026 às 10:00, Priya <p@example.com> escreveu:"],
+    ["Op ma 3 aug 2026 om 10:00 schreef Priya <p@example.com>:"],
+  ])("cuts the quoted history under %s", (attribution) => {
+    expect(stripQuotedReply(`Yes please.\n\n${attribution}\n> Your trip is Saturday`)).toBe(
+      "Yes please.",
+    );
+  });
+
   it("never throws on garbage, and yields empty text rather than the raw bytes of an unknown part", async () => {
     await expect(parseInboundEmail("")).resolves.toMatchObject({ from: null, text: "" });
     const raw = message(

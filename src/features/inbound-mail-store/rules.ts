@@ -34,7 +34,8 @@ export interface InboundMailObjectClient {
 }
 
 export type InboundMailRead =
-  | { status: "ok"; message: string }
+  /** The raw bytes: the message declares its own charset, so they are never decoded here. */
+  | { status: "ok"; message: Uint8Array }
   /** Recorded as arrived and not read — see MAX_INBOUND_MESSAGE_BYTES. */
   | { status: "too_large" }
   /** Missing, forbidden, or the network: worth SNS's handful of retries. */
@@ -107,7 +108,7 @@ export function inboundMailStore(
           log("email_inbound.message_too_large", "warn", { bytes: bytes.byteLength });
           return { status: "too_large" };
         }
-        return { status: "ok", message: Buffer.from(bytes).toString("utf8") };
+        return { status: "ok", message: bytes };
       } catch (error) {
         // The key is SES's opaque message id, safe to log; the bucket is ours.
         log("email_inbound.read_failed", "warn", {

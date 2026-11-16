@@ -40,6 +40,7 @@ const noWait = { sleep: async () => {}, random: () => 0 };
 describe("whatsAppRecipient", () => {
   it("returns digits only, dropping the plus Meta does not want", () => {
     expect(whatsAppRecipient("+13055551234")).toBe("13055551234");
+    expect(whatsAppRecipient("+44 (0)20 7946 0958")).toBe("442079460958");
   });
 
   it("strips human separators before validating", () => {

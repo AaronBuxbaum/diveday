@@ -47,7 +47,8 @@ const E164 = /^\+[1-9]\d{6,14}$/;
  */
 export function smsRecipient(phone: string | null | undefined): string | null {
   if (!phone) return null;
-  const cleaned = phone.replace(/[\s().-]/g, "");
+  // "+44 (0)20 7946 0958": the bracketed 0 is the domestic trunk prefix, dropped when dialing abroad.
+  const cleaned = phone.replace(/\(0\)/g, "").replace(/[\s().-]/g, "");
   return E164.test(cleaned) ? cleaned : null;
 }
 

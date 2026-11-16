@@ -6,6 +6,7 @@ describe("smsRecipient", () => {
   it("accepts and cleans an E.164 number", () => {
     expect(smsRecipient("+1 (305) 555-1234")).toBe("+13055551234");
     expect(smsRecipient("+13055551234")).toBe("+13055551234");
+    expect(smsRecipient("+44 (0)20 7946 0958")).toBe("+442079460958");
   });
 
   it("rejects anything without an unambiguous country code", () => {
