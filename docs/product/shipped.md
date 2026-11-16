@@ -7,6 +7,13 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Lapsed regulars on the divers roster (built 2026-11-16)
+
+Issue #4246. The staff divers roster has a "Lapsed regulars" view: three or more dive days with the
+shop, imported prior visits merged and counted in the shop's zone, and none in the last twelve
+months. Rows say when the diver last dived. Staff decide on outreach; nothing is sent. Thresholds
+are named in `src/lib/prior-visits.ts`; glossary "Lapsed regular".
+
 ## The count on deck beside the roll call (built 2026-11-16)
 
 Issue #4248. In the manifest's details, a crew member types the heads they counted on deck at the

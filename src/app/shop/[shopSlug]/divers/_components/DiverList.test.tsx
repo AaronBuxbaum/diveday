@@ -50,6 +50,7 @@ const copy = {
   viewNeedsAttention: t("divers.list.viewNeedsAttention"),
   viewMissingContact: t("divers.list.viewMissingContact"),
   viewNotBack: t("divers.list.viewNotBack"),
+  viewLapsedRegulars: t("divers.list.viewLapsedRegulars"),
   lastDivedGroup: t("divers.list.lastDivedGroup"),
   viewRemoved: t("divers.list.viewRemoved"),
   viewsAriaLabel: t("divers.list.viewsAriaLabel"),
@@ -480,6 +481,8 @@ describe("DiverList roster views", () => {
       ["Missing contact", "/shop/blue-mantis/divers?filter=missing_contact"],
       // Who has not been back in a year: the list a quiet week is filled from.
       ["Not back in 12 months", "/shop/blue-mantis/divers?filter=not_back"],
+      // Regulars who stopped coming (issue #4246): staff decide who to call.
+      ["Lapsed regulars", "/shop/blue-mantis/divers?filter=lapsed_regulars"],
       // Last, and apart from the three: not a question about today, but the
       // only way to find a diver somebody removed.
       ["Deleted", "/shop/blue-mantis/divers?filter=removed"],
@@ -497,6 +500,7 @@ describe("DiverList roster views", () => {
       "Needs you",
       "Missing contact",
       "Not back in 12 months",
+      "Lapsed regulars",
     ]);
   });
 
