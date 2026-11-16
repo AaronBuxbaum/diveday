@@ -192,6 +192,27 @@ describe("summarizeSafetyMonth: roll calls", () => {
 });
 
 describe("summarizeSafetyMonth: crew credentials", () => {
+  it("counts people once and requires a recorded, current credential on every sailing", () => {
+    const summary = summarizeSafetyMonth(
+      month({
+        departures: [
+          { ...departure, crew: [member("c1"), member("c2"), member("c3")] },
+          { ...departure, tripId: "t2", crew: [member("c1"), member("c2")] },
+        ],
+        credentials: [
+          { personId: "c1", kind: "first_aid_cpr", renewsAt: "2027-01-01" },
+          { personId: "c2", kind: "first_aid_cpr", renewsAt: "2026-10-02" },
+        ],
+        unavailableCredentialPeople: new Set(["c3"]),
+      }),
+    );
+    expect(summary.crewCredentialStates).toEqual([
+      { personId: "c1", credentialed: true },
+      { personId: "c2", credentialed: false },
+      { personId: "c3", credentialed: false },
+    ]);
+  });
+
   it("names a crew member who sailed on a credential lapsed by the day of the dive", () => {
     const summary = summarizeSafetyMonth(
       month({
@@ -583,6 +604,16 @@ describe("summarizeSafetyYear (dive-domain review F1)", () => {
     ]);
     expect(summarizeSafetyYear([unrecorded, unrecorded]).unrecordedCrew).toEqual([
       { personId: "c1", name: "Keiko Tanaka", sailings: 2 },
+    ]);
+  });
+
+  it("counts crew once across months and retains an earlier credential gap", () => {
+    const credentialed = summarizeSafetyMonth(
+      month({ credentials: [{ personId: "c1", kind: "first_aid_cpr", renewsAt: null }] }),
+    );
+    const missing = summarizeSafetyMonth(month());
+    expect(summarizeSafetyYear([credentialed, missing]).crewCredentialStates).toEqual([
+      { personId: "c1", credentialed: false },
     ]);
   });
 });

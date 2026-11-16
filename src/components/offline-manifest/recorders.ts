@@ -47,6 +47,7 @@ export function offlineRecorders({
   setBusyBooking,
   setBusyChecklistItem,
   setBusyArrival,
+  setActiveWrites,
   dispatchSaved,
   setMessage,
   reconcile,
@@ -61,6 +62,7 @@ export function offlineRecorders({
   setBusyBooking: Dispatch<SetStateAction<string | null>>;
   setBusyChecklistItem: Dispatch<SetStateAction<string | null>>;
   setBusyArrival: Dispatch<SetStateAction<string | null>>;
+  setActiveWrites: Dispatch<SetStateAction<number>>;
   dispatchSaved: Dispatch<SavedCopyAction>;
   setMessage: Dispatch<SetStateAction<string>>;
   reconcile: () => Promise<void>;
@@ -121,6 +123,7 @@ export function offlineRecorders({
       envelope.snapshot.rollCallMeetingDay ??
       savedDay;
     setBusyBooking(subjectId);
+    setActiveWrites((count) => count + 1);
     try {
       const next = await appendOfflineRollCall(tripId, {
         ...subject,
@@ -161,6 +164,7 @@ export function offlineRecorders({
       setMessage(refusalMessage(t, error));
       return false;
     } finally {
+      setActiveWrites((count) => count - 1);
       setBusyBooking((busy) => (busy === subjectId ? null : busy));
     }
   }
@@ -178,6 +182,7 @@ export function offlineRecorders({
       return;
     }
     setBusyChecklistItem(checklistItemId);
+    setActiveWrites((count) => count + 1);
     try {
       const next = await appendOfflineChecklistCheck(tripId, {
         checklistItemId,
@@ -198,6 +203,7 @@ export function offlineRecorders({
     } catch (error) {
       setMessage(refusalMessage(t, error));
     } finally {
+      setActiveWrites((count) => count - 1);
       setBusyChecklistItem((busy) => (busy === checklistItemId ? null : busy));
     }
   }
@@ -217,6 +223,7 @@ export function offlineRecorders({
       return;
     }
     setBusyArrival(bookingId);
+    setActiveWrites((count) => count + 1);
     try {
       const next = await appendOfflineArrival(tripId, {
         bookingId,
@@ -233,6 +240,7 @@ export function offlineRecorders({
     } catch (error) {
       setMessage(refusalMessage(t, error));
     } finally {
+      setActiveWrites((count) => count - 1);
       setBusyArrival((busy) => (busy === bookingId ? null : busy));
     }
   }

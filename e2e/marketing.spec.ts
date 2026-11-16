@@ -437,7 +437,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       name: diverTranslator("en-US")("marketing.pricing.feeAnchor.title"),
     }),
   ).toBeVisible();
-  await expect(page.getByText(/plan, market and booking channel matter/)).toBeVisible();
+  await expect(page.getByText(/plan, market, and booking channel matter/)).toBeVisible();
   await expect(page.getByText(/sets fees in its provider agreement/)).toBeVisible();
   await expect(page.getByText(/third parties report that fee/)).toHaveCount(0);
   await expect(

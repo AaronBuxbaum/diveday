@@ -383,7 +383,7 @@ describe("the fee anchor compares contractual terms without inventing a rival ra
         locale === "en-US" ? /provider agreement/ : /contrato con el proveedor/,
       );
       expect(messages["marketing.pricing.feeAnchor.rezdy"]).toMatch(
-        locale === "en-US" ? /plan, market and booking channel/ : /plan, el mercado y el canal/,
+        locale === "en-US" ? /plan, market, and booking channel/ : /plan, el mercado y el canal/,
       );
       for (const rival of ["fareharbor", "rezdy"] as const) {
         expect(messages[`marketing.pricing.feeAnchor.${rival}`]).not.toMatch(/\d+%/);

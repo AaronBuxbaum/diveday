@@ -66,7 +66,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
         "A coral garden on a shallow plateau that ends in a wall. The edge is rich with fish, and the wall falls past recreational depth.",
       marineLife: "Angelfish · parrotfish · stingrays · nurse sharks",
       marineLifeDescription:
-        "Fish gather along the edge. Rays, nurse sharks, lobsters and the odd turtle turn up.",
+        "Fish gather along the edge. Rays, nurse sharks, lobsters, and the odd turtle turn up.",
       difficultyLevel: "intermediate",
       depthMinMeters: 12,
       maxDepthMeters: 30,
@@ -158,7 +158,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       divePlan:
         "Start on the patch reefs over sand to the north, work south to the garden, and hold 15 m (49 ft) at most. Turn well before the southern edge; the drop-off lies beyond the plan.",
       fitTone: "welcoming",
-      fitNote: "Sand, patch reefs and a garden, all within one tank at modest depth.",
+      fitNote: "Sand, patch reefs, and a garden, all within one tank at modest depth.",
       creatureSlugs: [
         "southern-stingray",
         "nurse-shark",
@@ -388,7 +388,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       forecastLatitude: 12.5013,
       forecastLongitude: -81.7321,
       description:
-        "A reef off the southwest coast with brain corals, gorgonians and tube sponges, shallow in part and deeper in part. Nurse sharks rest in the hollows.",
+        "A reef off the southwest coast with brain corals, gorgonians and tube sponges, shallow in part, and deeper in part. Nurse sharks rest in the hollows.",
       marineLife: "Parrotfish · angelfish · barracuda · nurse sharks",
       marineLifeDescription:
         "Schools of parrotfish and angelfish, with groupers and barracuda along the structure.",
@@ -467,12 +467,12 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
         "A coral garden on the barrier reef east of the island, with a block that rises in front of the main reef and a wall that falls away past recreational depth. Visitors in the blue are the reason it is known.",
       marineLife: "Stingrays · green morays · turtles · nurse sharks",
       marineLifeDescription:
-        "Rays and green morays are common. Dolphins, turtles and sharks have turned up, though none is promised.",
+        "Rays and green morays are common. Dolphins, turtles, and sharks have turned up, though none is promised.",
       difficultyLevel: "advanced",
       depthMinMeters: 10,
       maxDepthMeters: 30,
       currentNote:
-        "Open water on the east barrier reef; current is not documented, so carry an SMB. Sharks, rays and other big animals: stay put, keep nothing dangling, do not chase or touch, stay with the group and follow the crew's briefing.",
+        "Open water on the east barrier reef; current is not documented, so carry an SMB. Sharks, rays, and other big animals: stay put, keep nothing dangling, do not chase or touch, stay with the group, and follow the crew's briefing.",
       divePlan:
         "Drop onto the garden, follow the edge and the block no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
@@ -515,7 +515,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       depthMinMeters: 8,
       maxDepthMeters: 40,
       currentNote:
-        "Current is variable and strong winds from November to January stir the surface. Carry an SMB. A cavern and a canyon swim-through near the wall are overhead; stay out. Sharks: stay put, keep nothing dangling, do not chase or touch, stay with the group and follow the crew's briefing. No season is documented for the sharks, so ask the crew; without them the dive is a wall and coral blocks.",
+        "Current is variable and strong winds from November to January stir the surface. Carry an SMB. A cavern and a canyon swim-through near the wall are overhead; stay out. Sharks: stay put, keep nothing dangling, do not chase or touch, stay with the group, and follow the crew's briefing. No season is documented for the sharks, so ask the crew; without them the dive is a wall and coral blocks.",
       divePlan:
         "Drop onto the plateau, follow the wall and the blocks no deeper than 40 m (131 ft), keep clear of the cavern, and back up the reef with reserve gas. Most dives end near 40 m and the wall falls beyond it. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
@@ -560,7 +560,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       currentNote:
         "Current not documented; ask the crew on the day. Small caves on the wall are overhead; stay out. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Drop onto the platform, follow the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks and reef condition are confirmed with the crew.",
+        "Drop onto the platform, follow the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and reef condition are confirmed with the crew.",
       fitTone: "demanding",
       fitNote: "A wall dive off a remote island.",
       minimumCertificationLevel: "advanced_open_water",
@@ -601,7 +601,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       currentNote:
         "Current not documented; ask the crew on the day. A crevice on the wall forms a tunnel, which is overhead; stay out of it. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Cross the platform, follow the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks and the statue and reef condition are confirmed with the crew.",
+        "Cross the platform, follow the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and the statue, and reef condition are confirmed with the crew.",
       fitTone: "demanding",
       fitNote: "A varied site that runs from a platform to a wall.",
       minimumCertificationLevel: "advanced_open_water",
@@ -637,7 +637,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       currentNote:
         "Current not documented; ask the crew on the day. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Cross the platform, then follow the wall south no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks and reef condition are confirmed with the crew.",
+        "Cross the platform, then follow the wall south no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and reef condition are confirmed with the crew.",
       fitTone: "demanding",
       fitNote: "A platform-and-wall dive with life in the shallows.",
       minimumCertificationLevel: "advanced_open_water",
@@ -663,7 +663,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       forecastLatitude: 13.3868,
       forecastLongitude: -81.4188,
       description:
-        "Once called the garden cave. A wide platform of hard and soft corals and many fish, as last reported, ends in a wall to the west. Groupers, jacks and reef sharks pass along it.",
+        "Once called the garden cave. A wide platform of hard and soft corals and many fish, as last reported, ends in a wall to the west. Groupers, jacks, and reef sharks pass along it.",
       marineLife: "Reef sharks · jacks · groupers · soft corals",
       marineLifeDescription:
         "Big fish pass along the wall, and the platform above is busy with smaller fish.",
@@ -673,7 +673,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       currentNote:
         "Current not documented; ask the crew on the day. A cave in the reef is overhead; stay out of it. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Cross the platform, descend the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks and reef condition are confirmed with the crew.",
+        "Cross the platform, descend the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and reef condition are confirmed with the crew.",
       fitTone: "demanding",
       fitNote: "A wall dive with big fish passing.",
       minimumCertificationLevel: "advanced_open_water",
@@ -709,7 +709,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       currentNote:
         "Current not documented; ask the crew on the day. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. No shark season is documented, so ask the crew; without them the dive is a wall and a platform with rays. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Cross the platform, follow the wall north no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks and reef condition are confirmed with the crew.",
+        "Cross the platform, follow the wall north no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and reef condition are confirmed with the crew.",
       fitTone: "demanding",
       fitNote: "A wall and a platform in one tank.",
       minimumCertificationLevel: "advanced_open_water",
@@ -734,7 +734,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       forecastLatitude: 13.3281,
       forecastLongitude: -81.4116,
       description:
-        "A shallow reef running southwest, parallel to the island, over rock, sand and seagrass. Pillar and soft corals sat on top as last reported, with morays and rays along the rocky edge.",
+        "A shallow reef running southwest, parallel to the island, over rock, sand, and seagrass. Pillar and soft corals sat on top as last reported, with morays and rays along the rocky edge.",
       marineLife: "Nurse sharks · morays · rays · grunts",
       marineLifeDescription:
         "Big schools of grunts and angelfish over the top, and nurse sharks are seen often. Dolphins pass sometimes.",
@@ -856,7 +856,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       forecastLatitude: 13.3885,
       forecastLongitude: -81.4187,
       description:
-        "A long platform of hard and soft corals and sponges, as last reported, that ends in a steep wall to the west. Lobsters, shrimp and nudibranchs live on the wall, and reef sharks are reported along it.",
+        "A long platform of hard and soft corals and sponges, as last reported, that ends in a steep wall to the west. Lobsters, shrimp, and nudibranchs live on the wall, and reef sharks are reported along it.",
       marineLife: "Reef sharks · lobsters · nudibranchs · angelfish",
       marineLifeDescription:
         "Gray angelfish and French angelfish cross the platform, with sharks along the wall.",
@@ -866,7 +866,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       currentNote:
         "Current not documented; ask the crew on the day. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. No shark season is documented, so ask the crew; without them the dive is a platform and a wall of sponges and corals. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Cross the platform, follow the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks and reef condition are confirmed with the crew.",
+        "Cross the platform, follow the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and reef condition are confirmed with the crew.",
       fitTone: "demanding",
       fitNote: "A wall dive along a coral platform.",
       minimumCertificationLevel: "advanced_open_water",

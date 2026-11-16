@@ -1,8 +1,16 @@
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { sightingWindowStart } from "@/lib/sightings";
 import type { DbExecutor } from "./client";
-import { diveSites, people, personRoles, tripSightings, trips } from "./schema";
+import {
+  diveSites,
+  executedDives,
+  people,
+  personRoles,
+  tripAssignments,
+  tripSightings,
+  trips,
+} from "./schema";
 
 /**
  * **A month of the crew's own log, on the two reefs the demo sells** — so
@@ -18,9 +26,9 @@ import { diveSites, people, personRoles, tripSightings, trips } from "./schema";
  * turned up on every departure would teach a shop exactly the wrong thing about
  * what this beat is: it is a frequency with a date on it, and the turtle showing
  * on one departure in three is the shape that makes that legible. So Molasses
- * reads two of three for the stingray and one of three for the turtle, and
- * French reads two of two for the nurse shark, which is the honest look of an
- * animal that genuinely is always there.
+ * records a stingray on more than one Molasses trip and a turtle on one,
+ * while French carries repeated nurse-shark sightings. The denominators are
+ * the actual logged dives at each site, including dives without a sighting.
  *
  * **Every species here is one this shop could actually have tapped.** Five of
  * the six are on the site's own field guide, which is what the chip row offers
@@ -118,9 +126,31 @@ export async function seedSightings(db: DbExecutor, shopId: string) {
     // reader here, and seeding it would leave the demo's denominator
     // disagreeing with what the page shows.
     if (!trip || trip.startsAt < since) continue;
-    // An hour after the boat left, which is when the crew is actually at the
-    // rail between tanks — and what "last seen" then renders.
-    const recordedAt = new Date(trip.startsAt.getTime() + 60 * 60 * 1000);
+    // A crew member records the sighting after surfacing at that site.
+    // Lean shops may not have a historical dive log, so retain the original
+    // hour-after-departure fallback for those shapes.
+    const [dive] = await db
+      .select({ exitedAt: executedDives.exitedAt })
+      .from(executedDives)
+      .where(
+        and(
+          eq(executedDives.shopId, shopId),
+          eq(executedDives.tripId, trip.id),
+          eq(executedDives.actualSiteId, site.id),
+        ),
+      )
+      .orderBy(executedDives.diveNumber)
+      .limit(1);
+    const [crew] = await db
+      .select({ personId: tripAssignments.personId })
+      .from(tripAssignments)
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .where(eq(tripAssignments.tripId, trip.id))
+      .orderBy(asc(tripAssignments.tripRole), asc(people.fullName))
+      .limit(1);
+    const recordedAt = new Date(
+      (dive?.exitedAt ?? trip.startsAt).getTime() + (dive?.exitedAt ? 3 : 60) * 60_000,
+    );
     await db.insert(tripSightings).values(
       entry.species.map((species) => ({
         shopId,
@@ -129,7 +159,7 @@ export async function seedSightings(db: DbExecutor, shopId: string) {
         diveSiteName: site.name,
         speciesSlug: species.slug,
         count: species.count,
-        recordedByPersonId: recorder.id,
+        recordedByPersonId: crew?.personId ?? recorder.id,
         recordedAt,
         updatedAt: recordedAt,
       })),

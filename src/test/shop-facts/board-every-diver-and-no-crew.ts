@@ -1,12 +1,12 @@
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { recordRollCall } from "../../db/manifests";
-import { bookings, cards, people, personRoles, trips } from "../../db/schema/index";
+import { bookings, cards, people, trips } from "../../db/schema/index";
 import { seatHeld } from "../../db/trips-queries";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
-import { STAFF_ROLES } from "../../lib/authz";
 import { HOUR_MS } from "../../lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";
+import { anActiveStaffPerson } from "./active-staff";
 
 /**
  * **A full boat whose crew nobody has counted** — the state where somebody may
@@ -29,12 +29,7 @@ export async function boardEveryDiverAndNoCrew(
   shopId: string,
   now: Date,
 ): Promise<void> {
-  const [crew] = await db
-    .select({ id: people.id })
-    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
-    .limit(1);
+  const crew = await anActiveStaffPerson(db, shopId);
   if (!crew) return;
 
   // The *next* departure only. Ordered by the trip's start and then the diver's

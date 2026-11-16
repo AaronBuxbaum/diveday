@@ -2,6 +2,8 @@
 
 Authorization: [Aaron’s approval on #4381](https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938). Generated images are fictional illustrations for demo tenants only. Original masters remain outside the repository; delivery assets are WebP under `public/demo-shop/generated/`. The boat cover and activity scenes replace unrelated species portraits. Brand color `#1d5fa3` and Outfit were already supplied by #4430 and remain unchanged.
 
+On 2026-11-15, the user requested expanded unique imagery. Two separately generated fictional scenes, `porch.webp` and `sunset-boat.webp`, fill the storefront strip to its eight-image limit. The Open Water Diver gallery also gained eight distinct illustrations; see [course illustrations](course-illustrations.md). Other course galleries remain unfilled.
+
 ## Storefront
 
 | Slot | Before | After |

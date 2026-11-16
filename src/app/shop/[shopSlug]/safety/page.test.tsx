@@ -160,11 +160,7 @@ describe("the Safety page", () => {
     expect(links).toContain("/shop/blue-mantis/safety-checklist");
   });
 
-  /**
-   * **Four counts, actionable doors** (visual review A05, A27): each count
-   * links only when its underlying safety evidence needs staff attention.
-   */
-  it("reads the month as four counts, linking actionable evidence", async () => {
+  it("shows every yearly figure in the month, linking actionable evidence", async () => {
     const tree = await renderTree(["owner"]);
     const figures = figuresIn(tree) as unknown as {
       key: string;
@@ -173,10 +169,15 @@ describe("the Safety page", () => {
     }[];
     expect(figures.map((figure) => figure.key)).toEqual([
       "rollCalls",
+      "boarded",
       "certOverrides",
       "crew",
+      "noCrew",
       "incidents",
     ]);
+    const year = String(nowDate().getUTCFullYear());
+    const yearly = figuresIn(await renderTree(["owner"], { year })) as unknown as typeof figures;
+    expect(figures.map((figure) => figure.key)).toEqual(yearly.map((figure) => figure.key));
     const lists = safetyListsIn(tree);
     expect(lists).not.toBeNull();
     expect(figures.find((figure) => figure.key === "rollCalls")?.href).toBe(

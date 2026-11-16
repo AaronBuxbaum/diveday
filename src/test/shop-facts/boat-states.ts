@@ -1,22 +1,15 @@
-import { and, eq, gte, inArray, isNull, notInArray } from "drizzle-orm";
+import { and, eq, gte, isNull, notInArray } from "drizzle-orm";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import type { AppDb } from "../../db/client";
 import { getBookingReadiness } from "../../db/readiness";
 import { seatMarks } from "../../db/roll-call-subject";
-import {
-  bookings,
-  people,
-  personRoles,
-  rollCallEvents,
-  trips,
-  waiverRecords,
-} from "../../db/schema/index";
+import { bookings, people, rollCallEvents, trips, waiverRecords } from "../../db/schema/index";
 import { seedArrivals } from "../../db/seed-arrivals";
 import { DEMO_COMPLETED_TRIP_TITLE } from "../../db/seed-more-trips";
 import { livePerson, liveTrip } from "../../db/trips-live";
 import { checkInBooking } from "../../features/check-in/store";
-import { STAFF_ROLES } from "../../lib/authz";
 import { HOUR_MS } from "../../lib/clock";
+import { anActiveStaffPerson } from "./active-staff";
 
 /**
  * The boat facts of the shop's test fixture (`src/test/shop-facts/index.ts`). Each is opt-in for the route's own reason: it moves
@@ -66,14 +59,7 @@ export async function checkInADiverThenBlockThem(
       ),
     )
     .orderBy(trips.startsAt, people.fullName);
-  const [crew] = await db
-    .select({ id: people.id })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(
-      and(eq(people.shopId, shopId), livePerson(), inArray(personRoles.role, [...STAFF_ROLES])),
-    )
-    .limit(1);
+  const crew = await anActiveStaffPerson(db, shopId);
   if (!crew) return null;
 
   for (const booking of candidates) {

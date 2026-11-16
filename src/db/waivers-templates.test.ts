@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { operationalWindow } from "@/lib/operational-window";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
@@ -565,18 +565,24 @@ describe("saving the waiver template", () => {
     const { db, shop } = await signedContext();
     const before = await standingWaiverExposure(db, shop.id, now);
 
-    const [record] = await db
-      .select()
+    // Every signer, because the seeded history also holds signers with no live
+    // booking, who the exposure never counted in the first place.
+    const signers = await db
+      .select({ personId: waiverRecords.personId })
       .from(waiverRecords)
-      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.status, "completed")))
-      .limit(1);
-    if (!record) throw new Error("expected a completed record in the seed");
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.status, "completed")));
+    if (signers.length === 0) throw new Error("expected a completed record in the seed");
     // Erasure stamps both columns (`anonymizeDiver`), which is why the query
     // asks only about `anonymized_at`.
     await db
       .update(people)
       .set({ anonymizedAt: now, deletedAt: now })
-      .where(eq(people.id, record.personId));
+      .where(
+        inArray(
+          people.id,
+          signers.map((row) => row.personId),
+        ),
+      );
 
     expect((await standingWaiverExposure(db, shop.id, now)).divers).toBeLessThan(before.divers);
   });

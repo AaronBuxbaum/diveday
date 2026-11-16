@@ -153,7 +153,7 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
     navItems.push({ href: publicSchedulePath(shop.slug), label: t("schedule.title") });
     // Packages earns a tab only while one is on sale: a shop that has never
     // defined one, or whose packages have all lapsed, shows no such door.
-    if (teaches) {
+    if (teaches && shop.coursesEnabled) {
       navItems.push({ href: publicCoursesPath(shop.slug), label: t("courses.index.title") });
     }
     if (packagesOnSale.length > 0) {

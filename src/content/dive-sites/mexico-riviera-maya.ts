@@ -58,7 +58,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
         "A 61 m former cargo ship sunk as a reef, the oldest wreck off Isla Mujeres. A hurricane split the hull in 1992. Far from the coast, deep, and covered in coral and sponges.",
       marineLife: "Groupers · jacks · eagle rays · barracuda",
       marineLifeDescription:
-        "Fish crowd the broken hull, with groupers, jacks and barracuda along the decks.",
+        "Fish crowd the broken hull, with groupers, jacks, and barracuda along the decks.",
       difficultyLevel: "advanced",
       depthMinMeters: 30,
       maxDepthMeters: 33,
@@ -66,7 +66,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       divePlan:
         "Down the line to the hull, along the outside of the wreck, and up with reserve gas.",
       fitTone: "demanding",
-      fitNote: "Deep, far offshore and usually running with current. Stay outside the hull.",
+      fitNote: "Deep, far offshore, and usually running with current. Stay outside the hull.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       creatureSlugs: [
@@ -108,7 +108,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       divePlan:
         "Follow the rows of figures at 10 m, one gallery at a time, and keep fins off the sculptures.",
       fitTone: "welcoming",
-      fitNote: "Shallow, clear and easy. Go early to have the figures to yourself.",
+      fitNote: "Shallow, clear, and easy. Go early to have the figures to yourself.",
       landmarks: [
         {
           name: "Sculpture rooms",
@@ -147,7 +147,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       currentNote:
         "Boat and snorkeler traffic. Carry an SMB and listen for engines. Low current, under 1 knot. A few swim-throughs cut the reef; they are overheads, so stay out of them.",
       fitTone: "welcoming",
-      fitNote: "Shallow, bright and calm. A good first reef dive in Isla Mujeres.",
+      fitNote: "Shallow, bright, and calm. A good first reef dive in Isla Mujeres.",
       creatureSlugs: [
         "green-sea-turtle",
         "french-grunt",
@@ -330,7 +330,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       divePlan:
         "Start over the reef balls, follow the drift, and finish on the Manchones reef. Stay outside the hull.",
       fitTone: "welcoming",
-      fitNote: "Shallow, calm and short on hazards. A good second dive after Manchones.",
+      fitNote: "Shallow, calm, and short on hazards. A good second dive after Manchones.",
       creatureSlugs: ["french-grunt", "sergeant-major", "bluehead-wrasse", "queen-angelfish"],
     },
   },
@@ -542,7 +542,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       forecastLatitude: 20.6283,
       forecastLongitude: -87.0626,
       description:
-        "A reef that runs parallel to the shore, five minutes by boat from Playa del Carmen. Many sponges, hard corals and tropical fish.",
+        "A reef that runs parallel to the shore, five minutes by boat from Playa del Carmen. Many sponges, hard corals, and tropical fish.",
       marineLife: "Sponges · hard corals · reef fish",
       marineLifeDescription: "Sponges and hard coral crowd the reef, with fish in every gap.",
       difficultyLevel: "beginner",
@@ -627,7 +627,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       divePlan:
         "Start at the south end and follow the reef edge, in calm weather for the best view.",
       fitTone: "welcoming",
-      fitNote: "Easy, shallow and quiet. Good visibility on calm days.",
+      fitNote: "Easy, shallow, and quiet. Good visibility on calm days.",
       creatureSlugs: ["boulder-brain-coral", "spiny-lobster", "green-moray", "french-grunt"],
     },
   },

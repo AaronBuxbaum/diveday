@@ -90,13 +90,16 @@ export default async function SafetyPrintPage({
           <MonthFigures
             label={t("incidents.safety.year.figuresLabel")}
             figures={bare(report.figures)}
+            columns={3}
+            paper
           />
         ) : (
           <div className="space-y-6">
             <MonthFigures
               label={t("incidents.safety.figuresLabel")}
               figures={bare(report.monthTiles)}
-              columns={4}
+              columns={3}
+              paper
             />
             <SafetyLists
               paper

@@ -13,7 +13,8 @@
  * self-registration, the waitlist, past-diver invites, day-of help requests,
  * partner links, the week-out reminder, public conditions and the dive-site
  * field guide, private charters asked for on the date-request form, and the
- * hourly seat-sold email to the desk (the one feature that starts off:
+ * computer dive files on a diver's record, teaching courses, the widgets a shop frames on
+ * its own website, and the hourly seat-sold email to the desk (the one feature that starts off:
  * `OFF_BY_DECISION`). Off hides the feature on every surface that offers it and deletes
  * nothing, so turning it back on finds everything where it was.
  *
@@ -59,6 +60,9 @@ export const SHOP_FEATURES = [
   "seatSoldAlerts",
   "privateCharters",
   "publicStaffProfiles",
+  "computerDives",
+  "courses",
+  "embeds",
 ] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
@@ -104,6 +108,9 @@ export const SHOP_FEATURE_COLUMNS = {
   seatSoldAlerts: "seatSoldAlertsEnabled",
   privateCharters: "privateChartersEnabled",
   publicStaffProfiles: "publicStaffProfilesEnabled",
+  computerDives: "computerDivesEnabled",
+  courses: "coursesEnabled",
+  embeds: "embedsEnabled",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];

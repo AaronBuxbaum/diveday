@@ -48,19 +48,28 @@ for (const width of [390, 1280]) {
         const paths = new Set<string>();
         for (const photo of await photos.all()) paths.add(await loadedScene(photo));
         if (surface === "shopfront") {
-          for (const path of paths) expect(path).toMatch(/^\/demo-shop\/generated\/[a-z]+\.webp$/);
+          for (const path of paths) expect(path).toMatch(/^\/demo-shop\/generated\/[a-z-]+\.webp$/);
           expect(paths).toEqual(
             new Set(
-              ["boat", "fleet", "dock", "briefing", "student", "reef", "oxygen", "shopfront"].map(
-                (scene) => `/demo-shop/generated/${scene}.webp`,
-              ),
+              [
+                "boat",
+                "fleet",
+                "dock",
+                "briefing",
+                "student",
+                "reef",
+                "oxygen",
+                "shopfront",
+                "porch",
+                "sunset-boat",
+              ].map((scene) => `/demo-shop/generated/${scene}.webp`),
             ),
           );
           await expect(page.getByAltText(demoIllustration("boat").alt)).toBeVisible();
           const strip = page.getByRole("list", {
             name: diverTranslator("en-US")("schedule.shopPhotos"),
           });
-          await expect(strip.locator("img")).toHaveCount(6);
+          await expect(strip.locator("img")).toHaveCount(8);
           await strip.evaluate((element) => {
             element.scrollLeft = 0;
           });

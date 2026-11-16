@@ -314,7 +314,7 @@ for (const scheme of ["light", "dark"] as const) {
       // join the registry.
       test(`integrations settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/integrations");
-        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Integrations" }).waitFor();
         await capture(page, "settings-integrations", scheme);
       });
 
@@ -463,17 +463,17 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the data-export page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/export");
-        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Export" }).waitFor();
         // The crew sheet (N-43) is the second thing that leaves this page.
         await page.getByRole("heading", { name: "Crew sheet" }).waitFor();
         await capture(page, "settings-export", scheme);
       });
 
-      // The Backups tab of the same page set: the destination and the delivery
+      // The Backups page: the destination and the delivery
       // history, which used to sit under the download on one long page.
       test(`the backups tab renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/export/backups");
-        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
+        await page.goto("/shop/blue-mantis/settings/backups");
+        await page.getByRole("heading", { level: 1, name: "Backups" }).waitFor();
         await page.getByRole("heading", { name: "Delivery history" }).waitFor();
         // The history rows, not just the heading — the table is half the
         // surface, and a capture taken on the heading alone banks an empty one.

@@ -40,6 +40,9 @@ const allOn = {
   seatSoldAlertsEnabled: true,
   privateChartersEnabled: true,
   publicStaffProfilesEnabled: true,
+  computerDivesEnabled: true,
+  coursesEnabled: true,
+  embedsEnabled: true,
 };
 
 describe("shopOffers", () => {

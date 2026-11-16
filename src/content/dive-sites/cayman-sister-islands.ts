@@ -120,10 +120,10 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       forecastLatitude: 19.6838,
       forecastLongitude: -80.083,
       description:
-        "A wall named for its chimney and a wide limestone arch. The chimney is a narrow overhead tunnel; stay out of it and dive the open wall. Barrel sponges, anemones and yellow tube sponges decorate the arch.",
+        "A wall named for its chimney and a wide limestone arch. The chimney is a narrow overhead tunnel; stay out of it and dive the open wall. Barrel sponges, anemones, and yellow tube sponges decorate the arch.",
       marineLife: "Sailfin blennies · octopus · hawksbill turtles · arrow crabs",
       marineLifeDescription:
-        "The top of the wall is a small-animal site: seahorses, feather stars, cleaner shrimp and morays turn up if you look slowly.",
+        "The top of the wall is a small-animal site: seahorses, feather stars, cleaner shrimp, and morays turn up if you look slowly.",
       difficultyLevel: "advanced",
       depthMinMeters: 9,
       maxDepthMeters: 30,
@@ -373,7 +373,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
         "A south-side reef moored in 9 m (30 ft). Hard-pan shallows give way to spur-and-groove coral, which slopes to a sandy floor near 14 to 15 m (45 to 50 ft) before a vertical drop from about 24 m (80 ft).",
       marineLife: "Grouper · turtles · rays · angelfish",
       marineLifeDescription:
-        "Groupers, turtles and rays are the animals to look for on the spurs and sand.",
+        "Groupers, turtles, and rays are the animals to look for on the spurs and sand.",
       difficultyLevel: "advanced",
       depthMinMeters: 9,
       maxDepthMeters: 24,
@@ -898,7 +898,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       forecastLatitude: 19.7002,
       forecastLongitude: -79.8743,
       description:
-        "High-profile coral heads between 8 and 11 m (25 to 35 ft), crowded with Bermuda chub, grunts and schoolmaster snapper. A good place for a photographer who likes schooling fish.",
+        "High-profile coral heads between 8 and 11 m (25 to 35 ft), crowded with Bermuda chub, grunts, and schoolmaster snapper. A good place for a photographer who likes schooling fish.",
       marineLife: "Bermuda chub · grunts · schoolmaster snapper · lobster",
       marineLifeDescription:
         "The schools move together over the heads, and lobster hide in the reef beneath.",
@@ -1118,7 +1118,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       forecastLatitude: 19.6798,
       forecastLongitude: -80.0915,
       description:
-        "Coral fingers reach out from the wall, with crevices and overhangs underneath. Lobsters, spider crabs and nurse sharks turn up beneath them. It is the next to last site in Bloody Bay.",
+        "Coral fingers reach out from the wall, with crevices and overhangs underneath. Lobsters, spider crabs, and nurse sharks turn up beneath them. It is the next to last site in Bloody Bay.",
       marineLife: "Nurse sharks · lobsters · morays · sailfin blennies",
       marineLifeDescription:
         "Sailfin blennies and juvenile fish fill the shallows, and morays either hide in the overhangs or swim free.",
@@ -1161,7 +1161,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
         "Named for the wreck of a school bus on the shore. A sand chute opened in the wall in a December 1989 northwester, and it drops into the deep. The chute is a dark, elbowed passage and overhead; stay out of it. Barrel sponges and Blue Chromis fill the shallow mooring area.",
       marineLife: "Blue chromis · eagle rays · turtles · barrel sponges",
       marineLifeDescription:
-        "Check the vase sponges for goby cleaners, crinoids and arrow crabs. Eagle rays, turtles and sharks pass in the blue.",
+        "Check the vase sponges for goby cleaners, crinoids and arrow crabs. Eagle rays, turtles, and sharks pass in the blue.",
       difficultyLevel: "advanced",
       depthMinMeters: 11,
       maxDepthMeters: 30,
@@ -1241,7 +1241,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
         "Toward the west end of the Bloody Bay Wall, a smaller wall split in two: a mini wall at 9 m (30 ft) and the main wall at 18 m (60 ft). A large stand of pillar coral draws turtles and stingrays. Tunnels cut through the outcroppings and are overhead; stay out of them. Large barrel sponges grow past 18 m (60 ft).",
       marineLife: "Pillar coral · turtles · stingrays · angelfish",
       marineLifeDescription:
-        "Gray, queen and French angelfish and parrotfish work the mini wall. Reef sharks cruise off the main wall.",
+        "Gray, queen, and French angelfish, and parrotfish work the mini wall. Reef sharks cruise off the main wall.",
       difficultyLevel: "advanced",
       depthMinMeters: 9,
       maxDepthMeters: 30,
@@ -1372,7 +1372,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
         "A site for deep or shallow diving: follow the drop-off, or wander the canyons and sand flats behind it. Tunnels open onto the wall and are overhead; stay out of them.",
       marineLife: "French angelfish · queen triggerfish · eagle rays · sharks",
       marineLifeDescription:
-        "Jawfish and sand tilefish live in the rubble, and sharks, rays and turtles pass from time to time.",
+        "Jawfish and sand tilefish live in the rubble, and sharks, rays, and turtles pass from time to time.",
       difficultyLevel: "advanced",
       depthMinMeters: 8,
       maxDepthMeters: 30,
@@ -1411,7 +1411,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       forecastLatitude: 19.6926,
       forecastLongitude: -80.0685,
       description:
-        "Deep or shallow, your choice. Canyons and sand flats lie behind the drop-off, and tunnels open onto the wall; they are overhead, so stay out of them. The shallow part bottoms out near 11 m (35 ft), with coral heads, razorfish, garden eels and rays.",
+        "Deep or shallow, your choice. Canyons and sand flats lie behind the drop-off, and tunnels open onto the wall; they are overhead, so stay out of them. The shallow part bottoms out near 11 m (35 ft), with coral heads, razorfish, garden eels, and rays.",
       marineLife: "French angelfish · queen triggerfish · razorfish · rays",
       marineLifeDescription:
         "Jawfish and sand tilefish live in the rubble, and garden eels sink into the sand as you approach.",
@@ -1457,7 +1457,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
         "The last Bloody Bay site, with coral fingers and a mini wall that starts near 8 m (25 ft) and slopes to the drop-off. Nooks and crannies hold lobsters and morays. Caverns and swim-throughs along the wall are overhead; stay out of them.",
       marineLife: "Spiny lobster · eagle rays · morays · snapper",
       marineLifeDescription:
-        "Spiny, rock and slipper lobsters hide here, and yellowtail snapper and bluestriped grunts school over the fingers.",
+        "Spiny, rock, and slipper lobsters hide here, and yellowtail snapper and bluestriped grunts school over the fingers.",
       difficultyLevel: "advanced",
       depthMinMeters: 8,
       maxDepthMeters: 30,
@@ -1498,7 +1498,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
         "A gently sloping drop-off with rubble and many anchors. One stands about 3 m (10 ft) tall with a large rope ring at the top.",
       marineLife: "Turtles · sharks · green morays · eagle rays",
       marineLifeDescription:
-        "Sand tilefish, octopus and yellowhead jawfish live in the rubble around the anchors.",
+        "Sand tilefish, octopus, and yellowhead jawfish live in the rubble around the anchors.",
       difficultyLevel: "advanced",
       depthMinMeters: 12,
       maxDepthMeters: 30,
@@ -1545,7 +1545,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
         "On the north side off Jackson's Point in Jackson's Bight. The reef lies in 8 to 14 m (25 to 45 ft), and the wall below has its top near 15 m (50 ft), with wide views. Swim-throughs off the deeper wall are overhead; stay out of them.",
       marineLife: "Turtles · stingrays · horse-eye jacks · garden eels",
       marineLifeDescription:
-        "Tarpon, eagle rays and sometimes sharks pass the wall, with moray eels, jawfish and, at night, octopus around the rubble.",
+        "Tarpon, eagle rays, and sometimes sharks pass the wall, with moray eels, jawfish and, at night, octopus around the rubble.",
       difficultyLevel: "advanced",
       depthMinMeters: 6,
       maxDepthMeters: 30,
@@ -1788,7 +1788,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       forecastLatitude: 19.7582,
       forecastLongitude: -79.7409,
       description:
-        "Closely packed ridges form large coral heads between the shore and the reef wall. Elkhorn coral tops the ridges, with gorgonians, tube sponges and hard corals in the gullies. Swim-throughs and undercuts let sunlight fall to the sand; they are overhead, so stay out of them. A large green moray has long lived here.",
+        "Closely packed ridges form large coral heads between the shore and the reef wall. Elkhorn coral tops the ridges, with gorgonians, tube sponges, and hard corals in the gullies. Swim-throughs and undercuts let sunlight fall to the sand; they are overhead, so stay out of them. A large green moray has long lived here.",
       marineLife: "Flamingo tongues · flying gurnards · green moray · lobsters",
       marineLifeDescription:
         "Flamingo tongues sit on the sea fans in the shallows. Flying gurnards turn up near 5.5 m (18 ft), and jewfish in the ridges and gullies.",
@@ -2020,7 +2020,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       description:
         "A south-shore reef reached through a cut in front of the picnic cabanas. Spur and groove coral, with most of the dive between 9 and 14 m (30 to 45 ft). The reef steps down in tiers to over 30 m (100 ft), deeper beyond the plan.",
       marineLife: "Juvenile fish · lobsters · eels · stingrays",
-      marineLifeDescription: "A good place for juveniles, lobsters, crabs, eels and stingrays.",
+      marineLifeDescription: "A good place for juveniles, lobsters, crabs, eels, and stingrays.",
       difficultyLevel: "beginner",
       depthMinMeters: 3,
       maxDepthMeters: 30,

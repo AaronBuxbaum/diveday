@@ -35,7 +35,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: "What you have" })).toBeVisible();
     await expect(page.getByText("BCD #2")).toBeVisible();
 
-    await page.goto("/shop/blue-mantis/gear");
+    await page.goto("/shop/blue-mantis/gear?kind=tank");
     await expect(page.getByRole("link", { name: "AL80-03" })).toBeVisible();
   });
 

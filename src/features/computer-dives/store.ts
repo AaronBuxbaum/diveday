@@ -318,6 +318,15 @@ export async function commitComputerFiles(
   });
 }
 
+/** How many live dives this diver's computers have given the shop, for the file's row. */
+export async function countComputerDives(db: AppDb, scope: ComputerScope) {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(computerDives)
+    .where(and(scopeWhere(scope), sql`${computerDives.deletedAt} is null`));
+  return row?.count ?? 0;
+}
+
 export async function historyComputerDives(db: AppDb, scope: ComputerScope) {
   const person = await authorize(db, scope);
   const roles = await readActiveStaffRoles(db, scope.shopId, scope.actorPersonId);

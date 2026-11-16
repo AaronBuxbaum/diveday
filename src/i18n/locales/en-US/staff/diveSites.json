@@ -311,6 +311,7 @@
     "upcomingCount": "{count, plural, one {# upcoming departure here} other {# upcoming departures here}}"
   },
   "new": {
+    "leaveWarning": "Leave this page? Your changes will be lost.",
     "title": "Add a dive site",
     "description": "Everything is optional except the name.",
     "errorInvalid": "That didn’t save. Check the required name and links, then try again.",

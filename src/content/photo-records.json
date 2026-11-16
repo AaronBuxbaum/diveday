@@ -7803,6 +7803,26 @@
     }
   },
   "demoPlaceholders": {
+    "demo-shop/generated/porch.webp": {
+      "subject": "demo:porch",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "User request, 2026-11-15",
+      "reviewed": "2026-11-15",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/sunset-boat.webp": {
+      "subject": "demo:sunset-boat",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "User request, 2026-11-15",
+      "reviewed": "2026-11-15",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
     "demo-shop/generated/boat.webp": {
       "subject": "demo:boat",
       "generated": true,

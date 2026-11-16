@@ -124,7 +124,7 @@ export const MEXICO_COSTA_MAYA: DiveSiteTemplate[] = [
         "A half-mile trench running parallel to the shore, with a coral wall on one side and a sandy slope on the other. Tarpon shelter along the wall, and the dive can end at the Copa del Mundo pinnacle.",
       marineLife: "Tarpon · horse-eye jacks · snappers · rays",
       marineLifeDescription:
-        "Schools of large tarpon hold along the coral wall, with jacks, snappers and rays beside them.",
+        "Schools of large tarpon hold along the coral wall, with jacks, snappers, and rays beside them.",
       difficultyLevel: "advanced",
       depthMinMeters: 5,
       maxDepthMeters: 26,
@@ -171,7 +171,7 @@ export const MEXICO_COSTA_MAYA: DiveSiteTemplate[] = [
       forecastLatitude: 18.265,
       forecastLongitude: -87.819,
       description:
-        "Two coral areas facing sand flats: a shallow wall, then, across the sand, tongue-and-groove coral, pinnacles and ledges where big groupers and snappers shelter.",
+        "Two coral areas facing sand flats: a shallow wall, then, across the sand, tongue-and-groove coral, pinnacles, and ledges where big groupers and snappers shelter.",
       marineLife: "Spiny lobsters · octopus · groupers · green turtles",
       marineLifeDescription:
         "Lobsters and octopus tuck into the coral. Groupers and snappers use the ledges in the deeper section.",

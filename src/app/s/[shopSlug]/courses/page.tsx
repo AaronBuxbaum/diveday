@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { AgencyTabs } from "@/components/AgencyTabs";
@@ -20,7 +20,7 @@ import { courseDepthFormat } from "@/i18n/unit-labels";
 import { courseTotalCents, resolveCourseContentDepths } from "@/lib/courses";
 import { formatMoneyScanned } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
+import { publicCoursePath, publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
 import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { CourseDates } from "./CourseDates";
@@ -98,6 +98,8 @@ export default async function PublicCoursesPage({
   const db = await getDb();
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
+  // Switched off on the Features page: the catalog is gone, and so is the error.
+  if (!shop.coursesEnabled) redirect(publicSchedulePath(shopSlug));
 
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const agencies = await activeCourseAgencies(db, shop.id);

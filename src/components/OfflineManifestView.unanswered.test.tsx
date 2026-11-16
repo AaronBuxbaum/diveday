@@ -3,13 +3,20 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { offlineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import {
+  appendOfflineArrival,
+  appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import { OfflineManifestView } from "./OfflineManifestView";
 import { LIVE_RETRY_MS } from "./offline-manifest/use-live-return";
-import { envelope, identityResponse, setOnline } from "./offline-manifest/view-fixtures";
+import {
+  envelope,
+  identityResponse,
+  richEnvelope,
+  setOnline,
+} from "./offline-manifest/view-fixtures";
 
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -40,7 +47,7 @@ const LIVE = "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=departure";
 /** Whether the live manifest answers its asks; silent unless a test says so. */
 let liveAnswers = false;
 const fetchMock = vi.fn(async (input: unknown): Promise<Response> => {
-  if (String(input) === LIVE) {
+  if (String(input) === LIVE || String(input) === LIVE.replace("departure", "after_dive_1")) {
     return liveAnswers ? new Response("live", { status: 200 }) : new Promise<Response>(() => {});
   }
   return identityResponse("blue-mantis");
@@ -142,7 +149,6 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     render(<OfflineManifestView />);
     const status = await routineStatus();
     expect(status.getByText(t("shared.connectivity.unansweredWithCopy"))).toBeVisible();
-    await openDetails();
     expect(liveOffer()).toBeNull();
 
     await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS * 3));
@@ -167,7 +173,80 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS * 3));
 
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(LIVE);
+    expect(liveOffer()).toBeNull();
+  });
+
+  it("withholds the live offer while a named person's mark is being saved and while it waits to send", async () => {
+    searchParams = new URLSearchParams("trip=trip-1&fallback=slow");
+    liveAnswers = true;
+    const saved = richEnvelope("trip-1");
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockImplementation(() => new Promise(() => {}));
+    let finish!: (value: typeof saved) => void;
+    vi.mocked(appendOfflineRollCall).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(<OfflineManifestView />);
+    await routineStatus();
+    await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS * 3));
+    expect(liveOffer()).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
+    fireEvent.click(screen.getByRole("button", { name: "Priya Shah" }));
+    fireEvent.click(screen.getByRole("button", { name: "Record Priya Shah aboard" }));
+    expect(liveOffer()).toBeNull();
+    await act(async () =>
+      finish({ ...saved, events: [{ ...pendingMark, bookingId: "diver-priya" }] }),
+    );
+    expect(liveOffer()).toBeNull();
+  });
+
+  it("withholds the live offer while a person's unsent note is in the device's memory", async () => {
+    searchParams = new URLSearchParams("trip=trip-1&fallback=slow&checkpoint=after_dive_1");
+    liveAnswers = true;
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
+    render(<OfflineManifestView />);
+    await routineStatus();
+    await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS * 3));
+    expect(liveOffer()).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
+    fireEvent.click(screen.getByRole("button", { name: "Priya Shah" }));
+    fireEvent.click(screen.getByRole("button", { name: "Not aboard / details" }));
+    const panel = document.querySelector<HTMLDetailsElement>("details[data-roll-call-exception]");
+    if (!panel) throw new Error("Missing exception panel");
+    fireEvent.click(panel.querySelector("summary") as HTMLElement);
+    fireEvent.change(within(panel).getByRole("textbox"), {
+      target: { value: "Last seen near the buoy" },
+    });
+    expect(liveOffer()).toBeNull();
+  });
+
+  it("keeps the live offer hidden when a later arrival fails before an earlier save completes", async () => {
+    searchParams = new URLSearchParams("trip=trip-1&fallback=slow");
+    liveAnswers = true;
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { withCarriedNotBoarded: true }),
+    );
+    let failSecond!: (error: Error) => void;
+    vi.mocked(appendOfflineArrival)
+      .mockImplementationOnce(() => new Promise(() => {}))
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            failSecond = reject;
+          }),
+      );
+    render(<OfflineManifestView />);
+    await routineStatus();
+    await act(() => vi.advanceTimersByTimeAsync(LIVE_RETRY_MS * 3));
+    expect(liveOffer()).toBeVisible();
     await openDetails();
+    fireEvent.click(screen.getByRole("button", { name: "Priya Shah Check in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Marcus Reed Check in" }));
+    expect(appendOfflineArrival).toHaveBeenCalledTimes(2);
+    await act(async () => failSecond(new Error("write failed")));
     expect(liveOffer()).toBeNull();
   });
 

@@ -30,7 +30,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
         "Start at the deeper sand edge, work up through a cut into the shallow coral, and finish under the boat. Some moorings sit deeper, near 20 m, so check which one the boat is on.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, bright and full of fish. If the current is running, the crew will make it a drift rather than a swim.",
+        "Shallow, bright, and full of fish. If the current is running, the crew will make it a drift rather than a swim.",
       landmarks: [
         {
           name: "Alligator Reef Light",
@@ -169,7 +169,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
         "An outer reef off Islamorada whose south end becomes Crocker Wall, a spur-and-groove slope more than 120 m long that runs from mounding coral heads near 9 m down toward 24 m. Big barrel sponges line the slope, and the bigger fish follow it.",
       marineLife: "Spotted eagle rays · sea turtles · green morays · barrel sponges",
       marineLifeDescription:
-        "Grunts, yellowtail and grouper on the reef top, and rays and turtles cruising the face of the slope.",
+        "Grunts, yellowtail, and grouper on the reef top, and rays and turtles cruising the face of the slope.",
       difficultyLevel: "intermediate",
       depthMinMeters: 5,
       maxDepthMeters: 24,
@@ -184,7 +184,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
         {
           name: "Crocker Wall",
           kind: "reefFormation",
-          note: "The sea slope on the reef’s south end, cut by spurs, grooves and small canyons.",
+          note: "The sea slope on the reef’s south end, cut by spurs, grooves, and small canyons.",
         },
       ],
       creatureSlugs: [
@@ -226,7 +226,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       divePlan:
         "Follow the ledge from the mooring, look into the gullies and archways, and come back over the soft-coral reef top.",
       fitTone: "welcoming",
-      fitNote: "Shallow, easy to follow and busy with fish. Good for any certified diver.",
+      fitNote: "Shallow, easy to follow, and busy with fish. Good for any certified diver.",
       landmarks: [
         {
           name: "The ledge",
@@ -407,7 +407,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       divePlan:
         "Circle the ballast mound slowly, find the plaque, then the cannons and anchor. An easy dive and a good snorkel.",
       fitTone: "welcoming",
-      fitNote: "Shallow, calm and full of history. Anyone certified can enjoy it.",
+      fitNote: "Shallow, calm, and full of history. Anyone certified can enjoy it.",
       landmarks: [
         {
           name: "The ballast mound",

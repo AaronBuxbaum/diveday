@@ -94,7 +94,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       forecastLatitude: 16.1655,
       forecastLongitude: -61.7878,
       description:
-        "A bright coral plateau of sponges and gorgonians that ends in a gentle slope with small cracks. Lobsters, porcupinefish and morays live in the cracks, and a school of jacks patrols the point.",
+        "A bright coral plateau of sponges and gorgonians that ends in a gentle slope with small cracks. Lobsters, porcupinefish, and morays live in the cracks, and a school of jacks patrols the point.",
       marineLife: "Jacks · porcupinefish · morays · lobster · groupers",
       marineLifeDescription:
         "A big school of jacks is the picture. The cracks along the slope hold the smaller animals.",
@@ -135,7 +135,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       forecastLatitude: 16.1676,
       forecastLongitude: -61.7931,
       description:
-        "A wall that starts at 13 m, covered in coral and sponges, on the northwest point of the big islet. Barracuda, mackerel, angelfish and turtles use it.",
+        "A wall that starts at 13 m, covered in coral and sponges, on the northwest point of the big islet. Barracuda, mackerel, angelfish, and turtles use it.",
       marineLife: "Barracuda · mackerel · angelfish · turtles · triggerfish",
       marineLifeDescription:
         "The wall fish are the show, with barracuda along the top and turtles on the coral.",
@@ -318,7 +318,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       forecastLatitude: 16.1022,
       forecastLongitude: -61.7781,
       description:
-        "A 53 m lighthouse tender sunk on purpose as an artificial reef, standing on sand. Barracuda, jacks and morays use the outside, and the soft corals suit photographers.",
+        "A 53 m lighthouse tender sunk on purpose as an artificial reef, standing on sand. Barracuda, jacks, and morays use the outside, and the soft corals suit photographers.",
       marineLife: "Barracuda · jacks · morays · lobster · soft coral",
       marineLifeDescription: "Fish hold over the deck and lobsters and morays use the structure.",
       difficultyLevel: "advanced",
@@ -354,7 +354,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       forecastLatitude: 15.9151,
       forecastLongitude: -61.6484,
       description:
-        "A volcanic seamount in the Saintes Channel with three rock pinnacles that rise to about 17 m and fall into very deep water. Large turtles, morays, jacks and queen angelfish circle the pinnacles in open water.",
+        "A volcanic seamount in the Saintes Channel with three rock pinnacles that rise to about 17 m and fall into very deep water. Large turtles, morays, jacks, and queen angelfish circle the pinnacles in open water.",
       marineLife: "Turtles · morays · queen angelfish · barracuda · jacks",
       marineLifeDescription:
         "Fish circle the pinnacles in open water, with turtles and spotted eagle rays among them.",
@@ -396,7 +396,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       forecastLatitude: 16.1394,
       forecastLongitude: -61.7824,
       description:
-        "A quiet site at the south end of the reserve. A ridge of small pinnacles sits over a floor at 12 m, then a wall falls away. Hot springs rise through cracks, and turtles, lionfish and mackerel work the coast.",
+        "A quiet site at the south end of the reserve. A ridge of small pinnacles sits over a floor at 12 m, then a wall falls away. Hot springs rise through cracks, and turtles, lionfish, and mackerel work the coast.",
       marineLife: "Turtles · lionfish · mackerel · giant gorgonians",
       marineLifeDescription: "A calm place to find turtles, with big gorgonians on the wall.",
       conservationNote: PARK,

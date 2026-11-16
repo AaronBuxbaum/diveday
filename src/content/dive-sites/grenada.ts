@@ -231,7 +231,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       forecastLatitude: 12.02,
       forecastLongitude: -61.7897,
       description:
-        "An undulating patch reef where glades of pale sand alternate with thickets of coral, purple sea fans, sponges and brain coral domes, bordered by sandy channels.",
+        "An undulating patch reef where glades of pale sand alternate with thickets of coral, purple sea fans, sponges, and brain coral domes, bordered by sandy channels.",
       marineLife: "Lobster · spotted moray · nurse shark · stingrays",
       marineLifeDescription:
         "Nurse sharks are often asleep on the sand, and lobsters and morays sit in the coral thickets.",
@@ -274,7 +274,7 @@ export const GRENADA: DiveSiteTemplate[] = [
         "A reef that runs parallel to the coast, named for the Creole wrasse that pour over it in schools. Run as a drift, with sponges and coral along the way.",
       marineLife: "Creole wrasse · barracuda · morays · lobster",
       marineLifeDescription:
-        "Wrasse in the hundreds, with rays, turtles and angelfish working the reef.",
+        "Wrasse in the hundreds, with rays, turtles, and angelfish working the reef.",
       difficultyLevel: "advanced",
       depthMinMeters: 6,
       maxDepthMeters: 30,
@@ -311,7 +311,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       forecastLatitude: 11.9814,
       forecastLongitude: -61.7818,
       description:
-        "A drift dive just off the south shore, open to the Atlantic. Stingrays, nurse sharks, eagle rays and turtles are reported over a reef of coral mounds and sand, with a pillar coral shaped like a giraffe.",
+        "A drift dive just off the south shore, open to the Atlantic. Stingrays, nurse sharks, eagle rays, and turtles are reported over a reef of coral mounds and sand, with a pillar coral shaped like a giraffe.",
       marineLife: "Southern stingray · nurse shark · eagle ray · queen conch",
       marineLifeDescription:
         "Stingrays and nurse sharks rest on the sand or ride the current; conch and lobster work the coral mounds. Sightings are not promised.",
@@ -434,7 +434,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       forecastLatitude: 12.0265,
       forecastLongitude: -61.7705,
       description:
-        "The stern section of a large cargo ship, with its propeller, deckhouse and engine still in place, lying at the edge of the Grand Anse reef.",
+        "The stern section of a large cargo ship, with its propeller, deckhouse, and engine still in place, lying at the edge of the Grand Anse reef.",
       marineLife: "Reef fish · hard coral · sponges",
       marineLifeDescription:
         "Coral is healthiest on the deeper parts of the wreck, with reef fish around the propeller and deckhouse.",
@@ -479,7 +479,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       divePlan:
         "Descend together on the line or the crew's drop, equalize early, and hold the descent rate the crew sets. Follow the deck toward the bow and begin the ascent early, with the safety stop on an SMB line. Bottom time is about 10 minutes, so plan more than one dive; Whibble Reef is a separate dive after a surface interval. Staff confirm the diver's log before boarding, and many operators ask for a checkout dive first. Stay outside the hull.",
       fitTone: "demanding",
-      fitNote: "A serious dive. Depth, current and short bottom time all apply.",
+      fitNote: "A serious dive. Depth, current, and short bottom time all apply.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       creatureSlugs: [
@@ -509,7 +509,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       forecastLatitude: 11.96,
       forecastLongitude: -61.79,
       description:
-        "A 170 ft coastal freighter that sank in the mid-2000s and lies on its side about 3 miles off the south coast. The Atlantic current moves over her. Nurse sharks, reef sharks and eagle rays are reported here, and sightings are not promised.",
+        "A 170 ft coastal freighter that sank in the mid-2000s and lies on its side about 3 miles off the south coast. The Atlantic current moves over her. Nurse sharks, reef sharks, and eagle rays are reported here, and sightings are not promised.",
       marineLife: "Nurse shark · reef shark · eagle ray · lobster",
       marineLifeDescription: "Sharks and rays use the hull and the current alongside it.",
       difficultyLevel: "advanced",
@@ -520,7 +520,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       divePlan:
         "Drift onto the hull with the group and keep the sharks at a distance: if sharks appear, stay put, keep nothing dangling, do not chase or touch them, and follow the crew's briefing. Begin the ascent early, deploy the SMB at the start and make the safety stop on it. Stay outside the hull. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
-      fitNote: "Deep, open and fast. For a diver with the depth card and recent drift experience.",
+      fitNote: "Deep, open, and fast. For a diver with the depth card and recent drift experience.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       creatureSlugs: ["nurse-shark", "caribbean-reef-shark", "spotted-eagle-ray", "spiny-lobster"],
@@ -546,7 +546,7 @@ export const GRENADA: DiveSiteTemplate[] = [
         "A 180 ft freighter that capsized in a storm in 2001 and now sits upright. A central crane overhangs the cargo hold, still full of cement bags, and a spiral tower rises toward the bridge.",
       marineLife: "Gorgonians · hydroids · sponges · green moray",
       marineLifeDescription:
-        "Black gorgonians, hydroids and sponges cover the structure, with seahorses and lobsters on a good day.",
+        "Black gorgonians, hydroids, and sponges cover the structure, with seahorses and lobsters on a good day.",
       difficultyLevel: "advanced",
       depthMinMeters: 16,
       maxDepthMeters: 32,
@@ -555,7 +555,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       divePlan:
         "Down the line to the deck, along the outside of the hull past the crane and tower, and back up with reserve gas. Stay outside the hull.",
       fitTone: "demanding",
-      fitNote: "Upright, intact and deep. Staff confirm the diver's log before boarding.",
+      fitNote: "Upright, intact, and deep. Staff confirm the diver's log before boarding.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       creatureSlugs: [
@@ -684,7 +684,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       forecastLatitude: 12.041,
       forecastLongitude: -61.764,
       description:
-        "A gently sloping reef of sea fans, sea rods, sponges and star coral, with coral heads reaching out past the shallows. Often dived right after the Veronica L.",
+        "A gently sloping reef of sea fans, sea rods, sponges, and star coral, with coral heads reaching out past the shallows. Often dived right after the Veronica L.",
       marineLife: "Barracuda · spadefish · goatfish · parrotfish",
       marineLifeDescription:
         "Blue chromis and goatfish work the slope, with shrimp and crabs for a slow look.",

@@ -130,7 +130,7 @@
   "footerHashVersion": "version {version}",
   "sailedWithSnag": "{item}: {note}. Noted by {name} · {date}",
   "sailedWithSnagsHeading": "Open on the boat when it sailed",
-  "preamble": "What was recorded for this departure, as one document: boarding, the roll-call timeline, certification evidence and waiver status. It reports recorded facts with their timestamps and does not assess, certify or imply any safety judgment. Generated in DiveDay {date} by {name}. All times are shop-local ({timezone}).",
+  "preamble": "What was recorded for this departure, as one document: boarding, the roll-call timeline, certification evidence, and waiver status. It reports recorded facts with their timestamps and does not assess, certify or imply any safety judgment. Generated in DiveDay {date} by {name}. All times are shop-local ({timezone}).",
   "evidenceWaiverHeader": "{title}, version {version}",
   "evidenceWaiverHeaderRecordedBy": "{title}, version {version}, recorded by {name} from in-person signatures",
   "evidenceWaiverHeaderAttested": "{title}, version {version}, recorded by staff from in-person signatures",

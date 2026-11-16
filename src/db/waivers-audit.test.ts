@@ -14,6 +14,7 @@ import {
 import { bookings, people, shops, waiverRecords, waiverTemplates } from "./schema";
 import { recheckWaiverSeals } from "./waiver-seal-checks";
 import {
+  getSignedWaiverForDiver,
   getSignedWaiverRecordForShop,
   listSignedWaiversByPerson,
   listWaiverIntegrityAudit,
@@ -26,6 +27,55 @@ import { issueWaiverRequest } from "./waivers-requests";
 // (src/test/db.ts, `fileScopedShopContext`).
 const fileCtx = fileScopedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
+
+it("withholds the signers, questionnaire, and alert while the seat is unconfirmed", async () => {
+  const { db, shop, booking, person } = await waiverContext();
+  await db.update(people).set({ dateOfBirth: "2014-05-01" }).where(eq(people.id, person.id));
+  const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+  if (!issued.ok) throw new Error("expected a waiver link");
+  const completed = await completeWaiver(db, issued.key, {
+    signerName: person.fullName,
+    agreed: true,
+    medicalAnswers: medicalReferralAnswers,
+    medicalAlert: "Private medical alert",
+    guardian: {
+      name: "Jonas Fischer",
+      relationship: "parent",
+      email: "jonas@example.com",
+      agreed: true,
+    },
+    now,
+  });
+  expect(completed.ok).toBe(true);
+  const input = {
+    shopId: shop.id,
+    personId: person.id,
+    recordId: issued.recordId,
+    readsMedicalAnswers: true,
+    readsMedicalAlert: true,
+  };
+  expect(await getSignedWaiverForDiver(db, input)).toMatchObject({
+    identityHeld: false,
+    signedName: person.fullName,
+    guardian: { name: "Jonas Fischer", relationship: "parent" },
+    medicalAnswers: medicalReferralAnswers,
+    medicalAlert: "Private medical alert",
+  });
+  await db
+    .update(bookings)
+    .set({ identityUnconfirmedAt: now, identityBookedAs: person.fullName })
+    .where(eq(bookings.id, booking.id));
+  expect(await getSignedWaiverForDiver(db, input)).toMatchObject({
+    identityHeld: true,
+    signedName: null,
+    guardian: null,
+    medicalAnswersOnFile: false,
+    medicalAnswers: null,
+    flaggedPrompts: [],
+    medicalAlertOnFile: false,
+    medicalAlert: null,
+  });
+});
 
 describe("listWaiverIntegrityAudit pagination", () => {
   it("pages by number and never repeats or skips a record", async () => {

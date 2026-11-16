@@ -135,7 +135,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       divePlan:
         "Drop on any buoy and follow the eastern ledge north or south, then cut west over the holes and staghorn patches on the way back.",
       fitTone: "welcoming",
-      fitNote: "Shallow, calm and busy with fish. A good first ocean dive.",
+      fitNote: "Shallow, calm, and busy with fish. A good first ocean dive.",
       landmarks: [
         {
           name: "The eastern ledge",
@@ -287,7 +287,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.1542,
       forecastLongitude: -80.089,
       description:
-        "A shallow ridge off Oakland Park Boulevard, marked by a line of fifteen county mooring buoys. Broken ledges, crevices and table-top rocks along its east face make cover for a lot of young fish.",
+        "A shallow ridge off Oakland Park Boulevard, marked by a line of fifteen county mooring buoys. Broken ledges, crevices, and table-top rocks along its east face make cover for a lot of young fish.",
       marineLife: "Glassy sweepers · snook · yellowhead jawfish · blennies · juvenile reef fish",
       marineLifeDescription:
         "Sweepers and snook hang under the ledges; the sand off the ridge is where the jawfish live.",
@@ -589,7 +589,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       forecastLatitude: 26.2309,
       forecastLongitude: -80.066,
       description:
-        "A 53 m Coast Guard buoy tender, built in 1937 as the Hollyhock and sunk upright off Pompano in 1990 in memory of a charter fishing captain. Intact, tall and always surrounded by fish.",
+        "A 53 m Coast Guard buoy tender, built in 1937 as the Hollyhock and sunk upright off Pompano in 1990 in memory of a charter fishing captain. Intact, tall, and always surrounded by fish.",
       marineLife: "Great barracuda · amberjack · grouper · bait schools",
       marineLifeDescription:
         "Big barracuda and jacks over the superstructure; operators have twice seen whale sharks here.",
@@ -855,7 +855,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       depthMinMeters: 17,
       maxDepthMeters: 24,
       currentNote:
-        "Run as a drift with a northbound current: start on the Dorman, then follow the line of wrecks north. Sharks, bull sharks among them, are common here and spearfishing draws them in. Keep your flag line clear of the wreck; Florida law requires the flag.",
+        "Run as a drift with a northbound current: start on the Dorman, then follow the line of wrecks north. Sharks, bull sharks among them, are common here, and spearfishing draws them in. Keep your flag line clear of the wreck; Florida law requires the flag.",
       divePlan:
         "Down on the Dorman, north to the Alpha and the Quallman tugs, and if gas allows head west and finish on top of the reef at about 15 m.",
       landmarks: [
@@ -1072,7 +1072,7 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
       currentNote:
         "One of a line of wrecks joined by cable and stakes, often drifted with the Gulf Stream's northbound current. Florida law requires a divers-down flag; tie it off if you stay on the wreck so it does not snag.",
       fitTone: "welcoming",
-      fitNote: "A classic first Fort Lauderdale wreck: shallow, upright and easy to navigate.",
+      fitNote: "A classic first Fort Lauderdale wreck: shallow, upright, and easy to navigate.",
       landmarks: [
         {
           name: "The Pride",

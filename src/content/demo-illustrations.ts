@@ -8,6 +8,8 @@ export const DEMO_ILLUSTRATIONS = {
   student: "An adult student and instructor talking in a training pool",
   reef: "Sunlit coral heads and sandy channels on a fictional reef",
   oxygen: "Adults discussing emergency oxygen equipment in a dry classroom",
+  porch: "Guests relaxing on a dive shop porch",
+  "sunset-boat": "Guests aboard a dive boat at sunset",
 } as const;
 
 export type DemoIllustrationScene = keyof typeof DEMO_ILLUSTRATIONS;
