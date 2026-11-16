@@ -200,5 +200,14 @@
       "1280": 508,
       "1920": 508
     }
+  },
+  "src/app/(token)/ready/[token]/_components/ReadyMasthead.tsx :: (min-width: 640px) 33rem, 90vw": {
+    "measured": "2026-11-16, /ready/<token>?booked=1. The booked ticket's site photo, edge to edge in the thread column (THREAD_MEASURE_CLASS: max-w-xl less px-5/px-6, less the panel's 1px borders).",
+    "rendered": {
+      "390": 348,
+      "768": 526,
+      "1280": 526,
+      "1920": 526
+    }
   }
 }

@@ -8,6 +8,7 @@ import {
   seenChipSlugs,
   seenSiteFor,
   sightingWindowStart,
+  ticketSighting,
 } from "./sightings";
 
 const NOW = new Date("2026-09-10T15:00:00Z");
@@ -140,5 +141,56 @@ describe("seenSiteFor", () => {
   it("falls back to the plan only when nothing was recorded at all", () => {
     expect(seenSiteFor({ recorded: undefined, planned: molasses })).toBe(molasses);
     expect(seenSiteFor({ recorded: undefined, planned: null })).toBeNull();
+  });
+});
+
+describe("ticketSighting", () => {
+  const now = new Date("2026-11-16T12:00:00Z");
+  const tally = (slug: string, daysAgo: number) => ({
+    speciesSlug: slug,
+    dives: 2,
+    total: 3,
+    lastSeenAt: new Date(now.getTime() - daysAgo * DAY_MS),
+  });
+  const sites = [
+    { id: "a", name: "Molasses Reef" },
+    { id: "b", name: "Christ of the Abyss" },
+  ];
+
+  it("names the first site on the day that has a tally, and its top species", () => {
+    const bySite = new Map([
+      ["b", { diveSiteId: "b", dives: 4, species: [tally("green-sea-turtle", 3)] }],
+    ]);
+    expect(ticketSighting(sites, bySite, now)).toEqual({
+      siteName: "Christ of the Abyss",
+      speciesSlug: "green-sea-turtle",
+      customName: null,
+      lastSeenAt: new Date(now.getTime() - 3 * DAY_MS),
+    });
+  });
+
+  it("says nothing when no site on the day has a sighting", () => {
+    expect(ticketSighting(sites, new Map(), now)).toBeNull();
+  });
+
+  it("never dates a sighting after now", () => {
+    const bySite = new Map([
+      ["a", { diveSiteId: "a", dives: 1, species: [tally("goliath-grouper", -1)] }],
+    ]);
+    expect(ticketSighting(sites, bySite, now)).toBeNull();
+  });
+
+  it("keeps a crew-written name", () => {
+    const bySite = new Map([
+      [
+        "a",
+        {
+          diveSiteId: "a",
+          dives: 1,
+          species: [{ ...tally("custom:frogfish", 1), customName: "Frogfish" }],
+        },
+      ],
+    ]);
+    expect(ticketSighting(sites, bySite, now)?.customName).toBe("Frogfish");
   });
 });

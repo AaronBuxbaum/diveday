@@ -837,3 +837,32 @@ test("a parent books themselves and two children with one email", async ({ page 
   await expect(page).toHaveURL(/\/ready\//);
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Priya/ })).toBeVisible();
 });
+
+// Issue #4386: the booked card is a ticket. Its bubble mark rises on the first
+// open and sits still after, and Save hands the diver a picture with no link.
+test("the booked ticket rises once and saves as a picture", async ({ page }) => {
+  await page.goto("/s/blue-mantis");
+  await openNamedScheduleTrip(page, "Two-Tank Reef — Christ of the Abyss");
+  await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill("Tess Ticket");
+  await page.getByLabel("Email", { exact: true }).fill(`tess-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+  await expect(
+    page.getByRole("heading", { level: 1, name: /You’ve got a seat, Tess/ }),
+  ).toBeVisible();
+
+  const mark = page.locator("[data-ticket-mark]");
+  await expect(mark).toHaveAttribute("data-ticket-mark", "rise");
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: diver("recap.saveAsImage") }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe(`${diver("booking.ticketFileName")}.png`);
+
+  // `?booked=1` is flashed out of the URL, so a reload is the ordinary
+  // thread. Opening the ticket again on purpose (back, or a saved tab) finds
+  // the bubbles already risen.
+  await page.goto(`${new URL(page.url()).pathname}?booked=1`);
+  await expect(mark).toHaveAttribute("data-ticket-mark", "still");
+});
