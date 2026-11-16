@@ -121,7 +121,11 @@ const executedDiveSchema = z.object({
   actualSiteId: z.union([z.literal(""), z.string().uuid()]),
   enteredAt: z.string().optional(),
   exitedAt: z.string().optional(),
-  maxDepthMeters: z.union([z.literal(""), z.coerce.number().finite().min(0)]),
+  // Trimmed first: a whitespace-only box coerces to 0 and would log a 0 m dive.
+  maxDepthMeters: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    z.union([z.literal(""), z.coerce.number().finite().min(0)]),
+  ),
   depthUnit: z.enum(["meters", "feet"]),
   visibility: z.string().trim().max(120).optional(),
   current: z.string().trim().max(120).optional(),

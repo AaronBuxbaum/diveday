@@ -17,6 +17,7 @@ import {
 import { submitTripReview } from "@/features/reviews";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
+import { readTypedMoney } from "@/lib/forgiving-fields";
 import { majorToMinor } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -133,9 +134,7 @@ export async function startTipAction(token: string, formData: FormData) {
   // A form that is not two strings reads as no amount at all, which the bounds
   // check below refuses as `invalid` — exactly where a non-number lands.
   const parsed = parseForm(tipForm, formData);
-  const typed = parsed.ok
-    ? Number(parsed.data.customAmount.trim() || parsed.data.amount)
-    : Number.NaN;
+  const typedText = parsed.ok ? parsed.data.customAmount.trim() || (parsed.data.amount ?? "") : "";
 
   const db = await getDb();
   if (!(await isRecapOpen(db, bookingId))) redirect(`${back}?tip=error`);
@@ -147,7 +146,10 @@ export async function startTipAction(token: string, formData: FormData) {
   // that skipped this can't push an out-of-bounds amount through.
   const currency = await getTipCurrencyForBooking(db, bookingId);
   if (!currency) redirect(`${back}?tip=error`);
-  const amountCents = Number.isFinite(typed) ? majorToMinor(typed, currency) : Number.NaN;
+  // "12,5" is twelve and a half in a Spanish-speaking diver's keyboard; the
+  // forgiving reader takes either separator and refuses anything else.
+  const typed = readTypedMoney(typedText, currency, await requestLocale());
+  const amountCents = typed ? majorToMinor(Number(typed.canonical), currency) : Number.NaN;
   const { minCents, maxCents } = tipBoundsCents(currency);
   if (!Number.isFinite(amountCents) || amountCents < minCents || amountCents > maxCents) {
     redirect(`${back}?tip=invalid`);

@@ -444,6 +444,11 @@ const NOTICE_KEYS: Record<
     tone: "success",
     key: "trips.notices.certifiedAwaitingCard",
   },
+  "already-certified": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.alreadyCertified",
+  },
   "certify-failed": { form: "roster", tone: "danger", key: "trips.notices.certifyFailed" },
   "next-step-saved": { form: "roster", tone: "success", key: "trips.notices.nextStepSaved" },
   "next-step-too-long": { form: "roster", tone: "danger", key: "trips.notices.nextStepTooLong" },

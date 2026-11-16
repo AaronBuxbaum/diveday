@@ -1057,13 +1057,17 @@ async function courtesyRecipientOptedOut(db: AppDb, notification: Notification):
  *   plain hello, while the week-out reminder is off. One that still lists
  *   something to finish goes either way, as its first send would.
  */
-async function switchedOffSinceQueued(db: AppDb, notification: Notification): Promise<boolean> {
+async function switchedOffSinceQueued(
+  db: AppDb,
+  notification: Notification,
+): Promise<"switched_off" | "checkout_closed" | null> {
   switch (notification.kind) {
     case "seat_offer":
     case "seat_offer_commercial":
-      return notification.governedBy
-        ? !(await shopHasFeatureOn(db, notification.shopId, notification.governedBy))
-        : false;
+      return notification.governedBy &&
+        !(await shopHasFeatureOn(db, notification.shopId, notification.governedBy))
+        ? "switched_off"
+        : null;
     // "Finish paying" is only true while the checkout is still open: a diver who
     // paid, or whose session expired, while the first send waited in the queue
     // is not nudged. A switch turned off since is refused like every other.
@@ -1079,17 +1083,19 @@ async function switchedOffSinceQueued(db: AppDb, notification: Notification): Pr
           ),
         )
         .limit(1);
-      return (
-        checkout?.status !== "pending" ||
-        !(await shopHasFeatureOn(db, notification.shopId, "checkoutRecovery"))
-      );
+      if (checkout?.status !== "pending") return "checkout_closed";
+      return (await shopHasFeatureOn(db, notification.shopId, "checkoutRecovery"))
+        ? null
+        : "switched_off";
     }
     case "trip_reminder_7d":
-      return notification.open === 0 && !notification.medicalReview
-        ? !(await shopHasFeatureOn(db, notification.shopId, "weekOutReminder"))
-        : false;
+      return notification.open === 0 &&
+        !notification.medicalReview &&
+        !(await shopHasFeatureOn(db, notification.shopId, "weekOutReminder"))
+        ? "switched_off"
+        : null;
     default:
-      return false;
+      return null;
   }
 }
 
@@ -1710,8 +1716,8 @@ export async function drainNotificationRetries(
       summary.failed += 1;
       continue;
     }
-    const switchedOff = await switchedOffSinceQueued(db, notification);
-    if (switchedOff || (await courtesyRecipientOptedOut(db, notification))) {
+    const dropped = await switchedOffSinceQueued(db, notification);
+    if (dropped || (await courtesyRecipientOptedOut(db, notification))) {
       // Finished, so it drops its handles like every other finished write. Not
       // a `send_abandoned` loss: the diver, or the shop's switch, asked for this.
       await db
@@ -1727,15 +1733,17 @@ export async function drainNotificationRetries(
           recipientTripId: null,
           lockedUntil: null,
           httpStatus: null,
-          errorCode: switchedOff ? "switched_off" : "opted_out",
+          errorCode: dropped ?? "opted_out",
           lastError: null,
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
       log(
-        switchedOff
+        dropped === "switched_off"
           ? "notification.retry_dropped_switched_off"
-          : "notification.retry_dropped_opted_out",
+          : dropped === "checkout_closed"
+            ? "notification.retry_dropped_checkout_closed"
+            : "notification.retry_dropped_opted_out",
         "info",
         {
           shopId: claimed.shopId,

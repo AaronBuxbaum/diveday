@@ -107,6 +107,6 @@ describe("a checkout reminder waiting in the queue", () => {
     expect(sent).toEqual([]);
     await expect(
       db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
-    ).resolves.toMatchObject([{ status: "failed", errorCode: "switched_off" }]);
+    ).resolves.toMatchObject([{ status: "failed", errorCode: "checkout_closed" }]);
   });
 });

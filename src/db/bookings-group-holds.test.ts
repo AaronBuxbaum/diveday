@@ -229,6 +229,74 @@ describe("expiring party holds", () => {
     expect(seats.every((seat) => seat.status === "cancelled")).toBe(true);
   });
 
+  it("keeps a paid seat's checkout pointer when its hold expires", async () => {
+    const { db, shop, until, member } = await heldParty();
+    const { startPaymentOperation } = await import("./payment-operations");
+    const intent = await startPaymentOperation(db, {
+      shopId: shop.id,
+      bookingId: member.bookingId,
+      kind: "checkout_session",
+    });
+    await db
+      .update(paymentOperationIntents)
+      .set({ startedAt: new Date(until.getTime() - PAYMENT_CLAIM_STALE_AFTER_MS - 1) })
+      .where(eq(paymentOperationIntents.id, intent.id));
+    await db
+      .update(bookings)
+      .set({ pendingCheckoutIntentId: intent.id })
+      .where(eq(bookings.id, member.bookingId));
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: member.bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 10_000,
+    });
+    // Capture normally clears the hold; put it back to prove the expiry never touches a paid seat.
+    await db
+      .update(bookings)
+      .set({ groupHoldUntil: until })
+      .where(eq(bookings.id, member.bookingId));
+    await expireGroupHolds(db, until);
+    expect((await tripSeats()).find((seat) => seat.id === member.bookingId)).toMatchObject({
+      status: "booked",
+      pendingCheckoutIntentId: intent.id,
+    });
+  });
+
+  it("moves past a due hold it must refuse to expire, to the holds after it", async () => {
+    const { startPaymentOperation } = await import("./payment-operations");
+    const first = await heldParty(4);
+    const second = await heldParty(4);
+    // The page is ordered by trip id, so the refused party is whichever sorts first.
+    const [refused, later] = first.trip.id < second.trip.id ? [first, second] : [second, first];
+    // A live checkout claim (started just now, not stale): the sweep must refuse to
+    // cancel this seat, and its expired deadline stays, so it is due on every pass.
+    const intent = await startPaymentOperation(refused.db, {
+      shopId: refused.shop.id,
+      bookingId: refused.member.bookingId,
+      kind: "checkout_session",
+    });
+    // The sweep runs at `later.until`, so the claim started at that moment is fresh to it.
+    await refused.db
+      .update(paymentOperationIntents)
+      .set({ startedAt: later.until })
+      .where(eq(paymentOperationIntents.id, intent.id));
+    await refused.db
+      .update(bookings)
+      .set({ pendingCheckoutIntentId: intent.id })
+      .where(eq(bookings.id, refused.member.bookingId));
+
+    // One due trip per page: the refused one is the whole first page.
+    await expireGroupHolds(refused.db, later.until, 1);
+
+    const seats = await tripSeats();
+    const status = (id: string) => seats.find((seat) => seat.id === id)?.status;
+    expect(status(refused.member.bookingId)).toBe("booked");
+    expect(status(later.member.bookingId)).toBe("cancelled");
+    expect(status(later.lead.bookingId)).toBe("cancelled");
+  });
+
   it("never revives a readiness link revoked before expiry", async () => {
     const { db, shop, until, lead } = await heldParty();
     const link = await issueBookingCapability(db, {

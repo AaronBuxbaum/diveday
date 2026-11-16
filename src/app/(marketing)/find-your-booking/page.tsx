@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { buttonClass } from "@/components/ui/button";
+import { SearchField } from "@/components/ui/form";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { listShopsForDiverPicker } from "@/db/shops";
@@ -33,11 +35,17 @@ export const metadata: Metadata = {
  * already names (`listedShopScope`): never a demo, never a shop that opted
  * out of search, so the line under the list says where else the link is.
  */
-export default async function FindYourBookingPage() {
+export default async function FindYourBookingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string | string[] }>;
+}) {
   await connection();
+  const { q } = await searchParams;
+  const query = (Array.isArray(q) ? q[0] : q)?.trim().slice(0, 80) ?? "";
   const [locale, shops] = await Promise.all([
     requestLocale(),
-    getDb().then((db) => listShopsForDiverPicker(db)),
+    getDb().then((db) => listShopsForDiverPicker(db, { query })),
   ]);
   const t = diverTranslator(locale);
   return (
@@ -47,6 +55,20 @@ export default async function FindYourBookingPage() {
         <p className="mt-2 max-w-prose text-pretty text-muted">
           {t("findYourBooking.description")}
         </p>
+        {/* A plain GET form, so it works before the page hydrates. */}
+        <form method="get" className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <SearchField
+            id="find-your-booking-search"
+            name="q"
+            label={t("findYourBooking.searchLabel")}
+            placeholder={t("findYourBooking.searchPlaceholder")}
+            defaultValue={query}
+            className="flex-1"
+          />
+          <button type="submit" className={buttonClass({ variant: "secondary" })}>
+            {t("findYourBooking.searchSubmit")}
+          </button>
+        </form>
         {shops.length > 0 ? (
           <>
             {/* The ledger's geometry, as on a shop's course list: the list
@@ -74,7 +96,9 @@ export default async function FindYourBookingPage() {
             <p className="mt-4 text-sm text-muted">{t("findYourBooking.notListed")}</p>
           </>
         ) : (
-          <p className="mt-8 text-sm text-muted">{t("findYourBooking.empty")}</p>
+          <p className="mt-8 text-sm text-muted">
+            {t(query ? "findYourBooking.noMatch" : "findYourBooking.empty")}
+          </p>
         )}
       </main>
       <MarketingFooter />

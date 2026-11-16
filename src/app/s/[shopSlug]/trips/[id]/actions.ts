@@ -21,6 +21,7 @@ import { recordBuddyReferral, resolveBuddyReferral } from "@/features/buddy-refe
 import { formValue, parseForm, readForm, trimmedText } from "@/features/form-parse";
 import { recordShopMilestone } from "@/features/founder-metrics";
 import { revalidateAndRedirect } from "@/features/navigation";
+import { sentry } from "@/features/sentry-server";
 import { getActiveTripPromoByCode } from "@/features/trip-promos";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
@@ -470,19 +471,22 @@ export async function bookSpot(
     confirmedBooking,
     purpose: "readiness",
   });
-  await issueReturningDiverReceiptForBooking(dbi, {
-    optedIn: rememberBooker,
-    embed,
-    shopId: shopNow.id,
-    bookingId: primaryBookingId,
-    tripId,
-    confirmedBooking,
-    redirectCapability,
-    deviceToken,
-    deviceGeneration,
-  });
-  await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
-  const ownLocale = await recordLeadBookerLocale(dbi, primaryBookingId);
+  await afterCommit("receipt", () =>
+    issueReturningDiverReceiptForBooking(dbi, {
+      optedIn: rememberBooker,
+      embed,
+      shopId: shopNow.id,
+      bookingId: primaryBookingId,
+      tripId,
+      confirmedBooking,
+      redirectCapability,
+      deviceToken,
+      deviceGeneration,
+    }),
+  );
+  await afterCommit("handoff", () => consumeHandoffFromForm(dbi, shopNow.id, fields.handoff));
+  const ownLocale =
+    (await afterCommit("locale", () => recordLeadBookerLocale(dbi, primaryBookingId))) ?? null;
   // The confirmation and every diver's waiver, after the seats are committed:
   // nothing in it may turn a completed booking into an error.
   await sendJoinMail(dbi, {
@@ -621,6 +625,20 @@ export async function bookSpot(
     revalidateAndRedirect(base, `${landing}${landing.includes("?") ? "&" : "?"}pay=code-used-up`);
   }
   revalidateAndRedirect(base, landing);
+}
+
+/**
+ * One step that runs after the seats are committed. A throw is reported and
+ * swallowed, so the diver reaches the confirmation of a seat that is already
+ * theirs instead of an error page that invites a second booking.
+ */
+async function afterCommit<T>(step: string, run: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await run();
+  } catch (error) {
+    await sentry.captureException(error, { tags: { booking_step: step } });
+    return undefined;
+  }
 }
 
 /**

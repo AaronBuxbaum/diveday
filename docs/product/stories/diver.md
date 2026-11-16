@@ -103,8 +103,6 @@ As Marco, when I cancel a paid seat the shop sees the money owed back to me, and
 
 As Tomas, if my card is declined I am told in words and can try again without losing my seat.
 
-**Gap:** #4575 no test exercises a declined card at booking.
-
 ### WAIV-01 A diver signs a waiver and answers the medical form
 
 As Rob, I can sign from the link in my email at night, and a "yes" on the medical form is met with

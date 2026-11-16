@@ -197,7 +197,11 @@ export async function syncShopifyCatalogAction(): Promise<void> {
   // "failed", after a sync that had already pushed the whole catalog.
   let synced: number;
   try {
-    synced = (await syncShopifyCatalog(db, session.user.shopId, config)).synced;
+    const result = await syncShopifyCatalog(db, session.user.shopId, config);
+    // A partial sync still moved products and left the failures on the
+    // integration's health; only a sync that moved nothing is "failed".
+    if (result.synced === 0 && result.failed > 0) throw new Error(result.firstError ?? "failed");
+    synced = result.synced;
   } catch {
     done(path, "failed");
   }

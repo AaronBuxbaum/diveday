@@ -152,6 +152,7 @@
     "recentSighting": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}} en los últimos 30 días"
   },
   "trip": {
+    "seatsLeftCard": "{count, plural, one {Queda # plaza} other {Quedan # plazas}}",
     "coursePlanHeading": "El plan de tu curso",
     "boatYoullBeOn": "Saldrás en {name}",
     "courseSession": "Sesión de curso",
@@ -556,7 +557,11 @@
     "description": "Elige el centro donde reservaste. En su página, escribe el correo con el que reservaste y el centro te envía el enlace de nuevo.",
     "listLabel": "Centros en DiveDay",
     "notListed": "¿No aparece? El correo de tu reserva tiene un enlace a la página del centro.",
-    "empty": "Todavía no hay centros en la lista. El correo de tu reserva tiene un enlace a la página del centro."
+    "empty": "Todavía no hay centros en la lista. El correo de tu reserva tiene un enlace a la página del centro.",
+    "searchLabel": "Buscar por centro o ciudad",
+    "searchPlaceholder": "Centro o ciudad",
+    "searchSubmit": "Buscar",
+    "noMatch": "Ningún centro coincide. Prueba con menos letras o mira el correo de tu reserva."
   },
   "courtesyEmailUnsubscribe": {
     "title": "¿Dejar de recibir estos correos?",

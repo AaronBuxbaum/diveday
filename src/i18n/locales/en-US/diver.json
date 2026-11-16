@@ -152,6 +152,7 @@
     "recentSighting": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}} in the past 30 days"
   },
   "trip": {
+    "seatsLeftCard": "{count, plural, one {# seat left} other {# seats left}}",
     "coursePlanHeading": "Your course plan",
     "boatYoullBeOn": "You’ll be on {name}",
     "courseSession": "Course session",
@@ -556,7 +557,11 @@
     "description": "Pick the shop you booked with. On its page, enter the email you booked with and the shop sends your link again.",
     "listLabel": "Shops on DiveDay",
     "notListed": "Not here? The email from your booking links to the shop’s page.",
-    "empty": "No shops are listed yet. The email from your booking links to the shop’s page."
+    "empty": "No shops are listed yet. The email from your booking links to the shop’s page.",
+    "searchLabel": "Search by shop or town",
+    "searchPlaceholder": "Shop or town",
+    "searchSubmit": "Search",
+    "noMatch": "No shop matches that. Try fewer letters, or check the email from your booking."
   },
   "courtesyEmailUnsubscribe": {
     "title": "Stop these emails?",

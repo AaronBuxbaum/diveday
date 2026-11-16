@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { allowSvgRasterization } from "@/features/og-rasterizer";
+import { diverTranslator } from "@/i18n/messages";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -11,7 +12,9 @@ import { seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
-// locale context, the same carve-out as the root `opengraph-image.tsx`.
+// locale context, the same carve-out as the root `opengraph-image.tsx`. The
+// seats line is the one string read from the diver bundle, in the shop's own
+// locale (issue #4605).
 /**
  * The unfurl card for one departure's public trip page. A diver sharing a
  * trip link deserves better than the generic DiveDay card the root
@@ -113,7 +116,7 @@ export default async function TripOpenGraphImage({
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 }}
       >
         {remaining > 0 ? (
-          ogFooter(`${remaining} ${remaining === 1 ? "spot" : "spots"} left`)
+          ogFooter(diverTranslator(locale)("trip.seatsLeftCard", { count: remaining }))
         ) : (
           <div style={{ display: "flex" }} />
         )}

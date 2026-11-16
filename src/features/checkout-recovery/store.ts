@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNull, lte, ne, not, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, ne, not, or, sql } from "drizzle-orm";
 import { liveTrip, seatHeld } from "@/db/trips";
 import { shopClock } from "@/features/shop-clock";
 import { fareCheckout } from "../../db/checkout-purpose";
@@ -31,6 +31,7 @@ import {
   publicAppUrl,
 } from "../../lib/notifications/index";
 import { type CheckoutProvider, sessionIsSettled } from "../../lib/payments/checkout";
+import { DEFAULT_SEND_WINDOW } from "../../lib/send-window";
 import { dueCheckoutRecovery, RECOVERY_DELAY_HOURS } from "./rules";
 
 /** One cron tick's worth of work — keeps a growing backlog from starving the other jobs on the same daily run. */
@@ -79,6 +80,8 @@ export type SendDueCheckoutRecoveriesOptions = {
   now?: Date;
   emailProvider?: NotificationProvider;
   checkoutProvider?: CheckoutProvider;
+  /** How many candidates one run reads; defaults to `BATCH_LIMIT`. */
+  batchLimit?: number;
 };
 
 /**
@@ -164,10 +167,15 @@ export async function sendDueCheckoutRecoveries(
         isNull(bookingCheckouts.abandonedRecoverySentAt),
         lte(bookingCheckouts.createdAt, staleBefore),
         or(isNull(bookingCheckouts.expiresAt), gt(bookingCheckouts.expiresAt, now)),
+        // Only shops inside their send window right now. A shop that is asleep
+        // would otherwise fill the batch oldest-first with rows the loop below
+        // can only defer, and starve a shop whose window is open.
+        sql`extract(hour from (${now.toISOString()}::timestamptz at time zone ${shops.timezone})) >= ${DEFAULT_SEND_WINDOW.startHour}
+          and extract(hour from (${now.toISOString()}::timestamptz at time zone ${shops.timezone})) < ${DEFAULT_SEND_WINDOW.endHour}`,
       ),
     )
     .orderBy(asc(bookingCheckouts.createdAt))
-    .limit(BATCH_LIMIT);
+    .limit(options.batchLimit ?? BATCH_LIMIT);
 
   const summary: CheckoutRecoveryRunSummary = {
     scanned: candidates.length,

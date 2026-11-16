@@ -793,6 +793,12 @@ export const shops = pgTable(
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
     uniqueIndex("shops_bookkeeper_confirm_token_hash_unique").on(table.bookkeeperConfirmTokenHash),
+    // The find-your-booking picker searches name and town with a leading wildcard (DATA-L6).
+    index("shops_name_trgm_idx").using("gin", sql`${table.name} gin_trgm_ops`),
+    index("shops_address_locality_trgm_idx").using(
+      "gin",
+      sql`${table.addressLocality} gin_trgm_ops`,
+    ),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
     check("shops_offline_erasure_epoch_nonnegative", sql`${table.offlineErasureEpoch} >= 0`),
     // H-20261014-stale-roll-call-recipients: an address DiveDay sends to exists only with its recorded consent.

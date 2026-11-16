@@ -24,7 +24,7 @@ export async function acceptStaffInvite(token: string, formData: FormData) {
     !(await checkRateLimit(rateLimitKey("invite-token", ip), RATE_LIMITS.accountTokenAction))
       .allowed
   ) {
-    redirect(base);
+    redirect(`${base}?error=rate`);
   }
 
   const parsed = passwordConfirmSchema.safeParse(Object.fromEntries(formData));

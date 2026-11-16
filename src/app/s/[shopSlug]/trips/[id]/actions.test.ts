@@ -66,6 +66,22 @@ vi.mock("@/db/booking-capabilities", async (importOriginal) => {
   };
 });
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
+vi.mock("@/features/sentry-server", () => ({ sentry: { captureException: vi.fn() } }));
+vi.mock("@/features/booking-handoff", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/booking-handoff")>();
+  return { ...actual, consumeBookingHandoff: vi.fn(actual.consumeBookingHandoff) };
+});
+vi.mock("./_lib/record-lead-booker-locale", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./_lib/record-lead-booker-locale")>();
+  return { ...actual, recordLeadBookerLocale: vi.fn(actual.recordLeadBookerLocale) };
+});
+vi.mock("./_lib/issue-returning-diver-receipt", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./_lib/issue-returning-diver-receipt")>();
+  return {
+    ...actual,
+    issueReturningDiverReceiptForBooking: vi.fn(actual.issueReturningDiverReceiptForBooking),
+  };
+});
 // The locale is read off the request's cookies, which do not exist here. The
 // words themselves stay real, so an error message that stopped resolving would
 // still show up as an empty `state.error`.
@@ -85,6 +101,12 @@ const { createBookingParty } = await import("@/db/bookings");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { bookSpot, joinWaitlist } = await import("./actions");
 const { cookies } = await import("next/headers");
+const { sentry } = await import("@/features/sentry-server");
+const { consumeBookingHandoff } = await import("@/features/booking-handoff");
+const { recordLeadBookerLocale } = await import("./_lib/record-lead-booker-locale");
+const { issueReturningDiverReceiptForBooking } = await import(
+  "./_lib/issue-returning-diver-receipt"
+);
 
 /**
  * A free departure three days out on the suite's frozen clock: no per-diver
@@ -515,5 +537,38 @@ describe("unnamed companion seats", () => {
         bookedAs: `Guest ${number}`,
       });
     }
+  });
+});
+
+describe("a failure after the seat is committed", () => {
+  const steps = [
+    ["consuming the handoff", () => vi.mocked(consumeBookingHandoff), "handoff"],
+    ["recording the booker's locale", () => vi.mocked(recordLeadBookerLocale), "locale"],
+    [
+      "issuing the returning-diver receipt",
+      () => vi.mocked(issueReturningDiverReceiptForBooking),
+      "receipt",
+    ],
+  ] as const;
+
+  it.each(steps)("still lands the booking when %s throws", async (_name, spy, step) => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+    const boom = new Error(`${step} failed`);
+    vi.mocked(redirect).mockClear();
+    vi.mocked(sentry.captureException).mockClear();
+    spy().mockRejectedValueOnce(boom);
+    const form = submission([{ email: `${step}@example.com` }]);
+    form.set("handoff", `c1.${"a".repeat(22)}.${"b".repeat(43)}`);
+
+    await expect(post(shop.slug, tripId, form)).resolves.toBeNull();
+
+    expect(await seats(db, tripId)).toHaveLength(1);
+    const landed = vi.mocked(redirect).mock.calls.map(([path]) => String(path));
+    expect(landed.some((path) => path.startsWith("/ready/"))).toBe(true);
+    expect(sentry.captureException).toHaveBeenCalledWith(
+      boom,
+      expect.objectContaining({ tags: expect.objectContaining({ booking_step: step }) }),
+    );
   });
 });

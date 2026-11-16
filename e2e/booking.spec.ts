@@ -2,6 +2,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
+  acceptAgeAttestation,
   bookASeatAndOpenThread,
   choosePartySize,
   createTrip,
@@ -764,4 +765,75 @@ test("a diver's card payment at booking settles their Pay step", async ({
 
   await page.goto(thread);
   await expect(pay).toHaveAttribute("data-step-state", "done");
+});
+
+/**
+ * **A declined card does not cost the diver their seat.** Stripe's hosted page
+ * shows the decline itself; the diver who gives up lands on the booking's own
+ * cancel return (`?pay=cancelled`). That page says so in words, the seat is
+ * still theirs, no money is recorded, and the payment door is still open for a
+ * second try. A shop of its own for the same reason as the test above.
+ */
+// story: PAY-04
+test("a declined card keeps the diver's seat and lets them try again", async ({
+  page,
+  request,
+  privateShop,
+}) => {
+  test.setTimeout(90_000);
+  const SHOP = privateShop.slug;
+  const email = "dana.declined@example.com";
+
+  await page.goto(`/s/${SHOP}`);
+  await openFirstBookableScheduleTrip(page);
+  await bookASeatAndOpenThread(page, "Dana Declined", email);
+  const thread = new URL(page.url()).pathname;
+
+  const { bookingCheckout: checkout } = await seedFacts(
+    request,
+    ["stripeAccount", { name: "bookingCheckout", email }],
+    { slug: SHOP },
+  );
+  expect(checkout.amountCents).toBeGreaterThan(0);
+
+  // The card failed on Stripe's page and the diver came back without paying.
+  await page.goto(`${thread}?pay=cancelled`);
+  await expect(page.getByText(diver("ready.paymentCancelled"))).toBeVisible();
+  await expect(threadStatus(page)).toBeVisible();
+  await expect(page.locator("li[data-thread-step='pay'][data-step-state='done']")).toHaveCount(0);
+
+  // Still theirs on a fresh visit, and the same link is still the way back to pay.
+  await page.goto(thread);
+  await expect(threadStatus(page)).toBeVisible();
+  await expect(page.getByText(diver("ready.paymentCancelled"))).toHaveCount(0);
+  await expect(page.locator("li[data-thread-step='pay'][data-step-state='done']")).toHaveCount(0);
+});
+
+/**
+ * **A family books on one form.** A parent books themselves and two children
+ * under one email: the other divers' email boxes stay closed (each shares the
+ * contact's address) and the booking goes through for three seats.
+ */
+// story: GUARD-06
+test("a parent books themselves and two children with one email", async ({ page }) => {
+  test.setTimeout(30_000);
+  await page.goto("/s/blue-mantis");
+  await openFirstBookableScheduleTrip(page);
+  await choosePartySize(page, 3);
+  await page.getByLabel("Name", { exact: true }).fill("Priya Rao");
+  await page.getByLabel("Email", { exact: true }).fill(`priya-${e2eNow().getTime()}@example.com`);
+  await page.getByLabel("Diver 2 name").fill("Asha Rao");
+  await page.getByLabel("Diver 3 name").fill("Dev Rao");
+
+  // No address is asked for, or invented, for either child.
+  await expect(page.getByLabel("Diver 2 email")).toHaveCount(0);
+  await expect(page.getByLabel("Diver 3 email")).toHaveCount(0);
+  for (const box of await page.getByLabel("Use the main contact’s email for this diver").all()) {
+    await expect(box).toBeChecked();
+  }
+
+  await acceptAgeAttestation(page);
+  await page.getByRole("button", { name: "Book 3 seats" }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+  await expect(page.getByRole("heading", { name: /You’ve got a seat, Priya/ })).toBeVisible();
 });

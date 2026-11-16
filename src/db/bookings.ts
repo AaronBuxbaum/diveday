@@ -3233,6 +3233,9 @@ async function cancelBookingRow(
     if (expireHold) {
       if (prior.status !== "booked" || !prior.groupHoldUntil || prior.groupHoldUntil > now)
         return { ok: false, reason: "not_found" };
+      const payment = await getBookingPayment(tx, shopId, bookingId);
+      if (isCapturedPaymentStatus(payment?.status) || payment?.status === "waived")
+        return { ok: false, reason: "not_found" };
       if (prior.pendingCheckoutIntentId) {
         const { paymentOperationIntents } = await import("./schema");
         const [intent] = await tx
@@ -3259,9 +3262,6 @@ async function cancelBookingRow(
           .set({ pendingCheckoutIntentId: null })
           .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)));
       }
-      const payment = await getBookingPayment(tx, shopId, bookingId);
-      if (isCapturedPaymentStatus(payment?.status) || payment?.status === "waived")
-        return { ok: false, reason: "not_found" };
     }
     const atSea = await aboardAtSeaBookingIds(tx, { shopId, tripId, now, bookingIds: [bookingId] });
     const hold = atSea.get(bookingId);

@@ -90,8 +90,8 @@ describe("executed depth uses the submitted measurement unit", () => {
     });
     expect(upsertExecutedDive).not.toHaveBeenCalled();
   });
-  it.each(["blank", "not-recorded"])("writes null for %s depth", async (kind) => {
-    const data = form(kind === "blank" ? "" : "60", "feet");
+  it.each(["blank", "not-recorded", "spaces"])("writes null for %s depth", async (kind) => {
+    const data = form(kind === "blank" ? "" : kind === "spaces" ? "   " : "60", "feet");
     if (kind === "not-recorded") data.set("notRecorded", "depth");
     expect(await saveExecutedDiveAction(ctx, undefined, data)).toEqual({ status: "ok" });
     expect(upsertExecutedDive).toHaveBeenCalledWith(

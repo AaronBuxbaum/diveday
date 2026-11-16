@@ -183,6 +183,17 @@ function validationRefusal(
   );
 }
 
+/** The most seats a hull is entered with; the same ceiling the paper fields hold. */
+const MAX_BOAT_SEATS = 999;
+
+/** A whole number of seats from 1 to the ceiling, else NaN — which the callers refuse. */
+function boatCapacity(raw: unknown): number {
+  const capacity = Number(raw ?? 0);
+  return Number.isInteger(capacity) && capacity >= 1 && capacity <= MAX_BOAT_SEATS
+    ? capacity
+    : Number.NaN;
+}
+
 /** Creates a new boat for the shop. */
 export async function createBoatAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -191,13 +202,13 @@ export async function createBoatAction(formData: FormData) {
   const form = readForm(boatForm, formData);
 
   const name = form.name;
-  const capacity = Number(form.capacity ?? 0);
+  const capacity = boatCapacity(form.capacity);
   const description = boatDescription(form);
   const papers = boatPapers(form);
 
   if (papers === "radio-invalid") validationRefusal(page, "new", "boat-radio-invalid");
   if (papers === "channel-distress") validationRefusal(page, "new", "boat-channel-distress");
-  if (!name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
+  if (!name || Number.isNaN(capacity) || papers === "invalid") {
     validationRefusal(page, "new", "boat-invalid");
   }
 
@@ -228,13 +239,13 @@ export async function updateBoatAction(formData: FormData) {
   const rawBoatId = form.boatId;
   const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
   const name = form.name;
-  const capacity = Number(form.capacity ?? 0);
+  const capacity = boatCapacity(form.capacity);
   const description = boatDescription(form);
   const papers = boatPapers(form);
 
   if (papers === "radio-invalid") validationRefusal(page, boatId, "boat-radio-invalid");
   if (papers === "channel-distress") validationRefusal(page, boatId, "boat-channel-distress");
-  if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
+  if (!boatId || !name || Number.isNaN(capacity) || papers === "invalid") {
     validationRefusal(page, boatId, "boat-invalid");
   }
 

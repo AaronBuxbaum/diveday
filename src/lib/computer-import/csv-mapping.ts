@@ -1,7 +1,12 @@
+import { unguardFormula } from "@/lib/csv-formula";
 import type { ComputerCsvMapping } from "./options";
 import { computerTime } from "./time";
 import { finite, type ParsedComputerDive, refuse } from "./types";
 
+/** A text cell as typed: the export's formula guard removed, then trimmed. */
+export function cellText(value: string | undefined): string | null {
+  return (value === undefined ? "" : unguardFormula(value)).trim() || null;
+}
 function mappedTime(row: Record<string, string>, mapping: ComputerCsvMapping) {
   const rawDate = row[mapping.columns.date]?.trim() ?? "";
   const pattern =
@@ -62,8 +67,8 @@ export function parseMappedCsvRows(
       : null;
     return {
       sourceFormat: "csv",
-      sourceId: mapping.columns.sourceId ? row[mapping.columns.sourceId]?.trim() || null : null,
-      device: mapping.columns.device ? row[mapping.columns.device]?.trim() || null : null,
+      sourceId: mapping.columns.sourceId ? cellText(row[mapping.columns.sourceId]) : null,
+      device: mapping.columns.device ? cellText(row[mapping.columns.device]) : null,
       ...time,
       durationSeconds:
         duration === null ? null : duration * (mapping.durationUnit === "minutes" ? 60 : 1),

@@ -191,6 +191,7 @@
     "newWaiverFailed": "The new waiver could not be sent. Check the booking is still on this departure.",
     "certified": "Certified. They can book their next level with no further review.",
     "certifiedAwaitingCard": "Recorded. It won’t clear a gate until someone confirms it against the card.",
+    "alreadyCertified": "Already certified at that level. Nothing more to do.",
     "certifyFailed": "That didn’t save. Check they’re still on this trip and the level is picked, then try again.",
     "contactSaved": "Emergency contact saved",
     "contactIncomplete": "A contact needs both a name and a phone number before the crew can reach someone.",

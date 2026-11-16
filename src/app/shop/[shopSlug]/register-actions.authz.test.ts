@@ -62,6 +62,9 @@ describe("the boats register's gate", () => {
     { field: "workingChannel", value: "16", notice: "boat-channel-distress" },
     { field: "mmsi", value: "123", notice: "boat-radio-invalid" },
     { field: "capacity", value: "0", notice: "boat-invalid" },
+    { field: "capacity", value: "2.5", notice: "boat-invalid" },
+    { field: "capacity", value: "1e10", notice: "boat-invalid" },
+    { field: "capacity", value: "1000", notice: "boat-invalid" },
   ])(
     "returns a refused $field creation to the new boat editor",
     async ({ field, value, notice }) => {
@@ -85,6 +88,9 @@ describe("the boats register's gate", () => {
     { field: "workingChannel", value: "16", notice: "boat-channel-distress" },
     { field: "mmsi", value: "123", notice: "boat-radio-invalid" },
     { field: "capacity", value: "0", notice: "boat-invalid" },
+    { field: "capacity", value: "2.5", notice: "boat-invalid" },
+    { field: "capacity", value: "1e10", notice: "boat-invalid" },
+    { field: "capacity", value: "1000", notice: "boat-invalid" },
   ])("returns a refused $field edit to its own boat editor", async ({ field, value, notice }) => {
     const { db, shop } = await signedInAs(SEEDED_OWNER_EMAIL);
     const before = await listBoats(db, shop.id);

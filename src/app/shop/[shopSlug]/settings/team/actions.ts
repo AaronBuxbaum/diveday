@@ -99,6 +99,18 @@ const teamForm = z
   })
   .catchall(formValue());
 
+/**
+ * A row id that is not a UUID cannot be on the roster, so it gets the answer a
+ * missing row gets (`not-found`) rather than reaching a uuid column and
+ * raising. A blank id keeps each action's own redirect.
+ */
+function refuseMalformedIds(path: string, ...ids: string[]): void {
+  const uuid = z.string().uuid();
+  if (ids.some((id) => id !== "" && !uuid.safeParse(id).success)) {
+    redirect(noticeUrl(path, "not-found"));
+  }
+}
+
 function rolesFromFormData(formData: FormData): Role[] {
   const fields = readForm(teamForm, formData);
   return STAFF_ROLES.filter((role) => fields[`role_${role}`] === "on");
@@ -229,6 +241,7 @@ export async function resendInviteAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
+  refuseMalformedIds(path, fields.userAccountId);
 
   const userAccountId = fields.userAccountId;
   const member = await findTeamMember(session.user.shopId, userAccountId);
@@ -284,6 +297,7 @@ export async function saveStaffRolesAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
+  refuseMalformedIds(path, fields.personId);
 
   const personId = fields.personId;
   if (!personId) redirect(path);
@@ -349,6 +363,7 @@ export async function saveStaffEmergencyContactAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
+  refuseMalformedIds(path, fields.personId);
 
   const personId = fields.personId;
   if (!personId) redirect(path);
@@ -379,6 +394,7 @@ export async function saveStaffLanguagesAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
+  refuseMalformedIds(path, fields.personId);
 
   const personId = fields.personId;
   if (!personId) redirect(path);
@@ -402,6 +418,7 @@ export async function setStaffStatusAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
+  refuseMalformedIds(path, fields.personId, fields.userAccountId);
 
   const personId = fields.personId;
   const userAccountId = fields.userAccountId;
@@ -423,6 +440,7 @@ export async function removeStaffAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
+  refuseMalformedIds(path, fields.personId, fields.userAccountId);
 
   const personId = fields.personId;
   const userAccountId = fields.userAccountId;
@@ -464,6 +482,7 @@ export async function cancelInviteAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
+  refuseMalformedIds(path, fields.personId, fields.userAccountId);
 
   const personId = fields.personId;
   const userAccountId = fields.userAccountId;
@@ -496,6 +515,7 @@ export async function restoreStaffAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
+  refuseMalformedIds(path, fields.personId, fields.userAccountId);
 
   const personId = fields.personId;
   const userAccountId = fields.userAccountId;

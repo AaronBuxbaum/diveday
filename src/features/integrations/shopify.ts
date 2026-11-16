@@ -5,8 +5,9 @@ import { escapeHtml } from "@/lib/html";
 import { minorToMajor, toShopCurrency } from "@/lib/money";
 import { type RentalPricing, toRentableKinds } from "@/lib/rentals";
 import {
-  getIntegrationSyncRecord,
   getShopIntegration,
+  listIntegrationSyncRecords,
+  markIntegrationError,
   markIntegrationHealthy,
   readIntegrationCredentials,
   upsertIntegrationSyncRecord,
@@ -258,7 +259,7 @@ export async function syncShopifyCatalog(
   shopId: string,
   config: ShopifyConfig,
   fetchImpl: typeof fetch = fetch,
-): Promise<{ synced: number }> {
+): Promise<{ synced: number; failed: number; firstError: string | null }> {
   const [shop] = await db.select().from(shops).where(eq(shops.id, shopId)).limit(1);
   const integration = await getShopIntegration(db, shopId, "shopify");
   if (!shop || !integration) throw new Error("shopify_not_connected");
@@ -281,15 +282,18 @@ export async function syncShopifyCatalog(
     packages,
   });
   let synced = 0;
+  let failed = 0;
+  let firstError: string | null = null;
   const currency = toShopCurrency(shop.currency);
+  const records = await listIntegrationSyncRecords(db, {
+    shopId: integration.shopId,
+    provider: integration.provider,
+    operation: "catalog_product",
+  });
+  // One item's failure never strands the items after it: each is tried, the
+  // failures are counted, and the integration's health says how many and why.
   for (const item of catalog) {
-    const record = await getIntegrationSyncRecord(db, {
-      shopId: integration.shopId,
-      provider: integration.provider,
-      sourceType: item.sourceType,
-      sourceId: item.sourceId,
-      operation: "catalog_product",
-    });
+    const record = records.get(`${item.sourceType}:${item.sourceId}`);
     const variables = shopifyProductSetVariables(item, currency, record?.externalId);
     const result = await shopifyGraphql(
       {
@@ -300,13 +304,21 @@ export async function syncShopifyCatalog(
       },
       fetchImpl,
     );
-    if (result.status !== "ok") throw new Error(result.code);
-    const productSet = result.data.productSet as
-      | { product?: { id?: string }; userErrors?: unknown[] }
-      | undefined;
+    const productSet =
+      result.status === "ok"
+        ? (result.data.productSet as
+            | { product?: { id?: string }; userErrors?: unknown[] }
+            | undefined)
+        : undefined;
     const externalId = productSet?.product?.id;
-    if (typeof externalId !== "string" || productSet?.userErrors?.length) {
-      throw new Error("shopify_product_sync_failed");
+    if (
+      result.status !== "ok" ||
+      typeof externalId !== "string" ||
+      productSet?.userErrors?.length
+    ) {
+      failed += 1;
+      firstError ??= result.status === "ok" ? "shopify_product_sync_failed" : result.code;
+      continue;
     }
     await upsertIntegrationSyncRecord(db, {
       shopId: integration.shopId,
@@ -318,6 +330,14 @@ export async function syncShopifyCatalog(
     });
     synced += 1;
   }
-  await markIntegrationHealthy(db, integration.id);
-  return { synced };
+  if (failed > 0) {
+    await markIntegrationError(
+      db,
+      integration.id,
+      `shopify_partial_sync: ${failed} of ${catalog.length} failed, first ${firstError}`,
+    );
+  } else {
+    await markIntegrationHealthy(db, integration.id);
+  }
+  return { synced, failed, firstError };
 }

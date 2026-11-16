@@ -1,6 +1,6 @@
 import Papa from "papaparse";
 import { computerCsvColumns, inspectComputerCsvColumns } from "@/lib/computer-csv-columns";
-import { parseMappedCsvRows } from "./csv-mapping";
+import { cellText, parseMappedCsvRows } from "./csv-mapping";
 import type { ComputerCsvMapping } from "./options";
 import { computerTime } from "./time";
 import { finite, COMPUTER_IMPORT_LIMITS as LIMIT, type ParsedComputerDive, refuse } from "./types";
@@ -56,8 +56,8 @@ export function parseCsv(text: string, mapping?: ComputerCsvMapping): ParsedComp
     const depth = finite(row[depthField], 0, depthField === "max_depth_ft" ? 6500 : 2000);
     return {
       sourceFormat: "csv",
-      sourceId: row.source_id?.trim() || null,
-      device: row.device?.trim() || null,
+      sourceId: cellText(row.source_id),
+      device: cellText(row.device),
       ...time,
       durationSeconds: finite(row.duration_seconds, 0, 604800),
       maxDepthMeters: depth === null ? null : depth * (depthField === "max_depth_ft" ? 0.3048 : 1),
