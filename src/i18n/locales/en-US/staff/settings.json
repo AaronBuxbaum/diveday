@@ -1076,7 +1076,8 @@
         "create": "New diver",
         "update": "Update existing diver",
         "merge": "Merge with earlier row",
-        "skip": "Skip"
+        "skip": "Skip",
+        "conflict": "Name conflict: nothing imported"
       },
       "manualMapping": "Match columns",
       "ignoreColumn": "Leave out",
@@ -1208,7 +1209,9 @@
         "sizesDeclinedLineOne": "{count} size was too long for its box and is kept as a staff note on the diver.",
         "sizesDeclinedLineOther": "{count} sizes were too long for their boxes and are kept as staff notes on the divers.",
         "receiptDocumentsFailedNote": " {count} receipt document link(s) didn’t fetch and were left off the source record.",
-        "seeRoster": "See the divers"
+        "seeRoster": "See the divers",
+        "identityConflictsOne": "{count} row was left out because the names do not match. Confirm the person and correct the file before retrying.",
+        "identityConflictsOther": "{count} rows were left out because the names do not match. Confirm each person and correct the file before retrying."
       }
     },
     "issues": {
@@ -1242,7 +1245,8 @@
       "noName": "This row has no name and was skipped.",
       "mergedDuplicate": "Same diver as row {row} ({email}), so this row’s certifications, waiver, and past visit are added to them, with contact details left as the earlier row has them.",
       "noEmailNewRecord": "This row has no email and was imported as a new record; a re-import can’t match it to update.",
-      "sizeTooLong": "{field} “{value}” is too long for a size box, so the diver imports without it. Set it on their record, or their gear form will ask them for it."
+      "sizeTooLong": "{field} “{value}” is too long for a size box, so the diver imports without it. Set it on their record, or their gear form will ask them for it.",
+      "manualIdentityConflict": "Rows sharing this email have different names. Nothing in this group is imported; confirm each person and use their own email."
     },
     "declinedSizeNote": "{item} from the import, too long for the size box: “{value}”",
     "errors": {

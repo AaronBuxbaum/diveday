@@ -809,7 +809,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "outcome",
       "replacement_booking_id",
       "recorded_at",
-      "seq",
     ],
     rows: ({ disruptionRecoveryEventRows, recoverySource }) =>
       disruptionRecoveryEventRows.map((row) => [
@@ -822,7 +821,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.outcome,
         row.replacementBookingId,
         row.recordedAt,
-        row.seq,
       ]),
     note: EXPORT_FILE_NOTES["disruption_recovery_events.csv"],
   },

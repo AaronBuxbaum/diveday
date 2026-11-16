@@ -161,8 +161,8 @@ export async function triageInboundMessagesSafely(
     try {
       await triageInboundMessage(db, shopId, messageId, options);
     } catch {
+      // One message that will not triage must not strand the rest waiting behind it.
       log("claude_assist.triage_failed", "warn", {});
-      return;
     }
   }
 }

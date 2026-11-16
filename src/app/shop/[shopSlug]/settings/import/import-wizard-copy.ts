@@ -21,7 +21,7 @@ export type ImportWizardCopy = {
   checkingMatches: string;
   matchesStale: string;
   matchFailed: string;
-  outcomes: Record<"create" | "update" | "merge" | "skip", string>;
+  outcomes: Record<"create" | "update" | "merge" | "skip" | "conflict", string>;
   manualMapping: string;
   ignoreColumn: string;
   manualEvidenceNotice: string;
@@ -111,6 +111,8 @@ export type ImportWizardCopy = {
     rowsMergedNote: string;
     cardsSkippedNote: string;
     rowsSkippedNote: string;
+    identityConflictsOne: string;
+    identityConflictsOther: string;
     cardsHeldByAnother: string;
     specialtyGateNote: string;
     waiversLineOne: string;
@@ -224,6 +226,7 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
     payment_history_date_unreadable: t.raw("settings.import.issues.paymentHistoryDateUnreadable"),
     payment_history_no_date: t("settings.import.issues.paymentHistoryNoDate"),
     no_name: t("settings.import.issues.noName"),
+    manual_identity_conflict: t.raw("settings.import.issues.manualIdentityConflict"),
     merged_duplicate: t.raw("settings.import.issues.mergedDuplicate"),
     no_email_new_record: t("settings.import.issues.noEmailNewRecord"),
     size_too_long: t.raw("settings.import.issues.sizeTooLong"),
@@ -254,6 +257,7 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
     matchesStale: t("settings.import.wizard.matchesStale"),
     matchFailed: t("settings.import.wizard.matchFailed"),
     outcomes: {
+      conflict: t("settings.import.wizard.outcomes.conflict"),
       create: t("settings.import.wizard.outcomes.create"),
       update: t("settings.import.wizard.outcomes.update"),
       merge: t("settings.import.wizard.outcomes.merge"),
@@ -329,6 +333,8 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
       cardsNitroxOther: t.raw("settings.import.wizard.result.cardsNitroxOther"),
       rowsMergedNote: t.raw("settings.import.wizard.result.rowsMergedNote"),
       cardsSkippedNote: t.raw("settings.import.wizard.result.cardsSkippedNote"),
+      identityConflictsOne: t.raw("settings.import.wizard.result.identityConflictsOne"),
+      identityConflictsOther: t.raw("settings.import.wizard.result.identityConflictsOther"),
       rowsSkippedNote: t.raw("settings.import.wizard.result.rowsSkippedNote"),
       cardsHeldByAnother: t.raw("settings.import.wizard.result.cardsHeldByAnother"),
       specialtyGateNote: t("settings.import.wizard.result.specialtyGateNote"),

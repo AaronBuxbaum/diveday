@@ -4,6 +4,11 @@ export type {
   DiveSitePhotos,
   ExistingDiveSitePhotos,
 } from "./dive-site-photos";
-export { supersededDiveSitePhotos, uploadDiveSitePhotos } from "./dive-site-photos";
+export {
+  abandonDiveSitePhotos,
+  addedDiveSitePhotos,
+  supersededDiveSitePhotos,
+  uploadDiveSitePhotos,
+} from "./dive-site-photos";
 export type { IngestResult } from "./ingest-url";
 export { ingestImageUrl } from "./ingest-url";
