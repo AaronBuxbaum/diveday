@@ -808,3 +808,32 @@ test("a declined card keeps the diver's seat and lets them try again", async ({
   await expect(page.getByText(diver("ready.paymentCancelled"))).toHaveCount(0);
   await expect(page.locator("li[data-thread-step='pay'][data-step-state='done']")).toHaveCount(0);
 });
+
+/**
+ * **A family books on one form.** A parent books themselves and two children
+ * under one email: the other divers' email boxes stay closed (each shares the
+ * contact's address) and the booking goes through for three seats.
+ */
+// story: GUARD-06
+test("a parent books themselves and two children with one email", async ({ page }) => {
+  test.setTimeout(30_000);
+  await page.goto("/s/blue-mantis");
+  await openFirstBookableScheduleTrip(page);
+  await choosePartySize(page, 3);
+  await page.getByLabel("Name", { exact: true }).fill("Priya Rao");
+  await page.getByLabel("Email", { exact: true }).fill(`priya-${e2eNow().getTime()}@example.com`);
+  await page.getByLabel("Diver 2 name").fill("Asha Rao");
+  await page.getByLabel("Diver 3 name").fill("Dev Rao");
+
+  // No address is asked for, or invented, for either child.
+  await expect(page.getByLabel("Diver 2 email")).toHaveCount(0);
+  await expect(page.getByLabel("Diver 3 email")).toHaveCount(0);
+  for (const box of await page.getByLabel("Use the main contact’s email for this diver").all()) {
+    await expect(box).toBeChecked();
+  }
+
+  await acceptAgeAttestation(page);
+  await page.getByRole("button", { name: "Book 3 seats" }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+  await expect(page.getByRole("heading", { name: /You’ve got a seat, Priya/ })).toBeVisible();
+});

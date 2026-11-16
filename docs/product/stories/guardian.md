@@ -43,5 +43,3 @@ As the shop, a same-named person is never accepted as the guardian by a quick ti
 ### GUARD-06 A family books on one form without invented emails
 
 As Priya, I book myself and two kids without making up an email address for each of them.
-
-**Gap:** #4576 the public party form has no browser test for this.
