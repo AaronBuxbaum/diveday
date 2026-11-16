@@ -385,6 +385,28 @@ describe("rental pricing", () => {
     expect(quote.subtotalCents).toBe(4500 + 2000 + 3000);
   });
 
+  it("bills the kit a dive calls for beside the set, and reports one the shop has not priced", () => {
+    const quote = quoteRentalFit(
+      { ...PRICING, perItemCents: { ...PRICING.perItemCents, drysuit: 3500, torch: 600 } },
+      {
+        rentedKinds: ["bcd", "drysuit", "torch", "hood"],
+        offeredKinds: [...ALL_OFFERED, "drysuit", "hood", "torch"],
+        wantsNitrox: false,
+        plannedDives: 2,
+      },
+    );
+    // A priced drysuit and torch are lines of their own, never folded into the
+    // set; an unpriced hood is named, so the quote is not silently short.
+    expect(quote.lines).toEqual([
+      { kind: "bcd", cents: 1500 },
+      { kind: "drysuit", cents: 3500 },
+      { kind: "torch", cents: 600 },
+    ]);
+    expect(quote.subtotalCents).toBe(1500 + 3500 + 600);
+    expect(quote.listSubtotalCents).toBe(quote.subtotalCents);
+    expect(quote.unpricedKinds).toEqual(["hood"]);
+  });
+
   it("falls back to per-piece when the shop has no set price", () => {
     const quote = quoteRentalFit(
       { ...PRICING, setCents: null },

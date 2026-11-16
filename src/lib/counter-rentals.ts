@@ -62,7 +62,7 @@ export function checkCounterRentalWindow(input: {
 /**
  * The price-list entry a register unit is billed under, where there is one.
  *
- * Masks and fins each carry their own configured price. Register kinds without
+ * Every rentable kind carries its own configured price. Register kinds without
  * a catalog entry (a tank, a reel, boots) are left for the staffer to price.
  */
 function priceListKind(kind: GearItemKind): RentableItemKind | null {
@@ -78,7 +78,6 @@ function priceListKind(kind: GearItemKind): RentableItemKind | null {
     case "gloves":
     case "torch":
     case "smb":
-      return kind;
     case "mask":
     case "fins":
       return kind;
