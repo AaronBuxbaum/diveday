@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  discountedAmountCents,
   discountOffCents,
   isPromoExhausted,
   isPromoRedeemable,
@@ -121,27 +120,26 @@ describe("isPromoRedeemable", () => {
   });
 });
 
-describe("discountedAmountCents", () => {
+describe("discountOffCents", () => {
   const percent = (value: number) => ({ kind: "percent", percent: value }) as const;
   const amount = (cents: number) => ({ kind: "amount", amountCents: cents }) as const;
 
   it("takes a percent off, rounding the discount up so the shop's share is a floor", () => {
-    expect(discountedAmountCents(13000, percent(20))).toBe(10400);
-    // 12345 * 15% = 1851.75 → the discount rounds up to 1852, leaving 10493.
-    expect(discountedAmountCents(12345, percent(15))).toBe(10493);
+    expect(discountOffCents(13000, percent(20))).toBe(2600);
+    // 12345 * 15% = 1851.75 → the discount rounds up to 1852.
+    expect(discountOffCents(12345, percent(15))).toBe(1852);
   });
 
-  it("handles the ends of the percent range without going negative", () => {
-    expect(discountedAmountCents(13000, percent(100))).toBe(0);
-    expect(discountedAmountCents(0, percent(50))).toBe(0);
+  it("handles the ends of the percent range without going over the total", () => {
+    expect(discountOffCents(13000, percent(100))).toBe(13000);
+    expect(discountOffCents(0, percent(50))).toBe(0);
   });
 
   it("takes a fixed amount off exactly", () => {
-    expect(discountedAmountCents(13000, amount(2000))).toBe(11000);
+    expect(discountOffCents(13000, amount(2000))).toBe(2000);
   });
 
   it("never takes a line below zero: $50 off a $30 booking leaves nothing to pay", () => {
-    expect(discountedAmountCents(3000, amount(5000))).toBe(0);
     expect(discountOffCents(3000, amount(5000))).toBe(3000);
     expect(discountOffCents(0, amount(2000))).toBe(0);
   });
@@ -153,7 +151,6 @@ describe("a fixed amount is per booking, not per diver", () => {
     // taken from its discountable total, not multiplied by the party size.
     const party = 4 * 12000;
     expect(discountOffCents(party, { kind: "amount", amountCents: 2000 })).toBe(2000);
-    expect(discountedAmountCents(party, { kind: "amount", amountCents: 2000 })).toBe(46000);
   });
 });
 
