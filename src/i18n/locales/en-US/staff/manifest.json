@@ -168,7 +168,6 @@
   "deckCount": {
     "label": "Heads counted on deck, crew included",
     "save": "Save count",
-    "saving": "Saving…",
     "invalid": "Enter the number you counted, from 0 to 999.",
     "error": "That didn’t save. Check your connection and tap again.",
     "matches": "{counted} on deck, the same as the roll call.",

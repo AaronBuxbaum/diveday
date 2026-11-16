@@ -4,7 +4,7 @@ import { useActionState, useId } from "react";
 import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
-import type { DeckCountResult } from "../actions";
+import type { DeckCountResult } from "../deck-count-action";
 
 export type DeckCountAction = (
   prev: DeckCountResult,
