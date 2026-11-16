@@ -99,5 +99,12 @@
     "invalid": "No se guardó el seguimiento. Revisa la selección y las reservas existentes del buzo.",
     "busy": "Se está actualizando la recuperación. Vuelve a intentarlo en un momento.",
     "forDiver": "Registrar seguimiento de {name}"
+  },
+  "alternatives": {
+    "title": "Priorizar salidas desde la costa o en piscina (opcional)",
+    "legend": "Salidas existentes",
+    "help": "Elige hasta tres. Las opciones aptas aparecen primero en los enlaces de reserva de cada buzo; no se reservan plazas ni instalaciones. Las opciones no disponibles se omiten.",
+    "limit": "Tres seleccionadas. Quita una para elegir otra.",
+    "invalid": "Elige hasta tres salidas existentes desde la costa o en piscina. No se canceló nada."
   }
 }

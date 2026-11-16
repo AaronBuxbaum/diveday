@@ -107,3 +107,13 @@ return, and past the deadline says the money is forfeit.
 **Done when**
 - Inside the window, the booking is flagged for a manual refund.
 - Past the deadline, the refund is forfeited and the page says so.
+
+### DESK-10 Offer an existing shore or pool departure after a weather call
+
+As Chloe, when a boat departure is canceled, I can prioritize existing shore or pool departures
+without moving a diver or changing what money is owed.
+
+**Done when**
+- Nothing is selected by default, and each diver receives only eligible available booking links.
+- The selection survives an interrupted call; sent and queued offers retain their history.
+- Departures affected by the same weather call are excluded from its offers.

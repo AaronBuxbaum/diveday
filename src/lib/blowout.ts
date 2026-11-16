@@ -67,6 +67,8 @@ export type BlowoutCandidateTrip = {
   riderPriceCents?: number | null;
   /** True when the departure is a scheduled course session (`trips.course_id`). */
   courseSession: boolean;
+  /** The existing trip mode; absent candidates retain the ordinary boat behavior. */
+  diveMode?: "boat" | "shore" | "pool";
   /** The trip's own requirement row, or null when the shop configured none. */
   requirement: TripLevelRequirement | null;
   /** Every site the trip visits, folded into one gate (`combineSiteRequirements`). */
@@ -99,6 +101,8 @@ export type BlowoutOfferInput = {
   diver: BlowoutDiverContext;
   horizonDays?: number;
   maxOffers?: number;
+  /** Explicit staff choices, applied only to existing shore/pool departures. */
+  preferredTripIds?: readonly string[];
 };
 
 /**
@@ -145,10 +149,22 @@ export function qualifyingAlternatives(input: BlowoutOfferInput): string[] {
         participantType: type,
       }).admitted;
     })
-    .sort(
-      (a, b) =>
-        a.startsAt.getTime() - b.startsAt.getTime() || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
-    )
+    .sort((a, b) => compareBlowoutOffers(a, b, input.preferredTripIds ?? []))
     .slice(0, maxOffers)
     .map((candidate) => candidate.id);
+}
+
+/** Preferred non-boat options first, then the existing soonest/id order. */
+export function compareBlowoutOffers(
+  a: Pick<BlowoutCandidateTrip, "id" | "startsAt" | "diveMode">,
+  b: Pick<BlowoutCandidateTrip, "id" | "startsAt" | "diveMode">,
+  preferredTripIds: readonly string[],
+): number {
+  const preferred = (trip: typeof a) =>
+    (trip.diveMode === "shore" || trip.diveMode === "pool") && preferredTripIds.includes(trip.id);
+  return (
+    Number(preferred(b)) - Number(preferred(a)) ||
+    a.startsAt.getTime() - b.startsAt.getTime() ||
+    (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+  );
 }
