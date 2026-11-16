@@ -140,29 +140,35 @@ export default async function SchedulePage({
   const explicitMonth = parseMonthKey(month);
   const listMonthBounds = explicitMonth ? scheduleMonthBounds(explicitMonth, tz) : null;
 
-  const {
-    lenses,
-    activeLens,
-    range,
-    upcoming,
-    cursors,
-    reviewAggregate,
-    activeCourses,
-    boats,
-    everHadDeparture,
-    diveSitesByTrip,
-    requirementsByTrip,
-    shelfNextStarts,
-    recentSightings,
-  } = await readSchedulePage(db, shop, {
-    lens,
-    cursor: { after, before },
-    now,
-    listMonthBounds,
-    hasSpaceFilter,
-    partySize: query.partySize ? partySize : undefined,
-    tripTypeFilter,
-  });
+  const [
+    {
+      lenses,
+      activeLens,
+      range,
+      upcoming,
+      cursors,
+      reviewAggregate,
+      activeCourses,
+      boats,
+      everHadDeparture,
+      diveSitesByTrip,
+      requirementsByTrip,
+      shelfNextStarts,
+      recentSightings,
+    },
+    staffProfiles,
+  ] = await Promise.all([
+    readSchedulePage(db, shop, {
+      lens,
+      cursor: { after, before },
+      now,
+      listMonthBounds,
+      hasSpaceFilter,
+      partySize: query.partySize ? partySize : undefined,
+      tripTypeFilter,
+    }),
+    listPublicStaffProfiles(db, shop.id),
+  ]);
   const view: ScheduleView = {
     shopSlug,
     partySize: query.partySize ? partySize : undefined,
@@ -444,7 +450,7 @@ export default async function SchedulePage({
         t={t}
         className={SECTION_GAP}
       />
-      <PublicStaffProfiles profiles={await listPublicStaffProfiles(db, shop.id)} locale={locale} />
+      <PublicStaffProfiles profiles={staffProfiles} locale={locale} />
       <BoatsShelf boats={boats} t={t} className={SECTION_GAP} />
       <MonthSightingsSection shop={shop} tz={tz} locale={locale} t={t} />
       {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget

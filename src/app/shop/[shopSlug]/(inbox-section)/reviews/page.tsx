@@ -111,24 +111,28 @@ export default async function ReviewsPage({
   // the public list, or the suppression share (src/features/recap/recap-pulses.store.ts).
   // Owner/manager only, and unread rather than merely unrendered for
   // everybody else (issue #1410).
-  const { can, waitingPage, moderatedPage, aggregate, monthAggregate, groups, openPulses } =
-    await getReviewsPage(db, session.user.shopId, session.user.personId, {
+  const t = staffTranslator(locale);
+  const [
+    { can, waitingPage, moderatedPage, aggregate, monthAggregate, groups, openPulses },
+    reply,
+  ] = await Promise.all([
+    getReviewsPage(db, session.user.shopId, session.user.personId, {
       narrow,
       page: Number.parseInt(page ?? "", 10),
       monthStart,
       canReadPulses,
-    });
+    }),
+    reviewReplyContext(db, shop, session.user.personId, t),
+  ]);
   const canManageSettings = can.manageSettings;
   // Whether DiveDay has stopped publishing this shop's rating as a machine-readable claim. Not
   // the same as "the rating is unrepresentative": a shop with no reviews at all is also not
   // representative and has nothing to be told about (src/lib/reviews.ts).
   const ratingWithheld = ratingIsWithheld(aggregate);
-  const t = staffTranslator(locale);
   // `noticeFromParam`, never a bare lookup: the param is attacker-supplied.
   const pulseNotice = noticeFromParam(notice, PULSE_NOTICES);
   const base = shopPath(shopSlug, "reviews");
   const rowCopy = reviewRowCopy(t);
-  const reply = await reviewReplyContext(db, shop, session.user.personId, t);
   /** The reason list, worded once for every row's picker. */
   const hideReasons = REVIEW_MODERATION_REASONS.map((reason) => ({
     value: reason,
