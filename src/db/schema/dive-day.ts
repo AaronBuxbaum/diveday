@@ -839,6 +839,8 @@ export const tripBlowoutDivers = pgTable(
     // booking alone is the natural key — the send loop's resume guarantee.
     uniqueIndex("trip_blowout_divers_booking_unique").on(table.bookingId),
     index("trip_blowout_divers_blowout_idx").on(table.blowoutId),
+    // Merge and erasure scans find a person's rows by person.
+    index("trip_blowout_divers_person_idx").on(table.personId),
     uniqueIndex("trip_blowout_divers_shop_id_id_unique").on(table.shopId, table.id),
   ],
 );

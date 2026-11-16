@@ -365,6 +365,8 @@ export const recapPulses = pgTable(
     uniqueIndex("recap_pulses_booking_live_unique")
       .on(table.bookingId)
       .where(sql`${table.deletedAt} is null`),
+    // Merge and erasure scans find a person's rows by person.
+    index("recap_pulses_person_idx").on(table.personId),
     // The staff panel's query verbatim: this shop's open items, newest first.
     index("recap_pulses_shop_open_idx")
       .on(table.shopId, table.createdAt)

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { aboardAtSeaBookingIds } from "./aboard-at-sea";
+import { aboardAtSeaBookingIds, departureMayBeAtSea, departuresMayBeAtSea } from "./aboard-at-sea";
 import * as bookingCapabilitiesModule from "./booking-capabilities";
 import { cancelBooking, createBooking, createBookingParty, selfCancelBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -642,5 +642,30 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-20261015-aboard-
       ok: false,
       hold: "on_the_water",
     });
+  });
+});
+
+describe("departuresMayBeAtSea", () => {
+  it("answers each departure exactly as departureMayBeAtSea does, in one pass", async () => {
+    const { db, shop } = await seededContext();
+    const now = nowDate();
+    const rows = await db
+      .select({ id: trips.id, startsAt: trips.startsAt })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id));
+    const departures = rows.map((row) => ({ tripId: row.id, startsAt: row.startsAt }));
+    expect(departures.length).toBeGreaterThan(1);
+    const batch = await departuresMayBeAtSea(db, { shopId: shop.id, departures, now });
+    for (const { tripId, startsAt } of departures) {
+      const single = await departureMayBeAtSea(db, { shopId: shop.id, tripId, startsAt, now });
+      expect(batch.has(tripId), tripId).toBe(single);
+    }
+  });
+
+  it("is empty for no departures", async () => {
+    const { db, shop } = await seededContext();
+    expect(
+      await departuresMayBeAtSea(db, { shopId: shop.id, departures: [], now: nowDate() }),
+    ).toEqual(new Set());
   });
 });
