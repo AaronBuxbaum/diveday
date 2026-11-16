@@ -31,6 +31,7 @@ import {
   VoidCounterOrderForm,
 } from "./_components/CounterPayment";
 import { DisabledDemoButton } from "./_components/DisabledDemoButton";
+import { LocalOrderControls } from "./_components/LocalOrderControls";
 import { OrderBookingLine } from "./_components/OrderBookingLine";
 import { OrderDisputes, OrderMeta } from "./_components/OrderMeta";
 import { OrderMoreMenu } from "./_components/OrderMoreMenu";
@@ -245,6 +246,7 @@ export default async function OrderDetailPage({
           {...{ locale, t }}
         />
 
+        <LocalOrderControls order={order.order} canManage={page.can.localManage} t={t} />
         <RecordedPurchaseRefund
           order={order.order}
           history={page.purchaseRefunds}

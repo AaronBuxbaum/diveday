@@ -31,14 +31,18 @@ export async function getOrderDetailPage(
   const order = await getOrder(db, shopId, orderId);
   if (!order) return null;
   const { bookingId } = order.order;
-  const [refund, disputeSheet, voidCounter, header, booking, purchaseRefunds] = await Promise.all([
-    canPersonRefund(db, shopId, personId),
-    bookingId ? canPersonExportDisputeSheet(db, shopId, personId) : false,
-    isVoidableCounterOrder(order.order) ? canPersonManageOrders(db, shopId, personId) : false,
-    loadOrderHeader(db, { shopId, orderId: order.order.id, personId }),
-    bookingId ? getOrderBookingContext(db, shopId, bookingId) : null,
-    order.order.counterReceipt ? purchaseRefundHistory(db, shopId, orderId) : [],
-  ]);
+  const [refund, disputeSheet, voidCounter, header, booking, purchaseRefunds, localManage] =
+    await Promise.all([
+      canPersonRefund(db, shopId, personId),
+      bookingId ? canPersonExportDisputeSheet(db, shopId, personId) : false,
+      isVoidableCounterOrder(order.order) ? canPersonManageOrders(db, shopId, personId) : false,
+      loadOrderHeader(db, { shopId, orderId: order.order.id, personId }),
+      bookingId ? getOrderBookingContext(db, shopId, bookingId) : null,
+      order.order.counterReceipt ? purchaseRefundHistory(db, shopId, orderId) : [],
+      order.order.collection === "local_invoice"
+        ? canPersonManageOrders(db, shopId, personId)
+        : false,
+    ]);
   const squareReceipt = await getSquareReceiptState(db, shopId, orderId);
   const matchSquareReceipt =
     !order.order.stripeInvoiceId &&
@@ -48,7 +52,7 @@ export async function getOrderDetailPage(
     order,
     squareReceipt,
     purchaseRefunds,
-    can: { refund, disputeSheet, voidCounter, matchSquareReceipt },
+    can: { refund, disputeSheet, voidCounter, matchSquareReceipt, localManage },
     header,
     booking,
   };

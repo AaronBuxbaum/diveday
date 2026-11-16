@@ -117,3 +117,15 @@ without moving a diver or changing what money is owed.
 - Nothing is selected by default, and each diver receives only eligible available booking links.
 - The selection survives an interrupted call; sent and queued offers retain their history.
 - Departures affected by the same weather call are excluded from its offers.
+
+### DESK-11 Record a local amount due and the receipt separately
+
+As Chloe, I can add a rental or purchase to a named diver's unpaid order without connecting a
+payment provider, then record how the full amount was received.
+
+**Done when**
+- Amount due and Already received are separate choices; walk-ins retain the received-only flow.
+- An ancillary amount due never clears a trip fare, reserves equipment, or charges a card.
+- Repeated or simultaneous receipt submissions create one receipt and one collection entry.
+- Original receipt totals are grouped by method and shop-local day; returns with an unknown method
+  remain separate and missing return amounts are visibly incomplete.

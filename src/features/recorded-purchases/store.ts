@@ -10,7 +10,7 @@ import {
 } from "../../db/orders";
 import { activityEvents, orders, people } from "../../db/schema";
 import { getShopCurrency } from "../../db/stripe-accounts";
-import { isStaff } from "../../lib/authz";
+import { canManageOrders, isStaff } from "../../lib/authz";
 import { nowDate } from "../../lib/clock";
 import { isUuid } from "../../lib/uuid";
 import { remainingCounterReceipt } from "./rules";
@@ -34,7 +34,7 @@ export async function getPurchaseForm(db: AppDb, shopId: string, personId: strin
     listOrderableCustomers(db, shopId),
     getShopCurrency(db, shopId),
   ]);
-  return { customers, currency };
+  return { customers, currency, canCreateDue: canManageOrders(roles) };
 }
 
 type RefundInput = {

@@ -57,6 +57,9 @@ export const NOTICES: Record<
     key: StaffMessageKey;
   }
 > = {
+  "local-receipt-recorded": { tone: "success", key: "orders.localDue.receiptSaved" },
+  "local-order-voided": { tone: "success", key: "orders.localDue.voided" },
+  "local-order-invalid": { tone: "danger", key: "orders.localDue.invalid" },
   "purchase-refund-recorded": { tone: "success", key: "orders.purchase.refundRecorded" },
   "purchase-refund-invalid": { tone: "danger", key: "orders.purchase.refundInvalid" },
   refreshed: { tone: "success", key: "orders.detail.notice.refreshed" },
