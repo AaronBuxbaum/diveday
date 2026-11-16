@@ -48,7 +48,7 @@ for (const width of [390, 1280]) {
         const paths = new Set<string>();
         for (const photo of await photos.all()) paths.add(await loadedScene(photo));
         if (surface === "shopfront") {
-          for (const path of paths) expect(path).toMatch(/^\/demo-shop\/generated\/[a-z]+\.webp$/);
+          for (const path of paths) expect(path).toMatch(/^\/demo-shop\/generated\/[a-z-]+\.webp$/);
           expect(paths).toEqual(
             new Set(
               ["boat", "fleet", "dock", "briefing", "student", "reef", "oxygen", "shopfront"].map(
