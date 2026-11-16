@@ -28,7 +28,9 @@ describe("addedDiveSitePhotos", () => {
     satelliteImageUrl: "https://store/map-old.jpg",
     routeImageUrl: null,
     imageUrls: ["https://store/a.jpg"],
-    landmarks: [{ name: "Wall", photoUrl: "/media/wall-old.jpg" }],
+    landmarks: [
+      { name: "Wall", kind: "pointOfInterest" as const, note: "", photoUrl: "/media/wall-old.jpg" },
+    ],
   };
 
   it("lists only what the save stored, not what the site already held", () => {
@@ -37,8 +39,13 @@ describe("addedDiveSitePhotos", () => {
       routeImageUrl: undefined,
       imageUrls: ["https://store/a.jpg", "https://store/b.jpg"],
       landmarks: [
-        { name: "Wall", photoUrl: "/media/wall-old.jpg" },
-        { name: "Cave", photoUrl: "/media/cave.jpg" },
+        {
+          name: "Wall",
+          kind: "pointOfInterest" as const,
+          note: "",
+          photoUrl: "/media/wall-old.jpg",
+        },
+        { name: "Cave", kind: "pointOfInterest" as const, note: "", photoUrl: "/media/cave.jpg" },
       ],
     };
     expect(addedDiveSitePhotos(before, after)).toEqual([
