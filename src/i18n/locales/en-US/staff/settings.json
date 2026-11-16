@@ -709,9 +709,6 @@
         "disconnected": "Disconnected"
       },
       "lastSeen": "last worked {date}"
-    },
-    "yourData": {
-      "heading": "Export, import, backups and integrations"
     }
   },
   "dockDay": {
@@ -1456,14 +1453,10 @@
     "viewReport": "View report"
   },
   "data": {
-    "title": "Your data",
-    "tabs": {
-      "label": "Your data sections",
-      "export": "Export",
-      "backups": "Backups",
-      "import": "Import",
-      "integrations": "Integrations"
-    }
+    "export": "Export",
+    "backups": "Backups",
+    "import": "Import",
+    "integrations": "Integrations"
   },
   "features": {
     "title": "Features",
