@@ -329,6 +329,11 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.courses.item5",
       "marketing.capabilities.courses.item6",
       "marketing.capabilities.courses.item7",
+      "marketing.capabilities.courses.item8",
+      "marketing.capabilities.courses.item9",
+      "marketing.capabilities.courses.item10",
+      "marketing.capabilities.courses.item11",
+      "marketing.capabilities.courses.item12",
     ],
   },
   {

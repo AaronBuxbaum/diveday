@@ -207,7 +207,12 @@
       "item4": "Una foto de portada y hasta ocho más en cada página de curso",
       "item5": "Las plazas de una sesión de Open Water de PADI, limitadas por sus instructores y asistentes, y las de cualquier bautismo, solo por sus instructores",
       "item6": "La edad mínima de un curso, confirmada por quien reserva en línea y comparada al embarcar con la fecha de nacimiento de la ficha del buceador",
-      "item7": "Una solicitud de fecha desde el horario o una página de curso, leída en el mostrador agrupada por día"
+      "item7": "Una solicitud de fecha desde el horario o una página de curso, leída en el mostrador agrupada por día",
+      "item8": "Sesiones en barco, desde la costa y en piscina, y un curso que se reúne varios días, cada uno con su horario, como una noche de piscina y luego un fin de semana en aguas abiertas",
+      "item9": "Materiales de estudio y enlaces de e-learning enviados con la reserva y el recordatorio de la semana previa, marcados como terminados en el listado, con la cuota de e-learning en su propia línea del pedido",
+      "item10": "Alumnos remitidos marcados en el listado, con el formulario de remisión y el registro de formación del otro instructor, cada uno sellado al recibirlo",
+      "item11": "El siguiente paso de cada alumno en el listado, una certificación que registra la nueva tarjeta y las tarjetas pendientes de enviar a la agencia, de la más antigua a la más reciente",
+      "item12": "Las acreditaciones de instructor y de asistente archivadas, en la lista de Hoy desde treinta días antes de cada renovación"
     },
     "payments": {
       "item1": "Pagos con tarjeta a través de la cuenta de Stripe del centro",
