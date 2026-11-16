@@ -41,8 +41,9 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the gear register renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear");
         await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
-        // The last seeded tank's row — the ledger below the fold has settled.
-        await page.getByRole("link", { name: "AL63-02" }).waitFor();
+        // The wall's pager — the fleet runs past one page, so the ledger below
+        // the fold has settled once its footer has.
+        await page.getByRole("navigation", { name: staffCopy("shared.pager.label") }).waitFor();
         await capture(page, "gear-register", scheme);
       });
 
@@ -356,11 +357,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/gear");
         await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
         // Both group headings, so the capture can never land on a half-built
-        // ledger — and the wall's own rows are what the `AL63-02` wait below
-        // proves have arrived.
+        // ledger — and the wall's pager below proves its rows have arrived.
         await page.getByRole("heading", { level: 2, name: /^Out/ }).waitFor();
         await page.getByRole("heading", { level: 2, name: /^Overdue/ }).waitFor();
-        await page.getByRole("link", { name: "AL63-02" }).waitFor();
+        await page.getByRole("navigation", { name: staffCopy("shared.pager.label") }).waitFor();
         await expect(
           page.getByText(staffCopy("gear.phase.neverPickedUp"), { exact: true }),
         ).toHaveCount(1);
