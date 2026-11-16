@@ -124,6 +124,9 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
         action={secondFactorRequired ? confirmSignIn : authenticate}
         className="flex flex-col gap-4"
       >
+        {typeof callbackUrl === "string" && callbackUrl.startsWith("/shop/") ? (
+          <input type="hidden" name="callbackUrl" value={callbackUrl} />
+        ) : null}
         <FieldGrid columns={1} className="gap-y-4">
           {/* Every field here is required, so no field carries the marker
               (visual review 2026-10-24, B46). */}
