@@ -75,7 +75,8 @@ export async function seedCourseInquiries(
             dateFlexible: true,
             partySize: 1,
             // i18n-exempt: what a diver typed into the shop's own inquiry form, stored verbatim — a fixture value, not product copy
-            message: "Loved the Benwood boat. Ready for the deep dives whenever you have space.",
+            message:
+              "Looking forward to the Benwood boat. Ready for the deep dives whenever you have space.",
             askedAt: at(-6, 19, 12),
           },
         ]
@@ -88,10 +89,10 @@ export async function seedCourseInquiries(
             askedBy: "diver" as const,
             courseId: openWaterCourseId,
             personId: null,
-            name: "Marisol Vega",
+            name: "Erica Santos",
             // Nobody at this shop holds this address, so the interest stays
             // unlinked — the ordinary case, and not a bug.
-            email: demoEmail("marisol.vega"),
+            email: demoEmail("erica.santos"),
             phone: "+1-305-555-0410",
             experienceLevel: "never" as const,
             timing: "Some weekend in the next couple of months",

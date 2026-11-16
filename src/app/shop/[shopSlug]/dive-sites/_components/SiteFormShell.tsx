@@ -54,6 +54,7 @@ export function SiteFormShell({
   action,
   errorMessages,
   savedMessage,
+  leaveWarning,
   actions,
   children,
 }: {
@@ -68,6 +69,7 @@ export function SiteFormShell({
    * the length of the briefing away from the button that earned it.
    */
   savedMessage?: string;
+  leaveWarning?: string;
   /**
    * The one Save, and the sentence naming what is unsaved. They ride the
    * bottom of the viewport with the refusal, because this form is ten sections
@@ -89,6 +91,73 @@ export function SiteFormShell({
     IDLE_SITE_FORM_STATE,
   );
   const formRef = useRef<HTMLFormElement>(null);
+  const dirty = useRef(false);
+  const submitting = useRef(false);
+
+  // A refused submission stays on this page and remains a draft.
+  useEffect(() => {
+    if (state.attempt) submitting.current = false;
+  }, [state.attempt]);
+
+  useEffect(() => {
+    if (!leaveWarning) return;
+    const warn = () => dirty.current && !submitting.current;
+    function unload(event: BeforeUnloadEvent) {
+      if (!warn()) return;
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    // The Navigation API also catches browser Back and Forward. A click
+    // fallback covers same-app links in browsers without that API.
+    const navigation = (window as Window & { navigation?: EventTarget }).navigation;
+    function navigate(event: Event) {
+      const destination = (
+        event as Event & {
+          destination?: { url: string; sameDocument: boolean };
+          hashChange?: boolean;
+        }
+      ).destination;
+      if (
+        !event.cancelable ||
+        !destination?.sameDocument ||
+        (event as Event & { hashChange?: boolean }).hashChange
+      )
+        return;
+      if (warn() && !window.confirm(leaveWarning)) event.preventDefault();
+    }
+    function click(event: MouseEvent) {
+      if (
+        navigation ||
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      )
+        return;
+      const link = (event.target as Element | null)?.closest("a[href]");
+      if (!(link instanceof HTMLAnchorElement) || link.target || link.download) return;
+      const target = new URL(link.href, window.location.href);
+      if (
+        target.origin !== window.location.origin ||
+        (target.pathname === window.location.pathname && target.search === window.location.search)
+      )
+        return;
+      if (warn() && !window.confirm(leaveWarning)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }
+    window.addEventListener("beforeunload", unload);
+    navigation?.addEventListener("navigate", navigate);
+    document.addEventListener("click", click, true);
+    return () => {
+      window.removeEventListener("beforeunload", unload);
+      navigation?.removeEventListener("navigate", navigate);
+      document.removeEventListener("click", click, true);
+    };
+  }, [leaveWarning]);
 
   useLayoutEffect(() => {
     const form = formRef.current;
@@ -112,6 +181,15 @@ export function SiteFormShell({
     <form
       ref={formRef}
       action={formAction}
+      onInputCapture={() => {
+        dirty.current = true;
+      }}
+      onChangeCapture={() => {
+        dirty.current = true;
+      }}
+      onSubmitCapture={() => {
+        submitting.current = true;
+      }}
       className="flex flex-col gap-6"
       data-hydrated={hydrated ? "true" : undefined}
     >

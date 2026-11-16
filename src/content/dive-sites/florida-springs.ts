@@ -117,7 +117,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "Into the Ballroom against the flow, one circuit inside the daylight zone, and let the spring run push you back out to the basin.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, warm and astonishingly clear. The Ballroom is grated beyond the cavern — everything past that grate needs cave training.",
+        "Shallow, warm, and astonishingly clear. The Ballroom is grated beyond the cavern — everything past that grate needs cave training.",
       landmarks: [
         {
           name: "The Ballroom",
@@ -335,7 +335,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "Down the sand slope to the ledge at the vent, a look at the small cavern opening from outside it, and a slow circuit back through the grass. Anything overhead past the mouth of the vent needs cavern training.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, clear and gently sloped: a natural first spring dive. The day-use area keeps set hours, so check them and the fees before you drive out.",
+        "Shallow, clear, and gently sloped: a natural first spring dive. The day-use area keeps set hours, so check them and the fees before you drive out.",
       landmarks: [
         {
           name: "The vent ledge",
@@ -446,7 +446,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       currentNote:
         "Very strong outflow at the vent, and divers' bubbles stir up the iron bacteria that cut the visibility. In winter the park closes the run to boats and can keep divers out of the headspring while manatees are in it. The run opens onto the Suwannee: tow a flag past the swimming area.",
       divePlan:
-        "Register in person (no reservations, whole party present) by three hours before sundown, card on the dashboard, and out of the water an hour before sundown. Open Water divers carry no lights; the cave below the vent is for cave divers only. A manatee met in the spring: hang still and keep 15 m (50 ft) away, with no touching, chasing or feeding.",
+        "Register in person (no reservations, whole party present) by three hours before sundown, card on the dashboard, and out of the water an hour before sundown. Open Water divers carry no lights; the cave below the vent is for cave divers only. A manatee met in the spring: hang still and keep 15 m (50 ft) away, with no touching, chasing, or feeding.",
       fitNote:
         "Shallow, but the flow at the vent is serious. The park takes 18 Open Water and cavern divers at a time across this spring and the Catfish Hotel.",
       landmarks: [
@@ -526,7 +526,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       currentNote:
         "Gentle except right at the boil. Diving is in the designated swimming area only. When the Suwannee runs high, call ahead about the visibility.",
       divePlan:
-        "Register with park staff by three hours before sunset (first come, first served, no holding spots), card on the dashboard, and finish an hour before sunset. Open Water divers carry no lights; 15 divers at a time. A manatee in the spring: keep 15 m (50 ft) away, with no touching, chasing or feeding.",
+        "Register with park staff by three hours before sunset (first come, first served, no holding spots), card on the dashboard, and finish an hour before sunset. Open Water divers carry no lights; 15 divers at a time. A manatee in the spring: keep 15 m (50 ft) away, with no touching, chasing, or feeding.",
       fitTone: "welcoming",
       fitNote: "Shallow and easy. A good first spring, and good for checking out a new diver.",
       landmarks: [
@@ -564,7 +564,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       currentNote:
         "No real current in the open basin. Summer algae blooms can cloud it; on those days open water diving is not worth it.",
       divePlan:
-        "Sign in, show your card or leave it on the dashboard, and dive in pairs or more: no solo diving and no lights for Open Water divers. Stay in the open basin. The cavern zone slopes away on the downstream side to 30 m and needs cavern certification, and everything past it needs cave training. The only way up is the opening above you. Out an hour before sundown.",
+        "Sign in, show your card, or leave it on the dashboard, and dive in pairs or more: no solo diving and no lights for Open Water divers. Stay in the open basin. The cavern zone slopes away on the downstream side to 30 m and needs cavern certification, and everything past it needs cave training. The only way up is the opening above you. Out an hour before sundown.",
       fitTone: "demanding",
       fitNote:
         "The water is easy; the setting is not. This is a cave diver's park, and the open basin is the whole of an Open Water diver's dive.",
@@ -676,7 +676,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "A guided dive, booked ahead: the site is private and keeps its own schedule. Down the entry shaft to the amphitheater and back out the way you came; the only way up is the opening.",
       fitTone: "demanding",
       fitNote:
-        "Deep, dark and roofed over the whole way. Operators take Advanced divers with lights, and only with a guide.",
+        "Deep, dark, and roofed over the whole way. Operators take Advanced divers with lights, and only with a guide.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep", "cavern"],
       creatureSlugs: [],

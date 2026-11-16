@@ -153,7 +153,7 @@ describe("shelfCourseCards", () => {
       shelfNextStarts: new Map([
         ["a", [{ id: "session-a", startsAt: new Date("2026-08-01T12:00:00Z"), seatsLeft: 4 }]],
       ]),
-      shop: { depthUnit: "meters", timezone: TZ },
+      shop: { depthUnit: "meters", timezone: TZ, coursesEnabled: true },
       shopSlug: "blue-mantis",
       currency: "usd",
       locale: "en-US",

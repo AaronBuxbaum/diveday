@@ -23,14 +23,14 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
         "Reefs and rocks around a small islet five minutes by boat from Gustavia, also called the Aquarium. The shallows are full of tropical fish and lobsters, and the outer rocks reach 25 m.",
       marineLife: "Tropical reef fish · spiny lobsters · green turtles · nurse sharks",
       marineLifeDescription:
-        "Reef fish and lobsters fill the rocks. Nurse sharks, rays and green turtles are reported on the deeper rocks.",
+        "Reef fish and lobsters fill the rocks. Nurse sharks, rays, and green turtles are reported on the deeper rocks.",
       conservationNote:
         "Most dive sites around the island lie inside the Saint-Barthélemy nature reserve, which sets mooring and group-size limits. Dive on the reserve’s moorings and within its group-size limit.",
       difficultyLevel: "intermediate",
       // Depth: one operator gives 0 to 15 m and one guide gives 25 m; the deeper figure is used.
       maxDepthMeters: 25,
       currentNote:
-        "Gustavia’s harbor is five minutes away, so listen for engines, carry an SMB and come up the mooring line. Current is not documented; ask the crew on the day.",
+        "Gustavia’s harbor is five minutes away, so listen for engines, carry an SMB, and come up the mooring line. Current is not documented; ask the crew on the day.",
       divePlan:
         "Down the mooring and around the islet in the shallows, no deeper than 25 m on the outer rocks, and back up the line with reserve gas.",
       fitTone: "unknown",
@@ -73,7 +73,7 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       maxDepthMeters: 30,
       currentNote:
-        "Gustavia’s harbor is close, so listen for engines, carry an SMB and come up the mooring line. Current is not documented; ask the crew on the day.",
+        "Gustavia’s harbor is close, so listen for engines, carry an SMB, and come up the mooring line. Current is not documented; ask the crew on the day.",
       divePlan:
         "Down the mooring and around the rock no deeper than 30 m, and back up the line with reserve gas. Staff confirm the diver’s log before boarding.",
       minimumCertificationLevel: "advanced_open_water",
@@ -108,10 +108,10 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
       forecastLatitude: 17.9242,
       forecastLongitude: -62.8709,
       description:
-        "A wall facing the tip of Colombier, with a pinnacle where barracuda have made their home. Turtles, eagle rays, stingrays, tarpon and lobsters live along the wall, and current can run along it.",
+        "A wall facing the tip of Colombier, with a pinnacle where barracuda have made their home. Turtles, eagle rays, stingrays, tarpon, and lobsters live along the wall, and current can run along it.",
       marineLife: "Great barracuda · hawksbill turtles · spotted eagle rays · tarpon",
       marineLifeDescription:
-        "Barracuda hold over the pinnacle, with turtles, rays, tarpon and lobsters along the wall.",
+        "Barracuda hold over the pinnacle, with turtles, rays, tarpon, and lobsters along the wall.",
       conservationNote:
         "Most dive sites around the island lie inside the Saint-Barthélemy nature reserve, which sets mooring and group-size limits. Dive on the reserve’s moorings and within its group-size limit.",
       difficultyLevel: "intermediate",
@@ -153,10 +153,10 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
       forecastLatitude: 17.956,
       forecastLongitude: -62.912,
       description:
-        "An uninhabited island north-west of Saint-Barthélemy and one of the dive sites farthest from Gustavia, run as a drift. Operators call it an aquarium, with rays, barracuda and turtles and sometimes nurse sharks.",
+        "An uninhabited island north-west of Saint-Barthélemy and one of the dive sites farthest from Gustavia, run as a drift. Operators call it an aquarium, with rays, barracuda, and turtles, and sometimes nurse sharks.",
       marineLife: "Great barracuda · turtles · southern stingrays · nurse sharks",
       marineLifeDescription:
-        "Rays, barracuda and turtles are the regulars, with nurse sharks for some divers.",
+        "Rays, barracuda, and turtles are the regulars, with nurse sharks for some divers.",
       conservationNote:
         "Most dive sites around the island lie inside the Saint-Barthélemy nature reserve, which sets mooring and group-size limits. Dive on the reserve’s moorings and within its group-size limit.",
       difficultyLevel: "intermediate",
@@ -198,7 +198,7 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
       forecastLatitude: 17.943,
       forecastLongitude: -62.8156,
       description:
-        "An Atlantic-side islet with several dive sites in its rock, where faults and canyons run through it. The arches, tunnels and caves are overhead; stay out. Pelagic fish sometimes pass in the blue.",
+        "An Atlantic-side islet with several dive sites in its rock, where faults and canyons run through it. The arches, tunnels, and caves are overhead; stay out. Pelagic fish sometimes pass in the blue.",
       marineLife: "Pelagic visitors · reef fish · lobsters",
       marineLifeDescription:
         "Fish and lobsters crowd the faults and canyons, and larger animals sometimes pass in open water.",
@@ -207,9 +207,9 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
       difficultyLevel: "advanced",
       maxDepthMeters: 25,
       currentNote:
-        "Atlantic side, where conditions can be rougher, so carry an SMB and ask the crew about the swell. The caves, tunnels and arches are overhead; stay out.",
+        "Atlantic side, where conditions can be rougher, so carry an SMB and ask the crew about the swell. The caves, tunnels, and arches are overhead; stay out.",
       divePlan:
-        "Down the mooring, along the outside of the rock no deeper than 25 m, and back up the line with reserve gas. The arches, tunnels and caves are overhead; stay out. Staff confirm the diver’s log before boarding.",
+        "Down the mooring, along the outside of the rock no deeper than 25 m, and back up the line with reserve gas. The arches, tunnels, and caves are overhead; stay out. Staff confirm the diver’s log before boarding.",
       fitTone: "demanding",
       fitNote: "Dramatic terrain on the exposed side. Stay outside every cave and tunnel.",
       // Depth: an operator gives 0 to 25 m and a guide lists "Toc Vert" at 25 m on the north coast, taken as the same site. Gated at Advanced Open Water for Atlantic exposure and the overhead terrain; depth (25 m) alone would not gate it. The caves, tunnels and arches are overhead and not part of the plan, so the site carries no cavern gate.

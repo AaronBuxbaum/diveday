@@ -17,7 +17,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.7006,
       forecastLongitude: -80.0902,
       description:
-        "An underwater columned city in 12 m of sand off Miami — a cremation memorial built as an artificial reef, with gates, lions and columns colonizing fast.",
+        "An underwater columned city in 12 m of sand off Miami — a cremation memorial built as an artificial reef, with gates, lions, and columns colonizing fast.",
       marineLife: "Angelfish · barracuda · sponges · sea fans",
       marineLifeDescription:
         "Purpose-built structure on open sand, which means everything that lives here chose to come.",
@@ -29,7 +29,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "One circuit of the structure with the current, then back through the middle — the whole site fits in a dive.",
       fitTone: "welcoming",
       fitNote:
-        "Flat, shallow and easy. It is also a memorial, and divers are asked to treat it as one.",
+        "Flat, shallow, and easy. It is also a memorial, and divers are asked to treat it as one.",
       landmarks: [
         {
           name: "The gates and lions",
@@ -79,7 +79,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       currentNote:
         "Usually an easy reef dive, with a mild northerly drift on some days. Use the county mooring buoys rather than anchoring on the reef, and fly a dive flag: Florida law asks boats to keep 300 ft from it in open water and divers to surface within 300 ft of it.",
       fitTone: "welcoming",
-      fitNote: "Shallow, roomy and full of life. A good first ocean dive.",
+      fitNote: "Shallow, roomy, and full of life. A good first ocean dive.",
       creatureSlugs: [
         "bluestriped-grunt",
         "great-barracuda",
@@ -289,7 +289,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthMinMeters: 5,
       maxDepthMeters: 6,
       currentNote:
-        "Very close to the beach and to Government Cut, so expect swimmers, jet skis and boat traffic. Fly a dive flag: Florida law asks boats to stay 300 ft away in open water and 100 ft in inlets and channels, and divers to stay within that distance of the flag.",
+        "Very close to the beach and to Government Cut, so expect swimmers, jet skis, and boat traffic. Fly a dive flag: Florida law asks boats to stay 300 ft away in open water and 100 ft in inlets and channels, and divers to stay within that distance of the flag.",
       fitTone: "welcoming",
       fitNote: "Shallow and quirky. Good for snorkelers and brand-new divers.",
       landmarks: [
@@ -473,7 +473,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.8113,
       forecastLongitude: -80.0913,
       description:
-        "Two M60 battle tanks placed by Miami-Dade County in 1994 with about a thousand tons of limestone boulders around them. Three decades of sponge, coral and oyster growth have turned them into a busy little reef.",
+        "Two M60 battle tanks placed by Miami-Dade County in 1994 with about a thousand tons of limestone boulders around them. Three decades of sponge, coral, and oyster growth have turned them into a busy little reef.",
       marineLife: "Spiny lobster · green moray · nurse shark · reef fish",
       marineLifeDescription:
         "Local shops know a resident nurse shark and a large green moray here; lobster fill the boulders.",
@@ -518,7 +518,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       currentNote:
         "In the Anchorage reef site, with freighters at anchor nearby and a current that usually sets north. Rebar stakes on the sand lead toward the neighboring sites. Stay outside the structure.",
       fitTone: "welcoming",
-      fitNote: "A good first wreck: shallow, compact and easy to find again.",
+      fitNote: "A good first wreck: shallow, compact, and easy to find again.",
       landmarks: [
         {
           name: "Memorial plaque",
@@ -558,7 +558,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthMinMeters: 15,
       maxDepthMeters: 18,
       currentNote:
-        "Part of the Key Biscayne reef site, about three miles out, where the current usually sets north and can be strong enough to run as a drift. Fishing boats work these wrecks, so watch for line, carry a surface marker and fly a dive flag. Stay outside the hull.",
+        "Part of the Key Biscayne reef site, about three miles out, where the current usually sets north and can be strong enough to run as a drift. Fishing boats work these wrecks, so watch for line, carry a surface marker, and fly a dive flag. Stay outside the hull.",
       divePlan:
         "Look over the barge, then follow the rebar markers on the sand to Belzona One and Two or to the Parker and Schurger's barges; Belzona Three is deeper and gated on its own. The neighboring wrecks sit deeper, so plan gas for the trek, not for the barge alone.",
       fitTone: "welcoming",
@@ -784,7 +784,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote:
-        "In the Key Biscayne reef site, where the current usually sets north. Fishing line collects on the old steel, so carry a cutter, a surface marker and a dive flag. Stay outside the hull.",
+        "In the Key Biscayne reef site, where the current usually sets north. Fishing line collects on the old steel, so carry a cutter, a surface marker, and a dive flag. Stay outside the hull.",
       fitTone: "welcoming",
       fitNote: "One of the shallower Key Biscayne wrecks, and one of the liveliest.",
       landmarks: [
@@ -1845,7 +1845,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       forecastLatitude: 25.8937,
       forecastLongitude: -80.0854,
       description:
-        "A 1926 yacht built for ocean research expeditions, later a wartime patrol boat and a freighter, seized for smuggling and sunk in December 1985. Hurricane Andrew broke her into three sections, and her twin propellers, two stacks and wheelhouse make her a favorite with photographers.",
+        "A 1926 yacht built for ocean research expeditions, later a wartime patrol boat and a freighter, seized for smuggling and sunk in December 1985. Hurricane Andrew broke her into three sections, and her twin propellers, two stacks, and wheelhouse make her a favorite with photographers.",
       marineLife: "Snapper · jacks · barracuda · reef fish",
       difficultyLevel: "advanced",
       depthMinMeters: 19,
@@ -1858,7 +1858,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         {
           name: "Twin propellers and stacks",
           kind: "wreckFeature",
-          note: "Both propellers, both smokestacks and the large wheelhouse are still there.",
+          note: "Both propellers, both smokestacks, and the large wheelhouse are still there.",
         },
         {
           name: "The exposed engine block",

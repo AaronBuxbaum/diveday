@@ -178,6 +178,9 @@ const DEMO_BOAT_CAPACITIES = {
  * | `./seed-course-photos.ts` | a species photo of its own on every course, so the storefront reads as a shop and not a template |
  * | `./seed-packages.ts` | two dive packages on sale, so the public Packages tab and price list have something to show |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
+ * | `./seed-sailed-records.ts`, `./seed-returning-divers.ts` | completed dive days and the regulars who sailed before coming back |
+ * | `./seed-rental-fleet.ts`, `./seed-rental-history.ts` | a fleet sized for two boats and its returned equipment |
+ * | `./seed-counter-receipts.ts`, `./seed-collection-history.ts`, `./seed-booking-collections.ts` | local sales and the dated, non-duplicated collections behind the money |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
  * | `./seed-buddy-teams.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder; the dawn boat's divers paired at the dock |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
@@ -451,7 +454,8 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
       name: "Mantis II",
       photoUrl: demoIllustration("boat").url,
       capacity: DEMO_BOAT_CAPACITIES["Mantis II"],
-      description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      description:
+        "The big boat: camera table, warm freshwater showers, and a ladder on each side.",
       callSign: "WDM2202",
       mmsi: "338055501",
       workingChannel: "VHF 68",
@@ -733,7 +737,8 @@ export async function createDemoShop(
       name: "Mantis II",
       photoUrl: shop.isDemo ? demoIllustration("boat").url : null,
       capacity: DEMO_BOAT_CAPACITIES["Mantis II"],
-      description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      description:
+        "The big boat: camera table, warm freshwater showers, and a ladder on each side.",
       callSign: "WDM2202",
       mmsi: "338055501",
       workingChannel: "VHF 68",

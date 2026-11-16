@@ -223,7 +223,7 @@ export const BAHAMAS_OUT_ISLANDS: DiveSiteTemplate[] = [
       currentNote:
         "The bay is sheltered and calm, and no current is documented. Entry is from a sand beach, and the bottom drops away within a few kicks of the shore. The halocline is reported between 15 and 20 m and its depth varies with rain; the water below it holds little oxygen. Do not dive while a freediving event or training session is running; ask the guide first.",
       divePlan:
-        "Enter from the beach and swim to the edge of the hole. Descend along the wall. The floor is 10 m (33 ft), shallower if the guide reports the layer higher; ask the guide where the layer is today before you enter. Ascend along the wall, not up the middle. The hole is far deeper than any recreational plan, so never follow it down. Dive with a guide who knows the site. There is no dive center on the beach, so rentals, fills and a guide come from an operator elsewhere on the island. Medical care is far from this bay, so confirm the guide’s oxygen and the emergency plan before you go.",
+        "Enter from the beach and swim to the edge of the hole. Descend along the wall. The floor is 10 m (33 ft), shallower if the guide reports the layer higher; ask the guide where the layer is today before you enter. Ascend along the wall, not up the middle. The hole is far deeper than any recreational plan, so never follow it down. Dive with a guide who knows the site. There is no dive center on the beach, so rentals, fills, and a guide come from an operator elsewhere on the island. Medical care is far from this bay, so confirm the guide’s oxygen and the emergency plan before you go.",
       fitTone: "demanding",
       fitNote:
         "The depth below you is far beyond recreational limits and the water changes with depth. For confident divers with a guide, holding a plan well above the bottom.",
@@ -258,14 +258,14 @@ export const BAHAMAS_OUT_ISLANDS: DiveSiteTemplate[] = [
         "A shark dive in about 9 m (30 ft) of calm lee-side water, run by a resort on the island since the 1970s. Divers settle in a sandy arena ringed by coral heads while Caribbean reef sharks, a dozen or two at a time, gather around them. The sharks come for prepared food that only the crew handles.",
       marineLife: "Caribbean reef sharks · jacks · barracuda · stingrays",
       marineLifeDescription:
-        "Reef sharks circle the arena at close range. Groupers, jacks, barracuda and stingrays share the sand around the coral heads.",
+        "Reef sharks circle the arena at close range. Groupers, jacks, barracuda, and stingrays share the sand around the coral heads.",
       difficultyLevel: "intermediate",
       depthMinMeters: 6,
       maxDepthMeters: 9,
       currentNote:
         "Current not documented; ask the crew on the day. The site is on the lee side and the sand bottom can cloud when the sharks stir it up. Shark numbers vary with the season and the day, and the west-facing site can turn choppy during strong fronts.",
       divePlan:
-        "Settle where the guide positions the group at the edge of the reef and stay put through the feed. Do not carry or handle food. Keep nothing dangling from your gear, never chase, touch or reach for a shark, stay together as one group and follow the crew’s briefing at every step. Sharks gather most from November to May; in summer they spread out and the dive is quieter, and a sighting is never a promise. Staff confirm the diver’s log before boarding. Medical care is far from the water on Long Island, so confirm the boat’s oxygen and the emergency plan before boarding.",
+        "Settle where the guide positions the group at the edge of the reef and stay put through the feed. Do not carry or handle food. Keep nothing dangling from your gear, never chase, touch, or reach for a shark, stay together as one group and follow the crew’s briefing at every step. Sharks gather most from November to May; in summer they spread out and the dive is quieter, and a sighting is never a promise. Staff confirm the diver’s log before boarding. Medical care is far from the water on Long Island, so confirm the boat’s oxygen and the emergency plan before boarding.",
       // Feeding: the sources disagree. The resort's own page describes sharks competing for prepared
       // food; Sail Abacos says most dives rely on natural behavior. The conservative reading is a
       // provisioned dive run to the crew's protocol. Season (November to May peak) is from the

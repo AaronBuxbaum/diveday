@@ -311,6 +311,7 @@
     "upcomingCount": "{count, plural, one {# salida próxima aquí} other {# salidas próximas aquí}}"
   },
   "new": {
+    "leaveWarning": "¿Salir de esta página? Se perderán tus cambios.",
     "title": "Agregar un sitio de buceo",
     "description": "Todo es opcional excepto el nombre.",
     "errorInvalid": "Eso no se guardó. Revisa el nombre obligatorio y los enlaces e inténtalo de nuevo.",

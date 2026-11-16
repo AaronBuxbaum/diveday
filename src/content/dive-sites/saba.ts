@@ -35,7 +35,7 @@ export const SABA: DiveSiteTemplate[] = [
         "Down the mooring to the plateau at about 30 m, along the outcrops, and out to the Needle only with gas and the guide’s say-so, no deeper than 35 m. Stop on the mooring line or an SMB in open water. Staff confirm the diver’s log before boarding. The site is well offshore; confirm the boat’s oxygen and plan.",
       fitTone: "demanding",
       fitNote:
-        "Deep, open-water and remote. For divers with the cards and the recent dives for it.",
+        "Deep, open-water, and remote. For divers with the cards and the recent dives for it.",
       // Mooring and maximum depth are past 30 m, so Advanced Open Water and the Deep specialty apply.
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -222,7 +222,7 @@ export const SABA: DiveSiteTemplate[] = [
         "An isolated pinnacle about half a mile east of Wells Bay. The main peak tops out near 27 m and a second set of outcrops sits near 37 m, rising from very deep water.",
       marineLife: "Caribbean reef sharks · jacks · sponges · wahoo",
       marineLifeDescription:
-        "Sharks, big sponge formations and plenty of reef fish crowd the peaks, and wahoo and mahi-mahi pass near the surface at the safety stop.",
+        "Sharks, big sponge formations, and plenty of reef fish crowd the peaks, and wahoo and mahi-mahi pass near the surface at the safety stop.",
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
@@ -231,10 +231,10 @@ export const SABA: DiveSiteTemplate[] = [
       currentNote:
         "Open ocean, washed by the deep currents that feed the pinnacles. The strength changes by the day, so carry an SMB and keep the group together.",
       divePlan:
-        "Down the mooring to the main peak near 27 m. The outcrops near 37 m are optional, reached only with gas and the guide’s say-so, and the plan’s floor at the outcrop tops is 37 m. Make a long stop on the mooring line or an SMB. Sharks: stay put, keep nothing dangling, do not chase or touch, and follow the crew’s briefing. Sightings are never guaranteed. Staff confirm the diver’s log before boarding. The site is well offshore; confirm the boat’s oxygen and plan.",
+        "Down the mooring to the main peak near 27 m. The outcrops near 37 m are optional, reached only with gas and the guide’s say-so, and the plan’s floor at the outcrop tops is 37 m. Make a long stop on the mooring line or an SMB. Sharks: stay put, keep nothing dangling, do not chase, or touch, and follow the crew’s briefing. Sightings are never guaranteed. Staff confirm the diver’s log before boarding. The site is well offshore; confirm the boat’s oxygen and plan.",
       fitTone: "demanding",
       fitNote:
-        "Deep, open-water and remote, with sharks close by. For divers with the cards and the recent dives for it.",
+        "Deep, open-water, and remote, with sharks close by. For divers with the cards and the recent dives for it.",
       // Mooring and maximum depth are past 30 m, so Advanced Open Water and the Deep specialty apply.
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -553,7 +553,7 @@ export const SABA: DiveSiteTemplate[] = [
         "Overhangs and lava flows cut by sand chutes (do not go under the overhangs), with deepwater sea fans on the ledges as the dive heads seaward. Toward shore the coral-encrusted boulders grow larger, and patches of warm sand are a feature of Saba’s volcano.",
       marineLife: "Caribbean reef sharks · hawksbill turtles · glassy sweepers · horse-eye jacks",
       marineLifeDescription:
-        "Sweepers and clinging crabs shelter under the overhangs, while turtles, jacks and nurse sharks pass through the site.",
+        "Sweepers and clinging crabs shelter under the overhangs, while turtles, jacks, and nurse sharks pass through the site.",
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
@@ -562,7 +562,7 @@ export const SABA: DiveSiteTemplate[] = [
       currentNote:
         "Current not documented; ask the crew on the day. The cave under the overhangs is overhead; stay out.",
       divePlan:
-        "Down the mooring to the boulders and ledges, along them no deeper than 30 m, and back up the line with reserve gas. The cave under the overhangs is overhead; stay out. If sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
+        "Down the mooring to the boulders and ledges, along them no deeper than 30 m, and back up the line with reserve gas. The cave under the overhangs is overhead; stay out. If sharks come by: stay put, keep nothing dangling, do not chase, or touch, stay together, and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
       fitTone: "unknown",
       fitNote:
         "A moderate-depth dive with overhangs to look at from outside. Ask the crew about the day’s water.",
@@ -597,7 +597,7 @@ export const SABA: DiveSiteTemplate[] = [
         "Ridges of coral and rock about 3 m high lie just seaward of the mooring and give the site its name. Farther east they open into lava flows and sand chutes, and sulfur-colored sand near the mooring is warm to the touch.",
       marineLife: "Filefish · chromis · schoolmaster snapper · tarpon",
       marineLifeDescription:
-        "Shrimp, crabs and lobsters fill the ridges, and the sand alleys hold jawfish, blennies and lancer dragonets. Tarpon share the safety stop.",
+        "Shrimp, crabs, and lobsters fill the ridges, and the sand alleys hold jawfish, blennies and lancer dragonets. Tarpon share the safety stop.",
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
@@ -776,10 +776,10 @@ export const SABA: DiveSiteTemplate[] = [
       forecastLatitude: 17.6163,
       forecastLongitude: -63.2585,
       description:
-        "A mini-wall, huge boulders and a coral garden, with sponges and soft coral along the drop-off and a sand slope beyond it. It is one of Saba’s most popular dives. Night dives need staff approval and a briefed plan.",
+        "A mini-wall, huge boulders, and a coral garden, with sponges, and soft coral along the drop-off and a sand slope beyond it. It is one of Saba’s most popular dives. Night dives need staff approval and a briefed plan.",
       marineLife: "Black jacks · green turtles · garden eels · southern stingrays",
       marineLifeDescription:
-        "Garden eels and stingrays sit on the sand slope, with black jacks or barracuda around the boulders, and scorpionfish, frogfish and seahorses for those who look.",
+        "Garden eels and stingrays sit on the sand slope, with black jacks or barracuda around the boulders, and scorpionfish, frogfish, and seahorses for those who look.",
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
@@ -820,7 +820,7 @@ export const SABA: DiveSiteTemplate[] = [
       forecastLatitude: 17.6165,
       forecastLongitude: -63.2559,
       description:
-        "A small, steep-sided patch reef at the end of the Tent Reef system, often combined with a visit to Tent Reef. The deeper reef holds black coral, snappers and creole wrasse, with garden eels and stingrays on the shallower sand.",
+        "A small, steep-sided patch reef at the end of the Tent Reef system, often combined with a visit to Tent Reef. The deeper reef holds black coral, snappers and creole wrasse, with garden eels, and stingrays on the shallower sand.",
       marineLife: "Black coral · yellowtail snapper · creole wrasse · garden eels",
       marineLifeDescription:
         "Snappers and wrasse school over the deeper reef, and the shallower sand is home to garden eels, stingrays and jawfish.",
@@ -868,7 +868,7 @@ export const SABA: DiveSiteTemplate[] = [
         "Named for the island’s supermarket, which has a big rock outside, this Atlantic-side site has big rocks in the shallows. Uncommon highhats live around them, and barracuda and reef sharks are regular visitors.",
       marineLife: "Highhats · barracuda · Caribbean reef sharks · nurse sharks",
       marineLifeDescription:
-        "Highhats, barracuda and a few reef sharks pass through, and the occasional nurse shark egg case turns up.",
+        "Highhats, barracuda, and a few reef sharks pass through, and the occasional nurse shark egg case turns up.",
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
@@ -952,7 +952,7 @@ export const SABA: DiveSiteTemplate[] = [
         "Mushroom-shaped plate corals and lettuce corals shape the seascape. A northern route runs along a deeper wall, a southern route crosses a steep slope, and elkhorn coral heads sit under the boat at the end.",
       marineLife: "Great barracuda · cero · queen angelfish · hawksbill turtles",
       marineLifeDescription:
-        "Barracuda and cero pass along the wall, with queen angelfish, stingrays and hawksbills on the slope.",
+        "Barracuda and cero pass along the wall, with queen angelfish, stingrays, and hawksbills on the slope.",
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",

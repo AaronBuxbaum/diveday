@@ -2,7 +2,7 @@
   "home": {
     "eyebrow": "Dive shop software",
     "heroTitle": "Every diver booked, signed, checked and accounted for",
-    "heroDescription": "Welcome the next group knowing who’s ready and what each diver still needs. Bookings, forms and trip details stay together for the desk and dock crews.",
+    "heroDescription": "Welcome the next group knowing who’s ready and what each diver still needs. Bookings, forms, and trip details stay together for the desk and dock crews.",
     "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
     "diverDoor": "Booked a dive?",
     "diverDoorLink": "Find your booking",
@@ -98,7 +98,7 @@
       "item5": "One embed code for WordPress, Squarespace and Wix, with the line each one needs",
       "item6": "Verified diver reviews and the shop’s rating on the public schedule",
       "item7": "Review moderation that records a reason for every hide",
-      "item8": "Structured data and real titles on the schedule, trip, course and dive site pages",
+      "item8": "Structured data and real titles on the schedule, trip, course, and dive site pages",
       "item9": "Public pages in English or Spanish, switchable in the header, and each diver’s own links in the language they chose",
       "item10": "Whether the shop appears in search results is the shop’s own switch",
       "item11": "The next fourteen days of open seats, published in a form AI assistants can read"
@@ -117,8 +117,8 @@
     "certifications": {
       "item1": "Ready or Blocked for every diver on every departure, with the reason beside it",
       "item2": "Certification cards recorded by agency, level and number. A card a diver enters counts only once a person has checked it, and imported cards are marked imported",
-      "item3": "Cards from PADI, SSI, NAUI, SDI, TDI, CMAS, RAID, GUE, BSAC, NSS-CDS, NACD and IANTD, and from any other agency as Other agency",
-      "item4": "Level, Deep, Wreck, Night, Drysuit, nitrox and site gates in one readiness answer, plus a course’s minimum age where a date of birth is on file",
+      "item3": "Cards from PADI, SSI, NAUI, SDI, TDI, CMAS, RAID, GUE, BSAC, NSS-CDS, NACD, and IANTD, and from any other agency as Other agency",
+      "item4": "Level, Deep, Wreck, Night, Drysuit, nitrox, and site gates in one readiness answer, plus a course’s minimum age where a date of birth is on file",
       "item5": "Nitrox as a per-booking request, re-checked against the card every time it’s read",
       "item6": "Nitrox and specialty cards brought in from another system, held until a staff member confirms each one",
       "item7": "A seat sold to a diver whose course brings them to the level first, with boarding held for the card",
@@ -141,7 +141,7 @@
       "item4": "A blocked diver’s fix on their row in place of the Check in tap",
       "item5": "Not here? once the boat’s time has passed: the seat frees up and the wait list shows beside it, with no money moved",
       "item6": "Walk-ins seated at the desk, with their own details filled in on their phone from the code on the counter",
-      "item7": "A printed pass for a diver without a phone: the boat, the dock time and a code the counter scans",
+      "item7": "A printed pass for a diver without a phone: the boat, the dock time, and a code the counter scans",
       "item8": "A returning-diver search that carries cards, waivers, fit, and history onto a new booking"
     },
     "boatManifest": {
@@ -179,7 +179,7 @@
       "item9": "A rental prep list built from the sizes divers gave you, tanks split air and nitrox",
       "item10": "A shop packing checklist reused on every trip",
       "item11": "A rental price list: the full set, each piece, and nitrox by the dive",
-      "item12": "Units, service history and past rentals imported from a spreadsheet",
+      "item12": "Units, service history, and past rentals imported from a spreadsheet",
       "item13": "A Rentals list of everything out or reserved, by who has it: the units, the dates, and whether it’s paid",
       "item14": "Counter rentals for someone who isn’t on a boat, with an invoice when there’s a price",
       "item15": "Work orders for customers’ own gear: what came in, parts and labor, and a claim tag",
@@ -188,7 +188,7 @@
     "schedule": {
       "item1": "The schedule as a builder: add, move, copy, remove in place",
       "item2": "Repeating trips with no end date, edited and rolled forward as one",
-      "item3": "One page per departure, in four tabs: Divers, Boat, Gear and Details",
+      "item3": "One page per departure, in four tabs: Divers, Boat, Gear, and Details",
       "item4": "Multi-day departures with one roster, one waiver, one crew",
       "item5": "A minimum number of divers with a time to decide by, after which a departure that falls short cancels and refunds itself",
       "item6": "A weather blow-out in one tap: every diver emailed the departures they qualify for, online card payments refunded",
@@ -202,7 +202,7 @@
     "courses": {
       "item1": "Course pages with prices, prerequisites, plans, and dates, one agency’s ladder at a time",
       "item2": "A course catalog that reads in the order you teach it",
-      "item3": "Starter pages from PADI, SSI or SDI, copied in and made your own",
+      "item3": "Starter pages from PADI, SSI, or SDI, copied in and made your own",
       "item4": "A cover photo and up to eight more on each course page",
       "item5": "Seats on a PADI Open Water session capped by its instructors and assistants, and on any try dive by its instructors alone",
       "item6": "A course’s minimum age confirmed by whoever books online, and checked at boarding against the date of birth on the diver’s record",
@@ -218,7 +218,7 @@
       "item7": "Sales tax and VAT added through Stripe when the shop turns it on",
       "item8": "A nudge to the diver who reserved a seat and never finished paying",
       "item9": "Crew tips a diver starts from their own recap page, when the shop turns them on",
-      "item10": "A monthly report: revenue, bookings, seat fill, waivers and tips, per trip",
+      "item10": "A monthly report: revenue, bookings, seat fill, waivers, and tips, per trip",
       "item11": "Paid and refunded orders posted to QuickBooks as receipts"
     },
     "divers": {
@@ -236,7 +236,7 @@
       "item3": "An evening view: every boat home, who closed its last roll call, and what the day made",
       "item4": "A search that jumps to a diver, a departure, or a page",
       "item5": "Staff invited by email, with roles that have real boundaries",
-      "item6": "Your own timezone, currency, depth and water-temperature units",
+      "item6": "Your own timezone, currency, depth, and water-temperature units",
       "item7": "Two-factor sign-in and a list of active sessions for every staff account",
       "item8": "With two-factor on, a fresh code before an invoice, a refund or an export",
       "item9": "A year view of trips and divers, and a printable card of the year"
@@ -269,7 +269,7 @@
         },
         "step2": {
           "title": "Check bookings and balances together",
-          "detail": "Compare upcoming departures, deposits, refunds and outstanding balances before changing your booking link. Keep the original records and receipts."
+          "detail": "Compare upcoming departures, deposits, refunds, and outstanding balances before changing your booking link. Keep the original records and receipts."
         },
         "step3": {
           "title": "Review changes while both systems run",
@@ -390,9 +390,9 @@
       "heroTitle": "Give the crew a clear view of the next departure",
       "heroLede": "See who still needs a waiver or a certification check, prepare their gear and run roll call from the boat. Compare that work in DiveDay before replacing any part of DiveShop360.",
       "context": {
-        "item1": "DiveShop360 combines retail sales with dive-shop tools, including rentals, servicing and courses. Keep it if its register, inventory and vendor workflows are doing work you need. DiveDay is not a retail POS replacement.",
+        "item1": "DiveShop360 combines retail sales with dive-shop tools, including rentals, servicing, and courses. Keep it if its register, inventory and vendor workflows are doing work you need. DiveDay is not a retail POS replacement.",
         "item2": "Try DiveDay if you want trip preparation organized around each diver: the missing record, the kit to pack and the next roll-call checkpoint. The demo lets your crew judge that fit before an import.",
-        "item3": "DiveShop360’s FAQ lists customer, inventory, sales and certification exports. Review the actual files with us; the published list does not establish the columns your account will provide."
+        "item3": "DiveShop360’s FAQ lists customer, inventory, sales, and certification exports. Review the actual files with us; the published list does not establish the columns your account will provide."
       },
       "exportHeading": "Get your data out of DiveShop360",
       "exportIntro": "Start with customer and certification exports. DiveShop360 confirms those datasets are exportable; ask its support for the current steps and file format for your account.",
@@ -416,7 +416,7 @@
       },
       "exportNotes": {
         "note1": "The FAQ confirms exportable datasets, not a universal click path or file schema.",
-        "note2": "Keep inventory, sales and original signed documents for your own records, even when they are outside the contact import.",
+        "note2": "Keep inventory, sales, and original signed documents for your own records, even when they are outside the contact import.",
         "note3": "Open repair jobs and future bookings need separate preparation; a contact CSV does not create them."
       },
       "importerNote": "Start with contacts, then review how any certification rows identify the same diver. Imported records remain subject to the checks in the field reference below."
@@ -443,7 +443,7 @@
         },
         "step2": {
           "title": "Choose the records you need",
-          "detail": "Filter by submission date, waiver title or tag. Check the selection includes the participants and release versions you intend to retain."
+          "detail": "Filter by submission date, waiver title, or tag. Check the selection includes the participants and release versions you intend to retain."
         },
         "step3": {
           "title": "Select Export Waiver Data",
@@ -476,7 +476,7 @@
       "coexist": {
         "heading": "Choose what stays in FareHarbor",
         "intro": "Keep your booking channel while testing DiveDay with one departure, or move new direct bookings after the trial. Either path needs a clear handover for the crew.",
-        "bridgeNote": "There is no automatic connection to FareHarbor. CSV imports bring supported contacts and historical records; staff create upcoming departures and seat divers in DiveDay, then check new bookings, changes and cancellations in both places.",
+        "bridgeNote": "There is no automatic connection to FareHarbor. CSV imports bring supported contacts and historical records; staff create upcoming departures and seat divers in DiveDay, then check new bookings, changes, and cancellations in both places.",
         "replaceHeading": "Take new direct bookings in DiveDay",
         "replaceBody": "Your booking link can open the DiveDay schedule, with payment through your Stripe account. Test the booking and preparation flow, then review outstanding bookings and balances before replacing the link."
       },
@@ -514,14 +514,14 @@
           },
           "row8": {
             "theirs": "WordPress plugin",
-            "ours": "The same embed code, with the line WordPress, Squarespace or Wix needs"
+            "ours": "The same embed code, with the line WordPress, Squarespace, or Wix needs"
           },
           "row9": {
             "theirs": "Sites, FareHarbor’s hosted website",
             "ours": "Your storefront, included. It is already a website of its own"
           }
         },
-        "sitesNote": "If FareHarbor hosts your website, confirm ownership, hosting and cancellation terms with them. A booking-component change does not transfer the website itself.",
+        "sitesNote": "If FareHarbor hosts your website, confirm ownership, hosting, and cancellation terms with them. A booking-component change does not transfer the website itself.",
         "offerHeading": "Talk to us about your website",
         "offerBody": "Tell us what you need, and a person at DiveDay will discuss the website work with you. You can add our booking components to your existing site yourself."
       },
@@ -546,7 +546,7 @@
         },
         "step5": {
           "title": "Review booking history separately",
-          "detail": "Use a booking report for past visits, keeping source booking references. Future seats, deposits and later changes need a separate handover."
+          "detail": "Use a booking report for past visits, keeping source booking references. Future seats, deposits, and later changes need a separate handover."
         }
       },
       "exportNotes": {
@@ -562,7 +562,7 @@
         "keepTitle": "Keep FareHarbor for bookings",
         "keepBody": "Booking and distribution stay in FareHarbor. Import contacts and historical visits from CSVs. Staff then create departures and seat upcoming bookings in DiveDay; the import does not create a live roster.",
         "keepFlow": "Contacts and history CSV → staff import; upcoming bookings → staff create and seat in DiveDay",
-        "keepReview": "Staff reconcile new bookings, changes and cancellations in both systems. Check export options and the work this requires before relying on this setup.",
+        "keepReview": "Staff reconcile new bookings, changes, and cancellations in both systems. Check export options and the work this requires before relying on this setup.",
         "moveTitle": "Take new bookings in DiveDay",
         "moveBody": "Point your booking link to DiveDay’s schedule and take payment through your Stripe account. Staff review imported records before the first trip.",
         "moveFlow": "Your booking link → DiveDay schedule → trip preparation",
@@ -576,7 +576,7 @@
         "supported": "Supported when supplied separately",
         "rows": {
           "contacts": {
-            "title": "Names, email and phone",
+            "title": "Names, email, and phone",
             "route": "Contacts CSV",
             "review": "Preview the file and match the columns; export availability may vary."
           },
@@ -604,18 +604,18 @@
       },
       "importStep": {
         "title": "Import contacts, then prepare upcoming trips",
-        "detail": "Import the supported contact fields and review any booking history separately. These imports do not create upcoming bookings or supply the certification, rental-size, waiver and medical records missing from the described exports."
+        "detail": "Import the supported contact fields and review any booking history separately. These imports do not create upcoming bookings or supply the certification, rental-size, waiver, and medical records missing from the described exports."
       },
       "cutover": {
         "heading": "Plan the handover",
-        "intro": "The timing depends on your export, record quality, staff training and upcoming bookings.",
+        "intro": "The timing depends on your export, record quality, staff training, and upcoming bookings.",
         "prepare": {
           "title": "Prepare upcoming departures in DiveDay",
           "detail": "Create the trips and add each diver to the right departure. Collect missing records separately and check readiness before boarding; imported history is not a live booking."
         },
         "reconcile": {
           "title": "Keep both systems aligned by hand",
-          "detail": "For each trip cycle, staff reconcile new bookings, changes and cancellations in FareHarbor and DiveDay. Re-importing contacts updates matched diver records; staff still update live bookings in each system."
+          "detail": "For each trip cycle, staff reconcile new bookings, changes, and cancellations in FareHarbor and DiveDay. Re-importing contacts updates matched diver records; staff still update live bookings in each system."
         },
         "timing": {
           "title": "Set the handover date after a trial",
@@ -638,7 +638,7 @@
       "coexist": {
         "heading": "Choose what stays in Rezdy",
         "intro": "Keep your booking channel while testing DiveDay with one departure, or move new direct bookings after the trial. Either path needs a clear handover for the crew.",
-        "bridgeNote": "There is no automatic connection to Rezdy. CSV imports bring supported contacts and historical records; staff create upcoming departures and seat divers in DiveDay, then check new bookings, changes and cancellations in both places.",
+        "bridgeNote": "There is no automatic connection to Rezdy. CSV imports bring supported contacts and historical records; staff create upcoming departures and seat divers in DiveDay, then check new bookings, changes, and cancellations in both places.",
         "replaceHeading": "Take new direct bookings in DiveDay",
         "replaceBody": "Your booking link can open the DiveDay schedule, with payment through your Stripe account. Test the booking and preparation flow, then review outstanding bookings and balances before replacing the link."
       },
@@ -663,12 +663,12 @@
         },
         "step5": {
           "title": "Prepare future departures outside the history import",
-          "detail": "Create the departures and add their divers in DiveDay. Compare deposits, cancellations and reschedules with Rezdy before using the new roster."
+          "detail": "Create the departures and add their divers in DiveDay. Compare deposits, cancellations, and reschedules with Rezdy before using the new roster."
         }
       },
       "exportNotes": {
         "note1": "The linked report instructions are the source for the export steps. Your account permissions and report selection still matter.",
-        "note2": "Custom questions, certification evidence and size information need a review of the actual file.",
+        "note2": "Custom questions, certification evidence, and size information need a review of the actual file.",
         "note3": "Original waiver documents and payment credentials are not implied by an order CSV. Keep the evidence your shop needs separately.",
         "note4": "Contact updates are not booking updates. Staff must check changes in both systems while they run together."
       },
@@ -682,7 +682,7 @@
       "heroTitle": "Follow each diver from their booking to the roll call",
       "heroLede": "If you are using Peek Pro and still assembling diver records for the crew, try preparing a departure in DiveDay. See the missing forms and certification checks together, then take that roster onto the boat.",
       "context": {
-        "item1": "Peek Pro already offers online bookings, digital waivers, resource management and distribution. Bring a real departure to the comparison so you can judge the work your crew does next.",
+        "item1": "Peek Pro already offers online bookings, digital waivers, resource management, and distribution. Bring a real departure to the comparison so you can judge the work your crew does next.",
         "item2": "Keep Peek where its sales channels, rental setup or checkout are working well for you. Try DiveDay if the crew still has to join participant details, certification requirements and roll call by hand.",
         "item3": "Ask Peek support which customer and booking files your account can export. Send us a sample; we’ll check what can move before you change systems."
       },
@@ -710,7 +710,7 @@
         },
         "step4": {
           "title": "Plan the live-booking handover",
-          "detail": "List future departures, participants, deposits and unresolved refunds. Staff prepare those separately; historical imports do not reserve live seats."
+          "detail": "List future departures, participants, deposits, and unresolved refunds. Staff prepare those separately; historical imports do not reserve live seats."
         }
       },
       "exportNotes": {
@@ -734,7 +734,7 @@
     "founderRole": "Founder",
     "buildEyebrow": "What comes first",
     "buildTitle": "The one job on a boat that can’t go wrong",
-    "buildDescription": "The roll call is the one record on a dive day that has to be right the first time, so it is where DiveDay starts. The booking, the waiver, the certification check, the gear sizes and the payment each have a screen of their own, and every one of those screens is there so that the captain opens the manifest with the records in order and the only job left is reading the names.",
+    "buildDescription": "The roll call is the one record on a dive day that has to be right the first time, so it is where DiveDay starts. The booking, the waiver, the certification check, the gear sizes, and the payment each have a screen of their own, and every one of those screens is there so that the captain opens the manifest with the records in order and the only job left is reading the names.",
     "rules": {
       "survivesDock": {
         "title": "The roll call runs with no signal",
@@ -760,7 +760,7 @@
   "product": {
     "eyebrow": "Features",
     "heroTitle": "From the first booking to the roll call after the last dive",
-    "heroDescription": "Keep bookings, diver records and trip preparation together, from the front desk to the captain’s phone.",
+    "heroDescription": "Keep bookings, diver records, and trip preparation together, from the front desk to the captain’s phone.",
     "boxDescription": "Before the dive day, on the day and across the season are all in one plan.",
     "whatsInIt": "What’s in it",
     "closingTitle": "Try a morning at the demo shop",
@@ -807,13 +807,13 @@
     "notes": {
       "title": "Notes",
       "note1": "Every staff login is in the price, front desk to captain. Nothing is counted per seat.",
-      "note2": "Waivers, medical review and the cert gate are in the price. None of it is an add-on."
+      "note2": "Waivers, medical review, and the cert gate are in the price. None of it is an add-on."
     },
     "seeFullList": "The full list is on the product page →",
     "feeAnchor": {
       "title": "Compare the fees your shop pays",
-      "rezdy": "{competitor} publishes monthly plans with online-booking fees. The plan, market and booking channel matter, so compare the terms for your shop.",
-      "fareharbor": "{competitor} sets fees in its provider agreement. Check your booking, payment, distribution and website terms rather than relying on a single advertised percentage.",
+      "rezdy": "{competitor} publishes monthly plans with online-booking fees. The plan, market, and booking channel matter, so compare the terms for your shop.",
+      "fareharbor": "{competitor} sets fees in its provider agreement. Check your booking, payment, distribution, and website terms rather than relying on a single advertised percentage.",
       "ours": "DiveDay takes no cut of a booking. What you pay is the number above, in August and in January.",
       "sourcesNote": "The switching guides link to the providers’ pricing or terms. Keep your current agreement beside the comparison.",
       "guideLink": "What moving off {competitor} looks like →"
@@ -828,11 +828,11 @@
     "faq": {
       "billing": {
         "question": "How does billing work?",
-        "answer": "Month to month, per location, with no setup fee and no annual contract."
+        "answer": "Month to month, per location, with no setup fee, and no annual contract."
       },
       "crewSize": {
         "question": "Do I pay more as my crew grows?",
-        "answer": "No. The price is per location, whoever is on the schedule: front desk, instructors, divemasters, captains and crew each get a login. Divers never need an account. They book on your shop’s pages and open their trip from a link."
+        "answer": "No. The price is per location, whoever is on the schedule: front desk, instructors, divemasters, captains, and crew each get a login. Divers never need an account. They book on your shop’s pages and open their trip from a link."
       },
       "setupTime": {
         "question": "What do I have to do to get set up?",
@@ -852,7 +852,7 @@
       },
       "pos": {
         "question": "Does DiveDay replace my POS?",
-        "answer": "No. Keep your register. DiveDay runs bookings, courses, readiness, prep and the boat, paid through your own Stripe account. An order can carry a retail line, and there is no register or stock count."
+        "answer": "No. Keep your register. DiveDay runs bookings, courses, readiness, prep, and the boat, paid through your own Stripe account. An order can carry a retail line, and there is no register or stock count."
       },
       "whyFounding": {
         "question": "Why be a founding shop?",
@@ -911,14 +911,14 @@
       "shopTerm": "With a dive shop",
       "shopBody": "we are the software they run their business on. Their staff hold accounts with us, and we hold what they put in.",
       "diverTerm": "With a shop’s divers",
-      "diverBody": "we hold data on the shop’s instruction. A waiver, medical answers and certification evidence are the shop’s records, in the shop’s own tenant. They are not sold or used to train anything, and they never move between shops. A diver wanting to see or delete their record should ask their shop, which can do both from inside DiveDay. DiveDay’s own 30-day copy of AI suggestions sits outside that record, and a diver can ask us to see it."
+      "diverBody": "we hold data on the shop’s instruction. A waiver, medical answers, and certification evidence are the shop’s records, in the shop’s own tenant. They are not sold or used to train anything, and they never move between shops. A diver wanting to see or delete their record should ask their shop, which can do both from inside DiveDay. DiveDay’s own 30-day copy of AI suggestions sits outside that record, and a diver can ask us to see it."
     },
     "collect": {
       "heading": "What is stored",
       "staffTerm": "Shop accounts",
       "staffBody": "a name, an email address, a hashed password, and the shop and role the account belongs to.",
       "diversTerm": "Diver records",
-      "diversBody": "name, contact details, an emergency contact, certification level and the evidence a shop verifies against, rental sizes, and the bookings they hold.",
+      "diversBody": "name, contact details, an emergency contact, certification level, and the evidence a shop verifies against, rental sizes, and the bookings they hold.",
       "waiversTerm": "Waivers and medical answers",
       "waiversBody": "the signed release and the health questionnaire a shop asks before a dive. This is the most sensitive thing in the system and is treated that way: it renders only to the shop’s own staff and to the diver holding the link, and it never appears in a log line or an analytics event.",
       "paymentsTerm": "Payments",
@@ -932,7 +932,7 @@
     },
     "where": {
       "heading": "Where it is processed",
-      "body": "Primarily in the United States. The database is Neon, the application and its file storage run on Vercel, and the mail, messaging, backup and monitoring pieces run in AWS. Vercel serves the site from wherever the reader is, so a request is first answered near them before it reaches the United States."
+      "body": "Primarily in the United States. The database is Neon, the application and its file storage run on Vercel, and the mail, messaging, backup, and monitoring pieces run in AWS. Vercel serves the site from wherever the reader is, so a request is first answered near them before it reaches the United States."
     },
     "processors": {
       "heading": "Who else touches it",
@@ -948,12 +948,12 @@
       "neonTerm": "Neon",
       "neonBody": "the database itself.",
       "anthropicTerm": "Anthropic",
-      "anthropicBody": "Claude, the AI model behind DiveDay’s suggestions, and only for a shop that has them turned on. It receives only what a suggestion needs. Across all of them, that is: messages divers send the shop, with the shop’s earlier replies in the same conversation, and replies staff ask it to draft, sort or translate, with the shop’s schedule, open seats and prices; a booking ask, from an email or a staffer’s note of a phone call; two diver records staff are comparing as a possible duplicate, sent as each one’s name, date of birth, email address before the @, last four phone digits, certification levels and the months the shop first and last saw them; a diver’s own note about the gear they rent; a certification card photo, from staff or from a diver registering with the shop, read and then discarded; the column headers DiveDay could not match, a few masked sample values and the level spellings of a file being imported; the shop’s blank waiver form; the shop’s own website; the text and details the shop wrote for its trips, courses and dive sites; review comments; work-order notes; the words the crew type or dictate about what they saw, with the sightings, sites and conditions they logged; the words a staffer types to search the diver list; and the counts in the shop’s weekly digest. Answers to the medical questionnaire, and the medical alert a diver writes for the crew, are never sent. A message, note or review goes as it was written, so anything a diver chose to put in it goes too. Anthropic processes this only to answer the request, under its commercial terms, does not train its models on it, and deletes it within 30 days, unless a request is flagged under its usage policy. DiveDay keeps its own copy of what was sent and what came back for 30 days, so we can find and fix a suggestion that went wrong. Only DiveDay can read it; the shop cannot, and it is not in the shop’s export. A diver can ask us to see it. When a reply draft finds that a diver asked about their health, the copy of that draft keeps none of the message; another suggestion that read the same message, such as sorting it, keeps it as written. A photo or a PDF itself is never kept, but what the suggestion read off it is, such as a card number or the text of the shop’s blank waiver form. A website’s pages are not kept either, only their addresses. Erasing a diver deletes everything kept for that shop; for anyone else, it goes when its 30 days are up. A copy already in our backups stays there until that backup expires.",
+      "anthropicBody": "Claude, the AI model behind DiveDay’s suggestions, and only for a shop that has them turned on. It receives only what a suggestion needs. Across all of them, that is: messages divers send the shop, with the shop’s earlier replies in the same conversation, and replies staff ask it to draft, sort or translate, with the shop’s schedule, open seats, and prices; a booking ask, from an email or a staffer’s note of a phone call; two diver records staff are comparing as a possible duplicate, sent as each one’s name, date of birth, email address before the @, last four phone digits, certification levels, and the months the shop first and last saw them; a diver’s own note about the gear they rent; a certification card photo, from staff or from a diver registering with the shop, read and then discarded; the column headers DiveDay could not match, a few masked sample values and the level spellings of a file being imported; the shop’s blank waiver form; the shop’s own website; the text and details the shop wrote for its trips, courses and dive sites; review comments; work-order notes; the words the crew type or dictate about what they saw, with the sightings, sites, and conditions they logged; the words a staffer types to search the diver list; and the counts in the shop’s weekly digest. Answers to the medical questionnaire, and the medical alert a diver writes for the crew, are never sent. A message, note, or review goes as it was written, so anything a diver chose to put in it goes too. Anthropic processes this only to answer the request, under its commercial terms, does not train its models on it, and deletes it within 30 days, unless a request is flagged under its usage policy. DiveDay keeps its own copy of what was sent and what came back for 30 days, so we can find and fix a suggestion that went wrong. Only DiveDay can read it; the shop cannot, and it is not in the shop’s export. A diver can ask us to see it. When a reply draft finds that a diver asked about their health, the copy of that draft keeps none of the message; another suggestion that read the same message, such as sorting it, keeps it as written. A photo or a PDF itself is never kept, but what the suggestion read off it is, such as a card number or the text of the shop’s blank waiver form. A website’s pages are not kept either, only their addresses. Erasing a diver deletes everything kept for that shop; for anyone else, it goes when its 30 days are up. A copy already in our backups stays there until that backup expires.",
       "sentryTerm": "Sentry",
-      "sentryBody": "error reporting. When something breaks, the crash is sent here so we can fix it. The address of the page is stripped of any token before it goes. Passwords, cookies and form contents are never sent; an error message can mention the booking or diver it was working on.",
+      "sentryBody": "error reporting. When something breaks, the crash is sent here so we can fix it. The address of the page is stripped of any token before it goes. Passwords, cookies, and form contents are never sent; an error message can mention the booking or diver it was working on.",
       "googleTerm": "Google",
       "googleBody": "the embedded map on a dive-site briefing and on a diver’s trip-prep page. Opening one of those pages reaches Google directly, so it sees the request the way any embedded map does; the page’s own link is withheld from it.",
-      "pushTerm": "Apple, Google, Mozilla and Microsoft",
+      "pushTerm": "Apple, Google, Mozilla, and Microsoft",
       "pushBody": "browser push notifications for staff who turn them on. Each gets a device address and an encrypted payload it cannot read."
     },
     "links": {
@@ -966,7 +966,7 @@
       "sendsTerm": "What it sends to the agency",
       "sendsBody": "the diver’s name and what that agency’s form asks for, a birth date or a card number, and only to the agency the staff member chose, as typing them in would. For a course student’s PADI eLearning, the student’s email goes to PADI.",
       "readsTerm": "What it reads",
-      "readsBody": "the agency’s answer. On the PADI Pros’ Site, which a staff member opens under their own shop’s PADI sign-in, it hands back only the lines about that diver, and for a student’s eLearning only the student’s own lines. When a check fails, it may send DiveDay the page’s structure (its labels, button words and headings, never anything typed into it or anyone’s details) so the reader can be fixed.",
+      "readsBody": "the agency’s answer. On the PADI Pros’ Site, which a staff member opens under their own shop’s PADI sign-in, it hands back only the lines about that diver, and for a student’s eLearning only the student’s own lines. When a check fails, it may send DiveDay the page’s structure (its labels, button words, and headings, never anything typed into it or anyone’s details) so the reader can be fixed.",
       "keepsTerm": "What DiveDay keeps",
       "keepsBody": "when the answer shows the card, the agency’s words for it become the card’s review note, with the name of the staff member whose browser checked. When the page lists other cards for the diver and a staff member adds them, the agency’s lines for the diver become those cards’ review notes too. Otherwise nothing from the agency’s page is kept.",
       "neverTerm": "What it never does",
@@ -991,9 +991,9 @@
     "out": {
       "heading": "Getting data out, and getting it deleted",
       "exportTerm": "Export",
-      "exportBody": "A shop can download its records from DiveDay as one ZIP, from its own settings, on any day, without asking us and without a fee. It is the same bundle our own backups are made of. A few internal tables are left out of it (delivery retry mechanics, device registrations, the sealed credentials for a shop’s own backup destination, and DiveDay’s own 30-day copy of what AI suggestions were sent and answered). That copy is the one left out that can hold a diver’s words, and a diver can ask us to see it.",
+      "exportBody": "A shop can download its records from DiveDay as one ZIP, from its own settings, on any day, without asking us, and without a fee. It is the same bundle our own backups are made of. A few internal tables are left out of it (delivery retry mechanics, device registrations, the sealed credentials for a shop’s own backup destination, and DiveDay’s own 30-day copy of what AI suggestions were sent and answered). That copy is the one left out that can hold a diver’s words, and a diver can ask us to see it.",
       "diverCopyTerm": "A diver’s own copy",
-      "diverCopyBody": "A diver may ask a shop for a copy of what it holds about them, and staff can download it from the diver’s own record page as one ZIP: their bookings, certifications, waivers with the medical answers on them, payments, messages and reviews at that shop, never another diver’s.",
+      "diverCopyBody": "A diver may ask a shop for a copy of what it holds about them, and staff can download it from the diver’s own record page as one ZIP: their bookings, certifications, waivers with the medical answers on them, payments, messages, and reviews at that shop, never another diver’s.",
       "erasureTerm": "Erasure",
       "erasureBody": "A shop can erase a diver’s record. Where that record reached a payment processor, the erasure is tracked as owed until it is discharged rather than being declared done at our own edge. A customer object DiveDay deletes itself and confirms. An invoice a processor has already issued is a request a person has to file, and the shop can see it sitting there until they do."
     },
@@ -1032,7 +1032,7 @@
     "intro": "Plain terms for an early-access product: how DiveDay is meant to be used, what we do and do not promise, and what happens when a shop wants to leave.",
     "what": {
       "heading": "What DiveDay is",
-      "body": "Software a dive shop uses to run bookings, waivers, certification checks, trip prep and boat manifests. It is a tool the shop operates, not a service that operates the shop. Every judgment that matters on a dock (whether a diver is fit to dive, a certification genuine, or a boat ready to sail) stays with the shop’s own staff. DiveDay shows what it has been told, refuses to hide a gap, and does not decide."
+      "body": "Software a dive shop uses to run bookings, waivers, certification checks, trip prep, and boat manifests. It is a tool the shop operates, not a service that operates the shop. Every judgment that matters on a dock (whether a diver is fit to dive, a certification genuine, or a boat ready to sail) stays with the shop’s own staff. DiveDay shows what it has been told, refuses to hide a gap, and does not decide."
     },
     "account": {
       "heading": "The shop’s side",
@@ -1053,11 +1053,11 @@
       "feeTerm": "The fee",
       "feeBody": "{percent} of the money your shop records as received in DiveDay in a calendar month{hasBase, select, yes {, with a base fee of {base} each month on top} other {}}. The month follows your shop’s own timezone.",
       "countsTerm": "What counts",
-      "countsBody": "money your shop records as received in DiveDay by any payment method, including cash and external payments. A deposit counts when recorded received, and only the later balance counts when it arrives. Unpaid bookings, package redemptions and imported history do not count. Packages count once at sale. Separately recorded tips, tax, park fees and other pass-through charges are excluded. Without a separate tax breakdown, the recorded amount counts in full.",
+      "countsBody": "money your shop records as received in DiveDay by any payment method, including cash and external payments. A deposit counts when recorded received, and only the later balance counts when it arrives. Unpaid bookings, package redemptions, and imported history do not count. Packages count once at sale. Separately recorded tips, tax, park fees, and other pass-through charges are excluded. Without a separate tax breakdown, the recorded amount counts in full.",
       "refundsTerm": "Refunds",
       "refundsBody": "a recorded refund or correction reverses the fee on that money at the rate and rounding of its original statement. A later statement applies the credit once. Unused fee credit carries forward in the same currency, and never expires because a month has no collections. A failed refund reverses its credit. Contact us to settle unused credit after cancellation.",
       "statementTerm": "A monthly statement",
-      "statementBody": "early in the next month, Settings shows recorded collections, the rate, refund credits, any credit carried forward and the fee separately for each currency. Amounts are never converted or combined across currencies. Automatic billing currently supports USD only; other currencies need an agreed billing setup before any charge. The running estimate is before credits.",
+      "statementBody": "early in the next month, Settings shows recorded collections, the rate, refund credits, any credit carried forward, and the fee separately for each currency. Amounts are never converted or combined across currencies. Automatic billing currently supports USD only; other currencies need an agreed billing setup before any charge. The running estimate is before credits.",
       "whoPaysTerm": "Who pays the fee",
       "whoPaysBody": "the shop, never the diver. DiveDay adds nothing to a diver’s price or checkout.",
       "noticeTerm": "Changes to the plan",
@@ -1117,21 +1117,21 @@
       "name": "Online booking",
       "summary": "Divers book and pay for seats from your schedule, and a boat stops selling once it’s full.",
       "metaTitle": "Online booking for dive shops",
-      "metaDescription": "Divers book their own seats at any hour, with rental gear, a nitrox request and payment in one pass, after reading the certification the trip needs. Seats come off the boat’s capacity, so a trip can’t be oversold.",
+      "metaDescription": "Divers book their own seats at any hour, with rental gear, a nitrox request, and payment in one pass, after reading the certification the trip needs. Seats come off the boat’s capacity, so a trip can’t be oversold.",
       "title": "Divers book while you’re out on the water",
-      "lede": "Divers see the trip’s certification requirements before booking. Your schedule takes their booking, rental gear, nitrox request and payment, and stops selling when the departure is full.",
-      "screenLabel": "A departure’s booking panel as a diver sees it: the certification the trip asks for, seats left, divers, rental gear and nitrox, and the total.",
+      "lede": "Divers see the trip’s certification requirements before booking. Your schedule takes their booking, rental gear, nitrox request, and payment, and stops selling when the departure is full.",
+      "screenLabel": "A departure’s booking panel as a diver sees it: the certification the trip asks for, seats left, divers, rental gear, and nitrox, and the total.",
       "note1": "The certification the trip asks for sits above the button, where a diver reads it before paying.",
       "note2": "Seats left is the boat’s capacity less every seat sold or held, counted again as the booking saves.",
       "note3": "Nitrox is priced per dive, and a diver who asks without a checked nitrox card is planned on air.",
       "step1Title": "Put the schedule where divers look",
       "step1Body": "Your departures have their own DiveDay page, and a Book Now button or the calendar pastes onto the site you already have.",
       "step2Title": "Divers choose their seats",
-      "step2Body": "They choose how many divers, rental gear and nitrox, then pay in full or leave a deposit. A party organizer receives a claim link for each person they named.",
+      "step2Body": "They choose how many divers, rental gear, and nitrox, then pay in full or leave a deposit. A party organizer receives a claim link for each person they named.",
       "step3Title": "The booking lands on the departure",
       "step3Body": "A confirmation goes to the diver, with the waiver link in its own email when the trip needs one. The seat appears on the departure’s Divers tab with whatever is still missing.",
       "faq1Q": "Can divers book from my own website?",
-      "faq1A": "Yes. Paste a Book Now button, a booking window or the calendar onto the site you have. WordPress, Squarespace and Wix take the same code.",
+      "faq1A": "Yes. Paste a Book Now button, a booking window or the calendar onto the site you have. WordPress, Squarespace, and Wix take the same code.",
       "faq2Q": "What happens when a departure fills up?",
       "faq2A": "It stops selling seats and offers its wait list instead. When a seat frees up, staff invite whoever on it fits, by email, in one tap.",
       "faq3Q": "Can a group book together?",
@@ -1145,7 +1145,7 @@
       "metaTitle": "Dive shop website and booking page",
       "metaDescription": "A booking page in your shop’s color, typeface and photos, plus a Book Now button, calendar and trip grid for WordPress, Squarespace or Wix.",
       "title": "A booking page that looks like your shop",
-      "lede": "Give divers a feel for your shop before they arrive, with your photos, colors and typeface. Reviews come only from divers who dived with you. Add booking buttons to your own site, or reach out to discuss a new one.",
+      "lede": "Give divers a feel for your shop before they arrive, with your photos, colors, and typeface. Reviews come only from divers who dived with you. Add booking buttons to your own site, or reach out to discuss a new one.",
       "screenLabel": "A shop’s public booking page: the shop’s name and rating, the next boat with space, and the week’s departures.",
       "note1": "The shop’s color, the typeface on its name and “Since 1987” are set once, in Settings.",
       "note2": "The next boat with space comes first, for the diver who wants to go out tomorrow.",
@@ -1153,9 +1153,9 @@
       "step1Title": "Set your look",
       "step1Body": "Choose a color, a typeface and a cover photo, then add your agency badges and photos of the shop.",
       "step2Title": "Put booking on your site",
-      "step2Body": "Copy one code for a Book Now button, a booking window, the calendar, a trip grid, one departure or your courses. It picks up your site’s color and typeface.",
+      "step2Body": "Copy one code for a Book Now button, a booking window, the calendar, a trip grid, one departure, or your courses. It picks up your site’s color and typeface.",
       "step3Title": "Let search engines read the trips",
-      "step3Body": "Each trip, course and dive site page carries its price, open seats and rating in the form search engines read, and you decide whether the shop is listed.",
+      "step3Body": "Each trip, course, and dive site page carries its price, open seats and rating in the form search engines read, and you decide whether the shop is listed.",
       "faq1Q": "I don’t have a website. Can you make one?",
       "faq1A": "Reach out to discuss what you need with a person at DiveDay. If you already have a site, you can add our booking buttons, calendar and trip grid yourself.",
       "faq2Q": "Will the booking button work on WordPress, Squarespace and Wix?",
@@ -1172,7 +1172,7 @@
       "metaDescription": "Divers sign your release and the 2026 diver medical questionnaire from home. An answer that refers the diver to a doctor holds them until staff record a physician’s clearance.",
       "title": "Waivers and medical forms come back signed before the diver walks in",
       "lede": "Divers sign at home from the link emailed when they book, and an answer that refers them to a doctor keeps them off the boat until a physician’s clearance is on file.",
-      "screenLabel": "The waiver page on a diver’s phone: the release, the medical questions and the typed signature.",
+      "screenLabel": "The waiver page on a diver’s phone: the release, the medical questions, and the typed signature.",
       "note1": "The link stays open for seven days and saves each answer as the diver goes.",
       "note2": "The signature is typed, and the signed record is sealed so a later change to it can be detected.",
       "note3": "A yes that needs a doctor tells the diver at once, and holds them until staff record the sign-off.",
@@ -1193,17 +1193,17 @@
     },
     "certifications": {
       "name": "Certification checks",
-      "summary": "Each diver is Ready or Blocked for each departure, with the missing card, form or payment named.",
+      "summary": "Each diver is Ready or Blocked for each departure, with the missing card, form, or payment named.",
       "metaTitle": "Dive certification checks for every departure",
-      "metaDescription": "DiveDay checks each diver’s cards against what the departure and its dive sites ask for, such as deep, wreck, night or nitrox, and names what is missing days before the boat leaves.",
+      "metaDescription": "DiveDay checks each diver’s cards against what the departure and its dive sites ask for, such as deep, wreck, night, or nitrox, and names what is missing days before the boat leaves.",
       "title": "Know what each diver needs before departure",
-      "lede": "DiveDay checks each diver against the level and the Deep, Wreck or nitrox card the departure and its sites ask for, plus the waiver, medical form and payment it requires, and names what’s missing.",
+      "lede": "DiveDay checks each diver against the level and the Deep, Wreck or nitrox card the departure and its sites ask for, plus the waiver, medical form, and payment it requires, and names what’s missing.",
       "screenLabel": "Today in DiveDay: a departure’s readiness bar, then the Needs you list with the reason beside each name.",
       "note1": "The bar is the departure’s seats: green for ready divers, red for blocked ones, the rest still open.",
       "note2": "A card a diver entered that nobody has checked keeps them blocked until someone on staff does.",
       "note3": "Each row says what is in the way and the boat it’s for, and names the diver when they’re the only one.",
       "step1Title": "The departure sets the bar",
-      "step1Body": "Pick the level a departure needs and any Deep, Wreck, Night or Drysuit card, on the departure or on its sites. A departure can also require a nitrox card.",
+      "step1Body": "Pick the level a departure needs and any Deep, Wreck, Night, or Drysuit card, on the departure or on its sites. A departure can also require a nitrox card.",
       "step2Title": "Cards come in with the diver",
       "step2Body": "Divers add their agency, level and number from their trip link after they book, and staff mark a card certified once they’ve checked it with the agency.",
       "step3Title": "Desk and dock read the same answer",
@@ -1231,7 +1231,7 @@
       "step1Title": "From booking to the week before",
       "step1Body": "The confirmation goes out at booking, and the waiver link follows in its own email when the trip needs one. A week before, a reminder lists anything the diver still has to do, by email with a text alongside.",
       "step2Title": "The day before",
-      "step2Body": "The second reminder is a brief: the dock time, the conditions, what to bring and who to text, linked to the diver’s own trip page.",
+      "step2Body": "The second reminder is a brief: the dock time, the conditions, what to bring, and who to text, linked to the diver’s own trip page.",
       "step3Title": "After the dive",
       "step3Body": "The recap shows the sites, a note from the crew and the photos, and asks how the day went.",
       "faq1Q": "Can a diver reply to a reminder?",
@@ -1257,13 +1257,13 @@
       "step1Title": "Arrivals open on the day",
       "step1Body": "In the hours around a departure, its Divers tab shows the count and a Check in tap beside every diver who’s ready, each with an undo.",
       "step2Title": "Fix what’s missing at the desk",
-      "step2Body": "A blocked diver’s row carries its own fix: send the waiver, record a paper release, take the payment or confirm who they are.",
+      "step2Body": "A blocked diver’s row carries its own fix: send the waiver, record a paper release, take the payment, or confirm who they are.",
       "step3Title": "Walk-ins and no-shows",
       "step3Body": "Add a walk-in from the tab, or let them fill in their details on their own phone from the code on your counter, then seat them. Once the boat’s time passes, Not here? frees the seat and shows who is waiting for it.",
       "faq1Q": "What if a diver can’t remember which boat they’re on?",
-      "faq1A": "Search by name, phone or email from DiveDay’s opening screen, or scan the code on their confirmation. It looks across every departure from six hours ago to a day and a half ahead.",
+      "faq1A": "Search by name, phone, or email from DiveDay’s opening screen, or scan the code on their confirmation. It looks across every departure from six hours ago to a day and a half ahead.",
       "faq2Q": "Can a walk-in fill in their own details?",
-      "faq2A": "Yes. The code on your counter card opens a form on their phone for their name, contact details, certification and rental sizes, and a walk-in is sent the release, by text if they gave a phone number and no email. Then seat them from the Divers tab.",
+      "faq2A": "Yes. The code on your counter card opens a form on their phone for their name, contact details, certification, and rental sizes, and a walk-in is sent the release, by text if they gave a phone number and no email. Then seat them from the Divers tab.",
       "faq3Q": "What happens when someone doesn’t show?",
       "faq3A": "Once the boat’s time has passed, mark them Not here. Their seat opens, the wait list shows beside it, and nothing is charged or refunded by that tap.",
       "closeTitle": "Check in the divers on the next demo boat",
@@ -1291,7 +1291,7 @@
       "faq2Q": "Can we print the manifest?",
       "faq2A": "Yes. The trip packet prints the dive plan, the manifest with its roll call and the emergency card you fill in (your nearest chamber, DAN, the coast guard), and the packing list.",
       "faq3Q": "What does a diver see while we’re out?",
-      "faq3A": "Their own trip link shows a line about the boat each time the crew taps a stage: boarding, out at the site, on the surface, heading in and back at the dock.",
+      "faq3A": "Their own trip link shows a line about the boat each time the crew taps a stage: boarding, out at the site, on the surface, heading in, and back at the dock.",
       "closeTitle": "Call the roll on the demo boat as its captain",
       "demoPlace": "the day’s boats, as the captain"
     },
@@ -1299,10 +1299,10 @@
       "name": "Dive sites and briefings",
       "summary": "Each site’s route, landmarks and marine life written once, and shown to every diver on a boat that goes there.",
       "metaTitle": "Dive site briefings for your divers",
-      "metaDescription": "Write each dive site once: depth, route, landmarks with photos and what lives there. Every diver booked on a boat to that site reads the briefing before they come.",
+      "metaDescription": "Write each dive site once: depth, route, landmarks with photos, and what lives there. Every diver booked on a boat to that site reads the briefing before they come.",
       "title": "Let divers picture the dive before they arrive",
-      "lede": "Share the route, the landmarks and the recent sightings that make a site worth looking forward to. Depth, maps and photos stay together on each diver’s trip page.",
-      "screenLabel": "A dive site briefing as divers read it before the trip: the site, its depth and time in the water, the route, and what has been seen there this month.",
+      "lede": "Share the route, the landmarks and the recent sightings that make a site worth looking forward to. Depth, maps, and photos stay together on each diver’s trip page.",
+      "screenLabel": "A dive site briefing as divers read it before the trip: the site, its depth, and time in the water, the route, and what has been seen there this month.",
       "note1": "Depth is the site’s own, in your shop’s units, and time in the water is your usual for that dive.",
       "note2": "The route starts at a hollow circle and finishes at a filled one, so a diver reads which way the dive swims.",
       "note3": "Seen here in the last 30 days comes from what your crew logged after their dives.",
@@ -1325,21 +1325,21 @@
       "name": "Rental gear",
       "summary": "Every unit on your wall with its size and service due, reserved for one diver at a time, and your customers’ own gear on the bench.",
       "metaTitle": "Dive gear rental and service tracking",
-      "metaDescription": "Track every BCD, regulator, wetsuit and cylinder by tag, size and service date. Staff reserve a unit to one booking, and the register won’t give it to a second diver on the same dates.",
+      "metaDescription": "Track every BCD, regulator, wetsuit, and cylinder by tag, size, and service date. Staff reserve a unit to one booking, and the register won’t give it to a second diver on the same dates.",
       "title": "Know what’s out, what’s available and what needs service",
       "lede": "When the morning crew starts pulling gear, see the sizes divers sent and the units available to hand out. Track your tagged units, returns and service dates. Customer repairs have their own work orders, with a message when the gear is ready.",
-      "screenLabel": "The gear register: units by kind with their counts, then each unit’s tag, model, size and status.",
+      "screenLabel": "The gear register: units by kind with their counts, then each unit’s tag, model, size, and status.",
       "note1": "The chips count units of each kind, so a short shelf shows before the morning.",
       "note2": "A reserved unit names its diver, and the register won’t give it to anyone else.",
       "note3": "Service due is a warning on the row, and whether the unit goes out is your call.",
       "step1Title": "List what’s on the wall",
-      "step1Body": "Add units by hand or from a spreadsheet, with tag, kind, size, serial and model.",
+      "step1Body": "Add units by hand or from a spreadsheet, with tag, kind, size, serial, and model.",
       "step2Title": "Divers give their sizes after booking",
       "step2Body": "The Gear tab turns those sizes into a list to pull and lists free units, exact size first.",
-      "step3Title": "Out, back and serviced",
+      "step3Title": "Out, back, and serviced",
       "step3Body": "Stamp a unit out and back, print the diver’s rental slip, and see overdue returns and service coming due on the day’s to-do list. Repairs run on work orders: the customer is told when theirs is ready, and gets the bill by email.",
       "faq1Q": "Which service checks can it track?",
-      "faq1A": "Annual service, hydrostatic test, visual inspection and oxygen cleaning, each with its due date, plus a dive count where the manufacturer sets one.",
+      "faq1A": "Annual service, hydrostatic test, visual inspection, and oxygen cleaning, each with its due date, plus a dive count where the manufacturer sets one.",
       "faq2Q": "What if two divers want the same unit?",
       "faq2A": "Staff reserve a unit to one booking, and the register refuses to give it to another diver whose dates overlap.",
       "faq3Q": "Do I have to tag every unit to rent gear?",
@@ -1351,7 +1351,7 @@
       "name": "Schedule and crew",
       "summary": "Build the season’s departures, repeat the regular ones, and see which boat still needs crew.",
       "metaTitle": "Dive trip scheduling and crew planning",
-      "metaDescription": "Add, move and copy departures in place, repeat a weekly trip with no end date, and put crew on each boat. The crew view shows which departure is uncovered.",
+      "metaDescription": "Add, move, and copy departures in place, repeat a weekly trip with no end date, and put crew on each boat. The crew view shows which departure is uncovered.",
       "title": "Build the week and see which boats still need crew",
       "lede": "Put departures on the week’s board, repeat your regular trips and assign the crew. A boat without crew stands out, and overlapping assignments are flagged.",
       "screenLabel": "The week’s schedule: departures by day with their times, crew and seats filled, and an Add button on each day.",
@@ -1359,11 +1359,11 @@
       "note2": "“Crew: nobody yet” marks a boat no one is assigned to, on the same row as its seats.",
       "note3": "Add sits on every day, so a new departure starts on the date you’re looking at.",
       "step1Title": "Build the week",
-      "step1Body": "Add a departure on its day, then move, copy or remove it in place. A course session or a multi-day trip is one departure with one roster.",
+      "step1Body": "Add a departure on its day, then move, copy, or remove it in place. A course session or a multi-day trip is one departure with one roster.",
       "step2Title": "Repeat the regulars",
       "step2Body": "Set a trip to run every Saturday, on Mondays and Thursdays, or daily. The series rolls forward on its own and edits as one.",
       "step3Title": "Crew every boat",
-      "step3Body": "Assign captains, instructors and divemasters, with an instructor on every course session. The same person on two boats at once is refused, and a later change that overlaps them is flagged.",
+      "step3Body": "Assign captains, instructors, and divemasters, with an instructor on every course session. The same person on two boats at once is refused, and a later change that overlaps them is flagged.",
       "faq1Q": "What if a boat fills and divers keep asking?",
       "faq1A": "A full departure with a long wait list suggests adding another boat or a second departure, and when someone cancels, staff invite whoever on the list fits.",
       "faq2Q": "Can staff see their trips in their own calendar?",
@@ -1377,15 +1377,15 @@
       "name": "Courses",
       "summary": "Course pages in the order you teach them, with dates divers can book and an instructor on every session.",
       "metaTitle": "Scuba course booking and scheduling",
-      "metaDescription": "Course pages with price, prerequisites, a day-by-day plan and bookable dates, started from PADI, SSI or SDI content. PADI Open Water sessions and try dives stop selling at their ratio, and whoever books online confirms each diver meets the course’s minimum age.",
+      "metaDescription": "Course pages with price, prerequisites, a day-by-day plan, and bookable dates, started from PADI, SSI, or SDI content. PADI Open Water sessions and try dives stop selling at their ratio, and whoever books online confirms each diver meets the course’s minimum age.",
       "title": "Divers book course dates from your own site",
-      "lede": "Make a PADI, SSI or SDI course yours with your price, prerequisites, plan and photos. A PADI Open Water session stops selling at its instructor ratio.",
-      "screenLabel": "A public course page: the agency, the course name and price, the plan by day, and an upcoming date to book.",
+      "lede": "Make a PADI, SSI or SDI course yours with your price, prerequisites, plan, and photos. A PADI Open Water session stops selling at its instructor ratio.",
+      "screenLabel": "A public course page: the agency, the course name, and price, the plan by day, and an upcoming date to book.",
       "note1": "The agency sits above the title, so a diver comparing shops knows which card they’ll get.",
       "note2": "The plan by day is the shop’s own, edited from the catalog it started with.",
       "note3": "Each upcoming date books like a departure, with its own seats.",
       "step1Title": "Start from a catalog",
-      "step1Body": "Copy in courses from PADI, SSI or SDI, then edit the price, the plan and the photos into your own.",
+      "step1Body": "Copy in courses from PADI, SSI or SDI, then edit the price, the plan, and the photos into your own.",
       "step2Title": "Schedule the sessions",
       "step2Body": "Each date is a departure with an instructor on it. A PADI Open Water session sells up to PADI’s ratio, with room added for each assistant, and a try dive up to two divers per instructor.",
       "step3Title": "Divers book and move up",
@@ -1401,7 +1401,7 @@
     },
     "payments": {
       "name": "Payments",
-      "summary": "Cards, deposits and refunds through your own Stripe account, with each day’s orders on one ledger.",
+      "summary": "Cards, deposits, and refunds through your own Stripe account, with each day’s orders on one ledger.",
       "metaTitle": "Dive shop payments, deposits and refunds",
       "metaDescription": "Take card payments and deposits at booking through your own Stripe account. Refunds go out by themselves when you call a blow-out or too few divers cancels a boat.",
       "title": "Divers pay when they book, and the money lands in your own Stripe account",
@@ -1411,7 +1411,7 @@
       "note2": "Open means the order still has money owed on it.",
       "note3": "DiveDay’s software fee is billed monthly, separately from each guest’s payment.",
       "step1Title": "Connect your Stripe account",
-      "step1Body": "Payouts, disputes and history stay in the shop’s own Stripe account.",
+      "step1Body": "Payouts, disputes, and history stay in the shop’s own Stripe account.",
       "step2Title": "Take payment at booking",
       "step2Body": "Charge in full or take a deposit, add sales tax or VAT through Stripe, and nudge a diver who reserved but never finished paying.",
       "step3Title": "Read the month",

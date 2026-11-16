@@ -137,7 +137,7 @@ export const TURKS_CAICOS_GRAND_TURK: DiveSiteTemplate[] = [
       forecastLatitude: 21.4915,
       forecastLongitude: -71.1546,
       description:
-        "A sandy slope falls from about 12 m to about 24 m, then drops steeply at a V-shaped split in the wall. Black coral, sea fans and tube sponges cover the wall around the bowl, with a hard-coral reef under the boat.",
+        "A sandy slope falls from about 12 m to about 24 m, then drops steeply at a V-shaped split in the wall. Black coral, sea fans, and tube sponges cover the wall around the bowl, with a hard-coral reef under the boat.",
       marineLife: "Queen angelfish · ocean triggerfish · jacks · black coral",
       marineLifeDescription: "Angelfish and triggerfish work the wall edge.",
       difficultyLevel: "intermediate",

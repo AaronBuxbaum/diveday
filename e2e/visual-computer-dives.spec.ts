@@ -1,7 +1,9 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   capture,
   installVisualBuildGuard,
+  SPANISH,
   SURFACE_TIMEOUT_MS,
   staffCopy,
   VISUAL_STEP_BOUNDS,
@@ -14,6 +16,32 @@ for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     test.use({ colorScheme: scheme, viewport: { width: 390, height: 844 } });
     signedInAsOwner();
+    for (const locale of ["en-US", SPANISH] as const) {
+      test.describe(`SSI guidance ${locale}`, () => {
+        test.use({ locale });
+        test("SSI guide distinguishes LogTRAK sharing from DiveDay import", async ({ page }) => {
+          const words = staffTranslator(locale);
+          await page.goto("/shop/blue-mantis/divers?q=Priya");
+          await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+          await page.getByRole("link", { name: words("computerDives.title"), exact: true }).click();
+          await page
+            .getByLabel(words("computerDives.provider"), { exact: true })
+            .selectOption("ssi");
+          await expect(
+            page.getByText(words("computerDives.providers.ssi.hint"), { exact: true }),
+          ).toBeVisible();
+          await expect(
+            page.getByRole("link", { name: words("computerDives.providerGuide"), exact: true }),
+          ).toHaveAttribute(
+            "href",
+            "https://www.divessi.com/en/blog/blog/blog/scubapro-logtrak-myssi-app-integration-10251.html",
+          );
+          await capture(page, "computer-dives-ssi-guidance", scheme, {
+            ...(locale === SPANISH ? { locale: SPANISH } : {}),
+          });
+        });
+      });
+    }
     test("Garmin FIT profile with an unknown local clock", async ({ page }) => {
       await page.goto("/shop/blue-mantis/divers?q=Priya");
       await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();

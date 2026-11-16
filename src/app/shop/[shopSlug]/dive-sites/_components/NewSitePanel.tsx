@@ -20,7 +20,7 @@ import { siteFormErrorMessages } from "./site-form-errors";
 import { siteFormSections, siteFormUnsavedCopy } from "./site-form-sections";
 
 /**
- * **A new dive site**: the library's add panel (`/dive-sites?add=1`), the same
+ * **A new dive site**: the dedicated create page (`/dive-sites/new`), the same
  * form the site's own editor (`dive-sites/[id]`) draws, empty. A refusal does
  * not navigate: it answers into the form with the whole submission
  * (`SiteFormShell`), and a saved site opens on its own page.
@@ -46,6 +46,7 @@ export async function NewSitePanel({
   return (
     <SiteFormShell
       action={createDiveSiteAction}
+      leaveWarning={t("diveSites.new.leaveWarning")}
       errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
       actions={
         <>

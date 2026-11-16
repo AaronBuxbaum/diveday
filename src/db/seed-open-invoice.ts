@@ -56,10 +56,10 @@ export async function seedOpenInvoice(
     createdByPersonId: string;
   },
 ): Promise<void> {
-  // The fourth seat rather than the first: the leading rows already carry the
+  // The fifth seat rather than the first: the leading rows already carry the
   // desk trail's notes and the buddy teams, and stacking every seeded story on
   // one diver makes the roster read as though nothing happens to anybody else.
-  const booking = ctx.roster.filter((row) => row.tripId === ctx.trip.id)[3];
+  const booking = ctx.roster.filter((row) => row.tripId === ctx.trip.id)[4];
   if (!booking) return;
   const diver = ctx.divers.find((person) => person.id === booking.personId);
   if (!diver) return;
@@ -89,7 +89,7 @@ export async function seedOpenInvoice(
       createdByPersonId: ctx.createdByPersonId,
       status: "open",
       currency: "usd",
-      totalCents: 17_500,
+      totalCents: (ctx.trip.priceCents ?? 0) + 3_500,
       amountPaidCents: 0,
       description: OPEN_INVOICE_DESCRIPTION,
       stripeAccountId: "acct_demo",
@@ -112,7 +112,7 @@ export async function seedOpenInvoice(
       kind: "trip_fee",
       description: "Two-tank reef charter",
       quantity: 1,
-      unitAmountCents: 14_000,
+      unitAmountCents: ctx.trip.priceCents ?? 0,
     },
     {
       shopId,

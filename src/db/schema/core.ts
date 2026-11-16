@@ -357,6 +357,23 @@ export const shops = pgTable(
     privateChartersEnabled: boolean("private_charters_enabled").notNull().default(true),
     publicStaffProfilesEnabled: boolean("public_staff_profiles_enabled").notNull().default(true),
     /**
+     * Computer dive files on a diver's record (uploads, the ledger of dives and
+     * their export). Off, the door on the diver's page and the page are gone and
+     * nothing already imported is touched.
+     */
+    computerDivesEnabled: boolean("computer_dives_enabled").notNull().default(true),
+    /**
+     * Teaching courses: the staff Courses and Certifications pages, the public
+     * course catalog and the courses widget. Off, they are gone and every
+     * course, enrollment and card already recorded stays.
+     */
+    coursesEnabled: boolean("courses_enabled").notNull().default(true),
+    /**
+     * The widgets a shop frames on its own website (grid, departure, courses,
+     * reviews, calendar and the framed trip page). Off, each frame is gone.
+     */
+    embedsEnabled: boolean("embeds_enabled").notNull().default(true),
+    /**
      * The instant the last seat-sold alert pass covered, the cursor that makes
      * an hour's batch exactly once: the next pass reports the seats sold after
      * it. Null until the first pass, which starts from an hour ago.

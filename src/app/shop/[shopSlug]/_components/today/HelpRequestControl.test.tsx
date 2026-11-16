@@ -31,7 +31,7 @@ const copy: HelpRequestCopy = {
   invalidHelper: "That crew member is no longer assigned to this departure.",
   failed: "Couldn’t save this change. Try again.",
   undoRefused:
-    "Undo didn’t go through: the request, its booking or its departure changed. It stays complete.",
+    "Undo didn’t go through: the request, its booking, or its departure changed. It stays complete.",
   undo: "Undo",
   undoPending: "Restoring…",
   dismiss: "Dismiss",

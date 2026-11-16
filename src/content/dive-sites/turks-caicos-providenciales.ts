@@ -24,13 +24,13 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
         "The reef slopes gently toward the wall, and each diver can settle at a depth that suits. Sand chutes run down the slope, with big stacks of coral standing between them.",
       marineLife: "Grunts · snappers · groupers",
       marineLifeDescription:
-        "Grunts, snappers and groupers crowd the coral stacks between the chutes.",
+        "Grunts, snappers, and groupers crowd the coral stacks between the chutes.",
       difficultyLevel: "intermediate",
       depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
-        "Down the mooring at about 9 m (30 ft), ease down the slope and turn at 18 m (60 ft). The wall lies beyond this plan; stay on the reef side.",
+        "Down the mooring at about 9 m (30 ft), ease down the slope, and turn at 18 m (60 ft). The wall lies beyond this plan; stay on the reef side.",
       fitTone: "unknown",
       fitNote: "The slope lets each diver set a depth. Set yours before you drop and keep it.",
       minimumCertificationLevel: "advanced_open_water",
@@ -222,7 +222,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       forecastLatitude: 21.8443,
       forecastLongitude: -72.3418,
       description:
-        "The wall starts near 14 m and falls to a shelf at 24 to 30 m before dropping away. Grunts, snappers and goatfish school over the top, and a large stand of pillar coral stands near the mooring.",
+        "The wall starts near 14 m and falls to a shelf at 24 to 30 m before dropping away. Grunts, snappers, and goatfish school over the top, and a large stand of pillar coral stands near the mooring.",
       marineLife: "Grunts · snappers · goatfish · reef sharks · pillar coral",
       marineLifeDescription:
         "Schools hold along the top of the wall; small reef sharks work the blue beyond it.",
@@ -423,10 +423,10 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       forecastLatitude: 21.8371,
       forecastLongitude: -72.341,
       description:
-        "A metal-mesh dome built for a French television game show, now collapsed into pieces scattered on a sand bottom at 11 m. Fish, groupers, nurse sharks and morays shelter around the pieces.",
+        "A metal-mesh dome built for a French television game show, now collapsed into pieces scattered on a sand bottom at 11 m. Fish, groupers, nurse sharks, and morays shelter around the pieces.",
       marineLife: "Groupers · nurse sharks · moray eels · schooling grunts",
       marineLifeDescription:
-        "Look closely at the frame and sand around it; small blennies, crabs and morays use the structure.",
+        "Look closely at the frame and sand around it; small blennies, crabs, and morays use the structure.",
       difficultyLevel: "beginner",
       depthMinMeters: 5,
       maxDepthMeters: 11,
@@ -506,7 +506,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       forecastLatitude: 21.6833,
       forecastLongitude: -72.4698,
       description:
-        "The reef on top of the wall lies at about 15 m, divided by sand chutes. The canyon opens into a wide sloping sand chute, and the wall face below it is crowded with sponges. Garden eels, stingrays and tilefish live on the sand under the boat.",
+        "The reef on top of the wall lies at about 15 m, divided by sand chutes. The canyon opens into a wide sloping sand chute, and the wall face below it is crowded with sponges. Garden eels, stingrays, and tilefish live on the sand under the boat.",
       marineLife: "Sponges · garden eels · stingrays · hawksbill turtles",
       marineLifeDescription:
         "The chute holds small life in the seagrass; hawksbills are common, and garden eels and stingrays work the sand under the boat.",
@@ -617,7 +617,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
         "The site is named for the steep white cliffs on shore. A rich reef runs along the top of the wall with stands of pillar coral. North of the mooring, a large anchor sits wedged in a crack in the wall at about 21 m, and the wall is undercut to near 30 m.",
       marineLife: "Pillar coral · barracuda · parrotfish · French angelfish",
       marineLifeDescription:
-        "Pillar coral stands crowd the reef top; barracuda, groupers and angelfish cruise over it.",
+        "Pillar coral stands crowd the reef top; barracuda, groupers, and angelfish cruise over it.",
       difficultyLevel: "intermediate",
       depthMinMeters: 14,
       maxDepthMeters: 30,
@@ -656,7 +656,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       forecastLatitude: 21.4898,
       forecastLongitude: -72.2071,
       description:
-        "Two large pinnacles rise from the sea floor off French Cay's bird sanctuary, beside a wall that slopes gradually under a thick carpet of coral. Jacks, black durgon and groupers gather around the pinnacles, and reef sharks may be seen.",
+        "Two large pinnacles rise from the sea floor off French Cay's bird sanctuary, beside a wall that slopes gradually under a thick carpet of coral. Jacks, black durgon, and groupers gather around the pinnacles, and reef sharks may be seen.",
       marineLife: "Jacks · black durgon · groupers · reef sharks",
       marineLifeDescription:
         "The pinnacles draw schools of jacks and durgon; large tube sponges make good wide-angle subjects.",
@@ -669,7 +669,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
         "Down the mooring to about 14 m (45 ft), circle the two pinnacles, then follow the wall no deeper than 30 m (100 ft) and come back up the reef with reserve gas. The wall drops far below this floor. Sharks may appear: stay with the group, keep your gear tucked in, and do not chase or touch them. Staff confirm the diver’s log before boarding. Make the safety stop on the mooring line or an SMB. Medical care is far, a 60 to 90 minute boat run from Providenciales; confirm the boat’s oxygen and plan.",
       fitTone: "demanding",
       fitNote:
-        "Open water, current and sharks, a long way from help. Stay with the group and hold your floor.",
+        "Open water, current, and sharks, a long way from help. Stay with the group and hold your floor.",
       minimumCertificationLevel: "advanced_open_water",
       creatureSlugs: [
         "black-durgon",
@@ -777,7 +777,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       currentNote:
         "Current meets the reef outside the bowl, and French Cay is remote and open to the sea. Carry an SMB with line, stay with the group, and expect the trip to run only in good weather.",
       divePlan:
-        "Down the mooring to about 14 m (45 ft), work along the wall and the bowl no deeper than 30 m (100 ft), and come back up the reef with reserve gas. The wall drops far below this floor. Sharks may shadow the group over the reef top: keep your gear tucked in and do not chase or touch them. Staff confirm the diver’s log before boarding. Make the safety stop on the mooring line or an SMB. Medical care is far, a 60 to 90 minute boat run from Providenciales; confirm the boat’s oxygen and plan.",
+        "Down the mooring to about 14 m (45 ft), work along the wall, and the bowl no deeper than 30 m (100 ft), and come back up the reef with reserve gas. The wall drops far below this floor. Sharks may shadow the group over the reef top: keep your gear tucked in and do not chase or touch them. Staff confirm the diver’s log before boarding. Make the safety stop on the mooring line or an SMB. Medical care is far, a 60 to 90 minute boat run from Providenciales; confirm the boat’s oxygen and plan.",
       fitTone: "demanding",
       fitNote:
         "A wall with a sheltered bowl and open water outside it, far from help. Hold your floor.",

@@ -6,6 +6,7 @@ import { unseededTestDb } from "@/test/db";
 import {
   annotateComputerDive,
   commitComputerFiles,
+  countComputerDives,
   deleteComputerDive,
   exportComputerDives,
   historyComputerDives,
@@ -53,6 +54,18 @@ describe("personal computer import", () => {
     expect(restored.record).toEqual(dive.record);
     expect(restored.deletedAt).toBeNull();
     expect(JSON.parse(await exportComputerDives(db, scope)).dives).toHaveLength(1);
+  });
+  it("counts a diver's live dives for the file's row, not the deleted ones", async () => {
+    const db = await unseededTestDb();
+    const scope = await computerFixture(db);
+    expect(await countComputerDives(db, scope)).toBe(0);
+    await commitComputerFiles(db, scope, await selectedInput(db, scope));
+    expect(await countComputerDives(db, scope)).toBe(1);
+    const {
+      dives: [dive],
+    } = await historyComputerDives(db, scope);
+    await deleteComputerDive(db, scope, dive.id);
+    expect(await countComputerDives(db, scope)).toBe(0);
   });
   it("scopes exact and possible duplicates to the person and refuses changed retry intent", async () => {
     const db = await unseededTestDb();

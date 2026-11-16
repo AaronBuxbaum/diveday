@@ -42,7 +42,9 @@ export async function GET(
 ) {
   const { shopSlug, slug } = await params;
   const { db, shop, session } = await requireShopSurface(shopSlug);
-  if (!(await isLiveShopStaff(db, shop.id, session))) return new Response(null, { status: 404 });
+  if (!shop.coursesEnabled || !(await isLiveShopStaff(db, shop.id, session))) {
+    return new Response(null, { status: 404 });
+  }
   // A token for a course that is not there would redirect to a URL the edge
   // refuses anyway. Answering here costs one indexed read and says the true
   // thing rather than the same thing one hop later.

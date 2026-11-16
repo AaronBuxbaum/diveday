@@ -205,4 +205,4 @@ describe("what the assembly readers cost", () => {
 const TRIP_PAGE_QUERY_CEILING = 143;
 
 /** The diver record's tripwire (issue #2757, measured when its reads moved behind `getDiverRecord`). */
-const DIVER_RECORD_QUERY_CEILING = 75;
+const DIVER_RECORD_QUERY_CEILING = 76; // 75 + the file's Computer dives count
