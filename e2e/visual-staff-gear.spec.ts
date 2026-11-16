@@ -179,7 +179,7 @@ for (const scheme of ["light", "dark"] as const) {
       // (amber state line + per-clock list) is in frame alongside the
       // service log form and history.
       test(`a gear unit's record renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/gear");
+        await page.goto("/shop/blue-mantis/gear?kind=tank");
         await page.getByRole("link", { name: "AL80-03" }).click();
         await page.getByRole("heading", { level: 1, name: "AL80-03" }).waitFor();
         await capture(page, "gear-unit", scheme);
