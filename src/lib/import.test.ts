@@ -983,6 +983,10 @@ describe("imported payment evidence helpers", () => {
       amountCents: 16_000,
       currency: "eur",
     });
+    expect(parseImportedMoney("Pay 165.00 EUR", null, "usd")).toEqual({
+      amountCents: 16_500,
+      currency: "eur",
+    });
     expect(parseImportedMoney("165", null, "usd")).toBeNull();
     expect(parseImportedMoney("$165.00", null, "eur")).toBeNull();
     expect(parseImportedMoney("€165.00", "USD", "usd")).toBeNull();
