@@ -10,13 +10,13 @@ import {
   createBoat,
   deleteBoat,
   departureVessels,
-  editBoat,
   editBoatWithinCertificate,
   getBoatById,
   getBoatForHistory,
   listBoats,
   replaceBoatPhoto,
 } from "./store";
+import { editBoat } from "./store.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.

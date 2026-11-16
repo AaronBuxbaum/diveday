@@ -8,7 +8,6 @@ export {
   createBoat,
   deleteBoat,
   departureVessels,
-  editBoat,
   editBoatWithinCertificate,
   getBoatById,
   getBoatForHistory,
