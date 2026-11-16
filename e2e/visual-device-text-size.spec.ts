@@ -255,8 +255,9 @@ test.describe("light mode largest device body after-dive warnings", () => {
                   : {}),
               };
             });
-            const crew = [...root.querySelectorAll("a")].find(
-              (link) => link.textContent?.trim() === labels.crew,
+            const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
+            const crew = [...root.querySelectorAll("[data-device-text-missing] a")].find((link) =>
+              normalize(link.textContent ?? "").includes(normalize(labels.crew)),
             );
             // SummaryPanel's HeadCount draws the large numeral inside the
             // progressbar; its separate dl/dd figures hold the smaller counts.
@@ -384,6 +385,10 @@ test.describe("light mode largest device body after-dive warnings", () => {
             ...diagnostic,
           }),
         );
+        expect(
+          diagnostic.crew,
+          "missing crew chip must be included in raster evidence",
+        ).not.toBeNull();
       },
     });
     const deck = page.getByRole("region", { name: copy("manifest.deck.title"), exact: true });
