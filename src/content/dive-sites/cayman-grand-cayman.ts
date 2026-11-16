@@ -968,7 +968,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       forecastLatitude: 19.3429,
       forecastLongitude: -81.078,
       description:
-        "A ridge with a drop on either side, cut by tunnels, nooks, and alcoves, and named for a coral outcrop shaped like a dragon's head. Stay out of the tunnels. Depending on the wind, the boat can sit over a reef top no deeper than 6 m.",
+        "A ridge with a drop on either side, cut by tunnels, nooks and alcoves, and named for a coral outcrop shaped like a dragon's head. Stay out of the tunnels. Depending on the wind, the boat can sit over a reef top no deeper than 6 m.",
       marineLife: "French angelfish · queen parrotfish · bluestriped grunts · star coral",
       marineLifeDescription:
         "Angelfish and parrotfish work the ridge, with grunts in the shade of the coral.",

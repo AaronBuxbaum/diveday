@@ -202,7 +202,7 @@
     "courses": {
       "item1": "Course pages with prices, prerequisites, plans, and dates, one agency’s ladder at a time",
       "item2": "A course catalog that reads in the order you teach it",
-      "item3": "Starter pages from PADI, SSI, or SDI, copied in and made your own",
+      "item3": "Starter pages from PADI, SSI or SDI, copied in and made your own",
       "item4": "A cover photo and up to eight more on each course page",
       "item5": "Seats on a PADI Open Water session capped by its instructors and assistants, and on any try dive by its instructors alone",
       "item6": "A course’s minimum age confirmed by whoever books online, and checked at boarding against the date of birth on the diver’s record",
@@ -828,7 +828,7 @@
     "faq": {
       "billing": {
         "question": "How does billing work?",
-        "answer": "Month to month, per location, with no setup fee, and no annual contract."
+        "answer": "Month to month, per location, with no setup fee and no annual contract."
       },
       "crewSize": {
         "question": "Do I pay more as my crew grows?",
@@ -970,7 +970,7 @@
       "keepsTerm": "What DiveDay keeps",
       "keepsBody": "when the answer shows the card, the agency’s words for it become the card’s review note, with the name of the staff member whose browser checked. When the page lists other cards for the diver and a staff member adds them, the agency’s lines for the diver become those cards’ review notes too. Otherwise nothing from the agency’s page is kept.",
       "neverTerm": "What it never does",
-      "neverBody": "it holds no password and no agency sign-in, stores nothing in the browser, reads no other site and no browsing history, and passes nothing to anyone for advertising, for sale or to judge credit."
+      "neverBody": "it holds no password and no agency sign-in, stores nothing in the browser, reads no other site, and no browsing history, and passes nothing to anyone for advertising, for sale or to judge credit."
     },
     "keep": {
       "heading": "How long it is kept",
@@ -991,7 +991,7 @@
     "out": {
       "heading": "Getting data out, and getting it deleted",
       "exportTerm": "Export",
-      "exportBody": "A shop can download its records from DiveDay as one ZIP, from its own settings, on any day, without asking us, and without a fee. It is the same bundle our own backups are made of. A few internal tables are left out of it (delivery retry mechanics, device registrations, the sealed credentials for a shop’s own backup destination, and DiveDay’s own 30-day copy of what AI suggestions were sent and answered). That copy is the one left out that can hold a diver’s words, and a diver can ask us to see it.",
+      "exportBody": "A shop can download its records from DiveDay as one ZIP, from its own settings, on any day, without asking us and without a fee. It is the same bundle our own backups are made of. A few internal tables are left out of it (delivery retry mechanics, device registrations, the sealed credentials for a shop’s own backup destination, and DiveDay’s own 30-day copy of what AI suggestions were sent and answered). That copy is the one left out that can hold a diver’s words, and a diver can ask us to see it.",
       "diverCopyTerm": "A diver’s own copy",
       "diverCopyBody": "A diver may ask a shop for a copy of what it holds about them, and staff can download it from the diver’s own record page as one ZIP: their bookings, certifications, waivers with the medical answers on them, payments, messages, and reviews at that shop, never another diver’s.",
       "erasureTerm": "Erasure",
@@ -1143,7 +1143,7 @@
       "name": "Your website",
       "summary": "A booking page in your shop’s colors, and booking buttons for the site you already have.",
       "metaTitle": "Dive shop website and booking page",
-      "metaDescription": "A booking page in your shop’s color, typeface and photos, plus a Book Now button, calendar and trip grid for WordPress, Squarespace or Wix.",
+      "metaDescription": "A booking page in your shop’s color, typeface and photos, plus a Book Now button, calendar, and trip grid for WordPress, Squarespace, or Wix.",
       "title": "A booking page that looks like your shop",
       "lede": "Give divers a feel for your shop before they arrive, with your photos, colors, and typeface. Reviews come only from divers who dived with you. Add booking buttons to your own site, or reach out to discuss a new one.",
       "screenLabel": "A shop’s public booking page: the shop’s name and rating, the next boat with space, and the week’s departures.",
@@ -1336,7 +1336,7 @@
       "step1Body": "Add units by hand or from a spreadsheet, with tag, kind, size, serial, and model.",
       "step2Title": "Divers give their sizes after booking",
       "step2Body": "The Gear tab turns those sizes into a list to pull and lists free units, exact size first.",
-      "step3Title": "Out, back, and serviced",
+      "step3Title": "Out, back and serviced",
       "step3Body": "Stamp a unit out and back, print the diver’s rental slip, and see overdue returns and service coming due on the day’s to-do list. Repairs run on work orders: the customer is told when theirs is ready, and gets the bill by email.",
       "faq1Q": "Which service checks can it track?",
       "faq1A": "Annual service, hydrostatic test, visual inspection, and oxygen cleaning, each with its due date, plus a dive count where the manufacturer sets one.",

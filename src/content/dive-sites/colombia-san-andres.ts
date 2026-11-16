@@ -472,7 +472,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       depthMinMeters: 10,
       maxDepthMeters: 30,
       currentNote:
-        "Open water on the east barrier reef; current is not documented, so carry an SMB. Sharks, rays, and other big animals: stay put, keep nothing dangling, do not chase, or touch, stay with the group, and follow the crew's briefing.",
+        "Open water on the east barrier reef; current is not documented, so carry an SMB. Sharks, rays, and other big animals: stay put, keep nothing dangling, do not chase or touch, stay with the group, and follow the crew's briefing.",
       divePlan:
         "Drop onto the garden, follow the edge and the block no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
@@ -515,7 +515,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       depthMinMeters: 8,
       maxDepthMeters: 40,
       currentNote:
-        "Current is variable and strong winds from November to January stir the surface. Carry an SMB. A cavern and a canyon swim-through near the wall are overhead; stay out. Sharks: stay put, keep nothing dangling, do not chase, or touch, stay with the group, and follow the crew's briefing. No season is documented for the sharks, so ask the crew; without them the dive is a wall and coral blocks.",
+        "Current is variable and strong winds from November to January stir the surface. Carry an SMB. A cavern and a canyon swim-through near the wall are overhead; stay out. Sharks: stay put, keep nothing dangling, do not chase or touch, stay with the group, and follow the crew's briefing. No season is documented for the sharks, so ask the crew; without them the dive is a wall and coral blocks.",
       divePlan:
         "Drop onto the plateau, follow the wall and the blocks no deeper than 40 m (131 ft), keep clear of the cavern, and back up the reef with reserve gas. Most dives end near 40 m and the wall falls beyond it. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
@@ -558,7 +558,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
-        "Current not documented; ask the crew on the day. Small caves on the wall are overhead; stay out. Sharks: stay put, keep nothing dangling, do not chase, or touch, follow the crew's briefing. Medical care is far; confirm the boat's oxygen and plan.",
+        "Current not documented; ask the crew on the day. Small caves on the wall are overhead; stay out. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
         "Drop onto the platform, follow the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and reef condition are confirmed with the crew.",
       fitTone: "demanding",
@@ -671,7 +671,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
-        "Current not documented; ask the crew on the day. A cave in the reef is overhead; stay out of it. Sharks: stay put, keep nothing dangling, do not chase, or touch, follow the crew's briefing. Medical care is far; confirm the boat's oxygen and plan.",
+        "Current not documented; ask the crew on the day. A cave in the reef is overhead; stay out of it. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
         "Cross the platform, descend the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and reef condition are confirmed with the crew.",
       fitTone: "demanding",
@@ -707,7 +707,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
-        "Current not documented; ask the crew on the day. Sharks: stay put, keep nothing dangling, do not chase, or touch, follow the crew's briefing. No shark season is documented, so ask the crew; without them the dive is a wall and a platform with rays. Medical care is far; confirm the boat's oxygen and plan.",
+        "Current not documented; ask the crew on the day. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. No shark season is documented, so ask the crew; without them the dive is a wall and a platform with rays. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
         "Cross the platform, follow the wall north no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and reef condition are confirmed with the crew.",
       fitTone: "demanding",
@@ -864,7 +864,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
-        "Current not documented; ask the crew on the day. Sharks: stay put, keep nothing dangling, do not chase, or touch, follow the crew's briefing. No shark season is documented, so ask the crew; without them the dive is a platform and a wall of sponges and corals. Medical care is far; confirm the boat's oxygen and plan.",
+        "Current not documented; ask the crew on the day. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. No shark season is documented, so ask the crew; without them the dive is a platform and a wall of sponges and corals. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
         "Cross the platform, follow the wall no deeper than 30 m (100 ft), and back up the reef with reserve gas. Staff confirm the diver's log before boarding. Hurricane Iota (November 2020) damaged Providencia; moorings, wrecks, and reef condition are confirmed with the crew.",
       fitTone: "demanding",

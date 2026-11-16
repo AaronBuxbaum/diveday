@@ -225,7 +225,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       depthMinMeters: 15,
       maxDepthMeters: 20,
       currentNote:
-        "Open water south of Key West, so current is possible. Storm damage has left sharp, loose metal: look, but stay off, and out of it.",
+        "Open water south of Key West, so current is possible. Storm damage has left sharp, loose metal: look, but stay off and out of it.",
       divePlan:
         "Circle the tug from the mooring, then spend the rest of the dive on the reef that surrounds it.",
       fitNote: "A good first wreck for a diver already comfortable at 20 m.",

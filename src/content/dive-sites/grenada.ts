@@ -321,7 +321,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       currentNote:
         "Strong and variable, with rougher surface conditions on the Atlantic side. Run as a drift; carry an SMB.",
       divePlan:
-        "Descend as a group and drift along the reef. If sharks or rays appear, stay put, keep nothing dangling, do not chase, or touch them, group together, and follow the crew's briefing. The season is not documented, so ask the crew what the dive offers on the day. Ascend on an SMB line. Staff confirm the diver's log before boarding.",
+        "Descend as a group and drift along the reef. If sharks or rays appear, stay put, keep nothing dangling, do not chase or touch them, group together and follow the crew's briefing. The season is not documented, so ask the crew what the dive offers on the day. Ascend on an SMB line. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "Shallow, but the Atlantic current is the whole dive. A diver comfortable in a strong drift will enjoy it.",
@@ -353,7 +353,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       forecastLatitude: 12.0335,
       forecastLongitude: -61.7805,
       description:
-        "A sloping sand wall that drops away into deeper water, dived as a drift. It is dived separately after the Bianca C, after a surface interval, with star boulder, and brain coral in good condition.",
+        "A sloping sand wall that drops away into deeper water, dived as a drift. It is dived separately after the Bianca C, after a surface interval, with star boulder and brain coral in good condition.",
       marineLife: "Jacks · rainbow runners · wrasse · eagle rays",
       marineLifeDescription:
         "Jacks and rainbow runners patrol the slope, with lobsters in the coral and turtles and eagle rays passing.",
@@ -518,7 +518,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       currentNote:
         "Strong current, run as a drift, with rough surface conditions. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Drift onto the hull with the group and keep the sharks at a distance: if sharks appear, stay put, keep nothing dangling, do not chase, or touch them, and follow the crew's briefing. Begin the ascent early, deploy the SMB at the start and make the safety stop on it. Stay outside the hull. Staff confirm the diver's log before boarding.",
+        "Drift onto the hull with the group and keep the sharks at a distance: if sharks appear, stay put, keep nothing dangling, do not chase or touch them, and follow the crew's briefing. Begin the ascent early, deploy the SMB at the start and make the safety stop on it. Stay outside the hull. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote: "Deep, open, and fast. For a diver with the depth card and recent drift experience.",
       minimumCertificationLevel: "advanced_open_water",
