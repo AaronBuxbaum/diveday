@@ -1434,12 +1434,20 @@
   },
   "setUp": {
     "title": "Pide tu centro",
-    "description": "Cuéntanos sobre tu centro. Te ayudaremos a configurarlo para la forma en que trabaja tu equipo.",
+    "next": {
+      "reply": "Alguien de DiveDay te responde en un día hábil.",
+      "asks": "La primera respuesta pregunta por tus salidas, lugares de buceo y horarios.",
+      "ready": "Tu centro puede recibir su primera reserva esa misma semana.",
+      "free": "Pedirlo no cuesta nada y no hace falta tarjeta."
+    },
     "shopName": "Nombre del centro",
     "region": "Ciudad o región",
-    "runsBoat": "¿Tienes barco?",
-    "yes": "Sí",
-    "no": "No",
+    "runs": "¿Qué ofrece tu centro?",
+    "runsAnswers": {
+      "boat": "Inmersiones desde barco",
+      "shore": "Inmersiones desde la costa",
+      "pool": "Sesiones en piscina"
+    },
     "currentSystem": "Herramienta actual (opcional)",
     "notSpecified": "Sin especificar",
     "current": {
@@ -1464,7 +1472,7 @@
     "sent": {
       "title": "Solicitud enviada",
       "support": "Contactar a DiveDay",
-      "body": "Te escribiremos para abrir tu centro. Mientras tanto, la demo está abierta.",
+      "body": "Alguien de DiveDay te responde en un día hábil para preguntarte por tus salidas, lugares de buceo y horarios. Tu centro puede recibir su primera reserva esa misma semana. Mientras tanto, la demo está abierta.",
       "paper": "¿En papel? Trae a nuestra primera llamada una foto de la planilla de un día.",
       "spreadsheet": "Guarda tu lista de buceadores como CSV y la leemos contigo.",
       "spreadsheetLink": "Qué leemos en ella",
