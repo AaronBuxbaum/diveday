@@ -68,6 +68,7 @@ export const EXPECTED_FILES = [
   "boat_snags.csv",
   "departure_boat_safety_snapshots.csv",
   "prior_visits.csv",
+  "trip_credit_entries.csv",
   "computer_import_batches.csv",
   "computer_dives.csv",
   "computer_dive_profiles.csv",
@@ -100,6 +101,7 @@ export const EXPECTED_FILES = [
 ];
 /** Schema tables that get their own CSV in the bundle. */
 export const EXPORTED_TABLES = [
+  "trip_credit_entries",
   "disruption_recovery_events",
   "shop_text_translations",
   "dive_packages",

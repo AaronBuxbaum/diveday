@@ -963,7 +963,8 @@
       "courses": "Catálogo de cursos",
       "shop_text_translations": "Traducciones del centro",
       "trip_conservation": "Acciones de conservación medidas por salida, con su estado de corrección y eliminación.",
-      "disruption_recovery_events": "Seguimiento de recuperación de cancelaciones"
+      "disruption_recovery_events": "Seguimiento de recuperación de cancelaciones",
+      "trip_credit_entries": "Créditos promocionales para salidas, aplicaciones a tarifas y devoluciones."
     }
   },
   "crewSheet": {

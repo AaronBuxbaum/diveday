@@ -182,6 +182,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Payments restricted
 - Payout
 - Pricing configuration
+- Promotional trip credit
 - Recorded collection
 - Recorded purchase
 - Room charge

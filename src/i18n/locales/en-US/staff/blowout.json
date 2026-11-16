@@ -98,7 +98,9 @@
     "stale": "Someone updated this diver’s follow-up. Review the latest history and try again.",
     "invalid": "Follow-up was not saved. Check the selection and the diver’s existing bookings.",
     "busy": "Recovery is being updated. Try again in a moment.",
-    "forDiver": "Record follow-up for {name}"
+    "forDiver": "Record follow-up for {name}",
+    "creditBoundary": "Goodwill credit is separate from any refund. An owner or manager can grant promotional credit on the diver’s record.",
+    "creditLink": "Review trip credit"
   },
   "alternatives": {
     "title": "Prioritize shore or pool departures (optional)",

@@ -456,7 +456,11 @@ export async function handleInboundReplyKeyword(
       shopId: input.shopId,
       bookingId: matched.bookingId,
     });
-    if (refund.status !== "no_policy" && refund.status !== "unpaid") {
+    if (
+      refund.status !== "no_policy" &&
+      refund.status !== "unpaid" &&
+      refund.status !== "credit_returned"
+    ) {
       await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
     }
   } catch {

@@ -32,6 +32,8 @@ export type ExportFile = { name: string; content: string | Uint8Array };
  * never drift apart (a sync test enforces it).
  */
 export const EXPORT_FILE_NOTES = {
+  "trip_credit_entries.csv":
+    "Promotional trip credit grants, fare redemptions, and restorations. Amounts are native-currency value, not cash collected or refunded. Identity merges can repoint the beneficiary; economic entries remain unchanged.",
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
   "boats.csv":
     "The shop's boats: the seats each sells, the passenger limit and the total-persons limit (crew included) on its certificate when the shop recorded them, the dates its certificate expires, its next safety inspection is due and its registration and insurance expire, and its radio identity: the call sign, upper case, and the nine-digit MMSI the emergency card prints for departures on that boat. Every date is a calendar day the shop typed; an empty one was never recorded.",

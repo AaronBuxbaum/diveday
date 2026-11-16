@@ -16,6 +16,8 @@
  *   departure — is the shop's record of its own day.
  */
 export const ERASURE_KEEPS: Record<string, string> = {
+  trip_credit_entries:
+    "Promotional value and its economic journal retain anonymous beneficiary ids; erasure removes personal data from the person record, never changes outstanding balances (ADR 20261116-promotional-trip-credit-ledger).",
   // --- staff prose that may mention a diver: not their data, so not swept ----
   // Owner, 2026-11-01: erasure removes a person's own data only. The person is
   // reached by a pointer, and a mention of them in words somebody else wrote is

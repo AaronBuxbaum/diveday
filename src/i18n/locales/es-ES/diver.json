@@ -1160,7 +1160,8 @@
     "groupDifferentDeparture": "Algunas plazas del grupo están en otra salida.",
     "groupSummary": "{total, plural, one {# plaza en tu grupo} other {# plazas en tu grupo}} · {unclaimed, plural, one {# sin reclamar} other {# sin reclamar}}",
     "doctorNeeds": "Lo que necesita tu médico",
-    "waiverSigned": "Exención firmada."
+    "waiverSigned": "Exención firmada.",
+    "tripCreditApplied": "{amount} de crédito aplicado · Quedan {balance} de crédito"
   },
   "thread": {
     "stepsDone": "{done} de {total, plural, one {# paso completado} other {# pasos completados}}",
@@ -3929,7 +3930,8 @@
       "body": "Realizamos {tripTitle} el {date} con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}, y tenía {booked, plural, one {# reserva} other {# reservas}} cuando dijimos que lo decidiríamos, así que se cancela. Tu plaza queda liberada y no tienes que hacer nada.",
       "moneyRefunded": "Te hemos reembolsado el importe completo: el dinero va de vuelta a la tarjeta con la que pagaste y puede tardar unos días en llegar.",
       "moneyRefundOwed": "Te corresponde el reembolso completo, y nos pondremos en contacto contigo para devolvértelo.",
-      "findAnother": "Ver qué más hay programado"
+      "findAnother": "Ver qué más hay programado",
+      "moneyCreditReturned": "Tu crédito promocional para salidas vuelve a estar disponible en tu saldo."
     },
     "bookingCancelled": {
       "subject": "Reserva cancelada: {tripTitle}",
@@ -3940,7 +3942,8 @@
       "moneyFollowUp": "Nos pondremos en contacto contigo sobre lo que pagaste.",
       "partyCancelled": "{count, plural, one {La # plaza de tu grupo que reservaste se cancela con la tuya.} other {Las # plazas de tu grupo que reservaste se cancelan con la tuya.}}",
       "partyStayed": "{count, plural, one {# plaza de tu grupo sigue reservada: su buceador ya la reclamó o ya hizo el check-in.} other {# plazas de tu grupo siguen reservadas: sus buceadores ya las reclamaron o ya hicieron el check-in.}}",
-      "findAnother": "Ver qué más hay programado"
+      "findAnother": "Ver qué más hay programado",
+      "moneyCreditReturned": "Tu crédito promocional para salidas vuelve a estar disponible en tu saldo."
     },
     "partyPaymentReceipt": {
       "subject": "Recibo: {tripTitle}",
@@ -3966,7 +3969,8 @@
       "alternativesIntro": "¿Quieres volver al agua? Estas salidas próximas ya cumplen con tus certificaciones:",
       "alternativeLine": "{title} — {when}",
       "noAlternatives": "Ninguna de las próximas salidas coincide con tus certificaciones por ahora, pero se agregan salidas nuevas constantemente.",
-      "seeSchedule": "Ver el calendario completo"
+      "seeSchedule": "Ver el calendario completo",
+      "moneyCreditReturned": "Tu crédito promocional para salidas vuelve a estar disponible en tu saldo."
     },
     "bookingConfirmation": {
       "subject": "Estás a bordo: {tripTitle}",

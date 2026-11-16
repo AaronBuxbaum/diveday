@@ -473,5 +473,6 @@ script again.
 | 20261115-online-logbook-file-interchange | Use explicit beta file interchange… |
 | 20261115-personal-computer-evidence | Keep imported computer evidence on… |
 | 20261116-local-customer-import-mapping | Map customer exports locally with… |
+| 20261116-promotional-trip-credit-ledger | Settle plain booking fares with… |
 
 <!-- adr-index:end -->

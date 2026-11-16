@@ -14,6 +14,11 @@
  * `setup_requests` records a prospective shop and has its own window rationale
  * below (code review 2026-10-11, item 14).
  *
+ * **`trip_credit_entries` is deliberately unbounded.** These entries are the
+ * promotional balance itself; pruning a grant, debit, or restoration changes
+ * spendable value. Requested erasure anonymizes the beneficiary, not the
+ * economic journal. ADR 20261116-promotional-trip-credit-ledger.
+ *
  * **`collection_entries` is deliberately unbounded.** It is the immutable
  * evidence behind shop billing and credits; removing a lot could erase an
  * outstanding refund credit. ADR 20261110-recorded-collections-own-billing.
@@ -156,6 +161,7 @@ export const ACCOUNT_TOKEN_RETENTION_DAYS = 90;
  * Whether the argument is any *good* is a reviewer's call, not a test's.
  */
 export const UNBOUNDED_BY_DECISION: readonly string[] = [
+  "trip_credit_entries",
   "collection_entries",
   "certification_junior_reviews",
   "gear_service_events",

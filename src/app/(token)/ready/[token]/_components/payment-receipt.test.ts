@@ -4,10 +4,12 @@ import { resolvePaymentReceipt } from "./payment-receipt";
 
 const db = vi.hoisted(() => ({
   getBookingPayment: vi.fn(),
+  tripCreditReceipt: vi.fn(),
   getLatestCheckoutForBooking: vi.fn(),
   refreshCheckoutFromStripe: vi.fn(),
 }));
 
+vi.mock("@/features/trip-credit", () => ({ tripCreditReceipt: db.tripCreditReceipt }));
 vi.mock("@/db/payments", () => ({ getBookingPayment: db.getBookingPayment }));
 vi.mock("@/db/checkouts", () => ({
   getLatestCheckoutForBooking: db.getLatestCheckoutForBooking,
@@ -67,4 +69,32 @@ describe("resolvePaymentReceipt", () => {
     expect(await resolvePaymentReceipt(handle, "shop", "booking", true, 18_000, "usd")).toBeNull();
     expect(db.getLatestCheckoutForBooking).not.toHaveBeenCalled();
   });
+});
+
+it("states only verified promotional coverage and never refreshes Stripe for its zero-cash receipt", async () => {
+  const { tripCreditReceipt } = await import("@/features/trip-credit");
+  vi.mocked(tripCreditReceipt).mockResolvedValue({
+    amountCents: 18_000,
+    balanceCents: 5_000,
+    currency: "usd",
+  });
+  db.getBookingPayment.mockResolvedValue({
+    status: "paid",
+    amountCents: 0,
+    currency: "usd",
+    provider: "trip_credit",
+    providerRef: "credit-debit",
+  });
+  expect(await resolvePaymentReceipt(handle, "shop", "booking", true, 18_000, "usd")).toMatchObject(
+    {
+      amountCents: 0,
+      isDeposit: false,
+      balanceDueCents: 0,
+      tripCredit: { amountCents: 18_000, balanceCents: 5_000 },
+    },
+  );
+  expect(db.getLatestCheckoutForBooking).not.toHaveBeenCalled();
+  expect(db.refreshCheckoutFromStripe).not.toHaveBeenCalled();
+  vi.mocked(tripCreditReceipt).mockResolvedValue(null);
+  expect(await resolvePaymentReceipt(handle, "shop", "booking", false, 18_000, "usd")).toBeNull();
 });

@@ -98,7 +98,9 @@
     "stale": "Alguien actualizó el seguimiento de este buzo. Revisa el historial y vuelve a intentarlo.",
     "invalid": "No se guardó el seguimiento. Revisa la selección y las reservas existentes del buzo.",
     "busy": "Se está actualizando la recuperación. Vuelve a intentarlo en un momento.",
-    "forDiver": "Registrar seguimiento de {name}"
+    "forDiver": "Registrar seguimiento de {name}",
+    "creditBoundary": "El crédito de cortesía es independiente de cualquier reembolso. El propietario o gerente puede conceder crédito promocional en la ficha del buceador.",
+    "creditLink": "Revisar crédito para salidas"
   },
   "alternatives": {
     "title": "Priorizar salidas desde la costa o en piscina (opcional)",

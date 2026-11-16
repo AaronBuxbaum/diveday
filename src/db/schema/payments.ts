@@ -340,6 +340,9 @@ export const paymentEventOperation = pgEnum("payment_event_operation", [
   "package_consumed",
   /** A cancellation returned prepaid package tanks to the diver. */
   "package_released",
+  "trip_credit_redeemed",
+  "trip_credit_released",
+  "trip_credit_reopened",
   /** A staff order was refunded through Stripe. */
   "order_refunded",
   /** The automated cancellation-window refund reversed a Stripe capture. */

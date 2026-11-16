@@ -769,3 +769,70 @@ describe("the party payment actions' gate", () => {
     expect(source).toContain("requireShopSurface");
   });
 });
+
+describe("promotional credit remains a source-owned payment", () => {
+  it.each(["paid", "waived", "unpaid", "refunded"])(
+    "refuses a manual %s relabel without changing credit or collections",
+    async (status) => {
+      const { db, shop, tripId, owner } = await context();
+      const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+      const { bookings, tripCreditEntries } = await import("@/db/schema");
+      const { grantTripCredit, redeemTripCredit } = await import("@/features/trip-credit");
+      const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+      await db
+        .update(shops)
+        .set({ taxEnabled: false, passThroughFee: null })
+        .where(eq(shops.id, shop.id));
+      const scope = {
+        shopId: shop.id,
+        personId: booking.personId,
+        actorPersonId: owner,
+        currency: "usd",
+      };
+      expect(
+        (
+          await grantTripCredit(db, {
+            ...scope,
+            attemptId: crypto.randomUUID(),
+            amountCents: 12_000,
+            reason: "goodwill",
+          })
+        ).ok,
+      ).toBe(true);
+      expect(
+        (
+          await redeemTripCredit(db, {
+            ...scope,
+            attemptId: crypto.randomUUID(),
+            bookingId,
+            expectedFareCents: 12_000,
+          })
+        ).ok,
+      ).toBe(true);
+      signIn(shop, owner);
+      const before = await getBookingPayment(db, shop.id, bookingId);
+      const entries = await db
+        .select()
+        .from(tripCreditEntries)
+        .where(eq(tripCreditEntries.personId, booking.personId));
+      const form = paymentForm(bookingId, status);
+      if (status === "paid") {
+        form.set("amount", "120");
+        form.set("method", "cash");
+      }
+      expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+        "notice=payment-online",
+      );
+      expect(await getBookingPayment(db, shop.id, bookingId)).toEqual(before);
+      expect(
+        await db
+          .select()
+          .from(tripCreditEntries)
+          .where(eq(tripCreditEntries.personId, booking.personId)),
+      ).toEqual(entries);
+      expect(
+        await db.select().from(collectionEntries).where(eq(collectionEntries.sourceId, bookingId)),
+      ).toHaveLength(0);
+    },
+  );
+});

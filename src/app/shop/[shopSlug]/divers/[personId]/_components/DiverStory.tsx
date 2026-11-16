@@ -81,6 +81,10 @@ function seatMoney(
   locale: string,
 ): BookingStoryMoney | undefined {
   const money = bookingMoney(diver, bookingId);
+  if (money.payment?.payment.provider === "trip_credit")
+    return { state: "paid", label: t("divers.tripCredit.kinds.redeem") };
+  if (money.payment?.payment.provider === "trip_credit_returned")
+    return { state: "open", label: t("divers.tripCredit.kinds.restore") };
   const key = bookingMoneyStatusKey(money);
   if (!key) return undefined;
   const word = t(key);

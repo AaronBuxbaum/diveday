@@ -75,6 +75,11 @@ const NOTICE_KEYS: Record<
   "note-added": { form: "roster", tone: "success", key: "trips.notices.noteAdded" },
   "note-deleted": { form: "roster", tone: "success", key: "trips.notices.noteDeleted" },
   "booking-removed": { form: "roster", tone: "success", key: "trips.notices.bookingRemoved" },
+  "booking-removed-credit-returned": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.bookingRemovedCreditReturned",
+  },
   "booking-removed-refunded": {
     form: "roster",
     tone: "success",
