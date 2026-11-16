@@ -348,9 +348,14 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(screen.queryByText(/everyone’s aboard/)).not.toBeInTheDocument();
 
     // Flush effects before proving that no celebration followed the missing-person statement.
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(50);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
     expect(screen.queryByTestId("sub-surface-ripple")).not.toBeInTheDocument();
     // MilestoneHaptics is keyed off the true boarded count too (0 of 2) —
     // no 100%-milestone vibration for a roll call where nobody boarded.
