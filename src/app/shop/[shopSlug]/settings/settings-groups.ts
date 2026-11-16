@@ -18,7 +18,7 @@ import { FEATURE_ROWS, type FeatureRowGate } from "./features/feature-rows";
  * changed" for how often a row is opened). What is about the reader (security,
  * calendar feed, email) is **My account** in the identity menu, not here; the
  * shop's registers (dive sites, boats, trip tags, the checklist) are doors in
- * Shop; Export, Import, Backups and Integrations are the tabs of one Your data.
+ * Shop; Export, Backups, Import and Integrations are the four pages of Your data.
  * `SettingsPage.tsx` renders its sections from this one list. It remains a
  * registry rather than local constants so a new section cannot drift from the
  * hub's section order or its test coverage.
@@ -63,7 +63,8 @@ export type SettingsRailGate =
   | "messaging"
   | "boats"
   | "billing"
-  | "selfRegistration";
+  | "selfRegistration"
+  | "embeds";
 
 /**
  * The one warning a rail row may carry, named as a code rather than a
@@ -85,8 +86,6 @@ type SettingsRailRowSpec = {
   group: SettingsGroupId;
   target: // `fragment`: the anchor when it is not the id (`SECTION_IDS` says why).
     | { kind: "section"; id: string; fragment?: string }
-    // `also`: the other paths of the same place (the tabs of Your data), so
-    // standing on any of them lights this one row.
     | { kind: "route"; path: string; also?: readonly string[] };
   gate?: SettingsRailGate;
   badgeSource?: SettingsRailBadgeSource;
@@ -300,6 +299,8 @@ const RAIL_ROWS = [
     labelKey: "settings.main.embed.heading",
     group: "website",
     target: { kind: "route", path: "/settings/embed" },
+    // Website widgets switched off on Features: no snippets to find.
+    gate: "embeds",
   },
   {
     id: "features",
@@ -308,14 +309,28 @@ const RAIL_ROWS = [
     target: { kind: "route", path: "/settings/features" },
   },
   {
-    id: "yourData",
-    labelKey: "settings.main.yourData.heading",
+    id: "export",
+    labelKey: "settings.data.export",
     group: "data",
-    target: {
-      kind: "route",
-      path: "/settings/export",
-      also: ["/settings/export/backups", "/settings/import", "/settings/integrations"],
-    },
+    target: { kind: "route", path: "/settings/export" },
+  },
+  {
+    id: "backups",
+    labelKey: "settings.data.backups",
+    group: "data",
+    target: { kind: "route", path: "/settings/backups" },
+  },
+  {
+    id: "import",
+    labelKey: "settings.data.import",
+    group: "data",
+    target: { kind: "route", path: "/settings/import" },
+  },
+  {
+    id: "integrations",
+    labelKey: "settings.data.integrations",
+    group: "data",
+    target: { kind: "route", path: "/settings/integrations" },
   },
 ] as const satisfies readonly SettingsRailRowSpec[];
 
@@ -396,6 +411,7 @@ export function settingsRailGatesFor(reader: {
   hasBoatDiving: boolean;
   isDemo: boolean;
   selfRegistrationEnabled: boolean;
+  embedsEnabled: boolean;
 }): Set<SettingsRailGate> {
   const gates = new Set<SettingsRailGate>();
   if (reader.canPayments) gates.add("payments");
@@ -404,6 +420,7 @@ export function settingsRailGatesFor(reader: {
   if (reader.canManageMessaging) gates.add("messaging");
   if (reader.hasBoatDiving) gates.add("boats");
   if (reader.selfRegistrationEnabled) gates.add("selfRegistration");
+  if (reader.embedsEnabled) gates.add("embeds");
   // The hub's own condition for its Billing door (`SettingsPage.tsx`).
   if (!reader.isDemo && reader.canBilling) gates.add("billing");
   return gates;
@@ -423,7 +440,12 @@ export function settingsRailRowHref(shopBasePath: string, row: SettingsRailRow):
  * re-checks its own permission server-side.
  */
 export function settingsShortcutsFor(
-  shop: { hasBoatDiving: boolean; isDemo: boolean; selfRegistrationEnabled: boolean },
+  shop: {
+    hasBoatDiving: boolean;
+    isDemo: boolean;
+    selfRegistrationEnabled: boolean;
+    embedsEnabled: boolean;
+  },
   roles: readonly Role[],
   shopSlug: string,
   t: StaffTranslator,
@@ -439,6 +461,7 @@ export function settingsShortcutsFor(
       hasBoatDiving: shop.hasBoatDiving,
       isDemo: shop.isDemo,
       selfRegistrationEnabled: shop.selfRegistrationEnabled,
+      embedsEnabled: shop.embedsEnabled,
     }),
   );
   const groupLabels = new Map(SETTINGS_GROUPS.map((group) => [group.id, t(group.labelKey)]));
@@ -477,7 +500,7 @@ function railRoutePaths(row: SettingsRailRow): readonly string[] {
  *
  * A row's `path` is shop-relative, so `basePath` (`/shop/<slug>`) is what makes
  * it comparable with the browser's own pathname. The comparison drops any
- * fragment (two rows point at `/settings/export`), and a row carrying one loses
+ * fragment (two rows can point at one route), and a row carrying one loses
  * the tie deliberately: the bare route is the destination the reader is
  * actually standing on.
  */

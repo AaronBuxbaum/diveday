@@ -85,7 +85,7 @@ describe("staffRouteAt", () => {
   it("takes the parent a node names where the URL lies", () => {
     expect(up("/shop/blue-mantis/boats")).toBe("/shop/blue-mantis/settings");
     expect(up("/shop/blue-mantis/me/email")).toBe("/shop/blue-mantis/me/security");
-    expect(up("/shop/blue-mantis/settings/export/backups")).toBe("/shop/blue-mantis/settings");
+    expect(up("/shop/blue-mantis/settings/backups")).toBe("/shop/blue-mantis/settings");
     expect(up("/shop/blue-mantis/schedule/day/2026-11-03")).toBe(
       "/shop/blue-mantis/schedule/board",
     );

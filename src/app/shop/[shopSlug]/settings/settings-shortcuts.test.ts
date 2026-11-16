@@ -3,7 +3,12 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { settingsShortcutsFor } from "./settings-groups";
 
 const t = staffTranslator("en-US");
-const shop = { hasBoatDiving: true, isDemo: false, selfRegistrationEnabled: true };
+const shop = {
+  hasBoatDiving: true,
+  isDemo: false,
+  selfRegistrationEnabled: true,
+  embedsEnabled: true,
+};
 
 /** ⌘K reaches a setting: the rail's rows, for a reader inside the settings gate. */
 describe("settingsShortcutsFor", () => {

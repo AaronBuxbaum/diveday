@@ -96,10 +96,12 @@ export function WebsiteGroup({ view }: { view: SettingsView }) {
           </FieldGrid>
         </SettingsRow>
 
-        <SettingsDoorRow
-          href={`/shop/${shopSlug}/settings/embed`}
-          heading={t("settings.main.embed.heading")}
-        />
+        {shop.embedsEnabled ? (
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/settings/embed`}
+            heading={t("settings.main.embed.heading")}
+          />
+        ) : null}
       </InsetGroup>
     </SettingsGroup>
   );

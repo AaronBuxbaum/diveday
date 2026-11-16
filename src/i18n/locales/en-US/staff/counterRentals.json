@@ -92,7 +92,7 @@
     "setPrice": "Set price, {count, plural, one {# day} other {# days}}",
     "cards": {
       "verified": "Verified card: {level}",
-      "none": "No verified card, so no life support: regulators, BCDs, tanks, computers and drysuits stay on the wall.",
+      "none": "No verified card, so no life support: regulators, BCDs, tanks, computers, and drysuits stay on the wall.",
       "drysuit": "Drysuit card verified",
       "unverified": "{count, plural, one {# card} other {# cards}} on file, not yet verified",
       "minor": "Minor",

@@ -23,6 +23,8 @@ const shopRow = {
   timezone: "America/New_York",
   depthUnit: "feet",
   reviewsEnabled: true,
+  coursesEnabled: true,
+  embedsEnabled: true,
 };
 vi.mock("../../../../../features/shops-cached/store", () => ({
   shopBySlugCached: vi.fn(async () => shopRow),

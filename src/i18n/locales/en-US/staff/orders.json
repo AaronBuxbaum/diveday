@@ -288,7 +288,7 @@
     "tip": "Included tip (optional)",
     "gross": "Total received",
     "submit": "Record received payment",
-    "invalid": "Check the customer, items and amounts. Included tax, tips and fees cannot exceed the total. Refresh if the shop currency changed.",
+    "invalid": "Check the customer, items and amounts. Included tax, tips, and fees cannot exceed the total. Refresh if the shop currency changed.",
     "refundTitle": "Record money already returned",
     "refundExplanation": "Return the money outside DiveDay first. This records the return and adjusts your DiveDay fee; it does not send money.",
     "refundAmount": "Amount returned ({currency})",

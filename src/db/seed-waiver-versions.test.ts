@@ -9,10 +9,9 @@ import { getCurrentWaiverTemplate } from "./waivers";
 /**
  * The demo shop's release has a history behind it (src/db/seed-waiver-versions.ts).
  * These are the invariants the rest of the seed rests on, not a restatement of
- * the row count: the *newest* version has to be the live one, and every record
- * any scenario snapshotted has to have snapshotted that one — otherwise
- * `isCompletedWaiverCurrent` reads the shop's own seeded evidence as signed
- * against superseded terms, and every diver on the board loses their waiver.
+ * the row count: the *newest* version has to be the live one, and signatures
+ * name the wording available when they were signed. Versions share
+ * the same material generation, so an older wording remains current.
  */
 describe("seeded waiver template history", () => {
   it("keeps superseded wordings on file behind the live release", async () => {
@@ -64,19 +63,21 @@ describe("seeded waiver template history", () => {
   });
 
   it("leaves every seeded signature current against it, so no diver's release goes stale", async () => {
-    // The whole reason `seedWaiverVersions` runs first: every later scenario
-    // snapshots `getCurrentWaiverTemplate`, and a record carrying an older
-    // `templateVersion` fails the currency check for good — a silent,
-    // shop-wide readiness regression that no single spec would name.
+    // A non-material wording revision does not make an earlier signature stale.
     const { db, shop } = await seededShopContext();
     const current = await getCurrentWaiverTemplate(db, shop.id);
     if (!current) throw new Error("seeded waiver template missing");
+    const templates = await waiverTemplateHistory(db, shop.id);
 
     const signed = await db.select().from(waiverRecords).where(eq(waiverRecords.shopId, shop.id));
     const completed = signed.filter((record) => record.status === "completed");
     expect(completed.length).toBeGreaterThan(0);
     for (const record of completed) {
-      expect(record.templateVersion).toBe(current.version);
+      const template = templates.find((row) => row.id === record.templateId);
+      if (!template || !record.signedAt) throw new Error("signed release missing its template");
+      expect(template.createdAt <= record.signedAt).toBe(true);
+      expect(record.templateVersion).toBe(template.version);
+      expect(record.templateBody).toBe(template.body);
       expect(isCompletedWaiverCurrent(record, current.materialGeneration)).toBe(true);
     }
   });

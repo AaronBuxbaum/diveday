@@ -5,6 +5,7 @@ import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { boats, crewAvailabilityBlocks, people, personRoles, shops } from "./schema";
 import { seedBoatAtSea } from "./seed-boat-at-sea";
+import { seedBookingCollections } from "./seed-booking-collections";
 import { seedBookings } from "./seed-bookings";
 import { fillWeeklyRun, seedBoothStories } from "./seed-booth";
 import { seedBuddyPairs } from "./seed-buddy-teams";
@@ -12,14 +13,18 @@ import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
+import { seedCollectionHistory } from "./seed-collection-history";
 import { seedConservation } from "./seed-conservation";
 import { seedCounterBlockers } from "./seed-counter-blockers";
+import { seedCounterReceipts } from "./seed-counter-receipts";
 import { seedCounterRental } from "./seed-counter-rental";
 import { seedCourseFormWording } from "./seed-course-form-wording";
 import { seedCourseInquiries } from "./seed-course-inquiries";
 import { seedCourseMaterials } from "./seed-course-materials";
 import { seedCoursePhotos } from "./seed-course-photos";
 import { seedDateRequests } from "./seed-date-requests";
+import { seedDawnPayments } from "./seed-dawn-payments";
+import { seedDeskFollowThrough } from "./seed-desk-follow-through";
 import { seedDeskHandoff } from "./seed-desk-handoff";
 import { seedDeskTrail } from "./seed-desk-trail";
 import { seedDiveIntents } from "./seed-dive-intents";
@@ -31,6 +36,7 @@ import { seedDivers } from "./seed-divers";
 import { seedFrontDesk, seedFrontDeskLists } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
+import { seedHistoryTimeline } from "./seed-history-timeline";
 import { seedHulls } from "./seed-hulls";
 import { seedInbox } from "./seed-inbox";
 import { seedLenses } from "./seed-lenses";
@@ -46,8 +52,12 @@ import { seedPartnerReferrals } from "./seed-partner-referrals";
 import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
+import { seedRentalFleet } from "./seed-rental-fleet";
+import { seedRentalHistory } from "./seed-rental-history";
+import { seedReturningDivers } from "./seed-returning-divers";
 import { seedSafeCrew } from "./seed-safe-crew";
 import { seedSafetyDrills } from "./seed-safety-drills";
+import { seedSailedRecords } from "./seed-sailed-records";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSharedDemoRecapPhoto } from "./seed-shared-demo-recap-photo";
 import { seedShopVoice } from "./seed-shop-voice";
@@ -456,6 +466,28 @@ const THE_DAY: readonly SeedStep[] = [
   // something to report. Off for the lean unit-test template and for a spec's
   // private shop; on for the demo shop, a visitor's mint and the e2e fleet.
   history((db, c) => seedHistory(db, c.shopId, c.staff.instructor.id)),
+  history((db, c) =>
+    seedHistoryTimeline(
+      db,
+      c.shopId,
+      [c.staff.owner.id, c.staff.instructor.id, c.staff.captainId, c.staff.divemasterId].filter(
+        (id): id is string => !!id,
+      ),
+    ),
+  ),
+  history((db, c) => seedReturningDivers(db, c.shopId, c.staff.instructor.id, c.customers)),
+  history((db, c) => seedDawnPayments(db, c.shopId, c.staff.instructor.id)),
+  history((db, c) => seedDeskFollowThrough(db, c.shopId, c.staff.instructor.id)),
+  // What the boats, crew and rental fleet actually did on those sailed days.
+  history((db, c) => seedSailedRecords(db, c.shopId)),
+  history((db, c) => seedRentalFleet(db, c.shopId)),
+  history((db, c) =>
+    seedRentalHistory(
+      db,
+      c.shopId,
+      c.customers.map((person) => person.id),
+    ),
+  ),
   history((db, c) => seedRecentRecaps(db, c.shopId)),
   history(async (db, c) => {
     if (c.shop.isDemo) await seedSharedDemoRecapPhoto(db, c.shopId, reefTrip(c).id);
@@ -690,6 +722,11 @@ const THE_DAY: readonly SeedStep[] = [
   // board: the shop's weekly run (src/db/seed-weekly-run.ts, fourth review,
   // item 51). In the history set, so the lean template keeps its board.
   history(seedTheWeeklyRun),
+  // Local counter receipts and the accounting trail for the orders above,
+  // including the dive card sold by the booth story.
+  history((db, c) => seedCounterReceipts(db, c.shopId, c.staff.instructor.id, c.customers)),
+  history((db, c) => seedCollectionHistory(db, c.shopId)),
+  history((db, c) => seedBookingCollections(db, c.shopId, c.staff.instructor.id)),
   // Updates-only, after every scenario that creates a departure: a hull on
   // every boat day and the shop's word on the ones seeded after the first pass
   // (src/db/seed-hulls.ts, src/db/seed-lenses.ts), so Reports' "By boat" and

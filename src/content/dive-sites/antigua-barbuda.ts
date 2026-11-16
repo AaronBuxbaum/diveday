@@ -123,7 +123,7 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       currentNote:
         "Exposed to the Atlantic and often run as a drift despite a mooring, so carry an SMB. The rock is awash in swell. The wall continues deeper than the plan, so the floor is the diver's to hold. A split runs through the rock itself; it is overhead, so stay out of it.",
       divePlan:
-        "Drop down the outside of the rock, drift along the wall no deeper than 25 m, and ascend on an SMB or the mooring line, away from the rock. If reef sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
+        "Drop down the outside of the rock, drift along the wall no deeper than 25 m, and ascend on an SMB or the mooring line, away from the rock. If reef sharks come by: stay put, keep nothing dangling, do not chase, or touch, stay together, and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "The furthest site on the windward side, exposed and walled. For divers comfortable drifting in open water.",
@@ -218,7 +218,7 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       currentNote:
         "Yachts use the water off English Harbor: carry an SMB, listen for engines, and surface only after the SMB is up. Close to a cliff and open to the Atlantic, with a current whose direction is unpredictable, so local operators usually run it as a drift from the boat. Keep a few meters clear of the cliff foot; surge can move you into the boulders. The water off the headland is often rough and the site is not always diveable.",
       divePlan:
-        "Drift with the current along the boulders and ridges, hold no deeper than 23 m, and make the safety stop on an SMB in open water, away from the cliff. If reef sharks come by: stay with the group, keep nothing dangling, do not chase or touch, and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
+        "Drift with the current along the boulders and ridges, hold no deeper than 23 m, and make the safety stop on an SMB in open water, away from the cliff. If reef sharks come by: stay with the group, keep nothing dangling, do not chase, or touch, and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A boat drift beside a cliff on the exposed coast. For divers who are at ease with current and an SMB.",

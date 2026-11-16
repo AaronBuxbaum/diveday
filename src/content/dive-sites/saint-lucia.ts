@@ -236,7 +236,8 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       description:
         "A freighter about 50 m long, sunk in May 2018 with her bow facing the open sea. She lies in about 24 m of water, with the shallowest part near 15 m.",
       marineLife: "Green morays · frogfish · jacks · Bermuda chub",
-      marineLifeDescription: "A young wreck, already drawing morays, frogfish and schooling jacks.",
+      marineLifeDescription:
+        "A young wreck, already drawing morays, frogfish, and schooling jacks.",
       difficultyLevel: "intermediate",
       depthMinMeters: 15,
       maxDepthMeters: 24,
@@ -267,7 +268,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       forecastLatitude: 13.9298,
       forecastLongitude: -61.0615,
       description:
-        "A 50 m freighter sunk in 1986 as an artificial reef. She sits upright on sand, with the deck at about 9 m and the stern near 20 m, covered in soft coral, sponges and hydroids.",
+        "A 50 m freighter sunk in 1986 as an artificial reef. She sits upright on sand, with the deck at about 9 m and the stern near 20 m, covered in soft coral, sponges, and hydroids.",
       marineLife: "Moray eels · frogfish · lobsters · French angelfish",
       marineLifeDescription:
         "Young angelfish and Nassau grouper shelter in the growth, with morays and frogfish tucked into the steel.",
@@ -353,7 +354,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       forecastLatitude: 13.8298,
       forecastLongitude: -61.069,
       description:
-        "The underwater face of Petit Piton: a wall that falls from the surface to many hundreds of feet, hung with sea whips, gorgonians and feather duster worms. The depth beyond the plan is not for recreational diving.",
+        "The underwater face of Petit Piton: a wall that falls from the surface to many hundreds of feet, hung with sea whips, gorgonians, and feather duster worms. The depth beyond the plan is not for recreational diving.",
       marineLife: "Seahorses · feather duster worms · hawksbill turtles · crustaceans",
       marineLifeDescription:
         "Look small: seahorses and crustaceans live in the soft coral on the wall.",
@@ -398,7 +399,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       forecastLatitude: 13.8365,
       forecastLongitude: -61.0705,
       description:
-        "A drift along the steep slope at the foot of Petit Piton, named for the cliff used in Superman II. Soft coral, large barrel sponges and orange sponges line the slope, with plenty of fish.",
+        "A drift along the steep slope at the foot of Petit Piton, named for the cliff used in Superman II. Soft coral, large barrel sponges, and orange sponges line the slope, with plenty of fish.",
       marineLife: "Barrel sponges · creole wrasse · parrotfish · eagle rays",
       marineLifeDescription:
         "Fish stream along the slope on the current, and the sponges are large.",
@@ -444,7 +445,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       forecastLatitude: 13.9328,
       forecastLongitude: -61.0605,
       description:
-        "Two reefs, north and south of the beach: coral patches, boulder fields and sand, with a steep slope of sponge-covered boulders on the deeper side. The shallows hold seahorses and scorpionfish.",
+        "Two reefs, north and south of the beach: coral patches, boulder fields, and sand, with a steep slope of sponge-covered boulders on the deeper side. The shallows hold seahorses and scorpionfish.",
       marineLife: "Turtles · octopus · moray eels · seahorses · scorpionfish",
       marineLifeDescription:
         "Look under the boulders and along the sand edges. Cleaner shrimp work the shallows.",
@@ -613,7 +614,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       forecastLatitude: 14.1005,
       forecastLongitude: -60.952,
       description:
-        "A beach dive over trenches, shelves, rocks and coral heads, with sandy patches between.",
+        "A beach dive over trenches, shelves, rocks, and coral heads, with sandy patches between.",
       marineLife: "Octopus · lobsters · trumpetfish · flying gurnards",
       marineLifeDescription: "Sandy patches hold gurnards and the rocks hide octopus and lobsters.",
       difficultyLevel: "beginner",
@@ -653,7 +654,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       forecastLatitude: 14.1066,
       forecastLongitude: -60.95,
       description:
-        "The island's northernmost dive: a shallow start at 6 m that deepens toward the point, with scorpionfish, puffers, grunts and rays. The shallows are also good snorkeling.",
+        "The island's northernmost dive: a shallow start at 6 m that deepens toward the point, with scorpionfish, puffers, grunts, and rays. The shallows are also good snorkeling.",
       marineLife: "Scorpionfish · puffers · grunts · stingrays · eels",
       marineLifeDescription:
         "Check the sand and the ledges; rays rest in the open and eels in the rock.",
@@ -741,7 +742,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       forecastLatitude: 13.8665,
       forecastLongitude: -61.085,
       description:
-        "The Big House: boulders on a terrace starting at about 12 m, then the lip of a steep wall hung with deep-water gorgonians, whip corals, large brain corals and barrel sponges. Beyond the plan the wall falls to depth.",
+        "The Big House: boulders on a terrace starting at about 12 m, then the lip of a steep wall hung with deep-water gorgonians, whip corals, large brain corals, and barrel sponges. Beyond the plan the wall falls to depth.",
       marineLife: "Gorgonians · whip corals · barrel sponges · barracuda",
       marineLifeDescription:
         "Gorgonians and whip corals hang on the wall. Large barracuda sometimes come in close.",
@@ -784,7 +785,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       forecastLatitude: 13.9455,
       forecastLongitude: -61.049,
       description:
-        "A sheltered coral garden on a plateau at about 12 m that slopes to deeper water, with large barrel sponges, brain coral and stingrays.",
+        "A sheltered coral garden on a plateau at about 12 m that slopes to deeper water, with large barrel sponges, brain coral, and stingrays.",
       marineLife: "Stingrays · yellowtail snappers · barracuda · barrel sponges",
       marineLifeDescription:
         "Rays rest on the sand between the coral formations, and snappers hold above the garden.",
@@ -876,7 +877,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       forecastLatitude: 13.9235,
       forecastLongitude: -61.064,
       description:
-        "A Japanese dredger 75 m long, put down in 1996 to make a reef. She is a wreck lying on her side on a slope, with eels, barracuda and jacks around her.",
+        "A Japanese dredger 75 m long, put down in 1996 to make a reef. She is a wreck lying on her side on a slope, with eels, barracuda, and jacks around her.",
       marineLife: "Green moray · barracuda · horse-eye jack · angelfish · turtles",
       marineLifeDescription:
         "Morays sit in the plating, so do not reach into it. Barracuda and jacks hold along the hull.",

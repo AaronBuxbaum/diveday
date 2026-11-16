@@ -90,6 +90,20 @@ function normalize(data: Export): Map<string, string[]> {
       names.set(row.id, `${table}#${digest}`);
     }
   }
+  // Collection lots use a bigint sequence rather than UUIDs. Name each lot by
+  // its contents and economic source, then use that name for reversal links as
+  // well. Dropping the numbers outright would hide a reversal aimed at the
+  // wrong receipt; retaining them would make two real resets always differ.
+  const collectionNames = new Map<number, string>();
+  for (const row of parsed.get("collection_entries") ?? []) {
+    if (typeof row.id !== "number") continue;
+    const contents = Object.fromEntries(
+      Object.entries(row).filter(([column]) => column !== "id" && column !== "reverses_entry_id"),
+    );
+    const stable = JSON.stringify(contents).replace(UUID, (id) => names.get(id) ?? "<id?>");
+    const digest = createHash("sha256").update(stable).digest("hex").slice(0, 16);
+    collectionNames.set(row.id, `collection_entries#${digest}`);
+  }
   return new Map(
     [...parsed].map(([table, rows]) => [
       table,
@@ -103,7 +117,14 @@ function normalize(data: Export): Map<string, string[]> {
                   column,
                   `${table}.${column}` in NONDETERMINISTIC
                     ? "<nondeterministic>"
-                    : JSON.stringify(value ?? null).replace(UUID, (id) => names.get(id) ?? "<id?>"),
+                    : table === "collection_entries" &&
+                        (column === "id" || column === "reverses_entry_id") &&
+                        typeof value === "number"
+                      ? JSON.stringify(collectionNames.get(value) ?? "<entry?>")
+                      : JSON.stringify(value ?? null).replace(
+                          UUID,
+                          (id) => names.get(id) ?? "<id?>",
+                        ),
                 ]),
             ),
           ),
@@ -208,6 +229,40 @@ async function freshModules(): Promise<{ snapshot: typeof Snapshot; seed: typeof
 }
 
 describe("the e2e demo reset's snapshot", () => {
+  it("normalizes collection sequence numbers while preserving reversal targets", () => {
+    const rows = (first: number, second: number, reversal: number, target: number): Export =>
+      new Map([
+        [
+          "collection_entries",
+          [
+            JSON.stringify({
+              id: first,
+              source_type: "order",
+              amount_cents: 100,
+              reverses_entry_id: null,
+            }),
+            JSON.stringify({
+              id: second,
+              source_type: "order",
+              amount_cents: 200,
+              reverses_entry_id: null,
+            }),
+            JSON.stringify({
+              id: reversal,
+              source_type: "order",
+              amount_cents: -50,
+              reverses_entry_id: target,
+            }),
+          ],
+        ],
+      ]);
+    const original = normalize(rows(10, 11, 12, 10));
+    expect(differingTables(original, normalize(rows(40, 41, 42, 40)))).toEqual([]);
+    expect(differingTables(original, normalize(rows(40, 41, 42, 41)))).toEqual([
+      "collection_entries",
+    ]);
+  });
+
   it("leaves exactly the shop a real reset leaves, however a spec drove it", async () => {
     const { db, shop } = await seededShopContext({ history: true });
     const { resetDemoFromSnapshot } = (await freshModules()).snapshot;
@@ -249,6 +304,11 @@ describe("the e2e demo reset's snapshot", () => {
     const { resetDemoSchedule } = (await freshModules()).seed;
     await resetDemoSchedule(reference.db, reference.shop.id, "history");
     const fresh = normalize(await exportDatabase(reference.db));
+    const ledgerFresh = fresh.get("collection_entries") ?? [];
+    const ledgerReplay = again.get("collection_entries") ?? [];
+    const missing = ledgerFresh.filter((row) => !ledgerReplay.includes(row)).slice(0, 2);
+    const extra = ledgerReplay.filter((row) => !ledgerFresh.includes(row)).slice(0, 2);
+    expect({ missing, extra }).toEqual({ missing: [], extra: [] });
     expect(differingTables(fresh, again)).toEqual([]);
   }, 120_000);
 
