@@ -319,10 +319,7 @@
   "import": {
     "description": "Read a dive_sites.csv from your DiveDay export back into this shop’s library. Choose dive_site_creatures.csv with it to bring each site’s field guide back too.",
     "help": "This reads DiveDay’s own export rather than another system’s file, so it expects the columns the bundle wrote and refuses one it does not recognize. Sites match by id first, then by name: importing into the shop the bundle came from rewrites the sites it names, and importing into a new one creates them. A site that was deleted when the bundle was made comes back deleted.",
-    "notRestored": "Without dive_site_creatures.csv, each site keeps the field guide it has. With it, every site in the file gets the guide the export carried, and a species DiveDay no longer lists is left out. A tide-station acknowledgment lands only on a site this shop already holds that station for; anywhere else the distance prompt asks again, which is what it is for.",
-    "chooseFile": "Choose CSV files",
-    "chooseDifferentFile": "Choose different files",
-    "submit": "Import dive sites"
+    "notRestored": "Without dive_site_creatures.csv, each site keeps the field guide it has. With it, every site in the file gets the guide the export carried, and a species DiveDay no longer lists is left out. A tide-station acknowledgment lands only on a site this shop already holds that station for; anywhere else the distance prompt asks again, which is what it is for."
   },
   "notice": {
     "importEmpty": "Choose a dive_sites.csv to import.",

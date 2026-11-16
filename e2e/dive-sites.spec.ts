@@ -1065,6 +1065,7 @@ test.describe("a site whose station is nowhere near it", () => {
  * not put back.
  */
 test("staff read a dive_sites.csv back into the library", async ({ page, privateShop }) => {
+  const copy = staffTranslator("en-US");
   await page.goto(`/shop/${privateShop.slug}/settings/import?what=dive-sites`);
   await expect(
     page
@@ -1075,7 +1076,7 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   // A subset of the bundle's columns, which is what a shop that trimmed its
   // copy hands over — only `name` is required, and a column that is not there
   // says nothing rather than blanking a field.
-  await page.getByLabel("Choose CSV files").setInputFiles({
+  await page.locator('input[type="file"]').setInputFiles({
     name: "dive_sites.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(
@@ -1083,22 +1084,20 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
         '"Lantern Wall","Outer Bank","A wall that starts at eighteen meters.",advanced,true\n',
     ),
   });
-  await page.getByRole("button", { name: "Import dive sites" }).click();
-  // The action's own `?notice=` redirect is the wait — never a navigation
-  // racing the write. One updated site is the seeded library's own row this
-  // file does not name; the created one is Lantern Wall.
-  await page.waitForURL(/notice=imported-\d+-1-0-0/);
-  await expect(page.getByRole("status")).toContainText("created 1 new one");
+  await page.getByRole("button", { name: copy("gear.import.existing.review") }).click();
+  await page.getByRole("button", { name: `${copy("gear.import.existing.submit")} (1)` }).click();
+  await expect(page.getByText(copy("gear.import.existing.result"))).toBeVisible();
+  await expect(
+    page.getByText(copy("gear.import.existing.created"), { exact: true }).locator(".."),
+  ).toContainText("1");
 
-  // Each import lands back on this tab, form and all, so the next upload goes
-  // from here and the library is read once at the end: a navigation between
-  // every step put this test on its 15-second budget (issue #2366).
+  // A new upload clears the previous result and requires its own review.
 
   // The field guide travels in a second file of the same bundle and comes back
   // in the same upload, joined on the id the sites file carried (issue #1841).
   // A species DiveDay no longer lists is left out and counted, never stored.
   const siteId = "3f0b6a2e-9c41-4d7e-8f15-2a6c9b1d4e70";
-  await page.getByLabel("Choose CSV files").setInputFiles([
+  await page.locator('input[type="file"]').setInputFiles([
     {
       name: "dive_sites.csv",
       mimeType: "text/csv",
@@ -1112,25 +1111,29 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
       ),
     },
   ]);
-  await page.getByRole("button", { name: "Import dive sites" }).click();
-  await page.waitForURL(/notice=imported-\d+-1-0-0-1-1/);
-  await expect(page.getByRole("status")).toContainText("Field guides came back for 1 site");
+  await page.getByRole("button", { name: copy("gear.import.existing.review") }).click();
+  await page.getByRole("button", { name: `${copy("gear.import.existing.submit")} (2)` }).click();
+  await expect(page.getByText(copy("gear.import.existing.result"))).toBeVisible();
+  await expect(
+    page.getByText(copy("gear.import.existing.guides"), { exact: true }).locator(".."),
+  ).toContainText("1");
+  await expect(
+    page.getByRole("link", { name: copy("gear.import.existing.correction") }),
+  ).toBeVisible();
 
   // And the file DiveDay did not write is refused whole, rather than read
   // half-way: this reads the export's own columns, so a column it does not know
   // is either one a later DiveDay wrote or one the shop added by hand, and
   // both are a restore that quietly loses a fact.
-  await page.getByLabel("Choose CSV files").setInputFiles({
+  await page.locator('input[type="file"]').setInputFiles({
     name: "dive_sites.csv",
     mimeType: "text/csv",
     buffer: Buffer.from("name,house_reef_rating\nSomewhere Else,5\n"),
   });
-  await page.getByRole("button", { name: "Import dive sites" }).click();
-  await page.waitForURL(/notice=import-unknown-columns/);
-  // The banner's own words rather than its role: a refusal is `role="alert"`
-  // (the shared tone-to-role rule, `noticeRole`) and so is Next's route
-  // announcer, which wins the match on a fresh navigation.
-  await expect(page.getByText(/column DiveDay does not recognize/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: copy("gear.import.existing.review") }),
+  ).toBeDisabled();
+  await expect(page.getByText(copy("gear.import.existing.mappingRequired"))).toBeVisible();
   await page.goto(`/shop/${privateShop.slug}/dive-sites`);
   await expect(page.getByText("Lantern Wall")).toBeVisible();
   await expect(page.getByText("Somewhere Else")).toHaveCount(0);

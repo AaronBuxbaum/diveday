@@ -1213,6 +1213,12 @@
         "seeRoster": "Ver el listado",
         "identityConflictsOne": "Se omitió {count} fila porque los nombres no coinciden. Confirma la persona y corrige el archivo antes de reintentarlo.",
         "identityConflictsOther": "Se omitieron {count} filas porque los nombres no coinciden. Confirma cada persona y corrige el archivo antes de reintentarlo."
+      },
+      "visitOutcomes": {
+        "add": "Reserva pasada: agregar solo al historial",
+        "existing": "Reserva pasada: ya está en el historial",
+        "duplicate": "Reserva pasada: repetida en este archivo",
+        "skip": "Reserva pasada: no se importará al historial"
       }
     },
     "issues": {
