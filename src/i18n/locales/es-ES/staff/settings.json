@@ -931,6 +931,7 @@
       "work_order_events": "Historial de las órdenes de trabajo",
       "pre_departure_checklist_items": "Lista de preparación",
       "pre_departure_check_events": "Registros de preparación",
+      "roll_call_deck_counts": "Recuentos en cubierta",
       "boat_snags": "Averías de los barcos",
       "departure_boat_safety_snapshots": "Seguridad del barco registrada",
       "computer_import_batches": "Resultados de importación de la computadora",

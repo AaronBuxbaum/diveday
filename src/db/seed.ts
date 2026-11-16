@@ -88,6 +88,7 @@ import {
   rentalFitProfiles,
   reviewModerationEvents,
   reviewReplies,
+  rollCallDeckCounts,
   safetyDrillParticipants,
   safetyDrills,
   shopBackupDeliveryClaims,
@@ -935,6 +936,7 @@ export async function clearDemoSchedule(
   // Snags name the departures they were written and answered on.
   await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db.delete(rollCallDeckCounts).where(eq(rollCallDeckCounts.shopId, shopId));
   await db
     .delete(departureBoatSafetySnapshots)
     .where(eq(departureBoatSafetySnapshots.shopId, shopId));

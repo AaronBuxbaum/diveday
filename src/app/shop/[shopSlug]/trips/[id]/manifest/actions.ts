@@ -28,6 +28,7 @@ import {
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
 import { markTripCaughtUp } from "@/db/trip-read-marks";
 import { answerSnag, noteSnag } from "@/features/boat-snags";
+import { parseDeckCount, recordDeckCount } from "@/features/deck-counts";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { requireShopSurface, requireStaffSession } from "@/features/session";
 import { deleteTripSighting, recordTripSighting } from "@/features/trip-sightings";
@@ -893,4 +894,39 @@ export async function dissolveBuddyTeamAction(ctx: ManifestActionContext, formDa
   });
   if (!outcome.ok) redirect(`${back}&buddyError=generic`);
   revalidateAndRedirect(manifestPath(ctx), back);
+}
+
+/** A deck count's answer: saved, a number the crew can fix, or "try again". */
+export type DeckCountResult = { ok: true } | { ok: false; reason: "invalid" | "error" } | null;
+
+/**
+ * **The count on deck** (issue #4248): the heads the captain counted at this
+ * checkpoint, crew included. Recorded and compared, never a gate: it closes,
+ * opens and blocks nothing, and the per-person roll call stays the head count.
+ * The write re-proves the staffer, the departure and the checkpoint.
+ */
+export async function recordDeckCountAction(
+  ctx: ManifestActionContext,
+  _prev: DeckCountResult,
+  formData: FormData,
+): Promise<DeckCountResult> {
+  const staff = await manifestStaff(ctx);
+  const counted = parseDeckCount(formData.get("counted"));
+  if (counted === null) return { ok: false, reason: "invalid" };
+  try {
+    const outcome = await recordDeckCount(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId: ctx.tripId,
+      checkpoint: ctx.checkpoint,
+      counted,
+      recordedByPersonId: staff.user.personId,
+    });
+    if (!outcome.ok) {
+      return { ok: false, reason: outcome.reason === "count_invalid" ? "invalid" : "error" };
+    }
+  } catch {
+    return { ok: false, reason: "error" };
+  }
+  revalidatePath(manifestPath(ctx));
+  return { ok: true };
 }

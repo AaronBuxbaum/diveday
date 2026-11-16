@@ -19,9 +19,11 @@ import { BoatTabPaper } from "./_components/BoatTabPaper";
 import { CancelledRollCallBanner } from "./_components/CancelledRollCallBanner";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CheckpointSwitch } from "./_components/CheckpointSwitch";
+import { DeckCountNote, DeckCountPanel } from "./_components/DeckCount";
 import { DeckRollCall } from "./_components/DeckRollCall";
 import { DockDesk } from "./_components/DockDesk";
 import { deckAttentionNeeded } from "./_components/deck-attention";
+import { deckCountView } from "./_components/deck-count-view";
 import { ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { executedDiveLogView } from "./_components/executed-dive-copy";
 import { headCountView } from "./_components/head-count-view";
@@ -122,6 +124,7 @@ export default async function TripManifestPage({
     stage,
     dockDesk,
     paperIdentity,
+    deckCounts,
   } = view;
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
@@ -131,6 +134,8 @@ export default async function TripManifestPage({
   // a divemaster still in the water.
   const completeness = manifest.completeness;
   const headCount = headCountView({ manifest, checkpoint, isDeparture });
+  // What the captain counted on deck, beside who is marked aboard (issue #4248).
+  const deckCount = deckCountView(manifest, checkpoint, deckCounts);
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -194,17 +199,20 @@ export default async function TripManifestPage({
             view={view}
             buddiesEnabled={shop.buddyTeamsEnabled}
             status={
-              <RosterFreshness
-                {...{ tripId, locale }}
-                shop={shop}
-                sessionId={session.user.sessionId}
-                read={view}
-                checkpoint={checkpoint}
-                renderId={renderId}
-                rosterRead={rosterRead}
-                t={t}
-                compact
-              />
+              <>
+                <RosterFreshness
+                  {...{ tripId, locale }}
+                  shop={shop}
+                  sessionId={session.user.sessionId}
+                  read={view}
+                  checkpoint={checkpoint}
+                  renderId={renderId}
+                  rosterRead={rosterRead}
+                  t={t}
+                  compact
+                />
+                <DeckCountNote comparison={deckCount.comparison} t={t} />
+              </>
             }
             checkpoint={
               <p className="font-semibold">
@@ -248,6 +256,16 @@ export default async function TripManifestPage({
                 ) : null}
                 {boatSafety ? <BoatSafetyNotices {...boatSafety} /> : null}
                 <PreDepartureCheckList {...checklistProps} />
+                {/* Informs, never gates (issue #4248). A cancelled departure's
+                    roll call takes no writes, and neither does its count. */}
+                {cancelled === "closed" ? null : (
+                  <DeckCountPanel
+                    action={actions.recordDeckCount}
+                    counted={deckCount.counted}
+                    comparison={deckCount.comparison}
+                    t={t}
+                  />
+                )}
                 <DockDesk {...dockDesk} />
                 {isDeparture ? (
                   <TripPlanSection

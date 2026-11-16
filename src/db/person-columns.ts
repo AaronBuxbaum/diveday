@@ -1260,6 +1260,13 @@ const rows = [
     why: "who ticked the check",
   },
   {
+    table: "roll_call_deck_counts",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who entered the count on deck",
+  },
+  {
     table: "pre_departure_checklist_items",
     column: "deleted_by_person_id",
     kind: "actor",

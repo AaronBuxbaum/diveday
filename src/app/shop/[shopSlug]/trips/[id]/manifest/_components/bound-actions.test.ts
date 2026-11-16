@@ -14,6 +14,7 @@ vi.mock("../actions", () => {
       "markTripCaughtUpAction",
       "noteSnagAction",
       "preDepartureCheckAction",
+      "recordDeckCountAction",
       "removeBuddyTeamMemberAction",
       "rollCallAction",
       "saveExecutedDiveAction",
@@ -41,6 +42,8 @@ describe("bindManifestActions", () => {
     const actions = bindManifestActions(context);
     expect(actions.rollCall).toEqual({ name: "rollCallAction", context });
     expect(actions.saveExecutedDive).toEqual({ name: "saveExecutedDiveAction", context });
+    // The count on deck belongs to the checkpoint that is open (issue #4248).
+    expect(actions.recordDeckCount).toEqual({ name: "recordDeckCountAction", context });
     expect(actions.buddyTeams.teamUpPartiesAction).toEqual({
       name: "teamUpPartiesAction",
       context,

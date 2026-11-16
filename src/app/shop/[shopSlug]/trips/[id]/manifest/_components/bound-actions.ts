@@ -15,6 +15,7 @@ import {
   markTripCaughtUpAction,
   noteSnagAction,
   preDepartureCheckAction,
+  recordDeckCountAction,
   removeBuddyTeamMemberAction,
   rollCallAction,
   saveExecutedDiveAction,
@@ -60,6 +61,8 @@ export function bindManifestActions(
   return {
     rollCall: rollCallAction.bind(null, actionContext),
     crewRollCall: crewRollCallAction.bind(null, actionContext),
+    // The count on deck belongs to the checkpoint that is open (issue #4248).
+    recordDeckCount: recordDeckCountAction.bind(null, actionContext),
     // The note carries its own checkpoint and the action re-proves it, so this
     // one takes the narrower context that has none.
     addPrivateNote: addManifestPrivateNoteAction.bind(null, { shopSlug, tripId }),
