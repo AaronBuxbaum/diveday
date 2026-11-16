@@ -10,6 +10,7 @@ import {
   listChecklistItems,
   reorderChecklistItems,
 } from "@/db/pre-departure-check";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { requireShopSurface } from "@/features/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { registerBlock } from "../register-block";
@@ -32,7 +33,7 @@ export async function addChecklistItemAction(shopSlug: string, formData: FormDat
     label: parsed.data.label,
   });
   if (!outcome.ok) redirect(noticeUrl(back, `checklist-item-${outcome.reason.replace(/_/g, "-")}`));
-  redirect(noticeUrl(back, "checklist-item-added"));
+  revalidateAndRedirect(back, noticeUrl(back, "checklist-item-added"));
 }
 
 const itemSchema = z.object({ itemId: z.string().uuid() });
@@ -52,7 +53,7 @@ export async function deleteChecklistItemAction(
     itemId: parsed.data.itemId,
   });
   if (!outcome.ok) redirect(noticeUrl(back, "checklist-item-not-authorized"));
-  redirect(noticeUrl(back, "checklist-item-deleted"));
+  revalidateAndRedirect(back, noticeUrl(back, "checklist-item-deleted"));
 }
 
 const moveSchema = z.object({
@@ -88,5 +89,5 @@ export async function moveChecklistItemAction(shopSlug: string, formData: FormDa
     personId: staff.user.personId,
     orderedIds,
   });
-  redirect(back);
+  revalidateAndRedirect(back);
 }
