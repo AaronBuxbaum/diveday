@@ -4,7 +4,12 @@ import type { AppDb } from "../../db/client";
 import { orders, paymentDisputes, people, shops } from "../../db/schema/index";
 import type { PaymentSourceLookup } from "../../lib/payments/payment-sources";
 import { fileScopedShopContext } from "../../test/db";
-import { type DisputeEvent, listOpenPaymentDisputes, recordStripeDispute } from "./store";
+import {
+  type DisputeEvent,
+  listLostDisputes,
+  listOpenPaymentDisputes,
+  recordStripeDispute,
+} from "./store";
 
 const ctx = fileScopedShopContext();
 
@@ -242,6 +247,42 @@ describe("recordStripeDispute", () => {
       status: "recorded",
       dispute: { closedAt: new Date("2026-10-05T00:00:00.000Z") },
     });
+  });
+
+  it("writes the reversal line once for a lost dispute, however often the close is redelivered", async () => {
+    const { db, shop } = ctx;
+    const { order } = await paidOrder(db, shop.id, {
+      account: "acct_demo",
+      paymentIntentId: "pi_disputed",
+    });
+    const { lookup } = lookupAnsweringNone();
+    const lose = (at: string) =>
+      recordStripeDispute(
+        db,
+        disputeEvent({ status: "lost", eventType: "charge.dispute.closed", at }),
+        lookup,
+      );
+    await lose("2026-10-05T00:00:00.000Z");
+    await lose("2026-10-05T00:00:00.000Z");
+    await lose("2026-10-07T00:00:00.000Z");
+    expect(await listLostDisputes(db, shop.id, { orderId: order.id })).toEqual([
+      expect.objectContaining({
+        amountCents: 12_000,
+        reversedAt: new Date("2026-10-05T00:00:00.000Z"),
+      }),
+    ]);
+    // A dispute still open, or won, is no reversal.
+    await recordStripeDispute(
+      db,
+      disputeEvent({
+        id: "dp_won",
+        status: "won",
+        eventType: "charge.dispute.closed",
+        at: "2026-10-06T00:00:00.000Z",
+      }),
+      lookup,
+    );
+    expect(await listLostDisputes(db, shop.id, { orderId: order.id })).toHaveLength(1);
   });
 
   it("reads a status Stripe has not told us about as still open", async () => {
