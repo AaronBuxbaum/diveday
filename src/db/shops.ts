@@ -1,4 +1,4 @@
-import { and, eq, exists, gt, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, eq, exists, gt, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { cache } from "react";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
@@ -7,6 +7,7 @@ import type { DepthUnit } from "@/lib/depth-units";
 import type { DeskPayment } from "@/lib/desk-payment";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
+import { containsPattern } from "@/lib/like-pattern";
 import type { ShopCurrency } from "@/lib/money";
 import type { NitroxFillMethod } from "@/lib/nitrox-fill";
 import type { RentalPricing } from "@/lib/rentals";
@@ -78,15 +79,22 @@ export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string; na
   return db.select({ slug: shops.slug, name: shops.name }).from(shops).where(listedShopScope(db));
 }
 
+export const DIVER_PICKER_LIMIT = 50;
+
 /**
  * The shops a diver can pick from on `/find-your-booking` (fourth review,
  * item 50): the same listed scope as the sitemap, so a shop that said no to
  * search is not named here either, with the town that tells two Reef Lines
- * apart. Name order, which is how a diver scans for theirs.
+ * apart. Name order, which is how a diver scans for theirs. A typed query
+ * narrows by name or town, and the list stops at `DIVER_PICKER_LIMIT`, so the
+ * page stays one light query however many shops join.
  */
 export async function listShopsForDiverPicker(
   db: AppDb,
+  options: { query?: string; limit?: number } = {},
 ): Promise<{ slug: string; name: string; locality: string | null; region: string | null }[]> {
+  const typed = options.query?.trim();
+  const like = typed ? containsPattern(typed) : undefined;
   return db
     .select({
       slug: shops.slug,
@@ -95,8 +103,14 @@ export async function listShopsForDiverPicker(
       region: shops.addressRegion,
     })
     .from(shops)
-    .where(listedShopScope(db))
-    .orderBy(shops.name);
+    .where(
+      and(
+        listedShopScope(db),
+        like ? or(ilike(shops.name, like), ilike(shops.addressLocality, like)) : undefined,
+      ),
+    )
+    .orderBy(shops.name)
+    .limit(options.limit ?? DIVER_PICKER_LIMIT);
 }
 
 /**

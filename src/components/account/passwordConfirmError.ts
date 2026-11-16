@@ -13,7 +13,7 @@ import {
  * code (same shape as `ONBOARD_ERROR_MESSAGES` in src/app/onboard/page.tsx).
  */
 const PASSWORD_CONFIRM_ERROR_MESSAGES: Record<
-  PasswordConfirmErrorCode | "invalid_input",
+  PasswordConfirmErrorCode | "invalid_input" | "rate",
   (t: DiverTranslator) => string
 > = {
   password_too_short: (t) =>
@@ -22,6 +22,8 @@ const PASSWORD_CONFIRM_ERROR_MESSAGES: Record<
     t("account.common.passwordErrors.tooLong", { max: MAX_PASSWORD_LENGTH }),
   passwords_mismatch: (t) => t("account.common.passwordErrors.mismatch"),
   invalid_input: (t) => t("account.common.passwordErrors.invalid"),
+  // The double-tapper's second submit (`acceptStaffInvite`'s rate limit).
+  rate: (t) => t("common.rateLimited"),
 };
 
 /** Resolves a known `?error=` code; anything else gets the generic invalid

@@ -225,6 +225,11 @@ describe("startTipAction", () => {
     expect(startTipCheckout).not.toHaveBeenCalled();
   });
 
+  it("reads a decimal comma in the typed amount", async () => {
+    await tipRedirect(form([["customAmount", "12,5"]])).catch(() => undefined);
+    expect(vi.mocked(startTipCheckout).mock.calls[0]?.[1]).toMatchObject({ amountCents: 1250 });
+  });
+
   it("lets a typed amount win over the checked preset", async () => {
     expect(
       await tipRedirect(

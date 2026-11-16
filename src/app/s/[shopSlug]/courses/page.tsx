@@ -23,6 +23,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
 import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
+import { requestedAgencyFrom } from "./agency-param";
 import { CourseDates } from "./CourseDates";
 import { courseRowDate } from "./course-row-date";
 
@@ -90,7 +91,7 @@ export default async function PublicCoursesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ agency?: string }>;
+  searchParams: Promise<{ agency?: string | string[] }>;
 }) {
   await connection(); // visibility can change between requests — render per request
   const { shopSlug } = await params;
@@ -111,7 +112,7 @@ export default async function PublicCoursesPage({
   // page, and a catalog that silently shows nothing is indistinguishable from
   // a shop that teaches nothing. Null only when the shop publishes no courses
   // at all; there is no unfiltered view (see `AgencyTabs`).
-  const requestedAgency = agency?.trim().toLowerCase();
+  const requestedAgency = requestedAgencyFrom(agency);
   const selectedAgency =
     requestedAgency && agencies.includes(requestedAgency) ? requestedAgency : (agencies[0] ?? null);
   // `{depth18}` markers in the shop's own prose resolve into the shop's unit

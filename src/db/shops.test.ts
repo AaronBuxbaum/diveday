@@ -325,6 +325,16 @@ describe("listShopsForDiverPicker", () => {
     expect(picker.find((row) => row.slug === "reef-line-divers")?.locality).toBe("Key Largo");
   });
 
+  it("narrows by a typed name or town, and caps the list", async () => {
+    const db = ctx.db;
+    const byName = await listShopsForDiverPicker(db, { query: "reef line" });
+    expect(byName.map((row) => row.slug)).toContain("reef-line-divers");
+    const byTown = await listShopsForDiverPicker(db, { query: "key largo" });
+    expect(byTown.map((row) => row.slug)).toContain("reef-line-divers");
+    expect(await listShopsForDiverPicker(db, { query: "zzz-no-such-shop" })).toEqual([]);
+    expect(await listShopsForDiverPicker(db, { limit: 1 })).toHaveLength(1);
+  });
+
   it("drops a shop that opted out of search", async () => {
     const db = ctx.db;
     const [shop] = await db.select().from(shops).where(eq(shops.slug, "reef-line-divers"));

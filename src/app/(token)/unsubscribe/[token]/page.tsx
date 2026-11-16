@@ -4,6 +4,8 @@ import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { DeadLink } from "@/components/DeadLink";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { ShopNotice } from "@/components/ui/outcome";
+import { noticeRole } from "@/components/ui/tone";
 import { getDb } from "@/db/client";
 import { resolveUnsubscribeToken, type UnsubscribeKind } from "@/features/unsubscribe";
 import { diverTranslator } from "@/i18n/messages";
@@ -41,16 +43,25 @@ function ConfirmUnsubscribe({
   submitLabel,
   pendingLabel,
   token,
+  rateLimited,
+  rateLimitedText,
 }: {
   title: string;
   description: string;
   submitLabel: string;
   pendingLabel: string;
   token: string;
+  rateLimited: boolean;
+  rateLimitedText: string;
 }) {
   // A single button needs no panel around it (docs/design/principles.md #10).
   return (
     <EntryShell wordmark panel={false} title={title} description={description}>
+      {rateLimited ? (
+        <ShopNotice tone="danger" role={noticeRole("danger")} className="mb-4">
+          {rateLimitedText}
+        </ShopNotice>
+      ) : null}
       <form action={confirmUnsubscribe.bind(null, token)}>
         <SubmitButton pendingLabel={pendingLabel} className={buttonClass()}>
           {submitLabel}
@@ -116,9 +127,16 @@ function wordsFor(t: Translate, kind: UnsubscribeKind, shopName: string) {
   }
 }
 
-export default async function UnsubscribePage({ params }: { params: Promise<{ token: string }> }) {
+export default async function UnsubscribePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ error?: string }>;
+}) {
   await connection();
   const { token } = await params;
+  const { error } = await searchParams;
   const db = await getDb();
   const t = diverTranslator(await requestLocale());
 
@@ -139,6 +157,8 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
       submitLabel={words.submit}
       pendingLabel={words.submitting}
       token={token}
+      rateLimited={error === "rate"}
+      rateLimitedText={t("common.rateLimited")}
     />
   );
 }
