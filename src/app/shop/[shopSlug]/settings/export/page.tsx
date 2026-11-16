@@ -12,7 +12,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { addMonths, type MonthRef, monthKey, monthLabel } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
-import { DataTabs } from "../_components/DataTabs";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { DownloadAcknowledgmentLink } from "./DownloadAcknowledgmentLink";
 import { EXPORT_PURPOSE_KEYS } from "./file-index";
@@ -85,7 +84,7 @@ export default async function DataOutSettingsPage({
     <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
-        title={t("settings.data.title")}
+        title={t("settings.data.export")}
         actions={
           <DownloadAcknowledgmentLink
             href={`${basePath}/download`}
@@ -94,8 +93,6 @@ export default async function DataOutSettingsPage({
           />
         }
       />
-
-      <DataTabs t={t} shopSlug={session.user.shopSlug} current="export" />
 
       {/* Collapsed by default. This is the page's *reference*, not its work:
           forty-odd file cards, several of them fifteen lines of prose, ran
