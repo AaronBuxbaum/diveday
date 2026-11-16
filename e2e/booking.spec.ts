@@ -2,6 +2,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
+  acceptAgeAttestation,
   bookASeatAndOpenThread,
   choosePartySize,
   createTrip,
@@ -764,4 +765,46 @@ test("a diver's card payment at booking settles their Pay step", async ({
 
   await page.goto(thread);
   await expect(pay).toHaveAttribute("data-step-state", "done");
+});
+
+/**
+ * **A declined card does not cost the diver their seat.** Stripe's hosted page
+ * shows the decline itself; the diver who gives up lands on the booking's own
+ * cancel return (`?pay=cancelled`). That page says so in words, the seat is
+ * still theirs, no money is recorded, and the payment door is still open for a
+ * second try. A shop of its own for the same reason as the test above.
+ */
+// story: PAY-04
+test("a declined card keeps the diver's seat and lets them try again", async ({
+  page,
+  request,
+  privateShop,
+}) => {
+  test.setTimeout(90_000);
+  const SHOP = privateShop.slug;
+  const email = "dana.declined@example.com";
+
+  await page.goto(`/s/${SHOP}`);
+  await openFirstBookableScheduleTrip(page);
+  await bookASeatAndOpenThread(page, "Dana Declined", email);
+  const thread = page.url();
+
+  const { bookingCheckout: checkout } = await seedFacts(
+    request,
+    ["stripeAccount", { name: "bookingCheckout", email }],
+    { slug: SHOP },
+  );
+  expect(checkout.amountCents).toBeGreaterThan(0);
+
+  // The card failed on Stripe's page and the diver came back without paying.
+  await page.goto(`${thread}?pay=cancelled`);
+  await expect(page.getByText(diver("ready.paymentCancelled"))).toBeVisible();
+  await expect(threadStatus(page)).toBeVisible();
+  await expect(page.locator("li[data-thread-step='pay'][data-step-state='done']")).toHaveCount(0);
+
+  // Still theirs on a fresh visit, and the same link is still the way back to pay.
+  await page.goto(thread);
+  await expect(threadStatus(page)).toBeVisible();
+  await expect(page.getByText(diver("ready.paymentCancelled"))).toHaveCount(0);
+  await expect(page.locator("li[data-thread-step='pay'][data-step-state='done']")).toHaveCount(0);
 });
