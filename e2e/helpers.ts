@@ -289,9 +289,11 @@ export function daysFromNow(days: number): string {
 /** Sign in through the dev credential form as any seeded staff login. */
 export async function signInAs(page: Page, login: { email: string; password: string }) {
   await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(login.email);
-  await page.getByLabel("Password").fill(login.password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  // The rendered locale may come from a cookie as well as browser preferences.
+  const words = diverTranslator(await page.locator("html").getAttribute("lang"));
+  await page.getByLabel(words("account.common.email"), { exact: true }).fill(login.email);
+  await page.getByLabel(words("account.common.password"), { exact: true }).fill(login.password);
+  await page.getByRole("button", { name: words("account.signIn.submit"), exact: true }).click();
   await expect(page).toHaveURL(/\/shop/);
 }
 
