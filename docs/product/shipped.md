@@ -7,6 +7,15 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A drafted emergency text from the manifest (built 2026-11-16)
+
+Issue #4256. Under an emergency contact in the manifest's person sheet, diver or crew, "Draft a
+text" opens the phone's message app with a draft naming the shop, the person, the departure, its
+date and its captain (the rostered captain, or no captain line without one). A person sends it;
+DiveDay sends and records nothing. Screen only, never on a held seat. The amendment is in ADR
+[20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
+decision 3.
+
 ## A quiet day names the week after's blocked boats (built 2026-11-16)
 
 Issue #4257. On a quiet day (`spineIsQuiet`), Today lists at most two departures of the week past

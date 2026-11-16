@@ -160,6 +160,11 @@
   "heldEmergencyContactLabel": "Contacto de emergencia, dado en el mostrador",
   "crewClashDetail": "También figura en {departures} a estas horas.",
   "crewClashConfirm": "{count, plural, one {# de la tripulación también figura en otro barco a estas horas.} other {# de la tripulación también figuran en otros barcos a estas horas.}} Confirma quién zarpa.",
+  "emergencyText": {
+    "label": "Redactar un mensaje",
+    "body": "Le escribimos de {shop} sobre {person}, en nuestra salida {trip} del {date}. Por favor, llámenos en cuanto pueda.",
+    "bodyWithCaptain": "Le escribimos de {shop} sobre {person}, en nuestra salida {trip} del {date}, con {captain} al mando. Por favor, llámenos en cuanto pueda."
+  },
   "notOnFile": "No registrado",
   "identityWithheldDetails": "Su contacto, su edad y sus demás datos esperan a que el mostrador confirme de quién se trata.",
   "heldSeatNotConfirmed": "{moreHolds, select, yes {Sin confirmar. El mostrador debe aclarar de quién se trata antes del embarque. Puede haber otras retenciones.} other {Sin confirmar. El mostrador debe aclarar de quién se trata antes del embarque.}}",
