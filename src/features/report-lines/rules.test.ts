@@ -129,6 +129,22 @@ describe("revenueByLine", () => {
     ).toEqual([]);
   });
 
+  it("rounds the month once, not each charge, so lines add up to the kept total", () => {
+    const parts = Array.from({ length: 10 }, () => ({
+      line: "retail" as const,
+      cents: 5,
+      keptRatio: 0.5,
+    }));
+    expect(revenueByLine(parts)).toEqual([{ line: "retail", cents: 25 }]);
+    const split = revenueByLine([
+      { line: "courses", cents: 5, keptRatio: 0.5 },
+      { line: "rentals", cents: 5, keptRatio: 0.5 },
+      { line: "retail", cents: 5, keptRatio: 0.5 },
+      { line: "funDives", cents: 5, keptRatio: 0.5 },
+    ]);
+    expect(split.reduce((sum, row) => sum + row.cents, 0)).toBe(10);
+  });
+
   it("never lets a stray ratio inflate or invert a line", () => {
     expect(
       revenueByLine([

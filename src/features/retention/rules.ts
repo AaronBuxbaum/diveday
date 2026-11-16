@@ -2,7 +2,7 @@
  * Retention windows for operational tables that grow without bounds
  * (DATA-M4/PAY-L2; ADR 20260803-append-only-retention). This framework-free
  * module owns the current windows and cutoff arithmetic; database deletion is
- * in `src/features/retention/store.ts`, and scheduling is in the cron route and `vercel.json`.
+ * in `src/features/retention/store.ts`, and scheduling is in the cron route and `config/crons.json`.
  *
  * **HD-11 owns these provisional defaults; they have not been reviewed by
  * counsel.** Shortening a window is a policy change: update this table and the
@@ -474,7 +474,7 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
 
 /**
  * The most rows one prune **batch** may delete from a table: a bound per
- * statement pair, not per run. The weekly run (`vercel.json`, Sundays 03:30
+ * statement pair, not per run. The weekly run (`config/crons.json`, Sundays 03:08
  * UTC) keeps taking batches from a table still over its window until it is
  * inside it or the run's time budget is spent (`PRUNE_TIME_BUDGET_MS`,
  * `src/features/retention/store.ts`), so a backlog drains in one run rather than at 5,000

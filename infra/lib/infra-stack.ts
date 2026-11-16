@@ -3935,7 +3935,7 @@ exports.handler = async () => {
     });
     backupFreshnessCheck.grantInvoke(backupFreshnessSchedulerRole);
 
-    // Tuesday 06:00 UTC. The pass itself is Monday 05:00 (vercel.json), so this
+    // Tuesday 06:00 UTC. The pass itself is Monday 05:00 (config/crons.json: 05:07), so this
     // sits a day behind it rather than an hour: a backup that is merely late
     // should not page anyone, and a whole day of slack is what keeps this alarm
     // meaning "a week was missed" rather than "a run was slow".
@@ -4221,7 +4221,7 @@ exports.handler = async () => {
       }),
     );
 
-    // Weekly, Monday 05:30 UTC: after the export pass (05:00, vercel.json) and
+    // Weekly, Monday 05:30 UTC: after the export pass (05:07, config/crons.json) and
     // well before the Tuesday 06:00 watchdog that now checks this prefix too, so
     // one week's dump and one week's bundles are always the same run date.
     const dumpSchedulerRole = new iam.Role(this, "DatabaseDumpSchedulerRole", {

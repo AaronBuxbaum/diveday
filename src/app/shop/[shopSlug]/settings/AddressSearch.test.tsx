@@ -396,6 +396,21 @@ describe("the address card with a geocoder", () => {
     expect(await screen.findByText(copy.noMatches)).toBeInTheDocument();
   });
 
+  it("does not spend a billed lookup after the card has gone away", () => {
+    vi.useFakeTimers();
+    try {
+      const { unmount } = renderCard();
+      fireEvent.change(screen.getByRole("combobox"), { target: { value: "Rainbow Reef" } });
+      unmount();
+      act(() => {
+        vi.advanceTimersByTime(10_000);
+      });
+      expect(suggest).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not reopen the list under an address that has already saved", async () => {
     // A lookup still in flight when the pick lands would otherwise drop its
     // rows back on top of a finished errand.

@@ -362,14 +362,14 @@ describe("dispatchDueIntegrationDeliveries", () => {
 });
 
 /**
- * The cadence lives beside the dispatcher it drives, and `vercel.json` is what
+ * The cadence lives beside the dispatcher it drives, and `config/crons.json` is what
  * actually runs. Asserted here rather than in `src/lib/cron-schedule.test.ts`
  * with the other four, because `src/lib` may not import `src/features` —
  * `pnpm check:architecture` enforces the direction, and a test is not an
  * exemption from it.
  */
 describe("the outbox drain's cadence", () => {
-  it("matches the deployed vercel.json schedule for /api/cron/integrations", () => {
+  it("matches the deployed config/crons.json schedule for /api/cron/integrations", () => {
     const raw = readFileSync(path.join(process.cwd(), "config", "crons.json"), "utf8");
     const crons: Array<{ path: string; schedule: string }> = JSON.parse(raw).crons;
     const drain = crons.find((cron) => cron.path === "/api/cron/integrations");

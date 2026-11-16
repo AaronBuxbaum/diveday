@@ -938,8 +938,11 @@ export function quoteRentalFit(
     listSubtotalCents += perPieceTotal;
   }
 
-  for (const kind of ["gopro"] as const) {
-    if (!rented.has(kind)) continue;
+  // Everything outside the set: the GoPro and the kit a particular dive calls
+  // for (drysuit, hood, gloves, torch, SMB), each its own line at its own price.
+  const coreKinds: readonly RentableItemKind[] = CORE_RENTAL_KINDS;
+  for (const { kind } of RENTABLE_ITEMS) {
+    if (coreKinds.includes(kind) || !rented.has(kind)) continue;
     const cents = pricing.perItemCents[kind];
     if (cents === undefined) unpricedKinds.push(kind);
     else {

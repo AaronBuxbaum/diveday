@@ -192,7 +192,25 @@ describe("POST /api/offline-manifests/[tripId]/medical-alerts (H-20261023-medica
     const own = await call(tripId, {
       Origin: "https://diveday.test",
       "Sec-Fetch-Site": "same-origin",
+      Host: "diveday.test",
     });
     expect(own.status).toBe(200);
+  });
+
+  it("judges the origin against the host the request was sent to, not the url the proxy handed the handler", async () => {
+    const { shop, tripId, owner } = await alerted();
+    vi.mocked(auth).mockResolvedValue(session(shop.id, owner, ["owner"]));
+    const response = await POST(
+      new Request(`http://internal:3000/api/offline-manifests/${tripId}/medical-alerts`, {
+        method: "POST",
+        headers: {
+          ...ROLL_CALL_CAUSAL_HEADERS,
+          Origin: "https://shop.example.test",
+          "X-Forwarded-Host": "shop.example.test",
+        },
+      }),
+      { params: Promise.resolve({ tripId }) },
+    );
+    expect(response.status).toBe(200);
   });
 });

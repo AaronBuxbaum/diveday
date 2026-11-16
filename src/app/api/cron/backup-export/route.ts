@@ -1,13 +1,10 @@
-import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { backupPeriodKey, listShopsDueForBackup, runShopBackup } from "@/features/backup-export";
-import { requireCronSecret } from "@/features/cron-auth";
-import { flushLogs } from "@/features/log-shipping";
+import { cronRoute } from "@/features/cron-route";
 import { sentry } from "@/features/sentry-server";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 
 /**
@@ -18,23 +15,6 @@ import { publicAppUrl } from "@/lib/notifications/app-url";
  * what actually keeps one wedged destination from eating the slot.
  */
 export const maxDuration = 300;
-
-/** Separate Sentry monitor from the other crons — a missed backup pass is its own incident. */
-const CRON_MONITOR_SLUG =
-  process.env.SENTRY_BACKUP_EXPORT_CRON_MONITOR_SLUG || "diveday-backup-export";
-
-/**
- * Must stay in lockstep with the `crons` entry in vercel.json. `checkinMargin`
- * is generous because a weekly backup being hours late is not an incident;
- * `maxRuntime` sits above `maxDuration` so a platform-killed run reads as
- * timed-out rather than still running.
- */
-const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "7 4 * * 1" },
-  checkinMargin: 240,
-  maxRuntime: 10,
-  timezone: "Etc/UTC",
-} as const;
 
 /**
  * The weekly shop-owned backup pass (ADR 20260804-shop-owned-backup-export):
@@ -56,16 +36,14 @@ const CRON_MONITOR_CONFIG = {
  * gate runs *before* the Sentry check-in so an unauthorized probe can never
  * tell the monitor the backup happened.
  */
-export async function GET(request: Request) {
-  const refusal = requireCronSecret(request);
-  if (refusal) return refusal;
-
-  const checkInId = await sentry.captureCheckIn(
-    { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
-    CRON_MONITOR_CONFIG,
-  );
-
-  try {
+export const GET = cronRoute({
+  id: "backup-export",
+  // `checkinMargin` is generous because a weekly backup being hours late is not
+  // an incident; `maxRuntime` sits above `maxDuration`.
+  crontab: "7 4 * * 1",
+  checkinMargin: 240,
+  maxRuntime: 10,
+  run: async (request) => {
     const db = await getDb();
     const now = nowDate();
     const periodKey = backupPeriodKey(now);
@@ -111,7 +89,7 @@ export async function GET(request: Request) {
     }
 
     // One line per run — ids and codes only (LogContext's rule).
-    log("cron_backup_export.pass_complete", "info", {
+    return {
       periodKey,
       shopsDue: due.length,
       delivered,
@@ -121,34 +99,8 @@ export async function GET(request: Request) {
           .filter((outcome) => outcome.status === "failed")
           .map((outcome) => outcome.shop)
           .join(",") || undefined,
-    });
-
-    await sentry.captureCheckIn({
-      checkInId,
-      monitorSlug: CRON_MONITOR_SLUG,
-      status: failed > 0 ? "error" : "ok",
-    });
-
-    // A partial pass answers 500 so the scheduler's invocation log agrees with
-    // Sentry that this run was not clean. Every arm is idempotent — a retry
-    // re-runs only the shops still due.
-    return NextResponse.json(
-      { periodKey, shopsDue: due.length, delivered, failed, outcomes },
-      { status: failed > 0 ? 500 : 200 },
-    );
-  } catch (error) {
-    // Only reachable before the loop or between shops — `getDb()` failing, or
-    // the due-list query itself. The check-in still has to be closed out.
-    await sentry.captureException(error, {
-      tags: { cron_scan: "backup_export_bootstrap" },
-    });
-    log("cron_backup_export.pass_failed", "error", { scan: "bootstrap" });
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
-    return NextResponse.json({ error: "backup_unavailable" }, { status: 503 });
-  } finally {
-    // See the identical block in the retention cron: a pass's log line is the
-    // record of what was delivered, so it is shipped before the response rather
-    // than after it (ADR 20260806-cloudwatch-log-shipping).
-    await flushLogs();
-  }
-}
+      outcomes,
+    };
+  },
+  healthy: (summary) => summary.failed === 0,
+});

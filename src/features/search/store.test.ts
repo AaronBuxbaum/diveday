@@ -10,6 +10,15 @@ import { resolveRecentRecords, searchShop } from "./store";
 const ctx = fileScopedShopContext();
 
 describe("searchShop", () => {
+  it("reads a % or _ in the query as the character, not a wildcard", async () => {
+    const { db, shop } = ctx;
+    for (const needle of ["%%", "__"]) {
+      const found = await searchShop(db, shop.id, needle, "America/New_York", "en-US");
+      expect(found.divers).toEqual([]);
+      expect(found.courses).toEqual([]);
+    }
+  });
+
   it("finds a diver by a case-insensitive substring of their name, email, or phone", async () => {
     const { db, shop } = ctx;
 

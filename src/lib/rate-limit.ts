@@ -36,6 +36,12 @@ export interface RateLimitStore {
     config: RateLimitConfig,
     now: number,
   ): RateLimitResult | Promise<RateLimitResult>;
+  /**
+   * Gives back one token `take` spent, capped at the bucket's capacity. For a
+   * bucket that should only be spent by failures: a sign-in that succeeded
+   * returns the try it cost. A key the store has never seen stays unseen.
+   */
+  refund(key: string, config: RateLimitConfig, now: number): void | Promise<void>;
 }
 
 type Bucket = { tokens: number; updatedAt: number };
@@ -86,6 +92,13 @@ export function inMemoryRateLimitStore(): RateLimitStore {
       }
       buckets.set(key, { tokens: tokens - 1, updatedAt: now });
       return { allowed: true, retryAfterMs: 0 };
+    },
+    refund(key, config, now) {
+      const existing = buckets.get(key);
+      if (!existing) return;
+      const elapsed = Math.max(0, now - existing.updatedAt);
+      const tokens = Math.min(config.capacity, existing.tokens + elapsed * config.refillPerMs);
+      buckets.set(key, { tokens: Math.min(config.capacity, tokens + 1), updatedAt: now });
     },
   };
 }
@@ -144,6 +157,27 @@ redis.call("PEXPIRE", key, 86400000)
 return {allowed, tostring(tokens)}
 `;
 
+/** {@link TOKEN_BUCKET_SCRIPT}'s inverse: one token back, refilled first, never past capacity. */
+const REFUND_SCRIPT = `
+local key = KEYS[1]
+local capacity = tonumber(ARGV[1])
+local refillPerMs = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+
+local existing = redis.call("HMGET", key, "tokens", "updatedAt")
+if not existing[1] then return {1, "0"} end
+
+local elapsed = now - tonumber(existing[2])
+if elapsed < 0 then elapsed = 0 end
+local tokens = tonumber(existing[1]) + elapsed * refillPerMs + 1
+if tokens > capacity then tokens = capacity end
+
+redis.call("HSET", key, "tokens", tostring(tokens), "updatedAt", tostring(now))
+redis.call("PEXPIRE", key, 86400000)
+
+return {1, tostring(tokens)}
+`;
+
 const upstashEvalResponseSchema = z.object({
   result: z.tuple([z.number(), z.string()]),
 });
@@ -159,55 +193,71 @@ export function upstashRateLimitStore(
   config: { url: string; token: string },
   fetchImpl: Fetch = fetch,
 ): RateLimitStore {
+  /** One bounded EVAL round trip; the response is the script's `{flag, tokensAfter}` pair. */
+  async function evalScript(
+    script: string,
+    key: string,
+    rateLimitConfig: RateLimitConfig,
+    now: number,
+  ): Promise<[number, string]> {
+    const controller = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        controller.abort();
+        reject(new Error("Upstash Redis request timed out"));
+      }, UPSTASH_REQUEST_TIMEOUT_MS);
+    });
+    const request = (async () => {
+      const response = await fetchImpl(config.url, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${config.token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify([
+          "EVAL",
+          script,
+          1,
+          key,
+          String(rateLimitConfig.capacity),
+          String(rateLimitConfig.refillPerMs),
+          String(now),
+        ]),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`Upstash Redis responded ${response.status}`);
+      return upstashEvalResponseSchema.parse(await response.json()).result;
+    })();
+
+    // Promise.race observes rejection from either branch, including a fetch
+    // that rejects after the timeout has already returned to its caller.
+    void request.catch(() => {});
+    try {
+      return await Promise.race([request, timeout]);
+    } finally {
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+    }
+  }
+
   return {
     async take(key, rateLimitConfig, now) {
-      const controller = new AbortController();
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      const timeout = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          controller.abort();
-          reject(new Error("Upstash Redis request timed out"));
-        }, UPSTASH_REQUEST_TIMEOUT_MS);
-      });
-      const request = (async () => {
-        const response = await fetchImpl(config.url, {
-          method: "POST",
-          headers: {
-            authorization: `Bearer ${config.token}`,
-            "content-type": "application/json",
-          },
-          body: JSON.stringify([
-            "EVAL",
-            TOKEN_BUCKET_SCRIPT,
-            1,
-            key,
-            String(rateLimitConfig.capacity),
-            String(rateLimitConfig.refillPerMs),
-            String(now),
-          ]),
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error(`Upstash Redis responded ${response.status}`);
-        const parsed = upstashEvalResponseSchema.parse(await response.json());
-        const [allowed, tokensAfterRaw] = parsed.result;
-        if (allowed === 1) return { allowed: true, retryAfterMs: 0 };
-        const tokensAfter = Number(tokensAfterRaw);
-        const deficit = 1 - tokensAfter;
-        const retryAfterMs =
-          rateLimitConfig.refillPerMs > 0
-            ? Math.ceil(deficit / rateLimitConfig.refillPerMs)
-            : Number.POSITIVE_INFINITY;
-        return { allowed: false, retryAfterMs };
-      })();
-
-      // Promise.race observes rejection from either branch, including a fetch
-      // that rejects after the timeout has already returned to its caller.
-      void request.catch(() => {});
-      try {
-        return await Promise.race([request, timeout]);
-      } finally {
-        if (timeoutId !== undefined) clearTimeout(timeoutId);
-      }
+      const [allowed, tokensAfterRaw] = await evalScript(
+        TOKEN_BUCKET_SCRIPT,
+        key,
+        rateLimitConfig,
+        now,
+      );
+      if (allowed === 1) return { allowed: true, retryAfterMs: 0 };
+      const deficit = 1 - Number(tokensAfterRaw);
+      const retryAfterMs =
+        rateLimitConfig.refillPerMs > 0
+          ? Math.ceil(deficit / rateLimitConfig.refillPerMs)
+          : Number.POSITIVE_INFINITY;
+      return { allowed: false, retryAfterMs };
+    },
+    async refund(key, rateLimitConfig, now) {
+      await evalScript(REFUND_SCRIPT, key, rateLimitConfig, now);
     },
   };
 }
@@ -384,6 +434,25 @@ export async function checkRateLimit(
 }
 
 /**
+ * Gives back the token {@link checkRateLimit} spent on `key`, for a bucket only
+ * failures should drain (a sign-in that worked). Never throws: a refund that
+ * cannot be made costs the person one try, not the request.
+ */
+export async function refundRateLimit(
+  key: string,
+  config: RateLimitConfig,
+  now: number = nowMs(),
+  store: RateLimitStore = defaultStore,
+): Promise<void> {
+  if (rateLimitDisabled()) return;
+  try {
+    await store.refund(key, config, now);
+  } catch (error) {
+    await reportStoreFailure(error, store, now);
+  }
+}
+
+/**
  * {@link checkRateLimit}, but a store error **refuses** rather than allows.
  * For the one bucket where a guess that slips through costs more than a
  * refused legitimate try: the doctor's page's date-of-birth unlock, which
@@ -469,7 +538,7 @@ export const RATE_LIMITS = {
    */
   demoSwitch: perHour(30),
   /** Credentials sign-in attempts, per IP — the wider net. */
-  signInByIp: per15Min(20),
+  signInByIp: per15Min(60),
   /** Credentials sign-in attempts, per attempted email — the narrow net. */
   signInByEmail: per15Min(8),
   /** Recap photo uploads, per capability token. */
@@ -646,7 +715,7 @@ export const RATE_LIMITS = {
    */
   readyAddSeatByBooking: perHour(10),
   /** Password-reset requests, per IP — the wider net. */
-  passwordResetRequestByIp: perHour(5),
+  passwordResetRequestByIp: perHour(30),
   /** Password-reset requests, per requested email — the narrow net. */
   passwordResetRequestByEmail: per15Min(3),
   /**
@@ -655,7 +724,7 @@ export const RATE_LIMITS = {
    * this is the identical anonymous-capability-minting shape, one shop
    * namespace over.
    */
-  findMyBookingByIp: perHour(5),
+  findMyBookingByIp: perHour(30),
   /** Same request, per requested email — the narrow net. */
   findMyBookingByEmail: per15Min(3),
   /**
@@ -690,7 +759,7 @@ export const RATE_LIMITS = {
   /** The same attempts per IP, so one attacker cannot fan out across accounts. */
   secondFactorByIp: per15Min(20),
   /** Public booking submissions, per IP. */
-  booking: perHour(10),
+  booking: perHour(30),
   /**
    * Any write behind a booking capability token (readiness, waiver,
    * schedule-confirmation actions) — per IP, keyed by the action's shared

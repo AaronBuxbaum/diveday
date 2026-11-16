@@ -37,6 +37,7 @@ import {
   parseCourseTemplateSnapshot,
 } from "../../lib/course-template-sync";
 import { type CourseContent, canonicalAgency } from "../../lib/courses";
+import { containsPattern } from "../../lib/like-pattern";
 import { REFRESHER_TEMPLATE_SLUGS } from "../../lib/re-entry";
 import type { CertificationLevel } from "../../lib/readiness";
 import { type RentableItemKind, toIncludedRentalKinds } from "../../lib/rentals";
@@ -459,7 +460,7 @@ export async function pagedCourses(
   const query = options.query?.trim();
   const scope = and(
     eq(courses.shopId, shopId),
-    query ? ilike(courses.title, `%${query}%`) : undefined,
+    query ? ilike(courses.title, containsPattern(query)) : undefined,
     courseListViewWhere(db, shopId, options.view, options.now ?? nowDate()),
   );
 

@@ -20,7 +20,7 @@ export const maxDuration = 300;
  *
  * The schedule comes from the dispatcher rather than being restated here, and
  * `src/features/integrations/dispatcher.test.ts` asserts it against
- * vercel.json. The default margin matches the other sub-daily passes: twenty
+ * config/crons.json. The default margin matches the other sub-daily passes: twenty
  * minutes late on an hourly drain is worth a look, and anything tighter would
  * page on a slow provider rather than on a cron that stopped.
  */

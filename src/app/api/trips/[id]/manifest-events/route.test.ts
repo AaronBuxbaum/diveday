@@ -182,6 +182,17 @@ describe("GET /api/trips/[id]/manifest-events", () => {
     expect(getDb).not.toHaveBeenCalled();
   });
 
+  it("404s for an id that is not a uuid, instead of throwing out of the trip lookup", async () => {
+    const { db, shop, personId } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+
+    const response = await GET(manifestEventsRequest("not-a-trip"), {
+      params: Promise.resolve({ id: "not-a-trip" }),
+    });
+    expect(response.status).toBe(404);
+  });
+
   it("404s for a trip that doesn't belong to the caller's shop", async () => {
     const { db, shop, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);

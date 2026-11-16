@@ -558,17 +558,17 @@ export type ReadinessInput = {
    */
   trainingMarkInvalid?: boolean;
   /**
-   * The seat's training mark stands and the course's instructor is aboard
-   * for it (`trainingDiveLevel`, issue #2731): a site's level may be lowered
-   * to the course's minimum where the course certifies it. The departure's
-   * own level, specialty, and nitrox requirements always stand.
-   */
-  /**
    * Any release this person signed at the shop failed its seal check and no
    * clean signature since has replaced it (`personSealFailed`, issue
    * #3885, attacker review B1), whichever release this seat reads.
    */
   waiverSealFailed?: boolean;
+  /**
+   * The seat's training mark stands and the course's instructor is aboard
+   * for it (`trainingDiveLevel`, issue #2731): a site's level may be lowered
+   * to the course's minimum where the course certifies it. The departure's
+   * own level, specialty, and nitrox requirements always stand.
+   */
   trainingDive?: TrainingDiveCourse | null;
   /**
    * How far `trainingDive` lowers (`trainingDiveReach`, issue #3910): `site`
@@ -1034,10 +1034,10 @@ function nitroxBlocker(
  * `trip-admission.test.ts` the product). The order of the returned blockers is
  * the order readiness lists them: level, specialties, nitrox.
  */
-export type StandingThreshold = "verified" | "sale";
+type StandingThreshold = "verified" | "sale";
 
 /** What a departure asks of the diver in the water; a `Requirement` fits. */
-export type StandingDemand = Pick<
+type StandingDemand = Pick<
   Requirement,
   "minimumCertificationLevel" | "requiredSpecialties" | "requiresNitrox"
 >;
@@ -1113,7 +1113,7 @@ export function levelStanding(
 }
 
 /** The standing against one specialty, at a threshold. Null when it clears. */
-export function specialtyStanding(
+function specialtyStanding(
   specialty: DiveSpecialty,
   evidence: StandingEvidence,
   threshold: StandingThreshold,
@@ -1129,7 +1129,7 @@ export function specialtyStanding(
 }
 
 /** The standing against nitrox, at a threshold. Null when it clears. */
-export function nitroxStanding(
+function nitroxStanding(
   evidence: StandingEvidence,
   threshold: StandingThreshold,
 ): ReadinessBlocker | null {

@@ -20,6 +20,7 @@ import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { packageOnSale } from "@/lib/dive-packages";
+import { containsPattern } from "@/lib/like-pattern";
 import { log } from "@/lib/log";
 import { majorToMinor } from "@/lib/money";
 import { MAX_LINE_ITEMS_PER_ORDER } from "@/lib/order-limits";
@@ -1541,14 +1542,15 @@ export function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
   const conditions = [eq(orders.shopId, shopId)];
   if (filter.status) conditions.push(eq(orders.status, filter.status));
   if (filter.personId) conditions.push(eq(orders.personId, filter.personId));
-  if (filter.personQuery) conditions.push(ilike(people.fullName, `%${filter.personQuery}%`));
+  if (filter.personQuery)
+    conditions.push(ilike(people.fullName, containsPattern(filter.personQuery)));
   if (filter.q) {
     // `or(...)` is only `undefined` for an empty argument list, which this is
     // not — the non-null assertion is the shape drizzle's own types force here.
     const matches = or(
-      ilike(people.fullName, `%${filter.q}%`),
-      ilike(trips.title, `%${filter.q}%`),
-      ilike(orders.description, `%${filter.q}%`),
+      ilike(people.fullName, containsPattern(filter.q)),
+      ilike(trips.title, containsPattern(filter.q)),
+      ilike(orders.description, containsPattern(filter.q)),
     );
     if (matches) conditions.push(matches);
   }

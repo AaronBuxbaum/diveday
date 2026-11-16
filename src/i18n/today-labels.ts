@@ -136,14 +136,6 @@ export function blockerLabelCopy(ref: BlockerLabelRef): Copy {
     : pointingLabelCopy(ref.target, ref.fullName);
 }
 
-export function pointingLabelText(
-  t: StaffTranslator,
-  target: "trip" | "diver",
-  fullName: string,
-): string {
-  return resolveCopy(t, pointingLabelCopy(target, fullName));
-}
-
 /** A Today row's short blocker sentence, keyed by code (`today.blockerRow.*`). */
 const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   requirements_not_configured: "today.blockerRow.requirementsNotConfigured",
@@ -1174,10 +1166,6 @@ export function gearServiceDueDetailText(
     clockLabel: input.clockLabel,
     dueOn: input.dueOn,
   });
-}
-
-export function openGearRegisterActionText(t: StaffTranslator): string {
-  return t("today.actionLabel.openGearRegister");
 }
 
 export function openRentalsActionText(t: StaffTranslator): string {

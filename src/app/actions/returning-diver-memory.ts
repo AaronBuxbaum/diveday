@@ -11,6 +11,7 @@ import { shopIdBySlug } from "@/db/shops";
 import { looksLikeBookingLinkToken } from "@/lib/booking-link-shape";
 import { nowDate } from "@/lib/clock";
 import { RETURNING_DIVER_DEVICE_TOKEN_PATTERN } from "@/lib/returning-diver";
+import { isUuid } from "@/lib/uuid";
 
 const MAX_DEVICE_SLOTS_PER_REQUEST = 32;
 
@@ -18,16 +19,10 @@ export type ReturningDiverMemoryScope =
   | { kind: "shop"; shopSlug: string }
   | { kind: "readiness"; readinessToken: string };
 
-function validReceiptId(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-}
+const validReceiptId = isUuid;
 
 function validGeneration(value: string | null): boolean {
-  return (
-    value === null ||
-    (typeof value === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value))
-  );
+  return value === null || (typeof value === "string" && isUuid(value));
 }
 
 async function resolveScopeShopId(

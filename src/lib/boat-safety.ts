@@ -734,11 +734,6 @@ export function boatSafetyNoticeTone(notice: BoatSafetyNotice): BoatSafetyTone {
   return notice.expired ? "warning" : "neutral";
 }
 
-/** Whether a notice is something that has already gone wrong rather than a heads-up. */
-export function boatSafetyNoticeIsUrgent(notice: BoatSafetyNotice): boolean {
-  return boatSafetyNoticeTone(notice) !== "neutral";
-}
-
 function rank(notice: BoatSafetyNotice): number {
   if (notice.code === "kit_missing") return 0;
   if (notice.code === "over_certificate" || notice.code === "over_total_persons") return 1;

@@ -35,6 +35,7 @@ import {
   mergedDiveSiteTemplateSnapshot,
 } from "@/lib/dive-site-template-sync";
 import type { DiveMode } from "@/lib/diver-planning";
+import { containsPattern } from "@/lib/like-pattern";
 import type { CertificationLevel } from "@/lib/readiness";
 import { serviceWindowCoversInstant, serviceWindowFrom } from "@/lib/service-window";
 import { briefingInUnit, SITE_PROSE_FIELDS, siteProseInUnit } from "@/lib/site-prose-units";
@@ -251,7 +252,7 @@ export type DiveSiteListFilter = {
  * the list and the map so a chip that narrows the rows narrows the pins too.
  */
 function siteFilterConditions(filter: DiveSiteListFilter) {
-  const like = filter.query?.trim() ? `%${filter.query.trim()}%` : undefined;
+  const like = filter.query?.trim() ? containsPattern(filter.query.trim()) : undefined;
   return [
     // A null `locationName` simply never matches — `ilike` on NULL is NULL,
     // which `or` treats as "not this branch" rather than excluding the row.
@@ -1108,7 +1109,7 @@ export async function listGlobalDiveSiteTemplates(
  */
 export function globalTemplateMatch(filter: DiveSiteListFilter) {
   const briefing = globalDiveSiteVersions.briefing;
-  const like = filter.query?.trim() ? `%${filter.query.trim()}%` : undefined;
+  const like = filter.query?.trim() ? containsPattern(filter.query.trim()) : undefined;
   const latitude = sql`(${briefing}->>'forecastLatitude')::double precision`;
   const longitude = sql`(${briefing}->>'forecastLongitude')::double precision`;
   const conditions = and(

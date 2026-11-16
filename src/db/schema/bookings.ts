@@ -737,6 +737,10 @@ export const bookings = pgTable(
     index("bookings_shop_person_idx").on(table.shopId, table.personId),
     /** Backs the organizer's "who has claimed" panel — member seats by their lead. */
     index("bookings_party_lead_idx").on(table.partyLeadBookingId),
+    /** Backs the hourly `expireGroupHolds` sweep: only seats still holding a party deadline. */
+    index("bookings_group_hold_due_idx")
+      .on(table.groupHoldUntil)
+      .where(sql`${table.groupHoldUntil} is not null`),
     /**
      * Backs the referred-seat count on Reports — one shop's seats carrying any
      * partner slug. There is no `group by` any more (issue #1294): the report
@@ -964,6 +968,7 @@ export const bookingReferrals = pgTable(
   (table) => [
     // The month's count on Reports.
     index("booking_referrals_shop_idx").on(table.shopId),
+    index("booking_referrals_referrer_idx").on(table.referredByBookingId),
   ],
 );
 

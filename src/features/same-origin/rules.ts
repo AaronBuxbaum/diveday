@@ -1,26 +1,14 @@
 import { publicAppUrl } from "../../lib/notifications/app-url";
 
 /**
- * **Whether a cookie-authenticated route handler should refuse a request as
- * coming from another site** (security review 2, L5). Server actions get
- * Next's own origin check; a route handler gets none, so a state-changing
- * one that trusts the session cookie asks this first. SameSite=Lax session
- * cookies already keep a cross-site POST from carrying the session, so this
- * is defense in depth against a later cookie-policy change.
- *
- * Its own origin is the request's, or DiveDay's public one (`publicAppUrl`);
- * what is refused is `crossSite`'s rule, below.
- */
-export function isCrossSiteRequest(request: Request): boolean {
-  const own = new URL(request.url).origin;
-  return crossSite(request.headers, (origin) => origin === own || isPublicOrigin(origin));
-}
-
-/**
- * **The same question for a server action or a page render**, which see the
- * request's headers but not its URL (security review of #2990, M1 and L1).
- * The print with medical alerts asks it before it reads or records anything,
- * and the emergency read's action before it reads the session.
+ * **Whether a cookie-authenticated route handler, server action or page render
+ * should refuse a request as coming from another site** (security review 2, L5;
+ * #2990, M1 and L1). Server actions get Next's own origin check; a route handler
+ * gets none, so a state-changing one that trusts the session cookie asks this
+ * first. SameSite=Lax session cookies already keep a cross-site POST from
+ * carrying the session, so this is defense in depth against a later
+ * cookie-policy change. The print with medical alerts asks it before it reads or
+ * records anything, and the emergency read's action before it reads the session.
  *
  * Its own origin is the host the request was sent to (`x-forwarded-host`,
  * then `host`) or DiveDay's public one (`publicAppUrl`), so a proxy that

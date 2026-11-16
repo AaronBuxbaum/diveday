@@ -1,4 +1,5 @@
 import { foldText } from "./agency-check";
+import { escapeRegExp } from "./escape-regexp";
 
 /**
  * **Has a course student finished the agency's eLearning?** (H-20261008-padi-elearning-check, ADR
@@ -176,10 +177,6 @@ export type ElearningVerdict =
 
 function hasWords(foldedLine: string, foldedPhrase: string): boolean {
   return foldedPhrase.length > 0 && ` ${foldedLine} `.includes(` ${foldedPhrase} `);
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 const ADDRESS = /[^\s@,;:()<>]+@[^\s@,;:()<>]+\.[a-z]{2,}/gi;

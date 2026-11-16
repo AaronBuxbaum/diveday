@@ -324,11 +324,6 @@ export const NOTICE_KEYS: DiverNoticeMap = {
   // These notices reuse the work-order bundle shared with the ticket page.
   "piece-added": { form: "work-orders", tone: "success", key: "workOrders.notice.pieceAdded" },
   "piece-deleted": { form: "work-orders", tone: "success", key: "workOrders.notice.pieceDeleted" },
-  "piece-restored": {
-    form: "work-orders",
-    tone: "success",
-    key: "workOrders.notice.pieceRestored",
-  },
   "on-open-work-order": {
     form: "work-orders",
     tone: "warning",

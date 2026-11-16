@@ -19,6 +19,7 @@ import { courses, diveSites, gearItems, orders, people, trips } from "../../db/s
 import { tripPrimarySiteId } from "../../db/trip-primary-site";
 import { nowDate } from "../../lib/clock";
 import { formatDateTimeTz, formatMoneyCents, formatShortDate } from "../../lib/format";
+import { containsPattern } from "../../lib/like-pattern";
 import type { RecentRef } from "../../lib/recent-refs";
 
 const PER_GROUP = 8;
@@ -61,7 +62,7 @@ export async function searchShop(
 ): Promise<SearchResults> {
   const query = rawQuery.trim();
   if (query.length < MIN_QUERY) return EMPTY_RESULTS;
-  const like = `%${query}%`;
+  const like = containsPattern(query);
 
   // **Nearest to now, in either direction.** `desc(startsAt)` is the right
   // default nearly everywhere else `trips` is read, because those surfaces page

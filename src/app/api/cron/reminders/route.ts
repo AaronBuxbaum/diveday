@@ -1,11 +1,8 @@
-import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { retryPendingMediaDeletions } from "@/db/media-deletions";
 import { drainNotificationRetries } from "@/db/notifications";
 import { reapExpiredDemoShops } from "@/db/seed";
-import { sendDueCheckoutRecoveries } from "@/features/checkout-recovery";
-import { requireCronSecret } from "@/features/cron-auth";
-import { flushLogs } from "@/features/log-shipping";
+import { cronRoute } from "@/features/cron-route";
 import { retryPendingProcessorErasures } from "@/features/processor-erasure";
 import { sentry } from "@/features/sentry-server";
 import { DAY_MS } from "@/lib/clock";
@@ -24,41 +21,6 @@ import { log } from "@/lib/log";
  * from `cron_reminders.scan_complete`, never to paper over a hanging call.
  */
 export const maxDuration = 300;
-
-/**
- * Sentry Cron Monitor identity for the daily tick. The check-in is made
- * explicitly from this handler (see below) rather than by Sentry's automatic
- * Vercel-cron instrumentation, which does not reach App Router route handlers
- * under this repo's build — next.config.ts carries the full verification.
- *
- * `SENTRY_CRON_MONITOR_SLUG` lets an operator point at a differently-named
- * monitor (e.g. one per environment) without a deploy; the default is what a
- * fresh Sentry project gets on the first check-in, since Sentry upserts the
- * monitor from the config sent with the `in_progress` check-in.
- */
-const CRON_MONITOR_SLUG = process.env.SENTRY_CRON_MONITOR_SLUG || "diveday-daily-tick";
-
-/**
- * Must stay in lockstep with the `crons` entry in vercel.json — Sentry uses it
- * to decide when a check-in is *missing*, which is the whole point of the
- * dead-man's switch. `checkinMargin` (minutes) is how late the tick may be
- * before Sentry calls it missed; `maxRuntime` (minutes) sits above
- * `maxDuration` above, so a run killed by the platform reads as timed-out
- * rather than as still running forever.
- *
- * "Must stay in lockstep" used to be this comment and nothing else. The
- * schedule now comes from `@/lib/cron-schedule`, whose own test reads
- * vercel.json and fails if the two disagree — the same constant the retry
- * bounds in `src/db/notifications.ts` derive from, so a cadence change moves
- * the dead-man's switch and the retry window together instead of leaving one
- * of them describing a schedule that no longer runs (OPS-6).
- */
-const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: DAILY_TICK_CRONTAB },
-  checkinMargin: 60,
-  maxRuntime: 10,
-  timezone: "Etc/UTC",
-} as const;
 
 /**
  * How long a minted demo shop lives before the reaper clears it. Defaults to 7
@@ -84,7 +46,7 @@ type ScanOutcome<T> = { status: "ok"; result: T } | { status: "error" };
  * awaits with no try/catch anywhere: the first throw aborted the request, so
  * every later scan silently never ran that day and the one summary log line
  * never fired either — a single bad row in the earliest scan could stop
- * reminders, recaps, checkout recovery, media cleanup and demo reaping for as
+ * reminders, recaps, media cleanup and demo reaping for as
  * long as nobody noticed. Each scan is independent and idempotent, so a
  * failure in one has no business starving the rest.
  *
@@ -113,7 +75,7 @@ function resultOf<T>(outcome: ScanOutcome<T>): T | undefined {
 /**
  * The scheduled pre-trip-notification entry point. The app holds no timer by
  * design (docs ADR 20260721-scheduled-reminder-cadence); an external scheduler
- * (Vercel Cron, see vercel.json) hits this daily and the scans do their
+ * (EventBridge, see config/crons.json) hits this daily and the scans do their
  * idempotent work. Post-trip recaps have their own hourly route: a daily pass
  * cannot keep the four-hour floor visible on Close-out meaningful.
  *
@@ -133,37 +95,26 @@ function resultOf<T>(outcome: ScanOutcome<T>): T | undefined {
  * shop per visitor, and this daily pass deletes the expired ones so the database
  * doesn't grow without bound. The canonical blue-mantis demo is never reaped.
  *
- * And it sends abandoned-checkout recovery emails (ADR
- * 20260726-abandoned-checkout-recovery): on this daily cadence a recovery
- * fires at least `RECOVERY_DELAY_HOURS` after abandonment, same-day or the
- * next tick depending on cron alignment — looser than the ~2-hour timing a
- * finer-grained scheduler could offer, but never duplicated (dedup is a
- * durable row) and never sent for a session that already paid or expired
- * (each candidate is reconciled against Stripe first).
- *
  * Three layers of observability, each catching a failure the others can't:
  * per-scan Sentry issues (one scan broke), the `cron_reminders.scan_complete`
- * summary line plus a non-200 status (this run was partial), and the Sentry
+ * summary line plus an error check-in (this run was partial), and the Sentry
  * Cron Monitor check-in (the run never happened at all — a deleted cron entry,
  * a rotated `CRON_SECRET`, a platform outage). Only the third can fire when
  * the handler is never invoked, which is the failure no amount of in-handler
  * logging can ever report on its own.
  */
-export async function GET(request: Request) {
-  const refusal = requireCronSecret(request);
-  if (refusal) return refusal;
-
-  // Dead-man's switch, half one: tell Sentry the tick started. Sentry upserts
-  // the monitor from `CRON_MONITOR_CONFIG` on this call, so there is nothing to
-  // create by hand — but if a check-in never arrives within `checkinMargin` of
-  // the schedule, Sentry raises a missed-check-in alert. That is the only
-  // signal that survives the endpoint never being called.
-  const checkInId = await sentry.captureCheckIn(
-    { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
-    CRON_MONITOR_CONFIG,
-  );
-
-  try {
+export const GET = cronRoute({
+  id: "reminders",
+  // Sentry's automatic Vercel-cron instrumentation does not reach App Router
+  // route handlers under this repo's build (next.config.ts carries the full
+  // verification), so the check-in is explicit. The monitor predates the
+  // `diveday-<id>` shape and keeps its slug and `SENTRY_CRON_MONITOR_SLUG`.
+  crontab: DAILY_TICK_CRONTAB,
+  monitorSlug: "diveday-daily-tick",
+  slugEnv: "SENTRY_CRON_MONITOR_SLUG",
+  checkinMargin: 60,
+  maxRuntime: 10,
+  run: async () => {
     const db = await getDb();
 
     // Each scan is isolated: a throw in one is captured and the rest still run.
@@ -174,12 +125,9 @@ export async function GET(request: Request) {
     // pass, a scan of `/api/cron/shop-tick`: a fixed daily UTC hour is 10am in
     // Florida and 03:00 in Fiji, so a shop in the picker's Asia-Pacific group
     // texted its divers in the middle of the night, every day (issue #697). The
-    // five scans left are durable-retry drains whose backoff bounds derive from
+    // scans left are durable-retry drains whose backoff bounds derive from
     // this tick's cadence (`src/lib/cron-schedule.ts`, OPS-6), which is exactly
     // why the cadence here did not change.
-    const checkoutRecoveries = await runScan("checkoutRecoveries", () =>
-      sendDueCheckoutRecoveries(db),
-    );
     const mediaDeletions = await runScan("mediaDeletions", () => retryPendingMediaDeletions(db));
     // The same bounded-retry shape one processor over: a Stripe customer delete
     // that erasure could not land (an outage, a dropped connection) gets tried
@@ -198,7 +146,6 @@ export async function GET(request: Request) {
 
     const scans = {
       notificationRetries,
-      checkoutRecoveries,
       mediaDeletions,
       processorErasures,
       demoShops,
@@ -208,7 +155,6 @@ export async function GET(request: Request) {
       .map(([name]) => name);
 
     const notificationRetriesCounts = resultOf(notificationRetries);
-    const checkoutRecoveriesCounts = resultOf(checkoutRecoveries);
     const mediaDeletionsCounts = resultOf(mediaDeletions);
     const processorErasuresCounts = resultOf(processorErasures);
     const demoShopsCounts = resultOf(demoShops);
@@ -218,48 +164,23 @@ export async function GET(request: Request) {
     // archive/specialist-optimization-audit-20260731.md §7). A scan that threw
     // contributes no counts at all — its absence, plus `failedScans`, is how a
     // reader tells "nothing was due" from "this never ran".
-    log("cron_reminders.scan_complete", "info", {
+    // One entry per scan's own summary counts. A scan that threw contributes no
+    // counts at all: its absence, plus `failedScans`, is how a reader tells
+    // "nothing was due" from "this never ran".
+    return {
       scansFailed: failedScans.length,
       failedScans: failedScans.length > 0 ? failedScans.join(",") : undefined,
       notificationRetriesScanned: notificationRetriesCounts?.scanned,
       notificationRetriesSent: notificationRetriesCounts?.sent,
       notificationRetriesFailed: notificationRetriesCounts?.failed,
-      checkoutRecoveriesScanned: checkoutRecoveriesCounts?.scanned,
-      checkoutRecoveriesSent: checkoutRecoveriesCounts?.sent,
       mediaDeletionsAttempted: mediaDeletionsCounts?.attempted,
       mediaDeletionsSucceeded: mediaDeletionsCounts?.succeeded,
       processorErasuresAttempted: processorErasuresCounts?.attempted,
       processorErasuresDischarged: processorErasuresCounts?.discharged,
       demoShopsDeleted: demoShopsCounts?.deleted,
-    });
-
-    // Dead-man's switch, half two.
-    await sentry.captureCheckIn({
-      checkInId,
-      monitorSlug: CRON_MONITOR_SLUG,
-      status: failedScans.length > 0 ? "error" : "ok",
-    });
-
-    // A partial tick answers 500 so the scheduler's own invocation log and any
-    // uptime check agree with Sentry that this run was not clean. Every scan is
-    // idempotent, so a scheduler retry re-runs the failed one without
-    // duplicating anything the successful ones already did.
-    return NextResponse.json(scans, { status: failedScans.length > 0 ? 500 : 200 });
-  } catch (error) {
-    // Only reachable before any scan starts — `getDb()` failing to connect or
-    // migrate. Nothing ran, so there are no counts to report; the check-in
-    // still has to be closed out or the monitor would read this as a run that
-    // is somehow still in progress.
-    await sentry.captureException(error, {
-      tags: { cron_scan: "bootstrap" },
-    });
-    log("cron_reminders.tick_failed", "error", { scan: "bootstrap" });
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
-    return NextResponse.json({ error: "scan_unavailable" }, { status: 503 });
-  } finally {
-    // See the identical block in the retention cron: a tick's log line is the
-    // record of the pass, so it is shipped before the response rather than
-    // after it (ADR 20260806-cloudwatch-log-shipping).
-    await flushLogs();
-  }
-}
+    };
+  },
+  // Every scan is idempotent, so a scheduler retry re-runs the failed one
+  // without duplicating anything the successful ones already did.
+  healthy: (summary) => summary.scansFailed === 0,
+});

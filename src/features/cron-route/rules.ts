@@ -1,6 +1,7 @@
 import { requireCronSecret } from "@/features/cron-auth";
 import { flushLogs } from "@/features/log-shipping";
 import { sentry } from "@/features/sentry-server";
+import { errorClassToken, errorCodeToken } from "../../lib/error-token";
 import { log } from "../../lib/log";
 
 /**
@@ -25,7 +26,8 @@ import { log } from "../../lib/log";
  * - **The slug override is read here and nowhere else.** `slugEnv` names a
  *   route whose variable predates the `SENTRY_<ID>_CRON_MONITOR_SLUG` shape.
  * - **A thrown pass reaches Sentry whole**: the real error, message and stack,
- *   tagged with the scan's name.
+ *   tagged with the scan's name; its log line carries only the error's class and
+ *   driver code.
  *
  * `maxDuration` is deliberately not an option. Next reads route segment config
  * from the route file's own `export const`, statically; a value passed through
@@ -38,7 +40,7 @@ import { log } from "../../lib/log";
 export type CronRouteOptions<Summary = unknown> = {
   /** Kebab-case name: the monitor `diveday-<id>`, the log `cron_<id_>` and the `cron_scan` tag. */
   id: string;
-  /** The deployed schedule (vercel.json); Sentry reads it to decide a check-in is missing. */
+  /** The deployed schedule (config/crons.json); Sentry reads it to decide a check-in is missing. */
   crontab: string;
   /** Minutes late before Sentry calls the check-in missing. */
   checkinMargin?: number;
@@ -46,6 +48,8 @@ export type CronRouteOptions<Summary = unknown> = {
   maxRuntime?: number;
   /** Override variable when it is not `SENTRY_<ID>_CRON_MONITOR_SLUG`. */
   slugEnv?: string;
+  /** The monitor's slug when it is not `diveday-<id>`: a monitor that predates the shape keeps its identity. */
+  monitorSlug?: string;
   /** The pass. Its return value is the 200 body; a throw is the 503. */
   run: (request: Request) => Promise<Summary>;
   /**
@@ -63,7 +67,7 @@ export function cronRoute<Summary>(
   const logName = `cron_${id.replaceAll("-", "_")}`;
   const slugEnv =
     options.slugEnv ?? `SENTRY_${id.toUpperCase().replaceAll("-", "_")}_CRON_MONITOR_SLUG`;
-  const monitorSlug = process.env[slugEnv] || `diveday-${id}`;
+  const monitorSlug = process.env[slugEnv] || options.monitorSlug || `diveday-${id}`;
   const monitorConfig = {
     schedule: { type: "crontab", value: crontab },
     checkinMargin: options.checkinMargin ?? 20,
@@ -89,7 +93,13 @@ export function cronRoute<Summary>(
       await sentry.captureException(error, {
         tags: { cron_scan: id },
       });
-      log(`${logName}.scan_failed`, "error", { scan: id });
+      // The class and driver code (a SQLSTATE, ECONNRESET), never the message:
+      // it can quote a diver.
+      log(`${logName}.scan_failed`, "error", {
+        scan: id,
+        errorName: errorClassToken(error),
+        errorCode: errorCodeToken(error),
+      });
       await sentry.captureCheckIn({ checkInId, monitorSlug, status: "error" });
       return Response.json({ error: "scan_unavailable" }, { status: 503 });
     } finally {

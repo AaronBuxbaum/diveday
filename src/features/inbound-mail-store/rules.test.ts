@@ -23,7 +23,7 @@ describe("inboundMailStore", () => {
     const store = inboundMailStore("diveday-inbound-mail", s3);
     await expect(store.read("mail/abc")).resolves.toEqual({
       status: "ok",
-      message: "From: a@example.com\r\n\r\nhi",
+      message: new TextEncoder().encode("From: a@example.com\r\n\r\nhi"),
     });
     const command = s3.send.mock.calls[0]?.[0] as { input: { Bucket: string; Key: string } };
     expect(command.input).toEqual({ Bucket: "diveday-inbound-mail", Key: "mail/abc" });

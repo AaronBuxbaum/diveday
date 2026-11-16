@@ -85,12 +85,7 @@ export async function POST(request: Request) {
   try {
     outcome = await handle(db, event, receivedAt, logOutcome);
   } catch (error) {
-    let released = false;
-    try {
-      released = await releaseStripeWebhookEventClaim(db, ledgerId);
-    } catch (releaseError) {
-      await reportBillingFailure(releaseError, event, "claim_release");
-    }
+    const released = await releaseClaim(db, ledgerId, event);
     await reportBillingFailure(error, event, "handler");
     logOutcome("handler_failed", { claimReleased: released });
     return new Response(null, { status: 500 });
@@ -99,11 +94,30 @@ export async function POST(request: Request) {
     // A paid invoice that beat its own subscription's events here. Not an
     // error: give the claim back and ask Stripe to deliver it again later,
     // by which time the subscription is linked and the invoice can count.
-    const released = await releaseStripeWebhookEventClaim(db, ledgerId);
+    const released = await releaseClaim(db, ledgerId, event);
     logOutcome("retry_later", { claimReleased: released });
     return new Response(null, { status: 503 });
   }
   return new Response(null, { status: 200 });
+}
+
+/**
+ * Give the claim back so Stripe's retry is handled, not read as a duplicate. A
+ * release that throws is reported and answered as not released: it must never
+ * replace the response Stripe is waiting on, and it is the one case a retry
+ * cannot heal.
+ */
+async function releaseClaim(
+  db: AppDb,
+  ledgerId: string,
+  event: { id: string; type: string },
+): Promise<boolean> {
+  try {
+    return await releaseStripeWebhookEventClaim(db, ledgerId);
+  } catch (releaseError) {
+    await reportBillingFailure(releaseError, event, "claim_release");
+    return false;
+  }
 }
 
 async function handle(

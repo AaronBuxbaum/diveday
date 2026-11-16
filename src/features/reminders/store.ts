@@ -719,11 +719,62 @@ export async function sendDueReminders(
     }),
   );
 
+  // A course's learning materials ride the week-out nudge to its students
+  // until marked done. A course student's diver is the one it is for: a
+  // snorkeler or a rider on the session is a passenger, sent neither the
+  // course's words nor its materials (issue #2226). The "done" read is one
+  // query per departure, not per student.
+  const materialsByBooking = new Map<string, ReturnType<typeof readLearningMaterials>>();
+  const materialSeats = new Map<
+    string,
+    {
+      shopId: string;
+      courseId: string;
+      around: Date;
+      seats: Array<{
+        bookingId: string;
+        personId: string;
+        list: ReturnType<typeof readLearningMaterials>;
+      }>;
+    }
+  >();
+  for (const {
+    row: { booking, person, trip, shop, courseMaterials },
+    cadence,
+  } of dueRows) {
+    if (cadence.kind !== "trip_reminder_7d" || !trip.courseId) continue;
+    if (!isDiver(booking.participantType) || booking.courseMaterialsDoneAt) continue;
+    const list = readLearningMaterials(courseMaterials);
+    if (list.length === 0) continue;
+    const key = `${shop.id}|${trip.courseId}|${trip.startsAt.getTime()}`;
+    const group = materialSeats.get(key) ?? {
+      shopId: shop.id,
+      courseId: trip.courseId,
+      around: trip.startsAt,
+      seats: [],
+    };
+    group.seats.push({ bookingId: booking.id, personId: person.id, list });
+    materialSeats.set(key, group);
+  }
+  await Promise.all(
+    [...materialSeats.values()].map(async (group) => {
+      const done = await courseMaterialsDoneByPerson(db, {
+        shopId: group.shopId,
+        courseId: group.courseId,
+        personIds: group.seats.map((seat) => seat.personId),
+        around: group.around,
+      });
+      for (const seat of group.seats) {
+        if (!done.has(seat.personId)) materialsByBooking.set(seat.bookingId, seat.list);
+      }
+    }),
+  );
+
   // First which reminders send, then every link they carry, then the sends.
   const sending: Array<(typeof dueRows)[number] & ReminderContent> = [];
   for (const {
     row,
-    row: { booking, person, trip, shop, courseMaterials },
+    row: { booking, shop },
     cadence,
   } of dueRows) {
     // The diver's own checklist, from their readiness page's engine, built
@@ -737,27 +788,7 @@ export async function sendDueReminders(
     // "Done" is the person's, across every departure of the course
     // (`courseMaterialsDoneByPerson`), so a tick on the pool weekend quiets
     // the open-water weekend's nudge too.
-    // A course's student is its diver: a snorkeler or a rider on the session
-    // is a passenger, sent neither the course's words nor its materials
-    // (issue #2226).
-    const student = Boolean(trip.courseId) && isDiver(booking.participantType);
-    const courseMaterialsList =
-      cadence.kind === "trip_reminder_7d" && student && !booking.courseMaterialsDoneAt
-        ? readLearningMaterials(courseMaterials)
-        : [];
-    const materialsDue =
-      trip.courseId &&
-      courseMaterialsList.length > 0 &&
-      !(
-        await courseMaterialsDoneByPerson(db, {
-          shopId: shop.id,
-          courseId: trip.courseId,
-          personIds: [person.id],
-          around: trip.startsAt,
-        })
-      ).has(person.id)
-        ? courseMaterialsList
-        : [];
+    const materialsDue = materialsByBooking.get(booking.id) ?? [];
 
     // **Due, sendable, and still not worth sending.** The 7-day nudge carries
     // the diver's to-do list and nothing else, so with nothing on it there is

@@ -34,7 +34,7 @@ import {
   signInOrigins,
   trustedSignInOrigin,
 } from "@/lib/pending-sign-in";
-import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey, refundRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { readSessionCookieCache } from "@/lib/session-cookie-cache";
 import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
@@ -167,12 +167,10 @@ function diveDayCredentialsPlugin(db: DbExecutor) {
           if (!trustedSignInOrigin(ctx.headers, Boolean(ctx.request), origins))
             throw new APIError("FORBIDDEN", { message: "invalid_origin" });
           const ip = await clientIp(ctx.headers ?? null);
+          const emailKey = rateLimitKey("sign-in-email", ctx.body.email.toLowerCase());
           const [byIp, byEmail] = await Promise.all([
             checkRateLimit(rateLimitKey("sign-in-ip", ip), RATE_LIMITS.signInByIp),
-            checkRateLimit(
-              rateLimitKey("sign-in-email", ctx.body.email.toLowerCase()),
-              RATE_LIMITS.signInByEmail,
-            ),
+            checkRateLimit(emailKey, RATE_LIMITS.signInByEmail),
           ]);
           if (!byIp.allowed || !byEmail.allowed) {
             void trackEvent({ name: "sign_in_attempted", outcome: "rate_limited" });
@@ -193,6 +191,9 @@ function diveDayCredentialsPlugin(db: DbExecutor) {
             log("auth.sign_in_refused", "warn", { code: "invalid_credentials" });
             throw new APIError("UNAUTHORIZED", { message: "invalid_credentials" });
           }
+          // The address bucket is for guessing: a password that was right
+          // returns its try, so opening the shop each morning never spends it.
+          await refundRateLimit(emailKey, RATE_LIMITS.signInByEmail);
           if (result.status === "pending") {
             // A pending account must not inherit another account’s browser session.
             deleteSessionCookie(ctx);
@@ -221,19 +222,19 @@ function diveDayCredentialsPlugin(db: DbExecutor) {
             !(await checkRateLimit(rateLimitKey("sign-in-ip", ip), RATE_LIMITS.signInByIp)).allowed
           )
             return ctx.json({ status: "rate_limited" as const });
+          const spent: { emailKey?: string } = {};
           const result = await completePendingSignIn(
             db,
             readPendingHandle(ctx.headers, cookie.name),
             ctx.body.totpCode.trim(),
-            async (email) =>
-              (
-                await checkRateLimit(
-                  rateLimitKey("sign-in-email", email),
-                  RATE_LIMITS.signInByEmail,
-                )
-              ).allowed,
+            async (email) => {
+              spent.emailKey = rateLimitKey("sign-in-email", email);
+              return (await checkRateLimit(spent.emailKey, RATE_LIMITS.signInByEmail)).allowed;
+            },
             createProviderSession,
           );
+          if (result.status === "signed_in" && spent.emailKey)
+            await refundRateLimit(spent.emailKey, RATE_LIMITS.signInByEmail);
           if (result.status === "restart" || result.status === "signed_in")
             ctx.setCookie(cookie.name, "", { ...cookie.attributes, maxAge: 0 });
           if (result.status !== "signed_in") return ctx.json({ status: result.status });

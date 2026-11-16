@@ -7,4 +7,3 @@
  * the template and a test's own `nowDate()` calls drift apart.
  */
 export const TEST_FROZEN_CLOCK = "2026-07-21T13:30:00.000Z";
-export const TEST_TZ = "UTC";

@@ -485,13 +485,13 @@
   "bundle-reach": {
     "//": "Message-bundle keys no string literal in src/ can reach, per bundle. Written by `node scripts/check-bundle-reach.mjs --write`. This number may only go down — see scripts/check-bundle-reach.mjs. An entry is a list to triage, not a list to delete on sight: some are a hole in the walk.",
     "src/i18n/locales/en-US/diver.json": 3,
-    "src/i18n/locales/en-US/staff/divers.json": 10,
-    "src/i18n/locales/en-US/staff/diveSites.json": 6,
-    "src/i18n/locales/en-US/staff/manifest.json": 4,
+    "src/i18n/locales/en-US/staff/divers.json": 7,
+    "src/i18n/locales/en-US/staff/diveSites.json": 5,
+    "src/i18n/locales/en-US/staff/manifest.json": 1,
     "src/i18n/locales/en-US/staff/orders.json": 1,
-    "src/i18n/locales/en-US/staff/settings.json": 3,
+    "src/i18n/locales/en-US/staff/settings.json": 2,
     "src/i18n/locales/en-US/staff/shared.json": 1,
-    "src/i18n/locales/en-US/staff/trips.json": 13
+    "src/i18n/locales/en-US/staff/trips.json": 8
   },
   "context-budget": {
     "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
@@ -974,7 +974,7 @@
     "src/features/staffing/store.test.ts": 939,
     "src/features/today/today.test.ts": 1274,
     "src/features/work-order-follow-up/store.test.ts": 1177,
-    "src/features/work-orders/store.test.ts": 1408,
+    "src/features/work-orders/store.test.ts": 1402,
     "src/i18n/label-maps.test.ts": 1236,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1935,
@@ -1050,7 +1050,7 @@
       }
     ],
     "src/app/(token)/ready/[token]/page.tsx": 615,
-    "src/app/s/[shopSlug]/page.tsx": 608,
+    "src/app/s/[shopSlug]/page.tsx": 598,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 565,
     "src/app/shop/[shopSlug]/page.tsx": 576,

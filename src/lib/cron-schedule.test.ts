@@ -15,7 +15,7 @@ import { WAIVER_SEAL_CHECK_CRONTAB } from "./waiver-integrity";
 import { WEEKLY_DIGEST_CRON_CRONTAB } from "./weekly-digest";
 
 /**
- * vercel.json is the deployed schedule. Everything else that names a cadence
+ * config/crons.json is the deployed schedule. Everything else that names a cadence
  * (this module, the Sentry Cron Monitor config, the retry bounds in
  * `src/db/notifications.ts`) restates it and can drift; reading the real file
  * is what catches a change made in one place only.
@@ -45,7 +45,7 @@ describe("the daily tick", () => {
     expect(pass?.schedule).toBe(WAIVER_SEAL_CHECK_CRONTAB);
   });
 
-  it("matches the deployed vercel.json schedule for /api/cron/reminders", () => {
+  it("matches the deployed config/crons.json schedule for /api/cron/reminders", () => {
     const reminders = vercelCrons().find((cron) => cron.path === "/api/cron/reminders");
     expect(reminders?.schedule).toBe(DAILY_TICK_CRONTAB);
   });

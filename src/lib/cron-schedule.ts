@@ -2,7 +2,7 @@
  * The platform's scheduling grain, in one place.
  *
  * Most durable retries are drained by the daily `/api/cron/reminders` entry
- * (`DAILY_TICK_CRONTAB`, mirrored from vercel.json). That cadence, not the
+ * (`DAILY_TICK_CRONTAB`, mirrored from config/crons.json). That cadence, not the
  * backoff arithmetic a queue writes into `next_attempt_at`, is the real floor
  * on how soon those messages can be tried again: under a once-a-day drain
  * every rung of `src/db/notifications.ts`'s 30s -> 1h ladder collapses to the
@@ -14,10 +14,10 @@
  * allowlisted in `cron-schedule.test.ts`.
  */
 
-/** UTC hour of the daily `/api/cron/reminders` tick. Mirrors vercel.json. */
+/** UTC hour of the daily `/api/cron/reminders` tick. Mirrors config/crons.json. */
 export const DAILY_TICK_UTC_HOUR = 14;
 
-/** UTC minute of the daily tick. Mirrors vercel.json. */
+/** UTC minute of the daily tick. Mirrors config/crons.json. */
 export const DAILY_TICK_UTC_MINUTE = 7;
 
 /**
@@ -26,8 +26,8 @@ export const DAILY_TICK_UTC_MINUTE = 7;
  * to decide when a check-in is *missing* and is therefore the dead-man's
  * switch on this whole cadence.
  *
- * `src/lib/cron-schedule.test.ts` asserts this equals vercel.json's entry, so
- * the "must stay in lockstep with vercel.json" instruction that was previously
+ * `src/lib/cron-schedule.test.ts` asserts this equals config/crons.json's entry, so
+ * the "must stay in lockstep with config/crons.json" instruction that was previously
  * only a comment is now a failing test if the two drift.
  */
 export const DAILY_TICK_CRONTAB = `${DAILY_TICK_UTC_MINUTE} ${DAILY_TICK_UTC_HOUR} * * *`;
@@ -39,7 +39,7 @@ export const DAILY_TICK_CRONTAB = `${DAILY_TICK_UTC_MINUTE} ${DAILY_TICK_UTC_HOU
  * routes of their own, shop cadences are this tick. `:00` because the
  * minimum-head-count decision is printed on the booking page to the minute,
  * and the top of the hour is the closest an hourly pass gets to it (ADR
- * 20260813-minimum-head-count-departures). Mirrors vercel.json;
+ * 20260813-minimum-head-count-departures). Mirrors config/crons.json;
  * `cron-schedule.test.ts` fails if the two drift.
  */
 export const SHOP_TICK_CRONTAB = "0 * * * *";

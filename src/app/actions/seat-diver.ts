@@ -9,7 +9,6 @@ import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/feature
 import { revalidateAndRedirect } from "@/features/navigation";
 import {
   type SeatDiverPerson,
-  type SeatDiverRefusal,
   type SeatPartyMember,
   seatDiver,
   seatParty,
@@ -377,29 +376,6 @@ export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, f
 }
 
 /**
- * The new-diver form's own code for each refusal, so a refused party lands
- * back on the form it was typed on (with its rows, `KeepTypedOnRefusal`)
- * rather than on the search, which would show none of them.
- */
-const PARTY_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
-  trip_full: "diver-full",
-  divers_full: "diver-divers-full",
-  participant_type_unavailable: "diver-type-unavailable",
-  already_booked: "diver-already",
-  course_unstaffed: "diver-course-unstaffed",
-  course_prerequisite: "diver-course-prerequisite",
-  course_ratio_full: "diver-course-ratio-full",
-  course_min_age: "diver-course-min-age",
-  trip_prerequisite: "diver-trip-prerequisite",
-  trip_unavailable: "diver-unavailable",
-  date_request_offer_unavailable: "diver-date-request-unavailable",
-  date_request_departure_conflict: "diver-date-request-conflict",
-  date_request_party_full: "diver-date-request-full",
-  person_not_found: "diver-unavailable",
-  unavailable: "diver-unavailable",
-};
-
-/**
  * **A family or group, seated in one pass** (fifth loop, item 9): the form's
  * own fields are the first person and each party row one more, booked
  * together on the departure or not at all (`seatParty`). Each row says what
@@ -493,7 +469,9 @@ export async function seatPartyAction(shopSlug: string, formData: FormData) {
     refusals: door.refusals,
   }).catch(busyOnLockWait);
   if (outcome === "busy") back(SEAT_BUSY_NOTICE);
-  if (!outcome.ok) back(PARTY_REFUSAL_NOTICE[outcome.reason]);
+  // The departure's own code for each refusal, so a refused party lands back on the form it was
+  // typed on (with its rows, `KeepTypedOnRefusal`), not on the search, which would show none.
+  if (!outcome.ok) back(door.refusalNotice[outcome.reason]);
   // The lead's name, email and phone were kept as a draft while typing; the
   // party is seated, so the draft is finished with (security review N2).
   await discardFormDraft(db, session.user.shopId, session.user.personId, "new_diver");

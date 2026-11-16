@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { requireCronSecret } from "@/features/cron-auth";
+import { cronRoute } from "@/features/cron-route";
 import { listEmailBounces } from "@/features/email-bounces";
 import {
   claimFounderDigest,
@@ -15,8 +14,6 @@ import {
   countSetupRequestsBySource,
   countUnnotifiedSetupRequests,
 } from "@/features/funnel";
-import { flushLogs } from "@/features/log-shipping";
-import { sentry } from "@/features/sentry-server";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
@@ -27,7 +24,6 @@ import {
   previousWeek,
   rankSources,
 } from "@/lib/founder-metrics";
-import { log } from "@/lib/log";
 import { notify } from "@/lib/notifications";
 import { founderDigestRecipient } from "@/lib/platform-mail";
 
@@ -35,32 +31,11 @@ import { founderDigestRecipient } from "@/lib/platform-mail";
 export const maxDuration = 60;
 
 /**
- * Its own Sentry Cron Monitor: the founder's numbers going quiet is its own
- * failure, and folded into another job's slug nobody would see it.
- */
-const CRON_MONITOR_SLUG = "diveday-founder-metrics";
-
-/**
- * Must match this route's `crons` entry in vercel.json (the route test holds
- * them together): Sentry decides a check-in is missing from it.
- *
- * 11:00 UTC: past midnight across the Americas and the Caribbean, so a Monday
- * run reads every shop's Sunday as finished, and clear of the other jobs.
- */
-const CRON_SCHEDULE = "7 11 * * *";
-const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: CRON_SCHEDULE },
-  checkinMargin: 240,
-  maxRuntime: 5,
-  timezone: "Etc/UTC",
-} as const;
-
-/**
  * **The founder's numbers, nightly** (ADR 20261007-founder-metrics).
  *
  * Every night: record each real shop's activation milestones that its own rows
  * now prove, and log the north star for the week so far to the drain
- * (`cron_founder_metrics.computed`), so the series exists between digests.
+ * (`cron_founder_metrics.scan_complete`), so the series exists between digests.
  *
  * On Mondays, additionally: send the founder last week's digest — the north
  * star, demo entries and set-up requests by source, and every shop stalled
@@ -73,16 +48,14 @@ const CRON_MONITOR_CONFIG = {
  * as a bearer token, checked before anything else, the Sentry check-in
  * included — through the shared constant-time check (`src/features/cron-auth/rules.ts`).
  */
-export async function GET(request: Request) {
-  const refused = requireCronSecret(request);
-  if (refused) return refused;
-
-  const checkInId = await sentry.captureCheckIn(
-    { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
-    CRON_MONITOR_CONFIG,
-  );
-
-  try {
+export const GET = cronRoute({
+  id: "founder-metrics",
+  // 11:00 UTC: past midnight across the Americas and the Caribbean, so a Monday
+  // run reads every shop's Sunday as finished, and clear of the other jobs.
+  crontab: "7 11 * * *",
+  checkinMargin: 240,
+  maxRuntime: 5,
+  run: async () => {
     const now = nowDate();
     const db = await getDb();
     await syncShopMilestones(db);
@@ -92,35 +65,16 @@ export async function GET(request: Request) {
     const soFar = countDiveDays(
       await departureRollCallEvents(db, { from: thisWeek.startDate, to: today }),
     );
-    log("cron_founder_metrics.computed", "info", {
+    const digest = isDigestDay(now) ? await sendDigest(now) : "not_today";
+    return {
       weekStart: thisWeek.startDate,
       diveDays: soFar.diveDays,
       diveDayShops: soFar.shops,
-    });
-
-    const digest = isDigestDay(now) ? await sendDigest(now) : "not_today";
-    log("cron_founder_metrics.digest", digest === "failed" ? "error" : "info", { digest });
-
-    await sentry.captureCheckIn({
-      checkInId,
-      monitorSlug: CRON_MONITOR_SLUG,
-      status: digest === "failed" ? "error" : "ok",
-    });
-    return NextResponse.json(
-      { weekStart: thisWeek.startDate, diveDays: soFar.diveDays, digest },
-      { status: digest === "failed" ? 500 : 200 },
-    );
-  } catch (error) {
-    await sentry.captureException(error, {
-      tags: { cron_scan: "founder_metrics" },
-    });
-    log("cron_founder_metrics.failed", "error", {});
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
-    return NextResponse.json({ error: "founder_metrics_unavailable" }, { status: 503 });
-  } finally {
-    await flushLogs();
-  }
-}
+      digest,
+    };
+  },
+  healthy: (summary) => summary.digest !== "failed",
+});
 
 type DigestOutcome = "sent" | "already_sent" | "no_recipient" | "failed";
 

@@ -10,7 +10,7 @@ import {
   people,
   trips,
 } from "../../db/schema/index";
-import { setShopFeature, setShopTaxEnabled } from "../../db/shops";
+import { setShopFeature, setShopTaxEnabled, setShopTimezone } from "../../db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../../db/stripe-accounts";
 import { editTrip, upcomingTripsWithCounts } from "../../db/trips";
 import type { CheckoutProvider } from "../../lib/payments/checkout";
@@ -208,6 +208,81 @@ describe("sendDueCheckoutRecoveries", () => {
     });
     expect(again.sent).toBe(0);
     expect(email.sent).toHaveLength(1);
+  });
+
+  it("waits for the shop's waking hours, and sends once they open", async () => {
+    const { db, shop, checkoutId } = await pendingCheckoutContext(3);
+    // 12:00 UTC is 22:00 in Sydney: a commercial nudge does not reach a diver then.
+    await setShopTimezone(db, shop.id, "Australia/Sydney");
+    const email = fakeEmail();
+    const night = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+    expect(night).toMatchObject({ sent: 0, deferred: 1 });
+    expect(email.sent).toHaveLength(0);
+
+    // 22:00 UTC is 08:00 the next morning there.
+    const morning = await sendDueCheckoutRecoveries(db, {
+      now: new Date("2026-08-01T22:00:00Z"),
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+    expect(morning.sent).toBe(1);
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(row?.abandonedRecoverySentAt).not.toBeNull();
+  });
+
+  it("holds the claim while sending, so an overlapping run cannot send the same nudge", async () => {
+    const { db } = await pendingCheckoutContext(3);
+    const inner = fakeEmail();
+    let overlap: Awaited<ReturnType<typeof sendDueCheckoutRecoveries>> | undefined;
+    const provider = {
+      async send(notification: Parameters<typeof inner.provider.send>[0]) {
+        overlap = await sendDueCheckoutRecoveries(db, {
+          now: NOW,
+          emailProvider: inner.provider,
+          checkoutProvider: fakeCheckoutProvider(stillOpen),
+        });
+        return inner.provider.send(notification);
+      },
+    };
+    const outer = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+    expect(outer.sent).toBe(1);
+    expect(overlap?.sent).toBe(0);
+    expect(inner.sent).toHaveLength(1);
+  });
+
+  it("gives the claim back when the send failed and nothing queued a retry", async () => {
+    const { db, checkoutId } = await pendingCheckoutContext(3);
+    const down = fakeEmail({ status: "not_configured" });
+    const failed = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: down.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+    expect(failed.failed).toBe(1);
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(row?.abandonedRecoverySentAt).toBeNull();
+
+    const up = fakeEmail();
+    const retried = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: up.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+    expect(retried.sent).toBe(1);
   });
 
   it("switched off, a paid session is still reconciled and a stale one expires, no email goes", async () => {

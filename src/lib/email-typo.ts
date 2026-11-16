@@ -27,6 +27,12 @@ const COMMON_DOMAINS = [
 ] as const;
 
 /**
+ * Real providers that sit one edit from a common one (`mail.com` and
+ * `email.com` from `gmail.com`, `ymail.com` likewise): never a slip.
+ */
+const REAL_NEIGHBOURS = ["mail.com", "email.com", "ymail.com"] as const;
+
+/**
  * Optimal string alignment distance (Levenshtein plus adjacent transposition),
  * so a swapped pair like `gmial` reads as one mistake, not two.
  */
@@ -63,6 +69,7 @@ export function suggestEmailTypo(email: string): string | null {
   // A domain needs a dot to be worth comparing, and an exact match is correct.
   if (!domain.includes(".")) return null;
   if ((COMMON_DOMAINS as readonly string[]).includes(domain)) return null;
+  if ((REAL_NEIGHBOURS as readonly string[]).includes(domain)) return null;
 
   // COMMON_DOMAINS is non-empty, so the reduce always yields a nearest match.
   const best = COMMON_DOMAINS.map((candidate) => ({

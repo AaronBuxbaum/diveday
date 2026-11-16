@@ -17,15 +17,13 @@ describe("OpenAddBand", () => {
     });
     Element.prototype.scrollIntoView = scrollIntoView;
     const { container, unmount } = render(
-      <>
-        <div id={ADD_A_BOOKING_ID}>
-          <form>
-            <input type="hidden" name="request" value="r-1" />
-            <input type="search" name="diverq" aria-label="Find a diver" />
-          </form>
-          <OpenAddBand />
-        </div>
-      </>,
+      <div id={ADD_A_BOOKING_ID}>
+        <form>
+          <input type="hidden" name="request" value="r-1" />
+          <input type="search" name="diverq" aria-label="Find a diver" />
+        </form>
+        <OpenAddBand />
+      </div>,
     );
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
     expect(container.querySelector("[data-open-add-band]")).toHaveAttribute(

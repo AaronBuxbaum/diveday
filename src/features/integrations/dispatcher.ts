@@ -14,7 +14,7 @@ import { deliverZapierEvent } from "./zapier";
 
 /** Leave room inside the route's 300-second platform ceiling to settle a claim. */
 export const INTEGRATIONS_CRON_BUDGET_MS = 240_000;
-export const INTEGRATION_DELIVERY_MAX_MS = 60_000;
+const INTEGRATION_DELIVERY_MAX_MS = 60_000;
 export const INTEGRATION_DELIVERY_SETTLEMENT_RESERVE_MS = 1_000;
 const MINIMUM_USEFUL_DELIVERY_SLICE_MS = 1_000;
 
@@ -34,7 +34,7 @@ const MINIMUM_USEFUL_DELIVERY_SLICE_MS = 1_000;
  * at the next hour, or at the next write that drains, so the dead-letter
  * horizon is longer than a shorter poll would give.
  *
- * Mirrors `vercel.json`; `src/lib/cron-schedule.test.ts` fails if the two
+ * Mirrors `config/crons.json`; `src/lib/cron-schedule.test.ts` fails if the two
  * drift.
  */
 export const INTEGRATIONS_CRON_CRONTAB = "3 * * * *";

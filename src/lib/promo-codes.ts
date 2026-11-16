@@ -221,12 +221,3 @@ export function discountOffCents(discountableCents: number, discount: PromoDisco
   const percent = Math.min(100, wholeCents(discount.percent));
   return Math.min(total, Math.ceil((total * percent) / 100));
 }
-
-/**
- * What a code leaves to pay, in minor units: `amountCents` less
- * {@link discountOffCents}. Stripe remains the authority on what is charged;
- * this is the figure DiveDay reconstructs when it has to.
- */
-export function discountedAmountCents(amountCents: number, discount: PromoDiscount): number {
-  return wholeCents(amountCents) - discountOffCents(amountCents, discount);
-}

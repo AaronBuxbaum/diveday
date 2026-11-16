@@ -47,5 +47,5 @@ the first Saturday's "back aboard" closed the second's count (#2557). It amends
   none raises a safety signal between days.
 - A late count past the halfway point of two same-day windows belongs to the later day.
 - Offline: a queued mark is compared only with marks on its own meeting day
-  (`onSameMeetingDayAs`). The copy carries each later day's boundary (`rollCallDayBoundaries`,
+ (`rollCallDayIndex`). The copy carries each later day's boundary (`rollCallDayBoundaries`,
   additive); past one, the device reads the new day empty and keeps an earlier day's missing person.

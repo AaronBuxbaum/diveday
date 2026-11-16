@@ -9,6 +9,7 @@ import { getTripWithBooked } from "@/db/trips";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { log } from "@/lib/log";
+import { uuidParam } from "@/lib/uuid";
 
 // Node runtime, not Edge: the shared LISTEN client (src/db/manifest-events.ts)
 // needs the `pg` driver. See ADR 20260726-manifest-push-refresh. Cache
@@ -136,7 +137,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!session?.user || !isStaff(session.user.roles)) {
     return Response.json({ error: "authentication_required" }, { status: 401 });
   }
-  const { id: tripId } = await params;
+  const tripId = uuidParam((await params).id);
   const db = await getDb();
 
   // The gate that decides: live roles, re-read on every subscribe. The session
@@ -163,8 +164,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return Response.json({ error: "authentication_required" }, { status: 401 });
   }
 
-  const trip = await getTripWithBooked(db, session.user.shopId, tripId);
-  if (!trip) return Response.json({ error: "not_found" }, { status: 404 });
+  // An id that cannot be a uuid names no trip: a 404, not a Postgres 22P02 escaping as a 500.
+  const trip = tripId ? await getTripWithBooked(db, session.user.shopId, tripId) : null;
+  if (!tripId || !trip) return Response.json({ error: "not_found" }, { status: 404 });
 
   const encoder = new TextEncoder();
   let stop = () => {};

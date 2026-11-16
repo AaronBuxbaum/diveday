@@ -8,7 +8,7 @@ import {
 import { INTEGRATION_PROVIDER_REGISTRY, type IntegrationEventType } from "./registry";
 import { readIntegrationCredentials } from "./store";
 
-export const ZAPIER_HOOK_HOST = "hooks.zapier.com";
+const ZAPIER_HOOK_HOST = "hooks.zapier.com";
 
 /**
  * A per-request ceiling on every outbound call.

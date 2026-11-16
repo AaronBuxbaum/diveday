@@ -887,7 +887,15 @@ export async function getDiverProfile(
         juniorStatusVerifiedByName: juniorReviewer.fullName,
       })
       .from(cards)
-      .leftJoin(levelReviewer, eq(levelReviewer.id, cards.reviewedByPersonId))
+      .leftJoin(
+        levelReviewer,
+        and(
+          eq(levelReviewer.id, cards.reviewedByPersonId),
+          eq(levelReviewer.shopId, shopId),
+          // An erased staffer is "staff", never the erasure placeholder.
+          isNull(levelReviewer.anonymizedAt),
+        ),
+      )
       .leftJoin(
         juniorReviewer,
         and(
@@ -914,7 +922,15 @@ export async function getDiverProfile(
     db
       .select({ card: cards, reviewedByName: specialtyReviewer.fullName })
       .from(cards)
-      .leftJoin(specialtyReviewer, eq(specialtyReviewer.id, cards.reviewedByPersonId))
+      .leftJoin(
+        specialtyReviewer,
+        and(
+          eq(specialtyReviewer.id, cards.reviewedByPersonId),
+          eq(specialtyReviewer.shopId, shopId),
+          // An erased staffer is "staff", never the erasure placeholder.
+          isNull(specialtyReviewer.anonymizedAt),
+        ),
+      )
       .where(
         and(
           eq(cards.kind, "specialty"),
@@ -933,7 +949,15 @@ export async function getDiverProfile(
     db
       .select({ card: cards, reviewedByName: nitroxReviewer.fullName })
       .from(cards)
-      .leftJoin(nitroxReviewer, eq(nitroxReviewer.id, cards.reviewedByPersonId))
+      .leftJoin(
+        nitroxReviewer,
+        and(
+          eq(nitroxReviewer.id, cards.reviewedByPersonId),
+          eq(nitroxReviewer.shopId, shopId),
+          // An erased staffer is "staff", never the erasure placeholder.
+          isNull(nitroxReviewer.anonymizedAt),
+        ),
+      )
       .where(
         and(
           eq(cards.kind, "nitrox"),

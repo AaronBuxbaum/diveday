@@ -31,17 +31,6 @@ export function shopWaiverStatusText(t: StaffTranslator, status: ShopWaiverStand
 }
 
 /**
- * The one tone that standing wears. A held medical is danger — it fails closed
- * and nobody boards on it. A missing or lapsed signature is warning: real work
- * to do, and ordinary, since it is the state every new diver starts in. Colour
- * never carries the meaning on its own (design/principles.md #6); it only has
- * to stop contradicting the word beside it.
- */
-export function shopWaiverStatusTone(status: ShopWaiverStanding): "success" | "warning" | "danger" {
-  return waiverRowStateTone(status.state);
-}
-
-/**
  * **The state a shared waiver row renders** (ADR 20260827-people-not-lists,
  * decision 6) — the states `shopWaiverStanding` can be in, plus two that are
  * not a standing it can see.

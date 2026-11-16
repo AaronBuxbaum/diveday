@@ -164,7 +164,6 @@
     "restored": "Orden de trabajo restaurada",
     "pieceAdded": "En el registro",
     "pieceDeleted": "Pieza eliminada",
-    "pieceRestored": "Pieza restaurada",
     "already": "Ya estaba en ese estado.",
     "closed": "Esa orden ya se entregó. Abre una nueva.",
     "noSubject": "Indica de quién es el equipo.",

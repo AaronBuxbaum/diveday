@@ -581,14 +581,6 @@ export async function anonymizeDiver(
     if (person.mergedIntoPersonId) {
       return { ok: false, reason: "merged", survivorId: person.mergedIntoPersonId } as const;
     }
-    if (input.confirmation && !person.deletedAt)
-      return { ok: false, reason: "requires_delete" } as const;
-    if (
-      input.confirmation &&
-      input.confirmation.name.trim().toLowerCase() !== person.fullName.trim().toLowerCase()
-    ) {
-      return { ok: false, reason: "name_mismatch" } as const;
-    }
     if (person.anonymizedAt) {
       const pendingMedia = await tx
         .select({ id: mediaDeletionAttempts.id })
@@ -609,6 +601,16 @@ export async function anonymizeDiver(
         raisedProcessorErasures: [] as ProcessorErasureObligation[],
         bookkeeperCleared: false,
       } as const;
+    }
+    // After the already-erased answer: a retry finds the name redacted, and the
+    // typed-name confirmation of the first call cannot match it.
+    if (input.confirmation && !person.deletedAt)
+      return { ok: false, reason: "requires_delete" } as const;
+    if (
+      input.confirmation &&
+      input.confirmation.name.trim().toLowerCase() !== person.fullName.trim().toLowerCase()
+    ) {
+      return { ok: false, reason: "name_mismatch" } as const;
     }
     const roleRows = await tx
       .select({ role: personRoles.role })
@@ -828,7 +830,8 @@ async function scrubPersonRecord(
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId, now } = ctx;
-  const profileOwners = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
+  const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
+  const profileOwners = [personId, ...mergedShellIds];
   const profileRows = await tx
     .select({ profile: people.publicStaffProfile })
     .from(people)
@@ -864,7 +867,6 @@ async function scrubPersonRecord(
   // (ADR 20260820-every-delete-is-soft). What goes is the identity, not the row,
   // so the merge audit trail (`merged_into_person_id`, `merged_at`,
   // `merged_by_person_id`) is deliberately left in place.
-  const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
   for (const shellId of mergedShellIds) {
     await tx
       .update(people)

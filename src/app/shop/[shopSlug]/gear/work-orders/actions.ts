@@ -16,7 +16,6 @@ import {
   editWorkOrderLine,
   recordWorkOrder,
   recordWorkOrderWork,
-  restoreCustomerGearItem,
   restoreWorkOrder,
   setWorkOrderStatus,
   type WorkOrderCareInput,
@@ -119,20 +118,6 @@ export async function deleteCustomerGearItemAction(formData: FormData) {
       ? noticeUrl(back, "piece-deleted", { undoPieceId: parsed.data.customerGearItemId })
       : noticeUrl(back, outcome.reason),
   );
-}
-
-/** The undo beside that delete. */
-export async function restoreCustomerGearItemAction(formData: FormData) {
-  const { session, board, diver } = await requireWorkOrderSurface();
-  const parsed = pieceActionSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
-
-  const back = diver(parsed.data.personId);
-  const outcome = await restoreCustomerGearItem(await getDb(), {
-    shopId: session.user.shopId,
-    customerGearItemId: parsed.data.customerGearItemId,
-  });
-  revalidateAndRedirect(back, noticeUrl(back, outcome.ok ? "piece-restored" : outcome.reason));
 }
 
 const newOrderSchema = z.object({

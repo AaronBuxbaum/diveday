@@ -411,6 +411,13 @@ describe("formatByteSize", () => {
     expect(formatByteSize(2_500_000_000, "en-US")).toBe("2.5 GB");
   });
 
+  it("moves up a unit rather than print 1,000 of the one below", () => {
+    expect(formatByteSize(999_499, "en-US")).toBe("999 kB");
+    expect(formatByteSize(999_500, "en-US")).toBe("1 MB");
+    expect(formatByteSize(999_999_999, "en-US")).toBe("1 GB");
+    expect(formatByteSize(99_950_000, "en-US")).toBe("100 MB");
+  });
+
   it("formats for the reader's locale", () => {
     expect(formatByteSize(42_300_000, "es-ES")).toBe("42,3 MB");
   });

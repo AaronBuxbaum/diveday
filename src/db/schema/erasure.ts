@@ -90,7 +90,14 @@ export const mediaDeletionAttempts = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   },
-  (table) => [index("media_deletion_attempts_shop_status_idx").on(table.shopId, table.status)],
+  (table) => [
+    index("media_deletion_attempts_shop_status_idx").on(table.shopId, table.status),
+    // The cross-shop retry pass (`retryPendingMediaDeletions`) has no shop to lead with;
+    // finished rows pile up, unfinished ones stay a handful.
+    index("media_deletion_attempts_unfinished_idx")
+      .on(table.createdAt)
+      .where(sql`${table.status} <> 'succeeded'`),
+  ],
 );
 
 /**

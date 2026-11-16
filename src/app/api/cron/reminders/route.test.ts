@@ -4,9 +4,6 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/checkout-recovery/store", () => ({
-  sendDueCheckoutRecoveries: vi.fn(),
-}));
 vi.mock("@/db/media-deletions", () => ({ retryPendingMediaDeletions: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
 vi.mock("../../../../features/processor-erasure/store", () => ({
@@ -23,7 +20,6 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 const { getDb } = await import("@/db/client");
-const { sendDueCheckoutRecoveries } = await import("../../../../features/checkout-recovery/store");
 const { retryPendingMediaDeletions } = await import("@/db/media-deletions");
 const { drainNotificationRetries } = await import("@/db/notifications");
 const { retryPendingProcessorErasures } = await import(
@@ -65,19 +61,6 @@ beforeEach(() => {
       failed: 0,
       held: { sent: 0, failed: 0 },
     });
-  vi.mocked(sendDueCheckoutRecoveries).mockReset().mockResolvedValue({
-    scanned: 4,
-    sent: 4,
-    resolved: 0,
-    cancelled: 0,
-    departed: 0,
-    settled: 0,
-    unreconciled: 0,
-    optedOut: 0,
-    unaddressable: 0,
-    failed: 0,
-    switchedOff: 0,
-  });
   vi.mocked(retryPendingMediaDeletions)
     .mockReset()
     .mockResolvedValue({ attempted: 5, succeeded: 5 });
@@ -138,8 +121,6 @@ describe("GET /api/cron/reminders — structured logging", () => {
         scansFailed: 0,
         notificationRetriesScanned: 1,
         notificationRetriesSent: 1,
-        checkoutRecoveriesScanned: 4,
-        checkoutRecoveriesSent: 4,
         mediaDeletionsAttempted: 5,
         mediaDeletionsSucceeded: 5,
         processorErasuresAttempted: 7,
@@ -167,13 +148,12 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
     expect(response).toBeDefined();
-    expect(sendDueCheckoutRecoveries).toHaveBeenCalledTimes(1);
     expect(retryPendingMediaDeletions).toHaveBeenCalledTimes(1);
     expect(reapExpiredDemoShops).toHaveBeenCalledTimes(1);
   });
 
   it("still emits the summary line — and its counts — when a scan throws", async () => {
-    vi.mocked(sendDueCheckoutRecoveries).mockRejectedValue(new Error("boom"));
+    vi.mocked(retryPendingMediaDeletions).mockRejectedValue(new Error("boom"));
 
     await GET(cronRequest(`Bearer ${secret}`));
 
@@ -182,35 +162,32 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
       expect.objectContaining({
         event: "cron_reminders.scan_complete",
         scansFailed: 1,
-        failedScans: "checkoutRecoveries",
+        failedScans: "mediaDeletions",
         demoShopsDeleted: 6,
       }),
     );
     // No counts at all for the scan that threw, so "nothing was due" and "this
     // never ran" can never be read as the same thing.
-    expect(line).not.toHaveProperty("checkoutRecoveriesScanned");
-    expect(line).not.toHaveProperty("checkoutRecoveriesSent");
+    expect(line).not.toHaveProperty("mediaDeletionsAttempted");
+    expect(line).not.toHaveProperty("mediaDeletionsSucceeded");
   });
 
   it("answers with a body that distinguishes a scan that ran from one that threw", async () => {
     vi.mocked(retryPendingMediaDeletions).mockRejectedValue(new Error("boom"));
 
     const response = await GET(cronRequest(`Bearer ${secret}`));
-    const body = (await response.json()) as Record<string, { status: string; result?: unknown }>;
+    const body = (await response.json()) as Record<string, unknown>;
 
-    expect(response.status).toBe(500);
-    expect(body.mediaDeletions).toEqual({ status: "error" });
-    expect(body.notificationRetries).toEqual({
-      status: "ok",
-      result: { scanned: 1, sent: 1, queued: 0, failed: 0, held: { sent: 0, failed: 0 } },
-    });
+    expect(response.status).toBe(200);
+    expect(body.failedScans).toBe("mediaDeletions");
+    expect(body.mediaDeletionsAttempted).toBeUndefined();
+    expect(body.notificationRetriesScanned).toBe(1);
   });
 
   it("answers 200 when every scan ran", async () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
-    const body = (await response.json()) as Record<string, { status: string }>;
-    expect(Object.values(body).every((outcome) => outcome.status === "ok")).toBe(true);
+    await expect(response.json()).resolves.toMatchObject({ scansFailed: 0 });
   });
 
   it("reports each failed scan to Sentry tagged with its name", async () => {
@@ -263,8 +240,7 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
 
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
-    expect(response.status).toBe(500);
-    expect(sendDueCheckoutRecoveries).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(200);
     expect(summaryLine()).toEqual(
       expect.objectContaining({ scansFailed: 2, failedScans: "notificationRetries,demoShops" }),
     );
@@ -282,7 +258,7 @@ describe("GET /api/cron/reminders — dead-man's switch", () => {
     vi.mocked(console.error).mockRestore();
   });
 
-  it("opens an in-progress check-in carrying the schedule vercel.json declares", async () => {
+  it("opens an in-progress check-in carrying the schedule config/crons.json declares", async () => {
     await GET(cronRequest(`Bearer ${secret}`));
 
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(
@@ -303,7 +279,7 @@ describe("GET /api/cron/reminders — dead-man's switch", () => {
   });
 
   it("closes the check-in as error when any scan threw", async () => {
-    vi.mocked(sendDueCheckoutRecoveries).mockRejectedValue(new Error("boom"));
+    vi.mocked(retryPendingMediaDeletions).mockRejectedValue(new Error("boom"));
 
     await GET(cronRequest(`Bearer ${secret}`));
 
@@ -339,7 +315,7 @@ describe("GET /api/cron/reminders — dead-man's switch", () => {
       status: "error",
     });
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
-      tags: { cron_scan: "bootstrap" },
+      tags: { cron_scan: "reminders" },
     });
     expect(drainNotificationRetries).not.toHaveBeenCalled();
   });

@@ -105,6 +105,35 @@ describe("commitGearImport", () => {
     expect(unit).toMatchObject({ label: "IMP-OLD-TAG", size: "L" });
   });
 
+  it("keeps a matched unit's kind when the file says nothing about it", async () => {
+    const { db, shop } = ctx;
+    const { staffId } = await staffAndDiver(db, shop.id);
+    await commitGearImport(
+      db,
+      shop.id,
+      prepareGearImport(`${HEADER}\nIMP-KEEP-KIND,regulator,,SN-KEEP,,,,`),
+      staffId,
+    );
+    // A service-history file with no kind column, then one whose kind is a word we do not know.
+    await commitGearImport(
+      db,
+      shop.id,
+      prepareGearImport("gear_label,serviced_on\nIMP-KEEP-KIND,2026-03-01"),
+      staffId,
+    );
+    await commitGearImport(
+      db,
+      shop.id,
+      prepareGearImport(`${HEADER}\nIMP-KEEP-KIND,snorkel vest,,,,,,`),
+      staffId,
+    );
+    const [unit] = await db
+      .select()
+      .from(gearItems)
+      .where(and(eq(gearItems.shopId, shop.id), eq(gearItems.label, "IMP-KEEP-KIND")));
+    expect(unit?.kind).toBe("regulator");
+  });
+
   it("never matches or edits another shop's unit with the same tag or serial", async () => {
     const { db, shop } = ctx;
     const { staffId } = await staffAndDiver(db, shop.id);

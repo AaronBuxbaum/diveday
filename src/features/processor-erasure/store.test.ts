@@ -534,6 +534,25 @@ describe("retrying an owed delete", () => {
     expect(stillOwed.map((row) => row.target)).toEqual(["stripe_invoice_snapshot"]);
   });
 
+  it("keeps draining when one obligation's attempt throws", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    await recordProcessorErasureObligations(db, {
+      shopId: shop.id,
+      personId: ownerId,
+      targets: [CUSTOMER("cus_throws"), CUSTOMER("cus_fine")],
+    });
+    const provider: CustomerProvider = {
+      deleteCustomer: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("socket hang up"))
+        .mockResolvedValue({ status: "deleted" }),
+    };
+    expect(await retryPendingProcessorErasures(db, { provider })).toEqual({
+      attempted: 2,
+      discharged: 1,
+    });
+  });
+
   it("leaves a checkout session out of the nightly drain, forever", async () => {
     const { db, shop, ownerId } = await twoShops();
     await recordProcessorErasureObligations(db, {
@@ -639,6 +658,64 @@ describe("retrying an owed delete", () => {
     expect(await rowById(db, eligible.id)).toMatchObject({ status: "discharged" });
     // The capped rows are still owed and still nobody's nightly Stripe call.
     expect(await listUnfinished(db, shop.id, "processor_erasure")).toHaveLength(5);
+  });
+});
+
+describe("an attestation racing the automatic attempt", () => {
+  it("keeps the owner's attestation when Stripe's answer lands after it", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    const [obligation] = await recordProcessorErasureObligations(db, {
+      shopId: shop.id,
+      personId: ownerId,
+      targets: [CUSTOMER("cus_race")],
+    });
+    if (!obligation) throw new Error("obligation missing");
+    const provider: CustomerProvider = {
+      deleteCustomer: vi.fn(async () => {
+        await dischargeProcessorErasure(db, {
+          shopId: shop.id,
+          obligationId: obligation.id,
+          actorPersonId: ownerId,
+        });
+        return { status: "deleted" } as const;
+      }),
+    };
+
+    await attemptProcessorErasure(db, obligation, provider);
+
+    expect(await rowById(db, obligation.id)).toMatchObject({
+      status: "discharged",
+      dischargedByPersonId: ownerId,
+      attempts: 0,
+    });
+  });
+
+  it("does not burn an attempt on a row the owner already closed", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    const [obligation] = await recordProcessorErasureObligations(db, {
+      shopId: shop.id,
+      personId: ownerId,
+      targets: [CUSTOMER("cus_race2")],
+    });
+    if (!obligation) throw new Error("obligation missing");
+    const provider: CustomerProvider = {
+      deleteCustomer: vi.fn(async () => {
+        await dischargeProcessorErasure(db, {
+          shopId: shop.id,
+          obligationId: obligation.id,
+          actorPersonId: ownerId,
+        });
+        return { status: "failed", error: "boom" } as never;
+      }),
+    };
+
+    await attemptProcessorErasure(db, obligation, provider);
+
+    expect(await rowById(db, obligation.id)).toMatchObject({
+      status: "discharged",
+      attempts: 0,
+      lastError: null,
+    });
   });
 });
 

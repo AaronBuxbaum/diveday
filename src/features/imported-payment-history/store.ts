@@ -10,6 +10,7 @@ import type { DbExecutor } from "../../db/client";
 import { offsetPage, PAGE_SIZE } from "../../db/paging";
 import { importedPaymentHistory, people } from "../../db/schema/index";
 import type { CalendarDate } from "../../lib/calendar-date";
+import { containsPattern } from "../../lib/like-pattern";
 
 /** A second bounded list inside Orders; source history can span decades. */
 export const IMPORTED_PAYMENT_HISTORY_PAGE_SIZE = PAGE_SIZE.list;
@@ -29,7 +30,8 @@ function importedPaymentHistoryWhere(shopId: string, filter: ImportedPaymentHist
   // never make another shop's diver name visible in Orders.
   const conditions = [eq(importedPaymentHistory.shopId, shopId), eq(people.shopId, shopId)];
   if (filter.personId) conditions.push(eq(importedPaymentHistory.personId, filter.personId));
-  if (filter.personQuery) conditions.push(ilike(people.fullName, `%${filter.personQuery}%`));
+  if (filter.personQuery)
+    conditions.push(ilike(people.fullName, containsPattern(filter.personQuery)));
   if (filter.from) conditions.push(gte(importedPaymentHistory.occurredOn, filter.from));
   if (filter.to) conditions.push(lte(importedPaymentHistory.occurredOn, filter.to));
   return and(...conditions);

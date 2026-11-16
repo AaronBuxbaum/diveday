@@ -80,7 +80,7 @@ describe("prepareGearImport", () => {
       ].join("\n"),
     );
     expect(prepared.fatal).toBeNull();
-    expect(prepared.rows.map((row) => row.kind)).toEqual(["other", "other"]);
+    expect(prepared.rows.map((row) => row.kind)).toEqual([null, null]);
   });
 
   it("rejects service dive intervals without a due date", () => {

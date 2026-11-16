@@ -1,8 +1,6 @@
-import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { claudeSpendUsdBetween } from "@/features/assists";
-import { requireCronSecret } from "@/features/cron-auth";
-import { flushLogs } from "@/features/log-shipping";
+import { cronRoute } from "@/features/cron-route";
 import { sentry } from "@/features/sentry-server";
 import { collectUsageSamples } from "@/features/usage";
 import { claimUsageAlert, releaseUsageAlert } from "@/features/usage-alert-ledger";
@@ -15,7 +13,6 @@ import {
   isAlertingLevel,
   periodBounds,
 } from "@/lib/cost-guardrails";
-import { log } from "@/lib/log";
 import { notify } from "@/lib/notifications";
 import { alertRecipient } from "@/lib/platform-mail";
 
@@ -28,37 +25,6 @@ import { alertRecipient } from "@/lib/platform-mail";
  * Raise it only with evidence from `cron_usage.scan_complete`.
  */
 export const maxDuration = 60;
-
-/**
- * Sentry Cron Monitor identity for the usage poll. Its own monitor, separate
- * from the daily reminders tick and the weekly prune: a cost monitor that
- * silently stopped running is its own incident with its own urgency, and
- * folding it into another slug would hide exactly the failure this endpoint
- * exists to prevent — nobody watching, and nothing saying so.
- * `SENTRY_USAGE_CRON_MONITOR_SLUG` points at a per-environment monitor without
- * a deploy, matching the other two routes.
- */
-const CRON_MONITOR_SLUG = process.env.SENTRY_USAGE_CRON_MONITOR_SLUG || "diveday-usage-guardrails";
-
-/**
- * Must stay in lockstep with the `crons` entry in vercel.json — Sentry uses it
- * to decide when a check-in is *missing*, which is the dead-man's switch on the
- * whole guardrail.
- *
- * 09:07 UTC, in an hour of its own among the dailies and a minute after the
- * hourly passes, so it rides the compute they woke rather than waking it again
- * (code review 2026-10-13b, item 36, `cron-schedule.test.ts`). `checkinMargin` is generous because
- * a cost reading arriving a few hours late is not an incident; `maxRuntime`
- * sits above `maxDuration` so a run the platform killed reads as timed-out
- * rather than as still running.
- */
-const CRON_SCHEDULE = "7 9 * * *";
-const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: CRON_SCHEDULE },
-  checkinMargin: 240,
-  maxRuntime: 5,
-  timezone: "Etc/UTC",
-} as const;
 
 /** Tags carried on every Sentry signal from this route, so one query finds them all. */
 function ceilingTags(evaluation: CeilingEvaluation) {
@@ -96,16 +62,15 @@ function ceilingTags(evaluation: CeilingEvaluation) {
  * outputs. That is the entire safety property: a monitor reporting "fine"
  * because it could not look is worse than no monitor.
  */
-export async function GET(request: Request) {
-  const refusal = requireCronSecret(request);
-  if (refusal) return refusal;
-
-  const checkInId = await sentry.captureCheckIn(
-    { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
-    CRON_MONITOR_CONFIG,
-  );
-
-  try {
+export const GET = cronRoute({
+  id: "usage",
+  monitorSlug: "diveday-usage-guardrails",
+  crontab: "7 9 * * *",
+  // A cost reading arriving a few hours late is not an incident; `maxRuntime`
+  // sits above `maxDuration`, so a killed run reads as timed-out.
+  checkinMargin: 240,
+  maxRuntime: 5,
+  run: async () => {
     const now = nowDate();
     const db = await getDb();
     const samples = await collectUsageSamples({
@@ -196,10 +161,11 @@ export async function GET(request: Request) {
       }
     }
 
-    // One line per run naming every ceiling and its verdict — ids, codes, and
-    // numbers about an invoice, which is all this pass ever knows (LogContext's
-    // rule). Nothing here is about a person.
-    log("cron_usage.scan_complete", "info", {
+    // Every ceiling's verdict, as flat fields (ids, codes and numbers about an
+    // invoice, which is all this pass ever knows; LogContext's rule) plus the
+    // evaluations themselves. The helper logs this as `cron_usage.scan_complete`.
+    return {
+      period: evaluations[0]?.periodKey,
       ceilings: evaluations.length,
       alertsSent,
       alertsSuppressed,
@@ -220,42 +186,10 @@ export async function GET(request: Request) {
             ceilingPercent(evaluation.fraction) ?? 0,
           ]),
       ),
-    });
-
-    await sentry.captureCheckIn({
-      checkInId,
-      monitorSlug: CRON_MONITOR_SLUG,
-      status: alertsFailed > 0 ? "error" : "ok",
-    });
-
-    // An undelivered alert answers 500 so the scheduler's invocation log agrees
-    // with Sentry that this run was not clean. The claim has been released, so
-    // a retry re-sends rather than double-sending.
-    return NextResponse.json(
-      {
-        period: evaluations[0]?.periodKey,
-        alertsSent,
-        alertsSuppressed,
-        alertsFailed,
-        evaluations,
-      },
-      { status: alertsFailed > 0 ? 500 : 200 },
-    );
-  } catch (error) {
-    // Only reachable before or around the loop — `getDb()` failing to connect,
-    // or an unexpected throw the per-probe guards did not cover. The check-in
-    // still has to be closed out or the monitor would read this as a run that
-    // is somehow still in progress.
-    await sentry.captureException(error, {
-      tags: { cron_scan: "usage_bootstrap" },
-    });
-    log("cron_usage.scan_failed", "error", { scan: "bootstrap" });
-    await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });
-    return NextResponse.json({ error: "usage_unavailable" }, { status: 503 });
-  } finally {
-    // See the identical block in the retention cron: a scan's log line is the
-    // record of the pass, so it is shipped before the response rather than
-    // after it (ADR 20260806-cloudwatch-log-shipping).
-    await flushLogs();
-  }
-}
+      evaluations,
+    };
+  },
+  // An undelivered alert flags the monitor; the claim has been released, so a
+  // retry re-sends rather than double-sending.
+  healthy: (summary) => summary.alertsFailed === 0,
+});

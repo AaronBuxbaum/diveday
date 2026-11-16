@@ -203,7 +203,14 @@ export async function attemptProcessorErasure(
         attempts: obligation.attempts + 1,
         lastError: null,
       })
-      .where(eq(processorErasureObligations.id, obligation.id));
+      // Still owed: an owner's attestation that landed while Stripe was being
+      // called keeps its own timestamp and attempt count.
+      .where(
+        and(
+          eq(processorErasureObligations.id, obligation.id),
+          eq(processorErasureObligations.status, "owed"),
+        ),
+      );
     return { status: "discharged" };
   }
 
@@ -254,7 +261,12 @@ async function recordFailedAttempt(
   await db
     .update(processorErasureObligations)
     .set({ attempts: obligation.attempts + 1, lastError: error })
-    .where(eq(processorErasureObligations.id, obligation.id));
+    .where(
+      and(
+        eq(processorErasureObligations.id, obligation.id),
+        eq(processorErasureObligations.status, "owed"),
+      ),
+    );
   return { status: "failed", error };
 }
 
@@ -362,11 +374,8 @@ export async function retryPendingProcessorErasures(
     .orderBy(asc(processorErasureObligations.createdAt))
     .limit(limit);
 
-  let discharged = 0;
-  for (const obligation of eligible) {
-    const outcome = await attemptProcessorErasure(db, obligation, provider);
-    if (outcome.status === "discharged") discharged += 1;
-  }
+  // One obligation's throw must not leave the rest of the night's queue undrained.
+  const { discharged } = await attemptProcessorErasures(db, eligible, provider);
   return { attempted: eligible.length, discharged };
 }
 

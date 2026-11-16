@@ -24,7 +24,7 @@ export const SHOPIFY_API_VERSION = "2026-07";
  * is a failure that retries, not a queue that stops.
  */
 const REQUEST_TIMEOUT_MS = 15_000;
-export const SHOPIFY_OAUTH_SCOPES = ["write_products"] as const;
+const SHOPIFY_OAUTH_SCOPES = ["write_products"] as const;
 
 export type ShopifyConfig = {
   clientId: string;
@@ -136,7 +136,7 @@ function credentialString(credentials: IntegrationCredentials, key: string): str
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-export async function shopifyGraphql(
+async function shopifyGraphql(
   input: {
     credentials: ShopifyCredentials;
     apiVersion: string;
