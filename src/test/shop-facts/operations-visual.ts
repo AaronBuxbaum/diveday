@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
+import { readActiveStaffRoles } from "../../db/authz";
 import { callTripBlowout, getTripBlowout } from "../../db/blowouts";
 import type { AppDb } from "../../db/client";
 import { setShopPassThroughFee, setShopTaxEnabled } from "../../db/shops";
 import { getShopCurrency } from "../../db/stripe-accounts";
-import { createTrip } from "../../db/trips";
+import { createTrip, listStaff } from "../../db/trips";
 import { recordPurchase, recordPurchaseRefund } from "../../features/recorded-purchases";
 import {
   createRecoveryActivity,
@@ -19,9 +20,20 @@ import { prepareWeatherAlternatives } from "./prepare-weather-alternatives";
 export async function prepareOperationsVisual(
   db: AppDb,
   shop: { id: string },
-  actorId: string,
+  _actorId: string,
   now: Date,
 ) {
+  // The test door supplies any seeded person, not an authorized staff identity.
+  // Resolve the actual live owner rather than assuming insertion order is authority.
+  let actorId: string | undefined;
+  for (const staff of await listStaff(db, shop.id)) {
+    const roles = await readActiveStaffRoles(db, shop.id, staff.person.id);
+    if (roles?.includes("owner")) {
+      actorId = staff.person.id;
+      break;
+    }
+  }
+  if (!actorId) throw new Error("operations visual fixture needs an active shop owner");
   const currency = await getShopCurrency(db, shop.id);
   await setShopTaxEnabled(db, shop.id, false);
   await setShopPassThroughFee(db, shop.id, null);
@@ -40,7 +52,7 @@ export async function prepareOperationsVisual(
       { kind: "rental", description: "Regulator rental", quantity: 1, unitAmountCents: 5000 },
     ],
   });
-  if (!purchase.ok) throw new Error("visual receipt refused");
+  if (!purchase.ok) throw new Error(`visual receipt refused: ${purchase.reason}`);
   const returned = await recordPurchaseRefund(db, {
     shopId: shop.id,
     orderId: purchase.order.id,
@@ -51,7 +63,7 @@ export async function prepareOperationsVisual(
     currency,
     reason: "Cash already returned for unused rental",
   });
-  if (!returned.ok) throw new Error("visual external return refused");
+  if (!returned.ok) throw new Error(`visual external return refused: ${returned.reason}`);
   const granted = await grantTripCredit(db, {
     shopId: shop.id,
     personId: source.personId,
@@ -61,7 +73,7 @@ export async function prepareOperationsVisual(
     amountCents: 15000,
     reason: "goodwill",
   });
-  if (!granted.ok) throw new Error("visual goodwill grant refused");
+  if (!granted.ok) throw new Error(`visual goodwill grant refused: ${granted.reason}`);
   await callTripBlowout(db, {
     shopId: shop.id,
     tripId: source.sourceTripId,

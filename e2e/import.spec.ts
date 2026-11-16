@@ -632,5 +632,14 @@ test("owner reviews mapped gear history and sees repeat-import and correction ou
     .getByRole("cell")
     .nth(1);
   await expect(repeatedOutcome).toContainText(copy("gear.import.existing.duplicate"));
-  await expect(repeatedOutcome).toContainText("service_already_recorded");
+  await expect(repeatedOutcome).toContainText(
+    copy("gear.import.existing.issues.service_already_recorded"),
+  );
+  await expect(repeatedOutcome).not.toContainText("service_already_recorded");
+  const correction = page.getByRole("link", { name: copy("gear.import.existing.correction") });
+  await expect(correction).toBeVisible();
+  const correctionCsv = decodeURIComponent((await correction.getAttribute("href")) ?? "");
+  expect(correctionCsv).toContain("CSV-REVIEW-REG");
+  expect(correctionCsv).toContain("service_already_recorded");
+  expect(correctionCsv).toContain("invalid_service_date");
 });

@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { getTripBlowout } from "../../db/blowouts";
 import { getBookingPayment } from "../../db/payments";
+import { createPerson } from "../../db/people";
 import { readRecoveryActivities } from "../../db/recovery-activities";
 import { recordedPurchaseDay } from "../../features/recorded-purchases";
 import { readTripCredit, tripCreditBookingOptions } from "../../features/trip-credit";
@@ -15,7 +16,15 @@ it("prepares actual receipts, external return, goodwill and a cancelled-diver cl
   const { db, shop } = context;
   const actor = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   const now = nowDate();
-  const fact = await prepareOperationsVisual(db, shop, actor, now);
+  const arbitraryPerson = await createPerson(db, {
+    shopId: shop.id,
+    fullName: "Test door arbitrary nonstaff person",
+    email: null,
+    phone: null,
+    origin: "counter",
+  });
+  // /api/test/shop passes an arbitrary earliest person, not necessarily staff.
+  const fact = await prepareOperationsVisual(db, shop, arbitraryPerson.id, now);
   const day = await recordedPurchaseDay(
     db,
     shop,
