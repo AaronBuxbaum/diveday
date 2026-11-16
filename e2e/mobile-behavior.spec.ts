@@ -98,6 +98,7 @@ test.describe("staff navigation on a phone", () => {
     await more.tap();
     await expect(more).toHaveAttribute("aria-expanded", "true");
     await panel.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+    // diveday:allow-e2e-hygiene sleep: the bug is the panel vanishing seconds after opening; only elapsed time can show it
     await page.waitForTimeout(2000);
     await expect(more).toHaveAttribute("aria-expanded", "true");
     const box = await panel.boundingBox();
