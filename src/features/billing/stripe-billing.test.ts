@@ -501,6 +501,68 @@ describe("configured pricing in Stripe", () => {
     expect(calls.filter((call) => call.method === "POST")).toEqual([]);
   });
 
+  it("finds a final month's item past the first page, so it is never invoiced twice", async () => {
+    const posts: string[] = [];
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if ((init?.method ?? "GET") !== "GET") {
+        posts.push(String(url));
+        return new Response(JSON.stringify({ id: "x" }));
+      }
+      const after = new URL(String(url)).searchParams.get("starting_after");
+      return new Response(
+        JSON.stringify(
+          after
+            ? {
+                has_more: false,
+                data: [
+                  { id: "ii_old", invoice: "in_1", metadata: { diveday_statement: "fee-id" } },
+                ],
+              }
+            : {
+                has_more: true,
+                data: [{ id: "ii_other", invoice: "in_9", metadata: null }],
+              },
+        ),
+      );
+    });
+    const provider = stripeBillingProvider(CONFIG, fetchMock as never);
+    expect(
+      await provider.invoiceFinalMonth({
+        customerId: "cus_1",
+        amountCents: 3_000,
+        identifier: "fee-id",
+        month: "2031-06",
+      }),
+    ).toEqual({ status: "ok", value: "already_invoiced" });
+    expect(posts).toEqual([]);
+  });
+
+  it("invoices a pending tagged item on retry without a second item, and fails when the invoice is refused", async () => {
+    const posts: string[] = [];
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if ((init?.method ?? "GET") === "GET") {
+        return new Response(
+          JSON.stringify({
+            data: [{ id: "ii_1", invoice: null, metadata: { diveday_statement: "fee-id" } }],
+          }),
+        );
+      }
+      posts.push(String(url));
+      return new Response(JSON.stringify({ error: { code: "x" } }), { status: 500 });
+    });
+    const provider = stripeBillingProvider(CONFIG, fetchMock as never);
+    expect(
+      await provider.invoiceFinalMonth({
+        customerId: "cus_1",
+        amountCents: 3_000,
+        identifier: "fee-id",
+        month: "2031-06",
+      }),
+    ).toEqual({ status: "failed" });
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toMatch(/\/v1\/invoices$/);
+  });
+
   it("reads Stripe already holding the identifier as reported, and anything else as failed", async () => {
     const event = {
       eventName: "e",

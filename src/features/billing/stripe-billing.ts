@@ -295,6 +295,7 @@ const meterSummariesResponse = z.object({
   data: z.array(z.object({ aggregated_value: z.number().finite() })),
 });
 const invoiceItemsResponse = z.object({
+  has_more: z.boolean().optional(),
   data: z.array(
     z.object({
       id: z.string().min(1),
@@ -305,6 +306,8 @@ const invoiceItemsResponse = z.object({
 });
 /** The statement tag on a final month's invoice item: its meter identifier. */
 const FINAL_MONTH_TAG = "diveday_statement";
+/** How far back a final month's item is looked for: 500 items on one customer. */
+const MAX_INVOICE_ITEM_PAGES = 5;
 
 /** Each configured price's product, read once per process: it never changes under a price id. */
 const productOfPrice = new Map<string, string>();
@@ -503,16 +506,19 @@ export function stripeBillingProvider(config: BillingConfig, fetchImpl: Fetch): 
 
     async invoiceFinalMonth({ customerId, amountCents, identifier, month }) {
       if (!Number.isSafeInteger(amountCents) || amountCents <= 0) return { status: "failed" };
-      const listed = invoiceItemsResponse.safeParse(
-        await call(
-          "GET",
-          `invoiceitems?${new URLSearchParams({ customer: customerId, limit: "100" })}`,
-        ),
-      );
-      if (!listed.success) return { status: "failed" };
-      const tagged = listed.data.data.find(
-        (item) => item.metadata?.[FINAL_MONTH_TAG] === identifier,
-      );
+      // Newest first, a page of 100 at a time: an item past the first page is
+      // still this month's, and missing it would raise a second one.
+      let tagged: z.infer<typeof invoiceItemsResponse>["data"][number] | undefined;
+      let startingAfter: string | null = null;
+      for (let page = 0; page < MAX_INVOICE_ITEM_PAGES && !tagged; page += 1) {
+        const query = new URLSearchParams({ customer: customerId, limit: "100" });
+        if (startingAfter) query.set("starting_after", startingAfter);
+        const listed = invoiceItemsResponse.safeParse(await call("GET", `invoiceitems?${query}`));
+        if (!listed.success) return { status: "failed" };
+        tagged = listed.data.data.find((item) => item.metadata?.[FINAL_MONTH_TAG] === identifier);
+        startingAfter = listed.data.data.at(-1)?.id ?? null;
+        if (!listed.data.has_more || !startingAfter) break;
+      }
       if (tagged?.invoice) return { status: "ok", value: "already_invoiced" };
       if (!tagged) {
         const item = idResponse.safeParse(

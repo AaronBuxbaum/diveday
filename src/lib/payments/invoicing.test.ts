@@ -315,6 +315,26 @@ describe("stripe invoicing provider", () => {
     expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_settled");
   });
 
+  it("refunds the paid payment even when the default attempt never settled", async () => {
+    const fetchImpl = sequencedFetch([
+      ok({
+        id: "in_1",
+        status: "paid",
+        total: 22_000,
+        payments: {
+          data: [
+            { is_default: true, status: "open", payment: { payment_intent: "pi_open_default" } },
+            { status: "paid", payment: { payment_intent: "pi_settled" } },
+          ],
+        },
+      }),
+      ok({ id: "re_13" }),
+    ]);
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    await provider.refundInvoice("acct_123", "in_1", "intent-13");
+    expect(fetchImpl.mock.calls[1][1].body).toContain("payment_intent=pi_settled");
+  });
+
   it("still refunds an account pinned to the older flat-field shape", async () => {
     const fetchImpl = sequencedFetch([
       ok({ id: "in_1", status: "paid", total: 22_000, payment_intent: { id: "pi_legacy" } }),

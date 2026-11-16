@@ -256,7 +256,7 @@ const invoiceResponseSchema = z.object({
  * Prefers the invoice-payments list — it is what a current account returns,
  * and it is the only one that survives once the legacy field is gone — and
  * falls back to the flat field for an account still pinned to an older
- * version. Within the list, the default payment wins, then any settled one:
+ * version. Within the list, the settled default payment wins, then any settled one, then the default:
  * an invoice can carry several attempts, and refunding a failed one is not a
  * refund.
  *
@@ -270,8 +270,12 @@ function paidPaymentIntentId(
 ): string | null {
   const payments = invoice.payments?.data ?? [];
   const settled =
-    payments.find((payment) => payment.is_default && payment.payment?.payment_intent) ??
+    payments.find(
+      (payment) =>
+        payment.is_default && payment.status === "paid" && payment.payment?.payment_intent,
+    ) ??
     payments.find((payment) => payment.status === "paid" && payment.payment?.payment_intent) ??
+    payments.find((payment) => payment.is_default && payment.payment?.payment_intent) ??
     payments.find((payment) => payment.payment?.payment_intent);
   if (settled?.payment?.payment_intent) return settled.payment.payment_intent;
 
