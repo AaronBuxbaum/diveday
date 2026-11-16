@@ -13,9 +13,13 @@ export type HomeScreenInstallCopy = {
   body: string;
   install: string;
   dismiss: string;
-  safari: string;
-  otherIos: string;
-  chrome: string;
+  stepsLabel: string;
+  openSafari: string;
+  share: string;
+  scroll: string;
+  add: string;
+  chromeMenu: string;
+  chromeAdd: string;
   promptFailed: string;
 };
 
@@ -34,6 +38,7 @@ export function HomeScreenInstall({ copy }: { copy: HomeScreenInstallCopy }) {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
   const inFlight = useRef(false);
 
   useEffect(() => {
@@ -113,6 +118,7 @@ export function HomeScreenInstall({ copy }: { copy: HomeScreenInstallCopy }) {
       dismiss();
     } catch {
       setFailed(true);
+      setShowSteps(true);
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -120,44 +126,43 @@ export function HomeScreenInstall({ copy }: { copy: HomeScreenInstallCopy }) {
   }
 
   if (!platform || (platform === "android-other" && !prompt && !busy)) return null;
-  const instruction =
-    platform === "ios-safari"
-      ? copy.safari
-      : platform === "ios-other"
-        ? copy.otherIos
-        : copy.chrome;
+  const ios = platform.startsWith("ios");
+  const steps = ios
+    ? [...(platform === "ios-other" ? [copy.openSafari] : []), copy.share, copy.scroll, copy.add]
+    : [copy.chromeMenu, copy.chromeAdd];
+  const stepsOpen = !prompt && showSteps;
   return (
-    <aside
-      data-home-screen-install
-      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted print:hidden"
-    >
-      <p className="min-w-0 flex-1 basis-64">
-        {copy.body}{" "}
-        {!prompt && !busy ? (
-          <>
-            {platform.startsWith("ios") ? <ShareGlyph /> : null}
-            {instruction}
-          </>
-        ) : null}
-        {failed ? <span role="status"> {copy.promptFailed}</span> : null}
-      </p>
-      {prompt || busy ? (
+    <aside data-home-screen-install className="space-y-2 text-sm text-muted print:hidden">
+      <p>{copy.body}</p>
+      {failed ? <p role="status">{copy.promptFailed}</p> : null}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <button
           type="button"
           disabled={busy}
+          aria-expanded={prompt ? undefined : stepsOpen}
           className={buttonClass({ variant: "secondary", size: "sm" })}
-          onClick={install}
+          onClick={prompt || busy ? install : () => setShowSteps((open) => !open)}
         >
           {copy.install}
         </button>
+        <button
+          type="button"
+          className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
+          onClick={dismiss}
+        >
+          {copy.dismiss}
+        </button>
+      </div>
+      {stepsOpen ? (
+        <ol aria-label={copy.stepsLabel} className="list-decimal space-y-1 ps-5">
+          {steps.map((step) => (
+            <li key={step}>
+              {step === copy.share ? <ShareGlyph /> : null}
+              {step}
+            </li>
+          ))}
+        </ol>
       ) : null}
-      <button
-        type="button"
-        className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
-        onClick={dismiss}
-      >
-        {copy.dismiss}
-      </button>
     </aside>
   );
 }

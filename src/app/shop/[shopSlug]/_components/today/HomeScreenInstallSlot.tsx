@@ -17,9 +17,13 @@ export function HomeScreenInstallSlot({
         body: t("shopHome.install.body"),
         install: t("shopHome.install.action"),
         dismiss: t("shopHome.install.dismiss"),
-        safari: t("shopHome.install.safari"),
-        otherIos: t("shopHome.install.otherIos"),
-        chrome: t("shopHome.install.chrome"),
+        stepsLabel: t("shopHome.install.stepsLabel"),
+        openSafari: t("shopHome.install.openSafari"),
+        share: t("shopHome.install.share"),
+        scroll: t("shopHome.install.scroll"),
+        add: t("shopHome.install.add"),
+        chromeMenu: t("shopHome.install.chromeMenu"),
+        chromeAdd: t("shopHome.install.chromeAdd"),
         promptFailed: t("shopHome.install.promptFailed"),
       }}
     />

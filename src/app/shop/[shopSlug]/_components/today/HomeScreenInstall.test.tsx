@@ -16,9 +16,13 @@ const copy: HomeScreenInstallCopy = {
   body: t("shopHome.install.body"),
   install: t("shopHome.install.action"),
   dismiss: t("shopHome.install.dismiss"),
-  safari: t("shopHome.install.safari"),
-  otherIos: t("shopHome.install.otherIos"),
-  chrome: t("shopHome.install.chrome"),
+  stepsLabel: t("shopHome.install.stepsLabel"),
+  openSafari: t("shopHome.install.openSafari"),
+  share: t("shopHome.install.share"),
+  scroll: t("shopHome.install.scroll"),
+  add: t("shopHome.install.add"),
+  chromeMenu: t("shopHome.install.chromeMenu"),
+  chromeAdd: t("shopHome.install.chromeAdd"),
   promptFailed: t("shopHome.install.promptFailed"),
 };
 const ANDROID = "Mozilla/5.0 (Linux; Android 15) Chrome/140.0.0.0 Mobile Safari/537.36";
@@ -69,11 +73,13 @@ afterEach(() => {
 });
 
 describe("HomeScreenInstall", () => {
-  it("offers Chrome instructions until a real event arrives, never an invented native prompt", () => {
+  it("opens Chrome steps on tap until a real event arrives, never an invented native prompt", () => {
     render(<HomeScreenInstall copy={copy} />);
-    expect(screen.getByText(copy.chrome, { exact: false })).toBeVisible();
-    expect(screen.queryByRole("button", { name: copy.install })).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.chromeAdd)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: copy.install }));
+    expect(screen.getByText(copy.chromeAdd)).toBeVisible();
     const { event, prompt } = offer();
+    expect(screen.queryByText(copy.chromeAdd)).not.toBeInTheDocument();
     expect(event.defaultPrevented).toBe(true);
     expect(screen.getByRole("button", { name: copy.install })).toHaveAttribute(
       "class",
@@ -109,25 +115,29 @@ describe("HomeScreenInstall", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: copy.install })));
     expect(prompt).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("status")).toHaveTextContent(copy.promptFailed);
-    expect(screen.getByText(copy.chrome, { exact: false })).toBeVisible();
-    expect(screen.queryByRole("button", { name: copy.install })).not.toBeInTheDocument();
+    expect(screen.getByText(copy.chromeAdd)).toBeVisible();
+    expect(prompt).toHaveBeenCalledTimes(1);
   });
 
   it.each([
-    [IPHONE, copy.safari],
-    [IPHONE.replace("Version/18.0", "CriOS/140.0"), copy.otherIos],
-  ])("gives accurate iOS instructions, never a native button (%s)", (ua, instruction) => {
+    [IPHONE, false],
+    [IPHONE.replace("Version/18.0", "CriOS/140.0"), true],
+  ])("opens accurate iOS steps on tap, never a native sheet (%s)", (ua, needsSafari) => {
     device(ua);
     render(<HomeScreenInstall copy={copy} />);
-    expect(screen.getByText(instruction, { exact: false })).toBeVisible();
-    offer();
-    expect(screen.queryByRole("button", { name: copy.install })).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.scroll)).not.toBeInTheDocument();
+    const { prompt } = offer();
+    fireEvent.click(screen.getByRole("button", { name: copy.install }));
+    expect(screen.getByText(copy.scroll)).toBeVisible();
+    expect(screen.queryByText(copy.openSafari) !== null).toBe(needsSafari);
+    expect(prompt).not.toHaveBeenCalled();
   });
 
   it("supports the desktop user agent of a touch iPad", () => {
     device("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) Version/18.0 Safari/605.1.15");
     render(<HomeScreenInstall copy={copy} />);
-    expect(screen.getByText(copy.safari, { exact: false })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: copy.install }));
+    expect(screen.getByText(copy.share)).toBeVisible();
   });
 
   it("renders nothing for other Android browsers without a real install event", () => {

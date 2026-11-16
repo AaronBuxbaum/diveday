@@ -20,13 +20,15 @@ test.describe("home-screen entry on a staff phone", () => {
   });
   signedInAsOwner();
 
-  test("Chrome instructions follow the work, dismissal survives navigation and reload", async ({
+  test("Chrome steps open on tap and follow the work, dismissal survives navigation and reload", async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis");
     const row = page.locator(hint);
-    await expect(row).toContainText(t("shopHome.install.chrome"));
-    await expect(row.getByRole("button", { name: t("shopHome.install.action") })).toHaveCount(0);
+    await expect(row).toContainText(t("shopHome.install.body"));
+    await expect(row).not.toContainText(t("shopHome.install.chromeAdd"));
+    await row.getByRole("button", { name: t("shopHome.install.action") }).click();
+    await expect(row).toContainText(t("shopHome.install.chromeAdd"));
     const operational = page.getByRole("heading", { name: "Needs you" });
     await expect(operational).toBeVisible();
     expect(
@@ -53,7 +55,7 @@ test.describe("home-screen entry on a staff phone", () => {
   });
 
   for (const outcome of ["accepted", "dismissed"] as const) {
-    test(`only an available native event exposes the action, ${outcome} retires it`, async ({
+    test(`a native event turns the action into the browser's own sheet, ${outcome} retires it`, async ({
       page,
     }) => {
       await page.goto("/shop/blue-mantis");
@@ -109,11 +111,13 @@ test.describe("home-screen entry on an iPad", () => {
     hasTouch: true,
   });
   signedInAsOwner();
-  test("names Safari Share and Add to Home Screen without a native button", async ({ page }) => {
+  test("opens the Safari Share steps on tap and never calls a native sheet", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
-    await expect(page.locator(hint)).toContainText(t("shopHome.install.safari"));
+    await page.getByRole("button", { name: t("shopHome.install.action") }).click();
+    await expect(page.locator(hint)).toContainText(t("shopHome.install.scroll"));
     expect(await offerNativeInstall(page)).toBe(false);
-    await expect(page.getByRole("button", { name: t("shopHome.install.action") })).toHaveCount(0);
+    await page.getByRole("button", { name: t("shopHome.install.action") }).click();
+    expect(await page.locator("html").getAttribute("data-install-calls")).toBeNull();
   });
 });
 
