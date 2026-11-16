@@ -345,7 +345,10 @@ const READY_AFTER_PHASE_CEILING = 12;
 // field-guide `dive_site_creatures` read (src/db/dive-sites.ts, which returns
 // before sending when no dive names a site) used to be skipped for them and now
 // runs, one statement.
-const RECAP_CEILING = 32;
+// 32 → 36 (issue #4328): the after-state's one "what's next" row reads the
+// catalog, the diver's level cards and their course seats in one wave beside
+// the next-dive pick, then the chosen course's next session. No new phase.
+const RECAP_CEILING = 36;
 const RECAP_PHASE_CEILING = 5;
 // The shop, `readSchedulePage`'s batch with its chained reads, then the
 // board's-end read. 16 → 14 statements and 7 → 5 phases (item 29): the
