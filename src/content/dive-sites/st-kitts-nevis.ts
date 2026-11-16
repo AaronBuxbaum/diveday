@@ -124,7 +124,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       currentNote:
         "Open water about 3 km out, with mild current reported. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Down the mooring to the reef top at 15 m, across the reef and along the slope, and back up with reserve gas. The slope reaches 40 m; the plan holds 30 m unless the crew briefs a deeper profile for divers carrying the Deep specialty. If sharks come by: stay put, keep nothing dangling, do not chase, or touch, stay together, and follow the crew's briefing. Staff confirm the diver's log before boarding.",
+        "Down the mooring to the reef top at 15 m, across the reef and along the slope, and back up with reserve gas. The slope reaches 40 m; the plan holds 30 m unless the crew briefs a deeper profile for divers carrying the Deep specialty. If sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together, and follow the crew's briefing. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A reef two miles out, with a slope that reaches 40 m. For divers who hold depth well.",
@@ -173,7 +173,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       currentNote:
         "Open water about 3 km out, with mild current reported. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Down the mooring to the boulder and the reef top at 15 m, then down the slope, and back up with reserve gas. The slope reaches 40 m; the plan holds 30 m unless the crew briefs a deeper profile for divers carrying the Deep specialty. If sharks come by: stay put, keep nothing dangling, do not chase, or touch, stay together, and follow the crew's briefing. Staff confirm the diver's log before boarding.",
+        "Down the mooring to the boulder and the reef top at 15 m, then down the slope, and back up with reserve gas. The slope reaches 40 m; the plan holds 30 m unless the crew briefs a deeper profile for divers carrying the Deep specialty. If sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together, and follow the crew's briefing. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A reef top at 15 m that invites you down a slope to 40 m. Watch the gauge and stay with the group.",

@@ -27,7 +27,7 @@ export const BELIZE_NORTH: DiveSiteTemplate[] = [
       marineLife: "Nurse sharks · spotted eagle rays · green moray eels · spiny lobsters",
       marineLifeDescription:
         "Large groupers, turtles, and morays sit among the coral, with eagle rays and nurse sharks working the sand. Southern stingrays turn up on the night dive, which needs a guide.",
-      conservationNote: "A marine reserve: look, but do not touch, or take anything.",
+      conservationNote: "A marine reserve: look, but do not touch or take anything.",
       difficultyLevel: "intermediate",
       depthMinMeters: 6,
       maxDepthMeters: 9,

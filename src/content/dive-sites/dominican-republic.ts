@@ -71,7 +71,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish crowd each pinnacle, and a sand snake eel lies in the sand between them with only its eyes showing.",
       conservationNote:
-        "Staghorn coral nurseries grow close by. Look, but keep hands, and fins away from them.",
+        "Staghorn coral nurseries grow close by. Look, but keep hands and fins away from them.",
       difficultyLevel: "beginner",
       depthMinMeters: 3,
       maxDepthMeters: 12,
@@ -111,7 +111,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 19.7747,
       forecastLongitude: -70.5172,
       description:
-        "A sloping reef beyond Three Rocks, with patches of soft coral, sea fans and whips scattered across the sand. Operators usually dive it as a second leg after Three Rocks.",
+        "A sloping reef beyond Three Rocks, with patches of soft coral, sea fans, and whips scattered across the sand. Operators usually dive it as a second leg after Three Rocks.",
       marineLife: "Sea fans · sea whips · garden eels · sand snake eels",
       marineLifeDescription:
         "Garden eels dot the sand as you leave Three Rocks, and a sand snake eel lies low with only its eyes showing.",
@@ -979,7 +979,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       forecastLatitude: 18.3387,
       forecastLongitude: -68.8288,
       description:
-        "A coral restoration reef about 500 m off the beach, where fragments grow on ropes, tables and sculptures before they are planted out. Statues and a coral garden sit among a colorful local reef.",
+        "A coral restoration reef about 500 m off the beach, where fragments grow on ropes, tables, and sculptures before they are planted out. Statues and a coral garden sit among a colorful local reef.",
       marineLife: "Reef octopus · reef squid · seahorses · reef fish",
       marineLifeDescription:
         "Octopus, squid, and seahorses use the structures for cover, and the slow, careful diver sees the most.",

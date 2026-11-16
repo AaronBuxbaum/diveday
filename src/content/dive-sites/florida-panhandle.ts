@@ -964,7 +964,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       currentNote:
         "Open Gulf, a long ride offshore. Her wheelhouse and interior are overhead; stay outside.",
       divePlan:
-        "Down the line to the wheelhouse and the mermaid, then, with gas, and no-stop time to spare, across the sand to the Brannon and the Dylan.",
+        "Down the line to the wheelhouse and the mermaid, then, with gas and no-stop time to spare, across the sand to the Brannon and the Dylan.",
       fitTone: "demanding",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
