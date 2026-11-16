@@ -29,10 +29,6 @@ export type WaiverSendSurface = "today" | "roster" | "diver" | "counter";
 export const WAIVER_SEND_CHANNELS = ["email", "sms", "link"] as const;
 export type WaiverSendChannel = (typeof WAIVER_SEND_CHANNELS)[number];
 
-export function isWaiverSendChannel(value: unknown): value is WaiverSendChannel {
-  return (WAIVER_SEND_CHANNELS as readonly unknown[]).includes(value);
-}
-
 /** A private fallback link staff must hand over when a send did not go out. */
 export type WaiverFallbackLink = {
   name: string;

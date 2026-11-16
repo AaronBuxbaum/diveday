@@ -43,14 +43,6 @@
 /** The rail's own hook, named here so a spec and a test cannot drift from it. */
 export const WAIVER_RAIL_TEST_ID = "waiver-step-rail";
 
-/**
- * Three segments on a release that asks only DiveDay's questions — the
- * denominator of "N of 3 done". A shop that adds its own questions (glossary
- * *Shop question*) gives the rail a fourth, **Questions**, between Medical and
- * Sign, and only then: a step nobody is asked is not a step.
- */
-export const WAIVER_RAIL_TOTAL = 3;
-
 export type WaiverRailSegmentId = "release" | "medical" | "questions" | "sign";
 
 /**

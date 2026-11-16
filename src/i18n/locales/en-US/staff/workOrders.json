@@ -164,7 +164,6 @@
     "restored": "Work order restored",
     "pieceAdded": "On the record",
     "pieceDeleted": "Piece deleted",
-    "pieceRestored": "Piece restored",
     "already": "It was already on that status.",
     "closed": "That work order is collected. Open a new one.",
     "noSubject": "Say whose gear this is.",
