@@ -125,3 +125,32 @@ it("shows manual name conflicts and revalidates a roster change after preview", 
   expect(result.peopleUpdated).toBe(0);
   expect(result.identityConflicts).toBe(1);
 });
+
+it("previews existing and repeated past-booking history without creating seats", async () => {
+  const { db, shop } = ctx;
+  const { priorVisits, bookings } = await import("@/db/schema");
+  const person = await createPerson(db, {
+    shopId: shop.id,
+    fullName: "History Diver",
+    email: "history-preview@example.com",
+    phone: null,
+    origin: "import",
+  });
+  const prepared = prepareContactImport(
+    "full_name,email,visit_date,visit_title,visit_reference\nHistory Diver,history-preview@example.com,2026-01-01,Reef,OLD-1\nHistory Diver,history-preview@example.com,2026-02-01,Reef,NEW-2\nHistory Diver,history-preview@example.com,2026-02-01,Reef,NEW-2",
+  );
+  const firstVisit = prepared.rows[0].visit;
+  if (!firstVisit) throw new Error("Expected a parsed past visit");
+  await db.insert(priorVisits).values({
+    shopId: shop.id,
+    personId: person.id,
+    visitedOn: "2026-01-01",
+    dedupeKey: firstVisit.dedupeKey,
+    importedAt: new Date("2026-11-16T00:00:00Z"),
+  });
+  const before = await db.select({ id: bookings.id }).from(bookings);
+  expect(
+    (await previewContactImportMatches(db, shop.id, prepared)).map((row) => row.visitOutcome),
+  ).toEqual(["existing", "add", "duplicate"]);
+  expect(await db.select({ id: bookings.id }).from(bookings)).toEqual(before);
+});

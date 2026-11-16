@@ -1,12 +1,11 @@
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { NoticeTone } from "@/components/ui/tone";
+import { DIVE_SITE_CREATURE_IMPORT_COLUMNS, DIVE_SITE_IMPORT_COLUMNS } from "@/features/dive-sites";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { CsvFileInput } from "../_components/CsvFileInput";
-import { restoreDiveSitesAction } from "./dive-site-actions";
+import { ExistingImportReview } from "./ExistingImportReview";
+import { existingImportCopy } from "./existing-import-copy";
 
 /**
  * Kebab, because `noticeUrl` writes kebab: `noticeCode` lowercases the value
@@ -65,27 +64,14 @@ export function DiveSiteImportPanel({ t, notice }: { t: StaffTranslator; notice?
         <p className="text-sm text-muted">{t("diveSites.import.description")}</p>
         <p className="mt-3 text-sm text-muted">{t("diveSites.import.help")}</p>
         <p className="mt-3 text-sm text-muted">{t("diveSites.import.notRestored")}</p>
-        <form action={restoreDiveSitesAction} className="mt-5 flex flex-wrap items-end gap-3">
-          {/* The picker the other tabs use: a secondary `md` button in the
-              shop's language, the height of the submit beside it. A bare file
-              input in a text-box outline read "Choose File No file chosen" as
-              plain text in a box, with no hover (K-350). */}
-          <CsvFileInput
-            name="file"
-            required
-            multiple
-            copy={{
-              choose: t("diveSites.import.chooseFile"),
-              chooseAnother: t("diveSites.import.chooseDifferentFile"),
-            }}
-          />
-          <SubmitButton
-            pendingLabel={t("words.busy.importing")}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("diveSites.import.submit")}
-          </SubmitButton>
-        </form>
+        <ExistingImportReview
+          kind="sites"
+          columns={{
+            sites: DIVE_SITE_IMPORT_COLUMNS,
+            creatures: DIVE_SITE_CREATURE_IMPORT_COLUMNS,
+          }}
+          copy={existingImportCopy(t, "sites")}
+        />
       </SectionCard>
     </>
   );

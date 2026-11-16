@@ -59,6 +59,10 @@ describe("commitGearImport", () => {
     });
 
     const again = await commitGearImport(db, shop.id, prepared, staffId);
+    expect(again.rowResults).toEqual([
+      { rowNumber: 2, issues: ["service_already_recorded"] },
+      { rowNumber: 3, issues: [] },
+    ]);
     expect(again).toMatchObject({
       unitsCreated: 0,
       unitsMatched: 2,

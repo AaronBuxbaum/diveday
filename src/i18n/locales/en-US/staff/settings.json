@@ -1213,6 +1213,12 @@
         "seeRoster": "See the divers",
         "identityConflictsOne": "{count} row was left out because the names do not match. Confirm the person and correct the file before retrying.",
         "identityConflictsOther": "{count} rows were left out because the names do not match. Confirm each person and correct the file before retrying."
+      },
+      "visitOutcomes": {
+        "add": "Past booking: add history only",
+        "existing": "Past booking: already in history",
+        "duplicate": "Past booking: repeated in this file",
+        "skip": "Past booking: history will not be imported"
       }
     },
     "issues": {
