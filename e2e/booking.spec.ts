@@ -787,7 +787,7 @@ test("a declined card keeps the diver's seat and lets them try again", async ({
   await page.goto(`/s/${SHOP}`);
   await openFirstBookableScheduleTrip(page);
   await bookASeatAndOpenThread(page, "Dana Declined", email);
-  const thread = page.url();
+  const thread = new URL(page.url()).pathname;
 
   const { bookingCheckout: checkout } = await seedFacts(
     request,
