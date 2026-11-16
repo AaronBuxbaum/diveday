@@ -397,6 +397,9 @@ describe("CR-018 trigram search indexes", () => {
       // rather than a sequential scan.
       "people_phone_digits_trgm_idx",
       "people_phone_trgm_idx",
+      // The find-your-booking picker, by shop name and by town.
+      "shops_address_locality_trgm_idx",
+      "shops_name_trgm_idx",
       "trips_title_trgm_idx",
     ]);
   });
