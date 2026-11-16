@@ -111,7 +111,8 @@ export type ImportWizardCopy = {
     rowsMergedNote: string;
     cardsSkippedNote: string;
     rowsSkippedNote: string;
-    identityConflicts: string;
+    identityConflictsOne: string;
+    identityConflictsOther: string;
     cardsHeldByAnother: string;
     specialtyGateNote: string;
     waiversLineOne: string;
@@ -332,7 +333,8 @@ export function importWizardCopy(t: StaffTranslator, sourceSystem: string): Impo
       cardsNitroxOther: t.raw("settings.import.wizard.result.cardsNitroxOther"),
       rowsMergedNote: t.raw("settings.import.wizard.result.rowsMergedNote"),
       cardsSkippedNote: t.raw("settings.import.wizard.result.cardsSkippedNote"),
-      identityConflicts: t.raw("settings.import.wizard.result.identityConflicts"),
+      identityConflictsOne: t.raw("settings.import.wizard.result.identityConflictsOne"),
+      identityConflictsOther: t.raw("settings.import.wizard.result.identityConflictsOther"),
       rowsSkippedNote: t.raw("settings.import.wizard.result.rowsSkippedNote"),
       cardsHeldByAnother: t.raw("settings.import.wizard.result.cardsHeldByAnother"),
       specialtyGateNote: t("settings.import.wizard.result.specialtyGateNote"),

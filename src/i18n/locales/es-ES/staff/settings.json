@@ -1210,7 +1210,8 @@
         "sizesDeclinedLineOther": "{count} tallas no cabían en sus campos y se guardan como notas del personal en las fichas de los buceadores.",
         "receiptDocumentsFailedNote": " {count} enlace(s) de documento de recibo no se pudieron descargar y se dejaron fuera del registro del origen.",
         "seeRoster": "Ver el listado",
-        "identityConflicts": "Se omitieron {count} filas porque los nombres no coinciden. Confirma cada persona y corrige el archivo antes de reintentarlo."
+        "identityConflictsOne": "Se omitió {count} fila porque los nombres no coinciden. Confirma la persona y corrige el archivo antes de reintentarlo.",
+        "identityConflictsOther": "Se omitieron {count} filas porque los nombres no coinciden. Confirma cada persona y corrige el archivo antes de reintentarlo."
       }
     },
     "issues": {

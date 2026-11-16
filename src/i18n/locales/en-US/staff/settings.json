@@ -1210,7 +1210,8 @@
         "sizesDeclinedLineOther": "{count} sizes were too long for their boxes and are kept as staff notes on the divers.",
         "receiptDocumentsFailedNote": " {count} receipt document link(s) didn’t fetch and were left off the source record.",
         "seeRoster": "See the divers",
-        "identityConflicts": "{count} rows were left out because the names do not match. Confirm each person and correct the file before retrying."
+        "identityConflictsOne": "{count} row was left out because the names do not match. Confirm the person and correct the file before retrying.",
+        "identityConflictsOther": "{count} rows were left out because the names do not match. Confirm each person and correct the file before retrying."
       }
     },
     "issues": {

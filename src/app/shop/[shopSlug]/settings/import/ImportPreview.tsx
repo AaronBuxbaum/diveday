@@ -456,7 +456,15 @@ function ImportConfirmForm({
 
 function ImportIdentityConflictNotice({ count, copy }: { count: number; copy: ImportWizardCopy }) {
   return count > 0 ? (
-    <p className="mb-3 text-sm">{fill(copy.result.identityConflicts, { count })}</p>
+    <p className="mb-3 text-sm">
+      {fill(
+        pluralForm(count, {
+          one: copy.result.identityConflictsOne,
+          other: copy.result.identityConflictsOther,
+        }),
+        { count },
+      )}
+    </p>
   ) : null;
 }
 function previewImportCounts(

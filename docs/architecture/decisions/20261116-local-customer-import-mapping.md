@@ -25,8 +25,8 @@ Recovery exports include rows with warnings or errors, original values, logical 
 
 ## Consequences
 
-Staff can map ordinary customer exports locally and inspect exactly which rows create or update divers. Manually mapped cards need staff review and waivers need collection in DiveDay. The roster preview is advisory, so concurrent edits may change final counts. Existing ledger/history deduplication remains the retry mechanism; no new financial or booking authority is introduced. Revisit the mapping evidence rule only with a separately reviewed attestation policy; doing so requires preparation and commit tests, not a data migration.
+Staff can map ordinary customer exports locally and inspect exactly which rows create or update divers. Manually mapped cards need staff review and waivers need collection in DiveDay. The advisory preview may change before commit. Existing history deduplication handles retries; financial and booking authority is unchanged. Evidence attestation needs separate review and tests.
 
 ## Validation
 
-The manual household-name regression failed against the original commit path, then passed with the locked-name refusal. Tests preserve the existing verified card and waiver byte-for-byte and reject attaching child notes; stale roster previews, same-file conflicts, strict presentation normalization, formula-safe conflict recovery, and visible submit counts are covered. Independent security and dive-domain source review found no additional issue. Review was source-based; rendered browser behavior remains unverified in this environment.
+The household-name regression failed before the fix. Tests preserve existing verified cards and waivers, reject child notes, and cover stale previews, strict names, whole-group refusal, safe recovery exports and submit counts. Independent security and dive-domain source reviews were clean. Browser verification remains restricted.
