@@ -75,7 +75,7 @@ export const MEXICO_COSTA_MAYA: DiveSiteTemplate[] = [
       forecastLatitude: 18.7485,
       forecastLongitude: -87.673,
       description:
-        'A "little Chinchorro": huge sandbanks dotted with low reef hills, with barrel sponges, fans, and soft and hard corals. A large coral formation rises from the deeper part.',
+        'A "little Chinchorro": huge sandbanks dotted with low reef hills, with barrel sponges, fans and soft and hard corals. A large coral formation rises from the deeper part.',
       marineLife: "Green turtles · eagle rays · spotted morays · garden eels",
       marineLifeDescription:
         "Turtles graze on the sand flats, rays pass over the sandbanks and garden eels sway in the open areas. Morays sit in the coral.",

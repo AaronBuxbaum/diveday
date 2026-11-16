@@ -321,7 +321,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       forecastLatitude: 12.2137,
       forecastLongitude: -68.3349,
       description:
-        "Three pillars that broke from the shore cliff stand in about 9 m of water, grown over with hard coral, gorgonians and sponges. The site is also called Mushroom City.",
+        "Three pillars that broke from the shore cliff stand in about 9 m of water, grown over with hard coral, gorgonians, and sponges. The site is also called Mushroom City.",
       marineLife: "Schoolmasters · grunts · goatfish",
       marineLifeDescription: "The pillars shelter schoolmasters, grunts and goatfish.",
       conservationNote:

@@ -275,7 +275,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       depthMinMeters: 12,
       maxDepthMeters: 14,
       currentNote:
-        "Open Gulf, so current, and visibility vary with the day. A memorial: look, photograph, and leave the statues as you found them. A fished reef: fly a flag and watch for line on the barges.",
+        "Open Gulf, so current and visibility vary with the day. A memorial: look, photograph, and leave the statues as you found them. A fished reef: fly a flag and watch for line on the barges.",
       fitTone: "welcoming",
       fitNote: "A moderate depth and a dive with a story. Open Water divers are welcome here.",
       landmarks: [
