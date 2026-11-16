@@ -1,7 +1,7 @@
 import { openBoardingObservationsByTrip } from "@/db/boarding-observations";
 import { personClashesByTrip } from "@/db/person-clashes";
 import { departuresWeekBefore, tripCrewByTrip, upcomingScheduleRange, weekBoard } from "@/db/trips";
-import { listBoats, listBoatsForHistory } from "@/features/boats";
+import { listBoatsForHistory } from "@/features/boats";
 import { listActiveCourses } from "@/features/courses";
 import { crewAwayByTrip } from "@/features/crew-away";
 import { readFormDraft } from "@/features/form-drafts";
@@ -189,10 +189,9 @@ export async function getScheduleBoardPage(
     range,
     canConfigure,
     openRollCalls,
-    shopBoats,
+    boatsEverOwned,
     weekRows,
     weekAsks,
-    boatsEverOwned,
     weekAround,
     { requestedCourse, requestedSite },
     requestRows,
@@ -207,18 +206,17 @@ export async function getScheduleBoardPage(
     // stream cannot include them. Read on every cursor page because the independently addressed
     // `?week=` grid still needs them when the stream is paged.
     openAfterDiveRollCalls(db, shop.id, now),
-    listBoats(db, shop.id),
+    // **Names come from every hull the shop has ever had, not just the live ones.** A departure
+    // that sailed on a boat the shop has since deleted must still say which vessel (ADR
+    // 20260820-every-delete-is-soft). The live fleet (the picker, the fleet count) is this
+    // same read without the deleted hulls, so it is one query, not two.
+    listBoatsForHistory(db, shop.id),
     // Bounded `xl` week-grid read (ADR 20260827-clearwater-surface-language, decision 5); unlike
     // the upcoming stream, it includes departures earlier in the selected week.
     weekRead,
     // Requests are bounded to the displayed week (ADR 20260919-one-idea, slice 23f); the separate
     // requests page reads them unbounded.
     listOpenDateInterestsForDates(db, shop.id, weekDates(weekStartIso)),
-    // **Names come from every hull the shop has ever had, not just the live ones.** A departure
-    // that sailed on a boat the shop has since deleted must still say which vessel (ADR
-    // 20260820-every-delete-is-soft). `shopBoats` stays live: it is the picker and the fleet
-    // count, and a deleted hull is not a boat this shop has.
-    listBoatsForHistory(db, shop.id),
     weekAroundRead(db, shop, weekRead, weekStartIso, now),
     requestedCourseAndSite(db, shop.id, { course: input.course, site: input.site }),
     // Request IDs only feed the add panel, so require its live configuration role and keep the
@@ -235,7 +233,7 @@ export async function getScheduleBoardPage(
     range,
     canConfigure,
     openRollCalls,
-    shopBoats,
+    shopBoats: boatsEverOwned.filter((boat) => boat.deletedAt === null),
     weekRows,
     weekAsks,
     boatsEverOwned,
