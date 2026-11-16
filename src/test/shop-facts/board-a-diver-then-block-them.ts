@@ -1,9 +1,9 @@
-import { and, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { recordRollCall } from "../../db/manifests";
-import { bookings, people, personRoles, trips, waiverRecords } from "../../db/schema/index";
-import { STAFF_ROLES } from "../../lib/authz";
+import { bookings, people, trips, waiverRecords } from "../../db/schema/index";
 import { HOUR_MS } from "../../lib/clock";
+import { anActiveStaffPerson } from "./active-staff";
 
 /**
  * **A blocked diver already on the boat**, which is the state the departure
@@ -58,12 +58,7 @@ export async function boardADiverThenBlockThem(
   // `staff_not_found` otherwise, and the route's shared `actor` is whichever
   // row came first — fine for the panels that only name who acted, and not for
   // this, which is a real safety write going through the real writer.
-  const [crew] = await db
-    .select({ id: people.id })
-    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
-    .limit(1);
+  const crew = await anActiveStaffPerson(db, shopId);
   if (!crew) return null;
 
   for (const booking of candidates) {

@@ -1,13 +1,13 @@
-import { and, eq, gte, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, gte, isNotNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "../../db/manifests";
-import { boats, bookings, cards, people, personRoles, trips } from "../../db/schema/index";
+import { boats, bookings, cards, people, trips } from "../../db/schema/index";
 import { liveTrip } from "../../db/trips-live";
 import { seatHeld } from "../../db/trips-queries";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
 import { markBookingNoShow } from "../../features/no-show/store";
-import { STAFF_ROLES } from "../../lib/authz";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";
+import { anActiveStaffPerson } from "./active-staff";
 
 /**
  * A manifest whose trip and boat capacity warnings can be read together.
@@ -19,12 +19,7 @@ export async function seedManifestOverCapacityState(
   shopId: string,
   now: Date,
 ): Promise<{ tripId: string } | null> {
-  const [staff] = await db
-    .select({ id: people.id })
-    .from(people) // diveday:allow-deleted-people: an e2e seed finds the people it just seeded
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
-    .limit(1);
+  const staff = await anActiveStaffPerson(db, shopId);
   if (!staff) return null;
 
   const candidates = await db
