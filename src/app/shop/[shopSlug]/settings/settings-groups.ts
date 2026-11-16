@@ -63,7 +63,8 @@ export type SettingsRailGate =
   | "messaging"
   | "boats"
   | "billing"
-  | "selfRegistration";
+  | "selfRegistration"
+  | "embeds";
 
 /**
  * The one warning a rail row may carry, named as a code rather than a
@@ -300,6 +301,8 @@ const RAIL_ROWS = [
     labelKey: "settings.main.embed.heading",
     group: "website",
     target: { kind: "route", path: "/settings/embed" },
+    // Website widgets switched off on Features: no snippets to find.
+    gate: "embeds",
   },
   {
     id: "features",
@@ -396,6 +399,7 @@ export function settingsRailGatesFor(reader: {
   hasBoatDiving: boolean;
   isDemo: boolean;
   selfRegistrationEnabled: boolean;
+  embedsEnabled: boolean;
 }): Set<SettingsRailGate> {
   const gates = new Set<SettingsRailGate>();
   if (reader.canPayments) gates.add("payments");
@@ -404,6 +408,7 @@ export function settingsRailGatesFor(reader: {
   if (reader.canManageMessaging) gates.add("messaging");
   if (reader.hasBoatDiving) gates.add("boats");
   if (reader.selfRegistrationEnabled) gates.add("selfRegistration");
+  if (reader.embedsEnabled) gates.add("embeds");
   // The hub's own condition for its Billing door (`SettingsPage.tsx`).
   if (!reader.isDemo && reader.canBilling) gates.add("billing");
   return gates;
@@ -423,7 +428,12 @@ export function settingsRailRowHref(shopBasePath: string, row: SettingsRailRow):
  * re-checks its own permission server-side.
  */
 export function settingsShortcutsFor(
-  shop: { hasBoatDiving: boolean; isDemo: boolean; selfRegistrationEnabled: boolean },
+  shop: {
+    hasBoatDiving: boolean;
+    isDemo: boolean;
+    selfRegistrationEnabled: boolean;
+    embedsEnabled: boolean;
+  },
   roles: readonly Role[],
   shopSlug: string,
   t: StaffTranslator,
@@ -439,6 +449,7 @@ export function settingsShortcutsFor(
       hasBoatDiving: shop.hasBoatDiving,
       isDemo: shop.isDemo,
       selfRegistrationEnabled: shop.selfRegistrationEnabled,
+      embedsEnabled: shop.embedsEnabled,
     }),
   );
   const groupLabels = new Map(SETTINGS_GROUPS.map((group) => [group.id, t(group.labelKey)]));

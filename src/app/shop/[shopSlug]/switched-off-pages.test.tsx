@@ -84,6 +84,21 @@ async function openSwitchedOff(
 const SOME_ID = "00000000-0000-4000-8000-000000000000";
 
 describe("a switched-off staff page", () => {
+  it("computer dives land on the diver's file", async () => {
+    const to = await openSwitchedOff(
+      "computerDivesEnabled",
+      () => import("./divers/[personId]/computer-dives/page"),
+      { personId: SOME_ID },
+    );
+    expect(to).toBe(`/shop/blue-mantis/divers/${SOME_ID}`);
+  });
+
+  it("certifications land on the shop home while courses are off", async () => {
+    expect(await openSwitchedOff("coursesEnabled", () => import("./certifications/page"))).toBe(
+      "/shop/blue-mantis",
+    );
+  });
+
   it("Lost and found lands on the schedule", async () => {
     expect(await openSwitchedOff("lostFoundEnabled", () => import("./lost-found/page"))).toBe(
       "/shop/blue-mantis/schedule/board",

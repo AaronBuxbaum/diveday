@@ -16,7 +16,9 @@ import { uuidParam } from "@/lib/uuid";
 
 async function context(shopSlug: string, personId: string) {
   if (!uuidParam(personId)) notFound();
-  const { db, session } = await requireShopSurface(shopSlug);
+  const { db, session, shop } = await requireShopSurface(shopSlug);
+  // Switched off on the Features page: a hand-built post changes nothing.
+  if (!shop.computerDivesEnabled) notFound();
   return {
     db,
     scope: { shopId: session.user.shopId, actorPersonId: session.user.personId, personId },

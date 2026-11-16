@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { historyComputerDives } from "@/features/computer-dives";
@@ -19,6 +19,8 @@ export default async function ComputerDivesPage({
   const { shopSlug, personId } = await params;
   if (!uuidParam(personId)) notFound();
   const { db, session, shop } = await requireShopSurface(shopSlug);
+  // Switched off on the Features page: back to the diver, no error.
+  if (!shop.computerDivesEnabled) redirect(`/shop/${shopSlug}/divers/${personId}`);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const copy = {

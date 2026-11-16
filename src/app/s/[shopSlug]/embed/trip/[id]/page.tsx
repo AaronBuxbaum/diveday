@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { shopBySlugCached } from "@/features/shops-cached";
 import { uuidParam } from "@/lib/uuid";
 import { EmbedChromeCollapse } from "../../../_components/EmbedChromeCollapse";
 import { publicTripMetadata } from "../../../trips/[id]/_lib/page-metadata";
@@ -35,8 +36,11 @@ export default async function EmbeddedTripPage({
   // The trip page narrows the id before its first read too; this file sits
   // under `[id]` as well, and a junk id is a 404 here rather than something a
   // reader has to follow into another file to see (scripts/check-uuid-segments.mjs).
-  const { id } = await params;
+  const { id, shopSlug } = await params;
   if (!uuidParam(id)) notFound();
+  // Switched off on the Features page: the frame says nothing.
+  const shop = await shopBySlugCached(shopSlug);
+  if (!shop?.embedsEnabled) notFound();
   return (
     <>
       <EmbedChromeCollapse />

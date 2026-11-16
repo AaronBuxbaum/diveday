@@ -75,6 +75,8 @@ export default async function EmbedWidgetPage({
   const db = await getDb();
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) notFound();
+  // Switched off on the Features page: the frame says nothing, as for a missing one.
+  if (!shop.embedsEnabled || (widget === "courses" && !shop.coursesEnabled)) notFound();
   const { t, locale } = await requestTranslator(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
   const { show, credit } = await searchParams;
@@ -294,7 +296,7 @@ export default async function EmbedWidgetPage({
   } else {
     const [{ trips }, courses] = await Promise.all([
       pagedUpcomingTripsWithCounts(db, shop.id, { now, limit: 6, publicOnly: true }),
-      activeCourses("primary"),
+      shop.coursesEnabled ? activeCourses("primary") : [],
     ]);
     body = (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

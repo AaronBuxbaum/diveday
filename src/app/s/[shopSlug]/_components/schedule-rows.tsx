@@ -195,12 +195,18 @@ export function shelfCourseCards({
 }: {
   activeCourses: Awaited<ReturnType<typeof listShelfCourses>>;
   shelfNextStarts: Awaited<ReturnType<typeof upcomingSessionsByCourse>>;
-  shop: { depthUnit: Parameters<typeof courseDepthFormat>[1]; timezone: string };
+  shop: {
+    depthUnit: Parameters<typeof courseDepthFormat>[1];
+    timezone: string;
+    coursesEnabled: boolean;
+  };
   shopSlug: string;
   currency: ShopCurrency;
   locale: string;
   t: DiverTranslator;
 }) {
+  // Courses switched off on the Features page: no shelf.
+  if (!shop.coursesEnabled) return [];
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
   const resolve = (text: string | null) =>
     text === null ? null : resolveCourseDepths(text, depthFormat);

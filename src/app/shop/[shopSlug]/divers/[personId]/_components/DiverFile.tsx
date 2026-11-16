@@ -172,7 +172,7 @@ export function DiverFile({
         t={t}
         status={noticeForForm(notice, "work-orders")}
       />
-      {!removed ? (
+      {!removed && shop.computerDivesEnabled ? (
         <Link
           href={`/shop/${shopSlug}/divers/${personId}/computer-dives`}
           className="flex min-h-13 items-center border-b border-border py-3 font-medium text-primary"

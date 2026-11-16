@@ -572,6 +572,21 @@
         "heading": "Buddy planning",
         "label": "Plan buddy teams for each trip",
         "description": "Keep optional buddy planning in The day"
+      },
+      "computerDives": {
+        "heading": "Computer dives",
+        "label": "Keep dive computer files on a diver’s record",
+        "description": "Upload a diver’s computer log and keep its dives beside their file."
+      },
+      "courses": {
+        "heading": "Courses",
+        "label": "Teach courses",
+        "description": "Courses and Certifications for staff, and the course catalog divers book from."
+      },
+      "embeds": {
+        "heading": "Website widgets",
+        "label": "Let your own website show your schedule",
+        "description": "Frames for your site: the calendar, departures, courses and reviews."
       }
     },
     "crewSchedule": {
