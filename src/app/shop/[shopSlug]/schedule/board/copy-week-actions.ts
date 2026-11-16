@@ -34,13 +34,15 @@ export async function copyLastYearWeekAction(shopSlug: string, formData: FormDat
     redirect(`${here}&builder=${outcome.reason.replace(/_/g, "-")}`);
   }
   // Each copy is logged as the builder's own copy is, one line per departure.
-  for (const tripId of outcome.tripIds) {
-    await recordShopActivity(db, {
-      shopId: shop.id,
-      actorPersonId: session.user.personId,
-      write: { code: "departure_copied", tripId },
-    });
-  }
+  await Promise.all(
+    outcome.tripIds.map((tripId) =>
+      recordShopActivity(db, {
+        shopId: shop.id,
+        actorPersonId: session.user.personId,
+        write: { code: "departure_copied", tripId },
+      }),
+    ),
+  );
   await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "ok" });
   revalidateAndRedirect(back, `${here}&builder=week-copied&count=${outcome.tripIds.length}`);
 }
