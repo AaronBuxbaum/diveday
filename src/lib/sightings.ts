@@ -180,3 +180,39 @@ export function seenChipSlugs(input: {
   }
   return chips;
 }
+
+/** The one sighting a booked diver's ticket mentions, as codes and a date. */
+export type TicketSighting = {
+  siteName: string;
+  speciesSlug: string;
+  customName: string | null;
+  lastSeenAt: Date;
+};
+
+/**
+ * **The ticket's line of anticipation** (issue #4386): the reef the diver is
+ * going to, the thing the crews there have seen most often lately, and the last
+ * day it was seen. The day's sites in the order the boat visits them, first site
+ * with a tally wins; a tally dated after `now` (a departure still to sail that
+ * somebody tapped early) says nothing, because the line claims a past sighting.
+ */
+export function ticketSighting(
+  sites: readonly { id: string; name: string }[],
+  bySite: ReadonlyMap<string, SiteSightings>,
+  now: Date,
+): TicketSighting | null {
+  for (const site of sites) {
+    const tally = bySite
+      .get(site.id)
+      ?.species.find((candidate) => candidate.lastSeenAt.getTime() <= now.getTime());
+    if (tally) {
+      return {
+        siteName: site.name,
+        speciesSlug: tally.speciesSlug,
+        customName: tally.customName ?? null,
+        lastSeenAt: tally.lastSeenAt,
+      };
+    }
+  }
+  return null;
+}

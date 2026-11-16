@@ -3,6 +3,7 @@ import { type CarriedPreparation, carriedPreparation } from "@/features/carried-
 import { courseMaterialsDoneByPerson } from "@/features/course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "@/features/courses";
 import { getHelpRequestForBooking, type HelpRequest } from "@/features/help-requests";
+import { siteSightings } from "@/features/trip-sightings";
 import type { CoursePersonalGear } from "@/lib/course-personal-gear";
 import { heldAtTheDoor } from "../../db/aboard-at-sea";
 import { seatCheckedIn } from "../../db/arrival-provenance";
@@ -29,7 +30,7 @@ import {
   trips,
 } from "../../db/schema/index";
 import { canAcceptPayments, getShopStripeAccount } from "../../db/stripe-accounts";
-import { getTripWithBookedOnce } from "../../db/trips";
+import { getTripWithBookedOnce, listTripDives } from "../../db/trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "../../db/waivers";
 import { diveDayCountForSeat, welcomeCueInputsByBooking } from "../../db/welcome-cues";
 import { asLevelCard } from "../../lib/card-ledger";
@@ -53,6 +54,7 @@ import { type ReEntryAsk, reEntryWindowOpen } from "../../lib/re-entry";
 import { noCertificationStands } from "../../lib/readiness";
 import type { RentableItemKind, RentalPricing } from "../../lib/rentals";
 import { canSayRunningLate, runningLateShown } from "../../lib/running-late";
+import { type TicketSighting, ticketSighting } from "../../lib/sightings";
 import { hasSailed } from "../../lib/trips";
 import { type DiveDayMilestone, diveDayMilestone } from "../../lib/visit-milestones";
 import { shopWaiverStanding } from "../../lib/waivers";
@@ -116,6 +118,12 @@ export type BookedCard = {
   departureCancelled: boolean;
   /** This seat is the diver's 10th, 25th, 50th or 100th boat with the shop (H-20261014-boat-count-milestones), or null. */
   milestone: DiveDayMilestone | null;
+  /**
+   * What turns the card into a ticket (issue #4386): the day's first site photo
+   * the shop uploaded, and one line from the crews' public sightings log for
+   * the day's sites. Either is null when the shop has nothing to show.
+   */
+  ticket: { photoUrl: string | null; sighting: TicketSighting | null };
 };
 
 export async function getBookedCard(
@@ -144,6 +152,7 @@ export async function getBookedCard(
       defaultLocale: shops.defaultLocale,
       dockCallMinutes: shops.dockCallMinutes,
       walletPassesEnabled: shops.walletPassesEnabled,
+      sightingsEnabled: shops.sightingsEnabled,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -163,9 +172,11 @@ export async function getBookedCard(
   // A held seat speaks for a record staff have not matched to whoever booked
   // (#2082): it is told no count. Every other link is, the page right after
   // booking included (#4059).
-  const milestone = identityHeld
-    ? null
-    : diveDayMilestone(await diveDayCountForSeat(db, shopId, bookingId));
+  const [milestoneCount, ticket] = await Promise.all([
+    identityHeld ? null : diveDayCountForSeat(db, shopId, bookingId),
+    bookedTicket(db, shopId, row.tripId, row.sightingsEnabled),
+  ]);
+  const milestone = milestoneCount === null ? null : diveDayMilestone(milestoneCount);
   return {
     shop: {
       name: row.shopName,
@@ -189,7 +200,34 @@ export async function getBookedCard(
     bookingCancelled: row.status === "cancelled",
     departureCancelled: row.tripStatus !== "scheduled",
     milestone,
+    ticket,
   };
+}
+
+/**
+ * The ticket's picture and its line: the photo the public trip page leads
+ * with (the first of the day's sites that has one, `dayCoverPhoto`), and the
+ * sightings the public pages already show, so a shop that switched sightings
+ * off is quoted nowhere.
+ */
+async function bookedTicket(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  sightingsEnabled: boolean,
+): Promise<BookedCard["ticket"]> {
+  const dives = await listTripDives(db, shopId, tripId);
+  const sites = dives.flatMap(({ diveSite }) => (diveSite ? [diveSite] : []));
+  const photoUrl = sites.find((site) => site.imageUrls[0])?.imageUrls[0] ?? null;
+  if (!sightingsEnabled || sites.length === 0) return { photoUrl, sighting: null };
+  const now = nowDate();
+  const seen = await siteSightings(
+    db,
+    shopId,
+    sites.map((site) => site.id),
+    now,
+  );
+  return { photoUrl, sighting: ticketSighting(sites, seen, now) };
 }
 
 /**
