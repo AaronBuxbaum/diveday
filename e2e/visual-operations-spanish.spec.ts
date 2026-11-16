@@ -127,7 +127,11 @@ test.describe("contact import", () => {
     });
     await expect(preview).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByLabel("4. longitude", { exact: true }).click();
+    // Anchor keyboard navigation without opening the native select popup,
+    // which can consume its closing Tab while retaining focus on the select.
+    const lastMapping = page.getByLabel("4. longitude", { exact: true });
+    await lastMapping.focus();
+    await expect(lastMapping).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(preview).toBeFocused();
     // Chromium exposes the actual overflowing inner table shell in its tab order.
