@@ -853,7 +853,10 @@ export function parseImportedMoney(
 ): { amountCents: number; currency: string } | null {
   if (!amountLabel) return null;
   const explicitCurrency = currencyLabel?.trim().toLowerCase();
-  const codeInAmount = amountLabel.match(/\b([a-z]{3})\b/i)?.[1]?.toLowerCase();
+  // The first three-letter word that is a currency: a leading "Paid" or "Pay" is not one.
+  const codeInAmount = [...amountLabel.matchAll(/\b([a-z]{3})\b/gi)]
+    .map((found) => found[1].toLowerCase())
+    .find((word) => isShopCurrency(word));
   const dollarCurrencies = new Set(["usd", "cad", "aud", "nzd", "sgd"]);
   const prefixedDollar = amountLabel.match(/\b(us|ca|au|nz|sg)\$/i)?.[1]?.toLowerCase();
   const prefixedDollarCurrency =
@@ -1909,7 +1912,9 @@ export function prepareContactImport(
     const index = indexOf(field);
     if (index < 0) return undefined;
     const cell = cells[index];
-    return cell === undefined ? undefined : unguardFormula(cell);
+    // `parseCsv` made every carriage return a line feed, and an export guards a cell opening on
+    // one as `'\r`: put it back so the guard is still recognised.
+    return cell === undefined ? undefined : unguardFormula(cell.replace(/^'\n/, "'\r"));
   };
 
   const hasIdentity =
