@@ -13,7 +13,7 @@ Provide explicit staff column mapping separately from the optional assist. Manua
 
 Any effective manual mapping reduces authority for the entire file: level, specialty, and nitrox cards become pending; prior waiver acceptance is omitted. Recognized template imports retain their established trusted-record behavior. No imported booking history creates or moves a seat.
 
-An owner/manager may request an advisory per-row roster match preview, scoped to the session shop and live people only. Commit retains its existing transactional match revalidation and locks. Repeated email rows merge; rows without email explicitly warn that each import creates a new record. Request identifiers correlate visible results with the current file revision only; they are not durable idempotency keys.
+An owner/manager may request an advisory per-row roster match preview, scoped to the session shop and live people only. Commit retains its existing transactional match revalidation and locks. Manually mapped files refuse every row in an email group when names disagree within the file or with the locked live roster record. Names compare only after Unicode presentation, case, and whitespace normalization; token order, suffixes, accents, and nicknames are never inferred. The advisory preview identifies these conflicts and commit checks again, including concurrent insert winners. No contact, notes, history, or evidence is attached from a refused group. Trusted canonical templates retain their existing name-refresh and repeated-email behavior. Repeated email rows with matching names merge; rows without email explicitly warn that each import creates a new record. Request identifiers correlate visible results with the current file revision only; they are not durable idempotency keys.
 
 Recovery exports include rows with warnings or errors, original values, logical row numbers, and issue codes. Shared CSV escaping neutralizes formulas. Selecting a corrected file clears the old mapping and match snapshot.
 
@@ -26,3 +26,7 @@ Recovery exports include rows with warnings or errors, original values, logical 
 ## Consequences
 
 Staff can map ordinary customer exports locally and inspect exactly which rows create or update divers. Manually mapped cards need staff review and waivers need collection in DiveDay. The roster preview is advisory, so concurrent edits may change final counts. Existing ledger/history deduplication remains the retry mechanism; no new financial or booking authority is introduced. Revisit the mapping evidence rule only with a separately reviewed attestation policy; doing so requires preparation and commit tests, not a data migration.
+
+## Validation
+
+The manual household-name regression failed against the original commit path, then passed with the locked-name refusal. Tests preserve the existing verified card and waiver byte-for-byte and reject attaching child notes; stale roster previews, same-file conflicts, strict presentation normalization, formula-safe conflict recovery, and visible submit counts are covered. Independent security and dive-domain source review found no additional issue. Review was source-based; rendered browser behavior remains unverified in this environment.

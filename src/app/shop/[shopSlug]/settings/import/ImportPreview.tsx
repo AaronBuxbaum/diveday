@@ -67,7 +67,7 @@ export function ImportPreview({
   locale,
 }: {
   prepared: PreparedImport;
-  outcomes?: { rowNumber: number; outcome: "create" | "update" | "merge" | "skip" }[];
+  outcomes?: { rowNumber: number; outcome: "create" | "update" | "merge" | "skip" | "conflict" }[];
   previewRows: PreparedImport["rows"];
   hiddenRows: number;
   copy: ImportWizardCopy;
@@ -86,6 +86,7 @@ export function ImportPreview({
   /** The reader's locale, for the dates of bookings after today. */
   locale: string;
 }) {
+  const { conflictCount, importableCount } = previewImportCounts(prepared, outcomes);
   const anyAssisted = prepared.mapping.some((entry) => entry.assisted);
   // The count is the importer's own total; the rows are only for the list.
   const afterTodayCount = prepared.totals.bookingsAfterToday;
@@ -95,6 +96,7 @@ export function ImportPreview({
   const unlistedAfterToday = afterTodayCount - listedAfterToday.length;
   return (
     <div className="mt-6">
+      <ImportIdentityConflictNotice count={conflictCount} copy={copy} />
       <div className="flex flex-wrap gap-2">
         {prepared.mapping.map((entry) => (
           <span
@@ -394,7 +396,7 @@ export function ImportPreview({
           requestId={requestId}
           assist={assist}
           anyAssisted={anyAssisted}
-          prepared={prepared}
+          importableCount={importableCount}
           copy={copy}
           state={state}
         />
@@ -410,7 +412,7 @@ function ImportConfirmForm({
   requestId,
   assist,
   anyAssisted,
-  prepared,
+  importableCount,
   copy,
   state,
 }: {
@@ -420,7 +422,7 @@ function ImportConfirmForm({
   requestId?: string;
   assist?: { json: string; suggested: string; pendingCards: string };
   anyAssisted: boolean;
-  prepared: PreparedImport;
+  importableCount: number;
   copy: ImportWizardCopy;
   state: ImportActionState;
 }) {
@@ -434,15 +436,15 @@ function ImportConfirmForm({
       {assist && anyAssisted ? <input type="hidden" name="assist" value={assist.json} /> : null}
       <SubmitButton
         pendingLabel={copy.submitting}
-        disabled={prepared.totals.importable === 0}
+        disabled={importableCount === 0}
         className={buttonClass()}
       >
         {fill(
-          pluralForm(prepared.totals.importable, {
+          pluralForm(importableCount, {
             one: copy.submitOne,
             other: copy.submitOther,
           }),
-          { count: prepared.totals.importable },
+          { count: importableCount },
         )}
       </SubmitButton>
       <FormStatus tone="danger">
@@ -450,4 +452,24 @@ function ImportConfirmForm({
       </FormStatus>
     </form>
   );
+}
+
+function ImportIdentityConflictNotice({ count, copy }: { count: number; copy: ImportWizardCopy }) {
+  return count > 0 ? (
+    <p className="mb-3 text-sm">{fill(copy.result.identityConflicts, { count })}</p>
+  ) : null;
+}
+function previewImportCounts(
+  prepared: PreparedImport,
+  outcomes?: { rowNumber: number; outcome: string }[],
+) {
+  const conflicts = new Set(
+    outcomes?.filter((row) => row.outcome === "conflict").map((row) => row.rowNumber),
+  );
+  return {
+    conflictCount: conflicts.size,
+    importableCount: prepared.rows.filter(
+      (row) => row.action === "import" && !conflicts.has(row.rowNumber),
+    ).length,
+  };
 }
