@@ -807,12 +807,9 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     const on = outcome.reason === "boat_out_of_service" ? `&on=${outcome.on}` : ""; // #4026
     redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}${on}`);
   }
-  await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "ok" });
-  // The departure already held this time (a second tap, or the panel saved
-  // untouched): nothing moved, so there is nothing to log and nobody to tell.
-  if (outcome.previousStartsAt.getTime() === outcome.trip.startsAt.getTime()) {
+  await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "ok" }); // a second tap moved nothing: log and tell nobody
+  if (outcome.previousStartsAt.getTime() === outcome.trip.startsAt.getTime())
     revalidateAndRedirect(back, `${back}?builder=moved`);
-  }
   await recordShopActivity(db, {
     shopId: shop.id,
     actorPersonId: session.user.personId,

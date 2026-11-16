@@ -65,9 +65,7 @@ describe("a discount code's window", () => {
   it("is read in the shop's own zone", async () => {
     const shop = await signInOwnerOfHonoluluShop();
     await redirectedTo(() =>
-      createPromoAction(
-        promoForm({ startsAt: "2026-12-01T09:00", expiresAt: "2026-12-31T17:30" }),
-      ),
+      createPromoAction(promoForm({ startsAt: "2026-12-01T09:00", expiresAt: "2026-12-31T17:30" })),
     );
     const input = vi.mocked(createShopPromoCode).mock.calls[0]?.[1];
     // Honolulu is UTC-10 all year.
