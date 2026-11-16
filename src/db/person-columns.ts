@@ -322,6 +322,19 @@ const rows = [
     erase: "keep",
     eraseWhy: "the shop's own balance of a package: ids, a consumption time and an expiry",
   },
+  // The gift's recipient (issue #4629): the dives themselves are entitlement
+  // rows on the same person, exported and moved there. The gift row adds only
+  // ids and a send date, so a merge moves it and an erasure leaves it.
+  {
+    table: "package_gifts",
+    column: "person_id",
+    export: "withheld",
+    exportWhy: "ids and a send date; the dives it gave are exported as entitlements",
+    kind: "subject",
+    merge: "move",
+    erase: "keep",
+    eraseWhy: "ids and a send date: the gift's order and when its mail went",
+  },
   {
     table: "orders",
     column: "person_id",

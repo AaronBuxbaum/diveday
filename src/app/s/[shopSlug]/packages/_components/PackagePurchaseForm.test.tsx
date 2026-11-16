@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderDiver } from "@/test/intl";
 import { type PackageOffer, PackagePurchaseForm } from "./PackagePurchaseForm";
@@ -24,7 +24,7 @@ const offers: PackageOffer[] = [
 ];
 describe("package tank accounting", () => {
   it("describes the whole choice once while preserving the different option facts", () => {
-    renderDiver(<PackagePurchaseForm shopSlug="blue-mantis" offers={offers} />);
+    renderDiver(<PackagePurchaseForm shopSlug="blue-mantis" offers={offers} today="2026-11-16" />);
     expect(screen.getByText("$200")).toBeVisible();
     expect(screen.getByText("$375")).toBeVisible();
     expect(screen.getAllByText("One dive is one tank")).toHaveLength(1);
@@ -40,6 +40,7 @@ describe("package tank accounting", () => {
     renderDiver(
       <PackagePurchaseForm
         shopSlug="blue-mantis"
+        today="2026-11-16"
         offers={[offers[0], { ...offers[1], tankNote: "Different tank accounting" }]}
       />,
     );
@@ -50,5 +51,22 @@ describe("package tank accounting", () => {
     expect(screen.getByRole("radio", { name: /Ten dives/ })).toHaveAccessibleName(
       /Different tank accounting/,
     );
+  });
+});
+
+describe("a package as a gift (issue 4629)", () => {
+  it("asks for the recipient and a send date only once it is a gift, today by default", () => {
+    renderDiver(<PackagePurchaseForm shopSlug="blue-mantis" offers={offers} today="2026-11-16" />);
+    expect(screen.queryByLabelText("Their email")).toBeNull();
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "This is a gift" }));
+    expect(screen.getByLabelText("Your name")).toBeRequired();
+    expect(screen.getByLabelText("Their name")).toBeRequired();
+    expect(screen.getByLabelText("Their email")).toHaveAttribute("type", "email");
+    const date = screen.getByLabelText("Send the gift email on");
+    expect(date).toHaveValue("2026-11-16");
+    expect(date).toHaveAttribute("min", "2026-11-16");
+    expect(screen.getByText(/The receipt is yours/)).toBeInTheDocument();
   });
 });

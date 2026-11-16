@@ -52,6 +52,7 @@ import {
 import { incidentMissingDiverEmail, incidentMissingDiverFoundEmail } from "./incident-emails";
 import { interestReceivedAckEmail } from "./interest-received-ack";
 import type { Notification } from "./kinds";
+import { packageGiftEmail } from "./package-gift";
 import { partyPaymentReceiptEmail } from "./party-payment-receipt";
 import { reminderSmsBody } from "./reminder-text";
 import {
@@ -271,6 +272,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "party_not_booked") return partyNotBookedEmail(notification);
   if (notification.kind === "party_payment_receipt") return partyPaymentReceiptEmail(notification);
   if (notification.kind === "course_certified") return courseCertifiedEmail(notification);
+  if (notification.kind === "package_gift") return packageGiftEmail(notification);
   if (notification.kind === "bookkeeper_month_end") return bookkeeperMonthEndEmail(notification);
   if (notification.kind === "bookkeeper_confirmation") {
     return bookkeeperConfirmationEmail(notification);

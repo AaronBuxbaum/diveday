@@ -172,6 +172,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Fee credit
 - First paid month
 - Free term
+- Gifted package
 - Late cancel
 - Local amount due
 - Mixed payment

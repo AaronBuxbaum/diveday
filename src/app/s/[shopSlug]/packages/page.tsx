@@ -10,7 +10,8 @@ import { listPackagesOnSale, singleDivePriceOnSale } from "@/db/dive-packages";
 import { shopBySlugCached } from "@/features/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestTranslator } from "@/i18n/request";
-import { formatCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { packageSavingCents } from "@/lib/dive-packages";
 import { formatMoneyScanned } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -149,6 +150,7 @@ export default async function PublicPackagesPage({
           shopSlug={shop.slug}
           offers={offers}
           scopeDescriptionId={sharedScope ? "package-introduction" : undefined}
+          today={calendarDateInTimezone(nowDate(), shop.timezone)}
         />
       </DiverIntlProvider>
     </main>

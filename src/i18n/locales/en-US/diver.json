@@ -934,11 +934,21 @@
     "buying": "Opening payment…",
     "invoiceLine": "{packageName}, {count, plural, one {# dive} other {# dives}}",
     "afterPaying": "Once it’s paid, your dives are ready the next time you book with this email.",
+    "gift": {
+      "toggle": "This is a gift",
+      "yourName": "Your name",
+      "yourEmail": "Your email",
+      "recipientName": "Their name",
+      "recipientEmail": "Their email",
+      "sendOn": "Send the gift email on",
+      "afterPaying": "Once it’s paid, the dives are on their email and the gift email goes on the date you picked. The receipt is yours."
+    },
     "error": {
       "invalid": "Add your name and an email we can reach you at.",
       "notOnSale": "That package isn’t on sale anymore.",
       "unavailable": "{shopName} can’t take this payment online right now. Get in touch and they’ll sort it out.",
-      "failed": "The payment page didn’t open. Nothing was charged. Try again in a moment."
+      "failed": "The payment page didn’t open. Nothing was charged. Try again in a moment.",
+      "gift": "Add their name, their email, and a date from today on."
     },
     "introWithScope": "{intro} {scope}."
   },
@@ -4460,6 +4470,12 @@
       "card": "Your card is on its way from {agency}; this record already counts with {shopName}.",
       "cardAnyAgency": "Your card is on its way from your training agency; this record already counts with {shopName}.",
       "next": "Your next course: {course}"
+    },
+    "packageGift": {
+      "subject": "{giver} gave you {count, plural, one {# dive} other {# dives}} at {shopName}",
+      "body": "{firstName}, {giver} bought you {packageName} at {shopName}: {count, plural, one {# dive} other {# dives}}, already paid for.",
+      "ready": "They’re on this email. Book with it and they’re used as you go.",
+      "book": "See what’s on at {shopName}"
     },
     "smsCourseCertified": {
       "body": "{shopName}: you’re {code, select, open_water {an Open Water Diver} advanced_open_water {an Advanced Open Water Diver} rescue {a Rescue Diver} divemaster {a Divemaster} other {an Instructor}} now.",

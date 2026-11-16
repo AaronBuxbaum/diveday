@@ -70,6 +70,7 @@ import {
   notificationSendQueue,
   orderLineItems,
   orders,
+  packageGifts,
   paymentDisputes,
   paymentOperationIntents,
   people,
@@ -1075,6 +1076,7 @@ export async function clearDemoSchedule(
   // the diff (found while accounting for issue #791's pixels).
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
   await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
+  await db.delete(packageGifts).where(eq(packageGifts.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   // Orders (and their line items) reference bookings and people; the waitlist
   // references trips and people. Both must go before the parents below.

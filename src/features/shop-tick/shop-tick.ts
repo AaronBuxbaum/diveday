@@ -4,6 +4,7 @@ import type { AppDb } from "@/db/client";
 import { sendDueCrewNotices } from "@/db/crew-notices";
 import { sendMissingDiverAlerts } from "@/db/missing-diver-alerts";
 import { drainNotificationRetries } from "@/db/notifications";
+import { sendDuePackageGifts } from "@/db/package-gifts";
 import { bringDemoBoatsAtSeaHome } from "@/db/seed";
 import { sendDueCheckoutRecoveries } from "@/features/checkout-recovery";
 import { sendTrailingDeskPings } from "@/features/desk-pings";
@@ -53,6 +54,7 @@ export const SHOP_TICK_SCANS = [
   "desk-pings",
   "seat-sold-alerts",
   "dock-observations",
+  "package-gifts",
 ] as const;
 
 export type ShopTickScan = (typeof SHOP_TICK_SCANS)[number];
@@ -99,6 +101,9 @@ const RUNS = {
   // (the departure was busy, or the worker stopped after the intake): settled
   // here if nothing on the page did it first (issue #4474).
   "dock-observations": (db, now) => settleOpenBoardingObservations(db, { now }),
+  // A dive package bought as a gift: its email on the chosen date, in the
+  // shop's zone and send window (issue #4629).
+  "package-gifts": (db, now) => sendDuePackageGifts(db, { now }),
 } satisfies Record<ShopTickScan, (db: AppDb, now: Date) => Promise<unknown>>;
 
 export type ShopTickSummary = {
