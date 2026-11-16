@@ -2,7 +2,7 @@ import type { CertificationLevel } from "./certification-levels";
 import type { CourseCrewGap, CourseCrewRemedy, CourseRatioKind } from "./course-ratios";
 import type { DepthCeilingCheck, DepthLimitBasis, JuniorVerificationReason } from "./depth-ceiling";
 import type { DepthUnit } from "./depth-units";
-import { type DiveRecencyBand, diveRecencyIsNotable } from "./dive-recency";
+import type { DiveRecencyBand } from "./dive-recency";
 import type { DivemasterRatioGap } from "./divemaster-ratio";
 import type { MinimumSeatsState } from "./minimum-seats";
 import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessStatus } from "./readiness";
@@ -245,13 +245,6 @@ export function depthFinding(check: DepthCeilingCheck | null | undefined): Depth
       ...(check.verificationReasons ? { verificationReasons: check.verificationReasons } : {}),
     },
   };
-}
-
-/** The two answers a divemaster would want to read twice (`diveRecencyIsNotable`). */
-export function recencyFinding(band: DiveRecencyBand | null | undefined): RecencyAdvisory | null {
-  return band != null && diveRecencyIsNotable(band)
-    ? { code: "recency_notable", params: { band } }
-    : null;
 }
 
 export function courseCrewFinding(gap: CourseCrewGap): CourseCrewAdvisory | null {

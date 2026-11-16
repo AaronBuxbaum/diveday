@@ -122,13 +122,6 @@ export function shopOffers(shop: ShopFeatureFlags, feature: ShopFeature): boolea
   return shop[SHOP_FEATURE_COLUMNS[feature]];
 }
 
-/** Narrows an untrusted form value to a feature, or null. */
-export function parseShopFeature(value: unknown): ShopFeature | null {
-  return typeof value === "string" && (SHOP_FEATURES as readonly string[]).includes(value)
-    ? (value as ShopFeature)
-    : null;
-}
-
 /**
  * **Every switch on the Features page**: the optional features above plus the
  * three with rules of their own (the crew schedule, Stripe Tax, and which kinds

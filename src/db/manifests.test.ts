@@ -8,11 +8,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
 import { log } from "@/lib/log";
-import {
-  isRollCallAccountedFor,
-  type RollCallCheckpoint,
-  rollCallCompleteness,
-} from "@/lib/manifests";
+import { type RollCallCheckpoint, rollCallCompleteness } from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
 import type { RollCallCausalContext } from "@/lib/roll-call-causality";
 import { markArrived } from "@/test/arrivals";
@@ -3170,7 +3166,6 @@ describe("the manifest and Today agree about who is still in the water (DOM-H3)"
       expect(diver?.rollCall).toMatchObject({ state: "not_boarded", implied: true });
       // Carried, so not a missing diver and not an awaiting one either.
       expect(manifest?.summary.notBackAboard).toBe(0);
-      expect(isRollCallAccountedFor(checkpoint, diver?.rollCall)).toBe(true);
     }
   });
 });
