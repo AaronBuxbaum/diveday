@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest";
 import { cancelBooking, createBooking } from "@/db/bookings";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { createPerson } from "@/db/people";
-import { refundBookingOnShopCancellation } from "@/db/refunds";
+import {
+  queueBookingRefundOnShopCancellation,
+  refundBookingOnCancellation,
+  refundBookingOnShopCancellation,
+  shopCancellationPaymentStory,
+} from "@/db/refunds";
 import {
   bookingPaymentEvents,
   bookings,
@@ -15,6 +20,7 @@ import {
   trips,
   userAccounts,
 } from "@/db/schema";
+import { setTripStatus } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { tripCreditTestFixture } from "@/test/trip-credit-fixture";
@@ -27,6 +33,40 @@ function fixture() {
 }
 
 describe("promotional trip credit lifecycle", () => {
+  it.each([
+    ["diver cancellation", refundBookingOnCancellation],
+    ["immediate shop cancellation", refundBookingOnShopCancellation],
+    ["queued shop cancellation", queueBookingRefundOnShopCancellation],
+  ] as const)(
+    "restores a called-off departure's promotional fare once through %s",
+    async (_name, refund) => {
+      const { db, shop, trip, booking, diver, grant, redeem } = await fixture();
+      expect((await grantTripCredit(db, grant)).ok).toBe(true);
+      expect((await redeemTripCredit(db, redeem)).ok).toBe(true);
+      // Phase one calls off the departure while retaining its bookings. A resumed
+      // cancellation must return promotional value even before a seat is removed.
+      await setTripStatus(db, shop.id, trip.id, "cancelled");
+      const input = { shopId: shop.id, bookingId: booking.id };
+      expect(await refund(db, input)).toEqual({ status: "credit_returned" });
+      expect(await refund(db, input)).toEqual({ status: "credit_returned" });
+      expect(shopCancellationPaymentStory({ status: "credit_returned" })).toBe("credit_returned");
+      expect(await getBookingPayment(db, shop.id, booking.id)).toMatchObject({
+        status: "unpaid",
+        provider: "trip_credit_returned",
+        amountCents: null,
+      });
+      const ledger = await readTripCredit(db, shop.id, diver.id, "usd");
+      expect(ledger.balanceCents).toBe(10_000);
+      expect(ledger.entries.filter((entry) => entry.kind === "restore")).toHaveLength(1);
+      expect(
+        await db.select().from(collectionEntries).where(eq(collectionEntries.sourceId, booking.id)),
+      ).toHaveLength(0);
+      expect(await db.select().from(bookings).where(eq(bookings.id, booking.id))).toMatchObject([
+        { status: "booked" },
+      ]);
+    },
+  );
+
   it("does not let an old promotional return replace the later cash-refund story", async () => {
     const { db, shop, booking, trip, diver, grant, redeem } = await fixture();
     expect((await grantTripCredit(db, grant)).ok).toBe(true);
