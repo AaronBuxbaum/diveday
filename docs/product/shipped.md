@@ -7,6 +7,15 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The courses page answers a course-led shop (built 2026-11-16)
+
+Issue #4321. `/product/courses` now lists what a training-heavy shop asked about and DiveDay
+already does: pool, shore and boat sessions and multi-day courses, learning materials and the
+eLearning fee, referral students and their papers, each student's next step, Certify and the cards
+still to process, and instructor ratings on file. Gaps were filed rather than claimed: per-session
+student progress (#4631), an eLearning code stock (#4632), the confined-water ratio on a pool
+session (#4633), and classroom sessions (#4244).
+
 ## Lapsed regulars on the divers roster (built 2026-11-16)
 
 Issue #4246. The staff divers roster has a "Lapsed regulars" view: three or more dive days with the
