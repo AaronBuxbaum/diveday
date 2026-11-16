@@ -35,6 +35,8 @@ const inquirySchema = z.object({
   experience: blankAsAbsent(z.enum(COURSE_INQUIRY_EXPERIENCE)),
   message: blankAsAbsent(z.string().trim().max(1500)),
   charter: formValue().transform((value) => value === "true"),
+  /** The "Flexible dates" checkbox: `on` from the browser, `true` from a script; nothing else. */
+  dateFlexible: formValue().transform((value) => value === "on" || value === "true"),
 });
 
 /**
@@ -115,6 +117,7 @@ export async function submitInquiryAction(
     experience,
     message,
     charter,
+    dateFlexible,
   } = parsed.data;
   // The either-or, in the diver's own words rather than as a constraint
   // violation: a request with no course in the URL and nothing typed into
@@ -132,6 +135,7 @@ export async function submitInquiryAction(
     timing,
     preferredDate,
     alternateDate,
+    dateFlexible,
     partySize: divers,
     message,
     // A private charter (loop 5, row 11): only off the shopfront's own form,
@@ -169,6 +173,7 @@ export async function submitInquiryAction(
         timing,
         preferredDate,
         alternateDate,
+        dateFlexible,
         divers,
         message,
       }).catch(() => ({ status: "failed" as const }));
