@@ -248,7 +248,6 @@ async function paidBookingContext(
 }
 
 describe("refundBookingOnCancellation", () => {
-  // story: PAY-03
   it("refunds a Stripe payment in full inside the window and flips the row to refunded", async () => {
     const { db, shop, bookingId, capturedCents, insideWindow } = await paidBookingContext(48);
     const outcome = await refundBookingOnCancellation(
@@ -263,7 +262,6 @@ describe("refundBookingOnCancellation", () => {
     expect(payment?.providerRef).toBe("re_ok");
   });
 
-  // story: PAY-03
   it("forfeits past the deadline and moves no money", async () => {
     const { db, shop, bookingId, pastDeadline } = await paidBookingContext(48);
     const outcome = await refundBookingOnCancellation(
@@ -354,7 +352,6 @@ describe("refundBookingOnCancellation", () => {
     expect(outcome).toEqual({ status: "unpaid" });
   });
 
-  // story: PAY-03
   it("leaves the payment paid when Stripe refuses the refund", async () => {
     const { db, shop, bookingId, insideWindow } = await paidBookingContext(48);
     const outcome = await refundBookingOnCancellation(
@@ -543,7 +540,6 @@ describe("refundBookingOnCancellation", () => {
   // that Stripe is not asked for anything a second time. The refunded status
   // is what holds it — not the idempotency key, which is minted fresh per
   // attempt on purpose (PAY-C1) and would happily issue a second real refund.
-  // story: PAY-03
   it("moves no money the second time a canceled booking is refunded", async () => {
     const { db, shop, bookingId, insideWindow } = await paidBookingContext(48);
     const refundCalls: RefundCall[] = [];

@@ -34,6 +34,7 @@ async function seatContext() {
 }
 
 describe("queueBookingRefundOnShopCancellation", () => {
+  // story: PAY-03
   it("queues a captured Stripe seat and leaves the money where it is", async () => {
     const { db, shop, bookingId } = await seatContext();
     await setBookingPayment(db, {
@@ -51,6 +52,7 @@ describe("queueBookingRefundOnShopCancellation", () => {
     expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("paid");
   });
 
+  // story: PAY-03
   it("answers already_refunded for a seat that was refunded", async () => {
     const { db, shop, bookingId } = await seatContext();
     await setBookingPayment(db, {

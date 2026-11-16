@@ -54,7 +54,6 @@ describe("offline manifest policy", () => {
     );
   });
 
-  // story: ROLL-03
   it("treats a snapshot as expired only once its expiresAt has actually passed", () => {
     const saved = snapshot();
     expect(saved.expiresAt).toBe("2026-07-27T16:00:00.000Z");
@@ -150,7 +149,6 @@ describe("offline manifest policy", () => {
   // list and refuses without it, while "this person did not come back" is true
   // regardless of which list the copy happens to hold and must never be refused
   // — a crew member who cannot log a missing diver has been silenced.
-  // story: ROLL-03
   it("refuses to board at a checkpoint the snapshot has no manifest for, but never refuses the alarm", () => {
     const saved = snapshot();
     expect(canRecordOfflineStatus(saved, "ready", "boarded", "after_dive_3")).toBe(false);

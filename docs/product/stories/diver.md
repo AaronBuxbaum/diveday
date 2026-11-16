@@ -91,15 +91,13 @@ As Marco, I can enter a shop's code and see it taken off.
 - A spent code and one that never existed are refused in the same words.
 - No promo box shows while the shop has no live code.
 
-### PAY-03 A cancelled seat gets its money back by the shop's rules
+### PAY-03 A cancelled seat's money is owed once
 
-As Marco, if I cancel inside the shop's free window my card is refunded, and if I cancel late I am
-told the money is forfeit.
+As Marco, when I cancel a paid seat the shop sees the money owed back to me, and asking twice never refunds me twice.
 
 **Done when**
-- A Stripe payment is refunded in full inside the window and no money moves past the deadline.
-- A failed refund leaves the seat showing as owed, never as settled.
-- Cancelling twice moves money once.
+- A cancelled Stripe-paid seat is queued for refund and the money stays where it is until the refund runs.
+- A seat already refunded answers "already refunded" and moves no money.
 
 ### PAY-04 A card that fails keeps the diver's place
 

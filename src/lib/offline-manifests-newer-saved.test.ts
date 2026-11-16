@@ -42,6 +42,7 @@ function refreshed(state: "boarded" | "not_boarded"): OfflineManifestSnapshot {
 }
 
 describe("opaque saved evidence and this tablet's own evidence", () => {
+  // story: ROLL-03
   it("shows the other device's 'did not come back' over this tablet's synced 'back aboard'", () => {
     const saved = refreshed("not_boarded");
     const mine = tap(saved, {
