@@ -303,7 +303,12 @@ export async function listActiveCoursesForSitemap(
     // would still have its course pages in the sitemap
     // (ADR 20260813-search-listing-is-a-choice).
     .where(
-      and(eq(courses.isActive, true), eq(shops.isDemo, false), isNull(shops.searchListingOptOutAt)),
+      and(
+        eq(courses.isActive, true),
+        eq(shops.coursesEnabled, true),
+        eq(shops.isDemo, false),
+        isNull(shops.searchListingOptOutAt),
+      ),
     );
   return rows;
 }

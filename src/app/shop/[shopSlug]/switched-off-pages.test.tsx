@@ -93,12 +93,6 @@ describe("a switched-off staff page", () => {
     expect(to).toBe(`/shop/blue-mantis/divers/${SOME_ID}`);
   });
 
-  it("certifications land on the shop home while courses are off", async () => {
-    expect(await openSwitchedOff("coursesEnabled", () => import("./certifications/page"))).toBe(
-      "/shop/blue-mantis",
-    );
-  });
-
   it("Lost and found lands on the schedule", async () => {
     expect(await openSwitchedOff("lostFoundEnabled", () => import("./lost-found/page"))).toBe(
       "/shop/blue-mantis/schedule/board",

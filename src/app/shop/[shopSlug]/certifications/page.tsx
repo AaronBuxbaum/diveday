@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
@@ -20,8 +19,6 @@ export default async function CertificationsPage({
   const { shopSlug } = await params;
   const { notice } = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
-  // Switched off on the Features page: no list, and no error either.
-  if (!shop.coursesEnabled) redirect(`/shop/${shopSlug}`);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   return (
