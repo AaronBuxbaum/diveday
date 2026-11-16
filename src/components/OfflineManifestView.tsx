@@ -97,6 +97,7 @@ function OfflineManifestScreen() {
   // Its own busy key, like the checklist's: a counter tap must never appear to
   // disable a diver's roll-call row, and vice versa.
   const [busyArrival, setBusyArrival] = useState<string | null>(null);
+  const [activeWrites, setActiveWrites] = useState(0);
   /**
    * What the crew is typing about a person who is unaccounted for, keyed by the
    * booking or person id the row is about (ADR
@@ -214,6 +215,7 @@ function OfflineManifestScreen() {
     setBusyBooking,
     setBusyChecklistItem,
     setBusyArrival,
+    setActiveWrites,
     dispatchSaved,
     setMessage,
     reconcile,
@@ -225,10 +227,16 @@ function OfflineManifestScreen() {
     message,
     servedWithoutAnswer,
     copyCaveat,
-    // Offered only with nothing waiting to send: on the live list a mark still
-    // queued here shows only as "still sending", and its diver looks uncounted.
+    // A pending or in-flight write may not be reflected on the live list yet.
+    // A note draft exists only in memory and would be lost on navigation.
     liveOffer:
-      liveAnswering && liveHref && pendingOfflineEventCount(envelope) === 0 ? liveHref : null,
+      liveAnswering &&
+      liveHref &&
+      pendingOfflineEventCount(envelope) === 0 &&
+      activeWrites === 0 &&
+      !Object.values(noteDrafts).some((note) => note.length > 0)
+        ? liveHref
+        : null,
     setCheckpoint,
     selectedMeetingDay: displayEnvelope.snapshot.selectedRollCallMeetingDay ?? 0,
     setMeetingDay: (day) => {
