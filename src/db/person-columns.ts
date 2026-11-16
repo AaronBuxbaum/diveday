@@ -471,15 +471,15 @@ const rows = [
     eraseWhy:
       "a pointer at an erased person discloses nothing: the name is joined at read; the words are the diver's, kept through the crew member's erasure (Aaron, 2026-11-05, #3913) and cleared by the diver's own",
   },
-  // The staffer who hid a thanks from the crew member.
+  // The staffer who passed a thanks on to the crew member, or kept it back (#4261).
   {
     table: "trip_reviews",
-    column: "crew_thanks_hidden_by_person_id",
+    column: "crew_thanks_ruled_by_person_id",
     export: "withheld",
     exportWhy: "a staff moderation record, not the diver's own words",
     kind: "actor",
     merge: "leave",
-    why: "names the staffer who hid the line, a staff record whose own merge is refused; the pointer stays on the id it had",
+    why: "names the staffer who ruled on the thanks, a staff record whose own merge is refused; the pointer stays on the id it had",
     erase: "keep",
   },
   // The private half of the same act (ADR 20260904-reef-all-the-way-down,

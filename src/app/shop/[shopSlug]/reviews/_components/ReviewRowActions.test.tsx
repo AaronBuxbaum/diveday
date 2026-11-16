@@ -33,10 +33,10 @@ const copy: ReviewRowCopy = {
   hideReasonLabel: "Reason",
   hideReasonPlaceholder: "In your words",
   hideNoteLabel: "Note",
-  hideThanks: "Hide thanks",
-  showThanks: "Show thanks",
-  thanksHidden: "Thanks hidden.",
-  thanksShown: "Thanks shown.",
+  holdThanks: "Keep thanks",
+  passThanks: "Pass thanks",
+  thanksHeld: "Thanks kept.",
+  thanksPassed: "Thanks passed.",
   markStandout: "Feature",
   removeStandout: "Unfeature",
   hiddenToast: "Hidden.",
@@ -277,7 +277,7 @@ describe("the hide's undo toast", () => {
 });
 
 describe("the thanks to the crew (loop 5, row 6)", () => {
-  function view(hidden: boolean) {
+  function view(ruling: "passed" | "held" | null) {
     return (
       <ReviewRowProvider>
         <ReviewRowActions
@@ -285,7 +285,7 @@ describe("the thanks to the crew (loop 5, row 6)", () => {
           isPublished
           isHidden={false}
           isStandout={false}
-          crewThanks={{ hidden }}
+          crewThanks={{ ruling }}
           canStandout={false}
           reasons={[]}
           copy={copy}
@@ -295,15 +295,23 @@ describe("the thanks to the crew (loop 5, row 6)", () => {
     );
   }
 
-  it("offers Hide thanks in the more menu on a review that carries one", async () => {
-    render(view(false));
+  it("puts Pass thanks on the row while the thanks waits, and Keep thanks in the menu", async () => {
+    render(view(null));
+    expect(screen.getByRole("button", { name: "Pass thanks" })).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "More" }));
-    expect(screen.getByRole("button", { name: "Hide thanks" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Keep thanks" })).toBeTruthy();
   });
 
-  it("offers Show thanks once staff hid it", async () => {
-    render(view(true));
+  it("offers Keep thanks in the menu once passed on", async () => {
+    render(view("passed"));
+    expect(screen.queryByRole("button", { name: "Pass thanks" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "More" }));
-    expect(screen.getByRole("button", { name: "Show thanks" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Keep thanks" })).toBeTruthy();
+  });
+
+  it("offers Pass thanks in the menu once kept back", async () => {
+    render(view("held"));
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    expect(screen.getByRole("button", { name: "Pass thanks" })).toBeTruthy();
   });
 });
