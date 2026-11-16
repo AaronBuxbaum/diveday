@@ -33,7 +33,8 @@ function fakeTracker(open = []) {
   const calls = { created: [], comments: [] };
   return {
     calls,
-    listIssues: () => open,
+    listIssues: ({ label } = {}) =>
+      label ? open.filter((issue) => issue.labels?.includes(label)) : open,
     createIssue: (issue) => {
       calls.created.push(issue);
       return { number: 9, url: "" };
@@ -81,10 +82,23 @@ describe("reconcile", () => {
     expect(tracker.calls.comments).toHaveLength(0);
   });
 
+  it("reports high advisories without opening or commenting on an issue", () => {
+    const highOnly = list.filter((a) => a.severity === "high");
+    expect(renderAdvisories(highOnly)).toContain("high: zod");
+    for (const issues of [[], [{ number: 3, title: ISSUE_TITLE }]]) {
+      const tracker = fakeTracker(issues);
+      expect(reconcile({ list: highOnly, tracker, log })).toBe("nothing");
+      expect(tracker.calls.created).toHaveLength(0);
+      expect(tracker.calls.comments).toHaveLength(0);
+    }
+  });
+
   it("opens one needs-triage issue whose body passes check:follow-ups", () => {
     const tracker = fakeTracker();
     expect(reconcile({ list, tracker, log, runUrl: "https://example.test/run/1" })).toBe("opened");
     expect(tracker.calls.created).toHaveLength(1);
+    expect(tracker.calls.created[0].body).toContain("critical: evil");
+    expect(tracker.calls.created[0].body).not.toContain("high: zod");
     expect(tracker.calls.created[0].labels).toEqual(["needs-triage"]);
     expect(
       findIssueProblems({ number: 0, title: ISSUE_TITLE, body: issueBody(list) }).problems,
@@ -96,6 +110,24 @@ describe("reconcile", () => {
     expect(reconcile({ list, tracker, log })).toBe("commented");
     expect(tracker.calls.created).toHaveLength(0);
     expect(tracker.calls.comments[0][0]).toBe(3);
+    expect(tracker.calls.comments[0][1]).toContain("critical: evil");
+    expect(tracker.calls.comments[0][1]).not.toContain("high: zod");
+  });
+
+  it("opens a critical issue even when a legacy high advisory issue is open", () => {
+    const tracker = fakeTracker([
+      { number: 4625, title: "Dependencies carry a high or critical advisory" },
+    ]);
+    expect(reconcile({ list, tracker, log })).toBe("opened");
+    expect(tracker.calls.comments).toHaveLength(0);
+    expect(tracker.calls.created).toHaveLength(1);
+  });
+
+  it("updates an existing critical issue after it is relabeled", () => {
+    const tracker = fakeTracker([{ number: 4, title: ISSUE_TITLE, labels: ["ready-for-agent"] }]);
+    expect(reconcile({ list, tracker, log })).toBe("commented");
+    expect(tracker.calls.comments[0][0]).toBe(4);
+    expect(tracker.calls.created).toHaveLength(0);
   });
 });
 
