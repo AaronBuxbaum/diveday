@@ -351,7 +351,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       forecastLatitude: 12.4987,
       forecastLongitude: -70.0283,
       description:
-        "A sloping reef known for its sponges in many colors: elephant ears, tubes, vases, and baskets, with plate, and leaf corals between them. Turtles are often seen.",
+        "A sloping reef known for its sponges in many colors: elephant ears, tubes, vases, and baskets, with plate and leaf corals between them. Turtles are often seen.",
       marineLife: "Elephant-ear sponges · tube sponges · vase sponges · turtles",
       marineLifeDescription: "Sponges of many shapes on the slope, with turtles passing through.",
       difficultyLevel: "advanced",
@@ -513,7 +513,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       currentNote:
         "The slope runs to great depths, past the plan's floor. Dived as a drift, so carry an SMB.",
       divePlan:
-        "Drift along the slope no deeper than 30 m (100 ft), looking up now, and then, and ascend with the boat following your marker.",
+        "Drift along the slope no deeper than 30 m (100 ft), looking up now and then, and ascend with the boat following your marker.",
       fitTone: "demanding",
       fitNote:
         "A drift down a slope that runs to great depths. Look up for the rays and keep the gauge in view.",
