@@ -53,7 +53,7 @@ if (/const linkClass =\s*\n?\s*"[^"]*\btext-sm\b/.test(publicNav)) {
 // surface used to live in.
 const orders = read("src/app/shop/[shopSlug]/orders/_components/OrdersLedger.tsx");
 for (const [needle, label] of [
-  ["truncate text-base font-medium sm:w-56 sm:shrink-0", "orders person names"],
+  ["break-words text-base font-medium sm:w-56 sm:shrink-0 sm:truncate", "orders person names"],
   // Wraps on a phone rather than truncating (slice E3-6): eight reef trips in
   // one day clipped at the same character said the same thing eight times. The
   // 16px floor is what this guard is about and it did not move.

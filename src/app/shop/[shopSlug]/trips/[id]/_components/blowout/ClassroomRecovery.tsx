@@ -13,6 +13,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { formatDateTimeTz } from "@/lib/format";
+import { publicAppUrl } from "@/lib/notifications";
 import { publicRecoveryActivityRequestPath } from "@/lib/public-routes";
 import {
   createClassroomActivityAction,
@@ -42,6 +43,7 @@ export function ClassroomRecovery({
   contactPhone: string | null;
   t: StaffTranslator;
 }) {
+  const publicOrigin = publicAppUrl();
   const action = transitionClassroomActivityAction.bind(null, shopSlug, tripId);
   const form = (
     activity: Page["classroomActivities"][number],
@@ -141,10 +143,11 @@ export function ClassroomRecovery({
                   activity.status === "scheduled" && allocation?.participant.status === "confirmed";
                 const facts = offer?.snapshot;
                 const replyPath =
+                  publicOrigin &&
                   dateRequestsEnabled &&
                   activity.status === "scheduled" &&
                   activity.startsAt > nowDate()
-                    ? publicRecoveryActivityRequestPath(shopSlug, activity.id)
+                    ? `${publicOrigin}${publicRecoveryActivityRequestPath(shopSlug, activity.id)}`
                     : contactEmail
                       ? mailtoHref(contactEmail)
                       : contactPhone

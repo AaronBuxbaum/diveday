@@ -310,6 +310,7 @@
     "totalInvalid": "Enter valid amounts"
   },
   "localDue": {
+    "gross": "Total due",
     "open": "Amount due at the shop",
     "help": "Record the full total only after money is received. DiveDay does not charge a card.",
     "record": "Record payment received",

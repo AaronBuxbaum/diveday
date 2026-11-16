@@ -227,7 +227,7 @@ export function PurchaseForm({
           />
         </Field>
         <p className="text-base font-medium">
-          {words.gross}:{" "}
+          {due ? words.grossDue : words.gross}:{" "}
           <output className="tabular-nums">
             {total === null ? words.totalInvalid : formatMoneyCents(total, currency, locale)}
           </output>

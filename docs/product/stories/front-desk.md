@@ -137,6 +137,7 @@ As Chloe, I can arrange a separate classroom activity, prepare offers and confir
 **Done when**
 - Staff confirm the room and coordinator arrangements; time, location and the shop’s place limit are explicit.
 - Prepared offers, sent messages, confirmed places and original refunds remain distinct facts.
+- Prepared message inquiry links use the canonical absolute public URL so they work when copied into email or text; unavailable origins fall back to shop contact.
 - A public request is an unassigned inquiry; it does not identify a diver or allocate a place.
 - Concurrent confirmations cannot exceed the limit; retries never revive a canceled place.
 - Erasure leaves anonymous promised places held until staff explicitly cancel them.

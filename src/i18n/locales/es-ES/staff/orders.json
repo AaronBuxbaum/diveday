@@ -310,6 +310,7 @@
     "totalInvalid": "Ingresa importes válidos"
   },
   "localDue": {
+    "gross": "Total pendiente",
     "open": "Importe pendiente en el centro",
     "help": "Registra el total completo solo después de recibir el dinero. DiveDay no cobra tarjetas.",
     "record": "Registrar pago recibido",

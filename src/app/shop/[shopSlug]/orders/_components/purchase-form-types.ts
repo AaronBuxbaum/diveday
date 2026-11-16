@@ -20,6 +20,7 @@ export type PurchaseWords = {
   taxHint: string;
   tip: string;
   gross: string;
+  grossDue: string;
   add: string;
   remove: string;
   submit: string;

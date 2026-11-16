@@ -83,6 +83,7 @@ async function PurchasePanelBody({
         taxHint: t("orders.purchase.taxHint"),
         tip: t("orders.purchase.tip"),
         gross: t("orders.purchase.gross"),
+        grossDue: t("orders.localDue.gross"),
         add: t("orders.new.addItem"),
         remove: t("orders.new.removeItem"),
         submit: t("orders.purchase.submit"),

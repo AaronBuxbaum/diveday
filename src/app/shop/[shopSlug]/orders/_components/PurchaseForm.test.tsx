@@ -20,7 +20,8 @@ const words: PurchaseWords = {
   tax: "Tax included",
   taxHint: "Recorded facts",
   tip: "Tip",
-  gross: "Total",
+  gross: "Total received",
+  grossDue: "Total due",
   add: "Add item",
   remove: "Remove item",
   submit: "Record received",
@@ -83,4 +84,17 @@ it("keeps paid walk-ins available without offering billing permission", () => {
   setup(false);
   expect(screen.queryByRole("radio", { name: "Amount due" })).not.toBeInTheDocument();
   expect(screen.getByRole("option", { name: "Walk-in" })).toBeInTheDocument();
+});
+
+it("labels an unpaid total as due and retains the received label when switching back", () => {
+  setup();
+  fireEvent.change(screen.getByLabelText("Price"), { target: { value: "25" } });
+  expect(screen.getByText("Total received:")).toBeVisible();
+  fireEvent.click(screen.getByRole("radio", { name: "Amount due" }));
+  expect(screen.getByText("Total due:")).toBeVisible();
+  expect(screen.queryByText("Total received:")).not.toBeInTheDocument();
+  expect(screen.getByText("$25.00")).toBeVisible();
+  fireEvent.click(screen.getByRole("radio", { name: "Already received" }));
+  expect(screen.getByText("Total received:")).toBeVisible();
+  expect(screen.getByText("$25.00")).toBeVisible();
 });
