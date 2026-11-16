@@ -1,3 +1,5 @@
+import type { AppDb } from "@/db/client";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { MAX_SITE_IMAGES } from "@/features/dive-sites";
 import { storeDiveSiteImage } from "@/lib/storage";
 import {
@@ -46,7 +48,8 @@ export type DiveSitePhotos = {
 
 export type DiveSitePhotoResult =
   | { ok: true; photos: DiveSitePhotos }
-  | { ok: false; reason: "not_configured" | "rejected" };
+  /** `stored` is what the batch had already put in storage: nothing references it, so the caller deletes it. */
+  | { ok: false; reason: "not_configured" | "rejected"; stored: string[] };
 
 /** What a site already holds, so an edit can keep, replace, or drop each photo. */
 export type ExistingDiveSitePhotos = {
@@ -103,7 +106,7 @@ export async function uploadDiveSitePhotos(
   // Checked before a single byte is uploaded: refusing after storing four
   // photos would leave orphaned objects nothing references.
   if (keptGallery.length + newGalleryFiles.length > MAX_SITE_IMAGES) {
-    return { ok: false, reason: "rejected" };
+    return { ok: false, reason: "rejected", stored: [] };
   }
 
   // The landmark list as posted, before `parseDiveSiteLandmarks` drops a
@@ -144,7 +147,11 @@ export async function uploadDiveSitePhotos(
     // One unconfigured deployment explains every failure in the batch, so it
     // wins over a per-file rejection when both are present.
     const unconfigured = results.some((result) => !result.ok && result.reason === "not_configured");
-    return { ok: false, reason: unconfigured ? "not_configured" : failure.reason };
+    return {
+      ok: false,
+      reason: unconfigured ? "not_configured" : failure.reason,
+      stored: results.flatMap((result) => (result.ok && result.url ? [result.url] : [])),
+    };
   }
 
   const keepOrDrop = (
@@ -221,4 +228,44 @@ export function supersededDiveSitePhotos(
   ]
     .filter((url): url is string => Boolean(url))
     .filter((url) => !stillReferenced.has(url));
+}
+
+/**
+ * Blob objects this save stored: every photo in `after` that `before` did not
+ * already hold. When the row is then refused (the name is taken, the site is
+ * gone) nothing references them, and the form comes back with its file inputs
+ * empty, so the caller queues each for deletion rather than leave a copy behind
+ * for every retry.
+ */
+export function addedDiveSitePhotos(
+  before: ExistingDiveSitePhotos | undefined,
+  after: DiveSitePhotos,
+): string[] {
+  const held = new Set(
+    before
+      ? [
+          before.satelliteImageUrl,
+          before.routeImageUrl,
+          ...before.imageUrls,
+          ...landmarkPhotoUrls(before.landmarks),
+        ].filter((url): url is string => Boolean(url))
+      : [],
+  );
+  return [
+    after.satelliteImageUrl,
+    after.routeImageUrl,
+    ...after.imageUrls,
+    ...landmarkPhotoUrls(after.landmarks),
+  ].filter((url): url is string => Boolean(url) && !held.has(url as string));
+}
+
+/** Hand photos a refused save stored to the deletion ledger, which retries what storage refuses. */
+export async function abandonDiveSitePhotos(
+  db: AppDb,
+  shopId: string,
+  urls: readonly string[],
+): Promise<void> {
+  for (const url of urls) {
+    await queueAndAttemptMediaDeletion(db, { shopId, kind: "dive_site_photo", url });
+  }
 }
