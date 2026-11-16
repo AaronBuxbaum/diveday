@@ -2144,6 +2144,12 @@
   **Rehearsal** until the fly-safe look-back plus a day has passed (`rehearsalMayClear`). Not the
   **Dive day (north star)**: that one is a shop's day, counted by roll call for the founder
   metrics, and never a diver's history.
+- **Lapsed regular** — a diver with three or more **dive days** with the shop, counted the way the
+  recap counts them (imported visits merged, a morning and an afternoon boat one day), and none in
+  the last twelve months (`isLapsedRegular`, `LAPSED_REGULAR_MIN_DAYS`, `LAPSED_REGULAR_MONTHS` in
+  `src/lib/prior-visits.ts`; issue #4246). A view on the staff divers roster, "Lapsed regulars";
+  staff decide whether to reach out, and nothing is sent because someone is on it. Narrower than
+  "Not back in 12 months", which takes anyone who dived once.
 - **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
   `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.

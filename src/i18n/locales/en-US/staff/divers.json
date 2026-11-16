@@ -215,6 +215,7 @@
       "total": "{count, plural, one {# diver} other {# divers}}"
     },
     "viewNotBack": "Not back in 12 months",
+    "viewLapsedRegulars": "Lapsed regulars",
     "lastDivedGroup": "Most recent dive first",
     "lastDived": "last dived {date}",
     "neverDived": "no dives yet",
