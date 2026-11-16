@@ -17,10 +17,10 @@
     "calledBy": "Called by {name} · {when}",
     "notified": "Notified",
     "rebooked": "Rebooked",
-    "rebookedDetail": "hold a seat on another departure",
-    "unresolved": "Unresolved",
-    "unresolvedDetail": "no new seat yet, so the blow-out isn’t over",
-    "allResolvedDetail": "everyone has somewhere to go",
+    "rebookedDetail": "explicitly linked replacement bookings",
+    "unresolved": "Needs follow-up",
+    "unresolvedDetail": "no recovery decision recorded yet",
+    "allResolvedDetail": "recovery follow-up recorded for everyone",
     "table": {
       "diver": "Diver",
       "message": "Message",
@@ -36,7 +36,7 @@
     "callThem": "Call {phone}",
     "noOffers": "No qualifying dates, so the schedule was sent instead",
     "rebookedBadge": "Rebooked",
-    "unresolvedBadge": "Unresolved",
+    "unresolvedBadge": "Follow-up needed",
     "noPayment": "No payment taken",
     "heldHeading": "{count, plural, one {# payment is still held.} other {# payments are still held.}}",
     "heldRelease": "Card payments go back to the card. Anything taken at the counter is yours to return.",
@@ -81,5 +81,23 @@
     "confirmTitle": "Cancel these departures?",
     "confirmButton": "{departures, plural, one {Cancel # departure} other {Cancel # departures}}, {divers, plural, one {# diver} other {# divers}}",
     "changeSelection": "Change the selection"
+  },
+  "recovery": {
+    "boundary": "Follow-up records the diver’s choice. Refunds and messages keep their own status.",
+    "outcome": "Recovery decision",
+    "pending": "Follow-up needed",
+    "contacted": "Contacted; awaiting decision",
+    "declined": "No replacement requested",
+    "rebooked": "Replacement booking confirmed",
+    "booking": "Existing replacement booking",
+    "chooseBooking": "Select an existing booking",
+    "save": "Save follow-up",
+    "history": "Follow-up history",
+    "bookingUnavailable": "The linked booking is no longer available for recovery. Check the diver’s plans.",
+    "saved": "Recovery follow-up saved.",
+    "stale": "Someone updated this diver’s follow-up. Review the latest history and try again.",
+    "invalid": "Follow-up was not saved. Check the selection and the diver’s existing bookings.",
+    "busy": "Recovery is being updated. Try again in a moment.",
+    "forDiver": "Record follow-up for {name}"
   }
 }

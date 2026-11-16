@@ -1,3 +1,4 @@
+import { partitionImportRows } from "./import-identity";
 /**
  * Contact CSV importer — the intake side of the portability wedge
  * (docs/product/competitive-strategy.md; the export ADR
@@ -627,6 +628,7 @@ export function widestRow(grid: readonly (readonly string[])[]): number {
  * `ReadinessBlockerCode` in `src/lib/readiness.ts`).
  */
 export type ImportIssueCode =
+  | "manual_identity_conflict"
   | "email_invalid"
   | "card_marked_unverified"
   | "specialty_not_gated"
@@ -1085,6 +1087,8 @@ export type ColumnMapping = {
   columnIndex: number;
   /** Matched by a Claude assist rather than an alias (`ImportAssist`). */
   assisted?: true;
+  /** Explicitly matched by staff; the whole file loses trusted evidence authority. */
+  manual?: true;
 };
 
 /**
@@ -1677,6 +1681,16 @@ export const ASSIST_MAPPABLE_FIELDS: readonly ImportField[] = IMPORT_FIELDS.filt
   (field) => !ASSIST_UNMAPPABLE_FIELDS.has(field),
 );
 
+/** Explicit staff mapping may identify customers, but cannot supply gate evidence. */
+export const MANUAL_MAPPABLE_FIELDS: readonly ImportField[] = [
+  "full_name",
+  "first_name",
+  "last_name",
+  "email",
+  ...ASSIST_MAPPABLE_FIELDS,
+];
+export type ManualImportMapping = Readonly<Record<string, ImportField>>;
+
 /** The fields that make a card; a file whose card column came from an assist imports pending. */
 const CARD_FIELDS: ReadonlySet<ImportField> = new Set<ImportField>([
   "certification_agency",
@@ -1740,7 +1754,11 @@ function assistedLevel(
  * assist's suggestion. A payment-method header is left unmapped and a medical
  * one ignored before any assist is consulted.
  */
-function mapImportHeaders(headers: readonly string[], assist: ImportAssist | undefined) {
+function mapImportHeaders(
+  headers: readonly string[],
+  assist: ImportAssist | undefined,
+  manual: ManualImportMapping | undefined,
+) {
   const mapping: ColumnMapping[] = [];
   const unmappedColumns: string[] = [];
   const ignoredMedicalColumns: string[] = [];
@@ -1767,6 +1785,19 @@ function mapImportHeaders(headers: readonly string[], assist: ImportAssist | und
       ignoredMedicalColumns.push(header);
       return;
     }
+    const chosen = manual && Object.hasOwn(manual, header) ? manual[header] : undefined;
+    // A later canonical column still owns its field: an earlier manual choice
+    // must never steal email/name from the source system's recognized header.
+    if (
+      chosen &&
+      MANUAL_MAPPABLE_FIELDS.includes(chosen) &&
+      !claimedFields.has(chosen) &&
+      !headers.some((raw) => HEADER_ALIASES[chosen].includes(normalizeImportKey(raw)))
+    ) {
+      claimedFields.add(chosen);
+      mapping.push({ field: chosen, header, columnIndex, manual: true });
+      return;
+    }
     const suggested = assistedField(assist, header, claimedFields);
     if (suggested) {
       claimedFields.add(suggested);
@@ -1777,8 +1808,10 @@ function mapImportHeaders(headers: readonly string[], assist: ImportAssist | und
   });
   // A card column Claude matched is not the old system's word: no card from
   // this file lands verified (see `ImportAssist`).
-  const assistedCards = mapping.some((entry) => entry.assisted && CARD_FIELDS.has(entry.field));
-  return { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards };
+  const manuallyMapped = mapping.some((entry) => entry.manual);
+  const assistedCards =
+    manuallyMapped || mapping.some((entry) => entry.assisted && CARD_FIELDS.has(entry.field));
+  return { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards, manuallyMapped };
 }
 
 /**
@@ -1829,6 +1862,12 @@ function waiverClaim(
   };
 }
 
+type ContactImportOptions = {
+  today: CalendarDate;
+  assist?: ImportAssist;
+  manual?: ManualImportMapping;
+};
+
 export function prepareContactImport(
   text: string,
   /**
@@ -1837,7 +1876,7 @@ export function prepareContactImport(
    * never filed as a visit. `assist` is a Claude assist's mapping for the
    * headers no alias claims (see {@link ImportAssist}).
    */
-  { today, assist }: { today: CalendarDate; assist?: ImportAssist },
+  { today, assist, manual }: ContactImportOptions,
 ): PreparedImport {
   const empty: PreparedImport = {
     mapping: [],
@@ -1901,10 +1940,8 @@ export function prepareContactImport(
     }
   }
 
-  const { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards } = mapImportHeaders(
-    headers,
-    assist,
-  );
+  const { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards, manuallyMapped } =
+    mapImportHeaders(headers, assist, manual);
 
   const indexOf = (field: ImportField) =>
     mapping.find((entry) => entry.field === field)?.columnIndex ?? -1;
@@ -2173,7 +2210,9 @@ export function prepareContactImport(
       finSize: finCell,
     };
 
-    const waiver = waiverClaim((field) => at(cells, field), { today, sourceLabel, issues });
+    const waiver = manuallyMapped
+      ? null
+      : waiverClaim((field) => at(cells, field), { today, sourceLabel, issues });
 
     // Date of birth, if the file carries one. Dropped rather than guessed when
     // it isn't a real calendar date or isn't plausible: the column feeds a
@@ -2353,9 +2392,7 @@ export function prepareContactImport(
       issues,
     };
   });
-
-  const importable = rows.filter((row) => row.action === "import");
-  const merged = rows.filter((row) => row.action === "merge");
+  const { importable, merged } = partitionImportRows(rows, manuallyMapped);
   // Evidence counts span both, because a merge row's whole purpose is its cards.
   const written = [...importable, ...merged];
   return {

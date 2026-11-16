@@ -8,7 +8,7 @@ import {
   type ImportField,
   type ImportIssueCode,
 } from "@/lib/import";
-import type { ImportActionErrorCode } from "./actions";
+import { type ImportActionErrorCode, previewContactImportAction } from "./actions";
 import { ImportWizard } from "./ImportWizard";
 
 // Import/export is security- and data-sensitive (AGENTS.md) — this is the
@@ -32,7 +32,10 @@ vi.mock("next/navigation", () => ({ usePathname }));
 
 // The wizard's own server action — never invoked in this test, and its
 // module pulls in the DB layer, so it's stubbed rather than imported for real.
-vi.mock("./actions", () => ({ importContactsAction: vi.fn() }));
+vi.mock("./actions", () => ({
+  importContactsAction: vi.fn(),
+  previewContactImportAction: vi.fn(),
+}));
 
 afterEach(() => {
   cleanup();
@@ -66,6 +69,7 @@ const ISSUE_CODES: ImportIssueCode[] = [
   "payment_history_date_unreadable",
   "payment_history_no_date",
   "no_name",
+  "manual_identity_conflict",
   "merged_duplicate",
   "no_email_new_record",
   "size_too_long",
@@ -82,6 +86,7 @@ const ERROR_CODES: ImportActionErrorCode[] = [
   "not_owner_or_manager",
   "csv_required",
   "no_importable_rows",
+  "invalid_mapping",
 ];
 
 const COPY = {
@@ -89,6 +94,22 @@ const COPY = {
   chooseFile: "Choose a file",
   chooseDifferentFile: "Choose a different file",
   columnTitle: "Column: {header}",
+  fileReadFailed: "Could not read this file. Choose it again.",
+  checkMatches: "Check roster matches",
+  checkingMatches: "Checking roster",
+  matchesStale: "Roster matches are checked again when you import.",
+  matchFailed: "Could not check the roster.",
+  outcomes: {
+    conflict: "Name conflict",
+    create: "New diver",
+    update: "Update existing diver",
+    merge: "Merge",
+    skip: "Skip",
+  },
+  manualMapping: "Match columns",
+  ignoreColumn: "Leave out",
+  manualEvidenceNotice: "Cards need review; collect a new waiver.",
+  recoveryDownload: "Download rows to correct",
   fieldLabels: Object.fromEntries(IMPORT_FIELDS.map((field) => [field, field])) as Record<
     ImportField,
     string
@@ -164,6 +185,8 @@ const COPY = {
     cardsNitroxOther: "{count} nitrox",
     rowsMergedNote: " ({count} merged)",
     cardsSkippedNote: " ({count} skipped)",
+    identityConflictsOne: "{count} name conflict",
+    identityConflictsOther: "{count} name conflicts",
     rowsSkippedNote: " ({count} rows skipped)",
     cardsHeldByAnother: "{count} cards already held by another diver",
     specialtyGateNote: "Specialty cards need review",
@@ -383,4 +406,102 @@ describe("a Claude mapping that comes back after the file changed", () => {
     expect(container.querySelector<HTMLInputElement>('input[name="csv"]')?.value).toBe(second);
     expect(container.querySelector('input[name="assist"]')).toBeNull();
   });
+});
+
+describe("manual mapping without an assist", () => {
+  it("rescues unknown customer headers, posts the same map as the preview, and resets it for another file", async () => {
+    render(
+      <ImportWizard
+        diversHref="/shop/blue-mantis/divers"
+        intro="Upload"
+        copy={COPY}
+        locale="en-US"
+        timeZone="America/New_York"
+      />,
+    );
+    const input = screen.getByLabelText(/choose a file/i, { selector: "input" });
+    await chooseFile(input, "Guest,Mailbox\nLocal Diver,local@example.com");
+    await userEvent.selectOptions(await screen.findByLabelText("Guest"), "full_name");
+    await userEvent.selectOptions(screen.getByLabelText("Mailbox"), "email");
+    expect(screen.getByText("Local Diver")).toBeInTheDocument();
+    expect(screen.getByText("local@example.com")).toBeInTheDocument();
+    expect(document.querySelector<HTMLInputElement>('input[name="manual"]')?.value).toBe(
+      '{"Guest":"full_name","Mailbox":"email"}',
+    );
+    expect(screen.getByText(COPY.manualEvidenceNotice)).toBeInTheDocument();
+    await chooseFile(input, CSV, "corrected.csv");
+    await waitFor(() => expect(screen.queryByLabelText("Guest")).not.toBeInTheDocument());
+    expect(document.querySelector('input[name="manual"]')).toBeNull();
+    expect(screen.getByText("Jane Diver")).toBeInTheDocument();
+  });
+});
+
+it("clears the old preview immediately while a corrected file is unreadable", async () => {
+  render(
+    <ImportWizard
+      diversHref="/shop/blue-mantis/divers"
+      intro="Upload"
+      copy={COPY}
+      locale="en-US"
+      timeZone="America/New_York"
+    />,
+  );
+  const input = screen.getByLabelText(/choose a file/i, { selector: "input" });
+  await chooseFile(input, CSV);
+  expect(await screen.findByText("Jane Diver")).toBeInTheDocument();
+  const unreadable = new File(["unreadable"], "corrected.csv", { type: "text/csv" });
+  Object.defineProperty(unreadable, "text", {
+    value: () => Promise.reject(new Error("read failed")),
+  });
+  await userEvent.upload(input, unreadable);
+  await waitFor(() => expect(screen.queryByText("Jane Diver")).not.toBeInTheDocument());
+  expect(document.querySelector('input[name="csv"]')).toBeNull();
+  expect(await screen.findByText(COPY.fileReadFailed)).toBeInTheDocument();
+});
+
+it("drops a roster snapshot that finishes after the file changes", async () => {
+  let resolve!: (value: Awaited<ReturnType<typeof previewContactImportAction>>) => void;
+  vi.mocked(previewContactImportAction).mockReturnValueOnce(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  render(
+    <ImportWizard
+      diversHref="/shop/blue-mantis/divers"
+      intro="Upload"
+      copy={COPY}
+      locale="en-US"
+      timeZone="America/New_York"
+    />,
+  );
+  const input = screen.getByLabelText(/choose a file/i, { selector: "input" });
+  await chooseFile(input, CSV);
+  await userEvent.click(screen.getByRole("button", { name: COPY.checkMatches }));
+  await chooseFile(input, "full_name,email\nOther Diver,other@example.com", "other.csv");
+  resolve({ status: "ready", rows: [{ rowNumber: 1, outcome: "update" }] });
+  await waitFor(() => expect(screen.getByText("Other Diver")).toBeInTheDocument());
+  expect(screen.queryByText("Update existing diver")).not.toBeInTheDocument();
+});
+
+it("offers roster conflict rows for correction and excludes them from the submit count", async () => {
+  vi.mocked(previewContactImportAction).mockResolvedValueOnce({
+    status: "ready",
+    rows: [{ rowNumber: 1, outcome: "conflict" }],
+  });
+  render(
+    <ImportWizard
+      diversHref="/shop/blue-mantis/divers"
+      intro="Upload"
+      copy={COPY}
+      locale="en-US"
+      timeZone="America/New_York"
+    />,
+  );
+  await chooseFile(screen.getByLabelText(/choose a file/i, { selector: "input" }), CSV);
+  await userEvent.click(screen.getByRole("button", { name: COPY.checkMatches }));
+  await screen.findByText("Name conflict");
+  expect(screen.getByRole("button", { name: "Import 0 divers" })).toBeDisabled();
+  const link = screen.getByRole("link", { name: COPY.recoveryDownload });
+  expect(decodeURIComponent(link.getAttribute("href") ?? "")).toContain("manual_identity_conflict");
 });

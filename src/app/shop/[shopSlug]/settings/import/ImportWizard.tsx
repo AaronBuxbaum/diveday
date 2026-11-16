@@ -5,13 +5,25 @@ import type { ReactNode } from "react";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { FormStatus } from "@/components/ui/form";
+import { ChoiceFieldset, controlClass, Field, FormStatus } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 import { importAssistSample } from "@/lib/assists/import-mapping";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { type ImportAssist, type PreparedImport, prepareContactImport } from "@/lib/import";
-import { type ImportActionState, importContactsAction } from "./actions";
+import {
+  type ImportAssist,
+  type ImportField,
+  MANUAL_MAPPABLE_FIELDS,
+  type ManualImportMapping,
+  type PreparedImport,
+  prepareContactImport,
+} from "@/lib/import";
+import { importRecoveryCsv, manualImportColumns } from "@/lib/import-manual-mapping";
+import {
+  type ImportActionState,
+  importContactsAction,
+  previewContactImportAction,
+} from "./actions";
 import { ImportPreview, PREVIEW_LIMIT } from "./ImportPreview";
 import { ImportResult } from "./ImportResult";
 import type { ImportWizardCopy } from "./import-wizard-copy";
@@ -55,11 +67,17 @@ export function ImportWizard({
   const [state, formAction] = useActionState<ImportActionState, FormData>(importContactsAction, {
     status: "idle",
   });
+  const [fileReadFailed, setFileReadFailed] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [csvText, setCsvText] = useState("");
   const [prepared, setPrepared] = useState<PreparedImport | null>(null);
   // Claude's mapping for this file, once asked for, and whether asking found
   // nothing. Both reset with the file.
+  const [matches, setMatches] = useState<Awaited<
+    ReturnType<typeof previewContactImportAction>
+  > | null>(null);
+  const [checkingMatches, startCheckingMatches] = useTransition();
+  const [manual, setManual] = useState<ManualImportMapping>({});
   const [mapped, setMapped] = useState<ImportAssist | null>(null);
   const [mapNothing, setMapNothing] = useState(false);
   const [mapping, startMapping] = useTransition();
@@ -88,9 +106,12 @@ export function ImportWizard({
   useEffect(() => {
     fileGeneration.current += 1;
     setFileName(null);
+    setFileReadFailed(false);
     setCsvText("");
     setPrepared(null);
     setMapped(null);
+    setManual({});
+    setMatches(null);
     setMapNothing(false);
     if (inputRef.current) inputRef.current.value = "";
   }, [pathname]);
@@ -98,13 +119,28 @@ export function ImportWizard({
   async function onFile(file: File | undefined) {
     if (!file) return;
     const generation = ++fileGeneration.current;
-    const text = await file.text();
+    setFileName(file.name);
+    setPrepared(null);
+    setCsvText("");
+    setMapped(null);
+    setManual({});
+    setMatches(null);
+    setFileReadFailed(false);
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      if (generation === fileGeneration.current) setFileReadFailed(true);
+      return;
+    }
     if (generation !== fileGeneration.current) return;
     setFileName(file.name);
     setCsvText(text);
     // The preview's today; the commit re-reads it on the server.
     setPrepared(prepareContactImport(text, { today: calendarDateInTimezone(nowDate(), timeZone) }));
     setMapped(null);
+    setManual({});
+    setMatches(null);
     setMapNothing(false);
   }
 
@@ -135,18 +171,69 @@ export function ImportWizard({
         setMapNothing(true);
         return;
       }
+      fileGeneration.current += 1;
       setMapped(answer);
+      setMatches(null);
       // The same preparation the confirm re-runs on the server with this mapping.
       setPrepared(
         prepareContactImport(text, {
           today: calendarDateInTimezone(nowDate(), timeZone),
           assist: answer,
+          manual,
         }),
       );
     });
   }
 
-  const showResult = state.status === "done";
+  function checkMatches() {
+    const generation = fileGeneration.current;
+    const data = new FormData();
+    data.set("csv", csvText);
+    data.set("manual", JSON.stringify(manual));
+    if (mapped) data.set("assist", JSON.stringify(mapped));
+    startCheckingMatches(async () => {
+      try {
+        const result = await previewContactImportAction(data);
+        if (generation === fileGeneration.current) setMatches(result);
+      } catch {
+        if (generation === fileGeneration.current) setMatches({ status: "error" });
+      }
+    });
+  }
+
+  function matchColumn(header: string, field: string) {
+    // A revised preview is a different request, including while a prior import is finishing.
+    fileGeneration.current += 1;
+    const next = { ...manual };
+    if (field) next[header] = field as ImportField;
+    else delete next[header];
+    setManual(next);
+    setMatches(null);
+    setPrepared(
+      prepareContactImport(csvText, {
+        today: calendarDateInTimezone(nowDate(), timeZone),
+        assist: mapped ?? undefined,
+        manual: next,
+      }),
+    );
+  }
+
+  const showResult = state.status === "done" && state.requestId === String(fileGeneration.current);
+  const columns =
+    prepared && (!prepared.fatal || prepared.fatal.code === "no_name_column")
+      ? manualImportColumns(csvText)
+      : [];
+  const recovery =
+    prepared && !prepared.fatal
+      ? importRecoveryCsv(
+          csvText,
+          prepared,
+          matches?.status === "ready"
+            ? matches.rows.filter((row) => row.outcome === "conflict").map((row) => row.rowNumber)
+            : [],
+        )
+      : null;
+  const hasManual = prepared?.mapping.some((entry) => entry.manual) ?? false;
   const previewRows = prepared?.rows.slice(0, PREVIEW_LIMIT) ?? [];
   const hiddenRows = (prepared?.rows.length ?? 0) - previewRows.length;
 
@@ -171,10 +258,51 @@ export function ImportWizard({
           not news about the page — so it renders in the chooser's own row
           rather than as a banner (see `FormStatus`, components/ui/form.tsx). */}
       <FormStatus tone="danger" className="mt-3">
-        {prepared?.fatal
-          ? fill(copy.errors[prepared.fatal.code], prepared.fatal.params ?? {})
-          : undefined}
+        {fileReadFailed
+          ? copy.fileReadFailed
+          : prepared?.fatal
+            ? fill(copy.errors[prepared.fatal.code], prepared.fatal.params ?? {})
+            : undefined}
       </FormStatus>
+
+      {/* The source column carries its own correction, above the preview it changes. */}
+      {columns.length > 0 ? (
+        <ChoiceFieldset className="mt-4" legend={copy.manualMapping}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {columns.map((header) => (
+              <Field key={header} label={header}>
+                <select
+                  className={controlClass}
+                  value={manual[header] ?? ""}
+                  onChange={(event) => matchColumn(header, event.target.value)}
+                >
+                  <option value="">{copy.ignoreColumn}</option>
+                  {MANUAL_MAPPABLE_FIELDS.filter(
+                    (field) =>
+                      !prepared?.mapping.some(
+                        (entry) => entry.field === field && entry.header !== header,
+                      ),
+                  ).map((field) => (
+                    <option key={field} value={field}>
+                      {copy.fieldLabels[field]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ))}
+          </div>
+        </ChoiceFieldset>
+      ) : null}
+      {hasManual ? <p className="mt-3 text-sm text-warning">{copy.manualEvidenceNotice}</p> : null}
+      {recovery ? (
+        <a
+          className={buttonClass({ variant: "ghost", className: "mt-3" })}
+          href={`data:text/csv;charset=utf-8,${encodeURIComponent(recovery)}`}
+          download="diveday-import-corrections.csv"
+        >
+          {copy.recoveryDownload}
+        </a>
+      ) : null}
 
       {canMap && assist ? (
         <div className="mt-4 grid gap-1">
@@ -196,15 +324,35 @@ export function ImportWizard({
         </div>
       ) : null}
 
+      {prepared && !prepared.fatal && !showResult ? (
+        <div className="mt-4 space-y-2">
+          <button
+            type="button"
+            disabled={checkingMatches}
+            onClick={checkMatches}
+            className={buttonClass({ variant: "secondary", busy: checkingMatches })}
+          >
+            {checkingMatches ? copy.checkingMatches : copy.checkMatches}
+          </button>
+          <p className="text-xs text-muted">{copy.matchesStale}</p>
+          <FormStatus tone="danger">
+            {matches?.status === "error" ? copy.matchFailed : undefined}
+          </FormStatus>
+        </div>
+      ) : null}
+
       {prepared && !prepared.fatal ? (
         <ImportPreview
           prepared={prepared}
+          outcomes={matches?.status === "ready" ? matches.rows : undefined}
           previewRows={previewRows}
           hiddenRows={hiddenRows}
           copy={copy}
           showResult={showResult}
           formAction={formAction}
           csvText={csvText}
+          manual={manual}
+          requestId={String(fileGeneration.current)}
           state={state}
           assist={
             assist && mapped

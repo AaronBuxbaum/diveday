@@ -11,6 +11,7 @@ export const EXPORT_PURPOSE_KEYS = {
   "cards.csv": "settings.export.filePurposes.cards",
   "certification_junior_reviews.csv": "settings.export.filePurposes.certification_junior_reviews",
   "trips.csv": "settings.export.filePurposes.trips",
+  "disruption_recovery_events.csv": "settings.export.filePurposes.disruption_recovery_events",
   "trip_change_events.csv": "settings.export.filePurposes.trip_change_events",
   "trip_stage_events.csv": "settings.export.filePurposes.trip_stage_events",
   "safety_drills.csv": "settings.export.filePurposes.safety_drills",

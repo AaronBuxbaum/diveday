@@ -1276,6 +1276,13 @@ const rows = [
     why: "who wrote the shift",
   },
   {
+    table: "disruption_recovery_events",
+    column: "actor_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who recorded recovery follow-up; names resolve live and erasure anonymizes the actor",
+  },
+  {
     table: "trip_blowouts",
     column: "called_by_person_id",
     kind: "actor",

@@ -8,12 +8,12 @@
 
 import { createHash } from "node:crypto";
 import { strToU8, zipSync } from "fflate";
-import { opensAsFormula } from "./csv-formula";
+import { buildCsv, type CsvValue } from "./csv";
+
+export { buildCsv, type CsvValue, csvCell } from "./csv";
+
 import { cachedFormatter } from "./intl-cache";
 import { isManagedStorageUrl, mediaStorageConfigFromEnvironment, readS3Object } from "./storage";
-
-/** Everything a CSV cell can hold. Dates serialize as ISO 8601 UTC. */
-export type CsvValue = string | number | boolean | Date | null | undefined;
 
 export type ExportTable = {
   /** File name inside the bundle, e.g. "people.csv". */
@@ -47,6 +47,8 @@ export const EXPORT_FILE_NOTES = {
     "Staff sightings of junior or full card status, including corrections.",
   "trips.csv":
     "Every trip ever scheduled, including canceled ones, with predicted conditions; its sites are in trip_dives.csv.",
+  "disruption_recovery_events.csv":
+    "Staff recovery follow-up for canceled departures, oldest first. Original and replacement booking ids link to bookings.csv. Outcomes record follow-up only, independently of notification delivery, refunds, or boarding readiness. Corrections append; actor ids resolve through people.csv.",
   "trip_change_events.csv":
     "The public-safe change ledger for departures: what meeting point or conditions snapshot changed, the before and after values, broad source, and timestamp. No readiness, waiver, contact, or capability state is included.",
   "trip_stage_events.csv":
@@ -221,34 +223,6 @@ export const EXPORT_FILE_NOTES = {
 } as const;
 
 export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;
-
-/** Serialize one cell: empty for null/undefined, ISO for dates, RFC-4180 quoting. */
-export function csvCell(value: CsvValue): string {
-  if (value === null || value === undefined) return "";
-  if (value instanceof Date) return value.toISOString();
-  let text = typeof value === "string" ? value : String(value);
-  // Neutralize spreadsheet formulas (CSV injection): a *string* cell that
-  // opens as a formula executes when the export opens in Excel or LibreOffice
-  // — RFC-4180 quoting does not prevent it — and names on a public booking
-  // are diver-controlled. The apostrophe is the spreadsheet "treat as text"
-  // marker; the bundle README documents it. Numbers and phone-shaped strings
-  // stay untouched so amounts and E.164 numbers import intact.
-  if (typeof value === "string" && opensAsFormula(text)) text = `'${text}`;
-  // Quote only when needed: embedded quote, comma, or line break.
-  if (/[",\r\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
-  return text;
-}
-
-/** Serialize a table to RFC-4180 CSV (CRLF line endings, header row first). */
-export function buildCsv(header: string[], rows: CsvValue[][]): string {
-  for (const row of rows) {
-    if (row.length !== header.length) {
-      throw new Error(`csv row has ${row.length} cells; header has ${header.length}`);
-    }
-  }
-  const lines = [header, ...rows].map((row) => row.map(csvCell).join(","));
-  return `${lines.join("\r\n")}\r\n`;
-}
 
 /** "2026-07-22" in the shop's own timezone — the date a human would say it is. */
 export function exportDateStamp(now: Date, timezone: string): string {

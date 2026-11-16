@@ -5,7 +5,7 @@ import { FormStatus } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { fill, pluralForm } from "@/i18n/fill";
 import { formatCalendarDate } from "@/lib/calendar-date";
-import type { ImportIssue, PreparedImport } from "@/lib/import";
+import type { ImportIssue, ManualImportMapping, PreparedImport } from "@/lib/import";
 import type { ImportActionState } from "./actions";
 import type { ImportWizardCopy } from "./import-wizard-copy";
 
@@ -53,23 +53,29 @@ const issueTone: Record<"error" | "warning" | "info", string> = {
  */
 export function ImportPreview({
   prepared,
+  outcomes,
   previewRows,
   hiddenRows,
   copy,
   showResult,
   formAction,
   csvText,
+  manual,
+  requestId,
   state,
   assist,
   locale,
 }: {
   prepared: PreparedImport;
+  outcomes?: { rowNumber: number; outcome: "create" | "update" | "merge" | "skip" | "conflict" }[];
   previewRows: PreparedImport["rows"];
   hiddenRows: number;
   copy: ImportWizardCopy;
   showResult: boolean;
   formAction: (formData: FormData) => void;
   csvText: string;
+  manual?: ManualImportMapping;
+  requestId?: string;
   state: ImportActionState;
   /**
    * Claude's mapping for the columns the importer could not read (the
@@ -80,6 +86,7 @@ export function ImportPreview({
   /** The reader's locale, for the dates of bookings after today. */
   locale: string;
 }) {
+  const { conflictCount, importableCount } = previewImportCounts(prepared, outcomes);
   const anyAssisted = prepared.mapping.some((entry) => entry.assisted);
   // The count is the importer's own total; the rows are only for the list.
   const afterTodayCount = prepared.totals.bookingsAfterToday;
@@ -89,6 +96,7 @@ export function ImportPreview({
   const unlistedAfterToday = afterTodayCount - listedAfterToday.length;
   return (
     <div className="mt-6">
+      <ImportIdentityConflictNotice count={conflictCount} copy={copy} />
       <div className="flex flex-wrap gap-2">
         {prepared.mapping.map((entry) => (
           <span
@@ -261,6 +269,16 @@ export function ImportPreview({
                 {row.rowNumber}
               </Td>
               <Td>
+                {outcomes ? (
+                  <p className="text-xs text-muted">
+                    {
+                      copy.outcomes[
+                        outcomes.find((entry) => entry.rowNumber === row.rowNumber)?.outcome ??
+                          "skip"
+                      ]
+                    }
+                  </p>
+                ) : null}
                 {row.fullName || <span className="text-danger">{copy.table.noName}</span>}
                 {row.action === "skip" ? (
                   <span className="ms-2 rounded bg-danger-tint px-1.5 py-0.5 text-xs text-danger">
@@ -371,29 +389,95 @@ export function ImportPreview({
         // sixty rows sat between the two, so a banner above it answered a
         // tap the staffer had made a screenful below (see `FormStatus`,
         // components/ui/form.tsx).
-        <form action={formAction} className="mt-5 flex flex-wrap items-center gap-3">
-          <input type="hidden" name="csv" value={csvText} />
-          {assist && anyAssisted ? <input type="hidden" name="assist" value={assist.json} /> : null}
-          <SubmitButton
-            pendingLabel={copy.submitting}
-            disabled={prepared.totals.importable === 0}
-            className={buttonClass()}
-          >
-            {fill(
-              pluralForm(prepared.totals.importable, {
-                one: copy.submitOne,
-                other: copy.submitOther,
-              }),
-              { count: prepared.totals.importable },
-            )}
-          </SubmitButton>
-          <FormStatus tone="danger">
-            {state.status === "error"
-              ? fill(copy.errors[state.code], state.params ?? {})
-              : undefined}
-          </FormStatus>
-        </form>
+        <ImportConfirmForm
+          formAction={formAction}
+          csvText={csvText}
+          manual={manual}
+          requestId={requestId}
+          assist={assist}
+          anyAssisted={anyAssisted}
+          importableCount={importableCount}
+          copy={copy}
+          state={state}
+        />
       ) : null}
     </div>
   );
+}
+
+function ImportConfirmForm({
+  formAction,
+  csvText,
+  manual,
+  requestId,
+  assist,
+  anyAssisted,
+  importableCount,
+  copy,
+  state,
+}: {
+  formAction: (formData: FormData) => void;
+  csvText: string;
+  manual?: ManualImportMapping;
+  requestId?: string;
+  assist?: { json: string; suggested: string; pendingCards: string };
+  anyAssisted: boolean;
+  importableCount: number;
+  copy: ImportWizardCopy;
+  state: ImportActionState;
+}) {
+  return (
+    <form action={formAction} className="mt-5 flex flex-wrap items-center gap-3">
+      <input type="hidden" name="csv" value={csvText} />
+      <input type="hidden" name="requestId" value={requestId} />
+      {manual && Object.keys(manual).length > 0 ? (
+        <input type="hidden" name="manual" value={JSON.stringify(manual)} />
+      ) : null}
+      {assist && anyAssisted ? <input type="hidden" name="assist" value={assist.json} /> : null}
+      <SubmitButton
+        pendingLabel={copy.submitting}
+        disabled={importableCount === 0}
+        className={buttonClass()}
+      >
+        {fill(
+          pluralForm(importableCount, {
+            one: copy.submitOne,
+            other: copy.submitOther,
+          }),
+          { count: importableCount },
+        )}
+      </SubmitButton>
+      <FormStatus tone="danger">
+        {state.status === "error" ? fill(copy.errors[state.code], state.params ?? {}) : undefined}
+      </FormStatus>
+    </form>
+  );
+}
+
+function ImportIdentityConflictNotice({ count, copy }: { count: number; copy: ImportWizardCopy }) {
+  return count > 0 ? (
+    <p className="mb-3 text-sm">
+      {fill(
+        pluralForm(count, {
+          one: copy.result.identityConflictsOne,
+          other: copy.result.identityConflictsOther,
+        }),
+        { count },
+      )}
+    </p>
+  ) : null;
+}
+function previewImportCounts(
+  prepared: PreparedImport,
+  outcomes?: { rowNumber: number; outcome: string }[],
+) {
+  const conflicts = new Set(
+    outcomes?.filter((row) => row.outcome === "conflict").map((row) => row.rowNumber),
+  );
+  return {
+    conflictCount: conflicts.size,
+    importableCount: prepared.rows.filter(
+      (row) => row.action === "import" && !conflicts.has(row.rowNumber),
+    ).length,
+  };
 }

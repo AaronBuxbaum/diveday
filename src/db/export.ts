@@ -45,6 +45,7 @@ import { readActiveStaffRoles } from "./authz";
 import { sortBuddyMemberRowsByTeam } from "./buddy-teams";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { exportCountScope } from "./export-count-scope";
+import { readDepartureAuditExportContext } from "./export-departure-audit";
 import { DIVER_EXPORT_FILES } from "./export-diver-files";
 import { SHOP_EXPORT_FILES } from "./export-shop-files";
 import {
@@ -454,9 +455,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const tripTitle = new Map(tripRows.map((row) => [row.id, row.title]));
   const tripStartsAt = new Map(tripRows.map((row) => [row.id, row.startsAt]));
 
-  const tripChangeEventRows = await readScoped(tx, "tripChangeEvents", scope);
-
-  const tripStageEventRows = await readScoped(tx, "tripStageEvents", scope);
   const safetyRecords = await readSafetyRecords(tx, scope);
 
   const scheduleDayRows = await tx
@@ -706,8 +704,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     tripRows,
     tripTitle,
     tripStartsAt,
-    tripChangeEventRows,
-    tripStageEventRows,
+    ...(await readDepartureAuditExportContext(tx, scope)),
     ...safetyRecords,
     scheduleDayRows,
     tripDiveRows,
@@ -1310,6 +1307,8 @@ export async function loadShopExportCounts(
           .from(trips)
           .where(and(eq(trips.shopId, shopId), exclusion("trips.csv", trips))),
       ),
+    "disruption_recovery_events.csv": async () =>
+      scoped("disruption_recovery_events.csv", "disruptionRecoveryEvents"),
     "trip_change_events.csv": async () => scoped("trip_change_events.csv", "tripChangeEvents"),
     "trip_stage_events.csv": async () => scoped("trip_stage_events.csv", "tripStageEvents"),
     "safety_drills.csv": async () => scoped("safety_drills.csv", "safetyDrills"),

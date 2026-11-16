@@ -8,8 +8,10 @@ import { getDb } from "@/db/client";
 import { recordTripActivity } from "@/db/operations";
 import { refundBookingsForShopCancelledTrip } from "@/db/refunds";
 import { getTripWithBooked } from "@/db/trips";
+import { recordRecoveryFollowUp } from "@/features/disruption-recovery";
 import { requireShopSurface } from "@/features/session";
 import { trackEvent } from "@/lib/analytics";
+import { isRecoveryOutcome } from "@/lib/disruption-recovery";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { blowoutPath } from "./_components/blowout/blowout-path";
 
@@ -115,4 +117,40 @@ function refreshBlowoutSurfaces(shopSlug: string, tripId: string) {
   revalidatePath(shopPath(shopSlug, "trips", tripId));
   revalidatePath(shopPath(shopSlug, "schedule", "board"));
   revalidatePath(shopPath(shopSlug));
+}
+
+/** Record follow-up without changing the seat, payment or notification trail. */
+export async function recordRecoveryFollowUpAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const { db, shop, session } = await requireShopSurface(shopSlug);
+  const back = blowoutPath(shopSlug, tripId);
+  const outcome = String(formData.get("outcome") ?? "");
+  if (!isRecoveryOutcome(outcome)) redirect(noticeUrl(back, "recovery-invalid"));
+  const result = await recordRecoveryFollowUp(db, {
+    shopId: shop.id,
+    tripId,
+    actorPersonId: session.user.personId,
+    blowoutDiverId: String(formData.get("blowoutDiverId") ?? ""),
+    attemptId: String(formData.get("attemptId") ?? ""),
+    expectedRevision: Number(formData.get("revision")),
+    outcome,
+    replacementBookingId:
+      outcome === "rebooked" ? String(formData.get("replacementBookingId") ?? "") : null,
+  });
+  refreshBlowoutSurfaces(shopSlug, tripId);
+  redirect(
+    noticeUrl(
+      back,
+      result.ok
+        ? "recovery-saved"
+        : result.reason === "stale"
+          ? "recovery-stale"
+          : result.reason === "busy"
+            ? "recovery-busy"
+            : "recovery-invalid",
+    ),
+  );
 }

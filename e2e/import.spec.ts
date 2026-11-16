@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
@@ -31,6 +32,41 @@ const CONTACTS_CSV = [
 
 test.describe("contact import", () => {
   signedInAsOwner();
+
+  test("owner maps unfamiliar customer headers locally and previews repeated-import matches", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings/import");
+    const input = page.locator('input[type="file"]').filter({ visible: true });
+    await expect(input).toHaveAttribute("data-hydrated", "true");
+    await input.setInputFiles({
+      name: "customers.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        "Guest,Mailbox,certification_level,certification_number,waiver_accepted\nMapped Morgan,mapped.morgan@example.com,Open Water,MANUAL-MORGAN-1,yes",
+      ),
+    });
+    await page.getByLabel("Guest", { exact: true }).selectOption("full_name");
+    await page.getByLabel("Mailbox", { exact: true }).selectOption("email");
+    await expect(page.getByText("Mapped Morgan", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(staffTranslator("en-US")("settings.import.wizard.manualEvidenceNotice")),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Check roster matches" }).click();
+    await expect(page.getByText("New diver", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: /Import 1 contact/ }).click();
+    await expect(page.getByText(/Imported. 1 added/)).toBeVisible();
+    await expect(page.getByText(/1 waiver imported as accepted/)).toHaveCount(0);
+    await input.setInputFiles({
+      name: "corrected.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from("full_name,email\nMapped Morgan,mapped.morgan@example.com"),
+    });
+    await page.getByRole("button", { name: "Check roster matches" }).click();
+    await expect(page.getByText("Update existing diver", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Import 1 contact/ })).toBeEnabled();
+    await expect(page.getByText(/Imported. 1 added/)).toHaveCount(0);
+  });
 
   test("owner imports a CSV: cards land verified-and-flagged with a one-tap confirm, an unrecognized medical column is left behind, and a claimed waiver is trusted and marked imported", async ({
     page,

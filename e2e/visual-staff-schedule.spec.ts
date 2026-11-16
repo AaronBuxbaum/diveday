@@ -798,7 +798,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Call the blow-out" }).click();
         await page.getByRole("heading", { level: 1, name: "Cancellation record" }).waitFor();
         await page
-          .getByRole("region", { name: /^Unresolved/ })
+          .getByRole("region", { name: /^Needs follow-up/ })
           .getByRole("columnheader", { name: "Diver" })
           .waitFor();
         // The call's toast leaves on a real 4-second timer, so whether the

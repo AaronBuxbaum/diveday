@@ -7,6 +7,7 @@ import {
   gt,
   gte,
   inArray,
+  isNull,
   lt,
   lte,
   ne,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/blowout";
 import { nowDate } from "@/lib/clock";
 import { departureUnderway } from "@/lib/day-blowout";
+import type { RecoveryEvent } from "@/lib/disruption-recovery";
 import { log } from "@/lib/log";
 import {
   type Notification,
@@ -52,6 +54,7 @@ import type { BlowoutCause, BlowoutMessageStatus, PaymentStatus } from "./schema
 import {
   bookingPayments,
   bookings,
+  disruptionRecoveryEvents,
   people,
   shops,
   tripAssignments,
@@ -62,7 +65,7 @@ import {
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 import { getTripRoster } from "./trips-manifest";
-import { seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
+import { seatHeld, seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
 import { getTripWithBooked, rollCallStartedOn, setTripStatus } from "./trips-record";
 
 /**
@@ -803,8 +806,13 @@ export type BlowoutDiverState = {
   paymentStatus: PaymentStatus | null;
   /** The alternatives this diver's message carried, resolved to display facts. */
   offeredTrips: { id: string; title: string; startsAt: Date }[];
-  /** Live: the diver holds an active seat on another upcoming scheduled trip. */
+  /** Explicitly linked recovery booking, still active on an upcoming departure. */
   rebooked: boolean;
+  recoveryEvents: RecoveryEvent[];
+  recoveryBookings: { id: string; title: string; startsAt: Date }[];
+  recoveryActors: Record<string, string>;
+  replacementBookingId: string | null;
+  canRecordRecovery: boolean;
 };
 
 export type TripBlowoutRecord = {
@@ -818,8 +826,8 @@ export type TripBlowoutRecord = {
 /**
  * The cascade record a staff surface renders: who was in the blast, what each
  * diver's message did, their money position, and — live, not snapshotted —
- * whether they hold a seat on another upcoming departure. The blow-out isn't
- * over until nobody on this list is unresolved.
+ * whether staff explicitly linked an existing replacement booking. Delivery,
+ * payment and recovery remain separate facts; unrelated seats resolve nothing.
  */
 export async function getTripBlowout(
   db: DbExecutor,
@@ -836,9 +844,13 @@ export async function getTripBlowout(
   if (!blowout) return null;
 
   const rows = await db
-    .select({ diver: tripBlowoutDivers, person: people })
+    .select({ diver: tripBlowoutDivers, person: people, source: bookings })
     .from(tripBlowoutDivers)
-    .innerJoin(people, eq(people.id, tripBlowoutDivers.personId))
+    .innerJoin(people, and(eq(people.id, tripBlowoutDivers.personId), eq(people.shopId, shopId)))
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, tripBlowoutDivers.bookingId), eq(bookings.shopId, shopId)),
+    )
     .where(
       and(
         eq(tripBlowoutDivers.blowoutId, blowout.blowout.id),
@@ -857,26 +869,61 @@ export async function getTripBlowout(
   const offeredById = new Map(offeredTrips.map((trip) => [trip.id, trip]));
 
   const personIds = rows.map((row) => row.diver.personId);
-  const rebookedPersonIds = new Set(
-    personIds.length
-      ? (
-          await db
-            .select({ personId: bookings.personId })
-            .from(bookings)
-            .innerJoin(trips, eq(trips.id, bookings.tripId))
-            .where(
-              and(
-                eq(bookings.shopId, shopId),
-                inArray(bookings.personId, personIds),
-                seatNotCancelled,
-                ne(trips.id, tripId),
-                eq(trips.status, "scheduled"),
-                gt(trips.startsAt, now),
+  const recoveryBookings = personIds.length
+    ? await db
+        .select({
+          id: bookings.id,
+          personId: bookings.personId,
+          title: trips.title,
+          startsAt: trips.startsAt,
+        })
+        .from(bookings)
+        .innerJoin(trips, eq(trips.id, bookings.tripId))
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            eq(trips.shopId, shopId),
+            inArray(bookings.personId, personIds),
+            seatHeld,
+            isNull(bookings.identityUnconfirmedAt),
+            ne(trips.id, tripId),
+            eq(trips.status, "scheduled"),
+            liveTrip(),
+          ),
+        )
+        .orderBy(asc(trips.startsAt), asc(trips.title), asc(bookings.id))
+    : [];
+  const recoveryEvents = rows.length
+    ? (
+        await db
+          .select()
+          .from(disruptionRecoveryEvents)
+          .where(
+            and(
+              eq(disruptionRecoveryEvents.shopId, shopId),
+              inArray(
+                disruptionRecoveryEvents.blowoutDiverId,
+                rows.map((row) => row.diver.id),
               ),
-            )
-        ).map((row) => row.personId)
-      : [],
-  );
+            ),
+          )
+          .orderBy(asc(disruptionRecoveryEvents.seq))
+      ).map((event) => ({
+        ...event,
+        attemptId: event.id,
+        recordedAt: event.recordedAt.toISOString(),
+      }))
+    : [];
+  const eventsFor = (id: string) => recoveryEvents.filter((event) => event.blowoutDiverId === id);
+  const actorIds = [...new Set(recoveryEvents.map((event) => event.actorPersonId))];
+  const actors = actorIds.length
+    ? await db
+        .select({ id: people.id, name: people.fullName })
+        .from(people)
+        // diveday:allow-deleted-people: audit actors resolve live, including the anonymized name after erasure.
+        .where(and(eq(people.shopId, shopId), inArray(people.id, actorIds)))
+    : [];
+  const recoveryActors = Object.fromEntries(actors.map((actor) => [actor.id, actor.name]));
   const payments = await paymentsByBooking(
     db,
     shopId,
@@ -902,7 +949,28 @@ export async function getTripBlowout(
         const trip = offeredById.get(id);
         return trip ? [trip] : [];
       }),
-      rebooked: rebookedPersonIds.has(row.diver.personId),
+      recoveryEvents: eventsFor(row.diver.id),
+      recoveryBookings: recoveryBookings.filter(
+        (booking) =>
+          booking.personId === row.diver.personId &&
+          booking.startsAt > now &&
+          row.source.personId === row.diver.personId &&
+          row.source.identityUnconfirmedAt === null &&
+          row.person.deletedAt === null,
+      ),
+      recoveryActors,
+      replacementBookingId: eventsFor(row.diver.id).at(-1)?.replacementBookingId ?? null,
+      canRecordRecovery: row.person.deletedAt === null,
+      rebooked:
+        row.person.deletedAt === null &&
+        row.source.personId === row.diver.personId &&
+        row.source.identityUnconfirmedAt === null &&
+        eventsFor(row.diver.id).at(-1)?.outcome === "rebooked" &&
+        recoveryBookings.some(
+          (booking) =>
+            booking.id === eventsFor(row.diver.id).at(-1)?.replacementBookingId &&
+            booking.personId === row.diver.personId,
+        ),
     })),
   };
 }

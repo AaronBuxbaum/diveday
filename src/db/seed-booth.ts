@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
 import { withDemoCrewEvidence } from "@/db/seed-crew-evidence";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
@@ -15,6 +16,7 @@ import {
   cards,
   courses,
   type DiveSpecialty,
+  disruptionRecoveryEvents,
   divePackageEntitlements,
   divePackages,
   diveSites,
@@ -566,15 +568,27 @@ async function seedWeatherCall(
         updatedAt: refundedAt,
       }),
     );
-    await db.insert(tripBlowoutDivers).values({
-      shopId,
-      blowoutId: blowout.id,
-      bookingId: booking.id,
-      personId: diver.id,
-      messageStatus: "sent",
-      notifiedAt: new Date(calledAt.getTime() + 2 * 60_000),
-      createdAt: calledAt,
-    });
+    const [canceledDiver] = await db
+      .insert(tripBlowoutDivers)
+      .values({
+        shopId,
+        blowoutId: blowout.id,
+        bookingId: booking.id,
+        personId: diver.id,
+        messageStatus: "sent",
+        notifiedAt: new Date(calledAt.getTime() + 2 * 60_000),
+        createdAt: calledAt,
+      })
+      .returning({ id: tripBlowoutDivers.id });
+    if (canceledDiver)
+      await db.insert(disruptionRecoveryEvents).values({
+        id: randomUUID(),
+        shopId,
+        blowoutDiverId: canceledDiver.id,
+        actorPersonId: ctx.ownerId,
+        outcome: "contacted",
+        recordedAt: calledAt,
+      });
   }
 }
 
