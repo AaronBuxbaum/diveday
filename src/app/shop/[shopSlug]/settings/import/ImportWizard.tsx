@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FormStatus } from "@/components/ui/form";
+import { ChoiceFieldset, controlClass, Field, FormStatus } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 import { importAssistSample } from "@/lib/assists/import-mapping";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -258,8 +258,7 @@ export function ImportWizard({
 
       {/* The source column carries its own correction, above the preview it changes. */}
       {columns.length > 0 ? (
-        <fieldset className="mt-4 space-y-3">
-          <legend className="text-sm font-medium">{copy.manualMapping}</legend>
+        <ChoiceFieldset className="mt-4" legend={copy.manualMapping}>
           <div className="grid gap-3 sm:grid-cols-2">
             {columns.map((header) => (
               <Field key={header} label={header}>
@@ -283,7 +282,7 @@ export function ImportWizard({
               </Field>
             ))}
           </div>
-        </fieldset>
+        </ChoiceFieldset>
       ) : null}
       {hasManual ? <p className="mt-3 text-sm text-warning">{copy.manualEvidenceNotice}</p> : null}
       {recovery ? (
