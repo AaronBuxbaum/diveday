@@ -37,6 +37,7 @@ beforeEach(() => {
   vi.mocked(requireShopSurface).mockResolvedValue({
     db,
     session: { user: { shopId: scope.shopId, personId: scope.actorPersonId } },
+    shop: { computerDivesEnabled: true },
   } as never);
 });
 describe("computer-import action boundary", () => {

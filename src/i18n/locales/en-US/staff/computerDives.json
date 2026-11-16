@@ -131,7 +131,7 @@
     },
     "garmin": {
       "label": "Garmin",
-      "hint": "One Descent/Connect single-session dive FIT export is verified. Other devices, sessions and export variants are beta."
+      "hint": "One Descent/Connect single-session dive FIT export is verified. Other devices, sessions, and export variants are beta."
     },
     "shearwater": {
       "label": "Shearwater Cloud",

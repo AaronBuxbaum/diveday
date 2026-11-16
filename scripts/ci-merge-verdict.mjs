@@ -170,7 +170,7 @@ export function ciMergeVerdict(
     "repo-safeguards",
     code === "true" ? "unit-tests" : "unit-tests-docs",
   ]);
-  // `browser` is false only for a pull request that changed unit-test files alone (ci.yml's
+  // `browser` can be false for unit-test-only PRs or superseded main pushes (ci.yml's
   // `changes` job); a missing or malformed value fails closed, like `safety`.
   if (code === "true" && browser !== "false")
     for (const id of ["build", "playwright", "visual-plan", "visual", "visual-report"])
@@ -180,7 +180,12 @@ export function ciMergeVerdict(
   if (code === "true" && safety !== "false") required.add("coverage-floors");
   if (code === "true" && browser !== "false" && !fork) required.add("visual-publish");
   if (db === "true") required.add("real-postgres");
-  if (code === "true" && ["push", "workflow_dispatch"].includes(event) && ref === "refs/heads/main")
+  if (
+    code === "true" &&
+    browser !== "false" &&
+    ["push", "workflow_dispatch"].includes(event) &&
+    ref === "refs/heads/main"
+  )
     required.add("visual-flakes");
   for (const id of CI_JOBS) {
     const result = needs?.[id]?.result;

@@ -84,6 +84,7 @@ async function SettingsRailPanel({ params }: { params: Promise<{ shopSlug: strin
       hasBoatDiving: shop.hasBoatDiving,
       isDemo: shop.isDemo,
       selfRegistrationEnabled: shop.selfRegistrationEnabled,
+      embedsEnabled: shop.embedsEnabled,
     }),
   );
   const locale = await requestLocale(shop.defaultLocale);

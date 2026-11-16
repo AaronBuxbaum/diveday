@@ -156,13 +156,13 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
       "box_a",
       "q1",
       2,
-      "Asthma, wheezing, severe allergies, hay fever or congested airways within the last 12 months that limits my physical activity/exercise.",
+      "Asthma, wheezing, severe allergies, hay fever, or congested airways within the last 12 months that limits my physical activity/exercise.",
     ),
     box(
       "box_a",
       "q1",
       3,
-      "A problem or illness involving my heart such as angina, chest pain on exertion, heart failure, immersion pulmonary edema, heart attack or stroke, or am taking medication for any heart condition.",
+      "A problem or illness involving my heart such as angina, chest pain on exertion, heart failure, immersion pulmonary edema, heart attack, or stroke, or am taking medication for any heart condition.",
     ),
     box(
       "box_a",
@@ -184,7 +184,7 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
       "box_b",
       "q2",
       4,
-      "I have had a close blood relative die suddenly or of cardiac disease or stroke before the age of 50, or have a family history of heart disease before age 50 (including abnormal heart rhythms, coronary artery disease or cardiomyopathy).",
+      "I have had a close blood relative die suddenly or of cardiac disease or stroke before the age of 50, or have a family history of heart disease before age 50 (including abnormal heart rhythms, coronary artery disease, or cardiomyopathy).",
     ),
 
     box("box_c", "q4", 1, "Sinus surgery within the last 6 months."),
@@ -255,7 +255,7 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
       "box_f",
       "q8",
       3,
-      "Diabetes, either drug or diet controlled, or gestational diabetes within the last 12 months.",
+      "Diabetes, either drug, or diet controlled, or gestational diabetes within the last 12 months.",
     ),
     box("box_f", "q8", 4, "An uncorrected hernia that limits my physical abilities."),
     box(

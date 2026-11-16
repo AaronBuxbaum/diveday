@@ -103,6 +103,12 @@ has to open in turn to answer one question. The settings sub-nav — derived fro
 - If a future half of this surface earns its own moment — a restore flow, say, which is a different
   question with a genuinely different gate — it gets a route then, on the day it clears the bar.
 
+## Amendment 2026-11-16: four Settings pages, no tabs
+
+Aaron split the tabs: Export, Backups, Import and Integrations are four rail rows and four doors
+in the Your data group, each page titled with its own name. Backups lives at `/settings/backups`.
+The paragraph below is the 2026-10-17 shape it replaced.
+
 ## Amendment 2026-10-17 (issue #2813): tabs, not one long page
 
 The two halves are now two tabs of one **Your data** page set, under one `<h1>`, with Import and

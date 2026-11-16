@@ -122,15 +122,15 @@ describe("each settings group renders as its own component", () => {
     ]);
   });
 
-  it("opens Your data at the first part this reader may use", async () => {
+  it("shows only the Your data doors this reader may use", async () => {
     const { db, view, personId } = await viewFor();
     const base = `/shop/${view.shopSlug}/settings`;
     expect(
       hrefsIn(await DataGroup({ view, db, personId, canExport: true, canImport: true })),
-    ).toEqual([`${base}/export`]);
+    ).toEqual([`${base}/export`, `${base}/backups`, `${base}/import`, `${base}/integrations`]);
     expect(
       hrefsIn(await DataGroup({ view, db, personId, canExport: false, canImport: true })),
-    ).toEqual([`${base}/import`]);
+    ).toEqual([`${base}/import`, `${base}/integrations`]);
     expect(
       hrefsIn(await DataGroup({ view, db, personId, canExport: false, canImport: false })),
     ).toEqual([`${base}/integrations`]);

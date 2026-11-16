@@ -406,7 +406,7 @@ describe("the website ledger", () => {
       const copy = diverTranslator(locale)(website.sitesNote);
       expect(copy).not.toMatch(/\p{Sc}\s?\d/u);
       expect(copy).toMatch(
-        locale === "en-US" ? /ownership, hosting and cancellation/ : /propiedad, el alojamiento/,
+        locale === "en-US" ? /ownership, hosting, and cancellation/ : /propiedad, el alojamiento/,
       );
     }
   });

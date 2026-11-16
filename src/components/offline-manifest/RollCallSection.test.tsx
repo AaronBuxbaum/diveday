@@ -813,7 +813,7 @@ describe("the row grammar the live manifest already reads", () => {
     const details = summary?.closest("details") as HTMLElement;
     expect(
       within(details).getByText(
-        "Their contact, age and other details wait until the desk confirms who this is.",
+        "Their contact, age, and other details wait until the desk confirms who this is.",
       ),
     ).toBeTruthy();
     expect(within(details).queryByText("Not on file")).toBeNull();
@@ -848,7 +848,7 @@ describe("the row grammar the live manifest already reads", () => {
     const details = summary?.closest("details") as HTMLElement;
     expect(
       within(details).getByText(
-        "Their contact, age and other details wait until the desk confirms who this is.",
+        "Their contact, age, and other details wait until the desk confirms who this is.",
       ),
     ).toBeTruthy();
   });

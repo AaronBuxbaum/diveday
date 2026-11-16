@@ -57,7 +57,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       forecastLatitude: 11.156,
       forecastLongitude: -60.8412,
       description:
-        "A colorful sloping reef off Store Bay at Tobago's south end, popular for training, night dives and photography.",
+        "A colorful sloping reef off Store Bay at Tobago's south end, popular for training, night dives, and photography.",
       marineLife: "Barracuda · eagle rays · groupers · moray eels",
       marineLifeDescription:
         "Groupers and eels use the reef, barracuda cruise the edge, and flying gurnards turn up on the sand.",
@@ -69,7 +69,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       divePlan:
         "Follow the slope at your own pace, turn on the gas you set at the start, and take a safety stop in open water under your SMB. On a night dive, carry a primary and a backup light and a surface light for the SMB.",
       fitTone: "welcoming",
-      fitNote: "Gentle, easy to navigate and good for new divers and night dives.",
+      fitNote: "Gentle, easy to navigate, and good for new divers and night dives.",
       creatureSlugs: [
         "great-barracuda",
         "spotted-eagle-ray",
@@ -138,7 +138,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       forecastLatitude: 11.2,
       forecastLongitude: -60.799,
       description:
-        "A shallow wall of sponge and coral along the rocky outcrop in Mount Irvine Bay, with canyons, cracks and ledges that hold small animals.",
+        "A shallow wall of sponge and coral along the rocky outcrop in Mount Irvine Bay, with canyons, cracks, and ledges that hold small animals.",
       marineLife: "Queen angelfish · seahorses · spiny lobster · moray eels",
       marineLifeDescription:
         "Cracks and ledges hold lobster, eels and shrimp, and queen angelfish patrol the face.",
@@ -223,14 +223,14 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLife:
         "Hammerhead sharks (seasonal) · hawksbill turtles · lobster · schooling reef fish",
       marineLifeDescription:
-        "Hammerheads are seen most from December to March, and are not guaranteed. Brown chromis, creole wrasse and durgeons crowd the reef on the east side.",
+        "Hammerheads are seen most from December to March, and are not guaranteed. Brown chromis, creole wrasse, and durgeons crowd the reef on the east side.",
       difficultyLevel: "advanced",
       depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Exposed to swell and surge, with a rough surface and hazy water on some days; the force lessens a few meters down. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Stay on the east side reef or hold the faces at no deeper than 30 m (100 ft), whatever the sheer drop shows. If sharks appear, stay put, nothing dangling, no chasing or touching, group together and follow the crew's briefing. Safety stop under your SMB. Staff confirm the diver's log before boarding.",
+        "Stay on the east side reef or hold the faces at no deeper than 30 m (100 ft), whatever the sheer drop shows. If sharks appear, stay put, nothing dangling, no chasing, or touching, group together, and follow the crew's briefing. Safety stop under your SMB. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "An exposed offshore dive with a drop-off beside you. For divers who keep their depth.",
@@ -262,7 +262,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       forecastLatitude: 11.13,
       forecastLongitude: -60.815,
       description:
-        "A rock reef on Tobago's south coast with ledges, overhangs and barrel sponges shaped by the current. Barracuda, rays and nurse sharks use the ledges.",
+        "A rock reef on Tobago's south coast with ledges, overhangs and barrel sponges shaped by the current. Barracuda, rays, and nurse sharks use the ledges.",
       marineLife: "Barracuda · nurse sharks · rays · barrel sponges",
       marineLifeDescription:
         "Big fish patrol the ledges and the current feeds the sponges. Look along the edge, not into the overhangs.",
@@ -303,7 +303,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       forecastLatitude: 11.139,
       forecastLongitude: -60.83,
       description:
-        "A long, straight reef edge on Tobago's south coast, dived as a drift. Plate corals, nurse sharks and stingrays line the base.",
+        "A long, straight reef edge on Tobago's south coast, dived as a drift. Plate corals, nurse sharks, and stingrays line the base.",
       marineLife: "Nurse sharks · stingrays · green moray eels · Bermuda chub",
       marineLifeDescription:
         "Rays and nurse sharks rest where the reef meets the sand, and a soft wall of chub rides the current.",
@@ -403,7 +403,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       currentNote:
         "A drift that is strong at times on the Atlantic side of Little Tobago. Carry an SMB so the boat can pick you up at the end of the drift. The Guyana Current can bring strong, cloudy water to the Atlantic side. Medical care is far; confirm the boat's oxygen and plan.",
       divePlan:
-        "Drift with the group to the brain coral at about 18 m (60 ft) on the sandy slope and keep fins and hands off it. Do not go beneath it. If sharks are resting, stay put, keep nothing dangling, do not chase or touch them, group together and follow the crew's briefing. The slope runs deeper, so hold the depth the crew sets and do a safety stop under your SMB. Staff confirm the diver's log before boarding.",
+        "Drift with the group to the brain coral at about 18 m (60 ft) on the sandy slope and keep fins and hands off it. Do not go beneath it. If sharks are resting, stay put, keep nothing dangling, do not chase, or touch them, group together, and follow the crew's briefing. The slope runs deeper, so hold the depth the crew sets and do a safety stop under your SMB. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A drift to one famous coral. Look from a body-length away and keep moving with the group.",
@@ -442,10 +442,10 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       forecastLatitude: 11.35,
       forecastLongitude: -60.52,
       description:
-        "A rock arch rising out of the sea off the St Giles Islands, on Tobago's exposed northeast tip. Brain corals, sponges and boulders sit around it, with tarpon, turtles and sharks seen nearby.",
+        "A rock arch rising out of the sea off the St Giles Islands, on Tobago's exposed northeast tip. Brain corals, sponges, and boulders sit around it, with tarpon, turtles, and sharks seen nearby.",
       marineLife: "Tarpon · turtles · sharks · jacks",
       marineLifeDescription:
-        "Tarpon, turtles and sharks are reported nearby, and jacks school over the boulders. Octopus tuck into holes in the rock face.",
+        "Tarpon, turtles, and sharks are reported nearby, and jacks school over the boulders. Octopus tuck into holes in the rock face.",
       difficultyLevel: "advanced",
       depthMinMeters: 12,
       maxDepthMeters: 30,
@@ -498,9 +498,9 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       currentNote:
         "Not documented. It is a shore entry from a beach, so ask the crew about the entry and the surf on the day.",
       divePlan:
-        "Enter from the beach, swim out to the cannons, and circle the site slowly. Look, do not touch or lift anything, and finish with a safety stop and reserve gas. Stay outside any wreckage.",
+        "Enter from the beach, swim out to the cannons, and circle the site slowly. Look, do not touch, or lift anything, and finish with a safety stop and reserve gas. Stay outside any wreckage.",
       fitTone: "welcoming",
-      fitNote: "Shallow, close to shore and a good first dive on Tobago's Caribbean side.",
+      fitNote: "Shallow, close to shore, and a good first dive on Tobago's Caribbean side.",
       creatureSlugs: [
         "nurse-shark",
         "spiny-lobster",
