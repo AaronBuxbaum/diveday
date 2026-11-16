@@ -19,6 +19,7 @@ import {
   staffCopy,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
+import { logPackingCounts, logSettingsRail } from "./visual-state-diagnostics";
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
@@ -30,6 +31,43 @@ for (const scheme of ["light", "dark"] as const) {
     // in VIEWPORTS for the screenshots and restores this afterward.
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
+    // The ordinary packing view owns a clean tenant; retained erasure duties
+    // belong to the separate settings-data-unfinished capture below.
+    test.describe("private packing", () => {
+      test.use({ privateShopSlug: `settings-packing-visual-${scheme}` });
+      test(`shop settings render true to the design (${scheme})`, async ({ page, privateShop }) => {
+        await page.goto(`/shop/${privateShop.slug}/settings`);
+        await openSettingsRow(page, "Trip packing checklist");
+        const assertPacking = async () => {
+          await expect(page.locator('textarea[name="packingList"]')).toBeVisible();
+          await expect(
+            page.getByRole("region", {
+              name: staffCopy("settings.main.dataJobs.processorErasures.sectionLabel"),
+              exact: true,
+            }),
+          ).toHaveCount(0);
+          await expect(
+            page.getByRole("region", {
+              name: staffCopy("settings.main.dataJobs.mediaDeletions.sectionLabel"),
+              exact: true,
+            }),
+          ).toHaveCount(0);
+          const connections = page
+            .locator('[data-settings-group="data"] h3')
+            .filter({ hasText: staffCopy("settings.main.connections.heading") });
+          await expect(connections).toHaveCount(1);
+          await expect(connections).toBeHidden();
+        };
+        await assertPacking();
+        await capture(page, "settings-packing-checklist", scheme, {
+          beforeScreenshot: async () => {
+            await logPackingCounts(page);
+            await assertPacking();
+          },
+        });
+      });
+    });
+
     test.describe("staff", () => {
       signedInAsOwner();
 
@@ -40,14 +78,6 @@ for (const scheme of ["light", "dark"] as const) {
           "optional",
         );
         await capture(page, "settings-teen-buddy-policy", scheme);
-      });
-
-      // The settings hub, the directory every shop setting hangs off.
-      test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        // Capture the selected packing setting with its form open.
-        await openSettingsRow(page, "Trip packing checklist");
-        await capture(page, "settings-packing-checklist", scheme);
       });
 
       test(`the settings section picker overlays its pane (${scheme})`, async ({ page }) => {
@@ -566,7 +596,15 @@ for (const scheme of ["light", "dark"] as const) {
           ),
         });
         await page.getByRole("heading", { name: "sites.csv" }).waitFor();
-        await capture(page, "settings-dive-site-import", scheme);
+        await logSettingsRail(page, "before-capture");
+        await capture(page, "settings-dive-site-import", scheme, {
+          beforeScreenshot: async () => {
+            await logSettingsRail(page, "before-screenshot");
+            const rail = page.getByRole("navigation", { name: "Settings sections" });
+            await expect(rail.locator('[aria-current="true"]')).toBeVisible();
+            await expect(rail.locator('[aria-current="true"]')).toBeInViewport({ ratio: 1 });
+          },
+        });
       });
 
       /**

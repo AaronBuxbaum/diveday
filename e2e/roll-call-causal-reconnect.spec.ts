@@ -130,18 +130,26 @@ for (const role of ["diver", "crew"] as const) {
         ]);
         mark("pages-loaded");
         const personName = role === "diver" ? "Diego Alvarez" : CAPTAIN_NAME;
-        await openDeckPerson(live, personName);
-        if (situation === "fast aboard") {
-          const liveRow =
-            role === "diver"
-              ? await manifestRow(live, personName)
-              : await crewDetails(live, personName);
-          await openManifestPerson(liveRow);
-        }
-        await openDeckDetails(page);
-        await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
-        mark("shell-rendered");
-        await openDeckPerson(page, personName);
+        // These separate contexts prepare their rendered bases independently.
+        // Join both before cutting transport, changing clocks, or recording either statement.
+        await Promise.all([
+          (async () => {
+            await openDeckPerson(live, personName);
+            if (situation === "fast aboard") {
+              const liveRow =
+                role === "diver"
+                  ? await manifestRow(live, personName)
+                  : await crewDetails(live, personName);
+              await openManifestPerson(liveRow);
+            }
+          })(),
+          (async () => {
+            await openDeckDetails(page);
+            await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
+            mark("shell-rendered");
+            await openDeckPerson(page, personName);
+          })(),
+        ]);
         // The rendered shell is already loaded; this case cuts transport
         // without a reload. Worker-cache reload has its own existing journey.
         await context.setOffline(true);

@@ -183,6 +183,212 @@ test.describe("light mode largest device body after-dive warnings", () => {
         ).toBeVisible();
         await expect(panel.getByRole("link", { name: "Ari Vale", exact: true })).toBeVisible();
         await expect(panel.getByRole("link").filter({ hasText: state.crewName })).toBeVisible();
+        // Observe screenshot-time geometry and paint inputs without changing them.
+        const diagnostic = await panel.evaluate(
+          (root, labels) => {
+            const rect = (box: DOMRect) => ({
+              x: box.x,
+              y: box.y,
+              width: box.width,
+              height: box.height,
+            });
+            const textRects = (element: Element) => {
+              const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+              const result = [];
+              for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                const text = node.textContent?.trim();
+                if (!text) continue;
+                const range = document.createRange();
+                range.selectNodeContents(node);
+                result.push({
+                  text: text.slice(0, 120),
+                  rects: [...range.getClientRects()].map(rect),
+                });
+              }
+              return result;
+            };
+            const style = (element: Element) => {
+              const computed = getComputedStyle(element);
+              return Object.fromEntries(
+                [
+                  "fontFamily",
+                  "fontSize",
+                  "fontWeight",
+                  "fontStyle",
+                  "fontStretch",
+                  "lineHeight",
+                  "letterSpacing",
+                  "fontVariantNumeric",
+                  "fontFeatureSettings",
+                  "textRendering",
+                  "webkitFontSmoothing",
+                  "transform",
+                  "transformOrigin",
+                  "opacity",
+                  "color",
+                  "backgroundColor",
+                  "borderTopWidth",
+                  "borderTopStyle",
+                  "borderTopColor",
+                  "borderTopLeftRadius",
+                  "borderTopRightRadius",
+                  "borderBottomLeftRadius",
+                  "borderBottomRightRadius",
+                ].map((key) => [key, computed[key as keyof CSSStyleDeclaration]]),
+              );
+            };
+            const warnings = labels.warnings.map((label) => {
+              const element = [...root.querySelectorAll("*")].find(
+                (candidate) =>
+                  candidate.textContent?.trim() === label &&
+                  ![...candidate.children].some((child) => child.textContent?.trim() === label),
+              );
+              return {
+                label,
+                found: Boolean(element),
+                ...(element
+                  ? {
+                      rect: rect(element.getBoundingClientRect()),
+                      text: textRects(element),
+                      style: style(element),
+                    }
+                  : {}),
+              };
+            });
+            const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
+            const crew = [...root.querySelectorAll("[data-device-text-missing] a")].find((link) =>
+              normalize(link.textContent ?? "").includes(normalize(labels.crew)),
+            );
+            // SummaryPanel's HeadCount draws the large numeral inside the
+            // progressbar; its separate dl/dd figures hold the smaller counts.
+            const ancestors = (element: Element) => {
+              const result = [];
+              for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+                const computed = getComputedStyle(parent);
+                result.push({
+                  tag: parent.tagName,
+                  role: parent.getAttribute("role"),
+                  rect: rect(parent.getBoundingClientRect()),
+                  transform: computed.transform,
+                  transformOrigin: computed.transformOrigin,
+                  opacity: computed.opacity,
+                });
+              }
+              return result;
+            };
+            const numericTargets = (scope: Element, selector: string) =>
+              [...scope.querySelectorAll(selector)]
+                .filter(
+                  (element) =>
+                    /^\d+$/.test(element.textContent?.trim() ?? "") &&
+                    ![...element.children].some(
+                      (child) => child.textContent?.trim() === element.textContent?.trim(),
+                    ),
+                )
+                .map((element) => ({
+                  tag: element.tagName,
+                  rect: rect(element.getBoundingClientRect()),
+                  clientRects: [...element.getClientRects()].map(rect),
+                  text: textRects(element),
+                  style: style(element),
+                  ancestors: ancestors(element),
+                }));
+            const progress = root.querySelector('[role="progressbar"]');
+            const active = document.activeElement;
+            const stateOf = (element: Element) => ({
+              hover: element.matches(":hover"),
+              focus: element.matches(":focus"),
+              focusVisible: element.matches(":focus-visible"),
+            });
+            return {
+              warnings,
+              progress: progress
+                ? {
+                    rect: rect(progress.getBoundingClientRect()),
+                    style: style(progress),
+                    valueNow: progress.getAttribute("aria-valuenow"),
+                    valueMax: progress.getAttribute("aria-valuemax"),
+                    numerals: numericTargets(progress, "*"),
+                    ancestors: ancestors(progress),
+                  }
+                : null,
+              summaryNumerals: numericTargets(root, "dd"),
+              crew: crew
+                ? {
+                    label: labels.crew,
+                    rect: rect(crew.getBoundingClientRect()),
+                    clientRects: [...crew.getClientRects()].map(rect),
+                    text: textRects(crew),
+                    style: style(crew),
+                    state: stateOf(crew),
+                  }
+                : null,
+              viewport: {
+                width: innerWidth,
+                height: innerHeight,
+                dpr: devicePixelRatio,
+                scrollX,
+                scrollY,
+                visual: visualViewport
+                  ? {
+                      width: visualViewport.width,
+                      height: visualViewport.height,
+                      scale: visualViewport.scale,
+                      offsetLeft: visualViewport.offsetLeft,
+                      offsetTop: visualViewport.offsetTop,
+                    }
+                  : null,
+              },
+              fonts: {
+                status: document.fonts.status,
+                faces: [...document.fonts].slice(0, 32).map((face) => ({
+                  family: face.family.slice(0, 120),
+                  style: face.style,
+                  weight: face.weight,
+                  stretch: face.stretch,
+                  status: face.status,
+                })),
+              },
+              panelState: stateOf(root),
+              activeElement: active
+                ? {
+                    tag: active.tagName,
+                    role: active.getAttribute("role"),
+                    insidePanel: root.contains(active),
+                    isCrew: active === crew,
+                    state: stateOf(active),
+                  }
+                : null,
+              hoveredInsidePanel: [...root.querySelectorAll(":hover")]
+                .slice(0, 16)
+                .map((element) => ({
+                  tag: element.tagName,
+                  role: element.getAttribute("role"),
+                  isCrew: element === crew,
+                })),
+            };
+          },
+          {
+            warnings: [
+              copy("manifest.notBackAboardOpen", { count: 1 }),
+              copy("manifest.crewNotBackAboard", { count: 1 }),
+            ],
+            crew: state.crewName,
+          },
+        );
+        console.log(
+          "diveday-manifest-raster-diagnostic",
+          JSON.stringify({
+            capture: "manifest-warnings-device-body-53",
+            scheme: "light",
+            browserVersion: page.context().browser()?.version() ?? null,
+            ...diagnostic,
+          }),
+        );
+        expect(
+          diagnostic.crew,
+          "missing crew chip must be included in raster evidence",
+        ).not.toBeNull();
       },
     });
     const deck = page.getByRole("region", { name: copy("manifest.deck.title"), exact: true });
