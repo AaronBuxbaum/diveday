@@ -55,6 +55,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
+import type { TripDiveMode } from "@/lib/trip-details";
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { arrivalTrailHighWater, seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
@@ -746,7 +747,7 @@ export async function tripCourseCrewCounts(
  */
 export async function courseStudentSeatCap(
   tx: DbExecutor,
-  trip: { id: string; shopId: string; courseId: string | null },
+  trip: CourseSessionTrip,
 ): Promise<number | null> {
   const session = await readCourseSession(tx, trip);
   return courseStudentCap(session.course, session.crew);
@@ -759,6 +760,18 @@ const NO_COURSE_SESSION: { course: null; crew: CourseCrew } = {
 };
 
 /**
+ * The departure facts a course session's rule reads. `diveMode` is the
+ * caller's locked trip row's, not a second read: a pool session of an intro
+ * course takes the confined-water figure (issue #4633).
+ */
+type CourseSessionTrip = {
+  id: string;
+  shopId: string;
+  courseId: string | null;
+  diveMode: TripDiveMode;
+};
+
+/**
  * **A course session's rule and rostered crew**, the rows every door hands
  * `decideCourseAdmission` (`src/lib/course-admission.ts`). Read under the
  * caller's trip-row lock, so a crew edit and a seat serialize. A departure
@@ -767,7 +780,7 @@ const NO_COURSE_SESSION: { course: null; crew: CourseCrew } = {
  */
 export async function readCourseSession(
   tx: DbExecutor,
-  trip: { id: string; shopId: string; courseId: string | null },
+  trip: CourseSessionTrip,
 ): Promise<{ course: CourseAdmissionRule | null; crew: CourseCrew }> {
   if (!trip.courseId) return NO_COURSE_SESSION;
   const [course] = await tx
@@ -781,7 +794,10 @@ export async function readCourseSession(
     .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, trip.shopId)))
     .limit(1);
   if (!course) return NO_COURSE_SESSION;
-  return { course, crew: await tripCourseCrewCounts(tx, trip.id) };
+  return {
+    course: { ...course, poolSession: trip.diveMode === "pool" },
+    crew: await tripCourseCrewCounts(tx, trip.id),
+  };
 }
 
 /**
@@ -1650,7 +1666,7 @@ type PendingWalkIn = {
 export async function courseSeatRefusal(
   tx: DbExecutor,
   input: {
-    trip: { id: string; shopId: string; courseId: string | null; startsAt: Date };
+    trip: CourseSessionTrip & { startsAt: Date };
     actor: BookingActor;
     /** Undefined for a walk-in whose row is not written yet. */
     personId: string | undefined;

@@ -1,7 +1,7 @@
 import { and, count, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
-import { courseCrewGap } from "@/lib/course-ratios";
+import { courseCrewGap, courseSession } from "@/lib/course-ratios";
 import { fileScopedShopContext } from "@/test/db";
 import { deleteDiver } from "../features/divers/store";
 import { createBooking } from "./bookings";
@@ -471,7 +471,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       .from(bookings)
       .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
     return courseCrewGap({
-      course,
+      course: courseSession(course, "boat"),
       instructorCount: assigned.filter((entry) => entry.roles.includes("instructor")).length,
       assistantCount: assigned.filter(
         (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),

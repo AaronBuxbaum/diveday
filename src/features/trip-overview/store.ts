@@ -32,7 +32,7 @@ import { ratingCredentialsByPerson } from "../../db/staff-credentials";
 
 import { calendarDateInTimezone } from "../../lib/calendar-date";
 import { nowDate } from "../../lib/clock";
-import { courseCrewGap } from "../../lib/course-ratios";
+import { courseCrewGap, courseSession } from "../../lib/course-ratios";
 import {
   countBothClaims,
   lapsedRungs,
@@ -326,7 +326,11 @@ export async function getTripOverview(
   // queue — `over_ratio` is the visible nudge to fix a ratio-gated session before
   // sailing, never a retroactive block on the bookings already taken.
   // Its students are its divers (G5 of #2226).
-  const crewGap = courseCrewGap({ course: trip.course, ...inWaterCrew, booked: trip.bookedDivers });
+  const crewGap = courseCrewGap({
+    course: courseSession(trip.course, trip.diveMode),
+    ...inWaterCrew,
+    booked: trip.bookedDivers,
+  });
   // The shop's own target, measured off the same crew count and reported
   // separately from the two agency gates above — it applies to every departure,
   // course or fun dive, and it refuses nothing.

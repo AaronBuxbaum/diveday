@@ -12,7 +12,7 @@ import type { AppDb } from "../../db/client";
 import { hasMoveAsk } from "../../db/inbound-messages";
 import { bookings, courses, trips } from "../../db/schema/index";
 
-import { courseSeatCapacity } from "../../lib/course-ratios";
+import { courseSeatCapacity, courseSession } from "../../lib/course-ratios";
 import { seatListPriceCents } from "../../lib/deposits";
 import { isDiver, seatRefusal } from "../../lib/participant-types";
 
@@ -144,7 +144,11 @@ export async function strandedMoveOffer(
     if (target.courseId && isDiver(seat.participantType)) {
       const { instructorCount, assistantCount } = await tripCourseCrewCounts(db, id);
       if (instructorCount === 0) continue;
-      const seatCap = courseSeatCapacity(course, instructorCount, assistantCount);
+      const seatCap = courseSeatCapacity(
+        courseSession(course, target.diveMode),
+        instructorCount,
+        assistantCount,
+      );
       if (seatCap !== null && held.divers >= seatCap) continue;
     }
     const admission = await tripAdmissionFor(
