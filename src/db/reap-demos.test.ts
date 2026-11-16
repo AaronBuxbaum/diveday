@@ -9,6 +9,7 @@ import { DEMO_SHOP_SLUG } from "./demo-shop";
 import {
   bookings,
   globalDiveSites,
+  accountSessions,
   people,
   personRoles,
   shops,
@@ -254,5 +255,43 @@ describe("reapExpiredDemoShops", () => {
     expect(await findShop(db, fresh.slug)).toBeDefined();
     // The canonical demo is protected by slug regardless of age.
     expect(await findShop(db, DEMO_SHOP_SLUG)).toBeDefined();
+  });
+
+  it("keeps a demo minted long ago while someone is still using it, and clears it a week after the last input", async () => {
+    const db = await seededTestDb();
+    const used = await createDemoShop(db);
+    const idle = await createDemoShop(db);
+    const longAgo = new Date(nowMs() - 20 * DAY_MS);
+
+    for (const [demo, lastInput] of [
+      [used, new Date(nowMs() - 2 * DAY_MS)],
+      [idle, new Date(nowMs() - 9 * DAY_MS)],
+    ] as const) {
+      const shop = await requireShop(db, demo.slug);
+      await db.update(shops).set({ createdAt: longAgo }).where(eq(shops.id, shop.id));
+      const [account] = await db
+        .select({ id: userAccounts.id, personId: userAccounts.personId })
+        .from(userAccounts)
+        .where(eq(userAccounts.email, demo.ownerEmail))
+        .limit(1);
+      if (!account) throw new Error("test setup: owner account missing");
+      await db.insert(accountSessions).values({
+        userAccountId: account.id,
+        personId: account.personId,
+        shopId: shop.id,
+        shopSlug: shop.slug,
+        roles: ["owner"],
+        name: "Dana",
+        token: crypto.randomUUID(),
+        expiresAt: new Date(nowMs() + DAY_MS),
+        lastHumanActivityAt: lastInput,
+      });
+    }
+
+    const result = await reapExpiredDemoShops(db);
+
+    expect(result.slugs).toContain(idle.slug);
+    expect(result.slugs).not.toContain(used.slug);
+    expect(await findShop(db, used.slug)).toBeDefined();
   });
 });

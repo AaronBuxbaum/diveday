@@ -2278,7 +2278,7 @@
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a
-  daily reaper clears minted demos after 7 days. The canonical `isDemo` shop (Blue Mantis) is
+  daily reaper clears minted demos after 7 days with no sign-in or staff input (idle time, not age). The canonical `isDemo` shop (Blue Mantis) is
   bootstrapped in every environment as the fixture the e2e/visual-regression fleet tests against,
   and is never reaped. AI suggestions run in a minted demo under a $1 cap and the demo AI
   allowance, $10 a month across every minted demo, kept in `claude_demo_spend` so a reaped

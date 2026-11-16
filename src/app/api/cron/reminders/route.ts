@@ -23,8 +23,8 @@ import { log } from "@/lib/log";
 export const maxDuration = 300;
 
 /**
- * How long a minted demo shop lives before the reaper clears it. Defaults to 7
- * days (ADR 20260724-per-visitor-demo-shops); `DEMO_SHOP_TTL_DAYS` overrides it,
+ * How long a minted demo shop may sit without a sign-in or staff input before
+ * the reaper clears it. Defaults to 7 days (ADR 20260724-per-visitor-demo-shops); `DEMO_SHOP_TTL_DAYS` overrides it,
  * ignoring any non-positive or non-numeric value.
  */
 function demoShopMaxAgeMs(): number | undefined {

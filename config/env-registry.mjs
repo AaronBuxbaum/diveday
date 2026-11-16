@@ -412,8 +412,8 @@ export const ENV_GROUPS = [
       "deployment that should never have a demo tenant (a self-hosted install, a",
       "compliance-scoped environment); `on` turns it back on. Anything else is read",
       "as off, so a typo never reads as consent. DEMO_SHOP_TTL_DAYS and",
-      "DEMO_SHOP_MAX_LIVE bound the per-visitor demo shops: how long one lives before",
-      "the nightly reaper clears it, and how many may exist at once.",
+      "DEMO_SHOP_MAX_LIVE bound the per-visitor demo shops: how long one may sit idle",
+      "before the nightly reaper clears it, and how many may exist at once.",
     ],
     keys: [
       {
@@ -427,7 +427,7 @@ export const ENV_GROUPS = [
         from: "manual",
         targets: VERCEL,
         absent:
-          "a minted demo shop is reaped after 7 days (a non-positive or non-numeric value reads as unset)",
+          "a minted demo shop is reaped after 7 days without a sign-in or staff input (a non-positive or non-numeric value reads as unset)",
       },
       {
         key: "DEMO_SHOP_MAX_LIVE",
