@@ -1,8 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
-import type { Boat } from "../../db/schema/index";
 import { boats } from "../../db/schema/index";
-import type { BoatPapersInput } from "./store";
+import type { Boat, BoatPapersInput } from "./store";
 
 /**
  * A bare hull save for tests that only need a name, a seat count or papers on
