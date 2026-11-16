@@ -670,7 +670,9 @@ describe("refundRateLimit", () => {
       fetchMock as unknown as typeof fetch,
     );
     await store.refund("k", config, 0);
-    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body,
+    );
     expect(body[0]).toBe("EVAL");
     expect(body[1]).toContain("elapsed * refillPerMs + 1");
   });
