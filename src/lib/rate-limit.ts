@@ -469,7 +469,7 @@ export const RATE_LIMITS = {
    */
   demoSwitch: perHour(30),
   /** Credentials sign-in attempts, per IP — the wider net. */
-  signInByIp: per15Min(20),
+  signInByIp: per15Min(60),
   /** Credentials sign-in attempts, per attempted email — the narrow net. */
   signInByEmail: per15Min(8),
   /** Recap photo uploads, per capability token. */
@@ -646,7 +646,7 @@ export const RATE_LIMITS = {
    */
   readyAddSeatByBooking: perHour(10),
   /** Password-reset requests, per IP — the wider net. */
-  passwordResetRequestByIp: perHour(5),
+  passwordResetRequestByIp: perHour(30),
   /** Password-reset requests, per requested email — the narrow net. */
   passwordResetRequestByEmail: per15Min(3),
   /**
@@ -655,7 +655,7 @@ export const RATE_LIMITS = {
    * this is the identical anonymous-capability-minting shape, one shop
    * namespace over.
    */
-  findMyBookingByIp: perHour(5),
+  findMyBookingByIp: perHour(30),
   /** Same request, per requested email — the narrow net. */
   findMyBookingByEmail: per15Min(3),
   /**
