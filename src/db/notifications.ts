@@ -57,6 +57,7 @@ import { hasSailed } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { bookingRecipient } from "./booking-address";
 import { issueBookingCapability } from "./booking-capabilities";
+import { fareCheckout } from "./checkout-purpose";
 import { settledPartyPayment } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
@@ -1074,6 +1075,7 @@ async function switchedOffSinceQueued(db: AppDb, notification: Notification): Pr
           and(
             eq(bookingCheckouts.id, notification.checkoutId),
             eq(bookingCheckouts.shopId, notification.shopId),
+            fareCheckout(),
           ),
         )
         .limit(1);

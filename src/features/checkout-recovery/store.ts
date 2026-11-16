@@ -1,5 +1,6 @@
 import { and, asc, eq, gt, inArray, isNull, lte, ne, not, or } from "drizzle-orm";
 import { liveTrip, seatHeld } from "@/db/trips";
+import { shopClock } from "@/features/shop-clock";
 import { fareCheckout } from "../../db/checkout-purpose";
 import {
   markCheckoutExpiredBySessionId,
@@ -21,7 +22,6 @@ import {
   trips,
 } from "../../db/schema/index";
 import { checkoutProviderFromEnvironment } from "../../db/stripe-providers";
-import { shopClock } from "@/features/shop-clock";
 
 import { toDiverLocale } from "../../i18n/settings";
 import { HOUR_MS, nowDate } from "../../lib/clock";

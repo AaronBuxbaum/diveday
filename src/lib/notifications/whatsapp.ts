@@ -4,8 +4,8 @@ import type { DiverLocale } from "@/i18n/settings";
 import { thrownErrorToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import { safeJson } from "@/lib/safe-json";
-import { smsRecipient } from "./sms";
 import type { CourtesyDelivery, CourtesyMessage, CourtesyProvider } from "./courtesy";
+import { smsRecipient } from "./sms";
 
 /**
  * WhatsApp delivery through **Meta's WhatsApp Cloud API**, using each shop's

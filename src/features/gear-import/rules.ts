@@ -1,4 +1,5 @@
 import { isValidCalendarDate } from "../../lib/calendar-date";
+import { unguardFormula } from "../../lib/csv-formula";
 import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "../../lib/gear";
 import {
   MAX_IMPORT_BYTES,
@@ -8,7 +9,6 @@ import {
   parseCsv,
   widestRow,
 } from "../../lib/import";
-import { unguardFormula } from "../../lib/csv-formula";
 import { normalizeImportKey } from "../../lib/import-key";
 
 export type PreparedGearImportRow = {

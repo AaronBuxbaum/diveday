@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { csvCell } from "./export";
 import { unguardFormula } from "./csv-formula";
+import { csvCell } from "./export";
 
 describe("unguardFormula", () => {
   it.each([
