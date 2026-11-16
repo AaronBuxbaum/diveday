@@ -89,13 +89,15 @@ export async function cacheOfflineShell(env: OfflineShellCacheEnv): Promise<void
   for (let start = 0; start < missing.length; start += FETCH_BATCH) {
     entries.push(
       ...(await Promise.all(
-        missing.slice(start, start + FETCH_BATCH).map(async (asset): Promise<[string, Response]> => {
-          const assetResponse = await env.fetch(asset, { cache: "reload" });
-          if (!assetResponse.ok) {
-            throw new Error(`Offline manifest asset ${asset} could not be loaded`);
-          }
-          return [asset, assetResponse];
-        }),
+        missing
+          .slice(start, start + FETCH_BATCH)
+          .map(async (asset): Promise<[string, Response]> => {
+            const assetResponse = await env.fetch(asset, { cache: "reload" });
+            if (!assetResponse.ok) {
+              throw new Error(`Offline manifest asset ${asset} could not be loaded`);
+            }
+            return [asset, assetResponse];
+          }),
       )),
     );
   }
