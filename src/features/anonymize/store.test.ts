@@ -153,29 +153,25 @@ describe("anonymizeDiver — the private word (ADR 20260904-reef-all-the-way-dow
     const [live, withdrawn] = seats;
     if (!live || !withdrawn) throw new Error("expected two seeded bookings");
 
-    const inserted = await db
-      .insert(recapPulses)
-      .values([
-        {
-          shopId: shop.id,
-          bookingId: live.id,
-          tripId: live.tripId,
-          personId: live.personId,
-          categories: ["gear"],
-          note: "The regulator I was handed free-flowed on the second dive.",
-        },
-        {
-          shopId: shop.id,
-          bookingId: withdrawn.id,
-          tripId: withdrawn.tripId,
-          personId: withdrawn.personId,
-          categories: ["boat"],
-          note: "Taken back, but the words were on file until now.",
-          deletedAt: new Date("2026-08-25T00:00:00.000Z"),
-        },
-      ])
-      .returning({ id: recapPulses.id });
-    const ours = new Set(inserted.map((row) => row.id));
+    await db.insert(recapPulses).values([
+      {
+        shopId: shop.id,
+        bookingId: live.id,
+        tripId: live.tripId,
+        personId: live.personId,
+        categories: ["gear"],
+        note: "The regulator I was handed free-flowed on the second dive.",
+      },
+      {
+        shopId: shop.id,
+        bookingId: withdrawn.id,
+        tripId: withdrawn.tripId,
+        personId: withdrawn.personId,
+        categories: ["boat"],
+        note: "Taken back, but the words were on file until now.",
+        deletedAt: new Date("2026-08-25T00:00:00.000Z"),
+      },
+    ]);
 
     for (const seat of [live, withdrawn]) {
       const erased = await anonymizeDiver(db, {
@@ -189,8 +185,7 @@ describe("anonymizeDiver — the private word (ADR 20260904-reef-all-the-way-dow
     const rows = await db
       .select({ id: recapPulses.id, note: recapPulses.note, categories: recapPulses.categories })
       .from(recapPulses)
-      .where(eq(recapPulses.shopId, shop.id))
-      .then((all) => all.filter((row) => ours.has(row.id)));
+      .where(inArray(recapPulses.bookingId, [live.id, withdrawn.id]));
     expect(rows.length).toBe(2);
     // The words are the diver's and go.
     expect(rows.every((row) => row.note === null)).toBe(true);
