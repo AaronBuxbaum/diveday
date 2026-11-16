@@ -535,7 +535,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
         "A one-way dive that starts at Buck Island Point and runs into the cove, the nearest thing to a drift dive off St Thomas. Pillars of rock stand along a reef wall with dense coral.",
       marineLife: "Southern stingrays · sharks · creole wrasse · jacks",
       marineLifeDescription:
-        "Big southern stingrays and sharks, with schools of creole wrasse, snapper and jacks.",
+        "Big southern stingrays and sharks, with schools of creole wrasse, snapper, and jacks.",
       difficultyLevel: "intermediate",
       depthMinMeters: 12,
       maxDepthMeters: 24,

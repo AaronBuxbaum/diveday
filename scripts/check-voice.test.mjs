@@ -798,6 +798,25 @@ describe("the Oxford comma", () => {
     ).toEqual([]);
   });
 
+  it("leaves paired phrases and negated verbs alone", () => {
+    expect(missing("Keep nothing dangling, do not chase or touch, stay together.")).toEqual([]);
+    expect(missing("Look, but do not touch or take anything.")).toEqual([]);
+    expect(missing("Stay calm, never chase or touch the animal.")).toEqual([]);
+    expect(missing("Keep your distance, with no chasing or touching, group together.")).toEqual([]);
+    expect(missing("Looking up now and then, and ascending.")).toEqual([]);
+    expect(missing("Diabetes, either drug or diet controlled")).toEqual([]);
+    expect(missing("Follow the ridge, north or south along the edge.")).toEqual([]);
+    expect(missing("Open Gulf, so current and visibility vary.")).toEqual([]);
+    expect(missing("Eagle rays, southern stingrays, and squid pass along the wall.")).toEqual([]);
+  });
+
+  it("still names the list that follows a negated pair", () => {
+    expect(
+      missing("Keep nothing dangling, do not chase or touch, stay together and follow the crew"),
+    ).toEqual([", stay together and"]);
+    expect(missing("Never chase, touch or reach for a shark")).toEqual([", touch or"]);
+  });
+
   it("is English only", () => {
     expect(
       findTells("Reservas, formularios y detalles del viaje", "es-ES").map((t) => t.rule),
