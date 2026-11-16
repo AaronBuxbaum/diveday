@@ -628,6 +628,7 @@
   "file": {
     "conversationUnanswered": "{count, plural, one {# unanswered} other {# unanswered}}",
     "noteCount": "{count, plural, one {# note} other {# notes}}",
+    "computerDiveCount": "{count, plural, one {# dive} other {# dives}}",
     "noneOnFile": "None on file",
     "certificationsNone": "None on file",
     "gearHeading": "Gear and sizes",

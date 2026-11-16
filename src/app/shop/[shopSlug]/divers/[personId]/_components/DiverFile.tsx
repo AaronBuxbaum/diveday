@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { personThread } from "@/db/inbound-messages";
 import type { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import type { loadDiverGear } from "@/features/diver-record";
@@ -14,6 +13,7 @@ import { ActivitySection } from "./ActivitySection";
 import { CertificationsGroup } from "./CertificationsGroup";
 import { ConversationWithAssists } from "./ConversationWithAssists";
 import { DiverDetailsGroup } from "./DiverDetailsGroup";
+import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverNotesSection } from "./DiverNotesSection";
 import { GearAndSizes } from "./GearAndSizes";
 import { LastDiveGroup } from "./LastDiveGroup";
@@ -49,6 +49,7 @@ export function DiverFile({
   notes,
   activityPage,
   lastDive,
+  computerDiveCount,
 }: {
   diver: DiverProfile;
   shop: Shop;
@@ -71,6 +72,7 @@ export function DiverFile({
   notes: Awaited<ReturnType<typeof listDiverRecordNotes>>;
   activityPage: Awaited<ReturnType<typeof pagedDiverActivity>>;
   lastDive: LastKnownDive;
+  computerDiveCount: number;
 }) {
   return (
     <div>
@@ -172,13 +174,18 @@ export function DiverFile({
         t={t}
         status={noticeForForm(notice, "work-orders")}
       />
+      {/* A door to the diver's dive-computer log, the same row as every group. */}
       {!removed ? (
-        <Link
+        <DiverFileGroupDisclosure
+          id="computer-dives"
+          label={t("computerDives.title")}
+          summary={
+            computerDiveCount > 0
+              ? t("divers.file.computerDiveCount", { count: computerDiveCount })
+              : t("divers.file.noneOnFile")
+          }
           href={`/shop/${shopSlug}/divers/${personId}/computer-dives`}
-          className="flex min-h-13 items-center border-b border-border py-3 font-medium text-primary"
-        >
-          {t("computerDives.title")}
-        </Link>
+        />
       ) : null}
       <DiverNotesSection
         notes={notes}

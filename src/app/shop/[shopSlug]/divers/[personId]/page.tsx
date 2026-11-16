@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
+import { countComputerDives } from "@/features/computer-dives";
 import { getDiverRecord } from "@/features/diver-record";
 import { diverStanding } from "@/features/diver-standing";
 import { splitDiverStatus } from "@/features/diver-status";
@@ -152,6 +153,13 @@ export default async function DiverDetailPage({
     found,
     lastDive,
   } = record;
+  const computerDiveCount = removed
+    ? 0
+    : await countComputerDives(db, {
+        shopId: shop.id,
+        personId,
+        actorPersonId: session.user.personId,
+      });
   /**
    * The page's `?notice=` resolved once, to words *and* to the group those
    * words belong beside. Each group is handed its own below with
@@ -323,6 +331,7 @@ export default async function DiverDetailPage({
           notes={notes}
           activityPage={activityPage}
           lastDive={lastDive}
+          computerDiveCount={computerDiveCount}
         />
         <DiverStory
           diver={diver}
