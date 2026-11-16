@@ -87,6 +87,7 @@ const day = {
   readyPath: "",
   /** The divers recorded aboard at departure — the only ones counted after a dive. */
   boardedNames: [] as string[],
+  crewNames: [] as string[],
 };
 
 let browser: Browser;
@@ -187,6 +188,7 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       await offlineCopySaved(staff);
       await openDeckDetails(staff);
       const plannedDives = await staff.getByRole("link", { name: /^After dive \d+$/ }).count();
+      expect(plannedDives).toBeGreaterThan(0);
       const sailAt = demoTodayDepartureStart(dayStart, DEMO_SHOP_TIMEZONE);
       const endsAt = new Date(sailAt.getTime() + SEEDED_DEPARTURE_MS);
       day.timeline = dayTimeline({ dayStart, sailAt, endsAt, plannedDives });
@@ -379,7 +381,10 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       await staff.goto(`${manifestPath()}?checkpoint=departure`);
       await offlineCopySaved(staff);
       const counted = await countEveryone(staff, { checkpoint: "departure" });
+      expect(counted.boarded).toContain(DIVER_NAME);
+      expect(counted.crewNames.length).toBeGreaterThan(0);
       day.boardedNames = counted.boarded;
+      day.crewNames = counted.crewNames;
       await expect(staff.getByText(/^(\d+) of \1 people accounted for$/)).toBeVisible();
       return {
         note: `${counted.boarded.length} divers boarded, ${counted.notBoarded.length} recorded not boarded (${counted.notBoarded.join(", ") || "none"}), ${counted.crew} crew aboard`,
@@ -407,6 +412,8 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
           checkpoint: `after_dive_${dive + 1}`,
           onlyNames: day.boardedNames,
         });
+        expect(counted.boarded).toEqual(expect.arrayContaining(day.boardedNames));
+        expect(counted.crewNames).toEqual(expect.arrayContaining(day.crewNames));
         await expect(staff.getByText(/^(\d+) of \1 people accounted for$/)).toBeVisible();
         shots.push(await snap(staff, index, id, `dive-${dive + 1}`));
         notes.push(
@@ -506,7 +513,7 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
 async function countEveryone(
   page: Page,
   options: { checkpoint: string; onlyNames?: string[] },
-): Promise<{ boarded: string[]; notBoarded: string[]; crew: number }> {
+): Promise<{ boarded: string[]; notBoarded: string[]; crew: number; crewNames: string[] }> {
   const find = page.locator('[data-deck-screen="find"]');
   const people = async (role: "Guest" | "Crew"): Promise<string[]> => {
     await page.getByRole("button", { name: "Find a person", exact: true }).click();
@@ -560,7 +567,8 @@ async function countEveryone(
   }
   let crew = 0;
   for (const name of crewNames) {
-    if (await record(name)) crew += 1;
+    expect(await record(name)).toBe(true);
+    crew += 1;
   }
   // The boat's own "Home" word (under Details) is a pressed-state toggle; the
   // Deck's way back to its home screen is the one that is not.
@@ -568,7 +576,7 @@ async function countEveryone(
     .getByRole("button", { name: "Home", exact: true })
     .and(page.locator(":not([aria-pressed])"))
     .click();
-  return { boarded, notBoarded, crew };
+  return { boarded, notBoarded, crew, crewNames };
 }
 
 /**

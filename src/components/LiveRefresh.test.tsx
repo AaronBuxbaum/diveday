@@ -69,6 +69,22 @@ describe("LiveRefresh", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the page current while a staff menu stays open", () => {
+    const nav = document.createElement("nav");
+    nav.setAttribute("data-staff-chrome", "true");
+    const more = document.createElement("button");
+    more.setAttribute("aria-expanded", "true");
+    nav.append(more);
+    document.body.append(nav);
+    render(<LiveRefresh />);
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_INTERVAL_MS * 3));
+    expect(refresh).toHaveBeenCalledTimes(3);
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_MIN_GAP_MS + 1));
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(refresh).toHaveBeenCalledTimes(4);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("stops after a week with no tap or key, so the session can lapse (issue 4063)", () => {
     expect(LIVE_REFRESH_IDLE_LIMIT_MS).toBe(7 * 24 * 60 * 60 * 1000);
     render(<LiveRefresh />);
