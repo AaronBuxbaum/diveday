@@ -21,8 +21,8 @@ import {
   parseComputerFile,
   validateComputerParseOptions,
 } from "@/lib/computer-import";
-import { computerHistorySummaryCsv } from "./summary-csv";
 import { createDuplicateIndex } from "./duplicate-index";
+import { computerHistorySummaryCsv } from "./summary-csv";
 
 export type ComputerScope = { shopId: string; personId: string; actorPersonId: string };
 export type ComputerFile = { name: string; bytes: Uint8Array };

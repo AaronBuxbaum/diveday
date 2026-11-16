@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { ParsedComputerDive } from "@/lib/computer-import";
 import { createDuplicateIndex } from "./duplicate-index";
 
-const dive = (over: Record<string, unknown>) => ({ localDate: null, localStart: null, startInstant: null, ...over }) as unknown as ParsedComputerDive;
+const dive = (over: Record<string, unknown>) =>
+  ({
+    localDate: null,
+    localStart: null,
+    startInstant: null,
+    ...over,
+  }) as unknown as ParsedComputerDive;
 
 describe("createDuplicateIndex", () => {
   it("matches on the same start instant or local start", () => {
