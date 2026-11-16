@@ -2,7 +2,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { people, priorVisits } from "@/db/schema";
 import type { PreparedImport } from "@/lib/import";
-import { manualIdentityConflicts } from "@/lib/import-identity";
+import { importIdentityConflicts } from "@/lib/import-identity";
 
 export type VisitImportOutcome = "add" | "existing" | "duplicate" | "skip";
 export type ImportMatchRow = {
@@ -41,9 +41,7 @@ export async function previewContactImportMatches(
   const matches = new Set(
     existing.flatMap((person) => (person.email ? [person.email.toLowerCase()] : [])),
   );
-  const conflicts = prepared.mapping.some((entry) => entry.manual)
-    ? manualIdentityConflicts(prepared.rows, existing)
-    : new Set<string>();
+  const conflicts = importIdentityConflicts(prepared.rows, existing);
   const personIds = existing.map((person) => person.id);
   const visits = personIds.length
     ? await db

@@ -9,7 +9,7 @@ import { previewContactImportMatches } from "./preview";
 const ctx = fileScopedShopContext();
 
 describe("import roster match preview", () => {
-  it("shows existing, new, same-file merge, and skipped outcomes within the session shop", async () => {
+  it("shows existing, conflicting shared-email, and skipped outcomes within the session shop", async () => {
     const { db, shop } = ctx;
     const person = await createPerson(db, {
       shopId: shop.id,
@@ -23,8 +23,8 @@ describe("import roster match preview", () => {
     );
     expect(await previewContactImportMatches(db, shop.id, prepared)).toEqual([
       { rowNumber: 1, outcome: "update" },
-      { rowNumber: 2, outcome: "create" },
-      { rowNumber: 3, outcome: "merge" },
+      { rowNumber: 2, outcome: "conflict" },
+      { rowNumber: 3, outcome: "conflict" },
       { rowNumber: 4, outcome: "skip" },
     ]);
     await db
@@ -94,37 +94,51 @@ it("rechecks advisory matches at commit and repeats a manually mapped file witho
   ).toHaveLength(1);
 });
 
-it("shows manual name conflicts and revalidates a roster change after preview", async () => {
-  const { prepareContactImport: prepare } = await import("@/lib/import");
-  const { commitContactImport } = await import("@/test/words-wiring");
-  const { userAccounts } = await import("@/db/schema");
-  const { DEV_STAFF_LOGINS } = await import("@/db/dev-credentials");
-  const [account] = await ctx.db
-    .select()
-    .from(userAccounts)
-    .where(eq(userAccounts.email, DEV_STAFF_LOGINS.owner.email));
-  const person = await createPerson(ctx.db, {
-    shopId: ctx.shop.id,
-    fullName: "Original Diver",
-    email: "stale-name@example.com",
-    phone: null,
-    origin: "import",
-  });
-  const prepared = prepare("Guest,Mailbox\nOriginal Diver,stale-name@example.com", {
-    today: "2026-11-16",
-    manual: { Guest: "full_name", Mailbox: "email" },
-  });
-  expect((await previewContactImportMatches(ctx.db, ctx.shop.id, prepared))[0].outcome).toBe(
-    "update",
-  );
-  await ctx.db.update(people).set({ fullName: "Different Person" }).where(eq(people.id, person.id));
-  expect((await previewContactImportMatches(ctx.db, ctx.shop.id, prepared))[0].outcome).toBe(
-    "conflict",
-  );
-  const result = await commitContactImport(ctx.db, ctx.shop.id, prepared, account.personId);
-  expect(result.peopleUpdated).toBe(0);
-  expect(result.identityConflicts).toBe(1);
-});
+it.each(["recognized", "assisted", "manual"] as const)(
+  "shows %s name conflicts and revalidates roster changes",
+  async (mode) => {
+    const { prepareContactImport: prepare } = await import("@/lib/import");
+    const { commitContactImport } = await import("@/test/words-wiring");
+    const { userAccounts } = await import("@/db/schema");
+    const { DEV_STAFF_LOGINS } = await import("@/db/dev-credentials");
+    const [account] = await ctx.db
+      .select()
+      .from(userAccounts)
+      .where(eq(userAccounts.email, DEV_STAFF_LOGINS.owner.email));
+    const person = await createPerson(ctx.db, {
+      shopId: ctx.shop.id,
+      fullName: "Original Diver",
+      email: "stale-name@example.com",
+      phone: null,
+      origin: "import",
+    });
+    const prepared = prepare(
+      `${mode === "manual" ? "Guest,Mailbox" : "full_name,email,Extra"}\nOriginal Diver,stale-name@example.com${mode === "manual" ? "" : ",note"}`,
+      {
+        today: "2026-11-16",
+        ...(mode === "manual"
+          ? { manual: { Guest: "full_name" as const, Mailbox: "email" as const } }
+          : {}),
+        ...(mode === "assisted"
+          ? { assist: { headers: { Extra: "internal_notes" as const }, levels: {} } }
+          : {}),
+      },
+    );
+    expect((await previewContactImportMatches(ctx.db, ctx.shop.id, prepared))[0].outcome).toBe(
+      "update",
+    );
+    await ctx.db
+      .update(people)
+      .set({ fullName: "Different Person" })
+      .where(eq(people.id, person.id));
+    expect((await previewContactImportMatches(ctx.db, ctx.shop.id, prepared))[0].outcome).toBe(
+      "conflict",
+    );
+    const result = await commitContactImport(ctx.db, ctx.shop.id, prepared, account.personId);
+    expect(result.peopleUpdated).toBe(0);
+    expect(result.identityConflicts).toBe(1);
+  },
+);
 
 it("previews existing and repeated past-booking history without creating seats", async () => {
   const { db, shop } = ctx;

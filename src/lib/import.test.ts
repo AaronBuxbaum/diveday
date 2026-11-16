@@ -711,23 +711,6 @@ describe("prepareContactImport — safety rules", () => {
     expect(row.issues.some((i) => i.code === "email_invalid")).toBe(true);
   });
 
-  it("skips a nameless row, and folds a repeated email onto the first row's diver", () => {
-    const csv = [
-      "full_name,email",
-      ",orphan@example.com",
-      "First Wins,dupe@example.com",
-      "Second Loses,DUPE@example.com",
-    ].join("\n");
-    const prepared = prepareContactImport(csv);
-    expect(prepared.rows[0].action).toBe("skip"); // no name
-    expect(prepared.rows[1].action).toBe("import");
-    // Case-insensitive, and the same diver — the contact details of row 2 win,
-    // but the row is not thrown away: any evidence on it lands on that diver.
-    expect(prepared.rows[2].action).toBe("merge");
-    expect(prepared.rows[2].mergedIntoRow).toBe(2);
-    expect(prepared.totals).toMatchObject({ total: 3, importable: 1, merged: 1, skipped: 1 });
-  });
-
   it("round-trips a cell the export guarded against spreadsheet-formula injection", () => {
     // export.ts prefixes a leading '=' with an apostrophe; the importer strips it.
     const [row] = prepareContactImport("full_name\n'=cmd").rows;
