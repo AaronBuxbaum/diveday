@@ -21,6 +21,7 @@ import {
   trips,
 } from "../../db/schema/index";
 import { checkoutProviderFromEnvironment } from "../../db/stripe-providers";
+import { shopClock } from "@/features/shop-clock";
 
 import { toDiverLocale } from "../../i18n/settings";
 import { HOUR_MS, nowDate } from "../../lib/clock";
@@ -64,6 +65,8 @@ export type CheckoutRecoveryRunSummary = {
   unaddressable: number;
   /** Send attempted but failed or no provider configured. */
   failed: number;
+  /** Outside the shop's waking hours; the next hourly tick looks again. */
+  deferred: number;
   /**
    * Stripe confirmed the session open and unpaid, but the shop has checkout
    * reminders switched off: reconciled, never emailed, left pending.
@@ -99,8 +102,8 @@ export type SendDueCheckoutRecoveriesOptions = {
  * written back as `expired` the moment it's found — otherwise the disqualified
  * rows would never leave the `pending` pool and could eventually fill every
  * future run's `BATCH_LIMIT`, starving genuinely due checkouts. Idempotent: dedup lives on
- * `booking_checkouts.abandoned_recovery_sent_at`, set only after a confirmed
- * send, so a failed attempt (no provider configured, a transient error) is
+ * `booking_checkouts.abandoned_recovery_sent_at`, claimed just before the send
+ * and released when it fails with no retry queued, so a failed attempt (no provider configured, a transient error) is
  * retried on the next run rather than silently dropped
  * (docs ADR 20260726-abandoned-checkout-recovery).
  *
@@ -177,6 +180,7 @@ export async function sendDueCheckoutRecoveries(
     optedOut: 0,
     unaddressable: 0,
     failed: 0,
+    deferred: 0,
     switchedOff: 0,
   };
   if (candidates.length === 0) return summary;
@@ -256,6 +260,14 @@ export async function sendDueCheckoutRecoveries(
       // Same terminal-and-permanent reasoning as the departed case above.
       await markCheckoutExpiredBySessionId(db, checkout.stripeSessionId);
       summary.settled += 1;
+      continue;
+    }
+
+    // A commercial nudge waits for the shop's waking hours like every other
+    // automated send (`src/lib/send-window.ts`). Before the Stripe lookup, so a
+    // shop asleep costs no API calls; this scan runs on the hourly shop tick.
+    if (!shopClock(shop, now).maySend("checkout_recovery")) {
+      summary.deferred += 1;
       continue;
     }
 
@@ -413,33 +425,57 @@ export async function sendDueCheckoutRecoveries(
       personId: recipient.personId,
     });
 
-    const delivery: NotificationDelivery = await sendNotification(
-      db,
-      {
-        kind: "checkout_recovery",
-        checkoutId: checkout.id,
-        shopId: shop.id,
-        to: checkout.customerEmail,
-        locale: toDiverLocale(shop.defaultLocale),
-        shopName: shop.name,
-        tripTitle: trip.title,
-        startsAt: trip.startsAt,
-        endsAt: trip.endsAt,
-        timezone: shop.timezone,
-        checkoutUrl: checkout.checkoutUrl,
-        unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
-      },
-      emailProvider,
-    );
-
-    if (delivery.status === "sent") {
-      await db
+    // **Claim before sending, release on a failure nobody else will retry.** The
+    // mark used to follow the send, so a failed write after a delivered mail, or
+    // a second overlapping run, sent the nudge again. Whoever flips the column
+    // from null owns this checkout's one send.
+    const [claimed] = await db
+      .update(bookingCheckouts)
+      // diveday:any-checkout-purpose: a fare candidate read above, by its id
+      .set({ abandonedRecoverySentAt: now })
+      .where(
+        and(eq(bookingCheckouts.id, checkout.id), isNull(bookingCheckouts.abandonedRecoverySentAt)),
+      )
+      .returning({ id: bookingCheckouts.id });
+    if (!claimed) continue;
+    const release = () =>
+      db
         .update(bookingCheckouts)
         // diveday:any-checkout-purpose: a fare candidate read above, by its id
-        .set({ abandonedRecoverySentAt: now })
+        .set({ abandonedRecoverySentAt: null })
         .where(eq(bookingCheckouts.id, checkout.id));
+
+    let delivery: NotificationDelivery;
+    try {
+      delivery = await sendNotification(
+        db,
+        {
+          kind: "checkout_recovery",
+          checkoutId: checkout.id,
+          shopId: shop.id,
+          to: checkout.customerEmail,
+          locale: toDiverLocale(shop.defaultLocale),
+          shopName: shop.name,
+          tripTitle: trip.title,
+          startsAt: trip.startsAt,
+          endsAt: trip.endsAt,
+          timezone: shop.timezone,
+          checkoutUrl: checkout.checkoutUrl,
+          unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
+        },
+        emailProvider,
+      );
+    } catch (error) {
+      await release();
+      throw error;
+    }
+
+    if (delivery.status === "sent") {
       summary.sent += 1;
     } else {
+      // A retry the send queue already holds keeps the claim: releasing it
+      // would have the next scan send the same mail beside the queue's own.
+      if (!(delivery.status === "failed" && delivery.retryQueued)) await release();
       summary.failed += 1;
     }
   }

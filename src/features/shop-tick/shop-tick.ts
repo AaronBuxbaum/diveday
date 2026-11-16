@@ -5,6 +5,7 @@ import { sendDueCrewNotices } from "@/db/crew-notices";
 import { sendMissingDiverAlerts } from "@/db/missing-diver-alerts";
 import { drainNotificationRetries } from "@/db/notifications";
 import { bringDemoBoatsAtSeaHome } from "@/db/seed";
+import { sendDueCheckoutRecoveries } from "@/features/checkout-recovery";
 import { sendTrailingDeskPings } from "@/features/desk-pings";
 import { sendDueRecaps } from "@/features/recap";
 import { sendDueReminders } from "@/features/reminders";
@@ -42,6 +43,7 @@ export const SHOP_TICK_SCANS = [
   "group-holds",
   "minimum-seats",
   "trip-reminders",
+  "checkout-recovery",
   "held-sends",
   "service-reminders",
   "recaps",
@@ -71,6 +73,9 @@ const RUNS = {
   "minimum-seats": (db, now) => sweepMinimumSeats(db, now),
   // Pre-trip reminders inside each shop's own waking hours (issue #697).
   "trip-reminders": (db, now) => sendDueReminders(db, { now }),
+  // The abandoned-checkout nudge, inside the shop's waking hours and after
+  // reconciling each candidate with Stripe (ADR 20260726-abandoned-checkout-recovery).
+  "checkout-recovery": (db, now) => sendDueCheckoutRecoveries(db, { now }),
   // Held sends whose client never came back (ADR 20260906-before-you-ask, decision 2).
   // The one send queue's held arm alone (issue #2730); its sealed retries stay
   // on the daily drain, whose backoff is counted in daily ticks.

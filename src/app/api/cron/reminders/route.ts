@@ -3,7 +3,6 @@ import { getDb } from "@/db/client";
 import { retryPendingMediaDeletions } from "@/db/media-deletions";
 import { drainNotificationRetries } from "@/db/notifications";
 import { reapExpiredDemoShops } from "@/db/seed";
-import { sendDueCheckoutRecoveries } from "@/features/checkout-recovery";
 import { requireCronSecret } from "@/features/cron-auth";
 import { flushLogs } from "@/features/log-shipping";
 import { retryPendingProcessorErasures } from "@/features/processor-erasure";
@@ -133,13 +132,9 @@ function resultOf<T>(outcome: ScanOutcome<T>): T | undefined {
  * shop per visitor, and this daily pass deletes the expired ones so the database
  * doesn't grow without bound. The canonical blue-mantis demo is never reaped.
  *
- * And it sends abandoned-checkout recovery emails (ADR
- * 20260726-abandoned-checkout-recovery): on this daily cadence a recovery
- * fires at least `RECOVERY_DELAY_HOURS` after abandonment, same-day or the
- * next tick depending on cron alignment — looser than the ~2-hour timing a
- * finer-grained scheduler could offer, but never duplicated (dedup is a
- * durable row) and never sent for a session that already paid or expired
- * (each candidate is reconciled against Stripe first).
+ * Abandoned-checkout recovery (ADR 20260726-abandoned-checkout-recovery) is
+ * not here: it is a commercial nudge, so it runs on the hourly shop tick and
+ * waits for the shop's waking hours.
  *
  * Three layers of observability, each catching a failure the others can't:
  * per-scan Sentry issues (one scan broke), the `cron_reminders.scan_complete`
@@ -174,12 +169,9 @@ export async function GET(request: Request) {
     // pass, a scan of `/api/cron/shop-tick`: a fixed daily UTC hour is 10am in
     // Florida and 03:00 in Fiji, so a shop in the picker's Asia-Pacific group
     // texted its divers in the middle of the night, every day (issue #697). The
-    // five scans left are durable-retry drains whose backoff bounds derive from
+    // scans left are durable-retry drains whose backoff bounds derive from
     // this tick's cadence (`src/lib/cron-schedule.ts`, OPS-6), which is exactly
     // why the cadence here did not change.
-    const checkoutRecoveries = await runScan("checkoutRecoveries", () =>
-      sendDueCheckoutRecoveries(db),
-    );
     const mediaDeletions = await runScan("mediaDeletions", () => retryPendingMediaDeletions(db));
     // The same bounded-retry shape one processor over: a Stripe customer delete
     // that erasure could not land (an outage, a dropped connection) gets tried
@@ -198,7 +190,6 @@ export async function GET(request: Request) {
 
     const scans = {
       notificationRetries,
-      checkoutRecoveries,
       mediaDeletions,
       processorErasures,
       demoShops,
@@ -208,7 +199,6 @@ export async function GET(request: Request) {
       .map(([name]) => name);
 
     const notificationRetriesCounts = resultOf(notificationRetries);
-    const checkoutRecoveriesCounts = resultOf(checkoutRecoveries);
     const mediaDeletionsCounts = resultOf(mediaDeletions);
     const processorErasuresCounts = resultOf(processorErasures);
     const demoShopsCounts = resultOf(demoShops);
@@ -224,8 +214,6 @@ export async function GET(request: Request) {
       notificationRetriesScanned: notificationRetriesCounts?.scanned,
       notificationRetriesSent: notificationRetriesCounts?.sent,
       notificationRetriesFailed: notificationRetriesCounts?.failed,
-      checkoutRecoveriesScanned: checkoutRecoveriesCounts?.scanned,
-      checkoutRecoveriesSent: checkoutRecoveriesCounts?.sent,
       mediaDeletionsAttempted: mediaDeletionsCounts?.attempted,
       mediaDeletionsSucceeded: mediaDeletionsCounts?.succeeded,
       processorErasuresAttempted: processorErasuresCounts?.attempted,

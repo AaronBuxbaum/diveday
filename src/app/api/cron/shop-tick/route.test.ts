@@ -12,6 +12,9 @@ vi.mock("@/db/trips", () => ({
   listMinimumNotMetRecipients: vi.fn(),
 }));
 vi.mock("../../../../features/reminders/store", () => ({ sendDueReminders: vi.fn() }));
+vi.mock("../../../../features/checkout-recovery/store", () => ({
+  sendDueCheckoutRecoveries: vi.fn(),
+}));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
 vi.mock("../../../../features/work-order-follow-up/store", () => ({
   sendDueServiceReminders: vi.fn(),
@@ -39,6 +42,7 @@ const { getDb } = await import("@/db/client");
 const { bringDemoBoatsAtSeaHome } = await import("@/db/seed-boat-at-sea");
 const { cancelDeparturesBelowMinimum } = await import("@/db/trips");
 const { sendDueReminders } = await import("../../../../features/reminders/store");
+const { sendDueCheckoutRecoveries } = await import("../../../../features/checkout-recovery/store");
 const { drainNotificationRetries } = await import("@/db/notifications");
 const { sendDueServiceReminders } = await import("../../../../features/work-order-follow-up/store");
 const { sendDueRecaps } = await import("../../../../features/recap/store");
@@ -67,6 +71,7 @@ const ALL_SCANS = [
   expireGroupHolds,
   cancelDeparturesBelowMinimum,
   sendDueReminders,
+  sendDueCheckoutRecoveries,
   drainNotificationRetries,
   sendDueServiceReminders,
   sendDueRecaps,
@@ -95,6 +100,9 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ considered: 0, cancelled: [], deferred: 0 } as never);
   vi.mocked(sendDueReminders)
+    .mockReset()
+    .mockResolvedValue({ scanned: 1, sent: 1 } as never);
+  vi.mocked(sendDueCheckoutRecoveries)
     .mockReset()
     .mockResolvedValue({ scanned: 1, sent: 1 } as never);
   vi.mocked(drainNotificationRetries)
@@ -156,6 +164,7 @@ describe("GET /api/cron/shop-tick", () => {
     for (const scan of ALL_SCANS) expect(scan).toHaveBeenCalledTimes(1);
     const now = nowDate();
     expect(sendDueReminders).toHaveBeenCalledWith(FAKE_DB, { now });
+    expect(sendDueCheckoutRecoveries).toHaveBeenCalledWith(FAKE_DB, { now });
     expect(sendDueRecaps).toHaveBeenCalledWith(FAKE_DB, { marineLifeNamesIn, now });
     expect(sendMissingDiverAlerts).toHaveBeenCalledWith(FAKE_DB, { now });
     expect(bringDemoBoatsAtSeaHome).toHaveBeenCalledWith(FAKE_DB, now);
