@@ -2416,7 +2416,12 @@ export async function applyProviderEmailEvent(
   const [existing] = await db
     .select({ id: notificationDeliveries.id })
     .from(notificationDeliveries)
-    .where(eq(notificationDeliveries.providerMessageId, input.providerMessageId))
+    .where(
+      and(
+        eq(notificationDeliveries.providerMessageId, input.providerMessageId),
+        ...(input.shopId ? [eq(notificationDeliveries.shopId, input.shopId)] : []),
+      ),
+    )
     .limit(1);
   const [existingIndependent] = await db
     .select({ id: waiverRecords.id })
