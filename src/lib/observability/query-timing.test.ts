@@ -36,16 +36,19 @@ afterEach(() => {
 
 describe("E2E API timing diagnostics", () => {
   it("reports bounded route, DB, and event-loop timings without request data", async () => {
+    vi.useFakeTimers();
     vi.stubEnv("DIVEDAY_E2E", "1");
     const lines: string[] = [];
     setLogSink((line) => lines.push(line));
     vi.spyOn(console, "log").mockImplementation(() => undefined);
 
-    await withE2EApiTiming("/api/example GET", async () => {
+    const timed = withE2EApiTiming("/api/example GET", async () => {
       queryTimingLogger.logQuery();
       await timeStatement(() => new Promise((resolve) => setTimeout(resolve, 25)));
       await new Promise((resolve) => setTimeout(resolve, 510));
     });
+    await vi.advanceTimersByTimeAsync(600);
+    await timed;
 
     expect(lines).toHaveLength(1);
     const report = JSON.parse(lines[0] ?? "{}");

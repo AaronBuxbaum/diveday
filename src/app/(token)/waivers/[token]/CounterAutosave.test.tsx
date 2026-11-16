@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CounterAutosave } from "./CounterAutosave";
 
@@ -60,23 +60,17 @@ describe("CounterAutosave", () => {
     const { container } = renderForm(action);
     const [first, second] = container.querySelectorAll("input");
     if (!first || !second) throw new Error("inputs missing");
-    await act(async () => {
-      fireEvent.focusOut(first, { relatedTarget: second });
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
+    fireEvent.focusOut(first, { relatedTarget: second });
+    expect(await screen.findByRole("status")).toHaveTextContent("Saved.");
     expect(action).toHaveBeenCalledTimes(1);
     expect(action.mock.calls[0]?.[0]).toBeInstanceOf(FormData);
-    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
   });
 
   it("reloads the page once the code has closed", async () => {
     const { container } = renderForm(vi.fn(async () => "closed" as const));
     const [first, second] = container.querySelectorAll("input");
     if (!first || !second) throw new Error("inputs missing");
-    await act(async () => {
-      fireEvent.focusOut(first, { relatedTarget: second });
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    });
-    expect(refresh).toHaveBeenCalled();
+    fireEvent.focusOut(first, { relatedTarget: second });
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
 });
