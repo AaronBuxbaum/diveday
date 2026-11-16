@@ -1002,14 +1002,15 @@ export function implementationWords(value, locale, key = "") {
  * keyed by the matched text, each with its reason.
  */
 const WORD = String.raw`[\p{L}\p{N}’-]+`;
-const OXFORD_PATTERN = new RegExp(`(?<=[\\p{L}\\p{N}’)]), (${WORD}(?: ${WORD}){0,3}) (and|or) `, "gu");
+const OXFORD_PATTERN = new RegExp(
+  `(?<=[\\p{L}\\p{N}’)]), (${WORD}(?: ${WORD}){0,3}) (and|or) `,
+  "gu",
+);
 const OXFORD_CLAUSE_OPENERS =
   /^(?:if|when|once|after|before|because|while|although|unless|since|as|until|whether|though|so|in|on|at|during|for|yes|no)\b/i;
 /** A part that opens on one of these is a clause ("so stay outside"), not an item. */
 const OXFORD_CLAUSE_OPENERS_INNER = /^(?:so|when|where|which|who|because|while|then|but)\b/i;
-const OXFORD_LIST_INTRODUCERS = new Set(
-  "by including like of plus between across".split(" "),
-);
+const OXFORD_LIST_INTRODUCERS = new Set("by including like of plus between across".split(" "));
 
 /**
  * Values whose "and" or "or" is not closing a list, by bundle key, each with
@@ -1017,13 +1018,25 @@ const OXFORD_LIST_INTRODUCERS = new Set(
  * real list is written with its commas by hand.
  */
 export const OXFORD_ALLOWLIST = new Map([
-  ["marketing.featurePages.onlineBooking.step2Body", "'pay in full or leave a deposit' joins two verbs"],
-  ["marketing.featurePages.certifications.step1Body", "'on the departure or on its sites' is a pair of places"],
+  [
+    "marketing.featurePages.onlineBooking.step2Body",
+    "'pay in full or leave a deposit' joins two verbs",
+  ],
+  [
+    "marketing.featurePages.certifications.step1Body",
+    "'on the departure or on its sites' is a pair of places",
+  ],
   ["marineLife.species.black-tunicate.tip", "'it clenches and squirts' joins two verbs"],
   ["marineLife.species.boga.description", "'above and silver below' is a clause, not an item"],
   ["marineLife.species.golden-coral-shrimp.tip", "'with a light and never a hand' is a pair"],
-  ["marineLife.species.lavender-rope-sponge.description", "'upright or trailing' is a pair of adjectives"],
-  ["marineLife.species.leatherback-sea-turtle.description", "'ridged lengthwise and flecked white' joins two descriptions"],
+  [
+    "marineLife.species.lavender-rope-sponge.description",
+    "'upright or trailing' is a pair of adjectives",
+  ],
+  [
+    "marineLife.species.leatherback-sea-turtle.description",
+    "'ridged lengthwise and flecked white' joins two descriptions",
+  ],
   ["marineLife.species.massive-starlet-coral.tip", "'keep hands and fins off' is a pair"],
   ["marineLife.species.silky-shark.description", "'above and pale below' is a clause, not an item"],
   ["main.notice.deskPaymentInvalid", "'card and cash' is one option in the list"],
@@ -1150,7 +1163,9 @@ export function findTells(value, locale, key = "") {
     ...threeDots(value),
     ...(inShapeScope(key) ? shapeTells(value) : []),
     ...implementationWords(value, locale, key),
-    ...(locale === "en-US" ? oxfordCommas(value, key).map(({ rule, text }) => ({ rule, text })) : []),
+    ...(locale === "en-US"
+      ? oxfordCommas(value, key).map(({ rule, text }) => ({ rule, text }))
+      : []),
   ];
   for (const [rule, pattern] of Object.entries(rules)) {
     pattern.lastIndex = 0;

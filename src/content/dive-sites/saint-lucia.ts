@@ -236,7 +236,8 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       description:
         "A freighter about 50 m long, sunk in May 2018 with her bow facing the open sea. She lies in about 24 m of water, with the shallowest part near 15 m.",
       marineLife: "Green morays · frogfish · jacks · Bermuda chub",
-      marineLifeDescription: "A young wreck, already drawing morays, frogfish, and schooling jacks.",
+      marineLifeDescription:
+        "A young wreck, already drawing morays, frogfish, and schooling jacks.",
       difficultyLevel: "intermediate",
       depthMinMeters: 15,
       maxDepthMeters: 24,
