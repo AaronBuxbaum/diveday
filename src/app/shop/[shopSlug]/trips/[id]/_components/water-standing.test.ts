@@ -401,3 +401,44 @@ describe("the day so far", () => {
     expect(loggableDives(read().standing, { back: false })).toEqual([1]);
   });
 });
+
+describe("seats the roll call never placed", () => {
+  const seatsAt = (over: Partial<WaterCount["divers"][number]>[]) => {
+    const [dock, ...rest] = counts({});
+    return [
+      {
+        ...dock,
+        divers: dock.divers.map((seat, i) => ({ ...seat, ...over[i] })),
+      },
+      ...rest,
+    ];
+  };
+  const run = (c: WaterCount[]) =>
+    waterStanding({
+      counts: c,
+      alerted: new Set(),
+      plannedDives: [],
+      logged: new Map(),
+      stage: null,
+      homeSaidAt: null,
+      endsAt: at("12:30"),
+      boatChecks: null,
+    }).unplaced;
+
+  it("names a guest with no record at the dock, and a blocked one apart", () => {
+    const c = seatsAt([
+      { rollCall: said("boarded", "09:00") },
+      { readiness: { status: "blocked" } },
+    ]);
+    expect(run(c)).toEqual({ noRecord: [], blocked: ["Lena Fischer"] });
+    expect(run(seatsAt([{ rollCall: said("boarded", "09:00") }, {}]))).toEqual({
+      noRecord: ["Lena Fischer"],
+      blocked: [],
+    });
+  });
+
+  it("does not name a seat the crew placed, the desk released, or turned away", () => {
+    const c = seatsAt([{ rollCall: said("not_boarded", "09:00") }, { notHere: true }]);
+    expect(run(c)).toEqual({ noRecord: [], blocked: [] });
+  });
+});

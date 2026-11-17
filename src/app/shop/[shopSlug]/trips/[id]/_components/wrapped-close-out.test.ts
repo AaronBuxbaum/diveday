@@ -32,6 +32,7 @@ function standing(over: Partial<WaterStanding> = {}, dives: WaterStop[] = []): W
   return {
     latest: count(2, true),
     alerts: 0,
+    unplaced: { noRecord: [], blocked: [] },
     notYetBack: [],
     lastAboard: ["Tom Okafor", "Lena Fischer", "Sal Reyes"],
     timeline: [
@@ -126,6 +127,16 @@ describe("the close-out list", () => {
     expect(closeOutItems({ standing: s, rentalsOut: [], reports: [], cancelled: false })).toEqual([
       { kind: "rollCall", names: ["Tom Okafor"], dive: 2 },
     ]);
+    expect(say(s).headline).toBe("Scheduled back at 12:30 PM. 1 thing to close out.");
+  });
+
+  it("never reads clean when people were counted aboard at the dock on a trip with no planned dives", () => {
+    // A snorkel or pool day: the timeline is the dock and Home. Five aboard at
+    // the dock and nobody recorded back; the dock count is where each is put ashore.
+    const five = ["Tom Okafor", "Lena Fischer", "Sal Reyes", "Ana Ruiz", "Joe Park"];
+    const s = standing({ latest: { ...count(0, true), aboard: 5 }, lastAboard: five });
+    const items = closeOutItems({ standing: s, rentalsOut: [], reports: [], cancelled: false });
+    expect(items).toEqual([{ kind: "rollCall", names: five, dive: 0 }]);
     expect(say(s).headline).toBe("Scheduled back at 12:30 PM. 1 thing to close out.");
   });
 

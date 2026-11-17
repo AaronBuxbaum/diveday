@@ -3,6 +3,7 @@
 import { createContext, type ReactNode, useContext, useRef, useState } from "react";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, DateField } from "@/components/ui/form";
 import { ITEM_TITLE_CLASS, SHELL_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { formatDateTimeTz } from "@/lib/format";
@@ -230,9 +231,10 @@ function DeckFooter({
       >
         {copy.find}
       </button>
-      <details ref={detailsRef} className="contents [&::details-content]:col-span-2">
-        <summary className="flex min-h-11 cursor-pointer items-center justify-center font-semibold">
+      <details ref={detailsRef} className="group/more contents [&::details-content]:col-span-2">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
           {copy.details}
+          <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />
         </summary>
         <div className="col-span-2 mt-4 space-y-6">
           <DeckObservation

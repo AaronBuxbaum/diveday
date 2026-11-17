@@ -558,11 +558,11 @@ for (const scheme of ["light", "dark"] as const) {
 
         await openReefTrip(page);
         await openTripTab(page, "Trip");
-        // One line under "Worth a minute" names everyone the depth is about;
-        // the whole sentence is on the guest opened from it.
+        // At Check-in the depth check rides each guest's own row among their
+        // other reasons; the whole sentence is on the guest opened from it.
         await expect(
           page
-            .locator('[data-fix-group="worth"] li')
+            .locator('[data-fix-group="toCome"] li')
             .filter({ hasText: staffCopy("trips.fixList.reason.depth") })
             .first(),
         ).toBeVisible();

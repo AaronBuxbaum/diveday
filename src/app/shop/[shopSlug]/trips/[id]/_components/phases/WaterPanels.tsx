@@ -235,3 +235,29 @@ function stopWords(
           };
   }
 }
+
+/**
+ * **Guests the dock count never placed**, once the boat has left: one quiet
+ * line each for "could not board" (readiness blocked, no record) and "no
+ * roll-call record". Names only, no button: Check-in's chores stay behind.
+ */
+export function UnplacedLine({
+  standing,
+  locale,
+  t,
+}: { standing: WaterStanding } & Omit<Words, "timeZone">) {
+  const { blocked, noRecord } = standing.unplaced;
+  if (blocked.length === 0 && noRecord.length === 0) return null;
+  const list = (names: string[]) =>
+    cachedListFormat(locale, { style: "long", type: "conjunction" }).format(names);
+  return (
+    <div data-unplaced className="space-y-1 text-sm text-muted">
+      {blocked.length > 0 ? (
+        <p>{t("trips.clock.water.unplacedBlocked", { names: list(blocked) })}</p>
+      ) : null}
+      {noRecord.length > 0 ? (
+        <p>{t("trips.clock.water.unplacedNoRecord", { names: list(noRecord) })}</p>
+      ) : null}
+    </div>
+  );
+}
