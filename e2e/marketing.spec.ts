@@ -71,7 +71,8 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   // door. The mockup's "Mark boarded" buttons are `disabled` scenery, not
   // doors, so the count is of things a visitor can actually act on.
   const heroSection = page.getByRole("main").locator("section").first();
-  await expect(heroSection.locator("button:not([disabled])")).toHaveCount(1);
+  // The sample desk's own taps (`data-try-tap`) are the sample's, not doors.
+  await expect(heroSection.locator("button:not([disabled]):not([data-try-tap])")).toHaveCount(1);
   // The shop's budget is counted without the one line for a diver (fourth
   // review, item 50): a sentence for the reader who landed here by mistake,
   // not a door for the shop deciding. It is pinned to exactly one link with
@@ -86,15 +87,26 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   await expect(shopLinks).toHaveAttribute("href", "/get-set-up?from=home-hero");
 
   await expect(heroSection.getByText(/^One flat price of/)).toHaveCount(0);
+});
 
-  // The dock note intentionally rises 20px into the phone's lower edge. The
-  // phone's entrance animation creates a stacking context, so the note must
-  // explicitly sit above it or its eyebrow and first line are painted under
-  // the bezel (the regression shown in the homepage hero screenshot).
-  await expect(heroSection.getByText("At the dock", { exact: true }).locator("..")).toHaveCSS(
-    "z-index",
-    "10",
-  );
+test("the homepage hero's sample desk clears all nine in three taps and starts over", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const desk = page.getByRole("figure", { name: /A sample of the arrival desk/ });
+  await expect(desk.getByText("of 9 here")).toBeVisible();
+  await expect(desk.getByText("7", { exact: true })).toBeVisible();
+
+  await desk.getByRole("button", { name: "Same person" }).click();
+  await desk.getByRole("button", { name: "Check in" }).first().click();
+  await desk.getByRole("button", { name: "Check in" }).click();
+  await expect(desk.getByText("9", { exact: true })).toBeVisible();
+  await expect(desk.getByText("Everyone is here and cleared")).toBeVisible();
+  await expect(page.getByText("All nine are cleared for the 7:30.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Start over" }).click();
+  await expect(desk.getByRole("button", { name: "Same person" })).toBeVisible();
+  await expect(page.getByText("All nine are cleared for the 7:30.")).toHaveCount(0);
 });
 
 test("the homepage offers a way to ask before the footer", async ({ page }) => {
