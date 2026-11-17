@@ -204,6 +204,7 @@
     "reg-publish-s3-plugin": "^0.14.4",
     "reg-simple-keygen-plugin": "^0.14.2",
     "reg-suit": "^0.14.5",
+    "semver": "7.8.6",
     "tailwindcss": "^4.3.5",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
