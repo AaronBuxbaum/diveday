@@ -173,6 +173,7 @@
     "needsYouLabel": "Needs you",
     "deskGroupLabel": "The desk",
     "crewThanks": "A diver said thanks after {trip}: “{words}”",
+    "crewThanksBare": "A diver said thanks after {trip}.",
     "crewTips": "Your share of tips this week: {amount}.",
     "crewMonth": "{month}: {boats, plural, one {# boat} other {# boats}} · {dives, plural, one {# dive run} other {# dives run}} · {hours, plural, one {# hour} other {# hours}} on the water."
   },
@@ -184,6 +185,10 @@
     "invite": "Invite past divers",
     "ladder": "See who could take it",
     "minimum": "Change the minimum"
+  },
+  "quietSuggestions": {
+    "heading": "Divers to clear for the week after",
+    "blocked": "{count, plural, one {# blocked} other {# blocked}}"
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",

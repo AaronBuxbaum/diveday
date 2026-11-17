@@ -177,7 +177,7 @@ function fire(
 }
 
 const fireSync = (tag = MANIFEST_SYNC_TAG) => fire("sync", { tag });
-/** No `title` in the payload, so the handler stops before showNotification. */
+/** No `title` in the payload: the handler falls back to a generic one. */
 const firePush = () => fire("push", { data: { json: () => ({ kind: "manifest-changed" }) } });
 
 beforeAll(async () => {
@@ -393,6 +393,12 @@ describe("refreshSavedManifests (the push event)", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("still shows a notification when the push carries no title", async () => {
+    await firePush();
+    expect(showNotification).toHaveBeenCalledTimes(1);
+    expect(showNotification).toHaveBeenCalledWith("DiveDay", expect.anything());
   });
 
   it("writes nothing when the purge itself fails", async () => {

@@ -2,7 +2,13 @@ import { StarRatingInput } from "@/components/StarRatingInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, FormStatus, legendClass, textareaClassFor } from "@/components/ui/form";
+import {
+  ChoiceFieldset,
+  ChoicePill,
+  controlClass,
+  FormStatus,
+  textareaClassFor,
+} from "@/components/ui/form";
 import type { AfterStateProps } from "@/features/recap-after-state";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { MAX_CREW_THANKS_LENGTH, MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
@@ -59,26 +65,34 @@ export function ReviewAsk({
         <p id="review-usage" className="text-xs text-muted">
           {t("reviews.usageHint")}
         </p>
-        {/* **Thank someone by name** (loop 5, row 6): one optional line for one
-            of the crew, seen only by them and the shop, never published. */}
+        {/* **Thank someone by name** (loop 5, row 6; issue #4261): one tap on a
+            crew member and an optional line, seen only by them and the shop,
+            never published, and by them only once the shop passed it on. */}
         {crewChoices.length > 0 ? (
-          <fieldset className="flex min-w-0 flex-col gap-2">
-            <legend className={`${legendClass} text-sm font-medium`}>
-              {t("reviews.thanksLegend")}
-            </legend>
-            <select
-              name="crewThanksChoice"
-              aria-label={t("reviews.thanksWho")}
-              defaultValue={ownReview?.crewThanksChoice ?? ""}
-              className={controlClass}
-            >
-              <option value="">{t("reviews.thanksNobody")}</option>
+          <ChoiceFieldset
+            legend={t("reviews.thanksLegend")}
+            className="min-w-0"
+            bodyClassName="flex flex-col gap-2"
+          >
+            <div className="flex flex-wrap gap-2">
+              {/* "Nobody" only once there is a thanks to take back. */}
+              {ownReview?.crewThanksChoice ? (
+                <ChoicePill type="radio" name="crewThanksChoice" value="">
+                  {t("reviews.thanksNobody")}
+                </ChoicePill>
+              ) : null}
               {crewChoices.map((crew) => (
-                <option key={crew.choice} value={crew.choice}>
+                <ChoicePill
+                  key={crew.choice}
+                  type="radio"
+                  name="crewThanksChoice"
+                  value={crew.choice}
+                  defaultChecked={ownReview?.crewThanksChoice === crew.choice}
+                >
                   {crew.name}
-                </option>
+                </ChoicePill>
               ))}
-            </select>
+            </div>
             <input
               type="text"
               name="crewThanks"
@@ -89,7 +103,7 @@ export function ReviewAsk({
               className={controlClass}
             />
             <p className="text-xs text-muted">{t("reviews.thanksHint")}</p>
-          </fieldset>
+          </ChoiceFieldset>
         ) : null}
         <div>
           <SubmitButton

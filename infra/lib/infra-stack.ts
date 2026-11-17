@@ -103,9 +103,13 @@ export function eventBridgeCron(crontab: string): string {
   if (!minute || !hour || !dayOfMonth || !month || !dayOfWeek) {
     throw new Error(`not a five-field crontab: ${crontab}`);
   }
-  const weekday = dayOfWeek.replace(/\b[0-7]\b/g, (d) =>
-    String(Number(d) === 0 || Number(d) === 7 ? 1 : Number(d) + 1),
-  );
+  // A crontab's Sunday is 0 or 7; EventBridge counts Sunday as 1 through Saturday as 7. A range
+  // that ends in 7 becomes `a-6,0` first, so it never turns into a backwards range.
+  const weekday = dayOfWeek
+    .split(",")
+    .map((part) => part.replace(/^([0-6])-7$/, "$1-6,0").replace(/\b7\b/g, "0"))
+    .join(",")
+    .replace(/\b[0-6]\b/g, (d) => String(Number(d) + 1));
   const [dom, dow] =
     dayOfWeek === "*" ? [dayOfMonth, "?"] : [dayOfMonth === "*" ? "?" : dayOfMonth, weekday];
   return `cron(${minute} ${hour} ${dom} ${month} ${dow} *)`;
@@ -3786,7 +3790,7 @@ exports.handler = async () => {
       "DiveDay backup: no export in " + ageDays + " days",
       "The newest export in " + bucket + " is " + latest + ", " + ageDays + " days old " +
       "(threshold " + maxAgeDays + "). The weekly pass has missed at least one run. Check the " +
-      "Vercel cron log for /api/cron/platform-backup and the diveday-platform-backup Sentry " +
+      "diveday-cron-dispatcher log group for /api/cron/platform-backup and the diveday-platform-backup Sentry " +
       "monitor. See docs/engineering/backup-and-restore-runbook.md section 2."
     );
     return { status: "stale", latest, ageDays, bundles: bundles.length, ...dump };

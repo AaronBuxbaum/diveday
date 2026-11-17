@@ -1,8 +1,9 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { bookings, cards, courses, people, personRoles, trips } from "../../db/schema/index";
 import { DAY_MS, nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
-import { getCourseLadder, ladderInviteRefusal } from "./store";
+import { getCourseLadder, ladderInviteRefusal, nextCourseForDiver } from "./store";
 
 const ctx = fileScopedShopContext();
 
@@ -253,5 +254,102 @@ describe("getCourseLadder", () => {
         timeZone: shop.timezone,
       }),
     ).toBe("not_a_course_session");
+  });
+});
+
+describe("nextCourseForDiver", () => {
+  async function ladderShop() {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    await db.update(courses).set({ isActive: false }).where(eq(courses.shopId, shop.id));
+    const agency = "next-for-diver";
+    const [entry, advanced] = await db
+      .insert(courses)
+      .values([
+        {
+          shopId: shop.id,
+          title: "NFD Open Water",
+          slug: "nfd-ow",
+          agency,
+          certifiesLevel: "open_water",
+        },
+        {
+          shopId: shop.id,
+          title: "NFD Advanced",
+          slug: "nfd-aow",
+          agency,
+          minimumCertificationLevel: "open_water",
+          certifiesLevel: "advanced_open_water",
+        },
+      ])
+      .returning();
+    const startsAt = new Date(now.getTime() + 9 * DAY_MS);
+    const [session] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "NFD Advanced session",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+        capacity: 6,
+        courseId: advanced.id,
+      })
+      .returning();
+    const person = async (fullName: string, level: "open_water" | "advanced_open_water" | null) => {
+      const [row] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
+      if (level) {
+        await db.insert(cards).values({
+          kind: "level",
+          shopId: shop.id,
+          personId: row.id,
+          agency: "padi",
+          level,
+          identifier: `NFD-${row.id.slice(0, 8)}`,
+          status: "pending",
+        });
+      }
+      return row;
+    };
+    return { db, shop, now, entry, advanced, session, person };
+  }
+
+  it("offers the course after the highest card held, with its next session", async () => {
+    const { db, shop, now, session, person } = await ladderShop();
+    const ow = await person("Ola Water", "open_water");
+    expect(
+      await nextCourseForDiver(db, {
+        shopId: shop.id,
+        personId: ow.id,
+        now,
+        timeZone: shop.timezone,
+      }),
+    ).toEqual({ slug: "nfd-aow", title: "NFD Advanced", nextSessionStartsAt: session.startsAt });
+  });
+
+  it("offers the entry course, undated, to a diver with no card", async () => {
+    const { db, shop, now, person } = await ladderShop();
+    const taster = await person("Tia Taster", null);
+    expect(
+      await nextCourseForDiver(db, {
+        shopId: shop.id,
+        personId: taster.id,
+        now,
+        timeZone: shop.timezone,
+      }),
+    ).toEqual({ slug: "nfd-ow", title: "NFD Open Water", nextSessionStartsAt: null });
+  });
+
+  it("offers nothing past the top of the ladder, or to a diver already booked on it", async () => {
+    const { db, shop, now, session, person } = await ladderShop();
+    const top = await person("Al Advanced", "advanced_open_water");
+    const read = (personId: string) =>
+      nextCourseForDiver(db, { shopId: shop.id, personId, now, timeZone: shop.timezone });
+    expect(await read(top.id)).toBeNull();
+
+    const booked = await person("Bea Booked", "open_water");
+    await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: session.id, personId: booked.id });
+    expect(await read(booked.id)).toBeNull();
   });
 });

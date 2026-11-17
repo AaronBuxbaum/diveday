@@ -57,6 +57,30 @@ describe("pushCrewGapRows", () => {
     expect(actions).toEqual([]);
   });
 
+  // Issue #4633: the sentence quotes the figure the session was measured at.
+  it("words an over-ratio pool intro session at 4 per instructor, a boat one at 2", () => {
+    const intro = { agency: "PADI", minimumCertificationLevel: null, isIntroCourse: true };
+    const crew = { instructorCount: 1, assistantCount: 0 };
+    const one = { ...crew, lapsed: [], roster: crew };
+    const detail = (diveMode: string, booked: number) => {
+      const actions: TodayAction[] = [];
+      const session = {
+        ...(trip as object),
+        course: intro,
+        diveMode,
+        booked,
+        bookedDivers: booked,
+      };
+      pushCrewGapRows(actions, rowsContext({ courseCrewCounts: new Map([["trip-1", one]]) }), {
+        ...where,
+        trip: session as never,
+      });
+      return actions.find((row) => row.kind === "instructor_missing")?.detail;
+    };
+    expect(detail("pool", 5)).toBe("5 booked, crew covers 4 at 4 per instructor.");
+    expect(detail("boat", 3)).toBe("3 booked, crew covers 2 at 2 per instructor.");
+  });
+
   it("raises nothing when the shop sets no divemaster target", () => {
     expect(rows({ courseCrewCounts: new Map() }, { diversPerDivemaster: null })).toEqual([]);
   });

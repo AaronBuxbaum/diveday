@@ -35,6 +35,8 @@ const { buyPackageAction } = await import("./actions");
 const { checkRateLimit, rateLimitKey } = await import("@/lib/rate-limit");
 const { createDivePackage } = await import("@/db/dive-packages");
 const { getDb } = await import("@/db/client");
+const { calendarDateInTimezone, shiftCalendarDate } = await import("@/lib/calendar-date");
+const { nowDate } = await import("@/lib/clock");
 
 beforeEach(() => {
   hoisted.createDiverPackageOrder.mockReset();
@@ -175,5 +177,82 @@ describe("buyPackageAction", () => {
     // React resets the form after the action; the answers come back with the
     // refusal so a retry is one tap, not a retype.
     expect(state).toMatchObject({ name: "Ola", email: "ola@example.com", packageId: pkg.id });
+  });
+
+  describe("as a gift (issue 4629)", () => {
+    const today = () => calendarDateInTimezone(nowDate(), ctx.shop.timezone);
+
+    it("hands the order the recipient and the send date, the buyer staying the payer", async () => {
+      const { shop, pkg } = await shopWithPackage();
+      hoisted.createDiverPackageOrder.mockResolvedValue({
+        ok: true,
+        order: { hostedInvoiceUrl: "https://invoice.stripe.com/i/acct_1/in_2" },
+      });
+      const sendOn = shiftCalendarDate(today(), 10);
+      await expect(
+        buyPackageAction(
+          shop.slug,
+          {},
+          purchaseForm({
+            packageId: pkg.id,
+            name: "Gil Giver",
+            email: "gil@example.com",
+            gift: "yes",
+            recipientName: "Rita Recipient",
+            recipientEmail: "Rita@Example.com",
+            sendOn,
+          }),
+        ),
+      ).rejects.toThrow("NEXT_REDIRECT");
+      const [, input] = hoisted.createDiverPackageOrder.mock.calls[0] ?? [];
+      expect(input).toMatchObject({
+        fullName: "Gil Giver",
+        email: "gil@example.com",
+        gift: { fullName: "Rita Recipient", email: "rita@example.com", sendOn },
+      });
+    });
+
+    it("ignores the recipient fields when the box is not ticked", async () => {
+      const { shop, pkg } = await shopWithPackage();
+      hoisted.createDiverPackageOrder.mockResolvedValue({ ok: false, reason: "stripe_failed" });
+      await buyPackageAction(
+        shop.slug,
+        {},
+        purchaseForm({
+          packageId: pkg.id,
+          name: "Ola",
+          email: "ola@example.com",
+          recipientEmail: "someone@example.com",
+          sendOn: "2020-01-01",
+        }),
+      );
+      const [, input] = hoisted.createDiverPackageOrder.mock.calls[0] ?? [];
+      expect(input).not.toHaveProperty("gift");
+    });
+
+    it("refuses a send date already past in the shop's zone, or no recipient email, and keeps the answers", async () => {
+      const { shop, pkg } = await shopWithPackage();
+      for (const fields of [
+        { recipientEmail: "rita@example.com", sendOn: shiftCalendarDate(today(), -1) },
+        { recipientEmail: "", sendOn: today() },
+        { recipientEmail: "rita@example.com", sendOn: shiftCalendarDate(today(), 400) },
+      ]) {
+        const state = await buyPackageAction(
+          shop.slug,
+          {},
+          purchaseForm({
+            packageId: pkg.id,
+            name: "Gil",
+            email: "gil@example.com",
+            gift: "yes",
+            recipientName: "Rita",
+            ...fields,
+          }),
+        );
+        expect(state.error).toBe("Add their name, their email, and a date from today on.");
+        expect(state).toMatchObject({ gift: "yes", recipientName: "Rita", sendOn: fields.sendOn });
+      }
+      expect(hoisted.createDiverPackageOrder).not.toHaveBeenCalled();
+    });
   });
 });

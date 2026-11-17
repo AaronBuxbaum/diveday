@@ -183,8 +183,9 @@ take twelve first-time, uncertified people into open water and the booking gate 
 Manual DSD figures — **4 students per instructor in confined/pool water, 2 students per instructor
 for the open-water dive, with no assistant bonus** — and
 [20260802-dsd-instructor-manual-ratio](20260802-dsd-instructor-manual-ratio.md) records them.
-DiveDay's trip model has no confined-water session type, so **only the 2:1 open-water figure is
-enforced**; the 4:1 confined figure is reference data in `DSD_RATIO`. This amendment covers the
+At the time DiveDay's trip model had no confined-water session type, so **only the 2:1 open-water
+figure was enforced**; since 2026-11-16 an intro session on a pool departure takes the 4:1
+confined figure (the [2026-11-16 amendment](20260802-dsd-instructor-manual-ratio.md#amendment-2026-11-16--the-pool-takes-the-confined-figure)). This amendment covers the
 scope and machinery around that figure, not the figure itself.
 
 **What ships now.**

@@ -232,6 +232,16 @@ const ATTRIBUTION_TAIL =
   /^.{0,120}(?:wrote:|escribió:|a écrit\s?:|schrieb\b.{0,200}:|ha scritto:|escreveu:|schreef\b.{0,200}:)$/;
 
 /**
+ * Outlook's pasted header block: the sender label then the sent/date label on
+ * the next line, in the languages above (From/Sent, Von/Gesendet, De/Enviado,
+ * Da/Inviato, De/Envoyé, De/Enviada em). Requiring the pair keeps an ordinary
+ * "De: …" line in a diver's own reply.
+ */
+const HEADER_FROM = /^(?:From|Von|De|Da)\s?:\s/i;
+const HEADER_SENT =
+  /^(?:Sent|Date|To|Gesendet|Datum|An|Enviado|Enviada(?: em)?|Para|Inviato|Envoy[eé]|Date|À)\s?:\s/i;
+
+/**
  * Cut the quoted history off a reply: everything from the first `>`-quoted
  * block, an "On … wrote:" attribution line, a `-----Original Message-----`
  * divider, or a `From:` header block a client pasted in. What survives is what
@@ -248,7 +258,7 @@ export function stripQuotedReply(text: string): string {
       trimmed.startsWith(">") ||
       /^-{2,}\s*Original Message\s*-{2,}$/i.test(trimmed) ||
       ATTRIBUTION_LINE.test(trimmed) ||
-      (/^From:\s/i.test(trimmed) && /^(Sent|Date|To):\s/i.test((lines[index + 1] ?? "").trim()))
+      (HEADER_FROM.test(trimmed) && HEADER_SENT.test((lines[index + 1] ?? "").trim()))
     ) {
       cutAt = index;
       break;

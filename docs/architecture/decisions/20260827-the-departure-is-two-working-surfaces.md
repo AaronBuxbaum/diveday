@@ -112,6 +112,13 @@ control as the live page's, and the exception a deliberate tap away in a closed 
   is the direct consequence of the context above: a control that can dial by accident buys nothing
   on a path used once a year and costs a false alarm the one time it misfires.
 
+*Amended 2026-11-16 (issue #4256).* An emergency contact on the person sheet carries one
+**"Draft a text"** link: an `sms:` link that opens the phone's message app with a draft naming the
+shop, the departure, its date and its captain. It is not a call button. A mis-tap opens a draft
+nobody sent; a person reads it, edits it and presses Send, and DiveDay sends and records nothing.
+It is on screen only (paper has nothing to tap) and never on a held seat, whose draft would name a
+person the desk has not confirmed. `emergency-text.ts` and `DiverFacts.test.tsx` pin it.
+
 ### 4. The screen worries only with reason
 
 A crew starts the after-dive count believing everyone is back, so an **open circle mid-count means

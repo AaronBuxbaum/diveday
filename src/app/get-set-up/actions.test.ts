@@ -121,6 +121,8 @@ describe("submitSetupRequestAction", () => {
       shopName: "Reef Line Divers",
       region: "Key Largo, FL",
       runsBoat: true,
+      runsShore: false,
+      runsPool: false,
       currentSystem: "booking_system",
       contactName: "Ana Ruiz",
       email: "ana@reefline.example",
@@ -146,6 +148,17 @@ describe("submitSetupRequestAction", () => {
   // Issue 2834: the address is typed into a public form and nothing has proved
   // who owns it, so the mail carrying the setup link never sets it as
   // Reply-To. The founder writes to it from the body, on purpose.
+  it("stores a boatless shop's answers as asked (issue 4319)", async () => {
+    const form = setUpForm({ runsShore: "yes", runsPool: "yes" });
+    form.delete("runsBoat");
+    await submit(form);
+    const [row] = await db.select().from(setupRequests);
+    expect(row).toMatchObject({ runsBoat: false, runsShore: true, runsPool: true });
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({ runsBoat: false, runsShore: true, runsPool: true }),
+    );
+  });
+
   it("sets no Reply-To from the unverified requester address", async () => {
     await submit(setUpForm());
     const alert = vi

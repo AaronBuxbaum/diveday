@@ -754,6 +754,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
   orders: [
     "orders",
     "dive_package_entitlements",
+    "package_gifts",
     "imported_payment_history",
     "trip_credit_entries",
   ],

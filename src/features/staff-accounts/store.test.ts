@@ -290,6 +290,20 @@ describe("setStaffRoles", () => {
   });
 });
 
+describe("setStaffRoles with a baseline", () => {
+  it("refuses when the person's roles are no longer the baseline, writing nothing", async () => {
+    const { db, shop } = ctx;
+    const staff = await makeStaff(db, shop.id, ["crew"]);
+    const result = await setStaffRoles(db, {
+      shopId: shop.id,
+      personId: staff.personId,
+      roles: ["captain"],
+      baseline: ["divemaster"],
+    });
+    expect(result).toEqual({ ok: false, reason: "roles_conflict" });
+  });
+});
+
 describe("setStaffAccountStatus", () => {
   it("refuses to disable the shop's last owner", async () => {
     const { db, shop } = ctx;

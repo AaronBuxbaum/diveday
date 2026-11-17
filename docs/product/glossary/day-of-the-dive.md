@@ -72,7 +72,9 @@
   diver reads it, by public name, written in the transaction that changed the dives; issue
   #3060). Each event stores before/after public-safe snapshots, a broad source
   (`shop` or `crew`), and a timestamp; it never names a staffer or carries private operational
-  notes. Re-saving the same facts is not a new event.
+  notes. Re-saving the same facts is not a new event. The public trip page shows a visitor it
+  cannot tell has booked only the changes from the 24 hours before departure; `/ready` keeps them
+  all (issue #4389).
 - **Day-of help request** — one controlled, non-medical request a diver can make from `/ready`
   (`carry gear`, `first-timer orientation`, or `find my group`). It is scoped to one booking,
   expires from active Today work when the trip ends, and moves through `requested`,

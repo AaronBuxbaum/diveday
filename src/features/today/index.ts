@@ -31,6 +31,11 @@ export type { CrewReading } from "./day-money";
 export { getDayPrintPage } from "./day-print-page";
 export { pastDayStationNotes } from "./past-day-notes";
 export {
+  type QuietDaySuggestion,
+  quietDaySuggestions,
+  readQuietDaySuggestions,
+} from "./quiet-day-suggestions";
+export {
   canAcceptPayments,
   daySummaryBlocked,
   getHomeShop,

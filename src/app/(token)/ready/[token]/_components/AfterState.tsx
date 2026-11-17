@@ -23,6 +23,7 @@ import { hasRecapPulseNotice, RecapPulse } from "./RecapPulse";
 import { RecordPaper } from "./RecordPaper";
 import { ReviewAsk } from "./ReviewAsk";
 import { ShareReviewButton } from "./ShareReviewButton";
+import { WhatsNextRow } from "./WhatsNextRow";
 
 /**
  * **The thread's third state: after the dive** — ADR
@@ -132,6 +133,7 @@ export function AfterState({
     nextDiveWorded,
     nextDiveHref = null,
     bookedNext = null,
+    whatsNext = null,
     yourDays = null,
     buddyLinkUrl = null,
     logFilePath = null,
@@ -423,6 +425,8 @@ export function AfterState({
             <p className="text-base">{t("recap.bookedNext", bookedNext)}</p>
           </SectionCard>
         ) : null}
+        {/* ——— One course or one package, never both (issue #4328). */}
+        <WhatsNextRow row={whatsNext} />
 
         {/* ——— Every other day with the shop, each row sending its own fresh
           link (H-20261014-other-days-send-fresh). Only `/ready` fills it. */}

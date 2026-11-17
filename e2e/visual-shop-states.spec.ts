@@ -333,6 +333,13 @@ for (const scheme of ["light", "dark"] as const) {
       );
       await capture(page, "public-packages-shared-terms", scheme);
 
+      // "This is a gift" open (issue 4629): the recipient, their email, and the
+      // send date, today in the shop's zone by default.
+      await expect(page.locator("form[data-hydrated='true']")).toHaveCount(1);
+      await page.getByRole("checkbox", { name: "This is a gift" }).check();
+      await expect(page.getByLabel("Their email")).toBeVisible();
+      await capture(page, "public-packages-gift", scheme);
+
       await addPackage("Course-and-dive card", 6, "270", "all", "2026-12-31");
       await page.goto(`/s/${privateShop.slug}/packages`);
       await expect(page.getByRole("radio")).toHaveCount(3);

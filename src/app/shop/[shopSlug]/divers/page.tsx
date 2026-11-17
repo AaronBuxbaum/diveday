@@ -181,7 +181,7 @@ export default async function DiversPage({
    */
   const factFor = (personId: string, lastDivedAt: Date | null): string | null => {
     // Ordered or narrowed by the last dive, the row says when it was (item 27).
-    if (sort === "last_dived" || filter === "not_back") {
+    if (sort === "last_dived" || filter === "not_back" || filter === "lapsed_regulars") {
       return lastDivedAt
         ? t("divers.list.lastDived", { date: formatShortDate(lastDivedAt, locale, shop.timezone) })
         : t("divers.list.neverDived");
@@ -290,6 +290,7 @@ export default async function DiversPage({
           viewNeedsAttention: t("divers.list.viewNeedsAttention"),
           viewMissingContact: t("divers.list.viewMissingContact"),
           viewNotBack: t("divers.list.viewNotBack"),
+          viewLapsedRegulars: t("divers.list.viewLapsedRegulars"),
           lastDivedGroup: t("divers.list.lastDivedGroup"),
           viewRemoved: t("divers.list.viewRemoved"),
           viewsAriaLabel: t("divers.list.viewsAriaLabel"),

@@ -36,7 +36,8 @@
         "when": "At the dock, and after every dive",
         "title": "The crew calls the roll by name, signal or not",
         "note1": "Each dive’s count, divers and crew by name, stays open until everyone who left the dock is counted aboard.",
-        "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns."
+        "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns.",
+        "note3": "The same manifest prints as a trip packet, roll call and emergency card included, for crews who carry paper."
       },
       "recap": {
         "when": "After the boat is back",
@@ -206,7 +207,12 @@
       "item4": "A cover photo and up to eight more on each course page",
       "item5": "Seats on a PADI Open Water session capped by its instructors and assistants, and on any try dive by its instructors alone",
       "item6": "A course’s minimum age confirmed by whoever books online, and checked at boarding against the date of birth on the diver’s record",
-      "item7": "A date request from the schedule or a course page, read at the desk grouped by day"
+      "item7": "A date request from the schedule or a course page, read at the desk grouped by day",
+      "item8": "Boat, shore, and pool sessions, and a course that meets on several days with its own hours each day, such as a pool night, then an open-water weekend",
+      "item9": "Learning materials and eLearning links sent with the booking and the week-out reminder, ticked done on the roster, with the eLearning fee on its own order line",
+      "item10": "Referral students marked on the roster, with the referral form and the other instructor’s training record each stamped when collected",
+      "item11": "Each student’s next step on the roster, a Certify that records the new card, and the cards still to send to the agency, oldest first",
+      "item12": "Instructor and assistant ratings on file, in Today’s list from thirty days before each renewal"
     },
     "payments": {
       "item1": "Card payments through the shop’s own Stripe account",
@@ -1387,13 +1393,13 @@
       "step1Title": "Start from a catalog",
       "step1Body": "Copy in courses from PADI, SSI or SDI, then edit the price, the plan, and the photos into your own.",
       "step2Title": "Schedule the sessions",
-      "step2Body": "Each date is a departure with an instructor on it. A PADI Open Water session sells up to PADI’s ratio, with room added for each assistant, and a try dive up to two divers per instructor.",
+      "step2Body": "Each date is a departure with an instructor on it. A PADI Open Water session sells up to PADI’s ratio, with room added for each assistant, and a try dive up to two divers per instructor in open water.",
       "step3Title": "Divers book and move up",
       "step3Body": "Divers pick a date on the course page, and a course that certifies them first lets them book the dive that needs the new card.",
       "faq1Q": "Can a diver ask for a date that isn’t listed?",
       "faq1A": "Yes. The course page takes a date request, and it lands in your Inbox grouped by day.",
       "faq2Q": "Which ratios does it hold sessions to?",
-      "faq2A": "PADI Open Water allows eight students per instructor, two more for each divemaster or assistant instructor, and never more than twelve. DiveDay holds every try dive to two divers per instructor, whatever the agency, and an assistant adds no room. Other courses are limited by the departure’s seats.",
+      "faq2A": "PADI Open Water allows eight students per instructor, two more for each divemaster or assistant instructor, and never more than twelve. DiveDay holds every try dive to two divers per instructor in open water and four in a pool, whatever the agency, and an assistant adds no room. Other courses are limited by the departure’s seats.",
       "faq3Q": "Do minimum ages apply?",
       "faq3A": "Yes. Whoever books online confirms every diver meets the course’s minimum age, and once a diver’s date of birth is on their record, it’s checked on the day the course runs and an under-age diver can’t board. DiveDay doesn’t ask divers for a date of birth, so confirm ages at the desk.",
       "closeTitle": "See the demo catalog and its course dates",
@@ -1428,12 +1434,20 @@
   },
   "setUp": {
     "title": "Get your shop set up",
-    "description": "Tell us about your shop. We’ll help you set it up for the way your crew works.",
+    "next": {
+      "reply": "Someone from DiveDay replies within one working day.",
+      "asks": "The first reply asks about your trips, dive sites, and schedule.",
+      "ready": "Your shop can take its first booking the same week.",
+      "free": "Asking costs nothing, and setup needs no card."
+    },
     "shopName": "Shop name",
     "region": "Town or region",
-    "runsBoat": "Do you run a boat?",
-    "yes": "Yes",
-    "no": "No",
+    "runs": "What do you run?",
+    "runsAnswers": {
+      "boat": "Boat dives",
+      "shore": "Shore dives",
+      "pool": "Pool sessions"
+    },
     "currentSystem": "Current tool (optional)",
     "notSpecified": "Not specified",
     "current": {
@@ -1458,7 +1472,7 @@
     "sent": {
       "title": "Request sent",
       "support": "Contact DiveDay",
-      "body": "We’ll write to you to set up your shop. The demo is open while you wait.",
+      "body": "Someone from DiveDay replies within one working day to ask about your trips, dive sites, and schedule. Your shop can take its first booking the same week. The demo is open while you wait.",
       "paper": "Paper? Bring a photo of one day’s clipboard to our first call.",
       "spreadsheet": "Save your diver list as a CSV. We’ll read it with you.",
       "spreadsheetLink": "What we read in it",

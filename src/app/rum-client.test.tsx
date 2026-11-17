@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { looksAutomated, rumConfig } from "./rum-client";
+import { looksAutomated, rumConfig, sessionSampled } from "./rum-client";
 
 /**
  * **The data plane a RUM event is posted to follows the region it is signed
@@ -92,5 +92,28 @@ describe("which visitors RUM ignores", () => {
       ),
     ).toBe(false);
     expect(ua("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120 Safari/537.36")).toBe(false);
+  });
+});
+
+describe("deciding the sample before the SDK downloads", () => {
+  afterEach(() => {
+    window.sessionStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it("draws once per browser session and keeps the answer", () => {
+    expect(sessionSampled(0.1, () => 0.05)).toBe(true);
+    expect(sessionSampled(0.1, () => 0.9)).toBe(true);
+    window.sessionStorage.clear();
+    expect(sessionSampled(0.1, () => 0.9)).toBe(false);
+    expect(sessionSampled(0.1, () => 0.05)).toBe(false);
+  });
+
+  it("still draws when storage is unavailable", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    expect(sessionSampled(0.1, () => 0.05)).toBe(true);
+    expect(sessionSampled(0.1, () => 0.5)).toBe(false);
   });
 });

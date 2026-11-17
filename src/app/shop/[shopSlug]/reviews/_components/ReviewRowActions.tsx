@@ -1,7 +1,7 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
-import { createContext, useActionState, useContext, useState } from "react";
+import { createContext, type ReactNode, useActionState, useContext, useState } from "react";
 import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
@@ -10,6 +10,7 @@ import { FormStatus } from "@/components/ui/form";
 import { ListItemActions } from "@/components/ui/list-item-actions";
 import { menuRowClass } from "@/components/ui/menu";
 import type { NoticeTone } from "@/components/ui/tone";
+import type { CrewThanksRuling } from "@/lib/reviews";
 import { type ReviewActionResult, reviewRowAction } from "../actions";
 import { ReviewHideForm } from "./ReviewHideForm";
 
@@ -28,8 +29,8 @@ export type ReviewRowCopy = {
   hideReasonLabel: string;
   hideReasonPlaceholder: string;
   hideNoteLabel: string;
-  hideThanks: string;
-  showThanks: string;
+  holdThanks: string;
+  passThanks: string;
   markStandout: string;
   removeStandout: string;
   hiddenToast: string;
@@ -40,8 +41,8 @@ export type ReviewRowCopy = {
   published: string;
   standout: string;
   standoutRemoved: string;
-  thanksHidden: string;
-  thanksShown: string;
+  thanksHeld: string;
+  thanksPassed: string;
   reasonRequired: string;
   noteRequired: string;
   noteTooLong: string;
@@ -80,10 +81,10 @@ function statusOf(
         ? copy.published
         : result.effect === "standout"
           ? copy.standout
-          : result.effect === "thanks-hidden"
-            ? copy.thanksHidden
-            : result.effect === "thanks-shown"
-              ? copy.thanksShown
+          : result.effect === "thanks-held"
+            ? copy.thanksHeld
+            : result.effect === "thanks-passed"
+              ? copy.thanksPassed
               : copy.standoutRemoved;
     return { tone: "success", text };
   }
@@ -199,8 +200,11 @@ export function ReviewRowActions({
   isStandout: boolean;
   /** A published review with words of its own — a bare rating has nothing to feature. */
   canStandout: boolean;
-  /** The review carries a thanks to a crew member, and whether staff hid it (loop 5, row 6); null without one. */
-  crewThanks: { hidden: boolean } | null;
+  /**
+   * The review carries a thanks to a crew member, with staff's ruling on it
+   * (null while it waits; loop 5, row 6; issue #4261); null without one.
+   */
+  crewThanks: { ruling: CrewThanksRuling | null } | null;
   reasons: readonly { value: string; label: string }[];
   copy: ReviewRowCopy;
   /**
@@ -240,6 +244,15 @@ export function ReviewRowActions({
               {isHidden ? copy.republish : copy.publish}
             </SubmitButton>
           </form>
+        ) : null}
+        {crewThanks && crewThanks.ruling === null ? (
+          /* A waiting thanks reaches the crew only through this tap (issue
+             #4261), so passing it on stands beside Publish, not in the menu. */
+          <ThanksRulingForm reviewId={reviewId} ruling="passed" action={formAction}>
+            <SubmitButton pendingLabel={copy.saving} className={REVIEW_SECONDARY_ACTION_CLASS}>
+              {copy.passThanks}
+            </SubmitButton>
+          </ThanksRulingForm>
         ) : null}
         {hasQuietActs ? (
           /* **The rare acts are revealed, not standing.** Hide and the standout
@@ -286,18 +299,16 @@ export function ReviewRowActions({
                     </form>
                   ) : null}
                   {crewThanks ? (
-                    <form action={formAction} onSubmit={close}>
-                      <input type="hidden" name="intent" value="crew-thanks" />
-                      <input type="hidden" name="reviewId" value={reviewId} />
-                      <input
-                        type="hidden"
-                        name="thanksHidden"
-                        value={crewThanks.hidden ? "false" : "true"}
-                      />
+                    <ThanksRulingForm
+                      reviewId={reviewId}
+                      ruling={crewThanks.ruling === "held" ? "passed" : "held"}
+                      action={formAction}
+                      onSubmit={close}
+                    >
                       <SubmitButton pendingLabel={copy.saving} className={MENU_ROW_CLASS}>
-                        {crewThanks.hidden ? copy.showThanks : copy.hideThanks}
+                        {crewThanks.ruling === "held" ? copy.passThanks : copy.holdThanks}
                       </SubmitButton>
-                    </form>
+                    </ThanksRulingForm>
                   ) : null}
                   {!isHidden ? (
                     <button
@@ -322,5 +333,29 @@ export function ReviewRowActions({
         ) : null}
       </ListItemActions>
     </>
+  );
+}
+
+/** One ruling on a review's thanks to the crew, posted as the row's `crew-thanks` intent. */
+function ThanksRulingForm({
+  reviewId,
+  ruling,
+  action,
+  onSubmit,
+  children,
+}: {
+  reviewId: string;
+  ruling: CrewThanksRuling;
+  action: (formData: FormData) => void;
+  onSubmit?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <form action={action} onSubmit={onSubmit} className="shrink-0">
+      <input type="hidden" name="intent" value="crew-thanks" />
+      <input type="hidden" name="reviewId" value={reviewId} />
+      <input type="hidden" name="ruling" value={ruling} />
+      {children}
+    </form>
   );
 }

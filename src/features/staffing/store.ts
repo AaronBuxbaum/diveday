@@ -29,6 +29,7 @@ import {
 } from "../../db/schema/index";
 import { STAFF_ROLES } from "../../lib/authz";
 import { HOUR_MS, nowDate } from "../../lib/clock";
+import { courseSession } from "../../lib/course-ratios";
 import type { InWaterCrewCount } from "../../lib/crew-roles";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "../../lib/divemaster-ratio";
 
@@ -369,7 +370,7 @@ export async function getStaffingView(
   // function (`crewGapFor`, issue #2482), so the two cannot disagree.
   const gapCodeFor = (entry: TripEntry, counts: InWaterCrewCount): StaffGapCode | null =>
     crewGapFor({
-      course: entry.course,
+      course: courseSession(entry.course, entry.trip.diveMode),
       counts,
       booked: entry.booked,
       bookedDivers: entry.bookedDivers,

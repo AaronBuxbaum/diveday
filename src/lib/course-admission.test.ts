@@ -20,6 +20,7 @@ const openWater: CourseAdmissionRule = {
   isIntroCourse: false,
   minimumCertificationLevel: null,
   minimumAge: 10,
+  poolSession: false,
 };
 /** A Discover Scuba taster: two per instructor, no assistant bonus. */
 const dsd: CourseAdmissionRule = { ...openWater, isIntroCourse: true, minimumAge: null };
@@ -115,6 +116,24 @@ describe("decideCourseAdmission", () => {
     const crew = { instructorCount: 1, assistantCount: 3 };
     expect(decideCourseAdmission(seat({ course: dsd, crew, studentsHeld: 1 }))).toBeNull();
     expect(decideCourseAdmission(seat({ course: dsd, crew, studentsHeld: 2 }))).toBe(
+      "course_ratio_full",
+    );
+  });
+
+  // Issue #4633: a pool session is confined water, the Manual's 4:1 DSD figure.
+  it("caps a DSD in the pool at four per instructor, whatever assistants are rostered", () => {
+    const poolDsd = { ...dsd, poolSession: true };
+    const crew = { instructorCount: 1, assistantCount: 3 };
+    expect(decideCourseAdmission(seat({ course: poolDsd, crew, studentsHeld: 3 }))).toBeNull();
+    expect(decideCourseAdmission(seat({ course: poolDsd, crew, studentsHeld: 4 }))).toBe(
+      "course_ratio_full",
+    );
+  });
+
+  it("keeps PADI Open Water's pool session at the entry-level ratio", () => {
+    const poolOpenWater = { ...openWater, poolSession: true };
+    expect(decideCourseAdmission(seat({ course: poolOpenWater, studentsHeld: 7 }))).toBeNull();
+    expect(decideCourseAdmission(seat({ course: poolOpenWater, studentsHeld: 8 }))).toBe(
       "course_ratio_full",
     );
   });

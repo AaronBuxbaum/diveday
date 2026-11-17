@@ -29,7 +29,11 @@ import { nowDate } from "@/lib/clock";
 import { courseTotalCents, resolveCourseContentDepths, resolveCourseDepths } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
+import {
+  publicCourseMedicalQuestionsPath,
+  publicCoursePath,
+  publicSchedulePath,
+} from "@/lib/public-routes";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { coursePageJsonLd } from "@/lib/structured-data";
 import { PublicStaffProfiles } from "../../_components/PublicStaffProfiles";
@@ -215,6 +219,7 @@ export default async function CoursePage({
       certificationRequired={certificationRequired}
       minimumAge={course.minimumAge}
       shopNote={course.prerequisiteNote}
+      medicalQuestionsHref={publicCourseMedicalQuestionsPath(shop.slug, course.slug)}
       t={t}
     />
   );

@@ -317,25 +317,23 @@ export async function saveStaffRolesAction(formData: FormData) {
   // its Undo). `setStaffRoles` is a delete-then-insert of the whole staff
   // subset, so without this a second writer's close silently reverts whatever
   // the first one added — the lost update the course editor already refuses
-  // rather than performs (`ConflictGuardedForm`, issue #820). Roles are the
-  // higher-stakes copy of that surface: what is being overwritten is who may
-  // reach every other gated surface in the shop.
+  // rather than performs (`ConflictGuardedForm`, issue #820). The comparison
+  // runs inside `setStaffRoles`, under the shop lock, so two closes from the
+  // same baseline cannot both pass it (issue #4595).
   //
   // Absent means unchecked, and deliberately so: this is a concurrency guard,
   // not an authorization one — `teamManagementBlock` above is what a hand-made
   // post has to get past, and a caller who omits the field only forfeits being
   // told that somebody moved first.
   const baseline = fields.baseline;
-  if (
-    typeof baseline === "string" &&
-    rolesKey(baseline.split(",").filter(Boolean)) !== rolesKey(before)
-  ) {
-    redirect(noticeUrl(rowPath, "roles-conflict", { rolesFor: personId }));
-  }
-
-  const result = await setStaffRoles(db, { shopId: session.user.shopId, personId, roles });
+  const base = { shopId: session.user.shopId, personId, roles };
+  const result =
+    typeof baseline === "string"
+      ? await setStaffRoles(db, { ...base, baseline: baseline.split(",").filter(Boolean) })
+      : await setStaffRoles(db, base);
   if (!result.ok) {
-    revalidateAndRedirect(path, noticeUrl(rowPath, result.reason, { rolesFor: personId }));
+    const notice = result.reason === "roles_conflict" ? "roles-conflict" : result.reason;
+    revalidateAndRedirect(path, noticeUrl(rowPath, notice, { rolesFor: personId }));
     return;
   }
 

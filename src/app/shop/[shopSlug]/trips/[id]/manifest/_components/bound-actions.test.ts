@@ -23,6 +23,12 @@ vi.mock("../actions", () => {
   );
 });
 
+vi.mock("../deck-count-action", () => ({
+  recordDeckCountAction: {
+    bind: (_: unknown, context: unknown) => ({ name: "recordDeckCountAction", context }),
+  },
+}));
+
 vi.mock("../../incidents/actions", () => {
   const bound = (name: string) => ({
     bind: (_: unknown, shopSlug: unknown, tripId: unknown) => ({ name, shopSlug, tripId }),
@@ -41,6 +47,8 @@ describe("bindManifestActions", () => {
     const actions = bindManifestActions(context);
     expect(actions.rollCall).toEqual({ name: "rollCallAction", context });
     expect(actions.saveExecutedDive).toEqual({ name: "saveExecutedDiveAction", context });
+    // The count on deck belongs to the checkpoint that is open (issue #4248).
+    expect(actions.recordDeckCount).toEqual({ name: "recordDeckCountAction", context });
     expect(actions.buddyTeams.teamUpPartiesAction).toEqual({
       name: "teamUpPartiesAction",
       context,

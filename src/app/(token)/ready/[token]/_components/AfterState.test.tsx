@@ -790,6 +790,31 @@ describe("a diver already booked on a later boat", () => {
   });
 });
 
+/** One quiet "what's next" row (issue #4328), and nothing when the shop sells neither. */
+describe("the what's-next row", () => {
+  it("draws the one course or package it is handed, as a link", () => {
+    render(
+      <AfterState
+        context={props({
+          whatsNext: {
+            title: "Advanced Open Water",
+            detail: "Your next course, from Sat, Oct 24",
+            href: "/s/blue-mantis/courses/advanced-open-water",
+          },
+        })}
+      />,
+    );
+    const link = screen.getByRole("link", { name: "Advanced Open Water" });
+    expect(link.getAttribute("href")).toBe("/s/blue-mantis/courses/advanced-open-water");
+    expect(screen.getByText("Your next course, from Sat, Oct 24")).toBeTruthy();
+  });
+
+  it("draws nothing without one", () => {
+    render(<AfterState context={props({ whatsNext: null })} />);
+    expect(screen.queryByText(/Your next course/)).toBeNull();
+  });
+});
+
 /**
  * Recap photos switched off on Features (ADR 20261005-optional-shop-features):
  * the page draws no photo door at all, and a shop with the switch on still

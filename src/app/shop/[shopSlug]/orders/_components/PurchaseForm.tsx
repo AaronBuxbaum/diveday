@@ -10,10 +10,12 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
+import type { OrderableCustomer } from "@/db/orders";
 import { formatMoneyCents } from "@/lib/format";
 import { MAX_LINE_ITEMS_PER_ORDER } from "@/lib/order-limits";
 import { purchaseFormTotal } from "@/lib/purchase-lines";
 import { type PurchaseActionState, recordPurchaseAction } from "../purchase-actions";
+import { CustomerPicker } from "./CustomerPicker";
 import { PurchaseLineFields } from "./PurchaseLineFields";
 import type { PurchaseRow, PurchaseWords } from "./purchase-form-types";
 
@@ -22,19 +24,21 @@ export type PurchaseFormProps = {
   currency: string;
   locale: string;
   step: string;
-  customers: { id: string; fullName: string; email: string | null }[];
-  personId?: string;
+  /** The customer a link named (`?personId=`), chosen when the form opens. */
+  customer: OrderableCustomer | null;
   canCreateDue: boolean;
   words: PurchaseWords;
 };
+/** What the form sends with nobody chosen: a walk-in, for a received receipt only. */
+const WALK_IN = "walk-in";
+
 /** A due amount and an already-received receipt are distinct, with one preserved item draft. */
 export function PurchaseForm({
   attemptId,
   currency,
   locale,
   step,
-  customers,
-  personId = "walk-in",
+  customer,
   canCreateDue,
   words,
 }: PurchaseFormProps) {
@@ -42,7 +46,7 @@ export function PurchaseForm({
     error: null,
   } as PurchaseActionState);
   const [intent, setIntent] = useState<"received" | "due">("received");
-  const [payer, setPayer] = useState(personId);
+  const [payer, setPayer] = useState(customer?.id ?? WALK_IN);
   const [method, setMethod] = useState("cash");
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
@@ -98,28 +102,15 @@ export function PurchaseForm({
         ) : (
           <input type="hidden" name="intent" value="received" />
         )}
-        <Field
-          label={words.customer}
-          description={due && payer === "walk-in" ? words.payerRequired : undefined}
-        >
-          <select
-            name="personId"
-            required
-            className={controlClass}
-            value={payer}
-            onChange={(event) => setPayer(event.target.value)}
-          >
-            <option value="walk-in" disabled={due}>
-              {words.choose}
-            </option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.fullName}
-                {customer.email ? ` · ${customer.email}` : ""}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <CustomerPicker
+          name="personId"
+          initial={customer}
+          emptyValue={WALK_IN}
+          required={due}
+          description={due && payer === WALK_IN ? words.payerRequired : undefined}
+          onChange={setPayer}
+          words={words.customer}
+        />
         <ChoiceFieldset legend={words.itemsHeading} bodyClassName="mt-3 space-y-4">
           {rows.map((row, index) => (
             <PurchaseLineFields

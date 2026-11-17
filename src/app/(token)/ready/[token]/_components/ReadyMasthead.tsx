@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
 import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
 import { EarnedMoment } from "@/components/EarnedMoment";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { ThreadShell } from "@/components/thread/ThreadShell";
+import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import type { ReadyPageData } from "@/features/ready";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
@@ -18,8 +21,12 @@ import {
 } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { firstNameOf } from "@/lib/person-name";
+import type { PostcardImage } from "@/lib/postcard-image";
 import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
+import type { TicketSighting } from "@/lib/sightings";
 import type { DiveDayMilestone } from "@/lib/visit-milestones";
+import { SaveTicket } from "./SaveTicket";
+import { TicketMark } from "./TicketMark";
 
 /**
  * **The facts the top of `/ready` states**, and the only ones: whose shop,
@@ -187,6 +194,59 @@ export function ReadyMastheadMeta({
   );
 }
 
+/** What turns the booked card into a ticket (issue #4386); see `getBookedCard`. */
+export type BookedTicket = { photoUrl: string | null; sighting: TicketSighting | null };
+
+/**
+ * **"Seen at Molasses Reef on Tue, Nov 10: Goliath grouper"**: the ticket's
+ * one line from the crews' sightings log, in the reader's words. Null when the
+ * shop logged nothing lately, or the species has no name to say.
+ */
+export function ticketSightingLine(
+  sighting: TicketSighting | null,
+  locale: string,
+  timeZone: string,
+  t: DiverTranslator,
+): string | null {
+  if (!sighting) return null;
+  const species =
+    sighting.customName ??
+    (isMarineLifeSlug(sighting.speciesSlug) ? marineLifeCard(sighting.speciesSlug, t).name : null);
+  if (!species) return null;
+  return t("booking.ticketSighting", {
+    site: sighting.siteName,
+    date: formatShortDate(sighting.lastSeenAt, locale, timeZone),
+    species,
+  });
+}
+
+/**
+ * The ticket as a picture: the same facts the card says, worded for somebody
+ * else's phone. No relative day ("Tomorrow" is wrong by the time a buddy
+ * reads it), no link of any kind (src/lib/postcard-image.ts).
+ */
+export function ticketPostcard(
+  facts: MastheadFacts,
+  greetingName: string,
+  sightingLine: string | null,
+  locale: string,
+  t: DiverTranslator,
+): PostcardImage {
+  const { hours } = mastheadWhenParts(facts, locale, facts.trip.startsAt);
+  return {
+    shopName: facts.shop.name,
+    heading: greetingName || t("ready.namelessFallback"),
+    diveDayLine: formatShortDate(facts.trip.startsAt, locale, facts.shop.timezone),
+    facts: [
+      { label: t("booking.ticketDeparture"), value: facts.trip.title },
+      { label: t("booking.ticketWhen"), value: hours },
+      { label: t("booking.ticketArrive"), value: mastheadArrivalLine(facts, locale, t) },
+    ],
+    privateLine: sightingLine,
+    recordedBy: t("booking.ticketBookedWith", { shopName: facts.shop.name }),
+  };
+}
+
 /**
  * **The booked card** (UX review 2026-10-10, items 7 and 34).
  *
@@ -211,11 +271,14 @@ export function ReadyBookedHeader({
   now,
   t,
   dateActions,
+  ticket,
   children,
 }: {
   facts: MastheadFacts;
   /** The name the booking greets, already resolved (a held identity greets the name it booked as). */
   greetingName: string;
+  /** The ticket's photo and sighting (issue #4386); absent, the card is the plain moment. */
+  ticket?: BookedTicket;
   /**
    * This seat is the diver's 10th, 25th, 50th or 100th boat with the shop
    * (H-20261014-boat-count-milestones): said once, as a count, under the arrival line. Null otherwise.
@@ -229,12 +292,27 @@ export function ReadyBookedHeader({
   children?: ReactNode;
 }) {
   const firstName = firstNameOf(greetingName, t("ready.namelessFallback"));
+  const sightingLine = ticket
+    ? ticketSightingLine(ticket.sighting, locale, facts.shop.timezone, t)
+    : null;
   return (
     <header>
       <EarnedMoment
         as="h1"
         eyebrow={facts.shop.name}
         title={t("booking.confirmedHeading", { name: firstName })}
+        media={
+          ticket?.photoUrl ? (
+            // Decorative, as the trip page's cover is: the title names the place.
+            <StoredPhoto
+              src={ticket.photoUrl}
+              alt=""
+              className="aspect-[2/1] w-full"
+              sizes="(min-width: 640px) 33rem, 90vw"
+              priority
+            />
+          ) : undefined
+        }
       >
         <p className="font-semibold text-foreground">{bindTitleDash(facts.trip.title)}</p>
         <BookedWhen facts={facts} locale={locale} now={now} />
@@ -248,6 +326,30 @@ export function ReadyBookedHeader({
               shopName: facts.shop.name,
             })}
           </p>
+        ) : null}
+        {sightingLine ? (
+          <p className="mt-3 text-sm" data-testid="ticket-sighting">
+            {sightingLine}
+          </p>
+        ) : null}
+        {ticket ? (
+          // The ticket's stub: the perforation, the mark rising once, whose
+          // seat it is, and the picture to send a buddy.
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-accent/40 pt-4">
+            <span className="flex min-w-0 items-center gap-2">
+              <TicketMark tripId={facts.trip.id} className="size-6 shrink-0" />
+              <span className="font-medium text-foreground">{greetingName || firstName}</span>
+            </span>
+            <SaveTicket
+              postcard={ticketPostcard(facts, greetingName, sightingLine, locale, t)}
+              fileName={`${t("booking.ticketFileName")}.png`}
+              copy={{
+                save: t("recap.saveAsImage"),
+                saving: t("words.busy.saving"),
+                failed: t("recap.saveImageFailed"),
+              }}
+            />
+          </div>
         ) : null}
       </EarnedMoment>
       <MastheadDoors facts={facts} t={t} />
@@ -314,7 +416,11 @@ export function ReadyBookedPage({
   dateActions,
   children,
 }: {
-  card: MastheadFacts & { greetingName: string; milestone?: DiveDayMilestone | null };
+  card: MastheadFacts & {
+    greetingName: string;
+    milestone?: DiveDayMilestone | null;
+    ticket?: BookedTicket;
+  };
   locale: DiverLocale;
   dateActions?: ReactNode;
   children: ReactNode;
@@ -332,6 +438,7 @@ export function ReadyBookedPage({
             facts={card}
             greetingName={card.greetingName}
             milestone={card.milestone ?? null}
+            ticket={card.ticket}
             locale={locale}
             now={nowDate()}
             t={t}

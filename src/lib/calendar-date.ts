@@ -13,6 +13,17 @@ export type CalendarDate = string;
 const CALENDAR_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
+ * Milliseconds at UTC midnight of a calendar day, month index counted from 0.
+ * `Date.UTC` reads years 0 to 99 as 1900 to 1999; setting the year on an epoch
+ * date does not.
+ */
+function utcMs(year: number, monthIndex: number, day: number): number {
+  const date = new Date(0);
+  date.setUTCFullYear(year, monthIndex, day);
+  return date.getTime();
+}
+
+/**
  * True only for a date that actually exists on the calendar — rejects
  * "2026-02-31" the same way it rejects "2026-13-01", not just malformed
  * shape (CR-009). Leap years are handled correctly via the JS calendar.
@@ -24,7 +35,7 @@ export function isValidCalendarDate(value: string): value is CalendarDate {
   const month = Number(match[2]);
   const day = Number(match[3]);
   if (month < 1 || month > 12 || day < 1) return false;
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const daysInMonth = new Date(utcMs(year, month, 0)).getUTCDate();
   return day <= daysInMonth;
 }
 
@@ -58,7 +69,7 @@ export function formatCalendarDate(date: CalendarDate, locale = "en-US"): string
       month: "short",
       day: "numeric",
       timeZone: "UTC",
-    }).formatToParts(new Date(Date.UTC(year, month - 1, day))),
+    }).formatToParts(new Date(utcMs(year, month - 1, day))),
   );
 }
 
@@ -73,13 +84,13 @@ export function formatCalendarMonth(date: CalendarDate, locale = "en-US"): strin
     year: "numeric",
     month: "short",
     timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month - 1, 1)));
+  }).format(new Date(utcMs(year, month - 1, 1)));
 }
 
 /** A calendar date as a UTC-midnight instant — for a timestamp column that needs one. */
 export function calendarDateToUtcMidnight(date: CalendarDate): Date {
   const [year, month, day] = date.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day));
+  return new Date(utcMs(year, month - 1, day));
 }
 
 /**
@@ -90,7 +101,7 @@ export function calendarDateToUtcMidnight(date: CalendarDate): Date {
  */
 export function shiftCalendarDate(date: CalendarDate, days: number): CalendarDate {
   const [year, month, day] = date.split("-").map(Number);
-  return toDateInputValue(utcToWallTimeParts(Date.UTC(year, month - 1, day + days)));
+  return toDateInputValue(utcToWallTimeParts(utcMs(year, month - 1, day + days)));
 }
 
 /**
@@ -102,9 +113,9 @@ export function shiftCalendarDate(date: CalendarDate, days: number): CalendarDat
 export function shiftCalendarDateMonths(date: CalendarDate, months: number): CalendarDate {
   const [year, month, day] = date.split("-").map(Number);
   const targetMonthIndex = month - 1 + months;
-  const lastDayOfTarget = new Date(Date.UTC(year, targetMonthIndex + 1, 0)).getUTCDate();
+  const lastDayOfTarget = new Date(utcMs(year, targetMonthIndex + 1, 0)).getUTCDate();
   return toDateInputValue(
-    utcToWallTimeParts(Date.UTC(year, targetMonthIndex, Math.min(day, lastDayOfTarget))),
+    utcToWallTimeParts(utcMs(year, targetMonthIndex, Math.min(day, lastDayOfTarget))),
   );
 }
 

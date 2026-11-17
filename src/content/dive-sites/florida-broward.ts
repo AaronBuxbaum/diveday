@@ -846,8 +846,8 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
     briefing: {
       name: "Jay Dorman",
       locationName: "off Pompano Beach, Florida",
-      forecastLatitude: 26.231,
-      forecastLongitude: -80.0671,
+      forecastLatitude: 26.23098,
+      forecastLongitude: -80.06711,
       description:
         "The steel schooner Panda, sunk off Pompano Beach in the late 1980s as a memorial reef for Jay Dorman. Hurricane Andrew broke her in two, and she lies on her port side just south of the schooner Alpha.",
       marineLife: "Grouper · hogfish · snapper · grunts · sharks",
@@ -888,8 +888,8 @@ export const FLORIDA_BROWARD: DiveSiteTemplate[] = [
     briefing: {
       name: "Alpha",
       locationName: "off Pompano Beach, Florida",
-      forecastLatitude: 26.231,
-      forecastLongitude: -80.0671,
+      forecastLatitude: 26.23095,
+      forecastLongitude: -80.06711,
       description:
         "A 26 m riveted schooner sunk in 1988 on the outer edge of Pompano's third reef, a few meters north of the Jay Dorman. Storms have flattened her, so she is now low wreckage that fish and divers move across on the way north.",
       marineLife: "Grouper · hogfish · snapper · grunts · sharks",

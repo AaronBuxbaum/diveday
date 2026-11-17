@@ -50,7 +50,7 @@ export async function getReviewsPage(
     listShopReviewsForStaff(db, shopId, { page, scope: "moderated", narrow, withCrewThanks }),
     getShopReviewAggregate(db, shopId),
     getShopReviewAggregate(db, shopId, { since: monthStart }),
-    countStaffReviewGroups(db, shopId, narrow),
+    countStaffReviewGroups(db, shopId, narrow, withCrewThanks),
     canReadPulses ? listOpenRecapPulses(db, shopId) : Promise.resolve<OpenRecapPulse[]>([]),
   ]);
   return {

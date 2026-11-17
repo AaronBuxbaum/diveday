@@ -26,7 +26,11 @@ test("a shop asks to be set up from the pricing page and lands on the thank-you 
   const unique = `set-up-${Date.now()}`;
   await page.getByLabel("Shop name").fill("Reef Line Divers");
   await page.getByLabel("Town or region").fill("Key Largo, FL");
-  await page.getByRole("radio", { name: "Yes" }).check();
+  // What happens after Send is said before the first box (#4319).
+  await expect(
+    page.getByText(diverTranslator("en-US")("marketing.setUp.next.reply")),
+  ).toBeVisible();
+  await page.getByRole("checkbox", { name: "Boat dives" }).check();
   await page.getByRole("combobox", { name: "Current tool (optional)" }).selectOption("spreadsheet");
   await page.getByLabel("Your name").fill("Ana Ruiz");
   // A malformed address is refused in place, and nothing typed is lost.
@@ -100,7 +104,7 @@ test("a shop leaving FareHarbor asks from its guide and is sent back to that gui
 
   await page.getByLabel("Shop name").fill("Harbor Line Divers");
   await page.getByLabel("Town or region").fill("Islamorada, FL");
-  await page.getByRole("radio", { name: "Yes" }).check();
+  await page.getByRole("checkbox", { name: "Boat dives" }).check();
   await page.getByLabel("Your name").fill("Ana Ruiz");
   await page.getByLabel("Email").fill(`fareharbor-${Date.now()}@example.com`);
   await page
@@ -114,13 +118,14 @@ test("a shop leaving FareHarbor asks from its guide and is sent back to that gui
   );
 });
 
-test("a shop can request setup without choosing a current tool", async ({ page }) => {
+test("a pool-only shop can request setup without choosing a current tool", async ({ page }) => {
   await page.goto("/get-set-up");
   await page.getByLabel("Shop name").fill("Reef Line Divers");
   await page.getByLabel("Town or region").fill("Key Largo, FL");
   await page.getByLabel("Your name").fill("Ana Ruiz");
   await page.getByLabel("Email").fill(`optional-tool-${Date.now()}@example.com`);
-  await page.getByRole("radio", { name: "No", exact: true }).check();
+  // A training shop with no boat ticks what it runs (#4319).
+  await page.getByRole("checkbox", { name: "Pool sessions" }).check();
   await expect(page.getByRole("combobox", { name: "Current tool (optional)" })).toHaveValue("");
   await page
     .getByRole("button", { name: diverTranslator("en-US")("marketing.setUp.submit"), exact: true })

@@ -43,12 +43,14 @@ export type CourseAdmissionRefusal =
   /** The crew's in-water ratio is already full of students. */
   | "course_ratio_full";
 
-/** The part of a course row the gates read. */
+/** The part of a course row the gates read, and the session's water. */
 export type CourseAdmissionRule = {
   agency: string;
   isIntroCourse: boolean;
   minimumCertificationLevel: CertificationLevel | null;
   minimumAge: number | null;
+  /** The session runs in a pool (`trips.dive_mode = 'pool'`); see `CourseCrewGapCourse`. */
+  poolSession: boolean;
 };
 
 /** The session's rostered crew, as `countInWaterCrew` counts it. */

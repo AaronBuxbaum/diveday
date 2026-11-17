@@ -167,6 +167,8 @@ export const EXPORT_FILE_NOTES = {
     "The shop's own pre-departure safety line, in the shop's own reading order (sort_order). DiveDay writes only the oxygen line a new shop starts with, and the shop may change it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
   "pre_departure_check_events.csv":
     "Append-only history of every tap against a checklist item, oldest first: status 'checked' or 'cleared' (an explicit undo of a mis-tap), who recorded it and when, and whether it was recorded live or synced from an offline device. The newest event per item is that item's current answer for the departure. Informs only — nothing here ever gated a departure from sailing.",
+  "roll_call_deck_counts.csv":
+    "Every head count a crew typed in from the deck at a roll-call checkpoint, crew included, oldest first, with who entered it and when. The newest row per departure and checkpoint is the count the manifest compared with the people marked aboard. Informs only: a count never closed, opened or gated a checkpoint.",
   "boat_snags.csv":
     "Problems a crew wrote against a checklist line on one boat (a snag), oldest first, each carried to that boat's next departures until somebody marked it fixed. still_there_* is the newest crew who looked and found it still there; fixed_* closes it for good. Informs only: an open snag never stopped a departure.",
   "departure_boat_safety_snapshots.csv":

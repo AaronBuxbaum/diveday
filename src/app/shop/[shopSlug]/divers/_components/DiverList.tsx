@@ -57,6 +57,7 @@ export interface DiverListCopy {
   viewNeedsAttention: string;
   viewMissingContact: string;
   viewNotBack: string;
+  viewLapsedRegulars: string;
   viewRemoved: string;
   /** The one group label over a roster sorted by last dive, which has no letters. */
   lastDivedGroup: string;
@@ -168,6 +169,8 @@ export function DiverList({
     { label: copy.viewNeedsAttention, filter: "needs_attention" },
     { label: copy.viewMissingContact, filter: "missing_contact" },
     { label: copy.viewNotBack, filter: "not_back" },
+    // Three dive days or more, none in a year (issue #4246): staff decide who to call.
+    { label: copy.viewLapsedRegulars, filter: "lapsed_regulars" },
     ...(canRestore ? [{ label: copy.viewRemoved, filter: "removed" as DiverFilter }] : []),
   ];
   const router = useRouter();

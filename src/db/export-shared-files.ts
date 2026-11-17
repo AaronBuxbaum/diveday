@@ -1795,7 +1795,7 @@ export const TRIP_REVIEWS_CSV = sharedFile<ShopRow<"reviewRows">>({
     { header: "is_published", in: "both", value: ({ review }) => review.isPublished },
     { header: "published_at", in: "both", value: ({ review }) => review.publishedAt },
     // The optional thanks line to one crew member (loop 5, row 6): the diver's
-    // own words, which they take with them; who it is for and whether staff hid it are the shop's.
+    // own words, which they take with them; who it is for and staff's ruling on it are the shop's.
     { header: "crew_thanks", in: "both", value: ({ review }) => review.crewThanks },
     {
       header: "crew_thanks_person_id",
@@ -1803,14 +1803,19 @@ export const TRIP_REVIEWS_CSV = sharedFile<ShopRow<"reviewRows">>({
       value: ({ review }) => review.crewThanksPersonId,
     },
     {
-      header: "crew_thanks_hidden_at",
+      header: "crew_thanks_ruling",
       in: "shop",
-      value: ({ review }) => review.crewThanksHiddenAt,
+      value: ({ review }) => review.crewThanksRuling,
     },
     {
-      header: "crew_thanks_hidden_by_person_id",
+      header: "crew_thanks_ruled_at",
       in: "shop",
-      value: ({ review }) => review.crewThanksHiddenByPersonId,
+      value: ({ review }) => review.crewThanksRuledAt,
+    },
+    {
+      header: "crew_thanks_ruled_by_person_id",
+      in: "shop",
+      value: ({ review }) => review.crewThanksRuledByPersonId,
     },
     { header: "created_at", in: "both", value: ({ review }) => review.createdAt },
     { header: "updated_at", in: "shop", value: ({ review }) => review.updatedAt },

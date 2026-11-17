@@ -87,13 +87,10 @@ describe("the dive-site catalog", () => {
   });
 
   // Two sites on one point stack their map pins and read as one place to the
-  // distance logic (issue #4597). These two pairs still share a point, waiting
-  // on a sourced coordinate each (FWC reef layer for BO0042/BO0043, a Roatan
-  // source for the West End pair); the list only shrinks.
-  const SHARES_A_POINT_PENDING_SOURCE = new Set([
-    "alpha-wreck-pompano|jay-dorman-wreck",
-    "half-moon-bay-wall-roatan|verns-dropoff-roatan",
-  ]);
+  // distance logic (issue #4597). The Pompano pair now carries the FWC reef
+  // layer's own points (BO0042/BO0043). The Roatan pair still shares one, waiting
+  // on a sourced coordinate; the list only shrinks.
+  const SHARES_A_POINT_PENDING_SOURCE = new Set(["half-moon-bay-wall-roatan|verns-dropoff-roatan"]);
 
   it("gives no two sites in an area the same point", () => {
     const byPoint = new Map<string, string[]>();
