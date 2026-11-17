@@ -16,6 +16,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { setUpHref, switchingHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { FounderSignature } from "./_components/FounderSignature";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -164,12 +165,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                   the page names (Aaron, 2026-11-11; #4316). */}
               <p className="pt-2">
                 <span className="sr-only">{FOUNDER_NAME}</span>
-                <span
-                  aria-hidden="true"
-                  className="block font-[family-name:var(--font-signature)] text-6xl leading-none text-foreground"
-                >
-                  {FOUNDER_NAME}
-                </span>
+                <FounderSignature className="h-auto w-64 text-foreground sm:w-72" />
                 <span className="mt-2 block text-sm font-medium uppercase tracking-wide text-muted">
                   {t("marketing.about.founderRole")}
                 </span>
@@ -214,7 +210,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             No words of its own: the standards above are the caption, and a
             heading here would restate the section it closes. Left-aligned on
             the section's rail, like the heading block and the grid. */}
-        <FunnelCtas locale={locale} source="about-rules" footnotes={{}} call className="mt-10" />
+        <FunnelCtas locale={locale} source="about-rules" footnotes={{}} className="mt-10" />
       </section>
 
       {/* How a shop gets set up and who answers afterwards, beside the
@@ -300,7 +296,6 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
       <ClosingCta
         locale={locale}
         source="about-closing"
-        call
         title={t("marketing.about.closingTitle")}
       />
     </main>

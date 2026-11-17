@@ -43,7 +43,7 @@ describe("the funnel's two doors", () => {
     expect(container.querySelectorAll("form")).toHaveLength(1);
   });
 
-  it("offers the 20-minute call only where a page asks for it, tagged with the page's source", () => {
+  it("offers the 20-minute call only where a pair asks for it, tagged with the page's source", () => {
     const { rerender } = render(<FunnelCtas locale="en-US" source="pricing" />);
     expect(screen.queryByRole("link", { name: "Book a 20-minute call" })).not.toBeInTheDocument();
     rerender(<FunnelCtas locale="en-US" source="pricing" call />);

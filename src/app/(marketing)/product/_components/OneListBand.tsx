@@ -3,7 +3,11 @@ import { Eyebrow } from "@/app/_components/Eyebrow";
 import { AppBar, MOCK_BODY } from "@/components/MarketingScreenFallbacks";
 import { MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
-import { BANNER_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import {
+  BANNER_TITLE_CLASS,
+  ITEM_TITLE_CLASS,
+  SECTION_TITLE_CLASS,
+} from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 import { switchingHref } from "@/lib/funnel";
 
@@ -49,17 +53,20 @@ export function OneListBand({ t }: { t: DiverTranslator }) {
             {TOOLS.map((tool) => (
               <li
                 key={tool}
-                className="rounded-inset border border-dashed border-border bg-background p-4"
+                className="flex items-center gap-4 rounded-inset border border-dashed border-border bg-background p-4"
               >
-                <p className="font-semibold">{t(k(`tools.${tool}.name`))}</p>
-                <p className="text-sm text-muted">{t(k(`tools.${tool}.knows`))}</p>
-                <p className="mt-2 flex flex-wrap gap-1.5">
-                  {TOOL_CHIPS[tool].map((c) => (
-                    <span key={c} className={CHIP_PLAIN}>
-                      {t(k(`tools.${tool}.has.${c}`))}
-                    </span>
-                  ))}
-                </p>
+                <ToolArt tool={tool} />
+                <div className="min-w-0">
+                  <p className="font-semibold">{t(k(`tools.${tool}.name`))}</p>
+                  <p className="text-sm text-muted">{t(k(`tools.${tool}.knows`))}</p>
+                  <p className="mt-2 flex flex-wrap gap-1.5">
+                    {TOOL_CHIPS[tool].map((c) => (
+                      <span key={c} className={CHIP_PLAIN}>
+                        {t(k(`tools.${tool}.has.${c}`))}
+                      </span>
+                    ))}
+                  </p>
+                </div>
               </li>
             ))}
           </ul>
@@ -128,27 +135,14 @@ export function OneListBand({ t }: { t: DiverTranslator }) {
           </table>
         </div>
 
-        <div className="mt-14 grid gap-10 lg:grid-cols-2 lg:gap-14">
-          <div>
-            <Eyebrow as="h3">{t(k("staysEyebrow"))}</Eyebrow>
-            <p className={`mt-3 ${SECTION_TITLE_CLASS} text-balance`}>{t(k("staysTitle"))}</p>
-            <p className="mt-3 text-lg leading-8 text-muted">{t(k("staysBody"))}</p>
-          </div>
-          <div>
-            <Eyebrow as="h3">{t(k("movingEyebrow"))}</Eyebrow>
-            <p className={`mt-3 ${SECTION_TITLE_CLASS} text-balance`}>{t(k("movingTitle"))}</p>
-            <p className="mt-3 text-lg leading-8 text-muted">{t(k("movingBody"))}</p>
-            <Link
-              href={switchingHref("/switching", "product-one-list")}
-              className={buttonClass({
-                variant: "link",
-                flush: true,
-                className: "mt-2 text-start",
-              })}
-            >
-              {t(k("movingLink"))}
-            </Link>
-          </div>
+        <div className="mt-12 flex flex-col gap-1 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <p className={ITEM_TITLE_CLASS}>{t(k("movingTitle"))}</p>
+          <Link
+            href={switchingHref("/switching", "product-one-list")}
+            className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+          >
+            {t(k("movingLink"))}
+          </Link>
         </div>
       </div>
     </section>
@@ -173,5 +167,64 @@ function Row({
       </div>
       <p className="flex flex-wrap gap-1.5">{children}</p>
     </div>
+  );
+}
+
+/**
+ * A small drawing of each tool the one list replaces: a month grid with a
+ * few seats marked, a release with a signature line, a clipboard with a tally.
+ * Strokes are `currentColor` (muted) with the one accent in `primary`, so the
+ * drawings follow the theme.
+ */
+function ToolArt({ tool }: { tool: (typeof TOOLS)[number] }) {
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      aria-hidden="true"
+      focusable="false"
+      className="size-16 shrink-0 text-muted"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {tool === "calendar" ? (
+        <>
+          <rect x="8" y="12" width="48" height="44" rx="6" />
+          <path d="M8 24h48M20 8v8M44 8v8" />
+          <g fill="currentColor" stroke="none">
+            <circle cx="20" cy="33" r="2" />
+            <circle cx="32" cy="33" r="2" />
+            <circle cx="44" cy="33" r="2" />
+            <circle cx="20" cy="45" r="2" />
+            <circle cx="44" cy="45" r="2" />
+          </g>
+          <circle
+            cx="32"
+            cy="45"
+            r="5"
+            className="text-primary"
+            fill="currentColor"
+            stroke="none"
+          />
+        </>
+      ) : null}
+      {tool === "waiver" ? (
+        <>
+          <path d="M16 6h24l10 10v42H16z" />
+          <path d="M40 6v10h10M23 24h14M23 31h20" />
+          <path d="M23 47c3-8 5-8 6-2s3 4 5-1 4-3 7 0" className="text-primary" />
+        </>
+      ) : null}
+      {tool === "clipboard" ? (
+        <>
+          <rect x="12" y="10" width="40" height="48" rx="5" />
+          <rect x="24" y="5" width="16" height="10" rx="3" fill="currentColor" />
+          <path d="M20 28h4m6 0h14M20 38h4m6 0h14M20 48h4m6 0h8" />
+          <path d="M20 28l2 2 3-4" className="text-primary" />
+        </>
+      ) : null}
+    </svg>
   );
 }
