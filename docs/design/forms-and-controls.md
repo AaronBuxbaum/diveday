@@ -477,7 +477,7 @@ emitted by several. Two pieces close that:
 The page resolves the notice once, hands each form its own with `noticeForForm`
 (`src/lib/staff-notices.ts`), and keeps whatever is left for the page banner — including anything
 homed to a section this staffer's role means the page never rendered. Worked examples: the trip
-Overview and Guests tabs (`resolveTripNotice`), and Settings, which got there first with its own
+Overview and guest lists (`resolveTripNotice`), and Settings, which got there first with its own
 `?saved=<section>` (`SettingsPage.tsx`'s `SectionNotice`).
 
 ### Moving the cursor to the refusal

@@ -174,7 +174,7 @@
   ([H-20260730-nitrox-fill-station-procedure](../human-decisions/H-20260730-nitrox-fill-station-procedure.md)): each cylinder is still analyzed and signed for at the
   fill station. It shows once today's boats are past their last scheduled return, or on a day
   with none (`loadOutDue`, `dayLoadOut` in `src/features/today/closeout.ts`).
-- **Back from the boat** — the Gear tab's list, once a departure is home, of every unit that went
+- **Back from the boat** — the Gear page's list, once a departure is home, of every unit that went
   out on it and is still out, one row per unit: **Back**, or **Back with a problem** with words,
   which closes it as a service concern and can pull the unit to Needs service in the same act
   (ticked from the start for a regulator, BCD or cylinder). Keyed to the departure, unlike the
@@ -194,7 +194,7 @@
   collected in kilograms or whole items, fishing line removed in meters, or lionfish removed as a
   whole-fish count under local invasive-species rules. Lionfish counts record removal or collection,
   not sightings or an assumption that lionfish are invasive everywhere. Staff can record,
-  correct and delete entries in the departure’s Details tab. A revision refuses stale edits;
+  correct and delete entries in the departure’s Edit trip view. A revision refuses stale edits;
   deletion is soft. Live entries appear on that departure’s diver recap with the shop’s optional
   location and collection note, never as an inferred ecological benefit or a diver’s achievement.
   Settings → Features controls every editor and recap door without deleting the records.

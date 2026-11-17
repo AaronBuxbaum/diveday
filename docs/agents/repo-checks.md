@@ -644,20 +644,22 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   departures and the builder) and Crew (`staffing/`, the same week by who is working it), both
   titled "Schedule" under `schedule/_components/ScheduleViews.tsx`, which carries `?week=` across.
   A third reading of the week is a third view there, never a page of its own.
-- **A departure is four tabs under one header** (ADR 20261001-logbook, decision 3):
-  Divers (`trips/[id]/page.tsx`, the roster, which is also the arrival desk inside the arrivals window:
-  `_arrivals/arrival-desk.tsx`, its walk-in form at `walk-in/`), Boat (`manifest/`), Gear (`prep/`, the packing list) and Details (`trips/[id]?view=details`,
-  the About panel). One component draws them, `_components/TripTabs.tsx`; every tab wears `TripPageHeader`, whose
-  stage pill is the crew's own tap in the manifest strip's five words (`boatStageOf` in
-  `src/lib/trip-phase.ts`, the same reading Today's card and the strip use), or nothing; the clock's phase
-  (Prep, Check-in, Aboard, Back) is never printed and only decides that a departure is finished, when its
-  Divers tab becomes the record of who sailed. Add to a tab, never a fifth surface; a second list of the same divers is the duplicate this cut removed. A gear form redirects to
-  `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`, which opens
-  Details. **A cancelled departure keeps its Boat tab and packs nothing**: the roll call is a
-  record of people, the packing list an instruction about a check-in that is not happening
-  (dive-domain review 20260920). `print/` composes prep as a component for the paper day.
-  Finding which boat an arriving diver is on is Today's arrival lookup (`?q=`), never a search on
-  the tab.
+- **A departure is five phases of one clock, plus Edit trip** (ADR 20261117-trip-page-clock,
+  amending 20261001-logbook decision 3): `trips/[id]/page.tsx` shows Filling, Getting ready,
+  Check-in, On the water or Wrapped up, picked by `?phase=` or, absent it, `clockPhaseOf`
+  (`src/lib/trip-clock.ts`, built on `tripPhaseOf`); `?view=edit` is Edit trip. Each phase is a
+  panel in `_components/phases/`; the header (`TripHeader`), the strip (`TripPhaseStrip`) and the
+  sentence (`trip-sentence.ts`, read through `trip-frame.ts`) are shared by all of them and by
+  Gear (`prep/`, the packing list). The strip names the kind of work, never where people are:
+  sentences about people aboard, in the water or back come only from recorded roll-call evidence
+  and the crew's taps (`boatStageOf`). Roll call (`manifest/`) has a door from Check-in on and on
+  every cancelled trip, and sits in More before. Add to a phase, never a sixth surface. A gear form
+  redirects to `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`,
+  which opens Edit trip (`trip-notice-views.ts`). **A cancelled departure keeps its Roll call and
+  packs nothing**: the roll call is a record of people, the packing list an instruction about a
+  check-in that is not happening (dive-domain review 20260920). `print/` composes prep as a
+  component for the paper day. Finding which boat an arriving diver is on is Today's arrival
+  lookup (`?q=`), never a search on the page.
 - **The shop home** is the day's departures, then one "Needs you" list (ADR 20261001-logbook,
   decision 4): `_components/today/DaySpine.tsx` composes them, `DayStation.tsx` is a departure
   card (time, stage pill from `tripPhaseOf`, readiness bar), and every job on the day, at a boat

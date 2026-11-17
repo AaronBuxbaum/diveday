@@ -76,7 +76,7 @@
   only what the agency's form asks for: a birth date or a card number, both only for CMAS. SSI's
   manual handoff fills the name and known birth date, leaves its terms and search to the staffer,
   and never reads a result or certifies a card.
-- **Check all (agency)** — a departure's "Check all 9 cards with their agencies" on its Divers tab
+- **Check all (agency)** — a departure's "Check all 9 cards with their agencies" on its guest list
   (H-20261008-cert-check-extension): each **Agency check** the departure holds, one card at a time with a pause between, from
   the staffer's browser, excluding SSI's manual handoff. Each card is judged and certified on its own and keeps its own Undo; there
   is no Undo for the departure. One diver the agency's page does not show is skipped, named, with
@@ -148,12 +148,12 @@
   authorizes a fill and a specialty opens a site (each can be certified afterwards by its own
   **Agency check of a card** or by Mark certified). Undoing the check archives the ones still pending. The server judges
   the posted page again and files only kinds it offers itself. Not levels: a second level card on
-  the diver's one agency number cannot be filed. On a departure's Divers tab the offer sits under
+  the diver's one agency number cannot be filed. On a departure's guest list the offer sits under
   the diver's row, after a **Check all (agency)** has finished; on Today it sits under the Needs you
   list, naming the diver with a link to their record, because the row leaves with the card it was
   about.
 - **Agency check of a card** — an **Agency check** of one pending nitrox or specialty certification,
-  with its own "Check Nitrox with NAUI" button on the diver record and a departure's Divers tab
+  with its own "Check Nitrox with NAUI" button on the diver record and a departure's guest list
   (issue #2592, ADR 20261008-cert-check-extension). The server certifies it only when the diver's own
   record on the agency's page lists that card in the agency's closed wording for its kind, under the
   card's own number, and never from a level card's match alone. Offered only for a card with a

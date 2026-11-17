@@ -4,6 +4,8 @@
 - **Date:** 2026-11-14
 - **Amends:** [20261001-logbook](20261001-logbook.md), departure navigation and boat workflow;
   [20261015-roll-call-records-readiness](20261015-roll-call-records-readiness.md), explicit physical-presence evidence
+- **Amended by:** [20261117-trip-page-clock](20261117-trip-page-clock.md): the four workspaces
+  became five phases plus Edit trip; individual roll-call records are unchanged
 
 ## Context
 
