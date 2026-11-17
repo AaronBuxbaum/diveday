@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -8,12 +9,15 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopPath } from "@/lib/staff-notices";
+import { startIncidentReportAction } from "../../incidents/actions";
 import { diveLogHash } from "../TripDiveRecord";
 import type { WaterStanding } from "../water-standing";
 import type { CloseOutItem } from "../wrapped-close-out";
 
 const LINK = buttonClass({ variant: "link", size: "sm", flush: true });
-const FIX = buttonClass({ variant: "primary", size: "sm", className: "shrink-0" });
+/** The first thing left carries the one primary; the rest are secondary (finding 5). */
+const FIX = (first: boolean) =>
+  buttonClass({ variant: first ? "primary" : "secondary", size: "sm", className: "shrink-0" });
 
 type Words = { locale: string; timeZone: string; t: StaffTranslator };
 
@@ -85,7 +89,7 @@ export function CloseOutCard({
       data-close-out=""
       className={`${sectionCardClass({ padding: "none" })} divide-y divide-border`}
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const { title, sub, href, fix } = row(item);
         return (
           <li
@@ -103,7 +107,7 @@ export function CloseOutCard({
               <p className="font-semibold">{title}</p>
               {sub ? <p className="text-sm text-muted [overflow-wrap:anywhere]">{sub}</p> : null}
             </div>
-            <Link href={href} className={FIX}>
+            <Link href={href} className={FIX(index === 0)}>
               {fix}
             </Link>
           </li>
@@ -113,31 +117,124 @@ export function CloseOutCard({
   );
 }
 
+type IncidentLines = {
+  /** The reports this viewer may read (`listTripIncidentReports`). */
+  reports: readonly { id: string; status: string; createdByName: string }[];
+  /** Whether this viewer may start one: the crew aboard, owners and managers. */
+  mayStart: boolean;
+};
+
+/** The incident reports said once: each one's door, or None, and one quiet "Report one". */
+function incidentValue(
+  { reports }: IncidentLines,
+  { shopSlug, tripId, t }: { shopSlug: string; tripId: string; t: StaffTranslator },
+): ReactNode {
+  if (reports.length === 0) return t("trips.clock.wrapped.none");
+  return (
+    <span className="flex flex-col items-start gap-1">
+      {reports.map((report) => (
+        <Link
+          key={report.id}
+          href={shopPath(shopSlug, "trips", tripId, "incidents", report.id)}
+          className={LINK}
+        >
+          {t(
+            report.status === "filed"
+              ? "trips.clock.wrapped.reportFiled"
+              : "trips.clock.wrapped.reportDraft",
+            {
+              name: report.createdByName,
+            },
+          )}
+        </Link>
+      ))}
+    </span>
+  );
+}
+
+/** "Report one": the only door on the departure that starts an incident report. */
+function ReportOne({
+  shopSlug,
+  tripId,
+  t,
+}: {
+  shopSlug: string;
+  tripId: string;
+  t: StaffTranslator;
+}) {
+  return (
+    <form action={startIncidentReportAction.bind(null, shopSlug, tripId)}>
+      <SubmitButton pendingLabel={t("words.busy.opening")} className={LINK}>
+        {t("trips.clock.wrapped.reportOne")}
+      </SubmitButton>
+    </form>
+  );
+}
+
 /**
- * **What happened**: each dive as recorded (site, times, deepest, when its
- * count closed), the incident reports, no-shows and turn-aways. A dive
- * nobody counted says "Not counted", one nobody logged "Not logged"; neither
- * is guessed.
+ * **A trip that never sailed has no dives to tell**: its incidents, said once,
+ * since one can still happen at the dock. Nothing for a viewer who may neither
+ * read a report nor start one.
+ */
+export function IncidentsLine({
+  incidents,
+  shopSlug,
+  tripId,
+  t,
+}: {
+  incidents: IncidentLines;
+  shopSlug: string;
+  tripId: string;
+  t: StaffTranslator;
+}) {
+  if (!incidents.mayStart && incidents.reports.length === 0) return null;
+  return (
+    <div
+      id="incidents"
+      className="flex scroll-mt-24 flex-wrap items-start justify-between gap-x-6 gap-y-2"
+    >
+      {incidents.reports.length > 0 ? (
+        <p>
+          <span className="font-semibold">{t("trips.clock.wrapped.incidents")}</span>
+          <span className="mt-1 block">{incidentValue(incidents, { shopSlug, tripId, t })}</span>
+        </p>
+      ) : null}
+      {incidents.mayStart ? <ReportOne shopSlug={shopSlug} tripId={tripId} t={t} /> : null}
+    </div>
+  );
+}
+
+/**
+ * **What happened**, one block (design review of the final screens, finding
+ * 4): each dive as recorded (site, times, deepest, when its count closed),
+ * opening in place to its log once its count has begun; then the incident
+ * reports, no-shows and turn-aways. A dive nobody counted says "Not counted",
+ * one nobody logged "Not logged"; neither is guessed.
  */
 export function WhatHappenedCard({
   standing,
   depth,
-  reports,
-  mayReport,
+  logRow,
+  incidents,
   noShows,
   turnedAway,
   print,
+  shopSlug,
+  tripId,
   locale,
   timeZone,
   t,
 }: {
   standing: WaterStanding;
   depth: (meters: number) => string;
-  reports: number;
-  mayReport: boolean;
+  /** The dive's row opening to its log, or null for a dive with no count begun. */
+  logRow: (dive: number, row: ReactNode) => ReactNode;
+  incidents: IncidentLines;
   noShows: readonly string[];
   turnedAway: readonly string[];
   print: ReactNode;
+  shopSlug: string;
+  tripId: string;
 } & Words) {
   const none = t("trips.clock.wrapped.none");
   const rows: {
@@ -146,7 +243,9 @@ export function WhatHappenedCard({
     value: ReactNode;
     detail?: string | null;
     action?: ReactNode;
+    id?: string;
   }[] = [];
+  const dives: { dive: number; row: (typeof rows)[number] }[] = [];
   for (const stop of standing.timeline) {
     if (stop.kind !== "dive") continue;
     const { logged, count } = stop;
@@ -170,23 +269,25 @@ export function WhatHappenedCard({
     ]
       .filter(Boolean)
       .join(" · ");
-    rows.push({
-      key: `dive-${stop.dive}`,
-      label: t("trips.clock.water.dive", { dive: stop.dive }),
-      value: value || (logged ? none : t("trips.clock.wrapped.notLogged")),
-      detail: detail || null,
+    dives.push({
+      dive: stop.dive,
+      row: {
+        key: `dive-${stop.dive}`,
+        label: t("trips.clock.water.dive", { dive: stop.dive }),
+        value: value || (logged ? none : t("trips.clock.wrapped.notLogged")),
+        detail: detail || null,
+      },
     });
   }
-  rows.push({
-    key: "incidents",
-    label: t("trips.clock.wrapped.incidents"),
-    value: reports > 0 ? t("trips.clock.wrapped.reports", { count: reports }) : none,
-    action: mayReport ? (
-      <Link href="#incidents" className={LINK}>
-        {t("trips.clock.wrapped.reportOne")}
-      </Link>
-    ) : null,
-  });
+  if (incidents.mayStart || incidents.reports.length > 0) {
+    rows.push({
+      key: "incidents",
+      id: "incidents",
+      label: t("trips.clock.wrapped.incidents"),
+      value: incidentValue(incidents, { shopSlug, tripId, t }),
+      action: incidents.mayStart ? <ReportOne shopSlug={shopSlug} tripId={tripId} t={t} /> : null,
+    });
+  }
   rows.push({
     key: "no-shows",
     label: t("trips.clock.wrapped.noShows"),
@@ -199,6 +300,18 @@ export function WhatHappenedCard({
       value: listOf(locale, turnedAway),
     });
   }
+  const GRID =
+    "grid grid-cols-[5.5rem_minmax(0,1fr)_auto] gap-x-4 sm:grid-cols-[9rem_minmax(0,1fr)_auto]";
+  const cells = (row: (typeof rows)[number]) => (
+    <>
+      <span className="text-muted">{row.label}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">
+        <span className="font-semibold">{row.value}</span>
+        {row.detail ? <span className="block text-sm text-muted">{row.detail}</span> : null}
+      </span>
+      <span>{row.action}</span>
+    </>
+  );
   return (
     <section
       aria-labelledby="what-happened-heading"
@@ -211,21 +324,22 @@ export function WhatHappenedCard({
         </h2>
         {print}
       </div>
-      <dl className="mt-2 divide-y divide-border">
+      <ul className="mt-2 divide-y divide-border">
+        {dives.map(({ dive, row }) => {
+          // A dive whose count has begun opens in place to its log.
+          const opens = logRow(dive, <span className={GRID}>{cells(row)}</span>);
+          return (
+            <li key={row.key} data-dive-row={dive}>
+              {opens ?? <div className={`${GRID} px-4 py-3 sm:px-6`}>{cells(row)}</div>}
+            </li>
+          );
+        })}
         {rows.map((row) => (
-          <div
-            key={row.key}
-            className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] gap-x-4 px-4 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:px-6"
-          >
-            <dt className="text-muted">{row.label}</dt>
-            <dd className="min-w-0 [overflow-wrap:anywhere]">
-              <span className="font-semibold">{row.value}</span>
-              {row.detail ? <span className="block text-sm text-muted">{row.detail}</span> : null}
-            </dd>
-            <dd>{row.action}</dd>
-          </div>
+          <li key={row.key} id={row.id} className={`${GRID} scroll-mt-24 px-4 py-3 sm:px-6`}>
+            {cells(row)}
+          </li>
         ))}
-      </dl>
+      </ul>
     </section>
   );
 }
@@ -233,10 +347,18 @@ export function WhatHappenedCard({
 /**
  * **Money**: what this departure collected, what of it was rental gear, and
  * what its seats still owe, from the payments already recorded
- * (`getTripMoney`). For whoever may read the shop's reports.
+ * (`getTripMoney`); on a cancelled trip, only what was collected. For whoever
+ * may read the shop's reports.
  */
-export function MoneyCard({ money, locale, t }: { money: TripMoney } & Omit<Words, "timeZone">) {
+export function MoneyCard({
+  money,
+  cancelled,
+  locale,
+  t,
+}: { money: TripMoney; cancelled: boolean } & Omit<Words, "timeZone">) {
   const amount = (cents: number) => formatMoneyCents(cents, money.currency, locale);
+  // A trip that never sailed owes the shop nothing and rented nothing: what
+  // came in is what its refunds are about (the call-off record holds them).
   const rows = [
     {
       key: "collected",
@@ -259,7 +381,7 @@ export function MoneyCard({ money, locale, t }: { money: TripMoney } & Omit<Word
       label: t("trips.clock.wrapped.owed"),
       value: money.owedCents > 0 ? amount(money.owedCents) : t("trips.clock.wrapped.nothingOwed"),
     },
-  ];
+  ].filter((row) => !cancelled || row.key === "collected");
   return (
     <section
       aria-labelledby="money-heading"

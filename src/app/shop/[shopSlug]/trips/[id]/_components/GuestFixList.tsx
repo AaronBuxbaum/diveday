@@ -15,17 +15,12 @@ export type FixListGuest = {
   panel: ReactNode;
 };
 
-/** A name, or the words between names, in the reader's list format. */
-export type FixListNamePart = { id?: string; text: string };
-
 export type FixListRow = {
   key: string;
   guestIds: string[];
   /** A row about the trip rather than a guest (no crew, a hull on two departures): its words. */
   title?: string;
-  /** Several guests sharing one reason, named in the list format. */
-  names?: FixListNamePart[];
-  /** The one status phrase. */
+  /** Every reason that stands for the guest, in one line. */
   phrase: string | null;
   tone: "danger" | "warning" | "muted";
   /** The row's one button, drawn by the server: Check in, Send waiver, a link. */
@@ -34,6 +29,8 @@ export type FixListRow = {
   openLabel: string | null;
   /** The opened guest already offers the control (its waiver block sends it). */
   panelHoldsControl?: boolean;
+  /** The list's first fix: the one primary button on it. */
+  primary: boolean;
 };
 
 export type FixListSection = {
@@ -51,6 +48,8 @@ export type FixListSection = {
   headless?: boolean;
   /** Quiet lines at the card's foot ("Crew and plan are set"). */
   after?: ReactNode;
+  /** One message to the whole group ("Ask all 3"), beside its count. Never a record. */
+  action?: ReactNode;
   rows: FixListRow[];
 };
 
@@ -125,14 +124,6 @@ export function GuestFixList({
     }
   };
   const byId = new Map(guests.map((guest) => [guest.id, guest]));
-  // Guests with a row of their own; a shared line naming them opens that row.
-  const ownRow = new Set(
-    sections.flatMap((section) =>
-      [...section.rows, ...(section.summary?.rows ?? [])].flatMap((row) =>
-        row.guestIds.length === 1 ? row.guestIds : [],
-      ),
-    ),
-  );
   const lastFolded = sections.findLast((section) => section.folded && section.rows.length)?.key;
 
   return (
@@ -167,7 +158,6 @@ export function GuestFixList({
                 openId={openId}
                 toggle={toggle}
                 closeLabel={copy.close}
-                ownRow={ownRow}
               />
             ))}
           </ul>
@@ -212,11 +202,12 @@ export function GuestFixList({
                 >
                   {section.label}
                 </h3>
-                <span className="text-sm text-muted tabular-nums">
-                  {[...section.rows, ...summaryRows].reduce(
-                    (sum, row) => sum + (row.title ? 0 : row.guestIds.length),
-                    0,
-                  ) || null}
+                <span className="flex items-center gap-3">
+                  {section.action}
+                  {/* People, not reasons: a guest is on one row. */}
+                  <span className="text-sm text-muted tabular-nums">
+                    {[...section.rows, ...summaryRows].filter((row) => !row.title).length || null}
+                  </span>
                 </span>
               </div>
             )}
@@ -263,35 +254,18 @@ export function GuestFixList({
   );
 }
 
-/** Each name with the punctuation that clings to it (", " gives ","), then the rest. */
-function nameRuns(parts: FixListNamePart[]): { part: FixListNamePart; after: string }[] {
-  const runs: { part: FixListNamePart; after: string }[] = [];
-  for (const part of parts) {
-    const last = runs.at(-1);
-    if (!part.id && last?.part.id && !last.after) {
-      const clinging = part.text.match(/^\S*/)?.[0] ?? "";
-      last.after = clinging;
-      const rest = part.text.slice(clinging.length);
-      if (rest) runs.push({ part: { text: rest }, after: "" });
-    } else runs.push({ part, after: "" });
-  }
-  return runs;
-}
-
 function FixRow({
   row,
   byId,
   openId,
   toggle,
   closeLabel,
-  ownRow,
 }: {
   row: FixListRow;
   byId: ReadonlyMap<string, FixListGuest>;
   openId: string | null;
   toggle: (id: string) => void;
   closeLabel: string;
-  ownRow: ReadonlySet<string>;
 }) {
   const phrase = row.phrase ? (
     <span className={`block text-sm ${PHRASE_TONE[row.tone]}`}>{row.phrase}</span>
@@ -309,59 +283,6 @@ function FixRow({
           {phrase}
         </span>
         {row.control ? <div className="shrink-0">{row.control}</div> : null}
-      </li>
-    );
-  }
-  if (row.names && row.guestIds.length > 1) {
-    const opened =
-      openId && row.guestIds.includes(openId) && !ownRow.has(openId) ? byId.get(openId) : undefined;
-    return (
-      <li className="px-4 py-3 sm:px-6">
-        {row.guestIds
-          .filter((id) => !ownRow.has(id))
-          .map((id) => (
-            <span key={id} id={`booking-${id}`} className="block scroll-mt-24" />
-          ))}
-        <p className="font-semibold leading-8">
-          {nameRuns(row.names).map(({ part, after }, index) =>
-            part.id ? (
-              // A name keeps the comma after it: a button is one box, and a line may
-              // otherwise break between it and its comma.
-              // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional.
-              <span key={index} className="whitespace-nowrap">
-                <button
-                  type="button"
-                  data-guest-open={part.id}
-                  aria-expanded={openId === part.id}
-                  onClick={() => toggle(part.id as string)}
-                  className="text-start underline-offset-4 hover:underline focus-visible:focus-ring"
-                >
-                  {part.text}
-                </button>
-                {after}
-              </span>
-            ) : (
-              // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional.
-              <span key={index}>{part.text}</span>
-            ),
-          )}
-        </p>
-        {phrase}
-        {opened ? (
-          <div className="-mx-4 mt-3 bg-primary-tint px-4 py-4 sm:-mx-6 sm:px-6">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="font-semibold">{opened.name}</p>
-              <button
-                type="button"
-                onClick={() => toggle(opened.id)}
-                className={buttonClass({ variant: "link", size: "sm", flush: true })}
-              >
-                {closeLabel}
-              </button>
-            </div>
-            {opened.panel}
-          </div>
-        ) : null}
       </li>
     );
   }
@@ -414,7 +335,7 @@ function FixRow({
                 type="button"
                 onClick={() => toggle(id)}
                 className={buttonClass({
-                  variant: row.tone === "danger" ? "primary" : "secondary",
+                  variant: row.primary ? "primary" : "secondary",
                   size: "sm",
                 })}
               >

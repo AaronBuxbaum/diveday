@@ -15,7 +15,12 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
-import { formatMoneyCents, formatTimeTz, formatWeekdayTime } from "@/lib/format";
+import {
+  formatMoneyCents,
+  formatMoneyScanned,
+  formatTimeTz,
+  formatWeekdayTime,
+} from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
@@ -424,16 +429,18 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
       label: t("trips.about.price"),
       value: (
         <>
-          {bookingPriceCents === null && !cancelled
-            ? t("trips.details.summaryNoPrice")
-            : [
-                bookingPriceCents === null
-                  ? null
-                  : formatMoneyCents(bookingPriceCents, shop.currency, locale),
-                t("schedule.week.seats", { booked: trip.booked, capacity: trip.sellableCapacity }),
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+          {/* The price alone, then the seats on their own quieter line (nit 13). */}
+          {bookingPriceCents === null
+            ? cancelled
+              ? null
+              : t("trips.details.summaryNoPrice")
+            : formatMoneyScanned(bookingPriceCents, shop.currency, locale)}
+          <span className="block text-sm text-muted">
+            {t("trips.clock.sentence.booked", {
+              booked: trip.booked,
+              capacity: trip.sellableCapacity,
+            })}
+          </span>
           {bookingTerms.length > 0 ? (
             <span className="block text-sm text-muted">{bookingTerms.join(" · ")}</span>
           ) : null}

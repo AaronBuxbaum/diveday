@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { scopedHash } from "@/lib/element-id";
 import { ExecutedDiveLog } from "../manifest/_components/ExecutedDiveLog";
@@ -18,19 +19,7 @@ export function diveLogHash(dive: number): string {
   return scopedHash(prefix(dive), "executed-dive");
 }
 
-/**
- * **Each dive's log, in the one place it is written** (ADR
- * 20261117-trip-page-clock): the Trip page, On the water and Wrapped up. Keeps
- * the existing per-dive authorization and validation (`saveExecutedDiveAction`).
- */
-export function TripDiveRecord({
-  view,
-  dives,
-  shop,
-  tripId,
-  locale,
-  t,
-}: {
+type LogInput = {
   view: ReadyManifestView;
   /** The dives to offer: each one whose count has begun, or that is logged. */
   dives: readonly number[];
@@ -43,14 +32,20 @@ export function TripDiveRecord({
   tripId: string;
   locale: string;
   t: StaffTranslator;
-}) {
+};
+
+/**
+ * Each offered dive's log form, keyed by dive, drawn by `draw` with an
+ * optional row to stand in for its collapsed line. Keeps the existing per-dive
+ * authorization and validation (`saveExecutedDiveAction`).
+ */
+function diveLogs({ view, dives, shop, tripId, locale, t }: LogInput) {
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, view.fieldGuides);
   const afterDives = view.completeManifests.filter(
     (manifest) =>
       manifest.checkpoint !== "departure" &&
       dives.includes(Number(manifest.checkpoint.slice("after_dive_".length))),
   );
-  if (afterDives.length === 0) return null;
   const log = executedDiveLogView({
     plannedDives: view.plannedDives,
     diveCount: view.completeManifests.length - 1,
@@ -63,17 +58,19 @@ export function TripDiveRecord({
     depthUnit: shop.depthUnit,
     t,
   });
-  return (
-    <section aria-labelledby="dive-record-heading" className="space-y-4">
-      <h2 id="dive-record-heading" className="font-semibold">
-        {log.labels.heading}
-      </h2>
-      {afterDives.map((manifest) => (
+  return {
+    heading: log.labels.heading,
+    numbers: afterDives.map((manifest) => Number(manifest.checkpoint.slice("after_dive_".length))),
+    draw: (dive: number, row?: ReactNode) => {
+      const manifest = afterDives.find((m) => m.checkpoint === `after_dive_${dive}`);
+      if (!manifest) return null;
+      return (
         <ExecutedDiveLog
           key={manifest.checkpoint}
           {...log}
           headed={false}
-          idPrefix={prefix(Number(manifest.checkpoint.slice("after_dive_".length)))}
+          row={row}
+          idPrefix={prefix(dive)}
           checkpoint={manifest.checkpoint}
           action={saveExecutedDiveAction.bind(null, {
             shopSlug: shop.slug,
@@ -82,7 +79,34 @@ export function TripDiveRecord({
           })}
           sightingsOn={shop.sightingsEnabled}
         />
-      ))}
+      );
+    },
+  };
+}
+
+/**
+ * **Each dive's row opens in place to its log** (Wrapped up's What happened):
+ * a function from a dive and the row that says what happened on it to that
+ * row, opening to the log form; null for a dive with no count begun.
+ */
+export function diveLogRows(input: LogInput): (dive: number, row: ReactNode) => ReactNode {
+  const logs = diveLogs(input);
+  return (dive, row) => logs.draw(dive, row);
+}
+
+/**
+ * **Each dive's log, in the one place it is written** (ADR
+ * 20261117-trip-page-clock): On the water, under its own heading.
+ */
+export function TripDiveRecord(input: LogInput) {
+  const logs = diveLogs(input);
+  if (logs.numbers.length === 0) return null;
+  return (
+    <section aria-labelledby="dive-record-heading" className="space-y-4">
+      <h2 id="dive-record-heading" className="font-semibold">
+        {logs.heading}
+      </h2>
+      {logs.numbers.map((dive) => logs.draw(dive))}
     </section>
   );
 }

@@ -96,7 +96,10 @@ test("every phase fits a 390px phone in Spanish", async ({ page }) => {
   for (const query of [...PHASES.map((phase) => `phase=${phase}`), "view=edit"]) {
     await page.goto(`${path}?${query}`);
     await expect(page.locator("[data-phase-panel]")).toBeVisible();
-    await expect(page.getByRole("navigation", { name: es("trips.clock.label") })).toBeVisible();
+    // Edit trip is not a phase, so it draws no strip (design review of the final screens, 12).
+    await expect(page.getByRole("navigation", { name: es("trips.clock.label") })).toHaveCount(
+      query === "view=edit" ? 0 : 1,
+    );
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );

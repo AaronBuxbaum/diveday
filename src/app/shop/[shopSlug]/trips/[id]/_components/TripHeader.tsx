@@ -39,16 +39,17 @@ export function tripFacts({
 
 /**
  * **The Trip page's header** (ADR 20261117-trip-page-clock): the title, one
- * facts line, then **Edit trip** and **More**. More holds what has no other
- * home yet: adding a guest, Gear, the printed packet, Activity, and Roll call
- * before the phase that opens its door. On a phone Edit trip moves into More.
+ * facts line, then **Edit trip** and **More**, with **Roll call** as a quiet
+ * link where it is not the phase's hero. More holds what has no other home
+ * yet: adding a guest, Gear, the printed packet, Activity, and Roll call
+ * before Check-in. On a phone Edit trip moves into More.
  */
 export function TripHeader({
   trip,
   facts,
   shopSlug,
   tripId,
-  rollCallInMore,
+  rollCall,
   addGuest,
   locale,
   timeZone,
@@ -58,8 +59,11 @@ export function TripHeader({
   facts: readonly string[];
   shopSlug: string;
   tripId: string;
-  /** Roll call has no door on the page yet (before Check-in): More carries it. */
-  rollCallInMore: boolean;
+  /**
+   * Where Roll call's door is: in More before Check-in, the phase's own hero
+   * at Check-in and On the water, and a quiet link here everywhere else.
+   */
+  rollCall: "more" | "header" | "hero";
   /** The trip still sells a seat: More offers the add band (`?add=1`). */
   addGuest: boolean;
   locale: string;
@@ -78,6 +82,15 @@ export function TripHeader({
       className=""
       actions={
         <>
+          {rollCall === "header" ? (
+            <Link
+              href={`${root}/manifest`}
+              data-roll-call-door=""
+              className={buttonClass({ variant: "ghost", size: "sm" })}
+            >
+              {t("trips.clock.rollCall")}
+            </Link>
+          ) : null}
           <span className="hidden sm:contents">
             <Link
               href={`${root}?view=edit`}
@@ -97,7 +110,7 @@ export function TripHeader({
                 {t("trips.clock.addGuest")}
               </MenuLink>
             ) : null}
-            {rollCallInMore ? (
+            {rollCall === "more" ? (
               <MenuLink href={`${root}/manifest`} className={row}>
                 {t("trips.clock.rollCall")}
               </MenuLink>

@@ -404,7 +404,17 @@ export async function rosterRow(page: Page, diverName: string): Promise<Locator>
   const name = (await folios.count()) ? guestOpenButton(page, folios, diverName) : null;
   const bookingId =
     name && (await name.count()) ? await name.getAttribute("data-guest-open") : null;
-  if (bookingId) return page.locator(`#roster li[id="booking-${bookingId}"]`);
+  if (bookingId) {
+    const row = page.locator(`#roster li[id="booking-${bookingId}"]`);
+    // A caller of `rosterRow` acts on the guest: open the rare actions' More too.
+    const more = row.locator(`summary[data-guest-more="${bookingId}"]`);
+    if (
+      (await more.count()) &&
+      !(await more.evaluate((el) => (el.parentElement as HTMLDetailsElement).open))
+    )
+      await more.click();
+    return row;
+  }
   return page.locator('#roster li[id^="booking-"]').filter({ hasText: diverName });
 }
 
@@ -419,9 +429,10 @@ const TRIP_SURFACE_URL = /\/trips\/[^/?#]+/;
 export async function openTripAbout(page: Page): Promise<Locator> {
   const about = page.locator("section#about");
   // A caller often clicks its way here, and the click resolves before the URL
-  // commits: wait for the trip's phase strip before reading the address.
+  // commits: wait for the trip's phase strip (or Edit trip, which has none)
+  // before reading the address.
   await page.waitForURL(TRIP_ROOT_URL);
-  await expect(page.locator("[data-trip-phases]")).toBeVisible();
+  await expect(page.locator("[data-trip-phases]").or(about)).toBeVisible();
   const url = new URL(page.url());
   if (url.searchParams.get("view") !== "edit" && (await about.count()) === 0) {
     url.searchParams.set("view", "edit");
@@ -441,6 +452,10 @@ export async function openTripMore(page: Page): Promise<Locator> {
   await openTripAbout(page);
   const card = page.locator("section#call-off");
   await expect(card).toBeVisible();
+  // At rest the destructive doors wait behind "Call it off…".
+  const open = card.locator("summary[data-call-off-open]");
+  if (!(await open.evaluate((el) => (el.parentElement as HTMLDetailsElement).open)))
+    await open.click();
   return card;
 }
 

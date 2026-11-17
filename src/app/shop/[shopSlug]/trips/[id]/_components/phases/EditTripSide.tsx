@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -116,30 +118,46 @@ export function CallOffCard({
       aria-label={t("trips.clock.edit.callOff")}
       className={`${CARD} scroll-mt-24`}
     >
-      <div className="flex flex-col items-start gap-2 px-4 py-4 sm:px-5">
-        <FormStatus tone={lifecycleStatus?.tone} className="mb-2">
-          {lifecycleStatus?.text}
-        </FormStatus>
-        <BlowoutDoors
-          shop={shop}
-          personId={personId}
-          tripId={tripId}
-          startsAt={startsAt}
-          tripLabel={t("trips.detail.weatherBlowout")}
-          dayLabel={t("trips.detail.dayBlowout")}
-        />
-        <form action={cancelTripAction.bind(null, shop.slug, tripId)} className="w-full">
-          <InlineConfirm
-            triggerLabel={t("trips.about.cancel")}
-            message={t("trips.detail.cancelHint")}
-            confirmLabel={t("trips.detail.cancelConfirm")}
-            cancelLabel={t("words.dismiss.neverMind")}
-            pendingLabel={t("words.busy.canceling")}
-            triggerClassName={buttonClass({ variant: "danger-ghost", flush: true })}
-            confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+      {/* **One quiet door at rest** (design review of the final screens, finding
+          12): the weather call, the day's and cancelling are destructive, so
+          they wait behind "Call it off…"; an answer arrives with it open. */}
+      <AutoOpenDetails
+        openOnHash="call-off"
+        open={Boolean(lifecycleStatus?.text)}
+        className="group/calloff"
+      >
+        <summary
+          data-call-off-open=""
+          className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold sm:px-5 [&::-webkit-details-marker]:hidden"
+        >
+          {t("trips.clock.edit.callOffMore")}
+          <DisclosureCaret direction="down" className="size-4 group-open/calloff:rotate-180" />
+        </summary>
+        <div className="flex flex-col items-start gap-2 px-4 pb-4 sm:px-5">
+          <FormStatus tone={lifecycleStatus?.tone} className="mb-2">
+            {lifecycleStatus?.text}
+          </FormStatus>
+          <BlowoutDoors
+            shop={shop}
+            personId={personId}
+            tripId={tripId}
+            startsAt={startsAt}
+            tripLabel={t("trips.detail.weatherBlowout")}
+            dayLabel={t("trips.detail.dayBlowout")}
           />
-        </form>
-      </div>
+          <form action={cancelTripAction.bind(null, shop.slug, tripId)} className="w-full">
+            <InlineConfirm
+              triggerLabel={t("trips.about.cancel")}
+              message={t("trips.detail.cancelHint")}
+              confirmLabel={t("trips.detail.cancelConfirm")}
+              cancelLabel={t("words.dismiss.neverMind")}
+              pendingLabel={t("words.busy.canceling")}
+              triggerClassName={buttonClass({ variant: "danger-ghost", flush: true })}
+              confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+            />
+          </form>
+        </div>
+      </AutoOpenDetails>
     </section>
   );
 }

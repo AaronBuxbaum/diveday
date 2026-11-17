@@ -55,6 +55,8 @@ export async function BuddyTeamsCard({
         addBuddyTeamMemberAction={addBuddyTeamMemberAction.bind(null, actionContext)}
         removeBuddyTeamMemberAction={removeBuddyTeamMemberAction.bind(null, actionContext)}
         dissolveBuddyTeamAction={dissolveBuddyTeamAction.bind(null, actionContext)}
+        // The Trip page's section heads are row-sized (finding 9).
+        headingClass="font-semibold"
         t={t}
       />
     </div>

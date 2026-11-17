@@ -15,16 +15,16 @@ describe("the trip page as The Clock", () => {
    * ADR 20261117-trip-page-clock: the header, the five-phase strip, one
    * sentence, then one phase's panel.
    */
-  it("draws the phase strip right under the header, on every trip", () => {
+  it("draws the phase strip right under the header, on every trip but Edit trip", () => {
     const header = BODY.indexOf("<TripHeader");
     const strip = BODY.indexOf("<TripPhaseStrip");
     expect(header).toBeGreaterThan(-1);
     expect(strip).toBeGreaterThan(header);
     // Never behind `cancelled`: a cancelled trip opens on Wrapped up, and every
     // phase stays a tap away.
-    const opener = BODY.slice(BODY.lastIndexOf("\n", strip - 1), strip);
-    expect(opener.trim()).toBe("");
-    expect(BODY.slice(BODY.lastIndexOf("*/}", strip), strip)).not.toMatch(/\?|&&/);
+    // Edit trip is not a phase (design review of the final screens, finding 12).
+    const guard = BODY.slice(BODY.lastIndexOf("*/}", strip) + 3, strip);
+    expect(guard.replace(/\s/g, "")).toBe("{showDetails?null:(");
   });
 
   it("renders one panel per phase, each from its own file, and Edit trip", () => {
@@ -49,6 +49,7 @@ describe("the trip page as The Clock", () => {
   it("keeps the Roll call door on a cancelled trip", () => {
     const frame = readFileSync(join(__dirname, "_components", "trip-frame.ts"), "utf8");
     expect(frame).toMatch(/rollCallDoor:\s*current === null \|\|/);
-    expect(BODY).toMatch(/rollCall=\{\s*frame\.rollCallDoor/);
+    expect(BODY).toMatch(/rollCallPlace\(\{\s*\.\.\.\{ door: frame\.rollCallDoor/);
+    expect(BODY).toMatch(/rollCall=\{rollCall\}/);
   });
 });

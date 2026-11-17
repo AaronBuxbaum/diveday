@@ -308,7 +308,7 @@ describe("the roster's row geometry", () => {
    * off the name, on no shared edge).
    */
   it("opens the guest in place with one name, every remedy before the facts", () => {
-    const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
+    const { container } = renderRoster({ ...fixtures, selectedBookingId: null, phase: "ready" });
     fireEvent.click(screen.getByRole("button", { name: blocked.person.fullName }));
     expect(screen.getAllByText(blocked.person.fullName)).toHaveLength(1);
     const remedy = screen.getByRole("link", { name: /Review certifications/ });
@@ -577,7 +577,7 @@ describe("the guest folio workflow", () => {
   });
 
   it("starts with named guest choices and opens each blocker beside its remedy", () => {
-    const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
+    const { container } = renderRoster({ ...fixtures, selectedBookingId: null, phase: "ready" });
     expect(screen.getByRole("region", { name: "Guests" })).toBeVisible();
     expect(screen.getByRole("button", { name: blocked.person.fullName })).toBeVisible();
     expect(container.querySelector("[data-opened-guest]")).toBeNull();
@@ -614,7 +614,8 @@ describe("a cancelled trip's guests", () => {
     });
     expect(screen.queryByText("Can’t board yet")).toBeNull();
     expect(screen.queryByText("No certification is on file for this trip.")).toBeNull();
-    expect(screen.getByText("Booked")).toBeVisible();
+    const booked = screen.getByText("Booked").closest("section") as HTMLElement;
+    fireEvent.click(within(booked).getByRole("button", { expanded: false }));
     expect(screen.getByRole("button", { name: "Gus Lin" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Meera Iyer" })).toBeVisible();
   });

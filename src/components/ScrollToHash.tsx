@@ -32,6 +32,31 @@ import { SCROLL_SETTLED_ATTRIBUTE } from "@/components/PreserveFormScroll";
  */
 const HASH_LANDED_ATTRIBUTE = "data-hash-landed";
 
+/**
+ * **The reader wins** (CI on PR #4674, three specs in three runs): a page body
+ * hydrates after its header, so a tap can land between the page painting and
+ * these effects running. Scrolling then moves the page under that tap and it
+ * lands on whatever slid beneath the finger. So the page is moved at most once
+ * per address, by the first list holding the anchor, and never once the reader
+ * has touched, scrolled or typed on that same address. The tap that brought
+ * them here was made on the page before, so it does not count.
+ */
+let touchedAt: string | null = null;
+let landedAt: string | null = null;
+if (typeof window !== "undefined") {
+  const touched = () => {
+    touchedAt = window.location.href;
+  };
+  for (const kind of ["pointerdown", "keydown", "wheel", "touchstart"]) {
+    window.addEventListener(kind, touched, { capture: true, passive: true });
+  }
+}
+
+function mayMoveThePage(): boolean {
+  const here = window.location.href;
+  return touchedAt !== here && landedAt !== here;
+}
+
 export function ScrollToHash({
   onlyHash,
   focusSelector,
@@ -78,6 +103,8 @@ export function ScrollToHash({
           else landed();
           return;
         }
+        if (!mayMoveThePage()) return landed();
+        landedAt = window.location.href;
         field.focus({ preventScroll: true });
         target.scrollIntoView({ block: "start", behavior: "instant" });
         landed();
@@ -87,8 +114,15 @@ export function ScrollToHash({
     }
     // `scroll-mt-*` on the target is what keeps it clear of the sticky header;
     // "start" is what honours it.
+    if (!mayMoveThePage()) return landed();
+    const href = window.location.href;
+    landedAt = href;
     target.scrollIntoView({ block: "start", behavior: "instant" });
     landed();
+    // Leaving the page lets a later visit to the same address land again.
+    return () => {
+      if (landedAt === href) landedAt = null;
+    };
   }, [onlyHash, focusSelector]);
 
   return null;

@@ -37,7 +37,7 @@ export function executedDiveSummary({
   t: StaffTranslator;
 }): string {
   if (!row) return t("manifest.executedDive.summaryNotRecorded", { dive: diveLabel });
-  const parts: string[] = [row.actualSite?.name ?? t("manifest.executedDive.unknown")];
+  const parts: string[] = [row.actualSite?.name ?? t("manifest.executedDive.siteUnknown")];
   const depth = row.executed.maxDepthMeters;
   if (depth != null && !row.executed.notRecorded.includes("depth")) {
     parts.push(

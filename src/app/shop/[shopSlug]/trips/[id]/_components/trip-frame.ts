@@ -130,3 +130,25 @@ export function tripFrame({
     ),
   };
 }
+
+/**
+ * **Where Roll call's door sits** (design review of the final screens, finding
+ * 5): the hero only where it is the work, Check-in and On the water; before
+ * it has a door, in More; everywhere else (a cancelled trip included), a quiet
+ * link in the header.
+ */
+export function rollCallPlace({
+  door,
+  editing,
+  cancelled,
+  shown,
+}: {
+  door: boolean;
+  editing: boolean;
+  cancelled: boolean;
+  shown: ClockPhase;
+}): "more" | "header" | "hero" {
+  if (!door) return "more";
+  const hero = !editing && !cancelled && (shown === "checkin" || shown === "water");
+  return hero ? "hero" : "header";
+}

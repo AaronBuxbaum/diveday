@@ -1100,7 +1100,7 @@
       "hereAtDock": "{here} de {total} aquí · en el muelle a las {time}",
       "notBack": "{count, plural, one {# participante consta} other {# participantes constan}} como no de vuelta a bordo.",
       "crewSaid": "La tripulación marcó {stage} a las {time}.",
-      "scheduledToLeave": "Salida programada a las {time}.",
+      "noRollCallYet": "Todavía no hay pase de lista.",
       "scheduledBack": "Regreso programado a las {time}.",
       "cancelled": "Esta salida está cancelada.",
       "scheduledFor": "Estaba programada para el {date}, {time}",
@@ -1226,7 +1226,8 @@
       "incidents": "Incidentes",
       "none": "Ninguno",
       "reportOne": "Informar uno",
-      "reports": "{count, plural, one {# informe} other {# informes}}",
+      "reportDraft": "Borrador · {name}",
+      "reportFiled": "Presentado · {name}",
       "noShows": "No se presentaron",
       "turnedAway": "Rechazados",
       "more": "Más",
@@ -1249,7 +1250,8 @@
       "paperPasses": "Pases en papel",
       "rentalTickets": "Tickets de alquiler",
       "paperRollCall": "Pase de lista en papel",
-      "callOff": "Suspender"
+      "callOff": "Suspender",
+      "callOffMore": "Suspender…"
     },
     "cancelledOn": "{cause, select, weather {Suspendida por mal tiempo} run_ended {Cancelada al detenerse su serie} other {Cancelada}} el {date}."
   },
@@ -1319,7 +1321,6 @@
       "call": "Llamar a {name}"
     },
     "close": "Cerrar",
-    "more": "{reason} · {count} más",
     "with": "con {names}",
     "private": "Datos privados",
     "reEntry": {

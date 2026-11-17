@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { type ReactNode, useActionState, useState } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -99,7 +99,14 @@ export function ExecutedDiveLog({
   checkpoint,
   sightingsOn = true,
   headed = true,
+  row: inList,
 }: {
+  /**
+   * Drawn as one row of a list rather than a card of its own: this replaces
+   * the collapsed line, and the row opens in place to the form (Wrapped up's
+   * What happened, one dives block).
+   */
+  row?: ReactNode;
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
   /**
@@ -172,7 +179,9 @@ export function ExecutedDiveLog({
       <div
         key={diveNumber}
         id={scopedId(idPrefix, "executed-dive")}
-        className={sectionCardClass({ padding: "none", className: "scroll-mt-24" })}
+        className={
+          inList ? "scroll-mt-24" : sectionCardClass({ padding: "none", className: "scroll-mt-24" })
+        }
       >
         {/* **Collapsed to its summary** (issue #1055, ADR
                   20260827-the-departure-is-two-working-surfaces decision 2).
@@ -187,11 +196,21 @@ export function ExecutedDiveLog({
                   treatment `PreDepartureCheckList` took in slice 5a. */}
         {/* "Log this dive" lands here by its hash, and opens it. */}
         <AutoOpenDetails openOnHash={scopedId(idPrefix, "executed-dive")} className="group/dive">
-          <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}>
-            <SummaryCaret className="group-open/dive:rotate-90" />
-            <span className="text-base font-semibold group-hover/summary:underline">
-              {summaryLine}
-            </span>
+          <summary
+            className={cardSummaryClass({
+              className: inList
+                ? "group/summary min-h-14 items-start px-4 py-3 sm:px-6"
+                : "group/summary min-h-14 px-4 py-4",
+            })}
+          >
+            <SummaryCaret className={`group-open/dive:rotate-90${inList ? " mt-1" : ""}`} />
+            {inList ? (
+              <span className="min-w-0 flex-1">{inList}</span>
+            ) : (
+              <span className="text-base font-semibold group-hover/summary:underline">
+                {summaryLine}
+              </span>
+            )}
           </summary>
           <ExecutedDiveForm
             diveNumber={diveNumber}

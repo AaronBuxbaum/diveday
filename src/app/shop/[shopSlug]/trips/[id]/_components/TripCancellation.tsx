@@ -15,7 +15,7 @@ import { blowoutPath } from "./blowout/blowout-path";
  * sentence of what happened and when, what it was scheduled for, then its
  * doors: Reinstate for whoever may configure the trip (the action keeps its
  * own gate), the cancellation record when the weather or a stopped run called
- * it off, and Roll call, which keeps its door on every cancelled trip. On
+ * it off. Roll call keeps its door on every cancelled trip, in the header. On
  * every phase of a cancelled trip, for every staffer.
  */
 export function TripCancellation({
@@ -25,7 +25,6 @@ export function TripCancellation({
   lifecycleStatus,
   cancelledAt,
   scheduledFor,
-  rollCallHref,
   shopSlug,
   tripId,
   locale,
@@ -40,7 +39,6 @@ export function TripCancellation({
   cancelledAt: Date | null;
   /** "Was scheduled for …", from the trip's sentence. */
   scheduledFor: string | null;
-  rollCallHref: string | null;
   shopSlug: string;
   tripId: string;
   locale: string;
@@ -64,7 +62,7 @@ export function TripCancellation({
         <p className={`${ITEM_TITLE_CLASS} text-pretty`}>{sentence}</p>
         {scheduledFor ? <p className="text-sm text-muted">{scheduledFor}</p> : null}
       </div>
-      {canConfigure || blowoutCalled || rollCallHref ? (
+      {canConfigure || blowoutCalled ? (
         <div className="flex flex-wrap items-center gap-3">
           {canConfigure ? (
             <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
@@ -79,11 +77,6 @@ export function TripCancellation({
               className={buttonClass({ variant: "secondary" })}
             >
               {t("trips.detail.viewBlowout", { cause: blowoutCalled })}
-            </Link>
-          ) : null}
-          {rollCallHref ? (
-            <Link href={rollCallHref} className={buttonClass({ variant: "secondary" })}>
-              {t("trips.clock.rollCall")}
             </Link>
           ) : null}
         </div>

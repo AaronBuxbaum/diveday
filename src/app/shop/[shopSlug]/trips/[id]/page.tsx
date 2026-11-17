@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
+import { PageBodyHydrated } from "@/components/PageBodyHydrated";
 import { requireShopSurface } from "@/features/session";
 import { readTripPage } from "@/features/trip-page";
 import { requestLocale } from "@/i18n/request";
@@ -34,7 +35,7 @@ import { TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripPhaseStrip } from "./_components/TripPhaseStrip";
 import { TripRosterContent } from "./_components/TripRosterContent";
 import { TripSentenceLine } from "./_components/TripSentenceLine";
-import { tripFrame } from "./_components/trip-frame";
+import { rollCallPlace, tripFrame } from "./_components/trip-frame";
 import { showsEditTrip } from "./_components/trip-notice-views";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
 import { type TripPageSearchParams, tripFlashParams } from "./_components/trip-search-params";
@@ -215,7 +216,6 @@ export default async function ManageTripPage({
     ...{ frame, overview, shop, shopSlug, tripId, now, locale, t },
     gearToPack: reading.gearToPack,
     water: { automatedForecast, tideLines },
-    noRollCall: Boolean(record && !record.rollCallTaken && record.afterDive.size === 0),
     mayCallOff: mayChangeDeparture,
   });
 
@@ -282,9 +282,17 @@ export default async function ManageTripPage({
   );
   const phase = {
     record: { context: { db, shop, session }, tripId, locale, t },
-    ...{ sentence: frame.sentence, cancelled, door: frame.rollCallDoor },
+    ...{ sentence: frame.sentence, cancelled },
   };
-
+  const rollCall = rollCallPlace({
+    ...{ door: frame.rollCallDoor, editing: showDetails, cancelled, shown: frame.shown },
+  });
+  const rollCallHero = rollCall === "hero";
+  const heroDoor = rollCallHero
+    ? { href: `${tripPath}/manifest`, label: t("trips.clock.rollCall") }
+    : null;
+  const seats =
+    frame.shown === "filling" ? { booked: trip.booked, capacity: frame.capacity } : null;
   const buddyArgs = { tripId, locale, t, buddyError, context: { db, shop, session } };
   return (
     <>
@@ -295,29 +303,20 @@ export default async function ManageTripPage({
       <div className="space-y-6 sm:space-y-10">
         <TripHeader
           {...{ trip, shopSlug, tripId, locale, t, facts: frame.facts, timeZone: shop.timezone }}
-          rollCallInMore={!frame.rollCallDoor}
+          rollCall={rollCall}
           addGuest={acceptsDivers && frame.capacity > trip.booked}
         />
-        {/* **The phase strip is on every trip, cancelled or not**: a cancelled trip opens on
-            Wrapped up, and every phase stays a tap away. */}
-        <TripPhaseStrip
-          {...{ shopSlug, tripId }}
-          current={frame.current}
-          shown={showDetails ? null : frame.shown}
-          copy={frame.strip}
-        />
-        {showDetails || cancelled || frame.shown === "water" || frame.shown === "wrapped" ? null : (
-          <TripSentenceLine
-            sentence={frame.sentence}
-            rollCall={
-              frame.rollCallDoor
-                ? { href: `${tripPath}/manifest`, label: t("trips.clock.rollCall") }
-                : null
-            }
-            seats={
-              frame.shown === "filling" ? { booked: trip.booked, capacity: frame.capacity } : null
-            }
+        {/* **The phase strip is on every trip, cancelled or not**; Edit trip is not a phase. */}
+        {showDetails ? null : (
+          <TripPhaseStrip
+            {...{ shopSlug, tripId }}
+            current={frame.current}
+            shown={frame.shown}
+            copy={frame.strip}
           />
+        )}
+        {showDetails || cancelled || frame.shown === "water" || frame.shown === "wrapped" ? null : (
+          <TripSentenceLine sentence={frame.sentence} rollCall={heroDoor} seats={seats} />
         )}
         {desk ? <TripDeskConnectivity active t={t} /> : null}
 
@@ -326,7 +325,6 @@ export default async function ManageTripPage({
         <TripCancellation
           {...{ cancelled, canConfigure, blowoutCalled, lifecycleStatus, shopSlug, tripId, t }}
           {...{ cancelledAt: trip.cancelledAt, scheduledFor: frame.sentence.sub, locale }}
-          rollCallHref={frame.rollCallDoor ? `${tripPath}/manifest` : null}
           timeZone={shop.timezone}
         />
 
@@ -374,11 +372,12 @@ export default async function ManageTripPage({
             buddies={<BuddyTeamsCard {...buddyArgs} surface="checkin" open={buddies === "open"} />}
           />
         ) : frame.shown === "water" ? (
-          <WaterPhase guests={guestList} {...phase} />
+          <WaterPhase guests={guestList} {...phase} door={rollCallHero} />
         ) : (
           <WrappedPhase guests={guestList} roster={guests} {...phase} />
         )}
       </div>
+      <PageBodyHydrated />
     </>
   );
 }

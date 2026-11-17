@@ -448,7 +448,7 @@ export type RosterSlots = {
   arrival?: RosterArrival;
   /** The departure is finished: the ledger is its record, never the desk. */
   record?: RosterRecord;
-  /** Which phase of the trip the fix list is drawn for (`guestFixRows`). Default `after`. */
+  /** Which phase of the trip the fix list is drawn for (`guestFixRows`). Default `listed`. */
   phase?: FixListPhase;
   /** What holds the whole boat up, leading its group. */
   tripFixes?: readonly TripFix[];

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { STAFF_RE_ENTRY_KEYS } from "@/features/dive-intent";
@@ -29,7 +30,7 @@ const LINK = buttonClass({ variant: "link", size: "sm", flush: true });
  * **A guest opened in place** (ADR 20261117-trip-page-clock, drawing
  * `24-clock-guest-opened`): the buttons that fix them first, then a short list
  * of facts (card, waiver, gear, last dive, what they asked for, who to call),
- * then the rare actions as plain links. The row above it carries the name and
+ * then the rare actions behind one More. The row above it carries the name and
  * the one status phrase; nothing here repeats them as headings.
  *
  * Every action the old folio held is still here: the fixes and their forms,
@@ -254,45 +255,66 @@ export function OpenedGuest({
           {seat.referenceFacts}
         </details>
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-        {seat.blockerTexts.length > 0 ? seat.arrivalControl : null}
-        {arrival?.details?.get(booking.id)}
-        <SeatFootActions
-          booking={booking}
-          person={person}
-          t={t}
-          shopSlug={trip.shopSlug}
-          offersCreateOrder={seat.offersCreateOrder}
-          removeBookingAction={seat.removeBookingAction}
-          aboardAtSea={seat.removeRefusedAboard}
-          moveSeat={seat.moveSeat}
-          carriedChartersNote={seat.carriedChartersNote}
-        />
-        <Link href={`/shop/${trip.shopSlug}/divers/${person.id}`} className={LINK}>
-          {t("trips.folio.openProfile")}
-        </Link>
-      </div>
-      <div className="space-y-1 text-sm">
-        <SeatPickup booking={booking} t={t} updatePickupAction={seat.updatePickupAction} />
-        <SeatLunchNote booking={booking} t={t} updateAction={seat.updateDietaryNoteAction} />
-        {seat.setParticipantTypeAction ? (
-          <SeatComingAs
-            booking={booking}
-            t={t}
-            certRefused={seat.participantTypeCertBookingId === booking.id}
-            setParticipantTypeAction={seat.setParticipantTypeAction}
-          />
-        ) : null}
-        <SeatNotes
-          bookingId={booking.id}
-          notes={seat.notes}
-          t={t}
-          locale={locale}
-          shopTimezone={timeZone}
-          addNoteAction={seat.addNoteAction}
-          deleteNoteAction={seat.deleteNoteAction}
-        />
-      </div>
+      {seat.blockerTexts.length > 0 && seat.arrivalControl ? (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1">{seat.arrivalControl}</div>
+      ) : null}
+      {/* **The rare actions behind one More** (design review of the final screens,
+          finding 10): the fixes and facts lead; releasing, moving, cancelling,
+          the profile, pickup, lunch, coming as and notes wait one tap in. A
+          refusal or a "Move to another departure" link arrives with it open. */}
+      <AutoOpenDetails
+        openOnHash={`move-booking-${booking.id}`}
+        open={seat.holdOpen}
+        className="group/guestmore"
+      >
+        <summary
+          data-guest-more={booking.id}
+          className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold [&::-webkit-details-marker]:hidden"
+        >
+          {t("trips.clock.more")}
+          <DisclosureCaret direction="down" className="size-4 group-open/guestmore:rotate-180" />
+        </summary>
+        <div className="space-y-4 pt-2">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+            {arrival?.details?.get(booking.id)}
+            <SeatFootActions
+              booking={booking}
+              person={person}
+              t={t}
+              shopSlug={trip.shopSlug}
+              offersCreateOrder={seat.offersCreateOrder}
+              removeBookingAction={seat.removeBookingAction}
+              aboardAtSea={seat.removeRefusedAboard}
+              moveSeat={seat.moveSeat}
+              carriedChartersNote={seat.carriedChartersNote}
+            />
+            <Link href={`/shop/${trip.shopSlug}/divers/${person.id}`} className={LINK}>
+              {t("trips.folio.openProfile")}
+            </Link>
+          </div>
+          <div className="space-y-1 text-sm">
+            <SeatPickup booking={booking} t={t} updatePickupAction={seat.updatePickupAction} />
+            <SeatLunchNote booking={booking} t={t} updateAction={seat.updateDietaryNoteAction} />
+            {seat.setParticipantTypeAction ? (
+              <SeatComingAs
+                booking={booking}
+                t={t}
+                certRefused={seat.participantTypeCertBookingId === booking.id}
+                setParticipantTypeAction={seat.setParticipantTypeAction}
+              />
+            ) : null}
+            <SeatNotes
+              bookingId={booking.id}
+              notes={seat.notes}
+              t={t}
+              locale={locale}
+              shopTimezone={timeZone}
+              addNoteAction={seat.addNoteAction}
+              deleteNoteAction={seat.deleteNoteAction}
+            />
+          </div>
+        </div>
+      </AutoOpenDetails>
     </div>
   );
   return arrival ? <TurnAwayRowStateProvider>{content}</TurnAwayRowStateProvider> : content;
