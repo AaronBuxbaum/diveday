@@ -451,23 +451,36 @@ export async function recapComputerDives(
     timeZone: string;
   },
 ): Promise<RecapComputerDives> {
-  const { crewPersonIds, ...scope } = input;
-  const own = await datedComputerDives(db, scope);
-  if (own.length > 0) return { source: "own", dives: own };
-  for (const crewId of crewPersonIds) {
-    if (crewId === input.personId) continue;
-    const dives = (await datedComputerDives(db, { ...scope, personId: crewId }))
-      .filter((dive) => dive.samples.length > 1)
-      .map((dive) => ({ ...dive, device: null }));
-    if (dives.length > 0) return { source: "crew", dives };
+  const all = await datedComputerDives(db, {
+    shopId: input.shopId,
+    personIds: [input.personId, ...input.crewPersonIds],
+    date: input.date,
+    timeZone: input.timeZone,
+  });
+  const own = all.filter((dive) => dive.personId === input.personId);
+  if (own.length > 0)
+    return {
+      source: "own",
+      dives: own.slice(0, RECAP_COMPUTER_DIVES_LIMIT).map(({ personId: _p, ...dive }) => dive),
+    };
+  // The first crew member, in the order given, who has a profile that day.
+  for (const crewId of input.crewPersonIds) {
+    const dives = all
+      .filter((dive) => dive.personId === crewId && dive.samples.length > 1)
+      .map(({ personId: _p, ...dive }) => ({ ...dive, device: null }));
+    if (dives.length > 0)
+      return { source: "crew", dives: dives.slice(0, RECAP_COMPUTER_DIVES_LIMIT) };
   }
   return { source: "own", dives: [] };
 }
 
+type DatedDive = RecapComputerDive & { personId: string };
+
+/** The live dives these people's computers logged on a calendar day, in start order, one read. */
 async function datedComputerDives(
   db: DbExecutor,
-  input: { shopId: string; personId: string; date: string; timeZone: string },
-): Promise<RecapComputerDive[]> {
+  input: { shopId: string; personIds: string[]; date: string; timeZone: string },
+): Promise<DatedDive[]> {
   const rows = await db
     .select({ dive: computerDives, samples: computerDiveProfiles.samples })
     .from(computerDives)
@@ -476,17 +489,16 @@ async function datedComputerDives(
       and(
         eq(computerDiveProfiles.diveId, computerDives.id),
         eq(computerDiveProfiles.shopId, input.shopId),
-        eq(computerDiveProfiles.personId, input.personId),
       ),
     )
     .where(
       and(
         eq(computerDives.shopId, input.shopId),
-        eq(computerDives.personId, input.personId),
+        inArray(computerDives.personId, input.personIds),
         sql`${computerDives.deletedAt} is null`,
       ),
     );
-  const found: Array<{ sort: string; dive: RecapComputerDive }> = [];
+  const found: Array<{ sort: string; dive: DatedDive }> = [];
   for (const { dive, samples } of rows) {
     const record = dive.record as unknown as Omit<ParsedComputerDive, "samples">;
     const date =
@@ -500,6 +512,7 @@ async function datedComputerDives(
       sort: record.localStart ?? record.startInstant ?? dive.fingerprint,
       dive: {
         id: dive.id,
+        personId: dive.personId,
         device: record.device,
         localStart: record.localStart,
         durationSeconds: record.durationSeconds,
@@ -508,8 +521,5 @@ async function datedComputerDives(
       },
     });
   }
-  return found
-    .sort((a, b) => a.sort.localeCompare(b.sort))
-    .slice(0, RECAP_COMPUTER_DIVES_LIMIT)
-    .map(({ dive }) => dive);
+  return found.sort((a, b) => a.sort.localeCompare(b.sort)).map(({ dive }) => dive);
 }

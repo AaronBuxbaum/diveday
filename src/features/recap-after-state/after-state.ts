@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { AppDb } from "@/db/client";
 import { listDivePackages } from "@/db/dive-packages";
 import { tipPresetsMajor } from "@/db/tips";
-import { pagedUpcomingTripsWithCounts, tripCrewByTrip } from "@/db/trips";
+import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { handoffHref, issueBookingHandoff } from "@/features/booking-handoff";
 import { BUDDY_PARAM } from "@/features/buddy-links";
 import { buddyReferralId } from "@/features/buddy-tokens";
@@ -445,15 +445,13 @@ export async function buildAfterStateProps(input: {
       }),
       bookedRead,
       whatsNextFor(db, { data, t, locale, now: nowDate() }),
-      tripCrewByTrip(db, shop.id, [trip.id]).then((crew) =>
-        recapComputerDives(db, {
-          shopId: shop.id,
-          personId: data.personId,
-          crewPersonIds: crew.get(trip.id)?.map((member) => member.id) ?? [],
-          date: calendarDateInTimezone(trip.startsAt, shop.timezone),
-          timeZone: shop.timezone,
-        }),
-      ),
+      recapComputerDives(db, {
+        shopId: shop.id,
+        personId: data.personId,
+        crewPersonIds: data.crewPersonIds,
+        date: calendarDateInTimezone(trip.startsAt, shop.timezone),
+        timeZone: shop.timezone,
+      }),
     ]);
   const computerDives = computerRows.dives.flatMap((row): RecapProfileDive[] => {
     const samples = row.samples.map(({ seconds, depthMeters }) => ({
