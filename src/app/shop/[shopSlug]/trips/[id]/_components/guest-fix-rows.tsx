@@ -13,7 +13,7 @@ import {
   type FixRemedy,
   fixListOf,
 } from "@/features/trip-fix-list";
-import type { StaffMessageKey } from "@/i18n/staff-messages";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { staffParticipantTypeLabel } from "@/i18n/staff-participant-labels";
 import { formatMoneyCents } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -52,7 +52,7 @@ const RE_ENTRY_PHRASE_KEYS = {
  * `filling` days ahead (one quiet Booked card), `ready` the day before (the
  * remote remedies), `checkin` at the desk, `after` once the boat has left.
  */
-export type FixListPhase = "filling" | "ready" | "checkin" | "after";
+export type FixListPhase = "filling" | "ready" | "checkin" | "after" | "cancelled";
 
 /** A trip-level fix: what holds the whole boat up, and the door to it. */
 export type TripFix = {
@@ -206,6 +206,7 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
  * - `filling`: one quiet Booked card: everyone fine as one counted line, then
  *   whoever will need something later, without a button.
  * - `after`: Can't board yet, Worth a minute, then everyone else folded.
+ * - `cancelled`: everyone who was booked, by name, with nothing to make ready.
  *
  * Released guests fold under Not here and Turned away. A trip-level fix
  * (`tripFixes`) leads its group.
@@ -374,28 +375,6 @@ export function guestFixRows(
     rows: ids.map((id) => plainRow(id)),
   });
 
-  /** Each depth note much of the boat shares: one row naming everyone, in a few words. */
-  const sharedDepthRows = (): FixListRow[] => {
-    const bySentence = new Map<string, string[]>();
-    for (const seat of seats) {
-      if (!seat.sharedDepth || seat.guest.released) continue;
-      bySentence.set(seat.sharedDepth, [
-        ...(bySentence.get(seat.sharedDepth) ?? []),
-        seat.guest.id,
-      ]);
-    }
-    // The whole sentence is on each opened guest; the row says what it is about.
-    return [...bySentence].map(([sentence, ids]) => ({
-      key: `depth:${sentence}`,
-      guestIds: ids,
-      names: nameParts(ids),
-      phrase: t(reasonKey("depth")),
-      tone: "warning",
-      control: null,
-      openLabel: null,
-    }));
-  };
-
   const tripRows = (tone: TripFix["tone"]): FixListRow[] =>
     tripFixes
       .filter((fix) => fix.tone === tone)
@@ -439,81 +418,92 @@ export function guestFixRows(
     tone: "default",
     rows: [
       ...tripRows("warning"),
-      ...sharedDepthRows(),
+      ...sharedDepthRows(seats, nameParts, t),
       ...list.worthAMinute.map((item) => fixRow(item, "warning", item.guestIds.join())),
     ],
   };
 
+  const booked = seats.filter((seat) => !seat.guest.released).map((seat) => seat.guest.id);
   const sections: FixListSection[] =
-    phase === "filling"
+    phase === "cancelled"
       ? [
           {
             key: "booked",
             label: t("trips.fixList.booked"),
             tone: "default",
-            summary: {
-              label: t("trips.clock.sentence.guestCount", { count: list.fine.length }),
-              phrase: t("trips.fixList.nothingYet"),
-              toggle: t("trips.fixList.allGuests"),
-              rows: list.fine.map((id) => plainRow(id)),
-            },
-            // Days ahead nothing is urgent: each reason is said quietly, and the
-            // guest opens in place for whoever wants to act on it now.
-            rows: [...list.blocking, ...list.worthAMinute].map((item) => ({
-              ...fixRow(item, "warning", item.guestIds.join()),
-              control: null,
-              openLabel: null,
-            })),
+            rows: booked.map((id) => plainRow(id)),
           },
           ...released,
         ]
-      : phase === "ready"
+      : phase === "filling"
         ? [
-            cantBoard,
-            worth,
             {
-              key: "fine",
-              label: t("trips.fixList.groups.fine"),
+              key: "booked",
+              label: t("trips.fixList.booked"),
               tone: "default",
-              headless: true,
               summary: {
-                label: t("trips.fixList.ready", { count: list.fine.length }),
-                phrase: t("trips.fixList.readyPhrase"),
+                label: t("trips.clock.sentence.guestCount", { count: list.fine.length }),
+                phrase: t("trips.fixList.nothingYet"),
                 toggle: t("trips.fixList.allGuests"),
                 rows: list.fine.map((id) => plainRow(id)),
               },
-              after,
-              rows: [],
+              // Days ahead nothing is urgent: each reason is said quietly, and the
+              // guest opens in place for whoever wants to act on it now.
+              rows: [...list.blocking, ...list.worthAMinute].map((item) => ({
+                ...fixRow(item, "warning", item.guestIds.join()),
+                control: null,
+                openLabel: null,
+              })),
             },
             ...released,
           ]
-        : [
-            cantBoard,
-            ...(mode === "checkin"
-              ? [
-                  {
-                    key: "toCome",
-                    label: t("trips.fixList.groups.toCome"),
-                    tone: "default" as const,
-                    rows: list.toCome.map((item) => ({
-                      ...plainRow(
-                        item.guestIds[0] ?? "",
-                        phraseOf(item, byId.get(item.guestIds[0] ?? "")),
-                      ),
-                      tone: item.reason ? ("warning" as const) : ("muted" as const),
-                    })),
-                  },
-                ]
-              : []),
-            worth,
-            folded(
-              "fine",
-              t(mode === "checkin" ? "trips.fixList.groups.here" : "trips.fixList.groups.fine"),
-              list.fine,
-              "success",
-            ),
-            ...released,
-          ];
+        : phase === "ready"
+          ? [
+              cantBoard,
+              worth,
+              {
+                key: "fine",
+                label: t("trips.fixList.groups.fine"),
+                tone: "default",
+                headless: true,
+                summary: {
+                  label: t("trips.fixList.ready", { count: list.fine.length }),
+                  phrase: t("trips.fixList.readyPhrase"),
+                  toggle: t("trips.fixList.allGuests"),
+                  rows: list.fine.map((id) => plainRow(id)),
+                },
+                after,
+                rows: [],
+              },
+              ...released,
+            ]
+          : [
+              cantBoard,
+              ...(mode === "checkin"
+                ? [
+                    {
+                      key: "toCome",
+                      label: t("trips.fixList.groups.toCome"),
+                      tone: "default" as const,
+                      rows: list.toCome.map((item) => ({
+                        ...plainRow(
+                          item.guestIds[0] ?? "",
+                          phraseOf(item, byId.get(item.guestIds[0] ?? "")),
+                        ),
+                        tone: item.reason ? ("warning" as const) : ("muted" as const),
+                      })),
+                    },
+                  ]
+                : []),
+              worth,
+              folded(
+                "fine",
+                t(mode === "checkin" ? "trips.fixList.groups.here" : "trips.fixList.groups.fine"),
+                list.fine,
+                "success",
+              ),
+              ...released,
+            ];
 
   const guests: FixListGuest[] = seats.map(({ entry }) => {
     const seat = rosterSeat(entry, false, context);
@@ -539,4 +529,27 @@ export function guestFixRows(
     (mode === "checkin" && list.worthAMinute.length > 0);
 
   return { sections, guests, deskWorkOpen };
+}
+
+/** Each depth note much of the boat shares: one row naming everyone, in a few words. */
+function sharedDepthRows(
+  seats: readonly Seat[],
+  nameParts: (ids: string[]) => FixListNamePart[],
+  t: StaffTranslator,
+): FixListRow[] {
+  const bySentence = new Map<string, string[]>();
+  for (const seat of seats) {
+    if (!seat.sharedDepth || seat.guest.released) continue;
+    bySentence.set(seat.sharedDepth, [...(bySentence.get(seat.sharedDepth) ?? []), seat.guest.id]);
+  }
+  // The whole sentence is on each opened guest; the row says what it is about.
+  return [...bySentence].map(([sentence, ids]) => ({
+    key: `depth:${sentence}`,
+    guestIds: ids,
+    names: nameParts(ids),
+    phrase: t(reasonKey("depth")),
+    tone: "warning",
+    control: null,
+    openLabel: null,
+  }));
 }

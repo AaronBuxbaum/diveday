@@ -4,7 +4,7 @@ import { overRatioPulseKey } from "@/i18n/crew-gap-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
-import type { TripFix } from "./guest-fix-rows";
+import type { FixListPhase, TripFix } from "./guest-fix-rows";
 import { boatClashText } from "./trip-crew-notes";
 
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
@@ -35,7 +35,7 @@ export function tripFixes(
     t,
   }: {
     liveBoatClashes: TripOverview["boatClashes"];
-    phase: "filling" | "ready" | "checkin" | "after";
+    phase: FixListPhase;
     shopSlug: string;
     tripId: string;
     now: Date;

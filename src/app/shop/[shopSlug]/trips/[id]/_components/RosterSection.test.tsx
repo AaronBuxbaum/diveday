@@ -592,3 +592,27 @@ describe("the guest folio workflow", () => {
     expect(within(folio).getByRole("button", { name: "Close" })).toBeVisible();
   });
 });
+
+/**
+ * **A cancelled trip has nothing to make ready** (layer E): its guests are
+ * listed as booked, with no "Can't board yet" and no remedy to chase.
+ */
+describe("a cancelled trip's guests", () => {
+  it("lists who was booked with no readiness to fix", () => {
+    renderRoster({
+      phase: "cancelled",
+      roster: [entry("g", "Gus Lin"), entry("m", "Meera Iyer")],
+      readiness: new Map([
+        ["g", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+        ["m", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      selectedBookingId: null,
+    });
+    expect(screen.queryByText("Can’t board yet")).toBeNull();
+    expect(screen.queryByText("No certification is on file for this trip.")).toBeNull();
+    expect(screen.getByText("Booked")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Gus Lin" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Meera Iyer" })).toBeVisible();
+  });
+});

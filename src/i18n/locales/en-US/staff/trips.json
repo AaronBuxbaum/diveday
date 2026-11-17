@@ -1249,7 +1249,8 @@
       "rentalTickets": "Rental tickets",
       "paperRollCall": "Paper roll call",
       "callOff": "Call it off"
-    }
+    },
+    "cancelledOn": "{cause, select, weather {Called off for weather} run_ended {Canceled when its run stopped} other {Canceled}} on {date}."
   },
   "fixList": {
     "groups": {

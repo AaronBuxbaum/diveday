@@ -305,7 +305,7 @@ export default async function ManageTripPage({
           shown={showDetails ? null : frame.shown}
           copy={frame.strip}
         />
-        {showDetails || frame.shown === "water" || frame.shown === "wrapped" ? null : (
+        {showDetails || cancelled || frame.shown === "water" || frame.shown === "wrapped" ? null : (
           <TripSentenceLine
             sentence={frame.sentence}
             rollCall={
@@ -322,6 +322,9 @@ export default async function ManageTripPage({
 
         <TripCancellation
           {...{ cancelled, canConfigure, blowoutCalled, lifecycleStatus, shopSlug, tripId, t }}
+          {...{ cancelledAt: trip.cancelledAt, scheduledFor: frame.sentence.sub, locale }}
+          rollCallHref={frame.rollCallDoor ? `${tripPath}/manifest` : null}
+          timeZone={shop.timezone}
         />
 
         {details ? (

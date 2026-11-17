@@ -52,7 +52,7 @@ export async function WaterPhase({
   if (view.status !== "ready") {
     return (
       <div data-phase-panel="water" className="space-y-10">
-        <TripSentenceLine sentence={sentence} rollCall={door} />
+        {cancelled ? null : <TripSentenceLine sentence={sentence} rollCall={door} />}
         {reports}
         {guests}
       </div>
@@ -61,12 +61,11 @@ export async function WaterPhase({
   const standing = waterStandingOf(view);
   const latestDive = standing.latest?.dive ?? 0;
   const words = { locale, timeZone, t };
+  const said = waterSentence(standing, sentence, { ...words, cancelled }, t);
   return (
     <div data-phase-panel="water" className="space-y-6 sm:space-y-10">
-      <TripSentenceLine
-        sentence={waterSentence(standing, sentence, { ...words, cancelled }, t)}
-        rollCall={door}
-      />
+      {/* A cancelled trip's own panel says it, unless somebody is not recorded back. */}
+      {cancelled && said === sentence ? null : <TripSentenceLine sentence={said} rollCall={door} />}
       <NotYetBackCard
         standing={standing}
         rollCallHref={

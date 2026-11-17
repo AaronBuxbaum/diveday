@@ -70,7 +70,8 @@ export async function WrappedPhase({
   if (view.status !== "ready") {
     return (
       <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
-        <TripSentenceLine sentence={sentence} rollCall={door} />
+        {/* A cancelled trip's own panel above says it, with the Roll call door. */}
+        {cancelled ? null : <TripSentenceLine sentence={sentence} rollCall={door} />}
         {reports}
         {guests}
         {more}
@@ -87,20 +88,18 @@ export async function WrappedPhase({
       unit: shop.depthUnit === "feet" ? "ft" : "m",
     });
   const released = roster.roster.filter(({ booking }) => booking.status === "no_show");
+  const said = wrappedSentence(
+    standing,
+    items,
+    sentence,
+    { ...words, cancelled, homeSaidAt: stage?.stage === "home" ? stage.recordedAt : null },
+    t,
+  );
   return (
     <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
-      <TripSentenceLine
-        sentence={wrappedSentence(
-          standing,
-          items,
-          sentence,
-          { ...words, cancelled, homeSaidAt: stage?.stage === "home" ? stage.recordedAt : null },
-          t,
-        )}
-        // Roll call keeps its door on every cancelled trip too (the ADR): a
-        // blow-out after the first tank still has a count to finish.
-        rollCall={door}
-      />
+      {/* On a cancelled trip the cancellation above is the sentence, unless the
+          counts have somebody not recorded back; Roll call keeps its door there. */}
+      {cancelled && said === sentence ? null : <TripSentenceLine sentence={said} rollCall={door} />}
       <CloseOutCard items={items} shopSlug={shop.slug} tripId={tripId} locale={locale} t={t} />
       {cancelled && !standing.latest ? null : (
         <WhatHappenedCard

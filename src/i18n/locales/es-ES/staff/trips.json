@@ -1249,7 +1249,8 @@
       "rentalTickets": "Tickets de alquiler",
       "paperRollCall": "Pase de lista en papel",
       "callOff": "Suspender"
-    }
+    },
+    "cancelledOn": "{cause, select, weather {Suspendida por mal tiempo} run_ended {Cancelada al detenerse su serie} other {Cancelada}} el {date}."
   },
   "fixList": {
     "groups": {

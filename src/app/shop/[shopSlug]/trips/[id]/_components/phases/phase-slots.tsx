@@ -76,10 +76,14 @@ export function phaseSlots({
   locale: string;
   t: StaffTranslator;
 }) {
-  const phase: FixListPhase =
-    shown === "filling" || shown === "ready" || shown === "checkin" ? shown : "after";
-  const tripPath = shopPath(shopSlug, "trips", tripId);
   const { trip, cancelled, requirement } = overview;
+  // A cancelled trip has nothing to make ready: its guests are only listed.
+  const phase: FixListPhase = cancelled
+    ? "cancelled"
+    : shown === "filling" || shown === "ready" || shown === "checkin"
+      ? shown
+      : "after";
+  const tripPath = shopPath(shopSlug, "trips", tripId);
   const crew = crewNamesOf(overview);
   const plan = planOf(overview);
   const fixes = tripFixes(overview, {
