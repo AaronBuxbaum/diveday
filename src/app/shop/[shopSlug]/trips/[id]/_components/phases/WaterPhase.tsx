@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
+import { listTripIncidentReports } from "@/db/incident-reports";
 import type { requireShopSurface } from "@/features/session";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { depthInUnit } from "@/lib/depth-units";
 import { shopPath } from "@/lib/staff-notices";
 import { readManifestView } from "../../manifest/_components/manifest-view";
 import { TripDiveRecord } from "../TripDiveRecord";
-import { TripIncidentReports } from "../TripIncidentReports";
 import { TripSentenceLine } from "../TripSentenceLine";
 import type { TripSentence } from "../trip-sentence";
 import { waterSentence } from "../water-copy";
 import { DaySoFarCard, NotYetBackCard, UnplacedLine } from "./WaterPanels";
+import { IncidentsLine } from "./WrappedPanels";
 import { loggableDives, waterStandingOf } from "./water-reading";
 
 export type PhaseRecordContext = {
@@ -45,9 +46,13 @@ export async function WaterPhase({
   const timeZone = shop.timezone;
   const rollCallHref = shopPath(shop.slug, "trips", tripId, "manifest");
   const door = hasDoor ? { href: rollCallHref, label: t("trips.clock.rollCall") } : null;
-  const view = await readManifestView({ ...context, shopSlug: shop.slug, tripId, locale, t });
+  const [view, incidents] = await Promise.all([
+    readManifestView({ ...context, shopSlug: shop.slug, tripId, locale, t }),
+    listTripIncidentReports(context.db, shop.id, tripId, context.session.user.personId),
+  ]);
+  // The same single row Wrapped up says (Incidents, None, Report one).
   const reports = (
-    <TripIncidentReports shop={shop} personId={context.session.user.personId} tripId={tripId} />
+    <IncidentsLine incidents={incidents} shopSlug={shop.slug} tripId={tripId} t={t} />
   );
   if (view.status !== "ready") {
     return (

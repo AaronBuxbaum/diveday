@@ -47,7 +47,7 @@ export function planOf(overview: Pick<Overview, "tripDiveList">): string[] {
  * Check-in's quiet line.
  */
 export function phaseSlots({
-  frame: { shown, current, readyFrom, dockBy },
+  frame: { shown, current, lookBack, readyFrom, dockBy },
   overview,
   shop,
   shopSlug,
@@ -62,7 +62,13 @@ export function phaseSlots({
   /** Call off is still on offer (`callOffShown`): not cancelled, not sailed, no Home said. */
   mayCallOff: boolean;
   /** The phase shown and the one now, when Getting ready starts, and when the dock call is. */
-  frame: { shown: ClockPhase; current: ClockPhase | null; readyFrom: Date; dockBy: Date };
+  frame: {
+    shown: ClockPhase;
+    current: ClockPhase | null;
+    lookBack: boolean;
+    readyFrom: Date;
+    dockBy: Date;
+  };
   overview: Overview;
   shop: {
     timezone: string;
@@ -81,10 +87,12 @@ export function phaseSlots({
 }) {
   const { trip, cancelled, requirement } = overview;
   // A cancelled trip has nothing to make ready, and once the boat has left (or
-  // when a later phase is only previewed) Check-in's blockers are nobody's
+  // when Getting ready or Check-in is looked back on) Check-in's blockers are nobody's
   // work: the guests are only listed, and Roll call says who is where.
   const phase: FixListPhase =
-    cancelled || shown === "water" || shown === "wrapped" ? "listed" : shown;
+    cancelled || (lookBack && shown !== "filling") || shown === "water" || shown === "wrapped"
+      ? "listed"
+      : shown;
   const tripPath = shopPath(shopSlug, "trips", tripId);
   const crew = crewNamesOf(overview);
   const plan = planOf(overview);

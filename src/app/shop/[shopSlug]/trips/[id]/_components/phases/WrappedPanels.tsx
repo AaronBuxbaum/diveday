@@ -176,7 +176,8 @@ function ReportOne({
 }
 
 /**
- * **A trip that never sailed has no dives to tell**: its incidents, said once,
+ * **The incidents row, said once** ("Incidents · None · Report one"): On the
+ * water, and Wrapped up when the trip never sailed and has no dives to tell,
  * since one can still happen at the dock. Nothing for a viewer who may neither
  * read a report nor start one.
  */
@@ -195,15 +196,15 @@ export function IncidentsLine({
   return (
     <div
       id="incidents"
-      className="flex scroll-mt-24 flex-wrap items-start justify-between gap-x-6 gap-y-2"
+      className="grid scroll-mt-24 grid-cols-[5.5rem_minmax(0,1fr)_auto] gap-x-4 sm:grid-cols-[9rem_minmax(0,1fr)_auto]"
     >
-      {incidents.reports.length > 0 ? (
-        <p>
-          <span className="font-semibold">{t("trips.clock.wrapped.incidents")}</span>
-          <span className="mt-1 block">{incidentValue(incidents, { shopSlug, tripId, t })}</span>
-        </p>
-      ) : null}
-      {incidents.mayStart ? <ReportOne shopSlug={shopSlug} tripId={tripId} t={t} /> : null}
+      <span className="text-muted">{t("trips.clock.wrapped.incidents")}</span>
+      <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
+        {incidentValue(incidents, { shopSlug, tripId, t })}
+      </span>
+      <span>
+        {incidents.mayStart ? <ReportOne shopSlug={shopSlug} tripId={tripId} t={t} /> : null}
+      </span>
     </div>
   );
 }

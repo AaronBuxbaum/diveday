@@ -43,6 +43,7 @@ import { CrewSection } from "./CrewSection";
 import { DetailsEditor } from "./DetailsEditor";
 import type { departureConditionReads } from "./departure-conditions";
 import { participantTermsRows } from "./ParticipantTermsSection";
+import { crewNamesOf } from "./phases/phase-slots";
 import { RequirementsSection } from "./RequirementsSection";
 import { boatClashText, tripCrewNotesOf } from "./trip-crew-notes";
 
@@ -71,11 +72,9 @@ export type TripAboutRowsContext = {
   detailsEditable?: boolean;
 };
 
-/** The names of the staff assigned to this departure, in the shop's staff order. */
+/** The names of the staff assigned to this departure, in the crew's own order (`getTripCrewAssignmentsByTrip`). */
 export function assignedCrewNames(overview: TripOverview): string[] {
-  return overview.staff
-    .filter((entry) => overview.crew.crewIds.includes(entry.person.id))
-    .map((entry) => entry.person.fullName);
+  return crewNamesOf(overview);
 }
 
 /**

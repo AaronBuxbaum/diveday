@@ -60,9 +60,9 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
         `${await tripPathByTitle(page, "blue-mantis", REEF)}?phase=ready&buddies=open`,
       );
       const outer = page
-        .locator("details")
-        .filter({ has: page.locator("#buddy-teams-heading") })
-        .first();
+        .locator("section", { has: page.locator("#buddy-teams-heading") })
+        .first()
+        .locator(":scope > details");
       await openIfClosed(outer);
       const builder = outer
         .locator("details")

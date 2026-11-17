@@ -11,9 +11,11 @@ import {
   CLOCK_PHASES,
   type ClockPhase,
   clockPhaseOf,
+  isLookBack,
   nextMeetingStart,
   phaseWhens,
   readyFrom,
+  sentencePhaseOf,
   shownClockPhase,
 } from "@/lib/trip-clock";
 import { boatStageOf, finalHomeSaid, type tripPhaseOf } from "@/lib/trip-phase";
@@ -84,6 +86,8 @@ export function tripFrame({
   return {
     current,
     shown,
+    /** The phase on screen is an earlier one, seen after the boat left (`isLookBack`). */
+    lookBack: isLookBack(shown, current),
     capacity,
     /** When guests are wanted at the dock: the shop's call, else the departure. */
     dockBy: dockBy ?? nextStartsAt,
@@ -115,7 +119,7 @@ export function tripFrame({
     }),
     sentence: tripSentence(
       {
-        phase: shown,
+        phase: sentencePhaseOf(shown, current),
         cancelled: clock.cancelled,
         now: clock.now,
         startsAt: trip.startsAt,

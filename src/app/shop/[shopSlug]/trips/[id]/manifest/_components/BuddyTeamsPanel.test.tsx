@@ -217,6 +217,25 @@ describe("the panel's disclosure line", () => {
     expect(screen.getByText("Teamed with a diver not cleared to board")).toBeInTheDocument();
   });
 
+  it("leads with the heading, then the caution, then the disclosure line", () => {
+    renderPanel(
+      [team(["Ana Ruiz", "Ben Okafor"])],
+      null,
+      { "team-2": ["Check pairing: a diver under 12."] },
+      { defaultOpen: false },
+    );
+    const heading = screen.getByRole("heading", { name: "manifest.buddyHeading" });
+    const caution = screen.getByText("Check pairing: a diver under 12.");
+    const summary = document.querySelector("summary") as HTMLElement;
+    expect(summary).not.toContainElement(heading);
+    expect(
+      heading.compareDocumentPosition(caution) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      caution.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("still opens for a refusal even when the panel was not requested open", () => {
     renderPanel(
       [],
