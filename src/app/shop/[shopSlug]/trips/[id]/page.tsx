@@ -16,6 +16,7 @@ import { callOffShown } from "./_components/call-off-shown";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { departureStateOf } from "./_components/departure-states";
 import { detailsReadRows } from "./_components/details-rows";
+import { BuddyTeamsCard } from "./_components/phases/BuddyTeamsCard";
 import { CheckInPhase } from "./_components/phases/CheckInPhase";
 import { EditTrip } from "./_components/phases/EditTrip";
 import { FillingPhase } from "./_components/phases/FillingPhase";
@@ -78,6 +79,8 @@ export default async function ManageTripPage({
       phase: askedPhase,
       held,
       tell,
+      buddies,
+      buddyError,
       ...rest
     },
   ] = await Promise.all([params, searchParams]);
@@ -281,6 +284,7 @@ export default async function ManageTripPage({
     ...{ sentence: frame.sentence, cancelled, door: frame.rollCallDoor },
   };
 
+  const buddyArgs = { tripId, locale, t, buddyError, context: { db, shop, session } };
   return (
     <>
       <FlashParams params={tripFlashParams({ held, form })} />
@@ -289,21 +293,14 @@ export default async function ManageTripPage({
           same stack (`TripRosterContent`). */}
       <div className="space-y-6 sm:space-y-10">
         <TripHeader
-          trip={trip}
-          facts={frame.facts}
-          shopSlug={shopSlug}
-          tripId={tripId}
+          {...{ trip, shopSlug, tripId, locale, t, facts: frame.facts, timeZone: shop.timezone }}
           rollCallInMore={!frame.rollCallDoor}
           addGuest={acceptsDivers && frame.capacity > trip.booked}
-          locale={locale}
-          timeZone={shop.timezone}
-          t={t}
         />
         {/* **The phase strip is on every trip, cancelled or not**: a cancelled trip opens on
             Wrapped up, and every phase stays a tap away. */}
         <TripPhaseStrip
-          shopSlug={shopSlug}
-          tripId={tripId}
+          {...{ shopSlug, tripId }}
           current={frame.current}
           shown={showDetails ? null : frame.shown}
           copy={frame.strip}
@@ -315,6 +312,9 @@ export default async function ManageTripPage({
               frame.rollCallDoor
                 ? { href: `${tripPath}/manifest`, label: t("trips.clock.rollCall") }
                 : null
+            }
+            seats={
+              frame.shown === "filling" ? { booked: trip.booked, capacity: frame.capacity } : null
             }
           />
         )}
@@ -361,9 +361,17 @@ export default async function ManageTripPage({
         ) : frame.shown === "filling" ? (
           <FillingPhase guests={guestList} next={slots.panel} />
         ) : frame.shown === "ready" ? (
-          <ReadyPhase guests={guestList} prep={slots.panel} />
+          <ReadyPhase
+            guests={guestList}
+            prep={slots.panel}
+            buddies={<BuddyTeamsCard {...buddyArgs} surface="ready" open={buddies === "open"} />}
+          />
         ) : frame.shown === "checkin" ? (
-          <CheckInPhase guests={guestList} quiet={slots.panel} />
+          <CheckInPhase
+            guests={guestList}
+            quiet={slots.panel}
+            buddies={<BuddyTeamsCard {...buddyArgs} surface="checkin" open={buddies === "open"} />}
+          />
         ) : frame.shown === "water" ? (
           <WaterPhase guests={guestList} {...phase} />
         ) : (

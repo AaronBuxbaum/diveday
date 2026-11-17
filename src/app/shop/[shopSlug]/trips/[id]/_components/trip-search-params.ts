@@ -62,6 +62,10 @@ export type TripPageSearchParams = {
   partyLead?: string;
   partyAmount?: string;
   partyMethod?: string;
+  /** `open`: the buddy-teams panel arrives open, after one of its acts. */
+  buddies?: string;
+  /** A refused buddy-team act's reason (`readManifestView`). */
+  buddyError?: string;
   /** The reschedule notice a retime held, and how many seats it tells. */
   held?: string;
   tell?: string;

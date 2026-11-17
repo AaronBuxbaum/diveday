@@ -153,7 +153,7 @@ export function phaseSlots({
           <GearToPackSlot
             read={gearToPack}
             prepHref={`${tripPath}/prep`}
-            buddyTeamsHref={shop.buddyTeamsEnabled ? `${tripPath}/manifest` : null}
+            buddyTeamsHref={shop.buddyTeamsEnabled ? `${tripPath}?phase=ready&buddies=open` : null}
             locale={locale}
             t={t}
           />

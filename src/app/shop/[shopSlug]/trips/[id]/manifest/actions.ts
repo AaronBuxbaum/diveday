@@ -45,6 +45,7 @@ import { TRIP_STAGES } from "@/lib/trip-stages";
 import { UUID_SOURCE } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { formShowedSpecies } from "./_components/species-shown";
+import { type BuddySurface, buddyActLandsAt } from "./buddy-landing";
 import { crewRollCallSchema, rollCallSchema } from "./roll-call-causal-fields";
 import { supersededOr } from "./roll-call-undo";
 
@@ -63,6 +64,8 @@ export type ManifestActionContext = {
   shopSlug: string;
   tripId: string;
   checkpoint: RollCallCheckpoint;
+  /** Set when a buddy-team act comes from the trip page's Getting ready or Check-in. */
+  buddySurface?: BuddySurface;
 };
 
 /**
@@ -93,23 +96,9 @@ async function manifestStaff(ctx: ManifestTripContext) {
   return (await requireShopSurface(ctx.shopSlug)).session;
 }
 
-/**
- * Where a buddy-team act lands when it is done — the same checkpoint the
- * staffer was working, so a refusal returns them to the list they were looking
- * at rather than to "departure". This is the page's old `back`. It is a
- * relative path built from bound values, never anything a caller supplied.
- *
- * `buddies=open`: the teams panel sits collapsed at rest, and every one of
- * these acts both starts inside it and redirects. Without this the panel
- * would fold shut after each successful step of a session that plainly isn't
- * finished (form a team, add the third, form the next), so the redirect says
- * to arrive with it open.
- */
+/** Where a buddy-team act lands: `buddyActLandsAt`. */
 function manifestBack(ctx: ManifestActionContext): string {
-  // `checkpoint` is escaped rather than interpolated raw: it reaches these
-  // actions as a bound argument like the slug, and one carrying `&` would
-  // append query params of its own to the URL a notice is then added to.
-  return `${manifestPath(ctx)}?checkpoint=${encodeURIComponent(ctx.checkpoint)}&buddies=open`;
+  return buddyActLandsAt(ctx);
 }
 
 const executedDiveSchema = z.object({
