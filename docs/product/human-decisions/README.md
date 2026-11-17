@@ -156,7 +156,7 @@ and run the command again.
 | H-20261014-boat-count-milestones | Implemented | 2026-10-14 | Is a regular's 10th, 25th, 50th or 100th boat said, and where? |
 | H-20261014-checkouts-reach-the-books | Implemented | 2026-10-14 | How do online checkouts and tips reach a shop's books? |
 | H-20261014-course-session-price | Implemented | 2026-10-14 | Which price does a course session show? |
-| H-20261014-demo-wears-visitor-shop | Implemented | 2026-10-16 | May the demo wear the visitor's own shop name? |
+| H-20261014-demo-wears-visitor-shop | Implemented | 2026-11-17 | May the demo wear the visitor's own shop name? |
 | H-20261014-no-mid-thread-model | Implemented | 2026-10-14 | Never switch a live thread's model? |
 | H-20261014-one-to-one-invite | Implemented | 2026-10-14 | May staff invite one past diver to a named departure? |
 | H-20261014-other-days-send-fresh | Implemented | 2026-11-06 | How does one booking's page lead to the diver's other days with the shop? |

@@ -35,6 +35,17 @@ const WALK_MS = 90_000;
 const SWIPE_PX = 40;
 
 /**
+ * Where in a beat a tap happens, as shares of its clock: the control pulses
+ * from `TAP_AT` and the screen swaps to the finished one at `AFTER_AT`. Only
+ * frames drawn with a `before` have anything to show for it.
+ */
+const TAP_AT = 0.16;
+const AFTER_AT = 0.38;
+
+/** A press held this long is a hold (it pauses, and its release is not a tap). */
+const HOLD_MS = 250;
+
+/**
  * **The homepage's booking, one step at a time.** It wraps the server-rendered
  * list of steps (`STEPS` in `src/app/(marketing)/page.tsx`) and changes nothing
  * about it: with no script, or before this one runs, the reader has the full
@@ -49,6 +60,12 @@ const SWIPE_PX = 40;
  * motion, only while it is on screen and the tab is visible, and the Pause
  * button is always there. A tap on a screen, a swipe, the arrow keys and the
  * buttons move it by hand and never start it.
+ *
+ * **The bar is the clock.** One segment per beat; the current one fills over
+ * the beat's share of the walk and the beat moves on when it is full, so what
+ * the reader sees is what the player waits for. Holding a finger or the mouse
+ * down anywhere on the walk freezes it, and letting go carries on from the
+ * same place (Instagram's stories, which Aaron named, 2026-11-17).
  */
 export function HomeWalkthrough({
   beats,
@@ -62,10 +79,17 @@ export function HomeWalkthrough({
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
+  const [held, setHeld] = useState(false);
+  const [tabVisible, setTabVisible] = useState(true);
   // The controls are for a reader whose script ran; without it they are not drawn.
   const [ready, setReady] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const swipeFrom = useRef<number | null>(null);
+  const pressedAt = useRef(0);
+  // How full the current beat's segment is, 0 to 1. Written straight to the
+  // segment so a frame of the fill is not a render of the page.
+  const progress = useRef(0);
+  const fillRef = useRef<HTMLSpanElement>(null);
   const total = beats.length;
   const beat = beats[index] ?? beats[0];
 
@@ -105,12 +129,52 @@ export function HomeWalkthrough({
     return () => watcher.disconnect();
   }, []);
 
+  useEffect(() => {
+    const sync = () => setTabVisible(!document.hidden);
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
+
+  const setPhase = (phase: "before" | "tap" | "after") => {
+    const list = rootRef.current?.querySelector("[data-walk-list]");
+    if (list && list.getAttribute("data-walk-phase") !== phase) {
+      list.setAttribute("data-walk-phase", phase);
+    }
+  };
+
+  // A new beat starts with an empty segment, on its first screen when it is
+  // playing and on its finished one when it is not (a reader who stopped it,
+  // or asked for no motion, gets the screen that says the most).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the index and playing are the trigger
+  useEffect(() => {
+    progress.current = 0;
+    setPhase(playing ? "before" : "after");
+  }, [index, playing]);
+
+  const running = playing && onScreen && tabVisible && !held;
   // biome-ignore lint/correctness/useExhaustiveDependencies: a move by hand restarts the beat's clock
   useEffect(() => {
-    if (!playing || !onScreen) return;
-    const timer = window.setTimeout(() => setIndex((i) => (i + 1) % total), WALK_MS / total);
-    return () => window.clearTimeout(timer);
-  }, [playing, onScreen, index, total]);
+    if (!running) return;
+    const beatMs = WALK_MS / total;
+    let last = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      progress.current = Math.min(1, progress.current + (now - last) / beatMs);
+      last = now;
+      if (fillRef.current) fillRef.current.style.transform = `scaleX(${progress.current})`;
+      setPhase(
+        progress.current >= AFTER_AT ? "after" : progress.current >= TAP_AT ? "tap" : "before",
+      );
+      if (progress.current >= 1) {
+        setIndex((i) => (i + 1) % total);
+        return;
+      }
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [running, index, total]);
 
   const go = (to: number) => setIndex(((to % total) + total) % total);
 
@@ -124,22 +188,31 @@ export function HomeWalkthrough({
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     swipeFrom.current = event.clientX;
+    pressedAt.current = performance.now();
+    setHeld(true);
   };
 
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     const from = swipeFrom.current;
     swipeFrom.current = null;
+    setHeld(false);
     if (from === null) return;
     const moved = event.clientX - from;
     if (Math.abs(moved) >= SWIPE_PX) {
       go(index + (moved < 0 ? 1 : -1));
     } else if (
+      performance.now() - pressedAt.current < HOLD_MS &&
       event.target instanceof HTMLElement &&
       event.target.closest("[data-walk-frame]") &&
       !event.target.closest("a, button")
     ) {
       go(index + 1);
     }
+  };
+
+  const release = () => {
+    swipeFrom.current = null;
+    setHeld(false);
   };
 
   const toggle = (
@@ -163,9 +236,8 @@ export function HomeWalkthrough({
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
-      onPointerCancel={() => {
-        swipeFrom.current = null;
-      }}
+      onPointerCancel={release}
+      onPointerLeave={release}
       className="scroll-mt-20 touch-pan-y"
     >
       {ready ? (
@@ -202,8 +274,19 @@ export function HomeWalkthrough({
             {beats.map((b, i) => (
               <span
                 key={`${b.step}-${b.frame}`}
-                className={`h-1 flex-1 rounded-full ${i <= index ? "bg-primary" : "bg-border"}`}
-              />
+                className="h-1 flex-1 overflow-hidden rounded-full bg-border"
+              >
+                {i < index ? (
+                  <span className="block size-full bg-primary" />
+                ) : i === index ? (
+                  <span
+                    key={index}
+                    ref={fillRef}
+                    className="block size-full origin-left bg-primary"
+                    style={{ transform: "scaleX(0)" }}
+                  />
+                ) : null}
+              </span>
             ))}
           </div>
         </>

@@ -301,6 +301,8 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["diver.json notifications.whatsappTemplate.exampleShopName", "the demo shop's own name"],
   ["diver.json marineLife.species.cobia.name", "the fish's name in Spanish too"],
   ["diver.json marineLife.species.boga.name", "the fish's name in Spanish too"],
+  ["diver.json marineLife.species.cobia.plural", "the fish's name in Spanish too"],
+  ["diver.json marineLife.species.boga.plural", "the fish's name in Spanish too"],
   [
     "content/marketing.json guides.shared.scopeTable.nitrox.what",
     "the gas, and the word Spanish diving uses for it",

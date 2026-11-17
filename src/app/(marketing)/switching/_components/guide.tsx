@@ -705,7 +705,7 @@ export function ClosingCta({
           <p className="mt-2 max-w-xl text-muted">{body}</p>
         </div>
         <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:shrink-0 sm:items-end">
-          <FunnelCtas locale={locale} source={source} />
+          <FunnelCtas locale={locale} source={source} setUp={false} />
           <Link
             href="/switching"
             className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}

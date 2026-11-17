@@ -125,7 +125,7 @@ export async function readSafetyReport({
       key: "boarded",
       label: t("incidents.safety.boarded"),
       value: String(safety.boardedAtDock),
-      detail: t(year ? "incidents.safety.year.boardedDetail" : "incidents.safety.boardedDetail", {
+      detail: t("incidents.safety.boardedDetail", {
         count: safety.unmarkedAtDock,
       }),
       detailTone: safety.unmarkedAtDock > 0 ? "attention" : "quiet",

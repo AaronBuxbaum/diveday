@@ -281,6 +281,8 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "id",
     "full_name",
     "staff_photo_path",
+    "diver_photo_path",
+    "diver_photo_suppressed",
     "public_staff_profile_enabled",
     "public_staff_profile",
     "email",

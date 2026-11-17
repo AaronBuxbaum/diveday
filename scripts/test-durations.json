@@ -2003,7 +2003,6 @@
   "src/features/demand/rules.test.ts": 6,
   "src/features/demo-reset-snapshot/store.test.ts": 69409,
   "src/features/demo-seat/rules.test.ts": 9,
-  "src/features/demo-shop-name/rules.test.ts": 25,
   "src/features/departure-counts/store.test.ts": 4328,
   "src/features/departure-money/rules.test.ts": 12,
   "src/features/departure-picker-window/rules.test.ts": 19,

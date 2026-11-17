@@ -135,4 +135,4 @@ checks again. Pool or shore facility reservations are not modeled, so no facilit
 This implements existing shore/pool departure selection only. Classroom is not a dive mode, and a
 course session remains excluded from charter replacement offers. A non-diving classroom activity
 needs its own capacity, resources, consent and participation model without recording a dive,
-redeeming a dive entitlement, or granting course completion. Issue #4244 remains open for that gap.
+redeeming a dive entitlement, or granting course completion. Aaron closed issue #4244 on 2026-11-17: shore and pool are enough, and no classroom type is planned.

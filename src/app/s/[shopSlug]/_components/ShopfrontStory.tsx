@@ -84,7 +84,6 @@ export function ShopfrontStory({
             : null
         }
         badges={welcomeShown ? [] : parseBrandBadges(shop.brandBadges)}
-        isDemo={shop.isDemo}
         establishedYear={welcomeShown ? null : shop.establishedYear}
         locale={locale}
         t={t}
