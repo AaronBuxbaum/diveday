@@ -43,7 +43,7 @@
         "when": "After the boat is back",
         "title": "Give divers the day to take home",
         "note1": "The record is written once: boat, crew, site, and the dive’s own numbers.",
-        "note2": "The photos are the crew’s, and the chart is her own dive.",
+        "note2": "The photos are the crew’s, and the chart shows what the dive looked like.",
         "mockupLabel": "A report page for a diver: three photos from the boat, the dive’s record with its numbers, and a depth-over-time chart."
       },
       "shopfront": {
@@ -114,7 +114,7 @@
         "desk": "At the counter, one tap checks her in.",
         "aboard": "After dive 1 the crew calls her by name. All nine are back aboard.",
         "computer": "Back at the shop, her dive computer’s file goes into her record.",
-        "recap": "That evening her report arrives, with photos from the boat and her dive.",
+        "recap": "That evening her report arrives, with photos from the boat and a chart of the dive.",
         "review": "She reads the crew’s note and leaves five stars."
       },
       "doorsTitle": "Then try the part that is yours",

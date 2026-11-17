@@ -43,7 +43,7 @@
         "when": "Después de que vuelva el barco",
         "title": "Dales a los buceadores el día para llevarse",
         "note1": "El registro se escribe una vez: barco, tripulación, sitio y las cifras de la propia inmersión.",
-        "note2": "Las fotos son de la tripulación, y el gráfico es de su propia inmersión.",
+        "note2": "Las fotos son de la tripulación, y el gráfico muestra cómo fue la inmersión.",
         "mockupLabel": "La página del informe de un buceador: tres fotos del barco, el registro de la inmersión con sus cifras y un gráfico de profundidad a lo largo del tiempo."
       },
       "shopfront": {
@@ -114,7 +114,7 @@
         "desk": "En el mostrador, un toque la registra.",
         "aboard": "Después de la inmersión 1 la tripulación la llama por su nombre. Los nueve están de vuelta a bordo.",
         "computer": "De vuelta en el centro, el archivo de su computadora de buceo pasa a su registro.",
-        "recap": "Por la tarde llega su informe, con fotos del barco y de su inmersión.",
+        "recap": "Por la tarde llega su informe, con fotos del barco y un gráfico de la inmersión.",
         "review": "Lee la nota de la tripulación y deja cinco estrellas."
       },
       "doorsTitle": "Ahora prueba la parte que es tuya",

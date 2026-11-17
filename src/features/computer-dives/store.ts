@@ -12,6 +12,7 @@ import {
 } from "@/db/schema";
 import { livePerson } from "@/db/trips";
 import { canExportShopData, isStaff } from "@/lib/authz";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   type ComputerLogbookProvider,
@@ -406,4 +407,119 @@ export async function exportComputerDiveSummaryCsv(db: AppDb, scope: ComputerSco
       })),
     );
   });
+}
+
+/** What a diver's recap shows of one dive their own computer logged. */
+export type RecapComputerDive = {
+  id: string;
+  device: string | null;
+  /** The recording's own start, shop-local, when the file carried one. */
+  localStart: string | null;
+  durationSeconds: number | null;
+  maxDepthMeters: number | null;
+  samples: Array<{ seconds: number; depthMeters: number; temperatureC?: number }>;
+};
+
+/** A day's recap lists at most this many recordings; a day past it is a computer dump, not a dive. */
+const RECAP_COMPUTER_DIVES_LIMIT = 6;
+
+export type RecapComputerDives = {
+  /** `own` is this diver's computer; `crew` is a crew member's, shown as what the dive looked like. */
+  source: "own" | "crew";
+  dives: RecapComputerDive[];
+};
+
+/**
+ * **The dive profile a diver's recap draws for the trip day.** The diver's own computer when staff
+ * imported it for them; otherwise a crew member's recording from the same day (the divemaster's or
+ * instructor's), which shows what the dive looked like even though it is not exactly theirs. The
+ * crew's is used only when it has a profile, carries no device name, and never names whose it is.
+ *
+ * Read by the recap's bearer link, the diver's own door, so there is no staff check here: rows are
+ * scoped by shop and person, live only, and matched by the recording's calendar date in the shop's
+ * zone. A diver's own recording with no profile still shows its facts. Nothing here feeds readiness,
+ * recency or the manifest.
+ */
+export async function recapComputerDives(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    personId: string;
+    /** The trip's crew, in the order to try them. */
+    crewPersonIds: string[];
+    date: string;
+    timeZone: string;
+  },
+): Promise<RecapComputerDives> {
+  const all = await datedComputerDives(db, {
+    shopId: input.shopId,
+    personIds: [input.personId, ...input.crewPersonIds],
+    date: input.date,
+    timeZone: input.timeZone,
+  });
+  const own = all.filter((dive) => dive.personId === input.personId);
+  if (own.length > 0)
+    return {
+      source: "own",
+      dives: own.slice(0, RECAP_COMPUTER_DIVES_LIMIT).map(({ personId: _p, ...dive }) => dive),
+    };
+  // The first crew member, in the order given, who has a profile that day.
+  for (const crewId of input.crewPersonIds) {
+    const dives = all
+      .filter((dive) => dive.personId === crewId && dive.samples.length > 1)
+      .map(({ personId: _p, ...dive }) => ({ ...dive, device: null }));
+    if (dives.length > 0)
+      return { source: "crew", dives: dives.slice(0, RECAP_COMPUTER_DIVES_LIMIT) };
+  }
+  return { source: "own", dives: [] };
+}
+
+type DatedDive = RecapComputerDive & { personId: string };
+
+/** The live dives these people's computers logged on a calendar day, in start order, one read. */
+async function datedComputerDives(
+  db: DbExecutor,
+  input: { shopId: string; personIds: string[]; date: string; timeZone: string },
+): Promise<DatedDive[]> {
+  const rows = await db
+    .select({ dive: computerDives, samples: computerDiveProfiles.samples })
+    .from(computerDives)
+    .leftJoin(
+      computerDiveProfiles,
+      and(
+        eq(computerDiveProfiles.diveId, computerDives.id),
+        eq(computerDiveProfiles.shopId, input.shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(computerDives.shopId, input.shopId),
+        inArray(computerDives.personId, input.personIds),
+        sql`${computerDives.deletedAt} is null`,
+      ),
+    );
+  const found: Array<{ sort: string; dive: DatedDive }> = [];
+  for (const { dive, samples } of rows) {
+    const record = dive.record as unknown as Omit<ParsedComputerDive, "samples">;
+    const date =
+      record.localDate ??
+      record.localStart?.slice(0, 10) ??
+      (record.startInstant
+        ? calendarDateInTimezone(new Date(record.startInstant), input.timeZone)
+        : null);
+    if (date !== input.date) continue;
+    found.push({
+      sort: record.localStart ?? record.startInstant ?? dive.fingerprint,
+      dive: {
+        id: dive.id,
+        personId: dive.personId,
+        device: record.device,
+        localStart: record.localStart,
+        durationSeconds: record.durationSeconds,
+        maxDepthMeters: record.maxDepthMeters,
+        samples: samples ?? [],
+      },
+    });
+  }
+  return found.sort((a, b) => a.sort.localeCompare(b.sort)).map(({ dive }) => dive);
 }

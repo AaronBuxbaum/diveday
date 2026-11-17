@@ -338,7 +338,9 @@ describe("how many round trips a diver's page waits for, one after another", () 
 // neither introduces another phase. The public recap remains under its existing ceiling.
 // 66 → 70 (issue #4328): the after-state's "what's next" row, the same four
 // statements the recap pays, in the after-state's one wave. No new phase.
-const READY_AFTER_CEILING = 70;
+// 70 → 71 (this recap's dive chart): one read of the diver's and the crew's computer dives for the
+// trip day, in the after-state's one wave. No new phase.
+const READY_AFTER_CEILING = 71;
 const READY_AFTER_PHASE_CEILING = 12;
 // `/recap/[token]`, replayed from item 32: the recap's 3 and the after-state's
 // next-dive read, with no handoff. Before item 32 the same reads were 7 + 2.
@@ -350,7 +352,9 @@ const READY_AFTER_PHASE_CEILING = 12;
 // 32 → 36 (issue #4328): the after-state's one "what's next" row reads the
 // catalog, the diver's level cards and their course seats in one wave beside
 // the next-dive pick, then the chosen course's next session. No new phase.
-const RECAP_CEILING = 36;
+// 36 → 37 (this recap's dive chart): one read of the diver's and the crew's computer dives for
+// the trip day, in the after-state's one wave. No new phase.
+const RECAP_CEILING = 37;
 const RECAP_PHASE_CEILING = 5;
 // The shop, `readSchedulePage`'s batch with its chained reads, then the
 // board's-end read. 16 → 14 statements and 7 → 5 phases (item 29): the

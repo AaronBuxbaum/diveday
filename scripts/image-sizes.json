@@ -215,5 +215,11 @@
   },
   "src/components/MarketingScreenFallbacks.tsx :: 140px": {
     "exempt": "Not yet measured. A photo in the homepage walkthrough's drawn report screen, inside the fixed-width mock frame; the frame is narrower than the viewport at every width, so the declaration is a safe over-estimate."
+  },
+  "src/app/(token)/ready/[token]/_components/DiveRecordExtras.tsx :: (min-width: 640px) 528px, 100vw": {
+    "exempt": "Derived, not yet measured in a browser: the recap card is inside the thread's max-w-xl (576px) measure with 24px side padding, so the cover's lead cell is the card's 526px content width above 640px and the viewport minus the 40px gutters below."
+  },
+  "src/app/(token)/ready/[token]/_components/DiveRecordExtras.tsx :: (min-width: 640px) 176px, 34vw": {
+    "exempt": "Derived, not yet measured in a browser: one third of the 526px card width above 640px, a third of the viewport below; the two side cells of the three-column cover."
   }
 }

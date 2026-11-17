@@ -881,6 +881,20 @@
       "litter_items": "{quantity} objetos recogidos",
       "line_m": "{quantity} m de sedal recogido",
       "lionfish_count": "Peces león recolectados: {quantity}"
+    },
+    "profile": {
+      "heading": "De tu computadora de buceo",
+      "diveN": "Inmersión {n}",
+      "maxDepth": "Profundidad máxima",
+      "avgDepth": "Profundidad media",
+      "diveTime": "Tiempo de inmersión",
+      "coldest": "Agua más fría",
+      "minutesValue": "{minutes, plural, one {# minuto} other {# minutos}}",
+      "max": "Máx. {depth}",
+      "stop": "Parada de seguridad · {minutes} min",
+      "axisMinutes": "minutos",
+      "headingCrew": "Cómo fue tu inmersión",
+      "crewNote": "De la computadora del equipo, así que la tuya puede variar un poco."
     }
   },
   "register": {
@@ -4262,7 +4276,7 @@
       "imported": "Importada"
     },
     "diveProfile": {
-      "stop": "Parada de seguridad · 3 min",
+      "stop": "Parada de seguridad · {minutes} min",
       "max": "Máx. {depth}",
       "minutes": "minutos"
     }
