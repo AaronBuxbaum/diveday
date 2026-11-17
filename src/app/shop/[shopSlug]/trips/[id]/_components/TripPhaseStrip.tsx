@@ -49,7 +49,7 @@ export function TripPhaseStrip({
                   aria-current={onScreen ? "page" : undefined}
                   data-phase={phase}
                   data-standing={standing}
-                  className="group flex min-h-11 min-w-0 grow flex-col gap-2 rounded-sm pb-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className="group flex min-h-11 min-w-0 grow flex-col gap-2 rounded-sm pb-1 focus-visible:focus-ring"
                 >
                   <span
                     aria-hidden="true"
