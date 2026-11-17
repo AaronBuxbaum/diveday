@@ -838,6 +838,8 @@ export async function setShopProfile(
   db: AppDb,
   shopId: string,
   profile: {
+    welcomeText?: string | null;
+    welcomeSigner?: string | null;
     tagline?: string | null;
     description?: string | null;
     logoUrl?: string | null;
@@ -854,6 +856,10 @@ export async function setShopProfile(
   const [shop] = await db
     .update(shops)
     .set({
+      ...(profile.welcomeText !== undefined ? { welcomeText: clean(profile.welcomeText) } : {}),
+      ...(profile.welcomeSigner !== undefined
+        ? { welcomeSigner: clean(profile.welcomeSigner) }
+        : {}),
       ...(profile.tagline !== undefined ? { tagline: clean(profile.tagline) } : {}),
       ...(profile.description !== undefined ? { description: clean(profile.description) } : {}),
       ...(profile.logoUrl !== undefined ? { logoUrl: clean(profile.logoUrl) } : {}),

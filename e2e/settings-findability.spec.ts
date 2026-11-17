@@ -239,6 +239,8 @@ test.describe("settings that change the shop", () => {
     await expect(tagline).toBeVisible();
     const savedTagline = "Reef and wreck diving";
     await tagline.fill(savedTagline);
+    await page.getByLabel("Welcome note").fill("Welcome, {diver}.");
+    await page.getByLabel("Signer name").fill("Ana");
     await page.getByRole("button", { name: "Save profile" }).click();
 
     // Saved, and the page comes back with its notice: the action's redirect
@@ -252,6 +254,7 @@ test.describe("settings that change the shop", () => {
     // form, while the public route continues to show the last saved value.
     const draftTagline = "Unpublished draft";
     await tagline.fill(draftTagline);
+    await page.getByLabel("Welcome note").fill("Draft welcome.");
     const savedPagePromise = page.context().waitForEvent("page");
     const savedPageLink = page.getByRole("link", {
       name: staffTranslator("en-US")("settings.main.profile.viewStorefront"),
@@ -263,6 +266,9 @@ test.describe("settings that change the shop", () => {
     const savedPage = await savedPagePromise;
     await expect(savedPage).toHaveURL(new RegExp(`/s/${privateShop.slug}$`));
     await expect(savedPage.getByText(savedTagline)).toBeVisible();
+    await expect(savedPage.getByText("Welcome, {diver}.")).toBeVisible();
+    await expect(savedPage.getByText("Ana", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Welcome note")).toHaveValue("Draft welcome.");
     await expect(tagline).toHaveValue(draftTagline);
     await expect(
       page.getByText(staffTranslator("en-US")("settings.main.profile.brandPreview")),
