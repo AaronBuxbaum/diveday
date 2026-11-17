@@ -41,7 +41,11 @@ export function CloseOutCard({
     switch (item.kind) {
       case "rollCall":
         return {
-          title: t("trips.clock.wrapped.rollCallOpen"),
+          title: t(
+            item.dive > 0
+              ? "trips.clock.wrapped.rollCallOpen"
+              : "trips.clock.wrapped.aboardNotBack",
+          ),
           sub: listOf(locale, item.names),
           href: `${trip("manifest")}?checkpoint=${item.dive > 0 ? `after_dive_${item.dive}` : "departure"}`,
           fix: t("trips.clock.water.openRollCall"),

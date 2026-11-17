@@ -110,11 +110,9 @@ export function CaptainPhoneFrame({
 /**
  * The builder's notes beside a screen: the register the public pages speak
  * in since the 2026-09-24 voice decision (docs/design/brand.md, "The voice on
- * the public pages"). A numbered list, each item one note under twenty words
- * that names a thing visible on the mockup next to it and gives its reason or
- * its limit. The number is the anchor a reader's eye carries from the note to
- * the screen, which is why it is set in the primary colour rather than muted
- * like a body list's.
+ * the public pages"). Plain sentences, never a numbered list: each one note
+ * under twenty words that names a thing visible on the mockup next to it and
+ * gives its reason or its limit.
  *
  * Structure only: the notes arrive resolved from the bundle, because the same
  * list renders on `/`, on every feature page and on the switching and pricing
@@ -123,31 +121,16 @@ export function CaptainPhoneFrame({
 export function MarginNotes({
   notes,
   className = "",
-  plain = false,
 }: {
   notes: readonly string[];
   className?: string;
-  /** Plain sentences, no list and no numbers: for notes that are not an order (the homepage's steps). */
-  plain?: boolean;
 }) {
-  if (plain) {
-    return (
-      <div className={`space-y-3 text-sm leading-6 text-muted ${className}`}>
-        {notes.map((note) => (
-          <p key={note}>{note}</p>
-        ))}
-      </div>
-    );
-  }
   return (
-    <ol className={`space-y-3 text-sm leading-6 text-muted ${className}`}>
-      {notes.map((note, index) => (
-        <li key={note} className="flex gap-3">
-          <span className="w-4 shrink-0 font-semibold text-primary tabular-nums">{index + 1}</span>
-          <span>{note}</span>
-        </li>
+    <div className={`space-y-3 text-sm leading-6 text-muted ${className}`}>
+      {notes.map((note) => (
+        <p key={note}>{note}</p>
       ))}
-    </ol>
+    </div>
   );
 }
 

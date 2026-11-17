@@ -9,7 +9,7 @@ import { TripIncidentReports } from "../TripIncidentReports";
 import { TripSentenceLine } from "../TripSentenceLine";
 import type { TripSentence } from "../trip-sentence";
 import { waterSentence } from "../water-copy";
-import { DaySoFarCard, NotYetBackCard } from "./WaterPanels";
+import { DaySoFarCard, NotYetBackCard, UnplacedLine } from "./WaterPanels";
 import { loggableDives, waterStandingOf } from "./water-reading";
 
 export type PhaseRecordContext = {
@@ -73,6 +73,7 @@ export async function WaterPhase({
         }
         {...words}
       />
+      <UnplacedLine standing={standing} locale={locale} t={t} />
       <DaySoFarCard
         standing={standing}
         depth={(meters) =>

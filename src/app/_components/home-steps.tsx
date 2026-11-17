@@ -7,6 +7,7 @@ import {
   FrontDeskReadinessFallback,
   RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
+import { CardCheckFallback, ComputerDivesFallback } from "@/components/MarketingWalkScreens";
 import type { DiverMessageKey } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { FeaturePageSlug } from "@/lib/feature-pages";
@@ -71,7 +72,8 @@ export const STEPS: readonly {
         id: "booking",
         label: "marketing.home.steps.book.mockupLabel",
         primary: true,
-        screen: (locale) => <DiverBookingFallback locale={locale} />,
+        before: (locale) => <DiverBookingFallback locale={locale} state="browse" />,
+        screen: (locale) => <DiverBookingFallback locale={locale} state="booked" />,
       },
     ],
   },
@@ -84,7 +86,8 @@ export const STEPS: readonly {
         id: "signing",
         label: "marketing.featurePages.waivers.screenLabel",
         primary: true,
-        screen: (locale) => <WaiverSigningFallback locale={locale} />,
+        before: (locale) => <WaiverSigningFallback locale={locale} state="open" />,
+        screen: (locale) => <WaiverSigningFallback locale={locale} state="signed" />,
       },
     ],
   },
@@ -96,13 +99,21 @@ export const STEPS: readonly {
       {
         id: "unsigned",
         label: "marketing.home.steps.check.mockupLabel",
-        screen: (locale) => <FrontDeskReadinessFallback locale={locale} state="unsigned" />,
+        before: (locale) => <FrontDeskReadinessFallback locale={locale} state="unsigned" />,
+        screen: (locale) => <FrontDeskReadinessFallback locale={locale} state="nudged" />,
       },
       {
         id: "ready",
         label: "marketing.home.steps.check.readyLabel",
         primary: true,
+        before: (locale) => <FrontDeskReadinessFallback locale={locale} state="nudged" />,
         screen: (locale) => <FrontDeskReadinessFallback locale={locale} state="ready" />,
+      },
+      {
+        id: "card",
+        label: "marketing.home.steps.check.cardLabel",
+        before: (locale) => <CardCheckFallback locale={locale} state="pending" />,
+        screen: (locale) => <CardCheckFallback locale={locale} state="certified" />,
       },
     ],
   },
@@ -144,10 +155,18 @@ export const STEPS: readonly {
     notes: ["marketing.home.steps.recap.note1", "marketing.home.steps.recap.note2"],
     frames: [
       {
+        // The crew imports her dive computer's file before the recap goes out.
+        id: "computer",
+        label: "marketing.home.steps.recap.computerLabel",
+        before: (locale) => <ComputerDivesFallback locale={locale} state="preview" />,
+        screen: (locale) => <ComputerDivesFallback locale={locale} state="imported" />,
+      },
+      {
         id: "recap",
         label: "marketing.home.steps.recap.mockupLabel",
         primary: true,
-        screen: (locale) => <RecapPageFallback locale={locale} />,
+        before: (locale) => <RecapPageFallback locale={locale} state="ask" />,
+        screen: (locale) => <RecapPageFallback locale={locale} state="rated" />,
       },
     ],
   },
@@ -156,21 +175,24 @@ export const STEPS: readonly {
 /**
  * The walkthrough, in the order Priya's day goes (not the list's order: the
  * morning list comes up twice, once with her waiver open and once after she
- * signs). Seven beats at about thirteen seconds is the ninety. Each names a
+ * signs). Nine beats at ten seconds is the ninety. Every beat is about Priya:
+ * the control tapped in it is hers, never another diver's. Each names a
  * step and one of its frames; the caption is
  * `marketing.home.walk.captions.<caption>`.
  */
 export const WALK: readonly {
   step: (typeof STEPS)[number]["id"];
   frame: string;
-  caption: "book" | "unsigned" | "sign" | "ready" | "desk" | "boat" | "recap";
+  caption: "book" | "unsigned" | "sign" | "ready" | "card" | "desk" | "boat" | "computer" | "recap";
 }[] = [
   { step: "book", frame: "booking", caption: "book" },
   { step: "check", frame: "unsigned", caption: "unsigned" },
   { step: "sign", frame: "signing", caption: "sign" },
   { step: "check", frame: "ready", caption: "ready" },
+  { step: "check", frame: "card", caption: "card" },
   { step: "aboard", frame: "desk", caption: "desk" },
   { step: "aboard", frame: "boat", caption: "boat" },
+  { step: "recap", frame: "computer", caption: "computer" },
   { step: "recap", frame: "recap", caption: "recap" },
 ];
 
@@ -182,8 +204,8 @@ export const WALK: readonly {
  *
  * A frame with a `before` draws both screens in one grid cell (so the frame
  * never changes height) and the player's `data-walk-phase` says which shows:
- * `before`, then `tap` (the same screen, its `data-tap-target` pulsing), then
- * `after`. With no phase (no script, reduced motion, a paused walk) the
+ * `before`, then `tap` (the same screen, a finger landing on its
+ * `data-tap-target`), then `after` (its `data-walk-pop` marks settle in). With no phase (no script, reduced motion, a paused walk) the
  * finished screen shows.
  */
 export const WALK_CLASSES =

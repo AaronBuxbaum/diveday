@@ -51,6 +51,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
     ["Rentals", `/shop/${SHOP}/settings/rentals`],
     ["Emergency reference", `/shop/${SHOP}/settings/emergency-reference`],
     ["Dock-day rhythm", `/shop/${SHOP}/settings/dock-day`],
+    ["Trip defaults", `/shop/${SHOP}/settings/trip-defaults`],
     ["Shop profile & branding", `/shop/${SHOP}/settings/profile`],
   ] as const) {
     await expect(rail.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);

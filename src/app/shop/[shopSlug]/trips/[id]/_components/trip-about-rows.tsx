@@ -453,18 +453,12 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
       label: t("trips.about.price"),
       value: (
         <>
-          {/* The price alone, then the seats on their own quieter line (nit 13). */}
+          {/* The price alone; the seats are their own row (review nit 13). */}
           {bookingPriceCents === null
             ? cancelled
               ? null
               : t("trips.details.summaryNoPrice")
             : formatMoneyScanned(bookingPriceCents, shop.currency, locale)}
-          <span className="block text-sm text-muted">
-            {t("trips.clock.sentence.booked", {
-              booked: trip.booked,
-              capacity: trip.sellableCapacity,
-            })}
-          </span>
           {bookingTerms.length > 0 ? (
             <span className="block text-sm text-muted">{bookingTerms.join(" · ")}</span>
           ) : null}
@@ -472,6 +466,15 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
       ),
       editorOpen: Boolean(noticeForForm(tripNotice, "booking")) || Boolean(detailsStatus),
       editor: editorFor("booking"),
+    },
+    {
+      // A fact, not a form: the capacity itself is edited in the Price row.
+      id: "seats",
+      label: t("trips.about.seats"),
+      value: t("trips.clock.sentence.booked", {
+        booked: trip.booked,
+        capacity: trip.sellableCapacity,
+      }),
     },
     {
       id: "requirements",

@@ -239,7 +239,6 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                       </div>
                       <MarginNotes
                         notes={step.notes.map((key) => t(key))}
-                        plain
                         className="order-2 max-w-lg lg:order-none lg:mt-5"
                       />
                       {/* The page's own name is the link's words: the reader

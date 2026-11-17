@@ -115,24 +115,11 @@ function certCheckTryReport(session: Session, installed: string | null): string 
   );
 }
 
-function Step({
-  number,
-  heading,
-  children,
-}: {
-  number: number;
-  heading: string;
-  children: React.ReactNode;
-}) {
+function Step({ heading, children }: { heading: string; children: React.ReactNode }) {
   return (
-    <li className="grid grid-cols-[2rem_1fr] gap-x-3 py-4">
-      <span aria-hidden className="font-semibold tabular-nums text-muted">
-        {number}
-      </span>
-      <div className="min-w-0">
-        <h2 className="text-base font-semibold">{heading}</h2>
-        <div className="mt-2 text-sm">{children}</div>
-      </div>
+    <li className="py-4">
+      <h2 className="text-base font-semibold">{heading}</h2>
+      <div className="mt-2 text-sm">{children}</div>
     </li>
   );
 }
@@ -215,13 +202,13 @@ export function CertCheckTry({
           answer their outer steps; sample badges answer each nested agency.
           Its 64px label and 12px gap place that mark 76px deeper. Each pill
           centers its own mark; the outer steps do not share an icon column. */}
-      <ol className="mt-4 divide-y divide-border">
-        <Step number={1} heading={copy.extension}>
+      <ul className="mt-4 divide-y divide-border">
+        <Step heading={copy.extension}>
           {presence.state === "current"
             ? badge("success", extensionText)
             : badge("warning", extensionText)}
         </Step>
-        <Step number={2} heading={copy.samples}>
+        <Step heading={copy.samples}>
           <ul className="space-y-2" aria-label={copy.samples}>
             {agencies.map((agency) => {
               const outcome = session?.samples[agency.key];
@@ -249,7 +236,7 @@ export function CertCheckTry({
             })}
           </ul>
         </Step>
-        <Step number={3} heading={copy.padi}>
+        <Step heading={copy.padi}>
           {padiOn ? null : <p className="mb-2 text-muted">{copy.padiOff}</p>}
           {session ? (
             session.padi ? (
@@ -271,7 +258,7 @@ export function CertCheckTry({
             )
           ) : null}
         </Step>
-        <Step number={4} heading={copy.report}>
+        <Step heading={copy.report}>
           {session ? (
             <>
               <Copyable
@@ -300,7 +287,7 @@ export function CertCheckTry({
             </>
           ) : null}
         </Step>
-      </ol>
+      </ul>
     </div>
   );
 }

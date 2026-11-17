@@ -9,12 +9,20 @@ import { manifestContext } from "@/test/substrate-fixtures/db/manifests-test-fix
 import { anonymizeDiver } from "./store";
 
 it("erases physical-observation blocker details while preserving causal context and retry intent", async () => {
-  const { db, shop, staff: owner } = await manifestContext();
+  const { db, shop, reef, staff: owner } = await manifestContext();
+  // Only the demo reef trip: reading readiness for every scheduled seat was the slow part.
   const candidates = await db
     .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(eq(bookings.shopId, shop.id), seatHeld, eq(trips.status, "scheduled")))
+    .where(
+      and(
+        eq(bookings.shopId, shop.id),
+        eq(bookings.tripId, reef.id),
+        seatHeld,
+        eq(trips.status, "scheduled"),
+      ),
+    )
     .orderBy(bookings.id);
   let target: (typeof candidates)[number] | undefined;
   for (const booking of candidates) {

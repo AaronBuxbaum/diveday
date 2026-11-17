@@ -324,8 +324,9 @@ test("departure editors save independently and preserve the other subjects", asy
   await booking.locator('[name="capacity"]').fill("9");
   await booking.locator('[name="priceDollars"]').fill("155");
   await saveSection(booking, "booking");
-  await expect(booking.locator(":scope > summary")).toContainText("$155.00");
-  await expect(booking.locator(":scope > summary")).toContainText("0 of 9");
+  await expect(booking.locator(":scope > summary")).toContainText("$155");
+  // The seats are their own row beside the price.
+  await expect(page.locator("section#about")).toContainText("0 of 9");
 
   const plan = await openTripAboutRow(page, "Plan");
   await expect(plan.locator('[name="capacity"]')).toHaveCount(0);
