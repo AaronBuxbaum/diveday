@@ -122,7 +122,7 @@ export function tripFrame({
         blocked,
         notBack,
         stage: boatStageOf(clock),
-        homeSaid: finalHomeSaid(clock),
+        homeSaidAt: finalHomeSaid(clock) ? (clock.stage?.recordedAt ?? null) : null,
         locale,
         timeZone,
       },

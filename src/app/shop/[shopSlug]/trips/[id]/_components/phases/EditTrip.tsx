@@ -9,6 +9,7 @@ import type { TripGuests } from "@/features/trip-guests";
 import { repeatsRowText } from "@/i18n/series-sentences";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import type { detailsReadRows } from "../details-rows";
+import { safetyRecordShown } from "../safety-record-shown";
 import { TripAboutLinks } from "../TripAboutLinks";
 import { type TripAboutRow, TripAboutSection } from "../TripAboutSection";
 import { TripPromoteAndActivity } from "../TripRosterContent";
@@ -147,10 +148,10 @@ async function safetyRecordRow(
 ): Promise<TripAboutRow | null> {
   const { overview, shop, shopSlug, tripId, t, tripNotice, detailsEditable } = context;
   if (detailsEditable !== false) return null;
-  if (overview.cancelled) {
-    const boarded = await listDepartureBoardedByTrip(db, shop.id, [tripId]);
-    if ((boarded.get(tripId)?.size ?? 0) === 0) return null;
-  }
+  const boarded = overview.cancelled
+    ? ((await listDepartureBoardedByTrip(db, shop.id, [tripId])).get(tripId)?.size ?? 0)
+    : 0;
+  if (!safetyRecordShown({ detailsEditable, cancelled: overview.cancelled, boarded })) return null;
   const status = noticeForForm(tripNotice, "safety-record");
   return {
     id: "safety-record",

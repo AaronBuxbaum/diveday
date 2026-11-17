@@ -44,6 +44,13 @@ export function CloseOutCard({
               : trip("manifest"),
           fix: t("trips.clock.water.openRollCall"),
         };
+      case "noRollCall":
+        return {
+          title: t("trips.clock.wrapped.noRollCall"),
+          sub: null,
+          href: trip("manifest"),
+          fix: t("trips.clock.water.openRollCall"),
+        };
       case "rentals":
         return {
           title: t("trips.clock.wrapped.rentals", { count: item.count }),
@@ -103,7 +110,8 @@ export function CloseOutCard({
 /**
  * **What happened**: each dive as recorded (site, times, deepest, when its
  * count closed), the incident reports, no-shows and turn-aways. A dive
- * nobody counted or logged is said as not logged, never guessed.
+ * nobody counted says "Not counted", one nobody logged "Not logged"; neither
+ * is guessed.
  */
 export function WhatHappenedCard({
   standing,
@@ -145,6 +153,7 @@ export function WhatHappenedCard({
       .filter(Boolean)
       .join(" · ");
     const detail = [
+      count ? null : t("trips.clock.wrapped.notCounted"),
       logged || !value ? null : t("trips.clock.wrapped.notLogged"),
       logged?.maxDepthMeters != null
         ? t("trips.clock.wrapped.deepest", { depth: depth(logged.maxDepthMeters) })

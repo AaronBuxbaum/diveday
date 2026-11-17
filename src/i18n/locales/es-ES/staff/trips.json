@@ -1109,7 +1109,6 @@
       "crewSaid": "La tripulación marcó {stage} a las {time}.",
       "scheduledToLeave": "Salida programada a las {time}.",
       "scheduledBack": "Regreso programado a las {time}.",
-      "everyoneBack": "Todos están de vuelta.",
       "cancelled": "Esta salida está cancelada.",
       "scheduledFor": "Estaba programada para el {date}, {time}",
       "leavesInMinutes": "El barco sale en {count, plural, one {# minuto} other {# minutos}}.",
@@ -1181,7 +1180,7 @@
       "dockDone": "{count, plural, one {# persona contada} other {# personas contadas}} a bordo en el muelle.",
       "dockPartial": "Pase de lista en el muelle: {aboard} de {out} constan a bordo.",
       "countedBy": "Contó {name}, {time}",
-      "backAboard": "{aboard} de {out} de vuelta a bordo",
+      "backAboard": "{aboard} de {out} constan de vuelta a bordo",
       "listHeading": "Aún no constan de vuelta",
       "status": {
         "missingAlert": "Alerta de buzo desaparecido abierta",
@@ -1202,13 +1201,15 @@
       "crewSaid": "La tripulación marcó {stage}",
       "dive": "Inmersión {dive}",
       "diveAt": "Inmersión {dive} · {site}",
-      "everyoneBack": "Todos de vuelta a bordo",
+      "everyoneBack": "Todos constan de vuelta a bordo",
       "countAfter": "Pase de lista después de esta inmersión",
       "logged": "Registrada",
       "logThis": "Registrar esta inmersión",
       "homeSaid": "La tripulación marcó En casa",
       "scheduledBack": "Regreso programado",
-      "openRollCall": "Abrir pase de lista"
+      "openRollCall": "Abrir pase de lista",
+      "partialBack": "{count, plural, one {# persona registrada} other {# personas registradas}} de vuelta a bordo tras la inmersión {dive}.",
+      "noCrewAboard": "Ningún miembro de la tripulación registrado a bordo."
     },
     "wrapped": {
       "everyoneBack": "Todos constan de vuelta.",
@@ -1236,7 +1237,9 @@
       "noShows": "No se presentaron",
       "turnedAway": "Rechazados",
       "more": "Más",
-      "runAgain": "Repetir esta salida"
+      "runAgain": "Repetir esta salida",
+      "noRollCall": "No se pasó lista",
+      "notCounted": "Sin recuento"
     },
     "edit": {
       "schedule": "Agenda",

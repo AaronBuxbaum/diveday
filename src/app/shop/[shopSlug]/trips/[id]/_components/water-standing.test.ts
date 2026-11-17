@@ -146,7 +146,7 @@ describe("the sentence On the water", () => {
     });
     expect(headline).toBe("1 person is not yet recorded back after dive 1.");
     expect(emphasis).toBe("1 person");
-    expect(sub).toBe("2 of 3 back aboard · Counted by Keiko Tanaka, 10:39 AM");
+    expect(sub).toBe("2 of 3 recorded back aboard · Counted by Keiko Tanaka, 10:39 AM");
     expect(standing.notYetBack).toEqual([
       expect.objectContaining({
         name: "Tom Okafor",
@@ -206,6 +206,24 @@ describe("the sentence On the water", () => {
     });
     expect(headline).toBe("Everyone is recorded back aboard after dive 1.");
     expect(standing.notYetBack).toEqual([]);
+    // Who sailed, for Wrapped up's close-out when a later count is never finished.
+    expect(standing.boarded).toEqual(["Tom Okafor", "Lena Fischer", "Sal Reyes"]);
+  });
+
+  it("never says everyone is back while the roll call keeps the count open", () => {
+    // Every guest tapped back aboard, no crew on the roster: the roll call keeps
+    // the count open (`completeness`), so the sentence says what was recorded.
+    const noCrew = counts(
+      {
+        ...dockDone,
+        after_dive_2: { tom: said("boarded", "11:40"), lena: said("boarded", "11:41") },
+      },
+      { departure: true, after_dive_2: false },
+    ).map((count) => ({ ...count, crew: [] }));
+    const { headline, standing } = read({ counts: noCrew });
+    expect(standing.notYetBack).toEqual([]);
+    expect(headline).not.toMatch(/Everyone/);
+    expect(headline).toBe("2 people recorded back aboard after dive 2. No crew recorded aboard.");
   });
 
   it("leaves a diver who never left the dock out of every after-dive count", () => {
@@ -250,6 +268,25 @@ describe("the sentence On the water", () => {
     expect(standing.notYetBack[0]).toMatchObject({ name: "Tom Okafor", status: "missingAlert" });
   });
 
+  it("leads with an open missing-diver report that names nobody", () => {
+    const { headline, standing } = read({
+      openAlerts: 1,
+      counts: counts(
+        {
+          ...dockDone,
+          after_dive_1: {
+            tom: said("boarded", "10:40"),
+            lena: said("boarded", "10:41"),
+            sal: said("boarded", "10:42"),
+          },
+        },
+        { departure: true, after_dive_1: true },
+      ),
+    });
+    expect(headline).toBe("1 missing-diver alert is open.");
+    expect(standing.alerts).toBe(1);
+  });
+
   it("names an alerted person before any after-dive count", () => {
     const { headline, standing } = read({
       alerted: new Set(["p-sal"]),
@@ -276,6 +313,26 @@ describe("the sentence On the water", () => {
       true,
     );
     expect(missing.headline).toBe("1 person is recorded not back aboard after dive 1.");
+    // A count nobody finished, or reports that disagree, outrank the cancellation too.
+    const unrecorded = read(
+      { counts: counts({ ...dockDone, after_dive_1: { tom: said("boarded", "10:38") } }) },
+      true,
+    );
+    expect(unrecorded.headline).toBe("2 people are not yet recorded back after dive 1.");
+    const conflict = read(
+      {
+        counts: counts({
+          ...dockDone,
+          after_dive_1: {
+            tom: said("boarded", "10:38", { evidenceConflict: true }),
+            lena: said("boarded", "10:38"),
+            sal: said("boarded", "10:39"),
+          },
+        }),
+      },
+      true,
+    );
+    expect(conflict.headline).toBe("1 person is not yet recorded back after dive 1.");
   });
 
   it("marks a guest who also crews once, as the guest", () => {

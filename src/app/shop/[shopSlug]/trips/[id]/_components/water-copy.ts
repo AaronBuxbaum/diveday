@@ -34,8 +34,10 @@ export function waterSentence(
     };
   }
   const notBack = notYetBack.filter((person) => person.status === "notBack");
-  // A cancelled trip says so, unless a count recorded somebody not back aboard.
-  if (!latest || (cancelled && notBack.length === 0)) return fallback;
+  // A cancelled trip says so, unless the latest count left somebody not
+  // recorded back aboard, whatever the reason: not back, not yet recorded, or
+  // reports that disagree.
+  if (!latest || (cancelled && notYetBack.length === 0)) return fallback;
   if (latest.dive === 0) {
     return {
       headline: latest.complete
@@ -62,6 +64,21 @@ export function waterSentence(
     return {
       headline: t("trips.clock.water.notYetBack", { count: notYetBack.length, dive: latest.dive }),
       emphasis: t("trips.clock.water.people", { count: notYetBack.length }),
+      sub: join(backAboard, countedBy),
+    };
+  }
+  // Everyone is back only by a count the roll call itself calls finished; an
+  // open count with nobody outstanding (no crew rostered, or crew implied
+  // ashore) says what it recorded instead.
+  if (!latest.complete) {
+    const recorded = t("trips.clock.water.partialBack", {
+      count: latest.aboard,
+      dive: latest.dive,
+    });
+    return {
+      headline:
+        latest.crewAboard === 0 ? `${recorded} ${t("trips.clock.water.noCrewAboard")}` : recorded,
+      emphasis: null,
       sub: join(backAboard, countedBy),
     };
   }

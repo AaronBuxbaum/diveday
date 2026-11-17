@@ -25,7 +25,7 @@ function say(over: Partial<TripSentenceInput>) {
       blocked: 0,
       notBack: 0,
       stage: null,
-      homeSaid: false,
+      homeSaidAt: null,
       locale: "en-US",
       timeZone: ZONE,
       ...over,
@@ -84,11 +84,12 @@ describe("tripSentence", () => {
     expect(say(water).headline).toBe("Scheduled to leave at 9:00 AM.");
   });
 
-  it("Wrapped up: everyone back only on the crew's Home, and a cancelled trip says so", () => {
+  it("Wrapped up: the crew's Home is their word, never proof everyone is back", () => {
     const wrapped = { phase: "wrapped" as const, now: new Date("2026-11-16T19:00:00.000Z") };
-    expect(say({ ...wrapped, homeSaid: true }).headline).toBe("Everyone is back.");
+    const home = new Date("2026-11-16T17:20:00.000Z");
+    expect(say({ ...wrapped, homeSaidAt: home }).headline).toBe("The crew said Home at 12:20 PM.");
     expect(say(wrapped).headline).toBe("Scheduled back at 12:30 PM.");
-    expect(say({ ...wrapped, homeSaid: true, notBack: 1 }).headline).toBe(
+    expect(say({ ...wrapped, homeSaidAt: home, notBack: 1 }).headline).toBe(
       "1 guest is recorded not back aboard.",
     );
     expect(say({ ...wrapped, cancelled: true })).toEqual({

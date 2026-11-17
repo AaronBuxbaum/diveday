@@ -12,6 +12,7 @@ export function waterStandingOf(view: ReadyManifestView): WaterStanding {
   return waterStanding({
     counts: view.completeManifests,
     alerted: view.reader.alerted,
+    openAlerts: view.reader.openAlerts,
     plannedDives: view.plannedDives.map(({ dive, diveSite }) => ({
       diveNumber: dive.diveNumber,
       site: diveSite?.name ?? null,

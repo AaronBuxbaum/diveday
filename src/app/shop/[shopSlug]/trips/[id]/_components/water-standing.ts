@@ -67,6 +67,8 @@ export type CountResult = {
   complete: boolean;
   aboard: number;
   out: number;
+  /** Of `aboard`, the crew the count recorded aboard. */
+  crewAboard: number;
   by: string | null;
   at: Date | null;
 };
@@ -98,6 +100,11 @@ export type WaterStandingInput = {
   counts: readonly WaterCount[];
   /** Booking and person ids the owners were alerted about and are not found yet. */
   alerted: ReadonlySet<string>;
+  /**
+   * Open missing-diver alerts on the departure, named or not: one that names
+   * nobody still leads the sentence.
+   */
+  openAlerts?: number;
   plannedDives: readonly { diveNumber: number; site: string | null }[];
   logged: ReadonlyMap<number, LoggedDive>;
   stage: { stage: TripStage; recordedAt: Date } | null;
@@ -114,6 +121,8 @@ export type WaterStanding = {
   alerts: number;
   /** Not yet recorded back at the latest after-dive count, worst first. */
   notYetBack: WaterPerson[];
+  /** Who the dock count recorded aboard, by name: who sailed. */
+  boarded: string[];
   timeline: WaterStop[];
 };
 
@@ -138,10 +147,32 @@ export function waterStanding(input: WaterStandingInput): WaterStanding {
       : alertedOnly(counts, input.alerted);
   return {
     latest,
-    alerts: notYetBack.filter((person) => person.status === "missingAlert").length,
+    alerts: Math.max(
+      notYetBack.filter((person) => person.status === "missingAlert").length,
+      input.openAlerts ?? 0,
+    ),
     notYetBack,
+    boarded: boardedAtDock(counts),
     timeline: timeline(input, counts, results),
   };
+}
+
+/** Everyone the dock count recorded aboard, once each, guests first. */
+function boardedAtDock(counts: readonly WaterCount[]): string[] {
+  const dock = counts.find((count) => count.checkpoint === "departure");
+  if (!dock) return [];
+  const names = new Map<string, string>();
+  for (const seat of dock.divers) {
+    if (isTurnedAwayOffBoat(seat)) continue;
+    if (roleAt("departure", seat.rollCall) === "aboard") names.set(seatKey(seat), seat.fullName);
+  }
+  for (const member of dock.crew) {
+    const key = `p:${member.id}`;
+    if (!names.has(key) && roleAt("departure", member.rollCall) === "aboard") {
+      names.set(key, member.fullName);
+    }
+  }
+  return [...names.values()];
 }
 
 /** Who a count recorded aboard of who was expected there, and its last entry. */
@@ -170,6 +201,9 @@ function countResult(count: WaterCount, counts: readonly WaterCount[]): CountRes
     complete: count.completeness.complete,
     aboard: values.filter((value) => value === "aboard").length,
     out: values.filter((value) => value !== "ashore").length,
+    crewAboard: count.crew.filter(
+      (member) => roleAt(count.checkpoint, member.rollCall) === "aboard",
+    ).length,
     by: recorded[0]?.recordedByName ?? null,
     at: recorded[0]?.occurredAt ?? null,
   };

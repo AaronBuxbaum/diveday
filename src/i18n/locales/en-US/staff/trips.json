@@ -1109,7 +1109,6 @@
       "crewSaid": "The crew said {stage} at {time}.",
       "scheduledToLeave": "Scheduled to leave at {time}.",
       "scheduledBack": "Scheduled back at {time}.",
-      "everyoneBack": "Everyone is back.",
       "cancelled": "This trip is canceled.",
       "scheduledFor": "Was scheduled for {date}, {time}",
       "leavesInMinutes": "The boat leaves in {count, plural, one {# minute} other {# minutes}}.",
@@ -1181,7 +1180,7 @@
       "dockDone": "{count, plural, one {# person} other {# people}} counted aboard at the dock.",
       "dockPartial": "Roll call at the dock: {aboard} of {out} recorded aboard.",
       "countedBy": "Counted by {name}, {time}",
-      "backAboard": "{aboard} of {out} back aboard",
+      "backAboard": "{aboard} of {out} recorded back aboard",
       "listHeading": "Not yet recorded back",
       "status": {
         "missingAlert": "Missing-diver alert open",
@@ -1202,13 +1201,15 @@
       "crewSaid": "Crew said {stage}",
       "dive": "Dive {dive}",
       "diveAt": "Dive {dive} · {site}",
-      "everyoneBack": "Everyone back aboard",
+      "everyoneBack": "Everyone recorded back aboard",
       "countAfter": "Roll call after this dive",
       "logged": "Logged",
       "logThis": "Log this dive",
       "homeSaid": "Crew said Home",
       "scheduledBack": "Scheduled back",
-      "openRollCall": "Open roll call"
+      "openRollCall": "Open roll call",
+      "partialBack": "{count, plural, one {# person} other {# people}} recorded back aboard after dive {dive}.",
+      "noCrewAboard": "No crew recorded aboard."
     },
     "wrapped": {
       "everyoneBack": "Everyone is recorded back.",
@@ -1236,7 +1237,9 @@
       "noShows": "No-shows",
       "turnedAway": "Turned away",
       "more": "More",
-      "runAgain": "Run this trip again"
+      "runAgain": "Run this trip again",
+      "noRollCall": "No roll call taken",
+      "notCounted": "Not counted"
     },
     "edit": {
       "schedule": "Schedule",

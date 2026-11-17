@@ -79,10 +79,7 @@ export async function getSeriesPage(
 }
 
 /** Read only after the page resolves its actual tab, including save notices. */
-export async function getTripDetails(
-  db: AppDb,
-  shop: TripManifestShop,
-) {
+export async function getTripDetails(db: AppDb, shop: TripManifestShop) {
   const [boats, lenses] = await Promise.all([
     shop.hasBoatDiving ? listBoats(db, shop.id) : [],
     listTripLenses(db, shop.id),

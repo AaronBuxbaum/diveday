@@ -227,6 +227,9 @@ export async function readManifestPage(
       alerted: new Set(
         missingAlerts.flatMap((row) => [row.bookingId, row.personId]).filter((id) => id !== null),
       ),
+      // Every open alert, including one that names nobody: it still leads the
+      // trip page's sentence (domain review of layer D).
+      openAlerts: missingAlerts.length,
       mayReadMedicalAlerts,
       // Offered only where the crew rule refused (`bindManifestActions`), and
       // while the trip's days have not ended, the day before included: a tab

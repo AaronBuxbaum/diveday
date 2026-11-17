@@ -70,7 +70,7 @@ export async function WrappedPhase({
   if (view.status !== "ready") {
     return (
       <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
-        <TripSentenceLine sentence={sentence} rollCall={cancelled ? null : door} />
+        <TripSentenceLine sentence={sentence} rollCall={door} />
         {reports}
         {guests}
         {more}
@@ -79,7 +79,7 @@ export async function WrappedPhase({
     );
   }
   const standing = waterStandingOf(view);
-  const items = closeOutItems({ standing, rentalsOut, reports: incidents.reports });
+  const items = closeOutItems({ standing, rentalsOut, reports: incidents.reports, cancelled });
   const stage = view.stageStrip.stage;
   const depth = (meters: number) =>
     t("manifest.executedDive.summaryDepth", {
@@ -97,8 +97,9 @@ export async function WrappedPhase({
           { ...words, cancelled, homeSaidAt: stage?.stage === "home" ? stage.recordedAt : null },
           t,
         )}
-        // A cancelled trip nobody counted has no roll call to open.
-        rollCall={cancelled && !standing.latest ? null : door}
+        // Roll call keeps its door on every cancelled trip too (the ADR): a
+        // blow-out after the first tank still has a count to finish.
+        rollCall={door}
       />
       <CloseOutCard items={items} shopSlug={shop.slug} tripId={tripId} locale={locale} t={t} />
       {cancelled && !standing.latest ? null : (

@@ -40,8 +40,8 @@ export type TripSentenceInput = {
   notBack: number;
   /** The crew's word, when it still speaks (`boatStageOf`). */
   stage: { stage: TripStage; recordedAt: Date } | null;
-  /** The crew said Home on the last day (`finalHomeSaid`). */
-  homeSaid: boolean;
+  /** When the crew said Home on the last day (`finalHomeSaid`), or null. */
+  homeSaidAt: Date | null;
   locale: string;
   timeZone: string;
 };
@@ -150,8 +150,13 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
           sub,
         };
       }
-      if (input.homeSaid) {
-        return { headline: t("trips.clock.sentence.everyoneBack"), emphasis: null, sub };
+      // A stage tap is the crew's word, not a count: say it as theirs.
+      if (input.homeSaidAt) {
+        return {
+          headline: t("trips.clock.wrapped.homeSaid", { time: time(input.homeSaidAt) }),
+          emphasis: null,
+          sub,
+        };
       }
       return {
         headline: t("trips.clock.sentence.scheduledBack", { time: time(input.endsAt) }),
