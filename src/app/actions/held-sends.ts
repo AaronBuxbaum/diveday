@@ -337,7 +337,7 @@ export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   revalidatePath(tripPath);
   revalidatePath(shopPath(shop.slug));
   if (outcome.kind === "seat_offer" && outcome.deal) {
-    const anchor = `${tripPath}?view=details#last-minute-deal`;
+    const anchor = `${tripPath}?view=edit#last-minute-deal`;
     const redirectTo = outcome.deal.ok
       ? noticeUrl(anchor, "last-minute-sent", { count: outcome.deal.recipientCount })
       : noticeUrl(anchor, LAST_MINUTE_NOTICE[outcome.deal.reason]);

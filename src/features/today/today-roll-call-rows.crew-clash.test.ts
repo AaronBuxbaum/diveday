@@ -131,7 +131,7 @@ describe("crew clashes on Today (H-20260916-may-one-hull-carry)", () => {
       aboutDeparture: true,
       urgency: "soon",
       detail: "Kai Clashwell is also scheduled on Clash host reef at these hours.",
-      href: `/shop/${ctx.shop.slug}/trips/${mover.id}?view=details#crew`,
+      href: `/shop/${ctx.shop.slug}/trips/${mover.id}?view=edit#crew`,
     });
   });
 

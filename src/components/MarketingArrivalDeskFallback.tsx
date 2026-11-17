@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -8,7 +7,7 @@ import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { AppBar, MOCK_BODY, MOCK_SECONDARY_BUTTON } from "./MarketingScreenFallbacks";
 
-/** A roster group's band: its label over the sunken strip (`RosterGroupBand.tsx`). */
+/** A fix-list group's band: its label over the sunken strip (`GuestFixList.tsx`). */
 export const ROSTER_BAND =
   "flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 bg-surface-sunken/50 px-4 py-1.5";
 
@@ -25,27 +24,26 @@ export function RowCaret() {
 }
 
 /**
- * **The arrival desk** — a departure's Divers tab inside the arrivals window
- * (`src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx`): the
- * counter instrument (`CounterInstrument.tsx`, "7 of 9 here" over its bar),
- * then the roster's three bands (`_components/RosterSection.tsx`,
- * `RosterGroupBand.tsx`). Still to clear: a held seat, whose identity check
- * (`src/components/IdentityCheck.tsx`) asks whether the booking is the same
- * person, and which has no Check in tap. Ready: a diver with the Check in tap
- * (`ArrivalTap.tsx`). Checked in: one of the seven, its tap turned to
- * "Checked in". Left out: the "Not here" door under each waiting row
- * (`NoShowScript.tsx`), the other six checked-in rows and the walk-in door.
+ * **The arrival desk** — a trip's Check-in phase inside the arrivals window
+ * (`src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx`): "7 of 9
+ * here" over the desk's bar (`CounterInstrument.tsx`), then the fix list's
+ * groups (`_components/RosterSection.tsx`, `GuestFixList.tsx`). Can't board
+ * yet: a held seat, whose identity check (`src/components/IdentityCheck.tsx`)
+ * asks whether the booking is the same person, and which has no Check in tap.
+ * To come: a guest with the bordered Check in button (`ArrivalTap.tsx`). Here: one of the
+ * seven, its tap turned to "Checked in". Left out: the opened guest's "Not
+ * here" (`NoShowScript.tsx`), the other six who are here, and Add a guest.
  *
  * `state="ready"` is Priya at the counter with her Check in tap. `state="checkedIn"`
  * is a moment later: her tap turned to "Checked in", her row in that band, the count
- * one higher, and no Ready band, because the roster draws a band only when someone
+ * one higher, and no To come group, because the list draws a group only when someone
  * is in it.
  *
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/_arrivals/CounterInstrument.tsx
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/_arrivals/ArrivalTap.tsx
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.tsx
- * @mirrors src/app/shop/[shopSlug]/trips/[id]/_components/RosterGroupBand.tsx
+ * @mirrors src/app/shop/[shopSlug]/trips/[id]/_components/GuestFixList.tsx
  * @mirrors src/components/IdentityCheck.tsx
  */
 export function ArrivalDeskFallback({
@@ -62,24 +60,15 @@ export function ArrivalDeskFallback({
     <div className="bg-background">
       <AppBar label={t("fallback.arrivalDesk.label")} />
       <div className={MOCK_BODY}>
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <p className="text-sm text-muted tabular-nums">
-            {t.rich("fallback.arrivalDesk.hereOf", {
-              here,
-              expected: 9,
-              figure: (chunks) => (
-                <span className={`${FIGURE_LARGE_CLASS} text-foreground`}>{chunks}</span>
-              ),
-            })}
-          </p>
-          <p className="text-xs text-muted">
-            {t(
-              checkedIn
-                ? "fallback.arrivalDesk.remainderCleared"
-                : "fallback.arrivalDesk.remainder",
-            )}
-          </p>
-        </div>
+        <p className="text-sm text-muted tabular-nums">
+          {t.rich("fallback.arrivalDesk.hereOf", {
+            here,
+            expected: 9,
+            figure: (chunks) => (
+              <span className={`${FIGURE_LARGE_CLASS} text-foreground`}>{chunks}</span>
+            ),
+          })}
+        </p>
         <ProgressBar
           aria-hidden="true"
           className="mt-2 h-[5px]"
@@ -98,9 +87,6 @@ export function ArrivalDeskFallback({
             <div className="flex items-center gap-2">
               {/* i18n-exempt: sample diver name used only in marketing mockups */}
               <p className="min-w-0 flex-1 text-sm font-semibold">Diego Alvarez</p>
-              <Badge tone="danger" size="sm" toneMark={false}>
-                {t("fallback.arrivalDesk.blocked")}
-              </Badge>
               <RowCaret />
             </div>
             <p className="flex items-baseline gap-2 text-xs text-danger">
@@ -135,12 +121,8 @@ export function ArrivalDeskFallback({
                   type="button"
                   disabled
                   data-tap-target=""
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-semibold whitespace-nowrap text-primary"
+                  className={`px-3 whitespace-nowrap ${MOCK_SECONDARY_BUTTON}`}
                 >
-                  <span
-                    aria-hidden="true"
-                    className="size-5 shrink-0 rounded-full border-2 border-current"
-                  />
                   {t("fallback.arrivalDesk.checkIn")}
                 </button>
                 <RowCaret />

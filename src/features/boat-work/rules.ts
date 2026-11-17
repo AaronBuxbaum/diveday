@@ -4,7 +4,7 @@ import { isDiver, type ParticipantType } from "../../lib/participant-types";
 /**
  * **A boat's work, in one vocabulary** (third review, item 4). The jobs a
  * departure carries that are not hazards, decided once: Today's rows for the
- * boat and the boat's own band on the Divers tab both list these items, with
+ * boat and the boat's own band on the Trip page both list these items, with
  * these counts, in this order, so the desk is never told the same boat's state
  * twice and differently. Hazards (who can't board, a missing instructor, a
  * boat clash) stay where they are; Today lists them for the boat beside its other rows.

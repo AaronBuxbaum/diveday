@@ -26,10 +26,10 @@
       },
       "check": {
         "when": "Each morning, for the week ahead",
-        "title": "Anyone who can’t board yet is named, with the reason",
+        "title": "Once she signs, her row leaves the list",
         "note2": "There is no “mark everyone ready” button. We left it out on purpose.",
-        "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you.",
-        "readyLabel": "Today in the demo shop after Priya signs: 8 of 9 divers ready, then one row under Needs you."
+        "mockupLabel": "A sample shop’s day: one departure with 7 of 9 divers ready, then two rows under Needs you.",
+        "readyLabel": "After Priya signs, today’s list reads 8 of 9 divers ready, then one row under Needs you."
       },
       "aboard": {
         "when": "At the dock, and after every dive",
@@ -37,15 +37,62 @@
         "note1": "Each dive’s count, divers and crew by name, stays open until everyone who left the dock is counted aboard.",
         "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns.",
         "note3": "The same manifest prints as a trip packet, roll call and emergency card included, for crews who carry paper.",
-        "deskLabel": "The arrivals desk, 8 of 9 here: Priya Sharma has just been checked in, and one held seat still asks whether it is the same person.",
         "boatLabel": "The boat’s roll call after dive 1: 9 of 9 divers aboard, with Priya Sharma and Tom Okafor both tapped back aboard."
       },
       "recap": {
         "when": "After the boat is back",
-        "title": "Give divers a little of the day to take home",
-        "note1": "The dive record at the top is the shop’s, written once: boat, crew, site, conditions.",
-        "note2": "The crew’s note is a quote. It is whatever the crew typed, with no template behind it.",
-        "mockupLabel": "A diver’s recap page with the day’s dive record, a note from the crew, and one review ask."
+        "title": "Give divers the day to take home",
+        "note1": "The record is written once: boat, crew, site, and the dive’s own numbers.",
+        "note2": "The photos are the crew’s, and the chart shows what the dive looked like.",
+        "mockupLabel": "A report page for a diver: three photos from the boat, the dive’s record with its numbers, and a depth-over-time chart."
+      },
+      "shopfront": {
+        "when": "Days before",
+        "title": "A diver lands on your page and taps the next boat",
+        "note1": "It is your page: your photo, your name, your next boat with seats left.",
+        "note2": "No account to make first, and no app to download.",
+        "mockupLabel": "The Blue Mantis booking page: the shop’s cover photo, its rating, and the next boat with three seats left beside a Book this boat button."
+      },
+      "money": {
+        "when": "The moment she books",
+        "title": "The payment lands in Orders, already paid",
+        "note1": "One row per order: the diver, what they bought, and the amount.",
+        "note2": "Paid says nothing. Only an open or refunded order wears a badge.",
+        "mockupLabel": "The Orders page for a sample shop: Priya Sharma’s booking arrives at the top of today’s list, paid."
+      },
+      "unsigned": {
+        "when": "The next morning",
+        "title": "Anyone who can’t board yet is named, with the reason",
+        "note1": "Each row says what is in the way and the boat it is for.",
+        "note2": "A nudge sends her the waiver again with a single tap.",
+        "mockupLabel": "A sample shop’s day: one departure with 7 of 9 divers ready, then Priya Sharma’s open waiver with a Nudge waiver button."
+      },
+      "card": {
+        "when": "Before the boat",
+        "title": "A card gets a person’s eyes before it counts",
+        "note2": "The crew sights the card itself, then taps Confirm certification.",
+        "mockupLabel": "A sample shop’s card check: Priya Sharma’s Advanced Open Water card, with a button to confirm it."
+      },
+      "desk": {
+        "when": "At the counter",
+        "title": "A tap checks her in",
+        "note1": "Check-in is a tap on her row, and the count at the top goes up with it.",
+        "note2": "A held seat asks Same person or Different person first, so paperwork stays with the diver it names.",
+        "mockupLabel": "The arrivals desk, 8 of 9 here: Priya Sharma has just been checked in, and one held seat still asks whether it is the same person."
+      },
+      "computer": {
+        "when": "Back at the shop",
+        "title": "Her dive computer’s file goes into her log",
+        "note1": "Pick the diver, add the file, and review each dive before it is saved.",
+        "note2": "The depth profile, gas, and computer come across with it. Nothing is saved until you confirm.",
+        "mockupLabel": "A diver’s Computer dives page: one dive read from a dive computer’s file with its depth chart, then the same dive in her imported history."
+      },
+      "review": {
+        "when": "That evening",
+        "title": "Then one ask: how was the day?",
+        "note1": "The crew’s note is a quote. It is whatever the crew typed, with no template behind it.",
+        "note2": "The page asks for one thing, and it asks last.",
+        "mockupLabel": "The rest of a diver’s report: a note from the crew and a five-star review ask."
       }
     },
     "walk": {
@@ -57,13 +104,18 @@
       "next": "Next step",
       "hint": "Tap the screen, swipe, or use the arrow keys.",
       "captions": {
-        "book": "Priya Sharma books the Two-Tank Reef from the shop’s own page.",
-        "unsigned": "The next morning her waiver is still open, and the list names it with a button to nudge her.",
+        "shopfront": "Priya finds the shop’s page and taps the next boat.",
+        "book": "She looks over the schedule and takes the Two-Tank Reef.",
+        "money": "Her payment lands in Orders, already paid.",
+        "unsigned": "Next morning her waiver is still open, so the list offers a nudge.",
         "sign": "She signs the release and answers the medical form on her phone.",
-        "ready": "Her row leaves the list and the ready count goes up by one.",
+        "check": "Her row leaves the list and the ready count goes up by one.",
+        "card": "Before the boat, the crew sights her card and confirms it in one tap.",
         "desk": "At the counter, one tap checks her in.",
-        "boat": "After dive 1 the crew calls her by name. All nine are back aboard.",
-        "recap": "That evening she gets the day’s dive record and a note from the crew."
+        "aboard": "After dive 1 the crew calls her by name. All nine are back aboard.",
+        "computer": "Back at the shop, her dive computer’s file goes into her record.",
+        "recap": "That evening her report arrives, with photos from the boat and a chart of the dive.",
+        "review": "She reads the crew’s note and leaves five stars."
       },
       "doorsTitle": "Then try the part that is yours",
       "doorDesk": "I run the desk",
@@ -85,7 +137,6 @@
       "hint": "A sample morning list. Tap a button to see what the desk does.",
       "region": "A sample of the arrival desk for the 7:30 two-tank trip.",
       "hereOf": "{here} of {expected} here",
-      "toCome": "1 to come",
       "allHere": "Everyone is here and cleared",
       "done": "All nine are cleared for the 7:30.",
       "restart": "Start over"
@@ -169,7 +220,7 @@
       "item8": "WhatsApp from the shop’s own number, connected in Settings, with replies in the Inbox"
     },
     "checkIn": {
-      "item1": "Check-in on the departure’s Divers tab: one tap per diver, each with an undo",
+      "item1": "Check-in on the departure’s page: one tap per diver, each with an undo",
       "item2": "An arrival lookup on Today by name, phone or email, or the code on a confirmation",
       "item3": "Same person or Different person on a held seat, so paperwork stays with the diver it names",
       "item4": "A blocked diver’s fix on their row in place of the Check in tap",
@@ -204,7 +255,7 @@
     "rentalGear": {
       "item1": "A register of your own units: tag, kind, size, serial, and status",
       "item2": "Reservations staff make per booking, never the same unit to two divers whose dates overlap",
-      "item3": "Free units suggested on the Gear tab, ranked by the diver’s own sizes",
+      "item3": "Free units suggested on the Gear page, ranked by the diver’s own sizes",
       "item4": "Check-out and return stamps, and a list of what’s due back today",
       "item5": "A return that asks how the unit came home, with a note for anything that needs a look",
       "item6": "Service clocks (annual, hydro, visual, O2-clean) by due date, with an optional dive count",
@@ -222,7 +273,7 @@
     "schedule": {
       "item1": "The schedule as a builder: add, move, copy, remove in place",
       "item2": "Repeating trips with no end date, edited and rolled forward as one",
-      "item3": "One page per departure, in four tabs: Divers, Boat, Gear, and Details",
+      "item3": "One page per departure that follows the day: Filling, Getting ready, Check-in, On the water, and Wrapped up",
       "item4": "Multi-day departures with one roster, one waiver, one crew",
       "item5": "A minimum number of divers with a time to decide by, after which a departure that falls short cancels and refunds itself",
       "item6": "A weather blow-out in one tap: every diver emailed the departures they qualify for, online card payments refunded",
@@ -1254,7 +1305,7 @@
       "step2Title": "Divers choose their seats",
       "step2Body": "They choose how many divers, rental gear, and nitrox, then pay in full or leave a deposit. A party organizer receives a claim link for each person they named.",
       "step3Title": "The booking lands on the departure",
-      "step3Body": "A confirmation goes to the diver, with the waiver link in its own email when the trip needs one. The seat appears on the departure’s Divers tab with whatever is still missing.",
+      "step3Body": "A confirmation goes to the diver, with the waiver link in its own email when the trip needs one. The seat appears on the departure’s page with whatever is still missing.",
       "faq1Q": "Can divers book from my own website?",
       "faq1A": "Yes. Paste a Book Now button, a booking window or the calendar onto the site you have. WordPress, Squarespace, and Wix take the same code.",
       "faq2Q": "What happens when a departure fills up?",
@@ -1374,21 +1425,21 @@
       "metaTitle": "Dive shop check-in for the morning rush",
       "metaDescription": "Check divers in with one tap on the departure’s own list. Anyone not ready shows what’s missing instead of the tap, and walk-ins can fill in their own details from the code on your counter before you seat them.",
       "title": "The morning rush is one tap per diver",
-      "lede": "Arrivals open on the departure’s Divers tab, with a count of who’s here, a Check in tap beside each diver who’s ready, and what’s missing beside anyone who isn’t.",
-      "screenLabel": "A departure’s Divers tab during arrivals: the count of divers here, a checked-in diver, a Check in tap, and a held seat asking whether it’s the same person.",
+      "lede": "Arrivals open on the departure’s page at Check-in, with a count of who’s here, a Check in tap beside each diver who’s ready, and what’s missing beside anyone who isn’t.",
+      "screenLabel": "A departure at Check-in: the count of divers here, a checked-in diver, a Check in tap, and a held seat asking whether it’s the same person.",
       "note1": "The count is divers here against divers booked, and it moves only when a tap lands.",
       "note2": "A held seat asks Same person or Different person, so paperwork stays with the diver it names.",
       "note3": "A diver who isn’t ready has no Check in tap, and their row carries the fix instead.",
       "step1Title": "Arrivals open on the day",
-      "step1Body": "In the hours around a departure, its Divers tab shows the count and a Check in tap beside every diver who’s ready, each with an undo.",
+      "step1Body": "In the hours around a departure, its page opens on Check-in with the count and a Check in tap beside every diver who’s ready, each with an undo.",
       "step2Title": "Fix what’s missing at the desk",
       "step2Body": "A blocked diver’s row carries its own fix: send the waiver, record a paper release, take the payment, or confirm who they are.",
       "step3Title": "Walk-ins and no-shows",
-      "step3Body": "Add a walk-in from the tab, or let them fill in their details on their own phone from the code on your counter, then seat them. Once the boat’s time passes, Not here? frees the seat and shows who is waiting for it.",
+      "step3Body": "Add a walk-in from the same page, or let them fill in their details on their own phone from the code on your counter, then seat them. Once the boat’s time passes, Not here? frees the seat and shows who is waiting for it.",
       "faq1Q": "What if a diver can’t remember which boat they’re on?",
       "faq1A": "Search by name, phone, or email from DiveDay’s opening screen, or scan the code on their confirmation. It looks across every departure from six hours ago to a day and a half ahead.",
       "faq2Q": "Can a walk-in fill in their own details?",
-      "faq2A": "Yes. The code on your counter card opens a form on their phone for their name, contact details, certification, and rental sizes, and a walk-in is sent the release, by text if they gave a phone number and no email. Then seat them from the Divers tab.",
+      "faq2A": "Yes. The code on your counter card opens a form on their phone for their name, contact details, certification, and rental sizes, and a walk-in is sent the release, by text if they gave a phone number and no email. Then seat them from the departure’s page.",
       "faq3Q": "What happens when someone doesn’t show?",
       "faq3A": "Once the boat’s time has passed, mark them Not here. Their seat opens, the wait list shows beside it, and nothing is charged or refunded by that tap.",
       "closeTitle": "Check in the divers on the next demo boat",
@@ -1460,7 +1511,7 @@
       "step1Title": "List what’s on the wall",
       "step1Body": "Add units by hand or from a spreadsheet, with tag, kind, size, serial, and model.",
       "step2Title": "Divers give their sizes after booking",
-      "step2Body": "The Gear tab turns those sizes into a list to pull and lists free units, exact size first.",
+      "step2Body": "The Gear page turns those sizes into a list to pull and lists free units, exact size first.",
       "step3Title": "Out, back and serviced",
       "step3Body": "Stamp a unit out and back, print the diver’s rental slip, and see overdue returns and service coming due on the day’s to-do list. Repairs run on work orders: the customer is told when theirs is ready, and gets the bill by email.",
       "faq1Q": "Which service checks can it track?",

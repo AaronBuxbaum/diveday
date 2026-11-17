@@ -1,4 +1,6 @@
+import Image from "next/image";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
+import { DiveProfileChart } from "@/components/DiveProfileChart";
 import { MarketingStorefrontPhoto } from "@/components/MarketingStorefrontPhoto";
 import { RollCallMark } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
@@ -10,6 +12,13 @@ import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/compon
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
+import {
+  FEET_PER_METER,
+  PROFILE_AVG_METERS,
+  PROFILE_MAX_METERS,
+  PROFILE_MINUTES,
+  SAMPLE_PROFILE,
+} from "@/lib/dive-profile-sample";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 
 /**
@@ -126,9 +135,10 @@ function ChecklistRow({
  * the Dive 1 checkpoint (`CheckpointSwitch`, the count `HeadCount` keeps open
  * until everyone who left the dock is counted back aboard): all nine back,
  * Priya's and Tom's rows both tapped, the heading the checkpoint's own.
- * `state="afterDivePending"` is the moment before: eight back, Tom's mark the
- * one the crew taps next (`data-tap-target`, which the homepage walkthrough
- * pulses before it swaps to `afterDive`).
+ * `state="afterDivePending"` is the moment before: eight back, Tom already
+ * counted and Priya's mark the one the crew taps next (`data-tap-target`,
+ * which the homepage walkthrough pulses before it swaps to `afterDive`; the
+ * walkthrough is about Priya, so the tap is hers).
  *
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.tsx
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CheckpointSwitch.tsx
@@ -203,8 +213,9 @@ export function CaptainRollCallFallback({
           <div className="mt-2 overflow-hidden rounded-lg border border-border">
             {divers.map((name, index) => {
               // At the dock Priya has been tapped aboard and Tom is the one the
-              // crew is still to call; after the dive both are counted back.
-              const isAboard = bothBack || index === 0;
+              // crew is still to call; after the dive both are counted back,
+              // and just before that Priya is the one still to tap.
+              const isAboard = bothBack || index === (state === "dock" ? 0 : 1);
               return (
                 <div
                   key={name}
@@ -224,6 +235,7 @@ export function CaptainRollCallFallback({
                     <DiveDayIcon name="chevron-right" className="size-4 shrink-0 text-muted" />
                     <span
                       data-tap-target={isAboard ? undefined : ""}
+                      data-walk-pop={isAboard && bothBack ? "" : undefined}
                       className="inline-flex rounded-full"
                     >
                       <RollCallMark state={isAboard ? "aboard" : "toCall"} />
@@ -254,7 +266,10 @@ export function CaptainRollCallFallback({
  * Priya is the diver the homepage follows. `state="unsigned"` is the morning
  * after she books: her row is the waiver one, "link sent", with the nudge the
  * real row carries. `state="ready"` is the morning after she signs: her row is
- * gone and the bar and the count under it are one ready higher. Diego's
+ * gone and the bar and the count under it are one ready higher.
+ * `state="nudged"` is the unsigned screen a tap later: the button is replaced
+ * by the word that the nudge went out, and the tap before it is hers
+ * (`data-tap-target` on the button). Diego's
  * certification row is in both, because the real list is never only good news.
  *
  * @mirrors src/app/shop/[shopSlug]/_components/today/DaySpine.tsx
@@ -265,10 +280,11 @@ export function FrontDeskReadinessFallback({
   state = "unsigned",
 }: {
   locale: DiverLocale;
-  state?: "unsigned" | "ready";
+  state?: "unsigned" | "nudged" | "ready";
 }) {
   const t = diverTranslator(locale);
-  const unsigned = state === "unsigned";
+  const unsigned = state !== "ready";
+  const nudged = state === "nudged";
   const readyCount = unsigned ? 7 : 8;
   const blockedCount = unsigned ? 2 : 1;
   // The stage chip is the staff chip's own word, read from the staff bundle by
@@ -283,6 +299,7 @@ export function FrontDeskReadinessFallback({
             name: "Priya Sharma",
             detail: t("fallback.waiverPending"),
             action: t("fallback.nudgeWaiver"),
+            nudged,
           },
         ]
       : []),
@@ -292,6 +309,7 @@ export function FrontDeskReadinessFallback({
       name: "Diego Alvarez",
       detail: t("fallback.certPending"),
       action: null,
+      nudged: false,
     },
   ];
   return (
@@ -313,7 +331,9 @@ export function FrontDeskReadinessFallback({
               twelve-seat boat, the three open seats the bare track. */}
           <ReadinessBar className="mt-3" ready={readyCount} blocked={blockedCount} of={12} />
           <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums">
-            <span>{t("fallback.readyCount", { ready: readyCount })}</span>
+            <span data-walk-pop={unsigned ? undefined : ""}>
+              {t("fallback.readyCount", { ready: readyCount })}
+            </span>
             <span className="font-medium text-danger">
               {t("fallback.blockedCount", { count: blockedCount })}
             </span>
@@ -333,8 +353,21 @@ export function FrontDeskReadinessFallback({
               leading={<StatusMark variant="warning" size="md" className="text-warning-strong" />}
               kind={{ word: row.kind, tone: "warning" }}
               trailing={
-                row.action ? (
-                  <button type="button" disabled className={`px-3 ${MOCK_SECONDARY_BUTTON}`}>
+                row.nudged ? (
+                  <span
+                    data-walk-pop=""
+                    className="inline-flex min-h-9 items-center gap-1.5 px-3 text-xs font-semibold text-success-strong"
+                  >
+                    <StatusMark variant="success" size="md" />
+                    {t("fallback.nudgeSent")}
+                  </span>
+                ) : row.action ? (
+                  <button
+                    type="button"
+                    disabled
+                    data-tap-target=""
+                    className={`px-3 ${MOCK_SECONDARY_BUTTON}`}
+                  >
                     {row.action}
                   </button>
                 ) : undefined
@@ -532,10 +565,23 @@ export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
   );
 }
 
-export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
+/**
+ * `state="booked"` is the screen a tap later, for the homepage walkthrough:
+ * Priya has taken the Two-Tank Reef, so its card wears her booking and its
+ * count is one lower. Before that tap (`data-tap-target`) it is the plain
+ * schedule every other caller draws.
+ */
+export function DiverBookingFallback({
+  locale,
+  state = "browse",
+}: {
+  locale: DiverLocale;
+  state?: "browse" | "booked";
+}) {
   const t = diverTranslator(locale);
+  const booked = state === "booked";
   const trips = [
-    { title: t("fallback.tripName"), time: t("fallback.tomorrowTime"), spots: 3 },
+    { title: t("fallback.tripName"), time: t("fallback.tomorrowTime"), spots: booked ? 2 : 3 },
     { title: t("fallback.nightDive"), time: t("fallback.fridayTime"), spots: 5 },
   ];
   return (
@@ -546,12 +592,27 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
         <p className={groupLabelClass("primary")}>{t("fallback.upcomingTrips")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.findNextDive")}</h3>
         <div className="mt-4 space-y-3">
-          {trips.map((trip) => (
-            <div key={trip.title} className="rounded-inset border border-border bg-surface p-4">
+          {trips.map((trip, index) => (
+            <div
+              key={trip.title}
+              data-tap-target={index === 0 && !booked ? "" : undefined}
+              className={`rounded-inset border bg-surface p-4 ${
+                index === 0 && booked ? "border-primary" : "border-border"
+              }`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h4 className="font-semibold">{trip.title}</h4>
                   <p className="mt-1 text-sm text-muted">{trip.time}</p>
+                  {index === 0 && booked ? (
+                    <p
+                      data-walk-pop=""
+                      className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-success-strong"
+                    >
+                      <StatusMark variant="success" size="md" />
+                      {t("fallback.youreBooked")}
+                    </p>
+                  ) : null}
                 </div>
                 <span className="rounded-full bg-primary-tint px-2.5 py-1 text-xs font-semibold text-primary">
                   {t("fallback.spotsLeft", { count: trip.spots })}
@@ -589,80 +650,165 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
  * Every control stays `disabled`: the homepage's steps open no door into the
  * demo, and this screen is not one (`e2e/marketing.spec.ts`).
  */
-export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
+export function RecapPageFallback({
+  locale,
+  view = "report",
+  state = "ask",
+}: {
+  locale: DiverLocale;
+  /**
+   * `report` is the top of the page: the photos from the boat, the dive's
+   * record and its depth chart. `review` is the rest: the crew's word and the
+   * review ask. The homepage walkthrough shows them one after the other.
+   */
+  view?: "report" | "review";
+  /** `rated` is the review ask after Priya taps the fifth star (the walkthrough's tap). */
+  state?: "ask" | "rated";
+}) {
   const t = diverTranslator(locale);
+  const rated = state === "rated";
+  const feet = (meters: number) => `${Math.round(meters * FEET_PER_METER)} ft`;
+  const deepest = feet(PROFILE_MAX_METERS);
+  // i18n-exempt: sample dive figures used only in the marketing mockup
+  const stats = [
+    [t("fallback.recap.maxDepthLabel"), deepest],
+    [t("fallback.recap.avgDepthLabel"), feet(PROFILE_AVG_METERS)],
+    [t("fallback.recap.diveTimeLabel"), `${PROFILE_MINUTES} min`],
+    [t("fallback.recap.waterLabel"), "81°F"],
+  ] as const;
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.recap.label")} />
       <div className={MOCK_BODY}>
-        <h3 className={SUB_TITLE_CLASS}>{t("fallback.recap.greeting")}</h3>
-        <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
+        {view === "report" ? (
+          <>
+            <h3 className={SUB_TITLE_CLASS}>{t("fallback.recap.greeting")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
 
-        {/* The dive record: the one place the day's facts render. */}
-        <div className="mt-4 rounded-inset border border-border bg-surface p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-sm font-semibold">{t("fallback.recap.recordHeading")}</h4>
-            <span className="rounded-md bg-primary-tint px-2 py-0.5 text-[10px] font-semibold text-primary">
-              {t("fallback.recap.visits")}
-            </span>
-          </div>
-          <dl className="mt-2 divide-y divide-border border-t border-border text-xs">
-            {[
-              // i18n-exempt: sample boat and crew used only in the marketing mockup
-              [t("fallback.recap.boatLabel"), "Mantis II · Keiko Tanaka"],
-              // The record stopped printing the *site's* deepest point as
-              // though it were this diver's, so the mockup carries no depth
-              // either — one that still did would sell a screen we do not
-              // render.
-              // i18n-exempt: sample site used only in the marketing mockup
-              [t("fallback.recap.sitesLabel"), "French Reef"],
-              // i18n-exempt: sample conditions used only in the marketing mockup
-              [t("fallback.recap.conditionsLabel"), "81°F · 60 ft"],
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-baseline gap-3 py-1.5">
-                <dt className="w-20 shrink-0 text-muted">{label}</dt>
-                <dd className="min-w-0 flex-1 font-medium tabular-nums">{value}</dd>
+            {/* The crew's photos, from the bundled, credited set in
+                public/dive-sites: the boat's diver posing on the wreck, and two
+                things she saw. */}
+            <p className={`mt-4 ${groupLabelClass()}`}>{t("fallback.recap.photosHeading")}</p>
+            <div className="mt-2 grid grid-cols-3 grid-rows-2 gap-1.5 overflow-hidden rounded-inset">
+              <Image
+                src={`/dive-sites/${encodeURIComponent(
+                  "US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg",
+                )}`}
+                alt=""
+                width={1024}
+                height={768}
+                sizes="(max-width: 1023px) calc(100vw - 88px), 400px"
+                className="col-span-2 row-span-2 h-full w-full object-cover"
+              />
+              <Image
+                src={`/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`}
+                alt=""
+                width={1024}
+                height={768}
+                sizes="140px"
+                className="aspect-[4/3] h-full w-full object-cover"
+              />
+              <Image
+                src={`/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`}
+                alt=""
+                width={1024}
+                height={768}
+                sizes="140px"
+                className="aspect-[4/3] h-full w-full object-cover"
+              />
+            </div>
+
+            {/* The dive record: the one place the day's facts render. */}
+            <div className="mt-4 rounded-inset border border-border bg-surface p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold">{t("fallback.recap.recordHeading")}</h4>
+                <span className="rounded-md bg-primary-tint px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  {t("fallback.recap.visits")}
+                </span>
               </div>
-            ))}
-          </dl>
-        </div>
+              <dl className="mt-2 divide-y divide-border border-t border-border text-xs">
+                {[
+                  // i18n-exempt: sample boat and crew used only in the marketing mockup
+                  [t("fallback.recap.boatLabel"), "Mantis II · Keiko Tanaka"],
+                  // i18n-exempt: sample site used only in the marketing mockup
+                  [t("fallback.recap.sitesLabel"), "French Reef"],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-baseline gap-3 py-1.5">
+                    <dt className="w-20 shrink-0 text-muted">{label}</dt>
+                    <dd className="min-w-0 flex-1 font-medium tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <dl className="mt-2 grid grid-cols-4 gap-2 border-t border-border pt-2.5 text-xs">
+                {stats.map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-muted">{label}</dt>
+                    <dd className="mt-0.5 text-sm font-semibold tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-3 text-xs font-medium text-muted">
+                {t("fallback.recap.depthHeading")}
+              </p>
+              <DiveProfileChart
+                samples={SAMPLE_PROFILE}
+                unit="ft"
+                className="mt-1 h-auto w-full"
+                labels={{
+                  stop: (minutes) => t("fallback.diveProfile.stop", { minutes }),
+                  max: t("fallback.diveProfile.max", { depth: deepest }),
+                  minutes: t("fallback.diveProfile.minutes"),
+                }}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* The crew's word, as a quote rather than a boxed panel. */}
+            <figure>
+              <blockquote className="text-sm leading-6">{t("fallback.recap.crewNote")}</blockquote>
+              <figcaption className="mt-1 text-xs text-muted">
+                {t("fallback.recap.crewNoteLabel")}
+              </figcaption>
+            </figure>
 
-        {/* The crew's word, as a quote rather than a boxed panel. */}
-        <figure className="mt-4">
-          <blockquote className="text-sm leading-6">{t("fallback.recap.crewNote")}</blockquote>
-          <figcaption className="mt-1 text-xs text-muted">
-            {t("fallback.recap.crewNoteLabel")}
-          </figcaption>
-        </figure>
-
-        {/* The one ask. */}
-        <div className="mt-4 rounded-inset border border-border bg-surface p-3">
-          <h4 className="text-sm font-semibold">{t("fallback.recap.reviewAsk")}</h4>
-          <div className="mt-2 flex gap-1" aria-hidden="true">
-            {[0, 1, 2, 3, 4].map((star) => (
-              <svg
-                key={star}
-                // The row is already `aria-hidden`, but the rule reads one
-                // element at a time and cannot see the ancestor. Marking the
-                // star itself is the same truth said twice, not a workaround:
-                // it is a drawn mark in a fallback screenshot.
-                aria-hidden="true"
-                viewBox="0 0 18 18"
-                // Empty, as the real form is before the diver rates the day
-                // (visual review 2026-10-24, B48).
-                className="size-5 fill-none stroke-border-strong"
-                strokeWidth={1.25}
-                strokeLinejoin="round"
-                focusable="false"
-              >
-                <path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z" />
-              </svg>
-            ))}
-          </div>
-          <button type="button" disabled className={`mt-3 ${MOCK_PRIMARY_BUTTON}`}>
-            {t("fallback.recap.reviewSubmit")}
-          </button>
-        </div>
+            {/* The one ask. */}
+            <div className="mt-4 rounded-inset border border-border bg-surface p-3">
+              <h4 className="text-sm font-semibold">{t("fallback.recap.reviewAsk")}</h4>
+              <div className="mt-2 flex gap-1" aria-hidden="true">
+                {[0, 1, 2, 3, 4].map((star) => (
+                  <span
+                    key={star}
+                    data-tap-target={star === 4 && !rated ? "" : undefined}
+                    data-walk-pop={rated ? "" : undefined}
+                    style={rated ? { animationDelay: `${star * 70}ms` } : undefined}
+                    className="inline-flex rounded-full"
+                  >
+                    <svg
+                      // The row is already `aria-hidden`, but the rule reads one
+                      // element at a time and cannot see the ancestor. Marking the
+                      // star itself is the same truth said twice, not a workaround:
+                      // it is a drawn mark in a fallback screenshot.
+                      aria-hidden="true"
+                      viewBox="0 0 18 18"
+                      // Empty, as the real form is before the diver rates the day
+                      // (visual review 2026-10-24, B48).
+                      className={`size-5 ${rated ? "fill-primary stroke-primary" : "fill-none stroke-border-strong"}`}
+                      strokeWidth={1.25}
+                      strokeLinejoin="round"
+                      focusable="false"
+                    >
+                      <path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z" />
+                    </svg>
+                  </span>
+                ))}
+              </div>
+              <button type="button" disabled className={`mt-3 ${MOCK_PRIMARY_BUTTON}`}>
+                {t("fallback.recap.reviewSubmit")}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -12,5 +12,7 @@ export const AFTER_STATE_TEST_IDS = {
   printUnconfirmed: "dive-record-print-unconfirmed",
   face: "dive-record-face",
   seen: "dive-record-seen",
+  photoStrip: "dive-record-photo-strip",
+  computerDives: "dive-record-computer-dives",
   flySafe: "fly-safe-line",
 } as const;

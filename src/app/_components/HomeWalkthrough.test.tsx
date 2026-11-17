@@ -73,10 +73,10 @@ describe("the homepage walkthrough", () => {
     expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
   });
 
-  it("advances by itself over about ninety seconds, and Pause stops it", () => {
+  it("advances by itself over about two minutes, and Pause stops it", () => {
     mockMotion(false);
     setup();
-    act(() => void vi.advanceTimersByTime(30_000));
+    act(() => void vi.advanceTimersByTime(41_000));
     expect(screen.getByText("Second")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
     act(() => void vi.advanceTimersByTime(120_000));
@@ -128,13 +128,60 @@ describe("the homepage walkthrough", () => {
     expect(screen.getByText("Second")).toBeInTheDocument();
   });
 
+  it("follows a drag with the beat, moves on past the threshold and springs back short of it", () => {
+    mockMotion(true);
+    const { container } = setup();
+    const group = screen.getByRole("group", { name: "Walk" });
+    const list = container.querySelector("[data-walk-list]") as HTMLElement;
+    fireEvent.pointerDown(group, { clientX: 200, clientY: 50 });
+    fireEvent.pointerMove(group, { clientX: 170, clientY: 52 });
+    expect(list.style.transform).toBe("translateX(-30px)");
+    // Short of the threshold: the beat goes home and the walk stays put.
+    fireEvent.pointerUp(group, { clientX: 170 });
+    expect(list.style.transform).toBe("");
+    expect(screen.getByText("First")).toBeInTheDocument();
+    // Past it: the next beat.
+    fireEvent.pointerDown(group, { clientX: 200, clientY: 50 });
+    fireEvent.pointerMove(group, { clientX: 100, clientY: 52 });
+    fireEvent.pointerUp(group, { clientX: 100 });
+    expect(list.style.transform).toBe("");
+    expect(screen.getByText("Second")).toBeInTheDocument();
+  });
+
+  it("does not drag on a mostly vertical move, which is the page scrolling", () => {
+    mockMotion(true);
+    const { container } = setup();
+    const group = screen.getByRole("group", { name: "Walk" });
+    const list = container.querySelector("[data-walk-list]") as HTMLElement;
+    fireEvent.pointerDown(group, { clientX: 200, clientY: 50 });
+    fireEvent.pointerMove(group, { clientX: 190, clientY: 120 });
+    expect(list.style.transform).toBe("");
+  });
+
+  it("goes back on a tap of a screen's left edge, as Instagram's stories do", () => {
+    mockMotion(true);
+    const { container } = setup();
+    const frame = container.querySelector("[data-walk-frame]") as HTMLElement;
+    vi.spyOn(frame, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      width: 300,
+    } as DOMRect);
+    fireEvent.click(screen.getByRole("button", { name: "Next step" }));
+    expect(screen.getByText("Second")).toBeInTheDocument();
+    const second = container.querySelector('[data-walk-step="b"] [data-walk-frame]') as HTMLElement;
+    vi.spyOn(second, "getBoundingClientRect").mockReturnValue({ left: 0, width: 300 } as DOMRect);
+    fireEvent.pointerDown(second, { clientX: 20 });
+    fireEvent.pointerUp(second, { clientX: 21 });
+    expect(screen.getByText("First")).toBeInTheDocument();
+  });
+
   it("fills the current segment as the beat's clock, and a hold freezes it", () => {
     mockMotion(false);
     const { container } = setup();
     const fill = () =>
       container.querySelector<HTMLElement>("[data-walk-controls] ~ div > span > span:last-child");
     const group = screen.getByRole("group", { name: "Walk" });
-    act(() => void vi.advanceTimersByTime(15_000));
+    act(() => void vi.advanceTimersByTime(20_000));
     const half = Number.parseFloat(fill()?.style.transform.replace("scaleX(", "") ?? "0");
     expect(half).toBeGreaterThan(0.4);
     expect(half).toBeLessThan(0.6);
@@ -143,7 +190,7 @@ describe("the homepage walkthrough", () => {
     act(() => void vi.advanceTimersByTime(120_000));
     expect(screen.getByText("First")).toBeInTheDocument();
     fireEvent.pointerUp(group, { clientX: 100 });
-    act(() => void vi.advanceTimersByTime(16_000));
+    act(() => void vi.advanceTimersByTime(21_000));
     expect(screen.getByText("Second")).toBeInTheDocument();
   });
 
@@ -163,7 +210,7 @@ describe("the homepage walkthrough", () => {
     const list = container.querySelector("[data-walk-list]") as HTMLElement;
     const phase = () => list.getAttribute("data-walk-phase");
     expect(phase()).toBe("before");
-    // Three beats of 30 seconds: the tap starts at 16% and the swap at 38%.
+    // Three beats of 30 seconds: the tap starts at 10% and the swap at 30%.
     act(() => void vi.advanceTimersByTime(6_000));
     expect(phase()).toBe("tap");
     act(() => void vi.advanceTimersByTime(8_000));

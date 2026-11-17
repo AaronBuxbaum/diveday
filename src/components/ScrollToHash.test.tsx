@@ -65,3 +65,41 @@ it("cancels the landing when navigation interrupts it", () => {
   vi.runAllTimers();
   expect(scroll).not.toHaveBeenCalled();
 });
+
+function anchored(path: string) {
+  window.history.replaceState(null, "", `${path}#roster`);
+  return render(
+    <>
+      <section id="roster" />
+      <ScrollToHash />
+    </>,
+  );
+}
+
+it("lands on the page's hash once, however many lists mount a ScrollToHash", () => {
+  window.history.replaceState(null, "", "/trip-a#roster");
+  render(
+    <>
+      <section id="roster" />
+      <ScrollToHash />
+      <ScrollToHash />
+      <ScrollToHash />
+    </>,
+  );
+  expect(scroll).toHaveBeenCalledTimes(1);
+});
+
+it("never moves the page under a reader who has already touched it here", () => {
+  // A tap on this very page while its list was still hydrating.
+  window.history.replaceState(null, "", "/trip-b#roster");
+  window.dispatchEvent(new Event("pointerdown"));
+  anchored("/trip-b");
+  expect(scroll).not.toHaveBeenCalled();
+});
+
+it("still lands after the tap that brought the reader from another page", () => {
+  window.history.replaceState(null, "", "/today");
+  window.dispatchEvent(new Event("pointerdown"));
+  anchored("/trip-c");
+  expect(scroll).toHaveBeenCalledTimes(1);
+});

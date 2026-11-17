@@ -2,7 +2,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { MIGRATION_GUIDES } from "../src/lib/migration-guides";
-import { ONBOARDING_EMAIL } from "../src/lib/platform-mail";
+import { ONBOARDING_EMAIL, SWITCH_EMAIL } from "../src/lib/platform-mail";
 import { expect, test } from "./fixtures";
 import { mintOnboardFormPath } from "./setup-link";
 
@@ -151,16 +151,27 @@ test.describe("before the player has run", () => {
     await expect(
       stepsBand.getByText(diverTranslator("en-US")("marketing.home.stepsLede")),
     ).toBeVisible();
-    // Each step's own name, from the copy column that is every row's first
+    // Each step's own name (all twelve are in the page; only the listed five show before the player runs), from the copy column that is every row's first
     // child (the alternation is `order`, not DOM order). The screens beside them
     // draw headings of their own ("Find your next dive"), which a screen reader
     // never hears inside a `role="img"` but a heading query still finds.
     await expect(stepsBand.locator("ol > li > div:first-child h3")).toHaveText([
-      diverTranslator("en-US")("marketing.home.steps.book.title"),
-      "They sign the release and answer the medical form at home",
-      "Anyone who can’t board yet is named, with the reason",
-      "The crew calls the roll by name, signal or not",
-      diverTranslator("en-US")("marketing.home.steps.recap.title"),
+      ...(
+        [
+          "shopfront",
+          "book",
+          "money",
+          "unsigned",
+          "sign",
+          "check",
+          "card",
+          "desk",
+          "aboard",
+          "computer",
+          "recap",
+          "review",
+        ] as const
+      ).map((id) => diverTranslator("en-US")(`marketing.home.steps.${id}.title` as never)),
     ]);
     // The screen is the claim in every step, so each one is shown rather than
     // described, and named for a screen reader by a label the *caller* resolves
@@ -169,7 +180,11 @@ test.describe("before the player has run", () => {
     await expect(list).not.toHaveAttribute("data-walk", "");
     await expect(list.getByRole("img")).toHaveCount(5);
     await expect(stepsBand.locator("[data-marketing-illustration]")).toHaveCount(0);
-    await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
+    await expect(
+      stepsBand.getByRole("img", {
+        name: diverTranslator("en-US")("marketing.home.steps.recap.mockupLabel"),
+      }),
+    ).toBeVisible();
     // The roll-call step shows the boat's count after dive 1, with Priya back aboard
     // (the desk screen before it is drawn for the walkthrough and waits for it).
     await expect(
@@ -179,7 +194,7 @@ test.describe("before the player has run", () => {
     ).toBeVisible();
     await expect(
       stepsBand.getByRole("img", {
-        name: diverTranslator("en-US")("marketing.home.steps.aboard.deskLabel"),
+        name: diverTranslator("en-US")("marketing.home.steps.desk.mockupLabel"),
       }),
     ).toHaveCount(0);
     await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toHaveCount(0);
@@ -215,19 +230,31 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
 
   // Reduced motion: it waits on the first beat, paused.
-  await expect(walk.getByText(t("marketing.home.walk.captions.book"))).toBeVisible();
+  await expect(walk.getByText(t("marketing.home.walk.captions.shopfront"))).toBeVisible();
   await expect(walk.getByRole("button", { name: t("marketing.home.walk.play") })).toBeVisible();
   await expect(walk.getByRole("img")).toHaveCount(1);
 
   // Each beat names the diver's state; the arrow keys walk the story.
-  const beats = ["unsigned", "sign", "ready", "desk", "boat", "recap"] as const;
+  const beats = [
+    "book",
+    "money",
+    "unsigned",
+    "sign",
+    "check",
+    "card",
+    "desk",
+    "aboard",
+    "computer",
+    "recap",
+    "review",
+  ] as const;
   for (const beat of beats) {
     await walk.getByRole("button", { name: t("marketing.home.walk.next") }).press("ArrowRight");
     await expect(walk.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
     await expect(walk.getByRole("img")).toHaveCount(1);
   }
   await expect(
-    walk.getByRole("img", { name: t("marketing.home.steps.recap.mockupLabel") }),
+    walk.getByRole("img", { name: t("marketing.home.steps.review.mockupLabel") }),
   ).toBeVisible();
 });
 
@@ -237,6 +264,9 @@ test("the walkthrough's bar fills as the clock, and holding the screen freezes i
   await page.goto("/");
   const t = diverTranslator("en-US");
   const walk = page.getByRole("group", { name: t("marketing.home.walk.label") });
+  // Scroll once the walk has taken over: before it runs the list is every listed step, and
+  // the page shortens under the reader when it does.
+  await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
   await walk.scrollIntoViewIfNeeded();
   const fill = walk.locator("[data-walk-controls] ~ div > span > span").last();
   const filled = async () =>
@@ -271,6 +301,9 @@ test("the walkthrough's three doors open the demo as the desk, the boat and the 
 
 test("the homepage leads to every feature page through the Product catalogue", async ({ page }) => {
   await page.goto("/");
+  // The header's menu button draws data-hydrated once React owns the page; a
+  // click before that is lost to the hydration pass.
+  await expect(page.locator('button[aria-expanded][data-hydrated="true"]').first()).toBeAttached();
   const catalogue = page.getByRole("main").getByRole("link", {
     name: diverTranslator("en-US")("marketing.home.featuresLink"),
     exact: true,
@@ -1588,6 +1621,31 @@ test("the homepage's spreadsheet door survives, tagged, and lands on the columns
   // heading is two to three screens below the fold, behind the hero, the wedge
   // list and the mid-page CTA.
   await expect(columns.locator("summary")).toBeInViewport();
+});
+
+test("the hub's Not listed here row opens an email to the switch mailbox", async ({ page }) => {
+  await page.goto("/switching");
+  await expect(
+    page.getByRole("link", { name: diverTranslator("en-US")("switching.hub.dontSeeSystem") }),
+  ).toHaveAttribute("href", `mailto:${SWITCH_EMAIL}`);
+});
+
+test("the alongside guide is listed on the hub and says what DiveDay does not connect to", async ({
+  page,
+}) => {
+  await page.goto("/switching");
+  await expect(
+    page.getByRole("link", { name: diverTranslator("en-US")("switching.hub.alongsideTitle") }),
+  ).toHaveAttribute("href", "/switching/alongside");
+  await page.goto("/switching/alongside");
+  await expect(
+    page.getByRole("heading", { name: diverTranslator("en-US")("switching.alongside.title") }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: diverTranslator("en-US")("switching.alongside.tools.agency.title"),
+    }),
+  ).toBeVisible();
 });
 
 test("the spreadsheet guide brings a no-system shop across for free", async ({ page }) => {

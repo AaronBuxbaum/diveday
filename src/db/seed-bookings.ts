@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { SAMPLE_PROFILE } from "@/lib/dive-profile-sample";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
@@ -8,6 +9,9 @@ import { paymentEntries } from "./payments";
 import {
   bookingPaymentEvents,
   bookings,
+  computerDiveProfiles,
+  computerDives,
+  computerImportBatches,
   type people,
   recapPhotos,
   trips,
@@ -58,6 +62,67 @@ export const DEMO_REEF_DIVER_INDEXES: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 
  * their `defaultRandom` ids; only this one demo row is pinned.
  */
 export { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
+
+/**
+ * The pinned recap diver's own dive computer, imported by staff the way the Computer dives page
+ * does it, so the canonical demo's recap shows a depth chart. The profile is the one the marketing
+ * drawings use: demo data in a fictional shop, never presented as a real dive.
+ */
+async function seedRecapComputerDive(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  tripStartsAt: Date,
+) {
+  const [batch] = await db
+    .insert(computerImportBatches)
+    .values({
+      shopId,
+      personId,
+      requestKey: "demo-recap-computer",
+      selectionHash: "demo-recap-computer",
+      importedCount: 1,
+      skippedCount: 0,
+    })
+    .returning();
+  if (!batch) throw new Error("seed: failed to insert demo computer batch");
+  const lastSample = SAMPLE_PROFILE[SAMPLE_PROFILE.length - 1];
+  const [dive] = await db
+    .insert(computerDives)
+    .values({
+      shopId,
+      personId,
+      batchId: batch.id,
+      fingerprint: "demo-recap-computer-dive",
+      record: {
+        sourceFormat: "uddf",
+        sourceId: "demo-recap-1",
+        device: "Shearwater Perdix",
+        localDate: calendarDateInTimezone(tripStartsAt, DEMO_SHOP_TIMEZONE),
+        localStart: null,
+        startInstant: null,
+        offsetMinutes: null,
+        durationSeconds: lastSample?.seconds ?? null,
+        maxDepthMeters: Math.max(...SAMPLE_PROFILE.map((sample) => sample.meters)),
+        gases: [],
+        tanks: [],
+        warnings: [],
+        sourceUnits: { depth: "m", temperature: "C", pressure: null },
+      },
+    })
+    .returning();
+  if (!dive) throw new Error("seed: failed to insert demo computer dive");
+  await db.insert(computerDiveProfiles).values({
+    shopId,
+    personId,
+    diveId: dive.id,
+    samples: SAMPLE_PROFILE.map((sample) => ({
+      seconds: sample.seconds,
+      depthMeters: sample.meters,
+      temperatureC: sample.meters > 12 ? 26 : 28,
+    })),
+  });
+}
 
 /**
  * Who is booked on what, and everything that follows from a seat being taken:
@@ -137,6 +202,9 @@ export async function seedBookings(
       })),
     )
     .returning();
+
+  const recapBooking = bookingRows_.find((b) => b.id === DEMO_RECAP_BOOKING_ID);
+  if (recapBooking) await seedRecapComputerDive(db, shopId, recapBooking.personId, reef.startsAt);
 
   // H-20260724-one-person-per-email demo: the counter seated one night-trip
   // diver off its name prompt under a different name than the record it

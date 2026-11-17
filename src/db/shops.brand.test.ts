@@ -13,6 +13,25 @@ const ctx = fileScopedShopContext();
  * plausibly have opened in.
  */
 describe("a shop's brand", () => {
+  it("saves and clears a welcome on only the selected shop", async () => {
+    const { db, shop } = ctx;
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other", slug: "other-welcome-test", timezone: "UTC" })
+      .returning();
+    await setShopProfile(db, shop.id, {
+      welcomeText: " Welcome, {diver}. ",
+      welcomeSigner: " Ana ",
+    });
+    const [saved] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    const [untouched] = await db.select().from(shops).where(eq(shops.id, other.id));
+    expect(saved).toMatchObject({ welcomeText: "Welcome, {diver}.", welcomeSigner: "Ana" });
+    expect(untouched).toMatchObject({ welcomeText: null, welcomeSigner: null });
+    await setShopProfile(db, shop.id, { welcomeText: " ", welcomeSigner: "" });
+    const [cleared] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    expect(cleared).toMatchObject({ welcomeText: null, welcomeSigner: null });
+  });
+
   it("stores the whole brand, and blanks clear it", async () => {
     const { db, shop } = ctx;
     const shopId = shop.id;

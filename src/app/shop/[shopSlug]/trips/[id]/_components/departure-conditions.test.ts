@@ -7,7 +7,7 @@ const t = staffTranslator("en-US");
 type Input = Parameters<typeof departureConditionReads>[0];
 
 describe("departureConditionReads", () => {
-  it("starts nothing on the Divers tab", async () => {
+  it("starts nothing when the page shows no details", async () => {
     const reads = departureConditionReads({
       showDetails: false,
       trip: { startsAt: new Date("2026-07-25T12:00:00Z") } as Input["trip"],

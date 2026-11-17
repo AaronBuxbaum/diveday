@@ -68,6 +68,7 @@
   "src/lib/thread-steps.ts": "Thread step state vocabulary shared by ThreadSpine client and after-dive thread composition. Concrete consumer: src/app/(token)/ready/[token]/_components/ThreadSpine.tsx.",
   "src/lib/took-a-call.ts": "Call-seat form and selection primitives shared by CallPanel and DepartureWindowSection clients. Concrete consumer: src/app/shop/[shopSlug]/_components/call/CallPanel.tsx.",
   "src/lib/trip-admission-gate.ts": "Admission gate response projection shared by seating action adapters and their user-facing decision controls. Concrete consumer: src/app/actions/seat-diver-surfaces.ts.",
+  "src/lib/trip-clock.ts": "The Clock's five phases, built on tripPhaseOf: a pure reading of the departure's clock and the crew's tap, shared by the Trip page and its Gear page, which both draw the phase strip. Concrete consumer: src/app/shop/[shopSlug]/trips/[id]/page.tsx.",
   "src/lib/usual-crew.ts": "Pure usual-crew suggestions are read by the interactive WeekBoard without importing a staff-store barrel. Concrete consumer: src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx.",
   "src/lib/web-push-key.ts": "Web-push public key conversion is a client-safe primitive used by reusable PushOptIn. Concrete consumer: src/components/PushOptIn.tsx.",
   "src/lib/week-seats.ts": "Pure weekly seat summaries are shared by the interactive WeekBoard and board-week view composition. Concrete consumer: src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx.",

@@ -15,7 +15,6 @@ import { openSnagsForTrip } from "@/features/boat-snags";
 import { departureVessels } from "@/features/boats";
 import { latestDeckCounts } from "@/features/deck-counts";
 import { diveIntentTallyForTrip } from "@/features/dive-intent";
-import { recordManifestRead } from "@/features/e2e-test-routes";
 import { readOfflineManifestRoster } from "@/features/offline-manifest-snapshots";
 import type { SiteHistory } from "@/features/site-history";
 import { lastAtSites } from "@/features/site-history";
@@ -25,7 +24,6 @@ import { departureCrewCount } from "@/lib/boat-safety";
 import { nowDate, nowMs } from "@/lib/clock";
 import { manifestPhysicalCounts } from "@/lib/manifests";
 import { cancelledRollCall } from "@/lib/roll-call";
-import { runtimeMode } from "@/lib/runtime-mode";
 
 /**
  * **Everything the boat manifest reads, in the waves the page awaits them**:
@@ -51,7 +49,6 @@ export async function readManifestPage(
   const shopId = shop.id;
   // All the other identity-bearing reads start after the roster has captured
   // its epoch. A later roster epoch cannot certify earlier buddy or note reads.
-  if (runtimeMode().e2eHarness) recordManifestRead(tripId);
   const rosterResult = await readOfflineManifestRoster(db, shopId, tripId);
   const readCompletedAt = nowMs();
   const renderErasureEpoch = rosterResult?.erasureEpoch ?? null;
@@ -227,6 +224,9 @@ export async function readManifestPage(
       alerted: new Set(
         missingAlerts.flatMap((row) => [row.bookingId, row.personId]).filter((id) => id !== null),
       ),
+      // Every open alert, including one that names nobody: it still leads the
+      // trip page's sentence (domain review of layer D).
+      openAlerts: missingAlerts.length,
       mayReadMedicalAlerts,
       // Offered only where the crew rule refused (`bindManifestActions`), and
       // while the trip's days have not ended, the day before included: a tab

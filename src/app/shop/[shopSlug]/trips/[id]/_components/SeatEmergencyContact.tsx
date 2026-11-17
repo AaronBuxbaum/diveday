@@ -20,6 +20,7 @@ export function SeatEmergencyContact({
   bookingId,
   contact,
   held = false,
+  bare = false,
   holdOpen,
   t,
   saveEmergencyContactAction,
@@ -27,6 +28,8 @@ export function SeatEmergencyContact({
   bookingId: string;
   contact: { name: string | null; phone: string | null };
   held?: boolean;
+  /** Its label is drawn beside it (the opened guest's facts list). */
+  bare?: boolean;
   holdOpen: boolean;
   t: StaffTranslator;
   saveEmergencyContactAction: (formData: FormData) => void;
@@ -97,22 +100,24 @@ export function SeatEmergencyContact({
   // also a reason line under the name, so the fact says only "Not on file".
   return (
     <div>
-      <GroupLabel as="p">
-        {t(
-          held
-            ? "trips.roster.heldEmergencyContactHeading"
-            : "trips.roster.emergencyContactHeading",
-        )}
-      </GroupLabel>
+      {bare ? null : (
+        <GroupLabel as="p">
+          {t(
+            held
+              ? "trips.roster.heldEmergencyContactHeading"
+              : "trips.roster.emergencyContactHeading",
+          )}
+        </GroupLabel>
+      )}
       {hasEmergencyContact ? (
-        <p className="mt-1 text-sm text-muted">
+        <p className={bare ? "text-sm" : "mt-1 text-sm text-muted"}>
           {t("trips.roster.emergencyContactOnFile", {
             name: contact.name ?? "",
             phone: contact.phone ?? "",
           })}
         </p>
       ) : (
-        <p className="mt-1 text-sm font-medium text-warning-strong">
+        <p className={`${bare ? "" : "mt-1 "}text-sm font-medium text-warning-strong`}>
           {t("trips.roster.emergencyContactMissing")}
         </p>
       )}

@@ -18,7 +18,7 @@ import { requireTripConfig } from "./trip-config";
 
 /**
  * A training dive on a charter seat (issue #2275), marked and cleared from
- * the departure's Divers tab. Both take `requireTripConfig` (owner, manager,
+ * the departure's Trip page. Both take `requireTripConfig` (owner, manager,
  * instructor); clearing one with forms owed is narrowed again by the writer.
  * Their gate is pinned beside them (`training-mark-actions.authz.test.ts`).
  */

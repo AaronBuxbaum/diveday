@@ -530,7 +530,7 @@ test.describe("as captain", () => {
     // The seat's foot row is open — its other control is there — so the
     // missing link is the permission, not a closed disclosure.
     await openBookingActions(seat);
-    await expect(seat.getByRole("button", { name: "Remove booking" })).toBeVisible();
+    await expect(seat.getByRole("button", { name: "Cancel booking" })).toBeVisible();
     await expect(seat.getByRole("link", { name: "Create order" })).toHaveCount(0);
   });
 });

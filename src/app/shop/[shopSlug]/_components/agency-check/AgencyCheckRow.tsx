@@ -22,7 +22,7 @@ const LINK_BUTTON = buttonClass({
 });
 
 /**
- * **"Check with SSI" on one diver's row** — a departure's Divers tab, or a
+ * **"Check with SSI" on one diver's row** — a departure's Trip page, or a
  * "certification pending" row on Today (H-20261008-cert-check-extension).
  *
  * Draws nothing without the DiveDay browser extension: the row's own door to

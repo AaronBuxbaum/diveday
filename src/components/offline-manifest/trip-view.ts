@@ -62,7 +62,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
    * the boat has gone.
    *
    * What the counter is finished with sinks to the bottom, which is the
-   * live desk's composition (the Divers tab's Checked in group) and the same
+   * live desk's composition (the Trip page's Checked in group) and the same
    * shared predicates
    * (`isSettledAtCounter` and `counterIsDone`, `src/lib/check-in.ts`) —
    * "settled" is checked in *and still cleared*, so a diver who came through

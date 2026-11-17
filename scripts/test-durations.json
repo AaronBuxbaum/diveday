@@ -1021,7 +1021,6 @@
   "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HoldPlace.test.tsx": 344,
   "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestDeviceSettings.test.tsx": 496,
   "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestMilestones.test.tsx": 477,
-  "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestMoreMenu.test.tsx": 380,
   "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestRosterCommit.test.tsx": 318,
   "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestRosterFreshness.cookie.test.tsx": 311,
   "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestRosterFreshness.test.tsx": 316,

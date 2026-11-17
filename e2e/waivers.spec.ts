@@ -8,6 +8,7 @@ import {
   openCopiedWaiverLink,
   openCounterFor,
   openDiverFileGroup,
+  openedGuestName,
   openFirstRosterRowWith,
   openManifestPerson,
   openRosterDetails,
@@ -1452,9 +1453,7 @@ test("a shop question is published, answered by the diver and shown on the signe
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
   const row = await openFirstRosterRowWith(page, "Send waiver");
-  const diverName = (
-    await page.locator("[data-guest-folios]").getByRole("heading", { level: 2 }).innerText()
-  ).trim();
+  const diverName = await openedGuestName(page);
   const diverLink = row.getByRole("link", { name: "Open guest profile", exact: true });
   const diverHref = await diverLink.getAttribute("href");
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
@@ -1522,9 +1521,7 @@ test("a diver's medical alert for the crew is signed, flagged on the manifest an
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Trip");
   const row = await openFirstRosterRowWith(page, "Send waiver");
-  const diverName = (
-    await page.locator("[data-guest-folios]").getByRole("heading", { level: 2 }).innerText()
-  ).trim();
+  const diverName = await openedGuestName(page);
   const diverLink = row.getByRole("link", { name: "Open guest profile", exact: true });
   const diverHref = await diverLink.getAttribute("href");
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();

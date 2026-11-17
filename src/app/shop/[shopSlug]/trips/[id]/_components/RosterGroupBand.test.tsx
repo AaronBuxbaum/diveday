@@ -3,39 +3,8 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { RosterGroup, RosterGroupBand } from "./RosterGroupBand";
-import { fixtures, renderRoster } from "./roster-test-fixtures";
 
 afterEach(cleanup);
-
-describe("the roster's row geometry", () => {
-  /**
-   * K-354: every group band opens with a hairline except "ADD A DIVER". The
-   * band draws `border-t … first:border-t-0`, and the add-diver band sat
-   * first inside the `#add-diver` wrapper, so `first:` stripped its rule
-   * though it is the card's last group. The group's rule is drawn by the
-   * element that is the card's child: the band, or the box holding it.
-   */
-  it("opens the add-diver group with the same rule as every other group", () => {
-    const { container } = renderRoster({
-      ...fixtures,
-      selectedBookingId: null,
-      addDiverGroup: <p>Find a returning diver</p>,
-    });
-
-    const addDiver = container.querySelector("#add-diver");
-    const guestIndex = container.querySelector("[data-guest-open]")?.closest("ul");
-    // Recruitment follows the searchable guest index in the overview.
-    expect(guestIndex).not.toBeNull();
-    expect(addDiver?.parentElement).toBe(guestIndex?.parentElement);
-    expect(addDiver).toHaveClass("border-t", "first:border-t-0");
-    // The band inside the add-diver box draws none of its own.
-    const band = within(addDiver as HTMLElement).getByRole("heading", {
-      name: "Add a booking",
-    }).parentElement;
-    expect(band).not.toBe(addDiver);
-    expect(band).not.toHaveClass("border-t");
-  });
-});
 
 describe("RosterGroupBand and RosterGroup", () => {
   it("draws a band as the group's rule and its heading, with what it carries beside", () => {

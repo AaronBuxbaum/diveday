@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
+import type { TripDefaultField } from "@/lib/trip-defaults";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courses } from "./courses";
@@ -466,6 +467,11 @@ export const trips = pgTable(
      * one anyway settle the money by hand, the same as an unpriced trip. Zero
      * is a real answer — a rider who comes along free — and is offered.
      */
+    /** Fields copied from shop settings and not subsequently changed. */
+    shopDefaultFields: jsonb("shop_default_fields")
+      .$type<TripDefaultField[]>()
+      .notNull()
+      .default([]),
     snorkelerPriceCents: integer("snorkeler_price_cents"),
     riderPriceCents: integer("rider_price_cents"),
     /**

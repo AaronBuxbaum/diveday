@@ -19,7 +19,7 @@ import { type GuardianSigner, guardianSignatureRequired, signingDate } from "./g
  * `true`: an unsigned required form makes the student Blocked for boarding,
  * exactly like a missing release (`course_form_unsigned` in
  * `src/lib/readiness.ts`). `false`: the form is still owed and still shown on
- * the course roster and the trip's Divers tab, but as a warning that never
+ * the course roster and the trip's Trip page, but as a warning that never
  * flips a student to Blocked.
  *
  * One switch on purpose, pending the owner's call (ADR 20261008-course-forms):

@@ -1,12 +1,5 @@
 {
   "clearedTitle": "Todos registrados",
-  "instrument": {
-    "hereOf": "<figure>{here}</figure> de {expected} aquí",
-    "toCome": "{count} por llegar",
-    "cantBoard": "{count, plural, one {# bloqueado} other {# bloqueados}}",
-    "notHere": "{count, plural, one {# persona no vino} other {# personas no vinieron}}",
-    "turnedAway": "{count, plural, one {# persona no pudo embarcar} other {# personas no pudieron embarcar}}"
-  },
   "row": {
     "runningLate": "Llega tarde, avisó a las {time}"
   },

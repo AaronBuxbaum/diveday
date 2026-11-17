@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { tripTabHref } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripTabs";
 import { getDb } from "@/db/client";
 import { readQuietDaySuggestions } from "@/features/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * **A quiet day's suggestions** (issue #4257): at most two boats of the week
@@ -42,7 +42,7 @@ export async function QuietDaySuggestions({
         {suggestions.map((boat) => (
           <li key={boat.tripId} className="space-y-1 px-4 py-3">
             <p className="font-medium break-words">
-              <Link href={tripTabHref(shopSlug, boat.tripId, "divers")} className="hover:underline">
+              <Link href={shopPath(shopSlug, "trips", boat.tripId)} className="hover:underline">
                 {boat.title}
               </Link>
             </p>

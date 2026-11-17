@@ -471,6 +471,7 @@ it("guards repeated preview requests and displays an export refusal without crea
   finish({ ok: true, value: preview });
   await screen.findByRole("heading", { name: copy.previewHeading });
   actions.exportCsvAction.mockResolvedValue({ ok: false });
+  await waitFor(() => expect(screen.getByRole("button", { name: copy.exportCsv })).toBeEnabled());
   await user.click(screen.getByRole("button", { name: copy.exportCsv }));
   expect(await screen.findByText(copy.error)).toBeVisible();
 });

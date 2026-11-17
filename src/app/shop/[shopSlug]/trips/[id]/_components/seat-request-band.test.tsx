@@ -155,4 +155,10 @@ describe("addBandFor", () => {
     render(<div>{band.requestGone}</div>);
     expect(screen.getByText(t("trips.addDiver.requestNotOffered"))).toBeInTheDocument();
   });
+
+  it("stays open for the search it holds: a search drops `add`, never the form", async () => {
+    vi.mocked(readSeatRequest).mockResolvedValue(null as never);
+    expect(await addBandFor(db, where, { diverq: "Tom" })).toMatchObject({ open: true });
+    expect(await addBandFor(db, where, {})).toMatchObject({ open: false });
+  });
 });

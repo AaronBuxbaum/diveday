@@ -11,7 +11,7 @@ import { seatUngatedNitrox } from "./rules";
  * departure carries that are not hazards: sizes the packer cannot pack from,
  * divers nobody has asked about their own kit, nitrox asked for with no verified card, divers with no emergency contact,
  * and orders still awaiting payment. Today's rows for each boat and the
- * boat's own band on the Divers tab both read this, through
+ * boat's own band on the Trip page both read this, through
  * `boatWorkItems` (`src/features/boat-work/rules.ts`), so the two can never tell the
  * desk the same boat's state twice and differently.
  *

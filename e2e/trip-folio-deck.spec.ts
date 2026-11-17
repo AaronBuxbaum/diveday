@@ -164,17 +164,20 @@ for (const viewport of [
   });
 }
 
-test("the Trip opens a guest folio and Deck without recording arrival or presence", async ({
+test("the Trip opens a guest in place and Roll call without recording arrival or presence", async ({
   page,
 }) => {
   await page.goto(trip);
   await expect(page.locator("[data-guest-folios]")).toBeVisible();
   await openGuestFolio(page, "Priya Sharma");
+  const opened = page.locator("[data-opened-guest]");
+  await expect(opened).toHaveCount(1);
   await expect(
-    page.locator("[data-guest-folio]").getByRole("heading", { name: "Priya Sharma", exact: true }),
+    page.getByRole("button", { name: "Priya Sharma", exact: true, expanded: true }),
   ).toBeVisible();
-  await expect(page.locator('#roster li[id^="booking-"]')).toHaveCount(1);
-  await page.getByRole("link", { name: "Open Deck", exact: true }).click();
+  // Opening a guest records nothing: the rest of the list stays where it was.
+  await expect(page.locator('#roster li[id^="booking-"]').first()).toBeVisible();
+  await page.getByRole("link", { name: "Roll call", exact: true }).first().click();
   await expect(page).toHaveURL(/\/manifest(?:[?#]|$)/);
   await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
 });

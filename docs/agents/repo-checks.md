@@ -155,6 +155,10 @@ The words one (`scripts/check-words.mjs`) refuses a message-bundle key whose en-
 
 The error-toasts one (`scripts/check-error-toasts.mjs`) refuses `role="alert"` under `src/app` and `src/components` except in the files its `ALLOWED` map lists, each with the reason it is not an error component. Aaron, 2026-11-13: a component drawn permanently when something goes wrong looks ugly, so every refusal, failed load and failed assist is an `ErrorToast` that leaves after a beat, reached through `FormStatus`, a `danger` `ShopNotice` (a standing queue of owed work says `persistent`) or directly. A field's own validation hint stays on the field through `Field`'s `error`.
 
+### numbered-lists
+
+The numbered-lists one (`scripts/check-numbered-lists.mjs`) refuses `list-decimal`, `list-[decimal]` and `list-style: decimal` under `src/app` and `src/components`. Aaron, 2026-11-17: 1 2 3 4 lists look clickable and are not truly ordered, so steps are bullets, plain sentences or a heading each; the move rail and step lists on the switching guides, the feature pages and Cert check now draw none. A numeral that is the item's own data (a printed form's question number, a manifest roster row) is written in the markup and not refused.
+
 ### tinted-ink
 
 The tinted-ink one (`scripts/check-tinted-ink.mjs`) refuses a `bg-<hue>/10` fill on an element whose own text is `text-<hue>`. That fill is **translucent**, so the colour the text is read against is the hue composited over whatever happens to be behind the element — and every ratio in `docs/design/forms-and-controls.md` was computed against `--surface`. Turning axe's `color-contrast` rule back on found 24 failing nodes on 2026-08-23 and every one was this: a status pill on `--background` rather than a card (4.21:1 where the table says 4.86), a `bg-primary/10` badge nested inside the green of a boarded row on `/check-in` (**4.09:1**, the worst in the app), and in dark mode a danger count badge inside the current nav tab's own primary tint. The fix is the opaque `--<hue>-tint` token, which resolves against `--surface` once and is the table's number wherever the element is mounted — or `Badge`, which does it for you. The check exists because the suite's axe scan reached about thirty routes and the pill that started this was on none of them; since that scan was removed on 2026-10-24, it is the only automated contrast net there is; it matches the same element only, at any opacity, since a parent's tint under a child's ink is invisible to a grep, and it skips the files in its `BOAT_MODE_FILES`, which render under `.boat-mode`, a different palette with its own measurements. The roll-call controls are not among them: they wear the opaque tint, and the check holds them to it (issue #2341). A line that genuinely means the translucent form says `diveday:allow-tinted-ink: <why>`.
@@ -644,20 +648,22 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   departures and the builder) and Crew (`staffing/`, the same week by who is working it), both
   titled "Schedule" under `schedule/_components/ScheduleViews.tsx`, which carries `?week=` across.
   A third reading of the week is a third view there, never a page of its own.
-- **A departure is four tabs under one header** (ADR 20261001-logbook, decision 3):
-  Divers (`trips/[id]/page.tsx`, the roster, which is also the arrival desk inside the arrivals window:
-  `_arrivals/arrival-desk.tsx`, its walk-in form at `walk-in/`), Boat (`manifest/`), Gear (`prep/`, the packing list) and Details (`trips/[id]?view=details`,
-  the About panel). One component draws them, `_components/TripTabs.tsx`; every tab wears `TripPageHeader`, whose
-  stage pill is the crew's own tap in the manifest strip's five words (`boatStageOf` in
-  `src/lib/trip-phase.ts`, the same reading Today's card and the strip use), or nothing; the clock's phase
-  (Prep, Check-in, Aboard, Back) is never printed and only decides that a departure is finished, when its
-  Divers tab becomes the record of who sailed. Add to a tab, never a fifth surface; a second list of the same divers is the duplicate this cut removed. A gear form redirects to
-  `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`, which opens
-  Details. **A cancelled departure keeps its Boat tab and packs nothing**: the roll call is a
-  record of people, the packing list an instruction about a check-in that is not happening
-  (dive-domain review 20260920). `print/` composes prep as a component for the paper day.
-  Finding which boat an arriving diver is on is Today's arrival lookup (`?q=`), never a search on
-  the tab.
+- **A departure is five phases of one clock, plus Edit trip** (ADR 20261117-trip-page-clock,
+  amending 20261001-logbook decision 3): `trips/[id]/page.tsx` shows Filling, Getting ready,
+  Check-in, On the water or Wrapped up, picked by `?phase=` or, absent it, `clockPhaseOf`
+  (`src/lib/trip-clock.ts`, built on `tripPhaseOf`); `?view=edit` is Edit trip. Each phase is a
+  panel in `_components/phases/`; the header (`TripHeader`), the strip (`TripPhaseStrip`) and the
+  sentence (`trip-sentence.ts`, read through `trip-frame.ts`) are shared by all of them and by
+  Gear (`prep/`, the packing list). The strip names the kind of work, never where people are:
+  sentences about people aboard, in the water or back come only from recorded roll-call evidence
+  and the crew's taps (`boatStageOf`). Roll call (`manifest/`) has a door from Check-in on and on
+  every cancelled trip, and sits in More before. Add to a phase, never a sixth surface. A gear form
+  redirects to `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`,
+  which opens Edit trip (`trip-notice-views.ts`). **A cancelled departure keeps its Roll call and
+  packs nothing**: the roll call is a record of people, the packing list an instruction about a
+  check-in that is not happening (dive-domain review 20260920). `print/` composes prep as a
+  component for the paper day. Finding which boat an arriving diver is on is Today's arrival
+  lookup (`?q=`), never a search on the page.
 - **The shop home** is the day's departures, then one "Needs you" list (ADR 20261001-logbook,
   decision 4): `_components/today/DaySpine.tsx` composes them, `DayStation.tsx` is a departure
   card (time, stage pill from `tripPhaseOf`, readiness bar), and every job on the day, at a boat

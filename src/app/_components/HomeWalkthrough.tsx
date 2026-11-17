@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
+import { useWalkSwipe } from "./useWalkSwipe";
 
 /**
  * One moment of the walkthrough: which step's list item to show, which of its
@@ -28,19 +29,22 @@ export type WalkLabels = {
   hint: string;
 };
 
-/** The whole walk takes about a minute and a half (Aaron, 2026-11-17). */
-const WALK_MS = 90_000;
+/** The whole walk takes two minutes, about ten seconds a slide (Aaron, 2026-11-17). */
+const WALK_MS = 120_000;
 
 /** Fewer than this many pixels sideways is a tap, not a swipe. */
 const SWIPE_PX = 40;
 
+/** A press that has moved this far sideways, more than up or down, is a drag. */
+const DRAG_START_PX = 8;
+
 /**
- * Where in a beat a tap happens, as shares of its clock: the control pulses
- * from `TAP_AT` and the screen swaps to the finished one at `AFTER_AT`. Only
- * frames drawn with a `before` have anything to show for it.
+ * Where in a beat a tap happens, as shares of its clock: a fingertip lands on
+ * the control from `TAP_AT` and the screen swaps to the finished one at
+ * `AFTER_AT`. Only frames drawn with a `before` have anything to show for it.
  */
-const TAP_AT = 0.16;
-const AFTER_AT = 0.38;
+const TAP_AT = 0.1;
+const AFTER_AT = 0.3;
 
 /** A press held this long is a hold (it pauses, and its release is not a tap). */
 const HOLD_MS = 250;
@@ -58,8 +62,10 @@ const HOLD_MS = 250;
  *
  * Motion: it advances itself only when the reader has not asked for reduced
  * motion, only while it is on screen and the tab is visible, and the Pause
- * button is always there. A tap on a screen, a swipe, the arrow keys and the
- * buttons move it by hand and never start it.
+ * button is always there. A tap on a screen (its left third goes back, the
+ * rest forward), a swipe, the arrow keys and the buttons move it by hand and
+ * never start it. A swipe is a drag: the beat follows the finger, then slides
+ * out and the next slides in, and a short drag springs back.
  *
  * **The bar is the clock.** One segment per beat; the current one fills over
  * the beat's share of the walk and the beat moves on when it is full, so what
@@ -85,6 +91,9 @@ export function HomeWalkthrough({
   const [ready, setReady] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const swipeFrom = useRef<number | null>(null);
+  const swipeFromY = useRef(0);
+  const dragging = useRef(false);
+  const sliding = useRef(false);
   const pressedAt = useRef(0);
   // How full the current beat's segment is, 0 to 1. Written straight to the
   // segment so a frame of the fill is not a render of the page.
@@ -136,6 +145,8 @@ export function HomeWalkthrough({
     return () => document.removeEventListener("visibilitychange", sync);
   }, []);
 
+  const listEl = () => rootRef.current?.querySelector<HTMLElement>("[data-walk-list]") ?? null;
+
   const setPhase = (phase: "before" | "tap" | "after") => {
     const list = rootRef.current?.querySelector("[data-walk-list]");
     if (list && list.getAttribute("data-walk-phase") !== phase) {
@@ -157,6 +168,7 @@ export function HomeWalkthrough({
   useEffect(() => {
     if (!running) return;
     const beatMs = WALK_MS / total;
+    listEl()?.style.setProperty("--walk-tap-ms", `${(AFTER_AT - TAP_AT) * beatMs}ms`);
     let last = performance.now();
     let frame = 0;
     const tick = (now: number) => {
@@ -186,33 +198,70 @@ export function HomeWalkthrough({
     event.preventDefault();
   };
 
+  const { dragBy, springBack, slide } = useWalkSwipe({
+    rootRef,
+    sliding,
+    index,
+    total,
+    beats,
+    playing,
+    go,
+  });
+
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (sliding.current) return;
     swipeFrom.current = event.clientX;
+    swipeFromY.current = event.clientY;
+    dragging.current = false;
     pressedAt.current = performance.now();
     setHeld(true);
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const from = swipeFrom.current;
+    if (from === null) return;
+    const dx = event.clientX - from;
+    if (!dragging.current) {
+      const dy = event.clientY - swipeFromY.current;
+      if (Math.abs(dx) < DRAG_START_PX || Math.abs(dy) > Math.abs(dx)) return;
+      dragging.current = true;
+      // From here the drag is the walk's, wherever the finger goes.
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    }
+    dragBy(dx);
   };
 
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     const from = swipeFrom.current;
     swipeFrom.current = null;
+    const wasDragging = dragging.current;
+    dragging.current = false;
     setHeld(false);
     if (from === null) return;
     const moved = event.clientX - from;
     if (Math.abs(moved) >= SWIPE_PX) {
-      go(index + (moved < 0 ? 1 : -1));
+      slide(moved < 0 ? 1 : -1, wasDragging ? moved : 0);
+    } else if (wasDragging) {
+      springBack(moved);
     } else if (
       performance.now() - pressedAt.current < HOLD_MS &&
       event.target instanceof HTMLElement &&
       event.target.closest("[data-walk-frame]") &&
       !event.target.closest("a, button")
     ) {
-      go(index + 1);
+      // Instagram's stories: the left edge of a screen goes back, the rest on.
+      const rect = event.target.closest("[data-walk-frame]")?.getBoundingClientRect();
+      const back = rect && rect.width > 0 && event.clientX < rect.left + rect.width * 0.3;
+      go(index + (back ? -1 : 1));
     }
   };
 
   const release = () => {
+    const wasDragging = dragging.current;
     swipeFrom.current = null;
+    dragging.current = false;
     setHeld(false);
+    if (wasDragging) springBack(0);
   };
 
   const toggle = (
@@ -235,10 +284,11 @@ export function HomeWalkthrough({
       aria-label={labels.label}
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={release}
       onPointerLeave={release}
-      className="scroll-mt-20 touch-pan-y"
+      className="relative scroll-mt-20 touch-pan-y overflow-x-clip"
     >
       {ready ? (
         <>
@@ -265,7 +315,7 @@ export function HomeWalkthrough({
             </p>
           </div>
           <p
-            className="mt-3 min-h-14 max-w-2xl text-lg leading-7 text-balance sm:min-h-8"
+            className="mt-3 min-h-14 max-w-4xl text-lg leading-7 text-balance sm:min-h-8"
             aria-live={playing ? "off" : "polite"}
           >
             {beat?.caption}

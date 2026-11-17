@@ -395,9 +395,9 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   await page.waitForURL(/\/trips\/[^/?]+\?add=1/);
   await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeFocused();
 
-  // ── Leg 4. Navigate to Add diver, type the diver in and seat them.
+  // ── Leg 4. Navigate to Add a guest, type the diver in and seat them.
   await beginWalk(page);
-  await tabUntil(page, /"Add diver"/, { limit: 25, where: "diver search" });
+  await tabUntil(page, /"Add a guest"/, { limit: 25, where: "diver search" });
   await page.keyboard.press("Enter");
   await page.waitForURL(/\/divers\?add=1&/);
   await expect(page.getByRole("heading", { level: 2, name: "Add a diver" })).toBeFocused();
@@ -429,10 +429,10 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
 
   // Seated: the shared seat-a-diver action lands on the trip's roster.
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  // Seating opens this guest’s folio directly; checking its heading keeps
-  // the complete journey keyboard-only, including the durable booked outcome.
+  // Seating opens this guest in place; checking the opened row keeps the
+  // complete journey keyboard-only, including the durable booked outcome.
   await expect(
-    page.locator("#roster").getByRole("heading", { name: diver, exact: true }),
+    page.locator("#roster").getByRole("button", { name: diver, exact: true, expanded: true }),
   ).toBeVisible();
 
   // And the outcome was *announced*, not merely rendered. The e2e fleet

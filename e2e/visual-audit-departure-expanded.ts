@@ -55,11 +55,14 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     test.use({ colorScheme: "light", viewport: { width: 1280, height: 800 } });
 
     test("the buddy team's inner builder exposes its person checkboxes", async ({ page }) => {
-      await page.goto(`${await tripPathByTitle(page, "blue-mantis", REEF)}?view=details`);
+      // Buddy teams sit in Getting ready, opened by the address the card links.
+      await page.goto(
+        `${await tripPathByTitle(page, "blue-mantis", REEF)}?phase=ready&buddies=open`,
+      );
       const outer = page
-        .locator("details")
-        .filter({ has: page.locator("#buddy-teams-heading") })
-        .first();
+        .locator("section", { has: page.locator("#buddy-teams-heading") })
+        .first()
+        .locator(":scope > details");
       await openIfClosed(outer);
       const builder = outer
         .locator("details")
@@ -253,30 +256,13 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
 
     test("the departure note opens the message for everyone booked", async ({ page }) => {
       const path = await tripPathByTitle(page, "blue-mantis", REEF);
-      await page.goto(`${path}?view=details#departure-note`);
+      await page.goto(`${path}?view=edit#departure-note`);
       const field = page.getByTestId("departure-note-body");
       await field.fill("Meet at the shop ten minutes early so we can leave together.");
       await expect(
         page.getByRole("button", { name: staff("desk.departureNote.submit"), exact: true }),
       ).toBeVisible();
       await capture(page, "departure-note-composer", "light");
-    });
-
-    test("the departure's work summary opens the individual needs-you links", async ({ page }) => {
-      await page.goto(await tripPathByTitle(page, "blue-mantis", REEF));
-      await openTripTab(page, "Trip");
-      const facts = page
-        .locator("details")
-        .filter({ has: page.locator("summary", { hasText: /^Needs you ·/ }) })
-        .first();
-      await openIfClosed(facts);
-      await expect(
-        facts
-          .getByRole("link", { name: /^Prep · \d+$|missing a (rental )?size|not asked about kit/i })
-          .first(),
-      ).toBeVisible();
-      await expect(facts.getByRole("link", { name: /awaiting payment/ })).toBeVisible();
-      await capture(page, "departure-needs-you-expanded", "light");
     });
 
     test("departure activity opens the recorded event body", async ({ page }) => {

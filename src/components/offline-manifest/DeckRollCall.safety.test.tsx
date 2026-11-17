@@ -71,7 +71,7 @@ it("retains participant split and the saved buddy reference caveat in Details", 
   });
   const ctx = controls();
   render(<OfflineDeckRollCall view={view} controls={ctx} details={null} />);
-  fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+  fireEvent.click(screen.getByText("More", { selector: "summary" }));
   expect(screen.getByText(/1 diver.*1 rider/)).toBeVisible();
   expect(screen.getByText(ctx.t("shared.offlineManifest.single.buddyReadOnlyHere"))).toBeVisible();
   expect(ctx.record).not.toHaveBeenCalled();

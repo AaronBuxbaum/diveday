@@ -320,12 +320,12 @@ export async function openTripFromBoard(page: Page, title: string) {
 }
 
 /**
- * Move between a departure's surfaces: Trip is the Divers tab, Manifest the
- * Boat tab, Prep the Gear tab (ADR 20261001-logbook, decision 3).
+ * Move between a departure's surfaces: Trip is the page of phases, Manifest
+ * Roll call, Prep the Gear page (ADR 20261117-trip-page-clock).
  *
- * This navigates by URL rather than by clicking a tab: a helper every spec
- * leans on should put the caller on a surface, and `boat-loop.spec.ts` is
- * where the tabs themselves are the subject.
+ * This navigates by URL rather than by clicking: a helper every spec leans on
+ * should put the caller on a surface. Trip lands on the phase the trip is in
+ * now, with no `?phase=` or `?view=` left from a form's redirect.
  */
 export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep") {
   // **Wait for the departure before reading the address bar.** A click that
@@ -341,14 +341,11 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
   const root = url.pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
   if (!root) throw new Error(`openTripTab called from ${url.pathname}, which is not a departure`);
   const target = tab === "Trip" ? root : `${root}/${tab.toLowerCase()}`;
-  // Divers and Details share a path: Details is `?view=details`, and an About
-  // form's save lands on Details with a `form=` that `FlashParams` strips, so the
-  // address bar alone cannot say the roster is open. The tab strip can.
+  // The phases and Edit trip share a path: Edit trip is `?view=edit`, and a
+  // phase is `?phase=`. Only the bare path is the trip as it stands now.
   const onTarget =
     url.pathname === target &&
-    (tab !== "Trip" ||
-      (await page.locator('nav[data-trip-tabs] a[aria-current="page"]').getAttribute("href")) ===
-        root);
+    (tab !== "Trip" || (!url.searchParams.has("view") && !url.searchParams.has("phase")));
   if (onTarget) return;
   await page.goto(target);
   await page.waitForURL(
@@ -368,35 +365,56 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
  * which took three specs red on CI at once.
  *
  * The ledger's own region is the honest scope: `RosterSection` labels it with
- * `trips.roster.heading` on any page that owns its masthead, which the
+ * `trips.clock.guests` on any page that owns its masthead, which the
  * departure does. English, like every other locator in this suite.
  */
 export async function openGuestFolio(page: Page, diverName: string): Promise<void> {
-  await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
+  // A departure with nobody booked draws its roster empty, and so invisible.
+  await expect(
+    page.locator("#roster").filter({ visible: true }).or(page.locator("#roster:not(:has(li))")),
+  ).toHaveCount(1);
   const folios = page.locator("[data-guest-folios]").filter({ visible: true });
   if (!(await folios.count())) return;
-  if (await folios.getByRole("heading", { name: diverName, exact: true }).count()) return;
-  const all = folios.getByRole("button", { name: "All guests", exact: true });
-  if (await all.count()) await all.click();
-  const search = folios.getByRole("searchbox", { name: "Find a guest", exact: true });
-  if (await search.count()) await search.fill("");
-  const name = folios.locator("button[data-guest-open]").filter({
-    has: page.locator("span", { hasText: new RegExp(`^${escapeRegExp(diverName)}$`) }),
-  });
+  await unfoldGuestGroups(folios);
+  const name = guestOpenButton(page, folios, diverName);
   // A caller may be asserting that a cancelled or moved person is absent.
   if ((await name.count()) === 0) return;
-  await name.click();
-  await expect(folios.getByRole("heading", { name: diverName, exact: true })).toBeVisible();
+  if ((await name.getAttribute("aria-expanded")) !== "true") await name.click();
+  await expect(name).toHaveAttribute("aria-expanded", "true");
+}
+
+/** The fix list folds everyone fine into one line; open every fold. */
+async function unfoldGuestGroups(folios: Locator): Promise<void> {
+  const folded = folios.locator('button[data-fix-fold][aria-expanded="false"]');
+  while (await folded.count()) await folded.first().click();
+}
+
+/** The button that opens a guest in place, found by the name it labels. */
+function guestOpenButton(page: Page, folios: Locator, diverName: string): Locator {
+  return folios.locator("button[data-guest-open]").filter({
+    has: page.locator('span[id^="guest-name-"]', {
+      hasText: new RegExp(`^${escapeRegExp(diverName)}$`),
+    }),
+  });
 }
 
 export async function rosterRow(page: Page, diverName: string): Promise<Locator> {
   await openGuestFolio(page, diverName);
-  const folio = page
-    .locator("[data-guest-folio]")
-    .filter({ visible: true })
-    .filter({ has: page.getByRole("heading", { name: diverName, exact: true }) });
-  const bookingId = (await folio.count()) ? await folio.getAttribute("data-guest-folio") : null;
-  if (bookingId) return page.locator(`#roster li[id="booking-${bookingId}"]`);
+  const folios = page.locator("[data-guest-folios]").filter({ visible: true });
+  const name = (await folios.count()) ? guestOpenButton(page, folios, diverName) : null;
+  const bookingId =
+    name && (await name.count()) ? await name.getAttribute("data-guest-open") : null;
+  if (bookingId) {
+    const row = page.locator(`#roster li[id="booking-${bookingId}"]`);
+    // A caller of `rosterRow` acts on the guest: open the rare actions' More too.
+    const more = row.locator(`summary[data-guest-more="${bookingId}"]`);
+    if (
+      (await more.count()) &&
+      !(await more.evaluate((el) => (el.parentElement as HTMLDetailsElement).open))
+    )
+      await more.click();
+    return row;
+  }
   return page.locator('#roster li[id^="booking-"]').filter({ hasText: diverName });
 }
 
@@ -405,19 +423,19 @@ const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
 const TRIP_SURFACE_URL = /\/trips\/[^/?#]+/;
 
 /**
- * Open the departure's Details tab before using its rows. Details is its own
- * tab (ADR 20261001-logbook), so a caller standing on Divers is moved across by
- * URL first; the rows are laid flat there, never folded (owner, 2026-10-05).
+ * Open Edit trip (`?view=edit`, ADR 20261117-trip-page-clock) before using its
+ * rows; a caller standing on a phase is moved across by URL first.
  */
 export async function openTripAbout(page: Page): Promise<Locator> {
   const about = page.locator("section#about");
   // A caller often clicks its way here, and the click resolves before the URL
-  // commits: wait for the departure's own tabs before reading the address.
+  // commits: wait for the trip's phase strip (or Edit trip, which has none)
+  // before reading the address.
   await page.waitForURL(TRIP_ROOT_URL);
-  await expect(page.getByRole("navigation", { name: "Departure" })).toBeVisible();
+  await expect(page.locator("[data-trip-phases]").or(about)).toBeVisible();
   const url = new URL(page.url());
-  if (url.searchParams.get("view") !== "details" && (await about.count()) === 0) {
-    url.searchParams.set("view", "details");
+  if (url.searchParams.get("view") !== "edit" && (await about.count()) === 0) {
+    url.searchParams.set("view", "edit");
     url.hash = "";
     await page.goto(url.toString());
   }
@@ -426,21 +444,160 @@ export async function openTripAbout(page: Page): Promise<Locator> {
 }
 
 /**
- * Open the Details tab's cancellation or repeating-date row — where the rare and
- * destructive acts live (the weather blow-out, cancelling the departure, the
- * series-wide writes), beside Promote and Activity. Opens the tab first.
+ * Edit trip's call-off card: the weather call and cancelling the trip. Opens
+ * Edit trip first. The run-wide acts live on the series page under Schedule
+ * (`openSeriesPage`).
  */
 export async function openTripMore(page: Page): Promise<Locator> {
   await openTripAbout(page);
+  const card = page.locator("section#call-off");
+  await expect(card).toBeVisible();
+  // At rest the destructive doors wait behind "Call it off…".
+  const open = card.locator("summary[data-call-off-open]");
+  if (!(await open.evaluate((el) => (el.parentElement as HTMLDetailsElement).open)))
+    await open.click();
+  return card;
+}
+
+/** One of the trip page's five phases (ADR 20261117-trip-page-clock). */
+export type TripPhase = "filling" | "ready" | "checkin" | "water" | "wrapped";
+
+/**
+ * Open one phase of the trip on screen from its phase strip, the way staff
+ * do, and wait for its panel.
+ */
+export async function openTripPhase(page: Page, phase: TripPhase): Promise<void> {
+  await page.waitForURL(TRIP_SURFACE_URL);
+  await page.locator(`[data-trip-phases] a[data-phase="${phase}"]`).click();
+  await expect(page.locator(`[data-trip-phases] a[data-phase="${phase}"]`)).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+}
+
+/**
+ * Follow one of the trip header's More menu rows (Gear, Roll call before
+ * Check-in, Add a guest, Activity, Edit trip on a phone) by its name.
+ */
+export async function openTripMenuLink(page: Page, name: string): Promise<void> {
   const t = staffTranslator("en-US");
-  const list = page
-    .getByRole("group", { name: t("trips.about.more"), exact: true })
-    .or(page.getByRole("group", { name: t("trips.about.moreSeries"), exact: true }));
-  if ((await list.getAttribute("open")) === null) {
-    await list.locator(":scope > summary").click();
+  const menu = page
+    .locator("[data-more-menu]")
+    .filter({ has: page.getByRole("button", { name: t("trips.clock.more"), exact: true }) })
+    .filter({ visible: true })
+    .first();
+  const trigger = menu.getByRole("button", { name: t("trips.clock.more"), exact: true });
+  if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click();
+  await menu.locator("[data-more-menu-panel]").getByRole("link", { name, exact: true }).click();
+}
+
+/**
+ * Open the trip's add form (`#add-a-booking`, `?add=1`): from the header's
+ * More menu while the trip has a seat, by its address on a full one (whose
+ * form wait-lists). Returns the form.
+ */
+export async function addGuestForm(page: Page): Promise<Locator> {
+  const t = staffTranslator("en-US");
+  const form = page.locator("#add-a-booking");
+  if ((await form.count()) === 0) {
+    await page.waitForURL(TRIP_ROOT_URL);
+    const trigger = page
+      .getByRole("button", { name: t("trips.clock.more"), exact: true })
+      .filter({ visible: true })
+      .first();
+    await trigger.click();
+    const add = page
+      .locator("[data-more-menu-panel]")
+      .getByRole("link", { name: t("trips.clock.addGuest"), exact: true });
+    // The page takes `add=1` off the address once the form is open, so the
+    // form itself is the wait, not the URL.
+    if (await add.count()) {
+      await add.click();
+    } else {
+      await page.keyboard.press("Escape");
+      const url = new URL(page.url());
+      url.searchParams.set("add", "1");
+      await page.goto(url.toString());
+    }
+    // The page takes `add=1` off the address with a router replace once it
+    // has shown the form; a link followed before then is cancelled by it. The
+    // form first, so the address read is the one the form came with, not the
+    // one the menu was opened on.
+    await expect(form).toBeVisible();
+    await expect(page).not.toHaveURL(/[?&]add=1/);
   }
-  await expect(list).toHaveAttribute("open", "");
-  return list;
+  await expect(form).toBeVisible();
+  return form;
+}
+
+/** The add form's returning-diver search, the form opened first. */
+export async function openAddAGuest(page: Page): Promise<Locator> {
+  const t = staffTranslator("en-US");
+  const find = (await addGuestForm(page)).getByRole("searchbox", {
+    name: t("trips.addDiver.findLabel"),
+  });
+  await expect(find).toBeVisible();
+  return find;
+}
+
+/**
+ * Taps "Add <name> to the trip" on a Trip page opened at `?diverq=`. The
+ * page's `FlashParams` strips `diverq` once React has mounted the page body,
+ * which can come after the staff header's hydration; before it, the body's
+ * hydration reflow moved the button between the click's hit check and its
+ * press, and the press landed on nothing (CI on 1ceab6ca: no POST was sent).
+ * The strip is the page's own signal, not a clock.
+ */
+export async function addFoundGuest(page: Page, name: string): Promise<void> {
+  await expect(page).not.toHaveURL(/[?&]diverq=/);
+  await page.getByRole("button", { name: `Add ${name} to the trip` }).click();
+}
+
+/**
+ * Seat a returning diver on the trip on screen from the add form's search,
+ * and wait for the page to open them in place.
+ */
+export async function addReturningGuest(page: Page, name: string): Promise<void> {
+  const t = staffTranslator("en-US");
+  const find = await openAddAGuest(page);
+  await find.fill(name);
+  await find.press("Enter");
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+    page
+      .locator("#add-a-booking")
+      .getByRole("button", { name: t("trips.addDiver.addPersonAriaLabel", { name }) })
+      .click(),
+  ]);
+  await expect(page.getByRole("button", { name, exact: true, expanded: true })).toBeVisible();
+}
+
+/** The new-guest form for this trip, through the add form's "Add a guest". */
+export async function openNewGuestForm(page: Page): Promise<void> {
+  const t = staffTranslator("en-US");
+  const form = await addGuestForm(page);
+  await form
+    .getByRole("link", { name: t("trips.addDiver.addDiver"), exact: true })
+    .first()
+    .click();
+  await page.waitForURL(/\/divers\?add=1/);
+}
+
+/** The series page under Schedule for the departure on screen, where the run is changed. */
+export async function openSeriesPage(page: Page): Promise<void> {
+  await openTripAbout(page);
+  const t = staffTranslator("en-US");
+  await page
+    .locator("section#series")
+    .getByRole("link", { name: t("trips.clock.edit.schedule"), exact: true })
+    .click();
+  await page.waitForURL(/\/schedule\/series\//);
+}
+
+/** Open Edit trip's closed "More settings", where its rarer rows fold. */
+export async function openMoreSettings(page: Page): Promise<void> {
+  const settings = page.locator("details").filter({ has: page.locator("section#more-settings") });
+  if ((await settings.count()) > 0) await openIfClosed(settings);
 }
 
 /**
@@ -452,6 +609,9 @@ export async function openTripMore(page: Page): Promise<Locator> {
 export async function openTripAboutRow(page: Page, label: string): Promise<Locator> {
   await openTripAbout(page);
   const row = page.getByRole("group", { name: label, exact: true });
+  // The rare rows fold into Edit trip's closed "More settings". Role queries
+  // see only what is on screen, so a row behind the fold counts as none.
+  if ((await row.count()) === 0) await openMoreSettings(page);
   await expect(row).toBeVisible();
   await openIfClosed(row);
   return row;
@@ -535,19 +695,27 @@ export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
   return waiverRequestLinkAfterSend(page, row);
 }
 
+/** The name of the guest opened in place on the Trip page's guest list. */
+export async function openedGuestName(page: Page): Promise<string> {
+  const name = page
+    .locator('[data-guest-folios] button[data-guest-open][aria-expanded="true"]')
+    .locator('span[id^="guest-name-"]')
+    .first();
+  return (await name.innerText()).trim();
+}
+
 /** Open and return the first booking row that offers a currently folded control. */
 export async function openFirstRosterRowWith(page: Page, control: string): Promise<Locator> {
   await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
   const folios = page.locator("[data-guest-folios]").filter({ visible: true });
   if (await folios.count()) {
-    const all = folios.getByRole("button", { name: "All guests", exact: true });
-    if (await all.count()) await all.click();
-    await folios.getByRole("searchbox", { name: "Find a guest", exact: true }).fill("");
+    await unfoldGuestGroups(folios);
     const ids = await folios
       .locator("button[data-guest-open]")
       .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("data-guest-open")));
     for (const id of ids) {
-      await folios.locator(`button[data-guest-open="${id}"]`).click();
+      const open = folios.locator(`button[data-guest-open="${id}"]`).first();
+      if ((await open.getAttribute("aria-expanded")) !== "true") await open.click();
       const candidate = page.locator(`#roster li[id="booking-${id}"]`).first();
       if (
         await candidate.locator("button", { hasText: new RegExp(`^\\s*${control}\\s*$`) }).count()
@@ -555,7 +723,6 @@ export async function openFirstRosterRowWith(page: Page, control: string): Promi
         await openRosterDetails(candidate);
         return candidate;
       }
-      await all.click();
     }
     throw new Error(`No guest folio offers ${control}`);
   }
@@ -573,7 +740,7 @@ export async function openFirstRosterRowWith(page: Page, control: string): Promi
   return pinned;
 }
 
-/** Open one diver's row on the Divers tab, where every fix for their seat waits. */
+/** Open one diver's row on the Trip page, where every fix for their seat waits. */
 export async function openRosterRow(page: Page, diverName: string): Promise<Locator> {
   const row = await rosterRow(page, diverName);
   await openRosterDetails(row);
@@ -719,7 +886,7 @@ export async function tripPathByTitle(
 /**
  * Open the counter for the boat a diver is on, the way the desk finds it:
  * Today's arrival lookup, then the match's own row, which lands on that
- * departure's Divers tab — the roster carries the desk's taps once arrivals
+ * departure's Trip page — the roster carries the desk's taps once arrivals
  * open. Returns the trip id read off the landing URL.
  */
 export async function openCounterFor(page: Page, shopSlug: string, diverName: string) {
@@ -744,13 +911,13 @@ export async function openCounterFor(page: Page, shopSlug: string, diverName: st
   return tripId;
 }
 
-/** The counter for one boat: the departure's Divers tab, the trip root. */
+/** The counter for one boat: the departure's Trip page, the trip root. */
 export function counterPath(shopSlug: string, tripId: string): string {
   return `/shop/${shopSlug}/trips/${tripId}`;
 }
 
 /**
- * The new-diver form for this boat. The Divers tab's own search reaches it
+ * The new-diver form for this boat. The Trip page's own search reaches it
  * through "Add diver"; tests that are not about that link go straight to it.
  */
 export function addDiverFormPath(shopSlug: string, tripId: string): string {
@@ -758,13 +925,13 @@ export function addDiverFormPath(shopSlug: string, tripId: string): string {
 }
 
 /**
- * Seat a returning diver from the boat's Divers tab: search, then the row's own
+ * Seat a returning diver from the trip's add form: search, then the row's own
  * add button. This is the roster's door, so the seat lands as an ordinary
  * "Diver added…" (`notice=diver-added…`).
  */
 export async function seatFromRoster(page: Page, tripId: string, name: string): Promise<void> {
   await page.goto(counterPath("blue-mantis", tripId));
-  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  const find = await openAddAGuest(page);
   await find.fill(name);
   await find.press("Enter");
   await page.getByRole("button", { name: `Add ${name} to the trip` }).click();
@@ -829,21 +996,16 @@ export async function openSettingsRow(page: Page, heading: string) {
  * Every seat is one line (owner, 2026-10-05): its blockers and advisories
  * are sentences under the name, and everything the row can *do* — the waiver
  * control, the payment selector, the emergency contact form, the private
- * notes, "Remove booking" — waits behind the row's one disclosure with the
+ * notes, "Cancel booking" — waits behind the row's one disclosure with the
  * reference facts.
  *
  * The disclosure is uncontrolled — its `open` is native DOM state React does
  * not touch — so this checks before clicking rather than toggling blindly,
  * exactly like `openPrivateNotes` in add-diver.spec.ts.
  */
-/** Open the rare booking operations only when a flow actually needs them. */
+/** The booking operations are plain links in the opened guest: opening the guest shows them. */
 export async function openBookingActions(row: Locator): Promise<void> {
   await openRosterDetails(row);
-  await openIfClosed(
-    row
-      .locator("details")
-      .filter({ has: row.page().locator(":scope > summary", { hasText: "Booking actions" }) }),
-  );
 }
 
 export async function openRosterDetails(row: Locator): Promise<void> {
@@ -853,8 +1015,18 @@ export async function openRosterDetails(row: Locator): Promise<void> {
     .locator(":scope > details")
     .filter({ has: row.page().locator('summary[aria-label^="Details for "]') });
   if (await disclosure.count()) await openIfClosed(disclosure);
-  const reference = row.locator('details[id^="guest-reference-"]');
-  if (await reference.count()) await openIfClosed(reference);
+  // The opened guest's private details: a flagged medical answer, a held
+  // seat's matched record.
+  const privateDetails = row.locator("[data-opened-guest] details.group\\/private");
+  if (await privateDetails.count()) await openIfClosed(privateDetails.first());
+  // The rare actions (open profile, move, cancel) wait behind the guest's More.
+  const more = row.locator("[data-opened-guest] details:has(> summary[data-guest-more])");
+  if (await more.count()) {
+    const first = more.first();
+    if (!(await first.evaluate((el) => (el as HTMLDetailsElement).open)))
+      await first.locator("> summary").click();
+    await expect(first).toHaveJSProperty("open", true);
+  }
 }
 
 /**
@@ -903,6 +1075,28 @@ export async function openDeckPerson(page: Page, name: string, locale = "en-US")
   await list.getByRole("searchbox").fill("");
   await list.getByRole("button", { name, exact: true }).click();
   await expect(person.getByRole("heading", { name, exact: true })).toBeVisible();
+}
+
+/**
+ * **One dive's log, where it is written**: the Trip page, On the water (ADR
+ * 20261117-trip-page-clock), from the trip or its Roll call. Opens the dive's
+ * collapsed form and returns it.
+ */
+export async function openDiveLog(page: Page, tripId: string, dive = 1): Promise<Locator> {
+  const slug = new URL(page.url()).pathname.split("/")[2];
+  await page.goto(`/shop/${slug}/trips/${tripId}?phase=water`);
+  await page
+    .locator("summary")
+    .filter({ hasText: `Dive ${dive}` })
+    .click();
+  return page.locator("form").filter({ hasText: `Dive ${dive}` });
+}
+
+/** The trip id in the address bar of a trip page or one of its children. */
+export function tripIdFromUrl(page: Page): string {
+  const id = new URL(page.url()).pathname.split("/")[4];
+  if (!id) throw new Error(`no trip id in ${page.url()}`);
+  return id;
 }
 
 export async function openDeckDetails(page: Page, locale = "en-US"): Promise<void> {
@@ -1011,24 +1205,19 @@ export async function openManifestPerson(row: Locator): Promise<void> {
 }
 
 /**
- * Open a departure's activity log on Record (`?view=record`). Call it
- * from any tab of the departure; it leaves the page on Record, so a spec that
- * goes on to work the roster returns with `openTripTab(page, "Trip")`.
+ * Open a trip's activity log the way staff do: the header's More menu, then
+ * Activity, which lands on Wrapped up with the log open. A spec that goes on
+ * to work the guests returns with `openTripTab(page, "Trip")`.
  */
 export async function openTripActivity(page: Page): Promise<void> {
+  const t = staffTranslator("en-US");
   await page.waitForURL(TRIP_SURFACE_URL);
-  const root = new URL(page.url()).pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
-  if (!root)
-    throw new Error(`openTripActivity called from ${page.url()}, which is not a departure`);
-  await page.goto(`${root}?view=record`);
-  await page.waitForURL(/\?view=record/);
-  await openIfClosed(
-    page
-      .locator("details")
-      .filter({ hasText: /^Activity/ })
-      .filter({ visible: true })
-      .first(),
-  );
+  if (!/\/trips\/[^/?#]+(?:[?#]|$)/.test(page.url())) await openTripTab(page, "Trip");
+  await openTripMenuLink(page, t("trips.clock.activity"));
+  await page.waitForURL(/\?phase=wrapped#trip-activity/);
+  const activity = page.locator("details#trip-activity");
+  await expect(activity).toBeVisible();
+  await openIfClosed(activity);
 }
 
 /**
@@ -1210,7 +1399,7 @@ export async function requireCourseForm(
 
 /**
  * Schedule a session of Open Water Diver with an instructor on its crew, so
- * it takes bookings, and return the staff path of its Divers tab.
+ * it takes bookings, and return the staff path of its Trip page.
  */
 export async function scheduleCrewedOpenWaterSession(
   page: Page,

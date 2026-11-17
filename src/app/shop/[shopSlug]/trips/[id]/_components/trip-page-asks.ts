@@ -6,7 +6,7 @@ import { type FormNotice, noticeForForm } from "@/lib/staff-notices";
 import { deskFormNotice } from "../_arrivals/notices";
 import type { PartyPreview } from "./roster-model";
 import { resolveTripNotice } from "./TripNoticeBanner";
-import { pageNoticesFor } from "./trip-notice-tabs";
+import { pageNoticesFor } from "./trip-notice-views";
 import type { TripPageSearchParams } from "./trip-search-params";
 
 /**

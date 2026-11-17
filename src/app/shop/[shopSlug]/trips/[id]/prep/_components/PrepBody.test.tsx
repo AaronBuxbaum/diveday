@@ -130,6 +130,18 @@ describe("the pulled-for-service notice (issue #2345)", () => {
 });
 
 /**
+ * **A gear form that fails its checks says so** (inventory item 22): every
+ * Gear-tab action redirects a refused parse with `?notice=invalid`, which drew
+ * no banner, so the tap looked like it did nothing.
+ */
+describe("a refused gear form", () => {
+  it("says it did not save", () => {
+    renderPrep(everyPanelPrep(), { notice: "invalid" });
+    expect(screen.getByText(t("gear.notice.invalid"))).toBeVisible();
+  });
+});
+
+/**
  * The "Sizes still missing" card no longer explains the list to itself, and
  * the gas-analysis disclaimer left the tab for the pre-departure checklist
  * settings (UX review 2026-10-10, item 26).

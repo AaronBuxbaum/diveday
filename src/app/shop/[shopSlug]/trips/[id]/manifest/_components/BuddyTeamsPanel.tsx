@@ -53,8 +53,11 @@ export function BuddyTeamsPanel({
   addBuddyTeamMemberAction,
   removeBuddyTeamMemberAction,
   dissolveBuddyTeamAction,
+  headingClass = SECTION_TITLE_CLASS,
   t,
 }: {
+  /** The heading's size: the Trip page sets it at its own section heads' size. */
+  headingClass?: string;
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
   /**
@@ -120,79 +123,44 @@ export function BuddyTeamsPanel({
   const showBuilder = diverOptions.length + crewOptions.length >= 2;
   const builderError = buddyErrorForm === "builder" && showBuilder ? buddyErrorText : null;
   const panelError = builderError ? null : buddyErrorText;
+  const memberNames = (team: TripBuddyTeam) =>
+    team.members
+      .map((member) =>
+        member.kind === "crew"
+          ? t("manifest.buddyCrewName", { name: member.fullName })
+          : member.cancelled
+            ? t("manifest.buddyCancelledName", { name: member.fullName })
+            : member.fullName,
+      )
+      .join(", ");
   return (
     <section aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")}>
-      {buddyTeamsList.some((team) => (teamWarnings[team.teamId] ?? []).length > 0) ? (
-        <ul className="mb-3 max-w-4xl space-y-2 text-sm" aria-label={t("manifest.buddyHeading")}>
-          {buddyTeamsList.flatMap((team, index) => {
-            const warnings = teamWarnings[team.teamId] ?? [];
-            if (warnings.length === 0) return [];
-            const members = team.members
-              .map((member) =>
-                member.kind === "crew"
-                  ? t("manifest.buddyCrewName", { name: member.fullName })
-                  : member.cancelled
-                    ? t("manifest.buddyCancelledName", { name: member.fullName })
-                    : member.fullName,
-              )
-              .join(", ");
-            return [
-              <li
-                key={team.teamId}
-                className="rounded-lg border border-warning/40 bg-warning-tint px-3 py-2"
-              >
-                <p className="font-semibold text-foreground">
-                  {t("manifest.buddyTeamLabel", { number: index + 1 })}: {members}
-                </p>
-                {warnings.map((warning) => (
-                  <p key={warning} className="mt-1 text-warning-strong">
-                    {warning}
-                  </p>
-                ))}
-              </li>,
-            ];
-          })}
-        </ul>
-      ) : null}
-      {/* The editor sits behind one disclosure line. Grouping people is
-          dock/desk prep, done once per departure — but the open panel (team
-          rows, per-team pickers, dissolve buttons) stood at permanent height
-          on every manifest visit, between the roll call and the offline
-          backstop. The teams themselves already ride on each member's row
-          where roll call reads them, so at rest this section owes the page
-          one line: how many teams, and who is not on one. It arrives open
-          when a refusal needs reading — a submit's answer must never hide
-          behind the fold it came from. Specific safety cautions stay visible
-          beside the line with the team and its members, without opening every
-          editor row on the manifest. */}
+      {/* The heading leads, then the teams that carry a caution and the one
+          warning line, then the disclosure with the counts. Specific safety
+          cautions stay visible beside their team without opening the editor. */}
+      <h2 id={scopedId(idPrefix, "buddy-teams-heading")} className={`${headingClass} mb-2`}>
+        {t("manifest.buddyHeading")}
+      </h2>
+      <BuddyWarnings
+        teams={buddyTeamsList.map((team, index) => ({
+          ...{ id: team.teamId, label: t("manifest.buddyTeamLabel", { number: index + 1 }) },
+          ...{ names: memberNames(team), warnings: teamWarnings[team.teamId] ?? [] },
+        }))}
+        label={t("manifest.buddyHeading")}
+      />
+      {/* The editor sits behind one disclosure line: grouping people is
+          dock/desk prep, done once per departure, and the teams already ride on
+          each member's row where roll call reads them. It arrives open when a
+          refusal needs reading, so a submit's answer never hides behind the
+          fold it came from. */}
       <details className="group/buddypanel" open={buddyErrorText || defaultOpen ? true : undefined}>
-        {/* Two alignments, not one: the caret centres on the heading's *first
-            line* (`SummaryCaret`, a box one title line tall, in a row that
-            starts at the top), while the heading and its count share a
-            baseline beside it. Flattened into a single baseline row the caret
-            hung off the text's baseline like a stray comma; centred on the
-            whole block it floated between the lines once the count wrapped
-            (9.5–20px low at 390, most in Spanish). `p-2` round the 28px title
-            line is the 44px floor, so one line still centres, and gives the
-            ring room off the words; `-m-2` hands the same 8px back on every
-            side, so the box overhangs the section gap rather than adding to it
-            — above, it stood "Buddy teams" 8px further from the plan than the
-            page's 40px (K-189). */}
-        <summary className="-m-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg p-2 select-none [&::-webkit-details-marker]:hidden">
-          <SummaryCaret
-            line={`h-lh ${SECTION_TITLE_CLASS}`}
-            className="size-4 text-muted group-open/buddypanel:rotate-90"
-          />
-          <span className="flex flex-wrap items-baseline gap-x-2">
-            <h2 id={scopedId(idPrefix, "buddy-teams-heading")} className={SECTION_TITLE_CLASS}>
-              {t("manifest.buddyHeading")}
-            </h2>
-            <span className="text-sm text-muted">
-              {t("manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
-              {unteamedDivers.length > 0
-                ? t("manifest.buddySummaryUnteamed", { count: unteamedDivers.length })
-                : ""}
-            </span>
+        <summary className="-m-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg p-2 text-sm text-muted select-none [&::-webkit-details-marker]:hidden">
+          <SummaryCaret line="h-lh" className="size-4 text-muted group-open/buddypanel:rotate-90" />
+          <span>
+            {t("manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
+            {unteamedDivers.length > 0
+              ? t("manifest.buddySummaryUnteamed", { count: unteamedDivers.length })
+              : ""}
           </span>
         </summary>
         {/* No caption under the heading. "Group people the way they'll dive"
@@ -530,5 +498,51 @@ export function BuddyTeamsPanel({
         ) : null}
       </details>
     </section>
+  );
+}
+
+/**
+ * **One plain row per warned team, full width** (design review of the final
+ * screens, finding 9): the team and its members, then only what is its own; a
+ * caution every warned team shares is said once, under them.
+ */
+function BuddyWarnings({
+  teams,
+  label,
+}: {
+  teams: readonly { id: string; label: string; names: string; warnings: readonly string[] }[];
+  label: string;
+}) {
+  const warnedTeams = teams.filter((team) => team.warnings.length > 0);
+  if (warnedTeams.length === 0) return null;
+  const shared =
+    warnedTeams.length > 1
+      ? (warnedTeams[0]?.warnings ?? []).filter((warning) =>
+          warnedTeams.every((team) => team.warnings.includes(warning)),
+        )
+      : [];
+  const caution = (warning: string) => (
+    <p key={warning} className="text-sm text-warning-strong">
+      {warning}
+    </p>
+  );
+  return (
+    <div className="mb-3 space-y-2">
+      <ul
+        className={sectionCardClass({ padding: "none", className: "divide-y divide-border" })}
+        aria-label={label}
+      >
+        {warnedTeams.map((team) => (
+          <li key={team.id} className="px-4 py-3 sm:px-6">
+            <p className="font-semibold [overflow-wrap:anywhere]">
+              {team.label}
+              <span className="font-normal text-muted"> · {team.names}</span>
+            </p>
+            {team.warnings.filter((warning) => !shared.includes(warning)).map(caution)}
+          </li>
+        ))}
+      </ul>
+      {shared.map(caution)}
+    </div>
   );
 }

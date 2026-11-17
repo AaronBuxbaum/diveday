@@ -79,7 +79,7 @@ describe("the decompression reminder on the roster (H-20261017-decompression-dep
 
 describe("the guests ledger (slice 5d)", () => {
   /**
-   * **The bands are the Divers tab's second level** (UX review 2026-10-13,
+   * **The bands are the Trip page's second level** (UX review 2026-10-13,
    * item 39). The departure page draws the roster under its own H1 with no
    * summary heading, and the bands were H3: a screen reader moving by level
    * found nothing at 2 on the page the desk uses most.
@@ -107,7 +107,10 @@ describe("the guests ledger (slice 5d)", () => {
     const note = screen.getByText("Asked for a word with the divemaster.");
     expect(note).toBeVisible();
     expect(note.className).not.toMatch(/text-(danger|warning)/);
-    expect(screen.getByRole("heading", { name: /Yara Halabi|Wen Ito/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Yara Halabi" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     expect(screen.queryByRole("heading", { name: /^Ready ·/ })).toBeNull();
   });
 
@@ -118,7 +121,7 @@ describe("the guests ledger (slice 5d)", () => {
   });
 
   /**
-   * **A finished departure's Divers tab is its record** (UX review
+   * **A finished departure's Trip page is its record** (UX review
    * 2026-10-10, item 10): "Sailed" and "Didn't sail", never "Still to clear",
    * "Ready" or a Blocked capsule on a boat that is home.
    */
@@ -221,43 +224,6 @@ describe("the guests ledger (slice 5d)", () => {
     expect(screen.queryByText("Blocked")).toBeNull();
   });
 
-  it("makes add diver the terminal ledger group, including on an empty roster", () => {
-    const { container } = renderRoster({
-      roster: [],
-      readiness: new Map() as ReadinessByBooking,
-      waivers: new Map() as WaiverByBooking,
-      addDiverGroup: <p data-testid="add-diver-form">Find a returning diver</p>,
-    });
-
-    const addDiver = container.querySelector("#add-diver");
-    expect(addDiver).not.toBeNull();
-    expect(
-      within(addDiver as HTMLElement).getByRole("heading", { name: "Add a booking" }),
-    ).toBeVisible();
-    expect(within(addDiver as HTMLElement).getByTestId("add-diver-form")).toBeVisible();
-    expect(screen.queryByText("No one on this boat yet")).toBeNull();
-  });
-
-  /**
-   * The add-diver group sits between its band and the card's bottom edge at
-   * one inset (pixel-craft class 5, K-164). Its wrapper was `pt-3 pb-5`, and
-   * the search row's own `mt-4` made the top 28px against 20px below on every
-   * trip capture; `AddDiverSection` now brings no margin, so the wrapper owns
-   * both sides.
-   */
-  it("insets the add-diver group equally under its band and above the card's edge", () => {
-    renderRoster({
-      roster: [],
-      readiness: new Map() as ReadinessByBooking,
-      waivers: new Map() as WaiverByBooking,
-      addDiverGroup: <p data-testid="add-diver-form">Find a returning diver</p>,
-    });
-
-    const wrapper = screen.getByTestId("add-diver-form").parentElement;
-    expect(wrapper).toHaveClass("py-5");
-    expect(wrapper?.className).not.toMatch(/(^|\s)(pt|pb)-/);
-  });
-
   /**
    * A cleared seat with no notes and no arrival has nothing to put at the end
    * of its name line, and the pixel probe found the trailing slot rendered
@@ -305,12 +271,12 @@ describe("the roster's row geometry", () => {
         ["a", signedWaiver],
         ["r", signedWaiver],
       ]) as WaiverByBooking,
+      phase: "ready",
     });
 
     const blocker = screen.getByText("No certification is on file for this trip.");
     expect(blocker).toBeVisible();
     expect(blocker.closest("details")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "All guests" }));
     fireEvent.click(screen.getByRole("button", { name: "Olga Rust" }));
     const warning = screen.getByText(/^Last dived/);
     expect(warning).toBeVisible();
@@ -341,15 +307,17 @@ describe("the roster's row geometry", () => {
    * first, like the name's own wrap (they right-aligned to the mark's edge, 6px
    * off the name, on no shared edge).
    */
-  it("gives the selected guest one name and keeps reference secondary to every remedy", () => {
-    const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
+  it("opens the guest in place with one name, every remedy before the facts", () => {
+    const { container } = renderRoster({ ...fixtures, selectedBookingId: null, phase: "ready" });
     fireEvent.click(screen.getByRole("button", { name: blocked.person.fullName }));
     expect(screen.getAllByText(blocked.person.fullName)).toHaveLength(1);
-    expect(screen.getByText("No certification is on file for this trip.")).toBeVisible();
-    expect(screen.getByRole("link", { name: /Review certifications/ })).toBeVisible();
-    const reference = container.querySelector('details[id^="guest-reference-"]');
-    expect(reference).not.toHaveAttribute("open");
-    expect(screen.getByText(blocked.person.email as string)).not.toBeVisible();
+    const remedy = screen.getByRole("link", { name: /Review certifications/ });
+    const facts = screen.getByText("If needed");
+    expect(remedy).toBeVisible();
+    expect(facts).toBeVisible();
+    // Fixes first, then facts.
+    expect(remedy.compareDocumentPosition(facts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelector('details[id^="guest-reference-"]')).toBeNull();
   });
 
   /**
@@ -473,7 +441,10 @@ describe("the one-line row", () => {
       requiresPayment: true,
     });
 
-    expect(screen.getByRole("heading", { name: /Yara Halabi|Wen Ito/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Wen Ito" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     expect(screen.getByText("Waiver not signed yet")).toBeVisible();
     expect(screen.getByText("Not paid yet")).toBeVisible();
   });
@@ -549,7 +520,10 @@ it("keeps readiness neutral for a booked diver already boarded without counter c
     roster: [ready],
     arrival: { controls: new Map(), below: new Map(), boarded: new Set([ready.booking.id]) },
   });
-  expect(screen.getByRole("heading", { name: ready.person.fullName })).toBeVisible();
+  expect(screen.getByRole("button", { name: ready.person.fullName })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
   expect(screen.queryByRole("heading", { name: /To arrive/ })).toBeNull();
 });
 
@@ -567,6 +541,7 @@ describe("the guest folio workflow", () => {
       ...fixtures,
       roster: [confirmed, hidden],
       selectedBookingId: null,
+      phase: "ready",
     });
     expect(container.querySelector('img[src^="/api/person-photos/"]')).not.toBeNull();
     expect(container.querySelector('img[src*="june.webp"]')).toBeNull();
@@ -584,24 +559,28 @@ describe("the guest folio workflow", () => {
     const { container } = renderRoster({
       ...fixtures,
       roster: [confirmed, held],
+      // Readiness holds a held seat (`calculateReadiness`), so it is a fix.
+      readiness: new Map([
+        ...fixtures.readiness,
+        [held.booking.id, readinessRow("blocked", [{ code: "identity_unconfirmed" }])],
+      ]) as ReadinessByBooking,
       selectedBookingId: null,
+      phase: "ready",
     });
     expect(container.querySelector('img[src*="priya.webp"]')).not.toBeNull();
     expect(container.querySelector('img[src*="june.webp"]')).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "June Park" }));
     expect(container.querySelector('img[src*="june.webp"]')).toBeNull();
     expect(screen.getByText("JP")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: /All guests/ }));
     fireEvent.click(screen.getByRole("button", { name: "Priya Sharma" }));
     expect(container.querySelector('img[src*="priya.webp"]')).not.toBeNull();
   });
 
   it("starts with named guest choices and opens each blocker beside its remedy", () => {
-    const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
-    expect(screen.getByRole("heading", { name: "Who’s coming" })).toBeVisible();
+    const { container } = renderRoster({ ...fixtures, selectedBookingId: null, phase: "ready" });
+    expect(screen.getByRole("region", { name: "Guests" })).toBeVisible();
     expect(screen.getByRole("button", { name: blocked.person.fullName })).toBeVisible();
-    expect(screen.getByRole("button", { name: ready.person.fullName })).toBeVisible();
-    expect(container.querySelector("li#booking-a")).toBeNull();
+    expect(container.querySelector("[data-opened-guest]")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: blocked.person.fullName }));
     const folio = container.querySelector("li#booking-a") as HTMLElement;
     expect(within(folio).getByText("No certification is on file for this trip.")).toBeVisible();
@@ -609,10 +588,35 @@ describe("the guest folio workflow", () => {
       "href",
       `/shop/blue-mantis/divers/${blocked.person.id}#cards`,
     );
-    expect(within(folio).getByRole("link", { name: "Review fit" })).toHaveAttribute(
+    expect(within(folio).getByRole("link", { name: "Set sizes" })).toHaveAttribute(
       "href",
       `/shop/blue-mantis/divers/${blocked.person.id}#gear`,
     );
-    expect(screen.getByRole("button", { name: "Next guest needing attention" })).toBeVisible();
+    expect(within(folio).getByRole("button", { name: "Close" })).toBeVisible();
+  });
+});
+
+/**
+ * **A cancelled trip has nothing to make ready** (layer E): its guests are
+ * listed as booked, with no "Can't board yet" and no remedy to chase.
+ */
+describe("a cancelled trip's guests", () => {
+  it("lists who was booked with no readiness to fix", () => {
+    renderRoster({
+      phase: "listed",
+      roster: [entry("g", "Gus Lin"), entry("m", "Meera Iyer")],
+      readiness: new Map([
+        ["g", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+        ["m", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      selectedBookingId: null,
+    });
+    expect(screen.queryByText("Can’t board yet")).toBeNull();
+    expect(screen.queryByText("No certification is on file for this trip.")).toBeNull();
+    const booked = screen.getByText("Booked").closest("section") as HTMLElement;
+    fireEvent.click(within(booked).getByRole("button", { expanded: false }));
+    expect(screen.getByRole("button", { name: "Gus Lin" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Meera Iyer" })).toBeVisible();
   });
 });

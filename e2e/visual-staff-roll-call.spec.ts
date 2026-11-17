@@ -7,15 +7,18 @@
 import { AT_SEA_DAY_TITLE } from "../src/db/seed-identifiers";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  addFoundGuest,
   manifestRow,
   offlineCopySaved,
   openDeckDetails,
   openDeckPerson,
+  openDiveLog,
   openManifestPerson,
   openRosterDetails,
   openRosterNotes,
-  openTripAbout,
+  openTripAboutRow,
   openTripFromBoard,
+  openTripPhase,
   openTripTab,
   rosterRow,
   seededTripId,
@@ -57,6 +60,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Night Dive — City of Washington");
         await openTripTab(page, "Trip");
+        // The held seat leads the list, and opened says why.
+        await rosterRow(page, "June Park");
         await page
           .getByText("Booked as Hana Park, then matched to June Park from the name list.")
           .first()
@@ -218,26 +223,18 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the manifest's plan-change fields render true to the design (${scheme})`, async ({
         page,
+        request,
       }) => {
-        // Board → trip → Manifest, then a checkpoint switch and a disclosure.
+        // The dive log lives on the Trip page, On the water (ADR
+        // 20261117-trip-page-clock): a boat out with dive 1 counted.
         test.setTimeout(FLOW_TIMEOUT_MS);
-        await openReefTrip(page);
-        await openTripTab(page, "Manifest");
-        await openDeckDetails(page);
-        await offlineCopySaved(page);
-        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\/manifest/)?.[1];
-        if (!tripId) throw new Error("The reef trip manifest must identify its trip");
-        const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "after_dive_1" });
-        await page
-          .getByRole("link", { name: "After dive 1" })
-          .evaluate((link: HTMLElement) => link.click());
-        await page.waitForURL(/checkpoint=after_dive_1/);
-        await openDeckDetails(page);
-        // The log's own summary line, which only this checkpoint renders.
-        await page.getByText("Dive 1 — not recorded yet").click();
+        const { boatOnTheWater } = (await seedFacts(request, [
+          { name: "boatOnTheWater", state: "outstanding" },
+        ])) as { boatOnTheWater: { tripId: string } };
+        await page.goto(`/shop/blue-mantis/trips/${boatOnTheWater.tripId}`);
+        const log = await openDiveLog(page, boatOnTheWater.tripId, 1);
         // Waits on a control the open form renders and the closed one does not.
-        await page.getByLabel("Why the plan changed").waitFor();
-        await confirmed;
+        await log.getByLabel("Why the plan changed").waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-plan-change", scheme);
       });
@@ -505,14 +502,13 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
-        await page.getByRole("link", { name: "The day", exact: true }).click();
-        await expect(page).toHaveURL(/view=details/);
+        await openTripPhase(page, "ready");
         const panel = page.locator("section", {
           has: page.getByRole("heading", { name: "Buddy teams" }),
         });
         // The panel rests collapsed behind its summary line — the capture is
         // of the panel itself, so open it the way a staffer would.
-        await page.getByRole("heading", { name: "Buddy teams" }).click();
+        await panel.locator("summary").first().click();
         await expect(panel.getByText("Keiko Tanaka (crew)", { exact: true })).toBeVisible();
         await panel.scrollIntoViewIfNeeded();
         await capture(page, "manifest-buddy-teams-panel", scheme);
@@ -562,14 +558,18 @@ for (const scheme of ["light", "dark"] as const) {
 
         await openReefTrip(page);
         await openTripTab(page, "Trip");
-        const warning = page
-          .getByText(
-            staffCopy("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }),
-            { exact: false },
-          )
-          .first();
-        await expect(warning).toBeVisible();
-        await expect(warning).toContainText(staffCopy("trips.roster.depthVerificationCard"));
+        // At Check-in the depth check rides each guest's own row among their
+        // other reasons; the whole sentence is on the guest opened from it.
+        await expect(
+          page
+            .locator('[data-fix-group="toCome"] li')
+            .filter({ hasText: staffCopy("trips.fixList.reason.depth") })
+            .first(),
+        ).toBeVisible();
+        const june = await rosterRow(page, "June Park");
+        await expect(
+          june.getByText(staffCopy("trips.roster.depthVerificationCard"), { exact: false }),
+        ).toBeVisible();
         await capture(page, "trip-guests-depth-warning", scheme);
       });
 
@@ -630,7 +630,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Diego Alvarez is on file with a verified Open Water card and nothing
         // above it, so the refusal can only be about the rung.
         await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Diego+Alvarez`);
-        await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
+        await addFoundGuest(page, "Diego Alvarez");
         await page.getByText("This charter requires Advanced Open Water.").waitFor();
         await capture(page, "trip-guests-refusal-level", scheme);
       });
@@ -643,7 +643,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Odile Marchand holds a verified Instructor card — the top rung — and
         // no specialty card at all, so nothing about her level can explain it.
         await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Odile+Marchand`);
-        await page.getByRole("button", { name: "Add Odile Marchand to the trip" }).click();
+        await addFoundGuest(page, "Odile Marchand");
         await page.getByText("This charter requires a Deep certification.").waitFor();
         await capture(page, "trip-guests-refusal-card", scheme);
       });
@@ -663,8 +663,14 @@ for (const scheme of ["light", "dark"] as const) {
         // A board crawl out to the day-29 session, then the capture.
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
-        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-        await openTripAbout(page);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling`);
+        const courseAdmission = staffCopy("trips.clock.filling.courseCard", {
+          level: staffCopy("shared.readiness.certificationLevels.openWater"),
+        });
+        await expect(page.getByText(courseAdmission).first()).toBeVisible();
+        await capture(page, "trip-filling-course-admission", scheme);
+        await openTripAboutRow(page, "Who can book");
+        await expect(page.locator("details#requirements")).toContainText(courseAdmission);
         await page
           .locator("details#requirements")
           .getByText(/never blocks? enrollment/)

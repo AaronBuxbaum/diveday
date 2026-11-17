@@ -220,7 +220,7 @@
   sentence, with no link; a current release standing over an earlier refusal or an open referral
   (H-20261007-after-physician-says-no as amended) carries the manifest's warning and a link to the record. Its return can **pull
   units for service** the way a departure's does (issue #2345).
-  Trip-scoped reads (prep, manifests) never count one; a departure's Gear tab names the units a
+  Trip-scoped reads (prep, manifests) never count one; a departure's Gear page names the units a
   booked diver holds on one over its window. ADR 20260815-minimal-gear-register, amendment
   2026-10-08.
 - **Rental terms** — the shop's own plain-text conditions for rented gear (`shops.rental_terms`,
@@ -246,7 +246,7 @@
   every picker row, with a "check before air" caution on an air diver's. It never gates: any free regulator can still be
   assigned to anyone, because most agencies accept a standard regulator up to 40%, and a refusal
   here would be a boarding gate in disguise.
-- **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
+- **Gear proposal** — the unit the Gear page offers for a piece a diver wants, so staff confirm
   instead of choose (`proposeRentalUnits`, `src/features/gear-proposals/rules.ts`). A proposal is never a
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
   Assign, and the exclusion constraint still decides availability at write time. A sized kind is
@@ -333,7 +333,7 @@
   from, so dropping them arrives a BCD short with nothing to fit them from — but the **size** comes
   off, reading "fit at check-in", and they're named in their own "fit these divers at check-in"
   section, along with the sizes they asked for — the captain doing the fit can't edit the profile
-  and needs somewhere to start. On the Gear tab a flagged diver still gets a picker for each piece, opened
+  and needs somewhere to start. On the Gear page a flagged diver still gets a picker for each piece, opened
   empty and never proposed, so their unit is still reserved through the register. Pieces with no size column are untouched by the flag; so are weights (lead is bulk stock, never a size to be short of, and usual weighting is
   the fit's most safety-relevant number) and tanks, since gas is never sized. Distinct from both "own kit" and "not asked yet" on
   a roster/manifest line, and sticky: editing sizes never clears it, only an explicit resolve does.

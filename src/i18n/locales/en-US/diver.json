@@ -881,6 +881,20 @@
       "litter_items": "{quantity} litter items collected",
       "line_m": "{quantity} m of fishing line removed",
       "lionfish_count": "{quantity} lionfish removed"
+    },
+    "profile": {
+      "heading": "From your dive computer",
+      "diveN": "Dive {n}",
+      "maxDepth": "Max depth",
+      "avgDepth": "Average depth",
+      "diveTime": "Dive time",
+      "coldest": "Coldest water",
+      "minutesValue": "{minutes} min",
+      "max": "Max {depth}",
+      "stop": "Safety stop · {minutes} min",
+      "axisMinutes": "min",
+      "headingCrew": "What your dive looked like",
+      "crewNote": "From the crew’s computer, so yours may differ a little."
     }
   },
   "register": {
@@ -4015,9 +4029,14 @@
       "visits": "Your 3rd dive day",
       "boatLabel": "Boat",
       "sitesLabel": "Sites",
-      "conditionsLabel": "Conditions",
       "reviewAsk": "How was your day?",
-      "reviewSubmit": "Leave my review"
+      "reviewSubmit": "Leave my review",
+      "photosHeading": "Photos from the boat",
+      "maxDepthLabel": "Max depth",
+      "avgDepthLabel": "Average",
+      "diveTimeLabel": "Dive time",
+      "waterLabel": "Water",
+      "depthHeading": "Depth over time"
     },
     "import": {
       "label": "Import preview",
@@ -4128,17 +4147,16 @@
       "signature": "Your signature",
       "typeFullName": "Type your full name",
       "agreement": "I have read this waiver, understand it, and agree to it.",
-      "signButton": "Sign waiver"
+      "signButton": "Sign waiver",
+      "progressDone": "3 of 3 done",
+      "signedDone": "Signed. You’re all set."
     },
     "arrivalDesk": {
-      "label": "Divers",
+      "label": "Guests",
       "hereOf": "<figure>{here}</figure> of {expected} here",
-      "remainder": "1 to come · 1 diver can’t board yet",
-      "remainderCleared": "1 diver can’t board yet",
-      "stillToClear": "Still to clear · {count}",
-      "ready": "Ready · {count}",
-      "checkedInGroup": "Checked in · {count}",
-      "blocked": "Blocked",
+      "stillToClear": "Can’t board yet · {count}",
+      "ready": "To come · {count}",
+      "checkedInGroup": "Here · {count}",
       "heldReason": "Booked as {bookedAs}, then matched to {name} from the name list. Confirm who this is.",
       "samePerson": "Same person",
       "differentPerson": "Different person",
@@ -4212,7 +4230,8 @@
       "refunded": "Refunded",
       "amountReef": "$95.00",
       "amountWreck": "$145.00",
-      "amountCounter": "$30.00"
+      "amountCounter": "$30.00",
+      "dayMetaWaiting": "3 orders · $270.00"
     },
     "scheduleWeek": {
       "label": "Schedule",
@@ -4235,6 +4254,31 @@
       "seats": "{booked} of {capacity}",
       "add": "Add",
       "rowActions": "Move, copy, or remove"
+    },
+    "youreBooked": "You’re booked",
+    "nudgeSent": "Nudge sent",
+    "cardCheck": {
+      "label": "Diver",
+      "heading": "Certifications",
+      "selfDeclared": "Self-declared. Card not sighted yet.",
+      "confirm": "Confirm certification",
+      "certifiedBy": "Certified by {name}"
+    },
+    "computerDives": {
+      "label": "Computer dives",
+      "previewHeading": "Review dives",
+      "historyHeading": "Imported history",
+      "depth": "Maximum depth",
+      "duration": "Duration",
+      "gas": "Gas",
+      "air": "Air",
+      "import": "Import selected dives",
+      "imported": "Imported"
+    },
+    "diveProfile": {
+      "stop": "Safety stop · {minutes} min",
+      "max": "Max {depth}",
+      "minutes": "min"
     }
   },
   "demo": {

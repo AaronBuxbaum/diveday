@@ -150,12 +150,20 @@ export function BookingCardFallback({ locale }: { locale: DiverLocale }) {
  * the guardian's line. From a 448px panel the form and the signature stand
  * side by side; the page itself is one column.
  */
-export function WaiverSigningFallback({ locale }: { locale: DiverLocale }) {
+export function WaiverSigningFallback({
+  locale,
+  state = "open",
+}: {
+  locale: DiverLocale;
+  /** `signed` is the page a tap later, for the homepage walkthrough (Priya taps Sign waiver). */
+  state?: "open" | "signed";
+}) {
   const t = diverTranslator(locale);
+  const signed = state === "signed";
   const steps = [
     { label: t("fallback.waiverSigning.railRelease"), done: true },
     { label: t("fallback.waiverSigning.railMedical"), done: true },
-    { label: t("fallback.waiverSigning.railSign"), done: false },
+    { label: t("fallback.waiverSigning.railSign"), done: signed },
   ];
   return (
     <div className="bg-background">
@@ -175,7 +183,9 @@ export function WaiverSigningFallback({ locale }: { locale: DiverLocale }) {
               </li>
             ))}
           </ol>
-          <p className="text-xs text-muted tabular-nums">{t("fallback.waiverSigning.progress")}</p>
+          <p className="text-xs text-muted tabular-nums">
+            {t(signed ? "fallback.waiverSigning.progressDone" : "fallback.waiverSigning.progress")}
+          </p>
         </div>
         {locale === DEFAULT_DIVER_LOCALE ? null : (
           <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-xs text-warning-strong">
@@ -233,9 +243,24 @@ export function WaiverSigningFallback({ locale }: { locale: DiverLocale }) {
               <StatusMarkColumn variant="checked" className="text-primary" />
               <span>{t("fallback.waiverSigning.agreement")}</span>
             </p>
-            <button type="button" disabled className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}>
-              {t("fallback.waiverSigning.signButton")}
-            </button>
+            {signed ? (
+              <p
+                data-walk-pop=""
+                className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-lg bg-success-tint text-sm font-semibold text-success-strong"
+              >
+                <StatusMark variant="success" size="md" />
+                {t("fallback.waiverSigning.signedDone")}
+              </p>
+            ) : (
+              <button
+                type="button"
+                disabled
+                data-tap-target=""
+                className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}
+              >
+                {t("fallback.waiverSigning.signButton")}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -569,15 +594,27 @@ export function CoursePageFallback({ locale }: { locale: DiverLocale }) {
  * (`LedgerRow`'s `stacked`), where a 290px panel has no room for both; the
  * page keeps them on one line at a phone's full width.
  */
-export function OrdersLedgerFallback({ locale }: { locale: DiverLocale }) {
+export function OrdersLedgerFallback({
+  locale,
+  state = "paid",
+}: {
+  locale: DiverLocale;
+  /**
+   * `waiting` is the day before Priya's booking lands: her row is not there
+   * yet. `paid` (the default) is the day with it, paid, which says nothing.
+   */
+  state?: "waiting" | "paid";
+}) {
   const t = diverTranslator(locale);
-  const rows = [
+  const waiting = state === "waiting";
+  const allRows = [
     {
       // i18n-exempt: sample diver name used only in marketing mockups
       diver: "Priya Sharma",
       detail: t("fallback.tripName"),
       status: null,
       amount: t("fallback.ordersLedger.amountReef"),
+      arrives: true,
     },
     {
       // i18n-exempt: sample diver name used only in marketing mockups
@@ -599,8 +636,10 @@ export function OrdersLedgerFallback({ locale }: { locale: DiverLocale }) {
       detail: t("fallback.tripName"),
       status: { word: t("fallback.ordersLedger.refunded"), tone: "warning" as const },
       amount: t("fallback.ordersLedger.amountReef"),
+      arrives: false,
     },
   ];
+  const rows = allRows.filter((row) => !(waiting && row.arrives));
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.ordersLedger.label")} />
@@ -614,7 +653,9 @@ export function OrdersLedgerFallback({ locale }: { locale: DiverLocale }) {
         <LedgerGroup
           as="h3"
           label={t("fallback.ordersLedger.today")}
-          meta={t("fallback.ordersLedger.dayMeta")}
+          meta={t(
+            waiting ? "fallback.ordersLedger.dayMetaWaiting" : "fallback.ordersLedger.dayMeta",
+          )}
           className="mt-4"
         >
           <ul>
@@ -629,7 +670,10 @@ export function OrdersLedgerFallback({ locale }: { locale: DiverLocale }) {
                         {row.status.word}
                       </Badge>
                     ) : null}
-                    <span className="min-w-16 text-end text-sm font-semibold tabular-nums">
+                    <span
+                      data-walk-pop={row.arrives ? "" : undefined}
+                      className="min-w-16 text-end text-sm font-semibold tabular-nums"
+                    >
                       {row.amount}
                     </span>
                     <DoorChevron />

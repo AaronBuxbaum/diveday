@@ -881,6 +881,20 @@
       "litter_items": "{quantity} objetos recogidos",
       "line_m": "{quantity} m de sedal recogido",
       "lionfish_count": "Peces león recolectados: {quantity}"
+    },
+    "profile": {
+      "heading": "De tu computadora de buceo",
+      "diveN": "Inmersión {n}",
+      "maxDepth": "Profundidad máxima",
+      "avgDepth": "Profundidad media",
+      "diveTime": "Tiempo de inmersión",
+      "coldest": "Agua más fría",
+      "minutesValue": "{minutes, plural, one {# minuto} other {# minutos}}",
+      "max": "Máx. {depth}",
+      "stop": "Parada de seguridad · {minutes} min",
+      "axisMinutes": "minutos",
+      "headingCrew": "Cómo fue tu inmersión",
+      "crewNote": "De la computadora del equipo, así que la tuya puede variar un poco."
     }
   },
   "register": {
@@ -4015,9 +4029,14 @@
       "visits": "Tu 3.er día de buceo",
       "boatLabel": "Barco",
       "sitesLabel": "Sitios",
-      "conditionsLabel": "Condiciones",
       "reviewAsk": "¿Qué tal tu día?",
-      "reviewSubmit": "Enviar mi opinión"
+      "reviewSubmit": "Enviar mi opinión",
+      "photosHeading": "Fotos desde el barco",
+      "maxDepthLabel": "Profundidad máx.",
+      "avgDepthLabel": "Promedio",
+      "diveTimeLabel": "Tiempo",
+      "waterLabel": "Agua",
+      "depthHeading": "Profundidad a lo largo del tiempo"
     },
     "import": {
       "label": "Vista previa de importación",
@@ -4128,17 +4147,16 @@
       "signature": "Tu firma",
       "typeFullName": "Escribe tu nombre completo",
       "agreement": "He leído esta exención, la entiendo y estoy de acuerdo con ella.",
-      "signButton": "Firmar exención"
+      "signButton": "Firmar exención",
+      "progressDone": "3 de 3 listos",
+      "signedDone": "Firmado. Todo listo."
     },
     "arrivalDesk": {
-      "label": "Buceadores",
+      "label": "Huéspedes",
       "hereOf": "<figure>{here}</figure> de {expected} aquí",
-      "remainder": "1 por llegar · 1 buceador todavía no puede embarcar",
-      "remainderCleared": "1 buceador todavía no puede embarcar",
-      "stillToClear": "Pendientes de resolver · {count}",
-      "ready": "Listos · {count}",
-      "checkedInGroup": "Registrados · {count}",
-      "blocked": "Bloqueado",
+      "stillToClear": "Aún no puede embarcar · {count}",
+      "ready": "Por llegar · {count}",
+      "checkedInGroup": "Aquí · {count}",
       "heldReason": "Reservó como {bookedAs} y se asoció a {name} desde la lista de nombres. Confirma quién es.",
       "samePerson": "Misma persona",
       "differentPerson": "Otra persona",
@@ -4212,7 +4230,8 @@
       "refunded": "Reembolsado",
       "amountReef": "95,00 US$",
       "amountWreck": "145,00 US$",
-      "amountCounter": "30,00 US$"
+      "amountCounter": "30,00 US$",
+      "dayMetaWaiting": "3 pedidos · 270,00 US$"
     },
     "scheduleWeek": {
       "label": "Agenda",
@@ -4235,6 +4254,31 @@
       "seats": "{booked} de {capacity}",
       "add": "Agregar",
       "rowActions": "Mover, copiar o quitar"
+    },
+    "youreBooked": "Reserva confirmada",
+    "nudgeSent": "Recordatorio enviado",
+    "cardCheck": {
+      "label": "Buceador",
+      "heading": "Certificaciones",
+      "selfDeclared": "Declarada por ella. Tarjeta aún sin ver.",
+      "confirm": "Confirmar certificación",
+      "certifiedBy": "Certificada por {name}"
+    },
+    "computerDives": {
+      "label": "Inmersiones de la computadora",
+      "previewHeading": "Revisar inmersiones",
+      "historyHeading": "Historial importado",
+      "depth": "Profundidad máxima",
+      "duration": "Duración",
+      "gas": "Mezcla",
+      "air": "Aire",
+      "import": "Importar las inmersiones elegidas",
+      "imported": "Importada"
+    },
+    "diveProfile": {
+      "stop": "Parada de seguridad · {minutes} min",
+      "max": "Máx. {depth}",
+      "minutes": "minutos"
     }
   },
   "demo": {

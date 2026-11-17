@@ -129,13 +129,15 @@ test("a diver blocked on the spine is the same diver waiting at the counter", as
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
 
-  // The counter is each departure's own Divers tab once its arrivals open, and
+  // The counter is each departure's Check-in once its arrivals open, and
   // the way to it from Today is the arrival lookup — the desk types the name it
   // was given.
   await openCounterFor(page, "blue-mantis", "Priya Sharma");
-  await expect(page.getByRole("heading", { name: "Priya Sharma", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "All guests", exact: true }).click();
-  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  // The match lands with her opened in place, under the desk's count.
+  await expect(
+    page.getByRole("button", { name: "Priya Sharma", exact: true, expanded: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/^\d+ of \d+ here\b/)).toBeVisible();
   await expect(await rosterRow(page, "Priya Sharma")).toBeVisible();
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
 

@@ -272,7 +272,7 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
  *
  * Why each one:
  *
- * - `trip-desk` — a departure's Divers tab with its arrivals open, the
+ * - `trip-desk` — a departure's Trip page with its arrivals open, the
  *   counter. The front desk is a tablet on a stand and nothing else.
  * - `manifest` — worked at the rail in a dry case.
  * - `schedule-builder` — a dense two-column board a shop keeps open on

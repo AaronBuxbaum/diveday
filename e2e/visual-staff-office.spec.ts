@@ -539,7 +539,7 @@ for (const scheme of ["light", "dark"] as const) {
         const row = await rosterRow(page, "Priya Sharma");
         await openRosterDetails(row);
         await openBookingActions(row);
-        await row.locator("summary", { hasText: "Move to another departure" }).click();
+        await row.locator("summary", { hasText: "Move to another trip" }).click();
         await row.getByLabel("Departure").waitFor();
         await row.getByRole("button", { name: "Move", exact: true }).scrollIntoViewIfNeeded();
         await expect(row.getByLabel("Departure")).toHaveValue("");

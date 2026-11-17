@@ -65,7 +65,7 @@ describe("crew rostered while away", () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.detail).toContain(`${instructor.fullName} is away`);
-    expect(rows[0]?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}?view=details#crew`);
+    expect(rows[0]?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}?view=edit#crew`);
     expect(rows[0]?.staffPersonId).toBe(instructor.id);
     // The week line counts the people these rows name (issue #2671).
     expect(rows[0]?.crewAway?.people).toEqual([

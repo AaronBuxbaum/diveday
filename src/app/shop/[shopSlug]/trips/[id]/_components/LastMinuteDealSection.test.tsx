@@ -34,7 +34,7 @@ function renderSection(props: Partial<Parameters<typeof LastMinuteDealSection>[0
 /**
  * The Details tab keeps the deals this departure sent and a door to the Divers
  * tab's panel; the sender, its recipient list and its hold live there
- * (`WhoWantsInPanel`).
+ * (`FillSeatsCard`).
  */
 describe("LastMinuteDealSection", () => {
   it("lists the deals sent: the discount, the code and how it ended", () => {
@@ -54,7 +54,7 @@ describe("LastMinuteDealSection", () => {
     renderSection();
     expect(screen.getByRole("link", { name: "Offer a seat with a discount" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/trip-1#who-wants-in",
+      "/shop/blue-mantis/trips/trip-1?phase=filling#who-wants-in",
     );
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByRole("checkbox")).toBeNull();

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { TripAboutSection, TripMoreDisclosure } from "./TripAboutSection";
+import { TripAboutSection } from "./TripAboutSection";
 
 afterEach(cleanup);
 
@@ -126,62 +126,5 @@ describe("Trip About panel", () => {
     const row = screen.getByRole("group", { name: "The plan" });
     expect(row.tagName).toBe("DETAILS");
     expect(row.id).toBe("details");
-  });
-});
-
-describe("TripMoreDisclosure", () => {
-  it("keeps the rare and destructive acts behind one closed row", () => {
-    render(
-      <TripMoreDisclosure label="More for this departure">
-        <button type="button">Cancel this departure</button>
-      </TripMoreDisclosure>,
-    );
-
-    expect(screen.getByText("More for this departure")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Cancel this departure" })).not.toBeVisible();
-  });
-
-  it("opens itself when one of its acts has an outcome to show", () => {
-    const { container } = render(
-      <TripMoreDisclosure label="More for this departure" open>
-        <button type="button">Cancel this departure</button>
-      </TripMoreDisclosure>,
-    );
-
-    expect(container.querySelector("details#about-more")).toHaveAttribute("open");
-  });
-
-  it("rings its summary inside the bordered foot group it sits in (A13)", () => {
-    const { container } = render(
-      <TripMoreDisclosure label="More for this departure">
-        <button type="button">Cancel this departure</button>
-      </TripMoreDisclosure>,
-    );
-
-    const more = container.querySelector("details#about-more > summary");
-    expect(more).not.toBeNull();
-    // The group clips its rows (`DisclosureRowList`), so the ring is drawn inside.
-    expect(more).toHaveClass("focus-visible:focus-ring-inset");
-    expect(more?.className).not.toMatch(/focus-visible:outline-/);
-  });
-
-  it("is a row of the foot group: no rule of its own, the shared caret at its end", () => {
-    const { container } = render(
-      <TripMoreDisclosure label="More for this departure">
-        <button type="button">Cancel this departure</button>
-      </TripMoreDisclosure>,
-    );
-    const more = container.querySelector("details#about-more");
-    expect(more?.className).not.toMatch(/border-/);
-    expect(more?.querySelector("summary > svg")).not.toBeNull();
-  });
-
-  it("is named by its label", () => {
-    render(
-      <TripMoreDisclosure label="More for this departure">
-        <span>Cancel departure</span>
-      </TripMoreDisclosure>,
-    );
-    expect(screen.getByRole("group", { name: "More for this departure" }).tagName).toBe("DETAILS");
   });
 });

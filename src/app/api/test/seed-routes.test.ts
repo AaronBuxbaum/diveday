@@ -353,6 +353,7 @@ const FACT_SAMPLES: Record<string, Record<string, unknown>> = {
   executedDepth: { unit: "feet", meters: 18.4404 },
   evening: { heads: "closed" },
   departTrip: { tripId: "trip-1", minutesAgo: 90 },
+  boatOnTheWater: { state: "outstanding" },
   offSeason: { opensInDays: 45 },
   pinAddedDate: { fullName: "Dana Diver" },
   returningDiver: { email: EMAIL },

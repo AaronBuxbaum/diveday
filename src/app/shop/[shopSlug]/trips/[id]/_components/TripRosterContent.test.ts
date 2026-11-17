@@ -25,9 +25,11 @@ describe("the roster's unmet-demand panel", () => {
   });
 });
 
-/** A cancelled departure has no seat to offer, so the panel is not drawn. */
-describe("the Who wants in panel", () => {
-  it("is left out on a cancelled departure", () => {
-    expect(SOURCE).toMatch(/whoWantsInGroup: guests\.cancelled \? null :/);
+/** A cancelled departure has no seat to offer, so Fill the last N is not drawn. */
+describe("the Fill the last N card", () => {
+  it("is drawn only while filling, and left out on a cancelled departure", () => {
+    expect(SOURCE).toMatch(
+      /context\.phase === "filling" && !guests\.cancelled \? \(\s*<FillSeatsCard/,
+    );
   });
 });

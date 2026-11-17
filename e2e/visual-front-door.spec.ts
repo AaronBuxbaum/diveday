@@ -11,6 +11,7 @@ import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages"
 import { publicFindMyBookingPath } from "../src/lib/public-routes";
 import { enrollSignInChallenge, startSignInChallenge } from "./auth-challenge";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openNewGuestForm } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 import { seedFacts } from "./shop-facts";
@@ -334,7 +335,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The walkthrough, one capture per beat: Priya booked, her open waiver, signed,
-      // ready, checked in, counted back aboard, and the recap.
+      // ready, her card confirmed, checked in, counted back aboard, her dive file imported, and the recap.
       // The beats are one theme's work, so the dark pass does not register the test.
       if (scheme === "light") {
         test(`the landing walkthrough shows each beat of one diver's day (${scheme})`, async ({
@@ -346,17 +347,22 @@ for (const scheme of ["light", "dark"] as const) {
           const next = page.getByRole("button", { name: t("marketing.home.walk.next") });
           await next.waitFor();
           for (const beat of [
+            "shopfront",
             "book",
+            "money",
             "unsigned",
             "sign",
-            "ready",
+            "check",
+            "card",
             "desk",
-            "boat",
+            "aboard",
+            "computer",
             "recap",
+            "review",
           ] as const) {
             await expect(page.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
             await capture(page, `landing-walk-${beat}`, scheme);
-            if (beat !== "recap") await next.click();
+            if (beat !== "review") await next.click();
           }
         });
       }
@@ -726,6 +732,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "switching-spreadsheet", scheme);
       });
 
+      test(`the alongside switching guide renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/switching/alongside");
+        await page
+          .getByRole("heading", { name: diverTranslator("en-US")("switching.alongside.title") })
+          .waitFor();
+        await capture(page, "switching-alongside", scheme);
+      });
+
       // The FareHarbor guide: the coexist-led variant of the composition, for a
       // booking channel a shop keeps rather than a records system it leaves —
       // the "keep it, or leave it" section (the ruled run-the-day list plus the
@@ -1076,7 +1092,7 @@ for (const scheme of ["light", "dark"] as const) {
         // second link to the departure itself.
         await page.locator('a[href*="?add=1"][aria-label*="Two-Tank Morning Reef"]').click();
         await page.waitForURL(/\/trips\/[^/?]+\?add=1/);
-        await page.getByRole("link", { name: "Add diver" }).click();
+        await openNewGuestForm(page);
         await page.waitForURL(/\/divers\?add=1&/);
         await page.getByLabel("Full name").fill("Marisol Vega");
         await page.getByLabel("Email", { exact: true }).fill(`marisol-${scheme}@example.com`);

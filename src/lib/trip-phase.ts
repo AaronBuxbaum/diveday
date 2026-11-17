@@ -10,7 +10,7 @@ import { shopDayBounds } from "./zoned";
  * 20261001-logbook.
  *
  * This is the staff page's orientation, never a word on screen: it decides
- * how a surface lays itself out (a departure that is Back shows its Divers tab
+ * how a surface lays itself out (a departure that is Back shows its Trip page
  * as a record), and which boats Today still counts as out. That is why it may
  * lean on the clock where `trip-stages.ts` may not. The word a chip prints is
  * {@link boatStageOf}'s, the crew's own tap, so Today, the header and the
@@ -111,7 +111,7 @@ export function tripPhaseOf({
  * Today's departure card, the departure header and the manifest's stage strip
  * all read this, so the three can never say different words about one boat.
  * The clock-derived phase above stays an orientation the page uses for its
- * own layout (a finished departure's Divers tab is a record); it is never
+ * own layout (a finished departure's Trip page is a record); it is never
  * printed, because "Aboard" from a clock is a claim about where people are
  * that nobody made.
  *
@@ -246,7 +246,7 @@ function earlierDayEnd(
  *
  * It is the one place the clock's phase reaches a word on screen, and it is
  * built not to compete with the stage. It never names a stage (it is not one
- * of the five boat words), it is said on the Divers tab only, where the desk
+ * of the five boat words), it is said on the Trip page only, where the desk
  * checks people in, and it goes silent the moment a crew tap speaks, so the
  * header's chip and this line can never both be talking. Before it the desk
  * had no word at all for its busiest half hour: the chip is silent until the
@@ -268,9 +268,9 @@ export function finalHomeSaid(input: Parameters<typeof tripPhaseOf>[0]): boolean
 /**
  * A departure page's readings of where the boat is, from one input: the
  * crew's word the header chip prints (`boatStageOf`), whether the departure is
- * finished, which turns its Divers tab into a record and stops its header
+ * finished, which turns its Trip page into a record and stops its header
  * counting seats (UX review 2026-10-10, items 1 and 10), whether the boat has
- * sailed (`departureSailed`), and whether the Divers tab says check-in is open
+ * sailed (`departureSailed`), and whether the Trip page says check-in is open
  * (`checkInOpen`).
  *
  * **A departure is not finished while the roll call still lacks a diver**

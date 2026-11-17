@@ -466,6 +466,10 @@ export async function crewMoveConflicts(
   return { clashes, away: names.map((row) => ({ ...row })) };
 }
 
+/** SQL rank of a per-trip role: captain, divemaster, instructor, other crew, then unspecified. */
+const tripCrewRoleRank = (column: typeof tripAssignments.tripRole) =>
+  sql`CASE ${column} WHEN 'captain' THEN 0 WHEN 'divemaster' THEN 1 WHEN 'instructor' THEN 2 WHEN 'crew' THEN 3 ELSE 4 END`;
+
 /**
  * A trip's crew with the job each is rostered to do on it (null = not
  * specified, ADR 20260803-per-trip-crew-role). Same tenancy proof as
@@ -502,7 +506,12 @@ export async function getTripCrewAssignmentsByTrip(
     })
     .from(tripAssignments)
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .where(and(inArray(tripAssignments.tripId, tripIds), eq(trips.shopId, shopId), liveTrip()));
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .where(and(inArray(tripAssignments.tripId, tripIds), eq(trips.shopId, shopId), liveTrip()))
+    // A bare join has no order, and the Trip page names the crew in this order,
+    // so a run of captures swapped the names. The job on the boat first (captain
+    // up front, unspecified last), then name, then id so namesakes hold still.
+    .orderBy(asc(tripCrewRoleRank(tripAssignments.tripRole)), asc(people.fullName), asc(people.id));
   for (const { tripId, personId, tripRole } of rows) {
     const crew = byTrip.get(tripId) ?? [];
     crew.push({ personId, tripRole });

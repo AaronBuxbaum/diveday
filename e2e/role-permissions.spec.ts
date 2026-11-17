@@ -126,14 +126,12 @@ test.describe("H-20260724-staff-role-reach role permissions", () => {
       // Crew editing is unconditional (no config-gated form around it), so its
       // presence for a captain is the row's own control, not a submit button.
       await expect(
-        page.getByRole("group", { name: "Boat & crew", exact: true }).locator(":scope > summary"),
+        page.getByRole("group", { name: "Crew", exact: true }).locator(":scope > summary"),
       ).toContainText("Edit");
-      // Cancelling the departure is one of the rare acts, in the panel's "More"
-      // list — still a captain's to reach.
+      // Cancelling the trip is one of the rare acts, on Edit trip's call-off
+      // card: still a captain's to reach.
       const more = await openTripMore(page);
-      await expect(
-        more.getByRole("button", { name: /Cancel (trip|this departure)/ }),
-      ).toBeVisible();
+      await expect(more.getByRole("button", { name: "Cancel this trip" })).toBeVisible();
     });
 
     /**
@@ -351,7 +349,7 @@ test.describe("H-20260724-staff-role-reach role permissions", () => {
       // The details form waits behind its Edit disclosure (summary-first
       // Overview) — the owner sees the toggle, and the form behind it.
       await openTripAbout(page);
-      await openTripAboutRow(page, "The plan");
+      await openTripAboutRow(page, "Plan");
       await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
     });
 

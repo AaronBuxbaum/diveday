@@ -38,7 +38,7 @@ export function pushCrewAwayRows(actions: TodayAction[], ctx: TodayRowsContext):
       aboutDeparture: true,
       detail: crewAwayDetailText(t, locale, away),
       actionLabel: openCrewActionText(t),
-      href: `/shop/${shopSlug}/trips/${trip.id}?view=details#crew`,
+      href: `/shop/${shopSlug}/trips/${trip.id}?view=edit#crew`,
       ...(away.length === 1 && away[0] ? { staffPersonId: away[0].personId } : {}),
       crewAway: {
         people: away.map((person) => ({ personId: person.personId, fullName: person.fullName })),

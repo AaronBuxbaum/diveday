@@ -57,7 +57,7 @@ export async function RentalTicketSheet({
       backHref={`${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`}
       paper={PACKET_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
-      backLabel={t("trips.tabs.gear")}
+      backLabel={t("trips.clock.gear")}
       printLabel={t("print.sheet.door")}
       // The packing list's door says "Rental ticket", not Print.
       autoPrint={false}

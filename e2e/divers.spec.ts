@@ -10,6 +10,7 @@ import {
   openDiverFileGroup,
   openIfClosed,
   openManifestPerson,
+  openNewGuestForm,
   openRosterDetails,
   openTripFromBoard,
   openTripTab,
@@ -229,8 +230,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
 
   const tripPath = await tripPathByTitle(page, SHOP, title);
   await page.goto(`${tripPath}`);
-  await page.getByRole("link", { name: "Add diver" }).click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
   await page.getByLabel("Full name").fill(diverName);
   await page.getByLabel("Email").fill(`contact-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -325,10 +325,11 @@ test("a Guests card shows an emergency contact only when it is missing", async (
     missing.locator("summary").filter({ hasText: /^Add emergency contact$/ }),
   ).toBeVisible();
 
-  // Tom Okafor has one on file. It must not be on the face of the card — but
-  // it must still be *on* the card, one tap away, not dropped.
+  // Tom Okafor has one on file. It is not on the list's face — but it is
+  // one tap away, on him opened, not dropped.
+  await page.goto(page.url().replace(/#.*$/, ""));
+  await expect(page.getByText(/Ngozi Okafor/)).toHaveCount(0);
   const onFile = await rosterRow(page, "Tom Okafor");
-  await expect(onFile.getByText(/Ngozi Okafor/)).toBeHidden();
   await openRosterDetails(onFile);
   await expect(onFile.getByText(/Ngozi Okafor/).filter({ visible: true })).toBeVisible();
 });

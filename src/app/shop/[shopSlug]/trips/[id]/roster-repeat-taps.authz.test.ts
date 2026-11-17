@@ -1,7 +1,8 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { setBookingPayment } from "@/db/payments";
 import { bookings, cards, courses, trips } from "@/db/schema";
+import { liveTrip } from "@/db/trips-live";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -74,11 +75,21 @@ describe("a second tap on Certify", () => {
       })
       .from(trips)
       .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
-      .innerJoin(courses, eq(courses.id, trips.courseId))
+      // A seat the roster's Certify can certify: a certifying course's diver
+      // whose identity is confirmed, picked in a fixed order. An unordered
+      // pick could land on an intro course or a passenger under load, and the
+      // second tap then read as a failure (flaked in a full run, 2026-11-17).
+      .innerJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.isIntroCourse, false)))
       .where(
-        and(eq(trips.shopId, shopId), isNotNull(trips.courseId), eq(courses.isIntroCourse, false)),
+        and(
+          eq(trips.shopId, shopId),
+          isNotNull(trips.courseId),
+          liveTrip(),
+          eq(bookings.participantType, "diver"),
+          isNull(bookings.identityUnconfirmedAt),
+        ),
       )
-      .orderBy(trips.id, bookings.id)
+      .orderBy(asc(trips.startsAt), asc(bookings.id))
       .limit(1);
     if (!seat?.courseId) throw new Error("seeded shop has no booked course session");
     return { ...seat, courseId: seat.courseId };

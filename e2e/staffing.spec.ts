@@ -1,7 +1,15 @@
 import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard, seededTripId } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openAddAGuest,
+  openNewGuestForm,
+  openTripFromBoard,
+  seededTripId,
+} from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 /**
@@ -205,8 +213,7 @@ test.describe("staffing", () => {
     // One diver aboard, and now the boat needs somebody in the water with them.
     const tripId = await seededTripId(page, "blue-mantis", title);
     await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
-    await page.getByRole("link", { name: "Add diver", exact: true }).click();
-    await page.waitForURL(/\/divers\?add=1/);
+    await openNewGuestForm(page);
     await page.getByLabel("Full name").fill("Waiting On Crew");
     await page.getByLabel("Email").fill("waiting-on-crew@example.com");
     await page.getByRole("button", { name: "Add to trip" }).click();
@@ -330,12 +337,12 @@ test.describe("a crew member asks to work a short-handed departure", () => {
       });
       await owner.goto("/shop/blue-mantis/schedule/board");
       await openTripFromBoard(owner, title);
-      // Inside the arrivals window "Add a diver" is one search field, and a
-      // booked seat is its empty result's "Add diver" (UX audit item 24).
-      const find = owner.getByRole("searchbox", { name: "Find a returning diver" });
+      // The add form is one search field, and a booked seat is its empty
+      // result's "Add a guest" (UX audit item 24).
+      const find = await openAddAGuest(owner);
       await find.fill("Needs A Divemaster");
       await find.press("Enter");
-      await owner.getByRole("link", { name: "Add diver", exact: true }).first().click();
+      await owner.getByRole("link", { name: "Add a guest", exact: true }).first().click();
       await owner.waitForURL(/\/divers\?add=1/);
       await owner.getByLabel("Full name").fill("Needs A Divemaster");
       await owner.getByLabel("Email").fill(`short-${e2eNow().getTime()}@example.com`);

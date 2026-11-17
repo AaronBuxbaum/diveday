@@ -7,7 +7,9 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openAddAGuest,
   openCantFillASize,
+  openNewGuestForm,
   openTripAbout,
   signInAs,
   signOut,
@@ -283,8 +285,7 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     // Fail open: a walk-in has no date on file — the same state every diver in
     // a live shop starts from — and books exactly as before.
     await page.goto(`${tripPath}`);
-    await page.getByRole("link", { name: "Add diver" }).click();
-    await page.waitForURL(/\/divers\?add=1/);
+    await openNewGuestForm(page);
     await page.getByLabel("Full name").fill(`Ageless Diver ${stamp}`);
     await page.getByLabel("Email").fill(`ageless-${stamp}@example.com`);
     await Promise.all([
@@ -297,7 +298,7 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     ]);
     await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: `Ageless Diver ${stamp}`, exact: true }),
+      page.getByRole("button", { name: `Ageless Diver ${stamp}`, exact: true, expanded: true }),
     ).toBeVisible();
   });
 
@@ -332,8 +333,8 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     await page.goto(`${tripPath}`);
     // Scope to the add-diver section: the picker is one of several boxes on
     // this page.
-    const addDiver = page.locator("#add-diver");
-    const search = addDiver.getByLabel("Find a returning diver");
+    const search = await openAddAGuest(page);
+    const addDiver = page.locator("#add-a-booking");
     await search.fill(`Young Diver ${stamp}`);
     await search.press("Enter");
     // The picker's button is labelled per diver ("Add <name> to the trip"),
@@ -356,7 +357,7 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     // durable, meaningful fact is that the booking itself was refused: nobody
     // is on this trip's roster (this test never adds the fail-open walk-in),
     // and the refused diver never appears in it.
-    await expect(page.locator("#roster")).toBeVisible();
+    await expect(page.locator("[data-phase-panel]")).toBeVisible();
     await expect(page.getByText(`Young Diver ${stamp}`)).toHaveCount(0);
   });
 

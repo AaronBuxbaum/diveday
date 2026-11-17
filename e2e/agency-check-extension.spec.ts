@@ -6,7 +6,13 @@ import path from "node:path";
 import { type BrowserContext, chromium, type Page } from "@playwright/test";
 import { chromiumExecutableOverride, DETERMINISTIC_RENDERING_ARGS } from "./browser";
 import { test as base, expect, makeActivitySafe } from "./fixtures";
-import { findTripOnBoard, openDiverFileGroup, openTripTab, rosterRow } from "./helpers";
+import {
+  addReturningGuest,
+  findTripOnBoard,
+  openDiverFileGroup,
+  openTripTab,
+  rosterRow,
+} from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
@@ -38,13 +44,6 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 async function showAllGuests(page: Page) {
   const all = page.getByRole("button", { name: "All guests", exact: true });
   if (await all.count()) await all.click();
-}
-
-async function waitForAddedGuest(page: Page, name: string) {
-  await showAllGuests(page);
-  await expect(
-    page.locator("button[data-guest-open]").filter({ has: page.getByText(name, { exact: true }) }),
-  ).toBeVisible();
 }
 
 const SHOP = "blue-mantis";
@@ -551,7 +550,8 @@ test("signed out of PADI, the check says to sign in first and types nothing into
   agencyPages.padi = "sign-in-redirect";
   agencyPages.requests.length = 0;
   await page.reload();
-  const reloaded = await openDiverFileGroup(page, "Certification records");
+  const reloaded = page.getByTestId("diver-file-group-certifications");
+  await expect(reloaded).toHaveAttribute("open", "");
   const signInAgain = reloaded.getByText("Sign in to the PADI Pros’ Site first, then check again.");
   await expect(signInAgain).toHaveCount(0);
   await reloaded.getByRole("button", { name: "Check with PADI" }).click();
@@ -631,14 +631,7 @@ test("SSI cards are excluded from Check all", async ({ page, extensionId }) => {
   const trip = await findTripOnBoard(page, SHOP, DEPARTURE);
   await trip.click();
   await openTripTab(page, "Trip");
-  const addDiver = page.locator("#add-diver").filter({ visible: true });
-  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(newcomer);
-  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-  await Promise.all([
-    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
-    addDiver.getByRole("button", { name: `Add ${newcomer} to the trip` }).click(),
-  ]);
-  await waitForAddedGuest(page, newcomer);
+  await addReturningGuest(page, newcomer);
   await expect(
     (await rosterRow(page, newcomer)).getByRole("button", { name: "Check with SSI" }),
   ).toBeVisible();

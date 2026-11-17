@@ -7,6 +7,7 @@ import {
   openIfClosed,
   openManifestPerson,
   openTripFromBoard,
+  openTripPhase,
   openTripTab,
 } from "./helpers";
 
@@ -15,7 +16,7 @@ signedInAsOwner();
 
 async function openBuddyTeamBuilder(page: Page) {
   const heading = page.getByRole("heading", { name: "Buddy teams" });
-  const panel = page.locator("details").filter({ has: heading }).first();
+  const panel = page.locator("section", { has: heading }).first().locator(":scope > details");
   await openIfClosed(panel);
   const builder = panel.locator("details").filter({ hasText: "New buddy team" }).first();
   await openIfClosed(builder);
@@ -38,8 +39,7 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await page.getByRole("link", { name: "The day", exact: true }).click();
-  await expect(page).toHaveURL(/view=details/);
+  await openTripPhase(page, "ready");
   // The panel can arrive open when a team warning needs attention. Inspect its
   // native state before opening so the test never toggles an already-open fold
   // shut. Buddy actions redirect back with `?buddies=open`.
@@ -133,8 +133,7 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await page.getByRole("link", { name: "The day", exact: true }).click();
-  await expect(page).toHaveURL(/view=details/);
+  await openTripPhase(page, "ready");
   // Same collapsed-at-rest panel as the first test: open it once, and the
   // `?buddies=open` redirects keep it open across the acts below.
   await expect(page.getByRole("heading", { name: "Buddy teams" })).toBeVisible();

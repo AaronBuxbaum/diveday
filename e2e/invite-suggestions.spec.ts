@@ -1,4 +1,4 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
 import { seededTripId } from "./helpers";
 
 signedInAsOwner();
@@ -7,9 +7,12 @@ test("reveals the remaining past divers and their invitation actions", async ({
 }, testInfo) => {
   const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — French Reef");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`/shop/blue-mantis/trips/${id}`);
+  await page.goto(`/shop/blue-mantis/trips/${id}?phase=filling#invite-suggestions`);
   const initial = page.getByTestId("invite-suggestions");
   await expect(initial).toBeVisible();
+  // The body streams in after the load event, so the wait `goto` ran found no body mark to wait for.
+  // Its ScrollToHash landing would otherwise move the page between the click's aim and its press.
+  await settleStaffHydration(page);
   const disclosure = initial.locator("+ details");
   const summary = disclosure.locator("summary");
   await expect(summary).toContainText(/and \d+ more/);
@@ -48,9 +51,11 @@ test.describe("Spanish phone", () => {
   test.use({ locale: "es-ES", viewport: { width: 390, height: 844 } });
   test("opens and closes the remaining people without widening the page", async ({ page }) => {
     const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — French Reef");
-    await page.goto(`/shop/blue-mantis/trips/${id}`);
+    await page.goto(`/shop/blue-mantis/trips/${id}?phase=filling#invite-suggestions`);
     const initial = page.getByTestId("invite-suggestions");
     await expect(initial).toBeVisible();
+    // The body streams in after the load event, so the wait `goto` ran found no body mark to wait for.
+    await settleStaffHydration(page);
     const disclosure = initial.locator("+ details");
     const summary = disclosure.locator("summary");
     await expect(summary).toContainText(/y \d+ más/);

@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { e2eNow, findTripOnBoard, openTripTab, rosterRow } from "./helpers";
+import { e2eNow, findTripOnBoard, openNewGuestForm, openTripTab, rosterRow } from "./helpers";
 
 signedInAsOwner();
 
@@ -59,9 +59,7 @@ test("PADI showing the eLearning finished ticks the student's materials, and Und
 
   // A new student on the session: a name and the email PADI knows them by.
   const student = `Lena Ortiz${e2eNow().getTime()}`;
-  const addDiver = page.locator("#add-diver").filter({ visible: true });
-  await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
   await page.getByLabel("Full name").fill(student);
   await page.getByLabel("Email").fill(`lena-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();

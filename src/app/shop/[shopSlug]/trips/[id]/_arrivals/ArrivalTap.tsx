@@ -2,6 +2,7 @@
 
 import { useOptimistic } from "react";
 import { useFormStatus } from "react-dom";
+import { buttonClass } from "@/components/ui/button";
 import { RowActionForm } from "./RowActionForm";
 
 type ArrivalAction = (formData: FormData) => Promise<{ ok: true }>;
@@ -72,12 +73,18 @@ function TapButton({
       aria-label={ariaLabel}
       disabled={busy}
       data-arrival-tap={checkedIn ? "undo" : "check-in"}
-      // 44px tall, the dock test's floor, and the word and its drawn circle in
-      // one target: the empty circle is the roll call's own "waiting to be
-      // ticked", so the row reads as a checklist line, not a link.
-      className={`-me-2 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg px-2 text-base font-semibold whitespace-nowrap transition-[background-color,transform] hover:bg-surface-sunken active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 ${
-        checkedIn ? "text-success" : "text-primary"
-      }`}
+      // Check in is the row's one bordered button, as drawn (ADR
+      // 20261117-trip-page-clock, `22-clock-checkin`); once tapped it turns into
+      // the quiet green word and its drawn tick, which undoes it. 44px either way.
+      className={
+        checkedIn
+          ? "-me-2 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg px-2 text-base font-semibold whitespace-nowrap text-success transition-[background-color,transform] hover:bg-surface-sunken active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+          : buttonClass({
+              variant: "secondary",
+              size: "sm",
+              className: "touch-manipulation whitespace-nowrap disabled:cursor-wait",
+            })
+      }
     >
       <span>{busy ? pendingLabel : label}</span>
       {checkedIn ? (
@@ -94,12 +101,7 @@ function TapButton({
           <circle cx="12" cy="12" r="10" />
           <path d="m7.5 12.5 3 3 6-6.5" />
         </svg>
-      ) : (
-        <span
-          aria-hidden="true"
-          className={`size-6 rounded-full border-2 border-current ${busy ? "opacity-40" : ""}`}
-        />
-      )}
+      ) : null}
     </button>
   );
 }

@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { openCounterFor, openRosterDetails } from "./helpers";
+import { openCounterFor, openRosterDetails, rosterRow } from "./helpers";
 
 /**
  * Every test here mints a shop of its own and signs in live, and that setup
@@ -30,21 +30,13 @@ test.describe("the shop on paper", () => {
     // checked-in group never appearing.
     await expect(page.locator("[data-check-in-queue]")).toHaveAttribute("data-hydrated", "true");
 
-    // Check one diver in, so an arrived row carries a pass door.
-    const checkIn = page.getByRole("button", { name: /^Check in / }).first();
-    await expect(checkIn).toBeVisible();
-    const diverName = ((await checkIn.getAttribute("aria-label")) ?? "")
-      .replace(/^Check in /, "")
-      .trim();
-    expect(diverName).toMatch(/\S/);
-    await checkIn.click();
+    // Check in the diver the desk opened, so an arrived row carries a pass door.
+    const diverName = "Diego Alvarez";
+    const row = await rosterRow(page, diverName);
+    await row.getByRole("button", { name: `Check in ${diverName}` }).click();
     // The row's own undo is the destination's answer that the write landed —
     // never a timeout — and the pass door stands beside it on that row.
-    const row = page
-      .locator('#roster li[id^="booking-"]')
-      .filter({ visible: true })
-      .filter({ has: page.getByRole("button", { name: `Undo check-in for ${diverName}` }) });
-    await expect(row).toHaveCount(1);
+    await expect(row.getByRole("button", { name: `Undo check-in for ${diverName}` })).toBeVisible();
 
     await openRosterDetails(row);
     await row.getByRole("link", { name: "Print a pass" }).click();

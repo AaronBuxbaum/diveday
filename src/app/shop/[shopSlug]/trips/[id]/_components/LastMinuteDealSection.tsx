@@ -9,7 +9,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatMoneyScanned } from "@/lib/format";
 import { promoDiscountOf } from "@/lib/promo-codes";
 import type { FormNotice } from "@/lib/staff-notices";
-import { WHO_WANTS_IN_ID } from "./WhoWantsInPanel";
+import { whoWantsInHref } from "@/lib/trip-clock";
 
 const STATUS_TONE: Record<TripLastMinutePromo["status"], BadgeTone> = {
   active: "success",
@@ -28,7 +28,7 @@ const STATUS_KEYS: Record<TripLastMinutePromo["status"], StaffMessageKey> = {
 
 /**
  * **The deals this departure sent, and the way to send another.** The sender
- * itself is the Divers tab's "Who wants in" panel: one Offer, "with a discount"
+ * itself is the Trip page's "Who wants in" panel: one Offer, "with a discount"
  * (ADR 20261017-one-interest-with-a-scope). What stays here is history (the code,
  * how many, whether Stripe minted it) and the answer to the last send
  * (`FormStatus`, since a deal's outcome redirects to `#last-minute-deal`).
@@ -45,7 +45,7 @@ export function LastMinuteDealSection({
 }: {
   /** What the last deal did, beside the history it joined. */
   status?: FormNotice;
-  /** The departure page (its Divers tab holds `#who-wants-in`), or null while nothing can be offered (full, cancelled). */
+  /** The departure page (its Trip page holds `#who-wants-in`), or null while nothing can be offered (full, cancelled). */
   tripPath: string | null;
   promos: TripLastMinutePromo[];
   promoRecipients?: TripLastMinutePromoRecipientItem[];
@@ -75,7 +75,7 @@ export function LastMinuteDealSection({
       {leadTime}
       {tripPath ? (
         <p className="mt-2 text-sm">
-          <a href={`${tripPath}#${WHO_WANTS_IN_ID}`} className={proseLinkClass}>
+          <a href={whoWantsInHref(tripPath)} className={proseLinkClass}>
             {t("trips.lastMinute.offerWithDiscount")}
           </a>
         </p>

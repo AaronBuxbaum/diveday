@@ -1,61 +1,7 @@
 import type { ReactNode } from "react";
 import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
-import { Badge } from "@/components/ui/badge";
-import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { capacityLabel, isFull, seatsOnSale, type TripCapacity } from "@/lib/trips";
-
-/**
- * How full the boat is, or that it isn't sailing — the one pill that leads the
- * header on every tab that has the capacity numbers in hand.
- *
- * A sold-out boat is a win worth noticing, not a quiet state
- * (docs/design/principles.md #3): "success" stands out where "neutral" would
- * recede. Cancelled outranks both — a full cancelled trip is not a full trip.
- */
-export function TripCapacityBadge({
-  trip,
-  cancelledLabel,
-  finished = false,
-  t,
-}: {
-  trip: TripCapacity & { status: string; sellableCapacity: number };
-  cancelledLabel: string;
-  /**
-   * The boat has left the dock (`departureSailed`): nothing is for sale, so
-   * "4 seats left" would be a dock word at sea or on a record (UX review
-   * 2026-10-10, item 10; fourth review, item 16).
-   */
-  finished?: boolean;
-  t: StaffTranslator;
-}) {
-  if (trip.status === "cancelled") return <Badge tone="danger">{cancelledLabel}</Badge>;
-  if (finished) return null;
-  // **The seats the boat may sell, not the seats stated** (H-20261009-certificate-caps-seats, #2321): the
-  // booking transaction stops at the certificate, so the desk counts there too.
-  // When the certificate binds, the stated number rides beside it, so the
-  // details form's figure is never a mystery.
-  const onSale = seatsOnSale(trip);
-  const capacity = capacityLabel(onSale);
-  return (
-    <>
-      <Badge tone={isFull(onSale) ? "success" : "primary"} tabularNums>
-        {capacity.kind === "full"
-          ? t("shared.capacity.full")
-          : t("shared.capacity.seatsLeft", { count: capacity.remaining })}
-      </Badge>
-      {trip.sellableCapacity < trip.capacity ? (
-        <span className="text-muted tabular-nums">
-          {t("shared.capacity.certificateCap", {
-            sellable: trip.sellableCapacity,
-            stated: trip.capacity,
-          })}
-        </span>
-      ) : null}
-    </>
-  );
-}
 
 /**
  * The boat's name: its size and its line box, below `sm` and from it. One
@@ -100,13 +46,12 @@ export function TripPageHeader({
   headerAside,
   price,
   daySpan,
+  facts,
   className,
   stackActionsOnMobile = false,
-  compactForFolio = false,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
   stackActionsOnMobile?: boolean;
-  compactForFolio?: boolean;
   /** The manifest retains a way out when boat mode hides global navigation. */
   backLabel?: string;
   locale: string;
@@ -134,6 +79,12 @@ export function TripPageHeader({
    * one day, in place of the first day's date and hours (item 26).
    */
   daySpan?: string;
+  /**
+   * The trip's facts in one line, already worded: date, time, boat and where
+   * to meet (the Trip page's header, ADR 20261117-trip-page-clock). In place
+   * of the date and price.
+   */
+  facts?: readonly string[];
   /** Allows a surface to tighten the space after its masthead when needed. */
   className?: string;
 }) {
@@ -158,10 +109,10 @@ export function TripPageHeader({
           its line (K-196, K-357). When present, the eyebrow keeps a line of
           its own, and the actions end the title's. */}
       <div
-        className={`${backLabel ? TRIP_TITLE_GAP : ""} flex gap-4 sm:gap-8 ${stackActionsOnMobile ? "flex-col items-stretch sm:flex-row sm:items-center group-has-[[data-guest-folio]]/folio:flex-row group-has-[[data-guest-folio]]/folio:items-center" : "items-center"}`}
+        className={`${backLabel ? TRIP_TITLE_GAP : ""} flex gap-4 sm:gap-8 ${stackActionsOnMobile ? "flex-col items-stretch sm:flex-row sm:items-center" : "items-center"}`}
       >
         <h1
-          className={`min-w-0 flex-1 ${TRIP_TITLE_TYPE} font-semibold tracking-tight text-balance ${compactForFolio ? "group-has-[[data-guest-folio]]/folio:text-xl" : ""}`}
+          className={`min-w-0 flex-1 ${TRIP_TITLE_TYPE} font-semibold tracking-tight text-balance`}
         >
           {trip.title}
         </h1>
@@ -182,29 +133,20 @@ export function TripPageHeader({
       <div
         className={`${TRIP_META_GAP} flex flex-wrap items-center gap-x-3 gap-y-2 ${TRIP_META_TYPE} text-muted`}
       >
-        {compactForFolio ? (
-          <span className="contents group-has-[[data-guest-folio]]/folio:hidden">{badge}</span>
+        {badge}
+        {facts ? (
+          <span>{facts.join(" · ")}</span>
         ) : (
-          badge
+          <span>
+            {daySpan ?? (
+              <>
+                {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
+                {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
+              </>
+            )}
+            {price ? <span> · {price}</span> : null}
+          </span>
         )}
-        <span>
-          {daySpan ?? (
-            <>
-              {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
-              {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
-            </>
-          )}
-          {price ? (
-            <span
-              className={
-                compactForFolio ? "group-has-[[data-guest-folio]]/folio:hidden" : undefined
-              }
-            >
-              {" "}
-              · {price}
-            </span>
-          ) : null}
-        </span>
       </div>
       {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
       {extraMeta ? <div className="mt-2 flex flex-col gap-1.5">{extraMeta}</div> : null}
@@ -241,7 +183,7 @@ export function TripPageHeaderSkeleton({
   badge?: boolean;
   /** Whether the loaded header has the parent link. */
   showBack?: boolean;
-  /** As on the header: the Divers tab stacks it in the page's `space-y-10`. */
+  /** As on the header: the Trip page stacks it in the page's `space-y-10`. */
   className?: string;
 }) {
   return (

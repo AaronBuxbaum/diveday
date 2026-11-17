@@ -602,7 +602,7 @@ export const bookings = pgTable(
      * here (the enrollment). The seat is then asked that course's forms, and
      * signing them once on the enrollment covers both.
      *
-     * Only ever a staff act on the departure's Divers tab, never inferred from
+     * Only ever a staff act on the departure's Trip page, never inferred from
      * a diver's open enrollment or card level (`src/db/training-marks.ts`).
      * One enrollment per seat: a second mark is refused until this one is
      * cleared. Checked again at every read (`trainingMarkValidity`): a mark

@@ -12,7 +12,7 @@ import type { RosterRecord } from "../_components/roster-model";
 import { buildArrivalDesk } from "./arrival-desk";
 import { sailedRebookBelow } from "./sailed-rebook-below";
 
-/** The Divers tab shows the arrival desk while arrivals are open, then the
+/** The Trip page shows the arrival desk while arrivals are open, then the
  * finished departure's roll-call record.
  */
 export async function diversTabState(

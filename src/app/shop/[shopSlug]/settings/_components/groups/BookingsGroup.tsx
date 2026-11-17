@@ -37,6 +37,10 @@ export function BookingsGroup({
   return (
     <SettingsGroup group={BOOKINGS_GROUP} label={t(BOOKINGS_GROUP.labelKey)}>
       <InsetGroup>
+        <SettingsDoorRow
+          href={`/shop/${shopSlug}/settings/trip-defaults`}
+          heading={t("settings.tripDefaults.heading")}
+        />
         {canManageWaivers ? (
           <SettingsDoorRow
             href={`/shop/${shopSlug}/settings/waivers`}

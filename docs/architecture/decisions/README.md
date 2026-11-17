@@ -478,5 +478,6 @@ script again.
 | 20261116-local-ancillary-amount-due | Record named ancillary amounts due… |
 | 20261116-local-customer-import-mapping | Map customer exports locally with… |
 | 20261116-promotional-trip-credit-ledger | Settle plain booking fares with… |
+| 20261117-trip-page-clock | Show a trip as five… |
 
 <!-- adr-index:end -->

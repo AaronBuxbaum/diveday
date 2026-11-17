@@ -128,7 +128,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
   // Disarm once the submit this guarded has landed. Without it the confirm
   // block just sits there re-asking a question that has already been answered
   // — on the roster's waiver resend, the send went out and the control stayed
-  // open on "Send Ana a new waiver link?" instead of settling back to the
+  // open on "Send Ana their waiver link again?" instead of settling back to the
   // status pill, which reads as a tap that did nothing.
   useEffect(() => {
     if (pending) {

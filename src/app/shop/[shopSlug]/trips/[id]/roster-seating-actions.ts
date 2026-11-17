@@ -39,6 +39,7 @@ import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { signTripAdmissionGate, tripGateBinding } from "@/lib/trip-admission-gate";
+import { whoWantsInHref } from "@/lib/trip-clock";
 import { uuidParam } from "@/lib/uuid";
 import { refundNotice } from "./refund-notice";
 import { removeSeat, requireRosterBooking, tripPath } from "./roster-booking";
@@ -74,6 +75,14 @@ function waitlistLanding(back: string, formData: FormData): string {
   return typeof value === "string" && uuidParam(value)
     ? `${back}?add=1&request=${encodeURIComponent(value)}`
     : back;
+}
+
+/**
+ * Where a wait-listed diver is shown: a date request's band when the entry came
+ * from one, otherwise Filling's wait list, whatever phase the clock reads.
+ */
+function waitlistedLanding(back: string): string {
+  return back.includes("?") ? back : `${back}?phase=filling#who-wants-in`;
 }
 
 const rosterBookingForm = z.object({ bookingId: text() });
@@ -117,7 +126,7 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     await trackEvent({ name: "waitlist_joined", source: "staff" });
-    revalidateAndRedirect(back, noticeUrl(back, "diver-waitlisted"));
+    revalidateAndRedirect(back, noticeUrl(waitlistedLanding(back), "diver-waitlisted"));
   }
   redirect(noticeUrl(back, WAITLIST_NOTICE[outcome.reason]));
 }
@@ -143,7 +152,7 @@ export async function addKnownDiverToWaitlistAction(
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     await trackEvent({ name: "waitlist_joined", source: "staff" });
-    revalidateAndRedirect(back, noticeUrl(back, "diver-waitlisted"));
+    revalidateAndRedirect(back, noticeUrl(waitlistedLanding(back), "diver-waitlisted"));
   }
   if (outcome.reason === "not_found") redirect(noticeUrl(back, "diver-invalid"));
   redirect(noticeUrl(back, WAITLIST_NOTICE[outcome.reason]));
@@ -199,16 +208,16 @@ async function inviteOneDiver(
     // A suggestion is past-diver invites' (the Features page): off, the list
     // is not drawn and a post from a page left open invites nobody.
     if (!(await shopHasFeatureOn(db, s.user.shopId, "pastDiverInvites"))) {
-      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-unavailable"));
+      redirect(noticeUrl(whoWantsInHref(guests), "invite-unavailable"));
     }
     // A suggestion: the cooldown and the departure's own gate, re-checked
     // under one lock for a page left open (H-20261014-one-to-one-invite; review F1, N2).
     const outcome = await createInvitationUnderCooldown(db, { ...input, now: nowDate() });
     if (outcome.status === "cooldown") {
-      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-cooldown"));
+      redirect(noticeUrl(whoWantsInHref(guests), "invite-cooldown"));
     }
     if (outcome.status === "unavailable") {
-      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-unavailable"));
+      redirect(noticeUrl(whoWantsInHref(guests), "invite-unavailable"));
     }
     interestId = outcome.status === "created" ? outcome.interestId : null;
   } else {
@@ -227,8 +236,8 @@ async function inviteOneDiver(
   revalidatePath(guests);
   redirect(
     delivery === "opted_out"
-      ? noticeUrl(`${guests}#who-wants-in`, "invitation-opted-out")
-      : `${guests}#who-wants-in`,
+      ? noticeUrl(whoWantsInHref(guests), "invitation-opted-out")
+      : whoWantsInHref(guests),
   );
 }
 

@@ -59,6 +59,19 @@ describe("MoreMenu", () => {
     expect(screen.queryByRole("link", { name: "Print" })).toBeNull();
   });
 
+  it("closes when one of its links is followed on the same path", async () => {
+    const user = userEvent.setup();
+    render(
+      <MoreMenu label="More">
+        <a href="?add=1">Add a guest</a>
+      </MoreMenu>,
+    );
+    const trigger = screen.getByRole("button", { name: "More" });
+    await user.click(trigger);
+    await user.click(screen.getByRole("link", { name: "Add a guest" }));
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("opens on its trigger, first row focused, and closes on a second tap", async () => {
     const user = userEvent.setup();
     const trigger = menu();

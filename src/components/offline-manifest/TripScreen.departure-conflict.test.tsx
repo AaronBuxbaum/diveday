@@ -66,7 +66,7 @@ it("offers reconciliation on the full offline screen for an aboard/ashore depart
     />,
   );
   fireEvent.click(screen.getByRole("button", { name: "Review reports" }));
-  const details = screen.getByText("Details", { selector: "summary" }).closest("details");
+  const details = screen.getByText("More", { selector: "summary" }).closest("details");
   const summary = screen
     .getAllByText(ctx.t("manifest.conflicts.heading", { name: diver.fullName }))
     .find((element) => !details?.contains(element));

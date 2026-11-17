@@ -767,7 +767,7 @@ rendered through the shared wrappers in `src/components/MarketingSections.tsx`:
 | `WaiverSigningFallback` | Signing the waiver and medical form on a diver's phone | The waivers page, and the homepage's signing step |
 | `FrontDeskReadinessFallback` | Today's readiness for one departure | The certification checks page, and the homepage's morning step |
 | `NightBeforeBriefFallback` | The diver's trip page the night before | The messages page |
-| `ArrivalDeskFallback` | A departure's Divers tab at the counter | The check-in page, and the homepage's roll-call step |
+| `ArrivalDeskFallback` | A departure's guest list at the counter | The check-in page, and the homepage's roll-call step |
 | `CaptainRollCallFallback` | Captain manifest roll call on a phone (`CaptainPhoneFrame`), at departure | The homepage hero, the boat manifest page, the `/about` hero |
 | `SiteBriefingFallback` | A dive site's briefing as a diver reads it | The dive sites page |
 | `GearRegisterFallback` | The gear register | The rental gear page |

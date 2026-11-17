@@ -273,7 +273,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   course_form_unsigned: "waiver",
   course_form_guardian_missing: "waiver",
   // The desk's own record is what is wrong, like a held identity: staff fix
-  // it on the Divers tab, and the student has nothing to do.
+  // it on the Trip page, and the student has nothing to do.
   training_mark_invalid: "setup",
   certification_missing: "certification",
   certification_pending: "certification",

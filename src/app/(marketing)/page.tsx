@@ -11,7 +11,7 @@ import { HomeWalkthrough, type WalkBeat } from "@/app/_components/HomeWalkthroug
 import { HomeWalkthroughDoors } from "@/app/_components/HomeWalkthroughDoors";
 import { HomeWhyBand } from "@/app/_components/HomeWhyBand";
 import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
-import { STEPS, WALK, WALK_CLASSES } from "@/app/_components/home-steps";
+import { STEPS, WALK_CLASSES } from "@/app/_components/home-steps";
 import { JsonLd } from "@/components/JsonLd";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingReveal } from "@/components/MarketingReveal";
@@ -189,11 +189,11 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               `lg`, so a phone reads each step as one unit rather than a
               drawing floating between two (design review, 2026-10-05). */}
           <HomeWalkthrough
-            beats={WALK.map(
-              (beat): WalkBeat => ({
-                step: beat.step,
-                frame: beat.frame,
-                caption: t(`marketing.home.walk.captions.${beat.caption}`),
+            beats={STEPS.map(
+              (step): WalkBeat => ({
+                step: step.id,
+                frame: step.id,
+                caption: t(`marketing.home.walk.captions.${step.id}`),
               }),
             )}
             labels={{
@@ -208,8 +208,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           >
             <ol data-walk-list className={`mt-6 space-y-16 lg:mt-8 lg:space-y-20 ${WALK_CLASSES}`}>
               {STEPS.map((step, index) => {
-                const page = getFeaturePage(step.feature);
-                if (!page) return null;
+                const page = step.feature ? getFeaturePage(step.feature) : undefined;
                 return (
                   // One list item per step, so a screen reader hears the
                   // booking as the sequence it is; the step's `<h3>` names it
@@ -217,6 +216,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                   <li
                     key={step.id}
                     data-walk-step={step.id}
+                    data-walk-listed={step.listed ? "" : undefined}
                     className="grid items-start gap-5 lg:grid-cols-11 lg:gap-14"
                   >
                     {/* **Below `lg` the copy column dissolves** (`contents`), so
@@ -239,7 +239,6 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                       </div>
                       <MarginNotes
                         notes={step.notes.map((key) => t(key))}
-                        plain
                         className="order-2 max-w-lg lg:order-none lg:mt-5"
                       />
                       {/* The page's own name is the link's words: the reader
@@ -248,43 +247,35 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                         every other link on the page carries, not an icon.
                         `self-start` keeps the link its own width in the `lg`
                         flex column, `justify-self-start` in the phone's grid. */}
-                      <Link
-                        href={featurePagePath(page.slug)}
-                        className={buttonClass({
-                          variant: "link",
-                          flush: true,
-                          className:
-                            "order-3 self-start justify-self-start text-start lg:order-none lg:mt-4",
-                        })}
-                      >
-                        {t("marketing.home.stepLink", {
-                          name: t(`marketing.featurePages.${page.key}.name`),
-                        })}
-                      </Link>
+                      {page ? (
+                        <Link
+                          href={featurePagePath(page.slug)}
+                          className={buttonClass({
+                            variant: "link",
+                            flush: true,
+                            className:
+                              "order-3 self-start justify-self-start text-start lg:order-none lg:mt-4",
+                          })}
+                        >
+                          {t("marketing.home.stepLink", {
+                            name: t(`marketing.featurePages.${page.key}.name`),
+                          })}
+                        </Link>
+                      ) : null}
                     </div>
                     <div className="order-1 lg:order-none lg:col-span-6">
-                      {step.frames.map((frame) => (
-                        <div
-                          key={frame.id}
-                          data-walk-frame={frame.id}
-                          data-walk-primary={frame.primary ? "" : undefined}
-                        >
-                          <MarketingMockup label={t(frame.label)}>
-                            {frame.before ? (
-                              <div className="grid">
-                                <div data-walk-before className="col-start-1 row-start-1">
-                                  {frame.before(locale)}
-                                </div>
-                                <div data-walk-after className="col-start-1 row-start-1">
-                                  {frame.screen(locale)}
-                                </div>
-                              </div>
-                            ) : (
-                              frame.screen(locale)
-                            )}
-                          </MarketingMockup>
-                        </div>
-                      ))}
+                      <div data-walk-frame={step.id} data-walk-primary="">
+                        <MarketingMockup label={t(step.label)}>
+                          <div className="grid">
+                            <div data-walk-before className="col-start-1 row-start-1">
+                              {step.before(locale)}
+                            </div>
+                            <div data-walk-after className="col-start-1 row-start-1">
+                              {step.screen(locale)}
+                            </div>
+                          </div>
+                        </MarketingMockup>
+                      </div>
                     </div>
                   </li>
                 );

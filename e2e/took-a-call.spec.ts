@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openAddAGuest, openTripFromBoard } from "./helpers";
 
 /**
  * **"Took a call"** (N-22): the desk phone's answer for a caller with no seat
@@ -44,12 +44,12 @@ async function fullDeparture(page: Page): Promise<string> {
     capacity: 1,
   });
   await openTripFromBoard(page, title);
-  // Tomorrow's boat is inside the arrivals window, where "Add a diver" is one
-  // search field and a booked seat is its empty result's "Add diver".
-  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  // The trip's add form is one search field, and a new guest is its empty
+  // result's "Add a guest".
+  const find = await openAddAGuest(page);
   await find.fill("Fills The Boat");
   await find.press("Enter");
-  await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
+  await page.getByRole("link", { name: "Add a guest", exact: true }).first().click();
   await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Fills The Boat");
   await page.getByLabel("Email").fill(`call-fills-${e2eNow().getTime()}@example.com`);
@@ -108,9 +108,9 @@ test.describe("took a call", () => {
     await chooseDeparture(call, title);
     await call.getByRole("button", { name: "Log the call" }).click();
 
-    await page.waitForURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]{36}\?notice=diver-waitlisted/);
+    await page.waitForURL(/\/trips\/[0-9a-f-]{36}\?phase=filling&notice=diver-waitlisted/);
     await expect(page.getByText("Diver added to the wait list")).toBeVisible();
-    await expect(page.getByText("Tobias Fenn E2E").first()).toBeVisible();
+    await expect(page.locator("#who-wants-in").getByText("Tobias Fenn E2E").first()).toBeVisible();
   });
 
   test("a caller nobody can ring back is refused beside the button, with the answer kept", async ({

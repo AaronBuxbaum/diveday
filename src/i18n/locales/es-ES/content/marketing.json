@@ -26,7 +26,7 @@
       },
       "check": {
         "when": "Cada mañana, para la semana que viene",
-        "title": "Quien aún no puede embarcar aparece con su nombre y el motivo",
+        "title": "En cuanto firma, su fila sale de la lista",
         "note2": "No hay botón de “marcar a todos como listos”. Lo dejamos fuera a propósito.",
         "mockupLabel": "Hoy en el centro de demostración: una salida con 7 de 9 buceadores listos y dos filas en Pendiente.",
         "readyLabel": "Hoy en el centro de demostración después de que Priya firma: 8 de 9 buceadores listos y una fila en Pendiente."
@@ -37,15 +37,62 @@
         "note1": "El recuento de cada inmersión, buceadores y tripulación por su nombre, sigue abierto hasta contar a bordo a todos los que zarparon.",
         "note2": "Fuera de cobertura, el teléfono sigue pasando lista desde su copia guardada, y los toques se suman al registro al volver la señal.",
         "note3": "El mismo manifiesto se imprime como paquete de la salida, con el pase de lista y la tarjeta de emergencia, para la tripulación que lleva papel.",
-        "deskLabel": "El mostrador de llegadas, con 8 de 9 aquí: Priya Sharma acaba de registrarse y una plaza retenida todavía pregunta si es la misma persona.",
         "boatLabel": "La cubierta tras la inmersión 1: 9 de 9 buceadores a bordo, con Priya Sharma y Tom Okafor marcados de vuelta."
       },
       "recap": {
         "when": "Después de que vuelva el barco",
-        "title": "Que los buceadores se lleven un recuerdo del día",
-        "note1": "El registro de arriba es del centro, escrito una vez: barco, tripulación, sitio, condiciones.",
-        "note2": "La nota de la tripulación es una cita. Es lo que la tripulación escribió, sin plantilla detrás.",
-        "mockupLabel": "La página de recuerdo de un buceador, con el registro del día, una nota de la tripulación y una sola petición de opinión."
+        "title": "Dales a los buceadores el día para llevarse",
+        "note1": "El registro se escribe una vez: barco, tripulación, sitio y las cifras de la propia inmersión.",
+        "note2": "Las fotos son de la tripulación, y el gráfico muestra cómo fue la inmersión.",
+        "mockupLabel": "La página del informe de un buceador: tres fotos del barco, el registro de la inmersión con sus cifras y un gráfico de profundidad a lo largo del tiempo."
+      },
+      "shopfront": {
+        "when": "Días antes",
+        "title": "Un buceador llega a tu página y toca el próximo barco",
+        "note1": "Es tu página: tu foto, tu nombre y tu próximo barco con plazas libres.",
+        "note2": "No hay que crear una cuenta antes, ni descargar una aplicación.",
+        "mockupLabel": "La página de reservas de Blue Mantis: la foto de portada del centro, su valoración y el próximo barco con tres plazas libres junto a un botón Reservar este barco."
+      },
+      "money": {
+        "when": "En cuanto reserva",
+        "title": "El pago llega a Pedidos, ya pagado",
+        "note1": "Una fila por pedido: el buceador, lo que compró y el importe.",
+        "note2": "Pagado no dice nada. Solo un pedido abierto o reembolsado lleva una etiqueta.",
+        "mockupLabel": "La página de Pedidos del centro de demostración: la reserva de Priya Sharma llega arriba en la lista de hoy, pagada."
+      },
+      "unsigned": {
+        "when": "A la mañana siguiente",
+        "title": "Quien aún no puede embarcar aparece con el motivo",
+        "note1": "Cada fila dice qué falta y para qué barco.",
+        "note2": "Un recordatorio le envía otra vez el enlace de la exención, con un toque.",
+        "mockupLabel": "Hoy en el centro de demostración: una salida con 7 de 9 buceadores listos, y la exención abierta de Priya Sharma con un botón Recordar exención."
+      },
+      "card": {
+        "when": "Antes del barco",
+        "title": "Una tarjeta pasa por los ojos de una persona antes de contar",
+        "note2": "La tripulación ve la tarjeta en persona y toca Confirmar certificación en su ficha.",
+        "mockupLabel": "La ficha de un buceador en el centro de demostración: la tarjeta Advanced Open Water de Priya Sharma, con un botón para confirmarla."
+      },
+      "desk": {
+        "when": "En el mostrador",
+        "title": "Un toque la registra",
+        "note1": "El registro es un toque en su fila, y el número de arriba sube con él.",
+        "note2": "Una plaza retenida pregunta primero Misma persona o Otra persona, para que el papeleo quede con el buceador al que corresponde.",
+        "mockupLabel": "El mostrador de llegadas, 8 de 9 aquí: Priya Sharma acaba de registrarse y una plaza retenida aún pregunta si es la misma persona."
+      },
+      "computer": {
+        "when": "De vuelta en el centro",
+        "title": "El archivo de su computadora de buceo pasa a su registro",
+        "note1": "Elige al buceador, agrega el archivo y revisa cada inmersión antes de guardarla.",
+        "note2": "El perfil de profundidad, el gas y la computadora vienen con ella. No se guarda nada hasta que confirmes.",
+        "mockupLabel": "La página de inmersiones de la computadora de un buceador: una inmersión leída del archivo con su gráfico de profundidad, y la misma inmersión en su historial importado."
+      },
+      "review": {
+        "when": "Por la tarde",
+        "title": "Y una sola petición: ¿cómo fue el día?",
+        "note1": "La nota de la tripulación es una cita. Es lo que escribió la tripulación, sin plantilla detrás.",
+        "note2": "La página pide una sola cosa, y la pide al final.",
+        "mockupLabel": "El resto del informe de un buceador: una nota de la tripulación y la petición de una reseña de cinco estrellas."
       }
     },
     "walk": {
@@ -57,13 +104,18 @@
       "next": "Paso siguiente",
       "hint": "Toca la pantalla, desliza o usa las flechas del teclado.",
       "captions": {
-        "book": "Priya Sharma reserva el Arrecife de dos tanques desde la página del propio centro.",
-        "unsigned": "A la mañana siguiente su exención sigue abierta, y la lista la nombra con un botón para recordársela.",
+        "shopfront": "Priya encuentra la página del centro y toca el próximo barco.",
+        "book": "Mira el calendario y se queda con el Arrecife de dos tanques.",
+        "money": "Su pago llega a Pedidos, ya pagado.",
+        "unsigned": "A la mañana siguiente su exención sigue abierta, y la lista ofrece un recordatorio.",
         "sign": "Firma la exención y responde el formulario médico desde su teléfono.",
-        "ready": "Su fila sale de la lista y el número de listos sube en uno.",
+        "check": "Su fila sale de la lista y el número de listos sube en uno.",
+        "card": "Antes del barco, la tripulación ve su tarjeta y la confirma con un toque.",
         "desk": "En el mostrador, un toque la registra.",
-        "boat": "Después de la inmersión 1 la tripulación la llama por su nombre. Los nueve están de vuelta a bordo.",
-        "recap": "Por la tarde le llega el registro del día y unas líneas de la tripulación."
+        "aboard": "Después de la inmersión 1 la tripulación la llama por su nombre. Los nueve están de vuelta a bordo.",
+        "computer": "De vuelta en el centro, el archivo de su computadora de buceo pasa a su registro.",
+        "recap": "Por la tarde llega su informe, con fotos del barco y un gráfico de la inmersión.",
+        "review": "Lee la nota de la tripulación y deja cinco estrellas."
       },
       "doorsTitle": "Ahora prueba la parte que es tuya",
       "doorDesk": "Llevo el mostrador",
@@ -85,7 +137,6 @@
       "hint": "Una lista de ejemplo de la mañana. Toca un botón para ver lo que hace el mostrador.",
       "region": "Una muestra del mostrador de llegadas para la salida de dos tanques de las 7:30.",
       "hereOf": "{here} de {expected} aquí",
-      "toCome": "1 por llegar",
       "allHere": "Todos están aquí y autorizados",
       "done": "Los nueve están listos para las 7:30.",
       "restart": "Empezar de nuevo"
@@ -169,7 +220,7 @@
       "item8": "WhatsApp desde el número del propio centro, conectado en Ajustes, con las respuestas en Mensajes"
     },
     "checkIn": {
-      "item1": "Check-in en la pestaña Buceadores de la salida: un toque por buceador, cada uno con su opción de deshacer",
+      "item1": "Check-in en la página de la salida: un toque por buceador, cada uno con su opción de deshacer",
       "item2": "Una búsqueda de llegadas en Hoy por nombre, teléfono o correo, o con el código de una confirmación",
       "item3": "Misma persona u Otra persona en una plaza retenida, para que los papeles queden con el buceador que nombran",
       "item4": "Lo que falta resolver de un buceador bloqueado, en su fila, en lugar del toque Registrar",
@@ -204,7 +255,7 @@
     "rentalGear": {
       "item1": "Un registro de tus propias unidades: etiqueta, tipo, talla, número de serie y estado",
       "item2": "Reservas que el personal hace por plaza, nunca la misma unidad para dos buceadores cuyas fechas se cruzan",
-      "item3": "Unidades libres sugeridas en la pestaña Equipo, ordenadas por las tallas del buceador",
+      "item3": "Unidades libres sugeridas en la página Equipo, ordenadas por las tallas del buceador",
       "item4": "Entregas y devoluciones con sello de hora, y una lista de lo que vuelve hoy",
       "item5": "Una devolución que pregunta cómo volvió la unidad, con una nota para lo que haya que revisar",
       "item6": "Plazos de mantenimiento (servicio, hidrostática, visual y limpieza de O2) por fecha de vencimiento, con un conteo de inmersiones opcional",
@@ -222,7 +273,7 @@
     "schedule": {
       "item1": "El horario como constructor: agrega, mueve, copia y quita en el sitio",
       "item2": "Salidas repetidas sin fecha final, editadas y avanzadas como una sola",
-      "item3": "Una página por salida, en cuatro pestañas: Buceadores, Barco, Equipo y Detalles",
+      "item3": "Una página por salida que sigue el día: Llenando, Preparativos, Check-in, En el agua y Terminada",
       "item4": "Salidas de varios días con un solo listado, una exención y una tripulación",
       "item5": "Un mínimo de buceadores con una hora límite para decidir, tras la cual una salida que no llega se cancela y se reembolsa sola",
       "item6": "Una cancelación por mal tiempo en un toque: cada buceador recibe por correo las salidas a las que puede ir, con los pagos con tarjeta en línea reembolsados",
@@ -1254,7 +1305,7 @@
       "step2Title": "Los buceadores eligen sus plazas",
       "step2Body": "Eligen cuántos buceadores, el equipo de alquiler y el nitrox, y pagan todo o dejan un depósito. Quien organiza un grupo recibe un enlace de reclamo por cada persona que nombró.",
       "step3Title": "La reserva llega a la salida",
-      "step3Body": "Al buceador le llega una confirmación, y el enlace de la exención en otro correo cuando la salida la pide. La plaza aparece en la pestaña Buceadores de la salida con lo que todavía falta.",
+      "step3Body": "Al buceador le llega una confirmación, y el enlace de la exención en otro correo cuando la salida la pide. La plaza aparece en la página de la salida con lo que todavía falta.",
       "faq1Q": "¿Pueden reservar desde mi propia web?",
       "faq1A": "Sí. Pega un botón de reservar, una ventana de reserva o el calendario en la web que tienes. WordPress, Squarespace y Wix usan el mismo código.",
       "faq2Q": "¿Qué pasa cuando una salida se llena?",
@@ -1374,21 +1425,21 @@
       "metaTitle": "Check-in para la hora pico de un centro de buceo",
       "metaDescription": "Registra a los buceadores con un toque en la lista de la propia salida. Quien no está listo muestra lo que falta en lugar del toque, y quienes llegan sin reserva pueden completar sus datos con el código de tu mostrador antes de que les des su plaza.",
       "title": "La hora pico es un toque por buceador",
-      "lede": "Las llegadas se abren en la pestaña Buceadores de la salida, con el recuento de quién ha llegado, un toque Registrar junto a cada buceador listo y lo que falta junto a quien no lo está.",
-      "screenLabel": "La pestaña Buceadores de una salida durante las llegadas: cuántos han llegado, un buceador registrado, un toque Registrar y una plaza retenida que pregunta si es la misma persona.",
+      "lede": "Las llegadas se abren en la página de la salida, en Check-in, con el recuento de quién ha llegado, un toque Registrar junto a cada buceador listo y lo que falta junto a quien no lo está.",
+      "screenLabel": "Una salida en Check-in: cuántos han llegado, un buceador registrado, un toque Registrar y una plaza retenida que pregunta si es la misma persona.",
       "note1": "El recuento es de buceadores que llegaron frente a buceadores reservados, y solo se mueve cuando entra un toque.",
       "note2": "Una plaza retenida pregunta Misma persona u Otra persona, para que los papeles queden con el buceador que nombran.",
       "note3": "Un buceador que no está listo no tiene toque Registrar, y su fila muestra lo que falta resolver en su lugar.",
       "step1Title": "Las llegadas se abren el mismo día",
-      "step1Body": "En las horas alrededor de una salida, su pestaña Buceadores muestra el recuento de llegadas y un toque Registrar junto a cada buceador listo, cada uno con su opción de deshacer.",
+      "step1Body": "En las horas alrededor de una salida, su página abre en Check-in con el recuento de llegadas y un toque Registrar junto a cada buceador listo, cada uno con su opción de deshacer.",
       "step2Title": "Resuelve lo que falta en el mostrador",
       "step2Body": "La fila de un buceador bloqueado lleva lo que falta resolver: enviar la exención, registrar una exención en papel, cobrar el pago o confirmar quién es.",
       "step3Title": "Quienes llegan sin reserva y quienes no vienen",
-      "step3Body": "Agrega desde la pestaña a quien llega sin reserva, o deja que complete sus datos en su propio teléfono con el código de tu mostrador y luego dale su plaza. Pasada la hora de la salida, ¿No vino? libera la plaza y muestra quién la espera.",
+      "step3Body": "Agrega desde la misma página a quien llega sin reserva, o deja que complete sus datos en su propio teléfono con el código de tu mostrador y luego dale su plaza. Pasada la hora de la salida, ¿No vino? libera la plaza y muestra quién la espera.",
       "faq1Q": "¿Y si un buceador no recuerda en qué barco va?",
       "faq1A": "Búscalo por nombre, teléfono o correo desde la pantalla de inicio de DiveDay, o escanea el código de su confirmación. La búsqueda abarca cada salida desde seis horas atrás hasta un día y medio adelante.",
       "faq2Q": "¿Quien llega sin reserva puede completar sus propios datos?",
-      "faq2A": "Sí. El código de la tarjeta de tu mostrador abre un formulario en su teléfono para su nombre, su correo o teléfono, su certificación y sus tallas de alquiler, y se le envía la exención, por SMS si dejó un teléfono y ningún correo. Luego dale su plaza desde la pestaña Buceadores.",
+      "faq2A": "Sí. El código de la tarjeta de tu mostrador abre un formulario en su teléfono para su nombre, su correo o teléfono, su certificación y sus tallas de alquiler, y se le envía la exención, por SMS si dejó un teléfono y ningún correo. Luego dale su plaza desde la página de la salida.",
       "faq3Q": "¿Qué pasa cuando alguien no se presenta?",
       "faq3A": "Una vez pasada la hora del barco, márcalo como que no vino. La plaza se libera, la lista de espera aparece al lado, y ese toque no cobra ni reembolsa nada.",
       "closeTitle": "Registra a los buceadores del próximo barco de la demo",
@@ -1460,7 +1511,7 @@
       "step1Title": "Registra lo que hay en la pared",
       "step1Body": "Agrega unidades a mano o desde una hoja de cálculo, con etiqueta, tipo, talla, número de serie y modelo.",
       "step2Title": "Los buceadores dan sus tallas después de reservar",
-      "step2Body": "La pestaña Equipo convierte esas tallas en una lista para sacar y muestra las unidades libres, la talla exacta primero.",
+      "step2Body": "La página Equipo convierte esas tallas en una lista para sacar y muestra las unidades libres, la talla exacta primero.",
       "step3Title": "Sale, vuelve y se revisa",
       "step3Body": "Marca la salida y la vuelta de una unidad, imprime el comprobante de alquiler del buceador, y mira en la lista de tareas del día las devoluciones atrasadas y el mantenimiento que vence. Las reparaciones van en órdenes de trabajo: el cliente se entera cuando la suya está lista y recibe la cuenta por correo.",
       "faq1Q": "¿Qué revisiones de mantenimiento controla?",

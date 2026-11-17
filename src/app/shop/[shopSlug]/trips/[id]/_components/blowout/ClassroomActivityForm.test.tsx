@@ -103,6 +103,7 @@ it("preserves the draft and attempt after an uncertain transport failure", async
   await screen.findByText("Check the latest activity, then retry.");
   expect(screen.getByLabelText("Title")).toHaveValue("Fotografía de arrecifes");
   expect(screen.getByLabelText("Location")).toHaveValue("Sala del muelle");
+  await waitFor(() => expect(screen.getByRole("button", { name: "Create" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "Create" }));
   await waitFor(() => expect(action).toHaveBeenCalledTimes(2));
   expect(action.mock.calls[0][1].get("attemptId")).toBe("uncertain");

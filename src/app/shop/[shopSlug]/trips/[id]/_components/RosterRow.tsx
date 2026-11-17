@@ -1,18 +1,14 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { StatusMark } from "@/components/ui/StatusMark";
-import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
-import { rentalFitLine } from "@/lib/dive-prep";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { TurnAwayRowStateProvider } from "../_arrivals/TurnAwayScript";
-import { GuestRequirements } from "./GuestRequirements";
+import { OpenedGuest } from "./OpenedGuest";
 import type { PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { RosterRecordBlocked } from "./RosterRecordBlocked";
 import type {
@@ -146,7 +142,7 @@ export function RosterRow({
   const s7 = {
     ...s6,
     ...rowReasonList({ ...s6, reasonLines }),
-    ...rowReference(s6, { omitFit: folio }),
+    ...rowReference(s6),
   };
   const {
     booking,
@@ -184,110 +180,24 @@ export function RosterRow({
       ),
   );
   if (folio) {
-    const content = (
-      <li id={`booking-${booking.id}`} className="list-none scroll-mt-24">
-        <div className="space-y-6">
-          <div className="space-y-5">
-            {s6.minor ||
-            s6.birthday ||
-            booking.participantType !== "diver" ||
-            (s6.blockerTexts.length === 0 && arrivalControl) ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                {headerLeft}
-                {s6.blockerTexts.length === 0 ? arrivalControl : null}
-              </div>
-            ) : null}
-            <GuestRequirements
-              lines={reasonLines}
-              blockers={s6.blockerTexts}
-              payment={s6.paymentRemedy}
-              t={t}
-              contact={
-                <a
-                  href={`#guest-reference-${booking.id}`}
-                  className={buttonClass({ variant: "link", flush: true })}
-                >
-                  {t("trips.folio.reviewContact")}
-                </a>
-              }
-            />
-            {arrival ? null : identityContact}
-            {identityCheck}
-            {arrival ? null : reEntryNote}
-            {arrivalBelow}
-            {identityUnconfirmed || !actions.agencyCheckAction ? null : (
-              <AgencyCheckRow
-                personId={person.id}
-                cards={rows.agencyCheckCardsByPerson?.get(person.id) ?? []}
-              />
-            )}
+    return (
+      <OpenedGuest
+        seat={s6}
+        context={context}
+        reasonLines={reasonLines}
+        chips={s6.minor || s6.birthday || booking.participantType !== "diver" ? headerLeft : null}
+        fixes={
+          <>
             {!waiverPlaced ? s6.waiverRemedy : null}
             {!courseFormsPlaced && s6.hasCourseForms ? s6.courseFormsRemedy : null}
             {outstanding}
-            {!identityUnconfirmed && booking.participantType !== "rider" ? (
-              <section className="border-t border-border pt-5">
-                <h3 className="font-semibold">{t("trips.tabs.gear")}</h3>
-                <p className="mt-2 text-sm text-muted">
-                  {rentalFitLineText(
-                    t,
-                    context.trip.locale,
-                    rentalFitLine(
-                      rows.rentalFitByBooking.get(booking.id) ?? null,
-                      context.trip.shopRentalItems,
-                      booking.participantType,
-                    ),
-                  )}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-4">
-                  <Link
-                    href={`/shop/${context.trip.shopSlug}/divers/${person.id}#gear`}
-                    className={buttonClass({ variant: "link", flush: true })}
-                  >
-                    {t("trips.folio.recordFit")}
-                  </Link>
-                  <Link
-                    href={`/shop/${context.trip.shopSlug}/trips/${context.trip.tripId}/prep#assignments-heading`}
-                    className={buttonClass({ variant: "link", flush: true })}
-                  >
-                    {t("trips.folio.assignEquipment")}
-                  </Link>
-                </div>
-              </section>
-            ) : null}
-          </div>
-          <aside className="border-t border-border pt-4">
-            <AutoOpenDetails
-              openOnHash={`guest-reference-${booking.id}`}
-              id={`guest-reference-${booking.id}`}
-              open={holdOpen}
-              className="group/reference"
-            >
-              <summary className="flex min-h-12 cursor-pointer items-center justify-between font-semibold">
-                {t("trips.folio.reference")}
-                <DisclosureCaret
-                  direction="down"
-                  className="size-4 group-open/reference:rotate-180"
-                />
-              </summary>
-              <div className="space-y-5 pt-4">
-                <Link
-                  href={`/shop/${context.trip.shopSlug}/divers/${person.id}`}
-                  className={buttonClass({ variant: "link", flush: true })}
-                >
-                  {t("trips.folio.openProfile")}
-                </Link>
-                {s6.referenceFacts}
-                {reference}
-                {!paymentOutstanding ? s6.paymentRemedy : null}
-                {s6.blockerTexts.length > 0 ? arrivalControl : null}
-                {arrival?.details?.get(booking.id)}
-              </div>
-            </AutoOpenDetails>
-          </aside>
-        </div>
-      </li>
+            {!paymentOutstanding ? s6.paymentRemedy : null}
+          </>
+        }
+        identityCheck={identityCheck}
+        identityContact={identityContact}
+      />
     );
-    return arrival ? <TurnAwayRowStateProvider>{content}</TurnAwayRowStateProvider> : content;
   }
   const markSummary = (
     <summary

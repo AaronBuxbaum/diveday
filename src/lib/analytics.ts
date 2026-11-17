@@ -181,7 +181,7 @@ export type AnalyticsEvent =
       failed: number;
     }
   | {
-      /** Staff opened the complete trip packet from the Overview tab. */
+      /** Staff opened the complete trip packet from the Trip page. */
       name: "trip_print_pdf_clicked";
       surface: "trip_overview";
     }

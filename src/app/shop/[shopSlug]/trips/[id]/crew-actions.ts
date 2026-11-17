@@ -74,7 +74,7 @@ export async function withdrawCrewAwayAcknowledgementAction(
     actorPersonId: s.user.personId,
   });
   revalidatePath(shopPath(shopSlug));
-  revalidateAndRedirect(page, `${page}?view=details#crew`);
+  revalidateAndRedirect(page, `${page}?view=edit#crew`);
 }
 
 /**
@@ -91,7 +91,7 @@ export async function moveTripCrewAction(
 ): Promise<void> {
   const s = (await requireShopSurface(shopSlug)).session;
   const page = shopPath(shopSlug, "trips", tripId);
-  const back = `${page}?view=details#crew`;
+  const back = `${page}?view=edit#crew`;
   const personId = formData.get("personId");
   const toTripId = formData.get("toTripId");
   if (

@@ -72,7 +72,7 @@ export function CheckpointSwitch({
           `data-key` is what `CheckpointGapGuard` catches. */}
         <nav
           aria-label={t("manifest.checkpointNavAriaLabel")}
-          className={`mt-7 ${BOAT_SEGMENT_TRACK_CLASS}`}
+          className={`mt-2 ${BOAT_SEGMENT_TRACK_CLASS}`}
         >
           {checkpoints.map((value) => {
             const current = value === checkpoint;
@@ -83,7 +83,9 @@ export function CheckpointSwitch({
                 data-key={value}
                 scroll={false}
                 aria-current={current ? "true" : undefined}
-                className={boatSegmentClass(current)}
+                // A short phone keeps routine roll call on one screen (ADR
+                // 20261114-trip-folio-and-individual-deck); 44px still takes a thumb.
+                className={`${boatSegmentClass(current)} [@media(max-height:640px)]:min-h-11`}
               >
                 <span aria-hidden="true" className="sm:hidden">
                   {rollCallCheckpointShortText(t, value)}

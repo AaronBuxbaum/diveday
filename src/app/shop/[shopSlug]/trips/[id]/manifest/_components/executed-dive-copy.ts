@@ -37,7 +37,7 @@ export function executedDiveSummary({
   t: StaffTranslator;
 }): string {
   if (!row) return t("manifest.executedDive.summaryNotRecorded", { dive: diveLabel });
-  const parts: string[] = [row.actualSite?.name ?? t("manifest.executedDive.unknown")];
+  const parts: string[] = [row.actualSite?.name ?? t("manifest.executedDive.siteUnknown")];
   const depth = row.executed.maxDepthMeters;
   if (depth != null && !row.executed.notRecorded.includes("depth")) {
     parts.push(
@@ -115,6 +115,7 @@ export function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): Ex
  */
 function executedDivePlanned({
   plannedDives,
+  diveCount,
   executedDives,
   locale,
   timeZone,
@@ -122,6 +123,8 @@ function executedDivePlanned({
   t,
 }: {
   plannedDives: Awaited<ReturnType<typeof listTripDives>>;
+  /** The trip's planned dive count, when some dives may have no plan row. */
+  diveCount?: number;
   executedDives: ReadonlyArray<{
     executed: ExecutedDive;
     actualSite: { id: string; name: string } | null;
@@ -131,16 +134,29 @@ function executedDivePlanned({
   depthUnit: DepthUnit;
   t: StaffTranslator;
 }) {
-  return plannedDives.map(({ dive, diveSite }) => ({
-    diveNumber: dive.diveNumber,
-    diveSite: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
-    diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
+  // A dive the trip counts but has no plan row for (no site chosen) is still
+  // a dive the crew can log.
+  const planned: { diveNumber: number; diveSite: { id: string; name: string } | null }[] =
+    plannedDives.map(({ dive, diveSite }) => ({
+      diveNumber: dive.diveNumber,
+      diveSite: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
+    }));
+  for (let diveNumber = 1; diveNumber <= (diveCount ?? 0); diveNumber += 1) {
+    if (!planned.some((entry) => entry.diveNumber === diveNumber)) {
+      planned.push({ diveNumber, diveSite: null });
+    }
+  }
+  planned.sort((a, b) => a.diveNumber - b.diveNumber);
+  return planned.map(({ diveNumber, diveSite }) => ({
+    diveNumber,
+    diveSite,
+    diveLabel: t("manifest.executedDive.dive", { number: diveNumber }),
     plannedSiteLabel: t("manifest.executedDive.plannedSite", {
       site: diveSite?.name ?? t("manifest.executedDive.unknown"),
     }),
     summaryLine: executedDiveSummary({
-      diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
-      row: executedDives.find((entry) => entry.executed.diveNumber === dive.diveNumber),
+      diveLabel: t("manifest.executedDive.dive", { number: diveNumber }),
+      row: executedDives.find((entry) => entry.executed.diveNumber === diveNumber),
       locale,
       timeZone,
       depthUnit,
@@ -157,6 +173,7 @@ function executedDivePlanned({
  */
 export function executedDiveLogView({
   plannedDives,
+  diveCount,
   executedDives,
   liveDiveSites,
   catalogSpecies,
@@ -173,7 +190,15 @@ export function executedDiveLogView({
   speciesBySite: ExecutedDiveLogProps["speciesBySite"];
 }) {
   return {
-    planned: executedDivePlanned({ plannedDives, executedDives, locale, timeZone, depthUnit, t }),
+    planned: executedDivePlanned({
+      plannedDives,
+      diveCount,
+      executedDives,
+      locale,
+      timeZone,
+      depthUnit,
+      t,
+    }),
     executed: executedDives,
     liveDiveSites: liveDiveSites.map((site) => ({ id: site.id, name: site.name })),
     catalogSpecies,

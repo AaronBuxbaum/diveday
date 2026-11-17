@@ -635,12 +635,12 @@ test.describe("the phone", () => {
     await expect(tabs).toBeVisible();
 
     await page.locator("ol li h3 a").first().click();
-    await page.getByRole("link", { name: "Open Deck", exact: true }).click();
+    await page.getByRole("link", { name: "Roll call", exact: true }).click();
     await expect(page).toHaveURL(/\/manifest/);
     // The roll call owns the phone: no tab bar while it is open.
     await expect(tabs).toBeHidden();
 
-    await page.getByRole("link", { name: "Return to Guests", exact: true }).click();
+    await page.getByRole("link", { name: "Trip", exact: true }).click();
     await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
     await expect(tabs).toBeVisible();
 

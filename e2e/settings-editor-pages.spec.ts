@@ -51,6 +51,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
     ["Rentals", `/shop/${SHOP}/settings/rentals`],
     ["Emergency reference", `/shop/${SHOP}/settings/emergency-reference`],
     ["Dock-day rhythm", `/shop/${SHOP}/settings/dock-day`],
+    ["Trip defaults", `/shop/${SHOP}/settings/trip-defaults`],
     ["Shop profile & branding", `/shop/${SHOP}/settings/profile`],
   ] as const) {
     await expect(rail.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);
@@ -376,4 +377,15 @@ test("bookkeeper settings and registers retain the settings rail", async ({
       }
     }
   }
+});
+
+test("trip defaults save and are shown again", async ({ page, privateShop }) => {
+  await page.goto(`/shop/${privateShop.slug}/settings/trip-defaults`);
+  await page.locator('input[name="deposit"]').fill("50");
+  await page.locator('input[name="minimum"]').fill("3");
+  await page.locator('input[name="snorkeler"]').fill("0");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Trip defaults saved.")).toBeVisible();
+  await expect(page.locator('input[name="deposit"]')).toHaveValue("50");
+  await expect(page.locator('input[name="snorkeler"]')).toHaveValue("0");
 });

@@ -33,7 +33,10 @@ schedule builder, date requests, site briefings, bearer-token routes). What they
   can use a create page; the dive-site editor is one.
 - **The builder is the one place a trip is created**; another reading of the schedule is a view in
   `schedule/_components/ScheduleViews.tsx`.
-- **A departure has four folio tabs** drawn by `_components/TripTabs.tsx`: Guests, Equipment, The day and Record. Open Deck enters the focused individual roll call (ADR 20261114-trip-folio-and-individual-deck); add ordinary work to its tab.
+- **A departure is five phases plus Edit trip** (ADR 20261117-trip-page-clock): Filling, Getting
+  ready, Check-in, On the water and Wrapped up (`?phase=`, `src/lib/trip-clock.ts`), each a panel in
+  `trips/[id]/_components/phases/`, and Edit trip (`?view=edit`). Roll call records one named person
+  per action (ADR 20261114-trip-folio-and-individual-deck); add ordinary work to its phase.
 - **The shop home** is `_components/today/DaySpine.tsx`: departures, then one "Needs you" list.
 - **Back-office queues** sit with their object and render nothing when empty, never on Reports.
 - **A date request is never the wait list.**

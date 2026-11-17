@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DeckFlow } from "@/components/offline-manifest/DeckFlow";
+import { deckCopy } from "@/components/offline-manifest/deck-copy";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { TripManifest } from "@/lib/manifests";
 import { DiverRollCall } from "./DiverRollCall";
@@ -81,11 +83,10 @@ function renderPanel(overrides: Partial<Parameters<typeof SummaryPanel>[0]> = {}
 }
 
 describe("the missing are named, not just counted", () => {
-  it("links each not-back-aboard diver to their own row", () => {
+  it("names each not-back-aboard diver", () => {
     renderPanel();
     const list = screen.getByRole("list", { name: "Who is not back aboard" });
-    const link = within(list).getByRole("link", { name: "Priya Sharma" });
-    expect(link.getAttribute("href")).toBe("#diver-row-b-3");
+    expect(within(list).getByText("Priya Sharma")).toBeInTheDocument();
   });
 
   it("names a not-back-aboard crew member, whose row is below the whole roster", () => {
@@ -98,8 +99,7 @@ describe("the missing are named, not just counted", () => {
       notBackAboardCrew: [{ id: "p-9", fullName: "Keiko Tanaka" }],
     });
     const list = screen.getByRole("list", { name: "Who is not back aboard" });
-    const link = within(list).getByRole("link", { name: "Keiko Tanaka (crew)" });
-    expect(link.getAttribute("href")).toBe("#crew-row-p-9");
+    expect(within(list).getByText("Keiko Tanaka (crew)")).toBeInTheDocument();
   });
 
   it("names both halves in one list, divers first", () => {
@@ -112,8 +112,8 @@ describe("the missing are named, not just counted", () => {
     const list = screen.getByRole("list", { name: "Who is not back aboard" });
     expect(
       within(list)
-        .getAllByRole("link")
-        .map((link) => link.textContent),
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
     ).toEqual(["Priya Sharma", "Keiko Tanaka (crew)"]);
   });
 
@@ -311,26 +311,7 @@ describe("a seat the counter released is not a head to count", () => {
   });
 });
 
-/**
- * **Every chip points at a row that is on the page.**
- *
- * The panel's name chips and the roll call's rows are two halves of one jump,
- * rendered from two files, and until `diverRowId` existed each spelled the
- * target itself. They agreed — and nothing here would have noticed if they
- * stopped: the chip test above asserts `"#diver-row-b-3"` and the roll call's
- * asserts `diver-row-b-1..b-3`, each restating its own literal, so renaming
- * one side and missing the other keeps both suites green while a captain taps
- * a name at the rail and the page does not move.
- *
- * That is not hypothetical. It is #1675, shipped on the offline manifest,
- * where the face grid jumped to `diver-row-<bookingId>` and its rows carried
- * `offline-roll-call-<bookingId>`.
- *
- * So this renders both from one roster and resolves the hrefs against the
- * document. It asserts a relationship rather than a string, which is the only
- * shape that can fail on a rename.
- */
-describe("the panel's chips and the roll call's rows are one jump", () => {
+describe("the card and the rows it pins over", () => {
   function diver(bookingId: string, fullName: string): TripManifest["divers"][number] {
     return {
       bookingId,
@@ -347,71 +328,6 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
       rollCall: undefined,
     } as TripManifest["divers"][number];
   }
-
-  it("resolves every name chip to a diver row in the same document", () => {
-    const roster = [
-      diver("b-1", "Ana Ruiz"),
-      diver("b-2", "Diego Marín"),
-      diver("b-3", "Priya Sharma"),
-    ];
-    const { container } = render(
-      <>
-        <SummaryPanel
-          checkpoint="after_dive_1"
-          isDeparture={false}
-          rollCallComplete={false}
-          completeness={completeness()}
-          summary={summary()}
-          separatedTeams={0}
-          notBackAboardDivers={[
-            { bookingId: "b-2", fullName: "Diego Marín" },
-            { bookingId: "b-3", fullName: "Priya Sharma" },
-          ]}
-          notBackAboardCrew={[]}
-          t={t}
-        />
-        <DiverRollCall
-          context={{
-            divers: roster,
-            crew: [],
-            checkpoint: "after_dive_1",
-            isDeparture: false,
-            shopSlug: "blue-mantis",
-            tripId: "00000000-0000-4000-8000-0000000000ff",
-            locale: "en-US",
-            timezone: "America/New_York",
-            notesByBooking: new Map(),
-            rollCallAction: vi.fn(async () => ({ ok: true }) as const),
-            addPrivateNoteAction: vi.fn(async () => undefined) as never,
-            rollCallButtonCopy: () => ({
-              errorRefusal: "Try again",
-              blockedMessage: "Still blocked",
-            }),
-            buddyTeamLabel: () => null,
-            t,
-          }}
-        />
-      </>,
-    );
-
-    const chips = [...container.querySelectorAll<HTMLAnchorElement>('a[href^="#diver-row-"]')];
-    // A vacuous pass is the failure mode worth naming: if the panel stopped
-    // rendering chips this would assert nothing at all.
-    expect(chips.length).toBe(2);
-    for (const chip of chips) {
-      const id = chip.getAttribute("href")?.slice(1) ?? "";
-      const row = container.querySelector(`li[id="${id}"]`);
-      expect(row, `no row for ${chip.textContent}`).not.toBeNull();
-      // **And it is that person's row**, not merely a row (`dive-domain-expert`
-      // review, issue #1773). Both halves of the id carry a booking id, so a
-      // transposition resolves to somebody — and lands a captain on the wrong
-      // diver while a named person is in the water, which is worse than
-      // #1675's tap that did nothing at all.
-      expect(row?.textContent, `${chip.textContent}'s chip points at another row`).toContain(
-        chip.textContent,
-      );
-    }
-  });
 
   /**
    * **And the jump lands below the card, however tall the card grows**
@@ -667,5 +583,75 @@ describe("blocked divers at the head count", () => {
   it("says nothing about blocked after a dive, where it gates nothing", () => {
     renderBlocked(false, { blocked: 3, undecided: 1, aboard: 2 });
     expect(screen.queryByText(/blocked/)).toBeNull();
+  });
+});
+
+/**
+ * **A missing person's name opens that person** on the roll call screen.
+ * The chips used to be links to `#diver-row-…` and `#crew-row-…`, rows the
+ * one-person roll call never draws, so a captain tapping a red name at the
+ * rail went nowhere. Inside the roll call each chip opens that person, with
+ * their exception sheet open; diver and crew alike.
+ */
+describe("a missing person's chip opens them on the roll call", () => {
+  function deckWithPanel() {
+    const people = [
+      { id: "b-1", name: "Ana Ruiz", role: "Guest" },
+      { id: "b-3", name: "Priya Sharma", role: "Guest" },
+      { id: "p-9", name: "Keiko Tanaka", role: "Crew" },
+    ].map((person) => ({
+      ...person,
+      outstanding: person.id !== "b-1",
+      attention: person.id !== "b-1",
+      record: <p>record {person.name}</p>,
+      details: <p>details of {person.name}</p>,
+    }));
+    render(
+      <DeckFlow
+        people={people}
+        copy={deckCopy(t)}
+        checkpoint="After dive 1"
+        progress="1 of 3"
+        complete={false}
+        timeZone="America/New_York"
+        locale="en-US"
+        attention={
+          <SummaryPanel
+            checkpoint="after_dive_1"
+            isDeparture={false}
+            rollCallComplete={false}
+            completeness={completeness({ crewReason: "crew_not_back_aboard" })}
+            summary={summary()}
+            separatedTeams={0}
+            notBackAboardDivers={[{ bookingId: "b-3", fullName: "Priya Sharma" }]}
+            notBackAboardCrew={[{ id: "p-9", fullName: "Keiko Tanaka" }]}
+            t={t}
+          />
+        }
+      />,
+    );
+    fireEvent.click(screen.getAllByRole("button", { name: deckCopy(t).review })[0]);
+    return screen.getByRole("list", { name: "Who is not back aboard" });
+  }
+
+  it("opens the diver, with their sheet open", () => {
+    const list = deckWithPanel();
+    fireEvent.click(within(list).getByRole("button", { name: "Priya Sharma" }));
+    expect(screen.getByRole("heading", { name: "Priya Sharma" })).toBeInTheDocument();
+    expect(screen.getByText("details of Priya Sharma")).toBeInTheDocument();
+  });
+
+  it("opens the crew member, whose name carries (crew)", () => {
+    const list = deckWithPanel();
+    fireEvent.click(within(list).getByRole("button", { name: "Keiko Tanaka (crew)" }));
+    expect(screen.getByRole("heading", { name: "Keiko Tanaka" })).toBeInTheDocument();
+    expect(screen.getByText("details of Keiko Tanaka")).toBeInTheDocument();
+  });
+
+  it("points at no row that is not on the screen", () => {
+    deckWithPanel();
+    expect(document.querySelectorAll('a[href^="#diver-row-"], a[href^="#crew-row-"]')).toHaveLength(
+      0,
+    );
   });
 });

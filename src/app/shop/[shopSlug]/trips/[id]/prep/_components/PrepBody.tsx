@@ -39,6 +39,8 @@ const GEAR_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; cou
   "gear-nothing-to-hand-over": { tone: "warning", key: "gear.notice.nothingToHandOver" },
   "gear-concern-needs-words": { tone: "warning", key: "gear.notice.concernNeedsWords" },
   "gear-nothing-out": { tone: "warning", key: "gear.notice.nothingOut" },
+  // Every Gear-tab action's refused parse (`prep/actions.ts`): never a silent tap.
+  invalid: { tone: "danger", key: "gear.notice.invalid" },
 };
 
 /**

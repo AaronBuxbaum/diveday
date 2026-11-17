@@ -1,10 +1,9 @@
-import { listBoats } from "@/features/boats";
-import { getTripConservationPanel } from "@/features/conservation";
+import { getBoatById, listBoats } from "@/features/boats";
 import { getCoursePulse } from "@/features/course-pulse";
-import { getDepartureNeeds } from "@/features/today";
 import { getTripGuests, type TripGuestsFilters, type TripGuestsShop } from "@/features/trip-guests";
 import { listTripLenses } from "@/features/trip-lenses";
 import { getTripOverview, type TripOverviewShop } from "@/features/trip-overview";
+import { gearToPack, getTripPrep, type TripPrepShop } from "@/features/trip-prep";
 import { loadTripSharedReads } from "@/features/trip-shared-reads";
 import { latestTripStage } from "@/features/trip-stages";
 import { canPersonRefund, canPersonRetireMedicalRefusal } from "../../db/authz";
@@ -56,31 +55,54 @@ export async function getTripManifest(
   };
 }
 
-/** Read only after the page resolves its actual tab, including save notices. */
-export async function getTripDetails(
+/**
+ * **A run's page under Schedule** (`/schedule/series/[tripId]`, ADR
+ * 20261117-trip-page-clock), opened from one of its dates: that date's
+ * overview, which carries the run and its off-cadence dates, and whether this
+ * staffer may refund, which decides whether a call-off releases card refunds or
+ * leaves them for an owner or manager. `null` when there is no such departure
+ * in this shop or it is not part of a run.
+ */
+export async function getSeriesPage(
   db: AppDb,
-  shop: TripManifestShop,
+  shop: TripOverviewShop,
   tripId: string,
   personId: string,
 ) {
-  const [boats, lenses, conservation] = await Promise.all([
-    shop.hasBoatDiving ? listBoats(db, shop.id) : [],
-    listTripLenses(db, shop.id),
-    getTripConservationPanel(db, shop.id, tripId, personId),
+  const [overview, mayRefund] = await Promise.all([
+    getTripOverview(db, shop, tripId, personId),
+    canPersonRefund(db, shop.id, personId),
   ]);
-  return { boats, lenses, conservation };
+  const series = overview?.series;
+  if (!overview || !series) return null;
+  return { overview, series, mayRefund };
 }
 
-/** Start the page's independent reads together; keep the queue deferred until the pulse needs it. */
+/** Read only after the page resolves its actual tab, including save notices. */
+export async function getTripDetails(db: AppDb, shop: TripManifestShop) {
+  const [boats, lenses] = await Promise.all([
+    shop.hasBoatDiving ? listBoats(db, shop.id) : [],
+    listTripLenses(db, shop.id),
+  ]);
+  return { boats, lenses };
+}
+
+/** Start the page's independent reads together; the phase-only reads wait until a phase asks. */
 export function readTripPage(
   db: AppDb,
-  shop: TripManifestShop & Parameters<typeof getDepartureNeeds>[1],
+  shop: TripManifestShop & TripPrepShop,
   tripId: string,
-  input: Parameters<typeof getTripManifest>[3] & Parameters<typeof getDepartureNeeds>[3],
+  input: Parameters<typeof getTripManifest>[3],
 ) {
   return {
     manifest: getTripManifest(db, shop, tripId, input),
-    details: () => getTripDetails(db, shop, tripId, input.session.user.personId),
-    departureNeeds: () => getDepartureNeeds(db, shop, tripId, input),
+    details: () => getTripDetails(db, shop),
+    /** The departure's boat, for the header's facts line; null for a shore dive or a pool session. */
+    boat: (boatId: string | null) => (boatId ? getBoatById(db, shop.id, boatId) : null),
+    /** Getting ready's and Check-in's summary of the Gear page's packing list. */
+    gearToPack: async () => {
+      const prep = await getTripPrep(db, shop, tripId);
+      return prep ? gearToPack(prep) : null;
+    },
   };
 }

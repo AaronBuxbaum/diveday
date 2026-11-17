@@ -13,7 +13,7 @@ import { ArrivalSearch } from "./ArrivalSearch";
 /**
  * **Which boat is this diver on?** — Today's arrival lookup.
  *
- * The counter is each departure's own Divers tab once arrivals open (ADR
+ * The counter is each departure's own Trip page once arrivals open (ADR
  * 20261001-logbook, decision 3, as amended 2026-10-05), which answers "who is still to come on *this* boat". The one
  * question it cannot answer is the desk's first one when a diver walks up with
  * a name and no idea which departure they booked, so that lookup lives here,

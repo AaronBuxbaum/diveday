@@ -123,6 +123,16 @@ describe("the executed-dive record is collapsed", () => {
     expect(disclosure?.contains(form as Node)).toBe(true);
   });
 
+  it("opens itself when a “Log this dive” link lands on its hash", () => {
+    window.location.hash = "#executed-dive";
+    try {
+      const { container } = renderLog("Dive 1 — not recorded yet");
+      expect(container.querySelector("details")?.open).toBe(true);
+    } finally {
+      window.location.hash = "";
+    }
+  });
+
   it("renders only the dive the crew is standing at", () => {
     renderLog("Dive 1 — not recorded yet");
     // One checkpoint, one dive: `after_dive_1` shows dive 1 and nothing else.

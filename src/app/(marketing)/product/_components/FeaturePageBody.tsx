@@ -211,9 +211,9 @@ export async function FeaturePageBody({
       </section>
 
       {/* How it works: three steps in the order the shop meets them, as a
-          numbered track rather than three equal boxes, because they are a
-          sequence. Numbered as the notes above are, in plain figures: two
-          numbering styles one scroll apart read as two systems. */}
+          plain list rather than three equal boxes, in the order the shop meets
+          them. No numerals: they would read as links, and the order is the
+          reading order. */}
       <MarketingReveal>
         <section className="bg-surface">
           <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20">
@@ -222,24 +222,16 @@ export async function FeaturePageBody({
                 <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
                   {t("marketing.featureChrome.stepsTitle")}
                 </h2>
-                <ol
+                <ul
                   className={scene ? "mt-8 space-y-6" : "mt-10 grid gap-8 md:grid-cols-3 md:gap-10"}
                 >
-                  {steps.map((step, index) => (
-                    <li key={step.title} className="flex gap-3 border-t border-border pt-5">
-                      <span
-                        aria-hidden="true"
-                        className="w-4 shrink-0 leading-7 font-semibold text-primary tabular-nums"
-                      >
-                        {index + 1}
-                      </span>
-                      <div>
-                        <h3 className={`${ITEM_TITLE_CLASS} text-balance`}>{step.title}</h3>
-                        <p className="mt-2 leading-7 text-muted">{step.body}</p>
-                      </div>
+                  {steps.map((step) => (
+                    <li key={step.title} className="border-t border-border pt-5">
+                      <h3 className={`${ITEM_TITLE_CLASS} text-balance`}>{step.title}</h3>
+                      <p className="mt-2 leading-7 text-muted">{step.body}</p>
                     </li>
                   ))}
-                </ol>
+                </ul>
               </div>
               {scene ? <MarketingIllustration scene={scene} locale={locale} /> : null}
             </div>

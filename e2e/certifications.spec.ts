@@ -8,6 +8,7 @@ import {
   findTripOnBoard,
   openDiverFileGroup,
   openFirstRosterRowWith,
+  openNewGuestForm,
   openRosterDetails,
   openThreadStep,
   openTripAbout,
@@ -157,13 +158,12 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
   await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
 
-  // Crew is on Details; the roster the diver joins is the Divers tab.
+  // Crew is on Edit trip; the guest list the diver joins is the trip itself.
   await openTripTab(page, "Trip");
 
   const diverName = `Cert Test Diver ${e2eNow().getTime()}`;
   const diverEmail = `cert-test-${e2eNow().getTime()}@example.com`;
-  await page.getByRole("link", { name: "Add diver" }).click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
   await page.getByLabel("Full name").fill(diverName);
   await page.getByLabel("Email").fill(diverEmail);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -222,7 +222,7 @@ test("an instructor writes a student's next step on the course session's own ros
     daysOut: 29,
   });
   await page.goto(tripPath);
-  // Crew is on Details; the roster the diver joins is the Divers tab.
+  // Crew is on Edit trip; the guest list the diver joins is the trip itself.
   await openTripTab(page, "Trip");
 
   // The disclosure is per student; the first one on this session's roster is
@@ -249,7 +249,7 @@ test("a fun dive's roster offers no certification and no next step", async ({ pa
   const trip = await findTripOnBoard(page, "blue-mantis", /Two-Tank Reef/);
   const title = ((await trip.textContent()) ?? "").trim();
   await trip.click();
-  // Crew is on Details; the roster the diver joins is the Divers tab.
+  // Crew is on Edit trip; the guest list the diver joins is the trip itself.
   await openTripTab(page, "Trip");
   // The departure's own masthead is what says the page has rendered.
   await page.getByRole("heading", { level: 1, name: title }).waitFor();
