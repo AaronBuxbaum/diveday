@@ -220,7 +220,9 @@ test("a paused session prints no departure information and retry restores the do
 }, info) => {
   const id = await seededTripId(page, "blue-mantis", REEF_TRIP);
   await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
-  await expect(page.getByRole("heading", { level: 1, name: "Roll call", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
+  ).toBeVisible();
   await page.emulateMedia({ media: "print" });
   await page.route("**/api/staff-activity", (route) => route.fulfill({ status: 401 }));
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
@@ -236,7 +238,9 @@ test("a paused session prints no departure information and retry restores the do
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(0);
   await page.emulateMedia({ media: "screen" });
-  await expect(page.getByRole("heading", { level: 1, name: "Roll call", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
+  ).toBeVisible();
   await page.emulateMedia({ media: "print" });
   await expect(page.getByRole("heading", { level: 1, name: REEF_TRIP })).toBeVisible();
   const restored = info.outputPath("restored-manifest.pdf");
