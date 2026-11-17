@@ -117,6 +117,7 @@ export default async function EmbedSettingsPage({
     code: t("settings.embed.code"),
     buttonText: t("settings.embed.bookButton.buttonText"),
     partnerName: t("settings.embed.partnerName"),
+    optional: t("settings.main.optionalHint"),
     partnerPlaceholder: t("settings.embed.partnerPlaceholder"),
     partnerLink: t("settings.embed.partnerLink"),
     partnerLinkField: t("settings.embed.partnerLinkField"),

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { choiceGridClass } from "@/components/ui/choice-grid";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ChoicePill, FormStatus } from "@/components/ui/form";
 
@@ -289,7 +290,7 @@ export function StaffRolesDisclosure({
             key={saved}
             onKeyDown={onEscape}
             onBlur={onFocusLeave}
-            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+            className={choiceGridClass}
           >
             <legend className="sr-only">{legend}</legend>
             {options.map((option) => (

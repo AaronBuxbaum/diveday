@@ -12,7 +12,7 @@ const words: SetupRequestFormWords = {
   region: "Town or region",
   runs: "What do you run?",
   runsAnswers: { runsBoat: "Boat dives", runsShore: "Shore dives", runsPool: "Pool sessions" },
-  currentSystem: "Current tool (optional)",
+  currentSystem: "Current tool",
   notSpecified: "Not specified",
   current: {
     paper: "Paper",
@@ -26,6 +26,7 @@ const words: SetupRequestFormWords = {
   contactName: "Your name",
   email: "Email",
   phone: "Phone",
+  optional: "(optional)",
   website: "Website",
   submit: "Send",
   sending: "Sending…",
@@ -49,7 +50,7 @@ describe("SetupRequestForm, which system", () => {
       <SetupRequestForm source="pricing" words={words} systems={systems} />,
     );
     const email = screen.getByRole("textbox", { name: "Email" });
-    const tool = screen.getByRole("combobox", { name: "Current tool (optional)" });
+    const tool = screen.getByRole("combobox", { name: /^Current tool/ });
     expect(email.compareDocumentPosition(tool) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(container.querySelectorAll('[name="currentSystem"][required]')).toHaveLength(0);
   });

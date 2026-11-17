@@ -593,6 +593,7 @@ function PayAtBookingFields({
       <FieldGrid columns={2} className="mt-4">
         <Field
           label={t("trips.details.depositLabel")}
+          hint={t("trips.details.optionalHint")}
           description={t("trips.details.depositDescription")}
         >
           <input
@@ -611,6 +612,7 @@ function PayAtBookingFields({
         </Field>
         <Field
           label={t("trips.details.cancellationWindowLabel")}
+          hint={t("trips.details.optionalHint")}
           description={t("trips.details.cancellationWindowDescription")}
         >
           <div className="flex items-center gap-2">
@@ -629,6 +631,7 @@ function PayAtBookingFields({
         </Field>
         <Field
           label={t("trips.details.minimumBookingsLabel")}
+          hint={t("trips.details.optionalHint")}
           description={t("trips.details.minimumBookingsDescription")}
         >
           <div className="flex items-center gap-2">
@@ -647,6 +650,7 @@ function PayAtBookingFields({
         </Field>
         <Field
           label={t("trips.details.minimumDecisionLabel")}
+          hint={t("trips.details.optionalHint")}
           description={t("trips.details.minimumDecisionDescription")}
         >
           <div className="flex items-center gap-2">

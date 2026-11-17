@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { choiceGridClass } from "@/components/ui/choice-grid";
 import { ChoiceFieldset, ChoicePill } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
@@ -16,7 +17,7 @@ export function EventCheckboxes({
   return (
     <ChoiceFieldset
       legend={t("integrations.common.selectedEvents")}
-      bodyClassName="grid gap-2 sm:grid-cols-3"
+      bodyClassName={choiceGridClass}
     >
       {EVENT_OPTIONS.map((event) => (
         <ChoicePill

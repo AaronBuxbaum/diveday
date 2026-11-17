@@ -47,7 +47,11 @@ export function BoatPaperFields({
     <div
       className={`grid w-full grid-cols-1 gap-3 sm:basis-full sm:grid-cols-2 ${className}`.trim()}
     >
-      <Field error={invalid ? error : undefined} label={t("boats.certifiedPassengersLabel")}>
+      <Field
+        hint={t("boats.optionalHint")}
+        error={invalid ? error : undefined}
+        label={t("boats.certifiedPassengersLabel")}
+      >
         <input
           name="certifiedPassengers"
           aria-invalid={invalid || undefined}
@@ -59,7 +63,11 @@ export function BoatPaperFields({
           className={`${controlClass} tabular-nums`}
         />
       </Field>
-      <Field error={invalid ? error : undefined} label={t("boats.certifiedTotalPersonsLabel")}>
+      <Field
+        hint={t("boats.optionalHint")}
+        error={invalid ? error : undefined}
+        label={t("boats.certifiedTotalPersonsLabel")}
+      >
         <input
           name="certifiedTotalPersons"
           aria-invalid={invalid || undefined}
@@ -71,19 +79,23 @@ export function BoatPaperFields({
           className={`${controlClass} tabular-nums`}
         />
       </Field>
-      <Field label={t("boats.coiExpiresLabel")}>
+      <Field hint={t("boats.optionalHint")} label={t("boats.coiExpiresLabel")}>
         <DateField name="coiExpiresOn" defaultValue={boat?.coiExpiresOn ?? ""} />
       </Field>
-      <Field label={t("boats.inspectionDueLabel")}>
+      <Field hint={t("boats.optionalHint")} label={t("boats.inspectionDueLabel")}>
         <DateField name="inspectionDueOn" defaultValue={boat?.inspectionDueOn ?? ""} />
       </Field>
-      <Field label={t("boats.registrationExpiresLabel")}>
+      <Field hint={t("boats.optionalHint")} label={t("boats.registrationExpiresLabel")}>
         <DateField name="registrationExpiresOn" defaultValue={boat?.registrationExpiresOn ?? ""} />
       </Field>
-      <Field label={t("boats.insuranceExpiresLabel")}>
+      <Field hint={t("boats.optionalHint")} label={t("boats.insuranceExpiresLabel")}>
         <DateField name="insuranceExpiresOn" defaultValue={boat?.insuranceExpiresOn ?? ""} />
       </Field>
-      <Field error={radioInvalid ? error : undefined} label={t("boats.callSignLabel")}>
+      <Field
+        hint={t("boats.optionalHint")}
+        error={radioInvalid ? error : undefined}
+        label={t("boats.callSignLabel")}
+      >
         <input
           name="callSign"
           aria-invalid={radioInvalid || undefined}
@@ -97,6 +109,7 @@ export function BoatPaperFields({
         />
       </Field>
       <Field
+        hint={t("boats.optionalHint")}
         error={radioInvalid ? error : undefined}
         label={t("boats.mmsiLabel")}
         description={t("boats.mmsiHint")}
@@ -113,6 +126,7 @@ export function BoatPaperFields({
         />
       </Field>
       <Field
+        hint={t("boats.optionalHint")}
         error={radioInvalid || channelInvalid ? error : undefined}
         label={t("boats.workingChannelLabel")}
         description={t("boats.workingChannelHint")}
@@ -131,13 +145,13 @@ export function BoatPaperFields({
       {/* The hull in the yard (loop 5, row 5): both days or neither. The
           builder refuses the boat for a day inside them and the board warns
           about a departure already on it. */}
-      <Field label={t("boats.outOfServiceFromLabel")}>
+      <Field hint={t("boats.optionalHint")} label={t("boats.outOfServiceFromLabel")}>
         <DateField name="outOfServiceFrom" defaultValue={boat?.outOfServiceFrom ?? ""} />
       </Field>
-      <Field label={t("boats.outOfServiceUntilLabel")}>
+      <Field hint={t("boats.optionalHint")} label={t("boats.outOfServiceUntilLabel")}>
         <DateField name="outOfServiceUntil" defaultValue={boat?.outOfServiceUntil ?? ""} />
       </Field>
-      <Field label={t("boats.outOfServiceReasonLabel")}>
+      <Field hint={t("boats.optionalHint")} label={t("boats.outOfServiceReasonLabel")}>
         <input
           name="outOfServiceReason"
           type="text"

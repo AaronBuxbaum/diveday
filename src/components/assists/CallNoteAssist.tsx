@@ -28,6 +28,7 @@ export function CallNoteAssist({
   words: {
     label: string;
     hint: string;
+    optional: string;
     fill: string;
     filling: string;
     /** "On file: {name}". */
@@ -66,7 +67,7 @@ export function CallNoteAssist({
 
   return (
     <div className="mb-6 grid gap-2">
-      <Field label={words.label} description={words.hint}>
+      <Field label={words.label} description={words.hint} hint={words.optional}>
         <textarea
           ref={ref}
           name="scribble"

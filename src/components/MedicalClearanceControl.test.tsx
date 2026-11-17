@@ -17,6 +17,7 @@ const COPY: MedicalClearanceCopy = {
   evaluatedOnLabel: "Date of the physician’s evaluation",
   physicianNameLabel: "Physician",
   evidenceHint: "Their name, the evaluation below, or both.",
+  optionalHint: "(optional)",
   documentLabel: "Physician’s evaluation form",
   documentHint: "An image or PDF of the signed form.",
   documentChoose: "Choose a file",

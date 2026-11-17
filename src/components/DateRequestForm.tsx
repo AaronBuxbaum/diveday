@@ -47,15 +47,12 @@ import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
  * is what makes it worth collecting at all (it groups by them: "four people
  * could make the 12th" is a departure waiting to be scheduled).
  *
- * **Four asks at rest, three more behind a word.** This form met a diver with
- * ten boxes, seven of them captioned "(optional)" and one "(required)" — the
- * app's only such suffix, against a house convention where a required field
- * wears `Field`'s asterisk and nothing else says anything
- * (docs/design/forms-and-controls.md, "Required fields"). So: the asterisk on
- * the one thing a request cannot be sent without, no "(optional)" anywhere,
- * and the three answers a diver almost never fills in — an alternative date,
- * their diving experience, anything else — behind a "More details" disclosure
- * (principle 8, "collapse the rare path"). Every one of them still submits
+ * **Four asks at rest, three more behind a word.** The asterisk marks the one
+ * thing a request cannot be sent without; every other text box says
+ * "(optional)" (Aaron, 2026-11-17), the folded ones too. The three answers a
+ * diver almost never fills in — an alternative date, their diving experience,
+ * anything else — sit behind a "More details" disclosure (principle 8,
+ * "collapse the rare path"). Every one of them still submits
  * from inside the closed disclosure: a `<details>` hides its content, it does
  * not take it out of the form, so nothing about what the shop receives
  * changes.
@@ -284,7 +281,7 @@ export function DateRequestForm({
               onFlexible={setFlexible}
             />
           )}
-          <Field label={copy.yourName}>
+          <Field label={copy.yourName} hint={t("common.optional")}>
             <input
               name="name"
               autoComplete="name"
@@ -302,6 +299,7 @@ export function DateRequestForm({
               both are blank. */}
           <Field
             label={copy.yourEmail}
+            hint={t("common.optional")}
             description={copy.contactHint}
             error={contactMissing ? t("inquiry.errors.contactRequired") : null}
           >
@@ -320,7 +318,7 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          <Field label={copy.yourPhone}>
+          <Field label={copy.yourPhone} hint={t("common.optional")}>
             <input
               name="phone"
               type="tel"
@@ -336,7 +334,7 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          <Field label={copy.howManyDivers}>
+          <Field label={copy.howManyDivers} hint={t("common.optional")}>
             <input
               name="divers"
               type="number"
@@ -373,7 +371,7 @@ export function DateRequestForm({
           </summary>
           <FieldGrid columns={2} className="mt-4 content-start gap-y-5">
             {recoveryActivity ? null : (
-              <Field label={copy.alternateDate}>
+              <Field label={copy.alternateDate} hint={t("common.optional")}>
                 <DateField
                   name="alternateDate"
                   value={alternateDate}
@@ -400,7 +398,7 @@ export function DateRequestForm({
                 </select>
               </Field>
             )}
-            <Field label={copy.anythingElse} className="sm:col-span-2">
+            <Field label={copy.anythingElse} hint={t("common.optional")} className="sm:col-span-2">
               <textarea
                 name="message"
                 rows={4}
@@ -499,18 +497,19 @@ function DateOptions({
   flexible: boolean;
   onFlexible: (value: boolean) => void;
 }) {
+  const t = useTranslations();
   return (
     <fieldset className="sm:col-span-2">
       <legend className={ITEM_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
       <FieldGrid columns={2} className="mt-3 gap-y-5">
-        <Field label={copy.preferredDate}>
+        <Field label={copy.preferredDate} hint={t("common.optional")}>
           <DateField
             name="preferredDate"
             value={preferredDate}
             onChange={(event) => onPreferredDate(event.target.value)}
           />
         </Field>
-        <Field label={copy.whenSuits}>
+        <Field label={copy.whenSuits} hint={t("common.optional")}>
           <input
             name="timing"
             maxLength={200}

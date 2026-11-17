@@ -1010,7 +1010,7 @@
     "moveAsk": {
       "body": "¿No puedes en esta fecha? Pídele a {shop} que te cambie a otra, o llama al {phone}.",
       "bodyNoPhone": "¿No puedes en esta fecha? Pídele a {shop} que te cambie a otra.",
-      "noteLabel": "Fechas que te sirven (opcional)",
+      "noteLabel": "Fechas que te sirven",
       "action": "Pedir cambio de fecha",
       "asked": "Esperando la respuesta de {shop} a tu solicitud de cambio de fecha",
       "sentAt": "Enviado {when}",

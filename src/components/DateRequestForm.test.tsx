@@ -446,32 +446,22 @@ describe("DateRequestForm — asking for a date", () => {
 
 describe("DateRequestForm — four asks at rest", () => {
   /**
-   * The composer met a diver with ten boxes, seven captioned "(optional)" and
-   * one "(required)" — the app's only such suffix, against a house convention
-   * where the required field wears `Field`'s asterisk and nothing else says
-   * anything (docs/design/forms-and-controls.md, "Required fields").
+   * One convention (Aaron, 2026-11-17): the required field wears `Field`'s
+   * asterisk, and every other text box says "(optional)", folded or not.
    */
-  it("marks the one required field and qualifies none of the others", () => {
-    renderInquiry(vi.fn(), { askInterest: true });
+  it("marks the one required field and hints every other text box", () => {
+    const { container } = renderInquiry(vi.fn(), { askInterest: true });
 
     expect(screen.getByLabelText(/What would you like to dive/)).toBeRequired();
     expect(screen.queryByText("(required)")).toBeNull();
-    expect(screen.queryByText("(optional)")).toBeNull();
-  });
+    // name, email, phone, divers, two date boxes and the timing box above the fold.
+    expect(screen.getAllByText("(optional)")).toHaveLength(8);
 
-  /**
-   * The disclosure rule (docs/design/forms-and-controls.md, "Required fields",
-   * issue #1867): a folded field is optional by position, so it carries neither
-   * a hint nor a native `required` a closed disclosure could never satisfy.
-   */
-  it("asks nothing of a field behind the disclosure: no hint and no required", () => {
-    const { container } = renderInquiry(vi.fn(), { askInterest: true });
     const more = container.querySelector("details");
     expect(more).not.toBeNull();
     const folded = more?.querySelectorAll("input, select, textarea") ?? [];
     expect(folded.length).toBe(3);
     for (const control of folded) expect(control).not.toBeRequired();
-    expect(more?.textContent).not.toMatch(/\((?:optional|required)\)/);
   });
 
   /**
@@ -645,8 +635,10 @@ it("opens a group request with the departure and shop-local day prefilled", () =
     />,
   );
   expect(screen.getByRole("textbox", { name: copy.whatToDive })).toHaveValue("Evening Reef");
-  expect(screen.getByLabelText(copy.preferredDate)).toHaveValue("2026-11-21");
-  expect(screen.getByRole("spinbutton", { name: copy.howManyDivers })).toHaveValue(8);
+  expect(screen.getByLabelText(new RegExp(`^${copy.preferredDate}`))).toHaveValue("2026-11-21");
+  expect(
+    screen.getByRole("spinbutton", { name: new RegExp(`^${copy.howManyDivers}`) }),
+  ).toHaveValue(8);
   expect(screen.getByRole("checkbox", { name: /A boat just for our group/ })).toBeChecked();
   window.history.replaceState({}, "", "/");
 });

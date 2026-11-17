@@ -247,7 +247,11 @@ export default async function CounterRentalTicketPage({
               {/* Optional, and the only count the dive clock gets for a
                   counter rental: blank counts nothing (ADR
                   20260815-minimal-gear-register, amendment 2026-10-08). */}
-              <Field label={t("counterRentals.ticket.divesLabel")} className="max-w-48">
+              <Field
+                label={t("counterRentals.ticket.divesLabel")}
+                className="max-w-48"
+                hint={t("gear.form.optionalHint")}
+              >
                 <input
                   type="number"
                   name="dives"

@@ -233,7 +233,8 @@ export default async function SeatClaimPage({
             />
           </Field>
           <Field
-            label={`${t("seatClaim.phoneLabel")} ${t("common.optional")}`}
+            label={t("seatClaim.phoneLabel")}
+            hint={t("common.optional")}
             description={<SmsConsentNote t={t} />}
           >
             <input

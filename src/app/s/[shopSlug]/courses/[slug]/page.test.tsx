@@ -212,7 +212,7 @@ describe.each(["en-US", "es-ES"] as const)("public course requests in %s", (loca
     );
     expect(inquiry.queryByRole("link", { name: "+1 305 555 0134" }) !== null).toBe(Boolean(phone));
 
-    fireEvent.change(inquiry.getByLabelText(t("inquiry.yourEmail")), {
+    fireEvent.change(inquiry.getByLabelText(new RegExp(`^${t("inquiry.yourEmail")}`)), {
       target: { value: "ana@example.com" },
     });
     fireEvent.click(inquiry.getByRole("button", { name: t("inquiry.send") }));

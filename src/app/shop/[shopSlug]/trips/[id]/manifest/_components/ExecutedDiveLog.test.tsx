@@ -48,6 +48,7 @@ const labels: ExecutedDiveLabels = {
   },
   planChangeNote: "Note for the shop",
   planChangeNoteHint: "Divers never see this.",
+  optional: "(optional)",
   save: "Save dive record",
   saved: "Dive record saved.",
   refusals: {
@@ -255,9 +256,9 @@ describe("recorded depth evidence", () => {
     "keeps %s meters exactly when editing only another field (%s)",
     async (meters, unit, shown) => {
       const form = depthForm(meters, unit);
-      const depth = screen.getByLabelText("Maximum depth (m)");
+      const depth = screen.getByLabelText("Maximum depth (m) (optional)");
       expect((depth as HTMLInputElement).value).toBe(shown);
-      await userEvent.type(screen.getByLabelText("Visibility"), "Clear");
+      await userEvent.type(screen.getByLabelText("Visibility (optional)"), "Clear");
       const posted = new FormData(form);
       expect(posted.get("maxDepthMeters")).toBe(String(meters));
       expect(posted.get("depthUnit")).toBe("meters");
@@ -267,7 +268,7 @@ describe("recorded depth evidence", () => {
 
   it("posts an intentional edit with the unit the crew used", async () => {
     const form = depthForm(18.4404, "feet");
-    const depth = screen.getByLabelText("Maximum depth (m)");
+    const depth = screen.getByLabelText("Maximum depth (m) (optional)");
     await userEvent.clear(depth);
     await userEvent.type(depth, "62.5");
     const posted = new FormData(form);
@@ -277,7 +278,7 @@ describe("recorded depth evidence", () => {
 
   it("honors an intentional edit to the same displayed tenth", async () => {
     const form = depthForm(20.44, "meters");
-    const depth = screen.getByLabelText("Maximum depth (m)");
+    const depth = screen.getByLabelText("Maximum depth (m) (optional)");
     expect((depth as HTMLInputElement).value).toBe("20.4");
     expect(new FormData(form).get("maxDepthMeters")).toBe("20.44");
     await userEvent.clear(depth);
@@ -324,7 +325,7 @@ it("keeps the shown unit with an open edit across a preference refresh", async (
       depthUnit="meters"
     />,
   );
-  const field = screen.getByLabelText("Maximum depth (feet)");
+  const field = screen.getByLabelText("Maximum depth (feet) (optional)");
   await userEvent.type(field, "60");
   const data = new FormData(view.container.querySelector("form") as HTMLFormElement);
   expect(data.get("depthUnit")).toBe("feet");

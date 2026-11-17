@@ -20,6 +20,7 @@ const copy: ConservationCopy = {
   quantity: "Quantity",
   location: "Location",
   note: "Note",
+  optional: "(optional)",
   save: "Save",
   add: "Record",
   pending: "Saving",
@@ -54,11 +55,11 @@ it.each(["invalid", "stale"] as const)(
     );
     const user = userEvent.setup();
     await user.type(screen.getByRole("spinbutton", { name: "Quantity" }), "1.5");
-    await user.type(screen.getByRole("textbox", { name: "Note" }), "Keep my collection note");
+    await user.type(screen.getByRole("textbox", { name: /^Note/ }), "Keep my collection note");
     await user.click(screen.getByRole("button", { name: /^Record$/ }));
     expect(await screen.findByText(copy.errors[reason])).toBeVisible();
     expect(screen.getByRole("spinbutton", { name: "Quantity" })).toHaveValue(1.5);
-    expect(screen.getByRole("textbox", { name: "Note" })).toHaveValue("Keep my collection note");
+    expect(screen.getByRole("textbox", { name: /^Note/ })).toHaveValue("Keep my collection note");
   },
 );
 

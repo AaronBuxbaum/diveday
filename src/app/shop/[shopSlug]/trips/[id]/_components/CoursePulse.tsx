@@ -118,6 +118,7 @@ export function CoursePulse({
         words={{
           label: t("trips.coursePulse.noteLabel"),
           audience: t("trips.coursePulse.audience"),
+          optional: t("trips.details.optionalHint"),
           save: t("trips.coursePulse.save"),
           remove: t("trips.coursePulse.delete"),
           busy: t("words.busy.saving"),

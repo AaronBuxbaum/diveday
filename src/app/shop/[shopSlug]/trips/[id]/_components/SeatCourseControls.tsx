@@ -232,6 +232,7 @@ export function SeatCourseControls({
             <Field
               label={t("trips.roster.nextStepLabel")}
               description={t("trips.roster.nextStepDescription")}
+              hint={t("trips.details.optionalHint")}
             >
               <textarea
                 name="note"

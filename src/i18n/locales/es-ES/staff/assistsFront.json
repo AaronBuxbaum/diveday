@@ -31,7 +31,8 @@
     "filling": "Leyendo…",
     "callback": "Devolver la llamada: {when}",
     "onFile": "En el registro: {name}",
-    "nothing": "Nada en la nota llena un campo."
+    "nothing": "Nada en la nota llena un campo.",
+    "optionalHint": "(opcional)"
   },
   "import": {
     "map": "Asignar las otras columnas",

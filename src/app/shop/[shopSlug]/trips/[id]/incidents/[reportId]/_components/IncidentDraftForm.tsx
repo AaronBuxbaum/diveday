@@ -79,13 +79,13 @@ export function IncidentDraftForm({
         description={t("incidents.page.timesIn", { zone: zoneName })}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t("incidents.form.occurredOn")}>
+          <Field label={t("incidents.form.occurredOn")} hint={t("incidents.form.optional")}>
             <DateField
               name="occurredOn"
               defaultValue={occurred ? toDateInputValue(occurred) : ""}
             />
           </Field>
-          <Field label={t("incidents.form.occurredTime")}>
+          <Field label={t("incidents.form.occurredTime")} hint={t("incidents.form.optional")}>
             <DateField
               name="occurredTime"
               type="time"
@@ -122,6 +122,7 @@ export function IncidentDraftForm({
         <Field
           className="mt-4"
           label={t("incidents.form.whatHappened")}
+          hint={t("incidents.form.optional")}
           description={t("incidents.form.whatHappenedHint")}
         >
           <textarea

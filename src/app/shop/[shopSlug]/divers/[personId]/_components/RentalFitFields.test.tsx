@@ -30,7 +30,14 @@ const SIZES: RentalFitSize[] = [
 ];
 
 function renderFields() {
-  return render(<RentalFitFields legend="Rents from the shop" toggles={TOGGLES} sizes={SIZES} />);
+  return render(
+    <RentalFitFields
+      legend="Rents from the shop"
+      toggles={TOGGLES}
+      sizes={SIZES}
+      optional="(optional)"
+    />,
+  );
 }
 
 /** The one thing a hidden size must still do: reach the save. */
@@ -43,10 +50,10 @@ describe("RentalFitFields", () => {
   it("asks only for the sizes this diver actually rents", async () => {
     renderFields();
     // BCD is ticked, so its size is a question worth asking.
-    expect(screen.getByLabelText("BCD size")).toBeInTheDocument();
+    expect(screen.getByLabelText(/BCD size/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByLabelText("BCD"));
-    expect(screen.queryByLabelText("BCD size")).toBeNull();
+    expect(screen.queryByLabelText(/BCD size/)).toBeNull();
   });
 
   it("keeps the size on file, so re-ticking brings the old answer back", async () => {
@@ -54,12 +61,12 @@ describe("RentalFitFields", () => {
     // August has not forgotten what size they take in January.
     const { container } = renderFields();
     await userEvent.click(screen.getByLabelText("BCD"));
-    expect(screen.queryByLabelText("BCD size")).toBeNull();
+    expect(screen.queryByLabelText(/BCD size/)).toBeNull();
     // Still submitted, so the save writes what was already on file.
     expect(submitted(container, "bcdSize")).toBe("L");
 
     await userEvent.click(screen.getByLabelText("BCD"));
-    expect(screen.getByLabelText("BCD size")).toHaveValue("L");
+    expect(screen.getByLabelText(/BCD size/)).toHaveValue("L");
   });
 
   it("does not lose what was typed while the box is hidden", async () => {
@@ -67,12 +74,12 @@ describe("RentalFitFields", () => {
     // input forgets what was typed into it, which is the one thing this must
     // never do.
     const { container } = renderFields();
-    await userEvent.clear(screen.getByLabelText("BCD size"));
-    await userEvent.type(screen.getByLabelText("BCD size"), "XL");
+    await userEvent.clear(screen.getByLabelText(/BCD size/));
+    await userEvent.type(screen.getByLabelText(/BCD size/), "XL");
     await userEvent.click(screen.getByLabelText("BCD"));
     expect(submitted(container, "bcdSize")).toBe("XL");
     await userEvent.click(screen.getByLabelText("BCD"));
-    expect(screen.getByLabelText("BCD size")).toHaveValue("XL");
+    expect(screen.getByLabelText(/BCD size/)).toHaveValue("XL");
   });
 
   it("keeps one shoe size for either tick that puts it on the packing list", async () => {
@@ -80,10 +87,10 @@ describe("RentalFitFields", () => {
     // why the save writes it to both columns — so either tick asks for it, and
     // it takes both being off to drop the question.
     renderFields();
-    expect(screen.getByLabelText("Fin & boot size")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Fin & boot size/)).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText("Wetsuit"));
-    expect(screen.queryByLabelText("Fin & boot size")).toBeNull();
+    expect(screen.queryByLabelText(/Fin & boot size/)).toBeNull();
     await userEvent.click(screen.getByLabelText("Fins"));
-    expect(screen.getByLabelText("Fin & boot size")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Fin & boot size/)).toBeInTheDocument();
   });
 });

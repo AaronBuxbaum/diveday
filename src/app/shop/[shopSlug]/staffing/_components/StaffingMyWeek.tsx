@@ -67,6 +67,7 @@ export function StaffingMyWeek({
     from: t("staffing.away.from"),
     to: t("staffing.away.to"),
     note: t("staffing.addShift.note"),
+    optional: t("staffing.optionalHint"),
     notePlaceholder: t("staffing.addShift.notePlaceholder"),
     submitShift: t("staffing.addShift.submit"),
     submitDayOff: t("staffing.away.save"),

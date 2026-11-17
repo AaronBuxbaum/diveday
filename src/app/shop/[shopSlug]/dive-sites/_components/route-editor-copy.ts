@@ -19,6 +19,7 @@ export function routeEditorCopy(t: StaffTranslator): RouteEditorCopy {
     labelPlaceholder: t("diveSites.form.route.labelPlaceholder"),
     noteLabel: t("diveSites.form.route.noteLabel"),
     notePlaceholder: t("diveSites.form.route.notePlaceholder"),
+    optional: t("diveSites.form.optionalHint"),
     zoomLabel: t("diveSites.form.route.zoomLabel"),
     zoomIn: t("diveSites.form.route.zoomIn"),
     zoomOut: t("diveSites.form.route.zoomOut"),

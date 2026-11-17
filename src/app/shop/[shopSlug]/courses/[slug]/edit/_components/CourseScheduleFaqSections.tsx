@@ -44,6 +44,7 @@ export function CourseDayByDaySection({
           daysMaxOne: t.raw("courses.dayByDay.daysMaxOne"),
           daysMaxOther: t.raw("courses.dayByDay.daysMaxOther"),
           addDay: t("courses.dayByDay.addDay"),
+          optionalHint: t("courses.edit.optionalHint"),
         }}
       />
     </CourseSection>

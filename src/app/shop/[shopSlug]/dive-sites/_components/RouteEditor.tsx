@@ -23,6 +23,7 @@ export type RouteEditorCopy = {
   labelPlaceholder: string;
   noteLabel: string;
   notePlaceholder: string;
+  optional: string;
   zoomLabel: string;
   zoomIn: string;
   zoomOut: string;
@@ -228,7 +229,7 @@ export function RouteEditor({
       )}
 
       <FieldGrid columns={2} className="mt-4">
-        <Field label={copy.labelLabel}>
+        <Field label={copy.labelLabel} hint={copy.optional}>
           <input
             name="routeLabel"
             maxLength={80}
@@ -237,7 +238,7 @@ export function RouteEditor({
             className={controlClass}
           />
         </Field>
-        <Field label={copy.noteLabel}>
+        <Field label={copy.noteLabel} hint={copy.optional}>
           <input
             name="routeNote"
             maxLength={240}

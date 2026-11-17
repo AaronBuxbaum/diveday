@@ -19,6 +19,7 @@ it("offers an id-based Undo for a deleted note without sending its words back", 
       words={{
         label: "Instructor note",
         audience: "Private",
+        optional: "(optional)",
         save: "Save",
         remove: "Delete",
         busy: "Saving",

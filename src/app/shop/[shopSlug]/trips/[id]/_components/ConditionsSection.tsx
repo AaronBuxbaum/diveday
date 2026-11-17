@@ -128,7 +128,7 @@ export function ConditionsSection({
           </span>
         </label>
         <FieldGrid columns={1} className="max-w-2xl">
-          <Field label={t("trips.conditions.overviewLabel")}>
+          <Field label={t("trips.conditions.overviewLabel")} hint={t("trips.details.optionalHint")}>
             <textarea
               name="conditionsSummary"
               rows={2}
@@ -140,7 +140,10 @@ export function ConditionsSection({
           </Field>
         </FieldGrid>
         <FieldGrid columns={3}>
-          <Field label={t("trips.conditions.waterTempLabel", { unit: temperatureUnitLabel })}>
+          <Field
+            label={t("trips.conditions.waterTempLabel", { unit: temperatureUnitLabel })}
+            hint={t("trips.details.optionalHint")}
+          >
             <input
               name="waterTemperature"
               type="number"
@@ -154,7 +157,10 @@ export function ConditionsSection({
               className={controlClass}
             />
           </Field>
-          <Field label={t("trips.conditions.visibilityLabel", { unit: depthUnitLabel })}>
+          <Field
+            label={t("trips.conditions.visibilityLabel", { unit: depthUnitLabel })}
+            hint={t("trips.details.optionalHint")}
+          >
             <input
               name="visibility"
               type="number"
@@ -166,7 +172,10 @@ export function ConditionsSection({
               className={controlClass}
             />
           </Field>
-          <Field label={t("trips.conditions.surfaceNotesLabel")}>
+          <Field
+            label={t("trips.conditions.surfaceNotesLabel")}
+            hint={t("trips.details.optionalHint")}
+          >
             <input
               name="surfaceConditions"
               maxLength={300}

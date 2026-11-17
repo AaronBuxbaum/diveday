@@ -36,6 +36,7 @@ export function LearningMaterialsSection({
           linkLabel: t("courses.materials.linkLabel"),
           linkHint: t("courses.materials.linkHint"),
           noteLabel: t("courses.materials.noteLabel"),
+          optionalHint: t("courses.edit.optionalHint"),
           notePlaceholder: t("courses.materials.notePlaceholder"),
           remove: t.raw("courses.materials.remove"),
           add: t("courses.materials.add"),

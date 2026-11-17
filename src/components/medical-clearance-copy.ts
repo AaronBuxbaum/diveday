@@ -18,6 +18,7 @@ export type MedicalClearanceCopy = {
   evaluatedOnLabel: string;
   physicianNameLabel: string;
   evidenceHint: string;
+  optionalHint: string;
   documentLabel: string;
   documentHint: string;
   /** The picker's own words — a bare `<input type="file">` says "Choose File" in the *device's* language. */
@@ -58,6 +59,7 @@ export function medicalClearanceCopy(
     evaluatedOnLabel: t("shared.medicalClearance.evaluatedOnLabel"),
     physicianNameLabel: t("shared.medicalClearance.physicianNameLabel"),
     evidenceHint: t("shared.medicalClearance.evidenceHint"),
+    optionalHint: t("shared.medicalClearance.optionalHint"),
     documentLabel: t("shared.medicalClearance.documentLabel"),
     documentHint: t("shared.medicalClearance.documentHint"),
     documentChoose: t("shared.medicalClearance.documentChoose"),

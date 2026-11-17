@@ -32,6 +32,7 @@ export function CoursePitchPricingSections({
       <CourseSection {...pitch} as="fieldset" lead>
         <FieldGrid columns={1} className="gap-y-5">
           <Field
+            hint={t("courses.edit.optionalHint")}
             label={t("courses.edit.subheadLabel")}
             description={t("courses.edit.subheadDescription")}
           >
@@ -46,6 +47,7 @@ export function CoursePitchPricingSections({
           </Field>
           {summaryTranslation}
           <Field
+            hint={t("courses.edit.optionalHint")}
             label={t("courses.edit.overviewLabel")}
             description={t("courses.edit.overviewDescription")}
           >
@@ -96,7 +98,7 @@ export function CoursePitchPricingSections({
             id="privatePrice"
             name="privatePrice"
             label={t("courses.edit.privatePriceLabel")}
-            hint={t("courses.edit.privatePriceHint")}
+            hint={t("courses.edit.optionalHint")}
             cents={course.privatePriceCents}
             currency={currency}
             locale={locale}

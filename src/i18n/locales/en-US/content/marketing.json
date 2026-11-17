@@ -1647,7 +1647,7 @@
       "shore": "Shore dives",
       "pool": "Pool sessions"
     },
-    "currentSystem": "Current tool (optional)",
+    "currentSystem": "Current tool",
     "notSpecified": "Not specified",
     "current": {
       "paper": "Paper",

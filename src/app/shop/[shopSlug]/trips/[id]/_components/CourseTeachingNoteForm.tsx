@@ -26,6 +26,7 @@ export function CourseTeachingNoteForm({
   words: {
     label: string;
     audience: string;
+    optional: string;
     save: string;
     remove: string;
     busy: string;
@@ -86,7 +87,12 @@ export function CourseTeachingNoteForm({
       ) : null}
       <form action={submit} className="mt-4">
         <input type="hidden" name="expectedNote" value={expected ?? ""} />
-        <Field label={words.label} description={words.audience} htmlFor="course-teaching-note">
+        <Field
+          label={words.label}
+          description={words.audience}
+          hint={words.optional}
+          htmlFor="course-teaching-note"
+        >
           <textarea
             id="course-teaching-note"
             name="note"

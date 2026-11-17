@@ -21,6 +21,7 @@ export type ConservationCopy = {
   quantity: string;
   location: string;
   note: string;
+  optional: string;
   save: string;
   add: string;
   pending: string;
@@ -97,7 +98,7 @@ export function ConservationForm({
             onChange={(event) => setQuantity(event.target.value)}
           />
         </Field>
-        <Field label={copy.location}>
+        <Field label={copy.location} hint={copy.optional}>
           <input
             className={controlClass}
             name="location"
@@ -107,7 +108,7 @@ export function ConservationForm({
           />
         </Field>
       </FieldGrid>
-      <Field label={copy.note}>
+      <Field label={copy.note} hint={copy.optional}>
         <textarea
           className={textareaClassFor(2)}
           rows={2}

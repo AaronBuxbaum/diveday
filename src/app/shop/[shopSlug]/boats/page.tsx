@@ -161,7 +161,11 @@ export default async function BoatsSettingsPage({
                   </Field>
                   {/* Descriptions are sentences up to 200 characters; the textarea avoids the
                       mid-word clipping noted in K-446, grows with its text, and shows two lines. */}
-                  <Field label={t("boats.descriptionLabel")} className="sm:col-span-2">
+                  <Field
+                    hint={t("boats.optionalHint")}
+                    label={t("boats.descriptionLabel")}
+                    className="sm:col-span-2"
+                  >
                     <textarea
                       name="description"
                       rows={2}
@@ -289,7 +293,11 @@ export default async function BoatsSettingsPage({
                 className={`${controlClass} tabular-nums`}
               />
             </Field>
-            <Field label={t("boats.descriptionLabel")} className="sm:col-span-2">
+            <Field
+              hint={t("boats.optionalHint")}
+              label={t("boats.descriptionLabel")}
+              className="sm:col-span-2"
+            >
               <textarea
                 name="description"
                 rows={2}

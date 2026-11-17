@@ -16,6 +16,7 @@ vi.mock("./shop-actions", () => ({
 
 const copy = {
   searchLabel: "Find your shop",
+  optional: "(optional)",
   searchPlaceholder: "Your shop’s name or address…",
   searching: "Looking…",
   saving: "Saving…",

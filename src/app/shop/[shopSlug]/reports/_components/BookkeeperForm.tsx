@@ -9,6 +9,7 @@ import type { BookkeeperFormState } from "../bookkeeper-actions";
 export type BookkeeperFormCopy = {
   label: string;
   description: string;
+  optional: string;
   save: string;
   saving: string;
   saved: string;
@@ -53,7 +54,7 @@ export function BookkeeperForm({
               : null;
   return (
     <FieldGrid as="form" columns={1} action={formAction} className="max-w-xl">
-      <Field label={copy.label} description={copy.description}>
+      <Field label={copy.label} description={copy.description} hint={copy.optional}>
         <input
           type="email"
           name="email"

@@ -26,6 +26,7 @@ export type LandmarkEditorCopy = {
   /** One label per kind code, resolved server-side (this is a Client Component). */
   kindLabels: Record<DiveSiteLandmarkKind, string>;
   noteLabel: string;
+  optional: string;
   notePlaceholder: string;
   photoLabel: string;
   removePhoto: string;
@@ -103,6 +104,7 @@ export function LandmarkEditor({
               <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <Field label={copy.nameLabel} className="flex-1 sm:min-w-48">
                   <input
+                    required={Boolean(landmark.note.trim() || landmark.photoUrl)}
                     value={landmark.name}
                     onChange={(event) => update(index, { name: event.target.value })}
                     maxLength={80}
@@ -126,7 +128,7 @@ export function LandmarkEditor({
                   </select>
                 </Field>
               </div>
-              <Field label={copy.noteLabel} className="mt-4">
+              <Field label={copy.noteLabel} hint={copy.optional} className="mt-4">
                 <textarea
                   value={landmark.note}
                   onChange={(event) => update(index, { note: event.target.value })}

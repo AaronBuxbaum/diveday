@@ -471,6 +471,39 @@ describe("form stylesheet contracts", () => {
     expect(mask, "input[data-empty]:not(:focus)::-webkit-datetime-edit { color }").not.toBeNull();
     expect(mask?.[1]).toBe(placeholder);
   });
+  /**
+   * **A field says it is optional.** One convention for the whole app (Aaron,
+   * 2026-11-17): a text box or textarea the form does not require carries the
+   * `(optional)` hint, and a required one carries the native `required` (which
+   * draws the `*`). "Current tool (optional)" sat beside a bare "Phone" that was
+   * just as optional, so a reader could not tell a blank was allowed. A box that
+   * is mandatory without a native `required` should get one; a read-only,
+   * disabled or search box asks nothing and is left alone.
+   */
+  it("marks every optional text field with a hint", () => {
+    const offenders: string[] = [];
+    for (const { file, source } of sourceFiles()) {
+      for (const field of openingTags(source, "Field")) {
+        if (/\bgroup\b|\bhint=/.test(field.text)) continue;
+        const after = source.slice(field.index + field.text.length);
+        const body = after.slice(0, Math.max(0, after.indexOf("</Field>")));
+        const [control] = ["input", "textarea", "ForgivingInput", "DateField"]
+          .flatMap((tag) =>
+            openingTags(body, tag)
+              .slice(0, 1)
+              .map((t) => ({ tag, text: t.text, at: t.index })),
+          )
+          .sort((a, b) => a.at - b.at);
+        if (!control) continue;
+        const type = control.text.match(/\btype="([a-z-]+)"/)?.[1];
+        if (type && /^(hidden|checkbox|radio|file|range|color|search|submit|button)$/.test(type))
+          continue;
+        if (/\b(required|readOnly|disabled)\b/.test(control.text)) continue;
+        offenders.push(`${file}:${lineOf(source, field.index)}`);
+      }
+    }
+    expect(offenders, "a Field with a text control, no `required` and no `hint`").toEqual([]);
+  });
   it("insets the scrollport above sticky form actions", () => {
     const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8").replace(
       /\/\*[\s\S]*?\*\//g,

@@ -17,6 +17,7 @@ export type DayAddWords = {
   from: string;
   to: string;
   note: string;
+  optional: string;
   notePlaceholder: string;
   submitShift: string;
   submitDayOff: string;
@@ -93,7 +94,7 @@ export function DayAdd({
             <Field label={words.ends}>
               <DateField name="endTime" type="time" required defaultValue="15:00" />
             </Field>
-            <Field label={words.note}>
+            <Field label={words.note} hint={words.optional}>
               <input
                 name="note"
                 maxLength={120}
@@ -116,7 +117,7 @@ export function DayAdd({
             <Field label={words.to}>
               <DateField name="endsOn" required defaultValue={date} />
             </Field>
-            <Field label={words.note}>
+            <Field label={words.note} hint={words.optional}>
               <input
                 name="note"
                 maxLength={120}

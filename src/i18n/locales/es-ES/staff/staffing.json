@@ -174,5 +174,6 @@
     "reasonLabel": "Motivo",
     "reasonHint": "(opcional, lo verá la persona)",
     "reasonPlaceholder": "Falta personal ese fin de semana"
-  }
+  },
+  "optionalHint": "(opcional)"
 }

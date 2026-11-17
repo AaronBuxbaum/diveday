@@ -23,6 +23,7 @@ const copy: LandmarkEditorCopy = {
     underwaterMonument: "Underwater monument",
   },
   noteLabel: "What to say about it",
+  optional: "(optional)",
   notePlaceholder: "The easiest above-water reference.",
   photoLabel: "Photo",
   removePhoto: "Remove photo",
@@ -51,7 +52,7 @@ function renderOne() {
     row,
     name: within(row).getByRole("textbox", { name: copy.nameLabel }),
     kind: within(row).getByRole("combobox", { name: copy.kindLabel }),
-    note: within(row).getByRole("textbox", { name: copy.noteLabel }),
+    note: within(row).getByRole("textbox", { name: new RegExp(`^${copy.noteLabel}`) }),
     remove: within(row).getByRole("button", { name: "Remove the landmark Molasses Reef Light" }),
   };
 }

@@ -48,6 +48,7 @@ export function GuardianCard({
           />
         </Field>
         <Field
+          hint={t("common.optional")}
           label={t("waiver.guardianEmail")}
           // Optional since issue #1453, and the description says what
           // giving one buys — an address collected under no stated

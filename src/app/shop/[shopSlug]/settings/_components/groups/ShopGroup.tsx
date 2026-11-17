@@ -347,6 +347,7 @@ export function ShopGroup({
             enabled={addressLookupEnabled}
             copy={{
               searchLabel: t("settings.main.address.searchLabel"),
+              optional: t("settings.main.optionalHint"),
               searchPlaceholder: t("settings.main.address.searchPlaceholder"),
               searching: t("settings.main.address.searching"),
               saving: t("words.busy.saving"),

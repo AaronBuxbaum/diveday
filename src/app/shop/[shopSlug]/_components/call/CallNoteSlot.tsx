@@ -26,6 +26,7 @@ export async function CallNoteSlot({
       words={{
         label: t("assistsFront.callNote.label"),
         hint: t("assistsFront.callNote.hint"),
+        optional: t("assistsFront.callNote.optionalHint"),
         fill: t("assistsFront.callNote.fill"),
         filling: t("assistsFront.callNote.filling"),
         onFile: t.raw("assistsFront.callNote.onFile"),

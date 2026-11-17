@@ -106,7 +106,7 @@ describe("RegisterForm mounted certification fields", () => {
     const { container } = render(form());
     const agency = screen.getByLabelText(en.register.agencyLabel);
     const level = screen.getByLabelText(en.register.levelLabel);
-    const number = screen.getByLabelText(en.register.identifierLabel);
+    const number = screen.getByLabelText(new RegExp(`^${en.register.identifierLabel}`));
     fireEvent.change(agency, { target: { value: "padi" } });
     fireEvent.change(level, { target: { value: "rescue" } });
     fireEvent.change(number, { target: { value: "P-123" } });

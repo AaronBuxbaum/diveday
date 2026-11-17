@@ -117,7 +117,7 @@ export function BookingsGroup({
         >
           <SectionNotice banner={banner} section="packing" active={activeSection} />
           <FieldGrid as="form" action={savePackingAction} columns={1} className="mt-4">
-            <Field label={t("settings.main.packing.label")}>
+            <Field label={t("settings.main.packing.label")} hint={t("settings.main.optionalHint")}>
               <textarea
                 name="packingList"
                 rows={6}

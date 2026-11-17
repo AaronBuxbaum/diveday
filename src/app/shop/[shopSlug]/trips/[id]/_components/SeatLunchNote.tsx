@@ -45,6 +45,7 @@ export function SeatLunchNote({
             <Field
               label={t("trips.roster.lunchNoteLabel")}
               description={t("trips.roster.lunchNoteHint")}
+              hint={t("trips.details.optionalHint")}
             >
               <input
                 name="dietaryNote"

@@ -111,6 +111,7 @@ export function FaqEditor({
           <FieldGrid columns={1}>
             <Field label={fill(copy.questionLabel, { number: index + 1 })}>
               <input
+                required={Boolean(row.answer.trim())}
                 type="text"
                 maxLength={200}
                 value={row.question}
@@ -121,6 +122,7 @@ export function FaqEditor({
             </Field>
             <Field label={copy.answerLabel}>
               <textarea
+                required={Boolean(row.question.trim())}
                 rows={3}
                 maxLength={1200}
                 value={row.answer}

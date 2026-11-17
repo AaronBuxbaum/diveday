@@ -78,7 +78,7 @@ export function SiteForecastFields({
   return (
     <>
       <FieldGrid columns={2} className="gap-y-5">
-        <Field label={t("diveSites.form.latitudeLabel")}>
+        <Field label={t("diveSites.form.latitudeLabel")} hint={t("diveSites.form.optionalHint")}>
           <input
             name="forecastLatitude"
             type="number"
@@ -89,7 +89,7 @@ export function SiteForecastFields({
             className={controlClass}
           />
         </Field>
-        <Field label={t("diveSites.form.longitudeLabel")}>
+        <Field label={t("diveSites.form.longitudeLabel")} hint={t("diveSites.form.optionalHint")}>
           <input
             name="forecastLongitude"
             type="number"
@@ -132,6 +132,7 @@ export function SiteForecastFields({
               {tideStationNote}
             </>
           }
+          hint={t("diveSites.form.optionalHint")}
         >
           {/* No `pattern`: native constraint validation refuses the submit
             outright, in the browser's own words, and the form never

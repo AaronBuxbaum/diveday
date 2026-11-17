@@ -2,6 +2,7 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { choiceGridClass } from "@/components/ui/choice-grid";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import {
   ChoicePill,
@@ -34,7 +35,7 @@ function RoleCheckboxes({
 }) {
   const labels = staffRoleLabelRecord(t);
   return (
-    <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <fieldset className={choiceGridClass}>
       <legend className="sr-only">{t("settings.team.rolesLegend")}</legend>
       {STAFF_ROLES.map((role) => (
         <ChoicePill

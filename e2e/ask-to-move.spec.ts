@@ -110,7 +110,7 @@ test.describe("ask to move", () => {
     await page.getByRole("link", { name: diver("ready.moveAsk.changePlans") }).click();
     await expect(page.locator("#move-ask")).toBeFocused();
     await expect(page.getByText(/Can’t make this date\? Ask .+ to move you/)).toBeVisible();
-    await page.getByLabel("Dates that would work (optional)").fill("Any Saturday in August");
+    await page.getByLabel("Dates that would work").fill("Any Saturday in August");
     await page.getByRole("button", { name: "Ask to move" }).click();
     await expect(page.getByText(diver("ready.moveAsk.sent"))).toBeVisible();
     const receipt = page.locator("#move-ask");

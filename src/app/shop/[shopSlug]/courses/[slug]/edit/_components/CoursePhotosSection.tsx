@@ -35,6 +35,7 @@ export function CoursePhotosSection({
                 altName="heroImageAlt"
                 alt={course.heroImageAlt ?? ""}
                 altLabel={t("courses.edit.photoCaptionLabel")}
+                altHint={t("courses.edit.optionalHint")}
                 altPlaceholder={t("courses.edit.photoCaptionPlaceholder")}
               />
             ) : null}
@@ -75,6 +76,7 @@ export function CoursePhotosSection({
                 altName="galleryAltValues"
                 alt={alt}
                 altLabel={t("courses.edit.photoCaptionLabel")}
+                altHint={t("courses.edit.optionalHint")}
                 altPlaceholder={t("courses.edit.photoCaptionPlaceholder")}
               >
                 <input type="hidden" name="galleryAltUrls" value={url} />

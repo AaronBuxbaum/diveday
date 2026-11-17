@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { choiceGridClass } from "@/components/ui/choice-grid";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { ChoicePill, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import {
@@ -33,6 +34,7 @@ export type SetupRequestFormWords = {
   contactName: string;
   email: string;
   phone: string;
+  optional: string;
   website: string;
   submit: string;
   sending: string;
@@ -144,7 +146,7 @@ export function SetupRequestForm({
             className={controlClass}
           />
         </Field>
-        <Field label={words.phone} error={errorFor("phone")}>
+        <Field label={words.phone} hint={words.optional} error={errorFor("phone")}>
           <input
             name="phone"
             type="tel"
@@ -157,7 +159,7 @@ export function SetupRequestForm({
         {/* Three boxes, any mix and none required (issue #4319): a shop with
             no boat reads as welcome, and the reply asks about the rest. */}
         <Field label={words.runs} group>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className={choiceGridClass}>
             {SETUP_RUNS.map((answer) => (
               <ChoicePill
                 key={answer}
@@ -172,7 +174,7 @@ export function SetupRequestForm({
             ))}
           </div>
         </Field>
-        <Field label={words.currentSystem} error={errorFor("currentSystem")}>
+        <Field label={words.currentSystem} hint={words.optional} error={errorFor("currentSystem")}>
           <select
             name="currentSystem"
             defaultValue={values.currentSystem ?? ""}

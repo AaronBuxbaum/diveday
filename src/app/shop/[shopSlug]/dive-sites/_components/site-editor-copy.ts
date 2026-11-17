@@ -40,6 +40,7 @@ export function landmarkEditorCopy(t: StaffTranslator): LandmarkEditorCopy {
       underwaterMonument: t("diveSites.form.landmarks.kinds.underwaterMonument"),
     },
     noteLabel: t("diveSites.form.landmarks.noteLabel"),
+    optional: t("diveSites.form.optionalHint"),
     notePlaceholder: t("diveSites.form.landmarks.notePlaceholder"),
     photoLabel: t("diveSites.form.landmarks.photoLabel"),
     removePhoto: t("diveSites.form.landmarks.removePhoto"),

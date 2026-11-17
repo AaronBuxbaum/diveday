@@ -32,14 +32,14 @@ export function SiteClosureForm({
       </h2>
       <p className="mt-1 max-w-2xl text-muted">{closedLine ?? t("diveSites.closure.body")}</p>
       <form action={action} className="mt-4 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label={t("diveSites.closure.fromLabel")}>
+        <Field label={t("diveSites.closure.fromLabel")} hint={t("diveSites.form.optionalHint")}>
           <DateField name="closedFrom" defaultValue={site.closedFrom ?? ""} />
         </Field>
-        <Field label={t("diveSites.closure.untilLabel")}>
+        <Field label={t("diveSites.closure.untilLabel")} hint={t("diveSites.form.optionalHint")}>
           <DateField name="closedUntil" defaultValue={site.closedUntil ?? ""} />
         </Field>
         <div className="sm:col-span-2">
-          <Field label={t("diveSites.closure.reasonLabel")}>
+          <Field label={t("diveSites.closure.reasonLabel")} hint={t("diveSites.form.optionalHint")}>
             <input
               name="closureReason"
               type="text"

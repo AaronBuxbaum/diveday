@@ -190,6 +190,7 @@ export function SiteDiveFields({
         <Field
           label={t("diveSites.form.conservationNoteLabel")}
           description={t("diveSites.form.conservationNoteHint")}
+          hint={t("diveSites.form.optionalHint")}
         >
           <textarea
             name="conservationNote"

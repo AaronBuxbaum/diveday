@@ -46,6 +46,7 @@ const copy: EmbedGeneratorCopy = {
   code: "Embed code",
   buttonText: "Book a dive",
   partnerName: "Partner",
+  optional: "(optional)",
   partnerPlaceholder: "e.g. hotel",
   partnerLink: "Partner link",
   partnerLinkField: "Referral link",
@@ -199,7 +200,7 @@ describe("EmbedGenerator", () => {
       "data:image/png;base64,QUJD",
     );
     await user.click(screen.getByRole("radio", { name: /kind partner/ }));
-    await user.type(screen.getByLabelText("Partner"), "The Reef Hotel");
+    await user.type(screen.getByLabelText("Partner (optional)"), "The Reef Hotel");
     expect(screen.getByLabelText("Referral link")).toHaveValue(
       "https://diveday.example/s/blue-mantis?utm_source=partner&utm_medium=referral&utm_campaign=the-reef-hotel",
     );

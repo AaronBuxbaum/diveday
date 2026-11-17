@@ -190,6 +190,7 @@ export function OrderEditor({
                 <input
                   type="text"
                   name={`description-${index}`}
+                  required
                   value={row.description}
                   onChange={(event) => change(row.id, "description", event.currentTarget.value)}
                   placeholder={words.descriptionPlaceholder}
@@ -201,6 +202,7 @@ export function OrderEditor({
                 <input
                   type="number"
                   name={`quantity-${index}`}
+                  required
                   value={row.quantity}
                   onChange={(event) => change(row.id, "quantity", event.currentTarget.value)}
                   min={1}
@@ -213,6 +215,7 @@ export function OrderEditor({
                 <input
                   type="number"
                   name={`unitAmount-${index}`}
+                  required
                   value={row.unitAmount}
                   onChange={(event) => change(row.id, "unitAmount", event.currentTarget.value)}
                   step={step}

@@ -319,6 +319,7 @@ export function GearAndSizes({
                 /* The shop's catalog decides which sizes exist at all; the
                    ticks above decide which of them are asked for. */
                 sizes={sizes}
+                optional={t("divers.rentalFit.optionalHint")}
               />
               <FieldActions>
                 {canAssist && profile?.note?.trim() ? (

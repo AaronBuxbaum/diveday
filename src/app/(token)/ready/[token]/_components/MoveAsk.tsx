@@ -60,7 +60,11 @@ export function MoveAsk({
       </p>
       <form action={action} className="flex flex-wrap items-end gap-3">
         <input type="hidden" name="tripId" value={tripId} />
-        <Field label={t("ready.moveAsk.noteLabel")} className="min-w-56 flex-1">
+        <Field
+          hint={t("common.optional")}
+          label={t("ready.moveAsk.noteLabel")}
+          className="min-w-56 flex-1"
+        >
           <input
             name="note"
             type="text"

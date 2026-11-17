@@ -1,5 +1,6 @@
 {
   "main": {
+    "optionalHint": "(optional)",
     "juniorBuddy": {
       "heading": "Adult buddy for teens",
       "detail": "For one-tap party teams, require a certified adult with divers aged 15–17.",
@@ -123,7 +124,6 @@
       "detail": "A diver who can’t find a date gets a ready-written email to send you. Use an address the whole team reads. Empty the box to take the form down.",
       "emailLabel": "Contact email",
       "phoneLabel": "Contact phone",
-      "phoneHint": "(optional)",
       "submit": "Save contact details",
       "awaitingConfirmation": "Awaiting confirmation",
       "resend": "Resend confirmation email"
@@ -191,7 +191,6 @@
       "description": "Your Google Business, TripAdvisor, or Facebook review page.",
       "detail": "When set, a diver’s post-trip recap invites them to leave a review. Empty the box to stop asking.",
       "label": "Review link",
-      "hint": "(optional)",
       "submit": "Save review link"
     },
     "deskHours": {
@@ -820,7 +819,8 @@
       "phoneLabel": "Emergency contact phone",
       "save": "Save contact",
       "label": "Emergency contact",
-      "addValue": "Add"
+      "addValue": "Add",
+      "optionalHint": "(optional)"
     },
     "publicNameSeen": "Divers see “{name}”, agreed on {date}",
     "year": {

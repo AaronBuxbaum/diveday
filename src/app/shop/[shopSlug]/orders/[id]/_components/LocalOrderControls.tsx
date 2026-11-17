@@ -34,6 +34,7 @@ export function LocalOrderControls({
           tip: t("orders.purchase.tip"),
           reference: t("orders.localDue.reference"),
           hint: t("orders.localDue.taxHint"),
+          optional: t("orders.new.noteHint"),
           submit: t("orders.localDue.record"),
           busy: t("words.busy.recording"),
           invalid: t("orders.localDue.invalid"),

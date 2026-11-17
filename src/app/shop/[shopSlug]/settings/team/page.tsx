@@ -8,7 +8,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import { FormStatus } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { requireShopSurface } from "@/features/session";
@@ -24,6 +24,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { AddCredentialDisclosure } from "./_components/AddCredentialDisclosure";
+import { EmergencyContactForm } from "./_components/EmergencyContactForm";
 import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
 import { LanguageCheckboxes, StaffLanguagesValue } from "./_components/LanguageCheckboxes";
 import { PendingInviteActions } from "./_components/PendingInviteActions";
@@ -36,7 +37,6 @@ import {
   removeStaffAction,
   restoreStaffAction,
   reviewStaffCredentialAction,
-  saveStaffEmergencyContactAction,
   saveStaffLanguagesAction,
   saveStaffRolesAction,
   setStaffStatusAction,
@@ -238,40 +238,7 @@ function StaffRow({
           }
           open={Boolean(contactStatus)}
         >
-          <FieldGrid
-            as="form"
-            action={saveStaffEmergencyContactAction}
-            columns={2}
-            className="mt-3"
-          >
-            <input type="hidden" name="personId" value={member.personId} />
-            <Field label={t("settings.team.emergencyContact.nameLabel")}>
-              <input
-                name="emergencyContactName"
-                defaultValue={member.emergencyContactName ?? ""}
-                autoComplete="off"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("settings.team.emergencyContact.phoneLabel")}>
-              <input
-                name="emergencyContactPhone"
-                type="tel"
-                defaultValue={member.emergencyContactPhone ?? ""}
-                autoComplete="off"
-                className={controlClass}
-              />
-            </Field>
-            <FieldActions>
-              <FormStatus tone={contactStatus?.tone}>{contactStatus?.text}</FormStatus>
-              <SubmitButton
-                pendingLabel={t("words.busy.saving")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("settings.team.emergencyContact.save")}
-              </SubmitButton>
-            </FieldActions>
-          </FieldGrid>
+          <EmergencyContactForm member={member} status={contactStatus} t={t} />
         </CompactDisclosureRow>
       </div>
 

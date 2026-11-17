@@ -84,11 +84,14 @@ export function RentalFitFields({
   toggles,
   suit,
   sizes,
+  optional,
 }: {
   legend: string;
   toggles: readonly RentalFitToggle[];
   suit?: RentalFitSuit;
   sizes: readonly RentalFitSize[];
+  /** The "(optional)" hint every size box carries. */
+  optional: string;
 }) {
   const [rented, setRented] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(toggles.map((toggle) => [toggle.name, toggle.defaultChecked])),
@@ -153,6 +156,7 @@ export function RentalFitFields({
             aside={
               size.info ? <InfoHint label={size.info.label} detail={size.info.detail} /> : undefined
             }
+            hint={optional}
           >
             <input
               name={size.name}

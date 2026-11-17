@@ -174,5 +174,6 @@
     "reasonLabel": "Reason",
     "reasonHint": "(optional, they’ll see it)",
     "reasonPlaceholder": "Short-staffed that weekend"
-  }
+  },
+  "optionalHint": "(optional)"
 }
