@@ -16,7 +16,7 @@ signedInAsOwner();
 
 async function openBuddyTeamBuilder(page: Page) {
   const heading = page.getByRole("heading", { name: "Buddy teams" });
-  const panel = page.locator("details").filter({ has: heading }).first();
+  const panel = page.locator("section", { has: heading }).first().locator(":scope > details");
   await openIfClosed(panel);
   const builder = panel.locator("details").filter({ hasText: "New buddy team" }).first();
   await openIfClosed(builder);

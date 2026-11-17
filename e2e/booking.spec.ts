@@ -348,7 +348,7 @@ test.describe("staff counts and intent", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
     await openTripPhase(page, "ready");
-    await page.getByRole("heading", { name: "Buddy teams" }).click();
+    await page.getByRole("region", { name: "Buddy teams" }).locator("summary").click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
     // name in it and no suggested pairing.
     const aboard = page.getByText(/^On the list today:/);

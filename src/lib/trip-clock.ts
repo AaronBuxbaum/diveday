@@ -77,6 +77,22 @@ export function shownClockPhase(asked: string | undefined, current: ClockPhase |
   return current ?? "wrapped";
 }
 
+/**
+ * **A phase seen after the boat has left is a look back.** When the phase on
+ * screen is earlier than the trip's current one and the current one is On the
+ * water or Wrapped up, its chores (check-in, readiness, rebooking) are nobody's
+ * work any more: the page says what is true now and lists the guests plainly.
+ */
+export function isLookBack(shown: ClockPhase, current: ClockPhase | null): boolean {
+  if (current !== "water" && current !== "wrapped") return false;
+  return CLOCK_PHASES.indexOf(shown) < CLOCK_PHASES.indexOf(current);
+}
+
+/** The phase whose sentence the page says: the current one for a look back, else the one shown. */
+export function sentencePhaseOf(shown: ClockPhase, current: ClockPhase | null): ClockPhase {
+  return isLookBack(shown, current) && current ? current : shown;
+}
+
 /** Where a phase stands against the current one. */
 export type PhaseStanding = "done" | "now" | "ahead";
 

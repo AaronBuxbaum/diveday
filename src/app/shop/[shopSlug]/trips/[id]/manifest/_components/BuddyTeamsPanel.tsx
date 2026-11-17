@@ -135,6 +135,12 @@ export function BuddyTeamsPanel({
       .join(", ");
   return (
     <section aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")}>
+      {/* The heading leads, then the teams that carry a caution and the one
+          warning line, then the disclosure with the counts. Specific safety
+          cautions stay visible beside their team without opening the editor. */}
+      <h2 id={scopedId(idPrefix, "buddy-teams-heading")} className={`${headingClass} mb-2`}>
+        {t("manifest.buddyHeading")}
+      </h2>
       <BuddyWarnings
         teams={buddyTeamsList.map((team, index) => ({
           ...{ id: team.teamId, label: t("manifest.buddyTeamLabel", { number: index + 1 }) },
@@ -142,45 +148,19 @@ export function BuddyTeamsPanel({
         }))}
         label={t("manifest.buddyHeading")}
       />
-      {/* The editor sits behind one disclosure line. Grouping people is
-          dock/desk prep, done once per departure — but the open panel (team
-          rows, per-team pickers, dissolve buttons) stood at permanent height
-          on every manifest visit, between the roll call and the offline
-          backstop. The teams themselves already ride on each member's row
-          where roll call reads them, so at rest this section owes the page
-          one line: how many teams, and who is not on one. It arrives open
-          when a refusal needs reading — a submit's answer must never hide
-          behind the fold it came from. Specific safety cautions stay visible
-          beside the line with the team and its members, without opening every
-          editor row on the manifest. */}
+      {/* The editor sits behind one disclosure line: grouping people is
+          dock/desk prep, done once per departure, and the teams already ride on
+          each member's row where roll call reads them. It arrives open when a
+          refusal needs reading, so a submit's answer never hides behind the
+          fold it came from. */}
       <details className="group/buddypanel" open={buddyErrorText || defaultOpen ? true : undefined}>
-        {/* Two alignments, not one: the caret centres on the heading's *first
-            line* (`SummaryCaret`, a box one title line tall, in a row that
-            starts at the top), while the heading and its count share a
-            baseline beside it. Flattened into a single baseline row the caret
-            hung off the text's baseline like a stray comma; centred on the
-            whole block it floated between the lines once the count wrapped
-            (9.5–20px low at 390, most in Spanish). `p-2` round the 28px title
-            line is the 44px floor, so one line still centres, and gives the
-            ring room off the words; `-m-2` hands the same 8px back on every
-            side, so the box overhangs the section gap rather than adding to it
-            — above, it stood "Buddy teams" 8px further from the plan than the
-            page's 40px (K-189). */}
-        <summary className="-m-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg p-2 select-none [&::-webkit-details-marker]:hidden">
-          <SummaryCaret
-            line={`h-lh ${headingClass}`}
-            className="size-4 text-muted group-open/buddypanel:rotate-90"
-          />
-          <span className="flex flex-wrap items-baseline gap-x-2">
-            <h2 id={scopedId(idPrefix, "buddy-teams-heading")} className={headingClass}>
-              {t("manifest.buddyHeading")}
-            </h2>
-            <span className="text-sm text-muted">
-              {t("manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
-              {unteamedDivers.length > 0
-                ? t("manifest.buddySummaryUnteamed", { count: unteamedDivers.length })
-                : ""}
-            </span>
+        <summary className="-m-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg p-2 text-sm text-muted select-none [&::-webkit-details-marker]:hidden">
+          <SummaryCaret line="h-lh" className="size-4 text-muted group-open/buddypanel:rotate-90" />
+          <span>
+            {t("manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
+            {unteamedDivers.length > 0
+              ? t("manifest.buddySummaryUnteamed", { count: unteamedDivers.length })
+              : ""}
           </span>
         </summary>
         {/* No caption under the heading. "Group people the way they'll dive"
