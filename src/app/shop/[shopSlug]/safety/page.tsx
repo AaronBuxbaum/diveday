@@ -67,7 +67,7 @@ export default async function SafetyReportPage({
             href={`${shopPath(shopSlug, "safety", "print")}?${year ? `year=${year.number}` : `month=${monthKey(current)}`}`}
             className={buttonClass({ variant: "secondary" })}
           >
-            {t(year ? "incidents.safety.year.print" : "incidents.safety.printMonth")}
+            {t("incidents.safety.print")}
           </Link>
         }
       />

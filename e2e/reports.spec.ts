@@ -357,7 +357,7 @@ test.describe("owner, the Safety page", () => {
 
     // The Print door opens the month as a sheet of the shop's paper, with the
     // same six counts and no control on it.
-    await page.getByRole("link", { name: "Print month" }).click();
+    await page.getByRole("link", { name: "Print", exact: true }).click();
     await expect(page).toHaveURL(/\/safety\/print\?month=\d{4}-\d{2}/);
     const sheet = page.locator(".paper-sheet");
     await expect(sheet.getByRole("region", { name: "This month’s safety record" })).toBeVisible();
@@ -369,7 +369,7 @@ test.describe("owner, the Safety page", () => {
     await page.goto("/shop/blue-mantis/safety");
     await page.getByRole("link", { name: "Year", exact: true }).click();
     await expect(page).toHaveURL(/\/safety\?year=\d{4}/);
-    await expect(page.getByRole("link", { name: "Print the year" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Print", exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Month", exact: true }).click();
     await expect(page).toHaveURL(/\/safety\?month=\d{4}-\d{2}/);
     const chooser = page.getByRole("navigation", { name: "Choose month" });
