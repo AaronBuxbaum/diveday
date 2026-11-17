@@ -16,7 +16,8 @@ import {
 } from "../../db/pre-departure-check";
 import { createCertification, reviewCertification } from "../../db/readiness";
 import { activityEvents, shops, waiverRecords, waiverTemplates } from "../../db/schema/index";
-import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "../../db/trips";
+import { createTrip, getTripRoster, listStaff } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
 import { nowDate } from "../../lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";

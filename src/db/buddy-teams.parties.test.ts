@@ -14,7 +14,8 @@ import {
 } from "./buddy-teams";
 import type { AppDb } from "./client";
 import { bookings, cards, courses, people, shops } from "./schema";
-import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

@@ -5,7 +5,8 @@ import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { trips } from "./schema";
-import { createTrip, pagedUpcomingTripsWithCounts, upcomingTripsWithCounts } from "./trips";
+import { createTrip, pagedUpcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

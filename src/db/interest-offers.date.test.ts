@@ -27,7 +27,7 @@ const { sendNotification } = await import("./notifications");
 const { offerSeats } = await import("./interest-offers");
 const { listDateInterestsInReach } = await import("./interest-dates");
 const { interests } = await import("./schema");
-const { upcomingTripsWithCounts } = await import("./trips");
+const { upcomingTripsWithCounts } = await import("./trips-queries.test-support");
 
 async function context() {
   const { db, shop } = ctx;

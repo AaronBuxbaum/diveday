@@ -12,7 +12,7 @@ import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
 import { people, shops, userAccounts } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

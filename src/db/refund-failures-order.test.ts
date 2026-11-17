@@ -10,7 +10,8 @@ import { markOrderPaidByInvoiceId } from "./orders.test-support";
 import { recordStripeChargeRefund } from "./refunds";
 import { orders } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A fare's refund history does not depend on webhook order** (issue #3835,

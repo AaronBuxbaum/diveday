@@ -6,7 +6,8 @@ import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { bookings, notificationDeliveries, people, trips } from "./schema";
 import { sendRescheduleNotices } from "./trip-rescheduled";
-import { moveTrip, upcomingTripsWithCounts } from "./trips";
+import { moveTrip } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ORIGIN = "https://diveday.example";
 const ctx = fileScopedShopContext();

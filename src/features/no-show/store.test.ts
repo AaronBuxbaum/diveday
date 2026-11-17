@@ -24,15 +24,9 @@ import {
   tripRequirements,
   trips,
 } from "../../db/schema/index";
-import {
-  createTrip,
-  getTripRoster,
-  listStaff,
-  setTripCrew,
-  setTripStatus,
-  upcomingTripsWithCounts,
-} from "../../db/trips";
+import { createTrip, getTripRoster, listStaff, setTripCrew, setTripStatus } from "../../db/trips";
 import { seatHeld } from "../../db/trips-queries";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
 import { MINUTE_MS, nowMs } from "../../lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";

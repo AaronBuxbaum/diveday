@@ -9,7 +9,8 @@ import {
   orders,
 } from "../../db/schema";
 import { setShopCurrency } from "../../db/shops";
-import { getTripRoster, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,

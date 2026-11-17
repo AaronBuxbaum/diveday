@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { bookings, orders } from "@/db/schema";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";

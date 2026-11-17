@@ -4,6 +4,7 @@ import {
   COMPANY_GOVERNING_LAW,
   COMPANY_LEGAL_NAME,
   COMPANY_POSTAL_ADDRESS,
+  FOUNDER_EMAIL,
   FOUNDER_NAME,
 } from "./rules";
 
@@ -13,6 +14,7 @@ describe("who DiveDay is, as a matter of record", () => {
     expect(COMPANY_LEGAL_NAME).toBe("Pseudorandom LLC");
     expect(COMPANY_POSTAL_ADDRESS).toBe("12851 Capital St, Suite 100, Oak Park, MI 48237");
     expect(FOUNDER_NAME).toBe("Aaron Buxbaum");
+    expect(FOUNDER_EMAIL).toBe("aaron@dive.day");
   });
 
   it.each(Object.entries(DIVER_MESSAGES))(

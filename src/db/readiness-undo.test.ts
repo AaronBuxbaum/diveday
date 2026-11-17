@@ -21,7 +21,8 @@ import {
 } from "./readiness";
 import type { DiveSpecialty } from "./schema";
 import { cards, shops } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

@@ -13,7 +13,8 @@ import {
   reorderChecklistItems,
 } from "./pre-departure-check";
 import { preDepartureCheckEvents } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 async function checklistContext() {
   const { db, shop } = ctx;

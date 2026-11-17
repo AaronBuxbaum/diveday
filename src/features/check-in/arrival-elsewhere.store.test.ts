@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bookings, people } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { arrivalElsewhere } from "./arrival-elsewhere.store";

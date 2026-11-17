@@ -18,13 +18,8 @@ import {
 } from "../../db/schema/index";
 import { setShopDockDayRhythm } from "../../db/shops";
 import { recordSmsKeyword } from "../../db/sms-opt-outs";
-import {
-  editTrip,
-  editTripConditions,
-  listStaff,
-  moveTrip,
-  upcomingTripsWithCounts,
-} from "../../db/trips";
+import { editTrip, editTripConditions, listStaff, moveTrip } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
 import { DEFAULT_DOCK_DAY_RHYTHM } from "../../lib/diver-planning";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";

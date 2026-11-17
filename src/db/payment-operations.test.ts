@@ -11,7 +11,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { bookings, paymentOperationIntents, shops } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { listUnfinished } from "./unfinished";
 
 // One seeded database for the file and a rolled-back transaction per test

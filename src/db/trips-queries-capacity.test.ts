@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "../features/boats/store";
-import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts, weekBoard } from "./trips";
+import { createTrip, listStaff, setTripCrew, weekBoard } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

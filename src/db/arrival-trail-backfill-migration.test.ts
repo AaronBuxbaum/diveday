@@ -7,7 +7,8 @@ import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { seatCheckedIn } from "./arrival-provenance";
 import { bookings } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * The deploy-time backfill of `bookings.arrival_trail_after_seq` (issue #2702,

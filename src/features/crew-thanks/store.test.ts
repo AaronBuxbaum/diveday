@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "../../db/bookings";
 import { bookings, people, personRoles, tripAssignments, tripReviews } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";

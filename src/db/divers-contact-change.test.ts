@@ -21,7 +21,7 @@ import { issueBookingCapability, verifyBookingCapability } from "./booking-capab
 import { createBooking } from "./bookings";
 import { mergeDiverRecords } from "./diver-merge";
 import { waiverRecords } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { issueAndDeliverPersonWaiver, issueAndDeliverWaiver } from "./waiver-issue";
 import {
   completeWaiver,

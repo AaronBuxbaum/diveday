@@ -121,14 +121,30 @@ export function ChecklistRow({
  * staff bundle's: the page's own copy can move without a marketing claim
  * moving under it.
  *
- * The dock checkpoint, where the hero's phone and the boat manifest page show
- * it: four of nine aboard, Priya tapped, Tom still to call.
+ * `state="dock"`, where the hero's phone and the boat manifest page show it:
+ * four of nine aboard, Priya tapped, Tom still to call. `state="afterDive"` is
+ * the Dive 1 checkpoint (`CheckpointSwitch`, the count `HeadCount` keeps open
+ * until everyone who left the dock is counted back aboard): all nine back,
+ * Priya's and Tom's rows both tapped, the heading the checkpoint's own.
+ *
+ * @mirrors src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.tsx
+ * @mirrors src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CheckpointSwitch.tsx
+ * @mirrors src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCallRow.tsx
+ * @mirrors src/components/RollCallMark.tsx
+ * @mirrors src/components/row-tones.ts
  */
-export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
+export function CaptainRollCallFallback({
+  locale,
+  state = "dock",
+}: {
+  locale: DiverLocale;
+  state?: "dock" | "afterDive";
+}) {
   const t = diverTranslator(locale);
   // i18n-exempt: sample diver names used only in marketing mockups
   const divers = ["Priya Sharma", "Tom Okafor"];
-  const aboard = 4;
+  const afterDive = state === "afterDive";
+  const aboard = afterDive ? 9 : 4;
   return (
     <div className="bg-background text-foreground">
       <AppBar label={t("fallback.boatLabel")} inset={PHONE_INSET_X} />
@@ -160,8 +176,8 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
             checkpoint raised on it. */}
         <div className="inline-flex rounded-lg border border-border bg-surface-sunken p-0.5">
           {[
-            [t("fallback.checkpointDock"), true],
-            [t("fallback.checkpointDive", { n: 1 }), false],
+            [t("fallback.checkpointDock"), !afterDive],
+            [t("fallback.checkpointDive", { n: 1 }), afterDive],
             [t("fallback.checkpointDive", { n: 2 }), false],
           ].map(([label, current]) => (
             <span
@@ -175,12 +191,16 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
           ))}
         </div>
         <div>
-          <h3 className="text-sm font-semibold">{t("fallback.rollCallHeading")}</h3>
+          <h3 className="text-sm font-semibold">
+            {afterDive
+              ? t("fallback.afterDiveRollCallHeading", { n: 1 })
+              : t("fallback.rollCallHeading")}
+          </h3>
           <div className="mt-2 overflow-hidden rounded-lg border border-border">
             {divers.map((name, index) => {
-              // Priya has been tapped aboard; Tom is the one the crew is
-              // still to call.
-              const isAboard = index === 0;
+              // At the dock Priya has been tapped aboard and Tom is the one the
+              // crew is still to call; after the dive both are counted back.
+              const isAboard = afterDive || index === 0;
               return (
                 <div
                   key={name}
@@ -222,24 +242,41 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
  * "Needs you" list, each naming one diver, the one thing missing and its boat.
  * The waiver row carries its own button, as the real row does.
  *
- * The waiver row is not Priya's: the homepage follows Priya from the release
- * she signs one step earlier to the recap that thanks her, so her name on an
- * unsigned waiver here would contradict the band's own title ("One booking…",
- * conversion review, 2026-10-05).
+ * Priya is the diver the homepage follows. `state="unsigned"` is the morning
+ * after she books: her row is the waiver one, "link sent", with the nudge the
+ * real row carries. `state="ready"` is the morning after she signs: her row is
+ * gone and the bar and the count under it are one ready higher. Diego's
+ * certification row is in both, because the real list is never only good news.
+ *
+ * @mirrors src/app/shop/[shopSlug]/_components/today/DaySpine.tsx
+ * @mirrors src/app/shop/[shopSlug]/_components/today/DayStation.tsx
  */
-export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) {
+export function FrontDeskReadinessFallback({
+  locale,
+  state = "unsigned",
+}: {
+  locale: DiverLocale;
+  state?: "unsigned" | "ready";
+}) {
   const t = diverTranslator(locale);
+  const unsigned = state === "unsigned";
+  const readyCount = unsigned ? 7 : 8;
+  const blockedCount = unsigned ? 2 : 1;
   // The stage chip is the staff chip's own word, read from the staff bundle by
   // the same key, so the picture cannot drift from the product (#2402).
   const stageWord = staffTranslator(locale)(STAGE_WORD_KEYS.boarding);
   const rows = [
-    {
-      kind: t("fallback.kindWaiver"),
-      // i18n-exempt: sample diver name used only in marketing mockups
-      name: "Hana Sato",
-      detail: t("fallback.waiverNotSent"),
-      action: t("fallback.sendWaiver"),
-    },
+    ...(unsigned
+      ? [
+          {
+            kind: t("fallback.kindWaiver"),
+            // i18n-exempt: sample diver name used only in marketing mockups
+            name: "Priya Sharma",
+            detail: t("fallback.waiverPending"),
+            action: t("fallback.nudgeWaiver"),
+          },
+        ]
+      : []),
     {
       kind: t("fallback.kindCertifications"),
       // i18n-exempt: sample diver name used only in marketing mockups
@@ -265,10 +302,12 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
           <p className="text-xs text-muted">French Reef · Mantis II · Keiko Tanaka</p>
           {/* Today's own bar (`ReadinessBar`): 7 ready and 2 blocked of a
               twelve-seat boat, the three open seats the bare track. */}
-          <ReadinessBar className="mt-3" ready={7} blocked={2} of={12} />
+          <ReadinessBar className="mt-3" ready={readyCount} blocked={blockedCount} of={12} />
           <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums">
-            <span>{t("fallback.readyCount")}</span>
-            <span className="font-medium text-danger">{t("fallback.blockedCount")}</span>
+            <span>{t("fallback.readyCount", { ready: readyCount })}</span>
+            <span className="font-medium text-danger">
+              {t("fallback.blockedCount", { count: blockedCount })}
+            </span>
             <span className="text-muted">{t("fallback.spotsOpen")}</span>
           </p>
         </div>

@@ -14,8 +14,9 @@ import {
 } from "./boarding-observations";
 import { createBooking } from "./bookings";
 import { boardingObservations, bookings, trips } from "./schema/index";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
 import { heldSeatCounts } from "./trips-queries";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const fileCtx = fileScopedShopContext();

@@ -5,7 +5,7 @@ import { fakePromotions } from "@/test/fakes";
 import { deals, shops } from "./schema";
 import { createShopPromoCode, getRedeemableShopPromo, tripMayTakeACode } from "./shop-promos";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 const NOW = new Date("2026-07-29T12:00:00.000Z");

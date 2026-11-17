@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { activityEvents } from "@/db/schema";
 import { DEMO_MEDICAL_ALERT_TRIP } from "@/db/seed-medical-alert";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { fileScopedShopContext } from "@/test/db";
 import { cookieJar } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";

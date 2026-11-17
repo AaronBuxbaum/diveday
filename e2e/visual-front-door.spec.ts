@@ -327,8 +327,36 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
+        // Still: the walkthrough would otherwise change its beat under the camera.
+        await page.emulateMedia({ reducedMotion: "reduce" });
         await page.goto("/");
         await capture(page, "landing", scheme);
+      });
+
+      // The walkthrough, one capture per beat: Priya booked, her open waiver, signed,
+      // ready, checked in, counted back aboard, and the recap.
+      test(`the landing walkthrough shows each beat of one diver's day (${scheme})`, async ({
+        page,
+      }) => {
+        test.skip(scheme === "dark", "the walkthrough's beats are one theme's work");
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.goto("/");
+        const t = diverCopy;
+        const next = page.getByRole("button", { name: t("marketing.home.walk.next") });
+        await next.waitFor();
+        for (const beat of [
+          "book",
+          "unsigned",
+          "sign",
+          "ready",
+          "desk",
+          "boat",
+          "recap",
+        ] as const) {
+          await expect(page.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
+          await capture(page, `landing-walk-${beat}`, scheme);
+          if (beat !== "recap") await next.click();
+        }
       });
 
       // The other two buyer-facing sales surfaces: the features hub (every

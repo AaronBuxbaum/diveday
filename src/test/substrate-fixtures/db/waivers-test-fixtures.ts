@@ -9,7 +9,8 @@ import {
   waiverDrafts,
   waiverRecords,
 } from "../../../db/schema/index";
-import { getTripRoster, upcomingTripsWithCounts } from "../../../db/trips";
+import { getTripRoster } from "../../../db/trips";
+import { upcomingTripsWithCounts } from "../../../db/trips-queries.test-support";
 import { claimCounterLink, waiverLinkDoor } from "../../../db/waivers-completion";
 import { recordMedicalEvaluation as recordMedicalEvaluationInShop } from "../../../db/waivers-medical";
 import { openWaiverInThread } from "../../../db/waivers-requests";

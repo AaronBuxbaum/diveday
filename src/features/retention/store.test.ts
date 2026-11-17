@@ -12,7 +12,8 @@ import {
   tripReadMarks,
   userAccounts,
 } from "../../db/schema/index";
-import { getTripRoster, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { pendingProofRetentionFixtures } from "../../test/retention-pending-sign-in";
 import { setupRequestForRetention } from "../../test/retention-setup-request";

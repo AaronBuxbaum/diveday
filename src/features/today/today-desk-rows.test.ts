@@ -1,7 +1,8 @@
 import { and, eq, gt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { lostItems, shops, trips as tripRows } from "@/db/schema";
-import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";

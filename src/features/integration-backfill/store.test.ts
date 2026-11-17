@@ -12,7 +12,8 @@ import {
   trips,
 } from "../../db/schema/index";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../../db/stripe-accounts";
-import { editTrip, upcomingTripsWithCounts } from "../../db/trips";
+import { editTrip } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { recordingCheckout } from "../../test/fakes";

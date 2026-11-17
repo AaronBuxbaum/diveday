@@ -13,7 +13,8 @@ import { getBookingReadiness } from "./readiness";
 import { bookings, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
-import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 /**

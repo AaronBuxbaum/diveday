@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { SEND_HOLD_MS } from "@/lib/held-sends";
 import { fileScopedShopContext } from "@/test/db";
 import { heldRows, insertHeldRow } from "@/test/held-sends";
-import { claimDueHeldSends, claimHeldSend, holdSend, undoHeldSend } from "./held-sends";
+import { claimHeldSend, holdSend, undoHeldSend } from "./held-sends";
+import { claimDueHeldSends } from "./held-sends.test-support";
 import { bookings, people, personRoles, trips } from "./schema";
 
 const ctx = fileScopedShopContext();

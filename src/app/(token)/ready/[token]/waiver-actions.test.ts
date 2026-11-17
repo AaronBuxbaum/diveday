@@ -5,7 +5,7 @@ import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
 import { mintCapability } from "@/db/capabilities";
 import { bookingCapabilities, bookings, people, waiverRecords } from "@/db/schema";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { diverTranslator } from "@/i18n/messages";
 import {
   emptyMedicalAnswers,

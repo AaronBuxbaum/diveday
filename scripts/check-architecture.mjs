@@ -217,6 +217,7 @@ export const seams = [
     refuses: (target) =>
       target !== null &&
       path.dirname(target) === "src/db" &&
+      !/\.test-support$/.test(target) &&
       /^(?:trips|seed)-/.test(path.basename(target)),
     typeOnlyAllowed: false,
     message: (file, specifier) =>

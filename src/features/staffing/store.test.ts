@@ -10,7 +10,8 @@ import {
   staffShifts,
   tripAssignments,
 } from "../../db/schema/index";
-import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "../../db/trips";
+import { createTrip, listStaff, setTripCrew } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { DAY_MS, HOUR_MS, nowMs } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { createStaffShift, crewShiftCoverage, getStaffingView, tripMeetings } from "./store";

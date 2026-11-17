@@ -11,7 +11,7 @@ import {
 } from "./fly-safe-correction";
 import { drainNotificationRetries } from "./notifications";
 import { bookings, people, trips } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

@@ -8,7 +8,8 @@ import { getDiverProfile } from "../features/divers/store";
 import { counterRentalWaiverStandings } from "../features/gear-counter-rentals/store";
 import { createBookingParty } from "./bookings";
 import { bookings, people, shops, trips } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 import { recordInPersonWaiver } from "./waivers-in-person";
 

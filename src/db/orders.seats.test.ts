@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { countOpenTripOrders, countShopOrders, listShopOrders } from "./orders";
 import { bookings, orders } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

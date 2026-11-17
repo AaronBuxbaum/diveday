@@ -7,7 +7,7 @@ import { issuePartySeatClaims } from "../features/seat-claims/store";
 import { addPartySeat, createBooking, createBookingParty } from "./bookings";
 import { listTripActivity } from "./operations";
 import { bookings, tripRequirements, trips } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.

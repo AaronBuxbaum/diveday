@@ -4,7 +4,8 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { recordFlySafeTold } from "./fly-safe-correction";
 import { bookings, trips as tripRows } from "./schema";
-import { createTrip, upcomingTripsWithCounts } from "./trips";
+import { createTrip } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { editTrip } from "./trips-record";
 
 /**

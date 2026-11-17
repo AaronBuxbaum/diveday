@@ -15,7 +15,8 @@ import {
   workOrders as workOrdersTable,
 } from "@/db/schema";
 import { createStaffCredential } from "@/db/staff-credentials";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster, listStaff } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";

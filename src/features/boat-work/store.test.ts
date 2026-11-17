@@ -2,7 +2,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { bookings, cards, shops } from "../../db/schema/index";
-import { getTripRoster, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { DAY_MS, nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { readBoatWork } from "./store";
