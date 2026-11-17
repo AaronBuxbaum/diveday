@@ -74,7 +74,8 @@ export function TripHeader({
       locale={locale}
       timeZone={timeZone}
       facts={facts}
-      className="mb-0"
+      // The page's own `space-y` spaces it; a margin here would override that gap.
+      className=""
       actions={
         <>
           <span className="hidden sm:contents">
