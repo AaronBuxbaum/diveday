@@ -271,6 +271,9 @@ test("the walkthrough's three doors open the demo as the desk, the boat and the 
 
 test("the homepage leads to every feature page through the Product catalogue", async ({ page }) => {
   await page.goto("/");
+  // The header's menu button draws data-hydrated once React owns the page; a
+  // click before that is lost to the hydration pass.
+  await expect(page.locator('button[aria-expanded][data-hydrated="true"]').first()).toBeAttached();
   const catalogue = page.getByRole("main").getByRole("link", {
     name: diverTranslator("en-US")("marketing.home.featuresLink"),
     exact: true,
