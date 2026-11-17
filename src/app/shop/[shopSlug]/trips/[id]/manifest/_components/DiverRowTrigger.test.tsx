@@ -276,6 +276,28 @@ describe("DiverRowTrigger, drawn on its own", () => {
     expect(container.querySelector(".basis-full")).toBeNull();
   });
 
+  it("draws a photo on screen and none on a printed sheet", () => {
+    const photo = diver({ photoPath: "/demo-staff/dana-reyes.webp" });
+    const screenRow = render(
+      <DiverRowTrigger diver={photo} index={0} capsule={null} typeBadge={null} {...at} t={t} />,
+    );
+    expect(screenRow.container.querySelector("img")).not.toBeNull();
+    screenRow.unmount();
+    const paper = render(
+      <DiverRowTrigger
+        diver={photo}
+        index={0}
+        capsule={null}
+        typeBadge={null}
+        {...at}
+        t={t}
+        paper
+      />,
+    );
+    expect(paper.container.querySelector("img")).toBeNull();
+    expect(paper.container.textContent).not.toMatch(/MI/);
+  });
+
   it("gives the capsule its own full-width line", () => {
     const { container } = render(
       <DiverRowTrigger

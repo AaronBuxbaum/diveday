@@ -209,7 +209,7 @@
   Remove refuses while they are still crew on a departure ahead and says to take them off those boats
   first. Taking them off a boat stays possible after removal. **Erasing** a diver is the one-way answer to "delete
   what you hold about me": their name, contact details, date of birth, emergency contact, card
-  numbers and card photographs, medical answers, sizes, notes, review comments, and shared photos
+  numbers and card photographs, their person photo, medical answers, sizes, notes, review comments, and shared photos
   are destroyed across every table that holds them by key (a mention in words somebody else wrote stays), and `people.anonymized_at` is stamped. What survives is the
   **evidence skeleton** below. Erasure is owner-only, requires typing the diver's name, cannot be
   undone (a database check constraint keeps an erased record removed), and always removes them too.

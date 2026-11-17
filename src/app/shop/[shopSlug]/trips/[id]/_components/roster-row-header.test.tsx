@@ -21,4 +21,23 @@ describe("rowHeader, from the seat's facts alone", () => {
       "/shop/blue-mantis/divers/p-h",
     );
   });
+
+  it("draws the diver's photo, but never a held seat's matched record's", () => {
+    const withPhoto = (held: boolean) => {
+      const row = entry("h", "Rene Marsh");
+      row.person = { ...row.person, staffPhotoPath: "/demo-staff/dana-reyes.webp" };
+      if (held)
+        row.booking = { ...row.booking, identityUnconfirmedAt: new Date() } as typeof row.booking;
+      return seatFacts(row, {
+        readiness: new Map([["h", readinessRow("ready")]]) as ReadinessByBooking,
+        waivers: new Map([["h", signedWaiver]]) as WaiverByBooking,
+      });
+    };
+    const open = render(rowHeader(withPhoto(false)).headerLeft);
+    expect(open.container.querySelector("img")).not.toBeNull();
+    cleanup();
+    const held = render(rowHeader(withPhoto(true)).headerLeft);
+    expect(held.container.querySelector("img")).toBeNull();
+    expect(screen.getByText("RM")).toBeInTheDocument();
+  });
 });
