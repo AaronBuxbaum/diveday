@@ -592,6 +592,21 @@ test.describe("staff", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
     ).toBeVisible();
+    // The toggle sits in the map's bottom-left corner at the same 12px (plus the 1px border) the
+    // map's own switch keeps at top-right, and its two options sit side by side.
+    await waitForCatalogControl(page);
+    const toggle = page.getByRole("navigation", { name: staffCopy("diveSites.list.viewsLabel") });
+    const mapBox = await page.getByTestId("map-container").boundingBox();
+    const toggleBox = await toggle.boundingBox();
+    const [libraryBox, catalogBox] = await Promise.all(
+      ["Your sites", "DiveDay catalog"].map((name) =>
+        toggle.getByText(name, { exact: true }).boundingBox(),
+      ),
+    );
+    if (!(mapBox && toggleBox && libraryBox && catalogBox)) throw new Error("no geometry");
+    expect(toggleBox.x - mapBox.x).toBeCloseTo(13, 0);
+    expect(mapBox.y + mapBox.height - (toggleBox.y + toggleBox.height)).toBeCloseTo(13, 0);
+    expect(Math.abs(libraryBox.y - catalogBox.y)).toBeLessThan(2);
     // By the row's own name, exactly: other templates' prose mentions Molasses
     // Reef too (Sand Island sits beside it), so a substring match finds two.
     const template = page

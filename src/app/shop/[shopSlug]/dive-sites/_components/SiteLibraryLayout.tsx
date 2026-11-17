@@ -65,7 +65,7 @@ export function SiteLibraryLayout({
           />
         </MapWheelHint>
         {views ? (
-          <div className="absolute bottom-9 start-3 z-[1000] w-80 max-w-[calc(100%-1.5rem)]">
+          <div className="absolute bottom-3 start-3 z-[1000] w-80 max-w-[calc(100%-1.5rem)]">
             {views}
           </div>
         ) : null}

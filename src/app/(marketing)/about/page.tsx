@@ -6,10 +6,10 @@ import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { CaptainPhoneFrame } from "@/components/MarketingSections";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { BANNER_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
-import { FOUNDER_NAME } from "@/features/company-identity";
+import { FOUNDER_EMAIL, FOUNDER_NAME } from "@/features/company-identity";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -151,12 +151,28 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               <p>{t("marketing.about.peopleP1")}</p>
               <p>{t("marketing.about.peopleP2")}</p>
               <p>{t("marketing.about.peopleP3")}</p>
-              <p>{t("marketing.about.peopleP4")}</p>
+              <p>
+                {t.rich("marketing.about.peopleP4", {
+                  email: (chunks) => (
+                    <a className={proseLinkClass} href={`mailto:${FOUNDER_EMAIL}`}>
+                      {chunks}
+                    </a>
+                  ),
+                })}
+              </p>
               {/* The band is in the first person and signed by the one person
                   the page names (Aaron, 2026-11-11; #4316). */}
-              <p className="text-base leading-7 text-foreground">
-                <span className="font-medium">{FOUNDER_NAME}</span>
-                <span className="text-muted">, {t("marketing.about.founderRole")}</span>
+              <p className="pt-2">
+                <span className="sr-only">{FOUNDER_NAME}</span>
+                <span
+                  aria-hidden="true"
+                  className="block font-[family-name:var(--font-signature)] text-6xl leading-none text-foreground"
+                >
+                  {FOUNDER_NAME}
+                </span>
+                <span className="mt-2 block text-sm font-medium uppercase tracking-wide text-muted">
+                  {t("marketing.about.founderRole")}
+                </span>
               </p>
             </div>
           </div>
