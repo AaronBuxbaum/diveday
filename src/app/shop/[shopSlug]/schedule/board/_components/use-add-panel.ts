@@ -29,6 +29,7 @@ export function useAddPanel({
   initialSite,
   requestPlan,
   startExpanded,
+  defaultLensId,
 }: {
   locale: string;
   addDraft: FormDraftProps["draft"];
@@ -40,6 +41,7 @@ export function useAddPanel({
   initialSite?: BuilderInitialSite | null;
   requestPlan?: BuilderRequestPlan | null;
   startExpanded: boolean;
+  defaultLensId?: string;
 }) {
   const [expanded, setExpanded] = useState(startExpanded);
   // Controlled, unlike every other select here: the catalogue arrives on its own
@@ -191,7 +193,7 @@ export function useAddPanel({
     patternEdited.current = true;
   };
   /** The trip tag, controlled so "Start blank" can reset it. */
-  const [lensId, setLensId] = useState("");
+  const [lensId, setLensId] = useState(defaultLensId ?? "");
   const [crew, setCrew] = useState<BuilderPattern["crew"]>([]);
   const canAskPattern = loadPattern !== undefined;
   useEffect(() => {

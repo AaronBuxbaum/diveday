@@ -229,6 +229,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "packing_logbook",
       "rental_items",
       "rental_pricing",
+      "trip_defaults",
       // The shop's own words on every rental ticket (ADR
       // 20260815-minimal-gear-register, amended 2026-10-08): its text, so its
       // backup carries it.
@@ -359,6 +360,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.packingLogbook,
         JSON.stringify(shop.rentalItems),
         JSON.stringify(shop.rentalPricing),
+        JSON.stringify(shop.tripDefaults),
         shop.rentalTerms,
         shop.replyNotes,
         shop.customerRegulatorServiceMonths,
@@ -700,6 +702,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "planned_dives",
       "price_cents",
       "deposit_cents",
+      "shop_default_fields",
       // The snorkeler and rider seats and the divers-only limit (ADR
       // 20261007-participant-types). Null means not stated.
       "snorkeler_price_cents",
@@ -766,6 +769,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.plannedDives,
         row.priceCents,
         row.depositCents,
+        JSON.stringify(row.shopDefaultFields),
         row.snorkelerPriceCents,
         row.riderPriceCents,
         row.diverCapacity,

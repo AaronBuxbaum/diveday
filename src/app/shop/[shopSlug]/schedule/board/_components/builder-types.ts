@@ -52,6 +52,12 @@ export type BuilderPriceInput = {
   max: number;
   /** Zero, formatted for the shop's currency — the box's placeholder. */
   placeholder: string;
+  defaults?: {
+    deposit: number | string;
+    cancellation: number | string;
+    minimum: number | string;
+    lensId: string;
+  };
 };
 
 export type BuilderActions = {
