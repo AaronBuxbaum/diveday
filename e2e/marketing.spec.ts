@@ -930,13 +930,10 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     .locator("section")
     .filter({ has: page.getByRole("link", { name: "See pricing" }) });
   await expect(workBand.locator("button:not([disabled])")).toHaveCount(0);
-  await expect(workBand.locator("a")).toHaveCount(4);
-  const setUpDoor = workBand.locator(SET_UP_DOOR);
-  await expect(setUpDoor).toHaveCount(1);
-  // Anchored on both sides, or `hover:bg-surface-sunken` would satisfy it and
-  // the assertion would pass on a button whose resting fill had changed.
-  await expect(setUpDoor).toHaveClass(/(^|\s)bg-surface(\s|$)/);
-  await expect(setUpDoor).not.toHaveClass(/bg-primary/);
+  // Pricing, switching and the two records links; Get set up is the closing
+  // band's, not a third copy here.
+  await expect(workBand.locator("a")).toHaveCount(3);
+  await expect(workBand.locator(SET_UP_DOOR)).toHaveCount(0);
 });
 
 for (const locale of ["en-US", "es-ES"] as const) {
