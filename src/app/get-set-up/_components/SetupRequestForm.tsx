@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { ChoicePill, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { ChoicePill, controlClass, Field, FieldGrid, FormStatus, choiceGridClass } from "@/components/ui/form";
 import {
   asksWhichSystem,
   SETUP_CURRENT_SYSTEMS,
@@ -157,7 +157,7 @@ export function SetupRequestForm({
         {/* Three boxes, any mix and none required (issue #4319): a shop with
             no boat reads as welcome, and the reply asks about the rest. */}
         <Field label={words.runs} group>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className={choiceGridClass}>
             {SETUP_RUNS.map((answer) => (
               <ChoicePill
                 key={answer}

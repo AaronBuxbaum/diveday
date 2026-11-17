@@ -10,6 +10,7 @@ import {
   FieldActions,
   FieldGrid,
   FormStatus,
+  choiceGridClass,
 } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
@@ -34,7 +35,7 @@ function RoleCheckboxes({
 }) {
   const labels = staffRoleLabelRecord(t);
   return (
-    <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <fieldset className={choiceGridClass}>
       <legend className="sr-only">{t("settings.team.rolesLegend")}</legend>
       {STAFF_ROLES.map((role) => (
         <ChoicePill
