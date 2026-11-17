@@ -33,9 +33,9 @@ export const DEMO_SHOP_BRAND = {
   logoUrl: "/demo-shop/blue-mantis-logo.png",
   brandColor: DEMO_SHOP_BRAND_COLOR,
   brandDisplayFont: "outfit",
-  brandHeroImageUrl: demoIllustration("boat").url,
+  brandHeroImageUrl: demoIllustration("sunset-boat").url,
   // i18n-exempt: a shop writes its own alt text, like its tagline.
-  brandHeroImageAlt: demoIllustration("boat").alt,
+  brandHeroImageAlt: demoIllustration("sunset-boat").alt,
   establishedYear: 1998,
   // Fictional examples, labelled as such wherever a demo renders them.
   brandBadges: ["padi_5_star", "padi_idc", "green_fins", "blue_star", "dan_partner", "tripadvisor"],
@@ -44,7 +44,7 @@ export const DEMO_SHOP_BRAND = {
     ...ORIGINAL_PHOTO_STRIP,
     demoIllustration("shopfront").url,
     demoIllustration("porch").url,
-    demoIllustration("sunset-boat").url,
+    demoIllustration("boat").url,
   ],
 } satisfies Partial<typeof shops.$inferInsert>;
 

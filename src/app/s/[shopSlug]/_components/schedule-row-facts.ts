@@ -33,13 +33,8 @@ export function scheduleRowFact(
   for (const tally of seen?.species ?? []) {
     const name =
       tally.customName ??
-      (isMarineLifeSlug(tally.speciesSlug) ? marineLifeCard(tally.speciesSlug, t).name : null);
-    if (name)
-      return t("schedule.recentSighting", {
-        species: name,
-        seen: tally.dives,
-        dives: seen?.dives ?? 0,
-      });
+      (isMarineLifeSlug(tally.speciesSlug) ? marineLifeCard(tally.speciesSlug, t).plural : null);
+    if (name) return t("schedule.recentSighting", { species: name });
   }
   return null;
 }
