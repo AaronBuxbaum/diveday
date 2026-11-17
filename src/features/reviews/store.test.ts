@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "../../db/bookings";
 import { bookings, reviewModerationEvents, trips as tripsTable } from "../../db/schema/index";
-import { setShopFeature } from "../../db/shops";
+import { setShopFeature } from "../../db/shops.test-support";
 import { createTrip } from "../../db/trips";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "../../lib/reviews";

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { claudeDemoSpend, claudeUsage, shops } from "../../db/schema/index";
-import { setShopFeature } from "../../db/shops";
+import { setShopFeature } from "../../db/shops.test-support";
 import type { StructuredCall } from "../../lib/claude/structured";
 import { fileScopedShopContext } from "../../test/db";
 import { fakeClaude, fakeClaudeMessage } from "../../test/fakes";

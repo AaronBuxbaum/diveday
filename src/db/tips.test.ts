@@ -14,7 +14,8 @@ import {
 import type { DbExecutor } from "./client";
 import { getBookingPayment } from "./payments";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, integrationEvents } from "./schema";
-import { setShopCurrency, setShopFeature } from "./shops";
+import { setShopCurrency } from "./shops";
+import { setShopFeature } from "./shops.test-support";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getLatestTipForBooking,

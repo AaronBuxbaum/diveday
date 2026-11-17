@@ -22,7 +22,7 @@ import {
   toDiverRentalFit,
 } from "./rental-fit";
 import { bookings, people, rentalFitProfiles } from "./schema";
-import { setShopRentalItems } from "./shops";
+import { setShopRentalItems } from "./shops.test-support";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 async function context() {

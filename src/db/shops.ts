@@ -256,12 +256,6 @@ export async function clearPassedReopensOn(db: AppDb, now: Date = nowDate()): Pr
   return cleared.length;
 }
 
-/** Turns Stripe Tax on or off for charges created after this setting is saved. */
-export async function setShopTaxEnabled(db: AppDb, shopId: string, taxEnabled: boolean) {
-  const [shop] = await db.update(shops).set({ taxEnabled }).where(eq(shops.id, shopId)).returning();
-  return shop ?? null;
-}
-
 /** Saves the shop's named per-diver pass-through fee; null disables it. */
 export async function setShopPassThroughFee(
   db: AppDb,
@@ -289,22 +283,6 @@ export async function setShopEmergencyReference(
   const [shop] = await db
     .update(shops)
     .set({ emergencyReference })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * **A human clears a flagged shop name** (issue #2450): the shop's mail goes
- * back to "{Shop} via DiveDay". Stamps the clearing rather than erasing the
- * flag, so a later rename that matches again (a newer flag) holds again. Null
- * for a shop that does not exist; clearing a shop that was never flagged is
- * harmless.
- */
-export async function clearShopNameReview(db: AppDb, shopId: string, now: Date = nowDate()) {
-  const [shop] = await db
-    .update(shops)
-    .set({ nameClearedAt: now })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
@@ -601,34 +579,6 @@ export async function setShopTemperatureUnit(db: AppDb, shopId: string, unit: Te
 }
 
 /**
- * Replaces the shop's rental catalog — which gear it rents. The route narrows
- * the incoming values to known kinds (src/lib/rentals.ts) before calling this,
- * so an unknown string can never be stored.
- */
-export async function setShopRentalItems(db: AppDb, shopId: string, rentalItems: string[]) {
-  const [shop] = await db
-    .update(shops)
-    .set({ rentalItems })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * Replaces the notes Claude reads when it drafts a reply (`shops.reply_notes`).
- * The action trims and caps the box first, so what arrives is text within
- * `REPLY_NOTES_MAX_LENGTH`, or `null` for none.
- */
-export async function setShopReplyNotes(db: AppDb, shopId: string, replyNotes: string | null) {
-  const [shop] = await db
-    .update(shops)
-    .set({ replyNotes })
-    .where(eq(shops.id, shopId))
-    .returning({ id: shops.id });
-  return shop ?? null;
-}
-
-/**
  * Writes the Rentals page's whole save in one UPDATE, so a failed write changes
  * none of its columns: the catalog, the price list, the terms every rental
  * ticket prints, and the two optional settings. An omitted optional setting is
@@ -782,34 +732,6 @@ export async function setShopReviewUrl(db: AppDb, shopId: string, reviewUrl: str
   return shop ?? null;
 }
 
-/** Sets which kinds of diving the shop runs. */
-export async function setShopDivingOptions(
-  db: AppDb,
-  shopId: string,
-  options: {
-    hasBoatDiving: boolean;
-    hasShoreDiving: boolean;
-    hasPoolDiving: boolean;
-  },
-) {
-  const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
-  return shop ?? null;
-}
-
-/** Turns the shop's crew schedule on or off (`shops.crew_schedule_enabled`). */
-export async function setShopCrewScheduleEnabled(
-  db: AppDb,
-  shopId: string,
-  crewScheduleEnabled: boolean,
-) {
-  const [shop] = await db
-    .update(shops)
-    .set({ crewScheduleEnabled })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
 /**
  * Sets the divemaster target the crew schedule's nudges are measured against, and whether a crew
  * member's days off wait for an owner or manager.
@@ -826,25 +748,6 @@ export async function setShopDiversPerDivemaster(
       diversPerDivemaster,
       ...(timeOffApprovalEnabled === undefined ? {} : { timeOffApprovalEnabled }),
     })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * Turns one optional feature on or off (`src/lib/shop-features.ts`). Nothing
- * the feature wrote is touched, so turning it back on finds everything where
- * it was.
- */
-export async function setShopFeature(
-  db: AppDb,
-  shopId: string,
-  feature: ShopFeature,
-  enabled: boolean,
-) {
-  const [shop] = await db
-    .update(shops)
-    .set({ [SHOP_FEATURE_COLUMNS[feature]]: enabled })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

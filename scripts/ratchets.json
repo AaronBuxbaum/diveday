@@ -942,6 +942,14 @@
           "src/features/seat-claims/store.test.ts": "1524 -> 1525",
           "src/features/staffing/store.test.ts": "939 -> 940"
         }
+      },
+      {
+        "why": "the moved shop setters import from shops.test-support, one extra import line in three test files",
+        "files": {
+          "src/db/checkouts.test.ts": "2965 -> 2966",
+          "src/db/orders.test.ts": "3175 -> 3176",
+          "src/features/checkout-recovery/store.test.ts": "901 -> 902"
+        }
       }
     ],
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1250,
@@ -957,7 +965,7 @@
     "src/components/ui/form.tsx": 1153,
     "src/db/bookings.test.ts": 3514,
     "src/db/buddy-teams.test.ts": 968,
-    "src/db/checkouts.test.ts": 2965,
+    "src/db/checkouts.test.ts": 2966,
     "src/db/course-forms.test.ts": 1234,
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1158,
@@ -966,7 +974,7 @@
     "src/db/incident-reports.test.ts": 967,
     "src/db/manifests.test.ts": 3560,
     "src/db/notifications.test.ts": 1860,
-    "src/db/orders.test.ts": 3175,
+    "src/db/orders.test.ts": 3176,
     "src/db/participant-types.test.ts": 1192,
     "src/db/readiness.test.ts": 1323,
     "src/db/refunds.test.ts": 1151,
@@ -979,7 +987,7 @@
     "src/db/waivers-medical.test.ts": 1001,
     "src/features/anonymize/store.test.ts": 1549,
     "src/features/check-in/store.test.ts": 1198,
-    "src/features/checkout-recovery/store.test.ts": 901,
+    "src/features/checkout-recovery/store.test.ts": 902,
     "src/features/courses/store.test.ts": 1676,
     "src/features/divers/store.test.ts": 2759,
     "src/features/import/store.test.ts": 1074,

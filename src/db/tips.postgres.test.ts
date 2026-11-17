@@ -6,7 +6,7 @@ import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } fro
 import { raceShop } from "@/test/postgres-shop";
 import { createBooking } from "./bookings";
 import { trips } from "./schema";
-import { setShopFeature } from "./shops";
+import { setShopFeature } from "./shops.test-support";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
 

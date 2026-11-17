@@ -14,7 +14,7 @@ import {
   verifiedNitroxPersonIds,
 } from "./nitrox";
 import { bookings, cards, people } from "./schema";
-import { setShopRentalItems } from "./shops";
+import { setShopRentalItems } from "./shops.test-support";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 async function context() {

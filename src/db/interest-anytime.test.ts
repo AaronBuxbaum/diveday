@@ -12,7 +12,7 @@ import {
 } from "./interests";
 import { capabilities, interests, shops } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
-import { setShopFeature } from "./shops";
+import { setShopFeature } from "./shops.test-support";
 
 const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
 

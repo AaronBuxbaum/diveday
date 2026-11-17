@@ -31,7 +31,8 @@ import {
   trips,
 } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
-import { setShopCurrency, setShopPassThroughFee, setShopTaxEnabled } from "./shops";
+import { setShopCurrency, setShopPassThroughFee } from "./shops";
+import { setShopTaxEnabled } from "./shops.test-support";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { editTrip, getTripRoster } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
