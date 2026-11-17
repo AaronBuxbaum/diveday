@@ -270,7 +270,7 @@ export async function TomorrowsWaterCard({
       {callOffHref ? (
         <Link
           href={callOffHref}
-          className={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
+          className={buttonClass({ variant: "link", size: "sm", flush: true })}
         >
           {t("trips.clock.ready.callOff")}
         </Link>

@@ -226,7 +226,7 @@ function rosterProps({
       moveSeat,
     },
     slots: {
-      phase: phase ?? (arrival ? "checkin" : "after"),
+      phase: phase ?? (arrival ? "checkin" : "listed"),
       addGuestHref,
       tripFixes,
       afterReady,

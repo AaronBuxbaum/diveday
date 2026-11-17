@@ -154,7 +154,7 @@ export default async function TripPrepPage({
           })}
           shopSlug={shopSlug}
           tripId={tripId}
-          rollCallInMore
+          rollCall="more"
           addGuest={false}
           locale={locale}
           timeZone={shop.timezone}

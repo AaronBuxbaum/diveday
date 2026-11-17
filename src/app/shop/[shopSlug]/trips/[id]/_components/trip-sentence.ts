@@ -136,7 +136,7 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
         };
       }
       return {
-        headline: t("trips.clock.sentence.scheduledToLeave", { time: time(input.nextStartsAt) }),
+        headline: t("trips.clock.sentence.noRollCallYet"),
         emphasis: null,
         sub: back,
       };

@@ -15,9 +15,8 @@ import { BLOCKER_CATEGORY, type ReadinessBlockerCode } from "@/lib/readiness";
  *   last dive, a re-entry ask, a fit, an earlier physician's word).
  * - Everyone else is `fine`, folded into one line.
  *
- * A blocker is fixed guest by guest, so a blocking item names one guest
- * (Aaron, 2026-10-05). Guests who share one advisory and nothing else share
- * one item.
+ * Every item names one guest and carries all of that guest's reasons, so a
+ * guest is on one line only and a group's count is a count of people.
  */
 
 /** Every reason a roster row says that is not a readiness blocker. */
@@ -103,7 +102,7 @@ export function remedyFor(reason: FixReason): FixRemedy {
 }
 
 /**
- * Which reason a row names when a guest has several: who they are before
+ * The order a row names a guest’s reasons in, worst first: who they are before
  * anything measured against them, then a doctor's word, then paperwork, then
  * cards, then money.
  */
@@ -169,13 +168,16 @@ export type FixGuest = {
   released: "not_here" | "turned_away" | null;
 };
 
-/** One line of the list: who, the one reason it names, and its remedy. The opened guest holds the rest. */
+/**
+ * One guest's line: who, every reason that stands, worst first, and the remedy
+ * the worst calls for. A guest has one line in the whole list (design review
+ * of the final screens, finding 3): two guests who share a reason keep a line
+ * each, so every count on the list counts people.
+ */
 export type FixItem = {
-  guestIds: string[];
-  /** Null on a guest to come with nothing to say. */
-  reason: FixReason | null;
-  /** Further reasons the same guest has, said as a count. */
-  more: number;
+  guestId: string;
+  /** Empty on a guest to come with nothing to say. */
+  reasons: FixReason[];
   remedy: FixRemedy;
 };
 
@@ -192,36 +194,10 @@ export type FixList = {
 
 export type FixListMode = "checkin" | "all";
 
-function itemOf(id: string, reasons: readonly FixReason[]): FixItem {
+function itemOf(guestId: string, reasons: readonly FixReason[]): FixItem {
   const ordered = [...new Set(reasons)].sort((a, b) => reasonRank(a) - reasonRank(b));
-  const reason = ordered[0] ?? null;
-  return {
-    guestIds: [id],
-    reason,
-    more: Math.max(0, ordered.length - 1),
-    remedy: reason ? remedyFor(reason) : "open",
-  };
-}
-
-/**
- * Guests who share one reason and have no other share one item, in the order
- * the first of them appears; everyone else keeps their own.
- */
-function groupShared(items: FixItem[]): FixItem[] {
-  const grouped: FixItem[] = [];
-  const byReason = new Map<FixReason, FixItem>();
-  for (const item of items) {
-    const shareable = item.more === 0 && item.reason !== null;
-    const existing = shareable && item.reason ? byReason.get(item.reason) : undefined;
-    if (existing) {
-      existing.guestIds.push(...item.guestIds);
-      continue;
-    }
-    const copy = { ...item, guestIds: [...item.guestIds] };
-    if (shareable && item.reason) byReason.set(item.reason, copy);
-    grouped.push(copy);
-  }
-  return grouped;
+  const worst = ordered[0];
+  return { guestId, reasons: ordered, remedy: worst ? remedyFor(worst) : "open" };
 }
 
 export function fixListOf(guests: readonly FixGuest[], { mode }: { mode: FixListMode }): FixList {
@@ -233,7 +209,6 @@ export function fixListOf(guests: readonly FixGuest[], { mode }: { mode: FixList
     notHere: [],
     turnedAway: [],
   };
-  const worth: FixItem[] = [];
   for (const guest of guests) {
     if (guest.released === "not_here") {
       list.notHere.push(guest.id);
@@ -257,9 +232,8 @@ export function fixListOf(guests: readonly FixGuest[], { mode }: { mode: FixList
       mode === "checkin"
         ? guest.advisories.filter((reason) => DESK_ADVISORIES.has(reason))
         : guest.advisories;
-    if (advisories.length > 0) worth.push(itemOf(guest.id, advisories));
+    if (advisories.length > 0) list.worthAMinute.push(itemOf(guest.id, advisories));
     else list.fine.push(guest.id);
   }
-  list.worthAMinute = groupShared(worth);
   return list;
 }

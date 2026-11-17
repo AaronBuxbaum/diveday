@@ -21,9 +21,7 @@ const guest = (id: string, over: Partial<FixGuest> = {}): FixGuest => ({
 describe("every reason the roster knows", () => {
   it.each(BLOCKER_REASONS)("blocker %s lands in Can't board yet with a remedy", (code) => {
     const list = fixListOf([guest("a", { blockers: [code] })], { mode: "all" });
-    expect(list.blocking).toEqual([
-      { guestIds: ["a"], reason: code, more: 0, remedy: remedyFor(code) },
-    ]);
+    expect(list.blocking).toEqual([{ guestId: "a", reasons: [code], remedy: remedyFor(code) }]);
     expect(list.worthAMinute).toEqual([]);
     expect(list.fine).toEqual([]);
     expect(isBlockerReason(code)).toBe(true);
@@ -33,7 +31,7 @@ describe("every reason the roster knows", () => {
   it.each(ADVISORY_REASONS)("advisory %s never blocks", (code) => {
     const list = fixListOf([guest("a", { advisories: [code] })], { mode: "all" });
     expect(list.blocking).toEqual([]);
-    expect(list.worthAMinute.map((item) => item.reason)).toEqual([code]);
+    expect(list.worthAMinute.map((item) => item.reasons)).toEqual([[code]]);
     expect(isBlockerReason(code)).toBe(false);
   });
 
@@ -63,19 +61,18 @@ describe("the blocking group is exactly what readiness refuses", () => {
       [guest("a", { blockers: ["payment_due"], advisories: ["depth", "contact_missing"] })],
       { mode: "all" },
     );
-    expect(list.blocking.map((item) => item.guestIds)).toEqual([["a"]]);
+    expect(list.blocking.map((item) => item.guestId)).toEqual(["a"]);
     expect(list.worthAMinute).toEqual([]);
   });
 
-  it("names the first blocker by priority and counts the rest", () => {
+  it("carries every blocker, worst first", () => {
     const [item] = fixListOf(
       [guest("a", { blockers: ["payment_due", "waiver_not_sent", "medical_review"] })],
       { mode: "all" },
     ).blocking;
     expect(item).toEqual({
-      guestIds: ["a"],
-      reason: "medical_review",
-      more: 2,
+      guestId: "a",
+      reasons: ["medical_review", "waiver_not_sent", "payment_due"],
       remedy: "review_medical",
     });
   });
@@ -85,7 +82,7 @@ describe("the blocking group is exactly what readiness refuses", () => {
       [guest("a", { blockers: ["certification_missing", "identity_unconfirmed"] })],
       { mode: "all" },
     ).blocking;
-    expect(item?.reason).toBe("identity_unconfirmed");
+    expect(item?.reasons[0]).toBe("identity_unconfirmed");
   });
 
   it("never groups blockers, even when guests share one", () => {
@@ -96,7 +93,7 @@ describe("the blocking group is exactly what readiness refuses", () => {
       ],
       { mode: "all" },
     );
-    expect(list.blocking.map((item) => item.guestIds)).toEqual([["a"], ["b"]]);
+    expect(list.blocking.map((item) => item.guestId)).toEqual(["a", "b"]);
   });
 
   it("keeps a guest who checked in and then went blocked in blocking", () => {
@@ -109,19 +106,41 @@ describe("the blocking group is exactly what readiness refuses", () => {
 });
 
 describe("worth a minute", () => {
-  it("groups guests who share one advisory and nothing else", () => {
+  it("is one row per person, carrying all their reasons, even when guests share one", () => {
     const list = fixListOf(
       [
         guest("a", { advisories: ["fit_needed"] }),
-        guest("b", { advisories: ["fit_needed", "recency"] }),
+        guest("b", { advisories: ["fit_needed", "depth", "depth"] }),
         guest("c", { advisories: ["fit_needed"] }),
       ],
       { mode: "all" },
     );
-    expect(list.worthAMinute.map((item) => [item.guestIds, item.reason])).toEqual([
-      [["a", "c"], "fit_needed"],
-      [["b"], "recency"],
+    expect(list.worthAMinute.map((item) => [item.guestId, item.reasons])).toEqual([
+      ["a", ["fit_needed"]],
+      ["b", ["depth", "fit_needed"]],
+      ["c", ["fit_needed"]],
     ]);
+  });
+
+  it("names each guest at most once across every group", () => {
+    const guests = [
+      guest("a", { blockers: ["waiver_not_sent"], advisories: ["depth"] }),
+      guest("b", { advisories: ["depth", "fit_needed"] }),
+      guest("c", { checkedIn: true, advisories: ["contact_missing", "depth"] }),
+      guest("d", { checkedIn: true, advisories: ["depth"] }),
+      guest("e", { advisories: ["depth"] }),
+      guest("f"),
+    ];
+    for (const mode of ["all", "checkin"] as const) {
+      const list = fixListOf(guests, { mode });
+      const named = [
+        ...list.blocking.map((item) => item.guestId),
+        ...list.worthAMinute.map((item) => item.guestId),
+        ...list.toCome.map((item) => item.guestId),
+        ...list.fine,
+      ];
+      expect(named.toSorted()).toEqual(["a", "b", "c", "d", "e", "f"]);
+    }
   });
 
   it("folds everyone with nothing to say into fine", () => {
@@ -135,7 +154,7 @@ describe("what the crew talks through ranks above what the desk owes", () => {
     const list = fixListOf([guest("a", { advisories: ["payment_unpaid", "depth"] })], {
       mode: "checkin",
     });
-    expect(list.toCome[0]?.reason).toBe("depth");
+    expect(list.toCome[0]?.reasons).toEqual(["depth", "payment_unpaid"]);
   });
 
   it.each([
@@ -157,9 +176,9 @@ describe("at Check-in", () => {
     const list = fixListOf([guest("a", { advisories: ["fit_needed"] }), guest("b")], {
       mode: "checkin",
     });
-    expect(list.toCome.map((item) => [item.guestIds[0], item.reason])).toEqual([
-      ["a", "fit_needed"],
-      ["b", null],
+    expect(list.toCome.map((item) => [item.guestId, item.reasons])).toEqual([
+      ["a", ["fit_needed"]],
+      ["b", []],
     ]);
     expect(list.worthAMinute).toEqual([]);
   });
@@ -172,8 +191,8 @@ describe("at Check-in", () => {
       ],
       { mode: "checkin" },
     );
-    expect(list.worthAMinute.map((item) => [item.guestIds, item.reason])).toEqual([
-      [["a"], "contact_missing"],
+    expect(list.worthAMinute.map((item) => [item.guestId, item.reasons])).toEqual([
+      ["a", ["contact_missing"]],
     ]);
     expect(list.fine).toEqual(["b"]);
   });

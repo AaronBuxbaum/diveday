@@ -5,7 +5,7 @@ import { compassText } from "@/i18n/compass-labels";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate } from "@/lib/format";
 import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
 import { shopPath } from "@/lib/staff-notices";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
@@ -47,14 +47,13 @@ export function planOf(overview: Pick<Overview, "tripDiveList">): string[] {
  * Check-in's quiet line.
  */
 export function phaseSlots({
-  frame: { shown, readyFrom, dockBy },
+  frame: { shown, current, readyFrom, dockBy },
   overview,
   shop,
   shopSlug,
   tripId,
   gearToPack,
   water,
-  noRollCall = false,
   mayCallOff,
   now,
   locale,
@@ -62,10 +61,8 @@ export function phaseSlots({
 }: {
   /** Call off is still on offer (`callOffShown`): not cancelled, not sailed, no Home said. */
   mayCallOff: boolean;
-  /** No roll call was taken: no dock count and no after-dive result (`RosterRecord`). */
-  noRollCall?: boolean;
-  /** The phase shown, when Getting ready starts, and when the dock call is. */
-  frame: { shown: ClockPhase; readyFrom: Date; dockBy: Date };
+  /** The phase shown and the one now, when Getting ready starts, and when the dock call is. */
+  frame: { shown: ClockPhase; current: ClockPhase | null; readyFrom: Date; dockBy: Date };
   overview: Overview;
   shop: {
     timezone: string;
@@ -83,14 +80,11 @@ export function phaseSlots({
   t: StaffTranslator;
 }) {
   const { trip, cancelled, requirement } = overview;
-  // A cancelled trip has nothing to make ready, and a wrapped-up one with no
-  // roll call has nothing honest to fix: its guests are only listed.
+  // A cancelled trip has nothing to make ready, and once the boat has left (or
+  // when a later phase is only previewed) Check-in's blockers are nobody's
+  // work: the guests are only listed, and Roll call says who is where.
   const phase: FixListPhase =
-    cancelled || (shown === "wrapped" && noRollCall)
-      ? "listed"
-      : shown === "filling" || shown === "ready" || shown === "checkin"
-        ? shown
-        : "after";
+    cancelled || shown === "water" || shown === "wrapped" ? "listed" : shown;
   const tripPath = shopPath(shopSlug, "trips", tripId);
   const crew = crewNamesOf(overview);
   const plan = planOf(overview);
@@ -109,7 +103,9 @@ export function phaseSlots({
         crew={crew}
         plan={plan}
         price={
-          trip.priceCents !== null ? formatMoneyCents(trip.priceCents, shop.currency, locale) : null
+          trip.priceCents !== null
+            ? formatMoneyScanned(trip.priceCents, shop.currency, locale)
+            : null
         }
         whoCanBook={
           level
@@ -139,7 +135,8 @@ export function phaseSlots({
     depthUnit: shop.depthUnit,
   };
   let panel: ReactNode = null;
-  if (phase === "filling") {
+  // "Next" is about the future, so only Filling seen while it is the phase now says it.
+  if (phase === "filling" && current === "filling") {
     panel = (
       <p className="text-sm text-muted">
         <span className="font-medium text-foreground">{t("trips.clock.quiet.next")}</span>

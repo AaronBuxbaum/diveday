@@ -81,7 +81,9 @@ describe("tripSentence", () => {
       }).headline,
     ).toBe("The crew said Underway at 9:02 AM.");
     // No evidence: what the schedule says, nothing about where anyone is.
-    expect(say(water).headline).toBe("Scheduled to leave at 9:00 AM.");
+    // Nothing recorded: say so, and what the schedule says, never "the boat is out".
+    expect(say(water)).toMatchObject({ headline: "No roll call yet.", emphasis: null });
+    expect(say(water).sub).toMatch(/^Scheduled back at /);
   });
 
   it("Wrapped up: the crew's Home is their word, never proof everyone is back", () => {

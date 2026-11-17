@@ -58,6 +58,7 @@ describe("a row says the name, one phrase, and one button", () => {
       readiness: blockers,
       waivers,
       selectedBookingId: null,
+      phase: "ready",
     });
     const cantBoard = group("cantBoard");
     expect(within(cantBoard).getByText("Can’t board yet")).toBeVisible();
@@ -84,21 +85,83 @@ describe("a row says the name, one phrase, and one button", () => {
     expect(group("cantBoard")).toBeNull();
     const worth = group("worth");
     expect(within(worth).getByRole("button", { name: "Olga Rust" })).toHaveAccessibleDescription(
-      "Hasn’t dived in a while · 1 more",
+      "Hasn’t dived in a while · Fit gear at check-in",
     );
   });
 
-  it("folds a check-in advisory in with everyone else once the boat has left", () => {
+  it("lists everyone booked, with nothing to fix, once the boat has left", () => {
     const rusty = entry("r", "Olga Rust");
     renderRoster({
-      roster: [{ ...rusty, booking: { ...rusty.booking, lastDivedBand: "over_five_years" } }],
-      readiness: new Map([["r", readinessRow("ready")]]) as ReadinessByBooking,
-      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+      roster: [
+        { ...rusty, booking: { ...rusty.booking, lastDivedBand: "over_five_years" } },
+        blocked,
+      ],
+      readiness: new Map([
+        ["r", readinessRow("ready")],
+        ["a", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers,
+      arrival: desk(["r", "a"]),
       selectedBookingId: null,
-      phase: "after",
+      phase: "listed",
     });
     expect(group("worth")).toBeNull();
-    expect(group("fine")).toHaveTextContent("Everyone else · Olga Rust");
+    expect(group("cantBoard")).toBeNull();
+    expect(group("booked")).toHaveTextContent("Booked · Olga Rust and Priya Sharma");
+    // No desk tap and no fix: the boat has left.
+    expect(screen.queryByRole("button", { name: "Check in" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send waiver" })).toBeNull();
+  });
+
+  it("names each guest once, with all their reasons, and counts people", () => {
+    const deep = (id: string, name: string) => {
+      const row = entry(id, name);
+      return { ...row, booking: { ...row.booking, lastDivedBand: "over_five_years" as const } };
+    };
+    renderRoster({
+      roster: [deep("r", "Olga Rust"), deep("s", "Sam Whitfield")],
+      readiness: new Map([
+        ["r", readinessRow("ready")],
+        ["s", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["r", signedWaiver],
+        ["s", signedWaiver],
+      ]) as WaiverByBooking,
+      rentalFit: ownGear(["s"]),
+      selectedBookingId: null,
+      phase: "ready",
+    });
+    const worth = group("worth");
+    expect(within(worth).getAllByRole("button", { name: /Olga Rust|Sam Whitfield/ })).toHaveLength(
+      2,
+    );
+    expect(within(worth).getByText("2")).toBeVisible();
+    expect(within(worth).getByRole("button", { name: "Olga Rust" })).toHaveAccessibleDescription(
+      "Hasn’t dived in a while · Fit gear at check-in",
+    );
+    expect(
+      within(worth).getByRole("button", { name: "Sam Whitfield" }),
+    ).toHaveAccessibleDescription("Hasn’t dived in a while");
+  });
+
+  it("gives the list's first fix the one primary button", () => {
+    const rusty = entry("r", "Olga Rust");
+    renderRoster({
+      roster: [
+        blocked,
+        { ...rusty, booking: { ...rusty.booking, lastDivedBand: "over_five_years" } },
+      ],
+      readiness: new Map([...blockers, ["r", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([...waivers, ["r", signedWaiver]]) as WaiverByBooking,
+      selectedBookingId: null,
+      phase: "ready",
+    });
+    expect(within(group("cantBoard")).getByRole("link", { name: "Check cards" })).toHaveClass(
+      "bg-primary",
+    );
+    for (const control of within(group("worth")).getAllByRole("button", { name: /Fit gear|Open/ }))
+      expect(control).not.toHaveClass("bg-primary");
   });
 
   it("says a snorkeler and the party they come with in the one phrase", () => {
@@ -171,6 +234,9 @@ describe("a guest opened in place", () => {
     });
     const opened = document.querySelector("li#booking-a") as HTMLElement;
     expect(within(opened).getByText("No certification is on file for this trip.")).toBeVisible();
+    // The rare actions wait behind one More.
+    expect(within(opened).getByRole("button", { name: "Not here" })).not.toBeVisible();
+    fireEvent.click(within(opened).getByText("More"));
     expect(within(opened).getByRole("button", { name: "Not here" })).toBeVisible();
     expect(within(opened).getByRole("link", { name: "Open guest profile" })).toBeVisible();
     // The rest of the list stays put.
@@ -232,11 +298,13 @@ describe("a cancelled trip", () => {
       waivers,
       rentalFit: ownGear(["a", "b"]),
       selectedBookingId: null,
+      phase: "listed",
     });
     expect(screen.queryByRole("button", { name: "Check in" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Add a guest" })).toBeNull();
-    expect(group("cantBoard")).not.toBeNull();
-    expect(group("fine")).toHaveTextContent("Everyone else · Lena Fischer");
+    // Nothing to make ready on a trip that will not sail.
+    expect(group("cantBoard")).toBeNull();
+    expect(group("booked")).toHaveTextContent("Booked · Priya Sharma and Lena Fischer");
   });
 });
 
@@ -253,8 +321,9 @@ describe("a wrapped trip with no roll call", () => {
     });
     expect(group("cantBoard")).toBeNull();
     expect(group("worth")).toBeNull();
-    expect(group("booked")).not.toBeNull();
-    expect(within(group("booked")).getByRole("button", { name: "Lena Fischer" })).toBeVisible();
+    const booked = group("booked");
+    fireEvent.click(within(booked).getByRole("button", { expanded: false }));
+    expect(within(booked).getByRole("button", { name: "Lena Fischer" })).toBeVisible();
   });
 });
 

@@ -86,7 +86,7 @@ export function RosterSection({
   slots?: RosterSlots;
 }) {
   const { locale, shopTimezone } = trip;
-  const { arrival, record, phase = "after", tripFixes, afterReady, addGuestHref } = slots;
+  const { arrival, record, phase = "listed", tripFixes, afterReady, addGuestHref } = slots;
   const { roster } = rows;
   const t = staffTranslator(locale);
   const controls = waiverControls(t, { rehearsal: trip.rehearsal });
@@ -178,7 +178,9 @@ export function RosterSection({
             <GuestFixList
               sections={fixRows.sections}
               guests={fixRows.guests}
-              top={arrival?.instrument?.(fixRows.deskWorkOpen)}
+              // The desk's bar belongs to Check-in alone, right under "2 of 11 here",
+              // which is its legend; no other phase is the desk's.
+              top={phase === "checkin" ? arrival?.instrument?.(fixRows.deskWorkOpen) : undefined}
               addGuest={
                 addGuestHref && phase !== "filling"
                   ? { href: addGuestHref, label: t("trips.clock.addGuest") }

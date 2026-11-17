@@ -28,7 +28,7 @@ export function TripPhaseStrip({
   tripId: string;
   /** The phase the trip is in now; `null` for a cancelled trip. */
   current: ClockPhase | null;
-  /** The phase on screen, or `null` when the screen is not a phase (Gear, Edit trip). */
+  /** The phase on screen, or `null` when the screen is not a phase (Gear). */
   shown: ClockPhase | null;
   copy: PhaseStripCopy;
 }) {
@@ -62,7 +62,7 @@ export function TripPhaseStrip({
                     }`}
                   />
                   <span
-                    className={`text-center text-xs sm:text-start sm:text-sm ${
+                    className={`text-center text-sm sm:text-start ${
                       onScreen
                         ? "font-semibold text-primary"
                         : standing === "ahead"

@@ -18,7 +18,6 @@ const base = {
   tripId: "trip-1",
   cancelledAt: new Date("2026-11-14T15:00:00.000Z"),
   scheduledFor: "Was scheduled for Mon, Nov 16, 9:00 AM",
-  rollCallHref: null,
   locale: "en-US",
   timeZone: "America/New_York",
   t,
@@ -42,14 +41,6 @@ describe("the cancellation", () => {
     expect(screen.getByText(/^Called off for weather on Sat, Nov\s14\.$/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     expect(screen.getByRole("link", { name: "View cancellation record" })).toBeVisible();
-  });
-
-  it("keeps the Roll call door", () => {
-    render(<TripCancellation {...base} rollCallHref="/shop/blue-mantis/trips/trip-1/manifest" />);
-    expect(screen.getByRole("link", { name: "Roll call" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/trips/trip-1/manifest",
-    );
   });
 
   it("draws nothing on a trip that is not cancelled", () => {

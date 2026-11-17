@@ -1100,7 +1100,7 @@
       "hereAtDock": "{here} of {total} here · at the dock by {time}",
       "notBack": "{count, plural, one {# guest is} other {# guests are}} recorded not back aboard.",
       "crewSaid": "The crew said {stage} at {time}.",
-      "scheduledToLeave": "Scheduled to leave at {time}.",
+      "noRollCallYet": "No roll call yet.",
       "scheduledBack": "Scheduled back at {time}.",
       "cancelled": "This trip is canceled.",
       "scheduledFor": "Was scheduled for {date}, {time}",
@@ -1226,7 +1226,8 @@
       "incidents": "Incidents",
       "none": "None",
       "reportOne": "Report one",
-      "reports": "{count, plural, one {# report} other {# reports}}",
+      "reportDraft": "Draft · {name}",
+      "reportFiled": "Filed · {name}",
       "noShows": "No-shows",
       "turnedAway": "Turned away",
       "more": "More",
@@ -1249,7 +1250,8 @@
       "paperPasses": "Paper passes",
       "rentalTickets": "Rental tickets",
       "paperRollCall": "Paper roll call",
-      "callOff": "Call it off"
+      "callOff": "Call it off",
+      "callOffMore": "Call it off…"
     },
     "cancelledOn": "{cause, select, weather {Called off for weather} run_ended {Canceled when its run stopped} other {Canceled}} on {date}."
   },
@@ -1319,7 +1321,6 @@
       "call": "Call {name}"
     },
     "close": "Close",
-    "more": "{reason} · {count} more",
     "with": "with {names}",
     "private": "Private details",
     "reEntry": {

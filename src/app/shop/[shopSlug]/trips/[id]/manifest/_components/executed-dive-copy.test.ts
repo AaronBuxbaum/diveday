@@ -40,6 +40,18 @@ describe("executedDiveSummary", () => {
     expect(line).toContain("ft");
     expect(line).toContain("8:05");
   });
+
+  it("says a dive logged with no site was logged at a site not recorded", () => {
+    const line = executedDiveSummary({
+      diveLabel: "Dive 1",
+      row: { ...recorded, actualSite: null },
+      locale: "en-US",
+      timeZone: "America/New_York",
+      depthUnit: "feet",
+      t,
+    });
+    expect(line.startsWith("Dive 1 — Site not recorded, ")).toBe(true);
+  });
 });
 
 describe("executedDiveLogView", () => {

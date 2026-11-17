@@ -104,6 +104,10 @@ export function DaySoFarCard({
   depth: (meters: number) => string;
 } & Words) {
   const time = (at: Date | null | undefined) => (at ? formatTime(at, locale, timeZone) : null);
+  const rows = standing.timeline.map((stop) => ({ stop, ...stopWords(stop, { depth, time, t }) }));
+  // The time column holds only what was recorded. With nothing recorded yet it
+  // would hold the schedule alone, so it goes, and the return says its time.
+  const timed = rows.some(({ stop, time: at }) => at && !(stop.kind === "home" && !stop.saidAt));
   return (
     <section
       aria-labelledby="day-so-far-heading"
@@ -114,24 +118,26 @@ export function DaySoFarCard({
         {t("trips.clock.water.daySoFar")}
       </h2>
       <ol className="mt-2 divide-y divide-border">
-        {standing.timeline.map((stop) => {
-          const row = stopWords(stop, { depth, time, t });
+        {rows.map(({ stop, ...row }) => {
+          const detail = row.detail || (timed ? null : row.time);
           return (
             <li
               key={stop.kind === "dive" ? `dive-${stop.dive}` : stop.kind}
               data-stop-state={stop.state}
-              className={`grid grid-cols-[3.75rem_auto_minmax(0,1fr)] gap-x-3 px-4 py-3 sm:px-6 ${
-                stop.state === "now" ? "bg-primary/5" : ""
-              }`}
+              className={`grid gap-x-3 px-4 py-3 sm:px-6 ${
+                timed ? "grid-cols-[3.75rem_auto_minmax(0,1fr)]" : "grid-cols-[auto_minmax(0,1fr)]"
+              } ${stop.state === "now" ? "bg-primary/5" : ""}`}
             >
-              <span className="text-end text-sm text-muted tabular-nums">{row.time}</span>
+              {timed ? (
+                <span className="text-end text-sm text-muted tabular-nums">{row.time}</span>
+              ) : null}
               <StatusMark variant={MARK[stop.state]} size="md" className="mt-0.5" />
               <div className="min-w-0">
                 <p className="font-semibold">{row.title}</p>
-                {row.detail || row.logHref ? (
+                {detail || row.logHref ? (
                   <p className="text-sm text-muted">
-                    {row.detail}
-                    {row.detail && row.logHref ? " · " : null}
+                    {detail}
+                    {detail && row.logHref ? " · " : null}
                     {row.logHref ? (
                       <Link href={row.logHref} className={LINK}>
                         {t("trips.clock.water.logThis")}

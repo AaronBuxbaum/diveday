@@ -12,4 +12,4 @@ Readiness itself (`src/lib/readiness.ts`), the reasons' words (the staff bundles
 
 ## Invariants
 
-`blocking` is exactly the guests boarding readiness refuses; an advisory never blocks and a blocker never hides among advisories. A blocking item names one guest. Every readiness blocker code and every advisory reason maps to a remedy.
+`blocking` is exactly the guests boarding readiness refuses; an advisory never blocks and a blocker never hides among advisories. Every item names one guest and carries all their reasons; a guest is on one line of the list. Every readiness blocker code and every advisory reason maps to a remedy.
