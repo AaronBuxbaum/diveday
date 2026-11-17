@@ -66,7 +66,7 @@ const pendingMark = {
 
 /** Delivery feedback stays visible on the routine Deck, outside its reference disclosure. */
 async function routineStatus() {
-  const deck = await screen.findByRole("region", { name: "Deck" });
+  const deck = await screen.findByRole("region", { name: "Roll call" });
   const status = deck.querySelector<HTMLDivElement>(':scope > div[role="status"]');
   if (!status) throw new Error("Expected the routine Deck delivery status");
   expect(status).toBeVisible();
@@ -74,7 +74,7 @@ async function routineStatus() {
 }
 
 async function openDetails() {
-  await screen.findByRole("region", { name: "Deck" });
+  await screen.findByRole("region", { name: "Roll call" });
   fireEvent.click(screen.getByText("Details", { selector: "summary" }));
 }
 

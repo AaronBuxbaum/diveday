@@ -267,7 +267,7 @@ for (const scheme of ["light", "dark"] as const) {
       await offlineCopySaved(page);
       const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
       await page.goto(`/offline-manifest?trip=${tripId}`);
-      await expect(page.getByRole("heading", { name: "Deck", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Roll call", exact: true })).toBeVisible();
       await openDeckDetails(page);
       // The empty state's own words, not a timeout: the snapshot is primed in the
       // background from the staff manifest, and if it had been written before
@@ -524,7 +524,7 @@ for (const scheme of ["light", "dark"] as const) {
       await openOnThisPhone(page);
       await page.getByRole("link", { name: "Open offline roll call" }).click();
       await page.waitForURL(/offline-manifest/);
-      await expect(page.getByRole("heading", { name: "Deck", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Roll call", exact: true })).toBeVisible();
       await context.setOffline(true);
       await openDeckPerson(page, state.crewName);
       await page

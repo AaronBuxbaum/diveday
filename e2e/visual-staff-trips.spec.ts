@@ -404,7 +404,7 @@ for (const scheme of ["light", "dark"] as const) {
         const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "departure" });
         await openTripTab(page, "Manifest");
         await expect(
-          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+          page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
         ).toBeVisible();
         // The offline safety copy now saves itself in the background on
         // mount; wait for that to settle (the offline-roll-call link only
@@ -679,7 +679,7 @@ for (const scheme of ["light", "dark"] as const) {
         const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "departure" });
         await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
         await expect(
-          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+          page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
         ).toBeVisible();
         // The chip itself, waited on rather than assumed: this capture is
         // worthless if it photographs the manifest a moment before the row

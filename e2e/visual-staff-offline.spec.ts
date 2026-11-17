@@ -125,7 +125,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The roster is what proves the record was read back and decrypted —
         // the shell renders its chrome before the store resolves.
         await expect(
-          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+          page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
         ).toBeVisible();
         await openDeckPerson(page, "Priya Sharma");
         // This capture opens the saved copy with service available. Photograph
@@ -175,7 +175,7 @@ for (const scheme of ["light", "dark"] as const) {
         );
         await page.goto(`/offline-manifest?trip=${tripId}&fallback=slow`);
         await expect(
-          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+          page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
         ).toBeVisible();
         await openDeckDetails(page);
         await expect(page.getByText("No answer · device copy").first()).toBeVisible();
@@ -209,7 +209,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: "Open offline roll call" }).click();
         await page.waitForURL(/offline-manifest/);
         await expect(
-          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+          page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
         ).toBeVisible();
         await openDeckDetails(page);
         await page.getByRole("button", { name: "After dive 1", exact: true }).click();
@@ -425,7 +425,7 @@ for (const scheme of ["light", "dark"] as const) {
         // a second thing to prime and a second thing to be flaky.
         await page.goto(`/offline-manifest?trip=${tripId}`);
         await expect(
-          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+          page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
         ).toBeVisible();
 
         // Signal returns. The shell re-runs its purge on `online` — the same
