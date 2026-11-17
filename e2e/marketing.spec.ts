@@ -151,14 +151,27 @@ test.describe("before the player has run", () => {
     await expect(
       stepsBand.getByText(diverTranslator("en-US")("marketing.home.stepsLede")),
     ).toBeVisible();
-    // Each step's own name, from the copy column that is every row's first
+    // Each step's own name (all twelve are in the page; only the listed five show before the player runs), from the copy column that is every row's first
     // child (the alternation is `order`, not DOM order). The screens beside them
     // draw headings of their own ("Find your next dive"), which a screen reader
     // never hears inside a `role="img"` but a heading query still finds.
     await expect(stepsBand.locator("ol > li > div:first-child h3")).toHaveText([
-      ...(["book", "sign", "check", "aboard", "recap"] as const).map((id) =>
-        diverTranslator("en-US")(`marketing.home.steps.${id}.title` as never),
-      ),
+      ...(
+        [
+          "shopfront",
+          "book",
+          "money",
+          "unsigned",
+          "sign",
+          "check",
+          "card",
+          "desk",
+          "aboard",
+          "computer",
+          "recap",
+          "review",
+        ] as const
+      ).map((id) => diverTranslator("en-US")(`marketing.home.steps.${id}.title` as never)),
     ]);
     // The screen is the claim in every step, so each one is shown rather than
     // described, and named for a screen reader by a label the *caller* resolves
