@@ -19,7 +19,7 @@ import {
   openTripActivity,
   openTripFromBoard,
   openTripMore,
-  openTripTab,
+  openTripPhase,
   payCheckoutThroughWebhook,
   rosterRow,
   saveDiveIntent,
@@ -274,7 +274,7 @@ test.describe("staff", () => {
     // Standing a departure down is a rare act, so it lives in the About
     // panel's "More for this departure" list now (slice B).
     await openTripMore(page);
-    await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+    await page.getByRole("button", { name: "Cancel this trip", exact: true }).click();
     // Standing a departure down states its cost and takes a second tap
     // (`InlineConfirm`) — no dialog, and the door is the sentence.
     await page.getByRole("button", { name: "Yes, cancel this trip" }).click();
@@ -347,7 +347,7 @@ test.describe("staff counts and intent", () => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
-    await openTripTab(page, "Manifest");
+    await openTripPhase(page, "ready");
     await page.getByRole("heading", { name: "Buddy teams" }).click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
     // name in it and no suggested pairing.
@@ -473,10 +473,10 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await openTripFromBoard(page, "Wreck Trip — Spiegel Grove");
   // Who is waiting is the guests ledger's "Who wants in" panel
   // (ADR 20261017-one-interest-with-a-scope).
-  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await expect(page.locator("#who-wants-in")).toBeVisible();
   await expect(page.getByText("Nora Quinn").last()).toBeVisible();
   // Staff read when each diver asked, not a rank: the list is unnumbered.
-  await expect(page.getByText(/Asked /).last()).toBeVisible();
+  await expect(page.getByText(/Waiting since /).last()).toBeVisible();
 });
 
 // H-20260724-one-person-per-email: a self-service booking that reuses an existing diver's email under a

@@ -114,11 +114,17 @@ test.describe("a standing crew clash", () => {
     // Gone with the panel, exactly as before this issue.
     await expect(page.getByText(/is already scheduled on/)).toHaveCount(0);
 
-    // **The departure's own page**, which is where a staffer looks next. The
-    // Divers tab's pulse names the hull's other departure (H-20260916-may-one-hull-carry).
+    // **The departure's own page**, which is where a staffer looks next. Its
+    // guest list names the hull's other departure, with the door to it
+    // (H-20260916-may-one-hull-carry).
     const twoTankPath = await tripPathByTitle(page, SHOP, twoTank);
     await page.goto(twoTankPath);
-    await expect(page.getByRole("link", { name: `${HULL} is also on ${drift}` })).toBeVisible();
+    const clashRow = page
+      .locator("[data-guest-folios] li")
+      .filter({ hasText: staffCopy("trips.pulse.boatClash", { boat: HULL, departure: drift }) });
+    await expect(
+      clashRow.getByRole("link", { name: staffCopy("trips.fixList.openTrip") }),
+    ).toBeVisible();
     await page.goto(twoTankPath);
     await openTripAbout(page);
     await expect(page.locator("#crew").getByRole("status")).toContainText(

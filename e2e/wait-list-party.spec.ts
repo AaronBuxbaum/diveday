@@ -80,12 +80,15 @@ for (const [device, viewport] of [
         }
       }
 
-      await page.goto(publicUrl.replace("/s/", "/shop/"));
-      await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+      await page.goto(`${publicUrl.replace("/s/", "/shop/")}?phase=filling`);
+      const whoWantsIn = page.locator("#who-wants-in");
+      await expect(whoWantsIn).toBeVisible();
       await expect(page.getByText("Astra Waitlist", { exact: true })).toHaveCount(1);
-      const savedParty = page.locator("li").filter({
-        has: page.getByText("Astra Waitlist", { exact: true }),
-      });
+      // The innermost row: the card's groups are list items too.
+      const savedParty = whoWantsIn
+        .locator("li")
+        .filter({ has: page.getByText("Astra Waitlist", { exact: true }) })
+        .last();
       await expect(savedParty).toContainText("Party of 2");
     });
   });
@@ -144,7 +147,7 @@ test("a full date in a weekly run points at the next one, and a party waits whol
   await expect(page.getByRole("heading", { name: /You’re on the wait list, Ines/ })).toBeVisible();
 
   await page.goto(staffUrl);
-  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await expect(page.locator("#who-wants-in")).toBeVisible();
   await expect(page.getByText("Party of 2")).toBeVisible();
   // The full boat's wait list can be carried to another date of the run.
   await expect(page.getByRole("button", { name: "Carry who’s waiting" })).toBeVisible();

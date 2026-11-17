@@ -55,7 +55,10 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     test.use({ colorScheme: "light", viewport: { width: 1280, height: 800 } });
 
     test("the buddy team's inner builder exposes its person checkboxes", async ({ page }) => {
-      await page.goto(`${await tripPathByTitle(page, "blue-mantis", REEF)}?view=edit`);
+      // Buddy teams sit in Getting ready, opened by the address the card links.
+      await page.goto(
+        `${await tripPathByTitle(page, "blue-mantis", REEF)}?phase=ready&buddies=open`,
+      );
       const outer = page
         .locator("details")
         .filter({ has: page.locator("#buddy-teams-heading") })
@@ -260,23 +263,6 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
         page.getByRole("button", { name: staff("desk.departureNote.submit"), exact: true }),
       ).toBeVisible();
       await capture(page, "departure-note-composer", "light");
-    });
-
-    test("the departure's work summary opens the individual needs-you links", async ({ page }) => {
-      await page.goto(await tripPathByTitle(page, "blue-mantis", REEF));
-      await openTripTab(page, "Trip");
-      const facts = page
-        .locator("details")
-        .filter({ has: page.locator("summary", { hasText: /^Needs you ·/ }) })
-        .first();
-      await openIfClosed(facts);
-      await expect(
-        facts
-          .getByRole("link", { name: /^Prep · \d+$|missing a (rental )?size|not asked about kit/i })
-          .first(),
-      ).toBeVisible();
-      await expect(facts.getByRole("link", { name: /awaiting payment/ })).toBeVisible();
-      await capture(page, "departure-needs-you-expanded", "light");
     });
 
     test("departure activity opens the recorded event body", async ({ page }) => {

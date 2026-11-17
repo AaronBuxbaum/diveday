@@ -75,9 +75,11 @@ test("early Home locks the plan but leaves conservation correction available", a
       .locator("#about-crew > summary")
       .getByText(t("trips.about.correctCrewRecord"), { exact: true }),
   ).toBeVisible();
-  await expect(page.locator("#conservation-add > summary")).toBeVisible();
   await expect(page.locator("#about-more")).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+  // Conservation is corrected under Wrapped up's More, which its hash opens.
+  await page.goto(`/shop/blue-mantis/trips/${id}?phase=wrapped#conservation`);
+  await expect(page.locator("#conservation-add > summary")).toBeVisible();
 });
 
 test("early Home leaves safety evidence correction available", async ({ page }) => {

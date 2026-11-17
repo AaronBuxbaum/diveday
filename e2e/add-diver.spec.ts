@@ -166,7 +166,7 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
 
   await expect(page.getByRole("status")).toContainText("Diver added to the wait list");
   // The ledger's "Who wants in" panel owns the state word.
-  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await expect(page.locator("#who-wants-in")).toBeVisible();
   await expect(page.getByText("Waitlist Wally")).toBeVisible();
 
   // One act on who wants in: the diver's own Offer a seat, which stamps the

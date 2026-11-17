@@ -224,7 +224,7 @@ test.describe("staff", () => {
   test("staff can cancel and reinstate a departure", async ({ page }) => {
     await (await findTripOnBoard(page, "blue-mantis", /Two-Tank Reef/)).click();
     const more = await openTripMore(page);
-    await more.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+    await more.getByRole("button", { name: "Cancel this trip", exact: true }).click();
     await more.getByRole("button", { name: "Yes, cancel this trip" }).click();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
   });

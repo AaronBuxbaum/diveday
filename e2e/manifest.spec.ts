@@ -22,6 +22,7 @@ import {
   openDeckPerson,
   openDiveLog,
   openDiverFileGroup,
+  openedGuestName,
   openFirstRosterRowWith,
   openManifestPerson,
   openOnThisPhone,
@@ -888,7 +889,6 @@ test("a checkpoint with every diver counted stays open until the crew are called
 
   const firstName = guests[0];
   const firstDiverRow = await manifestRow(page, firstName);
-  const firstDiverId = await firstDiverRow.getAttribute("id");
   await openManifestPerson(firstDiverRow);
   const observation = "Surfaced 200 m north, picked up by Reef Runner at 14:31.";
   await page
@@ -908,8 +908,9 @@ test("a checkpoint with every diver counted stays open until the crew are called
   const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
   await expect(progressPanel.getByText(/1 person is not back aboard/)).toBeVisible();
   const missingList = progressPanel.getByRole("list", { name: "Who is not back aboard" });
-  await expect(missingList.getByRole("link")).toHaveCount(1);
-  await expect(missingList.getByRole("link")).toHaveAttribute("href", `#${firstDiverId}`);
+  // Each name opens that person on the roll call, sheet open (`DeckPersonChip`).
+  await expect(missingList.getByRole("button")).toHaveCount(1);
+  await expect(missingList.getByRole("button", { name: firstName, exact: true })).toBeVisible();
 
   await openManifestPerson(await manifestRow(page, firstName));
   const firstDiverDialog = page.getByRole("dialog");
@@ -1006,7 +1007,9 @@ test("the active checkpoint stays visible while selecting named Deck people", as
   for (const name of ["Tom Okafor", "Lena Fischer", "Diego Alvarez"]) {
     await openDeckPerson(page, name);
     await expect(
-      page.locator('[data-deck-screen="person"]').getByText(/After dive 1/),
+      page
+        .locator('[data-deck-screen="person"]')
+        .getByRole("link", { name: "After dive 1", exact: true }),
     ).toBeInViewport();
     await expect(page.getByText(/^0 of \d+ people accounted for$/)).toBeInViewport();
     await expect(
@@ -1042,7 +1045,9 @@ test("resolving a blocker from the manifest lands on that diver, under the block
   // The remedy opens this guest’s folio with its outstanding requirements.
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+(?:\?booking=[^#]+)?#booking-/);
   await expect(
-    page.locator("[data-guest-folio]").getByRole("heading", { name: "Priya Sharma", exact: true }),
+    page
+      .locator("[data-guest-folios]")
+      .getByRole("button", { name: "Priya Sharma", exact: true, expanded: true }),
   ).toBeVisible();
 
   // And actually scrolled to them: a `<Link>` transition does not run the
@@ -1396,7 +1401,7 @@ test("a failed reload of the counter lands on this device's saved copy", async (
   await waitForShellPrimed(page);
 
   await page.goto(counterPath("blue-mantis", tripId));
-  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  await expect(page.getByText(/^\d+ of \d+ here\b/)).toBeVisible();
 
   await context.setOffline(true);
   await page.reload();
@@ -1562,9 +1567,7 @@ test("an instructor off the crew opens a medical alert in an emergency today, an
   await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
   await openTripTab(page, "Trip");
   const row = await openFirstRosterRowWith(page, "Send waiver");
-  const diverName = (
-    await page.locator("[data-guest-folios]").getByRole("heading", { level: 2 }).first().innerText()
-  ).trim();
+  const diverName = await openedGuestName(page);
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
   // The diver signs on the thread link the request carried (issue #2743); the
   // helper waits out the held send before it reads the link.

@@ -298,7 +298,7 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     ]);
     await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: `Ageless Diver ${stamp}`, exact: true }),
+      page.getByRole("button", { name: `Ageless Diver ${stamp}`, exact: true, expanded: true }),
     ).toBeVisible();
   });
 
@@ -357,7 +357,7 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     // durable, meaningful fact is that the booking itself was refused: nobody
     // is on this trip's roster (this test never adds the fail-open walk-in),
     // and the refused diver never appears in it.
-    await expect(page.locator("#roster")).toBeVisible();
+    await expect(page.locator("[data-phase-panel]")).toBeVisible();
     await expect(page.getByText(`Young Diver ${stamp}`)).toHaveCount(0);
   });
 

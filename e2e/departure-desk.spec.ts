@@ -137,7 +137,7 @@ test("Remove on a diver marked aboard a boat that has left says why and changes 
   const tripId = await seededTripId(page, "blue-mantis", SAILED);
   await page.goto(counterPath("blue-mantis", tripId));
   await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
-  const remove = /^\s*Remove booking\s*$/;
+  const remove = new RegExp(`^\\s*${staff("trips.roster.removeBooking")}\\s*$`);
   const row = page
     .locator('#roster li[id^="booking-"]')
     .filter({ has: page.locator("summary", { hasText: remove }) })

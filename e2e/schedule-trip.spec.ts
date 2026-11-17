@@ -98,7 +98,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   // Cancelling is one of the rare acts in the About panel's "More for this
   // departure" list, behind a blocking confirm.
   const more = await openTripMore(page);
-  await more.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+  await more.getByRole("button", { name: "Cancel this trip", exact: true }).click();
   await more.getByRole("button", { name: "Yes, cancel this trip" }).click();
   await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
 });

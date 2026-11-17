@@ -162,8 +162,10 @@ test.describe("light mode largest device body after-dive warnings", () => {
     await expect(
       panel.getByText(copy("manifest.crewNotBackAboard", { count: 1 }), { exact: true }),
     ).toBeVisible();
-    await expect(panel.getByRole("link", { name: "Ari Vale", exact: true })).toBeVisible();
-    await expect(panel.getByRole("link").filter({ hasText: state.crewName })).toBeVisible();
+    // Each name opens that person on the roll call (`DeckPersonChip`).
+    const named = panel.getByRole("list", { name: copy("manifest.notBackAboardListLabel") });
+    await expect(named.getByRole("button", { name: "Ari Vale", exact: true })).toBeVisible();
+    await expect(named.getByRole("button").filter({ hasText: state.crewName })).toBeVisible();
     await expect(panel).toHaveAttribute("data-roll-call-panel-flow", "true");
     await expect(panel).toHaveCSS("max-height", "none");
     const count = panel.getByRole("progressbar");
@@ -181,8 +183,8 @@ test.describe("light mode largest device body after-dive warnings", () => {
         await expect(
           panel.getByText(copy("manifest.crewNotBackAboard", { count: 1 }), { exact: true }),
         ).toBeVisible();
-        await expect(panel.getByRole("link", { name: "Ari Vale", exact: true })).toBeVisible();
-        await expect(panel.getByRole("link").filter({ hasText: state.crewName })).toBeVisible();
+        await expect(named.getByRole("button", { name: "Ari Vale", exact: true })).toBeVisible();
+        await expect(named.getByRole("button").filter({ hasText: state.crewName })).toBeVisible();
         // Observe screenshot-time geometry and paint inputs without changing them.
         const diagnostic = await panel.evaluate(
           (root, labels) => {
@@ -413,14 +415,15 @@ test.describe("light mode largest device body after-dive warnings", () => {
         deck.getByRole("button", { name: copy("manifest.deck.find"), exact: true }),
       ],
       ["More", deck.locator("details > summary").filter({ hasText: /^More$/ })],
-      ["Missing guest", deck.getByRole("button", { name: "Ari Vale", exact: true })],
-      ["Missing crew", deck.getByRole("button", { name: state.crewName, exact: true })],
+      // The attention list's own row, after the count panel's chip of the same name.
+      ["Missing guest", deck.getByRole("button", { name: "Ari Vale", exact: true }).last()],
+      ["Missing crew", deck.getByRole("button", { name: state.crewName, exact: true }).last()],
     ] as const;
     for (const [label, target] of navigation) {
       await expect(target).toBeVisible();
       expect.soft(await fragmentedWords(target), `${label} at 53px`).toEqual([]);
     }
-    const missingLinks = panel.getByRole("link");
+    const missingLinks = panel.locator("[data-device-text-missing]").getByRole("button");
     await expect(missingLinks).toHaveCount(2);
     for (const link of await missingLinks.all()) {
       expect.soft(await fragmentedWords(link)).toEqual([]);

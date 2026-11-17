@@ -16,6 +16,7 @@ import {
   manifestRow,
   openCounterFor,
   openDeckDetails,
+  openMoreSettings,
   openRosterDetails,
   openSeriesPage,
   openTripAbout,
@@ -617,6 +618,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-coming-as-editor", scheme);
 
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}?view=edit`);
+        await openMoreSettings(page);
         await expect(page.locator("details#participant-terms")).toBeVisible();
         await capture(page, "trip-details-participant-terms", scheme);
 

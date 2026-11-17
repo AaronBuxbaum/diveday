@@ -195,7 +195,7 @@ for (const scheme of ["light", "dark"] as const) {
           })
           .waitFor();
         // Nobody can be offered a seat on a cancelled departure.
-        await expect(page.getByRole("heading", { name: /Who wants in/ })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: /^Offer .* a seat$/ })).toHaveCount(0);
         await capture(page, "trip-cancelled", scheme);
       });
 
@@ -295,8 +295,6 @@ for (const scheme of ["light", "dark"] as const) {
           page.getByRole("alert").filter({ hasText: "Requirements updated." }),
         ).toContainText("Requirements updated.");
 
-        // The save lands on Details; the deal panel and the wait list are on Divers.
-        await openTripTab(page, "Trip");
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         // Nobody on the list clears the Rescue bar, so the panel is not drawn at all.
         await page.locator("#roster").waitFor();
@@ -381,15 +379,11 @@ for (const scheme of ["light", "dark"] as const) {
           page.getByRole("alert").filter({ hasText: "Requirements updated." }),
         ).toContainText("Requirements updated.");
 
-        // The save lands on Details; the deal panel and the wait list are on Divers.
-        await openTripTab(page, "Trip");
         await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling#who-wants-in`);
-        // Scoped to the ledger: the deal panel further down the same page
-        // renders the identical phrase for its own recipients, and this test is
-        // about the list that was still silent until now. (`#who-wants-in` is the
-        // panel that holds the rows, so the roster is still the narrowest honest scope.)
+        // Scoped to the wait list: the deal panel renders the identical phrase
+        // for its own recipients, and this test is about the list.
         await page
-          .locator("#roster")
+          .locator("#who-wants-in")
           .getByText("Open Water · below this departure’s minimum")
           .waitFor();
         await waitForHashLanding(page);

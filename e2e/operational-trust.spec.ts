@@ -61,7 +61,7 @@ async function openOffline(page: Page, manifest: string) {
 }
 
 async function openBuddyPanel(page: Page, trip: string) {
-  await page.goto(`${trip}/manifest?buddies=open`);
+  await page.goto(`${trip}?phase=ready&buddies=open`);
   const panel = page
     .locator("details")
     .filter({

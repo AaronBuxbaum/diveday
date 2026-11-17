@@ -408,12 +408,12 @@ test.describe("schedule builder", () => {
     const row = page.getByRole("listitem").filter({ hasText: title });
     await expect(row).toHaveCount(1);
     await expect(row.getByText("No price set")).toHaveCount(0);
-    // And the figure landed on the trip itself, not just off the badge: the
-    // Details summary states it at rest, and the form behind the Edit
-    // disclosure comes back pre-filled with what the board was told.
+    // And the figure landed on the trip itself, not just off the badge: Edit
+    // trip's Price row states it at rest, and its form comes back pre-filled
+    // with what the board was told.
     await row.getByRole("link", { name: title }).click();
-    await expect(page.getByText("$129 per diver")).toBeVisible();
-    await openTripAbout(page);
+    const about = await openTripAbout(page);
+    await expect(about).toContainText(/\$129\b/);
     await openTripAboutRow(page, "Price");
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });

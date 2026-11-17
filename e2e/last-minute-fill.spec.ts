@@ -39,7 +39,7 @@ async function joinTheList(
 async function openWhoWantsIn(page: Page): Promise<void> {
   const tripPath = await tripPathByTitle(page, "blue-mantis", REEF);
   await page.goto(`${tripPath}?phase=filling#who-wants-in`);
-  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await expect(page.locator("#who-wants-in")).toBeVisible();
   // A tick before React owns the panel is lost when it hydrates (CI saw
   // "Clicking the checkbox did not change its state" on main too), so every
   // test starts once the send forms say they are hydrated. Each row has its
@@ -258,8 +258,9 @@ test.describe("staff and the list", () => {
 
     // The row a staffer reads before deciding carries the level claim as
     // self-declared; the deal list does not collect a separate nitrox claim.
+    // The innermost row: the wait list's own `li` holds a list of its people.
     const recipient = page
-      .locator("li")
+      .locator("li:not(:has(li))")
       .filter({ hasText: "Tess Alvarez" })
       .filter({ visible: true });
     await expect(recipient).toContainText(
@@ -307,8 +308,9 @@ test.describe("staff and the list", () => {
     await openWhoWantsIn(page);
 
     const recipients = page.locator("#who-wants-in");
-    await expect(recipients.getByRole("listitem").filter({ hasText: "Owen Achebe" })).toBeVisible();
-    await expect(recipients.getByRole("listitem").filter({ hasText: "Nell Byrne" })).toHaveCount(0);
+    const row = (name: string) => recipients.locator("li:not(:has(li))").filter({ hasText: name });
+    await expect(row("Owen Achebe")).toBeVisible();
+    await expect(row("Nell Byrne")).toHaveCount(0);
     await expect(page.getByText(/below this departure’s requirement/)).toHaveCount(0);
 
     // Other eligible recipients can still be offered a seat, each from their own row.

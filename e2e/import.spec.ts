@@ -4,6 +4,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openAddAGuest,
   openDiverFileGroup,
   openTripAbout,
   openTripAboutRow,
@@ -226,12 +227,8 @@ test.describe("contact import — specialty cards", () => {
     // The save lands on Details, beside its form; the roster is the Divers tab.
     await openTripTab(page, "Trip");
 
-    const addDiver = page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "Add a booking" }) });
-    const returningDiverSearch = addDiver.getByRole("searchbox", {
-      name: "Find a returning diver",
-    });
+    const returningDiverSearch = await openAddAGuest(page);
+    const addDiver = page.locator("#add-a-booking");
     await returningDiverSearch.fill("Deep Dana");
     await returningDiverSearch.press("Enter");
     await addDiver.getByRole("button", { name: "Add Deep Dana to the trip" }).click();

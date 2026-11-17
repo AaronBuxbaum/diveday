@@ -8,7 +8,6 @@ import {
   openNamedScheduleTrip,
   openTripAbout,
   openTripAboutRow,
-  openTripTab,
   rosterRow,
   seededTripId,
 } from "./helpers";
@@ -377,8 +376,7 @@ test.describe("as owner", () => {
     // edit it, it used to be invisible entirely — and it says out loud that it
     // never blocks enrolment.
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-    await openTripAbout(page);
-    const requirements = page.locator("details#requirements");
+    const requirements = await openTripAboutRow(page, "Who can book");
     await expect(
       requirements.getByText(/requires Advanced Open Water or higher and Deep specialty/),
     ).toBeVisible();
@@ -427,12 +425,12 @@ test.describe("as owner", () => {
     );
     // The warning stays associated with the requirements editor in the DOM;
     // the shared timed toast pins it within reach of the viewport.
-    const requirements = page.locator("details#requirements");
+    const requirements = page.getByRole("group", { name: "Who can book", exact: true });
     await expect(
       requirements.getByRole("alert").filter({ hasText: "Requirements updated." }),
     ).toContainText("Requirements updated.");
-    await openTripTab(page, "Trip");
-    await expect(page.locator("#roster").getByText("Diego Alvarez").first()).toBeVisible();
+    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await expect(await rosterRow(page, "Diego Alvarez")).toBeVisible();
   });
 });
 

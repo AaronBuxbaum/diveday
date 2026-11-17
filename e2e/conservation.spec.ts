@@ -23,15 +23,17 @@ test("staff record and correct measured conservation actions after a departure",
   });
   const path = await tripPathByTitle(page, "blue-mantis", title, { daysOut: -2 });
   await page.goto(`${path}?view=edit`);
-  await expect(
-    page
-      .locator("#about #conservation")
-      .getByText(t("trips.conservation.heading"), { exact: true }),
-  ).toBeVisible();
   await expect(page.getByText(t("trips.notices.detailsFinished"), { exact: true })).toBeVisible();
   await expect(page.locator("#about #plan form")).toHaveCount(0);
   await expect(page.locator("#about #conditions form")).toHaveCount(0);
   await expect(page.locator('#about #about-crew [name="boatId"]')).toHaveCount(0);
+  // The record is kept under Wrapped up's More, which its own hash opens.
+  await page.goto(`${path}?phase=wrapped#conservation`);
+  await expect(
+    page
+      .locator("#wrapped-more #conservation")
+      .getByText(t("trips.conservation.heading"), { exact: true }),
+  ).toBeVisible();
   const add = page.locator("#conservation-add");
   await add.locator("summary").click();
   await add.getByRole("spinbutton", { name: t("trips.conservation.quantity") }).fill("2.5");
@@ -63,7 +65,7 @@ test("a corrected conservation record can be restored with Undo and deleted agai
   const {
     returnedConservationRecap: { tripId },
   } = await seedFacts(request, ["returnedConservationRecap"]);
-  await page.goto(`/shop/blue-mantis/trips/${tripId}?view=edit`);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=wrapped#conservation`);
   const item = page
     .locator("li")
     .filter({ hasText: "Discarded fishing gear" })
@@ -96,7 +98,7 @@ test("staff record lionfish as whole counts and the diver recap names the remova
   const {
     returnedConservationRecap: { tripId },
   } = await seedFacts(request, ["returnedConservationRecap"]);
-  await page.goto(`/shop/blue-mantis/trips/${tripId}?view=edit`);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=wrapped#conservation`);
   const add = page.locator("#conservation-add");
   await add.locator("summary").click();
   await add

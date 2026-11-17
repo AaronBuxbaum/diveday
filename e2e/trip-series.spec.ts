@@ -72,7 +72,8 @@ test.describe("demo series", () => {
     await expect(repeats).toContainText(startWeekday);
     await expect(repeats).toContainText(secondDay);
     await openSeriesPage(page);
-    const series = page.locator("main");
+    // The visible one: the router keeps the trip page it came from, hidden.
+    const series = page.locator("main").filter({ visible: true });
 
     // Widen the run: a third day joins it, and nothing that is already on the
     // board is disturbed.

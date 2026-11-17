@@ -11,10 +11,11 @@ import {
   offlineCopySaved,
   openDeckDetails,
   openDeckPerson,
+  openDiveLog,
   openManifestPerson,
   openRosterDetails,
   openRosterNotes,
-  openTripAbout,
+  openTripAboutRow,
   openTripFromBoard,
   openTripPhase,
   openTripTab,
@@ -58,6 +59,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Night Dive — City of Washington");
         await openTripTab(page, "Trip");
+        // The held seat leads the list, and opened says why.
+        await rosterRow(page, "June Park");
         await page
           .getByText("Booked as Hana Park, then matched to June Park from the name list.")
           .first()
@@ -219,26 +222,18 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the manifest's plan-change fields render true to the design (${scheme})`, async ({
         page,
+        request,
       }) => {
-        // Board → trip → Manifest, then a checkpoint switch and a disclosure.
+        // The dive log lives on the Trip page, On the water (ADR
+        // 20261117-trip-page-clock): a boat out with dive 1 counted.
         test.setTimeout(FLOW_TIMEOUT_MS);
-        await openReefTrip(page);
-        await openTripTab(page, "Manifest");
-        await openDeckDetails(page);
-        await offlineCopySaved(page);
-        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\/manifest/)?.[1];
-        if (!tripId) throw new Error("The reef trip manifest must identify its trip");
-        const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "after_dive_1" });
-        await page
-          .getByRole("link", { name: "After dive 1" })
-          .evaluate((link: HTMLElement) => link.click());
-        await page.waitForURL(/checkpoint=after_dive_1/);
-        await openDeckDetails(page);
-        // The log's own summary line, which only this checkpoint renders.
-        await page.getByText("Dive 1 — not recorded yet").click();
+        const { boatOnTheWater } = (await seedFacts(request, [
+          { name: "boatOnTheWater", state: "outstanding" },
+        ])) as { boatOnTheWater: { tripId: string } };
+        await page.goto(`/shop/blue-mantis/trips/${boatOnTheWater.tripId}`);
+        const log = await openDiveLog(page, boatOnTheWater.tripId, 1);
         // Waits on a control the open form renders and the closed one does not.
-        await page.getByLabel("Why the plan changed").waitFor();
-        await confirmed;
+        await log.getByLabel("Why the plan changed").waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-plan-change", scheme);
       });
@@ -562,14 +557,18 @@ for (const scheme of ["light", "dark"] as const) {
 
         await openReefTrip(page);
         await openTripTab(page, "Trip");
-        const warning = page
-          .getByText(
-            staffCopy("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }),
-            { exact: false },
-          )
-          .first();
-        await expect(warning).toBeVisible();
-        await expect(warning).toContainText(staffCopy("trips.roster.depthVerificationCard"));
+        // One line under "Worth a minute" names everyone the depth is about;
+        // the whole sentence is on the guest opened from it.
+        await expect(
+          page
+            .locator('[data-fix-group="worth"] li')
+            .filter({ hasText: staffCopy("trips.fixList.reason.depth") })
+            .first(),
+        ).toBeVisible();
+        const june = await rosterRow(page, "June Park");
+        await expect(
+          june.getByText(staffCopy("trips.roster.depthVerificationCard"), { exact: false }),
+        ).toBeVisible();
         await capture(page, "trip-guests-depth-warning", scheme);
       });
 
@@ -664,7 +663,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-        await openTripAbout(page);
+        await openTripAboutRow(page, "Who can book");
         await page
           .locator("details#requirements")
           .getByText(/never blocks? enrollment/)

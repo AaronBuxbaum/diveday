@@ -5,6 +5,7 @@ import {
   counterPath,
   openBoatCheck,
   openDeckDetails,
+  openMoreSettings,
   openTripFromBoard,
   openTripTab,
   seededTripId,
@@ -56,6 +57,8 @@ test("the plan says what the reef was like the last time a boat went", async ({ 
   await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);
   const root = new URL(page.url()).pathname;
   await page.goto(`${root}?view=edit`);
+  // Site history is one of Edit trip's rarer rows, under More settings.
+  await openMoreSettings(page);
   await expect(page.getByText(/Molasses Reef: last dived /).first()).toBeVisible();
 
   await openTripTab(page, "Manifest");

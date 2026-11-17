@@ -9,8 +9,11 @@ import {
   daysFromNow,
   e2eNow,
   HELD_SEND_TIMEOUT_MS,
+  openAddAGuest,
   openCounterFor,
+  openedGuestName,
   openGuestFolio,
+  openNewGuestForm,
   openPaperWaiverForm,
   openRosterDetails,
   openTripFromBoard,
@@ -43,14 +46,17 @@ async function deskRow(page: Page, name: string): Promise<Locator> {
   return rosterRow(page, name);
 }
 
-/** Return to the overview before asserting aggregate counts or recruitment. */
-async function allGuests(page: Page): Promise<void> {
-  const folios = page.locator("[data-guest-folios]");
-  await expect(folios).toBeVisible();
-  const all = folios.getByRole("button", { name: "All guests", exact: true });
-  if (/^#(?:move-)?booking-/.test(new URL(page.url()).hash)) await expect(all).toBeVisible();
-  if (await all.count()) await all.click();
-  await expect(folios.getByRole("searchbox", { name: "Find a guest", exact: true })).toBeVisible();
+/** The desk's count under the sentence: "2 of 11 here · at the dock by 2:00 PM". */
+const HERE_COUNT = /^\d+ of \d+ here\b/;
+
+/** The fix list's first group: everyone the readiness gate still holds back. */
+function cantBoard(page: Page): Locator {
+  return page.locator('[data-fix-group="cantBoard"]');
+}
+
+/** Whether a guest sits under "Can’t board yet", by the button that opens them. */
+async function expectCannotBoard(page: Page, name: string): Promise<void> {
+  await expect(cantBoard(page).getByRole("button", { name, exact: true })).toBeVisible();
 }
 
 /** "Checked in · n" — the group a settled arrival sinks into. */
@@ -72,14 +78,13 @@ test("counter check-in finds a diver's boat, confirms live readiness, and keeps 
   const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
   await expect(page).toHaveURL(onCounter(counterPath("blue-mantis", tripId)));
   // The desk is open: the count leads the roster.
-  await allGuests(page);
-  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  await expect(page.getByText(HERE_COUNT)).toBeVisible();
 
   const row = await deskRow(page, "Priya Sharma");
   await expect(row).toHaveCount(1);
   // One readiness vocabulary and one tone per state
   // (src/i18n/readiness-labels.ts): the word is "Blocked" on every surface.
-  await expect(row.getByText("Cannot board", { exact: true })).toBeVisible();
+  await expectCannotBoard(page, "Priya Sharma");
   // **The reason is on the row**, and a blocked row offers no check-in:
   // readiness is the gate, and a tap beside the reasons would be an act the
   // server refuses.
@@ -154,7 +159,7 @@ test("a ready diver checks in with one tap, sinks into the checked-in group, and
  * not this spec.
  *
  * What it pins is the instrument itself: the count leading the roster, taps at
- * the dock test's 44px floor, "Add a diver" as one search field, and that a
+ * the dock test's 44px floor, "Add a guest" as one door, and that a
  * boat already home is no instrument at all but its record.
  */
 test("the counter reads as an instrument at the tablet on the desk", async ({ page }) => {
@@ -166,8 +171,7 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   await expect(page.getByRole("heading", { name: OPEN_BOAT, level: 1 })).toBeVisible();
 
   // The count leads, before any list.
-  await allGuests(page);
-  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  await expect(page.getByText(HERE_COUNT)).toBeVisible();
 
   // A tap clears the dock test's 44px floor.
   await openGuestFolio(page, "Diego Alvarez");
@@ -178,10 +182,8 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   await expect(firstTap).toBeVisible();
   expect((await firstTap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 
-  await allGuests(page);
-  // The overview retains one booking search field.
-  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Booking or walk-in" })).toHaveCount(0);
+  // One door adds a guest, at the foot of the list; its search waits behind it.
+  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Add a guest", exact: true })).toHaveCount(1);
 
   // A boat that is home is read rather than worked: its Divers tab is the
@@ -193,7 +195,7 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   await page.goto(counterPath("blue-mantis", sailedId));
   await expect(page.getByRole("heading", { name: SAILED_BAND })).toBeVisible();
   await expect(page.getByRole("heading", { name: DID_NOT_SAIL_BAND })).toHaveCount(0);
-  await expect(page.getByText(/^\d+ of \d+ here$/)).toHaveCount(0);
+  await expect(page.getByText(HERE_COUNT)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: CHECKED_IN_BAND })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /^Still to clear/ })).toHaveCount(0);
   await expect(
@@ -220,16 +222,10 @@ test("a checked-in diver who is blocked again stays still to clear", async ({ pa
   const { tripId, personName } = checkedInBlocked;
 
   await page.goto(counterPath("blue-mantis", tripId));
-  await allGuests(page);
-  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  await expect(page.getByText(HERE_COUNT)).toBeVisible();
   await openGuestFolio(page, personName);
-  await expect(page.getByRole("heading", { name: personName, exact: true })).toBeVisible();
-  await expect(
-    (await deskRow(page, personName)).getByText("Cannot board", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    (await deskRow(page, personName)).getByText("Cannot board", { exact: true }),
-  ).toBeVisible();
+  expect(await openedGuestName(page)).toBe(personName);
+  await expectCannotBoard(page, personName);
   await expect(page.getByText("Everyone’s checked in")).toHaveCount(0);
 });
 
@@ -240,15 +236,13 @@ test("a diver added by name alone books straight onto a boat with no email requi
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   const counter = counterPath("blue-mantis", tripId);
   await page.goto(counter);
-  // A search for someone who isn't on file falls through to the new-diver form, in
-  // the Divers tab's own search (UX audit item 24).
-  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  // A search for someone who isn't on file falls through to the new-guest
+  // form, from the add form's own search (UX audit item 24).
+  const find = await openAddAGuest(page);
   await find.fill("Zzyzx No Such Diver");
   await find.press("Enter");
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
-
-  await page.getByRole("link", { name: "Add a guest", exact: true }).click();
-  await page.waitForURL(/\/divers\?add=1&/);
+  await openNewGuestForm(page);
   await page.getByLabel("Full name").fill("Walk-in Test Diver");
   // Email and phone are left blank on purpose — the whole point of this flow.
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -263,7 +257,11 @@ test("a diver added by name alone books straight onto a boat with no email requi
   const walkIn = await deskRow(page, "Walk-in Test Diver");
   await expect(walkIn).toHaveCount(1);
   await openRosterDetails(walkIn);
-  await expect(walkIn.getByText("no email on file", { exact: true })).toBeVisible();
+  const facts = staffTranslator("en-US");
+  // The opened guest's facts are a term and its definition; Email's says none.
+  await expect(
+    walkIn.locator("dt", { hasText: facts("trips.fixList.facts.email") }).locator("+ dd"),
+  ).toHaveText(facts("trips.fixList.facts.noEmail"));
   await expect(
     walkIn.getByRole("link", { name: "Sign at the counter", exact: true }),
   ).toBeVisible();
@@ -280,12 +278,7 @@ test("a family is seated together from one form", async ({ page }) => {
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   const counter = counterPath("blue-mantis", tripId);
   await page.goto(counter);
-  await expect(page.locator("[data-check-in-queue]")).toHaveAttribute("data-hydrated", "true");
-  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
-  await find.fill("Zzyzx No Such Diver");
-  await find.press("Enter");
-  await page.getByRole("link", { name: "Add a guest", exact: true }).click();
-  await page.waitForURL(/\/divers\?add=1&/);
+  await openNewGuestForm(page);
 
   await page.getByLabel("Full name").first().fill("Quillon Brightwater");
   await page.getByRole("button", { name: "Add another person" }).click();
@@ -376,7 +369,7 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
       { exact: true },
     ),
   ).toBeVisible();
-  await expect(row.getByText("Cannot board", { exact: true })).toBeVisible();
+  await expectCannotBoard(page, "Zoe Bennett");
   await openRosterDetails(row);
   await expect(
     row.getByText(words("trips.roster.identityWithheldDetails"), {
@@ -461,11 +454,7 @@ test("a full boat refuses another add with the wait-list nudge", async ({ page }
   const tripId = page.url().match(/\/trips\/([^/?#]+)/)?.[1];
   if (!tripId) throw new Error("could not read the trip id from the URL");
 
-  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
-  await find.fill("Fills The Boat");
-  await find.press("Enter");
-  await page.getByRole("link", { name: "Add a guest", exact: true }).first().click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
   // This form hydrates separately from the staff header.
   await expect(page.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
     "data-hydrated",
@@ -517,7 +506,7 @@ test("a paper waiver recorded on the roster row makes the diver checkable in pla
   const counter = counterPath("blue-mantis", tripId);
 
   const row = await deskRow(page, "Priya Sharma");
-  await expect(row.getByText("Cannot board", { exact: true })).toBeVisible();
+  await expectCannotBoard(page, "Priya Sharma");
 
   await openRosterDetails(row);
   await openPaperWaiverForm(row);
@@ -561,8 +550,7 @@ test("a paper waiver recorded on the roster row makes the diver checkable in pla
  */
 test("the desk shows no diver's email on the roster's face", async ({ page }) => {
   await openCounterFor(page, "blue-mantis", "Priya Sharma");
-  await allGuests(page);
-  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  await expect(page.getByText(HERE_COUNT)).toBeVisible();
 
   // Visible text only (the fixture's `getByText`), on the roster's own rows.
   await expect(page.locator("#roster").getByText(/@example\.com/)).toHaveCount(0);
@@ -759,7 +747,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   await page.waitForURL(
     new RegExp(`/shop/blue-mantis/trips/${tripId}\\?phase=filling#who-wants-in$`),
   );
-  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await expect(page.locator("#who-wants-in")).toBeVisible();
 
   // Nora's own row ends in its Offer: one act per person (visual review A14).
   await page.getByRole("button", { name: "Offer Nora Quinn a seat" }).click();
@@ -788,8 +776,6 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // having room again — `getTripWithBooked` counts on the same `seatHeld`
   // predicate the booking transaction enforces — and the sale itself runs
   // through `createBooking`, not through anything this ticket added.
-  await page.goto(counter);
-  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
   await seatFromRoster(page, tripId, "Diego Alvarez");
 
   await expect(await deskRow(page, "Diego Alvarez")).toHaveCount(1);
@@ -881,9 +867,9 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
     released.getByRole("button", { name: "Put Odile Marchand back on this boat’s list" }),
   ).toBeVisible();
 
-  // The seat is free at once: a full boat draws no search, this one does.
+  // The seat is free at once: the add form opens on its search again.
   await page.goto(counter);
-  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
+  await openAddAGuest(page);
 });
 
 /**
@@ -991,7 +977,7 @@ test("Today's arrival search says who is on file but not arriving today", async 
     "true",
   );
   await page.getByLabel("Full name").fill(diverName);
-  await page.getByRole("button", { name: "Add a guest", exact: true }).click();
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
 
   await page.goto("/shop/blue-mantis");

@@ -108,9 +108,9 @@ test.describe("took a call", () => {
     await chooseDeparture(call, title);
     await call.getByRole("button", { name: "Log the call" }).click();
 
-    await page.waitForURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]{36}\?notice=diver-waitlisted/);
+    await page.waitForURL(/\/trips\/[0-9a-f-]{36}\?phase=filling&notice=diver-waitlisted/);
     await expect(page.getByText("Diver added to the wait list")).toBeVisible();
-    await expect(page.getByText("Tobias Fenn E2E").first()).toBeVisible();
+    await expect(page.locator("#who-wants-in").getByText("Tobias Fenn E2E").first()).toBeVisible();
   });
 
   test("a caller nobody can ring back is refused beside the button, with the answer kept", async ({

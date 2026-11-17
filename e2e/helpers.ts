@@ -369,7 +369,10 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
  * departure does. English, like every other locator in this suite.
  */
 export async function openGuestFolio(page: Page, diverName: string): Promise<void> {
-  await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
+  // A departure with nobody booked draws its roster empty, and so invisible.
+  await expect(
+    page.locator("#roster").filter({ visible: true }).or(page.locator("#roster:not(:has(li))")),
+  ).toHaveCount(1);
   const folios = page.locator("[data-guest-folios]").filter({ visible: true });
   if (!(await folios.count())) return;
   await unfoldGuestGroups(folios);
@@ -501,6 +504,12 @@ export async function addGuestForm(page: Page): Promise<Locator> {
       url.searchParams.set("add", "1");
       await page.goto(url.toString());
     }
+    // The page takes `add=1` off the address with a router replace once it
+    // has shown the form; a link followed before then is cancelled by it. The
+    // form first, so the address read is the one the form came with, not the
+    // one the menu was opened on.
+    await expect(form).toBeVisible();
+    await expect(page).not.toHaveURL(/[?&]add=1/);
   }
   await expect(form).toBeVisible();
   return form;
@@ -557,6 +566,12 @@ export async function openSeriesPage(page: Page): Promise<void> {
   await page.waitForURL(/\/schedule\/series\//);
 }
 
+/** Open Edit trip's closed "More settings", where its rarer rows fold. */
+export async function openMoreSettings(page: Page): Promise<void> {
+  const settings = page.locator("details").filter({ has: page.locator("section#more-settings") });
+  if ((await settings.count()) > 0) await openIfClosed(settings);
+}
+
 /**
  * Open one About row's editor — the departure's crew, its price, the days it
  * runs — found by the row's label, which its `<details>` carries as its name.
@@ -568,8 +583,7 @@ export async function openTripAboutRow(page: Page, label: string): Promise<Locat
   const row = page.getByRole("group", { name: label, exact: true });
   // The rare rows fold into Edit trip's closed "More settings". Role queries
   // see only what is on screen, so a row behind the fold counts as none.
-  const settings = page.locator("details").filter({ has: page.locator("section#more-settings") });
-  if ((await row.count()) === 0 && (await settings.count()) > 0) await openIfClosed(settings);
+  if ((await row.count()) === 0) await openMoreSettings(page);
   await expect(row).toBeVisible();
   await openIfClosed(row);
   return row;
@@ -651,6 +665,15 @@ export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
   const row = await openFirstRosterRowWith(page, "Send waiver");
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
   return waiverRequestLinkAfterSend(page, row);
+}
+
+/** The name of the guest opened in place on the Trip page's guest list. */
+export async function openedGuestName(page: Page): Promise<string> {
+  const name = page
+    .locator('[data-guest-folios] button[data-guest-open][aria-expanded="true"]')
+    .locator('span[id^="guest-name-"]')
+    .first();
+  return (await name.innerText()).trim();
 }
 
 /** Open and return the first booking row that offers a currently folded control. */
