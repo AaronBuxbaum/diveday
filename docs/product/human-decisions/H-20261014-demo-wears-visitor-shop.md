@@ -23,4 +23,7 @@ stays and every demo storefront is `noindex`. Recorded in
 [20260724-per-visitor-demo-shops](../../architecture/decisions/20260724-per-visitor-demo-shops.md),
 amended 2026-10-16.
 
+**Reversed 2026-11-17 (Product owner, in the project thread):** the door no longer asks for a name;
+a demo keeps its generated one. A prospect's own name reaches a demo only through a preview link.
+
 Part of the [human decision log](README.md#decision-register).

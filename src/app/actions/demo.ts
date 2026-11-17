@@ -22,13 +22,6 @@ import {
   isDemoSeatFor,
   signDemoSeat,
 } from "@/features/demo-seat";
-import {
-  DEMO_SHOP_NAME_COOKIE,
-  DEMO_SHOP_NAME_COOKIE_CLEAR,
-  DEMO_SHOP_NAME_COOKIE_PATH,
-  DEMO_SHOP_NAME_MAX_AGE_SECONDS,
-  signDemoShopName,
-} from "@/features/demo-shop-name";
 import { demoStartDeparture, demoStartFrom } from "@/features/demo-starts";
 import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/quiet-demo-device";
 import { requireStaffSession } from "@/features/session";
@@ -101,27 +94,6 @@ async function takeDemoSeat(shopId: string): Promise<void> {
     secure: runtimeMode().secureCookies,
     path: "/",
     maxAge: DEMO_SEAT_MAX_AGE_SECONDS,
-  });
-}
-
-/**
- * Dress this browser's demo in the shop name the visitor typed at the door
- * (H-20261014-demo-wears-visitor-shop), or take off a name an earlier demo wore when this one was given
- * none. Staff screens and the email preview read it; the storefront never does.
- */
-async function wearVisitorShopName(shopId: string, typed: unknown): Promise<void> {
-  const jar = await cookies();
-  const value = signDemoShopName(shopId, typed);
-  if (!value) {
-    jar.delete(DEMO_SHOP_NAME_COOKIE_CLEAR);
-    return;
-  }
-  jar.set(DEMO_SHOP_NAME_COOKIE, value, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: runtimeMode().secureCookies,
-    path: DEMO_SHOP_NAME_COOKIE_PATH,
-    maxAge: DEMO_SHOP_NAME_MAX_AGE_SECONDS,
   });
 }
 
@@ -202,7 +174,6 @@ export async function enterDemoAction(formData?: FormData) {
   const shop = await getShopBySlug(db, slug);
   if (shop) {
     await takeDemoSeat(shop.id);
-    await wearVisitorShopName(shop.id, formData?.get("shopName"));
   }
 
   // The diver pick previews the customer view — the public schedule needs no
