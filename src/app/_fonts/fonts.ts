@@ -374,20 +374,6 @@ const notoSymbols = localFont({
   fallback: ["'Noto Sans Symbols 2 Fallback'"],
 });
 
-/**
- * The founder's autograph on `/about` (Mrs Saint Delafield, OFL): one weight, the
- * latin subset only, since it sets one name. Not preloaded; the browser fetches
- * it when the signature is on the page.
- */
-const signature = localFont({
-  src: [{ path: "./mrs-saint-delafield-latin-400.woff2", weight: "400", style: "normal" }],
-  declarations: [{ prop: "font-family", value: "signature" }],
-  variable: "--font-signature",
-  preload: false,
-  adjustFontFallback: false,
-  fallback: ["cursive"],
-});
-
 /** Every call's variable class, for the root `<html>`. */
 export const fontVariables = [
   plexSansCyrillicExt.variable,
@@ -409,5 +395,4 @@ export const fontVariables = [
   notoSymbolsSymbols.variable,
   notoSymbolsLatinExt.variable,
   notoSymbols.variable,
-  signature.variable,
 ].join(" ");
