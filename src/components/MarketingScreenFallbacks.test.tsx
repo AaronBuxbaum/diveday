@@ -20,6 +20,15 @@ import {
 
 afterEach(cleanup);
 
+it.each([
+  ["en-US", "Email (optional)", "Card number (optional)"],
+  ["es-ES", "Correo electrónico (opcional)", "Número de tarjeta (opcional)"],
+] as const)("RegisterFallback marks optional fields in %s", (locale, email, card) => {
+  render(<RegisterFallback locale={locale} />);
+  expect(screen.getByText(email)).toBeVisible();
+  expect(screen.getByText(card)).toBeVisible();
+});
+
 it("DiverBookingFallback shows the demo shop’s reef cover inside its accessible screen", () => {
   const { container } = render(<DiverBookingFallback locale="en-US" />);
   const photo = container.querySelector("img");

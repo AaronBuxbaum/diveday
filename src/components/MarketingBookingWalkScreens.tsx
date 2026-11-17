@@ -183,7 +183,7 @@ export function RegisterFallback({
                 {/* i18n-exempt: sample diver name used only in marketing mockups */}
                 <WalkTyped text="Priya Sharma" delay={200} />
               </WalkField>
-              <WalkField label={t("register.emailLabel")}>
+              <WalkField label={`${t("register.emailLabel")} ${t("common.optional")}`}>
                 {/* i18n-exempt: sample address used only in marketing mockups */}
                 <WalkTyped text="priya@example.com" delay={1200} />
               </WalkField>
@@ -198,7 +198,10 @@ export function RegisterFallback({
                 {/* i18n-exempt: certification level used only in marketing mockups */}
                 <WalkTyped text="Advanced Open Water" delay={2900} />
               </WalkField>
-              <WalkField label={t("register.identifierLabel")} className="col-span-2">
+              <WalkField
+                label={`${t("register.identifierLabel")} ${t("common.optional")}`}
+                className="col-span-2"
+              >
                 {/* i18n-exempt: sample card number used only in marketing mockups */}
                 <WalkTyped text="3481926" delay={4300} />
               </WalkField>

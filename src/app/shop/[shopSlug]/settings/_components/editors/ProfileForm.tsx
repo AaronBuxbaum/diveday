@@ -69,7 +69,10 @@ export function ProfileForm({
           className={textareaClassFor(3)}
         />
       </Field>
-      <Field label={t("settings.main.profile.welcomeSigner")} hint={t("settings.main.optionalHint")}>
+      <Field
+        label={t("settings.main.profile.welcomeSigner")}
+        hint={t("settings.main.optionalHint")}
+      >
         <input
           name="welcomeSigner"
           type="text"
