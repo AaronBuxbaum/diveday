@@ -463,3 +463,34 @@ export async function demoRoleEmail(
     .limit(1);
   return matches[0]?.email ?? null;
 }
+
+/**
+ * Set or clear a person's picture. Returns the stored path it replaced (so the
+ * caller can retire the old file), or `undefined` when no live person matched.
+ * A person erased or merged away has no picture to change.
+ */
+export async function setPersonPhoto(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; photoPath: string | null },
+): Promise<{ previous: string | null } | undefined> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ previous: people.staffPhotoPath })
+      .from(people)
+      .where(
+        and(
+          eq(people.shopId, input.shopId),
+          eq(people.id, input.personId),
+          isNull(people.deletedAt),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .for("no key update");
+    if (!row) return undefined;
+    await tx
+      .update(people)
+      .set({ staffPhotoPath: input.photoPath })
+      .where(and(eq(people.shopId, input.shopId), eq(people.id, input.personId)));
+    return { previous: row.previous };
+  });
+}

@@ -272,7 +272,7 @@ describe("DiverRowTrigger, drawn on its own", () => {
     const { container } = render(
       <DiverRowTrigger diver={diver()} index={4} capsule={null} typeBadge={null} {...at} t={t} />,
     );
-    expect(container.textContent).toMatch(/^05Meera Iyer/);
+    expect(container.textContent).toMatch(/^05MIMeera Iyer/);
     expect(container.querySelector(".basis-full")).toBeNull();
   });
 

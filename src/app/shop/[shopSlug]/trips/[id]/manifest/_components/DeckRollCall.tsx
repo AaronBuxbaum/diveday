@@ -76,6 +76,7 @@ export function DeckRollCall({
     return {
       id: diver.bookingId,
       name: diver.fullName,
+      photoPath: diver.photoPath,
       role: t("manifest.deck.guest"),
       outstanding: !diver.rollCall || missing || conflict,
       attention: missing || conflict || blocked || view.reader.alerted.has(diver.bookingId),
@@ -159,6 +160,7 @@ export function DeckRollCall({
     return {
       id: member.id,
       name: member.fullName,
+      photoPath: member.photoPath,
       role: t("manifest.deck.crew"),
       outstanding: !member.rollCall || missing || conflict,
       attention: missing || conflict || view.reader.alerted.has(member.id),

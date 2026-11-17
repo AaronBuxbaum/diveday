@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, type ReactNode, useContext, useRef, useState } from "react";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, DateField } from "@/components/ui/form";
 import { ITEM_TITLE_CLASS, SHELL_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
@@ -10,6 +11,8 @@ import { wallTimeToUtc } from "@/lib/zoned";
 export type DeckPerson = {
   id: string;
   name: string;
+  /** Their picture, when the live deck has one; the offline deck carries none. */
+  photoPath?: string | null;
   role: string;
   outstanding: boolean;
   attention?: boolean;
@@ -337,8 +340,13 @@ export function DeckFlow({
         ) : null}
         {(screen === "person" || screen === "receipt") && person ? (
           <div className="py-2" key={person.id}>
-            <p className="text-sm text-muted">{person.role}</p>
-            <h2 className={`mt-1 ${SHELL_TITLE_CLASS} wrap-anywhere`}>{person.name}</h2>
+            <div className="flex items-center gap-4">
+              <PersonAvatar name={person.name} photoPath={person.photoPath} size="lg" />
+              <div className="min-w-0">
+                <p className="text-sm text-muted">{person.role}</p>
+                <h2 className={`mt-1 ${SHELL_TITLE_CLASS} wrap-anywhere`}>{person.name}</h2>
+              </div>
+            </div>
             {screen === "receipt" ? (
               <>
                 <p className={`mt-2 ${ITEM_TITLE_CLASS}`} role="status">

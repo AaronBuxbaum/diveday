@@ -120,6 +120,8 @@ export type ManifestDiverInput = {
   /** Confirmed identity for physical totals only; absent on older saved copies. */
   personId?: string;
   fullName: string;
+  /** Their picture, withheld on a held seat whose matched record is not confirmed. */
+  photoPath?: string | null;
   /**
    * **What this person is doing on the boat** — diver, snorkeler or rider
    * (ADR 20261007-participant-types).
@@ -365,6 +367,7 @@ export type ManifestCrewMember = {
    */
   id: string;
   fullName: string;
+  photoPath?: string | null;
   /**
    * What this person is doing on **this** trip when the roster says so
    * (`effectiveCrewRoles`, src/lib/crew-roles.ts), otherwise their standing

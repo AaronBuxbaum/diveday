@@ -833,12 +833,14 @@ async function scrubPersonRecord(
   const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
   const profileOwners = [personId, ...mergedShellIds];
   const profileRows = await tx
-    .select({ profile: people.publicStaffProfile })
+    .select({ profile: people.publicStaffProfile, photoPath: people.staffPhotoPath })
     .from(people)
     // diveday:allow-deleted-people: erasure includes removed staff and merged shells.
     .where(and(eq(people.shopId, shopId), inArray(people.id, profileOwners)));
-  for (const row of profileRows)
+  for (const row of profileRows) {
     for (const url of row.profile?.photoUrls ?? []) await ctx.retire("staff_profile", url);
+    await ctx.retire("staff_profile", row.photoPath);
+  }
   await tx
     .update(people)
     .set({
