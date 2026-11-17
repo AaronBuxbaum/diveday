@@ -4,6 +4,8 @@ import { buttonClass } from "@/components/ui/button";
 import { listTripUnitsToCheckIn } from "@/db/gear";
 import { listTripIncidentReports } from "@/db/incident-reports";
 import type { TripGuests } from "@/features/trip-guests";
+import { getTripMoney } from "@/features/trip-money";
+import { canViewShopReports } from "@/lib/authz";
 import { depthInUnit } from "@/lib/depth-units";
 import { tripPacketPath } from "@/lib/print-sheets";
 import { shopPath } from "@/lib/staff-notices";
@@ -17,7 +19,7 @@ import type { TripSentence } from "../trip-sentence";
 import { closeOutItems, wrappedSentence } from "../wrapped-close-out";
 import type { PhaseRecordContext } from "./WaterPhase";
 import { WrappedMore } from "./WrappedMore";
-import { CloseOutCard, WhatHappenedCard } from "./WrappedPanels";
+import { CloseOutCard, MoneyCard, WhatHappenedCard } from "./WrappedPanels";
 import { loggableDives, waterStandingOf } from "./water-reading";
 
 /**
@@ -52,11 +54,14 @@ export async function WrappedPhase({
   const door = hasDoor
     ? { href: shopPath(shop.slug, "trips", tripId, "manifest"), label: t("trips.clock.rollCall") }
     : null;
-  const [view, rentalsOut, incidents] = await Promise.all([
+  const [view, rentalsOut, incidents, money] = await Promise.all([
     readManifestView({ ...context, shopSlug: shop.slug, tripId, locale, t }),
     cancelled ? [] : listTripUnitsToCheckIn(db, shop.id, tripId),
     listTripIncidentReports(db, shop.id, tripId, personId),
+    // The money record is for whoever may read the shop's reports.
+    canViewShopReports(session.user.roles) ? getTripMoney(db, shop, tripId) : null,
   ]);
+  const moneyCard = money ? <MoneyCard money={money} locale={locale} t={t} /> : null;
   const reports = <TripIncidentReports shop={shop} personId={personId} tripId={tripId} />;
   const more = <WrappedMore record={record} roster={roster} />;
   const runAgain = (
@@ -72,6 +77,7 @@ export async function WrappedPhase({
       <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
         {/* A cancelled trip's own panel above says it, with the Roll call door. */}
         {cancelled ? null : <TripSentenceLine sentence={sentence} rollCall={door} />}
+        {moneyCard}
         {reports}
         {guests}
         {more}
@@ -95,36 +101,44 @@ export async function WrappedPhase({
     { ...words, cancelled, homeSaidAt: stage?.stage === "home" ? stage.recordedAt : null },
     t,
   );
+  const whatHappened =
+    cancelled && !standing.latest ? null : (
+      <WhatHappenedCard
+        standing={standing}
+        depth={depth}
+        reports={incidents.reports.length}
+        mayReport={incidents.mayStart}
+        noShows={released
+          .filter(({ booking }) => !booking.turnedAwayAt)
+          .map(({ person }) => person.fullName)}
+        turnedAway={released
+          .filter(({ booking }) => booking.turnedAwayAt)
+          .map(({ person }) => person.fullName)}
+        print={
+          <PrintTripBundleButton
+            href={tripPacketPath(shop.slug, tripId)}
+            label={t("trips.clock.wrapped.print")}
+            popupBlockedLabel={t("shared.printButton.popupBlocked")}
+            recordAction={recordTripPrintPdfAction.bind(null, shop.slug, tripId)}
+            flush
+          />
+        }
+        {...words}
+      />
+    );
   return (
     <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
       {/* On a cancelled trip the cancellation above is the sentence, unless the
           counts have somebody not recorded back; Roll call keeps its door there. */}
       {cancelled && said === sentence ? null : <TripSentenceLine sentence={said} rollCall={door} />}
       <CloseOutCard items={items} shopSlug={shop.slug} tripId={tripId} locale={locale} t={t} />
-      {cancelled && !standing.latest ? null : (
-        <WhatHappenedCard
-          standing={standing}
-          depth={depth}
-          reports={incidents.reports.length}
-          mayReport={incidents.mayStart}
-          noShows={released
-            .filter(({ booking }) => !booking.turnedAwayAt)
-            .map(({ person }) => person.fullName)}
-          turnedAway={released
-            .filter(({ booking }) => booking.turnedAwayAt)
-            .map(({ person }) => person.fullName)}
-          print={
-            <PrintTripBundleButton
-              href={tripPacketPath(shop.slug, tripId)}
-              label={t("trips.clock.wrapped.print")}
-              popupBlockedLabel={t("shared.printButton.popupBlocked")}
-              recordAction={recordTripPrintPdfAction.bind(null, shop.slug, tripId)}
-              flush
-            />
-          }
-          {...words}
-        />
-      )}
+      {whatHappened || moneyCard ? (
+        // What happened and Money side by side once there is room.
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
+          {whatHappened}
+          {moneyCard}
+        </div>
+      ) : null}
       <TripDiveRecord
         view={view}
         dives={loggableDives(standing, { back: true })}

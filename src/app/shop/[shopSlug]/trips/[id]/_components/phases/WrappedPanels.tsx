@@ -3,8 +3,9 @@ import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
+import type { TripMoney } from "@/features/trip-money";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatTime, formatTimeRange } from "@/lib/format";
+import { formatMoneyCents, formatTime, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopPath } from "@/lib/staff-notices";
 import { diveLogHash } from "../TripDiveRecord";
@@ -220,6 +221,67 @@ export function WhatHappenedCard({
           </div>
         ))}
       </dl>
+    </section>
+  );
+}
+
+/**
+ * **Money**: what this departure collected, what of it was rental gear, and
+ * what its seats still owe, from the payments already recorded
+ * (`getTripMoney`). For whoever may read the shop's reports.
+ */
+export function MoneyCard({ money, locale, t }: { money: TripMoney } & Omit<Words, "timeZone">) {
+  const amount = (cents: number) => formatMoneyCents(cents, money.currency, locale);
+  const rows = [
+    {
+      key: "collected",
+      label: t("trips.clock.wrapped.collected"),
+      value: amount(money.collectedCents),
+    },
+    {
+      key: "rentals",
+      label: t("trips.clock.wrapped.rentalsLabel"),
+      value:
+        money.rentalSets > 0
+          ? t("trips.clock.wrapped.rentalSets", {
+              amount: amount(money.rentalCents),
+              count: money.rentalSets,
+            })
+          : t("trips.clock.wrapped.none"),
+    },
+    {
+      key: "owed",
+      label: t("trips.clock.wrapped.owed"),
+      value: money.owedCents > 0 ? amount(money.owedCents) : t("trips.clock.wrapped.nothingOwed"),
+    },
+  ];
+  return (
+    <section
+      aria-labelledby="money-heading"
+      data-money=""
+      className={sectionCardClass({ padding: "none" })}
+    >
+      <h2 id="money-heading" className="px-4 pt-4 font-semibold sm:px-6">
+        {t("trips.clock.wrapped.money")}
+      </h2>
+      <dl className="mt-2 divide-y divide-border">
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-4 px-4 py-3 sm:grid-cols-[9rem_minmax(0,1fr)] sm:px-6"
+          >
+            <dt className="text-muted">{row.label}</dt>
+            <dd className="min-w-0 font-semibold tabular-nums [overflow-wrap:anywhere]">
+              {row.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {money.otherCurrencySeats > 0 ? (
+        <p className="px-4 pb-4 text-sm text-muted sm:px-6">
+          {t("trips.clock.wrapped.otherCurrency", { count: money.otherCurrencySeats })}
+        </p>
+      ) : null}
     </section>
   );
 }

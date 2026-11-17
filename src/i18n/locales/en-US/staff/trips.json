@@ -1239,7 +1239,14 @@
       "more": "More",
       "runAgain": "Run this trip again",
       "noRollCall": "No roll call taken",
-      "notCounted": "Not counted"
+      "notCounted": "Not counted",
+      "money": "Money",
+      "collected": "Collected",
+      "rentalsLabel": "Rentals",
+      "rentalSets": "{amount} · {count, plural, one {# set} other {# sets}}",
+      "owed": "Owed",
+      "nothingOwed": "Nothing",
+      "otherCurrency": "{count, plural, one {# seat paid} other {# seats paid}} in another currency, not counted here."
     },
     "edit": {
       "schedule": "Schedule",
