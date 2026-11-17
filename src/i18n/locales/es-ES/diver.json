@@ -961,7 +961,7 @@
       "saved": "Foto guardada.",
       "failed": "No se guardó la foto. Inténtalo de nuevo.",
       "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-      "tooBigSuffix": ": supera los {maxMb} MB. Prueba con una foto más pequeña."
+      "tooBigSuffix": ": supera los {maxMb} MB. Prueba con una foto más pequeña."
     },
     "materialsAccess": "Consulta al centro cómo acceder",
     "courseStartLine": "Tu curso comienza a las {time}.",

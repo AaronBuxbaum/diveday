@@ -961,7 +961,7 @@
       "saved": "Photo saved.",
       "failed": "Photo not saved. Try again.",
       "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-      "tooBigSuffix": ": that’s over {maxMb} MB. Try a smaller photo."
+      "tooBigSuffix": ": that’s over {maxMb} MB. Try a smaller photo."
     },
     "materialsAccess": "Ask the shop about access",
     "courseStartLine": "Your course starts at {time}.",
