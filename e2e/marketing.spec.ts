@@ -231,6 +231,7 @@ test("the walkthrough's bar fills as the clock, and holding the screen freezes i
   await page.mouse.move(box.x + box.width / 2, box.y + 40);
   await page.mouse.down();
   const frozen = await filled();
+  // diveday:allow-e2e-hygiene sleep: proving that nothing moves needs a real interval to pass
   await page.waitForTimeout(1000);
   expect(await filled()).toBe(frozen);
   await page.mouse.up();
