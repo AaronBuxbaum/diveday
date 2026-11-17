@@ -5,7 +5,7 @@
  * `?recent=diver:<id>,trip:<id>`, so nothing personal sits in the browser and
  * a record erased since simply stops coming back.
  */
-export const RECENT_KINDS = ["diver", "trip", "order", "gear"] as const;
+const RECENT_KINDS = ["diver", "trip", "order", "gear"] as const;
 export type RecentKind = (typeof RECENT_KINDS)[number];
 export type RecentRef = { kind: RecentKind; id: string };
 
@@ -18,7 +18,7 @@ export function isRecentKind(value: unknown): value is RecentKind {
   return typeof value === "string" && KINDS.has(value);
 }
 
-export function isRecordId(value: unknown): value is string {
+function isRecordId(value: unknown): value is string {
   return typeof value === "string" && UUID.test(value);
 }
 

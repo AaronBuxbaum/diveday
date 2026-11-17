@@ -171,7 +171,7 @@ const openDateInterest = (shopId: string) =>
  * How many of this shop's date interests nobody has closed yet: the page's own
  * total, and what Today adds to its one unanswered count (issue #2658).
  */
-export async function countOpenDateInterests(db: DbExecutor, shopId: string): Promise<number> {
+async function countOpenDateInterests(db: DbExecutor, shopId: string): Promise<number> {
   const [row] = await db.select({ n: count() }).from(interests).where(openDateInterest(shopId));
   return row?.n ?? 0;
 }
@@ -295,7 +295,7 @@ export async function listOpenDateInterestsForDates(
 }
 
 /** How many closed requests the Requests page lists under "Done". */
-export const HANDLED_DATE_REQUESTS_SHOWN = 20;
+const HANDLED_DATE_REQUESTS_SHOWN = 20;
 
 /**
  * **The date interests the shop has closed, newest first** (third UX review, item

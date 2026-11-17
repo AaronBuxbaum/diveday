@@ -27,7 +27,7 @@ import type { TripStage } from "@/lib/trip-stages";
  * A staff component takes its words as props; `staffTranslator` is
  * server-side only.
  */
-export const TRIP_TABS = ["divers", "gear", "details", "record"] as const;
+const TRIP_TABS = ["divers", "gear", "details", "record"] as const;
 
 export type TripTab = (typeof TRIP_TABS)[number];
 

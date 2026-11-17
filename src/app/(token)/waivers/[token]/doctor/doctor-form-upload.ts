@@ -10,10 +10,7 @@ import {
  * A cheap first refusal before any decode; the bytes are proven again by
  * `storeMedicalClearanceDocument`, which never trusts this type.
  */
-export const DOCTOR_FORM_TYPES: readonly string[] = [
-  ...ALLOWED_IMAGE_CONTENT_TYPES,
-  PDF_CONTENT_TYPE,
-];
+const DOCTOR_FORM_TYPES: readonly string[] = [...ALLOWED_IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPE];
 
 export function isDoctorFormUpload(value: unknown): value is File {
   return (

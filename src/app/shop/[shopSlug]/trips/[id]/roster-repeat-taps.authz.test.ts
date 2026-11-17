@@ -74,7 +74,11 @@ describe("a second tap on Certify", () => {
       })
       .from(trips)
       .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
-      .where(and(eq(trips.shopId, shopId), isNotNull(trips.courseId)))
+      .innerJoin(courses, eq(courses.id, trips.courseId))
+      .where(
+        and(eq(trips.shopId, shopId), isNotNull(trips.courseId), eq(courses.isIntroCourse, false)),
+      )
+      .orderBy(trips.id, bookings.id)
       .limit(1);
     if (!seat?.courseId) throw new Error("seeded shop has no booked course session");
     return { ...seat, courseId: seat.courseId };

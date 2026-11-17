@@ -45,7 +45,7 @@ import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
  */
 
 /** Page order: loudest first; `startsAt` breaks ties inside a band. */
-export const CLOSEOUT_STATUS_RANK: Record<CloseoutDepartureStatus, number> = {
+const CLOSEOUT_STATUS_RANK: Record<CloseoutDepartureStatus, number> = {
   unreconciled: 0,
   still_out: 1,
   count_open: 2,

@@ -24,7 +24,7 @@ export const SEND_HOLD_MS = 8_000;
  * asks the server to send at zero; a half-second of skew must not turn that
  * into "not yet" and a second round trip.
  */
-export const SEND_HOLD_TOLERANCE_MS = 750;
+const SEND_HOLD_TOLERANCE_MS = 750;
 
 export const HELD_SEND_KINDS = [
   "waiver_send",
@@ -35,7 +35,7 @@ export const HELD_SEND_KINDS = [
 ] as const;
 export type HeldSendKind = (typeof HELD_SEND_KINDS)[number];
 
-export const WAIVER_SEND_SURFACES = ["today", "roster", "diver", "counter"] as const;
+const WAIVER_SEND_SURFACES = ["today", "roster", "diver", "counter"] as const;
 
 const waiverSendPayload = z
   .object({

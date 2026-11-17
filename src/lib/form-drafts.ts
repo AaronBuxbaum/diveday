@@ -10,7 +10,7 @@ import { DAY_MS } from "./clock";
  * framework-free half: which forms draft, how long a draft lives, and which
  * fields may never be in one.
  */
-export const FORM_DRAFT_KINDS = ["add_departure", "new_diver", "took_a_call"] as const;
+const FORM_DRAFT_KINDS = ["add_departure", "new_diver", "took_a_call"] as const;
 export type FormDraftKind = (typeof FORM_DRAFT_KINDS)[number];
 
 /**
@@ -49,7 +49,7 @@ export const FORM_DRAFT_TTL_MS = DAY_MS;
 
 /** How long a draft's field text may run; anything longer is not a form field. */
 export const FORM_DRAFT_FIELD_MAX = 4_000;
-export const FORM_DRAFT_FIELDS_MAX = 80;
+const FORM_DRAFT_FIELDS_MAX = 80;
 
 /**
  * Fields a draft never holds, by name. Payment details and medical answers are

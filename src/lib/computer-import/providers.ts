@@ -1,5 +1,5 @@
 /** A user-chosen logbook origin, never proof that the vendor produced an uploaded file. */
-export const COMPUTER_LOGBOOK_PROVIDERS = [
+const COMPUTER_LOGBOOK_PROVIDERS = [
   "generic",
   "oceanic",
   "padi",

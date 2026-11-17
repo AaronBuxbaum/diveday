@@ -23,7 +23,7 @@ const TOP_OF_SCREEN = "calc(var(--chrome-h, 0px) + 1rem)";
  * top otherwise, which is also where it goes when the press was inside the
  * person sheet, whose backdrop covers the card anyway.
  */
-export function rollCallTouchCueTop(control: Element | null): string {
+function rollCallTouchCueTop(control: Element | null): string {
   if (control?.closest('[role="dialog"]')) return TOP_OF_SCREEN;
   const card = document.querySelector(`[${ROLL_CALL_PANEL_ATTRIBUTE}]`);
   const bottom = card?.getBoundingClientRect().bottom ?? 0;

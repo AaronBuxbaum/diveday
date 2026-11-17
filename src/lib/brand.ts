@@ -94,7 +94,7 @@ export const BRAND_BADGE_CODES = [
 
 export type BrandBadgeCode = (typeof BRAND_BADGE_CODES)[number];
 
-export function isBrandBadgeCode(value: unknown): value is BrandBadgeCode {
+function isBrandBadgeCode(value: unknown): value is BrandBadgeCode {
   return typeof value === "string" && (BRAND_BADGE_CODES as readonly string[]).includes(value);
 }
 
@@ -148,7 +148,7 @@ function channel(v: number): number {
 }
 
 /** WCAG 2 relative luminance. */
-export function relativeLuminance(hex: string): number {
+function relativeLuminance(hex: string): number {
   const { r, g, b } = hexToRgb(hex);
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }

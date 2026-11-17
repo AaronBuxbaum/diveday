@@ -18,7 +18,7 @@ const offPaper = () => null;
 /** On paper an address is its words. */
 const asText = (chunks: ReactNode) => <span>{chunks}</span>;
 
-export const DOCTOR_SHEET_TEST_ID = "doctor-referral-sheet";
+const DOCTOR_SHEET_TEST_ID = "doctor-referral-sheet";
 
 /**
  * **The doctor's page on paper** (issue #2745): what a diver carries to the

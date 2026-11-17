@@ -137,7 +137,7 @@ export type MarkInvoicePaidResult = {
  * claim's horizon (`PAYMENT_CLAIM_STALE_AFTER_MS`, five minutes), so a call is over before a
  * second tap can retake the claim it is answering for.
  */
-export const MARK_PAID_TIMEOUT_MS = 30_000;
+const MARK_PAID_TIMEOUT_MS = 30_000;
 
 export type ResendInvoiceResult = { status: "sent" | "not_configured" | "failed" };
 export type RefundInvoiceResult = {
@@ -333,10 +333,7 @@ function toCreatedInvoice(body: z.infer<typeof invoiceResponseSchema>, stripeCus
   };
 }
 
-export function stripeInvoicingProvider(
-  config: StripeKeySource,
-  fetchImpl: Fetch,
-): InvoicingProvider {
+function stripeInvoicingProvider(config: StripeKeySource, fetchImpl: Fetch): InvoicingProvider {
   /** One request on the shop's connected account, with the key chosen for it. */
   async function onAccount(
     stripeAccountId: string,

@@ -51,7 +51,7 @@ export function parseMapArea(raw: string | undefined): MapArea | undefined {
   };
 }
 
-export function formatMapArea(area: MapArea): string {
+function formatMapArea(area: MapArea): string {
   const round = (value: number) => value.toFixed(4);
   return [area.south, area.west, area.north, area.east].map(round).join(",");
 }

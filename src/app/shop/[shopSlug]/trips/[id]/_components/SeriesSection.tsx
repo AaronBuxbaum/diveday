@@ -71,7 +71,7 @@ export function recurrenceSummaryText(
  * dates, how many booked divers it messages, and how many of them have paid,
  * because each of those is refunded or owed (`cancelFutureSeriesTrips`).
  */
-export function cancelConfirmText(
+function cancelConfirmText(
   t: StaffTranslator,
   reach: { dates: number; booked: number; paid: number; refundsHeld?: boolean },
 ): string {

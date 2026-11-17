@@ -56,8 +56,8 @@ export type StartTipOutcome =
  * for a real gratitude tip, bounded against a mistyped or abusive amount.
  * `tipBoundsCents` turns these into the shop currency's own minor units.
  */
-export const MIN_TIP_MAJOR = 1;
-export const MAX_TIP_MAJOR = 500;
+const MIN_TIP_MAJOR = 1;
+const MAX_TIP_MAJOR = 500;
 
 /**
  * Roughly how many major units of a currency stand in for one US dollar,

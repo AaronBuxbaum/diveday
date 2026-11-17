@@ -103,7 +103,7 @@ export type ShopActivityFilter = {
 };
 
 /** How many lines a page of the log shows: the list is the page. */
-export const SHOP_ACTIVITY_PAGE_SIZE = PAGE_SIZE.list;
+const SHOP_ACTIVITY_PAGE_SIZE = PAGE_SIZE.list;
 
 type LineRow = {
   source: ShopActivitySource;

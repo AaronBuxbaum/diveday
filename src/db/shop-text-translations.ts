@@ -16,7 +16,7 @@ import { liveTrip } from "./trips-live";
  * words are the ones that were translated.
  */
 
-export const TRANSLATION_LOCALE = "es-ES";
+const TRANSLATION_LOCALE = "es-ES";
 
 type Subject = { kind: TranslatableKind; id: string; field: string };
 

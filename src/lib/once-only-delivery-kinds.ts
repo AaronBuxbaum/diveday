@@ -46,7 +46,7 @@ export function isOnceOnlyDeliveryKind(
  * index with it and `recordNotificationDelivery` names it as its conflict
  * target, so the two can never describe different sets of kinds.
  */
-export const ONCE_ONLY_DELIVERY_KINDS_PREDICATE = `"kind" in (${ONCE_ONLY_DELIVERY_KINDS.map(
+const ONCE_ONLY_DELIVERY_KINDS_PREDICATE = `"kind" in (${ONCE_ONLY_DELIVERY_KINDS.map(
   (kind) => `'${kind}'`,
 ).join(", ")})`;
 

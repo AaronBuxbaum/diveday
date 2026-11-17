@@ -146,7 +146,7 @@ function attr(value: string): string {
 }
 
 /** The one loader line every framed or scripted snippet starts with. */
-export function embedLoaderTag(origin: string): string {
+function embedLoaderTag(origin: string): string {
   return `<script async src="${origin}/embed.js"></script>`;
 }
 

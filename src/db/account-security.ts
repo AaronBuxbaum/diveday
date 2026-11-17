@@ -314,7 +314,7 @@ async function recordCurrentKey(
     );
 }
 
-export async function listAccountSessions(db: DbExecutor, userAccountId: string) {
+async function listAccountSessions(db: DbExecutor, userAccountId: string) {
   return db
     .select({
       id: accountSessions.id,

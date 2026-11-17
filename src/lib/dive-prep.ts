@@ -109,7 +109,7 @@ export type RentalFit = {
  * `RentalFit` by hand (tests, the offline snapshot) is not silently dropped
  * from the packing list; only an explicit null means "note only".
  */
-export function fitIsStated(fit: RentalFit): boolean {
+function fitIsStated(fit: RentalFit): boolean {
   return fit.fitStatedAt !== null;
 }
 

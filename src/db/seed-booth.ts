@@ -68,7 +68,7 @@ import { seatNotCancelled } from "./trips-queries";
  */
 
 /** The package the regular holds, as `seedPackages` names it. */
-export const DIVE_CARD_PACKAGE = "Five-dive card";
+const DIVE_CARD_PACKAGE = "Five-dive card";
 /** What the crew found in the rinse tank. */
 export const LOST_MASK = "Blue mask in a yellow box, left in the rinse tank";
 /** Last Saturday's boat, which the weather kept in. */

@@ -62,7 +62,7 @@ export const MODEL_PRICES_MICRO_USD_PER_TOKEN: Readonly<
  * reviews), so the ledger prices it rather than assuming it never happens:
  * a cap that under-counts by five times is not a cap.
  */
-export const LONG_PROMPT_TOKENS = 100_000;
+const LONG_PROMPT_TOKENS = 100_000;
 const LONG_PROMPT_PRICES: Partial<
   Record<ClaudeModel, (typeof MODEL_PRICES_MICRO_USD_PER_TOKEN)[ClaudeModel]>
 > = {

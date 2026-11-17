@@ -42,7 +42,7 @@ export type CostProvider = (typeof COST_PROVIDERS)[number];
  * billing anniversary. The runbook says this out loud so nobody reconciles a
  * warning against a statement and concludes the monitor is broken.
  */
-export const CEILING_PERIODS = ["calendar_month"] as const;
+const CEILING_PERIODS = ["calendar_month"] as const;
 export type CeilingPeriod = (typeof CEILING_PERIODS)[number];
 
 /** The unit a ceiling and its samples are both stated in. */
@@ -244,7 +244,7 @@ export type UsageSample =
  * the other three are admissions that no measurement happened, and they survive
  * intact all the way to the log line, the response body, and the alert.
  */
-export const CEILING_LEVELS = [
+const CEILING_LEVELS = [
   "ok",
   "warn",
   "over",

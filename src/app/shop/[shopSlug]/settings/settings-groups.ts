@@ -427,7 +427,7 @@ export function settingsRailGatesFor(reader: {
 }
 
 /** Where a rail row leads, from anywhere: a section row is the hub plus its fragment. */
-export function settingsRailRowHref(shopBasePath: string, row: SettingsRailRow): string {
+function settingsRailRowHref(shopBasePath: string, row: SettingsRailRow): string {
   return row.target.kind === "route"
     ? `${shopBasePath}${row.target.path}`
     : `${shopBasePath}/settings#${settingsSectionFragment(row.target.id)}`;

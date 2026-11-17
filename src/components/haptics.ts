@@ -30,7 +30,7 @@
 export const HAPTICS_STORAGE_KEY = "diveday-haptics";
 
 /** Fired on this tab when the preference changes, so a live control can follow it. */
-export const HAPTICS_CHANGE_EVENT = "diveday:haptics-change";
+const HAPTICS_CHANGE_EVENT = "diveday:haptics-change";
 
 /** Whether this device *can* buzz. False on every iPhone. */
 export function hapticsAvailable(): boolean {

@@ -1,7 +1,7 @@
 import type { NotificationDelivery } from "./notifications/provider";
 
 /** Durable best-effort receipt state; terminal states are never reclaimed. */
-export const SETUP_RECEIPT_STATES = [
+const SETUP_RECEIPT_STATES = [
   "pending",
   "claimed",
   "accepted",
@@ -11,7 +11,7 @@ export const SETUP_RECEIPT_STATES = [
 ] as const;
 export type SetupReceiptStatus = (typeof SETUP_RECEIPT_STATES)[number];
 /** These fixed codes are the only failure detail stored or logged for a receipt. */
-export const SETUP_RECEIPT_ERRORS = [
+const SETUP_RECEIPT_ERRORS = [
   "address_cooldown",
   "global_limit",
   "not_configured",

@@ -107,7 +107,7 @@ const mapHit = <T,>(hit: T | undefined, toItem: (hit: T) => PaletteItem) =>
  * route read back just now. One that did not come back (removed, erased, or
  * not this shop's) is left out.
  */
-export function recentRows(
+function recentRows(
   { stored, hits }: PaletteRecents,
   root: string,
   copy: Pick<CommandPaletteCopy, "gearStatuses">,

@@ -1181,7 +1181,7 @@ export async function expirePendingCheckoutsForBooking(
  * so reading them before the checkout's own lock names the same seats the
  * cascade below writes.
  */
-export async function lockCheckoutSeatsBySessionId(
+async function lockCheckoutSeatsBySessionId(
   tx: AppTransaction,
   stripeSessionId: string,
 ): Promise<void> {

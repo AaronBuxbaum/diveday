@@ -59,7 +59,7 @@ export function levelCardCheck(
  * not stand in for the card in a staffer's hand. The same rule the action
  * judges by (`checkableListedQuery`, src/features/agency-check/store.ts).
  */
-export function listedCardCheck(
+function listedCardCheck(
   card: CheckedCard & {
     status: "pending" | "verified";
     selfDeclaredAt: Date | null;

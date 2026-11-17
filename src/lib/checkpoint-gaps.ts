@@ -188,7 +188,7 @@ export function plannedDivesWithout(gap: CheckpointGap): number {
 }
 
 /** The stages that say the diving is over (`TRIP_STAGES`, src/lib/trip-stages.ts). */
-export const HOMEWARD_STAGES = ["heading_in", "home"] as const;
+const HOMEWARD_STAGES = ["heading_in", "home"] as const;
 
 export function isHomewardStage(stage: string): stage is (typeof HOMEWARD_STAGES)[number] {
   return (HOMEWARD_STAGES as readonly string[]).includes(stage);

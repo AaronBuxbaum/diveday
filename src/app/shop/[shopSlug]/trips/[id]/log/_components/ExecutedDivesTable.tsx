@@ -51,7 +51,7 @@ export function surfaceIntervalText(
 }
 
 /** One dive's facts as label and value, in the order the table's columns read them. */
-export function executedDiveFields(
+function executedDiveFields(
   dive: IncidentExecutedDive,
   locale: string,
   timeZone: string,

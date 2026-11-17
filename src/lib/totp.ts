@@ -19,7 +19,7 @@ export function base32Encode(bytes: Uint8Array): string {
   return output;
 }
 
-export function base32Decode(value: string): Buffer {
+function base32Decode(value: string): Buffer {
   let buffer = 0;
   let bits = 0;
   const bytes: number[] = [];
@@ -68,7 +68,7 @@ function totpCodeForStep(secret: string, counter: number): string {
 export const TOTP_DRIFT_STEPS = 1;
 export const TOTP_STEP_SECONDS = 30;
 
-export function totpStepAt(timestampMs: number, stepSeconds = TOTP_STEP_SECONDS): number {
+function totpStepAt(timestampMs: number, stepSeconds = TOTP_STEP_SECONDS): number {
   return Math.floor(timestampMs / 1000 / stepSeconds);
 }
 

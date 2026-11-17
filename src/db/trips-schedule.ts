@@ -582,7 +582,7 @@ export async function duplicateTripOrRefusal(
 }
 
 /** 52 weeks: the same weekday a year on, so a Saturday boat lands on a Saturday. */
-export const YEAR_OF_WEEKS = 52;
+const YEAR_OF_WEEKS = 52;
 
 /** The instants a shop-local week runs between, Monday 00:00 to the next. */
 function weekWindow(weekStart: CalendarDate, timeZone: string): { from: Date; to: Date } {

@@ -1,7 +1,7 @@
 {
   "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": "0b45b38877c74ce1",
   "src/app/shop/[shopSlug]/_components/today/DayStation.tsx": "6f77e973c77acb83",
-  "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx": "c608a9f2ee0e4a83",
+  "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx": "79fc199ca0d36244",
   "src/app/shop/[shopSlug]/trips/[id]/_arrivals/ArrivalTap.tsx": "b40f2f691ffafdfa",
   "src/app/shop/[shopSlug]/trips/[id]/_arrivals/CounterInstrument.tsx": "5932a5e780af59fd",
   "src/app/shop/[shopSlug]/trips/[id]/_components/RosterGroupBand.tsx": "81e9aa2d8e8dd2e2",

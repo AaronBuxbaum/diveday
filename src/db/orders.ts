@@ -1449,7 +1449,7 @@ export async function createDiverPackageOrder(
 export type OrderableCustomer = { id: string; fullName: string; email: string | null };
 
 /** How many matches the customer picker shows at once (issue #4601). */
-export const ORDER_CUSTOMER_MATCHES = 8;
+const ORDER_CUSTOMER_MATCHES = 8;
 
 /**
  * **The customer picker's search** (issue #4601). It used to list every live

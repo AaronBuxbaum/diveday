@@ -101,7 +101,7 @@ export function windReading(wind: AutomatedWind | null): WindState | null {
 }
 
 /** Threshold in knots for high-wind advisories in Today queue (issue #722). */
-export const HIGH_WIND_THRESHOLD_KNOTS = 22;
+const HIGH_WIND_THRESHOLD_KNOTS = 22;
 
 export function isHighWind(wind: AutomatedWind | null): boolean {
   if (!wind) return false;
@@ -304,7 +304,7 @@ function closestForecastIndex(times: unknown, target: Date) {
  * lives in an ICU template two modules away, which is how a future reader
  * "fixes" it to the wrong one (dive-domain-expert review, 2026-08-06).
  */
-export function cardinalDirection(degrees: number): CardinalDirection {
+function cardinalDirection(degrees: number): CardinalDirection {
   const index = Math.round(degrees / 45);
   // `%` alone keeps the sign of a negative dividend, and Open-Meteo has been
   // seen returning a small negative bearing rather than clamping to [0, 360).
