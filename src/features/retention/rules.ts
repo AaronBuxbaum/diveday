@@ -118,6 +118,7 @@ export type RetainedTable =
   | "today_read_marks"
   | "form_drafts"
   | "demo_entries"
+  | "demo_previews"
   | "inbound_messages"
   | "staff_replies"
   | "weekly_digest_sends"
@@ -338,6 +339,11 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * week with the same week last year; nothing older is read.
    */
   demo_entries: 400,
+  /**
+   * The same window as `demo_entries`, and for its reason: the record of which
+   * prospect opened a preview is read against the same week a year on.
+   */
+  demo_previews: 400,
   /**
    * 400 days, the same window as `notification_deliveries` and for the same
    * reason: a diver's reply and the shop's answer are the other half of the

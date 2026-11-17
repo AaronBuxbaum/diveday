@@ -6,6 +6,8 @@ import { issuePersonCourtesyEmailUnsubscribeToken } from "../../db/courtesy-emai
 import { issueInterestUnsubscribeToken } from "../../db/interests";
 import { issueMagicSignIn } from "../../db/magic-sign-in";
 import { interests, people, setupRequests, shops, userAccounts } from "../../db/schema/index";
+import { PREVIEW_TTL_MS } from "../../features/demo-preview/rules";
+import { issuePreview } from "../../features/demo-preview/store";
 import { issueSetupLink } from "../../features/setup-links/store";
 import { issueShopContactEmailConfirmation } from "../../features/shop-contact-email/store";
 import { DEFAULT_DIVER_LOCALE } from "../../i18n/settings";
@@ -162,4 +164,37 @@ export async function mintASetupLink(db: AppDb) {
   const issued = await issueSetupLink(db, { setupRequestId: row.id });
   holdOnboardFixture(issued.token, row.id);
   return { path: setupLinkPath(issued.token), expiresAt: issued.expiresAt.toISOString() };
+}
+
+export const demoPreviewArgs = z
+  .object({ shopName: z.string().trim().min(1).max(80), ended: z.boolean().optional() })
+  .strict();
+
+/**
+ * **A prospect's preview** (`demoPreview`) for `/preview/[token]` (ADR
+ * 20261116-demo-previews): its own minted demo shop under the given name, built
+ * by the product's issuer, since the founder's command is the only other way
+ * one exists. `ended` builds it a week and a day ago, so its link reads as over.
+ * The shop it was asked on is not touched.
+ */
+export async function buildADemoPreview(
+  db: AppDb,
+  args: z.infer<typeof demoPreviewArgs>,
+  now: Date,
+) {
+  const builtAt = args.ended ? new Date(now.getTime() - PREVIEW_TTL_MS - 86_400_000) : now;
+  const preview = await issuePreview(
+    db,
+    {
+      name: args.shopName,
+      site: null,
+      brandColor: null,
+      tagline: null,
+      locality: null,
+      region: null,
+      position: null,
+    },
+    builtAt,
+  );
+  return { id: preview.id, shopSlug: preview.shopSlug };
 }

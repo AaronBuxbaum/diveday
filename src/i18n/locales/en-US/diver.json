@@ -4639,5 +4639,13 @@
   "staffProfiles": {
     "heading": "Who you’ll dive with",
     "since": "Diving since {year}"
+  },
+  "demoPreview": {
+    "title": "A preview built for {shop}",
+    "description": "Your shop’s name and colors, with sample divers and boats. Preview built by DiveDay.",
+    "submit": "Open the preview",
+    "endedTitle": "This preview has ended",
+    "ended": "Previews stay open for a week. Reply to the email it came in, and we’ll open it again.",
+    "home": "See DiveDay"
   }
 }
