@@ -802,7 +802,9 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   ).toBeVisible();
   const rendered = await page.locator("body").innerText();
   expect(rendered.match(/Aaron/g)).toHaveLength(1);
-  expect(rendered).toContain("Aaron Buxbaum, Founder");
+  // The signature is the name in an autograph face with the role below it, which CSS
+  // sets in capitals, so the role is matched without regard to case.
+  expect(rendered).toMatch(/Aaron Buxbaum\s+Founder/i);
   // The founder's own band, in the first person (Aaron, 2026-11-14), carries
   // his history; the head count of the team stays out.
   expect(rendered).toContain("self-driving cars");
