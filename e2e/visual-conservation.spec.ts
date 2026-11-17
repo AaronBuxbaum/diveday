@@ -24,8 +24,13 @@ test("recorded conservation action and its editor (light)", async ({ page }) => 
   const path = await tripPathByTitle(page, "blue-mantis", title, { daysOut: -2 });
   // The record is kept under Wrapped up's More, which its own hash opens.
   await page.goto(`${path}?phase=wrapped#conservation`);
+  const more = page.locator("#wrapped-more");
   const add = page.locator("#conservation-add");
+  await expect(more).toHaveAttribute("open", "");
+  await expect(add).toHaveAttribute("data-hydrated", "true");
   await add.locator("summary").click();
+  await expect(more).toHaveAttribute("open", "");
+  await expect(add).toHaveAttribute("open", "");
   await add
     .getByRole("combobox", { name: t("trips.conservation.kind") })
     .selectOption("lionfish_count");
