@@ -64,7 +64,7 @@ export async function announceDemoEntry(input: {
   }
 
   // The founder digest's count (ADR 20261007-founder-metrics): a row of
-  // DiveDay's own, unkeyed from the minted shop so the 7-day reaper does not
+  // DiveDay's own, unkeyed from the minted shop so the idle-demo reaper does not
   // take the count with it. Its own guard, for the reason above.
   try {
     await recordDemoEntry(await getDb(), { source, role });
@@ -78,7 +78,7 @@ export async function announceDemoEntry(input: {
     const db = await getDb();
     // The alert needs the minted shop's row id: `notification_send_queue` FKs
     // to it, which is what lets a retryable failure be durable and what lets
-    // the 7-day reaper clear the row along with the shop it belongs to.
+    // the idle-demo reaper clear the row along with the shop it belongs to.
     const shop = await getShopBySlug(db, slug);
     if (!shop) return;
     await sendNotification(db, {

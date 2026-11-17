@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
 import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
@@ -144,7 +144,10 @@ import {
  * blue-mantis demo and every real shop are never eligible for any of it.
  */
 
-/** Default lifetime of a minted demo shop before the reaper clears it. */
+/**
+ * How long a minted demo shop may sit untouched before the reaper clears it:
+ * seven days since its last sign-in or staff input, not since it was minted.
+ */
 export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
 
 /**
@@ -462,7 +465,19 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
 }
 
 /**
- * Clear minted demo shops older than `maxAgeMs`. Selects only `isDemo` shops
+ * When a shop was last used: its latest recorded staff input on any session
+ * (`account_sessions.last_human_activity_at`, which a sign-in also sets), or
+ * the moment it was minted when nobody ever signed in. A session row outlives
+ * its last input by the whole idle limit, which is the reaper's window, so a
+ * shop used inside the window always still has the row that says so.
+ */
+function demoLastActiveAt() {
+  return sql<Date>`greatest(${shops.createdAt}, coalesce((select max(${accountSessions.lastHumanActivityAt}) from ${accountSessions} where ${accountSessions.shopId} = ${shops.id}), ${shops.createdAt}))`;
+}
+
+/**
+ * Clear minted demo shops idle for more than `maxAgeMs` (seven days with no
+ * sign-in or staff input; see `demoLastActiveAt`). Selects only `isDemo` shops
  * whose slug is not the canonical demo — so blue-mantis and every real shop are
  * untouchable here — and deletes each in its own transaction so one failure
  * doesn't strand the rest. Time comes through `now` (clock rule); the cron route
@@ -480,7 +495,7 @@ export async function reapExpiredDemoShops(
     .select({ id: shops.id, slug: shops.slug })
     .from(shops)
     .where(
-      and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG), lt(shops.createdAt, cutoff)),
+      and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG), lt(demoLastActiveAt(), cutoff)),
     );
 
   for (const shop of expired) {
@@ -521,7 +536,7 @@ function mintedDemoCap(): number {
 }
 
 /**
- * Evict the oldest minted demos until there is room for one more under the cap.
+ * Evict the longest-idle minted demos until there is room for one more under the cap.
  * Only minted demos are ever eligible — the canonical blue-mantis demo (by slug)
  * and every real shop (`isDemo:false`) are excluded, so this can never delete a
  * real tenant. Runs inside the caller's transaction so the eviction and the new
@@ -545,7 +560,7 @@ export async function enforceMintedDemoCap(db: DbExecutor): Promise<void> {
     .from(shops)
     .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)))
     // diveday:allow-time-id-order: an eviction order, not a list; the id makes it total (above).
-    .orderBy(asc(shops.createdAt), asc(shops.id));
+    .orderBy(asc(demoLastActiveAt()), asc(shops.id));
   const toEvict = live.length - (cap - 1);
   for (let i = 0; i < toEvict; i++) {
     await deleteDemoShopCascade(db, live[i].id);

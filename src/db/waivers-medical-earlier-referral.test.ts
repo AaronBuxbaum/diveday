@@ -356,12 +356,24 @@ describe("a physician's letter that predates a re-signed referral", () => {
     if (!first?.bookingId) throw new Error("expected a first referral on a seat");
     // The seat is claimed by another person: the record keeps the diver's id
     // (it was given under their name) but the booking is no longer theirs.
+    const [seat] = await ctx.db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.id, first.bookingId));
+    if (!seat) throw new Error("expected the first referral's booking");
+    // Someone with no seat on this departure: `bookings_trip_person_unique`
+    // refuses a second one, and the table's row order decides who comes first.
+    const seated = await ctx.db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.tripId, seat.tripId));
+    const seatedIds = new Set(seated.map((row) => row.personId));
     const [stranger] = await ctx.db
       .select({ id: people.id })
       .from(people)
       .where(and(eq(people.shopId, ctx.shop.id)))
-      .limit(50)
-      .then((rows) => rows.filter((row) => row.id !== ctx.person.id));
+      .orderBy(people.id)
+      .then((rows) => rows.filter((row) => !seatedIds.has(row.id)));
     if (!stranger) throw new Error("expected another person");
     await ctx.db
       .update(bookings)
