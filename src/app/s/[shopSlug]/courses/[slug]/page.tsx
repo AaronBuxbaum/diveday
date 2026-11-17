@@ -309,7 +309,11 @@ export default async function CoursePage({
       />
       <div className="mt-4">
         {/* The composer's client-side refusals need the diver's translator. */}
-        <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry", "common", "course"]}>
+        <DiverIntlProvider
+          locale={locale}
+          timeZone={shop.timezone}
+          namespaces={["inquiry", "common", "course"]}
+        >
           <DateRequestForm
             submitRequest={submitInquiryAction.bind(null, shopSlug, slug)}
             collapsible
