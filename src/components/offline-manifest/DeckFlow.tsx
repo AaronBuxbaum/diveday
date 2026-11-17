@@ -200,6 +200,53 @@ function observationInstant(observation: string, timeZone: string) {
     : undefined;
 }
 
+/** Find, and More: the observation time and the boat's reference. */
+function DeckFooter({
+  copy,
+  busy,
+  timeZone,
+  observation,
+  details,
+  detailsRef,
+  onFind,
+  onObservation,
+}: {
+  copy: DeckCopy;
+  busy: boolean;
+  timeZone: string;
+  observation: string;
+  details?: ReactNode;
+  detailsRef: React.RefObject<HTMLDetailsElement | null>;
+  onFind: () => void;
+  onObservation: (value: string) => void;
+}) {
+  return (
+    <div data-device-text-deck-pair className="grid grid-cols-2 border-t border-border pt-2">
+      <button
+        type="button"
+        disabled={busy}
+        className={buttonClass({ variant: "link", className: "min-h-11" })}
+        onClick={onFind}
+      >
+        {copy.find}
+      </button>
+      <details ref={detailsRef} className="contents [&::details-content]:col-span-2">
+        <summary className="flex min-h-11 cursor-pointer items-center justify-center font-semibold">
+          {copy.details}
+        </summary>
+        <div className="col-span-2 mt-4 space-y-6">
+          <DeckObservation
+            {...{ copy, timeZone, busy }}
+            value={observation}
+            onChange={onObservation}
+          />
+          {details}
+        </div>
+      </details>
+    </div>
+  );
+}
+
 /** Navigation never invokes a recording action. Receipts are an explicit saved outcome. */
 function DeckPersonHeading({ person }: { person: DeckPerson }) {
   return (
@@ -493,29 +540,12 @@ export function DeckFlow({
                 ))}
             </div>
           ) : null}
-          <div data-device-text-deck-pair className="grid grid-cols-2 border-t border-border pt-2">
-            <button
-              type="button"
-              disabled={busy}
-              className={buttonClass({ variant: "link", className: "min-h-11" })}
-              onClick={() => setScreen("find")}
-            >
-              {copy.find}
-            </button>
-            <details ref={detailsRef} className="contents [&::details-content]:col-span-2">
-              <summary className="flex min-h-11 cursor-pointer items-center justify-center font-semibold">
-                {copy.details}
-              </summary>
-              <div className="col-span-2 mt-4 space-y-6">
-                <DeckObservation
-                  {...{ copy, timeZone, busy }}
-                  value={observation}
-                  onChange={setObservation}
-                />
-                {details}
-              </div>
-            </details>
-          </div>
+          <DeckFooter
+            {...{ copy, busy, timeZone, observation, details }}
+            detailsRef={detailsRef}
+            onFind={() => setScreen("find")}
+            onObservation={setObservation}
+          />
         </section>
       </DeckOpenPersonContext.Provider>
     </DeckMutationContext.Provider>

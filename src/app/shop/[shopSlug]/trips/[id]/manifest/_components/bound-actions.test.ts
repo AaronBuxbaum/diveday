@@ -43,10 +43,9 @@ vi.mock("../../incidents/actions", () => {
 const context = { shopSlug: "blue-mantis", tripId: "trip-1", checkpoint: "after_dive_1" } as const;
 
 describe("bindManifestActions", () => {
-  it("binds the roll call, the dive log and the buddy teams to the open checkpoint", () => {
+  it("binds the roll call and the buddy teams to the open checkpoint", () => {
     const actions = bindManifestActions(context);
     expect(actions.rollCall).toEqual({ name: "rollCallAction", context });
-    expect(actions.saveExecutedDive).toEqual({ name: "saveExecutedDiveAction", context });
     // The count on deck belongs to the checkpoint that is open (issue #4248).
     expect(actions.recordDeckCount).toEqual({ name: "recordDeckCountAction", context });
     expect(actions.buddyTeams.teamUpPartiesAction).toEqual({

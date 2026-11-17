@@ -112,7 +112,7 @@ describe("saved Deck receipts", () => {
     expect(screen.getByText("Saved roster · Check who’s on the boat")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Start roll call" }));
     expect(screen.getByText("Saved roster · Check who’s on the boat")).toBeVisible();
-    fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+    fireEvent.click(screen.getByText("More", { selector: "summary" }));
     expect(screen.getByText(/Count heads on the boat against this list/)).toBeVisible();
   });
 });

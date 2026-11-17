@@ -908,6 +908,28 @@ export async function openDeckPerson(page: Page, name: string, locale = "en-US")
   await expect(person.getByRole("heading", { name, exact: true })).toBeVisible();
 }
 
+/**
+ * **One dive's log, where it is written**: the Trip page, On the water (ADR
+ * 20261117-trip-page-clock), from the trip or its Roll call. Opens the dive's
+ * collapsed form and returns it.
+ */
+export async function openDiveLog(page: Page, tripId: string, dive = 1): Promise<Locator> {
+  const slug = new URL(page.url()).pathname.split("/")[2];
+  await page.goto(`/shop/${slug}/trips/${tripId}?phase=water`);
+  await page
+    .locator("summary")
+    .filter({ hasText: `Dive ${dive}` })
+    .click();
+  return page.locator("form").filter({ hasText: `Dive ${dive}` });
+}
+
+/** The trip id in the address bar of a trip page or one of its children. */
+export function tripIdFromUrl(page: Page): string {
+  const id = new URL(page.url()).pathname.split("/")[4];
+  if (!id) throw new Error(`no trip id in ${page.url()}`);
+  return id;
+}
+
 export async function openDeckDetails(page: Page, locale = "en-US"): Promise<void> {
   const t = staffTranslator(locale);
   const details = page

@@ -65,8 +65,9 @@ describe("a cancelled departure's roll call", () => {
     expect(SOURCE).toContain("<DeckRollCall");
     expect(SOURCE).toContain("view={view}");
     const deck = routeSource(import.meta.dirname, "_components/DeckRollCall.tsx");
-    // Both named recording paths retain the same server-read closure.
-    expect(deck.match(/view.cancelled === "closed" \|\| missing \|\| conflict/g)).toHaveLength(2);
+    // Both named recording paths retain the same server-read closure, after
+    // recorded evidence: a closed row is not counted, never missing.
+    expect(deck.match(/\) : view\.cancelled === "closed" \? \(/g)).toHaveLength(2);
     expect(PACKET).toContain("rollCall={manifest.rollCall}");
     const props = readFileSync(
       path.join(import.meta.dirname, "_components/roll-call-props.ts"),

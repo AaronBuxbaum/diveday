@@ -30,6 +30,7 @@ The Trip page (`src/app/shop/[shopSlug]/trips/[id]/`) shows one of five phases a
 - **Roll call has a door from Check-in on and on every cancelled trip**; before Check-in it is in
   More. Gear (`/prep`) keeps its route under the same header and strip.
 - **Words**: Guests, Roll call, Gear, Plan, everywhere on screen.
+- **Roll call's counts are tabs**; each dive's log is written once, On the water.
 
 Unchanged from 20261114: Roll call records exactly one named person per action, with no group
 confirm or count input; a fix list may offer a group message, never a group record of presence.

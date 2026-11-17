@@ -20,6 +20,7 @@ import {
   openBoatCheck,
   openDeckDetails,
   openDeckPerson,
+  openDiveLog,
   openDiverFileGroup,
   openFirstRosterRowWith,
   openManifestPerson,
@@ -28,6 +29,7 @@ import {
   openTripFromBoard,
   openTripTab,
   rosterRow,
+  tripIdFromUrl,
   tripPathByTitle,
   waiverRequestLinkAfterSend,
 } from "./helpers";
@@ -1231,13 +1233,10 @@ test("the crew records why the plan changed, and the plan itself does not move",
   const planned = page.getByRole("heading", { name: "The plan" });
   await expect(planned).toBeVisible();
   await expect(page.getByText(/Changed the plan|Say why in the dive log/)).toHaveCount(0);
-  await page.getByRole("link", { name: "After dive 1" }).click();
-  await expect(page).toHaveURL(/checkpoint=after_dive_1/);
-  await openDeckDetails(page);
-
-  const summary = page.locator("summary").filter({ hasText: "Dive 1" });
-  await summary.click();
-  const log = page.locator("form").filter({ hasText: "Dive 1" });
+  // The dive log is written on the Trip page, On the water, beside the dive
+  // (ADR 20261117-trip-page-clock): one form, one place.
+  const tripId = tripIdFromUrl(page);
+  const log = await openDiveLog(page, tripId);
 
   // A note with no reason above it is refused rather than dropped, and what
   // the divemaster typed survives the refusal (issue #1018's rule).
@@ -1251,8 +1250,7 @@ test("the crew records why the plan changed, and the plan itself does not move",
   await expect(log.getByText("Dive record saved")).toBeVisible();
 
   // The published plan is untouched: what happened lives in a different table.
-  await page.getByRole("link", { name: "Before departure" }).click();
-  await expect(page).toHaveURL(/checkpoint=departure/);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest?checkpoint=departure`);
   await openDeckDetails(page);
   await expect(page.getByText("Dive 1 · Molasses Reef")).toBeVisible();
 });
@@ -1262,20 +1260,11 @@ test("a transposed dive log entry is refused out loud and keeps what was typed",
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripTab(page, "Manifest");
-  await openDeckDetails(page);
-  await page.getByRole("link", { name: "After dive 1" }).click();
-  await expect(page).toHaveURL(/checkpoint=after_dive_1/);
-  await openDeckDetails(page);
-
-  // The dive log is collapsed to a summary line now (#1055) — it stays on the
-  // boat, where the numbers are, but the form is one tap in rather than a third
-  // of the screen at every checkpoint.
+  // The dive log is collapsed to a summary line (#1055), on the Trip page On
+  // the water (ADR 20261117-trip-page-clock).
   const summary = page.locator("summary").filter({ hasText: "Dive 1" });
+  const log = await openDiveLog(page, tripIdFromUrl(page));
   await expect(summary).toContainText("not recorded yet");
-  await summary.click();
-
-  const log = page.locator("form").filter({ hasText: "Dive 1" });
   await log.getByLabel("Entered the water").fill("2026-07-21T14:35");
   await log.getByLabel("Exited the water").fill("2026-07-21T14:05");
   await log.getByLabel(/Maximum depth/).fill("27");

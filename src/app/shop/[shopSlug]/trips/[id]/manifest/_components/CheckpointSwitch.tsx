@@ -72,7 +72,7 @@ export function CheckpointSwitch({
           `data-key` is what `CheckpointGapGuard` catches. */}
         <nav
           aria-label={t("manifest.checkpointNavAriaLabel")}
-          className={`mt-7 ${BOAT_SEGMENT_TRACK_CLASS}`}
+          className={`mt-3 ${BOAT_SEGMENT_TRACK_CLASS}`}
         >
           {checkpoints.map((value) => {
             const current = value === checkpoint;

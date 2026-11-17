@@ -69,7 +69,7 @@ afterEach(() => {
 /** The counter is saved reference under Deck Details, separate from person recording. */
 async function openDeckDetails() {
   await screen.findByRole("heading", { name: "Roll call" });
-  const summary = screen.getByText("Details", { selector: "summary" });
+  const summary = screen.getByText("More", { selector: "summary" });
   if (!summary.closest("details")?.open) fireEvent.click(summary);
 }
 

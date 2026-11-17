@@ -355,7 +355,7 @@ describe("OfflineTripScreen's paper door", () => {
 
   it("swaps the screen for the sheet, so no roll-call control is on the printed page", () => {
     renderScreen(savedCopy());
-    fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+    fireEvent.click(screen.getByText("More", { selector: "summary" }));
     fireEvent.click(screen.getByRole("button", { name: "Print this saved copy" }));
     expect(document.querySelector(".paper-sheet")).not.toBeNull();
     expect(document.querySelector("[data-roll-call-surface]")).toBeNull();
@@ -367,7 +367,7 @@ describe("OfflineTripScreen's paper door", () => {
         c.snapshot.expiresAt = "2000-01-01T00:00:00.000Z";
       }),
     );
-    fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+    fireEvent.click(screen.getByText("More", { selector: "summary" }));
     expect(screen.queryByRole("button", { name: "Print this saved copy" })).toBeNull();
     // Ctrl+P on it prints one line, never the expired roster: the page holds
     // a print-only frame, so on paper it is that frame (`ScreenNotPrinted`).

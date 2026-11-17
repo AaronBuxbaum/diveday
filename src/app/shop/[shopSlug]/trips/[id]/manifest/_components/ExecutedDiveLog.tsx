@@ -180,11 +180,10 @@ export function ExecutedDiveLog({
                   of a 2,700px phone screen, between the roll call and the
                   buddy panel, on the surface the ADR calls an instrument.
 
-                  It stays on the boat rather than moving ashore: the surface
-                  interval is when a divemaster still has the numbers in their
-                  head and the shop has no signal. What changes is that it no
-                  longer claims the screen while a crew is counting bodies. The
-                  same treatment `PreDepartureCheckList` took in slice 5a. */}
+                  It lives on the Trip page, On the water, beside each dive (ADR
+                  20261117-trip-page-clock: one form, one place), never on the
+                  Roll call screen where a crew is counting bodies. The same
+                  treatment `PreDepartureCheckList` took in slice 5a. */}
               <details className="group/dive">
                 <summary
                   className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}

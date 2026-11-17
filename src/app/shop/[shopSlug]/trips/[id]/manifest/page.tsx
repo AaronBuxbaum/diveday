@@ -24,7 +24,6 @@ import { DeckRollCall } from "./_components/DeckRollCall";
 import { DockDesk } from "./_components/DockDesk";
 import { deckAttentionNeeded } from "./_components/deck-attention";
 import { deckCountView } from "./_components/deck-count-view";
-import { ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { executedDiveLogView } from "./_components/executed-dive-copy";
 import { headCountView } from "./_components/head-count-view";
 import { LiveRollCallConflicts } from "./_components/LiveRollCallConflicts";
@@ -56,7 +55,7 @@ import { tripPlanRows } from "./_components/trip-plan-rows";
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Boat manifest — DiveDay",
+  title: "Roll call — DiveDay",
 };
 
 export default async function TripManifestPage({
@@ -212,12 +211,30 @@ export default async function TripManifestPage({
                   compact
                 />
                 <DeckCountNote comparison={deckCount.comparison} t={t} />
+                {/* The boat check sits with the dock count, open until it is done. */}
+                {isDeparture ? (
+                  <div className="mt-4">
+                    <PreDepartureCheckList {...checklistProps} />
+                  </div>
+                ) : null}
               </>
             }
+            // **The counts are tabs across the top** (ADR 20261117-trip-page-clock):
+            // the dock, then one after each planned dive, so the count after a
+            // dive is one tap away rather than behind More.
             checkpoint={
-              <p className="font-semibold">
-                {vessel?.name ?? manifest.trip.title} · {rollCallCheckpointText(t, checkpoint)}
-              </p>
+              <>
+                <p className="font-semibold">
+                  {vessel?.name ?? manifest.trip.title} · {rollCallCheckpointText(t, checkpoint)}
+                </p>
+                <CheckpointSwitch
+                  manifests={completeManifests}
+                  checkpoint={checkpoint}
+                  shopSlug={shopSlug}
+                  tripId={tripId}
+                  t={t}
+                />
+              </>
             }
             attention={
               deckAttentionNeeded({ manifest, checkpoint, alerted: reader.alerted, headCount }) ? (
@@ -244,18 +261,11 @@ export default async function TripManifestPage({
             details={
               <>
                 <StageStrip action={actions.setTripStage} {...stage} />
-                <CheckpointSwitch
-                  manifests={completeManifests}
-                  checkpoint={checkpoint}
-                  shopSlug={shopSlug}
-                  tripId={tripId}
-                  t={t}
-                />
                 {catchUpStrip ? (
                   <CatchUpStrip {...catchUpStrip} dismissAction={actions.markTripCaughtUp} />
                 ) : null}
                 {boatSafety ? <BoatSafetyNotices {...boatSafety} /> : null}
-                <PreDepartureCheckList {...checklistProps} />
+                {isDeparture ? null : <PreDepartureCheckList {...checklistProps} />}
                 {/* Informs, never gates (issue #4248). A cancelled departure's
                     roll call takes no writes, and neither does its count. */}
                 {cancelled === "closed" ? null : (
@@ -273,14 +283,8 @@ export default async function TripManifestPage({
                     {...tripPlanRows(t, shop, plannedDives, meetingPoint, siteHistory, locale)}
                   />
                 ) : null}
-                {diveLog ? (
-                  <ExecutedDiveLog
-                    {...diveLog}
-                    action={actions.saveExecutedDive}
-                    checkpoint={checkpoint}
-                    sightingsOn={shop.sightingsEnabled}
-                  />
-                ) : null}
+                {/* Each dive's log is written on the Trip page, On the water, beside
+                    the dive (one form, one place); the paper above still prints it. */}
                 {!isDeparture && seen ? <SeenGroup {...seen} /> : null}
                 <OfflineManifestManager
                   compact
