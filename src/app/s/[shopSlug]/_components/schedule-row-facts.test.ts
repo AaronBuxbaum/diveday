@@ -43,8 +43,7 @@ describe("scheduleRowFact", () => {
         shop,
         t,
       });
-      expect(fact).toContain("Southern stingray on 2 of 4 logged dives");
-      expect(fact).toContain("30 days");
+      expect(fact).toBe("Southern stingrays seen on recent dives");
       expect(fact).not.toContain("Glassy");
     }
   });

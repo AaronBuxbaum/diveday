@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lt } from "drizzle-orm";
+import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { sightingWindowStart } from "@/lib/sightings";
 import type { DbExecutor } from "./client";
@@ -7,10 +7,12 @@ import {
   executedDives,
   people,
   personRoles,
+  shops,
   tripAssignments,
   tripSightings,
   trips,
 } from "./schema";
+import { livePublicTripForShop, notRehearsal } from "./trips-live";
 
 /**
  * **A month of the crew's own log, on the two reefs the demo sells** — so
@@ -164,5 +166,93 @@ export async function seedSightings(db: DbExecutor, shopId: string) {
         updatedAt: recordedAt,
       })),
     );
+  }
+}
+
+/**
+ * **The month's shelf on the shopfront** ("What you might see in November")
+ * names a species only after it turned up on two of that calendar month's
+ * recorded departures, in any season. The 30-day log above gives it one nurse
+ * shark; this adds the older Novembers' taps so the shelf shows four animals,
+ * each logged on two to four departures, and none on all of them.
+ */
+const MONTH_LOG: { slug: string; departures: number[] }[] = [
+  { slug: "southern-stingray", departures: [0, 1, 2, 5] },
+  { slug: "nurse-shark", departures: [0, 3, 4] },
+  { slug: "green-sea-turtle", departures: [1, 3, 6] },
+  { slug: "goliath-grouper", departures: [2, 6] },
+];
+
+export async function seedMonthSightings(db: DbExecutor, shopId: string) {
+  const now = nowDate();
+  const [shop] = await db
+    .select({ timezone: shops.timezone })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!shop) return;
+  const month = sql`extract(month from ${trips.startsAt} at time zone ${shop.timezone}) = extract(month from ${now.toISOString()}::timestamptz at time zone ${shop.timezone})`;
+  const candidates = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(and(livePublicTripForShop(shopId), notRehearsal(), lt(trips.startsAt, now), month))
+    .orderBy(desc(trips.startsAt))
+    .limit(24);
+  // A sighting is the crew's tap after a dive at that site, so only departures
+  // with a logged dive and an assigned crew member can carry one.
+  const usable: {
+    tripId: string;
+    siteId: string;
+    siteName: string;
+    recordedAt: Date;
+    personId: string;
+  }[] = [];
+  for (const { id } of candidates) {
+    const [dive] = await db
+      .select({
+        siteId: executedDives.actualSiteId,
+        siteName: diveSites.name,
+        exitedAt: executedDives.exitedAt,
+      })
+      .from(executedDives)
+      .innerJoin(diveSites, eq(diveSites.id, executedDives.actualSiteId))
+      .where(and(eq(executedDives.shopId, shopId), eq(executedDives.tripId, id)))
+      .orderBy(executedDives.diveNumber)
+      .limit(1);
+    const [crew] = await db
+      .select({ personId: tripAssignments.personId })
+      .from(tripAssignments)
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .where(eq(tripAssignments.tripId, id))
+      .orderBy(asc(tripAssignments.tripRole), asc(people.fullName))
+      .limit(1);
+    if (!dive?.exitedAt || !crew || !dive.siteId) continue;
+    usable.push({
+      tripId: id,
+      siteId: dive.siteId,
+      siteName: dive.siteName,
+      recordedAt: new Date(dive.exitedAt.getTime() + 3 * 60_000),
+      personId: crew.personId,
+    });
+  }
+  for (const { slug, departures } of MONTH_LOG) {
+    for (const index of departures) {
+      const trip = usable[index];
+      if (!trip) continue;
+      await db
+        .insert(tripSightings)
+        .values({
+          shopId,
+          tripId: trip.tripId,
+          diveSiteId: trip.siteId,
+          diveSiteName: trip.siteName,
+          speciesSlug: slug,
+          count: 1,
+          recordedByPersonId: trip.personId,
+          recordedAt: trip.recordedAt,
+          updatedAt: trip.recordedAt,
+        })
+        .onConflictDoNothing();
+    }
   }
 }
