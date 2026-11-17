@@ -883,12 +883,7 @@
           "sees": "El manifiesto, a la salida y después de cada inmersión"
         }
       },
-      "staysEyebrow": "Lo que sigue igual",
-      "staysTitle": "Conserva tu caja registradora y el portal de tu agencia",
-      "staysBody": "DiveDay no tiene caja registradora ni control de existencias de venta minorista, y no se conecta con ninguna agencia. Los cobros con tarjeta pasan por tu propia cuenta de Stripe.",
-      "movingEyebrow": "El traslado",
-      "movingTitle": "Sube tu lista de clientes y mira qué se traslada antes de que se guarde nada",
-      "movingBody": "Las guías cubren FareHarbor, Peek Pro, EVE, DiveShop360, Smartwaiver y Rezdy. Envíanos el archivo y una persona hace la importación contigo, sin costo. Puedes hacer un viaje en DiveDay mientras el sistema que usas hoy sigue encendido.",
+      "movingTitle": "¿Vienes de otro sistema?",
       "movingLink": "Encuentra la guía de tu sistema →"
     }
   },

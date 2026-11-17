@@ -2066,16 +2066,15 @@ for (const [route, scene] of [
   });
 }
 
-test("pricing and about offer the founder's 20-minute call beside Get set up, and the home page does not", async ({
+test("each page's closing band offers the founder's 20-minute call once, and the heroes do not repeat it", async ({
   page,
 }) => {
   const call = page.getByRole("link", {
     name: diverTranslator("en-US")("marketing.common.bookCall"),
   });
-  for (const path of ["/pricing", "/about"]) {
+  for (const path of ["/", "/product", "/pricing", "/about", "/product/waivers"]) {
     await page.goto(path);
-    await expect(call.first()).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);
+    await expect(call).toHaveCount(1);
+    await expect(call).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);
   }
-  await page.goto("/");
-  await expect(call).toHaveCount(0);
 });
