@@ -14,7 +14,6 @@ import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
 import { STEPS, WALK, WALK_CLASSES } from "@/app/_components/home-steps";
 import { JsonLd } from "@/components/JsonLd";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { MarketingIllustration } from "@/components/MarketingIllustration";
 import { MarketingReveal } from "@/components/MarketingReveal";
 import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
@@ -177,11 +176,13 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           and the feature page's name beside a large drawing (`STEPS`). */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-          <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-14">
-            <h2 className={`max-w-2xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
+          <div className="max-w-3xl">
+            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.home.stepsTitle")}
             </h2>
-            <MarketingIllustration scene="harbor" locale={locale} />
+            <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
+              {t("marketing.home.stepsLede")}
+            </p>
           </div>
 
           {/* 96px between steps at every width, against 20px inside one below
@@ -238,6 +239,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                       </div>
                       <MarginNotes
                         notes={step.notes.map((key) => t(key))}
+                        plain
                         className="order-2 max-w-lg lg:order-none lg:mt-5"
                       />
                       {/* The page's own name is the link's words: the reader
