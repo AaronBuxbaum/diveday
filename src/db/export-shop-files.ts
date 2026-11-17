@@ -270,6 +270,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // bundle is also the *backup*: a shop that opted out and later
       // restored from one must not come back published.
       "search_listing_opt_out_at",
+      "welcome_text",
+      "welcome_signer",
       "tagline",
       "description",
       "logo_url",
@@ -369,6 +371,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.deskClosesMinute,
         shop.deskHoursConfirmedAt,
         shop.searchListingOptOutAt,
+        shop.welcomeText,
+        shop.welcomeSigner,
         shop.tagline,
         shop.description,
         shop.logoUrl,

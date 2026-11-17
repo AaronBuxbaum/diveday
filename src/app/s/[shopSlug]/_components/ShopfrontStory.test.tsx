@@ -41,6 +41,28 @@ function storefront(shop: Shop) {
 }
 
 describe("the welcome and the lower shop story", () => {
+  it("shows a literal owner note with an optional signature, including without other identity content", () => {
+    storefront({
+      ...SHOP,
+      tagline: null,
+      description: null,
+      brandHeroImageUrl: null,
+      welcomeText: "Welcome, {diver}.",
+      welcomeSigner: "Ana",
+    });
+    expect(screen.getByText("Welcome, {diver}.")).toBeInTheDocument();
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+  });
+
+  it("shows an unsigned note but never a signer without a note", () => {
+    const empty = { ...SHOP, tagline: null, description: null, brandHeroImageUrl: null };
+    const view = storefront({ ...empty, welcomeText: "Come aboard.", welcomeSigner: null });
+    expect(screen.getByText("Come aboard.")).toBeInTheDocument();
+    view.unmount();
+    storefront({ ...empty, welcomeText: "  ", welcomeSigner: "Ana" });
+    expect(screen.queryByText("Ana")).not.toBeInTheDocument();
+  });
+
   it("show identity once and keep the full description and photo strip below the board", () => {
     storefront(SHOP);
     expect(screen.getAllByText("Small boats")).toHaveLength(1);

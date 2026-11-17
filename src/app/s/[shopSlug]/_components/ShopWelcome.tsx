@@ -14,10 +14,15 @@ import { BadgeWall } from "./BadgeWall";
 export function hasShopWelcomeContent(
   shop: Pick<
     NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>,
-    "tagline" | "description" | "brandHeroImageUrl"
+    "tagline" | "description" | "brandHeroImageUrl" | "welcomeText"
   >,
 ) {
-  return Boolean(shop.tagline?.trim() || shop.description?.trim() || shop.brandHeroImageUrl);
+  return Boolean(
+    shop.tagline?.trim() ||
+      shop.description?.trim() ||
+      shop.brandHeroImageUrl ||
+      shop.welcomeText?.trim(),
+  );
 }
 
 /**
@@ -74,6 +79,14 @@ export function ShopWelcome({
             <p className="mt-2 line-clamp-2 max-w-xl text-lg text-pretty text-foreground/90">
               {line}
             </p>
+          ) : null}
+          {shop.welcomeText?.trim() ? (
+            <div className="mt-4 max-w-xl">
+              <p className="whitespace-pre-line break-words">{shop.welcomeText}</p>
+              {shop.welcomeSigner?.trim() ? (
+                <p className="mt-2 text-muted">{shop.welcomeSigner}</p>
+              ) : null}
+            </div>
           ) : null}
           {average === null ? null : (
             <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">

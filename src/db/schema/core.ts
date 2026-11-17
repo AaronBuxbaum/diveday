@@ -753,6 +753,8 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
+    welcomeText: text("welcome_text"),
+    welcomeSigner: text("welcome_signer"),
     tagline: text("tagline"),
     description: text("description"),
     logoUrl: text("logo_url"),

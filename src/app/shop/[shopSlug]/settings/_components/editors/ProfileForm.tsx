@@ -60,6 +60,24 @@ export function ProfileForm({
       columns={1}
       className={`device-text-profile ${className}`}
     >
+      <Field label={t("settings.main.profile.welcomeText")}>
+        <textarea
+          name="welcomeText"
+          rows={3}
+          maxLength={1000}
+          defaultValue={shop.welcomeText ?? ""}
+          className={textareaClassFor(3)}
+        />
+      </Field>
+      <Field label={t("settings.main.profile.welcomeSigner")}>
+        <input
+          name="welcomeSigner"
+          type="text"
+          maxLength={120}
+          defaultValue={shop.welcomeSigner ?? ""}
+          className={controlClass}
+        />
+      </Field>
       <Field label={t("settings.main.profile.tagline")}>
         <textarea
           name="tagline"
