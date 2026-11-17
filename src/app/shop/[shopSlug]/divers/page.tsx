@@ -213,6 +213,7 @@ export default async function DiversPage({
   const rows: RosterRow[] = diverPage.divers.map((diver) => ({
     personId: diver.id,
     fullName: diver.fullName,
+    photoPath: diver.staffPhotoPath,
     href: shopPath(shopSlug, "divers", diver.id),
     letter: rosterLetter(diver.fullName),
     badges: badgesFor(diver.id),

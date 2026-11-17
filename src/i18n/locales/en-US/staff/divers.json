@@ -247,7 +247,11 @@
     "lastOut": "Last out {date}",
     "spent": "{amount} spent",
     "broughtFriends": "Brought {count, plural, one {# friend} other {# friends}}",
-    "packageBalance": "Package: {left} of {of, plural, one {# dive} other {# dives}} left"
+    "packageBalance": "Package: {left} of {of, plural, one {# dive} other {# dives}} left",
+    "photoAdd": "Add a photo",
+    "photoChange": "Change photo",
+    "photoRemove": "Remove photo",
+    "photoAdding": "Adding photo…"
   },
   "bookActivity": {
     "courseOrDiveLabel": "Departure",

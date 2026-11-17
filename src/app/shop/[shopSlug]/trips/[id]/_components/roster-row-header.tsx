@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Children } from "react";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant-labels";
@@ -60,6 +61,13 @@ export function rowHeader(seat: RowHeaderInput, { omitName = false }: { omitName
           column the loudest thing on the ledger (principle 10: hierarchy by
           type before colour), and the board's own trip-title doors already
           read this way. Hover restores the link cue. */}
+      {omitName ? null : (
+        <PersonAvatar
+          name={person.fullName}
+          photoPath={booking.identityUnconfirmedAt ? null : person.staffPhotoPath}
+          size="sm"
+        />
+      )}
       {omitName ? null : (
         <Link
           href={`/shop/${shopSlug}/divers/${person.id}`}

@@ -247,7 +247,11 @@
     "lastOut": "Última salida: {date}",
     "spent": "Gasto: {amount}",
     "broughtFriends": "Trajo {count, plural, one {# amigo} other {# amigos}}",
-    "packageBalance": "Paquete: quedan {left} de {of, plural, one {# inmersión} other {# inmersiones}}"
+    "packageBalance": "Paquete: quedan {left} de {of, plural, one {# inmersión} other {# inmersiones}}",
+    "photoAdd": "Agregar foto",
+    "photoChange": "Cambiar foto",
+    "photoRemove": "Quitar foto",
+    "photoAdding": "Agregando foto…"
   },
   "bookActivity": {
     "courseOrDiveLabel": "Salida",
