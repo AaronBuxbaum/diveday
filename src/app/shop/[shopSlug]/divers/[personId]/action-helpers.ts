@@ -27,7 +27,7 @@ import { uuidParam } from "@/lib/uuid";
  * the same complaint in the other direction. The ids are `DiverSection`'s
  * (`_components/DiverSections.tsx`) and the destructive tail's own headings.
  */
-export const FORM_ANCHORS: Record<string, string> = {
+const FORM_ANCHORS: Record<string, string> = {
   cards: "#certifications",
   "last-dive": "#last-dive",
   waiver: "#waiver",

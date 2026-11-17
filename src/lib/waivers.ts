@@ -84,7 +84,7 @@ export const WAIVER_SIGNATURE_VALIDITY_MS = 365 * 24 * 60 * 60 * 1000;
  * which in a zone fourteen hours ahead of UTC is still the shop's today; a
  * date past that is one the shop has not reached, and fails closed.
  */
-export const SIGNATURE_FUTURE_TOLERANCE_MS = 14 * 60 * 60 * 1000;
+const SIGNATURE_FUTURE_TOLERANCE_MS = 14 * 60 * 60 * 1000;
 
 /**
  * When a record's signature happened, for recency comparisons and its year:
@@ -306,7 +306,7 @@ export function isCompletedWaiverCurrent(
  * the shop's current material terms, and inside the validity window. Fails
  * closed on a missing signature time.
  */
-export function isSignatureCurrent(
+function isSignatureCurrent(
   record: WaiverRecord,
   currentTemplateGeneration: number | null,
   now: Date,
@@ -350,7 +350,7 @@ export function isSignatureCurrent(
  * window, and picking the shop's zone here would make a release expire at a
  * different instant for the same paper depending on where it was filed.
  */
-export function clearanceEvaluatedAt(record: WaiverRecord): number | null {
+function clearanceEvaluatedAt(record: WaiverRecord): number | null {
   if (!record.medicalClearedAt || !record.medicalClearanceEvaluatedOn) return null;
   const parsed = Date.parse(`${record.medicalClearanceEvaluatedOn}T00:00:00.000Z`);
   return Number.isFinite(parsed) ? parsed : null;
@@ -393,7 +393,7 @@ export function waiverClockInstant(input: {
  * resolution every live surface uses; this is what keeps a release signed next
  * season, or a referral cleared after the boat came home, out of that record.
  */
-export function recordAsOf(record: WaiverRecord, at: Date): WaiverRecord | null {
+function recordAsOf(record: WaiverRecord, at: Date): WaiverRecord | null {
   // It existed once the shop had it: a date it claims cannot place it on an
   // earlier departure's record (an import run after the boat sailed, dated
   // before it; dive-domain-expert review of issue #3781).

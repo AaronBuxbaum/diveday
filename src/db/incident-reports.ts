@@ -92,7 +92,7 @@ const liveReport = isNull(incidentReports.deletedAt);
 const creators = alias(people, "incident_creators");
 
 /** The live roles and crew flag the rules in `src/lib/incident-reports.ts` read. */
-export async function loadIncidentViewer(
+async function loadIncidentViewer(
   db: DbExecutor,
   shopId: string,
   tripId: string,
@@ -1533,7 +1533,7 @@ export async function listIncidentSeatChoices(
 }
 
 /** The departure's crew, first, for naming a staffer; then nobody else is offered. */
-export async function listIncidentCrewChoices(
+async function listIncidentCrewChoices(
   db: DbExecutor,
   shopId: string,
   tripId: string,
@@ -1567,7 +1567,7 @@ export async function deleteDemoSafetyTrail(db: DbExecutor, shopId: string): Pro
  * staffer ashore — the person who took the call, or drove to the clinic.
  * Only staff with an active account; the write re-checks it.
  */
-export async function listIncidentShopStaffChoices(
+async function listIncidentShopStaffChoices(
   db: DbExecutor,
   shopId: string,
   tripId: string,

@@ -6,7 +6,7 @@ export type RecoveryActivitySnapshot = {
   location: string;
   revision: number;
 };
-export const RECOVERY_ACTIVITY_EVENT_CODES = [
+const RECOVERY_ACTIVITY_EVENT_CODES = [
   "identity_merged",
   "created",
   "offer_prepared",

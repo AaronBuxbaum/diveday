@@ -56,7 +56,7 @@ type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 export const CONNECT_CLIENT_ID = "ca_UvlITl41g1jCgVxyi3vqYguVm8l2dliH";
 
 /** The one OAuth callback registered with Stripe for every self-service shop. */
-export const STRIPE_CONNECT_CALLBACK_PATH = "/api/stripe/connect/callback";
+const STRIPE_CONNECT_CALLBACK_PATH = "/api/stripe/connect/callback";
 export const STRIPE_CONNECT_STATE_COOKIE = "stripe_connect_state";
 
 /**
@@ -85,10 +85,7 @@ const accountResponseSchema = z.object({
 
 type ConnectConfig = z.infer<typeof connectConfigSchema>;
 
-export function stripeConnectProvider(
-  config: ConnectConfig,
-  fetchImpl: Fetch,
-): StripeConnectProvider {
+function stripeConnectProvider(config: ConnectConfig, fetchImpl: Fetch): StripeConnectProvider {
   /** Logs only what Stripe never answered; an error status is an answer. */
   const threw = (operation: string, error: unknown) => {
     if (stripeAnsweredStatus(error) === null) logStripeRequestThrew(operation, error);

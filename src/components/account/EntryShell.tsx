@@ -176,7 +176,7 @@ export function entryMainClass(width: "sm" | "lg") {
  * The pending face wears this same constant, so the door and the skeleton
  * that stands in for it cannot drift apart.
  */
-export const entryPanelClass =
+const entryPanelClass =
   "mt-8 sm:rounded-panel sm:border sm:border-border sm:bg-surface sm:p-8 sm:shadow-bed";
 
 /**

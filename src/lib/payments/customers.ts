@@ -79,10 +79,7 @@ function failureFrom(status: number, error: unknown): { status: "failed"; error:
   return { status: "failed", error: detail };
 }
 
-export function stripeCustomerProvider(
-  config: StripeKeySource,
-  fetchImpl: Fetch,
-): CustomerProvider {
+function stripeCustomerProvider(config: StripeKeySource, fetchImpl: Fetch): CustomerProvider {
   return {
     async deleteCustomer(stripeAccountId, stripeCustomerId, idempotencyKey) {
       let answer: unknown;

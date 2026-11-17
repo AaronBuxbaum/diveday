@@ -92,7 +92,7 @@ export function paperGuardianFrom(
  * it there is nothing to restore, and re-ticking it across a *different*
  * refusal would re-assert something the staffer did not re-assert.
  */
-export function paperWaiverTypedFrom(formData: FormData): PaperWaiverTypedValues {
+function paperWaiverTypedFrom(formData: FormData): PaperWaiverTypedValues {
   const form = paperWaiverFields(formData);
   const name = form.guardianName;
   const relationship = form.guardianRelationship;

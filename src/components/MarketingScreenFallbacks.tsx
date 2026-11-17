@@ -32,10 +32,10 @@ import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
  * (135 + 136 in 272), and es-ES's "EMBARCADOS" (69.3px) outgrew its stat
  * tile's 67.3px label box.
  */
-export const MOCK_INSET_X = "px-5";
+const MOCK_INSET_X = "px-5";
 export const MOCK_BODY = `${MOCK_INSET_X} py-5`;
-export const PHONE_INSET_X = "px-4";
-export const PHONE_BODY = `${PHONE_INSET_X} py-4`;
+const PHONE_INSET_X = "px-4";
+const PHONE_BODY = `${PHONE_INSET_X} py-4`;
 
 /**
  * The one primary button the mocks draw ("Mark boarded", "Download", "Leave my
@@ -81,7 +81,7 @@ export function AppBar({ label, inset = MOCK_INSET_X }: { label: string; inset?:
  * "Tanks analyzed & loaded" needed at 390, and a row that had fitted wrapped
  * to start its second line with "&" (K-578 review).
  */
-export function ChecklistRow({
+function ChecklistRow({
   label,
   status,
   tone,

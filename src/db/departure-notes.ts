@@ -61,11 +61,7 @@ export type DepartureNoteCheck =
   | { ok: false; reason: DepartureNoteRefusal };
 
 /** How many notes this departure has carried. */
-export async function departureNotesSent(
-  db: DbExecutor,
-  shopId: string,
-  tripId: string,
-): Promise<number> {
+async function departureNotesSent(db: DbExecutor, shopId: string, tripId: string): Promise<number> {
   const [row] = await db
     .select({ n: count(departureNotes.id) })
     .from(departureNotes)
@@ -95,11 +91,7 @@ export async function departureNoteAudience(
 }
 
 /** Notes to this departure still inside their hold, not yet sent or undone. */
-export async function departureNotesHeld(
-  db: DbExecutor,
-  shopId: string,
-  tripId: string,
-): Promise<number> {
+async function departureNotesHeld(db: DbExecutor, shopId: string, tripId: string): Promise<number> {
   const [row] = await db
     .select({ n: count(notificationSendQueue.id) })
     .from(notificationSendQueue)
@@ -133,7 +125,7 @@ export async function lastDayStartsAt(db: DbExecutor, tripId: string): Promise<D
  * day one. Null when the departure has no day rows; the trip's own start
  * stands then.
  */
-export async function dayStillToComeStartsAt(
+async function dayStillToComeStartsAt(
   db: DbExecutor,
   tripId: string,
   now: Date,

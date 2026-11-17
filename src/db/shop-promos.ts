@@ -222,7 +222,7 @@ export async function getRedeemableShopPromo(
 export type ShopPromoWithUsage = Deal & { timesRedeemed: number };
 
 /** How many codes the Promos page's "Your codes" list shows per page. */
-export const SHOP_PROMO_PAGE_SIZE = PAGE_SIZE.list;
+const SHOP_PROMO_PAGE_SIZE = PAGE_SIZE.list;
 
 export type ShopPromoPage = {
   promos: ShopPromoWithUsage[];

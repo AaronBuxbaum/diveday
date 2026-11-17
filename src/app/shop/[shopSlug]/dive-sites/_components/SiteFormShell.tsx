@@ -23,7 +23,7 @@ export type SiteFormState = {
   values?: SubmittedFormValues;
 };
 
-export const IDLE_SITE_FORM_STATE: SiteFormState = {};
+const IDLE_SITE_FORM_STATE: SiteFormState = {};
 
 export type SiteFormAction = (state: SiteFormState, formData: FormData) => Promise<SiteFormState>;
 

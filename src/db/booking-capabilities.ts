@@ -40,10 +40,10 @@ export type CapabilityPurpose =
 export type IssuedCapability = { token: string; expiresAt: Date };
 
 /** The browser may return from hosted checkout before this one-use receipt expires. */
-export const RETURNING_DIVER_RECEIPT_TTL_MS = 24 * HOUR_MS;
+const RETURNING_DIVER_RECEIPT_TTL_MS = 24 * HOUR_MS;
 export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
-export const RETURNING_DIVER_RECEIPT_LOCK_TIMEOUT = "250ms";
-export const RETURNING_DIVER_RECEIPT_STATEMENT_TIMEOUT = "400ms";
+const RETURNING_DIVER_RECEIPT_LOCK_TIMEOUT = "250ms";
+const RETURNING_DIVER_RECEIPT_STATEMENT_TIMEOUT = "400ms";
 
 export type IssuedReturningDiverReceipt = {
   receiptId: string;

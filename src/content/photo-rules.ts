@@ -28,7 +28,7 @@
  * display string rather than an identifier — so a prefix check on the family,
  * with NC, ND and fair use refused outright regardless.
  */
-export const ALLOWED_LICENCES = [
+const ALLOWED_LICENCES = [
   "public domain",
   "no restrictions",
   "cc0",
@@ -69,7 +69,7 @@ export const FOLDERS: Record<PhotoFolder, { bound: number; minSource: number; qu
  * literal: each one is a kind of image that turned up in a real search and
  * would have been wrong on a briefing.
  */
-export const IRRELEVANT_WORDS = [
+const IRRELEVANT_WORDS = [
   "map",
   "maps",
   "diagram",

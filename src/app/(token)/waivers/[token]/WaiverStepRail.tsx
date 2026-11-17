@@ -74,7 +74,7 @@ export function refusalRailAnchors({
 }
 
 /** The segments in the order a diver walks them. Never re-ordered. */
-export const WAIVER_RAIL_ORDER = ["release", "medical", "questions", "sign"] as const;
+const WAIVER_RAIL_ORDER = ["release", "medical", "questions", "sign"] as const;
 
 /** The rail's names: the three every release has, and Questions when the shop asks any. */
 export type WaiverRailLabels = Record<Exclude<WaiverRailSegmentId, "questions">, string> & {

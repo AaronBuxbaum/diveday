@@ -2,7 +2,7 @@ import type { NewOrderLineItem } from "@/db/orders";
 import { currencyFractionDigits, majorToMinor } from "./money";
 import { MAX_LINE_ITEMS_PER_ORDER } from "./order-limits";
 
-export const ANCILLARY_LINE_KINDS = ["merchandise", "rental", "other", "pass_through_fee"] as const;
+const ANCILLARY_LINE_KINDS = ["merchandise", "rental", "other", "pass_through_fee"] as const;
 export const RECEIPT_METHODS = ["cash", "card_machine", "bank_transfer", "other"] as const;
 export type ReceiptMethod = (typeof RECEIPT_METHODS)[number];
 

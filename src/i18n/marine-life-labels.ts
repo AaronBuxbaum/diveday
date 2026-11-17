@@ -44,7 +44,7 @@ export type MarineLifeCard = {
 };
 
 /** The category word over a species' name (`Reef fish`, `Pez de arrecife`). */
-export function marineLifeKindLabel(kind: MarineLifeKind, t: DiverTranslator): string {
+function marineLifeKindLabel(kind: MarineLifeKind, t: DiverTranslator): string {
   return t(`marineLife.kinds.${kind}`);
 }
 

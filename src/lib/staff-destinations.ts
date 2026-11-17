@@ -90,7 +90,7 @@ export type StaffSection =
  * Courses and Gear are offered only to a shop that uses them
  * (`StaffNavOffers`); Settings sits at the foot of the sidebar.
  */
-export const STAFF_NAV_SECTIONS = [
+const STAFF_NAV_SECTIONS = [
   { section: "today", id: "today" },
   { section: "schedule", id: "board" },
   { section: "divers", id: "divers" },

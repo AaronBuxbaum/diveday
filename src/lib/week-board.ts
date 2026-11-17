@@ -70,7 +70,7 @@ export function resolveWeekStart(param: string | undefined, today: CalendarDate)
  * replaces, and on one departure it is the same sentence moved further from
  * the thing it is about.
  */
-export const WEEK_SHARED_FACT_FLOOR = 3;
+const WEEK_SHARED_FACT_FLOOR = 3;
 
 /** The little this gate needs to know about a departure. */
 type PricedDeparture = {

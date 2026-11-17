@@ -475,7 +475,7 @@ export function readyMastheadFacts(data: ReadyPageData): MastheadFacts {
 }
 
 /** The full thread and narrow booked card use the same masthead facts. */
-export function ReadyThreadMasthead({
+function ReadyThreadMasthead({
   walletUrl,
   data,
   locale,

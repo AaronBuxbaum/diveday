@@ -43,7 +43,7 @@ export function ageOnDate(dateOfBirth: CalendarDate, onDate: CalendarDate): numb
 }
 
 /** The oldest age that is still a minor. Eighteen is majority, so this is 17. */
-export const MINOR_AGE_CEILING = 17;
+const MINOR_AGE_CEILING = 17;
 
 /** Legal majority: the age a party's certified adult has reached. */
 export const ADULT_AGE = MINOR_AGE_CEILING + 1;
@@ -118,7 +118,7 @@ export function daysSinceBirthday(dateOfBirth: CalendarDate, onDate: CalendarDat
  * as looking ahead: a diver whose birthday was on Tuesday is still worth a
  * shout-out on Saturday's boat, and the crew has no other way to know.
  */
-export const BIRTHDAY_WINDOW_DAYS = 7;
+const BIRTHDAY_WINDOW_DAYS = 7;
 
 export type BirthdayCallout =
   | { status: "today" }

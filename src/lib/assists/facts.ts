@@ -10,7 +10,7 @@
 const PLACEHOLDER = /\{([A-Za-z][\w.:-]*)\}/g;
 
 /** Every placeholder the text names, in order, repeats included. */
-export function placeholdersIn(text: string): string[] {
+function placeholdersIn(text: string): string[] {
   return [...text.matchAll(PLACEHOLDER)].map((match) => match[1] ?? "");
 }
 

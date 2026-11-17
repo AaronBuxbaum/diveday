@@ -33,7 +33,7 @@
  * sign-in bypass and must never be an address anyone can receive mail at.
  */
 
-export const SES_SIMULATOR_DOMAIN = "simulator.amazonses.com";
+const SES_SIMULATOR_DOMAIN = "simulator.amazonses.com";
 
 /** What the simulator does with the message. Only `success` is safe for seed data. */
 export type SimulatorOutcome = "success" | "bounce" | "complaint" | "ooto" | "suppressionlist";

@@ -84,7 +84,7 @@ export function departureSafetyDate(
  * help. These are the kinds Today raises on a departure sailing today; a
  * first-aid kit's lapse stays the owner's errand.
  */
-export const LIFE_SAFETY_KIT_KINDS = [
+const LIFE_SAFETY_KIT_KINDS = [
   "o2_kit",
   "aed",
   "flares",
@@ -492,7 +492,7 @@ export type BoatSeatsRefusal =
     };
 
 /** How many over-limit departures the refusal names by date. */
-export const NAMED_DEPARTURES = 3;
+const NAMED_DEPARTURES = 3;
 
 export function boatSeatsRefusal(input: {
   capacity: number;

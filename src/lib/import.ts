@@ -1224,7 +1224,7 @@ function containsRun(tokens: readonly string[], run: readonly string[]): boolean
  * specialty it is rather than being mistaken for the Advanced Open Water rung
  * by the `/advanced/` rule below.
  */
-export function normalizeSpecialty(raw: string | null | undefined): DiveSpecialty | null {
+function normalizeSpecialty(raw: string | null | undefined): DiveSpecialty | null {
   return specialtiesNamed(raw)[0] ?? null;
 }
 
@@ -1241,7 +1241,7 @@ export function normalizeSpecialty(raw: string | null | undefined): DiveSpecialt
  * Club" is a shop's own label, not a depth clearance, and while an extra card
  * would only ever land gate-held, a card nobody earned should not appear at all.
  */
-export function specialtiesNamed(raw: string | null | undefined): DiveSpecialty[] {
+function specialtiesNamed(raw: string | null | undefined): DiveSpecialty[] {
   const value = (raw ?? "").trim().toLowerCase();
   if (!value) return [];
   const found: DiveSpecialty[] = [];
@@ -1377,7 +1377,7 @@ const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "
  * 1900–2200 is a typo or a sentinel ("9999-12-31" is how a card becomes valid
  * forever), and year 0–99 is additionally unrepresentable in a Postgres `date`.
  */
-export function parseCardDate(raw: string | null | undefined): {
+function parseCardDate(raw: string | null | undefined): {
   date: CalendarDate;
   assumedMonthFirst: boolean;
 } | null {

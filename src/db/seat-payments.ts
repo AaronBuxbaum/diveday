@@ -41,7 +41,7 @@ import { notRehearsal } from "./trips-live";
 import { seatHeld } from "./trips-queries";
 
 /** What this seat was asked, the weight its share of the charge is split by. */
-export const seatAskedCents = sql<number>`(coalesce(${bookingCheckoutBookings.tripCents}, ${bookingCheckouts.amountPerDiverCents}) + ${bookingCheckoutBookings.gearCents} + ${bookingCheckoutBookings.passThroughCents})`;
+const seatAskedCents = sql<number>`(coalesce(${bookingCheckoutBookings.tripCents}, ${bookingCheckouts.amountPerDiverCents}) + ${bookingCheckoutBookings.gearCents} + ${bookingCheckoutBookings.passThroughCents})`;
 
 /** What every seat of this seat's checkout was asked together. */
 const checkoutAskedCents = sql<number>`(select sum(coalesce(seat.trip_cents, ${bookingCheckouts.amountPerDiverCents}) + seat.gear_cents + seat.pass_through_cents) from booking_checkout_bookings seat where seat.checkout_id = ${bookingCheckouts.id})`;
@@ -55,9 +55,7 @@ function seatShare(cents: SQL): SQL<number> {
 }
 
 /** What this seat still holds after refunds: what the ledger's day subtotal adds. */
-export const seatNetCents = seatShare(
-  sql`(${checkoutChargedCents} - ${bookingCheckouts.refundedCents})`,
-);
+const seatNetCents = seatShare(sql`(${checkoutChargedCents} - ${bookingCheckouts.refundedCents})`);
 
 /**
  * The status word a seat payment reads under, in the orders' own vocabulary
@@ -65,7 +63,7 @@ export const seatNetCents = seatShare(
  * goes back, then `partly_refunded`, then `refunded`. Never `open`, `void` or
  * `uncollectible`: a checkout that did not settle is not money.
  */
-export const seatPaymentStatus = sql<
+const seatPaymentStatus = sql<
   "paid" | "partly_refunded" | "refunded"
 >`case when ${bookingCheckouts.refundedCents} <= 0 then 'paid' when ${bookingCheckouts.refundedCents} >= ${checkoutChargedCents} then 'refunded' else 'partly_refunded' end`;
 
@@ -75,7 +73,7 @@ export const seatPaymentStatus = sql<
  * departure the checkout's, the date the day the money settled. A status no
  * settled payment can have (`open`, `void`, `uncollectible`) matches nothing.
  */
-export function seatPaymentWhere(shopId: string, filter: ShopOrderFilter): SQL | undefined {
+function seatPaymentWhere(shopId: string, filter: ShopOrderFilter): SQL | undefined {
   const conditions: (SQL | undefined)[] = [
     eq(bookingCheckoutBookings.shopId, shopId),
     eq(bookingCheckouts.status, "completed"),

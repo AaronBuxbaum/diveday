@@ -49,8 +49,8 @@ const NOT_DIVING = [
 ];
 
 /** What the reef boat charges someone who is not diving. */
-export const DEMO_SNORKELER_PRICE_CENTS = 4500;
-export const DEMO_RIDER_PRICE_CENTS = 2500;
+const DEMO_SNORKELER_PRICE_CENTS = 4500;
+const DEMO_RIDER_PRICE_CENTS = 2500;
 
 export async function seedMixedBoat(
   db: DbExecutor,

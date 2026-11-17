@@ -260,7 +260,7 @@ export type FieldGridColumns = keyof typeof columnClass;
  * destination's summary `dl` sat on `gap-2`, its second column 4px left of the
  * form's under it (K-588).
  */
-export const FIELD_GRID_COLUMN_GAP = "gap-x-4";
+const FIELD_GRID_COLUMN_GAP = "gap-x-4";
 
 /**
  * Grid wrapper for a row (or block) of `Field`s. Each field occupies two rows —

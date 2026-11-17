@@ -84,7 +84,7 @@ const SUPERSEDED_RELEASES: { body: string; createdAt: () => Date }[] = [
  * shop's name is written in here: the canonical demo and a minted one each
  * get their own.
  */
-export function shopReleaseBody(shopName: string): string {
+function shopReleaseBody(shopName: string): string {
   return [
     "Release of Liability, Waiver of Claims, and Assumption of Risk",
     "",

@@ -17,7 +17,7 @@ export const CARD_STATUS_KEYS: Record<CardDisplayStatus, StaffMessageKey> = {
   verified: "divers.shared.cardStatus.verified",
 };
 
-export function cardStatusTone(status: CardDisplayStatus): "success" | "warning" {
+function cardStatusTone(status: CardDisplayStatus): "success" | "warning" {
   return status === "verified" ? "success" : "warning";
 }
 

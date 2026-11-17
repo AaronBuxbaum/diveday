@@ -88,7 +88,7 @@ export type SavePostcardCopy = {
 };
 
 /** How long a line the card can carry before it stops being one line. */
-export const MAX_POSTCARD_LINE_LENGTH = 140;
+const MAX_POSTCARD_LINE_LENGTH = 140;
 
 /**
  * Two device pixels per CSS pixel: the card is read at phone width and shared

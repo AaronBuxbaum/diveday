@@ -40,7 +40,7 @@ export type RoutePoint = { x: number; y: number };
 export const MAX_ROUTE_POINTS = 12;
 
 /** Below this a "route" is a dot, not a path; the briefing draws nothing. */
-export const MIN_ROUTE_POINTS = 2;
+const MIN_ROUTE_POINTS = 2;
 
 /** Zoom levels the editor offers, and the only ones a stored route may use. */
 export const MIN_ROUTE_ZOOM = 12;

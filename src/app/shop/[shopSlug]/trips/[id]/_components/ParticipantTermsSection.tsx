@@ -24,7 +24,7 @@ import type { Trip } from "./types";
  * price this departure sells, and the diver limit when one binds, or "Divers
  * only" when it sells neither.
  */
-export function participantTermsSummary(
+function participantTermsSummary(
   t: StaffTranslator,
   trip: Pick<Trip, "snorkelerPriceCents" | "riderPriceCents" | "diverCapacity" | "capacity">,
   currency: ShopCurrency,

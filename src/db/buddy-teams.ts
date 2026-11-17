@@ -99,7 +99,7 @@ type ResolvedMember = BuddyTeamMemberInput & { fullName: string };
  * The smallest team the model allows. A team of one is refused — a team needs
  * someone to be a team with — and no surface ever offers one.
  */
-export const MIN_BUDDY_TEAM_SIZE = 2;
+const MIN_BUDDY_TEAM_SIZE = 2;
 
 /** Stable display order inside a team, and the order the trail records names in. */
 function sortMembers<T extends { fullName: string }>(members: T[], key: (m: T) => string): T[] {

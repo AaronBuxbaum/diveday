@@ -414,9 +414,7 @@ const ABOARD_HEADLINE_RANK: Partial<Record<TodayActionKind, number>> = {
   payment: 6,
 };
 
-export function aboardPrimaryBlocker(
-  blockers: readonly ReadinessBlocker[],
-): ReadinessBlocker | null {
+function aboardPrimaryBlocker(blockers: readonly ReadinessBlocker[]): ReadinessBlocker | null {
   const rank = (blocker: ReadinessBlocker) =>
     ABOARD_HEADLINE_RANK[BLOCKER_ACTIONS[blocker.code].kind] ?? Number.MAX_SAFE_INTEGER;
   let best: ReadinessBlocker | null = null;

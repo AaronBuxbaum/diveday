@@ -25,7 +25,7 @@ type DiverLine = TripPrep["checklist"]["diverLines"][number];
  * A proposal is never overdue or flagged, so on a proposed row this says
  * at most "service due soon".
  */
-export const careNotes = (
+const careNotes = (
   t: StaffTranslator,
   unit: { serviceState: { state: string }; serviceConcern?: boolean },
 ) => [
@@ -140,7 +140,7 @@ export function assignmentRowIsSettled(
  * tables, and both groupings, so none of them can drift into telling the
  * boat different things about the same piece.
  */
-export const pieceDetail = (t: StaffTranslator, piece: PrepPiece) => {
+const pieceDetail = (t: StaffTranslator, piece: PrepPiece) => {
   // The count is real; the size deliberately isn't.
   if (piece.fitAtCheckIn) {
     return <span className="font-medium text-warning">{t("tripPrep.fitAtCheckIn")}</span>;
@@ -248,7 +248,7 @@ export const sizeCell = (t: StaffTranslator, piece: PrepPiece) => {
  * row down the left third with the rest of the card empty (Aaron, 2026-10-23:
  * "really ugly"), and three tiles a row put a diver's kit on two lines.
  */
-export const kitLineClass =
+const kitLineClass =
   "grid grid-cols-[minmax(0,min(5rem,30%))_minmax(0,1fr)] items-center break-words gap-x-2 gap-y-1 sm:flex sm:min-w-0 sm:flex-col sm:items-stretch sm:justify-between sm:gap-1.5 sm:rounded-inset sm:border sm:p-3";
 
 /** A piece with its unit on it: settled, so it sits back in a sunken tile. */

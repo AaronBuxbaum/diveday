@@ -44,7 +44,7 @@ const FORMAT_CHARACTER = /\p{Cf}/gu;
  * page), case-insensitively, after trimming and dropping one final period.
  * Only the whole answer: "None, but I carry an EpiPen" is kept.
  */
-export const MEDICAL_ALERT_NOTHING_ANSWERS = {
+const MEDICAL_ALERT_NOTHING_ANSWERS = {
   "en-US": ["none", "n/a", "na", "no", "nothing", "nil"],
   "es-ES": ["ninguna", "ninguno", "nada", "no", "no aplica", "n/a"],
 } as const satisfies Record<string, readonly string[]>;

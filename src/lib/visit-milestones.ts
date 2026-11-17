@@ -43,7 +43,7 @@ export function visitMilestone(count: number): VisitMilestone | null {
  * words on both sides ("First dive with us", "First dive day"). Read from the
  * one set above so the roster, the booked moment and the stamp never disagree.
  */
-export const DIVE_DAY_MILESTONES = VISIT_MILESTONES.filter(
+const DIVE_DAY_MILESTONES = VISIT_MILESTONES.filter(
   (milestone): milestone is Exclude<VisitMilestone, 1> => milestone !== 1,
 );
 

@@ -849,7 +849,7 @@ export type ExternalRefundOutcome =
  * margin, and an order or checkout still unsettled after two days is not going
  * to settle on its own.
  */
-export const REVERSAL_PATIENCE_MS = 48 * 60 * 60 * 1000;
+const REVERSAL_PATIENCE_MS = 48 * 60 * 60 * 1000;
 
 export type ExternalRefundInput = {
   /** The event's own `account` — the connected account whose charge this is. */

@@ -1,5 +1,5 @@
 /** Promotional value only: never cash received, cash owed, or prepaid dive entitlements. */
-export const TRIP_CREDIT_KINDS = ["grant", "redeem", "restore"] as const;
+const TRIP_CREDIT_KINDS = ["grant", "redeem", "restore"] as const;
 export type TripCreditKind = (typeof TRIP_CREDIT_KINDS)[number];
 export const TRIP_CREDIT_REASONS = ["goodwill", "promotion"] as const;
 export type TripCreditReason = (typeof TRIP_CREDIT_REASONS)[number];

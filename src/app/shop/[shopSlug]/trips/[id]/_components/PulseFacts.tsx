@@ -107,7 +107,7 @@ type PulseChip = {
  * show a count. Shared destinations stay linked directly, while mixed
  * destinations go to the roster so every affected diver remains reachable.
  */
-export function pulseChips(work: readonly TripPulseFact[], rosterHref: string): PulseChip[] {
+function pulseChips(work: readonly TripPulseFact[], rosterHref: string): PulseChip[] {
   const chips: PulseChip[] = [];
   const byKind = new Map<string, PulseChip>();
   for (const fact of work) {

@@ -49,7 +49,7 @@ const PACKET_MARGIN_MM = 12.7;
  * margin is how a shop discovers its sheet lost the top of its own name.
  * The sheet's own box is sized to what is left.
  */
-export const PRINT_SHEET_MARGIN_MM = 6;
+const PRINT_SHEET_MARGIN_MM = 6;
 
 /**
  * The paper's own size, in millimetres, as `@page size` is told it.
@@ -59,7 +59,7 @@ export const PRINT_SHEET_MARGIN_MM = 6;
  * declaration went and the counter card printed as a postcard in the corner of
  * a Letter page. Two lengths are understood by every engine that reads `size`.
  */
-export const PRINT_SHEET_PAPER_MM = {
+const PRINT_SHEET_PAPER_MM = {
   "A6 portrait": { width: 105, height: 148 },
   // A4's width and Letter's height: the box that fits on both.
   "Letter or A4": { width: 210, height: 279.4 },

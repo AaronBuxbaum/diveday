@@ -53,7 +53,7 @@ export type MedicalAlertEmergencyCopy = {
  * signal right now and offers the retry (domain review 2, S2): a server
  * action on a stalled cell link can otherwise hang for a minute at the rail.
  */
-export const EMERGENCY_READ_TIMEOUT_MS = 15_000;
+const EMERGENCY_READ_TIMEOUT_MS = 15_000;
 
 type Revealed = { text: string; savedBy?: string };
 

@@ -72,12 +72,12 @@ export function subjectFolder(subject: string): PhotoFolder {
   return subject.startsWith("species:") ? "marine-life" : "dive-sites";
 }
 
-export function commonsPageUrl(title: string): string {
+function commonsPageUrl(title: string): string {
   return `https://commons.wikimedia.org/wiki/${encodeURI(title.replace(/ /g, "_")).replace(/\?/g, "%3F")}`;
 }
 
 /** One README credit line for one bundled file. */
-export function creditLine(file: string, record: PhotoRecord): string {
+function creditLine(file: string, record: PhotoRecord): string {
   const name = path.basename(file);
   const inaturalist = record.source.match(/^https:\/\/www\.inaturalist\.org\/photos\/(\d+)$/);
   if (inaturalist) {
@@ -91,8 +91,8 @@ export function creditLine(file: string, record: PhotoRecord): string {
   return `- \`${name}\` — [${title}](${commonsPageUrl(record.source)}) · ${record.licence}${artist}${crop}`;
 }
 
-export const CREDITS_START = "<!-- credits:start (rendered by pnpm content:photos readme) -->";
-export const CREDITS_END = "<!-- credits:end -->";
+const CREDITS_START = "<!-- credits:start (rendered by pnpm content:photos readme) -->";
+const CREDITS_END = "<!-- credits:end -->";
 
 /** The README with its credit list replaced by the ledger's, between the two markers. */
 export function renderCredits(readme: string, folder: PhotoFolder, records: PhotoRecords): string {

@@ -110,15 +110,15 @@ export type ExportBundleScope =
  * joins only one bundle needs. `null` for a shop, or a diver of this shop,
  * that does not exist.
  */
-export function loadExportBundleInput(
+function loadExportBundleInput(
   db: AppDb,
   scope: Extract<ExportBundleScope, { kind: "shop" }>,
 ): Promise<ExportBundleInput | null>;
-export function loadExportBundleInput(
+function loadExportBundleInput(
   db: AppDb,
   scope: Extract<ExportBundleScope, { kind: "diver" }>,
 ): Promise<DiverExportBundleInput | null>;
-export function loadExportBundleInput(
+function loadExportBundleInput(
   db: AppDb,
   scope: ExportBundleScope,
 ): Promise<ExportBundleInput | DiverExportBundleInput | null> {

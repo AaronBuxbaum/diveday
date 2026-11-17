@@ -13,7 +13,7 @@ import {
   upsertIntegrationSyncRecord,
 } from "./store";
 
-export const SHOPIFY_API_VERSION = "2026-07";
+const SHOPIFY_API_VERSION = "2026-07";
 
 /**
  * A per-request ceiling on every outbound call.

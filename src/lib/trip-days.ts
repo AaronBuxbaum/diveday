@@ -106,7 +106,7 @@ const wallOrder = (wall: WallTime) =>
  * the start is the next morning only up to this many hours on, so a night
  * dive from 20:00 to 01:00 saves, and 13:00 to 09:00 stays a mistake to fix.
  */
-export const MAX_OVERNIGHT_WINDOW_HOURS = 12;
+const MAX_OVERNIGHT_WINDOW_HOURS = 12;
 
 /**
  * Where a wall-clock window typed as two times on one date really ends: on

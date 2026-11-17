@@ -3,7 +3,7 @@ import { periodBounds } from "../../lib/cost-guardrails";
 import type { NeonProjectUsage } from "./neon";
 
 /** Account evidence is supplied explicitly, never inferred from org budgets or an API key. */
-export const neonQuotaEvidenceSchema = z
+const neonQuotaEvidenceSchema = z
   .array(
     z
       .object({
