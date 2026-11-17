@@ -1137,7 +1137,7 @@
   "src/components/MapFrame.test.tsx": 240,
   "src/components/MarketingFeatureScreens.test.tsx": 936,
   "src/components/MarketingFooterView.test.tsx": 293,
-  "src/components/MarketingIllustration.test.tsx": 319,
+  "src/app/(marketing)/product/_components/MarketingIllustration.test.tsx": 319,
   "src/components/MarketingNavView.test.tsx": 336,
   "src/components/MarketingReveal.test.tsx": 223,
   "src/components/MarketingScreenFallbacks.test.tsx": 485,
