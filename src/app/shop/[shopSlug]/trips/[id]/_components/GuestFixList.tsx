@@ -21,6 +21,8 @@ export type FixListNamePart = { id?: string; text: string };
 export type FixListRow = {
   key: string;
   guestIds: string[];
+  /** A row about the trip rather than a guest (no crew, a hull on two departures): its words. */
+  title?: string;
   /** Several guests sharing one reason, named in the list format. */
   names?: FixListNamePart[];
   /** The one status phrase. */
@@ -40,6 +42,15 @@ export type FixListSection = {
   tone: "danger" | "default";
   /** Everyone fine, folded into one line of names until it is opened. */
   folded?: { names: string; mark: "success" | "none" };
+  /**
+   * Everyone fine as one counted line ("8 guests are ready"), whose toggle
+   * ("All guests") lists them under it.
+   */
+  summary?: { label: string; phrase: string | null; toggle: string; rows: FixListRow[] };
+  /** A card with no heading: the summary line and what follows it say it all. */
+  headless?: boolean;
+  /** Quiet lines at the card's foot ("Crew and plan are set"). */
+  after?: ReactNode;
   rows: FixListRow[];
 };
 
@@ -117,7 +128,9 @@ export function GuestFixList({
   // Guests with a row of their own; a shared line naming them opens that row.
   const ownRow = new Set(
     sections.flatMap((section) =>
-      section.rows.flatMap((row) => (row.guestIds.length === 1 ? row.guestIds : [])),
+      [...section.rows, ...(section.summary?.rows ?? [])].flatMap((row) =>
+        row.guestIds.length === 1 ? row.guestIds : [],
+      ),
     ),
   );
   const lastFolded = sections.findLast((section) => section.folded && section.rows.length)?.key;
@@ -130,9 +143,35 @@ export function GuestFixList({
     >
       {top}
       {sections.map((section) => {
-        if (section.rows.length === 0) return null;
-        const holdsOpen = section.rows.some((row) => openId && row.guestIds.includes(openId));
+        const summaryRows = section.summary?.rows ?? [];
+        if (section.rows.length === 0 && summaryRows.length === 0 && !section.after) return null;
+        const holdsOpen = [...section.rows, ...summaryRows].some(
+          (row) => openId && row.guestIds.includes(openId),
+        );
         const expanded = !section.folded || holdsOpen || unfolded.has(section.key);
+        const summaryOpen = holdsOpen || unfolded.has(`${section.key}:summary`);
+        const unfold = (key: string) =>
+          setUnfolded((current) => {
+            const next = new Set(current);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+          });
+        const rowList = (rows: FixListRow[], className = "") => (
+          <ul className={`divide-y divide-border ${className}`}>
+            {rows.map((row) => (
+              <FixRow
+                key={row.key}
+                row={row}
+                byId={byId}
+                openId={openId}
+                toggle={toggle}
+                closeLabel={copy.close}
+                ownRow={ownRow}
+              />
+            ))}
+          </ul>
+        );
         return (
           <section
             key={section.key}
@@ -146,14 +185,7 @@ export function GuestFixList({
                   type="button"
                   data-fix-fold={section.key}
                   aria-expanded={expanded}
-                  onClick={() =>
-                    setUnfolded((current) => {
-                      const next = new Set(current);
-                      if (next.has(section.key)) next.delete(section.key);
-                      else next.add(section.key);
-                      return next;
-                    })
-                  }
+                  onClick={() => unfold(section.key)}
                   className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-start focus-visible:focus-ring-inset"
                 >
                   {section.folded.mark === "success" ? (
@@ -173,7 +205,7 @@ export function GuestFixList({
                   </a>
                 ) : null}
               </div>
-            ) : (
+            ) : section.headless ? null : (
               <div className="flex items-baseline justify-between gap-4 px-4 pt-4 pb-1 sm:px-6">
                 <h3
                   className={`font-semibold ${section.tone === "danger" ? "text-danger" : "text-foreground"}`}
@@ -181,26 +213,43 @@ export function GuestFixList({
                   {section.label}
                 </h3>
                 <span className="text-sm text-muted tabular-nums">
-                  {section.rows.reduce((sum, row) => sum + row.guestIds.length, 0)}
+                  {[...section.rows, ...summaryRows].reduce(
+                    (sum, row) => sum + (row.title ? 0 : row.guestIds.length),
+                    0,
+                  ) || null}
                 </span>
               </div>
             )}
-            {expanded ? (
-              <ul
-                className={`divide-y divide-border ${section.folded ? "border-t border-border" : ""}`}
-              >
-                {section.rows.map((row) => (
-                  <FixRow
-                    key={row.key}
-                    row={row}
-                    byId={byId}
-                    openId={openId}
-                    toggle={toggle}
-                    closeLabel={copy.close}
-                    ownRow={ownRow}
-                  />
-                ))}
-              </ul>
+            {section.summary && summaryRows.length > 0 ? (
+              <div className="border-b border-border last:border-b-0">
+                <div className="flex items-center gap-3 px-4 py-3 sm:px-6">
+                  <StatusMark variant="success" size="md" className="shrink-0" />
+                  <p className="min-w-0 flex-1">
+                    <span className="font-semibold">{section.summary.label}</span>
+                    {section.summary.phrase ? (
+                      <span className="text-muted"> · {section.summary.phrase}</span>
+                    ) : null}
+                  </p>
+                  <button
+                    type="button"
+                    data-fix-fold={`${section.key}:summary`}
+                    aria-expanded={summaryOpen}
+                    onClick={() => unfold(`${section.key}:summary`)}
+                    className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                  >
+                    {section.summary.toggle}
+                  </button>
+                </div>
+                {summaryOpen ? rowList(summaryRows, "border-t border-border") : null}
+              </div>
+            ) : null}
+            {expanded && section.rows.length > 0
+              ? rowList(section.rows, section.folded ? "border-t border-border" : "")
+              : null}
+            {section.after ? (
+              <div className="divide-y divide-border border-t border-border first:border-t-0">
+                {section.after}
+              </div>
             ) : null}
           </section>
         );
@@ -247,6 +296,22 @@ function FixRow({
   const phrase = row.phrase ? (
     <span className={`block text-sm ${PHRASE_TONE[row.tone]}`}>{row.phrase}</span>
   ) : null;
+  if (row.title) {
+    return (
+      <li data-trip-fix={row.key} className="flex items-center gap-3 px-4 py-3 sm:px-6">
+        <StatusMark
+          variant={row.tone === "danger" ? "danger" : "warning"}
+          size="md"
+          className="shrink-0"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">{row.title}</span>
+          {phrase}
+        </span>
+        {row.control ? <div className="shrink-0">{row.control}</div> : null}
+      </li>
+    );
+  }
   if (row.names && row.guestIds.length > 1) {
     const opened =
       openId && row.guestIds.includes(openId) && !ownRow.has(openId) ? byId.get(openId) : undefined;

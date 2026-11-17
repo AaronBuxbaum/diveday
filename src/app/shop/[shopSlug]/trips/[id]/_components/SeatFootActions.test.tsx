@@ -17,10 +17,10 @@ afterEach(cleanup);
  * this asks which control is flush; `button.test.ts` refuses the row bleed.
  */
 describe("the seat's foot row sits on the text column through flush", () => {
-  it("flushes Create order, the first control, and leaves Remove booking its padding", () => {
+  it("flushes Create order, the first control, and leaves Cancel booking its padding", () => {
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true });
 
-    const remove = screen.getByRole("button", { name: "Remove booking" });
+    const remove = screen.getByRole("button", { name: "Cancel booking" });
     const order = screen.getByRole("link", { name: "Create order" });
     expect(rendersFlush(order, "link", "sm")).toBe(true);
     expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(false);
@@ -35,14 +35,14 @@ describe("the seat's foot row sits on the text column through flush", () => {
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true, canManageOrders: false });
 
     expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();
-    const remove = screen.getByRole("button", { name: "Remove booking" });
+    const remove = screen.getByRole("button", { name: "Cancel booking" });
     expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
   });
 
-  it("flushes Remove booking when it is the only control on the row", () => {
+  it("flushes Cancel booking when it is the only control on the row", () => {
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: false });
 
-    const remove = screen.getByRole("button", { name: "Remove booking" });
+    const remove = screen.getByRole("button", { name: "Cancel booking" });
     expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();
     expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
     expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
@@ -50,7 +50,7 @@ describe("the seat's foot row sits on the text column through flush", () => {
 });
 
 /**
- * **"Move to another departure"** (ADR 20261013-staff-move-a-seat): offered on
+ * **"Move to another trip"** (ADR 20261013-staff-move-a-seat): offered on
  * a booked seat when the page found somewhere to go, as one select of
  * departures already worded with their zone, and never on a seat the day has
  * already recorded.
@@ -76,7 +76,7 @@ describe("the move to another departure", () => {
   it("offers the departures on a booked seat", () => {
     renderRoster({ ...fixtures, roster: [ready], moveSeat });
 
-    expect(screen.getByText("Move to another departure")).toBeInTheDocument();
+    expect(screen.getByText("Move to another trip")).toBeInTheDocument();
     const select = screen.getByLabelText("Departure");
     expect(select).toHaveAttribute("name", "toTripId");
     expect(screen.getByRole("option", { name: /8:00 AM EDT/ })).toHaveValue("t-2");
@@ -86,7 +86,7 @@ describe("the move to another departure", () => {
   it("is absent when the page found nowhere to go", () => {
     renderRoster({ ...fixtures, roster: [ready] });
 
-    expect(screen.queryByText("Move to another departure")).toBeNull();
+    expect(screen.queryByText("Move to another trip")).toBeNull();
   });
 
   /**
@@ -104,17 +104,17 @@ describe("the move to another departure", () => {
       },
     };
     renderRoster({ ...fixtures, roster: [turnedAway], moveSeat });
-    expect(screen.getByText("Move to another departure")).toBeInTheDocument();
+    expect(screen.getByText("Move to another trip")).toBeInTheDocument();
     cleanup();
     renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: { ...moveSeat, started: true } });
-    expect(screen.queryByText("Move to another departure")).toBeNull();
+    expect(screen.queryByText("Move to another trip")).toBeNull();
     cleanup();
     const departed = { ...moveSeat, started: true, departed: true };
     renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: departed });
-    expect(screen.queryByText("Move to another departure")).toBeNull();
+    expect(screen.queryByText("Move to another trip")).toBeNull();
     cleanup();
     renderRoster({ ...fixtures, roster: [ready], moveSeat: departed });
-    expect(screen.queryByText("Move to another departure")).toBeNull();
+    expect(screen.queryByText("Move to another trip")).toBeNull();
   });
 
   it("is absent on a checked-in seat", () => {
@@ -122,7 +122,7 @@ describe("the move to another departure", () => {
     const checkedIn = { ...ready, checkedIn: true };
     renderRoster({ ...fixtures, roster: [checkedIn], moveSeat });
 
-    expect(screen.queryByText("Move to another departure")).toBeNull();
+    expect(screen.queryByText("Move to another trip")).toBeNull();
   });
 });
 
@@ -139,14 +139,14 @@ describe("Remove on a diver marked aboard at sea", () => {
       aboardAtSea: new Map([[ready.booking.id, "on_the_water"]]),
     });
 
-    const remove = screen.getByText("Remove booking");
+    const remove = screen.getByText("Cancel booking");
     fireEvent.click(remove);
     expect(
       screen.getByText(
         "Rene Marsh sailed on this departure, so the booking stays. To give money back, refund their order.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Yes, remove booking" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Yes, cancel booking" })).toBeNull();
     // Not a form's control: nothing behind this Remove can post the removal.
     expect(remove.closest("form")).toBeNull();
   });
@@ -158,7 +158,7 @@ describe("Remove on a diver marked aboard at sea", () => {
       aboardAtSea: new Map([[ready.booking.id, "uncounted"]]),
     });
 
-    const remove = screen.getByText("Remove booking");
+    const remove = screen.getByText("Cancel booking");
     fireEvent.click(remove);
     expect(
       screen.getByText(
@@ -176,8 +176,8 @@ describe("Remove on a diver marked aboard at sea", () => {
       aboardAtSea: new Map([["someone-else", "on_the_water"]]),
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove booking" }));
-    expect(screen.getByRole("button", { name: "Yes, remove booking" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel booking" }));
+    expect(screen.getByRole("button", { name: "Yes, cancel booking" })).toBeInTheDocument();
   });
 });
 
@@ -212,7 +212,7 @@ describe("a course seat that carries a charter seat", () => {
 
     const notes = screen.getAllByText(/is booked on Deep wall · .* because this course gets them/);
     expect(notes).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "Remove booking" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel booking" }));
     expect(
       screen.getAllByText(/is booked on Deep wall · .* because this course gets them/),
     ).toHaveLength(2);
@@ -220,7 +220,7 @@ describe("a course seat that carries a charter seat", () => {
 
   it("says nothing on a seat that carries none", () => {
     renderRoster({ ...fixtures, roster: [ready], moveSeat });
-    fireEvent.click(screen.getByRole("button", { name: "Remove booking" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel booking" }));
     expect(screen.queryByText(/because this course gets them/)).toBeNull();
   });
 });

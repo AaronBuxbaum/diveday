@@ -395,9 +395,9 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   await page.waitForURL(/\/trips\/[^/?]+\?add=1/);
   await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeFocused();
 
-  // ── Leg 4. Navigate to Add diver, type the diver in and seat them.
+  // ── Leg 4. Navigate to Add a guest, type the diver in and seat them.
   await beginWalk(page);
-  await tabUntil(page, /"Add diver"/, { limit: 25, where: "diver search" });
+  await tabUntil(page, /"Add a guest"/, { limit: 25, where: "diver search" });
   await page.keyboard.press("Enter");
   await page.waitForURL(/\/divers\?add=1&/);
   await expect(page.getByRole("heading", { level: 2, name: "Add a diver" })).toBeFocused();

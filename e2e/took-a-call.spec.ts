@@ -45,11 +45,11 @@ async function fullDeparture(page: Page): Promise<string> {
   });
   await openTripFromBoard(page, title);
   // Tomorrow's boat is inside the arrivals window, where "Add a diver" is one
-  // search field and a booked seat is its empty result's "Add diver".
+  // search field and a booked seat is its empty result's "Add a guest".
   const find = page.getByRole("searchbox", { name: "Find a returning diver" });
   await find.fill("Fills The Boat");
   await find.press("Enter");
-  await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
+  await page.getByRole("link", { name: "Add a guest", exact: true }).first().click();
   await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Fills The Boat");
   await page.getByLabel("Email").fill(`call-fills-${e2eNow().getTime()}@example.com`);

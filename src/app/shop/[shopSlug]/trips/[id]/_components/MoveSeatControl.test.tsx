@@ -5,7 +5,7 @@ import { MoveSeatControl } from "./MoveSeatControl";
 
 afterEach(cleanup);
 const copy = {
-  trigger: "Move to another departure",
+  trigger: "Move to another trip",
   label: "Departure",
   note: "Same kind of departure",
   choose: "Choose a departure",

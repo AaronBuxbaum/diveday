@@ -66,7 +66,7 @@ describe("AddDiverSection", () => {
     );
 
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Add diver" }).at(-1)).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "Add a guest" }).at(-1)).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers?add=1&surface=departure&tripId=trip-1",
     );
@@ -86,10 +86,10 @@ describe("AddDiverSection", () => {
       timeZone: "America/Cancun",
     };
     const { rerender } = render(<AddDiverSection context={{ ...props, query: "" }} />);
-    expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Add a guest" })).toHaveLength(1);
     rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
     // An empty result carries the door itself, so the search draws none beside it.
-    expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Add a guest" })).toHaveLength(1);
   });
 
   it("offers waitlist addition directly when trip is full", () => {
@@ -113,7 +113,7 @@ describe("AddDiverSection", () => {
 
     // Someone new is still one tap away, onto who's waiting.
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Add a guest" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers?add=1&surface=departure&tripId=trip-1&waitlist=true",
     );
@@ -168,7 +168,7 @@ describe("AddDiverSection", () => {
     );
     expect(screen.getByText("The boat is full.")).toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).toBeNull();
-    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Add a guest" })).toBeNull();
     expect(screen.queryByText("Ana Reyes")).toBeNull();
   });
 
@@ -230,7 +230,7 @@ describe("AddDiverSection", () => {
       "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&tripId=trip-1&waitlist=true",
     );
     // The empty result is the door; the search does not draw a second one.
-    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Add a guest" })).toBeNull();
   });
 
   it("offers direct add-diver link with prefill when no matches are found", () => {
@@ -253,7 +253,7 @@ describe("AddDiverSection", () => {
     );
 
     expect(screen.getByText("No returning diver matches “Nobody Here”.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Add a guest" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers?add=1&name=Nobody+Here&surface=departure&tripId=trip-1",
     );
@@ -284,7 +284,7 @@ describe("AddDiverSection", () => {
     );
 
     expect(screen.getByText("Avery Diver")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Add a guest" })).toHaveLength(1);
     expect(screen.queryByText("Not listed?")).toBeNull();
   });
 });

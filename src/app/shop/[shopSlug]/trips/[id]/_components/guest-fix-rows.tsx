@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { buttonClass } from "@/components/ui/button";
+import type { STAFF_RE_ENTRY_KEYS } from "@/features/dive-intent";
 import {
   type AdvisoryReason,
   type FixGuest,
@@ -14,7 +15,9 @@ import {
 } from "@/features/trip-fix-list";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { staffParticipantTypeLabel } from "@/i18n/staff-participant-labels";
+import { formatMoneyCents } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { firstNameOf } from "@/lib/person-name";
 import { diverPhotoDisplayPath } from "@/lib/person-photo";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import type { FixListGuest, FixListNamePart, FixListRow, FixListSection } from "./GuestFixList";
@@ -35,6 +38,28 @@ const LINE_REASONS: Readonly<Record<string, AdvisoryReason>> = {
   waiver: "waiver_unsigned",
   payment: "payment_unpaid",
   contact: "contact_missing",
+};
+
+/** The short phrase each re-entry ask is said with on a row (domain review of layer B, F2). */
+const RE_ENTRY_PHRASE_KEYS = {
+  deck_word: "trips.fixList.reEntry.deckWord",
+  easy_first_dive: "trips.fixList.reEntry.easyFirstDive",
+  refresher_course: "trips.fixList.reEntry.refresherCourse",
+} as const satisfies Record<keyof typeof STAFF_RE_ENTRY_KEYS, StaffMessageKey>;
+
+/**
+ * Which part of the trip's day the list is drawn for (ADR 20261117-trip-page-clock):
+ * `filling` days ahead (one quiet Booked card), `ready` the day before (the
+ * remote remedies), `checkin` at the desk, `after` once the boat has left.
+ */
+export type FixListPhase = "filling" | "ready" | "checkin" | "after";
+
+/** A trip-level fix: what holds the whole boat up, and the door to it. */
+export type TripFix = {
+  key: string;
+  text: string;
+  tone: "danger" | "warning";
+  action: { href: string; label: string };
 };
 
 const REMEDY_KEYS: Readonly<Record<Exclude<FixRemedy, "send_waiver">, StaffMessageKey>> = {
@@ -60,6 +85,10 @@ type Seat = {
   /** Whom this guest travels with, named. */
   party: string | null;
   sendWaiver: ReactNode | null;
+  /** A link can reach this guest alone, so a group send may include them. */
+  waiverSendable: boolean;
+  /** What a payment fix would take, formatted in the shop's currency. */
+  owed: string | null;
   cardsHref: string;
   /** The depth sentence this guest shares with much of the boat, if any. */
   sharedDepth: string | null;
@@ -115,26 +144,31 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
   // counter guest's release is signed through its queue, on the opened guest.
   const reachable = Boolean(person.email) || rows.textableBookings.has(booking.id);
   const control = seat.waiverControl;
-  const sendWaiver =
-    control.action && reachable && !partyLead && !seat.identityUnconfirmed ? (
-      <WaiverSendControl
-        surface="roster"
-        tripId={trip.tripId}
-        bookingIds={[booking.id]}
-        label={control.label}
-        pendingLabel={
-          control.action === "send" ? t("words.busy.sending") : t("trips.roster.resending")
-        }
-        confirmMessage={
-          control.confirm
-            ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
-            : undefined
-        }
-        className={buttonClass({ variant: "primary", size: "sm" })}
-        wrapperClassName=""
-        copy={waiverSendCopy(t)}
-      />
-    ) : null;
+  const waiverSendable = Boolean(
+    control.action && reachable && !partyLead && !seat.identityUnconfirmed,
+  );
+  const sendWaiver = waiverSendable ? (
+    <WaiverSendControl
+      surface="roster"
+      tripId={trip.tripId}
+      bookingIds={[booking.id]}
+      label={control.label}
+      pendingLabel={
+        control.action === "send" ? t("words.busy.sending") : t("trips.roster.resending")
+      }
+      confirmMessage={
+        control.confirm
+          ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
+          : undefined
+      }
+      className={buttonClass({ variant: "primary", size: "sm" })}
+      wrapperClassName=""
+      copy={waiverSendCopy(t)}
+    />
+  ) : null;
+  const { amountCents, currency } = seat.paymentMark;
+  const owed =
+    amountCents && amountCents > 0 ? formatMoneyCents(amountCents, currency, trip.locale) : null;
   return {
     entry,
     guest: {
@@ -155,23 +189,42 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
         )
       : null,
     sendWaiver,
+    waiverSendable,
+    owed,
     cardsHref: `/shop/${trip.shopSlug}/divers/${person.id}#cards`,
     sharedDepth: seat.depthShared && seat.depthText !== null ? seat.depthText : null,
   };
 }
 
 /**
- * **The guest list's sections and rows** for `GuestFixList`, in `mode`:
- * `checkin` while the desk is open (Can't board yet, To come with Check in,
- * Worth a minute, then Here folded), `all` otherwise (Can't board yet, Worth a
- * minute, then everyone else folded). Released guests fold under Not here and
- * Turned away.
+ * **The guest list's sections and rows** for `GuestFixList`, by phase:
+ *
+ * - `checkin`: Can't board yet, To come with Check in, Worth a minute, then
+ *   Here folded.
+ * - `ready`: Can't board yet and Worth a minute with the remote remedies (send
+ *   the waiver again, call), then "N guests are ready" with the crew line.
+ * - `filling`: one quiet Booked card: everyone fine as one counted line, then
+ *   whoever will need something later, without a button.
+ * - `after`: Can't board yet, Worth a minute, then everyone else folded.
+ *
+ * Released guests fold under Not here and Turned away. A trip-level fix
+ * (`tripFixes`) leads its group.
  */
 export function guestFixRows(
   context: RosterRowContext,
-  { mode }: { mode: FixListMode },
+  {
+    phase,
+    tripFixes = [],
+    after,
+  }: {
+    phase: FixListPhase;
+    tripFixes?: readonly TripFix[];
+    /** Quiet lines under the ready guests ("Crew and plan are set"). */
+    after?: ReactNode;
+  },
 ): { sections: FixListSection[]; guests: FixListGuest[]; deskWorkOpen: boolean } {
   const { t, rows, arrival, trip } = context;
+  const mode: FixListMode = phase === "checkin" && arrival ? "checkin" : "all";
   const seats = rows.roster.map((entry) => seatOf(entry, context));
   const byId = new Map(seats.map((seat) => [seat.guest.id, seat]));
   const list = fixListOf(
@@ -192,13 +245,37 @@ export function guestFixRows(
       .filter(Boolean)
       .join(" · ") || null;
 
+  /** One reason in the row's words: the amount when money is the reason, the ask when it is one. */
+  const reasonText = (reason: FixReason, seat: Seat | undefined): string => {
+    if (reason === "payment_due" && seat?.owed)
+      return t("trips.fixList.reason.paymentDueAmount", { amount: seat.owed });
+    const ask = seat?.entry.booking.reEntryAsk;
+    if (reason === "re_entry_ask" && ask) return t(RE_ENTRY_PHRASE_KEYS[ask]);
+    return t(reasonKey(reason));
+  };
+
   const phraseOf = (item: FixItem, seat: Seat | undefined): string | null => {
     if (!item.reason) return seat ? kindPhrase(seat) : null;
-    const reason = t(reasonKey(item.reason));
+    const reason = reasonText(item.reason, seat);
     return item.more > 0 ? t("trips.fixList.more", { reason, count: item.more }) : reason;
   };
 
-  const remedyControl = (remedy: FixRemedy, seat: Seat | undefined) => {
+  const callControl = (seat: Seat) => {
+    const phone = seat.entry.person.phone;
+    if (!phone) return null;
+    return (
+      <a href={`tel:${phone}`} className={buttonClass({ variant: "primary", size: "sm" })}>
+        {t("trips.fixList.remedy.call", {
+          name: firstNameOf(seat.entry.person.fullName, seat.entry.person.fullName),
+        })}
+      </a>
+    );
+  };
+
+  const remedyControl = (
+    remedy: FixRemedy,
+    seat: Seat | undefined,
+  ): { control?: ReactNode; openLabel?: string; panelHoldsControl?: boolean } => {
     if (remedy === "send_waiver" && seat?.sendWaiver)
       return { control: seat.sendWaiver, panelHoldsControl: true };
     if (remedy === "review_cards" && seat)
@@ -209,30 +286,37 @@ export function guestFixRows(
           </Link>
         ),
       };
+    if (remedy === "take_payment" && seat?.owed)
+      return { openLabel: t("trips.fixList.remedy.takeAmount", { amount: seat.owed }) };
+    // The day before, what nobody can do from the desk is a call away.
+    if (phase === "ready" && seat && (remedy === "open" || remedy === "fit_gear")) {
+      const call = callControl(seat);
+      if (call) return { control: call };
+    }
     return { openLabel: t(REMEDY_KEYS[remedy === "send_waiver" ? "open" : remedy]) };
   };
 
-  const fixRow = (item: FixItem, tone: FixListRow["tone"], key: string): FixListRow => {
-    const seat = item.guestIds.length === 1 ? byId.get(item.guestIds[0] ?? "") : undefined;
-    const {
-      control = null,
-      openLabel = null,
-      panelHoldsControl = false,
-    } = remedyControl(item.remedy, seat) as {
-      control?: ReactNode;
-      openLabel?: string;
-      panelHoldsControl?: boolean;
-    };
-    return {
-      key,
-      guestIds: item.guestIds,
-      names: item.guestIds.length > 1 ? nameParts(item.guestIds) : undefined,
-      phrase: phraseOf(item, seat),
-      tone,
-      control: seat ? control : null,
-      openLabel: seat ? openLabel : null,
-      panelHoldsControl,
-    };
+  /** One send that reaches every guest a shared waiver row names, when a link reaches each. */
+  const askAll = (item: FixItem): ReactNode | null => {
+    const group = item.guestIds.map((id) => byId.get(id));
+    if (
+      item.remedy !== "send_waiver" ||
+      group.length < 2 ||
+      !group.every((seat) => seat?.waiverSendable)
+    )
+      return null;
+    return (
+      <WaiverSendControl
+        surface="roster"
+        tripId={trip.tripId}
+        bookingIds={item.guestIds}
+        label={t("trips.fixList.askAll", { count: item.guestIds.length })}
+        pendingLabel={t("words.busy.sending")}
+        className={buttonClass({ variant: "secondary", size: "sm" })}
+        wrapperClassName=""
+        copy={waiverSendCopy(t)}
+      />
+    );
   };
 
   const nameParts = (ids: string[]): FixListNamePart[] => {
@@ -243,6 +327,30 @@ export function guestFixRows(
       next += 1;
       return { id, text: part.value };
     });
+  };
+
+  const fixRow = (item: FixItem, tone: FixListRow["tone"], key: string): FixListRow => {
+    const seat = item.guestIds.length === 1 ? byId.get(item.guestIds[0] ?? "") : undefined;
+    const {
+      control = null,
+      openLabel = null,
+      panelHoldsControl = false,
+    } = remedyControl(item.remedy, seat);
+    const phrase = phraseOf(item, seat);
+    return {
+      key,
+      guestIds: item.guestIds,
+      names: item.guestIds.length > 1 ? nameParts(item.guestIds) : undefined,
+      // A guest who arrived and then went blocked says so (domain review of layer B, F3).
+      phrase:
+        tone === "danger" && seat?.guest.checkedIn && phrase
+          ? t("trips.fixList.here", { reason: phrase })
+          : phrase,
+      tone,
+      control: seat ? control : askAll(item),
+      openLabel: seat ? openLabel : null,
+      panelHoldsControl,
+    };
   };
 
   /** A plain row: the guest's name, what they come as, and the desk's tap. */
@@ -266,7 +374,7 @@ export function guestFixRows(
     rows: ids.map((id) => plainRow(id)),
   });
 
-  /** Each depth sentence much of the boat shares: one row naming everyone it is about. */
+  /** Each depth note much of the boat shares: one row naming everyone, in a few words. */
   const sharedDepthRows = (): FixListRow[] => {
     const bySentence = new Map<string, string[]>();
     for (const seat of seats) {
@@ -276,51 +384,136 @@ export function guestFixRows(
         seat.guest.id,
       ]);
     }
+    // The whole sentence is on each opened guest; the row says what it is about.
     return [...bySentence].map(([sentence, ids]) => ({
       key: `depth:${sentence}`,
       guestIds: ids,
       names: nameParts(ids),
-      phrase: sentence,
+      phrase: t(reasonKey("depth")),
       tone: "warning",
       control: null,
       openLabel: null,
     }));
   };
 
-  const sections: FixListSection[] = [
-    {
-      key: "cantBoard",
-      label: t("trips.fixList.groups.cantBoard"),
-      tone: "danger",
-      rows: list.blocking.map((item) => fixRow(item, "danger", item.guestIds.join())),
-    },
-    {
-      key: "toCome",
-      label: t("trips.fixList.groups.toCome"),
-      tone: "default",
-      rows: list.toCome.map((item) => ({
-        ...plainRow(item.guestIds[0] ?? "", phraseOf(item, byId.get(item.guestIds[0] ?? ""))),
-        tone: item.reason ? ("warning" as const) : ("muted" as const),
-      })),
-    },
-    {
-      key: "worth",
-      label: t("trips.fixList.groups.worth"),
-      tone: "default",
-      rows: [
-        ...sharedDepthRows(),
-        ...list.worthAMinute.map((item) => fixRow(item, "warning", item.guestIds.join())),
-      ],
-    },
-    folded(
-      "fine",
-      t(mode === "checkin" ? "trips.fixList.groups.here" : "trips.fixList.groups.fine"),
-      list.fine,
-      "success",
-    ),
+  const tripRows = (tone: TripFix["tone"]): FixListRow[] =>
+    tripFixes
+      .filter((fix) => fix.tone === tone)
+      .map((fix) => ({
+        key: `trip:${fix.key}`,
+        guestIds: [],
+        title: fix.text,
+        phrase: null,
+        tone,
+        control: (
+          <Link
+            href={fix.action.href}
+            className={buttonClass({
+              variant: tone === "danger" ? "primary" : "secondary",
+              size: "sm",
+            })}
+          >
+            {fix.action.label}
+          </Link>
+        ),
+        openLabel: null,
+      }));
+
+  const released = [
     folded("notHere", t("trips.fixList.groups.notHere"), list.notHere, "none"),
     folded("turnedAway", t("trips.fixList.groups.turnedAway"), list.turnedAway, "none"),
   ];
+
+  const cantBoard: FixListSection = {
+    key: "cantBoard",
+    label: t("trips.fixList.groups.cantBoard"),
+    tone: "danger",
+    rows: [
+      ...tripRows("danger"),
+      ...list.blocking.map((item) => fixRow(item, "danger", item.guestIds.join())),
+    ],
+  };
+  const worth: FixListSection = {
+    key: "worth",
+    label: t("trips.fixList.groups.worth"),
+    tone: "default",
+    rows: [
+      ...tripRows("warning"),
+      ...sharedDepthRows(),
+      ...list.worthAMinute.map((item) => fixRow(item, "warning", item.guestIds.join())),
+    ],
+  };
+
+  const sections: FixListSection[] =
+    phase === "filling"
+      ? [
+          {
+            key: "booked",
+            label: t("trips.fixList.booked"),
+            tone: "default",
+            summary: {
+              label: t("trips.clock.sentence.guestCount", { count: list.fine.length }),
+              phrase: t("trips.fixList.nothingYet"),
+              toggle: t("trips.fixList.allGuests"),
+              rows: list.fine.map((id) => plainRow(id)),
+            },
+            // Days ahead nothing is urgent: each reason is said quietly, and the
+            // guest opens in place for whoever wants to act on it now.
+            rows: [...list.blocking, ...list.worthAMinute].map((item) => ({
+              ...fixRow(item, "warning", item.guestIds.join()),
+              control: null,
+              openLabel: null,
+            })),
+          },
+          ...released,
+        ]
+      : phase === "ready"
+        ? [
+            cantBoard,
+            worth,
+            {
+              key: "fine",
+              label: t("trips.fixList.groups.fine"),
+              tone: "default",
+              headless: true,
+              summary: {
+                label: t("trips.fixList.ready", { count: list.fine.length }),
+                phrase: t("trips.fixList.readyPhrase"),
+                toggle: t("trips.fixList.allGuests"),
+                rows: list.fine.map((id) => plainRow(id)),
+              },
+              after,
+              rows: [],
+            },
+            ...released,
+          ]
+        : [
+            cantBoard,
+            ...(mode === "checkin"
+              ? [
+                  {
+                    key: "toCome",
+                    label: t("trips.fixList.groups.toCome"),
+                    tone: "default" as const,
+                    rows: list.toCome.map((item) => ({
+                      ...plainRow(
+                        item.guestIds[0] ?? "",
+                        phraseOf(item, byId.get(item.guestIds[0] ?? "")),
+                      ),
+                      tone: item.reason ? ("warning" as const) : ("muted" as const),
+                    })),
+                  },
+                ]
+              : []),
+            worth,
+            folded(
+              "fine",
+              t(mode === "checkin" ? "trips.fixList.groups.here" : "trips.fixList.groups.fine"),
+              list.fine,
+              "success",
+            ),
+            ...released,
+          ];
 
   const guests: FixListGuest[] = seats.map(({ entry }) => {
     const seat = rosterSeat(entry, false, context);

@@ -12,6 +12,7 @@ import {
   clockPhaseOf,
   nextMeetingStart,
   phaseWhens,
+  readyFrom,
   shownClockPhase,
 } from "@/lib/trip-clock";
 import { boatStageOf, finalHomeSaid, type tripPhaseOf } from "@/lib/trip-phase";
@@ -78,10 +79,15 @@ export function tripFrame({
   ).length;
   const capacity = seatsOnSale(trip).capacity;
   const nextStartsAt = nextMeetingStart(clock);
+  const dockBy = dockCallAt(nextStartsAt, shop.dockCallMinutes);
   return {
     current,
     shown,
     capacity,
+    /** When guests are wanted at the dock: the shop's call, else the departure. */
+    dockBy: dockBy ?? nextStartsAt,
+    /** When Getting ready opens: shop-local midnight of the day before. */
+    readyFrom: readyFrom(nextStartsAt, timeZone),
     // **Roll call has a door from Check-in on, and on every cancelled trip**: a
     // blow-out cancels the trip and leaves every booking active, so the crew may
     // still need the roll call to put people back ashore (dive-domain review
@@ -108,7 +114,7 @@ export function tripFrame({
         startsAt: trip.startsAt,
         endsAt: trip.endsAt,
         nextStartsAt,
-        dockCallAt: dockCallAt(nextStartsAt, shop.dockCallMinutes),
+        dockCallAt: dockBy,
         booked: trip.booked,
         capacity,
         guests: active.length,

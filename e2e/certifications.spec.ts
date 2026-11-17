@@ -162,7 +162,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
 
   const diverName = `Cert Test Diver ${e2eNow().getTime()}`;
   const diverEmail = `cert-test-${e2eNow().getTime()}@example.com`;
-  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.getByRole("link", { name: "Add a guest" }).first().click();
   await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill(diverName);
   await page.getByLabel("Email").fill(diverEmail);

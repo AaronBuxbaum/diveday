@@ -211,8 +211,8 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   // sits behind the card's own "Details" disclosure.
   // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
   await openBookingActions(diverRow);
-  await diverRow.getByRole("button", { name: "Remove booking" }).click();
-  await diverRow.getByRole("button", { name: "Yes, remove booking" }).click();
+  await diverRow.getByRole("button", { name: "Cancel booking" }).click();
+  await diverRow.getByRole("button", { name: "Yes, cancel booking" }).click();
   await expect(staffPage).toHaveURL(
     (url) =>
       url.pathname === `/shop/blue-mantis/trips/${tripId}` &&

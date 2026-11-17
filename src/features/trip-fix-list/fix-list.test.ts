@@ -22,7 +22,7 @@ describe("every reason the roster knows", () => {
   it.each(BLOCKER_REASONS)("blocker %s lands in Can't board yet with a remedy", (code) => {
     const list = fixListOf([guest("a", { blockers: [code] })], { mode: "all" });
     expect(list.blocking).toEqual([
-      { guestIds: ["a"], reason: code, more: 0, remedy: remedyFor(code), secondRemedy: null },
+      { guestIds: ["a"], reason: code, more: 0, remedy: remedyFor(code) },
     ]);
     expect(list.worthAMinute).toEqual([]);
     expect(list.fine).toEqual([]);
@@ -77,7 +77,6 @@ describe("the blocking group is exactly what readiness refuses", () => {
       reason: "medical_review",
       more: 2,
       remedy: "review_medical",
-      secondRemedy: "send_waiver",
     });
   });
 
@@ -128,6 +127,28 @@ describe("worth a minute", () => {
   it("folds everyone with nothing to say into fine", () => {
     const list = fixListOf([guest("a"), guest("b", { checkedIn: true })], { mode: "all" });
     expect(list.fine).toEqual(["a", "b"]);
+  });
+});
+
+describe("what the crew talks through ranks above what the desk owes", () => {
+  it("names the depth before the money on a guest not here yet (domain review F1)", () => {
+    const list = fixListOf([guest("a", { advisories: ["payment_unpaid", "depth"] })], {
+      mode: "checkin",
+    });
+    expect(list.toCome[0]?.reason).toBe("depth");
+  });
+
+  it.each([
+    "earlier_refusal",
+    "earlier_referral",
+    "depth",
+    "recency",
+    "re_entry_ask",
+    "drysuit",
+  ] as const)("%s outranks every desk advisory", (crew) => {
+    for (const desk of ["waiver_unsigned", "payment_unpaid", "contact_missing"] as const) {
+      expect(reasonRank(crew)).toBeLessThan(reasonRank(desk));
+    }
   });
 });
 

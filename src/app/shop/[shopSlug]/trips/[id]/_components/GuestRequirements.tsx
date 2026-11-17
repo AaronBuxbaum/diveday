@@ -5,7 +5,12 @@ import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import type { RowReasonLines } from "./roster-row-reasons";
 import type { RosterSeat } from "./roster-seat";
 
-/** Requirement families share a remedy; every underlying blocker stays visible. */
+/**
+ * What fixes an opened guest, first (drawing `24-clock-guest-opened`).
+ * Requirement families share a remedy; every underlying blocker stays visible.
+ * The row above already says whether they can board, so no heading repeats it,
+ * and a missing contact points at its form, the "If needed" fact below.
+ */
 export function GuestRequirements({
   lines,
   blockers,
@@ -16,6 +21,7 @@ export function GuestRequirements({
   lines: RowReasonLines["reasonLines"];
   blockers: RosterSeat["blockerTexts"];
   payment: ReactNode;
+  /** The door to the contact form among the facts below. */
   contact: ReactNode;
   t: StaffTranslator;
 }) {
@@ -64,7 +70,7 @@ export function GuestRequirements({
     required.set(family, row);
   }
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {([true, false] as const).map((blocking) => {
         const rows = [...required].filter(([, row]) => row.blocking === blocking);
         if (!rows.length && (blocking || !preparation.length)) return null;
@@ -75,12 +81,9 @@ export function GuestRequirements({
               blocking ? "trips.folio.beforeBoarding" : "trips.roster.informationAndPreparation",
             )}
           >
-            <p className={`text-sm font-semibold ${blocking ? "text-danger" : "text-muted"}`}>
-              {t(blocking ? "trips.roster.cannotBoard" : "trips.roster.informationAndPreparation")}
-            </p>
             <div className="divide-y divide-border">
               {rows.map(([family, row]) => (
-                <section key={family} className="py-4 first:pt-3">
+                <section key={family} className="py-3 first:pt-0">
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-5 gap-y-3">
                     <div className="min-w-0">
                       <h3 className={ITEM_TITLE_CLASS}>{titles[family]}</h3>

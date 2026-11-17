@@ -428,9 +428,9 @@ test.describe("undoing a removal after the trip is canceled", () => {
     // check `open` before clicking, so the arm-tap needs no retry (#3299).
     await expect(row).toBeVisible();
     await openBookingActions(row);
-    await row.getByRole("button", { name: "Remove booking" }).click();
-    await expect(row.getByRole("button", { name: "Yes, remove booking" })).toBeVisible();
-    await row.getByRole("button", { name: "Yes, remove booking" }).click();
+    await row.getByRole("button", { name: "Cancel booking" }).click();
+    await expect(row.getByRole("button", { name: "Yes, cancel booking" })).toBeVisible();
+    await row.getByRole("button", { name: "Yes, cancel booking" }).click();
     const removedNotice = page.getByRole("status").filter({ hasText: "Booking canceled" });
     await expect(removedNotice).toContainText("Booking canceled. The seat is open again.");
     const undo = removedNotice.getByRole("button", { name: "Undo" });
@@ -636,7 +636,7 @@ async function seededTrip(
  * `/shop/<slug>/trips/<id>/print` is the sheet a captain prints and carries.
  * It composes whole pages, so it inherits whatever controls those pages have —
  * and under print media it carried **42 buttons, 9 selects, 48 inputs and 13
- * textareas**, including "Cancel trip", "Remove booking" nine times, and a bare
+ * textareas**, including "Cancel trip", "Cancel booking" nine times, and a bare
  * "×" (issue #814). A control printed beside a diver's name looks fillable and
  * records nothing, on the one surface where the difference between a recorded
  * head count and an unrecorded one is the whole product.

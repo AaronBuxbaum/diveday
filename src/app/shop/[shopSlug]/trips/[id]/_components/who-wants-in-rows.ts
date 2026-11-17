@@ -17,8 +17,8 @@ import {
   ranksBelow,
   reviewLastMinuteRecipients,
 } from "@/lib/interests";
+import type { WhoWantsInGroup } from "./FillSeatsCard";
 import type { Waitlist } from "./types";
-import type { WhoWantsInGroup } from "./WhoWantsInPanel";
 
 /**
  * One row of **Who wants in**, in the words the panel prints. Every group

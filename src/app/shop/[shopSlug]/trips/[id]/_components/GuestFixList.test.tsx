@@ -130,7 +130,7 @@ describe("at Check-in", () => {
       ]) as WaiverByBooking,
       rentalFit: ownGear(["b", "j"]),
       arrival: desk(["b", "j"]),
-      addDiverGroup: <p>add</p>,
+      addGuestHref: "#add-a-booking",
       selectedBookingId: null,
     });
     expect(within(group("toCome")).getByRole("button", { name: "Check in" })).toBeVisible();
@@ -177,17 +177,6 @@ describe("a guest opened in place", () => {
     expect(document.querySelectorAll("[data-opened-guest]")).toHaveLength(1);
     expect(document.querySelector('[data-opened-guest="b"]')).not.toBeNull();
   });
-
-  it("leaves the wait list's offers beside the list while a guest is open", () => {
-    renderRoster({
-      roster: [blocked],
-      readiness: blockers,
-      waivers,
-      whoWantsInGroup: <section aria-label="Who wants in">Ravi Menon · Offer a seat</section>,
-      selectedBookingId: "a",
-    });
-    expect(screen.getByRole("region", { name: "Who wants in" })).toBeVisible();
-  });
 });
 
 describe("a cancelled trip", () => {
@@ -203,5 +192,46 @@ describe("a cancelled trip", () => {
     expect(screen.queryByRole("link", { name: "Add a guest" })).toBeNull();
     expect(group("cantBoard")).not.toBeNull();
     expect(group("fine")).toHaveTextContent("Everyone else · Lena Fischer");
+  });
+});
+
+/** Domain review of layer B, F2: at Check-in the crew can read what the guest asked for. */
+describe("a guest easing back in, at Check-in", () => {
+  it("names the ask on the row and says it in full in the opened guest", () => {
+    const ivo = entry("i", "Ivo Marsh");
+    renderRoster({
+      roster: [{ ...ivo, booking: { ...ivo.booking, reEntryAsk: "easy_first_dive" } }],
+      readiness: new Map([["i", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["i", signedWaiver]]) as WaiverByBooking,
+      rentalFit: ownGear(["i"]),
+      arrival: desk(["i"]),
+      selectedBookingId: null,
+    });
+    expect(
+      within(group("toCome")).getByRole("button", { name: "Ivo Marsh" }),
+    ).toHaveAccessibleDescription("Wants an easy first dive");
+    fireEvent.click(screen.getByRole("button", { name: "Ivo Marsh" }));
+    const opened = document.querySelector('[data-opened-guest="i"]') as HTMLElement;
+    expect(within(opened).getByText("Asked for an easy first dive.")).toBeVisible();
+  });
+});
+
+/** Domain review of layer B, F3: a blocked guest who already arrived says so. */
+describe("a blocked guest who is already here", () => {
+  it("leads the phrase with Here", () => {
+    const arrived = entry("h", "Hana Ito", { checkedIn: true });
+    renderRoster({
+      roster: [arrived],
+      readiness: new Map([
+        ["h", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["h", signedWaiver]]) as WaiverByBooking,
+      rentalFit: ownGear(["h"]),
+      arrival: desk(["h"]),
+      selectedBookingId: null,
+    });
+    expect(
+      within(group("cantBoard")).getByRole("button", { name: "Hana Ito" }),
+    ).toHaveAccessibleDescription("Here · No card on file");
   });
 });

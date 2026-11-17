@@ -14,11 +14,10 @@ import { needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { signingDate } from "@/lib/guardian";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { issueCourseFormQrAction } from "../course-form-qr-action";
-import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 import { CourseFormsQrProvider } from "./CourseFormsQr";
 import { GuestFixList } from "./GuestFixList";
 import { guestFixRows } from "./guest-fix-rows";
-import { RosterGroup, RosterGroupBand } from "./RosterGroupBand";
+import { RosterGroupBand } from "./RosterGroupBand";
 import { RosterRow, type RosterRowContext } from "./RosterRow";
 import {
   groupRoster,
@@ -87,7 +86,7 @@ export function RosterSection({
   slots?: RosterSlots;
 }) {
   const { locale, shopTimezone } = trip;
-  const { whoWantsInGroup, suggestionsGroup, addDiverGroup, arrival, record } = slots;
+  const { arrival, record, phase = "after", tripFixes, afterReady, addGuestHref } = slots;
   const { roster } = rows;
   const t = staffTranslator(locale);
   const controls = waiverControls(t, { rehearsal: trip.rehearsal });
@@ -131,32 +130,15 @@ export function RosterSection({
     offersCreateOrder: trip.paymentsConnected && trip.canManageOrders,
   };
 
-  const hasTail = whoWantsInGroup != null || suggestionsGroup != null || addDiverGroup != null;
   // Before the boat is home: the fix list, at Check-in with the desk's taps.
-  const fixRows = record ? null : guestFixRows(context, { mode: arrival ? "checkin" : "all" });
+  const fixRows = record ? null : guestFixRows(context, { phase, tripFixes, after: afterReady });
+  const hasTripFixes = (tripFixes?.length ?? 0) > 0;
   // This departure's cards the browser extension can check, in roster order:
   // the whole of what its "Check all" may touch (H-20261008-cert-check-extension). Held seats are never
   // in the map (`getTripGuests`).
   const agencyCards = actions.agencyCheckAction
     ? roster.flatMap(({ person }) => rows.agencyCheckCardsByPerson?.get(person.id) ?? [])
     : [];
-  const overview = (
-    <>
-      {whoWantsInGroup}
-      {suggestionsGroup}
-      {/* One box, so `#add-diver` holds the form its links and specs
-              scope to; the box draws the group's rule (K-354). */}
-      {addDiverGroup ? (
-        <RosterGroup id="add-diver" label={t("trips.addDiver.heading")}>
-          {/* The masthead's "Add a booking" lands here (A31); the group
-                  keeps `#add-diver` for the doors elsewhere that open it. */}
-          <div id={ADD_A_BOOKING_ID} className="scroll-mt-20 px-4 py-5 sm:px-5">
-            {addDiverGroup}
-          </div>
-        </RosterGroup>
-      ) : null}
-    </>
-  );
   const section = (
     <CourseFormsQrProvider
       action={issueCourseFormQrAction.bind(null, trip.shopSlug, trip.tripId)}
@@ -186,36 +168,29 @@ export function RosterSection({
             <AgencyCheckAll cards={agencyCards} copy={agencyCheckAllCopy(t, agencyCards.length)} />
           </div>
         ) : null}
-        {fixRows && (roster.length > 0 || hasTail) ? (
+        {fixRows && (roster.length > 0 || hasTripFixes) ? (
           <div className="space-y-10">
             {/* Mounted with the rows, so a deep link scrolls to a row that exists. */}
             <ScrollToHash />
-            {roster.length > 0 ? (
-              <GuestFixList
-                sections={fixRows.sections}
-                guests={fixRows.guests}
-                top={arrival?.instrument?.(fixRows.deskWorkOpen)}
-                addGuest={
-                  addDiverGroup
-                    ? { href: `#${ADD_A_BOOKING_ID}`, label: t("trips.clock.addGuest") }
-                    : null
-                }
-                initialOpenId={
-                  rows.keepOpenBookingId ??
-                  rows.paymentMarkRetry?.bookingId ??
-                  rows.partyPreview?.leadBookingId
-                }
-                copy={{ close: t("trips.fixList.close") }}
-              />
-            ) : null}
-            {hasTail ? (
-              <div className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}>
-                {overview}
-              </div>
-            ) : null}
+            <GuestFixList
+              sections={fixRows.sections}
+              guests={fixRows.guests}
+              top={arrival?.instrument?.(fixRows.deskWorkOpen)}
+              addGuest={
+                addGuestHref && phase !== "filling"
+                  ? { href: addGuestHref, label: t("trips.clock.addGuest") }
+                  : null
+              }
+              initialOpenId={
+                rows.keepOpenBookingId ??
+                rows.paymentMarkRetry?.bookingId ??
+                rows.partyPreview?.leadBookingId
+              }
+              copy={{ close: t("trips.fixList.close") }}
+            />
           </div>
         ) : null}
-        {record && (roster.length > 0 || hasTail) ? (
+        {record && roster.length > 0 ? (
           // The finished departure's record: one card of hairline-ruled rows
           // under group bands that own the state words.
           <div className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}>
@@ -285,7 +260,6 @@ export function RosterSection({
               settled={false}
               context={context}
             />
-            {overview}
           </div>
         ) : null}
       </section>

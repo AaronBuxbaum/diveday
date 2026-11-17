@@ -138,15 +138,18 @@ const PRIORITY: readonly FixReason[] = [
   "payment_refunded",
   "requirements_not_configured",
   "readiness_unavailable",
+  // What the crew talks through before what the desk owes (domain review of
+  // layer B, F1): a row names one reason, and once the guest is here only the
+  // desk's own advisories stay, so a crew advisory ranked lower was never seen.
   "earlier_refusal",
   "earlier_referral",
-  "waiver_unsigned",
-  "payment_unpaid",
-  "contact_missing",
   "depth",
   "recency",
   "re_entry_ask",
   "drysuit",
+  "waiver_unsigned",
+  "payment_unpaid",
+  "contact_missing",
   "fit_needed",
 ];
 
@@ -166,7 +169,7 @@ export type FixGuest = {
   released: "not_here" | "turned_away" | null;
 };
 
-/** One line of the list: who, the one reason it names, and its remedies. */
+/** One line of the list: who, the one reason it names, and its remedy. The opened guest holds the rest. */
 export type FixItem = {
   guestIds: string[];
   /** Null on a guest to come with nothing to say. */
@@ -174,8 +177,6 @@ export type FixItem = {
   /** Further reasons the same guest has, said as a count. */
   more: number;
   remedy: FixRemedy;
-  /** The next reason's remedy, when it is a different door. */
-  secondRemedy: FixRemedy | null;
 };
 
 export type FixList = {
@@ -194,18 +195,11 @@ export type FixListMode = "checkin" | "all";
 function itemOf(id: string, reasons: readonly FixReason[]): FixItem {
   const ordered = [...new Set(reasons)].sort((a, b) => reasonRank(a) - reasonRank(b));
   const reason = ordered[0] ?? null;
-  const remedy = reason ? remedyFor(reason) : "open";
-  const second =
-    ordered
-      .slice(1)
-      .map(remedyFor)
-      .find((next) => next !== remedy) ?? null;
   return {
     guestIds: [id],
     reason,
     more: Math.max(0, ordered.length - 1),
-    remedy,
-    secondRemedy: second,
+    remedy: reason ? remedyFor(reason) : "open",
   };
 }
 

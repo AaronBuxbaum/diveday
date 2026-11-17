@@ -271,20 +271,16 @@
     "bookingRemovedCreditReturned": "Reserva eliminada. Se devolvió su crédito promocional para salidas."
   },
   "pulse": {
-    "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",
-    "aboard": "{count} a bordo",
-    "blocked": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "needsInstructor": "El curso necesita instructor",
     "overRatio": "Ratio de alumnos excedida: agrega un divemaster o AI",
     "overRatioInstructor": "Ratio de alumnos excedida: agrega un instructor",
     "overIntroRatio": "Ratio de bautismo excedida: agrega un instructor",
-    "needsYou": "Pendiente · {count}",
     "noRequirements": "Define los requisitos para que alguien pueda embarcar",
     "boatClash": "{boat} también está asignado a {departure}"
   },
   "detail": {
     "copyBookingLink": "Copiar enlace",
-    "linkCopyFailed": "No se pudo copiar. Selecciona el enlace de arriba.",
+    "linkCopyFailed": "Enlace de reserva para copiar",
     "meetingDaysSummary": "{count, plural, one {# día de encuentro} other {# días de encuentro}} · mismos instructores cada día",
     "dayLabel": "Día {number}: {date} · {timeRange}",
     "courseSession": "Sesión de curso · <course>{title}</course>",
@@ -484,8 +480,8 @@
     "addToWaitlist": "Agregar a quienes esperan",
     "addPersonToWaitlist": "Agregar a {name} a quienes esperan",
     "noMatchesHeading": "Ningún buceador habitual con ese nombre",
-    "addDiver": "Agregar buceador",
-    "addNewDiverAction": "Agregar buceador",
+    "addDiver": "Agregar un huésped",
+    "addNewDiverAction": "Agregar un huésped",
     "offerSeat": "Ofrecer una plaza",
     "offerSeating": "Ofreciendo…",
     "offerSeatAria": "Ofrecer a {name} una plaza en la salida",
@@ -674,7 +670,7 @@
     "sendNewWaiverConfirm": "Enviar la nueva exención",
     "sendNewWaiverMessage": "Envía a {name} una nueva exención por correo. La plaza sigue bloqueada hasta que la firme. La respuesta del médico queda archivada.",
     "refundEligibleUntil": "Reembolsable hasta {date}",
-    "removeBooking": "Eliminar reserva",
+    "removeBooking": "Cancelar reserva",
     "removeAboard": "{name} zarpó en esta salida, así que la reserva se mantiene. Para devolver el dinero, reembolsa su pedido.",
     "removeUncounted": "Nadie registró a {name} en el muelle, así que puede que haya ido en el barco. Si no vino, marca No embarcado en el manifiesto y luego elimina la reserva.",
     "moveSeat": "Mover a otra salida",
@@ -683,7 +679,7 @@
     "moveSeatPending": "Moviendo…",
     "moveSeatNote": "El pedido, el pago y la exención van con la plaza. No se cobra ni se reembolsa nada, y el buceador recibe el nuevo horario.",
     "moveSeatParty": "Esta plaza encabeza un grupo de {count}. Los {count} se mueven juntos y cada uno recibe el nuevo horario.",
-    "removeBookingConfirmButton": "Sí, eliminar reserva",
+    "removeBookingConfirmButton": "Sí, cancelar reserva",
     "rentalFitColumnHeading": "Equipo de alquiler",
     "resending": "Reenviando…",
     "reviewCertificationsLink": "Revisar certificaciones →",
@@ -756,7 +752,6 @@
     },
     "cannotBoard": "No puede embarcar",
     "informationAndPreparation": "Información y preparación",
-    "bookingActions": "Acciones de la reserva",
     "moveSeatChoose": "Elige una salida",
     "moveSeatAvailability": "{count, plural, one {# lugar disponible} other {# lugares disponibles}}",
     "moveSeatFull": "Llena",
@@ -884,9 +879,6 @@
   },
   "whoWantsIn": {
     "heading": "Quién quiere plaza · {count}",
-    "seatsOpen": "{count, plural, one {# plaza libre} other {# plazas libres}}",
-    "alreadyOffered": "{count} ya con oferta",
-    "description": "Aquí nadie tiene una plaza.",
     "groupDeparture": "Pidieron esta salida",
     "groupDate": "Pidieron esta fecha",
     "groupAnytime": "Disponibles en estas fechas",
@@ -1056,8 +1048,6 @@
     "stale": "El registro de seguridad cambió. Revisa el valor actual antes de corregirlo."
   },
   "folio": {
-    "recordFit": "Revisar tallas",
-    "assignEquipment": "Asignar equipo",
     "openProfile": "Abrir perfil del huésped",
     "beforeBoarding": "Antes de embarcar",
     "requirementWaiver": "Exención",
@@ -1123,7 +1113,59 @@
       "leavesTomorrow": "El barco sale mañana a las {time}.",
       "leavesInDays": "El barco sale en {count, plural, one {# día} other {# días}}."
     },
-    "addGuest": "Agregar huésped"
+    "addGuest": "Agregar huésped",
+    "quiet": {
+      "gear": "Equipo",
+      "crew": "Tripulación",
+      "water": "Agua",
+      "next": "Después",
+      "sets": "{count, plural, one {# equipo de alquiler} other {# equipos de alquiler}}",
+      "noSets": "nada que entregar",
+      "noCrew": "nadie todavía",
+      "rollCallAt": "pase de lista en el muelle, {time}",
+      "gettingReady": "Los preparativos empiezan el {day}, el día anterior"
+    },
+    "filling": {
+      "fillLast": "{count, plural, one {Llena la última plaza} other {Llena las últimas #}}",
+      "pastGuests": "{count, plural, one {# huésped anterior} other {# huéspedes anteriores}}",
+      "invite": "Invitar",
+      "bookingLink": "Enlace de reserva",
+      "bookingLinkLine": "Para correo, mensaje o redes",
+      "addYourself": "Agrega un huésped tú mismo",
+      "addYourselfLine": "Reserva por teléfono o en persona",
+      "add": "Agregar",
+      "crew": "Tripulación",
+      "plan": "Plan de buceo",
+      "price": "Precio",
+      "whoCanBook": "Quién puede reservar",
+      "edit": "Editar",
+      "notSet": "Sin fijar",
+      "anyone": "Cualquiera",
+      "orHigher": "{level} o superior",
+      "heading": "Esta salida"
+    },
+    "ready": {
+      "gearHeading": "Equipo para cargar",
+      "pullList": "Lista de carga",
+      "tanks": "Botellas",
+      "tanksAir": "{count} de aire",
+      "tanksMixed": "{air} de aire, {nitrox} de nitrox",
+      "rentalSets": "Equipos de alquiler",
+      "sized": "{sized} de {total} con tallas",
+      "fitAtCheckIn": "Probar en el check-in: {names}",
+      "noRentals": "Nadie alquila",
+      "weights": "Plomos",
+      "weightsUnsaid": "Sin indicar: {names}",
+      "weightsSaid": "Todos lo indicaron",
+      "lunch": "Almuerzo",
+      "lunchCount": "{count, plural, one {# almuerzo} other {# almuerzos}}",
+      "pickups": "Recogidas",
+      "pickupsCount": "{count, plural, one {# recogida en hotel} other {# recogidas en hotel}}",
+      "buddyTeams": "Parejas de buceo",
+      "waterHeading": "El agua de mañana",
+      "noForecast": "Sin pronóstico para estos sitios",
+      "callOff": "Cancelar por el tiempo"
+    }
   },
   "fixList": {
     "groups": {
@@ -1138,7 +1180,7 @@
     "reason": {
       "requirementsNotConfigured": "Requisitos de la salida sin configurar",
       "identityUnconfirmed": "Confirmar quién es",
-      "waiverNotSent": "Exención sin firmar",
+      "waiverNotSent": "Exención sin enviar",
       "waiverLapsed": "Exención vencida",
       "waiverRunsOut": "La exención vence antes de la salida",
       "waiverPending": "Exención enviada, sin firmar",
@@ -1168,14 +1210,15 @@
       "earlierRefusal": "Un médico dijo que no antes",
       "earlierReferral": "Derivación anterior aún abierta",
       "moreHolds": "Más por revisar al confirmar",
-      "waiverUnsigned": "Exención sin firmar",
-      "paymentUnpaid": "Aún sin pagar",
+      "waiverUnsigned": "Exención opcional sin firmar",
+      "paymentUnpaid": "Sin pagar, puede embarcar",
       "contactMissing": "Sin contacto de emergencia",
-      "reEntryAsk": "Un pedido para la tripulación",
       "depth": "Revisar la profundidad",
       "drysuit": "Revisar la certificación de traje seco",
       "fitNeeded": "Ajustar el equipo en el check-in",
-      "recency": "Hace tiempo que no bucea"
+      "recency": "Hace tiempo que no bucea",
+      "paymentDueAmount": "{amount} sin pagar",
+      "reEntryAsk": "Un pedido para la tripulación"
     },
     "remedy": {
       "takePayment": "Cobrar",
@@ -1185,11 +1228,45 @@
       "courseForms": "Formularios del curso",
       "addContact": "Agregar contacto",
       "fitGear": "Ajustar equipo",
-      "open": "Abrir"
+      "open": "Abrir",
+      "takeAmount": "Cobrar {amount}",
+      "call": "Llamar a {name}"
     },
     "close": "Cerrar",
     "more": "{reason} · {count} más",
     "with": "con {names}",
-    "private": "Datos privados"
+    "private": "Datos privados",
+    "reEntry": {
+      "deckWord": "Quiere hablar con el divemaster",
+      "easyFirstDive": "Quiere una primera inmersión fácil",
+      "refresherCourse": "Preguntó por el repaso"
+    },
+    "here": "Aquí · {reason}",
+    "askAll": "Pedir a los {count}",
+    "ready": "{count, plural, one {# huésped está listo} other {# huéspedes están listos}}",
+    "readyPhrase": "pueden embarcar",
+    "booked": "Reservados",
+    "nothingYet": "Nada pendiente por ahora",
+    "allGuests": "Todos los huéspedes",
+    "crewPlanSet": "Tripulación y plan listos",
+    "noCrew": "Aún sin tripulación",
+    "noPlan": "Aún sin plan de inmersión",
+    "setCrew": "Asignar tripulación",
+    "setPlan": "Fijar plan",
+    "setRequirements": "Fijar requisitos",
+    "openTrip": "Abrir salida",
+    "openGear": "Equipo",
+    "facts": {
+      "card": "Tarjeta",
+      "waiver": "Exención",
+      "gear": "Equipo",
+      "lastDive": "Última inmersión",
+      "asked": "Pidió",
+      "ifNeeded": "En caso de emergencia",
+      "cardChecked": "{level} · verificada",
+      "cardUnchecked": "{level} · sin verificar",
+      "noCard": "Ninguna registrada",
+      "setFit": "Indicar tallas"
+    }
   }
 }

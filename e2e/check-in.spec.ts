@@ -182,7 +182,7 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   // The overview retains one booking search field.
   await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Booking or walk-in" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "Add a guest", exact: true })).toHaveCount(1);
 
   // A boat that is home is read rather than worked: its Divers tab is the
   // record, every seat filed by the crew's roll call (UX review 2026-10-10,
@@ -200,7 +200,7 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
     page.locator("#roster").getByRole("button", { name: /^(Check in|Undo check-in for) / }),
   ).toHaveCount(0);
   // Nobody can be seated on a boat that has left, so its door is not drawn.
-  await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Add a guest", exact: true })).toHaveCount(0);
 });
 
 /**
@@ -247,7 +247,7 @@ test("a diver added by name alone books straight onto a boat with no email requi
   await find.press("Enter");
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 
-  await page.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.getByRole("link", { name: "Add a guest", exact: true }).click();
   await page.waitForURL(/\/divers\?add=1&/);
   await page.getByLabel("Full name").fill("Walk-in Test Diver");
   // Email and phone are left blank on purpose — the whole point of this flow.
@@ -284,7 +284,7 @@ test("a family is seated together from one form", async ({ page }) => {
   const find = page.getByRole("searchbox", { name: "Find a returning diver" });
   await find.fill("Zzyzx No Such Diver");
   await find.press("Enter");
-  await page.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.getByRole("link", { name: "Add a guest", exact: true }).click();
   await page.waitForURL(/\/divers\?add=1&/);
 
   await page.getByLabel("Full name").first().fill("Quillon Brightwater");
@@ -464,7 +464,7 @@ test("a full boat refuses another add with the wait-list nudge", async ({ page }
   const find = page.getByRole("searchbox", { name: "Find a returning diver" });
   await find.fill("Fills The Boat");
   await find.press("Enter");
-  await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
+  await page.getByRole("link", { name: "Add a guest", exact: true }).first().click();
   await page.waitForURL(/\/divers\?add=1/);
   // This form hydrates separately from the staff header.
   await expect(page.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
@@ -989,7 +989,7 @@ test("Today's arrival search says who is on file but not arriving today", async 
     "true",
   );
   await page.getByLabel("Full name").fill(diverName);
-  await page.getByRole("button", { name: "Add diver", exact: true }).click();
+  await page.getByRole("button", { name: "Add a guest", exact: true }).click();
   await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
 
   await page.goto("/shop/blue-mantis");

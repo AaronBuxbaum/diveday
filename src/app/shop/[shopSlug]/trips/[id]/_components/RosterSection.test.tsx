@@ -224,43 +224,6 @@ describe("the guests ledger (slice 5d)", () => {
     expect(screen.queryByText("Blocked")).toBeNull();
   });
 
-  it("makes add diver the terminal ledger group, including on an empty roster", () => {
-    const { container } = renderRoster({
-      roster: [],
-      readiness: new Map() as ReadinessByBooking,
-      waivers: new Map() as WaiverByBooking,
-      addDiverGroup: <p data-testid="add-diver-form">Find a returning diver</p>,
-    });
-
-    const addDiver = container.querySelector("#add-diver");
-    expect(addDiver).not.toBeNull();
-    expect(
-      within(addDiver as HTMLElement).getByRole("heading", { name: "Add a booking" }),
-    ).toBeVisible();
-    expect(within(addDiver as HTMLElement).getByTestId("add-diver-form")).toBeVisible();
-    expect(screen.queryByText("No one on this boat yet")).toBeNull();
-  });
-
-  /**
-   * The add-diver group sits between its band and the card's bottom edge at
-   * one inset (pixel-craft class 5, K-164). Its wrapper was `pt-3 pb-5`, and
-   * the search row's own `mt-4` made the top 28px against 20px below on every
-   * trip capture; `AddDiverSection` now brings no margin, so the wrapper owns
-   * both sides.
-   */
-  it("insets the add-diver group equally under its band and above the card's edge", () => {
-    renderRoster({
-      roster: [],
-      readiness: new Map() as ReadinessByBooking,
-      waivers: new Map() as WaiverByBooking,
-      addDiverGroup: <p data-testid="add-diver-form">Find a returning diver</p>,
-    });
-
-    const wrapper = screen.getByTestId("add-diver-form").parentElement;
-    expect(wrapper).toHaveClass("py-5");
-    expect(wrapper?.className).not.toMatch(/(^|\s)(pt|pb)-/);
-  });
-
   /**
    * A cleared seat with no notes and no arrival has nothing to put at the end
    * of its name line, and the pixel probe found the trailing slot rendered
@@ -348,11 +311,11 @@ describe("the roster's row geometry", () => {
     fireEvent.click(screen.getByRole("button", { name: blocked.person.fullName }));
     expect(screen.getAllByText(blocked.person.fullName)).toHaveLength(1);
     const remedy = screen.getByRole("link", { name: /Review certifications/ });
-    const email = screen.getByText(blocked.person.email as string);
+    const facts = screen.getByText("If needed");
     expect(remedy).toBeVisible();
-    expect(email).toBeVisible();
+    expect(facts).toBeVisible();
     // Fixes first, then facts.
-    expect(remedy.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(remedy.compareDocumentPosition(facts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(container.querySelector('details[id^="guest-reference-"]')).toBeNull();
   });
 
@@ -622,7 +585,7 @@ describe("the guest folio workflow", () => {
       "href",
       `/shop/blue-mantis/divers/${blocked.person.id}#cards`,
     );
-    expect(within(folio).getByRole("link", { name: "Review fit" })).toHaveAttribute(
+    expect(within(folio).getByRole("link", { name: "Set sizes" })).toHaveAttribute(
       "href",
       `/shop/blue-mantis/divers/${blocked.person.id}#gear`,
     );

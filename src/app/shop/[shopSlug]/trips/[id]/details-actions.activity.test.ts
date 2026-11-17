@@ -122,7 +122,7 @@ async function movedLines(db: AppDb, tripId: string) {
 }
 
 describe("the details form in the activity log", () => {
-  it("preserves the Details tab after its one-shot saved notice is removed", async () => {
+  it("preserves Edit trip after its one-shot saved notice is removed", async () => {
     const { shop, trip } = await context();
     const redirect = await redirectedTo(() =>
       saveDetails(shop.slug, trip.id, detailsForm(trip, shop.timezone, 60)),
@@ -130,7 +130,7 @@ describe("the details form in the activity log", () => {
     const url = new URL(redirect, "https://dive.day");
     expect(url.searchParams.get("notice")).toBe("saved");
     url.searchParams.delete("notice");
-    expect(url.searchParams.get("view")).toBe("details");
+    expect(url.searchParams.get("view")).toBe("edit");
   });
 
   it("refuses a fifth planned dive on an ordinary departure without changing it", async () => {

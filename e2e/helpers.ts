@@ -835,21 +835,16 @@ export async function openSettingsRow(page: Page, heading: string) {
  * Every seat is one line (owner, 2026-10-05): its blockers and advisories
  * are sentences under the name, and everything the row can *do* — the waiver
  * control, the payment selector, the emergency contact form, the private
- * notes, "Remove booking" — waits behind the row's one disclosure with the
+ * notes, "Cancel booking" — waits behind the row's one disclosure with the
  * reference facts.
  *
  * The disclosure is uncontrolled — its `open` is native DOM state React does
  * not touch — so this checks before clicking rather than toggling blindly,
  * exactly like `openPrivateNotes` in add-diver.spec.ts.
  */
-/** Open the rare booking operations only when a flow actually needs them. */
+/** The booking operations are plain links in the opened guest: opening the guest shows them. */
 export async function openBookingActions(row: Locator): Promise<void> {
   await openRosterDetails(row);
-  await openIfClosed(
-    row
-      .locator("details")
-      .filter({ has: row.page().locator(":scope > summary", { hasText: "Booking actions" }) }),
-  );
 }
 
 export async function openRosterDetails(row: Locator): Promise<void> {

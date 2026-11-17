@@ -27,6 +27,7 @@ import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { type SeatWaiverStanding, seatWaiverStanding, type WaiverStanding } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
+import type { FixListPhase, TripFix } from "./guest-fix-rows";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { type NotCountedAfterDiveGroup, recordGroups } from "./record-groups";
 import { SHARED_FACT_MIN } from "./shared-facts";
@@ -436,15 +437,6 @@ export type RosterRecord = {
 /** What the page slots into the ledger beneath the seats. */
 export type RosterSlots = {
   /**
-   * **Who wants in** (`WhoWantsInPanel`, `#who-wants-in`): everyone who asked
-   * for a seat here, as one group of the ledger.
-   */
-  whoWantsInGroup?: ReactNode;
-  /** Past divers of the site worth asking (`InviteSuggestionsGroup`). */
-  suggestionsGroup?: ReactNode;
-  /** The one terminal action group in the guests ledger, supplied by the page. */
-  addDiverGroup?: ReactNode;
-  /**
    * **The desk, once arrivals open** (`_arrivals/arrival-desk.tsx`). The
    * Divers tab and the old Check-in tab were one list drawn twice, with the
    * same blockers and the same fixes on both (owner, 2026-10-05), so arrival is
@@ -456,6 +448,14 @@ export type RosterSlots = {
   arrival?: RosterArrival;
   /** The departure is finished: the ledger is its record, never the desk. */
   record?: RosterRecord;
+  /** Which phase of the trip the fix list is drawn for (`guestFixRows`). Default `after`. */
+  phase?: FixListPhase;
+  /** What holds the whole boat up, leading its group. */
+  tripFixes?: readonly TripFix[];
+  /** Quiet lines under the ready guests the day before ("Crew and plan are set"). */
+  afterReady?: ReactNode;
+  /** Where "Add a guest" goes, when the trip takes one. */
+  addGuestHref?: string | null;
 };
 
 /** Everything the enum holds — for a staffer who may write money off. */

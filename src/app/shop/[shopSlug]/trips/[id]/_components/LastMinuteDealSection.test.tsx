@@ -34,7 +34,7 @@ function renderSection(props: Partial<Parameters<typeof LastMinuteDealSection>[0
 /**
  * The Details tab keeps the deals this departure sent and a door to the Divers
  * tab's panel; the sender, its recipient list and its hold live there
- * (`WhoWantsInPanel`).
+ * (`FillSeatsCard`).
  */
 describe("LastMinuteDealSection", () => {
   it("lists the deals sent: the discount, the code and how it ended", () => {

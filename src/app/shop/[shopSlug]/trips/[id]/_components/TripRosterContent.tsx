@@ -6,7 +6,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { TONE_PANEL_CLASS } from "@/components/ui/card";
+import { sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
@@ -26,9 +26,12 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { BookableDiver } from "../../../../../../lib/diver-choice-types";
 import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection, type SeatRequestContext } from "./AddDiverSection";
+import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 import { carryTargetLabel } from "./carry-target-label";
 import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
+import { FillSeatsCard } from "./FillSeatsCard";
+import type { FixListPhase, TripFix } from "./guest-fix-rows";
 import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { MixedTrainingForTrip } from "./MixedTrainingAdvisory";
@@ -39,7 +42,6 @@ import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./rost
 import { TrainingPlanWithDepth } from "./TrainingPlanWithDepth";
 import { FOOT_ROW_BODY, FOOT_ROW_SUMMARY } from "./TripAboutSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
-import { WhoWantsInPanel } from "./WhoWantsInPanel";
 import { whoWantsInGroupsOf } from "./who-wants-in-rows";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
@@ -154,6 +156,8 @@ export type TripRosterContentContext = {
    * invite control is drawn at all (owner, 2026-10-06).
    */
   acceptsDivers: boolean;
+  /** Where "Add a guest" goes (`?add=1#add-a-booking` on the shown phase). */
+  addGuestHref?: string;
   /** The live roles may send a wait-list invite (`seat_wanted`'s audience), as the action will. */
   mayInviteFromWaitlist: boolean;
   /** The role may discount (`canPersonManagePaymentSettings`): "with a discount" on the Offer. */
@@ -161,6 +165,14 @@ export type TripRosterContentContext = {
   /** The shop's currency, for a fixed-amount discount. */
   currency: string | null;
   actions: TripRosterActions;
+  /** The phase the list is drawn for (ADR 20261117-trip-page-clock); Filling also draws its Fill card. */
+  phase: FixListPhase;
+  /** What holds the whole boat up, leading the fix list. */
+  tripFixes?: readonly TripFix[];
+  /** Quiet lines under the ready guests the day before. */
+  afterReady?: ReactNode;
+  /** Beside the guest list at full width (Filling's trip facts). */
+  beside?: ReactNode;
 };
 
 /**
@@ -225,6 +237,109 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
   const moveSeat = actions.moveSeat ? { ...actions.moveSeat, refusal: moveRefusal } : undefined;
   const whoWantsInGroups = whoWantsInGroupsOf({ guests, t, locale, timezone });
   const addStatus = noticeForForm(context.tripNotice, "add-diver");
+  const rosterSection = (
+    <RosterSection
+      trip={{
+        shopSlug,
+        rehearsal: trip.isRehearsal,
+        exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
+        divingCrew: Boolean(
+          inWaterCrew && inWaterCrew.instructorCount + inWaterCrew.assistantCount > 0,
+        ),
+        shopTimezone: timezone,
+        locale,
+        tripId: trip.id,
+        booked: trip.booked,
+        capacity: trip.sellableCapacity,
+        tripDate: tripDateIso,
+        requiresPayment: Boolean(requirement?.requiresPayment),
+        paymentsConnected,
+        cancellationDeadline: cancellationDeadline(trip),
+        mayWriteOffPayment,
+        canManageOrders,
+        shopRentalItems,
+        splitAsksDateOfBirth: guests.splitAsksDateOfBirth,
+        certifyDefaultLevel: guests.certifyDefaultLevel,
+        courseHasMaterials: guests.courseHasMaterials,
+        courseMaterialsOpen: guests.courseMaterialsOpen,
+      }}
+      rows={{
+        roster,
+        readinessByBooking,
+        waiverByBooking,
+        textableBookings: guests.textableBookings,
+        rentalFitByBooking,
+        nitroxByBooking,
+        notesByBooking,
+        courseNextStepByBooking,
+        elearningQueryByBooking: guests.elearningQueryByBooking,
+        elearningChecksOff: guests.elearningChecksOff,
+        agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
+        issuedCardByPerson: guests.issuedCardByPerson,
+        courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
+        sameNameHeldSeats: guests.sameNameHeldSeats,
+        aboardAtSea: guests.aboardAtSea,
+        sameNamePeople: guests.sameNamePeople,
+        dependentCharters: guests.dependentCharters,
+        trainingMarks: guests.trainingMarks,
+        heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
+        packageDivesByBooking: guests.packageDivesByBooking,
+        paymentMarksByBooking: guests.paymentMarksByBooking,
+        keepOpenBookingId,
+        paymentMarkRetry,
+        partyPreview,
+        namesakeRefusedBookingId,
+        participantTypeCertBookingId,
+      }}
+      actions={{
+        markRosterWaiverInPersonAction: actions.markRosterWaiverInPersonAction,
+        markPaymentAction: actions.markPaymentAction,
+        previewPartyPaymentAction: actions.previewPartyPaymentAction,
+        markPartyPaidAction: actions.markPartyPaidAction,
+        removeBookingAction: actions.removeBookingAction,
+        moveSeat,
+        setParticipantTypeAction: actions.setParticipantTypeAction,
+        confirmIdentityAction: actions.confirmDiverIdentityAction,
+        splitIdentityAction: actions.splitDiverIdentityAction,
+        repointIdentityAction: actions.repointDiverIdentityAction,
+        sendNewWaiverAction: actions.sendNewWaiverAction,
+        addNoteAction: actions.addInternalNoteAction,
+        deleteNoteAction: actions.deleteInternalNoteAction,
+        saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
+        certifyDiverAction: guests.certifies ? actions.certifyDiverAction : undefined,
+        saveCourseNextStepAction: actions.saveCourseNextStepAction,
+        markCardProcessedAction: actions.markCardProcessedAction,
+        setCourseMaterialsDoneAction: guests.courseHasMaterials
+          ? actions.setCourseMaterialsDoneAction
+          : undefined,
+        elearningCheckAction: guests.courseHasMaterials ? actions.elearningCheckAction : undefined,
+        referralStudentAction: actions.referralStudentAction,
+        // A finished departure is its record: nothing on it is checked.
+        agencyCheckAction: record ? undefined : actions.agencyCheckAction,
+        agencyListedAction: record ? undefined : actions.agencyListedAction,
+        // A course form signed on paper (ADR 20261008-course-forms). Bound
+        // here rather than on the page: only a seat that owes a form draws it.
+        recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
+        // A training dive on a charter (issue #2275). Never on a finished
+        // departure: its ledger is the record.
+        markTrainingDiveAction: record ? undefined : actions.markTrainingDiveAction,
+        clearTrainingDiveAction: record ? undefined : actions.clearTrainingDiveAction,
+        updatePickupAction: offersHotelPickup ? actions.updateBookingPickupAction : undefined,
+        // Only a departure that serves lunch aboard asks for a lunch note.
+        updateDietaryNoteAction: trip.lunchAboard
+          ? actions.updateBookingDietaryNoteAction
+          : undefined,
+      }}
+      slots={{
+        arrival,
+        record,
+        phase: context.phase,
+        tripFixes: context.tripFixes,
+        afterReady: context.afterReady,
+        addGuestHref: acceptsDivers ? context.addGuestHref : null,
+      }}
+    />
+  );
 
   return (
     // `contents`, so these blocks lie in the page's flow; `space-y-10` is the
@@ -250,7 +365,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
       )}
       <FormStatus tone={addStatus?.tone}>{addStatus?.text}</FormStatus>
 
-      {demand ? (
+      {demand && context.phase === "filling" ? (
         // A card in a tone (`TONE_PANEL_CLASS`), not a 12px inset box: its
         // corners were tighter than every card's, its words 4px further in.
         <section className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint`}>
@@ -292,164 +407,85 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         </section>
       ) : null}
 
-      <TrainingPlanWithDepth context={context} />
-      <RosterSection
-        trip={{
-          shopSlug,
-          rehearsal: trip.isRehearsal,
-          exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
-          divingCrew: Boolean(
-            inWaterCrew && inWaterCrew.instructorCount + inWaterCrew.assistantCount > 0,
-          ),
-          shopTimezone: timezone,
-          locale,
-          tripId: trip.id,
-          booked: trip.booked,
-          capacity: trip.sellableCapacity,
-          tripDate: tripDateIso,
-          requiresPayment: Boolean(requirement?.requiresPayment),
-          paymentsConnected,
-          cancellationDeadline: cancellationDeadline(trip),
-          mayWriteOffPayment,
-          canManageOrders,
-          shopRentalItems,
-          splitAsksDateOfBirth: guests.splitAsksDateOfBirth,
-          certifyDefaultLevel: guests.certifyDefaultLevel,
-          courseHasMaterials: guests.courseHasMaterials,
-          courseMaterialsOpen: guests.courseMaterialsOpen,
-        }}
-        rows={{
-          roster,
-          readinessByBooking,
-          waiverByBooking,
-          textableBookings: guests.textableBookings,
-          rentalFitByBooking,
-          nitroxByBooking,
-          notesByBooking,
-          courseNextStepByBooking,
-          elearningQueryByBooking: guests.elearningQueryByBooking,
-          elearningChecksOff: guests.elearningChecksOff,
-          agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
-          issuedCardByPerson: guests.issuedCardByPerson,
-          courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
-          sameNameHeldSeats: guests.sameNameHeldSeats,
-          aboardAtSea: guests.aboardAtSea,
-          sameNamePeople: guests.sameNamePeople,
-          dependentCharters: guests.dependentCharters,
-          trainingMarks: guests.trainingMarks,
-          heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
-          packageDivesByBooking: guests.packageDivesByBooking,
-          paymentMarksByBooking: guests.paymentMarksByBooking,
-          keepOpenBookingId,
-          paymentMarkRetry,
-          partyPreview,
-          namesakeRefusedBookingId,
-          participantTypeCertBookingId,
-        }}
-        actions={{
-          markRosterWaiverInPersonAction: actions.markRosterWaiverInPersonAction,
-          markPaymentAction: actions.markPaymentAction,
-          previewPartyPaymentAction: actions.previewPartyPaymentAction,
-          markPartyPaidAction: actions.markPartyPaidAction,
-          removeBookingAction: actions.removeBookingAction,
-          moveSeat,
-          setParticipantTypeAction: actions.setParticipantTypeAction,
-          confirmIdentityAction: actions.confirmDiverIdentityAction,
-          splitIdentityAction: actions.splitDiverIdentityAction,
-          repointIdentityAction: actions.repointDiverIdentityAction,
-          sendNewWaiverAction: actions.sendNewWaiverAction,
-          addNoteAction: actions.addInternalNoteAction,
-          deleteNoteAction: actions.deleteInternalNoteAction,
-          saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
-          certifyDiverAction: guests.certifies ? actions.certifyDiverAction : undefined,
-          saveCourseNextStepAction: actions.saveCourseNextStepAction,
-          markCardProcessedAction: actions.markCardProcessedAction,
-          setCourseMaterialsDoneAction: guests.courseHasMaterials
-            ? actions.setCourseMaterialsDoneAction
-            : undefined,
-          elearningCheckAction: guests.courseHasMaterials
-            ? actions.elearningCheckAction
-            : undefined,
-          referralStudentAction: actions.referralStudentAction,
-          // A finished departure is its record: nothing on it is checked.
-          agencyCheckAction: record ? undefined : actions.agencyCheckAction,
-          agencyListedAction: record ? undefined : actions.agencyListedAction,
-          // A course form signed on paper (ADR 20261008-course-forms). Bound
-          // here rather than on the page: only a seat that owes a form draws it.
-          recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
-          // A training dive on a charter (issue #2275). Never on a finished
-          // departure: its ledger is the record.
-          markTrainingDiveAction: record ? undefined : actions.markTrainingDiveAction,
-          clearTrainingDiveAction: record ? undefined : actions.clearTrainingDiveAction,
-          updatePickupAction: offersHotelPickup ? actions.updateBookingPickupAction : undefined,
-          // Only a departure that serves lunch aboard asks for a lunch note.
-          updateDietaryNoteAction: trip.lunchAboard
-            ? actions.updateBookingDietaryNoteAction
-            : undefined,
-        }}
-        slots={{
-          arrival,
-          record,
-          // A cancelled departure has no seat to offer anyone.
-          whoWantsInGroup: guests.cancelled ? null : (
-            <WhoWantsInPanel
-              groups={whoWantsInGroups}
-              tripId={trip.id}
-              shopSlug={shopSlug}
-              shopName={shopName}
-              tripTitle={trip.title}
-              tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
-              seatsOpen={spotsRemaining(seatsOnSale(trip))}
-              canOffer={acceptsDivers && mayInviteFromWaitlist}
-              discount={
-                mayDiscount
-                  ? {
-                      toggle: t("trips.whoWantsIn.addDiscount"),
-                      hint: t("trips.whoWantsIn.discountHint"),
-                      amountAriaLabel: t("trips.lastMinute.discountPercentAriaLabel"),
-                      kindAriaLabel: t("trips.lastMinute.discountKindAriaLabel"),
-                      currencySymbol: currencySymbol(toShopCurrency(currency), locale),
-                    }
-                  : null
-              }
-              locale={locale}
-              // **One waiting diver is worth carrying too** (fourth review,
-              // item 31). The demand banner, and the carry door inside it,
-              // wait for a cluster; a full boat with one interest offered staff
-              // only an offer of a boat with no seat. Under the list it is
-              // about, whenever the banner is not standing.
-              carry={
-                !demand &&
-                isFull(seatsOnSale(trip)) &&
-                actions.carryWaitlistAction &&
-                actions.moveSeat?.targets.length ? (
-                  <CarryWaitlistForm
-                    action={actions.carryWaitlistAction}
-                    targets={actions.moveSeat.targets}
-                    t={t}
-                  />
-                ) : null
-              }
-            />
-          ),
-          suggestionsGroup:
-            acceptsDivers && guests.inviteSuggestions ? (
-              <InviteSuggestionsGroup
-                suggestions={guests.inviteSuggestions}
-                action={actions.invitePastDiverAction}
-                locale={locale}
-                timeZone={timezone}
+      {context.phase === "filling" && !guests.cancelled ? (
+        <FillSeatsCard
+          heading={
+            spotsRemaining(seatsOnSale(trip)) > 0
+              ? t("trips.clock.filling.fillLast", { count: spotsRemaining(seatsOnSale(trip)) })
+              : t("trips.whoWantsIn.heading", {
+                  count: whoWantsInGroups.reduce(
+                    (sum, group) => sum + group.rows.length + (group.more?.length ?? 0),
+                    0,
+                  ),
+                })
+          }
+          groups={whoWantsInGroups}
+          canOffer={acceptsDivers && mayInviteFromWaitlist}
+          discount={mayDiscount ? offerDiscountCopy(t, currency, locale) : null}
+          pastGuests={
+            acceptsDivers && guests.inviteSuggestions
+              ? {
+                  count: guests.inviteSuggestions.total,
+                  line: t("trips.inviteSuggestions.heading", {
+                    site: guests.inviteSuggestions.siteName,
+                  }),
+                  list: (
+                    <InviteSuggestionsGroup
+                      suggestions={guests.inviteSuggestions}
+                      action={actions.invitePastDiverAction}
+                      locale={locale}
+                      timeZone={timezone}
+                    />
+                  ),
+                }
+              : null
+          }
+          addHref={acceptsDivers ? (context.addGuestHref ?? null) : null}
+          addForm={
+            acceptsDivers && context.addBand?.open ? <AddDiverGroup context={context} /> : null
+          }
+          carry={
+            // **One waiting diver is worth carrying too** (fourth review, item 31).
+            !demand &&
+            isFull(seatsOnSale(trip)) &&
+            actions.carryWaitlistAction &&
+            actions.moveSeat?.targets.length ? (
+              <CarryWaitlistForm
+                action={actions.carryWaitlistAction}
+                targets={actions.moveSeat.targets}
+                t={t}
               />
-            ) : null,
-          addDiverGroup: !acceptsDivers ? null : (
-            <>
-              <AddDiverGroup context={context} />
-              {context.addBand?.open ? <OpenAddBand /> : null}
-            </>
-          ),
-        }}
-      />
-
+            ) : null
+          }
+          trip={{
+            id: trip.id,
+            shopSlug,
+            shopName,
+            title: trip.title,
+            when: formatShortDate(trip.startsAt, locale, timezone),
+          }}
+          t={t}
+        />
+      ) : null}
+      <TrainingPlanWithDepth context={context} />
+      {context.beside ? (
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div className="min-w-0">{rosterSection}</div>
+          {context.beside}
+        </div>
+      ) : (
+        rosterSection
+      )}
+      {/* "Add a guest" outside Filling opens the form under the list (`?add=1`). */}
+      {acceptsDivers && context.addBand?.open && context.phase !== "filling" ? (
+        <section
+          id="add-diver"
+          aria-label={t("trips.addDiver.heading")}
+          className={sectionCardClass({ className: "scroll-mt-24" })}
+        >
+          <AddDiverGroup context={context} />
+        </section>
+      ) : null}
       {afterRoster}
     </div>
   );
@@ -475,9 +511,10 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
   const diverCandidates = picked?.candidates ?? guests.diverCandidates;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div id={ADD_A_BOOKING_ID} className="flex scroll-mt-24 flex-col gap-4 px-4 py-4 sm:px-6">
       {seatRequest?.card}
       {context.addBand?.requestGone}
+      {context.addBand?.open ? <OpenAddBand /> : null}
       {!isFull(seatsOnSale(trip)) ? (
         <Suspense fallback={null}>
           <MixedTrainingForTrip
@@ -667,4 +704,15 @@ function CarryWaitlistForm({
       </div>
     </form>
   );
+}
+
+/** The words of an offer's optional discount, in the shop's currency. */
+function offerDiscountCopy(t: StaffTranslator, currency: string | null, locale: string) {
+  return {
+    toggle: t("trips.whoWantsIn.addDiscount"),
+    hint: t("trips.whoWantsIn.discountHint"),
+    amountAriaLabel: t("trips.lastMinute.discountPercentAriaLabel"),
+    kindAriaLabel: t("trips.lastMinute.discountKindAriaLabel"),
+    currencySymbol: currencySymbol(toShopCurrency(currency), locale),
+  };
 }

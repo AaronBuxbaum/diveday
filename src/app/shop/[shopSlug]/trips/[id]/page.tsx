@@ -16,10 +16,10 @@ import { departureConditionReads } from "./_components/departure-conditions";
 import { departureStateOf } from "./_components/departure-states";
 import { detailsReadRows } from "./_components/details-rows";
 import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
-import { shownPulseFacts } from "./_components/PulseFacts";
 import { CheckInPhase } from "./_components/phases/CheckInPhase";
 import { EditTrip } from "./_components/phases/EditTrip";
 import { FillingPhase } from "./_components/phases/FillingPhase";
+import { phaseSlots } from "./_components/phases/phase-slots";
 import { ReadyPhase } from "./_components/phases/ReadyPhase";
 import { WaterPhase } from "./_components/phases/WaterPhase";
 import { WrappedPhase } from "./_components/phases/WrappedPhase";
@@ -36,7 +36,6 @@ import { TripSentenceLine } from "./_components/TripSentenceLine";
 import { tripFrame } from "./_components/trip-frame";
 import { showsEditTrip } from "./_components/trip-notice-views";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
-import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
 import { type TripPageSearchParams, tripFlashParams } from "./_components/trip-search-params";
 import { readStaffGates } from "./_lib/staff-gates";
 
@@ -92,13 +91,9 @@ export default async function ManageTripPage({
   const t = staffTranslator(locale);
   const now = nowDate();
   const reading = readTripPage(db, shop, tripId, {
-    now,
-    t,
-    locale,
     session,
     filters: { diverQuery: diverq, confirmName },
   });
-  const { departureNeeds } = reading;
   const [manifest, staffGates] = await Promise.all([
     reading.manifest,
     readStaffGates(db, shop.id, session.user.personId),
@@ -145,27 +140,8 @@ export default async function ManageTripPage({
     cancelled: false,
     meetingWindows: scheduleDays,
   };
-  const pulseFacts = tripPulseFactsOf(overview, {
-    liveBoatClashes: cancelled ? [] : boatClashes,
-    shopSlug,
-    tripId,
-    now,
-    t,
-    needs: overview.pulseNeeded && !showDetails ? await departureNeeds() : null,
-  });
-
   const details = showDetails ? await reading.details() : null;
   const readRows = detailsReadRows({ db, shop, overview, t, locale, shown: showDetails });
-  const { automatedForecast, tideLines } = departureConditionReads({
-    showDetails,
-    trip,
-    tripDiveList,
-    scheduleDayCount: scheduleDays.length,
-    shop,
-    locale,
-    t,
-  });
-
   const detailsEditable = tripPhaseOf(lifecycle) !== "back";
   const mayChangeDeparture = !cancelled && !finalHomeSaid(lifecycle);
   const acceptsDivers = acceptsNewDivers(trip, now);
@@ -219,13 +195,27 @@ export default async function ManageTripPage({
     t,
   });
   const tripPath = shopPath(shopSlug, "trips", tripId);
+  const { automatedForecast, tideLines } = departureConditionReads({
+    showDetails: showDetails || frame.shown === "ready" || frame.shown === "checkin",
+    trip,
+    tripDiveList,
+    scheduleDayCount: scheduleDays.length,
+    shop,
+    locale,
+    t,
+  });
+
+  const slots = phaseSlots({
+    ...{ frame, overview, shop, shopSlug, tripId, now, locale, t },
+    gearToPack: reading.gearToPack,
+    water: { automatedForecast, tideLines },
+  });
 
   const guestList = showDetails ? null : (
     <TripGuestList
       deskOpen={Boolean(desk)}
       overview={overview}
       showMinimum={pulseNeeded && !sailed}
-      pulseFacts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
       coursePulse={coursePulse}
       shopSlug={shopSlug}
       tripId={tripId}
@@ -235,6 +225,11 @@ export default async function ManageTripPage({
       roster={
         <TripRosterContent
           context={{
+            phase: slots.phase,
+            tripFixes: slots.fixes,
+            afterReady: slots.afterReady,
+            beside: slots.beside,
+            addGuestHref: `${tripPath}?phase=${frame.shown}&add=1#add-a-booking`,
             arrival: desk?.arrival,
             record,
             inWaterCrew: overview.crew.inWaterCrew,
@@ -369,11 +364,11 @@ export default async function ManageTripPage({
             }}
           />
         ) : frame.shown === "filling" ? (
-          <FillingPhase guests={guestList} />
+          <FillingPhase guests={guestList} next={slots.panel} />
         ) : frame.shown === "ready" ? (
-          <ReadyPhase guests={guestList} />
+          <ReadyPhase guests={guestList} prep={slots.panel} />
         ) : frame.shown === "checkin" ? (
-          <CheckInPhase guests={guestList} />
+          <CheckInPhase guests={guestList} quiet={slots.panel} />
         ) : frame.shown === "water" ? (
           <WaterPhase guests={guestList} record={recordContext} />
         ) : (

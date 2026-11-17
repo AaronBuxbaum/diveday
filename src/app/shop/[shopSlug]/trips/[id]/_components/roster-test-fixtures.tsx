@@ -1,6 +1,5 @@
 // i18n-exempt-file: test fixture; only the roster's tests import it, and its names are seeded data.
 import { fireEvent, render } from "@testing-library/react";
-import type { ReactNode } from "react";
 import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { SameNamePerson } from "@/features/identity-repoint";
@@ -9,6 +8,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { signingDate } from "@/lib/guardian";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
+import type { FixListPhase, TripFix } from "./guest-fix-rows";
 import type { RosterRowContext } from "./RosterRow";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import {
@@ -120,9 +120,11 @@ export type RosterFixtureOptions = {
   readiness: ReadinessByBooking;
   waivers: WaiverByBooking;
   rentalFit?: RentalFitByBooking;
-  addDiverGroup?: ReactNode;
-  /** The wait list's panel under the guests. */
-  whoWantsInGroup?: ReactNode;
+  /** The clock phase the list is drawn for; Check-in when the desk is open, else after. */
+  phase?: FixListPhase;
+  /** Where "Add a guest" goes, when the trip takes one. */
+  addGuestHref?: string | null;
+  tripFixes?: TripFix[];
   paymentsConnected?: boolean;
   canManageOrders?: boolean;
   requiresPayment?: boolean;
@@ -150,8 +152,9 @@ function rosterProps({
   readiness,
   waivers,
   rentalFit,
-  addDiverGroup,
-  whoWantsInGroup,
+  phase,
+  addGuestHref = null,
+  tripFixes,
   paymentsConnected = false,
   canManageOrders = true,
   requiresPayment = false,
@@ -219,7 +222,13 @@ function rosterProps({
       certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
       moveSeat,
     },
-    slots: { addDiverGroup, whoWantsInGroup, arrival, record },
+    slots: {
+      phase: phase ?? (arrival ? "checkin" : "after"),
+      addGuestHref,
+      tripFixes,
+      arrival,
+      record,
+    },
   };
 }
 

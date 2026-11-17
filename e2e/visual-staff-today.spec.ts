@@ -557,9 +557,9 @@ for (const scheme of ["light", "dark"] as const) {
         const row = await rosterRow(page, uncountedSeat.personName);
         await openRosterDetails(row);
         await openBookingActions(row);
-        await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
+        await row.locator("summary", { hasText: /^\s*Cancel booking\s*$/ }).click();
         await row.getByRole("status").filter({ hasText: "at the dock, so the boat may" }).waitFor();
-        await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
+        await expect(row.getByRole("button", { name: "Yes, cancel booking" })).toHaveCount(0);
         await capture(page, "trip-remove-uncounted-refused", scheme);
       });
 
@@ -577,9 +577,9 @@ for (const scheme of ["light", "dark"] as const) {
         const row = await rosterRow(page, name);
         await openRosterDetails(row);
         await openBookingActions(row);
-        await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
+        await row.locator("summary", { hasText: /^\s*Cancel booking\s*$/ }).click();
         await row.getByRole("status").filter({ hasText: "sailed on this departure" }).waitFor();
-        await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
+        await expect(row.getByRole("button", { name: "Yes, cancel booking" })).toHaveCount(0);
         await capture(page, "trip-remove-aboard-refused", scheme);
       });
 

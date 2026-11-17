@@ -30,7 +30,7 @@ function RowCaret() {
  * groups (`_components/RosterSection.tsx`, `GuestFixList.tsx`). Can't board
  * yet: a held seat, whose identity check (`src/components/IdentityCheck.tsx`)
  * asks whether the booking is the same person, and which has no Check in tap.
- * To come: a guest with the Check in tap (`ArrivalTap.tsx`). Here: one of the
+ * To come: a guest with the bordered Check in button (`ArrivalTap.tsx`). Here: one of the
  * seven, its tap turned to "Checked in". Left out: the opened guest's "Not
  * here" (`NoShowScript.tsx`), the other six who are here, and Add a guest.
  *
@@ -121,12 +121,8 @@ export function ArrivalDeskFallback({
                   type="button"
                   disabled
                   data-tap-target=""
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-semibold whitespace-nowrap text-primary"
+                  className={`px-3 whitespace-nowrap ${MOCK_SECONDARY_BUTTON}`}
                 >
-                  <span
-                    aria-hidden="true"
-                    className="size-5 shrink-0 rounded-full border-2 border-current"
-                  />
                   {t("fallback.arrivalDesk.checkIn")}
                 </button>
                 <RowCaret />

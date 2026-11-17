@@ -148,5 +148,5 @@ test("Remove on a diver marked aboard a boat that has left says why and changes 
   // The sentence after the diver's name, from the bundle.
   const why = staff("trips.roster.removeAboard", { name: "" }).trim();
   await expect(row.getByRole("status").filter({ hasText: why })).toBeVisible();
-  await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Yes, cancel booking" })).toHaveCount(0);
 });

@@ -89,7 +89,7 @@ async function seatNewcomerWithPendingCard(page: Page, departure: RegExp, prefix
   const stamp = Date.now();
   const newcomer = `${prefix} ${prefix === "Rory" ? "Quill" : "Bracken"}${stamp}`;
   const addDiver = page.locator("#add-diver").filter({ visible: true });
-  await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
+  await addDiver.getByRole("link", { name: "Add a guest", exact: true }).click();
   await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill(newcomer);
   await page.getByLabel("Email").fill(`${prefix.toLowerCase()}-${stamp}@example.com`);

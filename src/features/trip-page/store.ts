@@ -1,10 +1,10 @@
 import { getBoatById, listBoats } from "@/features/boats";
 import { getTripConservationPanel } from "@/features/conservation";
 import { getCoursePulse } from "@/features/course-pulse";
-import { getDepartureNeeds } from "@/features/today";
 import { getTripGuests, type TripGuestsFilters, type TripGuestsShop } from "@/features/trip-guests";
 import { listTripLenses } from "@/features/trip-lenses";
 import { getTripOverview, type TripOverviewShop } from "@/features/trip-overview";
+import { gearToPack, getTripPrep, type TripPrepShop } from "@/features/trip-prep";
 import { loadTripSharedReads } from "@/features/trip-shared-reads";
 import { latestTripStage } from "@/features/trip-stages";
 import { canPersonRefund, canPersonRetireMedicalRefusal } from "../../db/authz";
@@ -71,18 +71,22 @@ export async function getTripDetails(
   return { boats, lenses, conservation };
 }
 
-/** Start the page's independent reads together; keep the queue deferred until the pulse needs it. */
+/** Start the page's independent reads together; the phase-only reads wait until a phase asks. */
 export function readTripPage(
   db: AppDb,
-  shop: TripManifestShop & Parameters<typeof getDepartureNeeds>[1],
+  shop: TripManifestShop & TripPrepShop,
   tripId: string,
-  input: Parameters<typeof getTripManifest>[3] & Parameters<typeof getDepartureNeeds>[3],
+  input: Parameters<typeof getTripManifest>[3],
 ) {
   return {
     manifest: getTripManifest(db, shop, tripId, input),
     details: () => getTripDetails(db, shop, tripId, input.session.user.personId),
     /** The departure's boat, for the header's facts line; null for a shore dive or a pool session. */
     boat: (boatId: string | null) => (boatId ? getBoatById(db, shop.id, boatId) : null),
-    departureNeeds: () => getDepartureNeeds(db, shop, tripId, input),
+    /** Getting ready's and Check-in's summary of the Gear page's packing list. */
+    gearToPack: async () => {
+      const prep = await getTripPrep(db, shop, tripId);
+      return prep ? gearToPack(prep) : null;
+    },
   };
 }

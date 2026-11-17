@@ -9,7 +9,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatMoneyScanned } from "@/lib/format";
 import { promoDiscountOf } from "@/lib/promo-codes";
 import type { FormNotice } from "@/lib/staff-notices";
-import { WHO_WANTS_IN_ID } from "./WhoWantsInPanel";
+import { WHO_WANTS_IN_ID } from "./FillSeatsCard";
 
 const STATUS_TONE: Record<TripLastMinutePromo["status"], BadgeTone> = {
   active: "success",

@@ -1,18 +1,14 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { StatusMark } from "@/components/ui/StatusMark";
-import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
-import { rentalFitLine } from "@/lib/dive-prep";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { TurnAwayRowStateProvider } from "../_arrivals/TurnAwayScript";
-import { GuestRequirements } from "./GuestRequirements";
+import { OpenedGuest } from "./OpenedGuest";
 import type { PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { RosterRecordBlocked } from "./RosterRecordBlocked";
 import type {
@@ -146,7 +142,7 @@ export function RosterRow({
   const s7 = {
     ...s6,
     ...rowReasonList({ ...s6, reasonLines }),
-    ...rowReference(s6, { omitFit: folio }),
+    ...rowReference(s6),
   };
   const {
     booking,
@@ -184,107 +180,24 @@ export function RosterRow({
       ),
   );
   if (folio) {
-    // **The guest opened in place** (ADR 20261117-trip-page-clock): what fixes
-    // them first, then what is true about them, then the rare actions. The
-    // row above it already carries the name and the desk's tap.
-    const content = (
-      <div data-opened-guest={booking.id} className="space-y-6">
-        <div className="space-y-5">
-          {s6.minor || s6.birthday || booking.participantType !== "diver" ? (
-            <div className="flex flex-wrap items-center gap-3">{headerLeft}</div>
-          ) : null}
-          <GuestRequirements
-            lines={reasonLines}
-            blockers={s6.blockerTexts}
-            payment={s6.paymentRemedy}
-            t={t}
-            contact={
-              <a
-                href={`#guest-contact-${booking.id}`}
-                className={buttonClass({ variant: "link", flush: true })}
-              >
-                {t("trips.folio.reviewContact")}
-              </a>
-            }
-          />
-          {arrival ? null : identityContact}
-          {identityCheck}
-          {arrival ? null : reEntryNote}
-          {arrivalBelow}
-          {identityUnconfirmed || !actions.agencyCheckAction ? null : (
-            <AgencyCheckRow
-              personId={person.id}
-              cards={rows.agencyCheckCardsByPerson?.get(person.id) ?? []}
-            />
-          )}
-          {!waiverPlaced ? s6.waiverRemedy : null}
-          {!courseFormsPlaced && s6.hasCourseForms ? s6.courseFormsRemedy : null}
-          {outstanding}
-          {!paymentOutstanding ? s6.paymentRemedy : null}
-        </div>
-        <div
-          id={`guest-contact-${booking.id}`}
-          className="scroll-mt-24 border-t border-border pt-5"
-        >
-          {/* A flagged medical answer, and a held seat's matched record, stay
-              one tap further in: the desk's screen faces the queue. */}
-          {s6.flaggedPrompts.length > 0 || (arrival && identityContact) ? (
-            <details className="group/private mb-5">
-              <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
-                {t("trips.fixList.private")}
-                <DisclosureCaret
-                  direction="down"
-                  className="size-4 group-open/private:rotate-180"
-                />
-              </summary>
-              {s6.referenceFacts}
-            </details>
-          ) : null}
-          {identityUnconfirmed || booking.participantType === "rider" ? null : (
-            <div className="mb-5">
-              <p className="text-sm font-semibold">{t("trips.clock.gear")}</p>
-              <p className="mt-1 text-sm text-muted">
-                {rentalFitLineText(
-                  t,
-                  context.trip.locale,
-                  rentalFitLine(
-                    rows.rentalFitByBooking.get(booking.id) ?? null,
-                    context.trip.shopRentalItems,
-                    booking.participantType,
-                  ),
-                )}
-              </p>
-              <div className="mt-1 flex flex-wrap gap-x-4">
-                <Link
-                  href={`/shop/${context.trip.shopSlug}/divers/${person.id}#gear`}
-                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
-                >
-                  {t("trips.folio.recordFit")}
-                </Link>
-                <Link
-                  href={`/shop/${context.trip.shopSlug}/trips/${context.trip.tripId}/prep#assignments-heading`}
-                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
-                >
-                  {t("trips.folio.assignEquipment")}
-                </Link>
-              </div>
-            </div>
-          )}
-          {reference}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-4">
-          {s6.blockerTexts.length > 0 ? arrivalControl : null}
-          {arrival?.details?.get(booking.id)}
-          <Link
-            href={`/shop/${context.trip.shopSlug}/divers/${person.id}`}
-            className={buttonClass({ variant: "link", size: "sm", flush: true })}
-          >
-            {t("trips.folio.openProfile")}
-          </Link>
-        </div>
-      </div>
+    return (
+      <OpenedGuest
+        seat={s6}
+        context={context}
+        reasonLines={reasonLines}
+        chips={s6.minor || s6.birthday || booking.participantType !== "diver" ? headerLeft : null}
+        fixes={
+          <>
+            {!waiverPlaced ? s6.waiverRemedy : null}
+            {!courseFormsPlaced && s6.hasCourseForms ? s6.courseFormsRemedy : null}
+            {outstanding}
+            {!paymentOutstanding ? s6.paymentRemedy : null}
+          </>
+        }
+        identityCheck={identityCheck}
+        identityContact={identityContact}
+      />
     );
-    return arrival ? <TurnAwayRowStateProvider>{content}</TurnAwayRowStateProvider> : content;
   }
   const markSummary = (
     <summary

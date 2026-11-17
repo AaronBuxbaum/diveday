@@ -602,7 +602,6 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.getByText("Minor · age 14")).toBeVisible();
     // The last three live in the row's collapsed reference panel, which jsdom
     // reports as hidden — being in the document is the whole claim.
-    expect(screen.getByText(/Age 14/)).toBeInTheDocument();
     expect(screen.getByText(/Pilar Vega/)).toBeInTheDocument();
     expect(screen.getByText(/5 mm \/ M/)).toBeInTheDocument();
     expect(

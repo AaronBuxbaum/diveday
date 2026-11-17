@@ -49,10 +49,7 @@ export type RowReferenceInput = Pick<
 > &
   Pick<RowNotices, "emergencyContactBlock" | "heldEmergencyContactBlock">;
 
-export function rowReference(
-  seat: RowReferenceInput,
-  { omitFit = false }: { omitFit?: boolean } = {},
-) {
+export function rowReference(seat: RowReferenceInput) {
   const {
     booking,
     person,
@@ -156,7 +153,7 @@ export function rowReference(
 
         {/* Sizes are the matched person's profile row and the nitrox word
             is their card, so the whole column waits for the confirmation. */}
-        {showsPersonDetail && !omitFit ? (
+        {showsPersonDetail ? (
           <div>
             <GroupLabel as="p">{t("trips.roster.rentalFitColumnHeading")}</GroupLabel>
             <p className="mt-1 text-sm text-muted">
