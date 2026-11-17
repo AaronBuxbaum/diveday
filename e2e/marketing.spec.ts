@@ -829,7 +829,9 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   ).toBeVisible();
   const rendered = await page.locator("body").innerText();
   expect(rendered.match(/Aaron/g)).toHaveLength(1);
-  expect(rendered).toContain("Aaron Buxbaum, Founder");
+  // The signature is the name in an autograph face with the role below it, which CSS
+  // sets in capitals, so the role is matched without regard to case.
+  expect(rendered).toMatch(/Aaron Buxbaum\s+Founder/i);
   // The founder's own band, in the first person (Aaron, 2026-11-14), carries
   // his history; the head count of the team stays out.
   expect(rendered).toContain("self-driving cars");
@@ -955,13 +957,10 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     .locator("section")
     .filter({ has: page.getByRole("link", { name: "See pricing" }) });
   await expect(workBand.locator("button:not([disabled])")).toHaveCount(0);
-  await expect(workBand.locator("a")).toHaveCount(4);
-  const setUpDoor = workBand.locator(SET_UP_DOOR);
-  await expect(setUpDoor).toHaveCount(1);
-  // Anchored on both sides, or `hover:bg-surface-sunken` would satisfy it and
-  // the assertion would pass on a button whose resting fill had changed.
-  await expect(setUpDoor).toHaveClass(/(^|\s)bg-surface(\s|$)/);
-  await expect(setUpDoor).not.toHaveClass(/bg-primary/);
+  // Pricing, switching and the two records links; Get set up is the closing
+  // band's, not a third copy here.
+  await expect(workBand.locator("a")).toHaveCount(3);
+  await expect(workBand.locator(SET_UP_DOOR)).toHaveCount(0);
 });
 
 for (const locale of ["en-US", "es-ES"] as const) {
@@ -2092,16 +2091,24 @@ for (const [route, scene] of [
   });
 }
 
-test("pricing and about offer the founder's 20-minute call beside Get set up, and the home page does not", async ({
+test("each page's closing band offers the founder's 20-minute call once, and the heroes do not repeat it", async ({
   page,
 }) => {
   const call = page.getByRole("link", {
     name: diverTranslator("en-US")("marketing.common.bookCall"),
   });
-  for (const path of ["/pricing", "/about"]) {
+  for (const path of [
+    "/",
+    "/product",
+    "/product/waivers",
+    "/pricing",
+    "/about",
+    "/switching",
+    "/switching/spreadsheet",
+    "/switching/fareharbor",
+  ]) {
     await page.goto(path);
-    await expect(call.first()).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);
+    await expect(call).toHaveCount(1);
+    await expect(call).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);
   }
-  await page.goto("/");
-  await expect(call).toHaveCount(0);
 });

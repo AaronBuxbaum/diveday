@@ -222,13 +222,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               </div>
             </div>
 
-            <FunnelCtas
-              locale={locale}
-              source="pricing"
-              footnotes={{ offer }}
-              call
-              className="mt-12"
-            />
+            <FunnelCtas locale={locale} source="pricing" footnotes={{ offer }} className="mt-12" />
           </div>
         </section>
 
@@ -331,7 +325,6 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
         <ClosingCta
           locale={locale}
           source="pricing-close"
-          call
           title={t("marketing.pricing.closingTitle")}
         />
       </main>

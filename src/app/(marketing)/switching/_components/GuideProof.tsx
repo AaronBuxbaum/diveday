@@ -59,7 +59,12 @@ export function GuideProof({ locale, source }: { locale: DiverLocale; source: Fu
           </ul>
         </div>
         <div className="mt-8">
-          <FunnelCtas locale={locale} source={source} demo={{ role: "owner", landing: "today" }} />
+          <FunnelCtas
+            locale={locale}
+            source={source}
+            demo={{ role: "owner", landing: "today" }}
+            setUp={false}
+          />
         </div>
       </div>
     </section>

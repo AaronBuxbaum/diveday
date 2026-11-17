@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LEAD_TITLE_CLASS, MARKETING_EYEBROW_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { type FunnelSource, setUpHref } from "@/lib/funnel";
+import { callHref, type FunnelSource, setUpHref } from "@/lib/funnel";
 
 /**
  * The concierge switch offer, shared by every /switching page (the hub, each
@@ -48,10 +48,18 @@ export function SwitchingConcierge({
         <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
           {t("switching.concierge.description")}
         </p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
           <Link href={setUpHref(source)} className={buttonClass()}>
             {t("marketing.common.getSetUp")}
           </Link>
+          <a
+            href={callHref(source)}
+            target="_blank"
+            rel="noreferrer"
+            className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
+          >
+            {t("marketing.common.bookCall")}
+          </a>
         </div>
       </div>
     </section>
