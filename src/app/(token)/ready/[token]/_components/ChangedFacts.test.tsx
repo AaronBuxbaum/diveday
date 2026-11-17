@@ -125,8 +125,8 @@ describe("the three facts", () => {
     // without an emergency contact" is the same gap seen from the diver's side.
     render(panel({ emergencyContact: { name: null, phone: null } }));
     expect(screen.getByText("Not on file")).toBeInTheDocument();
-    expect(screen.getByLabelText("Contact name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Contact phone")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Contact name/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Contact phone/)).toBeInTheDocument();
   });
 });
 

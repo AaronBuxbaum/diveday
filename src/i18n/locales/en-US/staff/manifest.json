@@ -101,7 +101,8 @@
       "planChangeNoteWithoutReason": "Choose why the plan changed, then save the note.",
       "planChangeNoteTooLong": "That note is too long. Shorten it and save again."
     },
-    "observedSpeciesHint": "Divers read this on their recap."
+    "observedSpeciesHint": "Divers read this on their recap.",
+    "optional": "(optional)"
   },
   "seen": {
     "heading": "Seen",

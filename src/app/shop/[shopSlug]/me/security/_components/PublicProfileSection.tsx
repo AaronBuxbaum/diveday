@@ -56,7 +56,7 @@ export function PublicProfileSection({
             {t("staffing.crewConsent.label")}
           </ChoiceRow>
           {/* Show the exact public name so consent never publishes an inferred surname. */}
-          <Field label={t("staffing.crewConsent.nameLabel")}>
+          <Field label={t("staffing.crewConsent.nameLabel")} hint={t("staffing.optionalHint")}>
             <input
               name="publicName"
               defaultValue={crewPublicName}
@@ -95,11 +95,12 @@ export function PublicProfileSection({
             <input
               className={controlClass}
               name="profileFirstName"
+              required
               maxLength={60}
               defaultValue={person.publicStaffProfile?.firstName ?? ""}
             />
           </Field>
-          <Field label={t("staffing.publicProfile.role")}>
+          <Field label={t("staffing.publicProfile.role")} hint={t("staffing.optionalHint")}>
             <input
               className={controlClass}
               name="profileRole"
@@ -107,7 +108,7 @@ export function PublicProfileSection({
               defaultValue={person.publicStaffProfile?.role ?? ""}
             />
           </Field>
-          <Field label={t("staffing.publicProfile.since")}>
+          <Field label={t("staffing.publicProfile.since")} hint={t("staffing.optionalHint")}>
             <input
               className={controlClass}
               type="number"
@@ -117,7 +118,7 @@ export function PublicProfileSection({
               defaultValue={person.publicStaffProfile?.sinceYear ?? ""}
             />
           </Field>
-          <Field label={t("staffing.publicProfile.languages")}>
+          <Field label={t("staffing.publicProfile.languages")} hint={t("staffing.optionalHint")}>
             <input
               className={controlClass}
               name="profileLanguages"
@@ -125,7 +126,7 @@ export function PublicProfileSection({
               defaultValue={person.publicStaffProfile?.languages ?? ""}
             />
           </Field>
-          <Field label={t("staffing.publicProfile.description")}>
+          <Field label={t("staffing.publicProfile.description")} hint={t("staffing.optionalHint")}>
             <textarea
               className={textareaClassFor(3)}
               rows={3}

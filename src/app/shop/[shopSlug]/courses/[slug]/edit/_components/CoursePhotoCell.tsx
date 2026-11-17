@@ -17,6 +17,7 @@ export function CoursePhotoCell({
   alt,
   altLabel,
   altPlaceholder,
+  altHint,
   children,
 }: {
   url: string;
@@ -28,13 +29,14 @@ export function CoursePhotoCell({
   alt: string;
   altLabel: string;
   altPlaceholder: string;
+  altHint: string;
   children?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <RemovablePhoto url={url} name={removeName} value={removeValue} label={removeLabel} />
       {children}
-      <Field label={altLabel} className="text-xs" htmlFor={altId}>
+      <Field label={altLabel} hint={altHint} className="text-xs" htmlFor={altId}>
         <input
           id={altId}
           name={altName}

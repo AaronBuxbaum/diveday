@@ -214,6 +214,7 @@ export async function DivePackagesSection({
           <Field
             label={t("settings.main.divePackages.validityLabel")}
             description={t("settings.main.divePackages.validityDescription")}
+            hint={t("promos.fields.expiresHint")}
           >
             <DateField name="validUntil" className="tabular-nums" />
           </Field>

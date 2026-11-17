@@ -140,14 +140,14 @@ describe("GearAndSizes", () => {
       }),
       ["mask", "fins", "wetsuit"],
     );
-    expect(screen.getByLabelText("Fin size")).toBeInTheDocument();
-    expect(screen.getByLabelText("Boot size")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Fin size/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Boot size/)).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Fins"));
     expect(screen.queryByLabelText("Fin size")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Boot size")).toHaveValue("9");
+    expect(screen.getByLabelText(/^Boot size/)).toHaveValue("9");
     expect(screen.getByLabelText("Mask")).toBeChecked();
     fireEvent.click(screen.getByLabelText("Fins"));
-    expect(screen.getByLabelText("Fin size")).toHaveValue("M");
+    expect(screen.getByLabelText(/^Fin size/)).toHaveValue("M");
   });
 
   it.each([
@@ -191,7 +191,7 @@ describe("GearAndSizes", () => {
    */
   it("asks for a drysuit size only when the shop's catalog has one, prefilled", () => {
     renderGear(makeRentalFit({ rentsDrysuit: true, drysuitSize: "MT" }), ["drysuit"]);
-    expect(screen.getByLabelText("Drysuit size")).toHaveValue("MT");
+    expect(screen.getByLabelText(/^Drysuit size/)).toHaveValue("MT");
   });
 
   it("never asks a shop that does not rent drysuits", () => {
@@ -204,14 +204,14 @@ describe("GearAndSizes", () => {
       makeRentalFit({ rentsHood: true, hoodSize: "M, 5 mm", rentsGloves: true, gloveSize: "L" }),
       ["hood", "gloves"],
     );
-    expect(screen.getByLabelText("Hood size")).toHaveValue("M, 5 mm");
-    expect(screen.getByLabelText("Glove size")).toHaveValue("L");
+    expect(screen.getByLabelText(/^Hood size/)).toHaveValue("M, 5 mm");
+    expect(screen.getByLabelText(/^Glove size/)).toHaveValue("L");
     expect(screen.getByLabelText("Hood")).toBeChecked();
     expect(screen.getByLabelText("Gloves")).toBeChecked();
     cleanup();
     renderGear(makeRentalFit({ rentsGloves: true, gloveSize: "L" }), ["gloves"]);
     expect(screen.queryByLabelText("Hood size")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Glove size")).toHaveValue("L");
+    expect(screen.getByLabelText(/^Glove size/)).toHaveValue("L");
   });
 
   /**
@@ -232,7 +232,7 @@ describe("GearAndSizes", () => {
       /separate rock boots, put that size in here/i,
     );
     // The hint is a description, never folded into what the box is called.
-    expect(screen.getByLabelText("Drysuit size")).toHaveValue("MT");
+    expect(screen.getByLabelText(/^Drysuit size/)).toHaveValue("MT");
   });
 
   /**
@@ -253,12 +253,12 @@ describe("GearAndSizes", () => {
     renderGear(makeRentalFit(), ["bcd", "wetsuit"]);
     expect(screen.queryByLabelText("Wetsuit size")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "Rents a wetsuit" }));
-    expect(screen.getByLabelText("Wetsuit size")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Wetsuit size/)).toBeInTheDocument();
   });
 
   it("gives a drysuit example for the weighting while the suit is a drysuit", () => {
     renderGear(makeRentalFit({ rentsWeights: true }), ["weights", "drysuit"]);
-    const weighting = () => screen.getByRole("textbox", { name: "Weight preference" });
+    const weighting = () => screen.getByRole("textbox", { name: /^Weight preference/ });
     expect(weighting()).toHaveAttribute("placeholder", "Usually 12 lb with 3 mm suit");
     fireEvent.click(screen.getByRole("radio", { name: "Own drysuit" }));
     expect(weighting()).toHaveAttribute("placeholder", "Usually 22 lb in a drysuit");

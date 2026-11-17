@@ -195,7 +195,10 @@ export function SiteFields({
               className={controlClass}
             />
           </Field>
-          <Field label={t("diveSites.form.descriptionLabel")}>
+          <Field
+            label={t("diveSites.form.descriptionLabel")}
+            hint={t("diveSites.form.optionalHint")}
+          >
             <textarea
               name="description"
               rows={3}
@@ -250,7 +253,10 @@ export function SiteFields({
     underwater: {
       body: (
         <FieldGrid columns={1} className="gap-y-5">
-          <Field label={t("diveSites.form.marineLifeLabel")}>
+          <Field
+            label={t("diveSites.form.marineLifeLabel")}
+            hint={t("diveSites.form.optionalHint")}
+          >
             <input
               name="marineLife"
               maxLength={400}
@@ -259,7 +265,7 @@ export function SiteFields({
               className={controlClass}
             />
           </Field>
-          <Field label={t("diveSites.form.briefingLabel")}>
+          <Field label={t("diveSites.form.briefingLabel")} hint={t("diveSites.form.optionalHint")}>
             <textarea
               name="marineLifeDescription"
               rows={3}

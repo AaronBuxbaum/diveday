@@ -1,5 +1,6 @@
 {
   "main": {
+    "optionalHint": "(opcional)",
     "juniorBuddy": {
       "heading": "Pareja adulta para adolescentes",
       "detail": "Al formar parejas por grupo, exige un adulto certificado con los buceadores de 15 a 17 años.",
@@ -123,7 +124,6 @@
       "detail": "Un buceador que no encuentra fecha recibe un correo ya redactado para enviarte. Usa una dirección que lea todo el equipo. Vacía la casilla para quitar el formulario.",
       "emailLabel": "Correo de contacto",
       "phoneLabel": "Teléfono de contacto",
-      "phoneHint": "(opcional)",
       "submit": "Guardar datos de contacto",
       "awaitingConfirmation": "Pendiente de confirmación",
       "resend": "Reenviar correo de confirmación"
@@ -189,7 +189,6 @@
       "description": "Tu página de reseñas de Google Business, TripAdvisor o Facebook.",
       "detail": "Cuando está configurada, el recap posterior a la salida invita al buceador a dejar una reseña. Vacía el campo para dejar de pedirlas.",
       "label": "Enlace de reseñas",
-      "hint": "(opcional)",
       "submit": "Guardar enlace de reseñas"
     },
     "deskHours": {
@@ -818,7 +817,8 @@
       "phoneLabel": "Teléfono del contacto de emergencia",
       "save": "Guardar contacto",
       "label": "Contacto de emergencia",
-      "addValue": "Agregar"
+      "addValue": "Agregar",
+      "optionalHint": "(opcional)"
     },
     "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}",
     "year": {

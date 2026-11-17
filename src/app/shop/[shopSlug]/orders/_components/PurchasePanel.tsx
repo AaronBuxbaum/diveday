@@ -80,6 +80,7 @@ async function PurchasePanelBody({
         method: t("orders.purchase.method"),
         reference: t("orders.purchase.reference"),
         note: t("orders.new.noteLabel"),
+        optional: t("orders.new.noteHint"),
         item: t("orders.purchase.item"),
         kind: t("orders.new.lineItemKindLabel"),
         quantity: t("orders.new.quantityLabel"),

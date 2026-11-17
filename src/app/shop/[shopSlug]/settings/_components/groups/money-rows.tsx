@@ -47,7 +47,10 @@ export function passThroughRow(view: SettingsView) {
       <SectionNotice banner={banner} section="passThrough" active={activeSection} />
       <form action={savePassThroughFeeAction} className="mt-4">
         <FieldGrid columns={2}>
-          <Field label={t("settings.main.passThrough.nameLabel")}>
+          <Field
+            label={t("settings.main.passThrough.nameLabel")}
+            hint={t("settings.main.optionalHint")}
+          >
             <input
               name="passThroughName"
               defaultValue={passThroughFee?.name ?? ""}

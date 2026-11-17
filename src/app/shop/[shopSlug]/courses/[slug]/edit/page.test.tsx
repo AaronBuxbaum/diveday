@@ -194,7 +194,7 @@ describe("EditCoursePage sections", () => {
     await renderEditor({ error: "spanish-stale" });
     const source = screen.getByRole("textbox", { name: /^courses\.edit\.subheadLabel/ });
     const spanish = screen.getByRole("textbox", { name: /^courses\.edit\.summarySpanishLabel/ });
-    const overview = screen.getByRole("textbox", { name: "courses.edit.overviewLabel" });
+    const overview = screen.getByRole("textbox", { name: /^courses.edit.overviewLabel/ });
     expect(source.closest("form")).toBe(spanish.closest("form"));
     expect(source.compareDocumentPosition(spanish) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(

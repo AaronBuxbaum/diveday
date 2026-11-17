@@ -139,6 +139,7 @@ export function RecordPaymentForm({
               <Field
                 label={t("orders.detail.recordPayment.roomHotel")}
                 description={t("orders.detail.recordPayment.roomHotelHint")}
+                hint={t("orders.new.noteHint")}
               >
                 <input
                   name="roomHotel"

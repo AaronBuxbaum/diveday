@@ -201,7 +201,7 @@ function CredentialRow({
                 className={controlClass}
               />
             </Field>
-            <Field label={t("staffing.credentials.issuer")}>
+            <Field label={t("staffing.credentials.issuer")} hint={t("staffing.optionalHint")}>
               <input
                 name="issuingBody"
                 maxLength={160}
@@ -209,7 +209,7 @@ function CredentialRow({
                 className={controlClass}
               />
             </Field>
-            <Field label={t("staffing.credentials.identifier")}>
+            <Field label={t("staffing.credentials.identifier")} hint={t("staffing.optionalHint")}>
               <input
                 name="identifier"
                 maxLength={120}
@@ -217,10 +217,10 @@ function CredentialRow({
                 className={controlClass}
               />
             </Field>
-            <Field label={t("staffing.credentials.issuedAt")}>
+            <Field label={t("staffing.credentials.issuedAt")} hint={t("staffing.optionalHint")}>
               <DateField name="issuedAt" defaultValue={credential.issuedAt ?? ""} />
             </Field>
-            <Field label={t("staffing.credentials.renewsAt")}>
+            <Field label={t("staffing.credentials.renewsAt")} hint={t("staffing.optionalHint")}>
               <DateField name="renewsAt" defaultValue={credential.renewsAt ?? ""} />
             </Field>
             <div className="col-span-full flex flex-wrap gap-3">

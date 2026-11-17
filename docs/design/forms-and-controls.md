@@ -264,12 +264,14 @@ be real and not just a visual convention.
 </Field>
 ```
 
-**A field behind a "More details" disclosure is optional by position and carries no hint** (issue
-#1867). Folding the rare answers away is how a form says they are rare, so none of them may carry a
-native `required` either: a disclosure the diver never opens cannot hold an answer the form insists
-on. The disclosure's own summary is what says so, because an opened disclosure looks exactly like
-the fields above it: name it for what it holds ("More details"), never for what it asks of the
-reader. `DateRequestForm` is the example, and its test pins that the folded fields carry neither.
+**Every text box or textarea says which it is, with no exceptions** (Aaron, 2026-11-17): a required
+one carries the native `required` (so `*`), any other carries `hint="(optional)"`. "Current tool
+(optional)" beside a bare "Phone" that was just as optional left a reader unable to tell a blank
+was allowed. A box that is mandatory but has no native `required` gets one. A read-only, disabled
+or search box asks nothing and carries neither. A field behind a "More details" disclosure
+follows the same rule: the disclosure folds fields away, it does not change what they are. The
+guard is `form-source.test.ts` ("marks every optional text field with a hint"); a group of
+choices sets `hint` on its `ChoiceFieldset` by hand.
 
 ### `hint` or `description`: where the words go, not how long they are
 

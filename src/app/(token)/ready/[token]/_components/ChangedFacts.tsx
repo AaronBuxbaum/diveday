@@ -236,7 +236,11 @@ export function ChangedFacts({
             as a pair (`readEmergencyContact`). */}
         <form action={actions.saveContact}>
           <FieldGrid columns={2}>
-            <Field label={t("waiver.contactName")} htmlFor="changed-contact-name">
+            <Field
+              hint={t("common.optional")}
+              label={t("waiver.contactName")}
+              htmlFor="changed-contact-name"
+            >
               <input
                 id="changed-contact-name"
                 name="emergencyContactName"
@@ -246,7 +250,11 @@ export function ChangedFacts({
                 className={controlClass}
               />
             </Field>
-            <Field label={t("waiver.contactPhone")} htmlFor="changed-contact-phone">
+            <Field
+              hint={t("common.optional")}
+              label={t("waiver.contactPhone")}
+              htmlFor="changed-contact-phone"
+            >
               <input
                 id="changed-contact-phone"
                 name="emergencyContactPhone"

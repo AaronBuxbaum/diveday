@@ -60,7 +60,7 @@ export function ProfileForm({
       columns={1}
       className={`device-text-profile ${className}`}
     >
-      <Field label={t("settings.main.profile.tagline")}>
+      <Field label={t("settings.main.profile.tagline")} hint={t("settings.main.optionalHint")}>
         <textarea
           name="tagline"
           rows={2}
@@ -70,7 +70,10 @@ export function ProfileForm({
           className={textareaClassFor(2)}
         />
       </Field>
-      <Field label={t("settings.main.profile.descriptionLabel")}>
+      <Field
+        label={t("settings.main.profile.descriptionLabel")}
+        hint={t("settings.main.optionalHint")}
+      >
         <textarea
           name="description"
           rows={3}
@@ -190,7 +193,10 @@ export function ProfileForm({
             className={controlClass}
           />
         </Field>
-        <Field label={t("settings.main.profile.establishedYear")}>
+        <Field
+          label={t("settings.main.profile.establishedYear")}
+          hint={t("settings.main.optionalHint")}
+        >
           <input
             name="establishedYear"
             type="number"

@@ -25,7 +25,7 @@ export function CourseGlanceSection({
   return (
     <CourseSection as="fieldset" {...glance}>
       <FieldGrid columns={2} className="gap-y-5">
-        <Field label={t("courses.edit.durationLabel")}>
+        <Field hint={t("courses.edit.optionalHint")} label={t("courses.edit.durationLabel")}>
           <input
             id="durationText"
             name="durationText"
@@ -35,7 +35,7 @@ export function CourseGlanceSection({
             className={controlClass}
           />
         </Field>
-        <Field label={t("courses.edit.groupSizeLabel")}>
+        <Field hint={t("courses.edit.optionalHint")} label={t("courses.edit.groupSizeLabel")}>
           <input
             id="groupSizeText"
             name="groupSizeText"
@@ -88,7 +88,7 @@ export function CourseEnrollSection({
                 underwater. The column stays; the way to set it is to be one of
                 those courses. */}
       <FieldGrid columns={1} className="gap-y-5">
-        <Field label={t("courses.edit.prerequisiteLabel")}>
+        <Field hint={t("courses.edit.optionalHint")} label={t("courses.edit.prerequisiteLabel")}>
           <textarea
             id="prerequisiteNote"
             name="prerequisiteNote"
@@ -117,6 +117,7 @@ export function CourseFeeCoversSection({
     <CourseSection {...feeCovers} as="fieldset">
       <FieldGrid columns={2} className="gap-y-5">
         <Field
+          hint={t("courses.edit.optionalHint")}
           label={t("courses.edit.includedLabel")}
           description={t("courses.edit.oneItemPerLine")}
         >
@@ -131,6 +132,7 @@ export function CourseFeeCoversSection({
           />
         </Field>
         <Field
+          hint={t("courses.edit.optionalHint")}
           label={t("courses.edit.notIncludedLabel")}
           description={t("courses.edit.oneItemPerLine")}
         >

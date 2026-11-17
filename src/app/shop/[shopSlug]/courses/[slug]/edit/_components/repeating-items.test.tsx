@@ -32,6 +32,7 @@ const DAY_COPY: DayByDayEditorCopy = {
   daysMaxOne: "",
   daysMaxOther: "",
   addDay: "Add day",
+  optionalHint: "(optional)",
 };
 
 const FAQ_COPY: FaqEditorCopy = {
@@ -111,7 +112,7 @@ it("round-trips each explicitly authored day place in the course editor", () => 
       copy={DAY_COPY}
     />,
   );
-  const place = screen.getByRole("textbox", { name: "Day 1 meeting place" });
+  const place = screen.getByRole("textbox", { name: /^Day 1 meeting place/ });
   expect(place).toHaveValue("Shop pool");
   fireEvent.change(place, { target: { value: "Training pool entrance" } });
   expect(

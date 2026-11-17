@@ -191,6 +191,7 @@ export default async function IntegrationsSettingsPage({
                   <Field
                     label={t("integrations.quickbooks.incomeAccountLabel")}
                     description={t("integrations.quickbooks.incomeAccountDescription")}
+                    hint={t("settings.main.optionalHint")}
                   >
                     <input
                       name="incomeAccountId"

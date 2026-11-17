@@ -133,6 +133,7 @@ export function RentalsForm({
         <Field
           label={t("settings.main.rentals.terms.label")}
           description={t("settings.main.rentals.terms.hint")}
+          hint={t("settings.main.optionalHint")}
         >
           <textarea
             name="rentalTerms"

@@ -683,15 +683,6 @@ export function Field({
 export const choiceClass = "size-4 shrink-0";
 
 /**
- * **A grid of `ChoicePill`s** that fits as many 11rem columns as the box allows
- * and wraps the rest, so a label never breaks mid-phrase and no pill is clipped
- * at the edge. A fixed `sm:grid-cols-3` did both in a narrow form column (the
- * get-set-up "What do you run?" boxes, 2026-11-17).
- */
-export const choiceGridClass =
-  "grid grid-cols-[repeat(auto-fit,minmax(min(100%,11rem),1fr))] gap-2";
-
-/**
  * **A radio's focus is drawn on the box it sits in, not round its dot.** An
  * outline follows `border-radius`, and a native radio's is 0 whatever asks
  * otherwise: Preflight's `input { border-radius: 0 }` outranks a `:where()`

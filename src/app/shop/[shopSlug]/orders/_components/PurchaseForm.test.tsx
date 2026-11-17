@@ -24,6 +24,7 @@ const words: PurchaseWords = {
   },
   method: "Method",
   reference: "Reference",
+  optional: "(optional)",
   note: "Note",
   item: "Item",
   kind: "Kind",
@@ -82,7 +83,7 @@ it("preserves cart and receipt drafts across modes and moves focus when adding/r
   fireEvent.change(screen.getByLabelText("Item", { selector: "input" }), {
     target: { value: "Mask" },
   });
-  fireEvent.change(screen.getByLabelText("Reference"), { target: { value: "Terminal 42" } });
+  fireEvent.change(screen.getByLabelText(/Reference/), { target: { value: "Terminal 42" } });
   fireEvent.click(screen.getByRole("radio", { name: "Amount due" }));
   expect(screen.getByDisplayValue("Mask")).toBeVisible();
   fireEvent.click(screen.getByRole("radio", { name: "Already received" }));

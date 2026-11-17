@@ -21,6 +21,7 @@ export interface LearningMaterialsEditorCopy {
   linkLabel: string;
   linkHint: string;
   noteLabel: string;
+  optionalHint: string;
   notePlaceholder: string;
   remove: string;
   add: string;
@@ -108,6 +109,7 @@ export function LearningMaterialsEditor({
           <FieldGrid columns={1}>
             <Field label={fill(copy.nameLabel, { number: index + 1 })}>
               <input
+                required={Boolean(row.url.trim() || row.note.trim())}
                 type="text"
                 maxLength={LEARNING_MATERIAL_LIMITS.name}
                 value={row.name}
@@ -116,7 +118,7 @@ export function LearningMaterialsEditor({
                 className={controlClass}
               />
             </Field>
-            <Field label={copy.linkLabel} description={copy.linkHint}>
+            <Field label={copy.linkLabel} hint={copy.optionalHint} description={copy.linkHint}>
               <input
                 type="url"
                 inputMode="url"
@@ -126,7 +128,7 @@ export function LearningMaterialsEditor({
                 className={controlClass}
               />
             </Field>
-            <Field label={copy.noteLabel}>
+            <Field label={copy.noteLabel} hint={copy.optionalHint}>
               <input
                 type="text"
                 maxLength={LEARNING_MATERIAL_LIMITS.note}

@@ -28,6 +28,7 @@ export function ConservationPanel({
     quantity: t("trips.conservation.quantity"),
     location: t("trips.conservation.location"),
     note: t("trips.conservation.note"),
+    optional: t("trips.details.optionalHint"),
     save: t("trips.conservation.save"),
     add: t("trips.conservation.add"),
     pending: t("words.busy.saving"),

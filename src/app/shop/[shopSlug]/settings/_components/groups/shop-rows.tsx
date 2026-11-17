@@ -91,6 +91,7 @@ export function seasonRow(view: SettingsView) {
         <Field
           label={t("settings.main.season.reopensLabel")}
           description={t("settings.main.season.reopensHint")}
+          hint={t("settings.main.optionalHint")}
         >
           <DateField name="reopensOn" defaultValue={shop.reopensOn ?? ""} />
         </Field>

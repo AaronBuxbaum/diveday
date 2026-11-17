@@ -105,6 +105,7 @@ export function CourseFormsRowControl({
               <Field
                 label={t("trips.roster.courseForms.signedOn")}
                 description={t("trips.roster.courseForms.signedOnHint")}
+                hint={t("trips.details.optionalHint")}
                 htmlFor={`paper-form-signed-on-${bookingId}`}
               >
                 <DateField id={`paper-form-signed-on-${bookingId}`} name="signedOn" />

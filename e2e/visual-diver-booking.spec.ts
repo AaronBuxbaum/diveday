@@ -554,7 +554,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "ready-change-plans-date", scheme);
         await page.getByRole("link", { name: diverCopy("ready.moveAsk.changePlans") }).click();
         await expect(page.locator("#move-ask")).toBeFocused();
-        await page.getByLabel("Dates that would work (optional)").fill("Any Saturday in August");
+        await page.getByLabel("Dates that would work").fill("Any Saturday in August");
         await capture(page, "ready-ask-to-move", scheme);
 
         await page.getByRole("button", { name: "Ask to move" }).click();

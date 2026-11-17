@@ -97,6 +97,7 @@ export function RegisterForm({
           />
         </Field>
         <Field
+          hint={t("common.optional")}
           label={t("register.emailLabel")}
           // `description`, not `hint`: `hint` is the inline "(optional)" slot, and a
           // whole sentence there wraps the caption row and knocks this box out of
@@ -114,6 +115,7 @@ export function RegisterForm({
           />
         </Field>
         <Field
+          hint={t("common.optional")}
           label={t("register.phoneLabel")}
           htmlFor="phone"
           // Shown once the field holds a number, the moment the words start
@@ -176,6 +178,7 @@ export function RegisterForm({
             </select>
           </Field>
           <Field
+            hint={t("common.optional")}
             label={t("register.identifierLabel")}
             htmlFor="identifier"
             className={styles.certificationDetails}
@@ -212,7 +215,11 @@ export function RegisterForm({
             the schema's own bound accepts a size the diver's gear form could
             not save back, which is issue #1754 from this door. */}
         <FieldGrid columns={3}>
-          <Field label={t("register.wetsuitLabel")} htmlFor="wetsuitSize">
+          <Field
+            hint={t("common.optional")}
+            label={t("register.wetsuitLabel")}
+            htmlFor="wetsuitSize"
+          >
             <input
               id="wetsuitSize"
               name="wetsuitSize"
@@ -220,7 +227,7 @@ export function RegisterForm({
               className={controlClass}
             />
           </Field>
-          <Field label={t("register.bootLabel")} htmlFor="bootSize">
+          <Field hint={t("common.optional")} label={t("register.bootLabel")} htmlFor="bootSize">
             <input
               id="bootSize"
               name="bootSize"
@@ -228,7 +235,7 @@ export function RegisterForm({
               className={controlClass}
             />
           </Field>
-          <Field label={t("register.finLabel")} htmlFor="finSize">
+          <Field hint={t("common.optional")} label={t("register.finLabel")} htmlFor="finSize">
             <input
               id="finSize"
               name="finSize"

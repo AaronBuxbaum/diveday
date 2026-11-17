@@ -5,6 +5,10 @@ import { ErrorToast } from "@/components/Toast";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { BoatPaperFields } from "./BoatPaperFields";
 
+/** The caption alone: the control's name also carries the "(optional)" hint. */
+const labelStart = (caption: string) =>
+  new RegExp(`^${caption.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -23,12 +27,14 @@ it.each(["certificate", "radio", "channel"] as const)(
       />,
     );
     const control = screen.getByLabelText(
-      t(
-        kind === "certificate"
-          ? "boats.certifiedPassengersLabel"
-          : kind === "radio"
-            ? "boats.callSignLabel"
-            : "boats.workingChannelLabel",
+      labelStart(
+        t(
+          kind === "certificate"
+            ? "boats.certifiedPassengersLabel"
+            : kind === "radio"
+              ? "boats.callSignLabel"
+              : "boats.workingChannelLabel",
+        ),
       ),
     );
     expect(control).toHaveAttribute("aria-invalid", "true");
@@ -54,12 +60,14 @@ it.each(["certificate", "radio", "channel"] as const)(
       </>,
     );
     const control = screen.getByLabelText(
-      t(
-        kind === "certificate"
-          ? "boats.certifiedPassengersLabel"
-          : kind === "radio"
-            ? "boats.callSignLabel"
-            : "boats.workingChannelLabel",
+      labelStart(
+        t(
+          kind === "certificate"
+            ? "boats.certifiedPassengersLabel"
+            : kind === "radio"
+              ? "boats.callSignLabel"
+              : "boats.workingChannelLabel",
+        ),
       ),
     );
     expect(control).toHaveAccessibleDescription(expect.stringContaining(error));

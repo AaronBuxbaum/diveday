@@ -47,6 +47,7 @@ export type EmbedGeneratorCopy = {
   code: string;
   buttonText: string;
   partnerName: string;
+  optional: string;
   partnerPlaceholder: string;
   partnerLink: string;
   partnerLinkField: string;
@@ -249,7 +250,7 @@ export function EmbedGenerator({
               ) : null}
 
               {kind === "partner" ? (
-                <Field label={copy.partnerName}>
+                <Field label={copy.partnerName} hint={copy.optional}>
                   <input
                     type="text"
                     value={partner}

@@ -84,7 +84,10 @@ export function ParticipantTermsSection({
     <form action={action} className="flex flex-col gap-4">
       <p className="text-sm text-muted">{t("participants.terms.description")}</p>
       <FieldGrid columns={3}>
-        <Field label={t("participants.terms.snorkelerPrice")}>
+        <Field
+          label={t("participants.terms.snorkelerPrice")}
+          hint={t("trips.details.optionalHint")}
+        >
           <input
             name="snorkelerPrice"
             type="number"
@@ -96,7 +99,7 @@ export function ParticipantTermsSection({
             className={`${controlClass} tabular-nums`}
           />
         </Field>
-        <Field label={t("participants.terms.riderPrice")}>
+        <Field label={t("participants.terms.riderPrice")} hint={t("trips.details.optionalHint")}>
           <input
             name="riderPrice"
             type="number"

@@ -69,6 +69,7 @@ export type ExecutedDiveLabels = {
   /** The staff-only note beside it, and the six words that say so. */
   planChangeNote: string;
   planChangeNoteHint: string;
+  optional: string;
   save: string;
   saved: string;
   /** One per refusal `saveExecutedDiveAction` can return. */
@@ -362,6 +363,7 @@ function ExecutedDiveForm({
         <Field
           label={labels.planChangeNote}
           description={labels.planChangeNoteHint}
+          hint={labels.optional}
           error={planChangeNoteError ? labels.refusals.plan_change_note_too_long : undefined}
           className="sm:col-span-2"
         >
@@ -376,6 +378,7 @@ function ExecutedDiveForm({
         </Field>
         <Field
           label={initialDepth.label}
+          hint={labels.optional}
           error={depthError ? labels.refusals.depth_out_of_range : undefined}
         >
           <input
@@ -393,6 +396,7 @@ function ExecutedDiveForm({
         </Field>
         <Field
           label={labels.enteredAt}
+          hint={labels.optional}
           error={timesError ? labels.refusals.times_transposed : undefined}
         >
           <DateField
@@ -404,6 +408,7 @@ function ExecutedDiveForm({
         </Field>
         <Field
           label={labels.exitedAt}
+          hint={labels.optional}
           error={timesError ? labels.refusals.times_transposed : undefined}
         >
           <DateField
@@ -413,7 +418,7 @@ function ExecutedDiveForm({
             onChange={(event) => setExitedAt(event.target.value)}
           />
         </Field>
-        <Field label={labels.visibility}>
+        <Field label={labels.visibility} hint={labels.optional}>
           <input
             name="visibility"
             value={visibility}
@@ -421,7 +426,7 @@ function ExecutedDiveForm({
             className={controlClass}
           />
         </Field>
-        <Field label={labels.current}>
+        <Field label={labels.current} hint={labels.optional}>
           <input
             name="current"
             value={current}

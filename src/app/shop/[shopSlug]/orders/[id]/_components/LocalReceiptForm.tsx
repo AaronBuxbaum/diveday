@@ -11,6 +11,7 @@ type Words = {
   tip: string;
   reference: string;
   hint: string;
+  optional: string;
   submit: string;
   busy: string;
   invalid: string;
@@ -61,7 +62,7 @@ export function LocalReceiptForm({
         </Field>
         <p className="text-sm text-muted">{words.hint}</p>
         <FieldGrid columns={2}>
-          <Field label={words.tax}>
+          <Field label={words.tax} hint={words.optional}>
             <input
               name="tax"
               type="number"
@@ -73,7 +74,7 @@ export function LocalReceiptForm({
               onChange={(event) => setTax(event.target.value)}
             />
           </Field>
-          <Field label={words.tip}>
+          <Field label={words.tip} hint={words.optional}>
             <input
               name="tip"
               type="number"
@@ -85,7 +86,7 @@ export function LocalReceiptForm({
               onChange={(event) => setTip(event.target.value)}
             />
           </Field>
-          <Field label={words.reference}>
+          <Field label={words.reference} hint={words.optional}>
             <input
               name="receiptReference"
               type="text"

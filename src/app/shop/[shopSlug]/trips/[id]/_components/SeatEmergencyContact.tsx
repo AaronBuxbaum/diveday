@@ -42,7 +42,10 @@ export function SeatEmergencyContact({
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <FieldGrid columns={2}>
-        <Field label={t("trips.roster.emergencyContactNameLabel")}>
+        <Field
+          label={t("trips.roster.emergencyContactNameLabel")}
+          hint={t("trips.details.optionalHint")}
+        >
           <input
             name="emergencyContactName"
             autoComplete="name"
@@ -51,7 +54,10 @@ export function SeatEmergencyContact({
             className={controlClass}
           />
         </Field>
-        <Field label={t("trips.roster.emergencyContactPhoneLabel")}>
+        <Field
+          label={t("trips.roster.emergencyContactPhoneLabel")}
+          hint={t("trips.details.optionalHint")}
+        >
           <input
             name="emergencyContactPhone"
             type="tel"

@@ -138,6 +138,7 @@ export function EmergencyReferenceForm({
       <Field
         label={t("settings.main.emergency.lineLabel", { n: index + 1 })}
         description={examples ? t("settings.main.emergency.lineExamples") : undefined}
+        hint={t("settings.main.optionalHint")}
       >
         <input
           name={`emergencyLabel-${index}`}
@@ -147,7 +148,10 @@ export function EmergencyReferenceForm({
           className={controlClass}
         />
       </Field>
-      <Field label={t("settings.main.emergency.phoneLabel", { n: index + 1 })}>
+      <Field
+        label={t("settings.main.emergency.phoneLabel", { n: index + 1 })}
+        hint={t("settings.main.optionalHint")}
+      >
         <input
           name={`emergencyPhone-${index}`}
           type="tel"
@@ -214,6 +218,7 @@ export function EmergencyReferenceForm({
               <Field
                 label={t("settings.main.emergency.vesselLabel")}
                 description={t("settings.main.emergency.vesselHint")}
+                hint={t("settings.main.optionalHint")}
               >
                 <input
                   name="emergencyVessel"
@@ -228,6 +233,7 @@ export function EmergencyReferenceForm({
               <Field
                 label={t("settings.main.emergency.shoreContactLabel")}
                 description={t("settings.main.emergency.shoreContactDescription")}
+                hint={t("settings.main.optionalHint")}
               >
                 <input
                   name="emergencyShoreContact"
@@ -237,7 +243,11 @@ export function EmergencyReferenceForm({
                   className={controlClass}
                 />
               </Field>
-              <Field label={t("settings.main.emergency.planLabel")} className="sm:col-span-2">
+              <Field
+                label={t("settings.main.emergency.planLabel")}
+                className="sm:col-span-2"
+                hint={t("settings.main.optionalHint")}
+              >
                 <textarea
                   name="emergencyPlan"
                   rows={4}
@@ -276,6 +286,7 @@ export function EmergencyReferenceForm({
               <Field
                 label={t("settings.main.emergency.shoreAlertEmailLabel")}
                 description={shoreAlertDescription}
+                hint={t("settings.main.optionalHint")}
               >
                 <input
                   name="shoreAlertEmail"
@@ -499,6 +510,7 @@ export function CrewLeadFields({ shop, t }: { shop: SettingsShop; t: StaffTransl
       <Field
         label={t("settings.main.crewLead.label")}
         description={t("settings.main.crewLead.description")}
+        hint={t("settings.main.optionalHint")}
       >
         <input
           name="crewLeadMinutes"

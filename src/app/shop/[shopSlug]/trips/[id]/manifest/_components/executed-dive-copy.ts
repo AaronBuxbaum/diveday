@@ -87,6 +87,7 @@ export function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): Ex
     },
     planChangeNote: t("manifest.planChange.noteLabel"),
     planChangeNoteHint: t("manifest.planChange.noteHint"),
+    optional: t("manifest.executedDive.optional"),
     save: t("manifest.executedDive.save"),
     saved: t("manifest.executedDive.saved"),
     refusals: {

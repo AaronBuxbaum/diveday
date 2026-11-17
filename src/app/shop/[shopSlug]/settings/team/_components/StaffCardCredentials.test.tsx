@@ -235,9 +235,9 @@ describe("renewing and correcting a staff credential", () => {
       />,
     );
     fireEvent.click(screen.getByText("Edit or renew"));
-    expect(screen.getByLabelText("Reference number")).toHaveValue("C-123");
-    expect(screen.getByLabelText("Issue date")).toHaveValue("2024-01-01");
-    expect(screen.getByLabelText("Renewal date")).toHaveValue("2026-01-01");
+    expect(screen.getByLabelText(/^Reference number/)).toHaveValue("C-123");
+    expect(screen.getByLabelText(/^Issue date/)).toHaveValue("2024-01-01");
+    expect(screen.getByLabelText(/^Renewal date/)).toHaveValue("2026-01-01");
     expect(screen.getByRole("button", { name: "Save renewal" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Save correction" })).toBeVisible();
   });

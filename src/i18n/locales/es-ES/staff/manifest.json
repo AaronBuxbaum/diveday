@@ -101,7 +101,8 @@
       "planChangeNoteWithoutReason": "Elige por qué cambió el plan y guarda la nota.",
       "planChangeNoteTooLong": "Esa nota es demasiado larga. Acórtala y guarda de nuevo."
     },
-    "observedSpeciesHint": "Los buceadores lo leen en su resumen."
+    "observedSpeciesHint": "Los buceadores lo leen en su resumen.",
+    "optional": "(opcional)"
   },
   "seen": {
     "heading": "Visto",

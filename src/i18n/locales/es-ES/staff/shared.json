@@ -62,7 +62,8 @@
     "documentChooseAnother": "Elige otro archivo",
     "confirm": "Registrar la respuesta",
     "useDiverForm": "Usar como evaluación el formulario que envió el buceador. Ábrelo primero y escribe el nombre del médico que aparece en él.",
-    "earlierLetterConfirm": "Marca si esta carta tiene fecha anterior a la última derivación: el médico evaluó su estado actual, no solo la derivación firmada el {date}."
+    "earlierLetterConfirm": "Marca si esta carta tiene fecha anterior a la última derivación: el médico evaluó su estado actual, no solo la derivación firmada el {date}.",
+    "optionalHint": "(opcional)"
   },
   "waiverSend": {
     "copyLink": "Copiar enlace",

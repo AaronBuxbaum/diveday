@@ -42,6 +42,7 @@ export interface DayByDayEditorCopy {
   daysMaxOne: string;
   daysMaxOther: string;
   addDay: string;
+  optionalHint: string;
 }
 
 /**
@@ -124,6 +125,15 @@ export function DayByDayEditor({
       <input ref={hidden} type="hidden" name="scheduleDaysJson" value={JSON.stringify(days)} />
       {days.map((day, dayIndex) => {
         const dayNumber = dayIndex + 1;
+        // A row nobody touched is dropped on save; one with anything in it needs its title.
+        const started = Boolean(
+          day.title.trim() ||
+            day.startTime ||
+            day.endTime ||
+            day.timeNote?.trim() ||
+            day.meetingPlace?.trim() ||
+            countItems(day.items),
+        );
         return (
           <RepeatingItemCard
             // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id and are only ever appended/removed by position, never reordered.
@@ -142,6 +152,7 @@ export function DayByDayEditor({
             <FieldGrid columns={1}>
               <Field label={fill(copy.dayTitleLabel, { number: dayNumber })}>
                 <input
+                  required={started}
                   value={day.title}
                   onChange={(event) => updateDay(dayIndex, { title: event.target.value })}
                   maxLength={160}
@@ -150,14 +161,20 @@ export function DayByDayEditor({
                 />
               </Field>
               <FieldGrid columns={2}>
-                <Field label={fill(copy.startTimeLabel, { number: dayNumber })}>
+                <Field
+                  label={fill(copy.startTimeLabel, { number: dayNumber })}
+                  hint={copy.optionalHint}
+                >
                   <DateField
                     type="time"
                     value={day.startTime ?? ""}
                     onChange={(event) => updateDay(dayIndex, { startTime: event.target.value })}
                   />
                 </Field>
-                <Field label={fill(copy.endTimeLabel, { number: dayNumber })}>
+                <Field
+                  label={fill(copy.endTimeLabel, { number: dayNumber })}
+                  hint={copy.optionalHint}
+                >
                   <DateField
                     type="time"
                     value={day.endTime ?? ""}
@@ -165,7 +182,10 @@ export function DayByDayEditor({
                   />
                 </Field>
               </FieldGrid>
-              <Field label={fill(copy.meetingPlaceLabel, { number: dayNumber })}>
+              <Field
+                label={fill(copy.meetingPlaceLabel, { number: dayNumber })}
+                hint={copy.optionalHint}
+              >
                 <input
                   value={day.meetingPlace ?? ""}
                   onChange={(event) => updateDay(dayIndex, { meetingPlace: event.target.value })}
@@ -176,6 +196,7 @@ export function DayByDayEditor({
               </Field>
               <Field
                 label={fill(copy.timeNoteLabel, { number: dayNumber })}
+                hint={copy.optionalHint}
                 description={copy.timeNoteDescription}
               >
                 <input
@@ -203,6 +224,7 @@ export function DayByDayEditor({
             <FieldGrid columns={1} className="mt-4">
               <Field
                 label={fill(copy.whatHappens, { number: dayNumber })}
+                hint={copy.optionalHint}
                 description={copy.whatHappensHint}
                 error={
                   countItems(day.items) > MAX_SCHEDULE_DAY_ITEMS

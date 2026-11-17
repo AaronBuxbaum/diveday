@@ -73,7 +73,10 @@ export function MessagesGroup({
         >
           <SectionNotice banner={banner} section="contact" active={activeSection} />
           <FieldGrid as="form" action={saveContactAction} columns={2} className="mt-4">
-            <Field label={t("settings.main.contact.emailLabel")}>
+            <Field
+              label={t("settings.main.contact.emailLabel")}
+              hint={t("settings.main.optionalHint")}
+            >
               <input
                 name="contactEmail"
                 type="email"
@@ -86,7 +89,7 @@ export function MessagesGroup({
             </Field>
             <Field
               label={t("settings.main.contact.phoneLabel")}
-              hint={t("settings.main.contact.phoneHint")}
+              hint={t("settings.main.optionalHint")}
             >
               <input
                 name="contactPhone"
@@ -176,7 +179,7 @@ export function MessagesGroup({
           <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
             <Field
               label={t("settings.main.reviewLink.label")}
-              hint={t("settings.main.reviewLink.hint")}
+              hint={t("settings.main.optionalHint")}
             >
               <input
                 name="reviewUrl"

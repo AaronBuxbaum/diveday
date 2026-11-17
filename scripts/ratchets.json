@@ -1083,7 +1083,7 @@
     "src/app/shop/[shopSlug]/page.tsx": 576,
     "src/app/shop/[shopSlug]/promos/page.tsx": 407,
     "src/app/shop/[shopSlug]/reports/page.tsx": 412,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 547
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 514
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

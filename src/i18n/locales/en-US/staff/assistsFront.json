@@ -31,7 +31,8 @@
     "filling": "Reading…",
     "callback": "Call back: {when}",
     "onFile": "On file: {name}",
-    "nothing": "Nothing in the note fills a field."
+    "nothing": "Nothing in the note fills a field.",
+    "optionalHint": "(optional)"
   },
   "import": {
     "map": "Map the other columns",

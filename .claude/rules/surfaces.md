@@ -57,6 +57,8 @@ schedule builder, date requests, site briefings, bearer-token routes). What they
   (`src/components/Toast.tsx`), reached through `FormStatus`, a `danger` `ShopNotice` or directly; a
   `role="alert"` element in `src/app`/`src/components` fails `pnpm check:error-toasts`. Only a
   field's own validation hint stays beside its control (`Field`'s `error`).
+- **A text field says which it is**: native `required` (draws `*`) or `hint="(optional)"`, never
+  neither (Aaron, 2026-11-17): `form-source.test.ts`; [forms-and-controls.md](../../docs/design/forms-and-controls.md#required-fields).
 - **A form's outcome** (`FormStatus`) is routed by
   `noticeForForm`, brought on screen by `StatusInView`; scroll-preservation guard.
 - **A new page ships with `loading.tsx` and `export const instant = true`; no `await` above

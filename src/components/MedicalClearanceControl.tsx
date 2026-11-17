@@ -138,6 +138,7 @@ export function MedicalClearanceControl({
         <Field
           label={copy.physicianNameLabel}
           description={copy.evidenceHint}
+          hint={copy.optionalHint}
           htmlFor="physicianName"
         >
           <input

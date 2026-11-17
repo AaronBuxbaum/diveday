@@ -51,6 +51,7 @@ export function EmergencyContactSection({
           control the reader was just sent to, not a banner at the top. */}
         <FieldGrid columns={2} className="mt-4">
           <Field
+            hint={t("common.optional")}
             label={t("waiver.contactName")}
             error={
               namedFieldError?.anchor === "emergencyContactName"
@@ -68,6 +69,7 @@ export function EmergencyContactSection({
             />
           </Field>
           <Field
+            hint={t("common.optional")}
             label={t("waiver.contactPhone")}
             error={
               namedFieldError?.anchor === "emergencyContactPhone"

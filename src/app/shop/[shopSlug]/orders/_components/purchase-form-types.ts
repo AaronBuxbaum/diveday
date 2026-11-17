@@ -14,6 +14,8 @@ export type PurchaseWords = {
   method: string;
   reference: string;
   note: string;
+  /** The "(optional)" hint on every box the payment can leave blank. */
+  optional: string;
   item: string;
   kind: string;
   quantity: string;

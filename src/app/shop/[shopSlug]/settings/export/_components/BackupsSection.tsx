@@ -252,6 +252,7 @@ export function BackupsSection({
               >
                 <input
                   name="secretAccessKey"
+                  required={!destination}
                   type="password"
                   maxLength={500}
                   autoComplete="new-password"

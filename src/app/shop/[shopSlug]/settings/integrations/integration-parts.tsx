@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { ChoiceFieldset, ChoicePill, choiceGridClass } from "@/components/ui/form";
+import { choiceGridClass } from "@/components/ui/choice-grid";
+import { ChoiceFieldset, ChoicePill } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { disconnectIntegrationAction } from "./actions";

@@ -55,6 +55,7 @@ export async function MonthEndSection({
         copy={{
           label: t("reports.bookkeeper.label"),
           description: t("reports.bookkeeper.description"),
+          optional: t("settings.main.optionalHint"),
           save: t("reports.bookkeeper.save"),
           saving: t("words.busy.saving"),
           saved: t("reports.bookkeeper.saved"),

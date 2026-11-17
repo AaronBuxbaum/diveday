@@ -2,6 +2,7 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { choiceGridClass } from "@/components/ui/choice-grid";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import {
   ChoicePill,
@@ -10,7 +11,6 @@ import {
   FieldActions,
   FieldGrid,
   FormStatus,
-  choiceGridClass,
 } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";

@@ -1567,7 +1567,7 @@
       "shore": "Inmersiones desde la costa",
       "pool": "Sesiones en piscina"
     },
-    "currentSystem": "Herramienta actual (opcional)",
+    "currentSystem": "Herramienta actual",
     "notSpecified": "Sin especificar",
     "current": {
       "paper": "Papel",

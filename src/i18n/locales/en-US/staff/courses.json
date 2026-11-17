@@ -57,7 +57,7 @@
     "eLearningFeeLabel": "e-Learning fee",
     "eLearningFeeHint": "(its own order line)",
     "privatePriceLabel": "Private session price",
-    "privatePriceHint": "(optional)",
+    "optionalHint": "(optional)",
     "photosLegend": "Photos",
     "photosDescription": "Descriptions are optional. Screen readers say them aloud to divers who can’t see the photo.",
     "heroPhotoLabel": "Cover photo",
@@ -176,7 +176,7 @@
     "daysMaxOne": "{max} day max",
     "daysMaxOther": "{max} days max",
     "addDay": "Add day",
-    "meetingPlaceLabel": "Day {number} meeting place (optional)",
+    "meetingPlaceLabel": "Day {number} meeting place",
     "meetingPlacePlaceholder": "Shop classroom"
   },
   "faq": {
@@ -194,7 +194,7 @@
     "nameLabel": "Material {number}",
     "namePlaceholder": "Open Water eLearning",
     "linkLabel": "Link",
-    "linkHint": "Optional. Starts with https://. Use the learning portal, not a store page when access is included.",
+    "linkHint": "Starts with https://. Use the learning portal, not a store page when access is included.",
     "noteLabel": "Access and preparation",
     "notePlaceholder": "Explain how to get access and when to finish",
     "remove": "Remove material {number}",

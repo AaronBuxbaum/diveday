@@ -188,7 +188,7 @@ export function DayOfDetails({
         {/* **The diver's own words.** Written to the note column alone, so it
             cannot blank sizes set last week (issue 627). */}
         <div className="py-5">
-          <Field label={t("rental.anythingElse")} htmlFor="crew-note">
+          <Field hint={t("common.optional")} label={t("rental.anythingElse")} htmlFor="crew-note">
             <textarea
               id="crew-note"
               name="note"
@@ -207,7 +207,12 @@ export function DayOfDetails({
         {data.offersHotelPickup ? (
           <div className="py-5">
             <h3 className="text-base font-semibold">{t("ready.hotelPickupLabel")}</h3>
-            <Field label={t("ready.hotelPickupFieldLabel")} htmlFor="hotel-pickup" className="mt-3">
+            <Field
+              hint={t("common.optional")}
+              label={t("ready.hotelPickupFieldLabel")}
+              htmlFor="hotel-pickup"
+              className="mt-3"
+            >
               <input
                 id="hotel-pickup"
                 type="text"
@@ -226,6 +231,7 @@ export function DayOfDetails({
         {data.lunchAboard ? (
           <div className="py-5">
             <Field
+              hint={t("common.optional")}
               label={t("ready.dietaryLabel")}
               description={t("ready.dietaryHint")}
               htmlFor="dietary-note"

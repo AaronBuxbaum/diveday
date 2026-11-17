@@ -3,8 +3,9 @@
 import { useActionState, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { choiceGridClass } from "@/components/ui/choice-grid";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { ChoicePill, controlClass, Field, FieldGrid, FormStatus, choiceGridClass } from "@/components/ui/form";
+import { ChoicePill, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import {
   asksWhichSystem,
   SETUP_CURRENT_SYSTEMS,
@@ -33,6 +34,7 @@ export type SetupRequestFormWords = {
   contactName: string;
   email: string;
   phone: string;
+  optional: string;
   website: string;
   submit: string;
   sending: string;
@@ -144,7 +146,7 @@ export function SetupRequestForm({
             className={controlClass}
           />
         </Field>
-        <Field label={words.phone} error={errorFor("phone")}>
+        <Field label={words.phone} hint={words.optional} error={errorFor("phone")}>
           <input
             name="phone"
             type="tel"
@@ -172,7 +174,7 @@ export function SetupRequestForm({
             ))}
           </div>
         </Field>
-        <Field label={words.currentSystem} error={errorFor("currentSystem")}>
+        <Field label={words.currentSystem} hint={words.optional} error={errorFor("currentSystem")}>
           <select
             name="currentSystem"
             defaultValue={values.currentSystem ?? ""}

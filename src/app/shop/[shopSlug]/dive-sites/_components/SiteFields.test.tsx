@@ -63,7 +63,7 @@ describe("SiteFields — help under the control (K-418)", () => {
     renderFields(null);
     const input = document.querySelector('input[name="tideStationId"]') as HTMLInputElement;
     const caption = input.labels?.[0];
-    expect(caption?.textContent).toBe("NOAA tide station");
+    expect(caption?.textContent).toBe(`NOAA tide station ${t("diveSites.form.optionalHint")}`);
     expect(caption?.querySelector("a")).toBeNull();
     const help = describedBy(input);
     expect(help?.textContent).toContain("The list covers US waters only.");
@@ -83,7 +83,9 @@ describe("SiteFields — help under the control (K-418)", () => {
   it("puts the conservation note's sentence under its box", () => {
     renderFields(null);
     const box = document.querySelector('textarea[name="conservationNote"]') as HTMLTextAreaElement;
-    expect(box.labels?.[0]?.textContent).toBe("Conservation note");
+    expect(box.labels?.[0]?.textContent).toBe(
+      `Conservation note ${t("diveSites.form.optionalHint")}`,
+    );
     expect(describedBy(box)?.textContent).toBe(t("diveSites.form.conservationNoteHint"));
   });
 

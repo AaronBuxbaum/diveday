@@ -46,7 +46,10 @@ export function SeatPickup({
             className="mt-2 flex max-w-md flex-col gap-2 rounded-lg border border-border bg-surface-sunken/50 p-2"
           >
             <FieldGrid columns={2}>
-              <Field label={t("trips.roster.pickupLocationLabel")}>
+              <Field
+                label={t("trips.roster.pickupLocationLabel")}
+                hint={t("trips.details.optionalHint")}
+              >
                 <input
                   name="hotelPickupLocation"
                   maxLength={300}
@@ -55,7 +58,10 @@ export function SeatPickup({
                   className={controlClass}
                 />
               </Field>
-              <Field label={t("trips.roster.pickupTimeLabel")}>
+              <Field
+                label={t("trips.roster.pickupTimeLabel")}
+                hint={t("trips.details.optionalHint")}
+              >
                 <input
                   name="pickupTime"
                   maxLength={20}

@@ -18,6 +18,7 @@ import { saveAddressAction, suggestAddressAction } from "./shop-actions";
  */
 export type AddressSearchCopy = {
   searchLabel: string;
+  optional: string;
   searchPlaceholder: string;
   searching: string;
   saving: string;
@@ -332,7 +333,7 @@ export function AddressSearch({
           {/* `Field` subgrids its caption and control onto two rows of the grid
               above it, so it needs a `FieldGrid` and not a bare div. */}
           <FieldGrid>
-            <Field label={copy.searchLabel}>
+            <Field label={copy.searchLabel} hint={copy.optional}>
               <div className="relative">
                 <input
                   type="text"

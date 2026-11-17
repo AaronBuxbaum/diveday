@@ -170,7 +170,7 @@ export function PurchaseForm({
               </select>
             </Field>
             <FieldGrid columns={2}>
-              <Field label={words.tax} description={words.taxHint}>
+              <Field label={words.tax} description={words.taxHint} hint={words.optional}>
                 <input
                   name="tax"
                   type="number"
@@ -182,7 +182,7 @@ export function PurchaseForm({
                   onChange={(event) => setTax(event.target.value)}
                 />
               </Field>
-              <Field label={words.tip}>
+              <Field label={words.tip} hint={words.optional}>
                 <input
                   name="tip"
                   type="number"
@@ -194,7 +194,7 @@ export function PurchaseForm({
                   onChange={(event) => setTip(event.target.value)}
                 />
               </Field>
-              <Field label={words.reference}>
+              <Field label={words.reference} hint={words.optional}>
                 <input
                   name="receiptReference"
                   type="text"
@@ -207,7 +207,7 @@ export function PurchaseForm({
             </FieldGrid>
           </ChoiceFieldset>
         )}
-        <Field label={words.note}>
+        <Field label={words.note} hint={words.optional}>
           <input
             name="description"
             type="text"

@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { choiceGridClass } from "@/components/ui/choice-grid";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { ChoicePill, FormStatus, choiceGridClass } from "@/components/ui/form";
+import { ChoicePill, FormStatus } from "@/components/ui/form";
 
 export type StaffRoleOption = {
   /** The `STAFF_ROLES` value. */

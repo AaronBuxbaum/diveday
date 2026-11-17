@@ -65,16 +65,16 @@ export function AddCredentialDisclosure({
             <Field label={t("staffing.credentials.name")}>
               <input name="name" required maxLength={160} className={controlClass} />
             </Field>
-            <Field label={t("staffing.credentials.issuer")}>
+            <Field label={t("staffing.credentials.issuer")} hint={t("staffing.optionalHint")}>
               <input name="issuingBody" maxLength={160} className={controlClass} />
             </Field>
-            <Field label={t("staffing.credentials.identifier")}>
+            <Field label={t("staffing.credentials.identifier")} hint={t("staffing.optionalHint")}>
               <input name="identifier" maxLength={120} className={controlClass} />
             </Field>
-            <Field label={t("staffing.credentials.issuedAt")}>
+            <Field label={t("staffing.credentials.issuedAt")} hint={t("staffing.optionalHint")}>
               <DateField name="issuedAt" />
             </Field>
-            <Field label={t("staffing.credentials.renewsAt")}>
+            <Field label={t("staffing.credentials.renewsAt")} hint={t("staffing.optionalHint")}>
               <DateField name="renewsAt" />
             </Field>
             <FieldActions>

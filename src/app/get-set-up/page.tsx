@@ -68,6 +68,7 @@ export default async function GetSetUpPage({
     contactName: t("marketing.setUp.contactName"),
     email: t("marketing.setUp.email"),
     phone: t("marketing.setUp.phone"),
+    optional: t("common.optional"),
     website: t("marketing.setUp.website"),
     submit: t("marketing.setUp.submit"),
     sending: t("words.busy.sending"),
