@@ -273,7 +273,10 @@ export default async function ManageTripPage({
       }
     />
   );
-  const recordContext = { context: { db, shop, session }, tripId, locale, t };
+  const phase = {
+    record: { context: { db, shop, session }, tripId, locale, t },
+    ...{ sentence: frame.sentence, cancelled, door: frame.rollCallDoor },
+  };
 
   return (
     <>
@@ -302,7 +305,7 @@ export default async function ManageTripPage({
           shown={showDetails ? null : frame.shown}
           copy={frame.strip}
         />
-        {showDetails ? null : (
+        {showDetails || frame.shown === "water" || frame.shown === "wrapped" ? null : (
           <TripSentenceLine
             sentence={frame.sentence}
             rollCall={
@@ -371,9 +374,9 @@ export default async function ManageTripPage({
         ) : frame.shown === "checkin" ? (
           <CheckInPhase guests={guestList} quiet={slots.panel} />
         ) : frame.shown === "water" ? (
-          <WaterPhase guests={guestList} record={recordContext} />
+          <WaterPhase guests={guestList} {...phase} />
         ) : (
-          <WrappedPhase guests={guestList} record={{ ...recordContext, guests }} />
+          <WrappedPhase guests={guestList} roster={guests} {...phase} />
         )}
       </div>
     </>

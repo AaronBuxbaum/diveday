@@ -1,26 +1,46 @@
-import type { requireShopSurface } from "@/features/session";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { scopedHash } from "@/lib/element-id";
 import { ExecutedDiveLog } from "../manifest/_components/ExecutedDiveLog";
 import { executedDiveLogView } from "../manifest/_components/executed-dive-copy";
 import { manifestSpecies } from "../manifest/_components/manifest-species";
-import { readManifestView } from "../manifest/_components/manifest-view";
+import type { readManifestView } from "../manifest/_components/manifest-view";
 import { saveExecutedDiveAction } from "../manifest/actions";
 
-/** Dive records keep the existing per-dive authorization and validation. */
-export async function TripDiveRecord({
-  context,
+export type ReadyManifestView = Extract<
+  Awaited<ReturnType<typeof readManifestView>>,
+  { status: "ready" }
+>;
+
+const prefix = (dive: number) => `dive-log-${dive}`;
+
+/** Where dive `dive`'s log form is on the page, for "Log this dive". */
+export function diveLogHash(dive: number): string {
+  return scopedHash(prefix(dive), "executed-dive-heading");
+}
+
+/**
+ * **Each dive's log, in the one place it is written** (ADR
+ * 20261117-trip-page-clock): the Trip page, On the water and Wrapped up. Keeps
+ * the existing per-dive authorization and validation (`saveExecutedDiveAction`).
+ */
+export function TripDiveRecord({
+  view,
+  shop,
   tripId,
   locale,
   t,
 }: {
-  context: Pick<Awaited<ReturnType<typeof requireShopSurface>>, "db" | "shop" | "session">;
+  view: ReadyManifestView;
+  shop: {
+    slug: string;
+    timezone: string;
+    depthUnit: Parameters<typeof executedDiveLogView>[0]["depthUnit"];
+    sightingsEnabled: boolean;
+  };
   tripId: string;
   locale: string;
   t: StaffTranslator;
 }) {
-  const { shop } = context;
-  const view = await readManifestView({ ...context, shopSlug: shop.slug, tripId, locale, t });
-  if (view.status !== "ready") return null;
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, view.fieldGuides);
   const log = executedDiveLogView({
     plannedDives: view.plannedDives,
@@ -41,7 +61,7 @@ export async function TripDiveRecord({
           <ExecutedDiveLog
             key={manifest.checkpoint}
             {...log}
-            idPrefix={`trip-record-${manifest.checkpoint}`}
+            idPrefix={prefix(Number(manifest.checkpoint.slice("after_dive_".length)))}
             checkpoint={manifest.checkpoint}
             action={saveExecutedDiveAction.bind(null, {
               shopSlug: shop.slug,
