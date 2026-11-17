@@ -10,7 +10,8 @@ import {
   people,
   trips,
 } from "../../db/schema/index";
-import { setShopFeature, setShopTaxEnabled, setShopTimezone } from "../../db/shops";
+import { setShopTimezone } from "../../db/shops";
+import { setShopFeature, setShopTaxEnabled } from "../../db/shops.test-support";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../../db/stripe-accounts";
 import { editTrip } from "../../db/trips";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";

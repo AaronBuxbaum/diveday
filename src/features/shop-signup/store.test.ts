@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clearShopNameReview } from "../../db/shops";
+import { clearShopNameReview } from "../../db/shops.test-support";
 import { staffTranslator } from "../../i18n/staff-messages";
 import {
   DEFAULT_PRICING_CONFIG,

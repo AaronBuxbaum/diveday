@@ -1,7 +1,7 @@
 import { and, asc, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { trips } from "../../db/schema/index";
-import { setShopDivingOptions } from "../../db/shops";
+import { setShopDivingOptions } from "../../db/shops.test-support";
 import { createTrip } from "../../db/trips-create";
 import { fileScopedShopContext } from "../../test/db";
 import {

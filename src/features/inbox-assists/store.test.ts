@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { recordInboundMessage, recordStaffReply } from "../../db/inbound-messages";
 import { courses, inboundMessages, people, personRoles, shops, trips } from "../../db/schema/index";
-import { setShopFeature, setShopReplyNotes } from "../../db/shops";
+import { setShopFeature, setShopReplyNotes } from "../../db/shops.test-support";
 import type { ClaudeProvider, ClaudeRequest } from "../../lib/claude/provider";
 import { nowDate, nowMs } from "../../lib/clock";
 import { formatShortDate } from "../../lib/format";
