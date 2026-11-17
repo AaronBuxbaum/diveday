@@ -52,6 +52,13 @@ export const STEPS: readonly {
     id: string;
     label: DiverMessageKey;
     primary?: true;
+    /**
+     * The screen a moment before the tap this frame's beat is about, with the
+     * tapped control marked `data-tap-target`. The player shows it first,
+     * pulses the control, then swaps to `screen`; a reader without the player
+     * sees `screen` only.
+     */
+    before?: (locale: DiverLocale) => ReactNode;
     screen: (locale: DiverLocale) => ReactNode;
   }[];
 }[] = [
@@ -117,12 +124,14 @@ export const STEPS: readonly {
       {
         id: "desk",
         label: "marketing.home.steps.aboard.deskLabel",
+        before: (locale) => <ArrivalDeskFallback locale={locale} state="ready" />,
         screen: (locale) => <ArrivalDeskFallback locale={locale} state="checkedIn" />,
       },
       {
         id: "boat",
         label: "marketing.home.steps.aboard.boatLabel",
         primary: true,
+        before: (locale) => <CaptainRollCallFallback locale={locale} state="afterDivePending" />,
         screen: (locale) => <CaptainRollCallFallback locale={locale} state="afterDive" />,
       },
     ],
@@ -170,6 +179,12 @@ export const WALK: readonly {
  * one screen. Without the mark (no script, or before it runs) every step shows
  * and each shows only its primary screen, which is the list this page always
  * was.
+ *
+ * A frame with a `before` draws both screens in one grid cell (so the frame
+ * never changes height) and the player's `data-walk-phase` says which shows:
+ * `before`, then `tap` (the same screen, its `data-tap-target` pulsing), then
+ * `after`. With no phase (no script, reduced motion, a paused walk) the
+ * finished screen shows.
  */
 export const WALK_CLASSES =
-  "[&:not([data-walk])_[data-walk-frame]:not([data-walk-primary])]:hidden [&[data-walk]>li:not([data-walk-current])]:hidden [&[data-walk]_[data-walk-frame]:not([data-walk-frame-current])]:hidden";
+  "[&:not([data-walk])_[data-walk-frame]:not([data-walk-primary])]:hidden [&[data-walk]>li:not([data-walk-current])]:hidden [&[data-walk]_[data-walk-frame]:not([data-walk-frame-current])]:hidden [&:not([data-walk-phase=before]):not([data-walk-phase=tap])_[data-walk-before]]:invisible [&[data-walk-phase=before]_[data-walk-after]]:invisible [&[data-walk-phase=tap]_[data-walk-after]]:invisible";

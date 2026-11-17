@@ -270,7 +270,18 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                           data-walk-primary={frame.primary ? "" : undefined}
                         >
                           <MarketingMockup label={t(frame.label)}>
-                            {frame.screen(locale)}
+                            {frame.before ? (
+                              <div className="grid">
+                                <div data-walk-before className="col-start-1 row-start-1">
+                                  {frame.before(locale)}
+                                </div>
+                                <div data-walk-after className="col-start-1 row-start-1">
+                                  {frame.screen(locale)}
+                                </div>
+                              </div>
+                            ) : (
+                              frame.screen(locale)
+                            )}
                           </MarketingMockup>
                         </div>
                       ))}
