@@ -121,7 +121,7 @@ export function GuideHero({
 /**
  * The "you are here" step: the guide's own honest read of what the shop is
  * running today. Every other step on the path is announced — the coexist
- * section by its eyebrow, the mechanics by a numbered marker — and this one
+ * section by its eyebrow, the mechanics by a marker — and this one
  * was four unlabelled paragraphs, so a skimmer met a wall of body text with
  * nothing telling them what it was for.
  *
@@ -311,7 +311,7 @@ export function GuideBodySkeleton({ lines }: { lines: GuideSkeletonLines }) {
 
 /**
  * "How the move works" — the one section that holds the whole mechanical
- * path as a numbered rail of phases. This replaces the three separate
+ * path as a rail of phases. This replaces the three separate
  * "Step 1 / Step 2 / Step 3" mega-sections whose identical dress made the move read as seven screens of process.
  *
  * `moveIntro` carries the concierge in its second sentence, and that is the
@@ -365,7 +365,7 @@ export function MovePath({ locale, children }: { locale: DiverLocale; children: 
       <div className={GUIDE_BAND_CLASS}>
         <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>{t("switching.common.moveTitle")}</h2>
         <p className={GUIDE_BAND_LEDE_CLASS}>{t("switching.common.moveIntro")}</p>
-        <ol className="mt-12">
+        <ul className="mt-12">
           {/* Inside the list, so mounting proves the id-bearing phase exists.
               A phase's `id` (see MovePhase below) is a link target reached by
               client-side `<Link>` transition — this segment's own
@@ -374,14 +374,14 @@ export function MovePath({ locale, children }: { locale: DiverLocale; children: 
               than retrying once the real phase streams in. */}
           <ScrollToHash />
           {children}
-        </ol>
+        </ul>
       </div>
     </section>
   );
 }
 
 /**
- * One phase on the move rail: a numbered marker, a connecting line, a heading.
+ * One phase on the move rail: a dot, a connecting line, a heading.
  *
  * `id` makes a phase a link target. A guide's move rail is the part of it
  * another page can usefully point *into* — the homepage's "Your spreadsheet,
@@ -400,13 +400,11 @@ export function MovePath({ locale, children }: { locale: DiverLocale; children: 
  */
 export function MovePhase({
   id,
-  number,
   title,
   intro,
   children,
 }: {
   id?: string;
-  number: number;
   title: string;
   intro?: string;
   children?: ReactNode;
@@ -423,9 +421,9 @@ export function MovePhase({
           from the marker's centre line (`start-4`), 8px under it. */}
       <span
         aria-hidden
-        className="absolute start-0 top-0 flex size-8 items-center justify-center rounded-full border border-primary/30 bg-primary-tint text-sm font-semibold text-primary"
+        className="absolute start-0 top-0 flex size-8 items-center justify-center rounded-full border border-primary/30 bg-primary-tint"
       >
-        {number}
+        <span className="size-2 rounded-full bg-primary" />
       </span>
       <span
         aria-hidden
@@ -438,25 +436,17 @@ export function MovePhase({
   );
 }
 
-/** The ordered steps inside a phase — quiet numerals, title, one-line detail. */
+/** The steps inside a phase: title and one-line detail, in reading order, no numerals. */
 export function StepList({ steps }: { steps: { title: string; detail: string }[] }) {
   return (
-    <ol className="mt-6 space-y-5">
-      {steps.map((step, index) => (
-        <li key={step.title} className="flex gap-3">
-          <span
-            aria-hidden
-            className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-xs font-semibold text-muted tabular-nums"
-          >
-            {index + 1}
-          </span>
-          <div>
-            <h4 className="font-semibold leading-6">{step.title}</h4>
-            <p className="mt-1 text-sm leading-6 text-muted">{step.detail}</p>
-          </div>
+    <ul className="mt-6 space-y-5">
+      {steps.map((step) => (
+        <li key={step.title}>
+          <h4 className="font-semibold leading-6">{step.title}</h4>
+          <p className="mt-1 text-sm leading-6 text-muted">{step.detail}</p>
         </li>
       ))}
-    </ol>
+    </ul>
   );
 }
 
@@ -480,12 +470,10 @@ export function PhaseNotes({ notes }: { notes: string[] }) {
  */
 export function ScopePhase({
   locale,
-  number,
   source,
   showPricingLink = false,
 }: {
   locale: DiverLocale;
-  number: number;
   source?: "fareharbor";
   showPricingLink?: boolean;
 }) {
@@ -503,7 +491,6 @@ export function ScopePhase({
   return (
     <MovePhase
       id="scope"
-      number={number}
       title={
         source === "fareharbor"
           ? t("marketing.guides.fareharbor.transferScope.title")
@@ -603,13 +590,11 @@ export function ScopePhase({
  */
 export function ImportPhase({
   locale,
-  number,
   source,
   importerNote,
   children,
 }: {
   locale: DiverLocale;
-  number: number;
   source?: "fareharbor";
   importerNote?: ReactNode;
   children?: ReactNode;
@@ -640,7 +625,6 @@ export function ImportPhase({
   return (
     <MovePhase
       id="import"
-      number={number}
       title={t("switching.common.bringFileTitle")}
       intro={t("switching.common.bringFileIntro")}
     >

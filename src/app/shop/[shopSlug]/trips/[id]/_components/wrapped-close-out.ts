@@ -99,7 +99,11 @@ function rollCallItems(standing: WaterStanding, cancelled: boolean): CloseOutIte
   const open = standing.timeline.find(
     (stop) => stop.kind === "dive" && stop.dive >= latest.dive && !stop.count?.complete,
   );
-  return open?.kind === "dive" ? [{ kind: "rollCall", names, dive: open.dive }] : [];
+  if (open?.kind === "dive") return [{ kind: "rollCall", names, dive: open.dive }];
+  // No dive follows the dock count (a snorkel or pool day, or dives never
+  // planned): never an after-dive checkpoint for a dive that was not planned;
+  // the dock count is where each is put ashore by name.
+  return latest.dive === 0 && names.length > 0 ? [{ kind: "rollCall", names, dive: 0 }] : [];
 }
 
 /**

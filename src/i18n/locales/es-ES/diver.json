@@ -4128,7 +4128,9 @@
       "signature": "Tu firma",
       "typeFullName": "Escribe tu nombre completo",
       "agreement": "He leído esta exención, la entiendo y estoy de acuerdo con ella.",
-      "signButton": "Firmar exención"
+      "signButton": "Firmar exención",
+      "progressDone": "3 de 3 listos",
+      "signedDone": "Firmado. Todo listo."
     },
     "arrivalDesk": {
       "label": "Huéspedes",
@@ -4232,6 +4234,26 @@
       "seats": "{booked} de {capacity}",
       "add": "Agregar",
       "rowActions": "Mover, copiar o quitar"
+    },
+    "youreBooked": "Reserva confirmada",
+    "nudgeSent": "Recordatorio enviado",
+    "cardCheck": {
+      "label": "Buceador",
+      "heading": "Certificaciones",
+      "selfDeclared": "Declarada por ella. Tarjeta aún sin ver.",
+      "confirm": "Confirmar certificación",
+      "certifiedBy": "Certificada por {name}"
+    },
+    "computerDives": {
+      "label": "Inmersiones de la computadora",
+      "previewHeading": "Revisar inmersiones",
+      "historyHeading": "Historial importado",
+      "depth": "Profundidad máxima",
+      "duration": "Duración",
+      "gas": "Mezcla",
+      "air": "Aire",
+      "import": "Importar las inmersiones elegidas",
+      "imported": "Importada"
     }
   },
   "demo": {

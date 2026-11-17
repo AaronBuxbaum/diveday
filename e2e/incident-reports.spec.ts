@@ -103,14 +103,16 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // and the log still says it existed, and who deleted it.
   const tripPath = reportPath.replace(/\/incidents\/[0-9a-f-]+$/, "");
   await page.goto(`${tripPath}?phase=wrapped`);
-  await section.getByRole("button", { name: "Report an incident" }).click();
+  // Wrapped up says incidents in one row, with "Report one" beside it.
+  const incidents = page.locator("#incidents");
+  await incidents.getByRole("button", { name: "Report one" }).click();
   await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
   await page.getByRole("button", { name: "Delete draft" }).click();
   await page.getByRole("button", { name: "Yes, delete the draft" }).click();
   await page.waitForURL((url) => url.pathname === tripPath);
   await expect(page).toHaveURL(/[?&]phase=wrapped/);
-  await expect(section).toBeVisible();
-  await expect(section.getByText("Draft", { exact: true })).toHaveCount(0);
+  await expect(incidents).toBeVisible();
+  await expect(incidents.getByRole("link", { name: /^Draft/ })).toHaveCount(0);
   await page.goto(`${tripPath}/log`);
   await expect(page.getByText(/^Draft started by .+, deleted unfiled by .+ on /)).toBeVisible();
 });

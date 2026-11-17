@@ -71,6 +71,7 @@ describe("tripAboutRows (in-memory PGlite)", () => {
       "about-crew",
       "plan",
       "details",
+      "seats",
       "requirements",
       "conditions",
       "participant-terms",
@@ -94,25 +95,25 @@ describe("tripAboutRows (in-memory PGlite)", () => {
   );
 
   it.each([
-    { label: "ordinary fare", priceCents: 9500, course: null, quote: "$95.00" },
+    { label: "ordinary fare", priceCents: 9500, course: null, quote: "$95" },
     { label: "ordinary unpriced", priceCents: null, course: null, quote: null },
     {
       label: "priced course overrides departure",
       priceCents: 42500,
       course: { title: "Course", priceCents: 50000, eLearningPriceCents: 11500 },
-      quote: "$615.00",
+      quote: "$615",
     },
     {
       label: "priced course with unpriced departure",
       priceCents: null,
       course: { title: "Course", priceCents: 50000, eLearningPriceCents: 11500 },
-      quote: "$615.00",
+      quote: "$615",
     },
     {
       label: "course uses departure fallback plus eLearning",
       priceCents: 42500,
       course: { title: "Course", priceCents: null, eLearningPriceCents: 11500 },
-      quote: "$540.00",
+      quote: "$540",
     },
     {
       label: "unpriced course and departure",
@@ -124,22 +125,24 @@ describe("tripAboutRows (in-memory PGlite)", () => {
       label: "eLearning alone",
       priceCents: null,
       course: { title: "Course", priceCents: null, eLearningPriceCents: 11500 },
-      quote: "$115.00",
+      quote: "$115",
     },
     {
       label: "explicit free course",
       priceCents: 42500,
       course: { title: "Course", priceCents: 0, eLearningPriceCents: null },
-      quote: "$0.00",
+      quote: "$0",
     },
   ])(
     "quotes $label in Price without changing its stored editor price",
     async ({ quote, ...pricing }) => {
       const rows = await rowsFor(undefined, true, undefined, pricing);
       const booking = rows.find((row) => row.id === "details");
-      if (quote === null)
-        expect(renderToStaticMarkup(booking?.value)).toBe(t("trips.details.summaryNoPrice"));
-      else expect(renderToStaticMarkup(booking?.value).startsWith(`${quote} · `)).toBe(true);
+      // The price stands alone in its row; the seats are the next row (review nit 13).
+      const lead = quote === null ? t("trips.details.summaryNoPrice") : quote;
+      expect(renderToStaticMarkup(booking?.value).startsWith(lead)).toBe(true);
+      expect(renderToStaticMarkup(booking?.value)).not.toContain("booked");
+      expect(rows.find((row) => row.id === "seats")?.value).toBeTruthy();
       expect(booking?.editor).toMatchObject({
         props: { context: { trip: { priceCents: pricing.priceCents } } },
       });

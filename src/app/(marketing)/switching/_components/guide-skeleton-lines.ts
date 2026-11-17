@@ -101,3 +101,25 @@ export const SPREADSHEET_SKELETON_LINES: GuideSkeletonLines = {
     { title: 1, detail: { base: 4, sm: 3 } },
   ],
 };
+
+/**
+ * `/switching/alongside`: two intro paragraphs and six tool entries. Estimated
+ * from the copy (no capture yet), at the rate the other guides fit: title 52
+ * characters, lede 200, paragraphs 290 and 120, and details of 150 to 220.
+ */
+export const ALONGSIDE_SKELETON_LINES: GuideSkeletonLines = {
+  title: { base: 3, sm: 2 },
+  lede: { base: 6, sm: 3 },
+  context: [
+    { base: 8, sm: 4 },
+    { base: 4, sm: 2 },
+  ],
+  list: [
+    { title: { base: 2, sm: 1 }, detail: { base: 5, sm: 3 } },
+    { title: { base: 2, sm: 1 }, detail: { base: 4, sm: 3 } },
+    { title: { base: 2, sm: 1 }, detail: { base: 4, sm: 3 } },
+    { title: 1, detail: { base: 3, sm: 2 } },
+    { title: 1, detail: { base: 4, sm: 3 } },
+    { title: 1, detail: { base: 3, sm: 2 } },
+  ],
+};

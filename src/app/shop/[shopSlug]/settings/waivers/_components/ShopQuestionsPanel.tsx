@@ -87,13 +87,13 @@ export function StandardQuestionnaire({
         <DisclosureCaret className="group-open/medical:rotate-90" />
       </summary>
       <p className="mt-2 text-sm text-muted">{t("waiversStaff.questions.standardStays")}</p>
-      <ol className="mt-2 list-decimal space-y-1 ps-5 text-sm text-muted">
+      <ul className="mt-2 list-disc space-y-1 ps-5 text-sm text-muted">
         {questionnaire.questions
           .filter((question) => question.section === "primary")
           .map((question) => (
             <li key={question.id}>{question.prompt}</li>
           ))}
-      </ol>
+      </ul>
     </details>
   );
 }

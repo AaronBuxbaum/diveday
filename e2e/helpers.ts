@@ -1019,6 +1019,14 @@ export async function openRosterDetails(row: Locator): Promise<void> {
   // seat's matched record.
   const privateDetails = row.locator("[data-opened-guest] details.group\\/private");
   if (await privateDetails.count()) await openIfClosed(privateDetails.first());
+  // The rare actions (open profile, move, cancel) wait behind the guest's More.
+  const more = row.locator("[data-opened-guest] details:has(> summary[data-guest-more])");
+  if (await more.count()) {
+    const first = more.first();
+    if (!(await first.evaluate((el) => (el as HTMLDetailsElement).open)))
+      await first.locator("> summary").click();
+    await expect(first).toHaveJSProperty("open", true);
+  }
 }
 
 /**

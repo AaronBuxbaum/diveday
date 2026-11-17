@@ -150,12 +150,20 @@ export function BookingCardFallback({ locale }: { locale: DiverLocale }) {
  * the guardian's line. From a 448px panel the form and the signature stand
  * side by side; the page itself is one column.
  */
-export function WaiverSigningFallback({ locale }: { locale: DiverLocale }) {
+export function WaiverSigningFallback({
+  locale,
+  state = "open",
+}: {
+  locale: DiverLocale;
+  /** `signed` is the page a tap later, for the homepage walkthrough (Priya taps Sign waiver). */
+  state?: "open" | "signed";
+}) {
   const t = diverTranslator(locale);
+  const signed = state === "signed";
   const steps = [
     { label: t("fallback.waiverSigning.railRelease"), done: true },
     { label: t("fallback.waiverSigning.railMedical"), done: true },
-    { label: t("fallback.waiverSigning.railSign"), done: false },
+    { label: t("fallback.waiverSigning.railSign"), done: signed },
   ];
   return (
     <div className="bg-background">
@@ -175,7 +183,9 @@ export function WaiverSigningFallback({ locale }: { locale: DiverLocale }) {
               </li>
             ))}
           </ol>
-          <p className="text-xs text-muted tabular-nums">{t("fallback.waiverSigning.progress")}</p>
+          <p className="text-xs text-muted tabular-nums">
+            {t(signed ? "fallback.waiverSigning.progressDone" : "fallback.waiverSigning.progress")}
+          </p>
         </div>
         {locale === DEFAULT_DIVER_LOCALE ? null : (
           <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-xs text-warning-strong">
@@ -233,9 +243,24 @@ export function WaiverSigningFallback({ locale }: { locale: DiverLocale }) {
               <StatusMarkColumn variant="checked" className="text-primary" />
               <span>{t("fallback.waiverSigning.agreement")}</span>
             </p>
-            <button type="button" disabled className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}>
-              {t("fallback.waiverSigning.signButton")}
-            </button>
+            {signed ? (
+              <p
+                data-walk-pop=""
+                className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-lg bg-success-tint text-sm font-semibold text-success-strong"
+              >
+                <StatusMark variant="success" size="md" />
+                {t("fallback.waiverSigning.signedDone")}
+              </p>
+            ) : (
+              <button
+                type="button"
+                disabled
+                data-tap-target=""
+                className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}
+              >
+                {t("fallback.waiverSigning.signButton")}
+              </button>
+            )}
           </div>
         </div>
       </div>

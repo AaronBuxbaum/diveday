@@ -29,7 +29,8 @@
         "title": "Quien aún no puede embarcar aparece con su nombre y el motivo",
         "note2": "No hay botón de “marcar a todos como listos”. Lo dejamos fuera a propósito.",
         "mockupLabel": "Hoy en el centro de demostración: una salida con 7 de 9 buceadores listos y dos filas en Pendiente.",
-        "readyLabel": "Hoy en el centro de demostración después de que Priya firma: 8 de 9 buceadores listos y una fila en Pendiente."
+        "readyLabel": "Hoy en el centro de demostración después de que Priya firma: 8 de 9 buceadores listos y una fila en Pendiente.",
+        "cardLabel": "El registro de un buceador en el centro de demostración: la tarjeta Advanced Open Water de Priya Sharma, con un botón para confirmarla."
       },
       "aboard": {
         "when": "En el muelle, y después de cada inmersión",
@@ -45,7 +46,8 @@
         "title": "Que los buceadores se lleven un recuerdo del día",
         "note1": "El registro de arriba es del centro, escrito una vez: barco, tripulación, sitio, condiciones.",
         "note2": "La nota de la tripulación es una cita. Es lo que la tripulación escribió, sin plantilla detrás.",
-        "mockupLabel": "La página de recuerdo de un buceador, con el registro del día, una nota de la tripulación y una sola petición de opinión."
+        "mockupLabel": "La página de recuerdo de un buceador, con el registro del día, una nota de la tripulación y una sola petición de opinión.",
+        "computerLabel": "La página de inmersiones de la computadora de un buceador: una inmersión leída del archivo de una computadora de buceo, con su profundidad, tiempo, gas y perfil de profundidad."
       }
     },
     "walk": {
@@ -58,12 +60,14 @@
       "hint": "Toca la pantalla, desliza o usa las flechas del teclado.",
       "captions": {
         "book": "Priya Sharma reserva el Arrecife de dos tanques desde la página del propio centro.",
-        "unsigned": "A la mañana siguiente su exención sigue abierta, y la lista la nombra con un botón para recordársela.",
+        "unsigned": "A la mañana siguiente su exención sigue abierta, y la lista ofrece un recordatorio.",
         "sign": "Firma la exención y responde el formulario médico desde su teléfono.",
         "ready": "Su fila sale de la lista y el número de listos sube en uno.",
+        "card": "Antes del barco, la tripulación revisa su tarjeta y la confirma con un toque.",
         "desk": "En el mostrador, un toque la registra.",
         "boat": "Después de la inmersión 1 la tripulación la llama por su nombre. Los nueve están de vuelta a bordo.",
-        "recap": "Por la tarde le llega el registro del día y unas líneas de la tripulación."
+        "computer": "De vuelta en el centro, el archivo de su computadora de buceo pasa a su registro.",
+        "recap": "Por la tarde le llega el registro del día y deja cinco estrellas."
       },
       "doorsTitle": "Ahora prueba la parte que es tuya",
       "doorDesk": "Llevo el mostrador",

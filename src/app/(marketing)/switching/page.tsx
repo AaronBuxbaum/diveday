@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta } from "@/app/_components/FunnelCtas";
 import { ScreenDoor } from "@/app/_components/ScreenDoor";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
 import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
@@ -18,6 +19,7 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
+import { SWITCH_EMAIL } from "@/lib/platform-mail";
 import { HubGuideRow } from "./_components/HubGuideRow";
 import {
   HUB_CLOSING_ROW_CLASS,
@@ -125,6 +127,11 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
       title: t("switching.hub.spreadsheetTitle"),
       summary: t("switching.hub.spreadsheetDescription"),
     },
+    {
+      href: "/switching/alongside",
+      title: t("switching.hub.alongsideTitle"),
+      summary: t("switching.hub.alongsideDescription"),
+    },
     ...MIGRATION_GUIDES.map((guide) => ({
       href: `/switching/${guide.slug}`,
       title: t("switching.hub.switchingFrom", { competitor: guide.competitor }),
@@ -158,12 +165,23 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
         {/* The last row of the same list, for the reader who found nothing in
             it. The pair is the page's close (B15). */}
         <div className={HUB_CLOSING_ROW_CLASS}>
-          <div>
-            <h2 className={SUB_TITLE_CLASS}>{t("switching.hub.dontSeeSystem")}</h2>
-            <p className="mt-1.5 max-w-xl leading-7 text-muted">
-              {t("switching.hub.dontSeeSystemBody")}
-            </p>
-          </div>
+          <a
+            href={`mailto:${SWITCH_EMAIL}`}
+            className="group -mx-4 flex items-start gap-6 rounded-lg px-4 py-4 transition-colors hover:bg-surface"
+          >
+            <div className="min-w-0 flex-1">
+              <h2 className={`${SUB_TITLE_CLASS} group-hover:text-primary`}>
+                {t("switching.hub.dontSeeSystem")}
+              </h2>
+              <p className="mt-1.5 max-w-xl leading-7 text-muted">
+                {t("switching.hub.dontSeeSystemBody", { email: SWITCH_EMAIL })}
+              </p>
+            </div>
+            <DiveDayIcon
+              name="arrow-right"
+              className="mt-1 size-5 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-primary motion-reduce:transition-none"
+            />
+          </a>
         </div>
       </section>
 

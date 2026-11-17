@@ -195,11 +195,11 @@ export default async function WhatsAppSettingsPage({
 
         {canConnect && signupConfig ? (
           <SectionCard padding="lg" title={t("whatsapp.setup.heading")}>
-            <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+            <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
               <li>{t("whatsapp.setup.step1")}</li>
               <li>{t("whatsapp.setup.step2")}</li>
               <li>{t("whatsapp.setup.step3")}</li>
-            </ol>
+            </ul>
 
             <div className="mt-5">
               <EmbeddedSignupButton

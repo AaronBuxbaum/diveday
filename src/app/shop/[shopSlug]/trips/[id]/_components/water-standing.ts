@@ -27,6 +27,7 @@ type Seat = {
   turnedAway?: boolean | null;
   notHere?: boolean;
   rollCall?: RollCallRecord;
+  readiness?: { status: string };
   buddyTeam?: { others: readonly { fullName: string }[] } | null;
 };
 
@@ -124,6 +125,12 @@ export type WaterStanding = {
   /** Who the latest started count (dock or after a dive) recorded aboard, by name. */
   lastAboard: string[];
   timeline: WaterStop[];
+  /**
+   * Seats the dock count never placed (no record, not released by the desk):
+   * `blocked` when readiness blocks them, `noRecord` otherwise. Named plainly
+   * once the boat has left; never a button.
+   */
+  unplaced: { noRecord: string[]; blocked: string[] };
 };
 
 const STATUS_RANK: Record<WaterPersonStatus, number> = {
@@ -154,7 +161,18 @@ export function waterStanding(input: WaterStandingInput): WaterStanding {
     notYetBack,
     lastAboard: latestCount ? aboardAt(latestCount, counts) : [],
     timeline: timeline(input, counts, results),
+    unplaced: unplacedAtDock(counts),
   };
+}
+
+function unplacedAtDock(counts: readonly WaterCount[]): WaterStanding["unplaced"] {
+  const dock = counts.find((count) => count.checkpoint === "departure");
+  const out: WaterStanding["unplaced"] = { noRecord: [], blocked: [] };
+  for (const seat of dock?.divers ?? []) {
+    if (seat.rollCall || seat.notHere || seat.turnedAway) continue;
+    (seat.readiness?.status === "blocked" ? out.blocked : out.noRecord).push(seat.fullName);
+  }
+  return out;
 }
 
 /** Everyone one count recorded aboard, once each, guests first. */

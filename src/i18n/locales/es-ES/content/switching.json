@@ -65,9 +65,11 @@
     "previewDoor": "Abre la demo como propietario →",
     "previewMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
     "dontSeeSystem": "No está en la lista",
-    "dontSeeSystemBody": "Cuéntanos qué usas y qué quieres mejorar. Podemos revisar una muestra de exportación contigo antes de decidir el cambio.",
+    "dontSeeSystemBody": "Escribe a {email} con lo que usas y lo que quieres mejorar. Podemos revisar una muestra de exportación contigo antes de decidir el cambio.",
     "closingTitle": "Prueba una salida antes de trasladar tus registros",
-    "closingSupport": "Envíanos una muestra de tus registros y revisaremos el traslado contigo. También puedes escribir a {email}."
+    "closingSupport": "Envíanos una muestra de tus registros y revisaremos el traslado contigo. También puedes escribir a {email}.",
+    "alongsideTitle": "Conserva tus herramientas y suma DiveDay",
+    "alongsideDescription": "Prueba DiveDay con un solo viaje mientras tu web de reservas, tu caja y tu hoja siguen haciendo su trabajo, y luego decide qué mover."
   },
   "competitor": {
     "keepOrLeaveEyebrow": "Consérvalo, o déjalo",
@@ -179,5 +181,55 @@
     "eyebrow": "Una persona hace la importación contigo",
     "title": "Revisamos el cambio contigo",
     "description": "Envíanos lo que tengas, sea una exportación limpia o una década de pestañas desordenadas, y mapeamos las columnas y traemos a tus buceadores contigo, gratis. Si algún día DiveDay no encaja, te ayudamos a llevártelo todo de vuelta de la misma manera."
+  },
+  "alongside": {
+    "eyebrow": "Junto a tus herramientas",
+    "title": "Conserva lo que funciona. Suma lo que le falta a tu día de buceo",
+    "heroLede": "No tienes que dejar nada para empezar. Prueba DiveDay con un solo viaje mientras la web de reservas, la caja y la hoja de cálculo que ya usas siguen haciendo su trabajo, y luego decide qué mover.",
+    "intro1": "DiveDay no tiene enlace en vivo con otros programas. No se conecta a ninguna agencia, no tiene caja para la venta minorista y no habla por su cuenta con tu web de reservas. Tiene archivos que entran, archivos que salen y un enlace de reservas que controlas tú, así que los dos lados se encuentran donde una persona puede verlos.",
+    "intro2": "Por eso la pregunta útil no es a qué se conecta DiveDay. Es qué parte del día debe llevar cada herramienta mientras lo pruebas.",
+    "tools": {
+      "booking": {
+        "title": "Tu web o canal de reservas",
+        "body": "Sigue recibiendo reservas allí. Cuando llegue una, sienta al buceador en DiveDay para que la exención, la verificación de la certificación y el manifiesto partan de una persona real. Revisa cambios y cancelaciones en cada lado."
+      },
+      "register": {
+        "title": "Tu caja o sistema de venta minorista",
+        "body": "Consérvala. DiveDay no cobra ventas minoristas ni cuenta existencias. Un pedido puede llevar una línea minorista, y los cobros con tarjeta van por tu propia cuenta de Stripe."
+      },
+      "sheet": {
+        "title": "Tu hoja de cálculo o lista de contactos",
+        "body": "Consérvala mientras te sirva. Impórtala cuando quieras tener buceadores, certificaciones, tallas y visitas pasadas en DiveDay. Volver a importar un archivo actualiza a las mismas personas, por correo electrónico."
+      },
+      "waivers": {
+        "title": "Tu herramienta de exenciones o formularios",
+        "body": "Los buceadores firman la exención que envía DiveDay. Las que ya tienes entran con la importación cuando tu exportación las incluye."
+      },
+      "agency": {
+        "title": "Tu agencia de certificación",
+        "body": "DiveDay no se conecta a ninguna agencia. El equipo verifica la certificación con la agencia una vez y la confirma en DiveDay. Tramitar certificaciones nuevas sigue siendo cosa de la agencia."
+      },
+      "website": {
+        "title": "Tu propia web",
+        "body": "Pega las piezas de agenda y reservas de DiveDay en tu propia web, o apunta tu enlace de reservas a DiveDay y deja la web como está."
+      }
+    },
+    "weekTitle": "Una semana codo con codo",
+    "week": {
+      "one": {
+        "title": "Elige una salida",
+        "body": "Sienta a los buceadores de ese viaje en DiveDay y llévalo desde allí: exenciones, certificaciones al día y manifiesto."
+      },
+      "two": {
+        "title": "Deja lo demás como está",
+        "body": "Tu web de reservas, tu caja y tu hoja siguen como siempre. Compara esa mañana en el muelle con la anterior."
+      },
+      "three": {
+        "title": "Mueve más cuando te resulte más fácil",
+        "body": "No antes. Tus registros salen con un botón de exportación cuando quieras, así que probar DiveDay nunca los atrapa."
+      }
+    },
+    "closingTitle": "Prueba una salida junto a lo que ya tienes",
+    "closingDescription": "Mira la demo, o mándanos una muestra de tus registros y revisamos el cambio contigo."
   }
 }

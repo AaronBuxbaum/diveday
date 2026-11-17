@@ -413,7 +413,7 @@ test.describe("schedule builder", () => {
     // with what the board was told.
     await row.getByRole("link", { name: title }).click();
     const about = await openTripAbout(page);
-    await expect(about).toContainText(/\$129\b/);
+    await expect(about).toContainText("$129");
     await openTripAboutRow(page, "Price");
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });

@@ -1,6 +1,7 @@
 import { rosterRowIsBlocked } from "@/features/roster-filters";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { dockCallAt } from "@/lib/dock-call";
+import { isSameCalendarDay } from "@/lib/format";
 import {
   type MeetingPointShopRow,
   type MeetingPointTripRow,
@@ -88,12 +89,18 @@ export function tripFrame({
     dockBy: dockBy ?? nextStartsAt,
     /** When Getting ready opens: shop-local midnight of the day before. */
     readyFrom: readyFrom(nextStartsAt, timeZone),
-    // **Roll call has a door from Check-in on, and on every cancelled trip**: a
-    // blow-out cancels the trip and leaves every booking active, so the crew may
-    // still need the roll call to put people back ashore (dive-domain review
-    // 20260920). Before Check-in it is in More.
+    // **Roll call has a door** whenever the trip is today in the shop's zone,
+    // on every cancelled trip (a blow-out leaves every booking active, so the
+    // crew may still need it to put people back ashore), and whenever the phase
+    // on screen is Check-in, On the water, or Wrapped up (dive-domain review
+    // 20260920 and review-g). Otherwise it waits in More.
     rollCallDoor:
-      current === null || CLOCK_PHASES.indexOf(current) >= CLOCK_PHASES.indexOf("checkin"),
+      current === null ||
+      CLOCK_PHASES.indexOf(current) >= CLOCK_PHASES.indexOf("checkin") ||
+      shown === "checkin" ||
+      shown === "water" ||
+      shown === "wrapped" ||
+      isSameCalendarDay(clock.now, nextStartsAt, timeZone),
     facts: tripFacts({
       trip,
       daySpan: tripHeaderDaySpan(clock.meetingWindows, locale, timeZone, t),

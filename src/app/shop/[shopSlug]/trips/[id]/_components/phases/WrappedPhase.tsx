@@ -17,6 +17,7 @@ import { diveLogRows } from "../TripDiveRecord";
 import { TripSentenceLine } from "../TripSentenceLine";
 import type { TripSentence } from "../trip-sentence";
 import { closeOutItems, wrappedSentence } from "../wrapped-close-out";
+import { UnplacedLine } from "./WaterPanels";
 import type { PhaseRecordContext } from "./WaterPhase";
 import { WrappedMore } from "./WrappedMore";
 import { CloseOutCard, IncidentsLine, MoneyCard, WhatHappenedCard } from "./WrappedPanels";
@@ -121,6 +122,7 @@ export async function WrappedPhase({
     <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
       <TripSentenceLine sentence={said} rollCall={null} />
       {closeOut}
+      <UnplacedLine standing={standing} locale={locale} t={t} />
       {/* What happened and Money side by side once there is room. */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
         <WhatHappenedCard

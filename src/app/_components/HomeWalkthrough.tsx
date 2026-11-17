@@ -34,13 +34,19 @@ const WALK_MS = 90_000;
 /** Fewer than this many pixels sideways is a tap, not a swipe. */
 const SWIPE_PX = 40;
 
+/** A press that has moved this far sideways, more than up or down, is a drag. */
+const DRAG_START_PX = 8;
+
+/** How far a beat slides out and the next slides in from, in pixels. */
+const SLIDE_PX = 72;
+
 /**
- * Where in a beat a tap happens, as shares of its clock: the control pulses
- * from `TAP_AT` and the screen swaps to the finished one at `AFTER_AT`. Only
- * frames drawn with a `before` have anything to show for it.
+ * Where in a beat a tap happens, as shares of its clock: a fingertip lands on
+ * the control from `TAP_AT` and the screen swaps to the finished one at
+ * `AFTER_AT`. Only frames drawn with a `before` have anything to show for it.
  */
-const TAP_AT = 0.16;
-const AFTER_AT = 0.38;
+const TAP_AT = 0.1;
+const AFTER_AT = 0.3;
 
 /** A press held this long is a hold (it pauses, and its release is not a tap). */
 const HOLD_MS = 250;
@@ -58,8 +64,10 @@ const HOLD_MS = 250;
  *
  * Motion: it advances itself only when the reader has not asked for reduced
  * motion, only while it is on screen and the tab is visible, and the Pause
- * button is always there. A tap on a screen, a swipe, the arrow keys and the
- * buttons move it by hand and never start it.
+ * button is always there. A tap on a screen (its left third goes back, the
+ * rest forward), a swipe, the arrow keys and the buttons move it by hand and
+ * never start it. A swipe is a drag: the beat follows the finger, then slides
+ * out and the next slides in, and a short drag springs back.
  *
  * **The bar is the clock.** One segment per beat; the current one fills over
  * the beat's share of the walk and the beat moves on when it is full, so what
@@ -85,6 +93,9 @@ export function HomeWalkthrough({
   const [ready, setReady] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const swipeFrom = useRef<number | null>(null);
+  const swipeFromY = useRef(0);
+  const dragging = useRef(false);
+  const sliding = useRef(false);
   const pressedAt = useRef(0);
   // How full the current beat's segment is, 0 to 1. Written straight to the
   // segment so a frame of the fill is not a render of the page.
@@ -136,6 +147,8 @@ export function HomeWalkthrough({
     return () => document.removeEventListener("visibilitychange", sync);
   }, []);
 
+  const listEl = () => rootRef.current?.querySelector<HTMLElement>("[data-walk-list]") ?? null;
+
   const setPhase = (phase: "before" | "tap" | "after") => {
     const list = rootRef.current?.querySelector("[data-walk-list]");
     if (list && list.getAttribute("data-walk-phase") !== phase) {
@@ -157,6 +170,7 @@ export function HomeWalkthrough({
   useEffect(() => {
     if (!running) return;
     const beatMs = WALK_MS / total;
+    listEl()?.style.setProperty("--walk-tap-ms", `${(AFTER_AT - TAP_AT) * beatMs}ms`);
     let last = performance.now();
     let frame = 0;
     const tick = (now: number) => {
@@ -186,33 +200,121 @@ export function HomeWalkthrough({
     event.preventDefault();
   };
 
+  const clearDrag = () => {
+    const el = listEl();
+    if (!el) return;
+    el.style.transform = "";
+    el.style.opacity = "";
+  };
+
+  const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /** The beat follows the finger, fading as it leaves. */
+  const dragBy = (dx: number) => {
+    const el = listEl();
+    if (!el) return;
+    el.style.transform = `translateX(${dx}px)`;
+    el.style.opacity = String(1 - Math.min(0.6, Math.abs(dx) / Math.max(el.offsetWidth, 320)));
+  };
+
+  /** A short drag lets go: the beat settles back where it was. */
+  const springBack = (dx: number) => {
+    const el = listEl();
+    clearDrag();
+    if (!el || reducedMotion() || typeof el.animate !== "function") return;
+    el.animate([{ transform: `translateX(${dx}px)` }, { transform: "translateX(0)" }], {
+      duration: 180,
+      easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    });
+  };
+
+  /** Slides this beat out, the next (`dir` 1) or previous (-1) one in. */
+  const slide = (dir: 1 | -1, fromDx: number) => {
+    const el = listEl();
+    if (!el || reducedMotion() || typeof el.animate !== "function") {
+      clearDrag();
+      go(index + dir);
+      return;
+    }
+    if (sliding.current) return;
+    sliding.current = true;
+    const out = el.animate(
+      [
+        { transform: `translateX(${fromDx}px)`, opacity: el.style.opacity || "1" },
+        { transform: `translateX(${-dir * SLIDE_PX}px)`, opacity: 0 },
+      ],
+      { duration: 130, easing: "ease-in", fill: "forwards" },
+    );
+    out.onfinish = () => {
+      clearDrag();
+      go(index + dir);
+      out.cancel();
+      el.animate(
+        [
+          { transform: `translateX(${dir * SLIDE_PX}px)`, opacity: 0 },
+          { transform: "translateX(0)", opacity: 1 },
+        ],
+        { duration: 220, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+      ).onfinish = () => {
+        sliding.current = false;
+      };
+    };
+  };
+
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (sliding.current) return;
     swipeFrom.current = event.clientX;
+    swipeFromY.current = event.clientY;
+    dragging.current = false;
     pressedAt.current = performance.now();
     setHeld(true);
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const from = swipeFrom.current;
+    if (from === null) return;
+    const dx = event.clientX - from;
+    if (!dragging.current) {
+      const dy = event.clientY - swipeFromY.current;
+      if (Math.abs(dx) < DRAG_START_PX || Math.abs(dy) > Math.abs(dx)) return;
+      dragging.current = true;
+      // From here the drag is the walk's, wherever the finger goes.
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    }
+    dragBy(dx);
   };
 
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     const from = swipeFrom.current;
     swipeFrom.current = null;
+    const wasDragging = dragging.current;
+    dragging.current = false;
     setHeld(false);
     if (from === null) return;
     const moved = event.clientX - from;
     if (Math.abs(moved) >= SWIPE_PX) {
-      go(index + (moved < 0 ? 1 : -1));
+      slide(moved < 0 ? 1 : -1, wasDragging ? moved : 0);
+    } else if (wasDragging) {
+      springBack(moved);
     } else if (
       performance.now() - pressedAt.current < HOLD_MS &&
       event.target instanceof HTMLElement &&
       event.target.closest("[data-walk-frame]") &&
       !event.target.closest("a, button")
     ) {
-      go(index + 1);
+      // Instagram's stories: the left edge of a screen goes back, the rest on.
+      const rect = event.target.closest("[data-walk-frame]")?.getBoundingClientRect();
+      const back = rect && rect.width > 0 && event.clientX < rect.left + rect.width * 0.3;
+      go(index + (back ? -1 : 1));
     }
   };
 
   const release = () => {
+    const wasDragging = dragging.current;
     swipeFrom.current = null;
+    dragging.current = false;
     setHeld(false);
+    if (wasDragging) springBack(0);
   };
 
   const toggle = (
@@ -235,6 +337,7 @@ export function HomeWalkthrough({
       aria-label={labels.label}
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={release}
       onPointerLeave={release}
@@ -265,7 +368,7 @@ export function HomeWalkthrough({
             </p>
           </div>
           <p
-            className="mt-3 min-h-14 max-w-2xl text-lg leading-7 text-balance sm:min-h-8"
+            className="mt-3 min-h-14 max-w-4xl text-lg leading-7 text-balance sm:min-h-8"
             aria-live={playing ? "off" : "polite"}
           >
             {beat?.caption}

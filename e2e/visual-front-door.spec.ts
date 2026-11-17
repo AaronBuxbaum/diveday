@@ -335,7 +335,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The walkthrough, one capture per beat: Priya booked, her open waiver, signed,
-      // ready, checked in, counted back aboard, and the recap.
+      // ready, her card confirmed, checked in, counted back aboard, her dive file imported, and the recap.
       // The beats are one theme's work, so the dark pass does not register the test.
       if (scheme === "light") {
         test(`the landing walkthrough shows each beat of one diver's day (${scheme})`, async ({
@@ -351,8 +351,10 @@ for (const scheme of ["light", "dark"] as const) {
             "unsigned",
             "sign",
             "ready",
+            "card",
             "desk",
             "boat",
+            "computer",
             "recap",
           ] as const) {
             await expect(page.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
@@ -725,6 +727,16 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("heading", { name: diverTranslator("en-US")("switching.spreadsheet.title") })
           .waitFor();
         await capture(page, "switching-spreadsheet", scheme);
+      });
+
+      test(`the alongside switching guide renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/switching/alongside");
+        await page
+          .getByRole("heading", { name: diverTranslator("en-US")("switching.alongside.title") })
+          .waitFor();
+        await capture(page, "switching-alongside", scheme);
       });
 
       // The FareHarbor guide: the coexist-led variant of the composition, for a
