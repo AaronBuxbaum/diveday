@@ -269,6 +269,7 @@ export function RosterSection({
                     return {
                       id: entry.booking.id,
                       name: entry.person.fullName,
+                      photoPath: seat.identityUnconfirmed ? null : entry.person.staffPhotoPath,
                       summary: seat.blockerTexts.length
                         ? t("trips.folio.beforeBoardingCount", { count: seat.blockerTexts.length })
                         : undefined,

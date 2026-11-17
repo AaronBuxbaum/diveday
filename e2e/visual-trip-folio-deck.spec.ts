@@ -22,10 +22,20 @@ for (const scheme of ["light", "dark"] as const) {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
     test.describe("staff", () => {
       signedInAsOwner();
+      test(`guest list shows photos and initials (${scheme})`, async ({ page }) => {
+        await page.goto(trip);
+        const priya = page.getByRole("button", { name: "Priya Sharma", exact: true });
+        await expect(priya.locator('img[src*="priya-sharma"]')).toBeVisible();
+        await expect(page.getByRole("button", { name: "Lena Fischer", exact: true })).toContainText(
+          "LF",
+        );
+        await capture(page, "trip-guest-photos", scheme);
+      });
       test(`guest folio keeps independent requirements together (${scheme})`, async ({ page }) => {
         await page.goto(trip);
         await openGuestFolio(page, "Priya Sharma");
         await expect(page.locator("[data-guest-folio]")).toBeVisible();
+        await expect(page.locator('[data-guest-folio] img[src*="priya-sharma"]')).toBeVisible();
         await capture(page, "trip-guest-folio", scheme);
       });
       test(`guest folio keeps multiple blockers and remedies visible (${scheme})`, async ({

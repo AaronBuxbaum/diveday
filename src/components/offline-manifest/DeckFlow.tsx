@@ -65,20 +65,6 @@ type DeckMutation = {
 const DeckMutationContext = createContext<DeckMutation | null>(null);
 export const useDeckMutation = () => useContext(DeckMutationContext);
 
-function DeckPersonHeading({ person }: { person: DeckPerson }) {
-  return (
-    <div className="flex items-center gap-4">
-      {person.photoPath ? (
-        <PersonAvatar name={person.name} photoPath={person.photoPath} size="lg" />
-      ) : null}
-      <div className="min-w-0">
-        <p className="text-sm text-muted">{person.role}</p>
-        <h2 className={`mt-1 ${SHELL_TITLE_CLASS} wrap-anywhere`}>{person.name}</h2>
-      </div>
-    </div>
-  );
-}
-
 function DeckFind({
   people,
   copy,
