@@ -180,7 +180,11 @@ test.describe("before the player has run", () => {
     await expect(list).not.toHaveAttribute("data-walk", "");
     await expect(list.getByRole("img")).toHaveCount(5);
     await expect(stepsBand.locator("[data-marketing-illustration]")).toHaveCount(0);
-    await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
+    await expect(
+      stepsBand.getByRole("img", {
+        name: diverTranslator("en-US")("marketing.home.steps.recap.mockupLabel"),
+      }),
+    ).toBeVisible();
     // The roll-call step shows the boat's count after dive 1, with Priya back aboard
     // (the desk screen before it is drawn for the walkthrough and waits for it).
     await expect(
@@ -260,6 +264,9 @@ test("the walkthrough's bar fills as the clock, and holding the screen freezes i
   await page.goto("/");
   const t = diverTranslator("en-US");
   const walk = page.getByRole("group", { name: t("marketing.home.walk.label") });
+  // Scroll once the walk has taken over: before it runs the list is every listed step, and
+  // the page shortens under the reader when it does.
+  await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
   await walk.scrollIntoViewIfNeeded();
   const fill = walk.locator("[data-walk-controls] ~ div > span > span").last();
   const filled = async () =>
