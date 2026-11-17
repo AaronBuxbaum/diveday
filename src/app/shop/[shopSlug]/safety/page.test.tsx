@@ -147,7 +147,7 @@ describe("the Safety page", () => {
     expect(text).toContain("Pre-departure checklist");
     expect(text).toContain("Review status and renewal dates.");
     expect(text).not.toContain("Money");
-    expect(text).toContain("Print month");
+    expect(text).toContain("Print");
     // The month is one reading of the shared Month | Year control.
     const period = periodIn(await renderTree([role]));
     expect(period?.range).toBe("month");

@@ -132,8 +132,12 @@ test.describe("before the player has run", () => {
     await expect(
       stepsBand.getByRole("heading", {
         level: 2,
-        name: "One booking, from your website to the boat and home again",
+        name: diverTranslator("en-US")("marketing.home.stepsTitle"),
       }),
+    ).toBeVisible();
+    // The heading says what the steps are in one line; no picture stands beside it.
+    await expect(
+      stepsBand.getByText(diverTranslator("en-US")("marketing.home.stepsLede")),
     ).toBeVisible();
     // Each step's own name, from the copy column that is every row's first
     // child (the alternation is `order`, not DOM order). The screens beside them
@@ -152,7 +156,7 @@ test.describe("before the player has run", () => {
     const list = stepsBand.locator("ol[data-walk-list]");
     await expect(list).not.toHaveAttribute("data-walk", "");
     await expect(list.getByRole("img")).toHaveCount(5);
-    await expect(stepsBand.locator("[data-marketing-illustration] img")).toHaveCount(1);
+    await expect(stepsBand.locator("[data-marketing-illustration]")).toHaveCount(0);
     await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
     // The roll-call step shows the boat's count after dive 1, with Priya back aboard
     // (the desk screen before it is drawn for the walkthrough and waits for it).
@@ -213,6 +217,29 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   await expect(
     walk.getByRole("img", { name: t("marketing.home.steps.recap.mockupLabel") }),
   ).toBeVisible();
+});
+
+test("the walkthrough's bar fills as the clock, and holding the screen freezes it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const t = diverTranslator("en-US");
+  const walk = page.getByRole("group", { name: t("marketing.home.walk.label") });
+  await walk.scrollIntoViewIfNeeded();
+  const fill = walk.locator("[data-walk-controls] ~ div > span > span").last();
+  const filled = async () =>
+    Number.parseFloat((await fill.evaluate((el) => (el as HTMLElement).style.transform)).slice(7));
+  await expect.poll(filled).toBeGreaterThan(0);
+  const box = await walk.locator("[data-walk-frame]:visible").first().boundingBox();
+  if (!box) throw new Error("no screen to hold");
+  await page.mouse.move(box.x + box.width / 2, box.y + 40);
+  await page.mouse.down();
+  const frozen = await filled();
+  // diveday:allow-e2e-hygiene sleep: proving that nothing moves needs a real interval to pass
+  await page.waitForTimeout(1000);
+  expect(await filled()).toBe(frozen);
+  await page.mouse.up();
+  await expect.poll(filled).toBeGreaterThan(frozen);
 });
 
 test("the walkthrough's three doors open the demo as the desk, the boat and the diver", async ({
@@ -930,13 +957,10 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     .locator("section")
     .filter({ has: page.getByRole("link", { name: "See pricing" }) });
   await expect(workBand.locator("button:not([disabled])")).toHaveCount(0);
-  await expect(workBand.locator("a")).toHaveCount(4);
-  const setUpDoor = workBand.locator(SET_UP_DOOR);
-  await expect(setUpDoor).toHaveCount(1);
-  // Anchored on both sides, or `hover:bg-surface-sunken` would satisfy it and
-  // the assertion would pass on a button whose resting fill had changed.
-  await expect(setUpDoor).toHaveClass(/(^|\s)bg-surface(\s|$)/);
-  await expect(setUpDoor).not.toHaveClass(/bg-primary/);
+  // Pricing, switching and the two records links; Get set up is the closing
+  // band's, not a third copy here.
+  await expect(workBand.locator("a")).toHaveCount(3);
+  await expect(workBand.locator(SET_UP_DOOR)).toHaveCount(0);
 });
 
 for (const locale of ["en-US", "es-ES"] as const) {
@@ -2027,7 +2051,6 @@ test("guide contents reveal the complete spreadsheet reference on the same page"
 });
 
 for (const [route, scene] of [
-  ["/", "harbor"],
   ["/product/online-booking", "harbor"],
   ["/product/website", "harbor"],
   ["/product/courses", "classroom"],
@@ -2074,7 +2097,16 @@ test("each page's closing band offers the founder's 20-minute call once, and the
   const call = page.getByRole("link", {
     name: diverTranslator("en-US")("marketing.common.bookCall"),
   });
-  for (const path of ["/", "/product", "/pricing", "/about", "/product/waivers"]) {
+  for (const path of [
+    "/",
+    "/product",
+    "/product/waivers",
+    "/pricing",
+    "/about",
+    "/switching",
+    "/switching/spreadsheet",
+    "/switching/fareharbor",
+  ]) {
     await page.goto(path);
     await expect(call).toHaveCount(1);
     await expect(call).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);

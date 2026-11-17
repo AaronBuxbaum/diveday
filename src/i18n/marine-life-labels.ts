@@ -33,6 +33,8 @@ export type MarineLifeCard = {
   slug: MarineLifeSlug;
   /** The species' common name in the reader's language. */
   name: string;
+  /** The same name for a group of them ("Nurse sharks"), spelled out rather than guessed, since plurals are irregular. */
+  plural: string;
   /** The Latin binomial, identical in every language and not from a bundle. */
   scientificName: string;
   /** The category word printed over the name, translated. */
@@ -61,6 +63,7 @@ export function marineLifeCard(slug: MarineLifeSlug, t: DiverTranslator): Marine
   return {
     slug,
     name: t(`marineLife.species.${slug}.name`),
+    plural: t(`marineLife.species.${slug}.plural`),
     // Non-null because `MarineLifeSlug` is derived from this very map's source
     // array — the two cannot disagree.
     scientificName: species?.scientificName ?? "",

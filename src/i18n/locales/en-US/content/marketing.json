@@ -13,7 +13,8 @@
     "whyStory": "In January 1998, Tom and Eileen Lonergan went out on a dive boat to the Great Barrier Reef. The boat went back to port without them, and nobody noticed for two days. Neither of them was ever found.",
     "whyTie": "A tally can add up while someone is still in the water. So the roll call in DiveDay calls every diver and crew member by name, before the boat leaves and after every dive, and the count stays open until each name is accounted for.",
     "whyLink": "Why DiveDay exists",
-    "stepsTitle": "One booking, from your website to the boat and home again",
+    "stepsTitle": "Follow Priya’s booking from your website to the boat and home again",
+    "stepsLede": "Priya books a dive. Each step is the screen your shop sees at that moment.",
     "steps": {
       "book": {
         "when": "Days before",
