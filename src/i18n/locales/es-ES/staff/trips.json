@@ -1246,7 +1246,8 @@
       "rentalSets": "{amount} · {count, plural, one {# equipo} other {# equipos}}",
       "owed": "Pendiente",
       "nothingOwed": "Nada",
-      "otherCurrency": "{count, plural, one {# plaza pagó} other {# plazas pagaron}} en otra moneda; no se cuentan aquí."
+      "otherCurrency": "{count, plural, one {# plaza pagó} other {# plazas pagaron}} en otra moneda; no se cuentan aquí.",
+      "followUp": "Hacer seguimiento"
     },
     "edit": {
       "schedule": "Agenda",

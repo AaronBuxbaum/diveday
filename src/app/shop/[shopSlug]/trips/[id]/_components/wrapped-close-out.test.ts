@@ -164,6 +164,18 @@ describe("the close-out list", () => {
     );
   });
 
+  it("lists this trip's flying guidance to follow up, by guest, after the roll call", () => {
+    const s = standing({}, twoDives(true));
+    const items = closeOutItems({
+      standing: s,
+      rentalsOut: [],
+      reports: [],
+      cancelled: false,
+      flySafe: [{ name: "Tom Okafor" }, { name: "Lena Fischer" }],
+    });
+    expect(items).toEqual([{ kind: "flySafe", names: ["Tom Okafor", "Lena Fischer"] }]);
+  });
+
   it("says all is closed when nothing is left", () => {
     expect(say(standing({}, twoDives(true))).headline).toBe(
       "Everyone is recorded back. Nothing left to close out.",

@@ -52,6 +52,14 @@ export function CloseOutCard({
           href: trip("manifest"),
           fix: t("trips.clock.water.openRollCall"),
         };
+      case "flySafe":
+        // Resolved on Today, where the shop-wide list and its taps are.
+        return {
+          title: t("trips.flySafeFollowUp.heading"),
+          sub: listOf(locale, item.names),
+          href: `${shopPath(shopSlug)}#fly-safe-follow-up`,
+          fix: t("trips.clock.wrapped.followUp"),
+        };
       case "rentals":
         return {
           title: t("trips.clock.wrapped.rentals", { count: item.count }),

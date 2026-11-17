@@ -15,7 +15,6 @@ import { diversTabState } from "./_arrivals/departure-record";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { departureStateOf } from "./_components/departure-states";
 import { detailsReadRows } from "./_components/details-rows";
-import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
 import { CheckInPhase } from "./_components/phases/CheckInPhase";
 import { EditTrip } from "./_components/phases/EditTrip";
 import { FillingPhase } from "./_components/phases/FillingPhase";
@@ -318,7 +317,6 @@ export default async function ManageTripPage({
         {desk ? <TripDeskConnectivity active t={t} /> : null}
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
-        <FlySafeFollowUps {...{ db, shop, shopSlug, tripId, now, locale }} />
 
         <TripCancellation
           {...{ cancelled, canConfigure, blowoutCalled, lifecycleStatus, shopSlug, tripId, t }}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { listFlySafeFollowUps } from "@/db/fly-safe-correction";
 import { listTripUnitsToCheckIn } from "@/db/gear";
 import { listTripIncidentReports } from "@/db/incident-reports";
 import type { TripGuests } from "@/features/trip-guests";
@@ -54,12 +55,14 @@ export async function WrappedPhase({
   const door = hasDoor
     ? { href: shopPath(shop.slug, "trips", tripId, "manifest"), label: t("trips.clock.rollCall") }
     : null;
-  const [view, rentalsOut, incidents, money] = await Promise.all([
+  const [view, rentalsOut, incidents, money, flySafe] = await Promise.all([
     readManifestView({ ...context, shopSlug: shop.slug, tripId, locale, t }),
     cancelled ? [] : listTripUnitsToCheckIn(db, shop.id, tripId),
     listTripIncidentReports(db, shop.id, tripId, personId),
     // The money record is for whoever may read the shop's reports.
     canViewShopReports(session.user.roles) ? getTripMoney(db, shop, tripId) : null,
+    // This trip's own guests whose flying guidance needs a follow-up.
+    listFlySafeFollowUps(db, { shopId: shop.id, tripId }),
   ]);
   const moneyCard = money ? <MoneyCard money={money} locale={locale} t={t} /> : null;
   const reports = <TripIncidentReports shop={shop} personId={personId} tripId={tripId} />;
@@ -86,7 +89,9 @@ export async function WrappedPhase({
     );
   }
   const standing = waterStandingOf(view);
-  const items = closeOutItems({ standing, rentalsOut, reports: incidents.reports, cancelled });
+  const items = closeOutItems({
+    ...{ standing, rentalsOut, reports: incidents.reports, cancelled, flySafe },
+  });
   const stage = view.stageStrip.stage;
   const depth = (meters: number) =>
     t("manifest.executedDive.summaryDepth", {

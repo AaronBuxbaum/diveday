@@ -25,21 +25,23 @@ vi.mock("@/db/fly-safe-correction", () => ({
 }));
 vi.mock("./fly-safe-follow-up-actions", () => ({ acknowledgeFlySafeAction: vi.fn() }));
 const { getDb } = await import("@/db/client");
+const { staffTranslator } = await import("@/i18n/staff-messages");
 const { FlySafeFollowUps } = await import("./FlySafeFollowUps");
 afterEach(cleanup);
 
-it("shows the other departure link without repeating the current departure", async () => {
+it("names each follow-up's departure, with a link to it", async () => {
   render(
     await FlySafeFollowUps({
       db: await getDb(),
       shop: { id: "shop" },
       shopSlug: "reef",
-      tripId: "current-trip",
       now: new Date("2026-07-21T12:00:00Z"),
-      locale: "en-US",
+      t: staffTranslator("en-US"),
     }),
   );
-  expect(screen.queryByText("Current trip")).toBeNull();
+  expect(screen.getByRole("link", { name: "Current trip" }).getAttribute("href")).toBe(
+    "/shop/reef/trips/current-trip",
+  );
   expect(screen.getByRole("link", { name: "Other trip" }).getAttribute("href")).toBe(
     "/shop/reef/trips/other-trip",
   );

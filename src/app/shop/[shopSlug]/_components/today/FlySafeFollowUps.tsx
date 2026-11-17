@@ -4,36 +4,38 @@ import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import type { AppDb } from "@/db/client";
 import { listShopFlySafeFollowUps } from "@/db/fly-safe-correction";
-import { staffTranslator } from "@/i18n/staff-messages";
+import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 import { acknowledgeFlySafeAction } from "./fly-safe-follow-up-actions";
 
-type Locale = Parameters<typeof staffTranslator>[0];
-
+/**
+ * **Flying guidance to follow up, shop-wide, on Today** (layer E): each guest
+ * whose earlier flying guidance may no longer apply, with their departure and
+ * the resolve tap. Moved off the trip page, which showed every trip's list on
+ * every trip; a trip's own follow-ups are on its Wrapped up. Nothing when none.
+ */
 export async function FlySafeFollowUps({
   db,
   shop,
   shopSlug,
-  tripId,
   now,
-  locale,
+  t,
 }: {
   db: AppDb;
   shop: { id: string };
   shopSlug: string;
-  tripId: string;
   now: Date;
-  locale: Locale;
+  t: StaffTranslator;
 }) {
   const items = await listShopFlySafeFollowUps(db, { shopId: shop.id, now });
   if (!items.length) return null;
-  const t = staffTranslator(locale);
   return (
     <section
-      className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}
-      aria-labelledby="fly-safe-follow-up"
+      id="fly-safe-follow-up"
+      className={`${TONE_PANEL_CLASS} scroll-mt-24 border-warning/40 bg-warning/10`}
+      aria-labelledby="fly-safe-follow-up-heading"
     >
-      <h2 id="fly-safe-follow-up" className="font-semibold">
+      <h2 id="fly-safe-follow-up-heading" className="font-semibold">
         {t("trips.flySafeFollowUp.heading")}
       </h2>
       <p>{t("trips.flySafeFollowUp.intro")}</p>
@@ -42,14 +44,10 @@ export async function FlySafeFollowUps({
         {items.map((item) => (
           <li key={item.bookingId}>
             {item.name}
-            {item.tripId !== tripId ? (
-              <>
-                {" — "}
-                <Link className={proseLinkClass} href={shopPath(shopSlug, "trips", item.tripId)}>
-                  {item.tripTitle}
-                </Link>
-              </>
-            ) : null}
+            {" — "}
+            <Link className={proseLinkClass} href={shopPath(shopSlug, "trips", item.tripId)}>
+              {item.tripTitle}
+            </Link>
             :{" "}
             {t(
               item.status === "queued"
@@ -61,7 +59,7 @@ export async function FlySafeFollowUps({
               action={acknowledgeFlySafeAction.bind(
                 null,
                 shopSlug,
-                tripId,
+                item.tripId,
                 item.bookingId,
                 item.fingerprint,
               )}

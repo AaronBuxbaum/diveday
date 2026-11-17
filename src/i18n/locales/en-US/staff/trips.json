@@ -1246,7 +1246,8 @@
       "rentalSets": "{amount} · {count, plural, one {# set} other {# sets}}",
       "owed": "Owed",
       "nothingOwed": "Nothing",
-      "otherCurrency": "{count, plural, one {# seat paid} other {# seats paid}} in another currency, not counted here."
+      "otherCurrency": "{count, plural, one {# seat paid} other {# seats paid}} in another currency, not counted here.",
+      "followUp": "Follow up"
     },
     "edit": {
       "schedule": "Schedule",
