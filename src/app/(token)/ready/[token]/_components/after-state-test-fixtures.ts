@@ -70,6 +70,7 @@ export function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps
     flySafe: null,
     fieldGuide: [],
     observedSpecies: [],
+    computerDives: [],
     canShareWithBoat: true,
     actions: {
       submitReview: noop,

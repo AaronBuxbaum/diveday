@@ -1,56 +1,81 @@
-import { FEET_PER_METER, PROFILE_MINUTES, SAMPLE_PROFILE } from "./dive-profile-sample";
+import {
+  CHART_POINT_LIMIT,
+  type ProfileSample,
+  profileStats,
+  thinProfile,
+} from "@/lib/dive-profile";
+import { FEET_PER_METER } from "@/lib/dive-profile-sample";
 
 const WIDTH = 320;
 const HEIGHT = 150;
 const PAD = { left: 30, right: 8, top: 8, bottom: 20 };
 
 export type DiveProfileLabels = {
-  /** The chart's name for a screen reader: "Depth over time, 42 minutes, 59 ft deepest". */
-  /** "Safety stop · 3 min" */
-  stop: string;
+  /** "Safety stop · 3 min", worded for the stop the samples actually hold. */
+  stop: (minutes: number) => string;
   /** "Max 59 ft" */
   max: string;
   /** "min" */
   minutes: string;
 };
 
+/** The first round step of 5, 10, 15 or 30 that keeps a dive's time axis to about five labels. */
+function minuteStep(totalMinutes: number): number {
+  return [5, 10, 15, 30].find((step) => step * 6 >= totalMinutes) ?? 60;
+}
+
 /**
  * **A dive's depth over time**, drawn the way a dive computer's own log draws it: the surface on top
  * and the water filling down to the diver's line, gridlines at round depths, minutes along the
- * bottom, the safety stop marked at 5 m, and the deepest point labeled where it happened. Sample
- * data (`SAMPLE_PROFILE`), the one dive the marketing drawings give Priya.
+ * bottom, a safety stop marked where the line rests near 5 m, and the deepest point labeled where
+ * it happened. Everything comes from the `samples` it is given: the axes fit the dive, the stop is
+ * found in the data, and a recording with no samples draws nothing.
  *
  * `unit` picks the depth axis: feet for a diver's report in a US shop, meters for the staff import,
  * which asks for meters.
  */
 export function DiveProfileChart({
+  samples: allSamples,
   unit,
   labels,
   className,
 }: {
+  samples: readonly ProfileSample[];
   unit: "ft" | "m";
   labels: DiveProfileLabels;
   className?: string;
 }) {
+  const stats = profileStats(allSamples);
+  if (!stats) return null;
+  const samples = thinProfile(allSamples, CHART_POINT_LIMIT);
   const scale = unit === "ft" ? FEET_PER_METER : 1;
-  const axisMax = unit === "ft" ? 60 : 20;
   const tick = unit === "ft" ? 20 : 5;
+  const axisMax = Math.max(tick, Math.ceil((stats.maxMeters * scale) / tick) * tick);
+  const totalMinutes = Math.max(1, stats.durationSeconds / 60);
+  const step = minuteStep(totalMinutes);
   const plotW = WIDTH - PAD.left - PAD.right;
   const plotH = HEIGHT - PAD.top - PAD.bottom;
-  const x = (seconds: number) => PAD.left + (seconds / 60 / PROFILE_MINUTES) * plotW;
+  const x = (seconds: number) => PAD.left + (seconds / 60 / totalMinutes) * plotW;
   const y = (meters: number) => PAD.top + Math.min(1, (meters * scale) / axisMax) * plotH;
-  const line = SAMPLE_PROFILE.map(
-    (sample, index) =>
-      `${index === 0 ? "M" : "L"}${x(sample.seconds).toFixed(1)} ${y(sample.meters).toFixed(1)}`,
-  ).join(" ");
-  const last = SAMPLE_PROFILE[SAMPLE_PROFILE.length - 1];
-  const area = `${line} L${x(last?.seconds ?? 0).toFixed(1)} ${y(0).toFixed(1)} L${x(0).toFixed(1)} ${y(0).toFixed(1)} Z`;
-  const deepest = SAMPLE_PROFILE.reduce((best, sample) =>
-    sample.meters > best.meters ? sample : best,
-  );
+  const line = samples
+    .map(
+      (sample, index) =>
+        `${index === 0 ? "M" : "L"}${x(sample.seconds).toFixed(1)} ${y(sample.meters).toFixed(1)}`,
+    )
+    .join(" ");
+  const last = samples[samples.length - 1] as ProfileSample;
+  const area = `${line} L${x(last.seconds).toFixed(1)} ${y(0).toFixed(1)} L${x(0).toFixed(1)} ${y(0).toFixed(1)} Z`;
   const depthTicks = Array.from({ length: axisMax / tick + 1 }, (_, i) => i * tick);
-  const minuteTicks = [0, 10, 20, 30, 40];
-  const stopY = y(5 / scale);
+  const minuteTicks = Array.from(
+    { length: Math.floor(totalMinutes / step) + 1 },
+    (_, i) => i * step,
+  );
+  const stop = stats.safetyStop;
+  const stopY = y(5);
+  const stopMinutes = stop ? Math.round((stop.toSeconds - stop.fromSeconds) / 60) : 0;
+  const deepestX = x(stats.maxSeconds);
+  // The label sits left of the point when the point is near the right edge.
+  const maxAnchorEnd = deepestX > WIDTH * 0.7;
   return (
     <svg
       aria-hidden="true"
@@ -106,17 +131,19 @@ export function DiveProfileChart({
       <text x={PAD.left - 8} y={HEIGHT - 6} textAnchor="end" className="fill-muted text-[8px]">
         {labels.minutes}
       </text>
-      {/* The safety stop: a band at 5 m the line rests on for three minutes. */}
-      <rect
-        x={x(36.7 * 60)}
-        y={stopY - 4}
-        width={x(39.6 * 60) - x(36.7 * 60)}
-        height={8}
-        rx={2}
-        className="fill-success-tint stroke-success"
-        strokeWidth={0.6}
-        opacity={0.9}
-      />
+      {/* The safety stop: a band the line rests in near 5 m, found in the samples. */}
+      {stop ? (
+        <rect
+          x={x(stop.fromSeconds)}
+          y={stopY - 4}
+          width={Math.max(2, x(stop.toSeconds) - x(stop.fromSeconds))}
+          height={8}
+          rx={2}
+          className="fill-success-tint stroke-success"
+          strokeWidth={0.6}
+          opacity={0.9}
+        />
+      ) : null}
       <path d={area} className="fill-primary-tint" opacity={0.75} />
       <path
         d={line}
@@ -127,27 +154,30 @@ export function DiveProfileChart({
         strokeLinecap="round"
       />
       <circle
-        cx={x(deepest.seconds)}
-        cy={y(deepest.meters)}
+        cx={deepestX}
+        cy={y(stats.maxMeters)}
         r={3}
         className="fill-surface stroke-primary"
         strokeWidth={1.6}
       />
       <text
-        x={x(deepest.seconds) + 6}
-        y={y(deepest.meters) - 7}
+        x={deepestX + (maxAnchorEnd ? -6 : 6)}
+        y={y(stats.maxMeters) - 7}
+        textAnchor={maxAnchorEnd ? "end" : "start"}
         className="fill-foreground text-[8px] font-semibold"
       >
         {labels.max}
       </text>
-      <text
-        x={x(38.1 * 60)}
-        y={stopY - 8}
-        textAnchor="middle"
-        className="fill-success-strong text-[7px] font-medium"
-      >
-        {labels.stop}
-      </text>
+      {stop ? (
+        <text
+          x={(x(stop.fromSeconds) + x(stop.toSeconds)) / 2}
+          y={stopY - 8}
+          textAnchor="middle"
+          className="fill-success-strong text-[7px] font-medium"
+        >
+          {labels.stop(stopMinutes)}
+        </text>
+      ) : null}
     </svg>
   );
 }

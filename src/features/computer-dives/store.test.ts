@@ -11,6 +11,7 @@ import {
   exportComputerDives,
   historyComputerDives,
   previewComputerFiles,
+  recapComputerDives,
   restoreComputerDive,
 } from "./store";
 
@@ -123,5 +124,30 @@ describe("personal computer import", () => {
     expect(d.record.startInstant).toBe("2026-01-02T04:50:00.000Z");
     expect(d.record.localStart).toContain("2026-01-01T23:50");
     expect((await previewComputerFiles(db, scope, [file()])).dives[0].duplicate).toBe("exact");
+  });
+});
+
+describe("a diver's recap reads their own computer's dives for the trip day", () => {
+  it("returns the live dives logged that day for that diver, and nothing for another day or person", async () => {
+    const db = await unseededTestDb();
+    const scope = await computerFixture(db);
+    await commitComputerFiles(db, scope, await selectedInput(db, scope));
+    const day = { shopId: scope.shopId, personId: scope.personId, timeZone: "UTC" };
+    const found = await recapComputerDives(db, { ...day, date: "2026-01-01" });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({
+      device: "Computer",
+      durationSeconds: 1800,
+      maxDepthMeters: 20,
+    });
+    expect(await recapComputerDives(db, { ...day, date: "2026-01-02" })).toEqual([]);
+    expect(
+      await recapComputerDives(db, { ...day, personId: randomUUID(), date: "2026-01-01" }),
+    ).toEqual([]);
+    const {
+      dives: [dive],
+    } = await historyComputerDives(db, scope);
+    await deleteComputerDive(db, scope, dive.id);
+    expect(await recapComputerDives(db, { ...day, date: "2026-01-01" })).toEqual([]);
   });
 });

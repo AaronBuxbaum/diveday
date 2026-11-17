@@ -6,6 +6,7 @@ import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { handoffHref, issueBookingHandoff } from "@/features/booking-handoff";
 import { BUDDY_PARAM } from "@/features/buddy-links";
 import { buddyReferralId } from "@/features/buddy-tokens";
+import { recapComputerDives } from "@/features/computer-dives";
 import { nextCourseForDiver } from "@/features/course-ladder";
 import type { DiveRecordComparison } from "@/features/dive-record";
 import { type BookedDeparture, bookedDepartures, nextDiveForBooking } from "@/features/next-dive";
@@ -22,9 +23,11 @@ import { DIVER_CERT_LEVEL_KEYS, NEXT_DIVE_REASON_KEYS } from "@/i18n/next-dive-l
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { BrandDisplayFontCode } from "@/lib/brand";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { packageOnSale } from "@/lib/dive-packages";
+import { type ProfileSample, profileStats, thinProfile } from "@/lib/dive-profile";
 import type { FlySafeAnchor, FlySafeReason } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
@@ -133,6 +136,12 @@ export type AfterStateProps = {
    * the diver's own language whatever the crew was reading when they picked it.
    */
   observedSpecies: string[];
+  /**
+   * **The dives this diver's own computer logged on the day**, from the file a staff member
+   * imported for them: depth over time, never a plan or the shop's word. Empty is the ordinary
+   * state and renders nothing, so no chart is ever drawn without a recording behind it.
+   */
+  computerDives: RecapProfileDive[];
   /**
    * The course this departure taught, with what the shop recorded for it
    * (issues #1196, #1205). Null on an ordinary charter and then nothing about
@@ -356,6 +365,17 @@ function bookingReference(bookingId: string): string {
   return bookingId.replace(/-/g, "").slice(0, 8).toUpperCase();
 }
 
+/** One recorded dive as the recap draws it; samples are thinned for the page. */
+export type RecapProfileDive = {
+  device: string | null;
+  maxMeters: number | null;
+  averageMeters: number | null;
+  durationSeconds: number | null;
+  /** The coldest sample's water temperature, when the computer logged one. */
+  coldestC: number | null;
+  samples: ProfileSample[];
+};
+
 export async function buildAfterStateProps(input: {
   db: AppDb;
   data: RecapPageData;
@@ -399,30 +419,59 @@ export async function buildAfterStateProps(input: {
         excludeTripId: trip.id,
       })
     : Promise.resolve<BookedDeparture[]>([]);
-  const [ownReview, nextDeparture, ownPulse, nextDive, booked, whatsNext] = await Promise.all([
-    getReviewForBooking(db, bookingId),
-    nextPublicDeparture(db, shop.id, locale, shop.timezone),
-    getRecapPulseForBooking(db, bookingId),
-    // **The server-side-only fields on `RecapPageData` are read here and
-    // nowhere else** (`trip.id`, `trip.courseId`, `trip.lensId`, `personId`,
-    // and `seenThatDay` below — see their own
-    // note in src/features/recap/store.ts). They never reach `AfterStateProps`: this props
-    // object names every field explicitly rather than spreading `data`, which
-    // is what keeps a person uuid off a client-visible bearer-token page.
-    nextDiveForBooking(db, {
-      shopId: shop.id,
-      personId: data.personId,
-      justDivedTripId: trip.id,
-      dayCourseId: trip.courseId,
-      dayShoutout: data.shoutout,
-      daySiteNames: data.sites.map((site) => site.name),
-      dayLensId: trip.lensId,
-      booked: bookedRead,
-      noneIfBooked: true,
-    }),
-    bookedRead,
-    whatsNextFor(db, { data, t, locale, now: nowDate() }),
-  ]);
+  const [ownReview, nextDeparture, ownPulse, nextDive, booked, whatsNext, computerRows] =
+    await Promise.all([
+      getReviewForBooking(db, bookingId),
+      nextPublicDeparture(db, shop.id, locale, shop.timezone),
+      getRecapPulseForBooking(db, bookingId),
+      // **The server-side-only fields on `RecapPageData` are read here and
+      // nowhere else** (`trip.id`, `trip.courseId`, `trip.lensId`, `personId`,
+      // and `seenThatDay` below — see their own
+      // note in src/features/recap/store.ts). They never reach `AfterStateProps`: this props
+      // object names every field explicitly rather than spreading `data`, which
+      // is what keeps a person uuid off a client-visible bearer-token page.
+      nextDiveForBooking(db, {
+        shopId: shop.id,
+        personId: data.personId,
+        justDivedTripId: trip.id,
+        dayCourseId: trip.courseId,
+        dayShoutout: data.shoutout,
+        daySiteNames: data.sites.map((site) => site.name),
+        dayLensId: trip.lensId,
+        booked: bookedRead,
+        noneIfBooked: true,
+      }),
+      bookedRead,
+      whatsNextFor(db, { data, t, locale, now: nowDate() }),
+      recapComputerDives(db, {
+        shopId: shop.id,
+        personId: data.personId,
+        date: calendarDateInTimezone(trip.startsAt, shop.timezone),
+        timeZone: shop.timezone,
+      }),
+    ]);
+  const computerDives = computerRows.flatMap((row): RecapProfileDive[] => {
+    const samples = row.samples.map(({ seconds, depthMeters }) => ({
+      seconds,
+      meters: depthMeters,
+    }));
+    const stats = profileStats(samples);
+    const temperatures = row.samples.flatMap((sample) =>
+      sample.temperatureC === undefined ? [] : [sample.temperatureC],
+    );
+    const dive: RecapProfileDive = {
+      device: row.device,
+      maxMeters: row.maxDepthMeters ?? stats?.maxMeters ?? null,
+      averageMeters: stats?.averageMeters ?? null,
+      durationSeconds: row.durationSeconds ?? stats?.durationSeconds ?? null,
+      coldestC: temperatures.length > 0 ? Math.min(...temperatures) : null,
+      samples: thinProfile(samples),
+    };
+    // A recording with no profile, depth or time has nothing to say.
+    return dive.samples.length > 0 || dive.maxMeters !== null || dive.durationSeconds !== null
+      ? [dive]
+      : [];
+  });
   const [firstBooked] = booked;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
   const asOf = nowDate();
@@ -489,6 +538,7 @@ export async function buildAfterStateProps(input: {
       : null,
     fieldGuide: data.fieldGuide,
     observedSpecies: data.observedSpecies,
+    computerDives,
     conservation: data.conservation,
     shoutout: data.shoutout,
     photos: data.photos,

@@ -115,6 +115,7 @@ export function AfterState({
     course,
     shoutout,
     photos,
+    computerDives,
     maxPhotos,
     photosOn,
     visitCount,
@@ -231,6 +232,8 @@ export function AfterState({
           sites={sites}
           diveRecord={diveRecord}
           observedSpecies={observedSpecies}
+          computerDives={computerDives}
+          photos={photos}
           visitCount={visitCount}
           siteMark={siteMark}
           postcard={postcard}

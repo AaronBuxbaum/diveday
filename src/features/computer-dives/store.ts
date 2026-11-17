@@ -12,6 +12,7 @@ import {
 } from "@/db/schema";
 import { livePerson } from "@/db/trips";
 import { canExportShopData, isStaff } from "@/lib/authz";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   type ComputerLogbookProvider,
@@ -406,4 +407,75 @@ export async function exportComputerDiveSummaryCsv(db: AppDb, scope: ComputerSco
       })),
     );
   });
+}
+
+/** What a diver's recap shows of one dive their own computer logged. */
+export type RecapComputerDive = {
+  id: string;
+  device: string | null;
+  /** The recording's own start, shop-local, when the file carried one. */
+  localStart: string | null;
+  durationSeconds: number | null;
+  maxDepthMeters: number | null;
+  samples: Array<{ seconds: number; depthMeters: number; temperatureC?: number }>;
+};
+
+/** A day's recap lists at most this many recordings; a day past it is a computer dump, not a dive. */
+const RECAP_COMPUTER_DIVES_LIMIT = 6;
+
+/**
+ * **The dives this diver's own computer logged on the day of a trip**, for their recap. Read by the
+ * recap's bearer link, which is the diver's own door, so there is no staff check here: the rows are
+ * the person's, scoped by shop and person, live only, and matched by the recording's calendar date in
+ * the shop's zone. A recording with no profile is still a dive (its facts show), just no chart.
+ * Nothing here feeds readiness, recency or the manifest.
+ */
+export async function recapComputerDives(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; date: string; timeZone: string },
+): Promise<RecapComputerDive[]> {
+  const rows = await db
+    .select({ dive: computerDives, samples: computerDiveProfiles.samples })
+    .from(computerDives)
+    .leftJoin(
+      computerDiveProfiles,
+      and(
+        eq(computerDiveProfiles.diveId, computerDives.id),
+        eq(computerDiveProfiles.shopId, input.shopId),
+        eq(computerDiveProfiles.personId, input.personId),
+      ),
+    )
+    .where(
+      and(
+        eq(computerDives.shopId, input.shopId),
+        eq(computerDives.personId, input.personId),
+        sql`${computerDives.deletedAt} is null`,
+      ),
+    );
+  const found: Array<{ sort: string; dive: RecapComputerDive }> = [];
+  for (const { dive, samples } of rows) {
+    const record = dive.record as unknown as Omit<ParsedComputerDive, "samples">;
+    const date =
+      record.localDate ??
+      record.localStart?.slice(0, 10) ??
+      (record.startInstant
+        ? calendarDateInTimezone(new Date(record.startInstant), input.timeZone)
+        : null);
+    if (date !== input.date) continue;
+    found.push({
+      sort: record.localStart ?? record.startInstant ?? dive.fingerprint,
+      dive: {
+        id: dive.id,
+        device: record.device,
+        localStart: record.localStart,
+        durationSeconds: record.durationSeconds,
+        maxDepthMeters: record.maxDepthMeters,
+        samples: samples ?? [],
+      },
+    });
+  }
+  return found
+    .sort((a, b) => a.sort.localeCompare(b.sort))
+    .slice(0, RECAP_COMPUTER_DIVES_LIMIT)
+    .map(({ dive }) => dive);
 }

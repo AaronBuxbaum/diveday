@@ -18,3 +18,7 @@ formulas and excludes profiles/gases. The JSON backup retains the complete recor
 choice connects an account, fetches remote data, or verifies vendor compatibility. See
 [the interchange decision](../../../docs/architecture/decisions/20261115-online-logbook-file-interchange.md)
 and the parser fixture README for the tested compatibility scope.
+
+A diver's own recap reads their live dives for the trip's calendar day (`recapComputerDives`) and draws
+the depth profile and facts as "From your dive computer". It is shown to the diver as their evidence,
+never printed on the logbook sheet, and a recording with no samples shows its facts without a chart.
