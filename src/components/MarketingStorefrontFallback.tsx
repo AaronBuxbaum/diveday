@@ -22,11 +22,11 @@ const DAY_RULE_WORD = "text-sm font-bold tracking-[0.18em] uppercase";
  */
 export function StorefrontFallback({
   locale,
-  tapBook = false,
+  tapBoat = false,
 }: {
   locale: DiverLocale;
-  /** The homepage walkthrough taps "Book this boat" (`data-tap-target`); no other caller does. */
-  tapBook?: boolean;
+  /** The homepage walkthrough taps the Two-Tank Reef in the week's list (`data-tap-target`); no other caller does. */
+  tapBoat?: boolean;
 }) {
   const t = diverTranslator(locale);
   const rating = t("fallback.storefront.rating");
@@ -70,12 +70,7 @@ export function StorefrontFallback({
             <p className="mt-0.5 text-xs text-muted">
               {t("fallback.spotsLeft", { count: 3 })} · {t("fallback.storefront.perDiver")}
             </p>
-            <button
-              type="button"
-              disabled
-              data-tap-target={tapBook ? "" : undefined}
-              className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}
-            >
+            <button type="button" disabled className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}>
               {t("fallback.storefront.bookThisBoat")}
             </button>
           </div>
@@ -92,7 +87,10 @@ export function StorefrontFallback({
           <span aria-hidden="true" className="h-px flex-1 bg-border" />
         </div>
         <ul className="mt-1">
-          <li className="flex flex-col gap-1 border-b border-border py-2.5 @md:flex-row @md:items-center @md:gap-4">
+          <li
+            data-tap-target={tapBoat ? "" : undefined}
+            className="flex flex-col gap-1 border-b border-border py-2.5 @md:flex-row @md:items-center @md:gap-4"
+          >
             <p className="text-sm font-semibold whitespace-nowrap tabular-nums @md:w-36 @md:shrink-0">
               {t("fallback.storefront.reefTime")}
             </p>

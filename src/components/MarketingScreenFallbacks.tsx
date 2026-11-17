@@ -1,7 +1,7 @@
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { DiveProfileChart } from "@/components/DiveProfileChart";
-import { MarketingStorefrontPhoto } from "@/components/MarketingStorefrontPhoto";
 import { RollCallMark } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
 import { groupLabelClass } from "@/components/ui/group-label";
@@ -9,6 +9,8 @@ import { LedgerRow } from "@/components/ui/ledger";
 import { ReadinessBar } from "@/components/ui/ProgressBar";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
+import { WalkTyped } from "@/components/WalkTyped";
+import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -565,44 +567,19 @@ export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
   );
 }
 
-/**
- * The shop's public schedule, for the homepage walkthrough's browsing and picking: two upcoming
- * trips with their seats left. The first (`data-tap-target`) is the Two-Tank Reef Priya picks.
- */
-export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
-  const t = diverTranslator(locale);
-  const trips = [
-    { title: t("fallback.tripName"), time: t("fallback.tomorrowTime"), spots: 3 },
-    { title: t("fallback.nightDive"), time: t("fallback.fridayTime"), spots: 5 },
-  ];
+/** One of the review's five stars, empty or filled (the real form's, visual review 2026-10-24, B48). */
+function ReviewStar({ filled }: { filled: boolean }) {
   return (
-    <div className="bg-background">
-      <AppBar label={t("fallback.schedule")} />
-      <div className={MOCK_BODY}>
-        <MarketingStorefrontPhoto />
-        <p className={groupLabelClass("primary")}>{t("fallback.upcomingTrips")}</p>
-        <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.findNextDive")}</h3>
-        <div className="mt-4 space-y-3">
-          {trips.map((trip, index) => (
-            <div
-              key={trip.title}
-              data-tap-target={index === 0 ? "" : undefined}
-              className="rounded-inset border border-border bg-surface p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="font-semibold">{trip.title}</h4>
-                  <p className="mt-1 text-sm text-muted">{trip.time}</p>
-                </div>
-                <span className="rounded-full bg-primary-tint px-2.5 py-1 text-xs font-semibold text-primary">
-                  {t("fallback.spotsLeft", { count: trip.spots })}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 18 18"
+      className={`size-5 ${filled ? "fill-primary stroke-primary" : "fill-none stroke-border-strong"}`}
+      strokeWidth={1.25}
+      strokeLinejoin="round"
+      focusable="false"
+    >
+      <path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z" />
+    </svg>
   );
 }
 
@@ -633,20 +610,27 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
 export function RecapPageFallback({
   locale,
   view = "report",
-  state = "ask",
+  state = "writing",
 }: {
   locale: DiverLocale;
   /**
-   * `report` is the top of the page: the photos from the boat, the dive's
-   * record and its depth chart. `review` is the rest: the crew's word and the
+   * `report` is the top of the page: the dive's record and its depth chart, the photos
+   * from the trip and the species seen. `review` is the rest: the crew's word and the
    * review ask. The homepage walkthrough shows them one after the other.
    */
   view?: "report" | "review";
-  /** `rated` is the review ask after Priya taps the fifth star (the walkthrough's tap). */
-  state?: "ask" | "rated";
+  /**
+   * `writing` is the review ask while Priya fills the stars and types her review, then taps
+   * Leave my review (the walkthrough's tap); `posted` is the page a moment after.
+   */
+  state?: "writing" | "posted";
 }) {
   const t = diverTranslator(locale);
-  const rated = state === "rated";
+  const posted = state === "posted";
+  const writing = state === "writing";
+  const seen = (["green-sea-turtle", "spotted-eagle-ray", "french-angelfish"] as const).map(
+    (slug) => marineLifeCard(slug, t),
+  );
   const feet = (meters: number) => `${Math.round(meters * FEET_PER_METER)} ft`;
   const deepest = feet(PROFILE_MAX_METERS);
   // i18n-exempt: sample dive figures used only in the marketing mockup
@@ -664,39 +648,6 @@ export function RecapPageFallback({
           <>
             <h3 className={SUB_TITLE_CLASS}>{t("fallback.recap.greeting")}</h3>
             <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
-
-            {/* The crew's photos, from the bundled, credited set in
-                public/dive-sites: the boat's diver posing on the wreck, and two
-                things she saw. */}
-            <p className={`mt-4 ${groupLabelClass()}`}>{t("fallback.recap.photosHeading")}</p>
-            <div className="mt-2 grid grid-cols-3 grid-rows-2 gap-1.5 overflow-hidden rounded-inset">
-              <Image
-                src={`/dive-sites/${encodeURIComponent(
-                  "US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg",
-                )}`}
-                alt=""
-                width={1024}
-                height={768}
-                sizes="(max-width: 1023px) calc(100vw - 88px), 400px"
-                className="col-span-2 row-span-2 h-full w-full object-cover"
-              />
-              <Image
-                src={`/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`}
-                alt=""
-                width={1024}
-                height={768}
-                sizes="140px"
-                className="aspect-[4/3] h-full w-full object-cover"
-              />
-              <Image
-                src={`/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`}
-                alt=""
-                width={1024}
-                height={768}
-                sizes="140px"
-                className="aspect-[4/3] h-full w-full object-cover"
-              />
-            </div>
 
             {/* The dive record: the one place the day's facts render. */}
             <div className="mt-4 rounded-inset border border-border bg-surface p-3">
@@ -741,6 +692,57 @@ export function RecapPageFallback({
                 }}
               />
             </div>
+
+            {/* The crew's photos from the trip, from the bundled, credited set in
+                public/dive-sites: the boat's diver posing on the wreck, and two
+                things she saw. */}
+            <p className={`mt-4 ${groupLabelClass()}`}>{t("fallback.recap.photosHeading")}</p>
+            <div className="mt-2 grid grid-cols-3 grid-rows-2 gap-1.5 overflow-hidden rounded-inset">
+              <Image
+                src={`/dive-sites/${encodeURIComponent(
+                  "US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg",
+                )}`}
+                alt=""
+                width={1024}
+                height={768}
+                sizes="(max-width: 1023px) calc(100vw - 88px), 400px"
+                className="col-span-2 row-span-2 h-full w-full object-cover"
+              />
+              <Image
+                src={`/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`}
+                alt=""
+                width={1024}
+                height={768}
+                sizes="140px"
+                className="aspect-[4/3] h-full w-full object-cover"
+              />
+              <Image
+                src={`/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`}
+                alt=""
+                width={1024}
+                height={768}
+                sizes="140px"
+                className="aspect-[4/3] h-full w-full object-cover"
+              />
+            </div>
+
+            {/* What she saw, from the bundled species photos (`public/marine-life`). */}
+            <p className={`mt-4 ${groupLabelClass()}`}>{t("fallback.recap.seenHeading")}</p>
+            <ul className="mt-2 grid grid-cols-3 gap-1.5">
+              {seen.map((card) => (
+                <li key={card.slug} className="min-w-0">
+                  <Image
+                    src={card.imageUrl}
+                    alt=""
+                    width={640}
+                    height={480}
+                    sizes="140px"
+                    className="aspect-[4/3] w-full rounded-lg object-cover"
+                  />
+                  <p className="mt-1 truncate text-xs font-medium">{card.name}</p>
+                </li>
+              ))}
+            </ul>
           </>
         ) : (
           <>
@@ -752,40 +754,44 @@ export function RecapPageFallback({
               </figcaption>
             </figure>
 
-            {/* The one ask. */}
+            {/* The one ask: the stars fill, she writes her review, and sends it. */}
             <div className="mt-4 rounded-inset border border-border bg-surface p-3">
               <h4 className="text-sm font-semibold">{t("fallback.recap.reviewAsk")}</h4>
               <div className="mt-2 flex gap-1" aria-hidden="true">
                 {[0, 1, 2, 3, 4].map((star) => (
-                  <span
-                    key={star}
-                    data-tap-target={star === 4 && !rated ? "" : undefined}
-                    data-walk-pop={rated ? "" : undefined}
-                    style={rated ? { animationDelay: `${star * 70}ms` } : undefined}
-                    className="inline-flex rounded-full"
-                  >
-                    <svg
-                      // The row is already `aria-hidden`, but the rule reads one
-                      // element at a time and cannot see the ancestor. Marking the
-                      // star itself is the same truth said twice, not a workaround:
-                      // it is a drawn mark in a fallback screenshot.
-                      aria-hidden="true"
-                      viewBox="0 0 18 18"
-                      // Empty, as the real form is before the diver rates the day
-                      // (visual review 2026-10-24, B48).
-                      className={`size-5 ${rated ? "fill-primary stroke-primary" : "fill-none stroke-border-strong"}`}
-                      strokeWidth={1.25}
-                      strokeLinejoin="round"
-                      focusable="false"
+                  <span key={star} className="relative inline-flex">
+                    <ReviewStar filled={false} />
+                    <span
+                      data-walk-late=""
+                      style={{ "--late-delay": `${200 + star * 150}ms` } as CSSProperties}
+                      className="absolute inset-0"
                     >
-                      <path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z" />
-                    </svg>
+                      <ReviewStar filled />
+                    </span>
                   </span>
                 ))}
               </div>
-              <button type="button" disabled className={`mt-3 ${MOCK_PRIMARY_BUTTON}`}>
-                {t("fallback.recap.reviewSubmit")}
-              </button>
+              <div className="mt-3 flex min-h-16 items-start rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+                <WalkTyped text={t("fallback.recap.reviewText")} delay={1200} />
+              </div>
+              {posted ? (
+                <p
+                  data-walk-pop=""
+                  className="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-lg bg-success-tint px-3 text-center text-sm font-semibold text-success-strong"
+                >
+                  <StatusMark variant="success" size="md" />
+                  {t("fallback.recap.reviewPosted")}
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  data-tap-target={writing ? "" : undefined}
+                  className={`mt-3 ${MOCK_PRIMARY_BUTTON}`}
+                >
+                  {t("fallback.recap.reviewSubmit")}
+                </button>
+              )}
             </div>
           </>
         )}

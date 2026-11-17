@@ -8,12 +8,11 @@ import {
 import { OrdersLedgerFallback, WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
 import {
   CaptainRollCallFallback,
-  DiverBookingFallback,
   FrontDeskReadinessFallback,
   RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
 import { StorefrontFallback } from "@/components/MarketingStorefrontFallback";
-import { CardCheckFallback, ComputerDivesFallback } from "@/components/MarketingWalkScreens";
+import { CardCheckFallback } from "@/components/MarketingWalkScreens";
 import type { DiverMessageKey } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { FeaturePageSlug } from "@/lib/feature-pages";
@@ -41,18 +40,15 @@ import type { FeaturePageSlug } from "@/lib/feature-pages";
  */
 export type StepId =
   | "browse"
-  | "select"
   | "pay"
   | "money"
   | "onboard"
   | "unsigned"
-  | "medical"
   | "sign"
   | "check"
   | "card"
   | "desk"
   | "aboard"
-  | "computer"
   | "recap"
   | "review";
 
@@ -73,21 +69,13 @@ export const STEPS: readonly {
   screen: (locale: DiverLocale) => ReactNode;
 }[] = [
   {
-    // Browsing, selecting and buying are three slides on purpose: a reader sees her look, choose,
-    // and pay as three things, not one tap on a button (Aaron, 2026-11-17).
+    // Looking around and picking a boat are one slide: she taps a trip in the week's list and the
+    // seat card opens (Aaron, 2026-11-17).
     id: "browse",
-    feature: "website",
+    feature: "online-booking",
     notes: ["marketing.home.steps.browse.note1", "marketing.home.steps.browse.note2"],
     label: "marketing.home.steps.browse.mockupLabel",
-    before: (locale) => <StorefrontFallback locale={locale} tapBook />,
-    screen: (locale) => <DiverBookingFallback locale={locale} />,
-  },
-  {
-    id: "select",
-    feature: "online-booking",
-    notes: ["marketing.home.steps.select.note1", "marketing.home.steps.select.note2"],
-    label: "marketing.home.steps.select.mockupLabel",
-    before: (locale) => <DiverBookingFallback locale={locale} />,
+    before: (locale) => <StorefrontFallback locale={locale} tapBoat />,
     screen: (locale) => <SeatPickFallback locale={locale} />,
   },
   {
@@ -124,21 +112,13 @@ export const STEPS: readonly {
     screen: (locale) => <FrontDeskReadinessFallback locale={locale} state="nudged" />,
   },
   {
-    id: "medical",
-    feature: "waivers",
-    notes: ["marketing.home.steps.medical.note1", "marketing.home.steps.medical.note2"],
-    label: "marketing.home.steps.medical.mockupLabel",
-    before: (locale) => <WaiverSigningFallback locale={locale} state="unanswered" />,
-    screen: (locale) => <WaiverSigningFallback locale={locale} state="answered" />,
-  },
-  {
     id: "sign",
     listed: true,
     typed: true,
     feature: "waivers",
     notes: ["marketing.home.steps.sign.note1", "marketing.home.steps.sign.note2"],
     label: "marketing.home.steps.sign.mockupLabel",
-    before: (locale) => <WaiverSigningFallback locale={locale} state="typing" />,
+    before: (locale) => <WaiverSigningFallback locale={locale} state="filling" />,
     screen: (locale) => <WaiverSigningFallback locale={locale} state="signed" />,
   },
   {
@@ -164,8 +144,8 @@ export const STEPS: readonly {
     feature: "check-in",
     notes: ["marketing.home.steps.desk.note1", "marketing.home.steps.desk.note2"],
     label: "marketing.home.steps.desk.mockupLabel",
-    before: (locale) => <ArrivalDeskFallback locale={locale} state="ready" />,
-    screen: (locale) => <ArrivalDeskFallback locale={locale} state="checkedIn" />,
+    before: (locale) => <ArrivalDeskFallback locale={locale} state="ready" held="card" />,
+    screen: (locale) => <ArrivalDeskFallback locale={locale} state="checkedIn" held="card" />,
   },
   {
     // The hero draws the dock's roll-call phone, so this slide draws the same screen a dive later,
@@ -180,13 +160,6 @@ export const STEPS: readonly {
     screen: (locale) => <CaptainRollCallFallback locale={locale} state="afterDive" />,
   },
   {
-    id: "computer",
-    notes: ["marketing.home.steps.computer.note1", "marketing.home.steps.computer.note2"],
-    label: "marketing.home.steps.computer.mockupLabel",
-    before: (locale) => <ComputerDivesFallback locale={locale} state="preview" />,
-    screen: (locale) => <ComputerDivesFallback locale={locale} state="imported" />,
-  },
-  {
     // The report goes out by itself a few hours after the boat is due back, which is why it is the
     // messages page this slide opens. Its drawing carries the label `RecapPageFallback` names.
     id: "recap",
@@ -199,11 +172,12 @@ export const STEPS: readonly {
   },
   {
     id: "review",
+    typed: true,
     feature: "messages",
     notes: ["marketing.home.steps.review.note1", "marketing.home.steps.review.note2"],
     label: "marketing.home.steps.review.mockupLabel",
-    before: (locale) => <RecapPageFallback locale={locale} view="review" state="ask" />,
-    screen: (locale) => <RecapPageFallback locale={locale} view="review" state="rated" />,
+    before: (locale) => <RecapPageFallback locale={locale} view="review" state="writing" />,
+    screen: (locale) => <RecapPageFallback locale={locale} view="review" state="posted" />,
   },
 ];
 

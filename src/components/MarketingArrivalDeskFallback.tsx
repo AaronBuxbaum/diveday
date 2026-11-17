@@ -49,9 +49,16 @@ export function RowCaret() {
 export function ArrivalDeskFallback({
   locale,
   state = "ready",
+  held = "identity",
 }: {
   locale: DiverLocale;
   state?: "ready" | "checkedIn";
+  /**
+   * Why the one seat can't board: `identity` is the held seat asking whether the booking is the
+   * same person (the check-in page); `card` is a certification nobody has verified yet (the
+   * homepage walkthrough, where the card has its own slide).
+   */
+  held?: "identity" | "card";
 }) {
   const t = diverTranslator(locale);
   const checkedIn = state === "checkedIn";
@@ -92,22 +99,26 @@ export function ArrivalDeskFallback({
             <p className="flex items-baseline gap-2 text-xs text-danger">
               <StatusMarkColumn variant="danger" />
               <span>
-                {t("fallback.arrivalDesk.heldReason", {
-                  // i18n-exempt: sample diver names used only in marketing mockups
-                  bookedAs: "Mateo Rossi",
-                  // i18n-exempt: sample diver names used only in marketing mockups
-                  name: "Diego Alvarez",
-                })}
+                {held === "card"
+                  ? t("fallback.arrivalDesk.cardReason")
+                  : t("fallback.arrivalDesk.heldReason", {
+                      // i18n-exempt: sample diver names used only in marketing mockups
+                      bookedAs: "Mateo Rossi",
+                      // i18n-exempt: sample diver names used only in marketing mockups
+                      name: "Diego Alvarez",
+                    })}
               </span>
             </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button type="button" disabled className={`px-3 ${MOCK_SECONDARY_BUTTON}`}>
-                {t("fallback.arrivalDesk.samePerson")}
-              </button>
-              <button type="button" disabled className={`px-3 ${MOCK_SECONDARY_BUTTON}`}>
-                {t("fallback.arrivalDesk.differentPerson")}
-              </button>
-            </div>
+            {held === "card" ? null : (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" disabled className={`px-3 ${MOCK_SECONDARY_BUTTON}`}>
+                  {t("fallback.arrivalDesk.samePerson")}
+                </button>
+                <button type="button" disabled className={`px-3 ${MOCK_SECONDARY_BUTTON}`}>
+                  {t("fallback.arrivalDesk.differentPerson")}
+                </button>
+              </div>
+            )}
           </div>
           {checkedIn ? null : (
             <>

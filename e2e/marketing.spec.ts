@@ -151,7 +151,7 @@ test.describe("before the player has run", () => {
     await expect(
       stepsBand.getByText(diverTranslator("en-US")("marketing.home.stepsLede")),
     ).toBeVisible();
-    // Each step's own name (all fifteen are in the page; only the listed five show before the player runs), from the copy column that is every row's first
+    // Each step's own name (all twelve are in the page; only the listed five show before the player runs), from the copy column that is every row's first
     // child (the alternation is `order`, not DOM order). The screens beside them
     // draw headings of their own ("Find your next dive"), which a screen reader
     // never hears inside a `role="img"` but a heading query still finds.
@@ -159,18 +159,15 @@ test.describe("before the player has run", () => {
       ...(
         [
           "browse",
-          "select",
           "pay",
           "money",
           "onboard",
           "unsigned",
-          "medical",
           "sign",
           "check",
           "card",
           "desk",
           "aboard",
-          "computer",
           "recap",
           "review",
         ] as const
@@ -239,18 +236,15 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
 
   // Each beat names the diver's state; the arrow keys walk the story.
   const beats = [
-    "select",
     "pay",
     "money",
     "onboard",
     "unsigned",
-    "medical",
     "sign",
     "check",
     "card",
     "desk",
     "aboard",
-    "computer",
     "recap",
     "review",
   ] as const;
@@ -264,7 +258,7 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   ).toBeVisible();
 
   // Every segment of the bar is a door to its step.
-  await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 5 }) }).click();
+  await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 4 }) }).click();
   await expect(walk.getByText(t("marketing.home.walk.captions.onboard"))).toBeVisible();
   await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 1 }) }).click();
   await expect(walk.getByText(t("marketing.home.walk.captions.browse"))).toBeVisible();
