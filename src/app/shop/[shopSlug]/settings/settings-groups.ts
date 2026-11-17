@@ -196,6 +196,12 @@ const RAIL_ROWS = [
     target: { kind: "route", path: "/settings/activity" },
   },
   {
+    id: "tripDefaults",
+    labelKey: "settings.tripDefaults.heading",
+    group: "bookings",
+    target: { kind: "route", path: "/settings/trip-defaults" },
+  },
+  {
     id: "waivers",
     labelKey: "settings.main.waivers.heading",
     group: "bookings",

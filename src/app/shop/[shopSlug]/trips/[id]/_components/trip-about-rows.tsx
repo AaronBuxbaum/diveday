@@ -3,7 +3,6 @@ import type { listBoats } from "@/features/boats";
 import type { requireShopSurface } from "@/features/session";
 import type { listTripLenses } from "@/features/trip-lenses";
 import type { getTripOverview } from "@/features/trip-overview";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,
@@ -36,6 +35,7 @@ import { moveTripCrewAction, updateTripCrewAction } from "../crew-actions";
 import type { DepartureDetailsSection } from "../departure-detail-sections";
 import { saveDetailsSection } from "../details-actions";
 import { saveRequirementsAction } from "../terms-actions";
+import { admissionDisplay } from "./admission-display";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewAwayWorkingList } from "./CrewAwayWorkingList";
 import { CrewMoveForm } from "./CrewMoveForm";
@@ -256,32 +256,7 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
   const requirementsStatus = noticeForForm(tripNotice, "requirements");
   const siteNames = diveSites.sites.map((site) => site.name);
   const planSummary = siteNames.length > 0 ? siteNames.join(" + ") : t("trips.about.noneSet");
-  const requirementsSummary =
-    requirement === null
-      ? t("trips.about.noRequirements")
-      : [
-          requirement.minimumCertificationLevel
-            ? t("trips.requirements.summaryCert", {
-                level: t(CERTIFICATION_LEVEL_KEYS[requirement.minimumCertificationLevel]),
-              })
-            : null,
-          requirement.requiresWaiver ? t("trips.requirements.summaryWaiver") : null,
-          !trip.course && requirement.requiresPayment
-            ? t("trips.requirements.summaryPayment")
-            : null,
-          ...(!trip.course
-            ? requirement.requiredSpecialties.map((specialty) =>
-                t("trips.requirements.summarySpecialtyCard", {
-                  specialty: t(SPECIALTY_KEYS[specialty]),
-                }),
-              )
-            : []),
-          !trip.course && requirement.requiresNitrox
-            ? t("trips.requirements.summaryNitroxCard")
-            : null,
-        ]
-          .filter((part): part is string => Boolean(part))
-          .join(" · ") || t("trips.requirements.summaryNoneRequired");
+  const requirementsSummary = admissionDisplay(trip.course, requirement, siteRequirement, t);
   const temperatureUnit = temperatureUnitFor(shop);
   const conditionParts = crewConditionFacts(trip, shop.depthUnit, temperatureUnit, t);
   // The tide stands in for the at-rest line only when there is nothing else:

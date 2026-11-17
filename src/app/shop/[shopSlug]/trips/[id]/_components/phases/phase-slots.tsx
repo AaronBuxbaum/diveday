@@ -2,7 +2,6 @@ import { type ReactNode, Suspense } from "react";
 import type { TripOverview } from "@/features/trip-overview";
 import type { GearToPack } from "@/features/trip-prep";
 import { compassText } from "@/i18n/compass-labels";
-import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
 import { formatMoneyScanned, formatShortDate } from "@/lib/format";
@@ -10,6 +9,7 @@ import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
 import { shopPath } from "@/lib/staff-notices";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
 import type { ClockPhase } from "@/lib/trip-clock";
+import { admissionDisplay } from "../admission-display";
 import { blowoutPath } from "../blowout/blowout-path";
 import type { FixListPhase } from "../guest-fix-rows";
 import { tripFixes } from "../trip-fixes";
@@ -96,7 +96,6 @@ export function phaseSlots({
     now,
     t,
   });
-  const level = requirement?.minimumCertificationLevel;
   const beside =
     phase === "filling" ? (
       <TripFactsCard
@@ -107,11 +106,7 @@ export function phaseSlots({
             ? formatMoneyScanned(trip.priceCents, shop.currency, locale)
             : null
         }
-        whoCanBook={
-          level
-            ? t("trips.clock.filling.orHigher", { level: t(CERTIFICATION_LEVEL_KEYS[level]) })
-            : t("trips.clock.filling.anyone")
-        }
+        whoCanBook={admissionDisplay(trip.course, requirement, overview.siteRequirement, t)}
         editHref={(section) => `${tripPath}?view=edit#${section}`}
         locale={locale}
         t={t}

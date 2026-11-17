@@ -49,7 +49,6 @@
     "repeats": "Repeats",
     "noneSet": "Not set yet",
     "noConditions": "No crew prediction published",
-    "noRequirements": "No admission requirements set",
     "noBoat": "Boat not assigned",
     "oneTime": "One-time departure",
     "cancel": "Cancel this trip",
@@ -421,7 +420,7 @@
     "emptySummary": "No note yet. Recaps go out without one."
   },
   "requirements": {
-    "courseDescription": "This session keeps the admission rules it was created with. Editing the course later won’t change what enrolled students need.",
+    "courseDescription": "Booking uses the course’s current enrollment rules. Check-in also asks whether each student is ready to board.",
     "certOrHigher": "{level} or higher",
     "requireWaiver": "Require a signed waiver",
     "requirePayment": "Require payment to board",
@@ -439,13 +438,7 @@
     "save": "Save requirements",
     "notConfigured": "Requirements aren’t set for this trip, so every diver stays blocked until they are.",
     "levelIsDefault": "Open Water is where every trip starts, not a level anyone set. A training dive marked with its instructor aboard may go below it on a one-dive trip to one site that sets a level. Change the level, or tick the box below, to set your own.",
-    "keepLevel": "Keep this level, even for marked training dives",
-    "summaryWaiver": "A signed waiver",
-    "summaryPayment": "Payment settled before boarding",
-    "summaryCert": "{level} certification or higher",
-    "summarySpecialtyCard": "A verified {specialty} specialty certification",
-    "summaryNitroxCard": "A verified nitrox certification",
-    "summaryNoneRequired": "Nothing to check. Any diver with a seat can board."
+    "keepLevel": "Keep this level, even for marked training dives"
   },
   "recapPhotos": {
     "hiddenFromDivers": "Recap photos are off, so divers don’t see these.",
@@ -1138,6 +1131,10 @@
       "edit": "Edit",
       "notSet": "Not set",
       "anyone": "Anyone",
+      "courseCard": "Verified {level} certification or higher",
+      "courseAge": "Minimum age {age} (staff check known dates of birth)",
+      "specialty": "{specialty} specialty",
+      "nitrox": "Nitrox certification",
       "orHigher": "{level} or higher",
       "heading": "This trip"
     },

@@ -1,15 +1,10 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
 import { issueCapability } from "@/db/capabilities";
-import {
-  activityEvents,
-  bookingCapabilities,
-  capabilities,
-  people,
-  waiverRecords,
-} from "@/db/schema";
+import { createPerson } from "@/db/people";
+import { activityEvents, bookingCapabilities, capabilities, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { completeWaiver, threadWaiverKey } from "@/db/waivers-completion";
 import { hashBearerToken } from "@/lib/bearer-tokens";
@@ -106,12 +101,15 @@ async function redirectedTo(run: () => Promise<unknown>): Promise<string> {
 async function openLink() {
   const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
-  const [person] = await db
-    .select()
-    .from(people)
-    .where(and(eq(people.shopId, shop.id), isNull(people.dateOfBirth), isNull(people.deletedAt)))
-    .limit(1);
-  if (!person) throw new Error("seeded shop has no person without a date of birth");
+  // A seeded person without a birth date may already have a current release.
+  // This test needs an unsigned adult, independent of seed order and history.
+  const person = await createPerson(db, {
+    shopId: shop.id,
+    fullName: "Jordan Waiver",
+    email: "jordan-waiver@example.test",
+    phone: null,
+    origin: "waitlist",
+  });
   const issued = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id });
   if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
   if (issued.key.kind !== "release") throw new Error("expected a release link");

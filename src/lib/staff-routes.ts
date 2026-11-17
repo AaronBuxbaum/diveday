@@ -113,6 +113,7 @@ export const STAFF_ROUTES = {
   "settings/profile": {},
   "settings/rentals": {},
   "settings/team": {},
+  "settings/trip-defaults": {},
   "settings/waivers": {},
   "settings/waivers/print": {},
   "settings/whatsapp": {},
