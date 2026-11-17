@@ -30,13 +30,16 @@
         "when": "Each morning, for the week ahead",
         "title": "Anyone who can’t board yet is named, with the reason",
         "note2": "There is no “mark everyone ready” button. We left it out on purpose.",
-        "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you."
+        "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you.",
+        "readyLabel": "Today in the demo shop after Priya signs: 8 of 9 divers ready, then one row under Needs you."
       },
       "aboard": {
         "when": "At the dock, and after every dive",
         "title": "The crew calls the roll by name, signal or not",
         "note1": "Each dive’s count, divers and crew by name, stays open until everyone who left the dock is counted aboard.",
-        "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns."
+        "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns.",
+        "deskLabel": "The arrivals desk, 8 of 9 here: Priya Sharma has just been checked in, and one held seat still asks whether it is the same person.",
+        "boatLabel": "The boat’s roll call after dive 1: 9 of 9 divers aboard, with Priya Sharma and Tom Okafor both tapped back aboard."
       },
       "recap": {
         "when": "After the boat is back",
@@ -45,6 +48,31 @@
         "note2": "The crew’s note is a quote. It is whatever the crew typed, with no template behind it.",
         "mockupLabel": "A diver’s recap page with the day’s dive record, a note from the crew, and one review ask."
       }
+    },
+    "walk": {
+      "label": "Follow one diver through a dive day",
+      "position": "Step {n} of {total}",
+      "pause": "Pause",
+      "play": "Play",
+      "previous": "Previous step",
+      "next": "Next step",
+      "hint": "Tap the screen, swipe, or use the arrow keys.",
+      "captions": {
+        "book": "Priya Sharma books the Two-Tank Reef from the shop’s own page.",
+        "unsigned": "The next morning her waiver is still open, and the list names it with a button to nudge her.",
+        "sign": "She signs the release and answers the medical form on her phone.",
+        "ready": "Her row leaves the list and the ready count goes up by one.",
+        "desk": "At the counter, one tap checks her in.",
+        "boat": "After dive 1 the crew calls her by name. All nine are back aboard.",
+        "recap": "That evening she gets the day’s dive record and a note from the crew."
+      },
+      "doorsTitle": "Then try the part that is yours",
+      "doorDesk": "I run the desk",
+      "doorDeskNote": "See who is ready and check divers in.",
+      "doorBoat": "I run the boat",
+      "doorBoatNote": "Call the roll by name at the dock and after each dive.",
+      "doorDiver": "I’m the diver",
+      "doorDiverNote": "Book a seat and sign the release from a phone."
     },
     "featuresLink": "Explore the features",
     "exportTitle": "Get your records ready for the next dive day",
