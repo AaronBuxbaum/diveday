@@ -28,11 +28,7 @@ test.describe("the storefront wears the shop's brand", () => {
     ).toBeVisible();
     await expect(page.getByText("Since 1998")).toBeVisible();
     await expect(
-      page.getByText(
-        diverTranslator("en-US")("brand.demoBadge", {
-          badge: diverTranslator("en-US")("brand.badges.padi_5_star"),
-        }),
-      ),
+      page.getByText(diverTranslator("en-US")("brand.badges.padi_5_star")),
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Bookings by DiveDay" })).toBeVisible();
   });

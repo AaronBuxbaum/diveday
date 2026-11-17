@@ -88,10 +88,9 @@ async function MonthSightingsLoaded({
  * every season they have recorded.
  *
  * Rendered only when `monthSightings` found enough evidence; a shop without it
- * gets no section at all rather than an empty one. Every line is a frequency
- * over the shop's own logged departures ("seen on 9 of the 14 March trips our
- * crews logged"), and the
- * note under the list says it is a record and not a promise.
+ * gets no section at all rather than an empty one. The evidence picks and
+ * orders the animals; the page prints no tallies (a number reads as a promise),
+ * just each animal's name and its one-line description from the catalog.
  */
 export function MonthSightingsShelf({
   sightings,
@@ -109,7 +108,7 @@ export function MonthSightingsShelf({
   // printing as punctuation (the rule `fieldGuideCards` follows).
   const rows = sightings.species.flatMap((tally) => {
     if (!isMarineLifeSlug(tally.speciesSlug)) return [];
-    return [{ tally, card: marineLifeCard(tally.speciesSlug, t) }];
+    return [{ card: marineLifeCard(tally.speciesSlug, t) }];
   });
   if (rows.length === 0) return null;
   return (
@@ -118,7 +117,7 @@ export function MonthSightingsShelf({
         {t("schedule.monthSeen.heading", { month })}
       </h2>
       <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {rows.map(({ tally, card }) => (
+        {rows.map(({ card }) => (
           <li key={card.slug} className="flex min-w-0 items-center gap-3">
             <StoredPhoto
               src={card.imageUrl}
@@ -128,14 +127,11 @@ export function MonthSightingsShelf({
             />
             <div className="min-w-0">
               <p className="font-medium">{card.name}</p>
-              <p className="text-sm text-muted">
-                {t("schedule.monthSeen.line", { seen: tally.trips, trips: sightings.trips, month })}
-              </p>
+              <p className="text-sm text-muted">{card.description}</p>
             </div>
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-sm text-muted">{t("schedule.monthSeen.honest", { month })}</p>
     </section>
   );
 }

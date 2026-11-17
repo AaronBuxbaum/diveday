@@ -23,8 +23,8 @@ import { CourseDates } from "../courses/CourseDates";
  * that page with something to sell.
  *
  * A card with no `courses.heroImageUrl` keeps the photo's place as a plain
- * sunken tile rather than somebody else's stock reef, so the three cards stay
- * one height. Nothing is drawn on it (ADR 20261001-logbook: no ornament); the
+ * sunken tile rather than somebody else's stock reef, so the three cards keep
+ * one shape. Nothing is drawn on it (ADR 20261001-logbook: no ornament); the
  * card's heading names the course.
  */
 export function CoursesShelf({
@@ -90,40 +90,44 @@ export function CoursesShelf({
           <SectionCard as="li" key={course.id} padding="none" className="flex flex-col">
             <Link
               href={course.href}
-              className="group flex flex-1 flex-col overflow-hidden rounded-[inherit]"
+              className="group flex flex-col overflow-hidden rounded-[inherit]"
             >
+              {/* One 3:2 frame, the shape the shop photos are made in, so no
+                  card crops its people into a strip; a photo of another shape
+                  keeps the upper third, where faces are. */}
               {course.heroImageUrl ? (
                 <StoredPhoto
                   src={course.heroImageUrl}
                   alt={course.heroImageAlt}
-                  className="h-32 w-full"
+                  className="aspect-[3/2] w-full"
+                  focus="object-[50%_35%]"
                   sizes="(min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw"
                 />
               ) : (
-                <div aria-hidden="true" className="h-32 w-full bg-surface-sunken" />
+                <div aria-hidden="true" className="aspect-[3/2] w-full bg-surface-sunken" />
               )}
-              {/* A card's inset, `SectionCard`'s `p-4 sm:p-5`: at `p-4` alone
-                  the title started 4px left of the cards beside it at 1280. */}
-              <div className="flex flex-1 flex-col gap-1 p-4 sm:p-5">
-                <h3 className="text-base font-semibold group-hover:text-primary">{course.title}</h3>
-                {course.summary ? (
-                  <p className="line-clamp-2 text-sm text-muted">{course.summary}</p>
-                ) : null}
-                {/* The two facts the board draws under a card — how long, and
-                    when next — each only when the shop has it; a card says
-                    nothing it does not know. */}
-                {course.duration ? (
-                  <p className="mt-1 text-sm text-muted tabular-nums">{course.duration}</p>
-                ) : null}
-                {course.price ? (
-                  <p className="mt-auto pt-2 text-base font-semibold tabular-nums">
-                    {course.price}
+              {/* A card's inset, `SectionCard`'s `p-4 sm:p-5`. Title and pitch
+                  hold two lines each, so the fact row below starts at the
+                  same height on every card in the row. */}
+              <div className="flex flex-col gap-1 p-4 sm:p-5">
+                <h3 className="line-clamp-2 sm:min-h-[2lh] text-base font-semibold group-hover:text-primary">
+                  {course.title}
+                </h3>
+                <p className="line-clamp-2 sm:min-h-[2lh] text-sm text-muted">{course.summary}</p>
+                {/* How long and how much, one line, price at the right edge;
+                    each only when the shop has it. */}
+                <div className="mt-2 flex min-h-6 items-baseline justify-between gap-3 border-t border-border pt-3">
+                  <p className="min-w-0 truncate text-sm text-muted tabular-nums">
+                    {course.duration}
                   </p>
-                ) : null}
+                  {course.price ? (
+                    <p className="shrink-0 text-base font-semibold tabular-nums">{course.price}</p>
+                  ) : null}
+                </div>
               </div>
             </Link>
             {course.sessions.length > 0 ? (
-              <div className="px-4 sm:px-5">
+              <div className="-mt-2 px-4 sm:px-5">
                 <CourseDates
                   sessions={course.sessions}
                   shopSlug={shopSlug}
