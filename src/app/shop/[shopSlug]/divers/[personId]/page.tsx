@@ -12,6 +12,7 @@ import { resolveDiverNotice } from "@/i18n/diver-notice-text";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { diverPhotoDisplayPath } from "@/lib/person-photo";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { OfferedUndo } from "../../_components/OfferedUndo";
@@ -217,7 +218,7 @@ export default async function DiverDetailPage({
               shopSlug={shopSlug}
               personId={personId}
               name={diver.person.fullName}
-              photoPath={diver.person.staffPhotoPath}
+              photoPath={diverPhotoDisplayPath(diver.person)}
               t={t}
             />
           )

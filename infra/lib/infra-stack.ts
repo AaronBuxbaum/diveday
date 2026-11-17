@@ -178,7 +178,7 @@ const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
  * reader's failure, not the writer's.
  *
  * Adding a prefix here publishes it, so this list is checked in **both**
- * directions by `infra/lib/media-distribution.test.ts`: the three private ones
+ * directions by `infra/lib/media-distribution.test.ts`: the private prefixes
  * must be absent, and every prefix the app writes must be either served here or
  * in that file's explicit private list -- never both, never neither. One
  * direction alone is what let two prefixes go missing while the tests stayed
@@ -234,6 +234,7 @@ const MEDIA_WRITE_PREFIXES = [
   "import-waivers",
   MEDICAL_CLEARANCE_PREFIX,
   "person-photos",
+  "private-person-photos",
   "recap",
   "shop-heroes",
   "shop-logos",
@@ -1467,9 +1468,12 @@ exports.handler = async (event) => {
       new iam.PolicyStatement({
         sid: "ReadPrivateEvidenceOnly",
         actions: ["s3:GetObject"],
-        resources: [MEDICAL_CLEARANCE_PREFIX, "import-waivers", "import-receipts"].map((prefix) =>
-          mediaBucket.arnForObjects(`${prefix}/*`),
-        ),
+        resources: [
+          MEDICAL_CLEARANCE_PREFIX,
+          "import-waivers",
+          "import-receipts",
+          "private-person-photos",
+        ].map((prefix) => mediaBucket.arnForObjects(`${prefix}/*`)),
       }),
     );
 

@@ -26,6 +26,7 @@ import {
 } from "./collection-billing";
 import { countHeadsOnADepartureNobodyWillMove } from "./count-heads-on-a-departure-nobody-will-move";
 import { crewARatingThatStartsTomorrow } from "./crew-a-rating-that-starts-tomorrow";
+import { seedDiverPhotoReadiness } from "./diver-photo-readiness";
 import {
   bookingHandoffArgs,
   handADiverTheNextDeparture,
@@ -312,6 +313,9 @@ const FACTS = {
   todayCatchUp: privateOnly(({ db, shop, now }) => takeASeatSinceTheOwnerLooked(db, shop, now)),
   stripeAccount: ({ db, shop }) => connectStripe(db, shop),
   groupHoldLedger: privateOnly(({ db, shop, now }) => seedGroupHoldLedger(db, shop.id, now)),
+  diverPhotoReadiness: privateOnly(({ db, shop, now }) =>
+    seedDiverPhotoReadiness(db, shop.id, now),
+  ),
   expiredGroupHoldLedger: privateOnly(({ db, shop, now }) =>
     seedGroupHoldLedger(db, shop.id, now, true),
   ),

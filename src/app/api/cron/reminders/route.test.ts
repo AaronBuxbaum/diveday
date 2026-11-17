@@ -6,6 +6,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/media-deletions", () => ({ retryPendingMediaDeletions: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
+vi.mock("@/features/person-photo", () => ({ cleanupPrivatePersonPhotos: vi.fn() }));
 vi.mock("../../../../features/processor-erasure/store", () => ({
   retryPendingProcessorErasures: vi.fn(),
 }));
@@ -22,6 +23,7 @@ vi.mock("@sentry/nextjs", () => ({
 const { getDb } = await import("@/db/client");
 const { retryPendingMediaDeletions } = await import("@/db/media-deletions");
 const { drainNotificationRetries } = await import("@/db/notifications");
+const { cleanupPrivatePersonPhotos } = await import("@/features/person-photo");
 const { retryPendingProcessorErasures } = await import(
   "../../../../features/processor-erasure/store"
 );
@@ -64,6 +66,7 @@ beforeEach(() => {
   vi.mocked(retryPendingMediaDeletions)
     .mockReset()
     .mockResolvedValue({ attempted: 5, succeeded: 5 });
+  vi.mocked(cleanupPrivatePersonPhotos).mockReset().mockResolvedValue({ attempted: 0 });
   vi.mocked(retryPendingProcessorErasures)
     .mockReset()
     .mockResolvedValue({ attempted: 7, discharged: 7 });

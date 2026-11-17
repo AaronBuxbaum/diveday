@@ -3,6 +3,7 @@ import { retryPendingMediaDeletions } from "@/db/media-deletions";
 import { drainNotificationRetries } from "@/db/notifications";
 import { reapExpiredDemoShops } from "@/db/seed";
 import { cronRoute } from "@/features/cron-route";
+import { cleanupPrivatePersonPhotos } from "@/features/person-photo";
 import { retryPendingProcessorErasures } from "@/features/processor-erasure";
 import { sentry } from "@/features/sentry-server";
 import { DAY_MS } from "@/lib/clock";
@@ -129,6 +130,7 @@ export const GET = cronRoute({
     // this tick's cadence (`src/lib/cron-schedule.ts`, OPS-6), which is exactly
     // why the cadence here did not change.
     const mediaDeletions = await runScan("mediaDeletions", () => retryPendingMediaDeletions(db));
+    const privatePhotos = await runScan("privatePhotos", () => cleanupPrivatePersonPhotos(db));
     // The same bounded-retry shape one processor over: a Stripe customer delete
     // that erasure could not land (an outage, a dropped connection) gets tried
     // again here rather than waiting for an owner to notice the reports panel
@@ -147,6 +149,7 @@ export const GET = cronRoute({
     const scans = {
       notificationRetries,
       mediaDeletions,
+      privatePhotos,
       processorErasures,
       demoShops,
     };

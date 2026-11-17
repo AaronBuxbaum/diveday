@@ -47,6 +47,7 @@ import { CourseNextStepNote } from "./_components/CourseNextStepNote";
 import { DayOfDetails } from "./_components/DayOfDetails";
 import { readyDeadLink } from "./_components/dead-link";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
+import { OwnPhotoAndDays } from "./_components/OwnPhoto";
 import { PayStepBody } from "./_components/PayStepBody";
 import { payStepLines } from "./_components/pay-step-lines";
 import { resolvePaymentReceipt } from "./_components/payment-receipt";
@@ -65,7 +66,6 @@ import { SignStepActions } from "./_components/SignStepActions";
 import { ThreadSections } from "./_components/ThreadSections";
 import { ThreadSpine, ThreadStatus, threadSpineSteps } from "./_components/ThreadSpine";
 import { readyBoatStageLine, readyStepLine, readyThreadFacts } from "./_components/thread-facts";
-import { YourDays } from "./_components/YourDays";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
 import { saveEmergencyContactFromReady } from "./paperwork-actions";
 import { terminalCardIn } from "./terminal-card";
@@ -203,9 +203,7 @@ async function DiverReadinessPage({
   const { detail, shop } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
-  const yourDays = (
-    <YourDays ready={{ db, token, bookingId, data, delivered }} locale={locale} t={t} />
-  );
+  const yourDays = <OwnPhotoAndDays {...{ db, token, bookingId, data, delivered, locale, t }} />;
 
   if (detail.cancelled) {
     // The shop took this seat off the boat and this diver still holds a live

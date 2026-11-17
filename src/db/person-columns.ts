@@ -765,6 +765,17 @@ const rows = [
     exportWhy: "internal storage deletion obligations, not portable diver data",
   },
   {
+    table: "private_person_photo_uploads",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "keep",
+    eraseWhy:
+      "opaque object cleanup obligations outlive erasure and retain only the anonymized subject pointer",
+    export: "withheld",
+    exportWhy: "internal object cleanup bookkeeping is not portable diver data",
+  },
+  {
     table: "processor_erasure_obligations",
     column: "person_id",
     export: "withheld",

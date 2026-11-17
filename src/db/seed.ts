@@ -14,7 +14,8 @@ import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { deleteDemoSafetyTrail } from "./incident-reports";
-import { isUniqueConstraintViolation } from "./query-helpers";
+import { clearCompletedDemoPhotoObligations } from "./private-photo-demo-guard";
+import { isTransactionExecutor, isUniqueConstraintViolation } from "./query-helpers";
 import {
   accountSecurity,
   accountSessions,
@@ -871,6 +872,9 @@ export async function resetDemoSchedule(
   shopId: string,
   shape: SeedShape,
 ): Promise<void> {
+  if (!isTransactionExecutor(db)) {
+    return db.transaction((tx) => resetDemoSchedule(tx, shopId, shape));
+  }
   const cleared = await clearDemoSchedule(db, shopId);
   await reseedClearedDemoSchedule(db, shopId, cleared, shape);
 }
@@ -894,6 +898,10 @@ export async function clearDemoSchedule(
   db: DbExecutor,
   shopId: string,
 ): Promise<ClearedDemoSchedule> {
+  if (!isTransactionExecutor(db)) {
+    return db.transaction((tx) => clearDemoSchedule(tx, shopId));
+  }
+  await clearCompletedDemoPhotoObligations(db, shopId);
   // The demo shop is excluded from platform backup, but clear its scheduler
   // checkpoint with the rest of its resettable state if a local run wrote one.
   await db.delete(platformBackupProgress).where(eq(platformBackupProgress.shopId, shopId));

@@ -31,6 +31,7 @@ import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventInstant } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
+import { diverPhotoDisplayPath } from "@/lib/person-photo";
 import type { RollCallEventStatus, RollCallSubjectKind } from "@/lib/roll-call";
 import {
   foldRollCallEvidence,
@@ -1314,7 +1315,9 @@ export async function getTripManifests(
       // builder and every copy downstream inherit it (issue #1690).
       fullName: seatName(person.fullName, booking),
       photoPath:
-        !booking.identityUnconfirmedAt && !person.anonymizedAt ? person.staffPhotoPath : null,
+        !booking.identityUnconfirmedAt && !person.anonymizedAt
+          ? diverPhotoDisplayPath(person)
+          : null,
       // Diver, snorkeler or rider — shown on the row, never used to drop it.
       participantType: booking.participantType,
       bookedAs: booking.bookedAs,

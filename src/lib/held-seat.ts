@@ -109,7 +109,10 @@ type ManifestDiver = TripManifest["divers"][number];
  */
 export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver {
   if (diver.identityWithheld) {
-    const safe = diver.personId ? { ...diver, personId: undefined } : diver;
+    const safe =
+      diver.personId || diver.photoPath
+        ? { ...diver, personId: undefined, photoPath: null }
+        : diver;
     return safe.trainingDive ? { ...safe, trainingDive: null } : safe;
   }
   if (!isHeldSeat(diver)) return diver;
@@ -125,6 +128,7 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     fullName: diver.identityClaim?.bookedAs?.trim() || diver.fullName,
     identityWithheld: true,
     personId: undefined,
+    photoPath: null,
     moreHoldsBehindConfirmation: dropped > 0,
     email: null,
     // The matched record's next of kin never; the one the desk recorded for

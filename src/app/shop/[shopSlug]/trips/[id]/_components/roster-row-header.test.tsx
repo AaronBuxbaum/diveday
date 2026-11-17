@@ -40,4 +40,17 @@ describe("rowHeader, from the seat's facts alone", () => {
     expect(held.container.querySelector("img")).toBeNull();
     expect(screen.getByText("RM")).toBeInTheDocument();
   });
+
+  it("withholds the photo when readiness alone marks identity unconfirmed", () => {
+    const row = entry("h", "Rene Marsh");
+    row.person = { ...row.person, staffPhotoPath: "/demo-staff/dana-reyes.webp" };
+    const seat = seatFacts(row, {
+      readiness: new Map([
+        ["h", readinessRow("blocked", [{ code: "identity_unconfirmed" }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["h", signedWaiver]]) as WaiverByBooking,
+    });
+    expect(seat.identityUnconfirmed).toBe(true);
+    expect(render(rowHeader(seat).headerLeft).container.querySelector("img")).toBeNull();
+  });
 });

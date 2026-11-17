@@ -73,6 +73,18 @@ describe("the name a seat goes by (issue #1690)", () => {
 });
 
 describe("withholding a held seat's particulars (issue #1690)", () => {
+  it("withholds a photo when only the blocker signals a held identity, including on replay", () => {
+    const row = {
+      ...matchedPerson,
+      photoPath: "/api/person-photos/id/asset",
+      readiness: {
+        status: "blocked" as const,
+        blockers: [{ code: "identity_unconfirmed" as const }],
+      },
+    };
+    expect(withholdHeldSeatParticulars(row).photoPath).toBeNull();
+    expect(withholdHeldSeatParticulars({ ...row, identityWithheld: true }).photoPath).toBeNull();
+  });
   it("clears every fact about the matched person", () => {
     const shown = withholdHeldSeatParticulars(
       held([{ code: "identity_unconfirmed" }, { code: "medical_review" }]),

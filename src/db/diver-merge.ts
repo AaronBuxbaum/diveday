@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { canPersonMergeDiver } from "@/db/authz";
 import type { AppDb, DbExecutor } from "@/db/client";
+import { queueMediaDeletion } from "@/db/media-deletions";
 import {
   movedPersonTables,
   refusedPersonOnlyTables,
@@ -17,6 +18,7 @@ import {
   notificationSendQueue,
   people,
   personRoles,
+  privatePersonPhotoUploads,
   rentalFitProfiles,
   trips,
   waiverRecords,
@@ -776,7 +778,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "computer_dives",
     "computer_import_batches",
   ],
-  media: ["media_deletion_attempts"],
+  media: ["media_deletion_attempts", "private_person_photo_uploads"],
   lists: ["interests", "capabilities", "trip_blowout_divers", "recovery_activity_participants"],
 } as const satisfies Record<string, readonly (typeof DIVER_HISTORY_TABLES)[number][]>;
 export type DiverMergeCountGroup = keyof typeof DIVER_MERGE_COUNT_GROUPS;
@@ -1046,6 +1048,25 @@ export async function mergeDiverRecords(input: {
       // A new identity must not inherit an unconfirmed instructor plan.
       await forgetTrainingPlanPeople(tx, input.shopId, [source.id]);
       const mergedAt = nowDate();
+      // A photo on the removed record cannot silently become the survivor's.
+      if (source.diverPhotoPath) {
+        await tx
+          .update(privatePersonPhotoUploads)
+          .set({ state: "retired" })
+          .where(
+            and(
+              eq(privatePersonPhotoUploads.shopId, input.shopId),
+              eq(privatePersonPhotoUploads.url, source.diverPhotoPath),
+            ),
+          );
+        await queueMediaDeletion(tx, {
+          shopId: input.shopId,
+          personId: source.id,
+          kind: "staff_profile",
+          url: source.diverPhotoPath,
+          purgeVersions: true,
+        });
+      }
       const mergedSpokenLanguages = [
         ...new Set([...survivor.spokenLanguages, ...source.spokenLanguages]),
       ];
@@ -1059,6 +1080,8 @@ export async function mergeDiverRecords(input: {
           mergedIntoPersonId: survivor.id,
           mergedAt,
           mergedByPersonId: input.actorPersonId,
+          diverPhotoPath: null,
+          diverPhotoSuppressed: true,
         })
         .where(eq(people.id, source.id));
 

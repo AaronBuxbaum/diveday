@@ -7,6 +7,7 @@ import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant
 import { presenceText } from "@/i18n/presence-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { isDiver } from "@/lib/participant-types";
+import { diverPhotoDisplayPath } from "@/lib/person-photo";
 
 import type { RosterSeat } from "./roster-seat";
 
@@ -31,6 +32,7 @@ export type RowHeaderInput = Pick<
   | "depthShared"
   | "arrivalControl"
   | "holdOpen"
+  | "identityUnconfirmed"
   | "record"
 >;
 
@@ -50,6 +52,7 @@ export function rowHeader(seat: RowHeaderInput, { omitName = false }: { omitName
     depthShared,
     arrivalControl,
     holdOpen,
+    identityUnconfirmed,
     record,
   } = seat;
   const headerLeft = (
@@ -64,7 +67,7 @@ export function rowHeader(seat: RowHeaderInput, { omitName = false }: { omitName
       {omitName ? null : (
         <PersonAvatar
           name={person.fullName}
-          photoPath={booking.identityUnconfirmedAt ? null : person.staffPhotoPath}
+          photoPath={identityUnconfirmed ? null : diverPhotoDisplayPath(person)}
           size="sm"
         />
       )}

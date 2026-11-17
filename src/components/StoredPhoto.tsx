@@ -1,8 +1,8 @@
 import Image from "next/image";
 
 /**
- * A stored photo, rendered through `next/image` so a phone is served a
- * phone-sized file.
+ * A stored photo, optimized for the device unless it is a private person
+ * photo, which must reach its authenticated route directly.
  *
  * Every photo URL the app holds is first-party: a root-relative bundled asset
  * (`/dive-sites/...`) or an object in our own blob store, which is the one
@@ -34,7 +34,15 @@ export function StoredPhoto({
 }) {
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className="object-cover" />
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        priority={priority}
+        unoptimized={src.startsWith("/api/person-photos/")}
+        className="object-cover"
+      />
     </div>
   );
 }

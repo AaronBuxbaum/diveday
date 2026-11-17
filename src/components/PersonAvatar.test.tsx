@@ -14,3 +14,10 @@ it("draws initials when there is no photo", () => {
   render(<PersonAvatar name="Dana Reyes" />);
   expect(screen.getByText("DR")).toBeTruthy();
 });
+
+it("requests private photos directly, without the shared image optimizer", () => {
+  const path = "/api/person-photos/abc/abcdefghijklmnopqrstuv.jpg";
+  const { container } = render(<PersonAvatar name="Dana Reyes" photoPath={path} />);
+  expect(container.querySelector("img")?.getAttribute("src")).toBe(path);
+  expect(container.querySelector("img")?.getAttribute("srcset")).toBeNull();
+});

@@ -13,6 +13,7 @@ import { nowDate } from "@/lib/clock";
 import { needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { signingDate } from "@/lib/guardian";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { diverPhotoDisplayPath } from "@/lib/person-photo";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { issueCourseFormQrAction } from "../course-form-qr-action";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
@@ -269,7 +270,9 @@ export function RosterSection({
                     return {
                       id: entry.booking.id,
                       name: entry.person.fullName,
-                      photoPath: seat.identityUnconfirmed ? null : entry.person.staffPhotoPath,
+                      photoPath: seat.identityUnconfirmed
+                        ? null
+                        : diverPhotoDisplayPath(entry.person),
                       summary: seat.blockerTexts.length
                         ? t("trips.folio.beforeBoardingCount", { count: seat.blockerTexts.length })
                         : undefined,

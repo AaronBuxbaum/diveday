@@ -953,6 +953,18 @@
     "introWithScope": "{intro} {scope}."
   },
   "ready": {
+    "ownPhoto": {
+      "heading": "Your photo",
+      "choose": "Choose a photo",
+      "chooseAnother": "Choose another photo",
+      "upload": "Upload photo",
+      "uploading": "Saving photo…",
+      "remove": "Remove photo",
+      "saved": "Photo saved.",
+      "failed": "Photo not saved. Try again.",
+      "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
+      "tooBigSuffix": ": that’s over {maxMb} MB. Try a smaller photo."
+    },
     "materialsAccess": "Ask the shop about access",
     "courseStartLine": "Your course starts at {time}.",
     "estimatedOwnRental": "Your estimated rental: {amount}.",
