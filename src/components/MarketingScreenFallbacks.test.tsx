@@ -381,3 +381,24 @@ describe("FrontDeskReadinessFallback stage chip", () => {
     expect(screen.queryByText("Check-in")).toBeNull();
   });
 });
+
+describe("the walkthrough's taps are Priya's", () => {
+  it("marks Priya's mark, not Tom's, as the one the crew taps after dive 1", () => {
+    const { container } = render(
+      <CaptainRollCallFallback locale="en-US" state="afterDivePending" />,
+    );
+    const rows = container.querySelectorAll(".marketing-roll-call-row");
+    expect(rows[0]).toHaveTextContent("Priya Sharma");
+    expect(rows[0]?.querySelector("[data-tap-target]")).not.toBeNull();
+    expect(rows[1]?.querySelector("[data-tap-target]")).toBeNull();
+  });
+
+  it("taps Priya's own nudge before the list says it went out", () => {
+    const before = render(<FrontDeskReadinessFallback locale="en-US" state="unsigned" />);
+    expect(before.container.querySelector("[data-tap-target]")).toHaveTextContent("Nudge waiver");
+    before.unmount();
+    const after = render(<FrontDeskReadinessFallback locale="en-US" state="nudged" />);
+    expect(after.container.querySelector("[data-tap-target]")).toBeNull();
+    expect(screen.getByText("Nudge sent")).toBeInTheDocument();
+  });
+});

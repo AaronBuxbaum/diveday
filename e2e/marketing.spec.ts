@@ -220,7 +220,7 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   await expect(walk.getByRole("img")).toHaveCount(1);
 
   // Each beat names the diver's state; the arrow keys walk the story.
-  const beats = ["unsigned", "sign", "ready", "desk", "boat", "recap"] as const;
+  const beats = ["unsigned", "sign", "ready", "card", "desk", "boat", "computer", "recap"] as const;
   for (const beat of beats) {
     await walk.getByRole("button", { name: t("marketing.home.walk.next") }).press("ArrowRight");
     await expect(walk.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
