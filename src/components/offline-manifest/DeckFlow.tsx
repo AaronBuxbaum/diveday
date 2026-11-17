@@ -341,7 +341,9 @@ export function DeckFlow({
         {(screen === "person" || screen === "receipt") && person ? (
           <div className="py-2" key={person.id}>
             <div className="flex items-center gap-4">
-              <PersonAvatar name={person.name} photoPath={person.photoPath} size="lg" />
+              {person.photoPath ? (
+                <PersonAvatar name={person.name} photoPath={person.photoPath} size="lg" />
+              ) : null}
               <div className="min-w-0">
                 <p className="text-sm text-muted">{person.role}</p>
                 <h2 className={`mt-1 ${SHELL_TITLE_CLASS} wrap-anywhere`}>{person.name}</h2>
