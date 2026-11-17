@@ -397,7 +397,7 @@ export type ManifestCrewMember = {
   emergencyContactPhone: string | null;
   /**
    * Their result at this checkpoint, read through the same predicates a diver's
-   * is (`isRollCallAccountedFor`, `carryForwardNotBoarded`). Absent means
+   * is (`isNotBackAboard`, `carryForwardNotBoarded`). Absent means
    * nobody has said, which keeps the checkpoint open.
    */
   rollCall?: RollCallRecord;
@@ -463,22 +463,6 @@ export type CrewAttestation = {
   occurredAt: Date;
   note: string | null;
 };
-
-/**
- * Is this diver counted at this checkpoint? The one rule every head count on
- * the manifest asks, so "complete", the summary tiles, and the diver's own pill
- * cannot answer it differently.
- *
- * No result at all is *not* accounted for (nobody has said), and neither is a
- * diver a human recorded as not back aboard after a dive.
- */
-export function isRollCallAccountedFor(
-  checkpoint: RollCallCheckpoint,
-  rollCall: Pick<RollCallRecord, "state" | "implied" | "evidenceConflict"> | undefined,
-): boolean {
-  if (!rollCall || rollCall.evidenceConflict) return false;
-  return !isNotBackAboard(checkpoint, rollCall);
-}
 
 /**
  * The person is recorded as **ashore**: somebody said they are not aboard, and

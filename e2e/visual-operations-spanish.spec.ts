@@ -74,10 +74,17 @@ test.describe("recovery and goodwill", () => {
     };
     await page.goto(`/shop/${privateShop.slug}/trips/${fact.sourceTripId}?blowout=1`);
     const roster = page.locator("summary").filter({ hasText: t("blowout.classroom.divers") });
-    await roster.focus();
-    await page.keyboard.press("Enter");
     const copy = page.getByRole("region", { name: t("blowout.classroom.offerCopy"), exact: true });
-    await expect(copy).toBeVisible();
+    // A background refresh of the trip page can close a disclosure the
+    // keyboard just opened, so the opening is retried until the copy shows.
+    await expect(async () => {
+      const open = await roster.evaluate((summary) => summary.closest("details")?.open ?? false);
+      if (!open) {
+        await roster.focus();
+        await page.keyboard.press("Enter");
+      }
+      await expect(copy).toBeVisible({ timeout: 1_500 });
+    }).toPass({ timeout: 10_000 });
     const inquiry = copy.getByRole("link");
     const href = await inquiry.getAttribute("href");
     expect(href).toMatch(/^https:\/\//);

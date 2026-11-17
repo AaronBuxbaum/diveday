@@ -81,8 +81,7 @@ ledger until that link's normal expiry. It cannot pay, claim, sign a waiver, add
 any booking. A link revoked before hold expiry stays dead. No separate seat cap is introduced.
 
 This is core booking/capacity behavior on the existing public booking and readiness surfaces,
-not a new staff destination or optional subsystem (`BOOKING_FLOW_COVERAGE` in
-`src/lib/feature-coverage.ts`).
+not a new staff destination or optional subsystem.
 
 ## Native departure passes (built dark 2026-11-10)
 

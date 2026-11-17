@@ -4,8 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { QuietDay } from "./QuietDay";
 
-// The thin-boats list reads the database; its own tests cover it.
+// The thin-boats and suggestion lists read the database; its own tests cover it.
 vi.mock("./QuietDayThinBoats", () => ({ QuietDayThinBoats: () => null }));
+vi.mock("./QuietDaySuggestions", () => ({ QuietDaySuggestions: () => null }));
 
 afterEach(cleanup);
 

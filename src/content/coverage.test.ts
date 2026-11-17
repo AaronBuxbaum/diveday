@@ -2,12 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
-import {
-  COVERAGE_PROMISE,
-  type CoverageDenominator,
-  coverageOf,
-  coverageProblems,
-} from "./coverage";
+import { COVERAGE_PROMISE, type CoverageDenominator, coverageOf } from "./coverage";
+import { coverageProblems } from "./coverage.test-support";
 import { DIVE_AREA_BY_CODE } from "./dive-areas";
 import { DIVE_SITE_TEMPLATES } from "./dive-site-templates";
 import speciesCoverage from "./species-coverage.json";

@@ -5,12 +5,8 @@ import type { InvoicingProvider } from "@/lib/payments/invoicing";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { recordStripeRefundFailure } from "../features/refund-failures/store";
-import {
-  createOrder,
-  markOrderPaidByInvoiceId,
-  recordOrderPaymentIntent,
-  refundOrder,
-} from "./orders";
+import { createOrder, recordOrderPaymentIntent, refundOrder } from "./orders";
+import { markOrderPaidByInvoiceId } from "./orders.test-support";
 import { recordStripeChargeRefund } from "./refunds";
 import { orders } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";

@@ -331,6 +331,7 @@ const SENDERS: Record<string, string> = {
   "src/features/stripe-restricted/store.ts": NOT_ABOUT_A_DEPARTURE,
   "src/features/shore-alert-tokens/store.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/staff-reply.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/db/package-gifts.ts": NOT_ABOUT_A_DEPARTURE,
   "src/features/weekly-digest/digest.ts": "its counts carry `notRehearsal()`",
   "src/features/work-order-follow-up/store.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/actions/demo-instrumentation.ts": NOT_ABOUT_A_DEPARTURE,

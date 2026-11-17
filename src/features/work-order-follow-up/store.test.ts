@@ -4,12 +4,12 @@ import type { AppDb } from "../../db/client";
 import { createGearItem } from "../../db/gear";
 import {
   applyInvoicePaid,
-  markOrderPaidByInvoiceId,
   markOrderVoidedByInvoiceId,
   recordPaymentOnOpenOrder,
   refundOrder,
   voidCounterOrder,
 } from "../../db/orders";
+import { markOrderPaidByInvoiceId } from "../../db/orders.test-support";
 import {
   customerGearItems,
   customerGearNotices,

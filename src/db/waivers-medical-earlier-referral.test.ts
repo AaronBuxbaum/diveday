@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne, notExists, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { advanceClock } from "@/test/clock";
@@ -356,24 +356,27 @@ describe("a physician's letter that predates a re-signed referral", () => {
     if (!first?.bookingId) throw new Error("expected a first referral on a seat");
     // The seat is claimed by another person: the record keeps the diver's id
     // (it was given under their name) but the booking is no longer theirs.
-    const [seat] = await ctx.db
+    const [{ tripId }] = await ctx.db
       .select({ tripId: bookings.tripId })
       .from(bookings)
       .where(eq(bookings.id, first.bookingId));
-    if (!seat) throw new Error("expected the first referral's booking");
-    // Someone with no seat on this departure: `bookings_trip_person_unique`
-    // refuses a second one, and the table's row order decides who comes first.
-    const seated = await ctx.db
-      .select({ personId: bookings.personId })
-      .from(bookings)
-      .where(eq(bookings.tripId, seat.tripId));
-    const seatedIds = new Set(seated.map((row) => row.personId));
+    // Someone with no seat on this departure: a booking is one per person per trip.
     const [stranger] = await ctx.db
       .select({ id: people.id })
       .from(people)
-      .where(and(eq(people.shopId, ctx.shop.id)))
-      .orderBy(people.id)
-      .then((rows) => rows.filter((row) => !seatedIds.has(row.id)));
+      .where(
+        and(
+          eq(people.shopId, ctx.shop.id),
+          ne(people.id, ctx.person.id),
+          notExists(
+            ctx.db
+              .select({ one: sql`1` })
+              .from(bookings)
+              .where(and(eq(bookings.tripId, tripId), eq(bookings.personId, people.id))),
+          ),
+        ),
+      )
+      .limit(1);
     if (!stranger) throw new Error("expected another person");
     await ctx.db
       .update(bookings)
