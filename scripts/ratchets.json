@@ -951,7 +951,6 @@
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 990,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1146,
-    "src/components/MarketingFeatureScreens.tsx": 948,
     "src/components/search/CommandPalette.tsx": 913,
     "src/components/ui/button.test.ts": 966,
     "src/components/ui/form.test.tsx": 1436,

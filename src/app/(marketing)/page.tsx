@@ -7,26 +7,23 @@ import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { HomeHeroPhone } from "@/app/_components/HomeHeroPhone";
+import { HomeWalkthrough, type WalkBeat } from "@/app/_components/HomeWalkthrough";
+import { HomeWalkthroughDoors } from "@/app/_components/HomeWalkthroughDoors";
 import { HomeWhyBand } from "@/app/_components/HomeWhyBand";
 import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
+import { STEPS, WALK, WALK_CLASSES } from "@/app/_components/home-steps";
 import { JsonLd } from "@/components/JsonLd";
-import { ArrivalDeskFallback, WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingIllustration } from "@/components/MarketingIllustration";
 import { MarketingReveal } from "@/components/MarketingReveal";
-import {
-  DiverBookingFallback,
-  FrontDeskReadinessFallback,
-  RecapPageFallback,
-} from "@/components/MarketingScreenFallbacks";
 import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { requestPricingOffer } from "@/features/pricing-offer";
-import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { type FeaturePageSlug, featurePagePath, getFeaturePage } from "@/lib/feature-pages";
+import { featurePagePath, getFeaturePage } from "@/lib/feature-pages";
 import { switchingHref } from "@/lib/funnel";
 import { midSeasonCutover, sharedLinkCard } from "@/lib/marketing";
 
@@ -135,89 +132,6 @@ function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: 
 }
 
 /**
- * One booking, followed from the shop's website to the boat and home again
- * (H-20261005-public-pages-sell, the 2026-10-05 rework). Each step is the screen that does it, two or three of
- * the builder's notes beside it, and a link to the feature page that tells the
- * rest. The order is the order a diver meets the shop in, which is also the
- * order an owner's doubts arrive in: will they book, does the paperwork come
- * back, who catches the diver who isn't cleared, does the roll call on the
- * boat hold, and what does the diver take home.
- *
- * Five steps, not the six the rework first drew: check-in at the counter was
- * cut in review, because its screen read as the readiness step's twin and its
- * one claim was the band's only one any rival makes. The directory below still
- * links its page.
- *
- * A step ends in its feature page rather than in a door into the demo, as the
- * rows here did until 2026-10-05: the feature page's own door opens the demo
- * on that very screen, as the role that uses it, which a door here could only
- * do by repeating it. The page keeps its two demo doors, hero and close.
- *
- * A step that draws a feature page's own screen reads that page's notes and
- * label by key (the release on the diver's phone), and the readiness step
- * quotes the certifications page's line about its rows, so the homepage and a
- * feature page can never describe one drawing two ways. The rest keep the
- * drawings and notes this page carries under `marketing.home.steps`.
- *
- * `id` is the bundle namespace under `marketing.home.steps`, never a rendered
- * string.
- */
-const STEPS: readonly {
-  id: "book" | "sign" | "check" | "aboard" | "recap";
-  feature: FeaturePageSlug;
-  notes: readonly [DiverMessageKey, DiverMessageKey, ...DiverMessageKey[]];
-  label: DiverMessageKey;
-  screen: (locale: DiverLocale) => ReactNode;
-}[] = [
-  {
-    id: "book",
-    feature: "online-booking",
-    notes: ["marketing.home.steps.book.note1", "marketing.home.steps.book.note2"],
-    label: "marketing.home.steps.book.mockupLabel",
-    screen: (locale) => <DiverBookingFallback locale={locale} />,
-  },
-  {
-    id: "sign",
-    feature: "waivers",
-    notes: ["marketing.featurePages.waivers.note1", "marketing.featurePages.waivers.note3"],
-    label: "marketing.featurePages.waivers.screenLabel",
-    screen: (locale) => <WaiverSigningFallback locale={locale} />,
-  },
-  {
-    id: "check",
-    feature: "certifications",
-    notes: ["marketing.featurePages.certifications.note3", "marketing.home.steps.check.note2"],
-    label: "marketing.home.steps.check.mockupLabel",
-    screen: (locale) => <FrontDeskReadinessFallback locale={locale} />,
-  },
-  {
-    // The hero draws the roll-call phone, so this step draws the check-in
-    // page's dock screen, by key (B14, 2026-10-25); the notes keep H-20260802-may-public-pages-say's
-    // no-signal claim. The third note is for the owner who still carries
-    // paper (issue #4322): the same manifest prints, and the step's link is
-    // the boat-manifest page that lists the packet.
-    id: "aboard",
-    feature: "boat-manifest",
-    notes: [
-      "marketing.home.steps.aboard.note1",
-      "marketing.home.steps.aboard.note2",
-      "marketing.home.steps.aboard.note3",
-    ],
-    label: "marketing.featurePages.checkIn.screenLabel",
-    screen: (locale) => <ArrivalDeskFallback locale={locale} />,
-  },
-  {
-    // The recap goes out by itself a few hours after the boat is due back,
-    // which is why it is the messages page this step opens.
-    id: "recap",
-    feature: "messages",
-    notes: ["marketing.home.steps.recap.note1", "marketing.home.steps.recap.note2"],
-    label: "marketing.home.steps.recap.mockupLabel",
-    screen: (locale) => <RecapPageFallback locale={locale} />,
-  },
-];
-
-/**
  * The whole home page body, cached per negotiated locale (DIVER_LOCALES —
  * two entries). Everything here is deterministic given `locale`:
  * message-bundle copy and the feature registry. Nothing
@@ -273,16 +187,38 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           {/* 96px between steps at every width, against 20px inside one below
               `lg`, so a phone reads each step as one unit rather than a
               drawing floating between two (design review, 2026-10-05). */}
-          <ol className="mt-12 space-y-16 lg:mt-16 lg:space-y-20">
-            {STEPS.map((step, index) => {
-              const page = getFeaturePage(step.feature);
-              if (!page) return null;
-              return (
-                // One list item per step, so a screen reader hears the
-                // booking as the sequence it is; the step's `<h3>` names it
-                // in the outline.
-                <li key={step.id} className="grid items-center gap-5 lg:grid-cols-11 lg:gap-14">
-                  {/* **Below `lg` the copy column dissolves** (`contents`), so
+          <HomeWalkthrough
+            beats={WALK.map(
+              (beat): WalkBeat => ({
+                step: beat.step,
+                frame: beat.frame,
+                caption: t(`marketing.home.walk.captions.${beat.caption}`),
+              }),
+            )}
+            labels={{
+              label: t("marketing.home.walk.label"),
+              position: t("marketing.home.walk.position", { n: "{n}", total: "{total}" }),
+              pause: t("marketing.home.walk.pause"),
+              play: t("marketing.home.walk.play"),
+              previous: t("marketing.home.walk.previous"),
+              next: t("marketing.home.walk.next"),
+              hint: t("marketing.home.walk.hint"),
+            }}
+          >
+            <ol data-walk-list className={`mt-6 space-y-16 lg:mt-8 lg:space-y-20 ${WALK_CLASSES}`}>
+              {STEPS.map((step, index) => {
+                const page = getFeaturePage(step.feature);
+                if (!page) return null;
+                return (
+                  // One list item per step, so a screen reader hears the
+                  // booking as the sequence it is; the step's `<h3>` names it
+                  // in the outline.
+                  <li
+                    key={step.id}
+                    data-walk-step={step.id}
+                    className="grid items-center gap-5 lg:grid-cols-11 lg:gap-14"
+                  >
+                    {/* **Below `lg` the copy column dissolves** (`contents`), so
                       its parts and the screen stack in reading order: what
                       happens, the screen that does it, the notes on that
                       screen, then where the rest of it is. The notes are the
@@ -291,46 +227,58 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                       with the link reading as the drawing's title. From `lg`
                       it is a column beside the screen again, every `order`
                       reset, and the alternation is the column's own. */}
-                  <div
-                    className={`contents lg:col-span-5 lg:flex lg:flex-col ${index % 2 === 1 ? "lg:order-last" : ""}`}
-                  >
-                    <div>
-                      <SectionMarker>{t(`marketing.home.steps.${step.id}.when`)}</SectionMarker>
-                      <h3 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
-                        {t(`marketing.home.steps.${step.id}.title`)}
-                      </h3>
-                    </div>
-                    <MarginNotes
-                      notes={step.notes.map((key) => t(key))}
-                      className="order-2 max-w-lg lg:order-none lg:mt-5"
-                    />
-                    {/* The page's own name is the link's words: the reader
+                    <div
+                      className={`contents lg:col-span-5 lg:flex lg:flex-col ${index % 2 === 1 ? "lg:order-last" : ""}`}
+                    >
+                      <div>
+                        <SectionMarker>{t(`marketing.home.steps.${step.id}.when`)}</SectionMarker>
+                        <h3 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
+                          {t(`marketing.home.steps.${step.id}.title`)}
+                        </h3>
+                      </div>
+                      <MarginNotes
+                        notes={step.notes.map((key) => t(key))}
+                        className="order-2 max-w-lg lg:order-none lg:mt-5"
+                      />
+                      {/* The page's own name is the link's words: the reader
                         has just read what the step does, and the name says
                         where the rest of it is. Its arrow is the "→" glyph
                         every other link on the page carries, not an icon.
                         `self-start` keeps the link its own width in the `lg`
                         flex column, `justify-self-start` in the phone's grid. */}
-                    <Link
-                      href={featurePagePath(page.slug)}
-                      className={buttonClass({
-                        variant: "link",
-                        flush: true,
-                        className:
-                          "order-3 self-start justify-self-start text-start lg:order-none lg:mt-4",
-                      })}
-                    >
-                      {t("marketing.home.stepLink", {
-                        name: t(`marketing.featurePages.${page.key}.name`),
-                      })}
-                    </Link>
-                  </div>
-                  <div className="order-1 lg:order-none lg:col-span-6">
-                    <MarketingMockup label={t(step.label)}>{step.screen(locale)}</MarketingMockup>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+                      <Link
+                        href={featurePagePath(page.slug)}
+                        className={buttonClass({
+                          variant: "link",
+                          flush: true,
+                          className:
+                            "order-3 self-start justify-self-start text-start lg:order-none lg:mt-4",
+                        })}
+                      >
+                        {t("marketing.home.stepLink", {
+                          name: t(`marketing.featurePages.${page.key}.name`),
+                        })}
+                      </Link>
+                    </div>
+                    <div className="order-1 lg:order-none lg:col-span-6">
+                      {step.frames.map((frame) => (
+                        <div
+                          key={frame.id}
+                          data-walk-frame={frame.id}
+                          data-walk-primary={frame.primary ? "" : undefined}
+                        >
+                          <MarketingMockup label={t(frame.label)}>
+                            {frame.screen(locale)}
+                          </MarketingMockup>
+                        </div>
+                      ))}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </HomeWalkthrough>
+          <HomeWalkthroughDoors locale={locale} />
         </section>
       </MarketingReveal>
 

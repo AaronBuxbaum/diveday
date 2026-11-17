@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
+import { ArrivalDeskFallback } from "@/components/MarketingArrivalDeskFallback";
 import {
-  ArrivalDeskFallback,
   BookingCardFallback,
   CoursePageFallback,
   GearRegisterFallback,

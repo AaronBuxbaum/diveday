@@ -783,6 +783,7 @@ The nine feature-page screens live in `src/components/MarketingFeatureScreens.ts
 (`src/lib/feature-pages.ts`), and the homepage's steps name theirs in `STEPS` (`src/app/(marketing)/page.tsx`).
 
 **A mockup is a claim, so it mirrors a real screen element for element.**
+A drawing names the files it mirrors in `@mirrors` docblock lines, and `pnpm check:mockup-mirrors` fails when one of them changes until the drawing is read again and its pin accepted (`docs/agents/repo-checks.md#mockup-mirrors`).
 `ImportPreviewFallback` exists because "we show you exactly what comes across" was the switching
 surface's whole promise and was being made only in prose; it reproduces the wizard's mapped-column
 chips, its "Not recognized, so ignored" line, three of its eight stat tiles, and its row table with

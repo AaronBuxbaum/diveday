@@ -194,15 +194,30 @@ describe("MarketingScreenFallbacks", () => {
       expect(screen.getByText("7 of 9 ready")).toBeInTheDocument();
       expect(screen.getByText("2 blocked")).toBeInTheDocument();
       expect(screen.getByText("Needs you")).toBeInTheDocument();
-      expect(screen.getByText("Send waiver")).toBeInTheDocument();
+      expect(screen.getByText("Priya Sharma")).toBeInTheDocument();
+      expect(screen.getByText("Nudge waiver")).toBeInTheDocument();
       // There is no button that clears everyone (the home note says so).
       expect(screen.getAllByRole("button")).toHaveLength(1);
+    });
+
+    // The walkthrough follows Priya: her waiver row is there until she signs, and the
+    // morning after she has, the list is one row shorter and one diver more ready.
+    it("moves Priya from an open waiver to ready", () => {
+      const { rerender } = render(<FrontDeskReadinessFallback locale="en-US" state="unsigned" />);
+      expect(screen.getByText("Waiver not signed, link sent")).toBeInTheDocument();
+      expect(screen.getByText("7 of 9 ready")).toBeInTheDocument();
+      rerender(<FrontDeskReadinessFallback locale="en-US" state="ready" />);
+      expect(screen.queryByText("Priya Sharma")).toBeNull();
+      expect(screen.getByText("8 of 9 ready")).toBeInTheDocument();
+      expect(screen.getByText("1 blocked")).toBeInTheDocument();
+      expect(screen.getByText("Diego Alvarez")).toBeInTheDocument();
+      expect(screen.queryAllByRole("button")).toHaveLength(0);
     });
 
     it("renders in Spanish", () => {
       render(<FrontDeskReadinessFallback locale="es-ES" />);
       expect(screen.getByText("Pendiente")).toBeInTheDocument();
-      expect(screen.getByText("Enviar exención")).toBeInTheDocument();
+      expect(screen.getByText("Recordar exención")).toBeInTheDocument();
     });
   });
 
@@ -226,6 +241,18 @@ describe("MarketingScreenFallbacks", () => {
       // No button pair: the tap is the circle.
       expect(container.querySelectorAll("button")).toHaveLength(0);
       expect(screen.queryByText(/Mark (not )?boarded/)).toBeNull();
+    });
+
+    // After dive 1 the count is the one the shipped Dive 1 checkpoint keeps open until
+    // everyone who left the dock is back: nine of nine, both rows tapped.
+    it("draws Dive 1 with every diver counted back aboard", () => {
+      const { container } = render(<CaptainRollCallFallback locale="en-US" state="afterDive" />);
+      expect(screen.getByText("Dive 1 roll call")).toBeInTheDocument();
+      expect(screen.queryByText("Before departure roll call")).toBeNull();
+      expect(screen.getByText("9")).toBeInTheDocument();
+      const marks = container.querySelectorAll("span.size-14.rounded-full");
+      expect(marks).toHaveLength(2);
+      for (const mark of marks) expect(mark).toHaveClass("bg-success");
     });
 
     it("draws the dock checkpoint in Spanish", () => {

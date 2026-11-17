@@ -57,6 +57,12 @@ const FIXED_SOURCES = [
   // not for reuse.
   "home-drawn",
   "home-closing",
+  // The walkthrough's three doors under the player, one per role it names
+  // (desk, boat, diver). Each is a different person choosing a different
+  // part of the demo, so they are three buckets, not one.
+  "home-walk-desk",
+  "home-walk-boat",
+  "home-walk-diver",
   "nav",
   "product",
   // Retired 2026-10-05 with the dock chapter's card it tagged, when `/product`
