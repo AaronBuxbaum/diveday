@@ -10,9 +10,8 @@ import { HubGuideRowSkeleton } from "./HubGuideRow";
  */
 export const HUB_HERO_CLASS = "mx-auto max-w-4xl px-6 pt-10 pb-8 lg:pt-16 lg:pb-10";
 export const HUB_LIST_SECTION_CLASS = "mx-auto max-w-4xl px-6 pb-16 lg:pb-24";
-/** The "not listed here" row that closes the list, its words beside the doors from `lg`. */
-export const HUB_CLOSING_ROW_CLASS =
-  "flex flex-col gap-6 border-b border-border py-8 lg:flex-row lg:items-center lg:justify-between";
+/** The "not listed here" row that closes the list: one mailto link. */
+export const HUB_CLOSING_ROW_CLASS = "border-b border-border py-4";
 export const HUB_PREVIEW_BAND_CLASS = "border-y border-border bg-surface";
 export const HUB_PREVIEW_BOX_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-20";
 
@@ -25,6 +24,7 @@ export const HUB_PREVIEW_BOX_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-20";
  */
 export const HUB_ROW_SUMMARY_LINES: Record<string, SkeletonLines> = {
   spreadsheet: { base: 3, sm: 1 },
+  alongside: { base: 4, sm: 2 },
   peek: { base: 3, sm: 2 },
   fareharbor: { base: 4, sm: 2 },
   eve: { base: 5, sm: 2 },
@@ -74,11 +74,13 @@ export function SwitchHubBodySkeleton() {
       </section>
 
       <section className={HUB_LIST_SECTION_CLASS}>
-        {/* The index: the spreadsheet row, then one per incumbent guide. */}
+        {/* The index: the spreadsheet row, the alongside row, then one per incumbent guide. */}
         <ul className="border-t border-border">
-          {["spreadsheet", ...MIGRATION_GUIDES.map((guide) => guide.slug)].map((slug) => (
-            <HubGuideRowSkeleton key={slug} summaryLines={HUB_ROW_SUMMARY_LINES[slug]} />
-          ))}
+          {["spreadsheet", "alongside", ...MIGRATION_GUIDES.map((guide) => guide.slug)].map(
+            (slug) => (
+              <HubGuideRowSkeleton key={slug} summaryLines={HUB_ROW_SUMMARY_LINES[slug]} />
+            ),
+          )}
         </ul>
         {/* The "not listed here" row that closes the list. */}
         <div className={HUB_CLOSING_ROW_CLASS}>

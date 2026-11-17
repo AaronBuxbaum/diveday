@@ -212,7 +212,6 @@ async function SpreadsheetBody({
             promise. Pinned in e2e/marketing.spec.ts. */}
         <MovePhase
           id="prepare"
-          number={1}
           title={t("switching.spreadsheet.columnsTitle")}
           intro={t("switching.spreadsheet.columnsIntro")}
         >
@@ -254,7 +253,7 @@ async function SpreadsheetBody({
             </DisclosureRow>
           </div>
         </MovePhase>
-        <ScopePhase locale={locale} number={2} />
+        <ScopePhase locale={locale} />
         {/* `importerNote` is the one slot a guide tailors the shared import
             phase with, and this is the spreadsheet shop's tailoring: they have
             no vendor to cut over from, so the three phases here stop before the
@@ -265,11 +264,7 @@ async function SpreadsheetBody({
             copy of the cutover step — this one is about the sheet staying, and
             it says the re-import mechanics `findOrCreatePerson` actually
             implements (match on email, update in place). */}
-        <ImportPhase
-          locale={locale}
-          number={3}
-          importerNote={t("switching.spreadsheet.parallelRunNote")}
-        >
+        <ImportPhase locale={locale} importerNote={t("switching.spreadsheet.parallelRunNote")}>
           <Suspense fallback={null}>{importCta}</Suspense>
         </ImportPhase>
       </MovePath>

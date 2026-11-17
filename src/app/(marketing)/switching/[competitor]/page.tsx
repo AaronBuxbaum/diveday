@@ -302,12 +302,7 @@ async function GuideBody({
           itself) → the importer's own scope table, verbatim → the importer →
           the cutover. */}
       <MovePath locale={locale}>
-        <MovePhase
-          id="export"
-          number={1}
-          title={t(guide.exportHeading)}
-          intro={t(guide.exportIntro)}
-        >
+        <MovePhase id="export" title={t(guide.exportHeading)} intro={t(guide.exportIntro)}>
           <StepList
             steps={guide.exportSteps.map((step) => ({
               title: t(step.title),
@@ -320,13 +315,11 @@ async function GuideBody({
         </MovePhase>
         <ScopePhase
           locale={locale}
-          number={2}
           source={guide.slug === "fareharbor" ? "fareharbor" : undefined}
           showPricingLink={!guide.coexist}
         />
         <ImportPhase
           locale={locale}
-          number={3}
           source={guide.slug === "fareharbor" ? "fareharbor" : undefined}
           importerNote={
             guide.importerNote && (
@@ -341,12 +334,7 @@ async function GuideBody({
         >
           <Suspense fallback={null}>{importCta}</Suspense>
         </ImportPhase>
-        <MovePhase
-          id="cutover"
-          number={4}
-          title={t(guide.cutover.heading)}
-          intro={t(guide.cutover.intro)}
-        >
+        <MovePhase id="cutover" title={t(guide.cutover.heading)} intro={t(guide.cutover.intro)}>
           <StepList
             steps={guide.cutover.steps.map((step) => ({
               title: t(step.title),

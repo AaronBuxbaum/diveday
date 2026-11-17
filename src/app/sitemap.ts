@@ -57,6 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: FIND_YOUR_BOOKING_PATH, priority: 0.5 },
     { path: "/switching", priority: 0.7 },
     { path: "/switching/spreadsheet", priority: 0.8 },
+    { path: "/switching/alongside", priority: 0.8 },
     ...MIGRATION_GUIDE_SLUGS.map((slug) => ({ path: `/switching/${slug}`, priority: 0.8 })),
   ];
 
