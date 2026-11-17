@@ -131,6 +131,8 @@
     "profile": {
       "heading": "Perfil y marca del centro",
       "description": "Lema, descripción y logotipo visibles en tu calendario público y en las vistas previas de búsqueda.",
+      "welcomeText": "Nota de bienvenida",
+      "welcomeSigner": "Nombre de quien firma",
       "tagline": "Lema",
       "taglinePlaceholder": "ej. Buceando en Key Largo y los Cayos de Florida desde 2012",
       "descriptionLabel": "Acerca de tu centro",
