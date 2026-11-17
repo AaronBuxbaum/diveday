@@ -4678,5 +4678,13 @@
   "staffProfiles": {
     "heading": "Con quién vas a bucear",
     "since": "Buceando desde {year}"
+  },
+  "demoPreview": {
+    "title": "Una vista previa hecha para {shop}",
+    "description": "El nombre y los colores de tu centro, con buzos y barcos de muestra. Vista previa hecha por DiveDay.",
+    "submit": "Abrir la vista previa",
+    "endedTitle": "Esta vista previa terminó",
+    "ended": "Las vistas previas quedan abiertas una semana. Responde al correo en el que llegó y la abrimos de nuevo.",
+    "home": "Conoce DiveDay"
   }
 }

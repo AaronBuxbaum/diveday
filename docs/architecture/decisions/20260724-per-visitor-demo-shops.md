@@ -42,8 +42,10 @@ fleet depends on one stable canonical demo (`blue-mantis`) reached via `DEV_STAF
   per-shop-unique emails avoid the global `user_accounts` unique index. Pinned singletons
   (`DEMO_RECAP_BOOKING_ID`) stay on `blue-mantis` only — generated demos use random ids.
 - **TTL reaper:** an idempotent cron endpoint (same shape as the pre-trip reminder cron) deletes
-  generated demo shops older than **7 days** (window configurable via env), keyed on `shops.created_at`
-  and excluding the canonical demo.
+  generated demo shops idle for **7 days** (window configurable via env) and excluding the canonical
+  demo. Idle means no sign-in or staff input: the latest `account_sessions.last_human_activity_at`
+  for the shop, or `shops.created_at` when nobody signed in. Amended 2026-11-16: it was age since
+  creation, which cleared a demo a prospect was still using.
 - **Abuse bounds:** minting is a public unauthenticated action, so two limits apply. A per-IP token
   bucket (`demoCreate`) caps one visitor's burst; because that does *not* bound the fleet-wide total
   (an IP-rotating attacker, a fail-open limiter, a multi-instance deployment), a hard **aggregate
@@ -119,7 +121,7 @@ accounts, and exactly one live active owner. It refuses missing/reaped shops, re
 disabled/deleted owners and ambiguous ownership. The deployment must still allow demo sign-in.
 Run it with the deployment's `APP_HOST` and runtime flags; do not post its output to a public issue
 or CI log. These details are reusable public sample access, not a private or revocable magic link.
-Do not enter real customer data. Demos normally expire after seven days and can be evicted earlier.
+Do not enter real customer data. Demos normally expire after seven days without use and can be evicted earlier.
 
 Real accounts already use `/forgot-password` and the emailed single-use reset flow. Demo addresses
 are non-routable and demo mail is held, so that flow cannot recover demos. This operator tool does

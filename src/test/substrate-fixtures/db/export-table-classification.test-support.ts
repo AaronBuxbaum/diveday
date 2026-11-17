@@ -155,6 +155,7 @@ export const EXCLUDED_TABLES = [
   // its progress rather than anything the shop recorded. None is a shop record.
   "setup_requests",
   "demo_entries",
+  "demo_previews",
   "shop_milestones",
 ];
 

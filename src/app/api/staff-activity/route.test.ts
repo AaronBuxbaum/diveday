@@ -12,8 +12,13 @@ vi.mock("@/db/client", async (original) => ({
   getDb: vi.fn(),
 }));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
+vi.mock("next/server", () => ({ after: vi.fn((task: () => unknown) => task()) }));
+vi.mock("@/app/actions/demo-instrumentation", () => ({
+  announcePreviewActivity: vi.fn(async () => {}),
+}));
 const { getDb } = await import("@/db/client");
 const { auth } = await import("@/lib/auth");
+const { announcePreviewActivity } = await import("@/app/actions/demo-instrumentation");
 const { GET, POST } = await import("./route");
 
 beforeEach(() => {
@@ -90,6 +95,22 @@ describe("staff activity endpoint", () => {
     expect((await POST(request("https://diveday.example", row.id))).status).toBe(204);
     await ctx.db.delete(accountSessions).where(eq(accountSessions.id, row.id));
     expect((await POST(request("https://diveday.example", row.id))).status).toBe(401);
+  });
+  it("tells the preview record about a real touch, and never about a refused or quiet one", async () => {
+    // ADR 20261116-demo-previews: this touch is the one signal that is a person.
+    const row = await signedIn();
+    expect((await POST(request("https://diveday.example", "another-session"))).status).toBe(401);
+    expect(announcePreviewActivity).not.toHaveBeenCalled();
+
+    expect((await POST(request("https://diveday.example", row.id))).status).toBe(204);
+    expect(announcePreviewActivity).toHaveBeenCalledExactlyOnceWith(ctx.shop.id);
+
+    vi.mocked(announcePreviewActivity).mockClear();
+    const { QUIET_DEMO_COOKIE, quietDemoToken } = await import("@/features/quiet-demo-device");
+    const quiet = request("https://diveday.example", row.id);
+    quiet.headers.set("cookie", `other=1; ${QUIET_DEMO_COOKIE}=${quietDemoToken() ?? ""}`);
+    expect((await POST(quiet)).status).toBe(204);
+    expect(announcePreviewActivity).not.toHaveBeenCalled();
   });
   it("checks the session without recording activity and refuses another session", async () => {
     const row = await signedIn();

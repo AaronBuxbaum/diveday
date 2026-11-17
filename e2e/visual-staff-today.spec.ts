@@ -42,6 +42,7 @@ import {
   staffCopy,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
+import { logArrivalFocus } from "./visual-state-diagnostics";
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
@@ -134,7 +135,19 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the day spine renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");
         await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
-        await capture(page, "today", scheme);
+        const arrivals = page.getByRole("searchbox", {
+          name: staffCopy("shopHome.arrivals.label"),
+        });
+        await logArrivalFocus(page, "before-capture");
+        await expect(arrivals).toHaveAttribute("data-hydrated", "true");
+        await expect(arrivals).toBeFocused();
+        await capture(page, "today", scheme, {
+          beforeScreenshot: async () => {
+            await logArrivalFocus(page, "before-screenshot");
+            await expect(arrivals).toHaveAttribute("data-hydrated", "true");
+            await expect(arrivals).toBeFocused();
+          },
+        });
       });
 
       if (scheme === "light") {

@@ -1,6 +1,7 @@
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getShopBySlug } from "@/db/shops";
+import { recordPreviewActivity } from "@/features/demo-preview";
 import { recordDemoEntry } from "@/features/funnel";
 import { trackEvent } from "@/lib/analytics";
 import type { DemoRoleId } from "@/lib/demo-roles";
@@ -63,7 +64,7 @@ export async function announceDemoEntry(input: {
   }
 
   // The founder digest's count (ADR 20261007-founder-metrics): a row of
-  // DiveDay's own, unkeyed from the minted shop so the 7-day reaper does not
+  // DiveDay's own, unkeyed from the minted shop so the idle-demo reaper does not
   // take the count with it. Its own guard, for the reason above.
   try {
     await recordDemoEntry(await getDb(), { source, role });
@@ -77,7 +78,7 @@ export async function announceDemoEntry(input: {
     const db = await getDb();
     // The alert needs the minted shop's row id: `notification_send_queue` FKs
     // to it, which is what lets a retryable failure be durable and what lets
-    // the 7-day reaper clear the row along with the shop it belongs to.
+    // the idle-demo reaper clear the row along with the shop it belongs to.
     const shop = await getShopBySlug(db, slug);
     if (!shop) return;
     await sendNotification(db, {
@@ -91,6 +92,38 @@ export async function announceDemoEntry(input: {
     });
   } catch (error) {
     log("demo.entry_alert_failed", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
+}
+
+/**
+ * Note real input inside whatever shop a staff session just touched, and mail
+ * the founder the first time that shop is a prospect's preview (ADR
+ * 20261116-demo-previews). For every other shop the update matches no row and
+ * nothing else happens.
+ *
+ * Best-effort and swallowed whole, for `announceDemoEntry`'s reason: it runs
+ * inside `after()`, and counting a visit is never worth failing one.
+ */
+export async function announcePreviewActivity(shopId: string): Promise<void> {
+  try {
+    const db = await getDb();
+    const preview = await recordPreviewActivity(db, shopId);
+    if (!preview) return;
+    await sendNotification(db, {
+      kind: "operator_alert",
+      event: "preview_active",
+      shopId,
+      to: alertRecipient(),
+      previewId: preview.id,
+      prospectName: preview.prospectName,
+      shopSlug: preview.shopSlug,
+      fetchCount: preview.fetchCount,
+      openCount: preview.openCount,
+    });
+  } catch (error) {
+    log("preview.activity_failed", "error", {
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }

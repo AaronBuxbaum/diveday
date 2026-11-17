@@ -33,6 +33,7 @@ import {
   newAccountAlertEmail,
   passwordChangedEmail,
   passwordResetEmail,
+  previewActiveAlertEmail,
   readinessLinkEmail,
   setupRequestAlertEmail,
   staffInviteEmail,
@@ -170,6 +171,8 @@ function operatorAlertEmail(
       return newAccountAlertEmail(notification);
     case "demo_started":
       return demoStartedAlertEmail(notification);
+    case "preview_active":
+      return previewActiveAlertEmail(notification);
     case "usage_ceiling":
       return usageCeilingAlertEmail(notification);
     case "setup_request":

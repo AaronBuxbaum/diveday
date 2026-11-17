@@ -21,7 +21,7 @@ import { deriveLabelKey, signPayload, tagMatches } from "../../lib/signed-token"
 
 export const DEMO_SHOP_NAME_COOKIE = "diveday_demo_name";
 
-/** A minted demo is reaped after seven days; the name lasts as long. */
+/** A minted demo is reaped after seven idle days; the name lasts seven days from minting. */
 const LIFETIME_MS = 7 * DAY_MS;
 export const DEMO_SHOP_NAME_MAX_AGE_SECONDS = LIFETIME_MS / 1000;
 

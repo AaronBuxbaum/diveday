@@ -361,6 +361,7 @@ const FACT_SAMPLES: Record<string, Record<string, unknown>> = {
   openPackageInvoice: { email: EMAIL },
   bookingHandoff: { email: EMAIL },
   accountToken: { email: EMAIL, purpose: "invite" },
+  demoPreview: { shopName: "Reef Line Divers" },
   courtesyEmailUnsubscribe: { email: EMAIL },
   interestUnsubscribe: { email: EMAIL },
   visualLink: { family: "digest" },
