@@ -106,7 +106,7 @@ export function PromotedDateAsk({
   }
   const copy = dateRequestCopy(t, "dive");
   return (
-    <DiverIntlProvider locale={locale} timeZone={timeZone} namespaces={["inquiry"]}>
+    <DiverIntlProvider locale={locale} timeZone={timeZone} namespaces={["inquiry", "common", "course"]}>
       <DateRequestForm
         submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
         askInterest
