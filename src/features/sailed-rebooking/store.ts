@@ -10,7 +10,7 @@ import { DAY_MS, HOUR_MS } from "../../lib/clock";
 import { similarDepartures } from "../../lib/similar-departures";
 
 /**
- * How long after the boat is home the Divers tab keeps saying what each diver
+ * How long after the boat is home the Trip page keeps saying what each diver
  * could do next. The diver dripping on the dock is the sale; a list a week old
  * is a mailing list, which is somebody else's job.
  */

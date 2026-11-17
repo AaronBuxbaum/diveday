@@ -17,10 +17,10 @@ import { automatedForecastForDeparture } from "@/lib/marine-forecast";
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
 
 /**
- * The Details tab's two streamed readings of the water: the automated outlook
+ * The Trip page's two streamed readings of the water: the automated outlook
  * at the first forecastable site, and one tide sentence per stationed site at
  * the boat's own arrival there. Both are promises the conditions panel awaits
- * behind its own `<Suspense>`; on the Divers tab neither is started.
+ * behind its own `<Suspense>`; without `showDetails` neither is started.
  */
 export function departureConditionReads({
   showDetails,

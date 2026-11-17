@@ -28,7 +28,7 @@ const STATUS_KEYS: Record<TripLastMinutePromo["status"], StaffMessageKey> = {
 
 /**
  * **The deals this departure sent, and the way to send another.** The sender
- * itself is the Divers tab's "Who wants in" panel: one Offer, "with a discount"
+ * itself is the Trip page's "Who wants in" panel: one Offer, "with a discount"
  * (ADR 20261017-one-interest-with-a-scope). What stays here is history (the code,
  * how many, whether Stripe minted it) and the answer to the last send
  * (`FormStatus`, since a deal's outcome redirects to `#last-minute-deal`).
@@ -45,7 +45,7 @@ export function LastMinuteDealSection({
 }: {
   /** What the last deal did, beside the history it joined. */
   status?: FormNotice;
-  /** The departure page (its Divers tab holds `#who-wants-in`), or null while nothing can be offered (full, cancelled). */
+  /** The departure page (its Trip page holds `#who-wants-in`), or null while nothing can be offered (full, cancelled). */
   tripPath: string | null;
   promos: TripLastMinutePromo[];
   promoRecipients?: TripLastMinutePromoRecipientItem[];

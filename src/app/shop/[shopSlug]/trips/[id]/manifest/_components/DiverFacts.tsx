@@ -17,7 +17,7 @@ import type { EmergencyTextFacts } from "./emergency-text";
  * A held seat says the desk must settle it, and that other holds may still
  * apply when withholding dropped any, without naming the matched person or
  * which hold it was (dive-domain review 2026-10-06). "Confirm who this is"
- * stays on the Divers tab, beside the control that does it.
+ * stays on the Trip page, beside the control that does it.
  */
 export function diverBlockerText(
   t: StaffTranslator,
@@ -111,7 +111,7 @@ export function DiverFacts({
   if (diver.identityWithheld) {
     // Said, on screen and on paper alike, rather than "Not on file": a held
     // seat with no contact reads as a diver who has none, which is a wrong
-    // fact. The confirm control is ashore, on the Divers tab (issue #1690).
+    // fact. The confirm control is ashore, on the Trip page (issue #1690).
     // The one contact a held seat carries is the one the desk recorded for
     // the person on it (issue #2145), never the matched record's.
     return (

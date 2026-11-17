@@ -9,7 +9,7 @@ import { referralStudentAction } from "../referral-actions";
 import { clearTrainingDiveAction, markTrainingDiveAction } from "../training-mark-actions";
 
 /**
- * A course session's three acts of teaching on the Divers tab, bound to this
+ * A course session's three acts of teaching on the Trip page, bound to this
  * departure: certify a student, write their next step, mark their learning
  * materials done. They travel together, because a roster that could certify a
  * student but not tell them what comes next is half a session's record. A fun

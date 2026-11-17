@@ -263,7 +263,7 @@ export async function listedCardForAgencyCheck(
 
 /**
  * **Every card these divers hold that the extension could check**, keyed by
- * diver, oldest card first: the cards a departure's Divers tab and the Today
+ * diver, oldest card first: the cards a departure's Trip page and the Today
  * list offer to check, and the N of a departure's "Check all N". The same rule
  * as {@link certificationForAgencyCheck}, so nothing is offered that the
  * action would refuse. A diver with none is absent.

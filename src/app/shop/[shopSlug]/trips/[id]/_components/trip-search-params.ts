@@ -31,7 +31,7 @@ export type TripPageSearchParams = {
   /** `1`: the page is the departure's blow-out, the call-off confirmation or its record. */
   blowout?: string;
   /**
-   * `1` opens the Divers tab with the cursor in its add band: where every
+   * `1` opens the Trip page with the cursor in its add band: where every
    * "Add a booking" door that knows the departure lands (#2737).
    */
   add?: string;

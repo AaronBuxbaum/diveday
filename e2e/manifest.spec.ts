@@ -567,7 +567,7 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
 
   // Move to a *different* trip surface — the worker's live-manifest pattern
   // is scoped to the manifest route alone and must not swallow this one too.
-  // Gear, not Divers: the Divers tab is the counter once arrivals open, and
+  // Gear, not Divers: the Trip page is the counter once arrivals open, and
   // the worker backs that one up on purpose (ADR
   // 20260907-the-counter-survives-offline; the next test).
   await openTripTab(page, "Prep");
@@ -1022,7 +1022,7 @@ test("the active checkpoint stays visible while selecting named Deck people", as
 test("resolving a blocker from the manifest lands on that diver, under the blocked filter", async ({
   page,
 }) => {
-  // Board → trip → Manifest tab → resolve-link navigation: four loads on the
+  // Board → trip → Roll call → resolve-link navigation: four loads on the
   // 15s single-load default, still read-only.
   test.setTimeout(30_000);
   await page.goto("/shop/blue-mantis/schedule/board");

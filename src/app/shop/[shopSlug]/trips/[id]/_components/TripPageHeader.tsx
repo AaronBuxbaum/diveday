@@ -183,7 +183,7 @@ export function TripPageHeaderSkeleton({
   badge?: boolean;
   /** Whether the loaded header has the parent link. */
   showBack?: boolean;
-  /** As on the header: the Divers tab stacks it in the page's `space-y-10`. */
+  /** As on the header: the Trip page stacks it in the page's `space-y-10`. */
   className?: string;
 }) {
   return (

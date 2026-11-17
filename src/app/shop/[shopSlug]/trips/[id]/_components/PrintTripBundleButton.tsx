@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 type RecordPrintAction = (formData: FormData) => void | Promise<void>;
 
 /**
- * Opens the print bundle from the Overview tab without losing the originating
+ * Opens the print bundle from the Trip page without losing the originating
  * click to a popup blocker. The form action records the click server-side,
  * while the synchronous `window.open` lets the new tab show its print dialog.
  */

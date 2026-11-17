@@ -59,7 +59,7 @@ test("a diver taps Running late on their link, and the desk sees when they said 
   // Today's arrival lookup carries it under the name…
   await page.goto(`/shop/blue-mantis?q=${encodeURIComponent(name)}`);
   await expect(page.getByText(/^Running late, said \d/)).toBeVisible();
-  // …and so does the boat's own Divers tab.
+  // …and so does the boat's own Trip page.
   await openCounterFor(page, "blue-mantis", name);
   const row = await rosterRow(page, name);
   await expect(row.getByText(/^Running late, said \d/)).toBeVisible();
@@ -153,7 +153,7 @@ test("a diver says it in their own words, and the desk marks it from the inbox r
       .getByText(/On the manifest: running late, said \d/),
   ).toBeVisible();
 
-  // The boat hears it: the Divers tab's row carries the same mark.
+  // The boat hears it: the Trip page's row carries the same mark.
   await openCounterFor(page, "blue-mantis", name);
   const row = await rosterRow(page, name);
   await expect(row.getByText(/^Running late, said \d/)).toBeVisible();

@@ -209,7 +209,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       // **Which boat is this diver on?** Today's arrival lookup with a match:
       // the desk's first question, answered as one row per booking that opens
-      // that boat's Divers tab at the diver's own row.
+      // that boat's Trip page at the diver's own row.
       test(`the arrival lookup renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis?q=Priya%20Sharma");
         await expect(
@@ -499,13 +499,13 @@ for (const scheme of ["light", "dark"] as const) {
       // in the `today` capture above, and `day-spine.spec.ts` holds the
       // redirect to a single hop.
 
-      // The counter itself: one departure's Divers tab with its arrivals open,
+      // The counter itself: one departure's Trip page with its arrivals open,
       // reached the way the desk reaches it — Today's arrival lookup, then the
       // diver's own row. Priya Sharma is seeded blocked on a boat inside the
       // arrivals window, so the frame holds the instrument above the roster, a
       // blocked row with its reasons and no tap, cleared rows ending in their
       // check-in taps, and "Add a diver" as one search field.
-      test(`the desk on a departure's Divers tab renders true to the design (${scheme})`, async ({
+      test(`the desk on a departure's Trip page renders true to the design (${scheme})`, async ({
         page,
       }) => {
         const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
@@ -514,7 +514,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-desk", scheme);
       });
 
-      // The desk's settled state: a departure that is home. Its Divers tab is
+      // The desk's settled state: a departure that is home. Its Trip page is
       // no longer the desk but the record (UX review 2026-10-10, item 10),
       // every seat filed by the crew's roll call under "Sailed", "Didn't
       // sail", "Not counted at the dock" or "No roll call taken". The seeded
@@ -692,7 +692,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * **"Not here", open** (issue #1209) — the desk's script for the diver
-       * who never turned up, under their row on the Divers tab.
+       * who never turned up, under their row on the Trip page.
        *
        * The one state of this surface no seeded day can hold. The door opens
        * when the boat leaves without the diver (`noShowGate`) and shuts when

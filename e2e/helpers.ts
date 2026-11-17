@@ -526,6 +526,19 @@ export async function openAddAGuest(page: Page): Promise<Locator> {
 }
 
 /**
+ * Taps "Add <name> to the trip" on a Trip page opened at `?diverq=`. The
+ * page's `FlashParams` strips `diverq` once React has mounted the page body,
+ * which can come after the staff header's hydration; before it, the body's
+ * hydration reflow moved the button between the click's hit check and its
+ * press, and the press landed on nothing (CI on 1ceab6ca: no POST was sent).
+ * The strip is the page's own signal, not a clock.
+ */
+export async function addFoundGuest(page: Page, name: string): Promise<void> {
+  await expect(page).not.toHaveURL(/[?&]diverq=/);
+  await page.getByRole("button", { name: `Add ${name} to the trip` }).click();
+}
+
+/**
  * Seat a returning diver on the trip on screen from the add form's search,
  * and wait for the page to open them in place.
  */
@@ -712,7 +725,7 @@ export async function openFirstRosterRowWith(page: Page, control: string): Promi
   return pinned;
 }
 
-/** Open one diver's row on the Divers tab, where every fix for their seat waits. */
+/** Open one diver's row on the Trip page, where every fix for their seat waits. */
 export async function openRosterRow(page: Page, diverName: string): Promise<Locator> {
   const row = await rosterRow(page, diverName);
   await openRosterDetails(row);
@@ -858,7 +871,7 @@ export async function tripPathByTitle(
 /**
  * Open the counter for the boat a diver is on, the way the desk finds it:
  * Today's arrival lookup, then the match's own row, which lands on that
- * departure's Divers tab — the roster carries the desk's taps once arrivals
+ * departure's Trip page — the roster carries the desk's taps once arrivals
  * open. Returns the trip id read off the landing URL.
  */
 export async function openCounterFor(page: Page, shopSlug: string, diverName: string) {
@@ -883,13 +896,13 @@ export async function openCounterFor(page: Page, shopSlug: string, diverName: st
   return tripId;
 }
 
-/** The counter for one boat: the departure's Divers tab, the trip root. */
+/** The counter for one boat: the departure's Trip page, the trip root. */
 export function counterPath(shopSlug: string, tripId: string): string {
   return `/shop/${shopSlug}/trips/${tripId}`;
 }
 
 /**
- * The new-diver form for this boat. The Divers tab's own search reaches it
+ * The new-diver form for this boat. The Trip page's own search reaches it
  * through "Add diver"; tests that are not about that link go straight to it.
  */
 export function addDiverFormPath(shopSlug: string, tripId: string): string {
@@ -1363,7 +1376,7 @@ export async function requireCourseForm(
 
 /**
  * Schedule a session of Open Water Diver with an instructor on its crew, so
- * it takes bookings, and return the staff path of its Divers tab.
+ * it takes bookings, and return the staff path of its Trip page.
  */
 export async function scheduleCrewedOpenWaterSession(
   page: Page,

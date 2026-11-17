@@ -678,7 +678,7 @@ test.describe("the printed trip packet", () => {
     await page.emulateMedia({ media: "print" });
 
     // And the facts it exists for are still on it: the departure it is about,
-    // the dive plan that only ever lived inside the Overview tab's form, and
+    // the dive plan that only ever lived inside the Trip page's form, and
     // the roster with the head count.
     // The departure this packet is *about*, named from the board rather than
     // hard-coded: which one the week leads with is the seed's business.

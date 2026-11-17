@@ -94,7 +94,7 @@ export type AgencyCheckOffer = { kind: AgencyListedKind; words: string };
  * undone the way a one-tap review is.
  *
  * **One action wherever the check is pressed**: the diver record, a row on a
- * departure's Divers tab, a "certification pending" row on Today, and each
+ * departure's Trip page, a "certification pending" row on Today, and each
  * card of a departure's "Check all" (which is only this, one card at a time,
  * from the browser). So a write ends in `refresh()` as well as revalidating
  * the record: the page the staffer pressed it on is the one that has to
