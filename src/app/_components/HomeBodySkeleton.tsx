@@ -40,12 +40,9 @@ const TITLE_LINES = [
  *   - the demo note (`mt-3`): 20px lines, two on a phone and one from `sm`;
  *   - the diver's line (`mt-6`): one 20px line, "Booked a dive? Find your
  *     booking" (fourth review, item 50), only while `HOME_DIVER_DOOR` is on;
- *   - the phone: `CaptainPhoneFrame` renders 544px tall at every width (its
- *     height is its mockup's, not a ratio; the skeleton drew 450 after the
- *     roll call grew);
- *   - the dock card under it, `-mt-5`, `py-3`: a 16px label over a detail
- *     line that wraps to three 20px lines in a phone's 342px column and two
- *     from `sm`, where the column is `max-w-sm`.
+ *   - the desk, `MarketingTryDesk`: a hint line above it, the sample at 486px
+ *     (502 on a phone), and a 56px line below it for the finished note and
+ *     "Start over"; 574px from `lg`, 610px on a phone (the hint wraps to two lines).
  *
  * **The first step is drawn at its height**, the same way: the band's title
  * (three lines on a phone, two from `sm`), then the row — the marker, the
@@ -94,15 +91,9 @@ export function HomeBodySkeleton() {
               </div>
             ) : null}
           </div>
-          {/* The captain's phone, and the card that overlaps its lower edge. */}
-          <div className="mx-auto w-full max-w-sm lg:max-w-md">
-            <div className="h-[544px] rounded-[2.5rem] border border-border bg-surface" />
-            <div className="mx-auto -mt-5 w-[88%] rounded-inset border border-border bg-surface px-4 py-3">
-              <div className="h-4 w-24 rounded bg-surface-sunken" />
-              <div className="mt-1">
-                <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-5" width="w-full" />
-              </div>
-            </div>
+          {/* The arrival desk: its hint, the sample, and the line under it. */}
+          <div className="mx-auto w-full max-w-md lg:max-w-lg">
+            <div className="h-[610px] rounded-3xl border border-border bg-surface lg:h-[574px]" />
           </div>
         </div>
       </section>
