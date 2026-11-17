@@ -30,6 +30,12 @@ const EVERY_MOCK = [
   ["ExportBundleFallback", ExportBundleFallback],
   ["DiverBookingFallback", DiverBookingFallback],
   ["RecapPageFallback", RecapPageFallback],
+  [
+    "RecapPageFallback (review)",
+    ({ locale }: { locale: "en-US" | "es-ES" }) => (
+      <RecapPageFallback locale={locale} view="review" />
+    ),
+  ],
   ["NightBeforeBriefFallback", NightBeforeBriefFallback],
 ] as const;
 
@@ -268,13 +274,19 @@ describe("MarketingScreenFallbacks", () => {
       // The keepsake and the one ask, the two blocks the homepage's recap
       // step quotes: the shop wrote something, and the diver is asked once.
       expect(screen.getByText("Dive log entry")).toBeInTheDocument();
+      expect(screen.getByText("Photos from the boat")).toBeInTheDocument();
+      expect(screen.getByText("Depth over time")).toBeInTheDocument();
+    });
+
+    it("draws the crew's note and the one ask on the review view", () => {
+      render(<RecapPageFallback locale="en-US" view="review" />);
       expect(screen.getByText("From your crew")).toBeInTheDocument();
       expect(screen.getByText("How was your day?")).toBeInTheDocument();
     });
 
     it("renders in Spanish", () => {
       render(<RecapPageFallback locale="es-ES" />);
-      expect(screen.getByText("De tu tripulación")).toBeInTheDocument();
+      expect(screen.getByText("Fotos desde el barco")).toBeInTheDocument();
       expect(
         screen.getByText("Arrecife de dos tanques · Sábado · 13 de junio"),
       ).toBeInTheDocument();
@@ -285,7 +297,8 @@ describe("MarketingScreenFallbacks", () => {
     // 2026 (the market sheet of 2026-10-22, item 7).
     it("pictures a Florida shop on a Saturday that is one", () => {
       render(<RecapPageFallback locale="en-US" />);
-      expect(screen.getByText("81°F · 60 ft")).toBeInTheDocument();
+      expect(screen.getByText("81°F")).toBeInTheDocument();
+      expect(screen.getByText("59 ft")).toBeInTheDocument();
       expect(screen.getByText("Two-Tank Reef · Saturday · Jun 13")).toBeInTheDocument();
       expect(new Date(Date.UTC(2026, 5, 13)).getUTCDay()).toBe(6);
     });

@@ -1,4 +1,12 @@
+import Image from "next/image";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
+import { DiveProfileChart } from "@/components/DiveProfileChart";
+import {
+  FEET_PER_METER,
+  PROFILE_AVG_METERS,
+  PROFILE_MAX_METERS,
+  PROFILE_MINUTES,
+} from "@/components/dive-profile-sample";
 import { MarketingStorefrontPhoto } from "@/components/MarketingStorefrontPhoto";
 import { RollCallMark } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
@@ -643,93 +651,162 @@ export function DiverBookingFallback({
  */
 export function RecapPageFallback({
   locale,
+  view = "report",
   state = "ask",
 }: {
   locale: DiverLocale;
-  /** `rated` is the screen after Priya taps the fifth star (the walkthrough's tap). */
+  /**
+   * `report` is the top of the page: the photos from the boat, the dive's
+   * record and its depth chart. `review` is the rest: the crew's word and the
+   * review ask. The homepage walkthrough shows them one after the other.
+   */
+  view?: "report" | "review";
+  /** `rated` is the review ask after Priya taps the fifth star (the walkthrough's tap). */
   state?: "ask" | "rated";
 }) {
   const t = diverTranslator(locale);
   const rated = state === "rated";
+  const feet = (meters: number) => `${Math.round(meters * FEET_PER_METER)} ft`;
+  const deepest = feet(PROFILE_MAX_METERS);
+  // i18n-exempt: sample dive figures used only in the marketing mockup
+  const stats = [
+    [t("fallback.recap.maxDepthLabel"), deepest],
+    [t("fallback.recap.avgDepthLabel"), feet(PROFILE_AVG_METERS)],
+    [t("fallback.recap.diveTimeLabel"), `${PROFILE_MINUTES} min`],
+    [t("fallback.recap.waterLabel"), "81°F"],
+  ] as const;
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.recap.label")} />
       <div className={MOCK_BODY}>
-        <h3 className={SUB_TITLE_CLASS}>{t("fallback.recap.greeting")}</h3>
-        <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
+        {view === "report" ? (
+          <>
+            <h3 className={SUB_TITLE_CLASS}>{t("fallback.recap.greeting")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
 
-        {/* The dive record: the one place the day's facts render. */}
-        <div className="mt-4 rounded-inset border border-border bg-surface p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-sm font-semibold">{t("fallback.recap.recordHeading")}</h4>
-            <span className="rounded-md bg-primary-tint px-2 py-0.5 text-[10px] font-semibold text-primary">
-              {t("fallback.recap.visits")}
-            </span>
-          </div>
-          <dl className="mt-2 divide-y divide-border border-t border-border text-xs">
-            {[
-              // i18n-exempt: sample boat and crew used only in the marketing mockup
-              [t("fallback.recap.boatLabel"), "Mantis II · Keiko Tanaka"],
-              // The record stopped printing the *site's* deepest point as
-              // though it were this diver's, so the mockup carries no depth
-              // either — one that still did would sell a screen we do not
-              // render.
-              // i18n-exempt: sample site used only in the marketing mockup
-              [t("fallback.recap.sitesLabel"), "French Reef"],
-              // i18n-exempt: sample conditions used only in the marketing mockup
-              [t("fallback.recap.conditionsLabel"), "81°F · 60 ft"],
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-baseline gap-3 py-1.5">
-                <dt className="w-20 shrink-0 text-muted">{label}</dt>
-                <dd className="min-w-0 flex-1 font-medium tabular-nums">{value}</dd>
+            {/* The crew's photos, from the bundled, credited set in
+                public/dive-sites: the boat's diver posing on the wreck, and two
+                things she saw. */}
+            <p className={`mt-4 ${groupLabelClass()}`}>{t("fallback.recap.photosHeading")}</p>
+            <div className="mt-2 grid grid-cols-3 grid-rows-2 gap-1.5 overflow-hidden rounded-inset">
+              <Image
+                src={`/dive-sites/${encodeURIComponent(
+                  "US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg",
+                )}`}
+                alt=""
+                width={1024}
+                height={768}
+                sizes="(max-width: 1023px) calc(100vw - 88px), 400px"
+                className="col-span-2 row-span-2 h-full w-full object-cover"
+              />
+              <Image
+                src={`/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`}
+                alt=""
+                width={1024}
+                height={768}
+                sizes="140px"
+                className="aspect-[4/3] h-full w-full object-cover"
+              />
+              <Image
+                src={`/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`}
+                alt=""
+                width={1024}
+                height={768}
+                sizes="140px"
+                className="aspect-[4/3] h-full w-full object-cover"
+              />
+            </div>
+
+            {/* The dive record: the one place the day's facts render. */}
+            <div className="mt-4 rounded-inset border border-border bg-surface p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold">{t("fallback.recap.recordHeading")}</h4>
+                <span className="rounded-md bg-primary-tint px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  {t("fallback.recap.visits")}
+                </span>
               </div>
-            ))}
-          </dl>
-        </div>
+              <dl className="mt-2 divide-y divide-border border-t border-border text-xs">
+                {[
+                  // i18n-exempt: sample boat and crew used only in the marketing mockup
+                  [t("fallback.recap.boatLabel"), "Mantis II · Keiko Tanaka"],
+                  // i18n-exempt: sample site used only in the marketing mockup
+                  [t("fallback.recap.sitesLabel"), "French Reef"],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-baseline gap-3 py-1.5">
+                    <dt className="w-20 shrink-0 text-muted">{label}</dt>
+                    <dd className="min-w-0 flex-1 font-medium tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <dl className="mt-2 grid grid-cols-4 gap-2 border-t border-border pt-2.5 text-xs">
+                {stats.map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-muted">{label}</dt>
+                    <dd className="mt-0.5 text-sm font-semibold tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-3 text-xs font-medium text-muted">
+                {t("fallback.recap.depthHeading")}
+              </p>
+              <DiveProfileChart
+                unit="ft"
+                className="mt-1 h-auto w-full"
+                labels={{
+                  stop: t("fallback.diveProfile.stop"),
+                  max: t("fallback.diveProfile.max", { depth: deepest }),
+                  minutes: t("fallback.diveProfile.minutes"),
+                }}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* The crew's word, as a quote rather than a boxed panel. */}
+            <figure>
+              <blockquote className="text-sm leading-6">{t("fallback.recap.crewNote")}</blockquote>
+              <figcaption className="mt-1 text-xs text-muted">
+                {t("fallback.recap.crewNoteLabel")}
+              </figcaption>
+            </figure>
 
-        {/* The crew's word, as a quote rather than a boxed panel. */}
-        <figure className="mt-4">
-          <blockquote className="text-sm leading-6">{t("fallback.recap.crewNote")}</blockquote>
-          <figcaption className="mt-1 text-xs text-muted">
-            {t("fallback.recap.crewNoteLabel")}
-          </figcaption>
-        </figure>
-
-        {/* The one ask. */}
-        <div className="mt-4 rounded-inset border border-border bg-surface p-3">
-          <h4 className="text-sm font-semibold">{t("fallback.recap.reviewAsk")}</h4>
-          <div className="mt-2 flex gap-1" aria-hidden="true">
-            {[0, 1, 2, 3, 4].map((star) => (
-              <span
-                key={star}
-                data-tap-target={star === 4 && !rated ? "" : undefined}
-                data-walk-pop={rated ? "" : undefined}
-                style={rated ? { animationDelay: `${star * 70}ms` } : undefined}
-                className="inline-flex rounded-full"
-              >
-                <svg
-                  // The row is already `aria-hidden`, but the rule reads one
-                  // element at a time and cannot see the ancestor. Marking the
-                  // star itself is the same truth said twice, not a workaround:
-                  // it is a drawn mark in a fallback screenshot.
-                  aria-hidden="true"
-                  viewBox="0 0 18 18"
-                  // Empty, as the real form is before the diver rates the day
-                  // (visual review 2026-10-24, B48).
-                  className={`size-5 ${rated ? "fill-primary stroke-primary" : "fill-none stroke-border-strong"}`}
-                  strokeWidth={1.25}
-                  strokeLinejoin="round"
-                  focusable="false"
-                >
-                  <path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z" />
-                </svg>
-              </span>
-            ))}
-          </div>
-          <button type="button" disabled className={`mt-3 ${MOCK_PRIMARY_BUTTON}`}>
-            {t("fallback.recap.reviewSubmit")}
-          </button>
-        </div>
+            {/* The one ask. */}
+            <div className="mt-4 rounded-inset border border-border bg-surface p-3">
+              <h4 className="text-sm font-semibold">{t("fallback.recap.reviewAsk")}</h4>
+              <div className="mt-2 flex gap-1" aria-hidden="true">
+                {[0, 1, 2, 3, 4].map((star) => (
+                  <span
+                    key={star}
+                    data-tap-target={star === 4 && !rated ? "" : undefined}
+                    data-walk-pop={rated ? "" : undefined}
+                    style={rated ? { animationDelay: `${star * 70}ms` } : undefined}
+                    className="inline-flex rounded-full"
+                  >
+                    <svg
+                      // The row is already `aria-hidden`, but the rule reads one
+                      // element at a time and cannot see the ancestor. Marking the
+                      // star itself is the same truth said twice, not a workaround:
+                      // it is a drawn mark in a fallback screenshot.
+                      aria-hidden="true"
+                      viewBox="0 0 18 18"
+                      // Empty, as the real form is before the diver rates the day
+                      // (visual review 2026-10-24, B48).
+                      className={`size-5 ${rated ? "fill-primary stroke-primary" : "fill-none stroke-border-strong"}`}
+                      strokeWidth={1.25}
+                      strokeLinejoin="round"
+                      focusable="false"
+                    >
+                      <path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z" />
+                    </svg>
+                  </span>
+                ))}
+              </div>
+              <button type="button" disabled className={`mt-3 ${MOCK_PRIMARY_BUTTON}`}>
+                {t("fallback.recap.reviewSubmit")}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

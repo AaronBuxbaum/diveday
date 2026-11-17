@@ -209,5 +209,11 @@
       "1280": 526,
       "1920": 526
     }
+  },
+  "src/components/MarketingScreenFallbacks.tsx :: (max-width: 1023px) calc(100vw - 88px), 400px": {
+    "exempt": "Not yet measured. A photo in the homepage walkthrough's drawn report screen, inside the fixed-width mock frame; the frame is narrower than the viewport at every width, so the declaration is a safe over-estimate."
+  },
+  "src/components/MarketingScreenFallbacks.tsx :: 140px": {
+    "exempt": "Not yet measured. A photo in the homepage walkthrough's drawn report screen, inside the fixed-width mock frame; the frame is narrower than the viewport at every width, so the declaration is a safe over-estimate."
   }
 }

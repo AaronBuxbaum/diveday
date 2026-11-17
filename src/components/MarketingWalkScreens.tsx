@@ -1,3 +1,5 @@
+import { DiveProfileChart } from "@/components/DiveProfileChart";
+import { PROFILE_MAX_METERS, PROFILE_MINUTES } from "@/components/dive-profile-sample";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
@@ -69,9 +71,6 @@ export function CardCheckFallback({
   );
 }
 
-/** A dive's depth against time, drawn as the profile line the import preview shows. */
-const PROFILE = "M0 4 L14 22 L30 34 L58 36 L86 32 L104 20 L114 8 L120 4";
-
 /**
  * **A dive computer's file, imported** — the diver's Computer dives page
  * (`divers/[personId]/computer-dives/ComputerDives.tsx`): the preview of a
@@ -92,11 +91,12 @@ export function ComputerDivesFallback({
 }) {
   const t = diverTranslator(locale);
   const imported = state === "imported";
+  const deepest = `${Math.round(PROFILE_MAX_METERS)} m`;
   const facts = [
     // i18n-exempt: sample dive figures used only in marketing mockups
-    [t("fallback.computerDives.depth"), "18 m"],
+    [t("fallback.computerDives.depth"), deepest],
     // i18n-exempt: sample dive figures used only in marketing mockups
-    [t("fallback.computerDives.duration"), "42 min"],
+    [t("fallback.computerDives.duration"), `${PROFILE_MINUTES} min`],
     [t("fallback.computerDives.gas"), t("fallback.computerDives.air")],
   ] as const;
   return (
@@ -124,23 +124,15 @@ export function ComputerDivesFallback({
               </span>
             ) : null}
           </div>
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 120 40"
-            className="mt-3 h-14 w-full"
-            preserveAspectRatio="none"
-            focusable="false"
-          >
-            <path
-              d={PROFILE}
-              fill="none"
-              className="stroke-primary"
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
+          <DiveProfileChart
+            unit="m"
+            className="mt-3 h-auto w-full"
+            labels={{
+              stop: t("fallback.diveProfile.stop"),
+              max: t("fallback.diveProfile.max", { depth: deepest }),
+              minutes: t("fallback.diveProfile.minutes"),
+            }}
+          />
           <dl className="mt-3 grid grid-cols-3 gap-3 text-xs">
             {facts.map(([label, value]) => (
               <div key={label}>

@@ -20,7 +20,14 @@ const DAY_RULE_WORD = "text-sm font-bold tracking-[0.18em] uppercase";
  * nearly full one. The bundled reef cover is the demo shop’s own. Left out:
  * the other badges, the week picker and the rest of the week.
  */
-export function StorefrontFallback({ locale }: { locale: DiverLocale }) {
+export function StorefrontFallback({
+  locale,
+  tapBook = false,
+}: {
+  locale: DiverLocale;
+  /** The homepage walkthrough taps "Book this boat" (`data-tap-target`); no other caller does. */
+  tapBook?: boolean;
+}) {
   const t = diverTranslator(locale);
   const rating = t("fallback.storefront.rating");
   return (
@@ -63,7 +70,12 @@ export function StorefrontFallback({ locale }: { locale: DiverLocale }) {
             <p className="mt-0.5 text-xs text-muted">
               {t("fallback.spotsLeft", { count: 3 })} · {t("fallback.storefront.perDiver")}
             </p>
-            <button type="button" disabled className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}>
+            <button
+              type="button"
+              disabled
+              data-tap-target={tapBook ? "" : undefined}
+              className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}
+            >
               {t("fallback.storefront.bookThisBoat")}
             </button>
           </div>

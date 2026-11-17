@@ -4015,9 +4015,14 @@
       "visits": "Your 3rd dive day",
       "boatLabel": "Boat",
       "sitesLabel": "Sites",
-      "conditionsLabel": "Conditions",
       "reviewAsk": "How was your day?",
-      "reviewSubmit": "Leave my review"
+      "reviewSubmit": "Leave my review",
+      "photosHeading": "Photos from the boat",
+      "maxDepthLabel": "Max depth",
+      "avgDepthLabel": "Average",
+      "diveTimeLabel": "Dive time",
+      "waterLabel": "Water",
+      "depthHeading": "Depth over time"
     },
     "import": {
       "label": "Import preview",
@@ -4214,7 +4219,8 @@
       "refunded": "Refunded",
       "amountReef": "$95.00",
       "amountWreck": "$145.00",
-      "amountCounter": "$30.00"
+      "amountCounter": "$30.00",
+      "dayMetaWaiting": "3 orders · $270.00"
     },
     "scheduleWeek": {
       "label": "Schedule",
@@ -4257,6 +4263,11 @@
       "air": "Air",
       "import": "Import selected dives",
       "imported": "Imported"
+    },
+    "diveProfile": {
+      "stop": "Safety stop · 3 min",
+      "max": "Max {depth}",
+      "minutes": "min"
     }
   },
   "demo": {
