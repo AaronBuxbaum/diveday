@@ -1,24 +1,15 @@
 # One day, in minutes (pnpm 12): a version is not installable until it has been published this long.
 minimumReleaseAge: 1440
 
+# Patch the critical tar advisory in the Vercel CLI dependency.
+overrides:
+  '@vercel/container>tar@7.5.11': '^7.5.21'
+  # Keep the stable peer already used by Vercel during lockfile regeneration.
+  '@napi-rs/wasm-runtime@1.2.7>@emnapi/core': '1.11.3'
+
 patchedDependencies:
   '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch
   next@16.4.6: patches/next@16.4.6.patch
-
-# Keep security fixes within the affected consumers and major versions.
-overrides:
-  'passkit-generator>joi@17.13.4': '17.13.9'
-  'next-devtools-mcp>@modelcontextprotocol/sdk@1.25.2': '1.32.2'
-  'reg-suit>inquirer@8.2.6': '8.2.7'
-  '@vercel/cli-config>zod@>=4.0.0 <4.6.6': '^4.6.7'
-  '@vercel/python-analysis>js-yaml@4.1.1': '^4.3.2'
-  '@vercel/python-analysis>minimatch@10.1.1': '^10.2.3'
-  'path-to-regexp@>=6.0.0 <6.3.0': '^6.3.0'
-  'path-to-regexp@>=8.0.0 <8.4.0': '^8.4.0'
-  'smol-toml@>=1.0.0 <1.7.1': '>=1.7.1 <2'
-  '@vercel/container>tar@7.5.11': '^7.5.21'
-  # Preserve the stable WASM peer used by Vercel before lockfile regeneration.
-  '@napi-rs/wasm-runtime@1.2.7>@emnapi/core': '1.11.3'
 
 # sharp loads `detect-libc` and its `@img/*` binaries from the app's own node_modules at run
 # time (the standalone build copies sharp there), so they must sit at the top level.
