@@ -143,11 +143,11 @@ const PRIORITY: readonly FixReason[] = [
   "waiver_unsigned",
   "payment_unpaid",
   "contact_missing",
-  "re_entry_ask",
   "depth",
+  "recency",
+  "re_entry_ask",
   "drysuit",
   "fit_needed",
-  "recency",
 ];
 
 export function reasonRank(reason: FixReason): number {
@@ -195,7 +195,11 @@ function itemOf(id: string, reasons: readonly FixReason[]): FixItem {
   const ordered = [...new Set(reasons)].sort((a, b) => reasonRank(a) - reasonRank(b));
   const reason = ordered[0] ?? null;
   const remedy = reason ? remedyFor(reason) : "open";
-  const second = ordered.slice(1).map(remedyFor).find((next) => next !== remedy) ?? null;
+  const second =
+    ordered
+      .slice(1)
+      .map(remedyFor)
+      .find((next) => next !== remedy) ?? null;
   return {
     guestIds: [id],
     reason,

@@ -107,7 +107,10 @@ describe("the guests ledger (slice 5d)", () => {
     const note = screen.getByText("Asked for a word with the divemaster.");
     expect(note).toBeVisible();
     expect(note.className).not.toMatch(/text-(danger|warning)/);
-    expect(screen.getByRole("heading", { name: /Yara Halabi|Wen Ito/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Yara Halabi" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     expect(screen.queryByRole("heading", { name: /^Ready ·/ })).toBeNull();
   });
 
@@ -310,7 +313,6 @@ describe("the roster's row geometry", () => {
     const blocker = screen.getByText("No certification is on file for this trip.");
     expect(blocker).toBeVisible();
     expect(blocker.closest("details")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "All guests" }));
     fireEvent.click(screen.getByRole("button", { name: "Olga Rust" }));
     const warning = screen.getByText(/^Last dived/);
     expect(warning).toBeVisible();
@@ -341,15 +343,17 @@ describe("the roster's row geometry", () => {
    * first, like the name's own wrap (they right-aligned to the mark's edge, 6px
    * off the name, on no shared edge).
    */
-  it("gives the selected guest one name and keeps reference secondary to every remedy", () => {
+  it("opens the guest in place with one name, every remedy before the facts", () => {
     const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
     fireEvent.click(screen.getByRole("button", { name: blocked.person.fullName }));
     expect(screen.getAllByText(blocked.person.fullName)).toHaveLength(1);
-    expect(screen.getByText("No certification is on file for this trip.")).toBeVisible();
-    expect(screen.getByRole("link", { name: /Review certifications/ })).toBeVisible();
-    const reference = container.querySelector('details[id^="guest-reference-"]');
-    expect(reference).not.toHaveAttribute("open");
-    expect(screen.getByText(blocked.person.email as string)).not.toBeVisible();
+    const remedy = screen.getByRole("link", { name: /Review certifications/ });
+    const email = screen.getByText(blocked.person.email as string);
+    expect(remedy).toBeVisible();
+    expect(email).toBeVisible();
+    // Fixes first, then facts.
+    expect(remedy.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelector('details[id^="guest-reference-"]')).toBeNull();
   });
 
   /**
@@ -473,7 +477,10 @@ describe("the one-line row", () => {
       requiresPayment: true,
     });
 
-    expect(screen.getByRole("heading", { name: /Yara Halabi|Wen Ito/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Wen Ito" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     expect(screen.getByText("Waiver not signed yet")).toBeVisible();
     expect(screen.getByText("Not paid yet")).toBeVisible();
   });
@@ -549,7 +556,10 @@ it("keeps readiness neutral for a booked diver already boarded without counter c
     roster: [ready],
     arrival: { controls: new Map(), below: new Map(), boarded: new Set([ready.booking.id]) },
   });
-  expect(screen.getByRole("heading", { name: ready.person.fullName })).toBeVisible();
+  expect(screen.getByRole("button", { name: ready.person.fullName })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
   expect(screen.queryByRole("heading", { name: /To arrive/ })).toBeNull();
 });
 
@@ -584,6 +594,11 @@ describe("the guest folio workflow", () => {
     const { container } = renderRoster({
       ...fixtures,
       roster: [confirmed, held],
+      // Readiness holds a held seat (`calculateReadiness`), so it is a fix.
+      readiness: new Map([
+        ...fixtures.readiness,
+        [held.booking.id, readinessRow("blocked", [{ code: "identity_unconfirmed" }])],
+      ]) as ReadinessByBooking,
       selectedBookingId: null,
     });
     expect(container.querySelector('img[src*="priya.webp"]')).not.toBeNull();
@@ -591,17 +606,15 @@ describe("the guest folio workflow", () => {
     fireEvent.click(screen.getByRole("button", { name: "June Park" }));
     expect(container.querySelector('img[src*="june.webp"]')).toBeNull();
     expect(screen.getByText("JP")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: /All guests/ }));
     fireEvent.click(screen.getByRole("button", { name: "Priya Sharma" }));
     expect(container.querySelector('img[src*="priya.webp"]')).not.toBeNull();
   });
 
   it("starts with named guest choices and opens each blocker beside its remedy", () => {
     const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
-    expect(screen.getByRole("heading", { name: "Guests" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Guests" })).toBeVisible();
     expect(screen.getByRole("button", { name: blocked.person.fullName })).toBeVisible();
-    expect(screen.getByRole("button", { name: ready.person.fullName })).toBeVisible();
-    expect(container.querySelector("li#booking-a")).toBeNull();
+    expect(container.querySelector("[data-opened-guest]")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: blocked.person.fullName }));
     const folio = container.querySelector("li#booking-a") as HTMLElement;
     expect(within(folio).getByText("No certification is on file for this trip.")).toBeVisible();
@@ -613,6 +626,6 @@ describe("the guest folio workflow", () => {
       "href",
       `/shop/blue-mantis/divers/${blocked.person.id}#gear`,
     );
-    expect(screen.getByRole("button", { name: "Next guest needing attention" })).toBeVisible();
+    expect(within(folio).getByRole("button", { name: "Close" })).toBeVisible();
   });
 });

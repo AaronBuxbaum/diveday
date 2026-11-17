@@ -121,6 +121,8 @@ export type RosterFixtureOptions = {
   waivers: WaiverByBooking;
   rentalFit?: RentalFitByBooking;
   addDiverGroup?: ReactNode;
+  /** The wait list's panel under the guests. */
+  whoWantsInGroup?: ReactNode;
   paymentsConnected?: boolean;
   canManageOrders?: boolean;
   requiresPayment?: boolean;
@@ -149,6 +151,7 @@ function rosterProps({
   waivers,
   rentalFit,
   addDiverGroup,
+  whoWantsInGroup,
   paymentsConnected = false,
   canManageOrders = true,
   requiresPayment = false,
@@ -216,7 +219,7 @@ function rosterProps({
       certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
       moveSeat,
     },
-    slots: { addDiverGroup, arrival, record },
+    slots: { addDiverGroup, whoWantsInGroup, arrival, record },
   };
 }
 
@@ -226,9 +229,16 @@ export function renderRoster(options: RosterFixtureOptions) {
   if (!options.record && options.selectedBookingId !== null) {
     const id = options.selectedBookingId ?? options.roster[0]?.booking.id;
     const button = id ? rendered.container.querySelector(`[data-guest-open="${id}"]`) : null;
+    // Opening a guest in place; one in a folded group unfolds with it.
     if (button) fireEvent.click(button);
-    const reference = rendered.container.querySelector('details[id^="guest-reference-"] > summary');
-    if (reference && !reference.parentElement?.hasAttribute("open")) fireEvent.click(reference);
+    else if (id) {
+      for (const fold of rendered.container.querySelectorAll(
+        "button[data-fix-fold][aria-expanded='false']",
+      ))
+        fireEvent.click(fold);
+      const unfolded = rendered.container.querySelector(`[data-guest-open="${id}"]`);
+      if (unfolded) fireEvent.click(unfolded);
+    }
   }
   return rendered;
 }

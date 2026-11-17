@@ -184,108 +184,105 @@ export function RosterRow({
       ),
   );
   if (folio) {
+    // **The guest opened in place** (ADR 20261117-trip-page-clock): what fixes
+    // them first, then what is true about them, then the rare actions. The
+    // row above it already carries the name and the desk's tap.
     const content = (
-      <li id={`booking-${booking.id}`} className="list-none scroll-mt-24">
-        <div className="space-y-6">
-          <div className="space-y-5">
-            {s6.minor ||
-            s6.birthday ||
-            booking.participantType !== "diver" ||
-            (s6.blockerTexts.length === 0 && arrivalControl) ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                {headerLeft}
-                {s6.blockerTexts.length === 0 ? arrivalControl : null}
-              </div>
-            ) : null}
-            <GuestRequirements
-              lines={reasonLines}
-              blockers={s6.blockerTexts}
-              payment={s6.paymentRemedy}
-              t={t}
-              contact={
-                <a
-                  href={`#guest-reference-${booking.id}`}
-                  className={buttonClass({ variant: "link", flush: true })}
-                >
-                  {t("trips.folio.reviewContact")}
-                </a>
-              }
+      <div data-opened-guest={booking.id} className="space-y-6">
+        <div className="space-y-5">
+          {s6.minor || s6.birthday || booking.participantType !== "diver" ? (
+            <div className="flex flex-wrap items-center gap-3">{headerLeft}</div>
+          ) : null}
+          <GuestRequirements
+            lines={reasonLines}
+            blockers={s6.blockerTexts}
+            payment={s6.paymentRemedy}
+            t={t}
+            contact={
+              <a
+                href={`#guest-contact-${booking.id}`}
+                className={buttonClass({ variant: "link", flush: true })}
+              >
+                {t("trips.folio.reviewContact")}
+              </a>
+            }
+          />
+          {arrival ? null : identityContact}
+          {identityCheck}
+          {arrival ? null : reEntryNote}
+          {arrivalBelow}
+          {identityUnconfirmed || !actions.agencyCheckAction ? null : (
+            <AgencyCheckRow
+              personId={person.id}
+              cards={rows.agencyCheckCardsByPerson?.get(person.id) ?? []}
             />
-            {arrival ? null : identityContact}
-            {identityCheck}
-            {arrival ? null : reEntryNote}
-            {arrivalBelow}
-            {identityUnconfirmed || !actions.agencyCheckAction ? null : (
-              <AgencyCheckRow
-                personId={person.id}
-                cards={rows.agencyCheckCardsByPerson?.get(person.id) ?? []}
-              />
-            )}
-            {!waiverPlaced ? s6.waiverRemedy : null}
-            {!courseFormsPlaced && s6.hasCourseForms ? s6.courseFormsRemedy : null}
-            {outstanding}
-            {!identityUnconfirmed && booking.participantType !== "rider" ? (
-              <section className="border-t border-border pt-5">
-                <h3 className="font-semibold">{t("trips.clock.gear")}</h3>
-                <p className="mt-2 text-sm text-muted">
-                  {rentalFitLineText(
-                    t,
-                    context.trip.locale,
-                    rentalFitLine(
-                      rows.rentalFitByBooking.get(booking.id) ?? null,
-                      context.trip.shopRentalItems,
-                      booking.participantType,
-                    ),
-                  )}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-4">
-                  <Link
-                    href={`/shop/${context.trip.shopSlug}/divers/${person.id}#gear`}
-                    className={buttonClass({ variant: "link", flush: true })}
-                  >
-                    {t("trips.folio.recordFit")}
-                  </Link>
-                  <Link
-                    href={`/shop/${context.trip.shopSlug}/trips/${context.trip.tripId}/prep#assignments-heading`}
-                    className={buttonClass({ variant: "link", flush: true })}
-                  >
-                    {t("trips.folio.assignEquipment")}
-                  </Link>
-                </div>
-              </section>
-            ) : null}
-          </div>
-          <aside className="border-t border-border pt-4">
-            <AutoOpenDetails
-              openOnHash={`guest-reference-${booking.id}`}
-              id={`guest-reference-${booking.id}`}
-              open={holdOpen}
-              className="group/reference"
-            >
-              <summary className="flex min-h-12 cursor-pointer items-center justify-between font-semibold">
-                {t("trips.folio.reference")}
+          )}
+          {!waiverPlaced ? s6.waiverRemedy : null}
+          {!courseFormsPlaced && s6.hasCourseForms ? s6.courseFormsRemedy : null}
+          {outstanding}
+          {!paymentOutstanding ? s6.paymentRemedy : null}
+        </div>
+        <div
+          id={`guest-contact-${booking.id}`}
+          className="scroll-mt-24 border-t border-border pt-5"
+        >
+          {/* A flagged medical answer, and a held seat's matched record, stay
+              one tap further in: the desk's screen faces the queue. */}
+          {s6.flaggedPrompts.length > 0 || (arrival && identityContact) ? (
+            <details className="group/private mb-5">
+              <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
+                {t("trips.fixList.private")}
                 <DisclosureCaret
                   direction="down"
-                  className="size-4 group-open/reference:rotate-180"
+                  className="size-4 group-open/private:rotate-180"
                 />
               </summary>
-              <div className="space-y-5 pt-4">
+              {s6.referenceFacts}
+            </details>
+          ) : null}
+          {identityUnconfirmed || booking.participantType === "rider" ? null : (
+            <div className="mb-5">
+              <p className="text-sm font-semibold">{t("trips.clock.gear")}</p>
+              <p className="mt-1 text-sm text-muted">
+                {rentalFitLineText(
+                  t,
+                  context.trip.locale,
+                  rentalFitLine(
+                    rows.rentalFitByBooking.get(booking.id) ?? null,
+                    context.trip.shopRentalItems,
+                    booking.participantType,
+                  ),
+                )}
+              </p>
+              <div className="mt-1 flex flex-wrap gap-x-4">
                 <Link
-                  href={`/shop/${context.trip.shopSlug}/divers/${person.id}`}
-                  className={buttonClass({ variant: "link", flush: true })}
+                  href={`/shop/${context.trip.shopSlug}/divers/${person.id}#gear`}
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
                 >
-                  {t("trips.folio.openProfile")}
+                  {t("trips.folio.recordFit")}
                 </Link>
-                {s6.referenceFacts}
-                {reference}
-                {!paymentOutstanding ? s6.paymentRemedy : null}
-                {s6.blockerTexts.length > 0 ? arrivalControl : null}
-                {arrival?.details?.get(booking.id)}
+                <Link
+                  href={`/shop/${context.trip.shopSlug}/trips/${context.trip.tripId}/prep#assignments-heading`}
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                >
+                  {t("trips.folio.assignEquipment")}
+                </Link>
               </div>
-            </AutoOpenDetails>
-          </aside>
+            </div>
+          )}
+          {reference}
         </div>
-      </li>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-4">
+          {s6.blockerTexts.length > 0 ? arrivalControl : null}
+          {arrival?.details?.get(booking.id)}
+          <Link
+            href={`/shop/${context.trip.shopSlug}/divers/${person.id}`}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
+          >
+            {t("trips.folio.openProfile")}
+          </Link>
+        </div>
+      </div>
     );
     return arrival ? <TurnAwayRowStateProvider>{content}</TurnAwayRowStateProvider> : content;
   }

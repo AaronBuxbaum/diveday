@@ -91,7 +91,10 @@ describe("the blocking group is exactly what readiness refuses", () => {
 
   it("never groups blockers, even when guests share one", () => {
     const list = fixListOf(
-      [guest("a", { blockers: ["waiver_not_sent"] }), guest("b", { blockers: ["waiver_not_sent"] })],
+      [
+        guest("a", { blockers: ["waiver_not_sent"] }),
+        guest("b", { blockers: ["waiver_not_sent"] }),
+      ],
       { mode: "all" },
     );
     expect(list.blocking.map((item) => item.guestIds)).toEqual([["a"], ["b"]]);
@@ -118,7 +121,7 @@ describe("worth a minute", () => {
     );
     expect(list.worthAMinute.map((item) => [item.guestIds, item.reason])).toEqual([
       [["a", "c"], "fit_needed"],
-      [["b"], "fit_needed"],
+      [["b"], "recency"],
     ]);
   });
 

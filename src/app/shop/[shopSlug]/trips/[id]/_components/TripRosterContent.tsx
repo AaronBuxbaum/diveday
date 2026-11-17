@@ -253,9 +253,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
       {demand ? (
         // A card in a tone (`TONE_PANEL_CLASS`), not a 12px inset box: its
         // corners were tighter than every card's, its words 4px further in.
-        <section
-          className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint group-has-[[data-guest-folio]]/folio:hidden`}
-        >
+        <section className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint`}>
           <p className={groupLabelClass("warning")}>{t("trips.guests.demandSignal")}</p>
           {/* Balanced: at 390 it ended on "capacity" alone (K-504). */}
           <h2 className={`mt-1 text-balance ${SECTION_TITLE_CLASS}`}>
@@ -294,9 +292,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         </section>
       ) : null}
 
-      <div className="group-has-[[data-guest-folio]]/folio:hidden">
-        <TrainingPlanWithDepth context={context} />
-      </div>
+      <TrainingPlanWithDepth context={context} />
       <RosterSection
         trip={{
           shopSlug,

@@ -368,34 +368,42 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
  * which took three specs red on CI at once.
  *
  * The ledger's own region is the honest scope: `RosterSection` labels it with
- * `trips.roster.heading` on any page that owns its masthead, which the
+ * `trips.clock.guests` on any page that owns its masthead, which the
  * departure does. English, like every other locator in this suite.
  */
 export async function openGuestFolio(page: Page, diverName: string): Promise<void> {
   await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
   const folios = page.locator("[data-guest-folios]").filter({ visible: true });
   if (!(await folios.count())) return;
-  if (await folios.getByRole("heading", { name: diverName, exact: true }).count()) return;
-  const all = folios.getByRole("button", { name: "All guests", exact: true });
-  if (await all.count()) await all.click();
-  const search = folios.getByRole("searchbox", { name: "Find a guest", exact: true });
-  if (await search.count()) await search.fill("");
-  const name = folios.locator("button[data-guest-open]").filter({
-    has: page.locator("span", { hasText: new RegExp(`^${escapeRegExp(diverName)}$`) }),
-  });
+  await unfoldGuestGroups(folios);
+  const name = guestOpenButton(page, folios, diverName);
   // A caller may be asserting that a cancelled or moved person is absent.
   if ((await name.count()) === 0) return;
-  await name.click();
-  await expect(folios.getByRole("heading", { name: diverName, exact: true })).toBeVisible();
+  if ((await name.getAttribute("aria-expanded")) !== "true") await name.click();
+  await expect(name).toHaveAttribute("aria-expanded", "true");
+}
+
+/** The fix list folds everyone fine into one line; open every fold. */
+async function unfoldGuestGroups(folios: Locator): Promise<void> {
+  const folded = folios.locator('button[data-fix-fold][aria-expanded="false"]');
+  while (await folded.count()) await folded.first().click();
+}
+
+/** The button that opens a guest in place, found by the name it labels. */
+function guestOpenButton(page: Page, folios: Locator, diverName: string): Locator {
+  return folios.locator("button[data-guest-open]").filter({
+    has: page.locator('span[id^="guest-name-"]', {
+      hasText: new RegExp(`^${escapeRegExp(diverName)}$`),
+    }),
+  });
 }
 
 export async function rosterRow(page: Page, diverName: string): Promise<Locator> {
   await openGuestFolio(page, diverName);
-  const folio = page
-    .locator("[data-guest-folio]")
-    .filter({ visible: true })
-    .filter({ has: page.getByRole("heading", { name: diverName, exact: true }) });
-  const bookingId = (await folio.count()) ? await folio.getAttribute("data-guest-folio") : null;
+  const folios = page.locator("[data-guest-folios]").filter({ visible: true });
+  const name = (await folios.count()) ? guestOpenButton(page, folios, diverName) : null;
+  const bookingId =
+    name && (await name.count()) ? await name.getAttribute("data-guest-open") : null;
   if (bookingId) return page.locator(`#roster li[id="booking-${bookingId}"]`);
   return page.locator('#roster li[id^="booking-"]').filter({ hasText: diverName });
 }
@@ -540,14 +548,13 @@ export async function openFirstRosterRowWith(page: Page, control: string): Promi
   await expect(page.locator("#roster").filter({ visible: true })).toBeVisible();
   const folios = page.locator("[data-guest-folios]").filter({ visible: true });
   if (await folios.count()) {
-    const all = folios.getByRole("button", { name: "All guests", exact: true });
-    if (await all.count()) await all.click();
-    await folios.getByRole("searchbox", { name: "Find a guest", exact: true }).fill("");
+    await unfoldGuestGroups(folios);
     const ids = await folios
       .locator("button[data-guest-open]")
       .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("data-guest-open")));
     for (const id of ids) {
-      await folios.locator(`button[data-guest-open="${id}"]`).click();
+      const open = folios.locator(`button[data-guest-open="${id}"]`).first();
+      if ((await open.getAttribute("aria-expanded")) !== "true") await open.click();
       const candidate = page.locator(`#roster li[id="booking-${id}"]`).first();
       if (
         await candidate.locator("button", { hasText: new RegExp(`^\\s*${control}\\s*$`) }).count()
@@ -555,7 +562,6 @@ export async function openFirstRosterRowWith(page: Page, control: string): Promi
         await openRosterDetails(candidate);
         return candidate;
       }
-      await all.click();
     }
     throw new Error(`No guest folio offers ${control}`);
   }
@@ -853,8 +859,10 @@ export async function openRosterDetails(row: Locator): Promise<void> {
     .locator(":scope > details")
     .filter({ has: row.page().locator('summary[aria-label^="Details for "]') });
   if (await disclosure.count()) await openIfClosed(disclosure);
-  const reference = row.locator('details[id^="guest-reference-"]');
-  if (await reference.count()) await openIfClosed(reference);
+  // The opened guest's private details: a flagged medical answer, a held
+  // seat's matched record.
+  const privateDetails = row.locator("[data-opened-guest] details.group\\/private");
+  if (await privateDetails.count()) await openIfClosed(privateDetails.first());
 }
 
 /**

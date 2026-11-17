@@ -3,7 +3,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { FIGURE_HERO_CLASS } from "@/components/ui/typography";
 import { openBoardingObservationsByTrip } from "@/db/boarding-observations";
 import type { AppDb } from "@/db/client";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
@@ -288,7 +287,7 @@ export async function buildArrivalDesk({
       } else {
         // A diver who arrived and has since gone blocked can still be sent
         // home, until the boat leaves with them.
-        placeTurnAway(turnAwayFor(row), row.bookingId, { controls, below });
+        placeTurnAway(turnAwayFor(row), row.bookingId, { details });
       }
       continue;
     }
@@ -308,9 +307,6 @@ export async function buildArrivalDesk({
         />,
       );
     }
-    // The door beside the Blocked pill, its confirm at the row's foot (A08).
-    const turnAway = ready ? null : turnAwayFor(row);
-    placeTurnAway(turnAway, row.bookingId, { controls, below });
     const claim = noShowClaimFor(row);
     if (claim) {
       // **"Not here" on a blocked row too** (dive-domain review 2026-10-05):
@@ -345,6 +341,8 @@ export async function buildArrivalDesk({
         />,
       );
     }
+    // A blocked guest may be turned away, after "Not here" on the opened guest.
+    placeTurnAway(ready ? null : turnAwayFor(row), row.bookingId, { details });
   }
 
   // **"Running late, said 7:42"** (J3): the diver's own word, on a seat still
@@ -466,21 +464,11 @@ export async function buildArrivalDesk({
     );
   }
 
-  // **The figure and its remainders** read off one tally
-  // (`src/lib/check-in.ts`), so nobody has to subtract to check. "Here" is
-  // arrival — checked in and cleared to board. Whether the desk is *finished*
-  // is the roster's question (a contact number, a balance), so the roster
-  // says whether the cleared line may show.
-  const { here, expected, cantBoard, toCome, notHere, turnedAway } = counterTally(rows);
-  const remainder =
-    [
-      toCome > 0 ? t("checkIn.instrument.toCome", { count: toCome }) : null,
-      cantBoard > 0 ? t("checkIn.instrument.cantBoard", { count: cantBoard }) : null,
-      notHere > 0 ? t("checkIn.instrument.notHere", { count: notHere }) : null,
-      turnedAway > 0 ? t("checkIn.instrument.turnedAway", { count: turnedAway }) : null,
-    ]
-      .filter(Boolean)
-      .join(" · ") || null;
+  // **The bar** reads off one tally (`src/lib/check-in.ts`), so nobody has to
+  // subtract. "Here" is arrival: checked in and cleared to board. Whether the
+  // desk is *finished* is the guest list's question (a contact number, a
+  // balance), so the list says whether the cleared line may show.
+  const { here, expected, cantBoard } = counterTally(rows);
   const instrument =
     rows.length > 0
       ? (deskWorkOpen: boolean) => (
@@ -489,15 +477,7 @@ export async function buildArrivalDesk({
             expected={expected}
             cantBoard={cantBoard}
             cleared={counterIsClear(rows) && !deskWorkOpen}
-            remainder={remainder}
             clearedLabel={t("checkIn.clearedTitle")}
-            figure={t.rich("checkIn.instrument.hereOf", {
-              here,
-              expected,
-              figure: (chunks) => (
-                <span className={`${FIGURE_HERO_CLASS} text-foreground`}>{chunks}</span>
-              ),
-            })}
           />
         )
       : undefined;
@@ -566,29 +546,22 @@ function turnAwayDoor({
 }
 
 /**
- * The turn-away door leads the row's controls (beside the Blocked pill, A08)
- * and its confirm sits at the row's foot. Whatever the row already holds in
- * its control slot stays, after the door.
+ * Turn away is a rare act, so it waits on the opened guest beside "Not here"
+ * (ADR 20261117-trip-page-clock): the door and its confirm, together.
  */
 function placeTurnAway(
   turnAway: { door: ReactNode; panel: ReactNode } | null,
   bookingId: string,
-  slots: { controls: Map<string, ReactNode>; below: Map<string, ReactNode> },
+  slots: { details: Map<string, ReactNode> },
 ) {
   if (!turnAway) return;
-  const held = slots.controls.get(bookingId);
-  slots.controls.set(
+  const held = slots.details.get(bookingId);
+  slots.details.set(
     bookingId,
-    held ? (
-      // One line beside what the row already held ("Checked in", Undo): the
-      // action side stays one row at every width (visual triage, layer 3).
-      <span className="inline-flex items-center gap-3 whitespace-nowrap">
-        {turnAway.door}
-        {held}
-      </span>
-    ) : (
-      turnAway.door
-    ),
+    <>
+      {held}
+      {turnAway.door}
+      {turnAway.panel}
+    </>,
   );
-  slots.below.set(bookingId, turnAway.panel);
 }

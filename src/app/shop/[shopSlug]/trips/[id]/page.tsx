@@ -285,7 +285,7 @@ export default async function ManageTripPage({
       {/* **One gap between every section, masthead included** (K-262). The
           roster's own blocks are `display: contents`, in this flow, on the
           same stack (`TripRosterContent`). */}
-      <div className="group/folio space-y-6 sm:space-y-10 group-has-[[data-guest-folio]]/folio:space-y-3">
+      <div className="space-y-6 sm:space-y-10">
         <TripHeader
           trip={trip}
           facts={frame.facts}

@@ -224,7 +224,10 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     });
 
     expect(screen.getByText(/Matched to this record on a guess/)).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Marisol Vega" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Marisol Vega" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     expect(
       screen.getByRole("link", { name: staffTranslator("en-US")("trips.folio.openProfile") }),
     ).toHaveAttribute("href", `/shop/blue-mantis/divers/${matched.person.id}`);

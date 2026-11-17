@@ -46,7 +46,7 @@ export function TripGuestList({
         refreshing: t("checkIn.pullToRefresh.refreshing"),
       }}
     >
-      <div className="space-y-6 group-has-[[data-guest-folio]]/folio:hidden">
+      <div className="space-y-6">
         <GuestBands {...{ overview, showMinimum, shopSlug, locale, timeZone, t }} />
         <PulseFacts
           facts={pulseFacts}
