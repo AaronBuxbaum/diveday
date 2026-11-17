@@ -10,6 +10,7 @@ import {
   openDiverFileGroup,
   openIfClosed,
   openManifestPerson,
+  openNewGuestForm,
   openRosterDetails,
   openTripFromBoard,
   openTripTab,
@@ -229,8 +230,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
 
   const tripPath = await tripPathByTitle(page, SHOP, title);
   await page.goto(`${tripPath}`);
-  await page.getByRole("link", { name: "Add diver" }).click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
   await page.getByLabel("Full name").fill(diverName);
   await page.getByLabel("Email").fill(`contact-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();

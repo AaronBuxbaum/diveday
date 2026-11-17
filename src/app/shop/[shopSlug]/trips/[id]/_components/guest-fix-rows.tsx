@@ -205,7 +205,8 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
  *   the waiver again, call), then "N guests are ready" with the crew line.
  * - `filling`: one quiet Booked card: everyone fine as one counted line, then
  *   whoever will need something later, without a button.
- * - `after`: Can't board yet, Worth a minute, then everyone else folded.
+ * - `after`: Can't board yet, then everyone else folded; a check-in advisory
+ *   no longer holds anyone out of the fold.
  * - `listed`: everyone who was booked, by name, with nothing to make ready: a
  *   cancelled trip, or a wrapped-up one with no roll call taken.
  *
@@ -496,11 +497,20 @@ export function guestFixRows(
                     },
                   ]
                 : []),
-              worth,
+              // Once the boat has left, a check-in advisory is no longer worth a
+              // minute: its guest folds in with everyone else.
+              ...(phase === "after" ? [] : [worth]),
               folded(
                 "fine",
                 t(mode === "checkin" ? "trips.fixList.groups.here" : "trips.fixList.groups.fine"),
-                list.fine,
+                phase === "after"
+                  ? [
+                      ...new Set([
+                        ...list.fine,
+                        ...list.worthAMinute.flatMap((item) => item.guestIds),
+                      ]),
+                    ]
+                  : list.fine,
                 "success",
               ),
               ...released,

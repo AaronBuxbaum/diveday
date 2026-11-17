@@ -271,6 +271,7 @@ describe("the roster's row geometry", () => {
         ["a", signedWaiver],
         ["r", signedWaiver],
       ]) as WaiverByBooking,
+      phase: "ready",
     });
 
     const blocker = screen.getByText("No certification is on file for this trip.");
@@ -540,6 +541,7 @@ describe("the guest folio workflow", () => {
       ...fixtures,
       roster: [confirmed, hidden],
       selectedBookingId: null,
+      phase: "ready",
     });
     expect(container.querySelector('img[src^="/api/person-photos/"]')).not.toBeNull();
     expect(container.querySelector('img[src*="june.webp"]')).toBeNull();
@@ -563,6 +565,7 @@ describe("the guest folio workflow", () => {
         [held.booking.id, readinessRow("blocked", [{ code: "identity_unconfirmed" }])],
       ]) as ReadinessByBooking,
       selectedBookingId: null,
+      phase: "ready",
     });
     expect(container.querySelector('img[src*="priya.webp"]')).not.toBeNull();
     expect(container.querySelector('img[src*="june.webp"]')).toBeNull();

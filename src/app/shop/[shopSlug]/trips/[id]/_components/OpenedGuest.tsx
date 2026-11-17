@@ -70,6 +70,10 @@ export function OpenedGuest({
       ? waiver.completedAt
       : null;
   const facts: { key: string; label: string; value: ReactNode }[] = [];
+  // A minor's age is said in years: it decides who signs and how deep they go.
+  if (seat.minor && seat.age !== null) {
+    facts.push({ key: "age", label: t("trips.fixList.facts.age"), value: seat.age });
+  }
   if (showsPersonDetail && booking.participantType !== "rider") {
     facts.push({
       key: "card",
@@ -157,6 +161,17 @@ export function OpenedGuest({
   }
   if (seat.depthShared && seat.depthText) {
     facts.push({ key: "depth", label: t("trips.roster.depthChip"), value: seat.depthText });
+  }
+  if (showsPersonDetail && person.email) {
+    facts.push({
+      key: "email",
+      label: t("trips.fixList.facts.email"),
+      value: (
+        <a href={`mailto:${person.email}`} className="hover:underline">
+          {person.email}
+        </a>
+      ),
+    });
   }
 
   const content = (

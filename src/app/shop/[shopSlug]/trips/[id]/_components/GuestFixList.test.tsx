@@ -79,12 +79,26 @@ describe("a row says the name, one phrase, and one button", () => {
       readiness: new Map([["r", readinessRow("ready")]]) as ReadinessByBooking,
       waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
       selectedBookingId: null,
+      phase: "ready",
     });
     expect(group("cantBoard")).toBeNull();
     const worth = group("worth");
     expect(within(worth).getByRole("button", { name: "Olga Rust" })).toHaveAccessibleDescription(
       "Hasn’t dived in a while · 1 more",
     );
+  });
+
+  it("folds a check-in advisory in with everyone else once the boat has left", () => {
+    const rusty = entry("r", "Olga Rust");
+    renderRoster({
+      roster: [{ ...rusty, booking: { ...rusty.booking, lastDivedBand: "over_five_years" } }],
+      readiness: new Map([["r", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+      selectedBookingId: null,
+      phase: "after",
+    });
+    expect(group("worth")).toBeNull();
+    expect(group("fine")).toHaveTextContent("Everyone else · Olga Rust");
   });
 
   it("says a snorkeler and the party they come with in the one phrase", () => {
@@ -172,10 +186,41 @@ describe("a guest opened in place", () => {
       readiness: blockers,
       waivers,
       selectedBookingId: "a",
+      phase: "ready",
     });
     fireEvent.click(screen.getByRole("button", { name: "Lena Fischer" }));
     expect(document.querySelectorAll("[data-opened-guest]")).toHaveLength(1);
     expect(document.querySelector('[data-opened-guest="b"]')).not.toBeNull();
+  });
+});
+
+describe("an opened guest's facts", () => {
+  it("names their email, and a minor's age", () => {
+    const mia = entry("m", "Mia Young", { dateOfBirth: "2014-03-01" });
+    renderRoster({
+      roster: [mia],
+      readiness: new Map([["m", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["m", signedWaiver]]) as WaiverByBooking,
+      selectedBookingId: "m",
+      phase: "ready",
+    });
+    const opened = document.querySelector('[data-opened-guest="m"]') as HTMLElement;
+    expect(within(opened).getByText("m@example.com")).toBeVisible();
+    expect(within(opened).getByText("Age")).toBeVisible();
+  });
+
+  it("gives an adult no age line", () => {
+    const ada = entry("d", "Ada Grown", { dateOfBirth: "1980-03-01" });
+    renderRoster({
+      roster: [ada],
+      readiness: new Map([["d", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["d", signedWaiver]]) as WaiverByBooking,
+      selectedBookingId: "d",
+      phase: "ready",
+    });
+    const opened = document.querySelector('[data-opened-guest="d"]') as HTMLElement;
+    expect(within(opened).getByText("d@example.com")).toBeVisible();
+    expect(within(opened).queryByText("Age")).toBeNull();
   });
 });
 

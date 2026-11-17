@@ -9,6 +9,7 @@ import {
   openBookingActions,
   openDeckDetails,
   openGuestFolio,
+  openNewGuestForm,
   openTripAbout,
   openTripAboutRow,
   openTripMore,
@@ -406,8 +407,7 @@ test.describe("undoing a removal after the trip is canceled", () => {
     if (!tripPath) throw new Error(`no trip card found for ${title}`);
 
     await page.goto(`${tripPath}`);
-    await page.getByRole("link", { name: "Add diver" }).click();
-    await page.waitForURL(/\/divers\?add=1/);
+    await openNewGuestForm(page);
     await page.getByLabel("Full name").fill(diver);
     await page.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();

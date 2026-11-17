@@ -585,7 +585,7 @@
     "confirmIdentityMessage": "¿Confirmar que esta reserva es de {name}? Embarcará con las certificaciones y la exención de {name}, y no se puede deshacer.",
     "confirmRemoveBooking": "¿Eliminar a {name} de esta salida? Si tiene derecho a reembolso, se emitirá automáticamente.",
     "courseSeatCarriesCharters": "{name} tiene plaza en {trips} porque este curso le da ese nivel. Esa plaza sigue reservada y necesita la certificación para embarcar.",
-    "confirmResendWaiver": "¿Enviar a {name} un nuevo enlace de exención? Su enlace anterior dejará de funcionar.",
+    "confirmResendWaiver": "¿Volver a enviar a {name} su enlace de exención?",
     "createOrder": "Crear pedido",
     "delete": "Eliminar",
     "deletingEllipsis": "…",
@@ -1359,6 +1359,8 @@
       "cardChecked": "{level} · verificada",
       "cardUnchecked": "{level} · sin verificar",
       "noCard": "Ninguna registrada",
+      "age": "Edad",
+      "email": "Correo",
       "setFit": "Indicar tallas"
     }
   }

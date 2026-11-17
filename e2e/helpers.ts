@@ -474,16 +474,75 @@ export async function openTripMenuLink(page: Page, name: string): Promise<void> 
 }
 
 /**
- * Open the trip's add form (`?add=1`) from the header's More menu, and wait
- * for its returning-diver search.
+ * Open the trip's add form (`#add-a-booking`, `?add=1`): from the header's
+ * More menu while the trip has a seat, by its address on a full one (whose
+ * form wait-lists). Returns the form.
  */
+export async function addGuestForm(page: Page): Promise<Locator> {
+  const t = staffTranslator("en-US");
+  const form = page.locator("#add-a-booking");
+  if ((await form.count()) === 0) {
+    await page.waitForURL(TRIP_ROOT_URL);
+    const trigger = page
+      .getByRole("button", { name: t("trips.clock.more"), exact: true })
+      .filter({ visible: true })
+      .first();
+    await trigger.click();
+    const add = page
+      .locator("[data-more-menu-panel]")
+      .getByRole("link", { name: t("trips.clock.addGuest"), exact: true });
+    if (await add.count()) {
+      await add.click();
+    } else {
+      await page.keyboard.press("Escape");
+      const url = new URL(page.url());
+      url.searchParams.set("add", "1");
+      await page.goto(url.toString());
+    }
+    await page.waitForURL(/[?&]add=1/);
+  }
+  await expect(form).toBeVisible();
+  return form;
+}
+
+/** The add form's returning-diver search, the form opened first. */
 export async function openAddAGuest(page: Page): Promise<Locator> {
   const t = staffTranslator("en-US");
-  await openTripMenuLink(page, t("trips.clock.addGuest"));
-  await page.waitForURL(/[?&]add=1/);
-  const find = page.getByRole("searchbox", { name: t("trips.addDiver.findLabel") });
+  const find = (await addGuestForm(page)).getByRole("searchbox", {
+    name: t("trips.addDiver.findLabel"),
+  });
   await expect(find).toBeVisible();
   return find;
+}
+
+/**
+ * Seat a returning diver on the trip on screen from the add form's search,
+ * and wait for the page to open them in place.
+ */
+export async function addReturningGuest(page: Page, name: string): Promise<void> {
+  const t = staffTranslator("en-US");
+  const find = await openAddAGuest(page);
+  await find.fill(name);
+  await find.press("Enter");
+  await Promise.all([
+    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
+    page
+      .locator("#add-a-booking")
+      .getByRole("button", { name: t("trips.addDiver.addPersonAriaLabel", { name }) })
+      .click(),
+  ]);
+  await expect(page.getByRole("button", { name, exact: true, expanded: true })).toBeVisible();
+}
+
+/** The new-guest form for this trip, through the add form's "Add a guest". */
+export async function openNewGuestForm(page: Page): Promise<void> {
+  const t = staffTranslator("en-US");
+  const form = await addGuestForm(page);
+  await form
+    .getByRole("link", { name: t("trips.addDiver.addDiver"), exact: true })
+    .first()
+    .click();
+  await page.waitForURL(/\/divers\?add=1/);
 }
 
 /** The series page under Schedule for the departure on screen, where the run is changed. */

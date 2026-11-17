@@ -1,4 +1,3 @@
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { scopedHash } from "@/lib/element-id";
 import { ExecutedDiveLog } from "../manifest/_components/ExecutedDiveLog";
@@ -66,7 +65,7 @@ export function TripDiveRecord({
   });
   return (
     <section aria-labelledby="dive-record-heading" className="space-y-4">
-      <h2 id="dive-record-heading" className={SECTION_TITLE_CLASS}>
+      <h2 id="dive-record-heading" className="font-semibold">
         {log.labels.heading}
       </h2>
       {afterDives.map((manifest) => (

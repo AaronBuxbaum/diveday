@@ -1,8 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  addReturningGuest,
   findTripOnBoard,
   openDiverFileGroup,
+  openNewGuestForm,
   openRosterDetails,
   openTripTab,
   rosterRow,
@@ -13,13 +15,6 @@ signedInAsOwner();
 async function showAllGuests(page: Page) {
   const all = page.getByRole("button", { name: "All guests", exact: true });
   if (await all.count()) await all.click();
-}
-
-async function waitForAddedGuest(page: Page, name: string) {
-  await showAllGuests(page);
-  await expect(
-    page.locator("button[data-guest-open]").filter({ has: page.getByText(name, { exact: true }) }),
-  ).toBeVisible();
 }
 
 const SHOP = "blue-mantis";
@@ -88,9 +83,7 @@ async function seatNewcomerWithPendingCard(page: Page, departure: RegExp, prefix
 
   const stamp = Date.now();
   const newcomer = `${prefix} ${prefix === "Rory" ? "Quill" : "Bracken"}${stamp}`;
-  const addDiver = page.locator("#add-diver").filter({ visible: true });
-  await addDiver.getByRole("link", { name: "Add a guest", exact: true }).click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
   await page.getByLabel("Full name").fill(newcomer);
   await page.getByLabel("Email").fill(`${prefix.toLowerCase()}-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -250,14 +243,7 @@ test("a certification-pending row on Today checks the card in place, with Undo",
   const trip = await findTripOnBoard(page, SHOP, /Two-Tank Reef — Molasses & French/);
   await trip.click();
   await openTripTab(page, "Trip");
-  const addDiver = page.locator("#add-diver").filter({ visible: true });
-  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill(name);
-  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
-  await Promise.all([
-    page.waitForURL((url) => url.searchParams.get("notice")?.startsWith("diver-added") === true),
-    addDiver.getByRole("button", { name: `Add ${name} to the trip` }).click(),
-  ]);
-  await waitForAddedGuest(page, name);
+  await addReturningGuest(page, name);
   await expect(await rosterRow(page, name)).toBeVisible();
 
   await page.goto(`/shop/${SHOP}`);

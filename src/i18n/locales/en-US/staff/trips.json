@@ -585,7 +585,7 @@
     "confirmIdentityMessage": "Confirm this booking is {name}? They’ll board on {name}’s cards and waiver, and this can’t be undone.",
     "confirmRemoveBooking": "Remove {name} from this trip? If they’re eligible for a refund, it’s issued automatically.",
     "courseSeatCarriesCharters": "{name} is booked on {trips} because this course gets them to that level. That seat stays booked, and still needs the card to board.",
-    "confirmResendWaiver": "Send {name} a new waiver link? Their previous link will stop working.",
+    "confirmResendWaiver": "Send {name} their waiver link again?",
     "createOrder": "Create order",
     "delete": "Delete",
     "deletingEllipsis": "…",
@@ -1359,6 +1359,8 @@
       "cardChecked": "{level} · checked",
       "cardUnchecked": "{level} · not checked",
       "noCard": "None on file",
+      "age": "Age",
+      "email": "Email",
       "setFit": "Set sizes"
     }
   }
