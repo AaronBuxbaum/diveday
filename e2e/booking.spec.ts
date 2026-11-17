@@ -19,6 +19,7 @@ import {
   openTripActivity,
   openTripFromBoard,
   openTripMore,
+  openTripPhase,
   payCheckoutThroughWebhook,
   rosterRow,
   saveDiveIntent,
@@ -170,15 +171,15 @@ test.describe("staff", () => {
     const noraRow = (await rosterRow(page, "Nora Quinn")).filter({ visible: true });
     await openRosterDetails(noraRow);
     await openBookingActions(noraRow);
-    await noraRow.getByRole("button", { name: "Remove booking" }).click();
+    await noraRow.getByRole("button", { name: "Cancel booking" }).click();
     await expect(noraRow).toContainText("Remove Nora Quinn from this trip?");
     await noraRow.getByRole("button", { name: "Never mind" }).click();
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
 
     await openRosterDetails(noraRow);
     await openBookingActions(noraRow);
-    await noraRow.getByRole("button", { name: "Remove booking" }).click();
-    await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
+    await noraRow.getByRole("button", { name: "Cancel booking" }).click();
+    await noraRow.getByRole("button", { name: "Yes, cancel booking" }).click();
     await expect(page.getByRole("status")).toContainText("Booking canceled");
     // Scoped to the roster: removals now also write the trip activity trail
     // ("… removed Nora Quinn from the trip"), so the name legitimately stays
@@ -262,7 +263,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Book my seat" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
     await openTripAbout(page);
-    await openTripAboutRow(page, "Departure details");
+    await openTripAboutRow(page, "Name and description");
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("status")).toContainText("Changes saved");
@@ -273,10 +274,10 @@ test.describe("staff", () => {
     // Standing a departure down is a rare act, so it lives in the About
     // panel's "More for this departure" list now (slice B).
     await openTripMore(page);
-    await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+    await page.getByRole("button", { name: "Cancel this trip", exact: true }).click();
     // Standing a departure down states its cost and takes a second tap
     // (`InlineConfirm`) — no dialog, and the door is the sentence.
-    await page.getByRole("button", { name: "Yes, cancel this departure" }).click();
+    await page.getByRole("button", { name: "Yes, cancel this trip" }).click();
     // The cancellation badge is in the shared masthead and keeps the state
     // visible after the redirect; match the word rather than the lifecycle
     // notice, which is also present on this page.
@@ -346,10 +347,7 @@ test.describe("staff counts and intent", () => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
-    await page
-      .getByRole("navigation", { name: "Departure" })
-      .getByRole("link", { name: "The day" })
-      .click();
+    await openTripPhase(page, "ready");
     await page.getByRole("heading", { name: "Buddy teams" }).click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
     // name in it and no suggested pairing.
@@ -475,10 +473,10 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await openTripFromBoard(page, "Wreck Trip — Spiegel Grove");
   // Who is waiting is the guests ledger's "Who wants in" panel
   // (ADR 20261017-one-interest-with-a-scope).
-  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await expect(page.locator("#who-wants-in")).toBeVisible();
   await expect(page.getByText("Nora Quinn").last()).toBeVisible();
   // Staff read when each diver asked, not a rank: the list is unnumbered.
-  await expect(page.getByText(/Asked /).last()).toBeVisible();
+  await expect(page.getByText(/Waiting since /).last()).toBeVisible();
 });
 
 // H-20260724-one-person-per-email: a self-service booking that reuses an existing diver's email under a

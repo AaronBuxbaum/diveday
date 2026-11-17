@@ -84,6 +84,14 @@ export const STAFF_HYDRATION_PROBE = '[aria-keyshortcuts="Meta+K Control+K"]';
  */
 export const STAFF_NAV_PROBE = "nav[data-staff-nav]";
 
+/**
+ * A page body's own mark (`src/components/PageBodyHydrated.tsx`), drawn once
+ * the body's effects have run: the Trip page's body hydrates after its header,
+ * and its `ScrollToHash` and `FlashParams` moved the page under a click made
+ * in between (three specs in three CI runs on PR #4674).
+ */
+export const PAGE_BODY_PROBE = "[data-page-body]";
+
 /** A disclosure (`AutoOpenDetails`), which draws `data-hydrated="true"` once React owns it. */
 export const DISCLOSURE_PROBE = "details[data-auto-open-details]";
 
@@ -133,6 +141,10 @@ export async function settleStaffHydration(page: Page): Promise<void> {
   await expect(
     page.locator(`${STAFF_NAV_PROBE}:not([data-hydrated="true"])`),
     `${pathname} loaded, but React never took over its section nav`,
+  ).toHaveCount(0);
+  await expect(
+    page.locator(`${PAGE_BODY_PROBE}:not([data-hydrated="true"]):visible`),
+    `${pathname} loaded, but React never took over its page body`,
   ).toHaveCount(0);
   // A disclosure toggled while React is still adopting it is the one place a click
   // and hydration interleave (`AutoOpenDetails`, the emergency reference's

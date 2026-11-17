@@ -16,7 +16,9 @@ import {
   manifestRow,
   openCounterFor,
   openDeckDetails,
+  openMoreSettings,
   openRosterDetails,
+  openSeriesPage,
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
@@ -133,7 +135,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripAbout(page);
-        await openTripAboutRow(page, "Timing");
+        await openTripAboutRow(page, "When");
         await page.getByLabel("Departs").fill("13:45");
         await page.getByLabel("Returns").fill("17:15");
         await page.getByRole("button", { name: "Save changes" }).click();
@@ -154,7 +156,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripAbout(page);
-        await openTripAboutRow(page, "Timing");
+        await openTripAboutRow(page, "When");
         await page.locator('input[name="dayCount"]').fill("3");
         const dayThree = page.getByLabel("Day 3", { exact: true });
         await dayThree.waitFor();
@@ -217,8 +219,8 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-reschedule-hold", scheme);
       });
 
-      // The new-diver form for a boat's Divers tab, no required email. The boat
-      // is the form's own `tripId`, so there is no picker. The boat's Divers tab
+      // The new-diver form for a boat's Trip page, no required email. The boat
+      // is the form's own `tripId`, so there is no picker. The boat's Trip page
       // (its search and "Add diver") is the departure capture's.
       const openWalkInForm = async (page: Page) => {
         const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
@@ -268,7 +270,7 @@ for (const scheme of ["light", "dark"] as const) {
       // "Add a booking" with no boat chosen (#2737): the shop home's panel,
       // its departure picker one ledger grouped by day (slice 9g of ADR
       // 20260827-the-shops-shelves), seats-left on every row. A row opens that
-      // departure's own Divers tab with the add band focused (`?add=1`), the
+      // departure's own Trip page with the add band focused (`?add=1`), the
       // one place a diver is seated; that band is the second capture. Two
       // tests, so a broken picker cannot take the band's baseline with it.
       test(`the Add-booking departure picker renders true to the design (${scheme})`, async ({
@@ -615,7 +617,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator('select[name="participantType"]:visible').waitFor();
         await capture(page, "trip-coming-as-editor", scheme);
 
-        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}?view=details`);
+        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}?view=edit`);
+        await openMoreSettings(page);
         await expect(page.locator("details#participant-terms")).toBeVisible();
         await capture(page, "trip-details-participant-terms", scheme);
 
@@ -717,17 +720,16 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("status")).toContainText(title);
         await openTripFromBoard(page, title);
         await openTripAbout(page);
-        // The About panel's "Repeats" row — its label and cadence sentence are
-        // the summary, and the headed "Repeating trip" card is gone.
-        await page.locator("details#series").waitFor();
+        // Edit trip's Repeats card: the run in one line and its door to Schedule.
+        await page.locator("section#series").waitFor();
         await capture(page, "trip-repeating-panel", scheme);
 
-        // And the cadence editor open — the weekday chips carrying the run's
-        // real answer, which is the state the collapsed panel above can never
-        // show. Same page, one click, so it costs a click rather than a build.
-        await openTripAboutRow(page, "Repeats");
+        // And the run's page under Schedule, the weekday chips carrying the
+        // run's real answer. One click, so it costs a click rather than a build.
+        await openSeriesPage(page);
         await page.getByRole("group", { name: "Repeats on" }).waitFor();
         await capture(page, "trip-repeating-cadence", scheme);
+        await page.goBack();
 
         // And what a diver reads on the same departure: the header's run line,
         // "Runs every … · next …" (fourth UX review, item 35).

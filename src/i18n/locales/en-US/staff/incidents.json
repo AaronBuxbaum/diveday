@@ -1,7 +1,6 @@
 {
   "trip": {
     "title": "Incident reports",
-    "description": "Write down what happened while it is fresh. Owners, managers, and the person who wrote a report can read it.",
     "start": "Report an incident",
     "writtenBy": "Written by {name}",
     "notTimed": "Time not written yet"

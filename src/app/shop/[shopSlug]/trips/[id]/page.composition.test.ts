@@ -8,22 +8,48 @@ import { describe, expect, it } from "vitest";
  * behaviour of what it composes; that lives beside each component.
  */
 const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const BODY = SOURCE.slice(SOURCE.indexOf("export default async function"));
 
-describe("the departure's tabs", () => {
+describe("the trip page as The Clock", () => {
   /**
-   * ADR 20261001-logbook, decision 3, as amended 2026-10-05: the departure is
-   * four tabs under a stage stepper. This page is two of them, Divers and Details, chosen by `?view=`
-   * or by an About form's own notice, so a save on Details lands back on it.
+   * ADR 20261117-trip-page-clock: the header, the five-phase strip, one
+   * sentence, then one phase's panel.
    */
-  it("draws the tabs right under the masthead, on every departure", () => {
-    const body = SOURCE.slice(SOURCE.indexOf("export default async function"));
-    const masthead = body.indexOf("<TripPageHeader");
-    const tabs = body.indexOf("<TripTabs");
-    expect(tabs).toBeGreaterThan(masthead);
-    // Never behind `cancelled`: the Boat tab is a blown-out departure's way to
-    // its roll call (dive-domain review 20260920).
-    const opener = body.slice(body.lastIndexOf("\n", tabs - 1), tabs);
-    expect(opener.trim()).toBe("");
-    expect(body.slice(body.lastIndexOf("*/}", tabs), tabs)).not.toMatch(/\?|&&/);
+  it("draws the phase strip right under the header, on every trip but Edit trip", () => {
+    const header = BODY.indexOf("<TripHeader");
+    const strip = BODY.indexOf("<TripPhaseStrip");
+    expect(header).toBeGreaterThan(-1);
+    expect(strip).toBeGreaterThan(header);
+    // Never behind `cancelled`: a cancelled trip opens on Wrapped up, and every
+    // phase stays a tap away.
+    // Edit trip is not a phase (design review of the final screens, finding 12).
+    const guard = BODY.slice(BODY.lastIndexOf("*/}", strip) + 3, strip);
+    expect(guard.replace(/\s/g, "")).toBe("{showDetails?null:(");
+  });
+
+  it("renders one panel per phase, each from its own file, and Edit trip", () => {
+    for (const panel of [
+      "FillingPhase",
+      "ReadyPhase",
+      "CheckInPhase",
+      "WaterPhase",
+      "WrappedPhase",
+      "EditTrip",
+    ]) {
+      expect(SOURCE).toContain(`from "./_components/phases/${panel}"`);
+      expect(BODY).toContain(`<${panel}`);
+    }
+  });
+
+  /**
+   * A blow-out cancels the trip and leaves every booking active, so the crew
+   * may still need the roll call to put people back ashore (dive-domain review
+   * 20260920): a cancelled trip has no current phase, and keeps its door.
+   */
+  it("keeps the Roll call door on a cancelled trip", () => {
+    const frame = readFileSync(join(__dirname, "_components", "trip-frame.ts"), "utf8");
+    expect(frame).toMatch(/rollCallDoor:\s*current === null \|\|/);
+    expect(BODY).toMatch(/rollCallPlace\(\{\s*\.\.\.\{ door: frame\.rollCallDoor/);
+    expect(BODY).toMatch(/rollCall=\{rollCall\}/);
   });
 });

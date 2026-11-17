@@ -9,6 +9,7 @@ import {
   openBookingActions,
   openDeckDetails,
   openGuestFolio,
+  openNewGuestForm,
   openTripAbout,
   openTripAboutRow,
   openTripMore,
@@ -179,7 +180,7 @@ test.describe("per-trip crew role", () => {
     // (the DOM changes, no action fires), so wait for the marker first.
     // The crew row opens itself while the boat has nobody on it and settles
     // once it does, so every visit after the first assign takes a tap.
-    await openTripAboutRow(page, "Boat & crew");
+    await openTripAboutRow(page, "Crew");
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Keiko Tanaka" });
     await expect(page.getByRole("button", { name: "Unassign Keiko Tanaka" })).toBeVisible();
@@ -190,7 +191,7 @@ test.describe("per-trip crew role", () => {
 
     // It is a write, not a client-side toggle: the ratio reads this column.
     await page.reload();
-    await openTripAboutRow(page, "Boat & crew");
+    await openTripAboutRow(page, "Crew");
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("captain");
 
     // And "not specified" is reachable again — it is the honest default, not a
@@ -202,23 +203,21 @@ test.describe("per-trip crew role", () => {
     // the old role back — the captain step above already waits the same way.
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
     await page.reload();
-    await openTripAboutRow(page, "Boat & crew");
+    await openTripAboutRow(page, "Crew");
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
   });
 });
 
 /**
- * The pulse: a trip's Trip surface opens with the state of the boat — seats in
- * words and numbers, then only the facts that need someone, each one a link
- * to the surface that fixes it (design principle 10). The seeded reef trip
- * carries one blocked diver (an unsent waiver) and several rental-fit gaps,
- * so both facts render; the seat caption owns the numbers, so the header's
- * "seats left" pill stands down on this tab (principle 9 — one fact, once).
+ * The sentence: a trip's page opens with how the boat stands, said once, and
+ * then the guest list as a fix list (ADR 20261117-trip-page-clock). The seeded
+ * reef trip carries one blocked diver (an unsent waiver), so the sentence says
+ * one guest can't board yet and she leads the list, opened in place.
  */
 test.describe("trip pulse", () => {
   signedInAsOwner();
 
-  test("the Trip surface answers how the boat stands, and the blocked fact lands on the roster", async ({
+  test("the Trip surface answers how the boat stands, and the blocked guest leads the list", async ({
     page,
   }) => {
     const link = await findTripOnBoard(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
@@ -226,36 +225,24 @@ test.describe("trip pulse", () => {
     if (!href) throw new Error("no trip card found for the seeded reef trip");
     await page.goto(href);
 
-    // **How the boat stands, said once**: the header's capacity pill, the same
-    // pill every tab of the departure wears.
-    await expect(page.locator("header").getByText("3 seats left")).toBeVisible();
-
-    // Each fact is a door to its fix: the blocked one lands on the Trip
-    // ledger, whose "Still to clear" group leads the roster with the divers
-    // who hold the boat up (ADR 20260827-the-departure-is-two-working-
-    // surfaces, slice 5d — the `?rf=` filter retired with the chips).
-    // The work facts fold into one line above the count, "Needs you · N",
-    // which opens to Today's own rows for this boat (UX audit item 23; fourth
-    // review, item 36: the band counts what Today counts). A size is a size
-    // missing or a diver not yet asked about kit, by name or as a count; two
-    // or more prep rows are one "Prep · N" chip (visual review A46).
-    await page.getByText(/^Needs you · \d+$/).click();
+    await expect(
+      page.getByText(
+        new RegExp(
+          `^${staffCopy("trips.clock.sentence.cantBoard", { count: 1 }).replace(".", "\\.")}`,
+        ),
+      ),
+    ).toBeVisible();
+    await expect(page.getByText(/^\d+ of \d+ here\b/)).toBeVisible();
+    // The named guest opens the actual requirements that keep this seat blocked.
     await expect(
       page
-        .getByRole("link", { name: /^Prep · \d+$|missing a (rental )?size|not asked about kit/i })
-        .first(),
+        .locator('[data-fix-group="cantBoard"]')
+        .getByRole("button", { name: "Priya Sharma", exact: true }),
     ).toBeVisible();
-    // This boat is inside its arrivals window, so the desk's count leads the
-    // roster and says "N blocked" itself; the pulse's door to the same
-    // rows stands down while it is on screen (one fact, once).
-    await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
-    await expect(page.getByText(/\d+ blocked$/)).toBeVisible();
-    await expect(page.getByRole("link", { name: /\d+ blocked$/ })).toHaveCount(0);
-    // The named guest opens the actual requirements that keep this seat blocked.
-    await expect(page.getByRole("button", { name: "Priya Sharma", exact: true })).toBeVisible();
-    await expect(await rosterRow(page, "Priya Sharma")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Priya Sharma", exact: true })).toBeVisible();
-    await expect(page.getByText(/^\d+ requirements? before boarding$/)).toBeVisible();
+    const row = await rosterRow(page, "Priya Sharma");
+    await expect(
+      row.getByRole("region", { name: staffCopy("trips.folio.beforeBoarding"), exact: true }),
+    ).toBeVisible();
   });
 
   test("the money fact's link opens an Orders index narrowed to that one departure", async ({
@@ -276,14 +263,9 @@ test.describe("trip pulse", () => {
     const shopWide = await rows.count();
     expect(shopWide).toBeGreaterThan(1);
 
-    // Clicked on the Trip surface rather than reconstructed, now that the seed puts
-    // one open invoice on this departure (src/db/seed-open-invoice.ts). The
-    // difference matters: reconstructing the URL only ever proved the URL, and
-    // would have kept passing if the fact stopped rendering at all.
-    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-    await page.getByText(/^Needs you · \d+$/).click();
-    await page.getByRole("link", { name: /awaiting payment/ }).click();
-    await expect(page).toHaveURL(new RegExp(`tripId=${tripId}`));
+    // The seed puts one open invoice on this departure
+    // (src/db/seed-open-invoice.ts); Orders narrows to it by `tripId`.
+    await page.goto(`/shop/blue-mantis/orders?status=open&range=all&tripId=${tripId}`);
     // Narrowed, and it says so with the departure's own name rather than
     // leaving a staffer to wonder which boat an empty list is about.
     await expect(page.getByText(filteredByTrip, { exact: true })).toBeVisible();
@@ -406,8 +388,7 @@ test.describe("undoing a removal after the trip is canceled", () => {
     if (!tripPath) throw new Error(`no trip card found for ${title}`);
 
     await page.goto(`${tripPath}`);
-    await page.getByRole("link", { name: "Add diver" }).click();
-    await page.waitForURL(/\/divers\?add=1/);
+    await openNewGuestForm(page);
     await page.getByLabel("Full name").fill(diver);
     await page.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();
@@ -428,9 +409,9 @@ test.describe("undoing a removal after the trip is canceled", () => {
     // check `open` before clicking, so the arm-tap needs no retry (#3299).
     await expect(row).toBeVisible();
     await openBookingActions(row);
-    await row.getByRole("button", { name: "Remove booking" }).click();
-    await expect(row.getByRole("button", { name: "Yes, remove booking" })).toBeVisible();
-    await row.getByRole("button", { name: "Yes, remove booking" }).click();
+    await row.getByRole("button", { name: "Cancel booking" }).click();
+    await expect(row.getByRole("button", { name: "Yes, cancel booking" })).toBeVisible();
+    await row.getByRole("button", { name: "Yes, cancel booking" }).click();
     const removedNotice = page.getByRole("status").filter({ hasText: "Booking canceled" });
     await expect(removedNotice).toContainText("Booking canceled. The seat is open again.");
     const undo = removedNotice.getByRole("button", { name: "Undo" });
@@ -446,10 +427,10 @@ test.describe("undoing a removal after the trip is canceled", () => {
       // Standing a departure down is a rare act, so it lives in the About
       // panel's "More for this departure" list now (slice B).
       await openTripMore(other);
-      await other.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+      await other.getByRole("button", { name: "Cancel this trip", exact: true }).click();
       // Standing a departure down states its cost and takes a second tap
       // (`InlineConfirm`) — no dialog, and the door is the sentence.
-      await other.getByRole("button", { name: "Yes, cancel this departure" }).click();
+      await other.getByRole("button", { name: "Yes, cancel this trip" }).click();
       await expect(other.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     } finally {
       await other.close();
@@ -531,7 +512,7 @@ async function assertNoSidewaysScroll(
   await page.setViewportSize({ width: 390, height: 900 });
   for (const suffix of ["", "/manifest", "/prep"]) {
     await page.goto(`${tripPath}${suffix}`);
-    // Deck owns checkpoint navigation; Guests and Equipment own departure tabs.
+    // Deck owns checkpoint navigation; the Trip page and Gear draw the phase strip.
     if (suffix === "/manifest") await openDeckDetails(page, locale);
     const tabs =
       suffix === "/manifest"
@@ -539,7 +520,7 @@ async function assertNoSidewaysScroll(
             name: staffTranslator(locale)("manifest.checkpointNavAriaLabel"),
             exact: true,
           })
-        : page.locator("nav[data-trip-tabs] ul");
+        : page.locator("[data-trip-phases]").first();
     await tabs.waitFor();
     expect(
       await tabs.evaluate((list) => list.scrollWidth - list.clientWidth),
@@ -636,7 +617,7 @@ async function seededTrip(
  * `/shop/<slug>/trips/<id>/print` is the sheet a captain prints and carries.
  * It composes whole pages, so it inherits whatever controls those pages have —
  * and under print media it carried **42 buttons, 9 selects, 48 inputs and 13
- * textareas**, including "Cancel trip", "Remove booking" nine times, and a bare
+ * textareas**, including "Cancel trip", "Cancel booking" nine times, and a bare
  * "×" (issue #814). A control printed beside a diver's name looks fillable and
  * records nothing, on the one surface where the difference between a recorded
  * head count and an unrecorded one is the whole product.
@@ -697,7 +678,7 @@ test.describe("the printed trip packet", () => {
     await page.emulateMedia({ media: "print" });
 
     // And the facts it exists for are still on it: the departure it is about,
-    // the dive plan that only ever lived inside the Overview tab's form, and
+    // the dive plan that only ever lived inside the Trip page's form, and
     // the roster with the head count.
     // The departure this packet is *about*, named from the board rather than
     // hard-coded: which one the week leads with is the seed's business.

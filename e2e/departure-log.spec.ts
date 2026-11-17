@@ -1,5 +1,11 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { offlineCopySaved, openDeckPerson, openTripFromBoard, openTripTab } from "./helpers";
+import {
+  offlineCopySaved,
+  openDeckPerson,
+  openIfClosed,
+  openTripFromBoard,
+  openTripTab,
+} from "./helpers";
 
 signedInAsOwner();
 
@@ -11,14 +17,15 @@ signedInAsOwner();
  * record a real roll-call fact first, then check it appears on the document
  * with its attribution.
  *
- * The door lives on Record: an authority-facing document standing beside
- * "Mark boarded" put it on the surface a crew works at the rail. It is the
- * departure's Record tab, for every departure live or back, and the settled
+ * The door lives under Wrapped up's More (ADR 20261117-trip-page-clock): an
+ * authority-facing document standing beside "Mark boarded" put it on the
+ * surface a crew works at the rail. It is reachable on every departure, live or
+ * back, by opening Wrapped up, and the settled
  * station on the shop home once the boat is back (ADR
  * 20260804-incident-export-owner-gate, amendment 2026-10-07). The live Today
  * card is the day's briefing and no longer carries it.
  */
-test("the Details tab opens the log with the recorded facts", async ({ page }) => {
+test("Wrapped up opens the log with the recorded facts", async ({ page }) => {
   // Board → trip → manifest, one roll-call write, the home, then the log —
   // several full server round trips over a 9-diver manifest.
   test.setTimeout(45_000);
@@ -42,7 +49,9 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
   // **A live departure, not only one that is back.** The seeded demo day is
   // mid-morning, so the reef trip is still live; an owner whose boat is
   // overdue needs the record of who is on it, and Record is where it is.
-  await page.goto(`${tripPath}?view=record`);
+  // Wrapped up keeps the trip's links under its closed More.
+  await page.goto(`${tripPath}?phase=wrapped`);
+  await openIfClosed(page.locator("details#wrapped-more"));
   await page.getByRole("link", { name: "Departure log" }).click();
   await page.waitForURL(/\/log$/);
 
@@ -191,8 +200,9 @@ test.describe("the log is the owner's to produce", () => {
     await offlineCopySaved(page);
     const tripUrl = new URL(page.url());
 
-    // The departure's Record tab is theirs to read; this one door is not on it.
-    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}?view=record`);
+    // Wrapped up's More is theirs to read; this one door is not in it.
+    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}?phase=wrapped`);
+    await openIfClosed(page.locator("details#wrapped-more"));
     await expect(page.getByRole("link", { name: "View public page" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Departure log" })).toHaveCount(0);
 

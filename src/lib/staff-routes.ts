@@ -96,6 +96,8 @@ export const STAFF_ROUTES = {
   "schedule/blowout/day/[date]": { parent: BOARD },
   "schedule/board": {},
   "schedule/day/[date]": { parent: BOARD },
+  // A run is opened from one of its dates' Edit trip, and goes back there.
+  "schedule/series/[tripId]": { parent: "trips/[tripId]", upHash: "?view=edit" },
   settings: {},
   "settings/activity": {},
   "settings/billing": {},
@@ -119,7 +121,7 @@ export const STAFF_ROUTES = {
   "trip-tags": { parent: SETTINGS },
   // `/trips` has no page: a departure is the board's detail view.
   "trips/[id]": { parent: BOARD },
-  "trips/[id]/incidents/[reportId]": { upHash: "?view=record#incidents" },
+  "trips/[id]/incidents/[reportId]": { upHash: "?phase=wrapped#incidents" },
   "trips/[id]/log": {},
   "trips/[id]/log/print": {},
   "trips/[id]/manifest": { face: true },

@@ -33,7 +33,7 @@ function bookingIdFrom(formData: FormData, back: string): string {
 /**
  * **Every refusal lands back on the boat the staffer was working.**
  *
- * The counter is one departure's Divers tab once arrivals open (ADR
+ * The counter is one departure's Trip page once arrivals open (ADR
  * 20261001-logbook, as amended 2026-10-05), bound to that departure by the page. `counterQueuePath` (./focus.ts) is the one
  * place the path back is built — including its `shopPath` escaping, since
  * `shopSlug` and `tripId` reach an action as ordinary caller-supplied

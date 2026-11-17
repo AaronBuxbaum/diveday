@@ -16,7 +16,7 @@ describe("hasSailed", () => {
 });
 
 describe("counterQueuePath", () => {
-  it("is the departure's own Divers tab", () => {
+  it("is the departure's own Trip page", () => {
     expect(counterQueuePath("blue-mantis", "trip-7")).toBe("/shop/blue-mantis/trips/trip-7");
   });
 

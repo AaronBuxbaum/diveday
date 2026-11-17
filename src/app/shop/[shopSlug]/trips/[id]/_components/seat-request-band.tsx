@@ -82,7 +82,9 @@ export async function addBandFor(
   person?: { query: string; candidates: BookableDiver[] };
   requestGone?: ReactNode;
 }> {
-  const open = Boolean(search.add);
+  // `add` is a flash param a search does not carry: the search, a request or
+  // a rebook link's person keep the form open after it.
+  const open = Boolean(search.add || search.diverq || search.request || search.person);
   const read = await readSeatRequest(db, {
     shopId: where.shop.id,
     tripId: where.tripId,

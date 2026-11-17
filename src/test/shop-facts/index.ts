@@ -75,6 +75,7 @@ import { prepareOperationsVisual } from "./operations-visual";
 import { makeRoomForPartyWaiverCaptures } from "./party-waiver-capacity-state";
 import { prepareWeatherAlternatives } from "./prepare-weather-alternatives";
 import { introduceAssignedInstructor } from "./public-staff-profile";
+import { boatOnTheWaterArgs, putABoatOnTheWater } from "./put-a-boat-on-the-water";
 import { putARehearsalOnTomorrow } from "./put-a-rehearsal-on-tomorrow";
 import { putOneUnitOutToday } from "./put-one-unit-out-today";
 import { putTheBenchBehind } from "./put-the-bench-behind";
@@ -256,6 +257,9 @@ const FACTS = {
   manifestOverCapacity: ({ db, shop, now }) => seedManifestOverCapacityState(db, shop.id, now),
   operationalTrust: withArgs(operationalTrustArgs, ({ db, shop, now }, args) =>
     seedOperationalTrustFact(db, shop, args, now),
+  ),
+  boatOnTheWater: withArgs(boatOnTheWaterArgs, ({ db, shop, now }, args) =>
+    putABoatOnTheWater(db, shop, args, now),
   ),
   fiveDivePrint: ({ db, shop, now }) => logFiveDivesForPrint(db, shop, now),
   flySafeFollowUp: ({ db, shop, now }) => failTheFlySafeCorrections(db, shop, now),

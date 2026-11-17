@@ -1,12 +1,15 @@
 import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
 import {
+  addGuestForm,
   createTrip,
   daysFromNow,
   disclosureSettled,
   e2eNow,
   findTripOnBoard,
   HELD_SEND_TIMEOUT_MS,
+  openAddAGuest,
+  openNewGuestForm,
   openRosterNotes,
   openRosterRow,
   openTripActivity,
@@ -40,7 +43,7 @@ async function openPrivateNotes(page: Page) {
 
 /**
  * A capacity-1 trip of the spec's own, opened on its Trip tab with one
- * walk-in seated through the Add diver form: the boat is full afterwards.
+ * walk-in seated through the new-guest form: the boat is full afterwards.
  * Both walk-in tests start here, so each carries one half of the old single
  * flow (notes, then wait list) and neither runs on its budget's edge.
  */
@@ -66,10 +69,7 @@ async function openNewTripWithWalkIn(page: Page, titlePrefix: string): Promise<s
   // Who is attending — and adding one — lives on the Trip surface now.
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
-  const addDiver = page.locator("#add-diver").filter({ visible: true });
-  await addDiver.scrollIntoViewIfNeeded();
-  await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
   await page.getByLabel("Full name").fill("Walk-in Wanda");
   await page.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -78,13 +78,12 @@ async function openNewTripWithWalkIn(page: Page, titlePrefix: string): Promise<s
   await expect(page.getByRole("alert").first()).toContainText(
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
-  await expect(page.getByRole("heading", { name: "Walk-in Wanda", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "All guests", exact: true }).click();
-  // The header's capacity pill states a full boat, the same pill on every tab.
-  const header = page
-    .locator("header")
-    .filter({ has: page.getByRole("heading", { level: 1, name: title }) });
-  await expect(header.getByText("Full", { exact: true })).toBeVisible();
+  // Seating opens the guest in place.
+  await expect(
+    page.getByRole("button", { name: "Walk-in Wanda", exact: true, expanded: true }),
+  ).toBeVisible();
+  // The phase strip's Filling says the boat is full: one of one.
+  await expect(page.locator('[data-trip-phases] a[data-phase="filling"]')).toContainText("1 of 1");
 
   return title;
 }
@@ -154,7 +153,9 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
 
   // Trip is now full — the same section switches to wait-listing: the search
   // puts a diver on file on the list, and "Add diver" takes someone new there.
-  const addNew = page.locator('a[href*="waitlist=true"]', { hasText: "Add diver" });
+  const addNew = (await addGuestForm(page)).locator('a[href*="waitlist=true"]', {
+    hasText: "Add a guest",
+  });
   await expect(addNew).toBeVisible();
   await addNew.click();
   await page.waitForURL(/\/divers\?add=1/);
@@ -165,7 +166,7 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
 
   await expect(page.getByRole("status")).toContainText("Diver added to the wait list");
   // The ledger's "Who wants in" panel owns the state word.
-  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await expect(page.locator("#who-wants-in")).toBeVisible();
   await expect(page.getByText("Waitlist Wally")).toBeVisible();
 
   // One act on who wants in: the diver's own Offer a seat, which stamps the
@@ -205,8 +206,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   await openTripFromBoard(page, title);
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
-  const addDiver = page.locator("#add-diver").filter({ visible: true });
-  await addDiver.scrollIntoViewIfNeeded();
+  const addDiver = await addGuestForm(page);
 
   // Search the shop's existing people and add one by identity — their record,
   // not a re-typed name, lands on the roster.
@@ -226,12 +226,12 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   );
   const roster = page.locator("#roster");
   await expect(roster.getByText("Priya Sharma").filter({ visible: true })).toBeVisible();
-  await page.getByRole("button", { name: "All guests", exact: true }).click();
 
   // Picking the same diver again is no longer offered — the roster can't
   // double-book them.
-  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill("Priya");
-  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
+  const again = await openAddAGuest(page);
+  await again.fill("Priya");
+  await again.press("Enter");
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 });
 
@@ -262,10 +262,7 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   await openTripFromBoard(page, title);
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
-  const addDiver = page.locator("#add-diver").filter({ visible: true });
-  await addDiver.scrollIntoViewIfNeeded();
-  await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
 
   // One letter off "Marisol Vega", who is in the demo shop's trailing quarter
   // of sailed departures (src/db/seed-history.ts) — so she has a dive day and
@@ -293,7 +290,9 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   // Seated, and blocked on the identity the shop only guessed at — the seat
   // does not inherit her certifications or her waiver on a spelling.
   const roster = page.locator("#roster");
-  await expect(roster.getByRole("heading", { name: "Marisol Vega", exact: true })).toBeVisible();
+  await expect(
+    roster.getByRole("button", { name: "Marisol Vega", exact: true, expanded: true }),
+  ).toBeVisible();
   await expect(roster.getByRole("button", { name: "Same person as Marisol Vega" })).toBeVisible();
 
   // One tap at the roster, the same one the shared-inbox path has always cost.
@@ -400,7 +399,9 @@ test("booking a diver from their record issues their waiver, like every other do
   await page.goto(`/shop/blue-mantis/trips/${tripId}`);
   // The waiver control is one of the row's fixes, behind its fold.
   const priya = await openRosterRow(page, "Priya Sharma");
-  await expect(page.getByRole("heading", { name: "Priya Sharma", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Priya Sharma", exact: true, expanded: true }),
+  ).toBeVisible();
   await expect(priya.getByText("Waiver sent").first()).toBeVisible();
   // ...and the seating reaches the trip's activity trail, which this door also
   // used to skip.
@@ -459,8 +460,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeFocused();
 
   // The diver form is a dedicated step shared by all seating doors.
-  await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
   await page.getByLabel("Full name").fill("Phoned In Pat");
   await page.getByLabel("Email").fill("pat@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -468,7 +468,9 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   // Lands on the trip's Trip surface with the roster's usual success affordance.
   await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
   await expect(page.getByRole("alert").first()).toContainText("Diver added to the trip");
-  await expect(page.getByRole("heading", { name: "Phoned In Pat", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Phoned In Pat", exact: true, expanded: true }),
+  ).toBeVisible();
 });
 
 // story: DESK-05
@@ -489,8 +491,7 @@ test("a full boat's add band offers the wait list, never a seat", async ({ page 
 
   // ...while the other seats someone new and fills the boat.
   await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
-  await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\?add=1/);
+  await openNewGuestForm(page);
   await page.getByLabel("Full name").fill("First Aboard Fay");
   await page.getByLabel("Email").fill("fay@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -500,7 +501,7 @@ test("a full boat's add band offers the wait list, never a seat", async ({ page 
   // refusal of record: the boat is full, and nobody is seated past it.
   await stalePick.click();
   await expect(stale.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
-  // Seats only: the Divers tab also lists who wants in, where Priya can stand.
+  // Seats only: Filling also lists who wants in, where Priya can stand.
   await expect(await rosterRow(stale, "First Aboard Fay")).toHaveCount(1);
   await expect(await rosterRow(stale, "Priya Sharma")).toHaveCount(0);
   await stale.close();
@@ -509,10 +510,9 @@ test("a full boat's add band offers the wait list, never a seat", async ({ page 
   // offers the wait list, so someone new is taken down as waiting, never
   // seated past the capacity.
   await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1`);
-  await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveAttribute(
-    "href",
-    /waitlist=true/,
-  );
+  await expect(
+    (await addGuestForm(page)).getByRole("link", { name: "Add a guest", exact: true }),
+  ).toHaveAttribute("href", /waitlist=true/);
   await expect(page.getByText(title).first()).toBeVisible();
 });
 

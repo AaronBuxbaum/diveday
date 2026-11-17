@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { sectionCardClass } from "@/components/ui/card";
 import { getDb } from "@/db/client";
 import { listTripIncidentReports } from "@/db/incident-reports";
 import { requestLocale } from "@/i18n/request";
@@ -12,8 +12,8 @@ import { shopPath } from "@/lib/staff-notices";
 import { startIncidentReportAction } from "../incidents/actions";
 
 /**
- * **A departure's incident reports**, on its Details tab (ADR
- * 20261012-incident-reports). The door to start one is here and only here on
+ * **A departure's incident reports**, on On the water and Wrapped up (ADR
+ * 20261012-incident-reports; ADR 20261117-trip-page-clock). The door to start one is here and only here on
  * the departure: the crew who were aboard, and owners and managers.
  *
  * Absent for anyone who may neither start one nor read one: a staffer not on
@@ -38,31 +38,33 @@ export async function TripIncidentReports({
   const { mayStart, reports } = await listTripIncidentReports(db, shop.id, tripId, personId);
   if (!mayStart && reports.length === 0) return null;
   return (
-    <SectionCard
+    <section
       id="incidents"
-      className="scroll-mt-24"
-      title={t("incidents.trip.title")}
-      description={t("incidents.trip.description")}
-      actions={
-        mayStart ? (
+      aria-labelledby="incidents-heading"
+      className={`${sectionCardClass({ padding: "none" })} scroll-mt-24`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 pb-3 sm:px-6">
+        <h2 id="incidents-heading" className="font-semibold">
+          {t("incidents.trip.title")}
+        </h2>
+        {mayStart ? (
           <form action={startIncidentReportAction.bind(null, shopSlug, tripId)}>
             <SubmitButton
               pendingLabel={t("words.busy.opening")}
-              className={buttonClass({ variant: "secondary" })}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
             >
               {t("incidents.trip.start")}
             </SubmitButton>
           </form>
-        ) : undefined
-      }
-    >
+        ) : null}
+      </div>
       {reports.length > 0 ? (
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-border border-t border-border">
           {reports.map((report) => (
             <li key={report.id}>
               <Link
                 href={shopPath(shopSlug, "trips", tripId, "incidents", report.id)}
-                className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 py-2 hover:underline"
+                className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 hover:underline sm:px-6"
               >
                 <Badge size="sm" tone={report.status === "filed" ? "neutral" : "warning"}>
                   {t(
@@ -82,6 +84,6 @@ export async function TripIncidentReports({
           ))}
         </ul>
       ) : null}
-    </SectionCard>
+    </section>
   );
 }

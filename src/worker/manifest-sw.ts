@@ -88,7 +88,7 @@ function immutableAsset(response: Response): boolean {
 const LIVE_MANIFEST_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/manifest(?:\/.*)?$/;
 // The counter, and only the counter — the second authenticated page this shell
 // backs up (ADR 20260907-the-counter-survives-offline). The counter is a
-// departure's Divers tab, whose roster carries the desk's taps once arrivals
+// departure's Trip page, whose roster carries the desk's taps once arrivals
 // open (owner, 2026-10-05), so a staffer who reloads it with no signal lands on
 // the saved copy of that departure rather than the browser's offline error;
 // the departure is the path segment, so the redirect carries it across as

@@ -20,7 +20,8 @@ test("the owner hides and restores conservation without losing recorded actions"
     shopSlug: privateShop.slug,
   });
   const path = await tripPathByTitle(page, privateShop.slug, title, { daysOut: -2 });
-  await page.goto(`${path}?view=details`);
+  // The conservation record sits under Wrapped up's More (ADR 20261117-trip-page-clock).
+  await page.goto(`${path}?phase=wrapped#conservation`);
   const add = page.locator("#conservation-add");
   await add.locator("summary").click();
   await add.getByRole("spinbutton", { name: t("trips.conservation.quantity") }).fill("1");
@@ -35,10 +36,11 @@ test("the owner hides and restores conservation without losing recorded actions"
   await expect(
     page.getByRole("status").filter({ hasText: t("settings.main.features.saved") }),
   ).toBeVisible();
-  await page.goto(`${path}?view=details`);
+  await page.goto(`${path}?phase=wrapped#conservation`);
+  await expect(page.locator("#wrapped-more > summary")).toBeVisible();
   await expect(
     page
-      .locator("#about #conservation")
+      .locator("#wrapped-more #conservation")
       .getByText(t("trips.conservation.heading"), { exact: true }),
   ).toHaveCount(0);
   await page.goto(`/shop/${privateShop.slug}/settings/features`);
@@ -47,10 +49,11 @@ test("the owner hides and restores conservation without losing recorded actions"
   await expect(
     page.getByRole("status").filter({ hasText: t("settings.main.features.saved") }),
   ).toBeVisible();
-  await page.goto(`${path}?view=details`);
+  await page.goto(`${path}?phase=wrapped#conservation`);
+  await expect(page.locator("#wrapped-more > summary")).toBeVisible();
   await expect(
     page
-      .locator("#about #conservation")
+      .locator("#wrapped-more #conservation")
       .getByText(t("trips.conservation.heading"), { exact: true }),
   ).toBeVisible();
   await expect(page.getByText(/Recorded cleanup site/).first()).toBeVisible();

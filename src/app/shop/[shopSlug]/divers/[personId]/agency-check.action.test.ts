@@ -208,7 +208,7 @@ describe("agencyCheckAction", () => {
   });
 
   /**
-   * The same action answers the diver record, a departure's Divers tab, the
+   * The same action answers the diver record, a departure's Trip page, the
    * Today list and each card of a "Check all": the page it was pressed on has
    * to settle, whichever that is.
    */

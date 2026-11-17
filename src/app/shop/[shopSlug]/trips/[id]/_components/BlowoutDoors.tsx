@@ -7,10 +7,10 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { shopPath } from "@/lib/staff-notices";
 import { blowoutPath } from "./blowout/blowout-path";
 
-const DOOR_CLASS = buttonClass({ variant: "danger-ghost", size: "sm", flush: true });
+const DOOR_CLASS = buttonClass({ variant: "danger-ghost", flush: true });
 
 /**
- * The departure's two doors to a weather call, in its More list: this boat
+ * The departure's two doors to a weather call, on Edit trip: this boat
  * alone (ADR 20260804-blowout-cascade), or every boat of its day (ADR
  * 20261009-day-weather-call) — a front that closes the harbour closes it for
  * every boat that morning. The day door shows only to the roles that may call
@@ -20,10 +20,8 @@ const DOOR_CLASS = buttonClass({ variant: "danger-ghost", size: "sm", flush: tru
  * what calling it does, and it is the confirm.
  *
  * The trip door paints with the page; the day door waits on one role read, so
- * it streams in its own `<Suspense>` beside it rather than holding the More
- * list (and the page above it) until the read lands. Nothing stands in for it:
- * the list is `TripMoreDisclosure`, closed when the page paints, so the door
- * is there before anyone opens it.
+ * it streams in its own `<Suspense>` beside it rather than holding the card
+ * (and the page above it) until the read lands. Nothing stands in for it.
  */
 export function BlowoutDoors({
   shop,

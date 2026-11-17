@@ -95,7 +95,7 @@ describe("departureInterestRows", () => {
       interest("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"), { partySize: 2 }),
       interest("b", "Rafa Ortiz", new Date("2026-08-03T14:00:00Z")),
     ]);
-    expect(plain(pair?.facts)).toBe("a@example.com · Asked Sat, Aug 1 · Party of 2");
+    expect(plain(pair?.facts)).toBe("Waiting since Sat, Aug 1 · Party of 2");
     expect(single?.facts).not.toContain("Party");
   });
 
@@ -106,7 +106,7 @@ describe("departureInterestRows", () => {
         parentInterestId: "request-1",
       }),
     ]);
-    expect(plain(row?.facts)).toBe("a@example.com · Invited Sat, Aug 1 · from a request");
+    expect(plain(row?.facts)).toBe("Invited Sat, Aug 1 · from a request");
   });
 
   it("renders a person-less interest from its snapshot and weighs no card", () => {
@@ -186,9 +186,7 @@ describe("dateInterestRows", () => {
   it("reads a person-less request from its snapshot: name, address, dates, party, interest", () => {
     const [row] = dateRows([dateInterest("d1")]);
     expect(row).toMatchObject({ interestId: "d1", name: "Eli Moss", email: "eli@example.com" });
-    expect(plain(row?.facts)).toBe(
-      "eli@example.com · Oct 24, 2026 or Oct 25, 2026 · Party of 3 · night dive",
-    );
+    expect(plain(row?.facts)).toBe("Oct 24, 2026 or Oct 25, 2026 · Party of 3 · night dive");
     expect(row?.certification).toBeNull();
     expect(row?.offeredAt).toBeNull();
   });
@@ -206,7 +204,7 @@ describe("dateInterestRows", () => {
       }),
     ]);
     expect(row?.name).toBe("No name given");
-    expect(row?.facts).toContain("no email");
+    expect(row?.facts).toContain("No email");
     expect(row?.facts).toContain("flexible");
     expect(row?.facts).toContain(`wrote “${"x".repeat(60)}…”`);
   });
@@ -252,7 +250,7 @@ function anytime(recipients: AnytimeRecipient[], bar: CertRequirementSource | nu
 describe("anytimeInterestRows", () => {
   it("prints the window they are around, and an open window as any day", () => {
     const [row] = anytime([recipient("a", "Fay Ng", openWater)], null).shown;
-    expect(plain(row?.facts)).toContain("a@example.com · Oct 10 – 20, 2026");
+    expect(plain(row?.facts)).toBe("Oct 10 – 20, 2026");
     const open = recipient("b", "Gus Ode");
     open.interest = { ...open.interest, availableFrom: null, availableUntil: null };
     expect(anytime([open], null).shown[0]?.facts).toContain("Any day");

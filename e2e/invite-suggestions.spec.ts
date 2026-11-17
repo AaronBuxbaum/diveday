@@ -7,7 +7,7 @@ test("reveals the remaining past divers and their invitation actions", async ({
 }, testInfo) => {
   const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — French Reef");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`/shop/blue-mantis/trips/${id}`);
+  await page.goto(`/shop/blue-mantis/trips/${id}?phase=filling#invite-suggestions`);
   const initial = page.getByTestId("invite-suggestions");
   await expect(initial).toBeVisible();
   const disclosure = initial.locator("+ details");
@@ -48,7 +48,7 @@ test.describe("Spanish phone", () => {
   test.use({ locale: "es-ES", viewport: { width: 390, height: 844 } });
   test("opens and closes the remaining people without widening the page", async ({ page }) => {
     const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — French Reef");
-    await page.goto(`/shop/blue-mantis/trips/${id}`);
+    await page.goto(`/shop/blue-mantis/trips/${id}?phase=filling#invite-suggestions`);
     const initial = page.getByTestId("invite-suggestions");
     await expect(initial).toBeVisible();
     const disclosure = initial.locator("+ details");

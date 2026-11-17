@@ -231,6 +231,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Certificate total-persons limit
 - Charter inquiry
 - Check-in
+- Clock phase
 - Close-out
 - Coming as
 - Connected Stripe account
@@ -290,6 +291,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Export bundle
 - Feature coverage
 - Fill rate
+- Fix list
 - Group hold
 - Group seat link
 - Held
@@ -332,6 +334,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Not counted after dive N
 - Not counted at the dock
 - Not ready
+- Not yet recorded back
 - Notification delivery status
 - Offer a seat
 - Offline manifest snapshot
@@ -406,6 +409,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Station acknowledgement
 - Station echo
 - STOP list
+- The day so far
 - The record
 - Thin boat
 - Tide window
@@ -434,6 +438,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Walk-in party
 - Weather day
 - Week totals
+- What's left
 - WhatsApp sender
 - Who wants in
 - Working channel

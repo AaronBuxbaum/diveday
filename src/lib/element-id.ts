@@ -51,11 +51,6 @@ export function diverRowId(bookingId: string): string {
   return `diver-row-${bookingId}`;
 }
 
-/** The same id as a fragment/`href` target. */
-export function diverRowHash(bookingId: string): string {
-  return `#${diverRowId(bookingId)}`;
-}
-
 /**
  * **A crew member's row on the same manifest**, spelled in one place for the
  * same reason as the diver row; a crew member who did not come back outranks a

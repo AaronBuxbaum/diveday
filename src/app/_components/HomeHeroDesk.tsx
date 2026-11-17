@@ -20,13 +20,10 @@ export function HomeHeroDesk({ locale }: { locale: DiverLocale }) {
             hint: t("marketing.home.try.hint"),
             appBar: t("fallback.arrivalDesk.label"),
             hereOf: t("marketing.home.try.hereOf", { here: "{here}", expected: "{expected}" }),
-            toCome: t("marketing.home.try.toCome"),
-            blockedRemainder: t("fallback.arrivalDesk.remainderCleared"),
             allHere: t("marketing.home.try.allHere"),
             stillToClear: t("fallback.arrivalDesk.stillToClear", { count: "{count}" }),
             ready: t("fallback.arrivalDesk.ready", { count: "{count}" }),
             checkedInGroup: t("fallback.arrivalDesk.checkedInGroup", { count: "{count}" }),
-            blocked: t("fallback.arrivalDesk.blocked"),
             heldReason: t("fallback.arrivalDesk.heldReason", {
               // i18n-exempt: sample diver names used only in marketing mockups
               bookedAs: "Mateo Rossi",

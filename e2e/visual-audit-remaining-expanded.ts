@@ -87,7 +87,7 @@ async function offlineReef(page: Page) {
   await openOnThisPhone(page);
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await page.waitForURL(/offline-manifest/);
-  await expect(page.getByRole("heading", { name: "Deck", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Roll call", exact: true })).toBeVisible();
   await openDeckPerson(page, "Priya Sharma");
 }
 

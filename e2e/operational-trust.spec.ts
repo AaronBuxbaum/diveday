@@ -61,7 +61,7 @@ async function openOffline(page: Page, manifest: string) {
 }
 
 async function openBuddyPanel(page: Page, trip: string) {
-  await page.goto(`${trip}?view=details&buddies=open`);
+  await page.goto(`${trip}?phase=ready&buddies=open`);
   const panel = page
     .locator("details")
     .filter({
@@ -159,12 +159,8 @@ test("an unsailed boat change refreshes the log while a historical hull mismatch
     has: page.getByRole("heading", { name: copy("incidentExport.boatHeading"), exact: true }),
   });
   await expect(section.getByText("TRUST1", { exact: true })).toBeVisible();
-  await page.goto(`${trip}?view=details`);
-  const boatAndCrew = await openTripAboutRow(page, copy("trips.about.boatAndCrew"));
-  const boatEditor = boatAndCrew.locator("details").filter({
-    has: page.getByText(copy("trips.details.editBoat"), { exact: true }),
-  });
-  await openIfClosed(boatEditor);
+  await page.goto(`${trip}?view=edit`);
+  const boatEditor = await openTripAboutRow(page, copy("trips.about.boat"));
   await boatEditor
     .getByLabel(copy("boats.boatSelectLabel"), { exact: false })
     .selectOption(state.replacementBoatId);

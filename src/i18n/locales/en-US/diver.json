@@ -4133,14 +4133,11 @@
       "signedDone": "Signed. You’re all set."
     },
     "arrivalDesk": {
-      "label": "Divers",
+      "label": "Guests",
       "hereOf": "<figure>{here}</figure> of {expected} here",
-      "remainder": "1 to come · 1 diver can’t board yet",
-      "remainderCleared": "1 diver can’t board yet",
-      "stillToClear": "Still to clear · {count}",
-      "ready": "Ready · {count}",
-      "checkedInGroup": "Checked in · {count}",
-      "blocked": "Blocked",
+      "stillToClear": "Can’t board yet · {count}",
+      "ready": "To come · {count}",
+      "checkedInGroup": "Here · {count}",
       "heldReason": "Booked as {bookedAs}, then matched to {name} from the name list. Confirm who this is.",
       "samePerson": "Same person",
       "differentPerson": "Different person",

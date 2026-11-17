@@ -85,7 +85,11 @@ for (const width of [390, 1280]) {
     await underway.click();
     await expect(underway).toHaveAttribute("aria-pressed", "true");
     await page.goto(tripPath);
-    await expect(page.getByText("Stage: Underway", { exact: true })).toBeVisible();
+    // The trip opens on On the water: the crew's Underway tap moved its clock.
+    await expect(page.locator('[data-trip-phases] a[data-phase="water"]')).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     await page.goto("/shop/blue-mantis");
     await expect(
       station.getByText(t("closeout.departures.status.stillOut"), { exact: true }),

@@ -62,7 +62,6 @@ export {
   type TodayAction,
   weekCrewAway,
 } from "./today";
-export { getDepartureNeeds } from "./today-departure-needs";
 export {
   type CrewedSessionSummary,
   countBlockedDiversNextBoatDay,

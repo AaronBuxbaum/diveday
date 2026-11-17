@@ -17,7 +17,6 @@ import {
   preDepartureCheckAction,
   removeBuddyTeamMemberAction,
   rollCallAction,
-  saveExecutedDiveAction,
   setTripStageAction,
   teamUpPartiesAction,
 } from "../actions";
@@ -66,7 +65,6 @@ export function bindManifestActions(
     // The note carries its own checkpoint and the action re-proves it, so this
     // one takes the narrower context that has none.
     addPrivateNote: addManifestPrivateNoteAction.bind(null, { shopSlug, tripId }),
-    saveExecutedDive: saveExecutedDiveAction.bind(null, actionContext),
     // *Got it* is checkpoint-independent — the strip is about the departure,
     // not about which list is open — so it takes the narrower context.
     markTripCaughtUp: markTripCaughtUpAction.bind(null, { shopSlug, tripId }),

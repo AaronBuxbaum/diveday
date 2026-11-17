@@ -75,7 +75,7 @@ describe("boat clashes on Today (H-20260916-may-one-hull-carry, issue #2135)", (
     expect(row).toMatchObject({
       kind: "boat_clash",
       aboutDeparture: true,
-      href: `/shop/${ctx.shop.slug}/trips/${row?.departure?.tripId}?view=details`,
+      href: `/shop/${ctx.shop.slug}/trips/${row?.departure?.tripId}?view=edit`,
     });
     expect(row?.detail).toContain("Clash hull");
     const other = row?.departure?.tripId === drift.id ? "Morning charter" : "Reef drift";

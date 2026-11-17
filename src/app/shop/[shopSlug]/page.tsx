@@ -11,6 +11,7 @@ import {
   type SpineDraft,
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
+import { FlySafeFollowUps } from "@/app/shop/[shopSlug]/_components/today/FlySafeFollowUps";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
 import { HomeScreenInstallSlot } from "@/app/shop/[shopSlug]/_components/today/HomeScreenInstallSlot";
 import { QuietDay } from "@/app/shop/[shopSlug]/_components/today/QuietDay";
@@ -415,11 +416,9 @@ async function TodayBody({
         // The paper day (N-54) holds today’s departures in one printable document.
         // Its header link appears only when there are boats, never on paper.
         //
-        // A link rather than `PrintTripBundleButton`'s form: that one records
-        // the click server-side and so has to `window.open`, which a popup
-        // blocker can refuse silently — the reason it carries a "your browser
-        // blocked it" line. A tap on a real link is a navigation no blocker
-        // touches, so there is no refusal here to explain.
+        // A link, not `PrintTripBundleButton`'s form: that one records the click and so
+        // has to `window.open`, which a popup blocker can refuse silently; a real link
+        // is a navigation no blocker touches, so there is no refusal to explain.
         action={
           spine.stations.length > 0 || eveningClose.stations.length > 0 ? (
             <TodayPrintDoor shopSlug={shopSlug} t={t} />
@@ -487,6 +486,7 @@ async function TodayBody({
         />
       ) : null}
 
+      <FlySafeFollowUps {...{ db, shop, shopSlug, now, t }} />
       <ReleaseStillSample
         db={db}
         shop={shop}

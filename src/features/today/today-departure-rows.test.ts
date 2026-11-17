@@ -17,7 +17,6 @@ import { fakePromotions } from "@/test/fakes";
 import { shopClock } from "../shop-clock/rules";
 import { getTripOverview } from "../trip-overview/store";
 import { oneRowPerDiver, type TodayAction } from "./today";
-import { getDepartureNeeds } from "./today-departure-needs";
 import { pushDepartureRows } from "./today-departure-rows";
 import { getTodayWork } from "./today-reader";
 import { NOW, rowsContext, rowsNaming } from "./today-rows-test-fixtures";
@@ -435,7 +434,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     // Nobody waits for this boat itself, so there is no one to offer in place:
     // the tap opens the panel, where the list is offered a seat together.
     expect(row?.offer).toBeUndefined();
-    expect(row?.href).toContain("#who-wants-in");
+    expect(row?.href).toContain("?phase=filling#who-wants-in");
     expect(work.actions.some((action) => action.id.startsWith("last-minute-fill"))).toBe(false);
   });
 
@@ -665,74 +664,6 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       staffTranslator("en-US"),
     );
     expect(contactRows(cleared)).toEqual([]);
-  });
-
-  // Third review, item 4, then fourth review, item 36: Today listed seven rows
-  // for the 1:30 PM boat while its own band said "3 things to sort", because
-  // the band counted only the boat's work and this test only compared that
-  // subset. The band now reads Today's rows for the departure themselves, so
-  // what is pinned here is the whole list a person sees on each screen.
-  it("gives the boat's band exactly the rows Today lists for that boat", async () => {
-    const { db, shop } = ctx;
-    const trips = await upcomingTripsWithCounts(db, shop.id);
-    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
-    if (!reef) throw new Error("demo reef trip missing");
-    const roster = await getTripRoster(db, shop.id, reef.id);
-    for (const entry of roster) {
-      await db
-        .update(people)
-        .set({ emergencyContactName: null, emergencyContactPhone: null })
-        .where(eq(people.id, entry.person.id));
-    }
-    const now = nowDate();
-    const t = staffTranslator("en-US");
-    const [today, needs] = await Promise.all([
-      getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shopClock(shop, now),
-        undefined,
-        staffTranslator("en-US"),
-      ),
-      getDepartureNeeds(db, shop, reef.id, {
-        now,
-        t,
-        locale: "en-US",
-        session: { user: { roles: ["owner"] } },
-      }),
-    ]);
-    const onToday = today.actions.filter((action) => action.departure?.tripId === reef.id);
-    expect(needs?.map((action) => action.id)).toEqual(onToday.map((action) => action.id));
-    expect(needs?.map((action) => action.detail)).toEqual(onToday.map((action) => action.detail));
-    // More than the boat's work: the contacts row is there, and so is every
-    // row the boat's work never counted.
-    expect(needs?.some((action) => action.kind === "emergency_contact")).toBe(true);
-    expect(
-      needs?.some(
-        (action) =>
-          !/^(prep|nitrox|contact|orders|size-missing|kit-unasked|nitrox-group|contact-group):/.test(
-            action.id,
-          ),
-      ),
-    ).toBe(true);
-  });
-
-  it("gives no list for a boat outside Today's window, which Today does not show", async () => {
-    const { db, shop } = ctx;
-    const now = nowDate();
-    const trips = await upcomingTripsWithCounts(db, shop.id);
-    const far = trips.find((trip) => trip.startsAt.getTime() - now.getTime() > 14 * 86_400_000);
-    if (!far) throw new Error("demo has no departure two weeks out");
-    const t = staffTranslator("en-US");
-    expect(
-      await getDepartureNeeds(db, shop, far.id, {
-        now,
-        t,
-        locale: "en-US",
-        session: { user: { roles: ["owner"] } },
-      }),
-    ).toBeNull();
   });
 
   // Layer 1 review, finding 3: the orders count read every booking on the

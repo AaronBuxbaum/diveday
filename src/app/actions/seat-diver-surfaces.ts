@@ -165,7 +165,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
   /**
    * **From a departure**: the roster's hand entry and returning-diver picker,
    * and the global Add booking once a boat is chosen.
-   * Seated or refused, the staffer lands on that boat's Divers tab, where the
+   * Seated or refused, the staffer lands on that boat's Trip page, where the
    * add-diver form and the signed `?gate=` sentence both live.
    *
    * A name on its own is enough: email and phone are optional everywhere but

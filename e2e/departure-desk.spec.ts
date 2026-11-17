@@ -68,7 +68,7 @@ test("a note to everyone holds, carries a link, and is recorded once sent", asyn
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, REEF);
-  await page.goto(`${new URL(page.url()).pathname}?view=details#departure-note`);
+  await page.goto(`${new URL(page.url()).pathname}?view=edit#departure-note`);
 
   const box = page.getByTestId("departure-note-body");
   await expect(box).toBeVisible();
@@ -137,7 +137,7 @@ test("Remove on a diver marked aboard a boat that has left says why and changes 
   const tripId = await seededTripId(page, "blue-mantis", SAILED);
   await page.goto(counterPath("blue-mantis", tripId));
   await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
-  const remove = /^\s*Remove booking\s*$/;
+  const remove = new RegExp(`^\\s*${staff("trips.roster.removeBooking")}\\s*$`);
   const row = page
     .locator('#roster li[id^="booking-"]')
     .filter({ has: page.locator("summary", { hasText: remove }) })
@@ -148,5 +148,5 @@ test("Remove on a diver marked aboard a boat that has left says why and changes 
   // The sentence after the diver's name, from the bundle.
   const why = staff("trips.roster.removeAboard", { name: "" }).trim();
   await expect(row.getByRole("status").filter({ hasText: why })).toBeVisible();
-  await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Yes, cancel booking" })).toHaveCount(0);
 });

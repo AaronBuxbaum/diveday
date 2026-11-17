@@ -22,7 +22,8 @@ test("recorded conservation action and its editor (light)", async ({ page }) => 
     capacity: 6,
   });
   const path = await tripPathByTitle(page, "blue-mantis", title, { daysOut: -2 });
-  await page.goto(`${path}?view=details`);
+  // The record is kept under Wrapped up's More, which its own hash opens.
+  await page.goto(`${path}?phase=wrapped#conservation`);
   const add = page.locator("#conservation-add");
   await add.locator("summary").click();
   await add

@@ -127,7 +127,7 @@ export function pushCrewGapRows(
       actionLabel: openCrewActionText(t),
       // The trip's crew editor, not the bare Overview it used to land on
       // (Lens 17 task 139) — the fix for either gap lives right there.
-      href: `${tripHref}?view=details#crew`,
+      href: `${tripHref}?view=edit#crew`,
       dueAt: trip.startsAt,
     });
   }
@@ -184,7 +184,7 @@ export function pushCrewGapRows(
                   : uncrewedDepartureDetailText(t, ratioGap.divers),
               ),
         actionLabel: openCrewActionText(t),
-        href: `${tripHref}?view=details#crew`,
+        href: `${tripHref}?view=edit#crew`,
         dueAt: trip.startsAt,
       });
     } else {
@@ -207,7 +207,7 @@ export function pushCrewGapRows(
           ),
         ),
         actionLabel: openCrewActionText(t),
-        href: `${tripHref}?view=details#crew`,
+        href: `${tripHref}?view=edit#crew`,
         dueAt: trip.startsAt,
       });
     }

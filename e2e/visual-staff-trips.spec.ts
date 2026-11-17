@@ -20,6 +20,7 @@ import {
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
+  openTripPhase,
   openTripTab,
   rosterRow,
   seatFromRoster,
@@ -77,7 +78,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the plan editor stays with the dive plan (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        const plan = await openTripAboutRow(page, "The plan");
+        const plan = await openTripAboutRow(page, "Plan");
         await expect(plan.getByLabel("Number of dives")).toBeVisible();
         await capture(page, "departure-plan-editor", scheme);
       });
@@ -86,21 +87,21 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await openReefTrip(page);
-        const meeting = await openTripAboutRow(page, "Where we meet");
+        const meeting = await openTripAboutRow(page, "Meet");
         await expect(meeting.locator('[name="meetingPointLabel"]')).toBeVisible();
         await capture(page, "departure-meeting-editor", scheme);
       });
 
       test(`timing has its own explicit save (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        const timing = await openTripAboutRow(page, "Timing");
+        const timing = await openTripAboutRow(page, "When");
         await expect(timing.getByLabel("Departs")).toBeVisible();
         await capture(page, "departure-timing-editor", scheme);
       });
 
       test(`booking and payment has its own explicit save (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        const booking = await openTripAboutRow(page, "Booking and payment");
+        const booking = await openTripAboutRow(page, "Price");
         await expect(booking.locator('[name="capacity"]')).toBeVisible();
         await capture(page, "departure-booking-editor", scheme);
       });
@@ -109,16 +110,15 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await openReefTrip(page);
-        const details = await openTripAboutRow(page, "Departure details");
+        const details = await openTripAboutRow(page, "Name and description");
         await expect(details.getByLabel("Title", { exact: true })).toBeVisible();
         await capture(page, "departure-details-editor", scheme);
       });
 
-      test(`boat assignment edits beside its crew (${scheme})`, async ({ page }) => {
+      test(`boat assignment edits in its own row (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        const crew = await openTripAboutRow(page, "Boat & crew");
-        await crew.getByText("Edit boat", { exact: true }).click();
-        await expect(crew.locator('[name="boatId"]')).toBeVisible();
+        const boat = await openTripAboutRow(page, "Boat");
+        await expect(boat.locator('[name="boatId"]')).toBeVisible();
         await capture(page, "departure-boat-editor", scheme);
       });
 
@@ -195,7 +195,7 @@ for (const scheme of ["light", "dark"] as const) {
           })
           .waitFor();
         // Nobody can be offered a seat on a cancelled departure.
-        await expect(page.getByRole("heading", { name: /Who wants in/ })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: /^Offer .* a seat$/ })).toHaveCount(0);
         await capture(page, "trip-cancelled", scheme);
       });
 
@@ -203,7 +203,6 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Trip");
         await page.locator("#roster").waitFor();
-        await page.locator("#add-diver").waitFor();
         await capture(page, "trip-guests", scheme);
       });
 
@@ -244,8 +243,8 @@ for (const scheme of ["light", "dark"] as const) {
         // block, which is also why the public form above renders with the staff
         // preview bar. Neither affects the surface being photographed.
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
-        // The Divers tab's "Who wants in" panel is where the list is offered a seat.
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
+        // The Trip page's "Who wants in" panel is where the list is offered a seat.
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling#who-wants-in`);
         await page.getByText("Open Water — unverified").waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-recipients", scheme);
@@ -296,8 +295,6 @@ for (const scheme of ["light", "dark"] as const) {
           page.getByRole("alert").filter({ hasText: "Requirements updated." }),
         ).toContainText("Requirements updated.");
 
-        // The save lands on Details; the deal panel and the wait list are on Divers.
-        await openTripTab(page, "Trip");
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         // Nobody on the list clears the Rescue bar, so the panel is not drawn at all.
         await page.locator("#roster").waitFor();
@@ -323,7 +320,7 @@ for (const scheme of ["light", "dark"] as const) {
        * who has no certification declaration, is correctly absent from the
        * send list.
        *
-       * The deal is sent from the Divers tab's Who wants in panel now (H-20261005-one-interest-table-names
+       * The deal is sent from the Trip page's Who wants in panel now (H-20261005-one-interest-table-names
        * D-3), whose "Around these dates" group lists only who fits the
        * departure (dive-domain review of #2656, m1). The night charter asks for
        * a Night card nobody on the list holds, so this pins the shallow
@@ -337,7 +334,7 @@ for (const scheme of ["light", "dark"] as const) {
           "blue-mantis",
           "Two-Tank Reef — Christ of the Abyss",
         );
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling#who-wants-in`);
         // Both seeded joiners now read unverified (#2428: a staff-typed card
         // nobody checked is not vouched for), so wait on the first of them.
         await page
@@ -382,15 +379,11 @@ for (const scheme of ["light", "dark"] as const) {
           page.getByRole("alert").filter({ hasText: "Requirements updated." }),
         ).toContainText("Requirements updated.");
 
-        // The save lands on Details; the deal panel and the wait list are on Divers.
-        await openTripTab(page, "Trip");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
-        // Scoped to the ledger: the deal panel further down the same page
-        // renders the identical phrase for its own recipients, and this test is
-        // about the list that was still silent until now. (`#who-wants-in` is the
-        // panel that holds the rows, so the roster is still the narrowest honest scope.)
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling#who-wants-in`);
+        // Scoped to the wait list: the deal panel renders the identical phrase
+        // for its own recipients, and this test is about the list.
         await page
-          .locator("#roster")
+          .locator("#who-wants-in")
           .getByText("Open Water · below this departure’s minimum")
           .waitFor();
         await waitForHashLanding(page);
@@ -404,7 +397,7 @@ for (const scheme of ["light", "dark"] as const) {
         const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "departure" });
         await openTripTab(page, "Manifest");
         await expect(
-          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+          page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
         ).toBeVisible();
         // The offline safety copy now saves itself in the background on
         // mount; wait for that to settle (the offline-roll-call link only
@@ -491,7 +484,7 @@ for (const scheme of ["light", "dark"] as const) {
         if (!rehearsal) throw new Error("the fact could not put a rehearsal on");
         await page.goto(`/shop/blue-mantis/trips/${rehearsal.tripId}`);
         await page.locator("[data-rehearsal-banner]").waitFor();
-        await page.getByRole("navigation", { name: "Departure" }).waitFor();
+        await page.locator("[data-trip-phases]").waitFor();
         await capture(page, "trip-rehearsal", scheme);
       });
 
@@ -548,8 +541,8 @@ for (const scheme of ["light", "dark"] as const) {
         const seeded = await seedFacts(request, ["troublePanels", "crewClash"]);
         const { crewClash } = seeded as { crewClash?: { tripId: string } };
         if (!crewClash) throw new Error("the fact found no two departures to clash");
-        await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}?view=details`);
-        const crew = await openTripAboutRow(page, "Boat & crew");
+        await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}?view=edit`);
+        const crew = await openTripAboutRow(page, "Crew");
         const clashingName = await crew
           .locator("#crew li")
           .filter({ has: page.getByText(/^Also scheduled on /) })
@@ -563,7 +556,12 @@ for (const scheme of ["light", "dark"] as const) {
         });
         await openTripTab(page, "Manifest");
         await openDeckPerson(page, clashingName);
-        await page.getByRole("button", { name: "Not aboard / details", exact: true }).click();
+        await page
+          .getByRole("button", {
+            name: staffTranslator("en-US")("manifest.deck.exception"),
+            exact: true,
+          })
+          .click();
         // The destination's own words, not a timing guess.
         await page
           .getByText(/^Also scheduled on /)
@@ -607,7 +605,7 @@ for (const scheme of ["light", "dark"] as const) {
        * has left without the diver, so the state that needs photographing
        * cannot be reached without making a departure whose time has just
        * passed. The flow is the desk's own — seat the diver, clear their
-       * release, tap the door on the Divers tab —
+       * release, tap the door on the Trip page —
        * and then walks to the rail, which is where the pixels under test are.
        *
        * What the frame is for is the restraint. A released seat is the absence
@@ -679,7 +677,7 @@ for (const scheme of ["light", "dark"] as const) {
         const confirmed = liveRosterConfirmation(page, { tripId, checkpoint: "departure" });
         await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
         await expect(
-          page.getByRole("heading", { level: 1, name: "Deck", exact: true }),
+          page.getByRole("heading", { level: 1, name: "Roll call", exact: true }),
         ).toBeVisible();
         // The chip itself, waited on rather than assumed: this capture is
         // worthless if it photographs the manifest a moment before the row
@@ -713,16 +711,13 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "departure-log", scheme);
       });
 
-      // A fresh incident report, opened from the departure's Record tab (ADR
+      // A fresh incident report, opened from the trip's On the water phase (ADR
       // 20261012-incident-reports): the draft's three cards, every yes/no
       // unanswered rather than defaulted to "no", the people list, and the
       // filing card naming what a report needs before it can be filed.
       test(`a new incident report renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        await page
-          .getByRole("navigation", { name: "Departure" })
-          .getByRole("link", { name: "Record", exact: true })
-          .click();
+        await openTripPhase(page, "water");
         await page
           .getByRole("region", { name: "Incident reports" })
           .getByRole("button", { name: "Report an incident" })
@@ -737,10 +732,7 @@ for (const scheme of ["light", "dark"] as const) {
       // and when, opening the draft. Started here, so the seed stays clean.
       test(`an unfiled incident report is one line on Today (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        await page
-          .getByRole("navigation", { name: "Departure" })
-          .getByRole("link", { name: "Record", exact: true })
-          .click();
+        await openTripPhase(page, "water");
         await page
           .getByRole("region", { name: "Incident reports" })
           .getByRole("button", { name: "Report an incident" })
@@ -756,10 +748,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the departure log lists its incident reports (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         const tripPath = new URL(page.url()).pathname;
-        await page
-          .getByRole("navigation", { name: "Departure" })
-          .getByRole("link", { name: "Record", exact: true })
-          .click();
+        await openTripPhase(page, "water");
         await page
           .getByRole("region", { name: "Incident reports" })
           .getByRole("button", { name: "Report an incident" })

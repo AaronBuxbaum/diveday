@@ -68,8 +68,8 @@ afterEach(() => {
 
 /** The counter is saved reference under Deck Details, separate from person recording. */
 async function openDeckDetails() {
-  await screen.findByRole("heading", { name: "Deck" });
-  const summary = screen.getByText("Details", { selector: "summary" });
+  await screen.findByRole("heading", { name: "Roll call" });
+  const summary = screen.getByText("More", { selector: "summary" });
   if (!summary.closest("details")?.open) fireEvent.click(summary);
 }
 
@@ -472,7 +472,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
 
     expect(screen.queryByRole("region", { name: "At the counter" })).not.toBeInTheDocument();
     // The roll call it was sitting on top of is still there.
-    expect(screen.getByRole("heading", { name: "Deck" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Roll call" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Start roll call" })).toBeVisible();
   });
 });

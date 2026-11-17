@@ -94,9 +94,14 @@ export function DeckRollCall({
             ),
           })
         : undefined,
+      // Only recorded evidence says missing or conflicting. A cancelled
+      // departure nobody counted on takes no writes: its people are not
+      // counted, never missing (#2285).
       record:
-        view.cancelled === "closed" || missing || conflict ? (
+        missing || conflict ? (
           <p className="font-semibold text-danger">{t("manifest.deck.missing")}</p>
+        ) : view.cancelled === "closed" ? (
+          <p className="font-semibold text-muted">{t("manifest.deck.notCounted")}</p>
         ) : blocked ? (
           <div>
             <ul className="space-y-2 text-danger">
@@ -179,8 +184,10 @@ export function DeckRollCall({
           })
         : undefined,
       record:
-        view.cancelled === "closed" || missing || conflict ? (
+        missing || conflict ? (
           <p className="font-semibold text-danger">{t("manifest.deck.missing")}</p>
+        ) : view.cancelled === "closed" ? (
+          <p className="font-semibold text-muted">{t("manifest.deck.notCounted")}</p>
         ) : (
           control("boarded")
         ),

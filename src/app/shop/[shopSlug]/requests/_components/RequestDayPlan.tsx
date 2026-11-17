@@ -10,6 +10,7 @@ import type { CalendarDate } from "@/lib/calendar-date";
 import type { DateRequestEntry } from "@/lib/date-requests";
 import { formatTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
+import { whoWantsInHref } from "@/lib/trip-clock";
 import { WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 
 /** A comparison of recorded facts, never a promise that a party can board. */
@@ -75,7 +76,7 @@ export function RequestDayPlan({
             {departures.map((departure) => (
               <li key={departure.tripId} className="min-w-0 space-y-1">
                 <Link
-                  href={`${shopPath(shopSlug, "trips", departure.tripId)}#who-wants-in`}
+                  href={whoWantsInHref(shopPath(shopSlug, "trips", departure.tripId))}
                   className={buttonClass({ variant: "link", size: "sm", flush: true })}
                 >
                   {t("requests.plan.departure", {

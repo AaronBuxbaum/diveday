@@ -56,6 +56,18 @@ async function firstTimerAtTheCounter() {
 }
 
 async function belowFor(seat: Awaited<ReturnType<typeof firstTimerAtTheCounter>>) {
+  return deskSlot(seat, "below");
+}
+
+/** The opened guest's rare actions: "Not here" and "Turn away" (ADR 20261117-trip-page-clock). */
+async function detailsFor(seat: Awaited<ReturnType<typeof firstTimerAtTheCounter>>) {
+  return deskSlot(seat, "details");
+}
+
+async function deskSlot(
+  seat: Awaited<ReturnType<typeof firstTimerAtTheCounter>>,
+  slot: "below" | "details",
+) {
   const desk = await buildArrivalDesk({
     db: seat.db,
     shopId: seat.shop.id,
@@ -68,7 +80,7 @@ async function belowFor(seat: Awaited<ReturnType<typeof firstTimerAtTheCounter>>
     t: staffTranslator("en-US"),
   });
   if (!desk) throw new Error("the boat is outside its arrivals window");
-  return render(<div>{desk.arrival.below.get(seat.bookingId)}</div>).container;
+  return render(<div>{desk.arrival[slot]?.get(seat.bookingId)}</div>).container;
 }
 
 describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
@@ -190,9 +202,9 @@ describe("the counter's turned-away door (H-20261015-who-may-turn-someone)", () 
     if (!row) throw new Error("the seat left the queue");
     const expected = turnAwayReasons(row.readiness);
     expect(expected).toContain("identity");
-    const below = await belowFor(seat);
-    expect(below).toHaveTextContent("Turn away");
-    const offered = reasonsOffered(below);
+    const details = await detailsFor(seat);
+    expect(details).toHaveTextContent("Turn away");
+    const offered = reasonsOffered(details);
     expect(offered).toEqual(expected);
     // Security F1: the matched person's blockers are not this seat's reasons.
     expect(offered.every((reason) => reason === "identity" || reason === "payment")).toBe(true);
@@ -212,10 +224,10 @@ describe("the counter's turned-away door (H-20261015-who-may-turn-someone)", () 
     );
     if (!row) throw new Error("the seat left the queue");
     expect(row.readiness.status).toBe("blocked");
-    expect(reasonsOffered(await belowFor(sailed)).length).toBeGreaterThan(0);
+    expect(reasonsOffered(await detailsFor(sailed)).length).toBeGreaterThan(0);
     // Arrival is the trail's word on the held seat (issue #2702).
     await markArrived(seat.db, seat.bookingId);
-    expect(reasonsOffered(await belowFor(sailed))).toEqual([]);
+    expect(reasonsOffered(await detailsFor(sailed))).toEqual([]);
   });
 
   it("says a turned-away seat was seen at the desk, with its reason", async () => {

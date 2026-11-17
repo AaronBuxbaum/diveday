@@ -1,5 +1,12 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripAbout, openTripFromBoard } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openAddAGuest,
+  openTripAbout,
+  openTripFromBoard,
+} from "./helpers";
 import { E2E_CRON_SECRET } from "./servers";
 
 /**
@@ -137,12 +144,12 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
   await openTripFromBoard(page, title);
   const tripUrl = page.url();
 
-  // Inside the arrivals window "Add a diver" is one search field, and a booked
-  // seat is its empty result's "Add diver" (UX audit item 24).
-  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  // The add form is one search field, and a booked seat is its empty
+  // result's "Add a guest" (UX audit item 24).
+  const find = await openAddAGuest(page);
   await find.fill("Meets The Minimum");
   await find.press("Enter");
-  await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
+  await page.getByRole("link", { name: "Add a guest", exact: true }).first().click();
   await page.waitForURL(/\/divers\?add=1/);
   await page.getByLabel("Full name").fill("Meets The Minimum");
   await page.getByLabel("Email").fill(`meets-${e2eNow().getTime()}@example.com`);

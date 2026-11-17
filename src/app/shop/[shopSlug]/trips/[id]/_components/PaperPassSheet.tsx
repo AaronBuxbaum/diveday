@@ -76,7 +76,7 @@ export async function PaperPassSheet({
       backHref={shopPath(shopSlug, "trips", tripId)}
       paper={PAPER_PASS_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
-      backLabel={readerT("trips.tabs.divers")}
+      backLabel={readerT("trips.clock.guests")}
       printLabel={readerT("print.sheet.door")}
     >
       <PaperSheet

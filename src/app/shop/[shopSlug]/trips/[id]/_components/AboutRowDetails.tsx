@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 /**
  * **An About row opens on the server's say-so and never closes on it.**
@@ -26,6 +26,10 @@ import { type ReactNode, useEffect, useState } from "react";
  * `label` is the row's own label, the word its summary already shows, named
  * on the group so a screen reader entering the open editor hears whose it is
  * and a spec finds the row by its name rather than its id (issue #1868).
+ *
+ * **A link to the row, or to anything inside it, opens it** (`?view=edit#crew`
+ * from a fix list, `#dives` from Roll call): the fragment's target is looked
+ * up on arrival and on every hash change.
  */
 export function AboutRowDetails({
   id,
@@ -41,13 +45,29 @@ export function AboutRowDetails({
   children: ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(open);
+  const ref = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
     if (open) setIsOpen(true);
   }, [open]);
 
+  useEffect(() => {
+    const openOnHash = () => {
+      const target = window.location.hash
+        ? document.getElementById(decodeURIComponent(window.location.hash.slice(1)))
+        : null;
+      if (!target || !ref.current?.contains(target)) return;
+      setIsOpen(true);
+      target.scrollIntoView({ block: "start" });
+    };
+    openOnHash();
+    window.addEventListener("hashchange", openOnHash);
+    return () => window.removeEventListener("hashchange", openOnHash);
+  }, []);
+
   return (
     <details
+      ref={ref}
       id={id}
       aria-label={label}
       open={isOpen}

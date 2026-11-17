@@ -46,7 +46,7 @@ test.describe("a crew member put on a departure", () => {
     // Straight to the Details tab: landing on Divers made `openTripAbout`
     // load the departure a second time, a server render this test's 15s
     // budget could not spare on a loaded machine.
-    await page.goto(`${await tripPathByTitle(page, SHOP, title)}?view=details`);
+    await page.goto(`${await tripPathByTitle(page, SHOP, title)}?view=edit`);
     await openTripAbout(page);
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: CREW });

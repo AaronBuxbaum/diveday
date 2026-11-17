@@ -66,7 +66,7 @@ const pendingMark = {
 
 /** Delivery feedback stays visible on the routine Deck, outside its reference disclosure. */
 async function routineStatus() {
-  const deck = await screen.findByRole("region", { name: "Deck" });
+  const deck = await screen.findByRole("region", { name: "Roll call" });
   const status = deck.querySelector<HTMLDivElement>(':scope > div[role="status"]');
   if (!status) throw new Error("Expected the routine Deck delivery status");
   expect(status).toBeVisible();
@@ -74,8 +74,8 @@ async function routineStatus() {
 }
 
 async function openDetails() {
-  await screen.findByRole("region", { name: "Deck" });
-  fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+  await screen.findByRole("region", { name: "Roll call" });
+  fireEvent.click(screen.getByText("More", { selector: "summary" }));
 }
 
 /**
@@ -213,7 +213,7 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     expect(liveOffer()).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
     fireEvent.click(screen.getByRole("button", { name: "Priya Shah" }));
-    fireEvent.click(screen.getByRole("button", { name: "Not aboard / details" }));
+    fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.exception") }));
     const panel = document.querySelector<HTMLDetailsElement>("details[data-roll-call-exception]");
     if (!panel) throw new Error("Missing exception panel");
     fireEvent.click(panel.querySelector("summary") as HTMLElement);

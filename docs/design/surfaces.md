@@ -123,10 +123,11 @@ back.
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 
 **Approved 2026-11-14** ([ADR](../architecture/decisions/20261114-trip-folio-and-individual-deck.md), [#4527](https://github.com/AaronBuxbaum/diveday/issues/4527)): the Trip is a working folio whose four subjects are Guests, Equipment, The day and Record.
+**Amended 2026-11-17** ([ADR](../architecture/decisions/20261117-trip-page-clock.md), [#4670](https://github.com/AaronBuxbaum/diveday/issues/4670)): the four subjects became five phases of one clock (Filling, Getting ready, Check-in, On the water, Wrapped up) plus Edit trip; each phase is one sentence, the fix list, then what else that phase needs.
 The guest arrives with several independent requirements, so one selected folio shows every outstanding remedy and preserves booking relationships, arrival and equipment context.
 A compact guest index opens the person, and Next guest needing attention continues the counter workflow without scattering controls across the whole roster.
 Permanent rows expanded for every guest and a generic administrative card grid were considered and rejected; hierarchy comes from names, work and space.
-Removing the guest's unresolved tasks would hide the job, while removing repeated settled detail makes the next action clearer; Open Deck is the explicit transition to boat accounting.
+Removing the guest's unresolved tasks would hide the job, while removing repeated settled detail makes the next action clearer; the Roll call door is the explicit transition to boat accounting.
 
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the four tabs become one page — the boat's facts, the needs and the roster as groups (A) or sections (B), or a ring of here of booked with five facts beside it over A's groups (C) — and Roll call is the page's one filled control or its floating capsule. Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
 
@@ -225,7 +226,7 @@ departure, which is the one thing here that could turn a long page into an unbou
 **Approved 2026-11-14** ([ADR](../architecture/decisions/20261114-trip-folio-and-individual-deck.md), [#4527](https://github.com/AaronBuxbaum/diveday/issues/4527)): Deck answers “who am I recording now?” with one full name and one large action.
 The routine home, person and receipt each fit one phone viewport; selecting, skipping and Next create no evidence, and every recording concerns exactly one named guest or crew member.
 The receipt keeps that person's name until the captain advances, preventing an ordinary double tap from recording the next person.
-A permanent roster and named batch confirmation were rejected; counts are derived, buddy planning stays in The day, and history, timing and reference details open when needed.
+A permanent roster and named batch confirmation were rejected; counts are derived, buddy planning stays in Edit trip, and history, timing and reference details open when needed.
 Missing or conflicting evidence takes priority and remains unresolved until explicitly reconciled, so removing that attention would change the meaning while removing routine admin chrome does not.
 
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): the checkpoint card, the five stage chips, the three-way switch and the disclosure above the first name become the count and one line — at 34px in a group (A), at 44px under a floating bar (B), or as a ring that closes when everyone is aboard (C) — then the one still to call, then everyone aboard, one circle per name; glare is a word in the bar. Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
@@ -369,9 +370,9 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 - **Composition:** a grouped ledger because orders share their date, and a shared fact belongs to
   the group (principle 9 applied to a table).
 
-### The counter — the Divers tab, `/shop/[shopSlug]/trips/[id]`, inside the arrivals window
+### The counter — the guest list, `/shop/[shopSlug]/trips/[id]`, inside the arrivals window
 
-**Moved again 2026-10-05** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3, second amendment): the Check-in tab listed the same divers as the Divers tab with the same blockers and fixes, so it is gone and arrival is a state of the roster. Inside the arrivals window the Divers tab draws the count above the roster, a Check in tap on each ready row (Checked in, with the paper pass, once tapped), "Not here?" under a ready row once the boat is due, and two more groups, Checked in and Not here. A blocked row carries no tap; its fixes are the roster row's own. There is no walk-in page or mode (Aaron, 2026-11-05): the Divers tab's own search offers "Add diver" for someone new, which opens the new-diver form for that boat (`divers?add=1&surface=departure&tripId=`). A name is enough, and email and phone are optional everywhere but the wait list. The form takes the rest of a party, up to eight, in one pass. Seating a diver has two doors, from a departure and from a diver (`SEAT_SURFACES`). Everything below describes the counter's grammar, which the roster now wears.
+**Moved again 2026-10-05** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3, second amendment): the Check-in tab listed the same divers as the guest list with the same blockers and fixes, so it is gone and arrival is a state of the roster. Inside the arrivals window the guest list draws the count above the roster, a Check in tap on each ready row (Checked in, with the paper pass, once tapped), "Not here?" under a ready row once the boat is due, and two more groups, Checked in and Not here. A blocked row carries no tap; its fixes are the roster row's own. There is no walk-in page or mode (Aaron, 2026-11-05): the guest list's own search offers "Add diver" for someone new, which opens the new-diver form for that boat (`divers?add=1&surface=departure&tripId=`). A name is enough, and email and phone are optional everywhere but the wait list. The form takes the rest of a party, up to eight, in one pass. Seating a diver has two doors, from a departure and from a diver (`SEAT_SURFACES`). Everything below describes the counter's grammar, which the roster now wears.
 
 **Moved 2026-10-03** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3): the counter is each departure's own Check-in tab rather than a page of its own. The departure chips and the search left with the page: the boat is the tab's, and "which boat is this diver on?" is answered by the arrival lookup on Today, whose matches open the boat's tab. The walk-in form is the tab's foot (`check-in/walk-in`, no boat picker), and the tab's header carries Print, which opens the trip packet. The "Remove first" line below is history.
 
@@ -592,7 +593,7 @@ existing four demo doors stay, one per chapter, and the index and the honest-no 
 **Redrawn, 2026-10-03**, after the Logbook redesign (ADR 20261001-logbook) changed the screens the
 mockups mirror: the readiness card became Today (a departure card, then two Needs you rows), the
 roll call became the saved offline copy in Boat mode (Divers, Boarded, Awaiting, and “Mark boarded”
-beside “Mark not boarded”), the prep list became the trip's Gear tab, and the night-before brief
+beside “Mark not boarded”), the prep list became the trip's Gear page, and the night-before brief
 became the diver's trip page (the dock call line, then Done and Your turn). The notes were re-read
 against each redraw.
 

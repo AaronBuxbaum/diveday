@@ -70,7 +70,7 @@ describe("turnAwayReasons", () => {
     expect(turnAwayReasons(blocked("readiness_unavailable"))).toEqual([]);
   });
 
-  /** A stale training mark is the desk's own record, cleared on the Divers tab. */
+  /** A stale training mark is the desk's own record, cleared on the Trip page. */
   it("offers nothing for a training mark that no longer holds", () => {
     expect(turnAwayReasons(blocked("training_mark_invalid"))).toEqual([]);
   });

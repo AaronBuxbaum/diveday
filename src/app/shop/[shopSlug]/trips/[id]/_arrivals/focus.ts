@@ -7,7 +7,7 @@ export function counterQueuePath(shopSlug: string, tripId: string): string {
   return shopPath(shopSlug, "trips", tripId);
 }
 
-/** A diver's row on the Divers tab, which Today's arrival lookup links straight to. */
+/** A diver's row on the Trip page, which Today's arrival lookup links straight to. */
 export function counterRowId(bookingId: string): string {
   return `booking-${bookingId}`;
 }

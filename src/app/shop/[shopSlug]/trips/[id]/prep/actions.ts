@@ -86,6 +86,24 @@ function packingListOf(shopSlug: string, tripId: string) {
 }
 
 /**
+ * **A gear form that fails its checks says so where it was tapped**: back to
+ * its departure's packing list with `?notice=invalid` when the post still
+ * names a departure, else to the register. Never a silent tap (inventory item
+ * 22). The departure is only a landing: nothing is read or written for it.
+ */
+function refusedParse(slug: string, postedTripId: FormDataEntryValue | null): never {
+  const tripId = z.uuid().safeParse(postedTripId);
+  if (tripId.success) {
+    revalidateAndRedirect(
+      departureOf(slug, tripId.data),
+      noticeUrl(packingListOf(slug, tripId.data), "invalid"),
+    );
+  }
+  const gear = shopPath(slug, "gear");
+  revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+}
+
+/**
  * What a row learns when it commits its own pick — a **code**, never a
  * sentence; the row picks the words (ADR 20260731-domain-layer-copy-leaks).
  */
@@ -196,8 +214,8 @@ export async function releaseGearUnitAction(formData: FormData) {
   const session = await requireStaffSession();
   const parsed = releaseSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
-    const gear = shopPath(session.user.shopSlug, "gear");
-    revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+    const postedTripId = formData.get("tripId");
+    refusedParse(session.user.shopSlug, postedTripId);
   }
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
   const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
@@ -232,8 +250,8 @@ export async function checkOutTripGearSetAction(formData: FormData) {
   const session = await requireStaffSession();
   const parsed = gearSetSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
-    const gear = shopPath(session.user.shopSlug, "gear");
-    revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+    const postedTripId = formData.get("tripId");
+    refusedParse(session.user.shopSlug, postedTripId);
   }
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
   const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
@@ -281,8 +299,8 @@ export async function returnTripGearSetAction(formData: FormData) {
   const session = await requireStaffSession();
   const parsed = returnSetSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
-    const gear = shopPath(session.user.shopSlug, "gear");
-    revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+    const postedTripId = formData.get("tripId");
+    refusedParse(session.user.shopSlug, postedTripId);
   }
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
   const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
@@ -339,8 +357,8 @@ export async function returnTripGearUnitAction(formData: FormData) {
   const session = await requireStaffSession();
   const parsed = returnUnitSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
-    const gear = shopPath(session.user.shopSlug, "gear");
-    revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+    const postedTripId = formData.get("tripId");
+    refusedParse(session.user.shopSlug, postedTripId);
   }
   const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
   const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);

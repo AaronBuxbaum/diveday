@@ -54,7 +54,7 @@ beforeEach(() => {
 
 /** Scope delivery feedback to the visible Deck, rather than its closed reference copy. */
 async function routineStatus() {
-  const deck = await screen.findByRole("region", { name: "Deck" });
+  const deck = await screen.findByRole("region", { name: "Roll call" });
   const status = deck.querySelector<HTMLDivElement>(':scope > div[role="status"]');
   if (!status) throw new Error("Expected the routine Deck delivery status");
   expect(status).toBeVisible();
@@ -62,8 +62,8 @@ async function routineStatus() {
 }
 
 async function openDetails() {
-  await screen.findByRole("region", { name: "Deck" });
-  fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+  await screen.findByRole("region", { name: "Roll call" });
+  fireEvent.click(screen.getByText("More", { selector: "summary" }));
 }
 
 function savedWithDiscardedNote(tripId: string) {
@@ -807,7 +807,7 @@ it("quarantines a selected roster through failed verification, then scopes it af
   });
 
   render(<OfflineManifestView />);
-  await screen.findByRole("region", { name: "Deck" });
+  await screen.findByRole("region", { name: "Roll call" });
   fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
   fireEvent.click(screen.getByRole("button", { name: "Dana Divemaster" }));
   expect(screen.getByRole("heading", { name: "Dana Divemaster" })).toBeVisible();

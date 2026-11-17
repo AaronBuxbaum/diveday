@@ -1,6 +1,5 @@
 // i18n-exempt-file: test fixture; only the roster's tests import it, and its names are seeded data.
 import { fireEvent, render } from "@testing-library/react";
-import type { ReactNode } from "react";
 import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { SameNamePerson } from "@/features/identity-repoint";
@@ -9,6 +8,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { signingDate } from "@/lib/guardian";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
+import type { FixListPhase, TripFix } from "./guest-fix-rows";
 import type { RosterRowContext } from "./RosterRow";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import {
@@ -120,7 +120,13 @@ export type RosterFixtureOptions = {
   readiness: ReadinessByBooking;
   waivers: WaiverByBooking;
   rentalFit?: RentalFitByBooking;
-  addDiverGroup?: ReactNode;
+  /** The clock phase the list is drawn for; Check-in when the desk is open, else after. */
+  phase?: FixListPhase;
+  /** Where "Add a guest" goes, when the trip takes one. */
+  addGuestHref?: string | null;
+  tripFixes?: TripFix[];
+  /** Getting ready's settled line under "everyone is ready". */
+  afterReady?: import("react").ReactNode;
   paymentsConnected?: boolean;
   canManageOrders?: boolean;
   requiresPayment?: boolean;
@@ -148,7 +154,10 @@ function rosterProps({
   readiness,
   waivers,
   rentalFit,
-  addDiverGroup,
+  phase,
+  addGuestHref = null,
+  tripFixes,
+  afterReady,
   paymentsConnected = false,
   canManageOrders = true,
   requiresPayment = false,
@@ -216,7 +225,14 @@ function rosterProps({
       certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
       moveSeat,
     },
-    slots: { addDiverGroup, arrival, record },
+    slots: {
+      phase: phase ?? (arrival ? "checkin" : "listed"),
+      addGuestHref,
+      tripFixes,
+      afterReady,
+      arrival,
+      record,
+    },
   };
 }
 
@@ -226,9 +242,16 @@ export function renderRoster(options: RosterFixtureOptions) {
   if (!options.record && options.selectedBookingId !== null) {
     const id = options.selectedBookingId ?? options.roster[0]?.booking.id;
     const button = id ? rendered.container.querySelector(`[data-guest-open="${id}"]`) : null;
+    // Opening a guest in place; one in a folded group unfolds with it.
     if (button) fireEvent.click(button);
-    const reference = rendered.container.querySelector('details[id^="guest-reference-"] > summary');
-    if (reference && !reference.parentElement?.hasAttribute("open")) fireEvent.click(reference);
+    else if (id) {
+      for (const fold of rendered.container.querySelectorAll(
+        "button[data-fix-fold][aria-expanded='false']",
+      ))
+        fireEvent.click(fold);
+      const unfolded = rendered.container.querySelector(`[data-guest-open="${id}"]`);
+      if (unfolded) fireEvent.click(unfolded);
+    }
   }
   return rendered;
 }

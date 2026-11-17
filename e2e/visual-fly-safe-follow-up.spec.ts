@@ -19,7 +19,7 @@ test.describe("light mode", () => {
     viewport: { width: 1280, height: 800 },
     privateShopSlug: "flying-follow-up-visual",
   });
-  test("staff see queued and unresolved flying guidance and can mark follow-up resolved", async ({
+  test("Today lists queued and unresolved flying guidance and staff mark follow-up resolved", async ({
     page,
     request,
     privateShop,
@@ -29,18 +29,22 @@ test.describe("light mode", () => {
     })) as {
       flySafeFollowUp: { tripId: string; otherTripId: string };
     };
-    await page.goto(`/shop/${privateShop.slug}/trips/${flySafeFollowUp.tripId}`);
+    // Shop-wide, on Today (layer E): every follow-up names its departure.
+    await page.goto(`/shop/${privateShop.slug}`);
     const panel = page.getByRole("region", { name: t("trips.flySafeFollowUp.heading") });
     const queued = panel.getByRole("listitem").filter({ hasText: "Queue Diver" });
     const followUp = panel.getByRole("listitem").filter({ hasText: "Contact Diver" });
     await expect(queued).toContainText(t("trips.flySafeFollowUp.queued"));
     await expect(followUp).toContainText(t("trips.flySafeFollowUp.contact"));
-    await expect(queued.getByRole("link")).toHaveCount(0);
+    await expect(queued.getByRole("link")).toHaveAttribute(
+      "href",
+      `/shop/${privateShop.slug}/trips/${flySafeFollowUp.tripId}`,
+    );
     await expect(followUp.getByRole("link", { name: "Other flying day" })).toHaveAttribute(
       "href",
       `/shop/${privateShop.slug}/trips/${flySafeFollowUp.otherTripId}`,
     );
-    await capture(page, "trip-flying-guidance-follow-up", "light", {
+    await capture(page, "today-flying-guidance-follow-up", "light", {
       beforeScreenshot: async () => {
         const buttons = panel.getByRole("button");
         await expect(buttons).toHaveCount(2);

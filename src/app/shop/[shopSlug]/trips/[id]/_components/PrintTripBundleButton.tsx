@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 type RecordPrintAction = (formData: FormData) => void | Promise<void>;
 
 /**
- * Opens the print bundle from the Overview tab without losing the originating
+ * Opens the print bundle from the Trip page without losing the originating
  * click to a popup blocker. The form action records the click server-side,
  * while the synchronous `window.open` lets the new tab show its print dialog.
  */
@@ -19,6 +19,7 @@ export function PrintTripBundleButton({
   popupBlockedLabel,
   recordAction,
   flush = false,
+  link = false,
 }: {
   href: string;
   label: string;
@@ -26,6 +27,8 @@ export function PrintTripBundleButton({
   recordAction: RecordPrintAction;
   /** The button may start a line: its word sits on that line's edge (`buttonClass`'s `flush`). */
   flush?: boolean;
+  /** Worn as a link among links (Edit trip's Print group), not a ghost button. */
+  link?: boolean;
 }) {
   const [popupBlocked, setPopupBlocked] = useState(false);
   return (
@@ -42,7 +45,11 @@ export function PrintTripBundleButton({
           The 44px touch floor comes from the base either way. */}
       <SubmitButton
         pendingLabel={label}
-        className={buttonClass({ variant: "ghost", size: "sm", flush })}
+        className={
+          link
+            ? buttonClass({ variant: "link", flush })
+            : buttonClass({ variant: "ghost", size: "sm", flush })
+        }
       >
         {label}
       </SubmitButton>

@@ -3,8 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Badge } from "@/components/ui/badge";
-import { staffTranslator } from "@/i18n/staff-messages";
-import { TripCapacityBadge, TripPageHeader, TripPageHeaderSkeleton } from "./TripPageHeader";
+import { TripPageHeader, TripPageHeaderSkeleton } from "./TripPageHeader";
 
 // The way up is read off the URL (issue #2748): a face of a departure links to
 // the board above the departure, never to the departure itself.
@@ -167,41 +166,6 @@ const spacing = (element: Element | null | undefined) =>
  * phone and 38px from `sm`, and a description bar this one never draws. The
  * packing list moved 12px when it landed at 1280.
  */
-/**
- * **Staff count the seats the boat may sell** (H-20261009-certificate-caps-seats, #2321): a departure
- * stating 14 on a hull certified for 12 has 2 left at 10 aboard, not 4. The
- * desk read 4, the counter refused the fifth, and the pill was the one that lied.
- */
-describe("TripCapacityBadge", () => {
-  const t = staffTranslator("en-US");
-  function renderBadge(trip: { capacity: number; sellableCapacity: number; booked: number }) {
-    return render(
-      <TripCapacityBadge
-        trip={{ ...trip, status: "scheduled" }}
-        cancelledLabel="Cancelled"
-        t={t}
-      />,
-    );
-  }
-
-  it("counts what is left under the certificate, and says the stated number beside it", () => {
-    renderBadge({ capacity: 14, sellableCapacity: 12, booked: 10 });
-    expect(screen.getByText("2 seats left")).toBeTruthy();
-    expect(screen.getByText("Certificate: 12 of 14 seats")).toBeTruthy();
-  });
-
-  it("reads Full when the certificate is reached, whatever the stated seats", () => {
-    renderBadge({ capacity: 14, sellableCapacity: 12, booked: 12 });
-    expect(screen.getByText("Full")).toBeTruthy();
-  });
-
-  it("says one number when the certificate does not bind", () => {
-    renderBadge({ capacity: 12, sellableCapacity: 12, booked: 10 });
-    expect(screen.getByText("2 seats left")).toBeTruthy();
-    expect(screen.queryByText(/Certificate:/)).toBeNull();
-  });
-});
-
 describe("TripPageHeaderSkeleton", () => {
   it("opens with a bar in the eyebrow's 16px line", () => {
     const loaded = loadedHeader();

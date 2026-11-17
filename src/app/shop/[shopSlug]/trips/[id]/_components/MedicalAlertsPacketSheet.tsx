@@ -84,7 +84,7 @@ export async function MedicalAlertsPacketSheet({
       backHref={shopPath(shopSlug, "trips", tripId)}
       paper={PACKET_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
-      backLabel={t("trips.tabs.divers")}
+      backLabel={t("trips.clock.guests")}
       printLabel={t("print.sheet.door")}
       readySelector={PACKET_READY_SELECTOR}
       // The words reach the crew's sheet, never this screen (layer 4 security

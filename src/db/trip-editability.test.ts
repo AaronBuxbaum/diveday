@@ -219,3 +219,42 @@ it("refuses stale unchecked safety evidence after a newer decompression record b
     ),
   ).toMatchObject({ ok: true, trip: { exceedsNoDecoLimits: false } });
 });
+
+it("refuses plan, price and timing edits on a cancelled departure, and the participant prices with them", async () => {
+  const { db, shop } = ctx;
+  const startsAt = new Date(nowDate().getTime() + 48 * HOUR);
+  const trip = await createTrip(db, {
+    shopId: shop.id,
+    title: "Called off",
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 4 * HOUR),
+    capacity: 8,
+  });
+  if (!trip) throw new Error("trip missing");
+  expect(await cancelDeparture(db, shop.id, trip.id)).toEqual({ ok: true });
+  expect(await tripDetailsAreEditable(db, shop.id, trip.id)).toBe(false);
+  for (const patch of [
+    { plannedDives: 3 },
+    { priceCents: 1 },
+    {
+      startsAt: new Date(startsAt.getTime() + HOUR),
+      endsAt: new Date(startsAt.getTime() + 5 * HOUR),
+    },
+  ]) {
+    expect(await editTripSection(db, shop.id, trip.id, patch)).toEqual({
+      ok: false,
+      reason: "finished",
+    });
+  }
+  expect(
+    await setTripParticipantTerms(db, shop.id, trip.id, {
+      snorkelerPriceCents: 1000,
+      riderPriceCents: null,
+      diverCapacity: null,
+    }),
+  ).toEqual({ ok: false, reason: "finished" });
+  const [stored] = await db.select().from(trips).where(eq(trips.id, trip.id));
+  expect(stored.priceCents).toBe(trip.priceCents);
+  expect(stored.plannedDives).toBe(trip.plannedDives);
+  expect(stored.startsAt).toEqual(startsAt);
+});

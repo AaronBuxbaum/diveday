@@ -1,0 +1,165 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { buttonClass } from "@/components/ui/button";
+import { listFlySafeFollowUps } from "@/db/fly-safe-correction";
+import { listTripUnitsToCheckIn } from "@/db/gear";
+import { listTripIncidentReports } from "@/db/incident-reports";
+import type { TripGuests } from "@/features/trip-guests";
+import { getTripMoney } from "@/features/trip-money";
+import { canViewShopReports } from "@/lib/authz";
+import { depthInUnit } from "@/lib/depth-units";
+import { tripPacketPath } from "@/lib/print-sheets";
+import { shopPath } from "@/lib/staff-notices";
+import { readManifestView } from "../../manifest/_components/manifest-view";
+import { recordTripPrintPdfAction } from "../../print-actions";
+import { PrintTripBundleButton } from "../PrintTripBundleButton";
+import { diveLogRows } from "../TripDiveRecord";
+import { TripSentenceLine } from "../TripSentenceLine";
+import type { TripSentence } from "../trip-sentence";
+import { closeOutItems, wrappedSentence } from "../wrapped-close-out";
+import { UnplacedLine } from "./WaterPanels";
+import type { PhaseRecordContext } from "./WaterPhase";
+import { WrappedMore } from "./WrappedMore";
+import { CloseOutCard, IncidentsLine, MoneyCard, WhatHappenedCard } from "./WrappedPanels";
+import { loggableDives, waterStandingOf } from "./water-reading";
+
+/**
+ * **Wrapped up** (ADR 20261117-trip-page-clock): the owner's phase once the
+ * boat is back, and where a cancelled trip opens. The sentence says whether
+ * the counts have everyone back and how much is left; then what is left, each
+ * with its door; what happened, one block whose dives open in place to their
+ * logs, with the incident reports; the guests as listed; and, under More, what
+ * was found aboard, the conservation record, the activity and the trip's links.
+ * Roll call's door is the close-out row that needs it, or the header's link.
+ *
+ * A cancelled trip that never sailed has no dives: its close-out (people put
+ * aboard at the dock come ashore through the dock count), what was collected,
+ * one quiet "Report one", the guests and More.
+ */
+export async function WrappedPhase({
+  guests,
+  roster,
+  record,
+  sentence,
+  cancelled,
+}: {
+  guests: ReactNode;
+  roster: TripGuests;
+  record: PhaseRecordContext;
+  sentence: TripSentence;
+  cancelled: boolean;
+}) {
+  const { context, tripId, locale, t } = record;
+  const { db, shop, session } = context;
+  const personId = session.user.personId;
+  const timeZone = shop.timezone;
+  const words = { locale, timeZone, t };
+  const [view, rentalsOut, incidents, money, flySafe] = await Promise.all([
+    readManifestView({ ...context, shopSlug: shop.slug, tripId, locale, t }),
+    cancelled ? [] : listTripUnitsToCheckIn(db, shop.id, tripId),
+    listTripIncidentReports(db, shop.id, tripId, personId),
+    // The money record is for whoever may read the shop's reports.
+    canViewShopReports(session.user.roles) ? getTripMoney(db, shop, tripId) : null,
+    // This trip's own guests whose flying guidance needs a follow-up.
+    listFlySafeFollowUps(db, { shopId: shop.id, tripId }),
+  ]);
+  const ids = { shopSlug: shop.slug, tripId };
+  const moneyCard = money ? (
+    <MoneyCard money={money} cancelled={cancelled} locale={locale} t={t} />
+  ) : null;
+  const incidentsLine = <IncidentsLine incidents={incidents} {...ids} t={t} />;
+  const more = <WrappedMore record={record} roster={roster} />;
+  const runAgain = (
+    <Link
+      href={shopPath(shop.slug, "schedule")}
+      className={buttonClass({ variant: "link", flush: true })}
+    >
+      {t("trips.clock.wrapped.runAgain")}
+    </Link>
+  );
+  const standing = view.status === "ready" ? waterStandingOf(view) : null;
+  // The roll call cannot be read: what is left from every other record still shows.
+  const items = closeOutItems({
+    ...{ standing, rentalsOut, reports: incidents.reports, cancelled, flySafe },
+  });
+  const closeOut = <CloseOutCard items={items} {...ids} locale={locale} t={t} />;
+  if (!standing || view.status !== "ready" || cancelled) {
+    const said =
+      standing && view.status === "ready"
+        ? wrappedSentence(standing, items, sentence, { ...words, cancelled, homeSaidAt: null }, t)
+        : sentence;
+    return (
+      <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
+        {/* A cancelled trip's own panel above says it, unless the counts have
+            somebody not recorded back. */}
+        {cancelled && said === sentence ? null : (
+          <TripSentenceLine sentence={said} rollCall={null} />
+        )}
+        {closeOut}
+        {moneyCard}
+        {incidentsLine}
+        {guests}
+        {more}
+        {runAgain}
+      </div>
+    );
+  }
+  const stage = view.stageStrip.stage;
+  const depth = (meters: number) =>
+    t("manifest.executedDive.summaryDepth", {
+      depth: depthInUnit(meters, shop.depthUnit),
+      unit: shop.depthUnit === "feet" ? "ft" : "m",
+    });
+  const released = roster.roster.filter(({ booking }) => booking.status === "no_show");
+  const said = wrappedSentence(
+    standing,
+    items,
+    sentence,
+    { ...words, cancelled, homeSaidAt: stage?.stage === "home" ? stage.recordedAt : null },
+    t,
+  );
+  return (
+    <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
+      <TripSentenceLine sentence={said} rollCall={null} />
+      {closeOut}
+      <UnplacedLine standing={standing} locale={locale} t={t} />
+      {/* What happened and Money side by side once there is room. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
+        <WhatHappenedCard
+          standing={standing}
+          depth={depth}
+          logRow={diveLogRows({
+            view,
+            dives: loggableDives(standing, { back: true }),
+            shop,
+            tripId,
+            locale,
+            t,
+          })}
+          incidents={incidents}
+          noShows={released
+            .filter(({ booking }) => !booking.turnedAwayAt)
+            .map(({ person }) => person.fullName)}
+          turnedAway={released
+            .filter(({ booking }) => booking.turnedAwayAt)
+            .map(({ person }) => person.fullName)}
+          print={
+            <PrintTripBundleButton
+              href={tripPacketPath(shop.slug, tripId)}
+              label={t("trips.clock.wrapped.print")}
+              popupBlockedLabel={t("shared.printButton.popupBlocked")}
+              recordAction={recordTripPrintPdfAction.bind(null, shop.slug, tripId)}
+              flush
+            />
+          }
+          {...ids}
+          {...words}
+        />
+        {moneyCard}
+      </div>
+      {guests}
+      {more}
+      {runAgain}
+    </div>
+  );
+}

@@ -123,7 +123,7 @@ describe("the departure log", () => {
     expect(screen.getByRole("heading", { name: "Roll-call timeline" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Trip" })).toHaveAttribute(
       "href",
-      `/shop/blue-mantis/trips/${TRIP_ID}?view=record`,
+      `/shop/blue-mantis/trips/${TRIP_ID}?phase=wrapped`,
     );
   });
 

@@ -48,7 +48,7 @@ export function tripDealRows({
       code: deal.code,
       discount: promoDiscountText(t, deal, currency, locale),
       tripTitle: deal.tripTitle,
-      href: `/shop/${shopSlug}/trips/${deal.tripId}?view=details#last-minute-deal`,
+      href: `/shop/${shopSlug}/trips/${deal.tripId}?view=edit#last-minute-deal`,
       facts: [
         t("promos.tripDeals.expiresAt", {
           date: formatDateTimeTz(deal.expiresAt, locale, timezone),

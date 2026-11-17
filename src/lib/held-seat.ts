@@ -6,7 +6,7 @@ import type { TripManifest } from "./manifests";
  * A booking attached to an existing diver on a guess (H-20260724-one-person-per-email: a name tapped
  * off the counter's "is this the same diver?" prompt) carries `identity_unconfirmed` until a staffer confirms it.
  * Everything the manifest knows about the matched person is then a fact about
- * *somebody*, not provably about whoever walks up the gangway. The Divers tab
+ * *somebody*, not provably about whoever walks up the gangway. The Trip page
  * already withholds those particulars (`showsPersonDetail` in
  * `RosterSection.tsx`); this is the same rule for the three carriers of the
  * manifest: the screen, the printed sheet and the copy a crew phone saves.

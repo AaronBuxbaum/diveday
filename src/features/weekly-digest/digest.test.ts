@@ -569,7 +569,7 @@ describe("previewWeeklyDigest", () => {
     const ownerWeek = await thisWeekOf(owner.personId);
     if (weakest && ownerWeek?.kind === "this_week") {
       expect(ownerWeek.weakest?.url).toBe(
-        `${ORIGIN}/shop/${shop.slug}/trips/${weakest.tripId}?view=details#last-minute-deal`,
+        `${ORIGIN}/shop/${shop.slug}/trips/${weakest.tripId}?view=edit#last-minute-deal`,
       );
     }
     const crewWeek = await thisWeekOf(captain.personId);

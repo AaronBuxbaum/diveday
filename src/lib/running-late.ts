@@ -5,7 +5,7 @@ import { hasSailed } from "./trips";
  * **"Running late"** (J3): a diver telling the shop, before the boat sails,
  * that they are on their way but behind. Two doors write it — the button on
  * `/ready/[token]` and a `LATE` reply to a shop message — and two places read
- * it: the arrivals list (Today's arrival lookup and the trip's Divers tab),
+ * it: the arrivals list (Today's arrival lookup and the trip's Trip page),
  * which says "Running late, said 7:42" instead of a blank until the diver
  * checks in (`runningLateShown`), and the boat manifest, live and offline, at
  * the departure checkpoint only, hidden once the row is boarded, checked in or

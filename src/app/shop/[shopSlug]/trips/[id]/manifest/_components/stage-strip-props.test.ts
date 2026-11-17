@@ -108,7 +108,7 @@ describe("stageStripProps on the way home (batch 6, item 4)", () => {
       href: "?checkpoint=after_dive_2",
       plan: {
         label: "Change the plan",
-        href: `/shop/blue-mantis/trips/${tripManifest().trip.id}?view=details#dives`,
+        href: `/shop/blue-mantis/trips/${tripManifest().trip.id}?view=edit#dives`,
       },
     });
   });

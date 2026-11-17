@@ -106,13 +106,13 @@ describe("saved Deck receipts", () => {
     expect(screen.getByRole("button", { name: "Record Priya Shah aboard" })).toBeDisabled();
   });
 
-  it("shows the saved-roster caveat during a routine roll call and retains full details", () => {
+  it("shows the saved-copy caveat during a routine roll call and retains full details", () => {
     const ctx = { ...controls(), copyCaveat: "offline" as const };
     render(<OfflineDeckRollCall view={view()} controls={ctx} details={null} />);
-    expect(screen.getByText("Saved roster · Check who’s on the boat")).toBeVisible();
+    expect(screen.getByText(ctx.t("manifest.deck.copyCaveat"))).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Start roll call" }));
-    expect(screen.getByText("Saved roster · Check who’s on the boat")).toBeVisible();
-    fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+    expect(screen.getByText(ctx.t("manifest.deck.copyCaveat"))).toBeVisible();
+    fireEvent.click(screen.getByText("More", { selector: "summary" }));
     expect(screen.getByText(/Count heads on the boat against this list/)).toBeVisible();
   });
 });

@@ -2,13 +2,13 @@ import { diverTranslator } from "../src/i18n/messages";
 import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 import {
   addDiverFormPath,
+  addFoundGuest,
   createTrip,
   daysFromNow,
   e2eNow,
   openNamedScheduleTrip,
   openTripAbout,
   openTripAboutRow,
-  openTripTab,
   rosterRow,
   seededTripId,
 } from "./helpers";
@@ -168,12 +168,12 @@ test.describe("as owner", () => {
     ).toBeEnabled();
   });
 
-  test("the Divers tab names the level the charter wants and the level the diver holds", async ({
+  test("the Trip page names the level the charter wants and the level the diver holds", async ({
     page,
   }) => {
     const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER, CHARTERS);
     await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Diego+Alvarez`);
-    await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
+    await addFoundGuest(page, "Diego Alvarez");
 
     // The structured refusal rides the redirect as a single `gate=` param and
     // becomes the sentence — without it every refusal shared one static line.
@@ -294,10 +294,10 @@ test.describe("as owner", () => {
     });
     await page.goto(`/shop/blue-mantis/trips/${tripId}?add=1&diverq=Odile+Marchand`);
     const clickStartedMs = elapsed();
-    await page.getByRole("button", { name: "Add Odile Marchand to the trip" }).click();
+    await addFoundGuest(page, "Odile Marchand");
 
     // "Add a booking" is the departure's own add band (#2737): its refusal
-    // lands back on that boat's Divers tab, where the band says why.
+    // lands back on that boat's Trip page, where the band says why.
     await expect(page).toHaveURL(new RegExp(`/trips/${tripId}(?:\\?|$)`));
     const banner = page.getByText("This charter requires a Deep certification.");
     try {
@@ -348,7 +348,7 @@ test.describe("as owner", () => {
     await page.getByRole("button", { name: "Diego Alvarez" }).click();
 
     // The structured detail rides a signed `?gate=` bound to the departure in
-    // the Divers tab's own path, so the banner can say which card is missing
+    // the Trip page's own path, so the banner can say which card is missing
     // and what the diver holds.
     await expect(page).toHaveURL(new RegExp(`/trips/${tripId}\\?`));
     await expect(
@@ -367,7 +367,7 @@ test.describe("as owner", () => {
     const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE, COURSE);
 
     await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Kwame+Asante`);
-    await page.getByRole("button", { name: "Add Kwame Asante to the trip" }).click();
+    await addFoundGuest(page, "Kwame Asante");
     // The seated notice, not the URL: `FlashParams` strips `notice` on mount
     // (by `replaceState`, so the server-rendered banner itself stays).
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");
@@ -377,8 +377,7 @@ test.describe("as owner", () => {
     // edit it, it used to be invisible entirely — and it says out loud that it
     // never blocks enrolment.
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-    await openTripAbout(page);
-    const requirements = page.locator("details#requirements");
+    const requirements = await openTripAboutRow(page, "Who can book");
     await expect(
       requirements.getByText(/requires Advanced Open Water or higher and Deep specialty/),
     ).toBeVisible();
@@ -406,7 +405,7 @@ test.describe("as owner", () => {
     // Seated while the trip states the shop's Open Water default, which his
     // verified card clears.
     await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Diego+Alvarez`);
-    await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
+    await addFoundGuest(page, "Diego Alvarez");
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
@@ -427,12 +426,12 @@ test.describe("as owner", () => {
     );
     // The warning stays associated with the requirements editor in the DOM;
     // the shared timed toast pins it within reach of the viewport.
-    const requirements = page.locator("details#requirements");
+    const requirements = page.getByRole("group", { name: "Who can book", exact: true });
     await expect(
       requirements.getByRole("alert").filter({ hasText: "Requirements updated." }),
     ).toContainText("Requirements updated.");
-    await openTripTab(page, "Trip");
-    await expect(page.locator("#roster").getByText("Diego Alvarez").first()).toBeVisible();
+    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await expect(await rosterRow(page, "Diego Alvarez")).toBeVisible();
   });
 });
 

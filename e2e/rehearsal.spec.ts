@@ -45,6 +45,6 @@ test("an ordinary departure carries no rehearsal flag", async ({ page }) => {
   await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
   await page.locator("[data-week-board] a[data-departure-door]").first().click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]{36}/);
-  await expect(page.getByRole("navigation", { name: "Departure" })).toBeVisible();
+  await expect(page.locator("[data-trip-phases]")).toBeVisible();
   await expect(page.locator("[data-rehearsal-banner]")).toHaveCount(0);
 });

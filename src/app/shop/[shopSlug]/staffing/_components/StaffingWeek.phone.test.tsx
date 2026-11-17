@@ -94,7 +94,7 @@ describe("the phone staffing day", () => {
     expect(warning.closest("a")).toHaveTextContent("Keiko Tanaka");
     expect(warning.closest("a")).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/trip-drift?view=details#crew",
+      "/shop/blue-mantis/trips/trip-drift?view=edit#crew",
     );
   });
 });

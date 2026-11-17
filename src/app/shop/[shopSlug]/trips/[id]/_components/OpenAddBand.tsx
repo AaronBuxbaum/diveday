@@ -8,7 +8,7 @@ import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
  * knows the departure opens it on this page, and the staffer's next keystroke
  * belongs in the band's first field, not at the top of the roster. The band
  * renders on the server either way; this only scrolls to it and focuses it,
- * the same move the masthead's `TripAddBookingLink` makes on a tap.
+ * the move every "Add a guest" door makes.
  */
 export function OpenAddBand() {
   const anchor = useRef<HTMLSpanElement>(null);

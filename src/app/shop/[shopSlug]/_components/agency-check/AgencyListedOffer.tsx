@@ -42,7 +42,7 @@ export function agencyListedForm(
  * words, for a staffer's Mark certified: never certified from here.
  *
  * Shown on the diver record under the card the check certified, on a
- * departure's Divers tab under the diver's row (after a "Check all" has
+ * departure's Trip page under the diver's row (after a "Check all" has
  * finished, never during it), and on Today under the Needs you list, naming
  * the diver with a link to their record, because the diver's row may have
  * left with the card it was about.

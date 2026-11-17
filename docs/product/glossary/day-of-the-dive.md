@@ -109,7 +109,7 @@
   verification warning. An unobserved forward clock jump can expire a copy early because it cannot
   be separated from elapsed time offline. An offline copy is a snapshot, never live readiness.
   Rules in `src/worker/ready-page-cache.ts`.
-- **Dock rider** — a non-diving passenger a captain adds from the Boat tab while the boat is still
+- **Dock rider** — a non-diving passenger a captain adds from Roll call while the boat is still
   at the dock (no stage recorded, or **boarding**): a name, an optional phone, an emergency
   contact, an optional date of birth (so a minor shows the minor badge at once), and whether they
   ride along or snorkel. It is a seat like any other, sold through the one seating path
@@ -131,12 +131,12 @@
   **held send** with the same eight-second Undo every held send has; the checks run at the hold
   and again when it drains. Recorded in `departure_notes` and on the activity trail
   (`src/lib/departure-notes.ts`, `src/db/departure-notes.ts`).
-- **Lost item** — something the crew found aboard after a departure, written down on its Boat tab
-  ("Blue mask, seat 4"), optionally tied to the seat it was found at, and so to that diver. One
-  tap tells the diver by their usual channel, once. It is **open** until it goes home
+- **Lost item** — something the crew found aboard after a departure, written down under Wrapped
+  up's More ("Blue mask, seat 4"), optionally tied to the seat it was found at, and so to that
+  diver. One tap tells the diver by their usual channel, once. It is **open** until it goes home
   (**returned**) or the shop gives up on it (**discarded**); open items across every departure
   are listed at Lost and found. Resolved items are pruned after 90 days, and an erasure deletes
-  the diver's items outright (`src/features/lost-items/store.ts`). The Boat tab's "Left aboard" form opens
+  the diver's items outright (`src/features/lost-items/store.ts`). Roll call's "Left aboard" form opens
   at Heading in, Home, or once the departure is Back (`leftAboardOpen`; see **At sea**,
   [operations.md](operations.md)). Open items show in three more places (fifth loop, item 7): a
   Today row in The desk group ("2 things waiting to go home"), counting every open item tied to a
@@ -174,7 +174,7 @@
   ([H-20260730-nitrox-fill-station-procedure](../human-decisions/H-20260730-nitrox-fill-station-procedure.md)): each cylinder is still analyzed and signed for at the
   fill station. It shows once today's boats are past their last scheduled return, or on a day
   with none (`loadOutDue`, `dayLoadOut` in `src/features/today/closeout.ts`).
-- **Back from the boat** — the Gear tab's list, once a departure is home, of every unit that went
+- **Back from the boat** — the Gear page's list, once a departure is home, of every unit that went
   out on it and is still out, one row per unit: **Back**, or **Back with a problem** with words,
   which closes it as a service concern and can pull the unit to Needs service in the same act
   (ticked from the start for a regulator, BCD or cylinder). Keyed to the departure, unlike the
@@ -194,7 +194,7 @@
   collected in kilograms or whole items, fishing line removed in meters, or lionfish removed as a
   whole-fish count under local invasive-species rules. Lionfish counts record removal or collection,
   not sightings or an assumption that lionfish are invasive everywhere. Staff can record,
-  correct and delete entries in the departure’s Details tab. A revision refuses stale edits;
+  correct and delete entries in the departure’s Edit trip view. A revision refuses stale edits;
   deletion is soft. Live entries appear on that departure’s diver recap with the shop’s optional
   location and collection note, never as an inferred ecological benefit or a diver’s achievement.
   Settings → Features controls every editor and recap door without deleting the records.

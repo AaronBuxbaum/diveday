@@ -101,18 +101,21 @@ test.describe("staff", () => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}`);
 
-    // With junior/full status unconfirmed on the seeded cards, the shared
-    // warning names the recorded site depth and asks the crew to verify the
-    // applicable card limit before planning; it remains an advisory, not a
-    // boarding blocker. The repeated sentence is grouped above the roster.
-    const warning = page
-      .getByText(staff("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }), {
-        exact: false,
-      })
-      .first();
-    await expect(warning).toBeVisible();
-    await expect(warning).toContainText(staff("trips.roster.depthVerificationCard"));
+    // With junior/full status unconfirmed on the seeded cards, the depth check
+    // rides each guest's own row at Check-in, among their other reasons (design
+    // review of the final screens, finding 3); it remains an advisory, not a
+    // boarding blocker. The whole sentence, with the recorded site depth, is on
+    // each opened guest, June Park's included, though she is already here.
+    await expect(
+      page
+        .locator('[data-fix-group="toCome"] li')
+        .filter({ hasText: staff("trips.fixList.reason.depth") })
+        .getByRole("button", { name: "Diego Alvarez", exact: true }),
+    ).toBeVisible();
     const juneCard = await rosterRow(page, "June Park");
+    await expect(
+      juneCard.getByText(staff("trips.roster.depthVerificationCard"), { exact: false }),
+    ).toBeVisible();
     await expect(
       juneCard.getByText(
         staff("trips.roster.depthWarningUnconfirmed", { site: "105", unit: "ft" }),

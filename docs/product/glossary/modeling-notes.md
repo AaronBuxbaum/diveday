@@ -77,7 +77,7 @@
   record, shown on the manifest, its sheet and the crew phone's copy from a field of its own
   (`heldEmergencyContact`, never `emergencyContact*`, which a withheld row leaves empty), moved onto the new record at a
   split from whichever moving seat holds it (two different ones refuse the split), and at a confirm copied onto a record with none; beside a different one, the staffer
-  picks which stands in the armed "Same person", which refuses until they do. The Gear tab packs nothing of the matched diver's for it
+  picks which stands in the armed "Same person", which refuses until they do. The Gear page packs nothing of the matched diver's for it
   either: its booked-as name, no sizes and no verified nitrox card until the desk confirms who it
   is (`listTripPrepDivers`, issue #2144). Its bearer links name nobody: `/ready` greets the name
   it was booked under and remembers nothing on the device, no release link is issued or signed

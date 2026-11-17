@@ -69,6 +69,6 @@ export async function crewWarningLines(input: {
         ? null
         : warning.code === "credential_expired" || warning.code === "credential_not_yet_issued"
           ? `${shopPath(input.shopSlug, "settings", "team")}#credentials`
-          : `${shopPath(input.shopSlug, "trips", warning.tripId)}?view=details#crew`,
+          : `${shopPath(input.shopSlug, "trips", warning.tripId)}?view=edit#crew`,
   }));
 }

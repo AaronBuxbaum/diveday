@@ -26,7 +26,7 @@ test("weather priority alternatives on phone and desktop (light)", async ({ page
   });
   await page.goto(await tripPathByTitle(page, "blue-mantis", "Weather call charter"));
   await openTripMore(page);
-  await page.getByRole("link", { name: "Weather blow-out…" }).click();
+  await page.getByRole("link", { name: "Call it off for weather" }).click();
   await page.getByText(t("blowout.alternatives.title"), { exact: true }).click();
   await expect(
     page.getByRole("checkbox", { name: /Sheltered pool recovery session/ }),

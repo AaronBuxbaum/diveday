@@ -1,6 +1,6 @@
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, makeActivitySafe, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openNewGuestForm, openTripFromBoard } from "./helpers";
 
 const ownerTest = test.extend({
   storageState: async ({ staffStorageState }, use) => {
@@ -27,8 +27,7 @@ ownerTest(
     await createTrip(page, { title, date: daysFromNow(3), departsAt: "09:00", returnsAt: "11:00" });
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
-    await page.getByRole("link", { name: "Add diver" }).click();
-    await page.waitForURL(/\/divers\?add=1/);
+    await openNewGuestForm(page);
     await page.getByLabel("Full name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: "Add to trip" }).click();

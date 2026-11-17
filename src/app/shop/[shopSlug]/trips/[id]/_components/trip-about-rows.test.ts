@@ -2,11 +2,10 @@ import { eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { courses, diveSites, trips } from "@/db/schema";
-import { createTripSeries, listStaff, setSeriesRepeat } from "@/db/trips";
+import { listStaff } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CoursePricing } from "@/lib/courses";
-import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import { listBoats } from "../../../../../../features/boats/store";
 import { listTripLenses } from "../../../../../../features/trip-lenses/store";
@@ -65,16 +64,19 @@ describe("tripAboutRows (in-memory PGlite)", () => {
   it("lays the departure flat in its rows' order", async () => {
     const rows = await rowsFor();
     const ids = rows.map((row) => row.id);
-    expect(ids.slice(0, 7)).toEqual([
-      "plan",
-      "meeting",
+    expect(ids).toEqual([
       "timing",
+      "meeting",
+      "boat",
+      "about-crew",
+      "plan",
       "details",
-      "departure-details",
-      "conditions",
+      "seats",
       "requirements",
+      "conditions",
+      "participant-terms",
+      "departure-details",
     ]);
-    expect(ids.slice(-2)).toEqual(["about-crew", "series"]);
   });
 
   it.each(["timing", "meeting"])(
@@ -93,25 +95,25 @@ describe("tripAboutRows (in-memory PGlite)", () => {
   );
 
   it.each([
-    { label: "ordinary fare", priceCents: 9500, course: null, quote: "$95.00" },
+    { label: "ordinary fare", priceCents: 9500, course: null, quote: "$95" },
     { label: "ordinary unpriced", priceCents: null, course: null, quote: null },
     {
       label: "priced course overrides departure",
       priceCents: 42500,
       course: { title: "Course", priceCents: 50000, eLearningPriceCents: 11500 },
-      quote: "$615.00",
+      quote: "$615",
     },
     {
       label: "priced course with unpriced departure",
       priceCents: null,
       course: { title: "Course", priceCents: 50000, eLearningPriceCents: 11500 },
-      quote: "$615.00",
+      quote: "$615",
     },
     {
       label: "course uses departure fallback plus eLearning",
       priceCents: 42500,
       course: { title: "Course", priceCents: null, eLearningPriceCents: 11500 },
-      quote: "$540.00",
+      quote: "$540",
     },
     {
       label: "unpriced course and departure",
@@ -123,21 +125,24 @@ describe("tripAboutRows (in-memory PGlite)", () => {
       label: "eLearning alone",
       priceCents: null,
       course: { title: "Course", priceCents: null, eLearningPriceCents: 11500 },
-      quote: "$115.00",
+      quote: "$115",
     },
     {
       label: "explicit free course",
       priceCents: 42500,
       course: { title: "Course", priceCents: 0, eLearningPriceCents: null },
-      quote: "$0.00",
+      quote: "$0",
     },
   ])(
-    "quotes $label in Booking and payment without changing its stored editor price",
+    "quotes $label in Price without changing its stored editor price",
     async ({ quote, ...pricing }) => {
       const rows = await rowsFor(undefined, true, undefined, pricing);
       const booking = rows.find((row) => row.id === "details");
-      if (quote === null) expect(booking?.value).toBe(t("trips.details.summaryNoPrice"));
-      else expect(String(booking?.value).startsWith(`${quote} · `)).toBe(true);
+      // The price stands alone in its row; the seats are the next row (review nit 13).
+      const lead = quote === null ? t("trips.details.summaryNoPrice") : quote;
+      expect(renderToStaticMarkup(booking?.value).startsWith(lead)).toBe(true);
+      expect(renderToStaticMarkup(booking?.value)).not.toContain("booked");
+      expect(rows.find((row) => row.id === "seats")?.value).toBeTruthy();
       expect(booking?.editor).toMatchObject({
         props: { context: { trip: { priceCents: pricing.priceCents } } },
       });
@@ -169,7 +174,7 @@ describe("tripAboutRows (in-memory PGlite)", () => {
     // plan's editor, so the crew knew less than the diver about the dock.
     const rows = await rowsFor();
     const meeting = rows.find((row) => row.id === "meeting");
-    expect(meeting?.label).toBe("Where we meet");
+    expect(meeting?.label).toBe("Meet");
     expect(String(meeting?.value)).toContain(ctx.shop.name);
     expect(meeting?.editor).toMatchObject({ props: { section: "meeting" } });
   });
@@ -201,6 +206,18 @@ describe("tripAboutRows (in-memory PGlite)", () => {
       configured.find((row) => row.id === "requirements")?.value,
     );
     expect(readOnly.find((row) => row.id === "conditions")?.editor).toBeDefined();
+  });
+
+  it("says View, not Edit, on a course's frozen admission rules", async () => {
+    // A course session keeps the rules it was created with; its row opens
+    // read-only text, so the word on the control says so (layer E bug).
+    const rows = await rowsFor(undefined, true, undefined, {
+      priceCents: null,
+      course: { title: "Course", priceCents: null, eLearningPriceCents: null },
+    });
+    expect(rows.find((row) => row.id === "requirements")?.editLabel).toBe("View");
+    const fun = await rowsFor();
+    expect(fun.find((row) => row.id === "requirements")?.editLabel).toBeUndefined();
   });
 
   it("opens the row its own form reported back to", async () => {
@@ -238,28 +255,4 @@ it("keeps the plan read-only while separating truthful crew correction after fin
     editor: expect.anything(),
   });
   expect(rows.find((row) => row.id === "conditions")?.value).toBeTruthy();
-});
-
-it("keeps future-series cadence reachable from a finished occurrence", async () => {
-  const { db, shop } = ctx;
-  const made = await createTripSeries(db, {
-    shopId: shop.id,
-    title: "Finished Monday run",
-    capacity: 6,
-    plannedDives: 1,
-    frequency: "weekly",
-    intervalWeeks: 1,
-    weekdays: weekdaySetFrom([1]),
-    anchorDate: "2026-07-20",
-    endsOn: "2026-07-20",
-    timeZone: shop.timezone,
-    template: {
-      startsAt: new Date("2026-07-20T13:00:00Z"),
-      endsAt: new Date("2026-07-20T17:00:00Z"),
-    },
-  });
-  if (!made?.trips[0]) throw new Error("past series missing");
-  await setSeriesRepeat(db, shop.id, made.series.id, false);
-  const rows = await rowsFor(undefined, true, undefined, undefined, false, made.trips[0].id);
-  expect(rows.find((row) => row.id === "series")?.editor).toBeDefined();
 });

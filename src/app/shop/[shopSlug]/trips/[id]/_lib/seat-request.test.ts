@@ -210,7 +210,7 @@ describe("readSeatRequest", () => {
    * **A request that is gone is one answer, whatever made it so** (dock review
    * F5): another shop's id, a deleted or erased row, junk, or a closed request
    * all read `"gone"`, so the page cannot be used to probe which ids exist, and
-   * a stale link never takes the desk's Divers tab down with a 404.
+   * a stale link never takes the desk's Trip page down with a 404.
    */
   it("reads another shop's request exactly as it reads one nobody has", async () => {
     const trip = await firstTrip();

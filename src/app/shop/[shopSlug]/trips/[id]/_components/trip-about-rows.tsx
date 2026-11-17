@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { listBoats } from "@/features/boats";
 import type { requireShopSurface } from "@/features/session";
 import type { listTripLenses } from "@/features/trip-lenses";
@@ -19,11 +17,11 @@ import { perDiverBookingPriceCents } from "@/lib/courses";
 import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import {
   formatMoneyCents,
-  formatShortDate,
+  formatMoneyScanned,
   formatTimeTz,
   formatWeekdayTime,
-  weekdayNames,
 } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
@@ -37,10 +35,6 @@ import { clearConditionsAction, saveConditionsAction } from "../conditions-actio
 import { moveTripCrewAction, updateTripCrewAction } from "../crew-actions";
 import type { DepartureDetailsSection } from "../departure-detail-sections";
 import { saveDetailsSection } from "../details-actions";
-import {
-  cancelOffCadenceSeriesAction as cancelOffCadence,
-  updateSeriesCadenceAction,
-} from "../series-actions";
 import { saveRequirementsAction } from "../terms-actions";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewAwayWorkingList } from "./CrewAwayWorkingList";
@@ -48,16 +42,14 @@ import { CrewMoveForm } from "./CrewMoveForm";
 import { CrewSection } from "./CrewSection";
 import { DetailsEditor } from "./DetailsEditor";
 import type { departureConditionReads } from "./departure-conditions";
-import { repeatsRowText } from "./details-rows";
 import { participantTermsRows } from "./ParticipantTermsSection";
 import { RequirementsSection } from "./RequirementsSection";
-import { SeriesCadenceEditor } from "./SeriesSection";
 import { boatClashText, tripCrewNotesOf } from "./trip-crew-notes";
 
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
 type ShopSurface = Awaited<ReturnType<typeof requireShopSurface>>["shop"];
 
-/** What the Details tab's About rows are composed from: the departure's overview and the page's reads. */
+/** What Edit trip's rows are composed from: the departure's overview and the page's reads. */
 export type TripAboutRowsContext = {
   overview: TripOverview;
   /** The hull's clashes with other departures; empty on a called-off one. */
@@ -125,11 +117,11 @@ function crewConditionFacts(
 }
 
 /**
- * **The Details tab's About rows**, each a one-line summary over its editor:
- * the plan, the conditions, who can book, the participant terms, the boat and
- * crew, and the cadence a repeating departure keeps. A row with open work — a
- * refusal from its own form, a missing requirements row, crew to sort —
- * renders open.
+ * **Edit trip's rows** (ADR 20261117-trip-page-clock), each a one-line
+ * summary over its editor: when, where to meet, the boat, the crew, the plan,
+ * the price, who can book, the conditions, and the rarer settings. A row with
+ * open work (a refusal from its own form, a missing requirements row, crew to
+ * sort) renders open.
  */
 function departureEditor(context: TripAboutRowsContext, section: DepartureDetailsSection) {
   const {
@@ -214,10 +206,8 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
     staff,
     requirement,
     siteRequirement,
-    series,
     scheduleDays,
     canConfigure,
-    offCadence,
     diveSites,
     crew,
   } = overview;
@@ -228,7 +218,6 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
   const detailsStatus = noticeForForm(tripNotice, "details");
   const conditionsStatus = noticeForForm(tripNotice, "conditions");
   const requirementsStatus = noticeForForm(tripNotice, "requirements");
-  const seriesStatus = noticeForForm(tripNotice, "series");
   const siteNames = diveSites.sites.map((site) => site.name);
   const planSummary = siteNames.length > 0 ? siteNames.join(" + ") : t("trips.about.noneSet");
   const requirementsSummary =
@@ -276,9 +265,19 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
   // The fleet's row for this departure's boat, for its name on the about line.
   // A shore dive or a pool session finds nothing here.
   const boat = shopBoats.find((row) => row.id === trip.boatId);
-  const boatName = boat?.name;
-  const boatAndCrew = [boatName, ...assignedCrew].filter((part): part is string => Boolean(part));
-  const boatCrewSummary = boatAndCrew.join(" · ") || t("trips.about.noBoat");
+  // Deposit, the free-cancellation window and the minimum to run are this
+  // trip's own (no shop default exists), said under its price.
+  const bookingTerms = [
+    trip.depositCents
+      ? t("trips.about.deposit", {
+          amount: formatMoneyCents(trip.depositCents, shop.currency, locale),
+        })
+      : null,
+    trip.cancellationWindowHours !== null
+      ? t("trips.about.freeCancel", { hours: trip.cancellationWindowHours })
+      : null,
+    trip.minimumBookings ? t("trips.about.minimumToRun", { count: trip.minimumBookings }) : null,
+  ].filter((part): part is string => Boolean(part));
 
   // The clash is a fact about two boats that will both sail, so a called-off
   // departure drops it with the rest of the live-trip nudges — `crewClashes`
@@ -302,25 +301,16 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
         ratingLapsedNote !== null));
 
   const editorFor = (section: DepartureDetailsSection) => departureEditor(context, section);
+  const crewSummary =
+    assignedCrew.length > 0
+      ? cachedListFormat(locale, { style: "long", type: "conjunction" }).format(assignedCrew)
+      : t("trips.crew.notAssignedYet");
+  const boatSummary = boat?.name ?? t("trips.about.noBoat");
 
   return [
     {
-      id: "plan",
-      label: t("trips.about.plan"),
-      value: planSummary,
-      editorOpen: Boolean(noticeForForm(tripNotice, "plan")),
-      editor: editorFor("plan"),
-    },
-    {
-      id: "meeting",
-      label: t("trips.about.meetingPoint"),
-      value: meetingPointLine(meetingPointOfRows(shop, trip)),
-      editorOpen: Boolean(noticeForForm(tripNotice, "meeting")),
-      editor: editorFor("meeting"),
-    },
-    {
       id: "timing",
-      label: t("trips.about.timing"),
+      label: t("trips.about.when"),
       value: [
         formatWeekdayTime(trip.startsAt, locale, shop.timezone),
         scheduleDays.length > 1 ? t("schedule.week.runsDays", { days: scheduleDays.length }) : null,
@@ -331,47 +321,168 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
       editor: editorFor("timing"),
     },
     {
+      id: "meeting",
+      label: t("trips.about.meet"),
+      value: meetingPointLine(meetingPointOfRows(shop, trip)),
+      editorOpen: Boolean(noticeForForm(tripNotice, "meeting")),
+      editor: editorFor("meeting"),
+    },
+    {
+      id: "boat",
+      label: t("trips.about.boat"),
+      // The hull's clash rides on the row whose editor changes the hull.
+      value:
+        liveBoatClashes.length === 0 ? (
+          boatSummary
+        ) : (
+          <>
+            {boatSummary}
+            {liveBoatClashes.map((clash) => (
+              <Link
+                key={clash.otherTripId}
+                href={shopPath(shopSlug, "trips", clash.otherTripId)}
+                className="mt-0.5 block font-medium text-danger hover:underline"
+              >
+                {boatClashText(t, clash)}
+              </Link>
+            ))}
+          </>
+        ),
+      editorOpen: Boolean(noticeForForm(tripNotice, "boat")),
+      editor: editorFor("boat"),
+    },
+    // **On every departure, whatever the crew schedule says**: who is aboard
+    // is manifest data, not planning (ADR 20261005-crew-schedule-is-a-setting).
+    {
+      id: "about-crew",
+      label: t("trips.about.crew"),
+      value: crewSummary,
+      // **A row with open work stays open** (principles.md §9, read the other way).
+      editorOpen: crewRowOpen,
+      /* Who's aboard is manifest accuracy (glossary): open to all staff.
+   Per-person assign/unassign (updateTripCrewAction), the same mutation
+   the schedule board uses, so two staff editing crew at once cannot
+   clobber each other (Lens 17 task 139). */
+      editor: (
+        <>
+          <CrewSection
+            shopSlug={shopSlug}
+            tripId={tripId}
+            staff={staff}
+            crewIds={crewIds}
+            crewRoles={Object.fromEntries(tripRoleByPerson)}
+            // Canceled departures have no live-trip staffing warnings.
+            onShiftIds={cancelled ? null : onShiftIds}
+            awayPersonIds={cancelled ? [] : crew.awayPersonIds}
+            clashes={liveClashes}
+            crewGapCode={cancelled ? "none" : crewGap.code}
+            bookingInstructorPresent={crew.rosterInWaterCrew.instructorCount > 0}
+            updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
+            copy={{
+              heading: t("trips.crew.heading"),
+              courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
+              overRatioWarning,
+              underTargetNote: cancelled ? null : underTargetNote,
+              languageGapNote: cancelled ? null : languageGapNote,
+              ratingLapsedNote: cancelled ? null : ratingLapsedNote,
+              noStaff: t("trips.crew.noCrew"),
+              notAssignedYet: t("trips.crew.notAssignedYet"),
+              awayWarning: t("trips.crew.awayWarning"),
+              assignLabel: t("trips.crew.assignLabel"),
+              assignOption: t("trips.crew.assignOption"),
+              unassignAria: t.raw("trips.crew.unassignAria"),
+              assignFailed: t("trips.crew.assignFailed"),
+              // `t.raw`: `{name}` is whoever the staffer just picked (src/i18n/fill.ts).
+              assignClash: t.raw("trips.crew.assignClash"),
+              // `t.raw`: `{departure}` is the other boat's own title (src/i18n/fill.ts).
+              clash: t.raw("trips.crew.clash"),
+              roleAria: t.raw("trips.crew.roleAria"),
+              roleUnspecified: t("trips.crew.roleUnspecified"),
+              roleOptions: crewRoleOptions(t),
+              onShift: t("trips.crew.onShift"),
+              notOnShift: t("trips.crew.notOnShift"),
+              manageShifts: shop.crewScheduleEnabled ? t("trips.crew.manageShifts") : null,
+            }}
+          />
+          {/* One step to another boat that day (issue #4474). */}
+          {crewMoveFormFor(context)}
+          {/* "No longer working it" (#2678, dock review S2). */}
+          <CrewAwayWorkingList
+            shopSlug={shopSlug}
+            tripId={tripId}
+            people={crew.awayWorking}
+            t={t}
+          />
+        </>
+      ),
+    },
+    {
+      id: "plan",
+      label: t("trips.about.plan"),
+      value: planSummary,
+      editorOpen: Boolean(noticeForForm(tripNotice, "plan")),
+      editor: editorFor("plan"),
+    },
+    {
       // Existing Set a price links land on this object.
       id: "details",
-      label: t("trips.about.bookingAndPayment"),
-      value:
-        bookingPriceCents === null && !cancelled
-          ? t("trips.details.summaryNoPrice")
-          : [
-              bookingPriceCents === null
-                ? null
-                : formatMoneyCents(bookingPriceCents, shop.currency, locale),
-              t("schedule.week.seats", { booked: trip.booked, capacity: trip.sellableCapacity }),
-            ]
-              .filter(Boolean)
-              .join(" · "),
+      label: t("trips.about.price"),
+      value: (
+        <>
+          {/* The price alone; the seats are their own row (review nit 13). */}
+          {bookingPriceCents === null
+            ? cancelled
+              ? null
+              : t("trips.details.summaryNoPrice")
+            : formatMoneyScanned(bookingPriceCents, shop.currency, locale)}
+          {bookingTerms.length > 0 ? (
+            <span className="block text-sm text-muted">{bookingTerms.join(" · ")}</span>
+          ) : null}
+        </>
+      ),
       editorOpen: Boolean(noticeForForm(tripNotice, "booking")) || Boolean(detailsStatus),
       editor: editorFor("booking"),
     },
     {
-      id: "departure-details",
-      label: t("trips.about.departureDetails"),
-      value: trip.title,
-      editorOpen: Boolean(noticeForForm(tripNotice, "departure")),
-      editor: editorFor("departure"),
+      // A fact, not a form: the capacity itself is edited in the Price row.
+      id: "seats",
+      label: t("trips.about.seats"),
+      value: t("trips.clock.sentence.booked", {
+        booked: trip.booked,
+        capacity: trip.sellableCapacity,
+      }),
+    },
+    {
+      id: "requirements",
+      label: t("trips.about.whoCanBook"),
+      value: requirementsSummary,
+      // A course session's gate is frozen (`saveRequirementsAction` refuses to
+      // edit it), so its row opens onto where the rules come from rather than
+      // onto a form, and the word on the control says View.
+      editLabel: trip.course ? t("trips.about.view") : undefined,
+      // Fail-closed, open: with no requirements row readiness blocks every diver.
+      editorOpen: Boolean(requirementsStatus) || requirement === null,
+      editor: canConfigure ? (
+        <RequirementsSection
+          action={saveRequirementsAction.bind(null, shopSlug, tripId)}
+          status={requirementsStatus}
+          trip={trip}
+          requirement={requirement}
+          siteRequirement={siteRequirement}
+          siteNames={diveSites.sites.map((site) => site.name)}
+          locale={locale}
+        />
+      ) : undefined,
     },
     {
       id: "conditions",
       label: t("trips.about.conditions"),
       value: conditionsSummary,
       editorOpen: Boolean(conditionsStatus),
-      /* Conditions are crew-entered (glossary) — open to all staff. Its
-   fields are uncontrolled (`defaultValue`, not `value`), so a save
-   or clear that lands via a same-route re-render rather than a
-   fresh mount leaves the old value on screen — the same
-   cacheComponents-can-skip-a-remount class ADR
-   20260802-cache-components-cross-render-state and ADR
-   20260801-cache-components-activity-state both hit, just in the
-   opposite direction. Keying on the fields themselves (not
-   `conditionsUpdatedAt`, which the e2e harness's frozen clock
-   would hold identical across a save-then-clear in the same test)
-   forces the remount `defaultValue` needs on any actual change to
-   what these inputs show. */
+      /* Conditions are crew-entered (glossary): open to all staff. Its fields
+   are uncontrolled (`defaultValue`), so keying on the fields themselves
+   forces the remount `defaultValue` needs on any actual change (ADR
+   20260802-cache-components-cross-render-state). */
       editor: (
         <ConditionsSection
           key={[
@@ -401,171 +512,27 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
         />
       ),
     },
-    {
-      id: "requirements",
-      label: t("trips.about.whoCanBook"),
-      value: requirementsSummary,
-      // A course session's gate is frozen — `saveRequirementsAction`
-      // refuses to edit it — so its row opens onto where the rules come
-      // from rather than onto a form, and says so in the word on the
-      // control.
-      // Fail-closed, open: with no requirements row readiness blocks
-      // every diver, so that state may never wait behind a tap. A frozen
-      // course gate opens for the opposite reason — one read-only
-      // sentence has nothing worth folding away.
-      editorOpen: Boolean(requirementsStatus) || requirement === null || Boolean(trip.course),
-      editor: canConfigure ? (
-        <RequirementsSection
-          action={saveRequirementsAction.bind(null, shopSlug, tripId)}
-          status={requirementsStatus}
-          trip={trip}
-          requirement={requirement}
-          siteRequirement={siteRequirement}
-          siteNames={diveSites.sites.map((site) => site.name)}
-          locale={locale}
-        />
-      ) : undefined,
-    },
     ...participantTermsRows({ ...overview, shop, locale, tripNotice, shopSlug }),
-    // **On every departure, whatever the crew schedule says**: who
-    // is aboard is manifest data (the crew roll call, the souls-on-
-    // board count), not planning (ADR 20261005-crew-schedule-is-a-setting).
     {
-      id: "about-crew",
-      label: t("trips.about.boatAndCrew"),
-      // **A row with open work stays open** (principles.md §9's
-      // "collapse the settled row", read the other way). A boat with
-      // nobody on it, a clash, a course with no instructor, a shortfall
-      // against the shop's own target or a language nobody aboard
-      // speaks are all things a staffer is here to fix — and the two
-      // safety-adjacent ones are also linked from the pulse above,
-      // which is what makes `#crew` land on something rather than on a
-      // closed row.
-      editorOpen: crewRowOpen || Boolean(noticeForForm(tripNotice, "boat")),
-      /* Who's aboard is manifest accuracy (glossary) — open to all
-   staff. Per-person assign/unassign (updateTripCrewAction), the
-   same mutation the schedule board uses — not a whole-set replace
-   — so two staff editing crew at once can no longer clobber each
-   other (Lens 17 task 139). */
-      editor: (
-        <>
-          {canConfigure && context.detailsEditable !== false ? (
-            <details
-              className="group/boat-edit mb-6"
-              open={Boolean(noticeForForm(tripNotice, "boat")) || undefined}
-            >
-              <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
-                {t("trips.details.editBoat")}
-                <DisclosureCaret direction="down" className="group-open/boat-edit:rotate-180" />
-              </summary>
-              <div className="mt-3">{editorFor("boat")}</div>
-            </details>
-          ) : null}
-          <CrewSection
-            shopSlug={shopSlug}
-            tripId={tripId}
-            staff={staff}
-            crewIds={crewIds}
-            crewRoles={Object.fromEntries(tripRoleByPerson)}
-            // Canceled departures have no live-trip staffing warnings.
-            onShiftIds={cancelled ? null : onShiftIds}
-            awayPersonIds={cancelled ? [] : crew.awayPersonIds}
-            clashes={liveClashes}
-            crewGapCode={cancelled ? "none" : crewGap.code}
-            bookingInstructorPresent={crew.rosterInWaterCrew.instructorCount > 0}
-            updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
-            copy={{
-              heading: t("trips.crew.heading"),
-              courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
-              overRatioWarning,
-              underTargetNote: cancelled ? null : underTargetNote,
-              languageGapNote: cancelled ? null : languageGapNote,
-              ratingLapsedNote: cancelled ? null : ratingLapsedNote,
-              noStaff: t("trips.crew.noCrew"),
-              notAssignedYet: t("trips.crew.notAssignedYet"),
-              awayWarning: t("trips.crew.awayWarning"),
-              assignLabel: t("trips.crew.assignLabel"),
-              assignOption: t("trips.crew.assignOption"),
-              unassignAria: t.raw("trips.crew.unassignAria"),
-              assignFailed: t("trips.crew.assignFailed"),
-              // `t.raw`: `{name}` is whoever the staffer just picked,
-              // which only the component knows (src/i18n/fill.ts).
-              assignClash: t.raw("trips.crew.assignClash"),
-              // `t.raw`: `{departure}` is the other boat's own title,
-              // which only the component has per row (src/i18n/fill.ts).
-              clash: t.raw("trips.crew.clash"),
-              roleAria: t.raw("trips.crew.roleAria"),
-              roleUnspecified: t("trips.crew.roleUnspecified"),
-              roleOptions: crewRoleOptions(t),
-              onShift: t("trips.crew.onShift"),
-              notOnShift: t("trips.crew.notOnShift"),
-              manageShifts: shop.crewScheduleEnabled ? t("trips.crew.manageShifts") : null,
-            }}
-          />
-          {/* One step to another boat that day (issue #4474). */}
-          {crewMoveFormFor(context)}
-          {/* "No longer working it" (#2678, dock review S2). */}
-          <CrewAwayWorkingList
-            shopSlug={shopSlug}
-            tripId={tripId}
-            people={crew.awayWorking}
-            t={t}
-          />
-        </>
-      ),
-      // The Details form is the door that changes the boat, and it
-      // redirects here, so the hull's clash rides on this row as
-      // well as on the Divers tab's pulse.
-      value:
-        liveBoatClashes.length === 0 ? (
-          boatCrewSummary
-        ) : (
-          <>
-            {boatCrewSummary}
-            {liveBoatClashes.map((clash) => (
-              <Link
-                key={clash.otherTripId}
-                href={shopPath(shopSlug, "trips", clash.otherTripId)}
-                className="mt-0.5 block font-medium text-danger hover:underline"
-              >
-                {boatClashText(t, clash)}
-              </Link>
-            ))}
-          </>
-        ),
-    },
-    {
-      id: "series",
-      label: t("trips.about.repeats"),
-      value: repeatsRowText(t, locale, series),
-      editorOpen: Boolean(seriesStatus),
-      editor:
-        canConfigure && series ? (
-          <SeriesCadenceEditor
-            intervalWeeks={series.intervalWeeks}
-            weekdays={series.weekdayMask}
-            endsOn={series.endsOn}
-            anchorDate={series.anchorDate}
-            offCadence={offCadence.map((date) => ({
-              id: date.id,
-              title: date.title,
-              // Formatted here, where the request locale and the shop's
-              // zone both are — the panel is handed words, never
-              // instants.
-              label: formatShortDate(date.startsAt, locale, shop.timezone),
-              booked: date.booked,
-            }))}
-            weekdayNames={weekdayNames(locale)}
-            status={seriesStatus}
-            cadenceAction={updateSeriesCadenceAction.bind(null, shopSlug, tripId, series.id)}
-            cancelOffCadenceAction={cancelOffCadence.bind(null, shopSlug, tripId, series.id)}
-            refundsHeld={context.refundsHeld}
-            locale={locale}
-          />
-        ) : undefined,
+      id: "departure-details",
+      label: t("trips.about.nameAndDescription"),
+      value: trip.title,
+      editorOpen: Boolean(noticeForForm(tripNotice, "departure")),
+      editor: editorFor("departure"),
     },
   ];
 }
+
+/**
+ * The rows Edit trip folds into one closed "More settings" group: rare,
+ * per-trip, and never what a staffer opened the page for.
+ */
+export const MORE_SETTINGS_ROWS: ReadonlySet<string> = new Set([
+  "participant-terms",
+  "departure-details",
+  "site-history",
+  "open-seats",
+]);
 
 /** "Move to another boat": the crew here and the day's other boats, while the departure is editable. */
 function crewMoveFormFor(context: TripAboutRowsContext) {
@@ -606,8 +573,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         editLabel: context.t("trips.about.correctCrewRecord"),
         editorOpen: Boolean(noticeForForm(context.tripNotice, "crew")),
       };
-    if (row.id === "series")
-      return { ...row, editLabel: context.t("trips.about.manageFutureDates") };
     return { ...row, editor: undefined, editorOpen: false };
   });
 }
