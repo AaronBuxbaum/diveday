@@ -892,7 +892,9 @@
       "minutesValue": "{minutes, plural, one {# minuto} other {# minutos}}",
       "max": "Máx. {depth}",
       "stop": "Parada de seguridad · {minutes} min",
-      "axisMinutes": "minutos"
+      "axisMinutes": "minutos",
+      "headingCrew": "Cómo fue tu inmersión",
+      "crewNote": "De la computadora del equipo, así que la tuya puede variar un poco."
     }
   },
   "register": {

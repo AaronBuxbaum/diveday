@@ -892,7 +892,9 @@
       "minutesValue": "{minutes} min",
       "max": "Max {depth}",
       "stop": "Safety stop · {minutes} min",
-      "axisMinutes": "min"
+      "axisMinutes": "min",
+      "headingCrew": "What your dive looked like",
+      "crewNote": "From the crew’s computer, so yours may differ a little."
     }
   },
   "register": {

@@ -45,8 +45,9 @@ import { SavePostcard } from "./SavePostcard";
  *
  * **The diver's own computer is the one exception, and it is labeled as theirs.** When staff
  * imported a file for this person, the card adds "From your dive computer": the recording's depth
- * chart and its max, average, time and coldest water. That is the diver's evidence, read from their
- * file (`recapComputerDives`), never the shop's record, so it stays off the sheet.
+ * chart and its max, average, time and coldest water. With none, it borrows a crew member's
+ * recording from the same day as "What your dive looked like", and says it is the crew's. Either is
+ * evidence read from a file (`recapComputerDives`), never the shop's record, so it stays off the sheet.
  *
  * **The postcard** — Reef's third moment (ADR 20260901-diveday-reimagined,
  * slice 13i). The record's face is a band of the lagoon wash carrying the
@@ -69,6 +70,7 @@ export function DiveRecord({
   diveRecord,
   observedSpecies,
   computerDives,
+  computerDivesSource,
   photos,
   visitCount,
   siteMark,
@@ -86,6 +88,7 @@ export function DiveRecord({
   | "diveRecord"
   | "observedSpecies"
   | "computerDives"
+  | "computerDivesSource"
   | "photos"
   | "visitCount"
   | "siteMark"
@@ -172,7 +175,12 @@ export function DiveRecord({
           observedSpecies={observedSpecies}
           course={course}
         />
-        <RecordComputerDives t={t} shop={shop} computerDives={computerDives} />
+        <RecordComputerDives
+          t={t}
+          shop={shop}
+          computerDives={computerDives}
+          computerDivesSource={computerDivesSource}
+        />
         <SavePostcard
           postcard={postcard}
           fileName={`${t("recap.postcardFileName")}.png`}

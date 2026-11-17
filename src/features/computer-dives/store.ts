@@ -423,14 +423,48 @@ export type RecapComputerDive = {
 /** A day's recap lists at most this many recordings; a day past it is a computer dump, not a dive. */
 const RECAP_COMPUTER_DIVES_LIMIT = 6;
 
+export type RecapComputerDives = {
+  /** `own` is this diver's computer; `crew` is a crew member's, shown as what the dive looked like. */
+  source: "own" | "crew";
+  dives: RecapComputerDive[];
+};
+
 /**
- * **The dives this diver's own computer logged on the day of a trip**, for their recap. Read by the
- * recap's bearer link, which is the diver's own door, so there is no staff check here: the rows are
- * the person's, scoped by shop and person, live only, and matched by the recording's calendar date in
- * the shop's zone. A recording with no profile is still a dive (its facts show), just no chart.
- * Nothing here feeds readiness, recency or the manifest.
+ * **The dive profile a diver's recap draws for the trip day.** The diver's own computer when staff
+ * imported it for them; otherwise a crew member's recording from the same day (the divemaster's or
+ * instructor's), which shows what the dive looked like even though it is not exactly theirs. The
+ * crew's is used only when it has a profile, carries no device name, and never names whose it is.
+ *
+ * Read by the recap's bearer link, the diver's own door, so there is no staff check here: rows are
+ * scoped by shop and person, live only, and matched by the recording's calendar date in the shop's
+ * zone. A diver's own recording with no profile still shows its facts. Nothing here feeds readiness,
+ * recency or the manifest.
  */
 export async function recapComputerDives(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    personId: string;
+    /** The trip's crew, in the order to try them. */
+    crewPersonIds: string[];
+    date: string;
+    timeZone: string;
+  },
+): Promise<RecapComputerDives> {
+  const { crewPersonIds, ...scope } = input;
+  const own = await datedComputerDives(db, scope);
+  if (own.length > 0) return { source: "own", dives: own };
+  for (const crewId of crewPersonIds) {
+    if (crewId === input.personId) continue;
+    const dives = (await datedComputerDives(db, { ...scope, personId: crewId }))
+      .filter((dive) => dive.samples.length > 1)
+      .map((dive) => ({ ...dive, device: null }));
+    if (dives.length > 0) return { source: "crew", dives };
+  }
+  return { source: "own", dives: [] };
+}
+
+async function datedComputerDives(
   db: DbExecutor,
   input: { shopId: string; personId: string; date: string; timeZone: string },
 ): Promise<RecapComputerDive[]> {

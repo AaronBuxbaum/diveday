@@ -56,6 +56,28 @@ describe("RecordComputerDives", () => {
     expect(container.querySelector("svg path")).not.toBeNull();
   });
 
+  it("says it is the crew's computer when the recording is theirs", () => {
+    render(
+      <RecordComputerDives
+        {...context}
+        computerDivesSource="crew"
+        computerDives={[
+          {
+            device: null,
+            maxMeters: 18,
+            averageMeters: 12,
+            durationSeconds: 40 * 60,
+            coldestC: null,
+            samples,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText("recap.profile.crewNote")).toBeTruthy();
+    expect(screen.getByText("recap.profile.headingCrew")).toBeTruthy();
+    expect(screen.queryByText("recap.profile.heading")).toBeNull();
+  });
+
   it("shows facts alone, never a made-up chart, when the file had no profile", () => {
     const { container } = render(
       <RecordComputerDives

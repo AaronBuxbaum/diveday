@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { computerDives, computerImportBatches, people, personRoles } from "@/db/schema";
+import { createPerson } from "@/db/people";
+import {
+  computerDiveProfiles,
+  computerDives,
+  computerImportBatches,
+  people,
+  personRoles,
+} from "@/db/schema";
 import { unseededTestDb } from "@/test/db";
 import {
   annotateComputerDive,
@@ -132,22 +139,69 @@ describe("a diver's recap reads their own computer's dives for the trip day", ()
     const db = await unseededTestDb();
     const scope = await computerFixture(db);
     await commitComputerFiles(db, scope, await selectedInput(db, scope));
-    const day = { shopId: scope.shopId, personId: scope.personId, timeZone: "UTC" };
+    const day = {
+      shopId: scope.shopId,
+      personId: scope.personId,
+      crewPersonIds: [],
+      timeZone: "UTC",
+    };
     const found = await recapComputerDives(db, { ...day, date: "2026-01-01" });
-    expect(found).toHaveLength(1);
-    expect(found[0]).toMatchObject({
+    expect(found.source).toBe("own");
+    expect(found.dives).toHaveLength(1);
+    expect(found.dives[0]).toMatchObject({
       device: "Computer",
       durationSeconds: 1800,
       maxDepthMeters: 20,
     });
-    expect(await recapComputerDives(db, { ...day, date: "2026-01-02" })).toEqual([]);
+    expect((await recapComputerDives(db, { ...day, date: "2026-01-02" })).dives).toEqual([]);
     expect(
-      await recapComputerDives(db, { ...day, personId: randomUUID(), date: "2026-01-01" }),
+      (await recapComputerDives(db, { ...day, personId: randomUUID(), date: "2026-01-01" })).dives,
     ).toEqual([]);
     const {
       dives: [dive],
     } = await historyComputerDives(db, scope);
     await deleteComputerDive(db, scope, dive.id);
-    expect(await recapComputerDives(db, { ...day, date: "2026-01-01" })).toEqual([]);
+    expect((await recapComputerDives(db, { ...day, date: "2026-01-01" })).dives).toEqual([]);
+  });
+
+  it("falls back to a crew member's recording with a profile, without naming their device", async () => {
+    const db = await unseededTestDb();
+    const scope = await computerFixture(db);
+    const guide = await createPerson(db, {
+      shopId: scope.shopId,
+      fullName: "Guide",
+      email: null,
+      phone: null,
+      origin: "seed",
+    });
+    const guideScope = { ...scope, personId: guide.id };
+    await commitComputerFiles(db, guideScope, await selectedInput(db, guideScope));
+    const [row] = await db.select().from(computerDives).where(eq(computerDives.personId, guide.id));
+    const input = {
+      shopId: scope.shopId,
+      personId: scope.personId,
+      crewPersonIds: [guide.id],
+      date: "2026-01-01",
+      timeZone: "UTC",
+    };
+    // No profile yet: nothing to show of the guide's.
+    expect((await recapComputerDives(db, input)).dives).toEqual([]);
+    await db.insert(computerDiveProfiles).values({
+      shopId: scope.shopId,
+      personId: guide.id,
+      diveId: row.id,
+      samples: [
+        { seconds: 0, depthMeters: 0 },
+        { seconds: 60, depthMeters: 12 },
+        { seconds: 120, depthMeters: 0 },
+      ],
+    });
+    const found = await recapComputerDives(db, input);
+    expect(found.source).toBe("crew");
+    expect(found.dives).toHaveLength(1);
+    expect(found.dives[0]?.device).toBeNull();
+    // The diver's own recording wins once they have one.
+    await commitComputerFiles(db, scope, await selectedInput(db, scope));
+    expect((await recapComputerDives(db, input)).source).toBe("own");
   });
 });

@@ -5,6 +5,7 @@ export type {
   ComputerScope,
   PreviewDive,
   RecapComputerDive,
+  RecapComputerDives,
 } from "./store";
 export {
   annotateComputerDive,

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { AppDb } from "@/db/client";
 import { listDivePackages } from "@/db/dive-packages";
 import { tipPresetsMajor } from "@/db/tips";
-import { pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { pagedUpcomingTripsWithCounts, tripCrewByTrip } from "@/db/trips";
 import { handoffHref, issueBookingHandoff } from "@/features/booking-handoff";
 import { BUDDY_PARAM } from "@/features/buddy-links";
 import { buddyReferralId } from "@/features/buddy-tokens";
@@ -142,6 +142,8 @@ export type AfterStateProps = {
    * state and renders nothing, so no chart is ever drawn without a recording behind it.
    */
   computerDives: RecapProfileDive[];
+  /** Whose computer drew them: the diver's own, or the crew's ("what your dive looked like"). */
+  computerDivesSource: "own" | "crew";
   /**
    * The course this departure taught, with what the shop recorded for it
    * (issues #1196, #1205). Null on an ordinary charter and then nothing about
@@ -443,14 +445,17 @@ export async function buildAfterStateProps(input: {
       }),
       bookedRead,
       whatsNextFor(db, { data, t, locale, now: nowDate() }),
-      recapComputerDives(db, {
-        shopId: shop.id,
-        personId: data.personId,
-        date: calendarDateInTimezone(trip.startsAt, shop.timezone),
-        timeZone: shop.timezone,
-      }),
+      tripCrewByTrip(db, shop.id, [trip.id]).then((crew) =>
+        recapComputerDives(db, {
+          shopId: shop.id,
+          personId: data.personId,
+          crewPersonIds: crew.get(trip.id)?.map((member) => member.id) ?? [],
+          date: calendarDateInTimezone(trip.startsAt, shop.timezone),
+          timeZone: shop.timezone,
+        }),
+      ),
     ]);
-  const computerDives = computerRows.flatMap((row): RecapProfileDive[] => {
+  const computerDives = computerRows.dives.flatMap((row): RecapProfileDive[] => {
     const samples = row.samples.map(({ seconds, depthMeters }) => ({
       seconds,
       meters: depthMeters,
@@ -539,6 +544,7 @@ export async function buildAfterStateProps(input: {
     fieldGuide: data.fieldGuide,
     observedSpecies: data.observedSpecies,
     computerDives,
+    computerDivesSource: computerRows.source,
     conservation: data.conservation,
     shoutout: data.shoutout,
     photos: data.photos,

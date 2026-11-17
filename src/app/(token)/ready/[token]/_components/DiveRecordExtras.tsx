@@ -38,7 +38,7 @@ export function RecordPhotoStrip({
           src={lead.imageUrl}
           alt={alt(lead.caption)}
           fill
-          sizes="(min-width: 640px) 640px, 100vw"
+          sizes="(min-width: 640px) 528px, 100vw"
           className="object-cover"
         />
       </div>
@@ -48,7 +48,7 @@ export function RecordPhotoStrip({
             src={photo.imageUrl}
             alt={alt(photo.caption)}
             fill
-            sizes="(min-width: 640px) 214px, 34vw"
+            sizes="(min-width: 640px) 176px, 34vw"
             className="object-cover"
           />
         </div>
@@ -68,9 +68,12 @@ export function RecordComputerDives({
   t,
   shop,
   computerDives,
-}: Pick<AfterStateProps, "t" | "shop" | "computerDives">) {
+  computerDivesSource,
+}: Pick<AfterStateProps, "t" | "shop" | "computerDives" | "computerDivesSource">) {
   if (computerDives.length === 0) return null;
   const feet = shop.depthUnit === "feet";
+  const crew = computerDivesSource === "crew";
+  const heading = t(crew ? "recap.profile.headingCrew" : "recap.profile.heading");
   return (
     <div data-testid={AFTER_STATE_TEST_IDS.computerDives} className="mt-6 space-y-6">
       {computerDives.map((dive, index) => {
@@ -95,15 +98,17 @@ export function RecordComputerDives({
             // A day holds a handful of recordings in file order; the index is their identity.
             // biome-ignore lint/suspicious/noArrayIndexKey: see above
             key={index}
-            aria-label={t("recap.profile.heading")}
+            aria-label={heading}
           >
             <div className="flex flex-wrap items-baseline justify-between gap-x-3">
               <h3 className={groupLabelClass()}>
-                {computerDives.length > 1
-                  ? t("recap.profile.diveN", { n: index + 1 })
-                  : t("recap.profile.heading")}
+                {computerDives.length > 1 ? t("recap.profile.diveN", { n: index + 1 }) : heading}
               </h3>
-              {dive.device ? <p className="text-xs text-muted">{dive.device}</p> : null}
+              {crew && index === 0 ? (
+                <p className="text-xs text-muted">{t("recap.profile.crewNote")}</p>
+              ) : dive.device ? (
+                <p className="text-xs text-muted">{dive.device}</p>
+              ) : null}
             </div>
             {facts.length > 0 ? (
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
