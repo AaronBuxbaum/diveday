@@ -177,7 +177,9 @@ html[data-device-text-size] [data-roll-call-panel] {
     flex-basis: 100%;
     min-inline-size: 0;
   }
-  [data-device-text-missing] a {
+  [data-device-text-missing] button {
+    inline-size: 100%;
+    text-align: start;
     display: flex;
     align-items: center;
     padding: 0.25rem 0.5rem;
