@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import { ScrollToHash } from "@/components/ScrollToHash";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/group-label";
@@ -124,6 +126,8 @@ export function FillSeatsCard({
       data-fill-seats
       className={sectionCardClass({ padding: "none", className: "scroll-mt-24 overflow-hidden" })}
     >
+      {/* Mounted with the card, so `#who-wants-in` and `#invite-suggestions` land here. */}
+      <ScrollToHash />
       <OfferDiscountProvider>
         <h2 id="fill-seats-heading" className="px-4 pt-4 pb-1 font-semibold sm:px-6">
           {heading}
@@ -155,7 +159,8 @@ export function FillSeatsCard({
           {carry ? <li className="px-4 pb-4 sm:px-6">{carry}</li> : null}
           {pastGuests && canOffer ? (
             <li>
-              <details className="group/past">
+              {/* Today's "Invite past divers" lands here, open. */}
+              <AutoOpenDetails openOnHash="invite-suggestions" className="group/past">
                 <summary
                   className={`${ROW_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
                 >
@@ -173,7 +178,7 @@ export function FillSeatsCard({
                   </span>
                 </summary>
                 <div className="border-t border-border">{pastGuests.list}</div>
-              </details>
+              </AutoOpenDetails>
             </li>
           ) : null}
           <li className={ROW_CLASS}>

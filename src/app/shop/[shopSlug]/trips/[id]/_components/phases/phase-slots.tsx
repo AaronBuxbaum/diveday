@@ -55,10 +55,13 @@ export function phaseSlots({
   gearToPack,
   water,
   noRollCall = false,
+  mayCallOff,
   now,
   locale,
   t,
 }: {
+  /** Call off is still on offer (`callOffShown`): not cancelled, not sailed, no Home said. */
+  mayCallOff: boolean;
   /** No roll call was taken: no dock count and no after-dive result (`RosterRecord`). */
   noRollCall?: boolean;
   /** The phase shown, when Getting ready starts, and when the dock call is. */
@@ -162,7 +165,7 @@ export function phaseSlots({
           <TomorrowsWaterCard
             {...water}
             {...units}
-            callOffHref={cancelled ? null : blowoutPath(shopSlug, tripId)}
+            callOffHref={mayCallOff ? blowoutPath(shopSlug, tripId) : null}
             t={t}
           />
         </Suspense>

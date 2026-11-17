@@ -25,7 +25,10 @@ export async function restoreConservationRecord(
   revalidatePath("/recap/[token]", "page");
   revalidateAndRedirect(
     base,
-    result.ok ? `${base}?view=edit` : noticeUrl(base, "conservation-undo-failed", { view: "edit" }),
+    // The record is kept under Wrapped up's More, which its hash opens.
+    result.ok
+      ? `${base}?phase=wrapped#conservation`
+      : noticeUrl(`${base}#conservation`, "conservation-undo-failed", { phase: "wrapped" }),
   );
 }
 

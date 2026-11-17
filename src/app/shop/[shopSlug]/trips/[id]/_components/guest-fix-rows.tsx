@@ -92,6 +92,8 @@ type Seat = {
   cardsHref: string;
   /** The depth sentence this guest shares with much of the boat, if any. */
   sharedDepth: string | null;
+  /** The opened guest draws the desk's tap itself, beside the blockers it answers. */
+  panelHoldsArrival: boolean;
 };
 
 /**
@@ -193,6 +195,7 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
     owed,
     cardsHref: `/shop/${trip.shopSlug}/divers/${person.id}#cards`,
     sharedDepth: seat.depthShared && seat.depthText !== null ? seat.depthText : null,
+    panelHoldsArrival: seat.blockerTexts.length > 0,
   };
 }
 
@@ -366,6 +369,7 @@ export function guestFixRows(
       tone: "muted",
       control: arrival?.controls.get(id) ?? null,
       openLabel: null,
+      panelHoldsControl: seat?.panelHoldsArrival ?? false,
     };
   };
 
@@ -426,6 +430,11 @@ export function guestFixRows(
   };
 
   const booked = seats.filter((seat) => !seat.guest.released).map((seat) => seat.guest.id);
+  const quietRows = [...list.blocking, ...list.worthAMinute].map((item) => ({
+    ...fixRow(item, "warning", item.guestIds.join()),
+    control: null,
+    openLabel: null,
+  }));
   const sections: FixListSection[] =
     phase === "listed"
       ? [
@@ -449,13 +458,9 @@ export function guestFixRows(
                 toggle: t("trips.fixList.allGuests"),
                 rows: list.fine.map((id) => plainRow(id)),
               },
-              // Days ahead nothing is urgent: each reason is said quietly, and the
-              // guest opens in place for whoever wants to act on it now.
-              rows: [...list.blocking, ...list.worthAMinute].map((item) => ({
-                ...fixRow(item, "warning", item.guestIds.join()),
-                control: null,
-                openLabel: null,
-              })),
+              // Days ahead a guest's reason is said quietly, opened in place;
+              // the trip's own fixes (a hull booked twice) keep their door.
+              rows: [...tripRows("danger"), ...tripRows("warning"), ...quietRows],
             },
             ...released,
           ]

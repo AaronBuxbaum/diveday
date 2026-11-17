@@ -77,6 +77,14 @@ function waitlistLanding(back: string, formData: FormData): string {
     : back;
 }
 
+/**
+ * Where a wait-listed diver is shown: a date request's band when the entry came
+ * from one, otherwise Filling's wait list, whatever phase the clock reads.
+ */
+function waitlistedLanding(back: string): string {
+  return back.includes("?") ? back : `${back}?phase=filling#who-wants-in`;
+}
+
 const rosterBookingForm = z.object({ bookingId: text() });
 
 /**
@@ -118,7 +126,7 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     await trackEvent({ name: "waitlist_joined", source: "staff" });
-    revalidateAndRedirect(back, noticeUrl(back, "diver-waitlisted"));
+    revalidateAndRedirect(back, noticeUrl(waitlistedLanding(back), "diver-waitlisted"));
   }
   redirect(noticeUrl(back, WAITLIST_NOTICE[outcome.reason]));
 }
@@ -144,7 +152,7 @@ export async function addKnownDiverToWaitlistAction(
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     await trackEvent({ name: "waitlist_joined", source: "staff" });
-    revalidateAndRedirect(back, noticeUrl(back, "diver-waitlisted"));
+    revalidateAndRedirect(back, noticeUrl(waitlistedLanding(back), "diver-waitlisted"));
   }
   if (outcome.reason === "not_found") redirect(noticeUrl(back, "diver-invalid"));
   redirect(noticeUrl(back, WAITLIST_NOTICE[outcome.reason]));

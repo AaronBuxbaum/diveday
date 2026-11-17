@@ -216,6 +216,7 @@ export default async function ManageTripPage({
     gearToPack: reading.gearToPack,
     water: { automatedForecast, tideLines },
     noRollCall: Boolean(record && !record.rollCallTaken && record.afterDive.size === 0),
+    mayCallOff: mayChangeDeparture,
   });
 
   const guestList = showDetails ? null : (

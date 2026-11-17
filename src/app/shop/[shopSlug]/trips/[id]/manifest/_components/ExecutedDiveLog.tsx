@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
@@ -184,7 +185,8 @@ export function ExecutedDiveLog({
                   20261117-trip-page-clock: one form, one place), never on the
                   Roll call screen where a crew is counting bodies. The same
                   treatment `PreDepartureCheckList` took in slice 5a. */}
-        <details className="group/dive">
+        {/* "Log this dive" lands here by its hash, and opens it. */}
+        <AutoOpenDetails openOnHash={scopedId(idPrefix, "executed-dive")} className="group/dive">
           <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}>
             <SummaryCaret className="group-open/dive:rotate-90" />
             <span className="text-base font-semibold group-hover/summary:underline">
@@ -206,7 +208,7 @@ export function ExecutedDiveLog({
             timeZone={timeZone}
             depthUnit={depthUnit}
           />
-        </details>
+        </AutoOpenDetails>
         {/* Paper states the dive's summary line on the Boat tab's sheet
                   (`BoatTabSheet`), never this closed form. */}
       </div>

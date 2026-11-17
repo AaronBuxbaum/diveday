@@ -162,14 +162,17 @@ export function OpenedGuest({
   if (seat.depthShared && seat.depthText) {
     facts.push({ key: "depth", label: t("trips.roster.depthChip"), value: seat.depthText });
   }
-  if (showsPersonDetail && person.email) {
+  // A walk-in booked with no email is said, so the desk asks for one.
+  if (showsPersonDetail) {
     facts.push({
       key: "email",
       label: t("trips.fixList.facts.email"),
-      value: (
+      value: person.email ? (
         <a href={`mailto:${person.email}`} className="hover:underline">
           {person.email}
         </a>
+      ) : (
+        t("trips.fixList.facts.noEmail")
       ),
     });
   }

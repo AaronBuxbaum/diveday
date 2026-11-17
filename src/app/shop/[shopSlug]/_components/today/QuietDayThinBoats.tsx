@@ -68,12 +68,12 @@ export async function QuietDayThinBoats({
               </p>
               <p className="flex flex-wrap gap-x-4">
                 {boat.dealOpen ? (
-                  <Link href={`${trip}#last-minute-deal`} className={door}>
+                  <Link href={`${trip}?view=edit#last-minute-deal`} className={door}>
                     {t("shopHome.thinBoats.deal")}
                   </Link>
                 ) : null}
                 {boat.invitesPastDivers ? (
-                  <Link href={`${trip}#invite-suggestions`} className={door}>
+                  <Link href={`${trip}?phase=filling#invite-suggestions`} className={door}>
                     {t("shopHome.thinBoats.invite")}
                   </Link>
                 ) : null}

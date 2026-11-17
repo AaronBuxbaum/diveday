@@ -66,6 +66,9 @@ function pickedEntry(request?: string) {
   return data;
 }
 
+/** Where a wait-listed diver now stands: Filling, whatever phase the clock reads. */
+const ON_THE_LIST = `${TRIP}?phase=filling#who-wants-in`;
+
 describe("wait-listing from a date request's band", () => {
   it("lands a typed entry back on the request's band", async () => {
     const to = await redirectedTo(() =>
@@ -86,18 +89,18 @@ describe("wait-listing from a date request's band", () => {
     async (junk) => {
       expect(
         await redirectedTo(() => addToWaitlistAction(SHOP_SLUG, TRIP_ID, typedEntry(junk))),
-      ).toBe(noticeUrl(TRIP, "diver-waitlisted"));
+      ).toBe(noticeUrl(ON_THE_LIST, "diver-waitlisted"));
       expect(
         await redirectedTo(() =>
           addKnownDiverToWaitlistAction(SHOP_SLUG, TRIP_ID, pickedEntry(junk)),
         ),
-      ).toBe(noticeUrl(TRIP, "diver-waitlisted"));
+      ).toBe(noticeUrl(ON_THE_LIST, "diver-waitlisted"));
     },
   );
 
-  it("lands without a request exactly as before, and never hands the request to the wait list", async () => {
+  it("lands without a request on Filling's wait list, and never hands the request to the wait list", async () => {
     expect(await redirectedTo(() => addToWaitlistAction(SHOP_SLUG, TRIP_ID, typedEntry()))).toBe(
-      noticeUrl(TRIP, "diver-waitlisted"),
+      noticeUrl(ON_THE_LIST, "diver-waitlisted"),
     );
     await redirectedTo(() => addToWaitlistAction(SHOP_SLUG, TRIP_ID, typedEntry(REQUEST_ID)));
     expect(JSON.stringify(vi.mocked(askForDeparture).mock.calls.at(-1))).not.toContain(REQUEST_ID);

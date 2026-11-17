@@ -599,7 +599,9 @@ export function TripPromoteAndActivity({
   return (
     // A shop's taps and its audit trail, not the departure a staffer prints.
     <div>
-      <DisclosureRowList>
+      {/* Its rows may all render nothing (no deal, no note, Edit trip's day
+          rows only): an empty card would draw a bare rule. */}
+      <DisclosureRowList className="empty:hidden">
         {showPromote ? (
           <AutoOpenDetails openOnHash="last-minute-deal" className="group/promote scroll-mt-6">
             <summary className={FOOT_ROW_SUMMARY}>
