@@ -51,9 +51,7 @@
     "noConditions": "No crew prediction published",
     "noRequirements": "No admission requirements set",
     "noBoat": "Boat not assigned",
-    "noCrew": "No crew assigned",
     "oneTime": "One-time departure",
-    "perDiver": "per diver",
     "cancel": "Cancel this trip",
     "meetingDaysSummary": "{count, plural, other {# days}} · {first} – {last}",
     "correctCrewRecord": "Correct crew record",
@@ -286,10 +284,6 @@
   "detail": {
     "copyBookingLink": "Copy link",
     "linkCopyFailed": "Booking link to copy",
-    "meetingDaysSummary": "{count} meeting days · same instructors each day",
-    "dayLabel": "Day {number}: {date} · {timeRange}",
-    "courseSession": "Course session · <course>{title}</course>",
-    "diveSiteLabel": "{count, plural, one {Dive site:} other {Dive sites:}}",
     "overRatioWarning": "{booked} booked, crew covers {cap}: 8 per instructor, +2 per certified assistant, up to 12 per instructor. Assign another divemaster or assistant instructor before this session sails; existing bookings are unaffected.",
     "overRatioWarningCeiling": "{booked} booked, crew covers {cap}: up to 12 per instructor, however many assistants. Only another instructor adds seats. Assign one before this session sails; existing bookings are unaffected.",
     "overRatioWarningIntro": "{booked} booked on this intro session, crew covers {cap}. Only another instructor adds seats; a certified assistant does not. Assign one before this session sails; existing bookings are unaffected.",
@@ -480,7 +474,6 @@
     "addPersonAriaLabel": "Add {name} to the trip",
     "addToTrip": "Add to trip",
     "noMatches": "No returning diver matches “{query}”.",
-    "nameLabel": "Name",
     "addToWaitlist": "Add to who’s waiting",
     "addPersonToWaitlist": "Add {name} to who’s waiting",
     "noMatchesHeading": "No returning diver by that name",
@@ -1361,6 +1354,7 @@
       "noCard": "None on file",
       "age": "Age",
       "email": "Email",
+      "noEmail": "None on file",
       "setFit": "Set sizes"
     }
   }

@@ -51,9 +51,7 @@
     "noConditions": "No hay previsión de la tripulación publicada",
     "noRequirements": "No hay requisitos de admisión configurados",
     "noBoat": "Barco sin asignar",
-    "noCrew": "Tripulación sin asignar",
     "oneTime": "Salida única",
-    "perDiver": "por buceador",
     "cancel": "Cancelar esta salida",
     "meetingDaysSummary": "{count, plural, other {# días}} · {first} – {last}",
     "correctCrewRecord": "Corregir registro de tripulación",
@@ -286,10 +284,6 @@
   "detail": {
     "copyBookingLink": "Copiar enlace",
     "linkCopyFailed": "Enlace de reserva para copiar",
-    "meetingDaysSummary": "{count, plural, one {# día de encuentro} other {# días de encuentro}} · mismos instructores cada día",
-    "dayLabel": "Día {number}: {date} · {timeRange}",
-    "courseSession": "Sesión de curso · <course>{title}</course>",
-    "diveSiteLabel": "{count, plural, one {Sitio de buceo:} other {Sitios de buceo:}}",
     "overRatioWarning": "{booked, plural, one {# reservado} other {# reservados}}, la tripulación cubre {cap}: 8 por instructor, +2 por asistente certificado, hasta 12 por instructor. Asigna otro divemaster o asistente de instructor antes de que zarpe; las reservas existentes no se ven afectadas.",
     "overRatioWarningCeiling": "{booked, plural, one {# reservado} other {# reservados}}, la tripulación cubre {cap}: hasta 12 por instructor, con los asistentes que haya. Solo otro instructor agrega plazas. Asigna uno antes de que zarpe; las reservas existentes no se ven afectadas.",
     "overRatioWarningIntro": "{booked, plural, one {# reservado} other {# reservados}} en este bautismo, la tripulación cubre {cap}. Solo otro instructor agrega plazas; un asistente certificado no. Asigna uno antes de que zarpe; las reservas existentes no se ven afectadas.",
@@ -480,7 +474,6 @@
     "addPersonAriaLabel": "Agregar a {name} a la salida",
     "addToTrip": "Agregar a la salida",
     "noMatches": "Ningún buceador habitual coincide con “{query}”.",
-    "nameLabel": "Nombre",
     "addToWaitlist": "Agregar a quienes esperan",
     "addPersonToWaitlist": "Agregar a {name} a quienes esperan",
     "noMatchesHeading": "Ningún buceador habitual con ese nombre",
@@ -1361,6 +1354,7 @@
       "noCard": "Ninguna registrada",
       "age": "Edad",
       "email": "Correo",
+      "noEmail": "Ninguno registrado",
       "setFit": "Indicar tallas"
     }
   }

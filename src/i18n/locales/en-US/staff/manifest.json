@@ -272,7 +272,6 @@
   "decompressionReminder": "This departure goes past no-decompression limits. DiveDay does not record technical cards: check each diver’s and guide’s decompression card against the planned depth and gas.",
   "sharedDepthApplies": "Applies to {names}.",
   "depthChip": "Depth advisory",
-  "personDetails": "Details",
   "openPersonDetails": "Open details for {name}",
   "closePersonDetails": "Close person details",
   "personSheetDiverSubtitle": "Diver · age {age}",

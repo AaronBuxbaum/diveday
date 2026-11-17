@@ -272,7 +272,6 @@
   "decompressionReminder": "Esta salida supera los límites sin descompresión. DiveDay no registra tarjetas técnicas: verifica la tarjeta de descompresión de cada buceador y guía según la profundidad y la mezcla previstas.",
   "sharedDepthApplies": "Se aplica a {names}.",
   "depthChip": "Aviso de profundidad",
-  "personDetails": "Detalles",
   "openPersonDetails": "Abrir detalles de {name}",
   "closePersonDetails": "Cerrar detalles de la persona",
   "personSheetDiverSubtitle": "Buceador · {age} años",
