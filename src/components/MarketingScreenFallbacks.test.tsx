@@ -4,6 +4,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 import {
+  CheckoutFallback,
+  RegisterFallback,
+  SeatPickFallback,
+} from "./MarketingBookingWalkScreens";
+import {
   CaptainRollCallFallback,
   DiverBookingFallback,
   ExportBundleFallback,
@@ -37,6 +42,9 @@ const EVERY_MOCK = [
     ),
   ],
   ["NightBeforeBriefFallback", NightBeforeBriefFallback],
+  ["SeatPickFallback", SeatPickFallback],
+  ["CheckoutFallback", CheckoutFallback],
+  ["RegisterFallback", RegisterFallback],
 ] as const;
 
 /** A mock's two parts: its app bar and the body under it. */

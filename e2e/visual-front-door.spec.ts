@@ -334,8 +334,9 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "landing", scheme);
       });
 
-      // The walkthrough, one capture per beat: Priya booked, her open waiver, signed,
-      // ready, her card confirmed, checked in, counted back aboard, her dive file imported, and the recap.
+      // The walkthrough, one capture per beat: Priya browsing, picking, paying by card, the money in Orders,
+      // her onboarding, the medical answer, her signature, her PADI card checked, checked in, aboard,
+      // her dive file imported, and the recap and review.
       // The beats are one theme's work, so the dark pass does not register the test.
       if (scheme === "light") {
         test(`the landing walkthrough shows each beat of one diver's day (${scheme})`, async ({
@@ -347,10 +348,13 @@ for (const scheme of ["light", "dark"] as const) {
           const next = page.getByRole("button", { name: t("marketing.home.walk.next") });
           await next.waitFor();
           for (const beat of [
-            "shopfront",
-            "book",
+            "browse",
+            "select",
+            "pay",
             "money",
+            "onboard",
             "unsigned",
+            "medical",
             "sign",
             "check",
             "card",

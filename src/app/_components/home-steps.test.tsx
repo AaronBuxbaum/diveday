@@ -5,13 +5,13 @@ import { STEPS } from "./home-steps";
 
 describe("the homepage's walk", () => {
   it("has one slide per step, in a story with a beginning and an end", () => {
-    expect(STEPS.length).toBeGreaterThanOrEqual(10);
+    expect(STEPS.length).toBeGreaterThanOrEqual(15);
     expect(new Set(STEPS.map((step) => step.id)).size).toBe(STEPS.length);
   });
 
   it("shows a reader without the player five slides, one drawing each", () => {
     expect(STEPS.filter((step) => step.listed).map((step) => step.id)).toEqual([
-      "book",
+      "pay",
       "sign",
       "check",
       "aboard",
@@ -29,6 +29,18 @@ describe("the homepage's walk", () => {
       expect(t(step.label).length).toBeGreaterThan(10);
       for (const note of step.notes) expect(t(note).length).toBeGreaterThan(10);
     }
+  });
+
+  it("walks browsing, selecting and buying as three slides before the money lands", () => {
+    expect(STEPS.slice(0, 4).map((step) => step.id)).toEqual(["browse", "select", "pay", "money"]);
+  });
+
+  it("gives the slides she types into a longer beat", () => {
+    expect(STEPS.filter((step) => step.typed).map((step) => step.id)).toEqual([
+      "pay",
+      "onboard",
+      "sign",
+    ]);
   });
 
   it("never repeats one heading for two slides", () => {

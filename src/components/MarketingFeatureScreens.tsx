@@ -23,6 +23,7 @@ import {
   MOCK_PRIMARY_BUTTON,
   MOCK_SECONDARY_BUTTON,
 } from "./MarketingScreenFallbacks";
+import { WalkTyped } from "./WalkTyped";
 
 export { StorefrontFallback } from "./MarketingStorefrontFallback";
 
@@ -155,14 +156,22 @@ export function WaiverSigningFallback({
   state = "open",
 }: {
   locale: DiverLocale;
-  /** `signed` is the page a tap later, for the homepage walkthrough (Priya taps Sign waiver). */
-  state?: "open" | "signed";
+  /**
+   * `open` is the feature page's screen: the question answered and the name in the box.
+   * The homepage walkthrough tells it in three pictures: `unanswered` (Priya taps No),
+   * `answered` and `typing` (the same page while she types her name, then taps Sign waiver),
+   * and `signed` a tap later.
+   */
+  state?: "open" | "unanswered" | "answered" | "typing" | "signed";
 }) {
   const t = diverTranslator(locale);
   const signed = state === "signed";
+  const unanswered = state === "unanswered";
+  // i18n-exempt: sample diver name used only in marketing mockups
+  const signerName = "Priya Sharma";
   const steps = [
     { label: t("fallback.waiverSigning.railRelease"), done: true },
-    { label: t("fallback.waiverSigning.railMedical"), done: true },
+    { label: t("fallback.waiverSigning.railMedical"), done: !unanswered },
     { label: t("fallback.waiverSigning.railSign"), done: signed },
   ];
   return (
@@ -184,7 +193,13 @@ export function WaiverSigningFallback({
             ))}
           </ol>
           <p className="text-xs text-muted tabular-nums">
-            {t(signed ? "fallback.waiverSigning.progressDone" : "fallback.waiverSigning.progress")}
+            {t(
+              signed
+                ? "fallback.waiverSigning.progressDone"
+                : unanswered
+                  ? "fallback.waiverSigning.progressOne"
+                  : "fallback.waiverSigning.progress",
+            )}
           </p>
         </div>
         {locale === DEFAULT_DIVER_LOCALE ? null : (
@@ -218,15 +233,28 @@ export function WaiverSigningFallback({
                   <StatusMark variant="pending" className="text-muted" />
                   {t("waiver.answerYes")}
                 </span>
-                <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-primary bg-primary-tint px-3 text-xs font-medium text-primary">
+                {unanswered ? (
                   <span
-                    aria-hidden="true"
-                    className="flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-primary"
+                    data-tap-target=""
+                    className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-xs"
                   >
-                    <span className="size-1.5 rounded-full bg-primary" />
+                    <StatusMark variant="pending" className="text-muted" />
+                    {t("waiver.answerNo")}
                   </span>
-                  {t("waiver.answerNo")}
-                </span>
+                ) : (
+                  <span
+                    data-walk-pop=""
+                    className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-primary bg-primary-tint px-3 text-xs font-medium text-primary"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-primary"
+                    >
+                      <span className="size-1.5 rounded-full bg-primary" />
+                    </span>
+                    {t("waiver.answerNo")}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -236,11 +264,19 @@ export function WaiverSigningFallback({
               {t("fallback.waiverSigning.typeFullName")}
             </p>
             <div className="mt-1 flex min-h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm">
-              {/* i18n-exempt: sample diver name used only in marketing mockups */}
-              <span>Priya Sharma</span>
+              {state === "unanswered" || state === "answered" ? null : state === "typing" ? (
+                <WalkTyped text={signerName} delay={300} />
+              ) : (
+                <span>{signerName}</span>
+              )}
             </div>
             <p className="mt-3 flex items-baseline gap-2 text-xs">
-              <StatusMarkColumn variant="checked" className="text-primary" />
+              <StatusMarkColumn
+                variant={state === "unanswered" || state === "answered" ? "unchecked" : "checked"}
+                className={
+                  state === "unanswered" || state === "answered" ? "text-muted" : "text-primary"
+                }
+              />
               <span>{t("fallback.waiverSigning.agreement")}</span>
             </p>
             {signed ? (
@@ -255,7 +291,7 @@ export function WaiverSigningFallback({
               <button
                 type="button"
                 disabled
-                data-tap-target=""
+                data-tap-target={state === "open" || state === "typing" ? "" : undefined}
                 className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}
               >
                 {t("fallback.waiverSigning.signButton")}

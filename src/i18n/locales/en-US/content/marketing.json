@@ -13,85 +13,110 @@
     "stepsTitle": "Follow Priya’s booking from your website to the boat and home again",
     "stepsLede": "Priya books a dive. Each step is the screen your shop sees at that moment.",
     "steps": {
-      "book": {
+      "browse": {
         "when": "Days before",
-        "title": "Let divers book while you’re out diving",
-        "note1": "Seats left are counted against the boat, live. A full boat says so and takes no more.",
-        "note2": "No sign-in on this page. A diver books, pays, and gets a link to their trip by email.",
+        "title": "A diver looks around your page first",
+        "note1": "It is your page, with your photo, your name, and your week of boats, so she knows whose boat she is looking at.",
+        "note2": "She doesn’t make an account or download an app. Looking is free, and that is what turns a visit into a booking.",
         "mockupLabel": "The Blue Mantis public schedule, two upcoming trips with the seats left on each."
       },
+      "select": {
+        "when": "Still days before",
+        "title": "She picks the boat that fits her week",
+        "note1": "The seats left are counted against the boat, so she can only pick what is really open.",
+        "note2": "Her seat, her price, and the one button are all on the same card. There is nothing to work out.",
+        "mockupLabel": "The Two-Tank Reef booking card: one diver, three seats left, and a Book and pay button."
+      },
+      "pay": {
+        "when": "The moment she books",
+        "title": "She pays by card and she is booked",
+        "note1": "One short page and one payment. Her trip link is in her email before she closes the tab.",
+        "note2": "No deposit to chase and no call to take. A booked diver is a paid diver.",
+        "mockupLabel": "The checkout page: Priya types her card number, expiry, and code, taps Pay, and the order reads Paid."
+      },
+      "money": {
+        "when": "A moment later",
+        "title": "The money is in Orders, already counted",
+        "note1": "Her booking is at the top of today’s list, paid, and nobody had to type it in.",
+        "note2": "Only an order that needs you wears a badge, so a quick look tells you if anything is open.",
+        "mockupLabel": "The Orders page for a sample shop: Priya Sharma’s booking arrives at the top of today’s list, paid."
+      },
+      "onboard": {
+        "when": "Right after she books",
+        "title": "She tells the shop who she is in a minute",
+        "note1": "She types in her name, a way to reach her, and her PADI number on her own phone, and it takes a minute.",
+        "note2": "By the time she is at the counter, the shop already has what it needs to get her on the boat.",
+        "mockupLabel": "The shop’s register page: Priya types her name, email, PADI Advanced Open Water, and card number, sends it, and reads You’re on file."
+      },
+      "unsigned": {
+        "when": "The next morning",
+        "title": "You see who isn’t ready, and why",
+        "note1": "Each row says what is in the way and the boat it is for, so you chase it today and not at the dock.",
+        "note2": "A nudge sends her the waiver again, and you didn’t write a word.",
+        "mockupLabel": "A sample shop’s day: one departure with 7 of 9 divers ready, then Priya Sharma’s open waiver with a Nudge waiver button."
+      },
+      "medical": {
+        "when": "Before she arrives",
+        "title": "She answers the medical questions in private",
+        "note1": "She takes her time on her own phone, not at a crowded counter with a pen.",
+        "note2": "An answer that needs a second look is in front of the crew before the boat leaves.",
+        "mockupLabel": "The release page on a phone: the medical question unanswered, then Priya taps No."
+      },
       "sign": {
-        "when": "Before they arrive",
-        "title": "They sign the release and answer the medical form at home"
+        "when": "Before she arrives",
+        "title": "Then she signs, and the paperwork is done",
+        "note1": "She types her name and taps once. It is on her record long before she is anywhere near the dock.",
+        "note2": "No clipboard, no pen, and no page to scan afterwards.",
+        "mockupLabel": "The release page on a phone: Priya types her name, taps Sign waiver, and reads Signed."
       },
       "check": {
         "when": "Each morning, for the week ahead",
-        "title": "Once she signs, her row leaves the list",
+        "title": "Once she signs, she drops off your list",
+        "note1": "The list only holds people who need something from you. When she is cleared, she is gone from it.",
         "note2": "There is no “mark everyone ready” button. We left it out on purpose.",
         "mockupLabel": "A sample shop’s day: one departure with 7 of 9 divers ready, then two rows under Needs you.",
         "readyLabel": "After Priya signs, today’s list reads 8 of 9 divers ready, then one row under Needs you."
       },
-      "aboard": {
-        "when": "At the dock, and after every dive",
-        "title": "The crew calls the roll by name, signal or not",
-        "note1": "Each dive’s count, divers and crew by name, stays open until everyone who left the dock is counted aboard.",
-        "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns.",
-        "note3": "The same manifest prints as a trip packet, roll call and emergency card included, for crews who carry paper.",
-        "boatLabel": "The boat’s roll call after dive 1: 9 of 9 divers aboard, with Priya Sharma and Tom Okafor both tapped back aboard."
-      },
-      "recap": {
-        "when": "After the boat is back",
-        "title": "Give divers the day to take home",
-        "note1": "The record is written once: boat, crew, site, and the dive’s own numbers.",
-        "note2": "The photos are the crew’s, and the chart is her own dive.",
-        "mockupLabel": "A report page for a diver: three photos from the boat, the dive’s record with its numbers, and a depth-over-time chart."
-      },
-      "shopfront": {
-        "when": "Days before",
-        "title": "A diver lands on your page and taps the next boat",
-        "note1": "It is your page: your photo, your name, your next boat with seats left.",
-        "note2": "No account to make first, and no app to download.",
-        "mockupLabel": "The Blue Mantis booking page: the shop’s cover photo, its rating, and the next boat with three seats left beside a Book this boat button."
-      },
-      "money": {
-        "when": "The moment she books",
-        "title": "The payment lands in Orders, already paid",
-        "note1": "One row per order: the diver, what they bought, and the amount.",
-        "note2": "Paid says nothing. Only an open or refunded order wears a badge.",
-        "mockupLabel": "The Orders page for a sample shop: Priya Sharma’s booking arrives at the top of today’s list, paid."
-      },
-      "unsigned": {
-        "when": "The next morning",
-        "title": "Anyone who can’t board yet is named, with the reason",
-        "note1": "Each row says what is in the way and the boat it is for.",
-        "note2": "A nudge sends her the waiver again with a single tap.",
-        "mockupLabel": "A sample shop’s day: one departure with 7 of 9 divers ready, then Priya Sharma’s open waiver with a Nudge waiver button."
-      },
       "card": {
         "when": "Before the boat",
-        "title": "A card gets a person’s eyes before it counts",
-        "note2": "The crew sights the card itself, then taps Confirm certification.",
-        "mockupLabel": "A sample shop’s card check: Priya Sharma’s Advanced Open Water card, with a button to confirm it."
+        "title": "Her card is checked with PADI before it counts",
+        "note1": "She gave the shop her PADI number when she registered. One click and the DiveDay extension looks it up on PADI, in your own browser.",
+        "note2": "You see PADI’s answer on her record, so nobody has to guess at the dock.",
+        "mockupLabel": "Priya Sharma’s record: her PADI Advanced Open Water card with the number she gave, then the DiveDay extension checking it on PADI and marking it certified."
       },
       "desk": {
         "when": "At the counter",
-        "title": "A tap checks her in",
-        "note1": "Check-in is a tap on her row, and the count at the top goes up with it.",
-        "note2": "A held seat asks Same person or Different person first, so paperwork stays with the diver it names.",
+        "title": "At the counter, check-in is a tap",
+        "note1": "Her waiver and her card are already settled, so there is nothing left to ask her at the counter.",
+        "note2": "The count at the top goes up as she does, so you always know who is still on the way.",
         "mockupLabel": "The arrivals desk, 8 of 9 here: Priya Sharma has just been checked in, and one held seat still asks whether it is the same person."
+      },
+      "aboard": {
+        "when": "At the dock, and after every dive",
+        "title": "The crew calls the roll by name, signal or not",
+        "note1": "Everyone is counted by name before the boat leaves and after every dive, so nobody is ever just a number.",
+        "note2": "Out of range, the phone keeps calling from its saved copy. The same list prints for crews who like paper.",
+        "boatLabel": "The boat’s roll call after dive 1: 9 of 9 divers aboard, with Priya Sharma and Tom Okafor both tapped back aboard."
       },
       "computer": {
         "when": "Back at the shop",
         "title": "Her dive computer’s file goes into her log",
-        "note1": "Pick the diver, add the file, and review each dive before it is saved.",
-        "note2": "The depth profile, gas, and computer come across with it. Nothing is saved until you confirm.",
+        "note1": "The crew adds the file and she gets a real log of the dive, with the depth, the time, and the gas.",
+        "note2": "Nothing is saved until you have looked it over and said so.",
         "mockupLabel": "A diver’s Computer dives page: one dive read from a dive computer’s file with its depth chart, then the same dive in her imported history."
+      },
+      "recap": {
+        "when": "After the boat is back",
+        "title": "She goes home with the day",
+        "note1": "That evening her page arrives with photos from the boat, the numbers from her dive, and her own depth profile.",
+        "note2": "It carries your shop’s name, so your name goes home with her.",
+        "mockupLabel": "A report page for a diver: three photos from the boat, the dive’s record with its numbers, and a depth-over-time chart."
       },
       "review": {
         "when": "That evening",
-        "title": "Then one ask: how was the day?",
-        "note1": "The crew’s note is a quote. It is whatever the crew typed, with no template behind it.",
-        "note2": "The page asks for one thing, and it asks last.",
+        "title": "Then she is asked how it went",
+        "note1": "The crew’s own note comes first, then a single question. A diver who just had a great day is easy to ask.",
+        "note2": "Her stars land on your page, where the next diver is looking.",
         "mockupLabel": "The rest of a diver’s report: a note from the crew and a five-star review ask."
       }
     },
@@ -102,15 +127,19 @@
       "play": "Play",
       "previous": "Previous step",
       "next": "Next step",
+      "goTo": "Go to step {n}",
       "hint": "Tap the screen, swipe, or use the arrow keys.",
       "captions": {
-        "shopfront": "Priya finds the shop’s page and taps the next boat.",
-        "book": "She looks over the schedule and takes the Two-Tank Reef.",
+        "browse": "Priya looks over the shop’s page and the week’s boats.",
+        "select": "She picks the Two-Tank Reef and sets up her seat.",
+        "pay": "She types in her card and pays, and she’s booked.",
         "money": "Her payment lands in Orders, already paid.",
+        "onboard": "She fills in her details, her PADI number included.",
         "unsigned": "Next morning her waiver is still open, so the list offers a nudge.",
-        "sign": "She signs the release and answers the medical form on her phone.",
+        "medical": "On her phone, she taps No on the medical question.",
+        "sign": "She types her name and signs.",
         "check": "Her row leaves the list and the ready count goes up by one.",
-        "card": "Before the boat, the crew sights her card and confirms it in one tap.",
+        "card": "With one click, the extension checks her PADI number on PADI.",
         "desk": "At the counter, one tap checks her in.",
         "aboard": "After dive 1 the crew calls her by name. All nine are back aboard.",
         "computer": "Back at the shop, her dive computer’s file goes into her record.",

@@ -565,22 +565,13 @@ export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
 }
 
 /**
- * `state="booked"` is the screen a tap later, for the homepage walkthrough:
- * Priya has taken the Two-Tank Reef, so its card wears her booking and its
- * count is one lower. Before that tap (`data-tap-target`) it is the plain
- * schedule every other caller draws.
+ * The shop's public schedule, for the homepage walkthrough's browsing and picking: two upcoming
+ * trips with their seats left. The first (`data-tap-target`) is the Two-Tank Reef Priya picks.
  */
-export function DiverBookingFallback({
-  locale,
-  state = "browse",
-}: {
-  locale: DiverLocale;
-  state?: "browse" | "booked";
-}) {
+export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
-  const booked = state === "booked";
   const trips = [
-    { title: t("fallback.tripName"), time: t("fallback.tomorrowTime"), spots: booked ? 2 : 3 },
+    { title: t("fallback.tripName"), time: t("fallback.tomorrowTime"), spots: 3 },
     { title: t("fallback.nightDive"), time: t("fallback.fridayTime"), spots: 5 },
   ];
   return (
@@ -594,24 +585,13 @@ export function DiverBookingFallback({
           {trips.map((trip, index) => (
             <div
               key={trip.title}
-              data-tap-target={index === 0 && !booked ? "" : undefined}
-              className={`rounded-inset border bg-surface p-4 ${
-                index === 0 && booked ? "border-primary" : "border-border"
-              }`}
+              data-tap-target={index === 0 ? "" : undefined}
+              className="rounded-inset border border-border bg-surface p-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h4 className="font-semibold">{trip.title}</h4>
                   <p className="mt-1 text-sm text-muted">{trip.time}</p>
-                  {index === 0 && booked ? (
-                    <p
-                      data-walk-pop=""
-                      className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-success-strong"
-                    >
-                      <StatusMark variant="success" size="md" />
-                      {t("fallback.youreBooked")}
-                    </p>
-                  ) : null}
                 </div>
                 <span className="rounded-full bg-primary-tint px-2.5 py-1 text-xs font-semibold text-primary">
                   {t("fallback.spotsLeft", { count: trip.spots })}

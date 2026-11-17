@@ -15,6 +15,7 @@ const LABELS = {
   play: "Play",
   previous: "Previous step",
   next: "Next step",
+  goTo: "Go to step {n}",
   hint: "Tap, swipe, or use the arrow keys.",
 };
 
@@ -76,7 +77,7 @@ describe("the homepage walkthrough", () => {
   it("advances by itself over about two minutes, and Pause stops it", () => {
     mockMotion(false);
     setup();
-    act(() => void vi.advanceTimersByTime(41_000));
+    act(() => void vi.advanceTimersByTime(51_000));
     expect(screen.getByText("Second")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
     act(() => void vi.advanceTimersByTime(120_000));
@@ -179,9 +180,11 @@ describe("the homepage walkthrough", () => {
     mockMotion(false);
     const { container } = setup();
     const fill = () =>
-      container.querySelector<HTMLElement>("[data-walk-controls] ~ div > span > span:last-child");
+      container.querySelector<HTMLElement>(
+        "[data-walk-controls] ~ div > button > span > span:last-child",
+      );
     const group = screen.getByRole("group", { name: "Walk" });
-    act(() => void vi.advanceTimersByTime(20_000));
+    act(() => void vi.advanceTimersByTime(25_000));
     const half = Number.parseFloat(fill()?.style.transform.replace("scaleX(", "") ?? "0");
     expect(half).toBeGreaterThan(0.4);
     expect(half).toBeLessThan(0.6);
@@ -190,8 +193,17 @@ describe("the homepage walkthrough", () => {
     act(() => void vi.advanceTimersByTime(120_000));
     expect(screen.getByText("First")).toBeInTheDocument();
     fireEvent.pointerUp(group, { clientX: 100 });
-    act(() => void vi.advanceTimersByTime(21_000));
+    act(() => void vi.advanceTimersByTime(26_000));
     expect(screen.getByText("Second")).toBeInTheDocument();
+  });
+
+  it("jumps to a step when its segment of the bar is clicked", () => {
+    mockMotion(true);
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "Go to step 3" }));
+    expect(screen.getByText("Third")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Go to step 1" }));
+    expect(screen.getByText("First")).toBeInTheDocument();
   });
 
   it("does not treat the release of a hold as a tap", () => {
@@ -210,10 +222,10 @@ describe("the homepage walkthrough", () => {
     const list = container.querySelector("[data-walk-list]") as HTMLElement;
     const phase = () => list.getAttribute("data-walk-phase");
     expect(phase()).toBe("before");
-    // Three beats of 30 seconds: the tap starts at 10% and the swap at 30%.
+    // Three beats of 50 seconds: the tap starts at 10% and the swap at 30%.
     act(() => void vi.advanceTimersByTime(6_000));
     expect(phase()).toBe("tap");
-    act(() => void vi.advanceTimersByTime(8_000));
+    act(() => void vi.advanceTimersByTime(10_000));
     expect(phase()).toBe("after");
     // Pause shows the finished screen; a new beat plays from its first.
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
@@ -221,6 +233,30 @@ describe("the homepage walkthrough", () => {
     expect(["before", "tap", "after"]).toContain(phase());
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
     expect(phase()).toBe("after");
+  });
+
+  it("gives a beat she types into a longer first phase before its tap", () => {
+    mockMotion(false);
+    const typedBeats: WalkBeat[] = [{ ...(BEATS[0] as WalkBeat), typed: true }, ...BEATS.slice(1)];
+    const { container } = render(
+      <HomeWalkthrough beats={typedBeats} labels={LABELS}>
+        <ol data-walk-list>
+          <li data-walk-step="a">
+            <div data-walk-frame="one" />
+          </li>
+          <li data-walk-step="b">
+            <div data-walk-frame="one" />
+            <div data-walk-frame="two" />
+          </li>
+        </ol>
+      </HomeWalkthrough>,
+    );
+    const list = container.querySelector("[data-walk-list]") as HTMLElement;
+    // A typed beat runs 75 seconds here and taps at 40%, so 6 seconds in she is still typing.
+    act(() => void vi.advanceTimersByTime(6_000));
+    expect(list.getAttribute("data-walk-phase")).toBe("before");
+    act(() => void vi.advanceTimersByTime(25_000));
+    expect(list.getAttribute("data-walk-phase")).toBe("tap");
   });
 
   it("shows the finished screen under reduced motion", () => {
