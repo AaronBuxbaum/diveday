@@ -7,9 +7,11 @@ import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { buttonClass } from "@/components/ui/button";
+import { recordManifestRead } from "@/features/e2e-test-routes";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { runtimeMode } from "@/lib/runtime-mode";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { DeparturePaperIdentity } from "../_components/DeparturePaperIdentity";
@@ -76,6 +78,8 @@ export default async function TripManifestPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  // Counts Roll call's own roster reads only; the Trip page reads the same view for its cards.
+  if (runtimeMode().e2eHarness) recordManifestRead(tripId);
   // The readers and views this tab shares with the packet's manifest sheet.
   const view = await readManifestView({
     db,
