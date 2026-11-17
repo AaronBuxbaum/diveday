@@ -244,7 +244,7 @@ const shapeWords = z
 
 const count = z.number().int().min(0).max(10_000);
 
-export const pageShapeSchema = z
+const pageShapeSchema = z
   .object({
     /** Each segment of the address's path, as form words; never its query string. */
     path: z

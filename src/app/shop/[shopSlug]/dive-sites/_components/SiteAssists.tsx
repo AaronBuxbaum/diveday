@@ -45,7 +45,7 @@ export function siteBriefAssist(shopSlug: string, canAssist: boolean, t: StaffTr
 }
 
 /** The words every Spanish box in an editor's form says. */
-export function spanishBoxCopy(t: StaffTranslator, label?: string): SpanishBoxCopy {
+function spanishBoxCopy(t: StaffTranslator, label?: string): SpanishBoxCopy {
   return {
     label: label ?? t("deskAssists.translate.label"),
     draft: t("deskAssists.translate.draft"),

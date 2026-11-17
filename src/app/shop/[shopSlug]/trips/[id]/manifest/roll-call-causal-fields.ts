@@ -5,7 +5,7 @@ import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 import { rollCallEvidenceIdPattern } from "@/lib/roll-call-causality";
 import { retractsEventIdSchema } from "./roll-call-undo";
 
-export const causalRollCallFields = {
+const causalRollCallFields = {
   observedAt: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.iso

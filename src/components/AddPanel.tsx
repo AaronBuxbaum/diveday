@@ -87,7 +87,7 @@ export function AddPanel({
 }
 
 /** Three field-shaped bars and an action: the panel's form, before its reads land. */
-export function AddPanelFormSkeleton() {
+function AddPanelFormSkeleton() {
   return (
     <Pending className="space-y-4" aria-hidden="true">
       {["one", "two", "three"].map((slot) => (

@@ -45,7 +45,7 @@ export type WebhookVerification =
   | { status: "malformed" };
 
 /** The absolute window, either side of now. Stripe's libraries check only the past side. */
-export const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
+const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
 
 /**
  * The one `t=` the header carries, read the way the SDK reads it, or null.

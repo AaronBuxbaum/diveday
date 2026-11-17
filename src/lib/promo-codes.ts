@@ -16,7 +16,7 @@ export const PROMO_DISCOUNT_MIN = 1;
 export const PROMO_DISCOUNT_MAX = 100;
 
 /** Bounds on the code text itself: long enough to be unguessable, short enough to say aloud. */
-export const PROMO_CODE_MIN_LENGTH = 3;
+const PROMO_CODE_MIN_LENGTH = 3;
 export const PROMO_CODE_MAX_LENGTH = 40;
 
 export function isValidPromoDiscountPercent(value: unknown): value is number {

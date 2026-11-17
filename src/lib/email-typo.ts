@@ -36,7 +36,7 @@ const REAL_NEIGHBOURS = ["mail.com", "email.com", "ymail.com"] as const;
  * Optimal string alignment distance (Levenshtein plus adjacent transposition),
  * so a swapped pair like `gmial` reads as one mistake, not two.
  */
-export function editDistance(a: string, b: string): number {
+function editDistance(a: string, b: string): number {
   const rows = a.length + 1;
   const cols = b.length + 1;
   const d: number[][] = Array.from({ length: rows }, () => new Array(cols).fill(0));

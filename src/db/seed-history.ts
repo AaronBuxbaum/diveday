@@ -1071,7 +1071,7 @@ const SITE_BY_PLACE: readonly (readonly [string, string])[] = [
 ];
 
 /** The shop's hulls, sites and kinds by name, as columns for a sailed departure. */
-export async function sailedTripPlaces(
+async function sailedTripPlaces(
   db: DbExecutor,
   shopId: string,
 ): Promise<
@@ -1113,7 +1113,7 @@ export async function sailedTripPlaces(
  * before, and a midweek boat to the people who decide the day before; the
  * seat's place on the roster picks its day from its weekday's spread.
  */
-export function daysBookedAhead(startsAt: Date, seat: number): number {
+function daysBookedAhead(startsAt: Date, seat: number): number {
   const weekday = utcToWallTime(startsAt, DEMO_SHOP_TIMEZONE);
   const isoWeekday =
     ((new Date(Date.UTC(weekday.year, weekday.month - 1, weekday.day)).getUTCDay() + 6) % 7) + 1;

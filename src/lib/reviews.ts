@@ -26,7 +26,7 @@ export const REVIEW_RATINGS = [1, 2, 3, 4, 5] as const;
 export type ReviewRating = (typeof REVIEW_RATINGS)[number];
 
 /** True for a whole number inside the 1–5 scale the schema check also enforces. */
-export function isReviewRating(value: unknown): value is ReviewRating {
+function isReviewRating(value: unknown): value is ReviewRating {
   return (
     typeof value === "number" &&
     Number.isInteger(value) &&
@@ -122,7 +122,7 @@ export const MAX_SUPPRESSED_SHARE_FOR_RATING = 0.2;
  * it is bounded on purpose: below the floor a shop's rating is one no reader
  * is relying on yet, and the tenth judged review closes it.
  */
-export const MIN_JUDGED_REVIEWS_FOR_SUPPRESSION = 10;
+const MIN_JUDGED_REVIEWS_FOR_SUPPRESSION = 10;
 
 /**
  * Whether the published average still describes the shop's real record — the

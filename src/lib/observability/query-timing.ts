@@ -38,7 +38,7 @@ const explicitScope = new AsyncLocalStorage<QueryStats>();
 /** React render-pass stats; React cache passes through outside a render. */
 const renderPassStats = cache(freshStats);
 
-export function currentQueryStats(): QueryStats {
+function currentQueryStats(): QueryStats {
   return explicitScope.getStore() ?? renderPassStats();
 }
 

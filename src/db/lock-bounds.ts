@@ -26,7 +26,7 @@ import type { DbExecutor } from "./client";
  * server, and `roll-call.postgres.test.ts` the crew roll call's trip lock
  * (#2983).
  */
-export const LOCK_WAIT_BOUND = "5s";
+const LOCK_WAIT_BOUND = "5s";
 
 export async function boundLockWaits(tx: DbExecutor): Promise<void> {
   await tx.execute(sql.raw(`set local lock_timeout = '${LOCK_WAIT_BOUND}'`));

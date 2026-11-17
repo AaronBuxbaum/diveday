@@ -30,7 +30,7 @@ import { SCROLL_SETTLED_ATTRIBUTE } from "@/components/PreserveFormScroll";
  * chrome wherever the page happened to be (issue #1304). One attribute is
  * cheaper than the harness guessing.
  */
-export const HASH_LANDED_ATTRIBUTE = "data-hash-landed";
+const HASH_LANDED_ATTRIBUTE = "data-hash-landed";
 
 export function ScrollToHash({
   onlyHash,

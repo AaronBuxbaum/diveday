@@ -73,7 +73,7 @@ export type RescheduleNoticeOutcome = {
 };
 
 /** How many seats a notice for this departure would address right now. */
-export async function rescheduleAudienceCount(
+async function rescheduleAudienceCount(
   db: DbExecutor,
   shopId: string,
   tripId: string,

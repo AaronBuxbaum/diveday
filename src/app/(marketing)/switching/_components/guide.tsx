@@ -756,7 +756,7 @@ export function SourcesFootnote({
 }
 
 /** Source coverage is distinct from the importer’s supported input fields. */
-export function FareHarborTransferScope({ locale }: { locale: DiverLocale }) {
+function FareHarborTransferScope({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   return (
     <dl className="mt-6 divide-y divide-border border-y border-border">

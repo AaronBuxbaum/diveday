@@ -206,7 +206,7 @@ function bottomTimeForDive(
 export type LegTravelTimes = readonly (number | null | undefined)[];
 
 /** Leg `number`'s own minutes, or the shop's ride out when the trip names none. */
-export function travelForLeg(
+function travelForLeg(
   rhythm: DockDayRhythm,
   legTravelTimes: LegTravelTimes | undefined,
   number: number,

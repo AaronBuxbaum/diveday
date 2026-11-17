@@ -79,7 +79,7 @@ export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string; na
   return db.select({ slug: shops.slug, name: shops.name }).from(shops).where(listedShopScope(db));
 }
 
-export const DIVER_PICKER_LIMIT = 50;
+const DIVER_PICKER_LIMIT = 50;
 
 /**
  * The shops a diver can pick from on `/find-your-booking` (fourth review,

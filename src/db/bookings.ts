@@ -778,7 +778,7 @@ type CourseSessionTrip = {
  * that is no course session, or whose course row this shop cannot see, reads
  * as no rule at all, and the course gates stand down.
  */
-export async function readCourseSession(
+async function readCourseSession(
   tx: DbExecutor,
   trip: CourseSessionTrip,
 ): Promise<{ course: CourseAdmissionRule | null; crew: CourseCrew }> {
@@ -3905,7 +3905,7 @@ export type SplitBookingIdentityInput = {
 };
 
 /** The longest name a split accepts. */
-export const SPLIT_NAME_MAX = 200;
+const SPLIT_NAME_MAX = 200;
 
 /** The comparable form of a booked-as name: what the same-name seats match on. */
 function bookedAsKey(name: string): string {

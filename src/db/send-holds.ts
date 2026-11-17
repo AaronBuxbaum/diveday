@@ -10,7 +10,7 @@ import { emailBounces } from "./schema";
  * reports. Non-retryable, so it is never queued, and coded, so a delivery row
  * reads "suppressed" rather than an error someone should chase.
  */
-export const SUPPRESSED_RECIPIENT_DELIVERY = {
+const SUPPRESSED_RECIPIENT_DELIVERY = {
   status: "failed",
   retryable: false,
   errorCode: "recipient_suppressed",

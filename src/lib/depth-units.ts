@@ -75,7 +75,7 @@ export function maxEnteredDepth(unit: DepthUnit): number {
  * clearest water on earth (a Bahamian blue hole on a still day), so a bigger
  * number is a typo, not a record.
  */
-export const MAX_ENTERED_VISIBILITY_METERS = 100;
+const MAX_ENTERED_VISIBILITY_METERS = 100;
 
 /**
  * The same bound in the shop's own unit. Rounded down, never to nearest — a

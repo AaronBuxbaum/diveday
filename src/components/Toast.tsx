@@ -17,7 +17,7 @@ import { motionMs } from "@/lib/motion";
 const EXIT_DURATION_MS = motionMs("base");
 
 /** How far a sideways drag must travel (px) before letting go sends the toast away. */
-export const SWIPE_AWAY_DISTANCE_PX = 72;
+const SWIPE_AWAY_DISTANCE_PX = 72;
 /** A shorter flick still counts when it is quick: this far (px) inside this long (ms). */
 const SWIPE_AWAY_FLICK_PX = 32;
 const SWIPE_AWAY_FLICK_MS = 250;
@@ -27,7 +27,7 @@ const SWIPE_AWAY_FLICK_MS = 250;
  * long drag, or a short quick flick. Sideways only; the caller has already
  * decided the drag was mostly horizontal.
  */
-export function swipeSendsAway(dx: number, ms: number): boolean {
+function swipeSendsAway(dx: number, ms: number): boolean {
   const distance = Math.abs(dx);
   return (
     distance >= SWIPE_AWAY_DISTANCE_PX ||

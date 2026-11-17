@@ -61,7 +61,7 @@ export type DiveSiteLandmark = {
  * public briefing must never fetch from a host a staffer typed. `//host/x` is
  * protocol-relative, not root-relative, and is exactly the shape refused.
  */
-export function landmarkPhotoUrl(value: unknown): string | undefined {
+function landmarkPhotoUrl(value: unknown): string | undefined {
   if (typeof value !== "string" || value.length > 2_048) return undefined;
   if (value.startsWith("/") && !value.startsWith("//")) return value;
   return isManagedStorageUrl(value) ? value : undefined;

@@ -175,7 +175,7 @@ export async function grantPackageEntitlements(
  * not a cancellation and the desk decides which it was. Reports' "dives owed"
  * reads the same list, so the liability and what a diver can spend agree.
  */
-export const BACKED_PACKAGE_ORDER_STATUSES = ["paid", "partly_refunded"] as const;
+const BACKED_PACKAGE_ORDER_STATUSES = ["paid", "partly_refunded"] as const;
 
 /**
  * Whether the order an entitlement was bought on still backs it: paid or

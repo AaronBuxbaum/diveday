@@ -49,7 +49,7 @@ export function isCallOutcome(value: unknown): value is CallOutcome {
  */
 export type CallRequirement = "departure" | "email" | "interest";
 
-export const CALL_REQUIREMENTS: Record<CallOutcome, readonly CallRequirement[]> = {
+const CALL_REQUIREMENTS: Record<CallOutcome, readonly CallRequirement[]> = {
   "date-request": ["interest"],
   waitlist: ["departure", "email"],
 };

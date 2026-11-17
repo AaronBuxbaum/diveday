@@ -42,14 +42,7 @@ export type BoardSearchParams = {
 };
 
 /** Result-only parameters are consumed by the board notice and scrubbed afterward. */
-export const BOARD_RESULT_PARAMS = [
-  "builder",
-  "count",
-  "created",
-  "on",
-  "result",
-  "series",
-] as const;
+const BOARD_RESULT_PARAMS = ["builder", "count", "created", "on", "result", "series"] as const;
 
 export function clearBoardResultParams(url: URL): URL {
   for (const key of BOARD_RESULT_PARAMS) url.searchParams.delete(key);

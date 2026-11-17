@@ -68,7 +68,7 @@ export function workOrderStatusRank(status: WorkOrderStatus): number {
  * skips `ready`: nobody collects the shop's own regulator, so "ready for
  * pickup" would be a state it sits in for no one.
  */
-export function workOrderStatusesFor(subject: WorkOrderSubject): readonly WorkOrderStatus[] {
+function workOrderStatusesFor(subject: WorkOrderSubject): readonly WorkOrderStatus[] {
   return subject === "unit"
     ? WORK_ORDER_STATUSES.filter((status) => status !== "ready")
     : WORK_ORDER_STATUSES;

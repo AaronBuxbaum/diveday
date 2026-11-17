@@ -31,7 +31,7 @@ const IV_BYTES = 12;
 const TAG_BYTES = 16;
 
 export const SECRET_KEY_VARIABLE = "SECRET_ENCRYPTION_KEY";
-export const PREVIOUS_SECRET_KEY_VARIABLE = "SECRET_ENCRYPTION_KEY_PREVIOUS";
+const PREVIOUS_SECRET_KEY_VARIABLE = "SECRET_ENCRYPTION_KEY_PREVIOUS";
 
 /**
  * The key that seals, and the one it replaced, which only opens.
@@ -225,7 +225,7 @@ export function keyringOpensStored(
  * access key. A wrong key here breaks that integration, not sign-in, but it
  * breaks it silently until a shop notices, so the deploy says so first.
  */
-export const SEALED_SECRET_KINDS = ["whatsapp", "connector", "backup"] as const;
+const SEALED_SECRET_KINDS = ["whatsapp", "connector", "backup"] as const;
 export type SealedSecretKind = (typeof SEALED_SECRET_KINDS)[number];
 
 /** One stored value of a kind, trial-opened by `keyringOpensSamples`. */

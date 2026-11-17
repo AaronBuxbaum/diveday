@@ -96,7 +96,7 @@ export function withSeats(types: ("diver" | "snorkeler" | "rider")[]): TripPrep 
 export const STATED = new Date("2026-09-01T00:00:00Z");
 
 /** A stated fit that rents nothing until an override says it does. */
-export function statedFit(overrides: Partial<RentalFit> = {}): RentalFit {
+function statedFit(overrides: Partial<RentalFit> = {}): RentalFit {
   return {
     rentsBcd: false,
     rentsRegulator: false,

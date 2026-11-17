@@ -1454,7 +1454,7 @@ function bounceLine(line: FounderDigestEmailInput["bounces"]["lines"][number]): 
  * the address itself. A mailbox outlives the table's 90 days and any erasure,
  * so the full address stays in `email_bounces`, where both reach it.
  */
-export function maskedAddress(address: string): string {
+function maskedAddress(address: string): string {
   const at = address.lastIndexOf("@");
   if (at <= 0) return "***";
   return `${address.slice(0, Math.min(2, at))}***${address.slice(at)}`;

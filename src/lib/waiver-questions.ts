@@ -46,10 +46,10 @@ export type DraftShopAnswers = Record<string, ShopAnswerValue>;
 export const SHOP_QUESTIONS_MAX = 15;
 export const SHOP_QUESTION_PROMPT_MAX = 200;
 export const SHOP_ANSWER_TEXT_MAX = 500;
-export const SHOP_ANSWER_NUMBER_MAX = 100_000;
+const SHOP_ANSWER_NUMBER_MAX = 100_000;
 /** The most characters a number answer's box takes: "100000". */
-export const SHOP_ANSWER_NUMBER_DIGITS = 6;
-export const SHOP_CHOICE_OPTIONS_MIN = 2;
+const SHOP_ANSWER_NUMBER_DIGITS = 6;
+const SHOP_CHOICE_OPTIONS_MIN = 2;
 export const SHOP_CHOICE_OPTIONS_MAX = 8;
 export const SHOP_CHOICE_OPTION_MAX = 80;
 

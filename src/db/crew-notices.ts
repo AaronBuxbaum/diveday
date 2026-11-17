@@ -36,7 +36,7 @@ import { liveTrip, notRehearsal } from "./trips-live";
  */
 
 /** Most departures one message lists; the schema's own cap. */
-export const MAX_CREW_NEWS_PER_MESSAGE = 50;
+const MAX_CREW_NEWS_PER_MESSAGE = 50;
 
 export type CrewNoticeInput = {
   shopId: string;

@@ -70,16 +70,16 @@ export const MISSING_DIVER_ALERT_LOOKBACK_MS = 6 * 60 * 60 * 1000;
 export const MISSING_DIVER_LEASE_MS = 10 * 60 * 1000;
 
 /** An incident this long before the report was filed is history, not an emergency: email only. */
-export const MISSING_DIVER_PUSH_STALE_MS = 6 * 60 * 60 * 1000;
+const MISSING_DIVER_PUSH_STALE_MS = 6 * 60 * 60 * 1000;
 
 /** The push goes with the first sends only; a retry later than this emails alone. */
-export const MISSING_DIVER_PUSH_WINDOW_MS = 15 * 60 * 1000;
+const MISSING_DIVER_PUSH_WINDOW_MS = 15 * 60 * 1000;
 
 /** The hourly pass retries an all-clear still owed to an owner for this long after Found. */
-export const ALL_CLEAR_RETRY_MS = 24 * 60 * 60 * 1000;
+const ALL_CLEAR_RETRY_MS = 24 * 60 * 60 * 1000;
 
 /** How long an all-clear run holds the report before another may take it. */
-export const ALL_CLEAR_LEASE_MS = 10 * 60 * 1000;
+const ALL_CLEAR_LEASE_MS = 10 * 60 * 1000;
 
 /** A filed report still not sent this long after filing is told to the cron monitor. */
 export const MISSING_DIVER_OVERDUE_MS = 30 * 60 * 1000;

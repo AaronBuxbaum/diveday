@@ -174,7 +174,7 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
  * shops don't fill Nitrox, so this defaults off, unlike every core gear
  * item above.
  */
-export const NITROX_CATALOG_ITEM = {
+const NITROX_CATALOG_ITEM = {
   kind: "nitrox",
   name: "nitrox",
   defaultRented: false,
@@ -227,7 +227,7 @@ export function offeredRentableItems(
 }
 
 /** The rental kinds that are a student's personal gear on a course unless its fee includes them. */
-export const PERSONAL_RENTAL_KINDS: ReadonlySet<RentableItemKind> = new Set(["mask", "fins"]);
+const PERSONAL_RENTAL_KINDS: ReadonlySet<RentableItemKind> = new Set(["mask", "fins"]);
 
 /** A course's included rental kinds, as every reader takes them. */
 export type CourseIncludedGear = { includedRentalKinds: readonly RentableItemKind[] };
@@ -386,7 +386,7 @@ export function suitFlags(choice: SuitChoice): SuitFlags {
  * order `recordRentalFit` resolves a post asking for both: a drysuit is the more
  * demanding suit, and its consequences are the safer default.
  */
-export function suitChoiceOf(fit: Partial<SuitFlags> | null | undefined): SuitChoice {
+function suitChoiceOf(fit: Partial<SuitFlags> | null | undefined): SuitChoice {
   if (fit?.rentsDrysuit) return "rents_drysuit";
   if (fit?.divesDry) return "own_drysuit";
   if (fit?.rentsWetsuit) return "rents_wetsuit";
@@ -408,7 +408,7 @@ export function defaultSuitChoice(
 }
 
 /** Narrows an untrusted form value; anything else is no answer at all. */
-export function parseSuitChoice(value: unknown): SuitChoice | undefined {
+function parseSuitChoice(value: unknown): SuitChoice | undefined {
   return SUIT_CHOICES.find((choice) => choice === value);
 }
 

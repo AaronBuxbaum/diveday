@@ -8,7 +8,7 @@
  * full disk or a refused fetch all leave the page exactly as it was online,
  * and there is nobody to tell.
  */
-export const READY_WORKER_SCOPE = "/ready/";
+const READY_WORKER_SCOPE = "/ready/";
 
 /** The Cache Storage cache that holds the one kept copy (`src/worker/ready-page-cache.ts`). */
 export const READY_CACHE_NAME = "diveday-ready-page-v1";

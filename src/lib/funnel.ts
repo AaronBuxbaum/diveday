@@ -239,7 +239,7 @@ export function guideHref(slug: string, source: FunnelSource): string {
 }
 
 /** Where the `/get-set-up` form lives. */
-export const SET_UP_PATH = "/get-set-up";
+const SET_UP_PATH = "/get-set-up";
 
 /** Where it lands once a request is stored: the thank-you page. */
 export const SET_UP_SENT_PATH = `${SET_UP_PATH}/sent`;

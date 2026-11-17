@@ -18,7 +18,7 @@ import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-wind
 export const QUIET_DAY_SUGGESTION_LIMIT = 2;
 
 /** How far past the horizon the suggestions look: the week after. */
-export const QUIET_DAY_SUGGESTION_REACH_MS = 7 * DAY_MS;
+const QUIET_DAY_SUGGESTION_REACH_MS = 7 * DAY_MS;
 
 export type QuietDaySuggestion = {
   tripId: string;
