@@ -174,6 +174,20 @@ function observationInstant(observation: string, timeZone: string) {
 }
 
 /** Navigation never invokes a recording action. Receipts are an explicit saved outcome. */
+function DeckPersonHeading({ person }: { person: DeckPerson }) {
+  return (
+    <div className="flex items-center gap-4">
+      {person.photoPath ? (
+        <PersonAvatar name={person.name} photoPath={person.photoPath} size="lg" />
+      ) : null}
+      <div className="min-w-0">
+        <p className="text-sm text-muted">{person.role}</p>
+        <h2 className={`mt-1 ${SHELL_TITLE_CLASS} wrap-anywhere`}>{person.name}</h2>
+      </div>
+    </div>
+  );
+}
+
 export function DeckFlow({
   people,
   copy,
@@ -340,15 +354,7 @@ export function DeckFlow({
         ) : null}
         {(screen === "person" || screen === "receipt") && person ? (
           <div className="py-2" key={person.id}>
-            <div className="flex items-center gap-4">
-              {person.photoPath ? (
-                <PersonAvatar name={person.name} photoPath={person.photoPath} size="lg" />
-              ) : null}
-              <div className="min-w-0">
-                <p className="text-sm text-muted">{person.role}</p>
-                <h2 className={`mt-1 ${SHELL_TITLE_CLASS} wrap-anywhere`}>{person.name}</h2>
-              </div>
-            </div>
+            <DeckPersonHeading person={person} />
             {screen === "receipt" ? (
               <>
                 <p className={`mt-2 ${ITEM_TITLE_CLASS}`} role="status">
