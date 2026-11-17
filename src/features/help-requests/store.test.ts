@@ -15,8 +15,8 @@ import {
   getTripRoster,
   listStaff,
   setTripCrew,
-  upcomingTripsWithCounts,
 } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { deleteDiver } from "../divers/store";
 import { getReadyPageData } from "../ready/store";

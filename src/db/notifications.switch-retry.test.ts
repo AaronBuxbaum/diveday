@@ -6,7 +6,7 @@ import { departureInterest } from "@/test/interests";
 import { createBooking } from "./bookings";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { bookings, interests, notificationSendQueue, shops } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // Review 2026-10-23, item 10: a send a Features switch governs is asked again
 // when the drain retries it, as the opt-out is (issue #2132). A staffer's own

@@ -15,8 +15,8 @@ import {
   rentalFitProfiles,
   shops,
 } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
 import { listStaff, setTripCrew } from "../../db/trips-crew";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { calendarDateInTimezone } from "../../lib/calendar-date";
 import { nowDate } from "../../lib/clock";
 import { tripReservationWindow } from "../../lib/gear";

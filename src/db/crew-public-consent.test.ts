@@ -10,13 +10,8 @@ import {
   setStaffLanguages,
 } from "../features/staff-accounts/store";
 import { people, personRoles, shops, tripAssignments } from "./schema";
-import {
-  listStaff,
-  setTripCrew,
-  tripCrewSpokenLanguages,
-  tripPublicCrew,
-  upcomingTripsWithCounts,
-} from "./trips";
+import { listStaff, setTripCrew, tripCrewSpokenLanguages, tripPublicCrew } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **Naming a person to divers is that person's own decision** (issue #1181,

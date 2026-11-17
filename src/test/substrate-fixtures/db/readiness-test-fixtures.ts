@@ -5,12 +5,8 @@ import {
   upsertTripRequirements,
 } from "../../../db/readiness";
 import { type DiveSpecialty, diveSites } from "../../../db/schema/index";
-import {
-  getTripRoster,
-  listStaff,
-  listTripDives,
-  upcomingTripsWithCounts,
-} from "../../../db/trips";
+import { getTripRoster, listStaff, listTripDives } from "../../../db/trips";
+import { upcomingTripsWithCounts } from "../../../db/trips-queries.test-support";
 import type { fileScopedShopContext } from "../../db";
 
 /**

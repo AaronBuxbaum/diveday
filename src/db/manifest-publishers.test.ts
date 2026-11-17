@@ -28,7 +28,7 @@ const { seatDiver } = await import("../features/seat-diver/store");
 const { cancelBooking } = await import("./bookings");
 const { setTripCrew } = await import("./trips-crew");
 const { callTripBlowout } = await import("./blowouts");
-const { upcomingTripsWithCounts } = await import("./trips");
+const { upcomingTripsWithCounts } = await import("./trips-queries.test-support");
 
 async function context() {
   const { db, shop } = ctx;

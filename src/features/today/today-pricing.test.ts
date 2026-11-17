@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { courses, trips as tripsTable } from "@/db/schema";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { fileScopedShopContext } from "@/test/db";
 import { inHorizonReadiness } from "../blockers/store";
 import { listRollCallGaps } from "../roll-call-gaps/store";

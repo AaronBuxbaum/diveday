@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { ArrivalDeskFallback } from "./MarketingArrivalDeskFallback";
 import {
-  ArrivalDeskFallback,
   BookingCardFallback,
   CoursePageFallback,
   GearRegisterFallback,

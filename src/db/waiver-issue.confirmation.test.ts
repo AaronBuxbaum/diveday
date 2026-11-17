@@ -7,7 +7,7 @@ import { verifyBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { applyProviderEmailEvent, recordNotificationDelivery } from "./notifications";
 import { bookings, tripRequirements, waiverDeliveries, waiverRecords } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import {
   openJoinSignStep,
   resendConfirmationWithWaiver,

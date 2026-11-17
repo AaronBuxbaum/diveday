@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createBooking } from "../../db/bookings";
 import { recordNotificationDelivery } from "../../db/notifications";
 import { shops } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { advanceClock } from "../../test/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { personSentMessages } from "./store";

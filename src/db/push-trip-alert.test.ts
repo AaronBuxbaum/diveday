@@ -4,7 +4,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
 import { listShopStaff, setStaffAccountStatus } from "../features/staff-accounts/store";
 import { personRoles, pushSubscriptions, userAccounts } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // Mocked at the transport boundary: who is chosen, and the words, are the
 // real code under test.

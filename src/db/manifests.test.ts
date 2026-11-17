@@ -48,7 +48,8 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
-import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));

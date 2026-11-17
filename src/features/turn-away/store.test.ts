@@ -14,8 +14,9 @@ import {
   shops,
   trips,
 } from "../../db/schema/index";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster, listStaff } from "../../db/trips";
 import { seatHeld } from "../../db/trips-queries";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
 import { HOUR_MS, MINUTE_MS, nowMs } from "../../lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";

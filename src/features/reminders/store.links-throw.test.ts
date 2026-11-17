@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { createBookingParty } from "../../db/bookings";
 import { bookingCapabilities } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { fakeEmail, fakeSms } from "../../test/fakes";
 import { sendDueReminders } from "./store";

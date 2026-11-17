@@ -7,7 +7,7 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { sqlStateOf } from "./query-helpers";
 import { bookings, people, shops, trips } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A booking's shop is its trip's shop, in the database** (issue #3285).

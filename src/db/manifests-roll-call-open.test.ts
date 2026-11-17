@@ -9,7 +9,8 @@ import {
   rollCallOpenOnTrip,
 } from "./manifests";
 import { rollCallEvents, shops, tripAssignments, trips } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createBookingParty } from "../../db/bookings";
 import { bookingCapabilities, bookings, people, trips } from "../../db/schema/index";
 import { recordSmsKeyword } from "../../db/sms-opt-outs";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { fakeEmail, fakeSms } from "../../test/fakes";
 import { sendDueReminders } from "./store";

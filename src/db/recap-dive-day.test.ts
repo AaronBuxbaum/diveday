@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { getRecapPageData } from "../features/recap/store";
 import { createBookingParty } from "./bookings";
-import { createTrip, upcomingTripsWithCounts } from "./trips";
+import { createTrip } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **The recap's ordinal counts dive days, not boats** (glossary **Dive day**;

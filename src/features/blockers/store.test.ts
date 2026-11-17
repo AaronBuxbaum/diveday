@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
 import { operationalWindow } from "../../lib/operational-window";
 import { fileScopedShopContext } from "../../test/db";

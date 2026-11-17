@@ -4,7 +4,8 @@ import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import { recordRollCall } from "./manifests";
 import { rollCallEvents } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const state = vi.hoisted(() => ({ fail: false }));
 

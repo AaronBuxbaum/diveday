@@ -14,7 +14,7 @@ import { createBookingParty } from "./bookings";
 import { issueCapability, mintCapability, verifyCapability } from "./capabilities";
 import { mergeDiverRecords } from "./diver-merge";
 import { bookings, capabilities, people, personRoles, shops, waiverRecords } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import {
   type CounterWaiverKey,
   claimCounterLink,

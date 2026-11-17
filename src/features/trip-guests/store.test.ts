@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cards, interests, people, tripRequirements } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { getTripGuests } from "./store";
 

@@ -1,7 +1,8 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { bookings, people, tripAssignments, tripScheduleDays, trips } from "@/db/schema";
-import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
+import { listStaff } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { fileScopedShopContext } from "@/test/db";
 import { FEED_FUTURE_DAYS, FEED_PAST_DAYS, listFeedTrips } from "./feed-trips";
 

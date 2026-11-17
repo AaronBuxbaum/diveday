@@ -7,7 +7,8 @@ import {
   preDepartureCheckEvents,
   rollCallEvents,
 } from "@/db/schema";
-import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";

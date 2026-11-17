@@ -21,7 +21,8 @@ import {
 import { setShopCurrency, setShopReviewUrl } from "../../db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../../db/stripe-accounts";
 import { startTipCheckout } from "../../db/tips";
-import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "../../db/trips";
+import { createTrip, getTripRoster, listStaff } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { toDiverLocale } from "../../i18n/settings";
 import { nowDate, nowMs } from "../../lib/clock";
 import { fileScopedShopContext, seededShopContext } from "../../test/db";

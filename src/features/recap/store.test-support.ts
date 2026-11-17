@@ -1,6 +1,6 @@
 import { createBookingParty } from "@/db/bookings";
 import { getTripManifest, recordRollCall } from "@/db/manifests";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import type { seededShopContext } from "@/test/db";
 
 const RAE = { fullName: "Rae Recap", email: "recap-rae@example.com" };

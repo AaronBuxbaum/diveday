@@ -44,7 +44,8 @@ import {
   setShopPromoEnabled,
 } from "./shop-promos";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { getCurrentWaiverTemplate, recordWaiverTemplate } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test

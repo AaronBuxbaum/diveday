@@ -7,7 +7,8 @@ import { recordPreDepartureCheck } from "./pre-departure-check";
 import { preDepartureCheckEvents, preDepartureChecklistItems } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A resent checklist sync, overlapping the request it gave up on** (layer 1

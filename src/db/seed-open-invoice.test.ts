@@ -7,7 +7,7 @@ import { countOpenTripOrders } from "./orders";
 import { listTripReadiness } from "./readiness";
 import { orders } from "./schema";
 import { OPEN_INVOICE_DESCRIPTION } from "./seed-open-invoice";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * The trip Overview's pulse states "N orders are awaiting payment" only when a

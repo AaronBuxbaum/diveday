@@ -11,7 +11,8 @@ import {
 import { createBooking } from "./bookings";
 import { getBookingReadiness, upsertTripRequirements } from "./readiness";
 import { activityEvents, bookings, people, shops, waiverRecords } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver } from "./waivers-completion";
 import { earlierReferralForOpenHold, recordMedicalEvaluation } from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";

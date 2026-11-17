@@ -40,7 +40,8 @@ import {
   shops,
   trips,
 } from "./schema";
-import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A switched-off feature keeps what it holds** (ADR

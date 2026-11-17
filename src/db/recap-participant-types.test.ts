@@ -5,7 +5,8 @@ import { fakeEmail, fakeSms } from "@/test/fakes";
 import { getRecapPageData, sendDueRecaps } from "../features/recap/store";
 import { createBookingParty, setBookingParticipantType } from "./bookings";
 import { upsertExecutedDive } from "./executed-dives";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ORIGIN = "https://diveday.test";
 const ctx = fileScopedShopContext();

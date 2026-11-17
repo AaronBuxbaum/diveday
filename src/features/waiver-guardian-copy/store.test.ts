@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { people, waiverRecords } from "../../db/schema/index";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster, listStaff } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest, recordInPersonWaiver } from "../../db/waivers";
 import { escapeHtml } from "../../lib/html";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";

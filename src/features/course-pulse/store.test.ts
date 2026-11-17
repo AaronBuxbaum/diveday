@@ -9,7 +9,8 @@ import {
   trips,
   userAccounts,
 } from "../../db/schema/index";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster, listStaff } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { getTripWithBooked } from "../../db/trips-record";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";

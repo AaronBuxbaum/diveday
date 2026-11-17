@@ -6,7 +6,8 @@ import { createBookingParty } from "./bookings";
 import { startBookingCheckout } from "./checkouts";
 import { trips } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { editTrip, upcomingTripsWithCounts } from "./trips";
+import { editTrip } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **What a checkout refuses before it asks Stripe for anything** (issue

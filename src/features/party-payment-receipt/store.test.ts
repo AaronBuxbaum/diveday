@@ -9,7 +9,8 @@ import {
 } from "../../db/checkouts";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, people } from "../../db/schema/index";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../../db/stripe-accounts";
-import { editTrip, upcomingTripsWithCounts } from "../../db/trips";
+import { editTrip } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { fakeCheckout, fakeEmail } from "../../test/fakes";
 import { type ReportedSettlement, sendPartyPaymentReceipt } from "./store";

@@ -10,7 +10,7 @@ import {
 } from "../test/substrate-fixtures/db/interest-dates-fixtures";
 import { askForDate, attachDateInterestsToDeparture } from "./interests";
 import { interests, shops } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

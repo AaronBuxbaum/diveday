@@ -5,7 +5,7 @@ import { createBooking } from "../../db/bookings";
 import type { AppDb } from "../../db/client";
 import { createNitroxCertification } from "../../db/nitrox";
 import { bookings, cards, shops } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { HANDOFF_TTL_MS } from "./rules";

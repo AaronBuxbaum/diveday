@@ -40,7 +40,8 @@ import {
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
-import { upcomingScheduleRange, upcomingTripsWithCounts } from "./trips";
+import { upcomingScheduleRange } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

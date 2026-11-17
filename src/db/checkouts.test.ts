@@ -33,7 +33,8 @@ import {
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency, setShopPassThroughFee, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { editTrip, getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { editTrip, getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`). The last-use race hydrates its

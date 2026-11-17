@@ -13,7 +13,7 @@ it.each(DIVER_LOCALES)("shows the crew workflow and opens its Today demo in %s",
   const t = diverTranslator(locale);
   const { container } = render(<GuideProof locale={locale} source="switching-peek-mid" />);
   expect(screen.getByRole("heading", { name: t("switching.common.proof.title") })).toBeVisible();
-  expect(screen.getByText("Hana Sato")).toBeVisible();
+  expect(screen.getByText("Priya Sharma")).toBeVisible();
   expect(screen.getByText("Diego Alvarez")).toBeVisible();
   expect(container.querySelector('input[name="role"]')).toHaveValue("owner");
   expect(container.querySelector('input[name="landing"]')).toHaveValue("today");

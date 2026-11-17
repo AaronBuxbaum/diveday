@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { offlineManifestSnapshotRevisions } from "../../db/schema/index";
 import { seedDemo } from "../../db/seed";
 import { getShopBySlug } from "../../db/shops";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { describePostgres, postgresTestDb } from "../../test/postgres";
 import {
   issueOfflineManifestSnapshot,

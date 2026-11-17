@@ -10,7 +10,7 @@ import { askAnytime } from "./interests";
 import { createDiverPackageOrder } from "./orders";
 import { people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

@@ -27,8 +27,9 @@ import {
   staffCredentials,
 } from "./schema";
 import { createStaffCredential } from "./staff-credentials";
-import { createTrip, setTripCrew, upcomingTripsWithCounts } from "./trips";
+import { createTrip, setTripCrew } from "./trips";
 import { changeTripCrew, getTripCrewIds, listStaff } from "./trips-crew";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
 

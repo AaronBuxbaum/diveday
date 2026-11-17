@@ -29,7 +29,8 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import {
   emailFreshWaiverLink,
   issueAndDeliverPersonWaiver,
