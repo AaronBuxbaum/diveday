@@ -1863,12 +1863,13 @@ async function scrubReviews(
       isPublished: false,
       publishedAt: null,
       isStandout: false,
-      // The thanks line is the diver's words too (loop 5, row 6): both columns
-      // clear together, as the pair check holds them.
+      // The thanks is the diver's too (loop 5, row 6): who, the words and the
+      // ruling clear together, as the shape check holds them.
       crewThanks: null,
       crewThanksPersonId: null,
-      crewThanksHiddenAt: null,
-      crewThanksHiddenByPersonId: null,
+      crewThanksRuling: null,
+      crewThanksRuledAt: null,
+      crewThanksRuledByPersonId: null,
     })
     .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId)));
   // The shop's reply under those reviews (batch 4, K2) answered words that are

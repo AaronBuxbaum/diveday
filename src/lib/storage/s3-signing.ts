@@ -29,6 +29,20 @@ export type S3SignatureInput = {
   now: Date;
 };
 
+/** SigV4's canonical query string: RFC 3986-encoded pairs, sorted by name then value. */
+function canonicalQueryString(url: URL): string {
+  const encode = (value: string) =>
+    encodeURIComponent(value).replace(
+      /[!'()*]/g,
+      (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+    );
+  return [...url.searchParams.entries()]
+    .map(([name, value]) => [encode(name), encode(value)] as const)
+    .sort(([an, av], [bn, bv]) => (an === bn ? (av < bv ? -1 : av > bv ? 1 : 0) : an < bn ? -1 : 1))
+    .map(([name, value]) => `${name}=${value}`)
+    .join("&");
+}
+
 /** Shared, deterministic S3 SigV4 mechanics. Callers retain their own policy and credential inputs. */
 export function signS3RequestHeaders(input: S3SignatureInput): Record<string, string> {
   const dateTime = input.now
@@ -53,7 +67,7 @@ export function signS3RequestHeaders(input: S3SignatureInput): Record<string, st
   const canonicalRequest = [
     input.method,
     input.url.pathname || "/",
-    "",
+    canonicalQueryString(input.url),
     canonicalHeaders,
     signedHeaders,
     input.payloadSha256Hex,

@@ -273,7 +273,9 @@ export function DeckFlow({
           </h1>
           {exit}
         </div>
-        <div className="mt-1">{checkpoint}</div>
+        <div data-device-text-deck-checkpoint className="mt-1">
+          {checkpoint}
+        </div>
         <p className="mt-1 text-base font-semibold tabular-nums">{progress}</p>
         {status}
         {deviceNotice ? (

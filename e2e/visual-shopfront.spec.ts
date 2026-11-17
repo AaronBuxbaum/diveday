@@ -590,6 +590,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "course-page", scheme);
       });
 
+      // Issue #4329: the waiver's medical questions, read-only, a link from
+      // "Who can enroll" so a doctor's sign-off is known before the money.
+      test(`the course's medical questions read before booking (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
+        await page.getByRole("link", { name: diverCopy("course.medicalQuestionsLink") }).click();
+        await expect(page).toHaveURL(
+          "/s/blue-mantis/courses/discover-scuba-diving/medical-questions",
+        );
+        await expect(
+          page.getByRole("heading", { name: diverCopy("course.medicalQuestions.title") }),
+        ).toBeVisible();
+        await expect(page.getByText("I am over 45 years of age.")).toBeVisible();
+        await capture(page, "course-medical-questions", scheme);
+      });
+
       test(`the course alternate-date enquiry opens beneath its dates (${scheme})`, async ({
         page,
       }) => {

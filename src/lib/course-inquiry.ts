@@ -59,6 +59,8 @@ export interface DateRequestCopy {
   dateOptionsHeading: string;
   preferredDate: string;
   alternateDate: string;
+  /** The checkbox that marks the dates as able to move a few days. */
+  datesFlexible: string;
   whenSuits: string;
   whenSuitsPlaceholder: string;
   /** The one word on the disclosure that holds the three rarely-answered asks. */

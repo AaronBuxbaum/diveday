@@ -58,6 +58,28 @@ describe("MeetingDaysField with named dates", () => {
   });
 });
 
+describe("MeetingDaysField while the count is being typed", () => {
+  it("leaves an emptied box empty and keeps the later days until a number lands", async () => {
+    renderField({ defaultCount: 3, defaultLaterDates: ["2026-10-04", "2026-10-10"] });
+    await screen.findByLabelText("Day 3");
+    const box = screen.getByRole("spinbutton", { name: /Days/ }) as HTMLInputElement;
+    fireEvent.change(box, { target: { value: "" } });
+    expect(box.value).toBe("");
+    expect(value("Day 3")).toBe("2026-10-10");
+    fireEvent.change(box, { target: { value: "2" } });
+    expect(value("Day 2")).toBe("2026-10-04");
+    expect(screen.queryByLabelText("Day 3")).toBeNull();
+  });
+
+  it("puts the last count back when the box is left empty", async () => {
+    renderField({ defaultCount: 3 });
+    const box = screen.getByRole("spinbutton", { name: /Days/ }) as HTMLInputElement;
+    fireEvent.change(box, { target: { value: "" } });
+    fireEvent.blur(box);
+    expect(box.value).toBe("3");
+  });
+});
+
 describe("MeetingDaysField with a gap and a day's own hours", () => {
   it("offers the date boxes by default and keeps a two-week gap", async () => {
     renderField({ defaultCount: 2 });

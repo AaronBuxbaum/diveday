@@ -128,33 +128,10 @@ export function SavePostcard({
   async function save() {
     setState("saving");
     try {
-      // The face has to be settled before anything is measured, or the export
-      // draws in whatever the browser had loaded when the click landed.
-      await document.fonts?.ready;
-      const canvas = document.createElement("canvas");
-      canvas.width = POSTCARD_FRAME.width * EXPORT_SCALE;
-      canvas.height = POSTCARD_FRAME.height * EXPORT_SCALE;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("no 2d context");
-      ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
-      drawPostcard(
-        ctx,
+      await exportPostcard(
         { ...postcard, privateLine: line.trim() ? line.trim() : null },
-        readPalette(),
-        await borrowSiteMark(),
+        fileName,
       );
-      if (await shareCard(canvas, fileName)) {
-        setState("idle");
-        return;
-      }
-      const href = canvas.toDataURL("image/png");
-      const anchor = document.createElement("a");
-      anchor.href = href;
-      anchor.download = fileName;
-      anchor.style.display = "none";
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
       setState("idle");
     } catch {
       setState("failed");
@@ -207,6 +184,40 @@ export function SavePostcard({
       </div>
     </>
   );
+}
+
+/**
+ * **Draw a card and get it off the page**: the share sheet where the browser
+ * takes a file, a PNG download everywhere else. The recap's record and the
+ * booked ticket (issue #4386) both leave through here, so the two keepsakes
+ * share one export and one set of tests. `borrowMark` lifts the record's site
+ * drawing off the page; the ticket has none to lift. Throws when nothing
+ * reached the diver, which the caller reports.
+ */
+export async function exportPostcard(
+  postcard: PostcardImage,
+  fileName: string,
+  { borrowMark = true }: { borrowMark?: boolean } = {},
+): Promise<void> {
+  // The face has to be settled before anything is measured, or the export
+  // draws in whatever the browser had loaded when the click landed.
+  await document.fonts?.ready;
+  const canvas = document.createElement("canvas");
+  canvas.width = POSTCARD_FRAME.width * EXPORT_SCALE;
+  canvas.height = POSTCARD_FRAME.height * EXPORT_SCALE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no 2d context");
+  ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
+  drawPostcard(ctx, postcard, readPalette(), borrowMark ? await borrowSiteMark() : null);
+  if (await shareCard(canvas, fileName)) return;
+  const href = canvas.toDataURL("image/png");
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = fileName;
+  anchor.style.display = "none";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
 }
 
 /**

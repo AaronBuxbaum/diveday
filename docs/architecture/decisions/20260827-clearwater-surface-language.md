@@ -206,6 +206,7 @@ is one table, here, and nowhere else:
 | The diver record | that was the last thing (post-action, transient) | [20260827-people-not-lists](20260827-people-not-lists.md) |
 | Reports | every waiver in (counted signatures > 0) | the shops-shelves SPEC, 9f |
 | The manifest | everyone's back aboard · dock complete | [20260827-the-departure-is-two-working-surfaces](20260827-the-departure-is-two-working-surfaces.md) |
+| The diver's thread, the booked ticket | the bubble mark on the "booked" moment's ticket rising once, on the first open of that departure's ticket and never again (its smallest bubble is the coral); the ticket's photo, perforation and stub belong to the booked panel, so it stays the thread's one moment | issue #4386; this decision |
 | The home spine and the recap | the drawn hand's single warm detail — on the *next* boat's site mark only (the week board's marks carry none), and on the postcard's mark; a detail beside a moment, never a moment | [20260901-diveday-reimagined](20260901-diveday-reimagined.md), decision 1 |
 
 Amended 2026-10-25 (visual review 2026-10-24, A07): the counter's cleared line ("Everyone's

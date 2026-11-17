@@ -42,7 +42,7 @@ import type { FeaturePageSlug } from "@/lib/feature-pages";
 export const STEPS: readonly {
   id: "book" | "sign" | "check" | "aboard" | "recap";
   feature: FeaturePageSlug;
-  notes: readonly [DiverMessageKey, DiverMessageKey];
+  notes: readonly [DiverMessageKey, DiverMessageKey, ...DiverMessageKey[]];
   /**
    * The step's drawn screens, in the order the walk shows them. The one marked
    * `primary` is what a reader without the player sees; the others are in the
@@ -105,7 +105,14 @@ export const STEPS: readonly {
     // H-20260802-may-public-pages-say's no-signal claim.
     id: "aboard",
     feature: "boat-manifest",
-    notes: ["marketing.home.steps.aboard.note1", "marketing.home.steps.aboard.note2"],
+    // The third note is for the owner who still carries paper (issue #4322):
+    // the same manifest prints, and the step's link is the boat-manifest page
+    // that lists the packet.
+    notes: [
+      "marketing.home.steps.aboard.note1",
+      "marketing.home.steps.aboard.note2",
+      "marketing.home.steps.aboard.note3",
+    ],
     frames: [
       {
         id: "desk",

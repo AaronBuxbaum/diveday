@@ -29,7 +29,7 @@ import { bookings, cards, courses, people, trips } from "../../db/schema/index";
 
 import { sellableSeats } from "../../lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "../../lib/calendar-date";
-import type { CertificationLevel } from "../../lib/certification-levels";
+import { type CertificationLevel, certificationRank } from "../../lib/certification-levels";
 import { DEPARTURE_BUFFER_MS } from "../../lib/departure-clock";
 import { courseLadderSince, ladderExclusion, nextCourseFor } from "./rules";
 
@@ -348,4 +348,81 @@ async function nextSessionsFor(
     });
   }
   return soonest;
+}
+
+/** The one course a diver could take next here, with its soonest open session. */
+export type DiverNextCourse = {
+  slug: string;
+  title: string;
+  /** Null when the shop has no public session of it with a seat yet. */
+  nextSessionStartsAt: Date | null;
+};
+
+/**
+ * **The next rung for one diver** (issue #4328): the course that follows the
+ * highest level card this diver holds here (any agency, any state), or the
+ * entry certification for a diver with none, read off the shop's catalog by
+ * the same rule as the ladder (`nextCourseFor`). Null when the shop has no
+ * such course, the diver already holds what it certifies or is under its
+ * minimum age, or already has a seat on any session of it (the one just
+ * sailed included, before its card is issued). The caller checks the shop's
+ * Courses switch, which it has already read.
+ *
+ * One wave of three statements, then the chosen course's next session.
+ */
+export async function nextCourseForDiver(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; now: Date; timeZone: string },
+): Promise<DiverNextCourse | null> {
+  const { shopId, personId, now, timeZone } = input;
+  const [catalog, personRows, seatRows] = await queryAll(db, [
+    () => listCatalogInProgressionOrder(db, shopId),
+    () =>
+      db
+        .select({ dateOfBirth: people.dateOfBirth, level: cards.level })
+        .from(people)
+        .leftJoin(
+          cards,
+          and(
+            eq(cards.personId, people.id),
+            eq(cards.shopId, shopId),
+            eq(cards.kind, "level"),
+            isNull(cards.deletedAt),
+          ),
+        )
+        .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson())),
+    () =>
+      db
+        .selectDistinct({ courseId: trips.courseId })
+        .from(bookings)
+        .innerJoin(trips, eq(trips.id, bookings.tripId))
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            eq(bookings.personId, personId),
+            isNotNull(trips.courseId),
+            liveTrip(),
+            notInArray(bookings.status, ["cancelled", "no_show"]),
+          ),
+        ),
+  ]);
+  const heldLevels = personRows.flatMap((row) => (row.level ? [row.level] : []));
+  const highest = heldLevels.reduce<CertificationLevel | null>(
+    (best, level) =>
+      best === null || certificationRank(level) > certificationRank(best) ? level : best,
+    null,
+  );
+  const next = catalog.find(
+    (course) =>
+      course.isActive &&
+      !course.isIntroCourse &&
+      course.certifiesLevel !== null &&
+      course.minimumCertificationLevel === highest,
+  );
+  if (!next || seatRows.some((row) => row.courseId === next.id)) return null;
+  const session = (await nextSessionsFor(db, shopId, [next.id], now)).get(next.id) ?? null;
+  const onDate = calendarDateInTimezone(session?.startsAt ?? now, timeZone);
+  const person = { heldLevels, dateOfBirth: personRows[0]?.dateOfBirth ?? null };
+  if (ladderExclusion(next, person, onDate) !== null) return null;
+  return { slug: next.slug, title: next.title, nextSessionStartsAt: session?.startsAt ?? null };
 }

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "@/db/bookings";
-import { bookings, diveSites, people, shops, tripSightings } from "@/db/schema";
+import { bookings, divePackages, diveSites, people, shops, tripSightings } from "@/db/schema";
 import { createTrip, upcomingTripsWithCounts } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
@@ -349,5 +349,64 @@ describe("the recap with sightings switched off", () => {
     const off = await getRecapPageData(db, bookingId);
     expect(off?.observedSpecies).toEqual([]);
     await db.update(shops).set({ sightingsEnabled: true }).where(eq(shops.id, shop.id));
+  });
+});
+
+// Issue #4328: one quiet row, a course before a package, nothing when neither.
+describe("the what's-next row", () => {
+  async function whatsNext(data: RecapPageData, bookingId: string) {
+    const props = await buildAfterStateProps({
+      db: ctx.db,
+      data,
+      bookingId,
+      locale: "en-US",
+      t: diverTranslator("en-US"),
+      params: {},
+      actions,
+      mintHandoff: false,
+      delivered: false,
+    });
+    return props.whatsNext;
+  }
+
+  async function setShop(values: { coursesEnabled?: boolean; divePackagesEnabled?: boolean }) {
+    await ctx.db.update(shops).set(values).where(eq(shops.id, ctx.shop.id));
+  }
+
+  it("names the next course on the shop's ladder for a diver with no card", async () => {
+    const { data, bookingId } = await recapData();
+    const row = await whatsNext(data, bookingId);
+    expect(row?.href).toMatch(new RegExp(`^/s/${ctx.shop.slug}/courses/`));
+    expect(row?.detail).toMatch(/^Your next course/);
+  });
+
+  it("offers a package to a repeat diver once no course is left, and nothing to a first-timer", async () => {
+    await setShop({ coursesEnabled: false, divePackagesEnabled: true });
+    try {
+      const { data, bookingId } = await recapData();
+      expect(await whatsNext({ ...data, visitCount: 1 }, bookingId)).toBeNull();
+      await ctx.db.insert(divePackages).values({
+        shopId: ctx.shop.id,
+        name: "Five-dive card",
+        diveCount: 5,
+        priceCents: 30_000,
+        scope: "all",
+      });
+      const row = await whatsNext({ ...data, visitCount: 2 }, bookingId);
+      expect(row?.href).toBe(`/s/${ctx.shop.slug}/packages`);
+      expect(row?.detail).toMatch(/prepaid dives$/);
+    } finally {
+      await setShop({ coursesEnabled: true });
+    }
+  });
+
+  it("says nothing when the shop sells neither", async () => {
+    await setShop({ coursesEnabled: false, divePackagesEnabled: false });
+    try {
+      const { data, bookingId } = await recapData();
+      expect(await whatsNext({ ...data, visitCount: 5 }, bookingId)).toBeNull();
+    } finally {
+      await setShop({ coursesEnabled: true, divePackagesEnabled: true });
+    }
   });
 });

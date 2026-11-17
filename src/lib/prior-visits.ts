@@ -30,7 +30,9 @@ export type PriorVisitStanding = "recorded" | "did_not_happen";
  * worse than the failure mode of under-matching (a cancelled row that reads
  * plainly as "Cancelled", which is what the label already says).
  */
-const DID_NOT_HAPPEN = /cancel|refund|no.?show|void|declin|abandon|fail|expired|unpaid/i;
+export const DID_NOT_HAPPEN_PATTERN =
+  "cancel|refund|no.?show|void|declin|abandon|fail|expired|unpaid";
+const DID_NOT_HAPPEN = new RegExp(DID_NOT_HAPPEN_PATTERN, "i");
 
 export function priorVisitStanding(statusLabel: string | null | undefined): PriorVisitStanding {
   return DID_NOT_HAPPEN.test(statusLabel ?? "") ? "did_not_happen" : "recorded";
@@ -147,3 +149,32 @@ export function diveDayOrdinal(input: {
  * they are on is never folded away (ADR 20260827-people-not-lists).
  */
 export const SHOP_HISTORY_PREVIEW_COUNT = 10;
+
+/**
+ * **A lapsed regular** (issue #4246): a diver with at least
+ * {@link LAPSED_REGULAR_MIN_DAYS} dive days with the shop, counted the way
+ * {@link diveDayOrdinal} counts them (distinct shop-local days across dive-day
+ * bookings and imported visits that did not fail to happen), and none in the
+ * last {@link LAPSED_REGULAR_MONTHS} months. Staff decide whether to reach
+ * out; nothing is sent because of it.
+ */
+export const LAPSED_REGULAR_MIN_DAYS = 3;
+export const LAPSED_REGULAR_MONTHS = 12;
+
+/** The instant before which a regular's last dive day makes them lapsed. */
+export function lapsedRegularCutoff(now: Date): Date {
+  const cutoff = new Date(now.getTime());
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - LAPSED_REGULAR_MONTHS);
+  return cutoff;
+}
+
+export function isLapsedRegular(
+  diver: { diveDays: number; lastDivedAt: Date | null },
+  now: Date,
+): boolean {
+  return (
+    diver.diveDays >= LAPSED_REGULAR_MIN_DAYS &&
+    diver.lastDivedAt !== null &&
+    diver.lastDivedAt.getTime() < lapsedRegularCutoff(now).getTime()
+  );
+}

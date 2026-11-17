@@ -3,15 +3,12 @@ import { cacheOfflineShell, shellBuildId } from "./offline-shell-cache";
 
 function fakeCaches(failPutFor?: string, stores = new Map<string, Map<string, Response>>()) {
   const caches = {
-    match: async (key: string, options?: MultiCacheQueryOptions) =>
-      stores
-        .get(options?.cacheName ?? "")
-        ?.get(key)
-        ?.clone(),
+    has: async (name: string) => stores.has(name),
     open: async (name: string) => {
       const store = stores.get(name) ?? new Map<string, Response>();
       stores.set(name, store);
       return {
+        keys: async () => [...store.keys()].map((key) => new Request(`https://shop.test${key}`)),
         put: async (key: string, response: Response) => {
           if (key === failPutFor) throw new Error("quota");
           store.set(key, response);
@@ -112,6 +109,26 @@ describe("cacheOfflineShell", () => {
     const { env: e, stores } = env({ served: null });
     await expect(cacheOfflineShell(e)).rejects.toThrow(/build unknown/);
     expect(stores.size).toBe(0);
+  });
+
+  it("fetches a large build a few assets at a time", async () => {
+    const assets = Array.from({ length: 40 }, (_, index) => `/_next/static/chunks/c${index}.js`);
+    const { env: e } = env({ build: { id: "build-1", assets } });
+    let inFlight = 0;
+    let peak = 0;
+    await cacheOfflineShell({
+      ...e,
+      fetch: async (input, init) => {
+        if (input === "/offline-manifest") return e.fetch(input);
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        inFlight -= 1;
+        return e.fetch(input, init);
+      },
+    });
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(6);
   });
 
   it("fetches assets past the HTTP cache so an old immutable chunk cannot answer", async () => {

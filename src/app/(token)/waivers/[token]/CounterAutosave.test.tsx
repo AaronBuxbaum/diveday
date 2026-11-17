@@ -61,7 +61,8 @@ describe("CounterAutosave", () => {
     const [first, second] = container.querySelectorAll("input");
     if (!first || !second) throw new Error("inputs missing");
     fireEvent.focusOut(first, { relatedTarget: second });
-    expect(await screen.findByRole("status")).toHaveTextContent("Saved.");
+    // The status line is always in the page, so wait on its words, not on it.
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Saved."));
     expect(action).toHaveBeenCalledTimes(1);
     expect(action.mock.calls[0]?.[0]).toBeInstanceOf(FormData);
   });
@@ -72,5 +73,56 @@ describe("CounterAutosave", () => {
     if (!first || !second) throw new Error("inputs missing");
     fireEvent.focusOut(first, { relatedTarget: second });
     await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  // Issue #4541: a step's save answered "closed" because the Sign it raced had
+  // already signed the release, and the reload threw the signer off the
+  // signed page (and the desk's next navigation with it).
+  it("does not save a step the signer has already submitted", async () => {
+    vi.useFakeTimers();
+    try {
+      const action = vi.fn(async () => "closed" as const);
+      const { container } = renderForm(action);
+      const second = container.querySelectorAll("input")[1];
+      const form = container.querySelector("form");
+      if (!second || !form) throw new Error("form missing");
+      fireEvent.change(second, { target: { value: "typed" } });
+      fireEvent.submit(form);
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(action).not.toHaveBeenCalled();
+      expect(refresh).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not reload for a save that answers after the signer submitted", async () => {
+    let answer: (outcome: "closed") => void = () => undefined;
+    const action = vi.fn(() => new Promise<"closed">((resolve) => (answer = resolve)));
+    const { container } = renderForm(action);
+    const [first, second] = container.querySelectorAll("input");
+    const form = container.querySelector("form");
+    if (!first || !second || !form) throw new Error("form missing");
+    fireEvent.focusOut(first, { relatedTarget: second });
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    fireEvent.submit(form);
+    answer("closed");
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("does not reload for a save that answers after the form is gone", async () => {
+    let answer: (outcome: "closed") => void = () => undefined;
+    const action = vi.fn(() => new Promise<"closed">((resolve) => (answer = resolve)));
+    const { container, unmount } = renderForm(action);
+    const [first, second] = container.querySelectorAll("input");
+    if (!first || !second) throw new Error("inputs missing");
+    fireEvent.focusOut(first, { relatedTarget: second });
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    unmount();
+    answer("closed");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

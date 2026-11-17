@@ -11,6 +11,8 @@ import {
   mastheadWhenParts,
   ReadyBookedHeader,
   ReadyMastheadMeta,
+  ticketPostcard,
+  ticketSightingLine,
 } from "./ReadyMasthead";
 
 afterEach(cleanup);
@@ -390,4 +392,86 @@ it("pairs each actual dated meeting with its authored place, even a one-day cour
     />,
   );
   expect(screen.getByText("Shop classroom")).toBeVisible();
+});
+
+// Issue #4386: the booked card is a ticket.
+describe("the booked ticket", () => {
+  const SIGHTING = {
+    siteName: "Molasses Reef",
+    speciesSlug: "goliath-grouper",
+    customName: null,
+    lastSeenAt: new Date("2026-10-06T15:00:00Z"),
+  };
+
+  it("adds one line from the crews' log, the diver's name and Save, under the moment", () => {
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={FACTS}
+          greetingName="Priya Sharma"
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+          ticket={{ photoUrl: null, sighting: SIGHTING }}
+        />,
+      ),
+    );
+    expect(screen.getByTestId("ticket-sighting").textContent).toMatch(
+      /^Seen at Molasses Reef on Tue, Oct\s6: Goliath grouper$/,
+    );
+    expect(screen.getByText("Priya Sharma")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save as image" })).toBeTruthy();
+  });
+
+  it("says the sighting in Spanish too", () => {
+    expect(
+      ticketSightingLine(SIGHTING, "es-ES", "America/New_York", diverTranslator("es-ES")),
+    ).toMatch(/^Visto en Molasses Reef el .+: Mero guasa$/);
+  });
+
+  it("says no sighting line when the log has nothing", () => {
+    expect(ticketSightingLine(null, "en-US", "America/New_York", diverTranslator("en-US"))).toBe(
+      null,
+    );
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={FACTS}
+          greetingName="Priya Sharma"
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+          ticket={{ photoUrl: null, sighting: null }}
+        />,
+      ),
+    );
+    expect(screen.queryByTestId("ticket-sighting")).toBeNull();
+  });
+
+  it("stays the plain moment without a ticket", () => {
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={FACTS}
+          greetingName="Priya Sharma"
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+        />,
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "Save as image" })).toBeNull();
+  });
+
+  it("words the picture for a buddy: a date, never 'Tomorrow', and no link", () => {
+    const card = ticketPostcard(FACTS, "Priya Sharma", null, "en-US", diverTranslator("en-US"));
+    expect(card.heading).toBe("Priya Sharma");
+    expect(card.diveDayLine).toMatch(/^Sun, Oct\s11$/);
+    expect(card.recordedBy).toBe("Booked with Blue Mantis Divers");
+    expect(card.facts.map((fact) => fact.label)).toEqual(["Departure", "When", "Be there"]);
+    expect(JSON.stringify(card)).not.toMatch(/Tomorrow|https?:|\/ready\//);
+  });
 });

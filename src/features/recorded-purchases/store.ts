@@ -4,7 +4,7 @@ import type { AppDb } from "../../db/client";
 import { recordOrderCollection } from "../../db/collection-ledger";
 import { enqueueOrderIntegrationEvent } from "../../db/integration-events";
 import {
-  listOrderableCustomers,
+  getOrderableCustomer,
   type NewCounterOrderInput,
   recordCounterOrder,
 } from "../../db/orders";
@@ -27,14 +27,19 @@ export async function recordPurchase(
 }
 
 /** Recording belongs to every live staff role, independently of Stripe setup. */
-export async function getPurchaseForm(db: AppDb, shopId: string, personId: string) {
+export async function getPurchaseForm(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  customerId?: string,
+) {
   const roles = await loadActiveStaffRoles(db, shopId, personId);
   if (!roles || !isStaff(roles)) return null;
-  const [customers, currency] = await Promise.all([
-    listOrderableCustomers(db, shopId),
+  const [customer, currency] = await Promise.all([
+    customerId && isUuid(customerId) ? getOrderableCustomer(db, shopId, customerId) : null,
     getShopCurrency(db, shopId),
   ]);
-  return { customers, currency, canCreateDue: canManageOrders(roles) };
+  return { customer, currency, canCreateDue: canManageOrders(roles) };
 }
 
 type RefundInput = {

@@ -105,6 +105,8 @@ export function MeetingDaysField({
   const firstStart = useFormValue(countRef, "startTime");
   const firstEnd = useFormValue(countRef, "endTime");
   const [count, setCount] = useState(defaultCount);
+  // What is in the box while it is typed into: empty is a moment, not a zero.
+  const [typed, setTyped] = useState(String(defaultCount));
   // Offsets from day one, one per later day. Seeded from the stored dates once
   // day one is known; until then the consecutive run.
   const [offsets, setOffsets] = useState<number[] | null>(null);
@@ -166,10 +168,15 @@ export function MeetingDaysField({
           disabled={disabled}
           min={minDays}
           max={maxDays}
-          value={count}
+          value={typed}
+          onBlur={() => setTyped(String(count))}
           onChange={(event) => {
-            const value = Number(event.currentTarget.value);
-            setCount(Number.isFinite(value) ? value : minDays);
+            const text = event.currentTarget.value;
+            setTyped(text);
+            // Nothing to commit until it parses; the later days wait.
+            if (text.trim() === "" || !Number.isFinite(Number(text))) return;
+            const value = Number(text);
+            setCount(value);
             setOffsets(laterOffsets.slice(0, Math.max(0, value - 1)));
             setHours(ownHours.slice(0, Math.max(0, value - 1)));
           }}

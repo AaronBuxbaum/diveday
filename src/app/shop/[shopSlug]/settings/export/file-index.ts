@@ -75,6 +75,7 @@ export const EXPORT_PURPOSE_KEYS = {
   "work_order_events.csv": "settings.export.filePurposes.work_order_events",
   "pre_departure_checklist_items.csv": "settings.export.filePurposes.pre_departure_checklist_items",
   "pre_departure_check_events.csv": "settings.export.filePurposes.pre_departure_check_events",
+  "roll_call_deck_counts.csv": "settings.export.filePurposes.roll_call_deck_counts",
   "boat_snags.csv": "settings.export.filePurposes.boat_snags",
   "departure_boat_safety_snapshots.csv":
     "settings.export.filePurposes.departure_boat_safety_snapshots",

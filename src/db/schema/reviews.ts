@@ -87,6 +87,9 @@ export const tripRecapPhotos = pgTable(
   ],
 );
 
+/** Staff's ruling on a diver's thanks to the crew (issue #4261); null is waiting. */
+export const crewThanksRuling = pgEnum("crew_thanks_ruling", ["passed", "held"]);
+
 /**
  * A star rating (and optional words) from a diver who provably dived — the row
  * is only ever written through that booking's own signed recap link, so unlike
@@ -124,38 +127,40 @@ export const tripReviews = pgTable(
     /** Null until published; drives "newest published first" on the public list. */
     publishedAt: timestamp("published_at", { withTimezone: true }),
     /**
-     * **Thanks to one of the crew** (loop 5, row 6; glossary "Crew thanks"):
-     * the optional line under the review ("Keiko made my first wreck easy"),
-     * and which crew member of that departure it is for. Both or neither (the
-     * check below). It is never published: only the crew member it names and
-     * staff read it. Revising the review replaces it, and a revision that
-     * leaves it blank takes it back.
+     * **Thanks to one of the crew** (loop 5, row 6; issue #4261; glossary "Crew
+     * thanks"): which crew member of that departure the diver thanked with one
+     * tap, and the optional line with it ("Keiko made my first wreck easy").
+     * It is never published: only the crew member it names and staff read it,
+     * and the crew member only once staff passed it on (`crewThanksRuling`).
+     * Revising the review replaces it, and a revision naming nobody takes it
+     * back.
      */
     crewThanksPersonId: uuid("crew_thanks_person_id").references(() => people.id),
     crewThanks: text("crew_thanks"),
     /**
-     * Staff hid the thanks from the crew member (loop 5, row 6). A hide, not a
-     * delete: the words stay for the shop's record. The hide belongs to the
-     * review, so a diver's revision (a new line, or none and then one) does
-     * not lift it; only staff showing it again does.
+     * Staff's ruling on the thanks: `passed` reaches the crew member, `held`
+     * stays with the shop. Null is waiting in the review moderation queue, and
+     * a diver's revision that changes who or what puts it back there, so no
+     * words reach the crew that staff have not read.
      */
-    crewThanksHiddenAt: timestamp("crew_thanks_hidden_at", { withTimezone: true }),
-    /** The staffer who hid it (null when shown). */
-    crewThanksHiddenByPersonId: uuid("crew_thanks_hidden_by_person_id").references(() => people.id),
+    crewThanksRuling: crewThanksRuling("crew_thanks_ruling"),
+    crewThanksRuledAt: timestamp("crew_thanks_ruled_at", { withTimezone: true }),
+    /** The staffer who ruled (null while waiting, or once that staffer is erased). */
+    crewThanksRuledByPersonId: uuid("crew_thanks_ruled_by_person_id").references(() => people.id),
     createdAt: appNowTimestamp("created_at").notNull(),
     updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_reviews_booking_unique").on(table.bookingId),
     check(
-      "trip_reviews_crew_thanks_pair",
-      sql`(${table.crewThanksPersonId} is null) = (${table.crewThanks} is null) and (${table.crewThanks} is null or (length(btrim(${table.crewThanks})) > 0 and length(${table.crewThanks}) <= 200))`,
+      "trip_reviews_crew_thanks_shape",
+      sql`(${table.crewThanks} is null or (${table.crewThanksPersonId} is not null and length(btrim(${table.crewThanks})) > 0 and length(${table.crewThanks}) <= 200)) and (${table.crewThanksRuling} is null or ${table.crewThanksPersonId} is not null) and ((${table.crewThanksRuling} is null) = (${table.crewThanksRuledAt} is null))`,
     ),
     // The crew member's own read on Today: their thanks, newest first. Leads on
     // the person column so a person's deletion probes it by index too.
     index("trip_reviews_crew_thanks_idx")
       .on(table.crewThanksPersonId, table.shopId, table.createdAt)
-      .where(sql`${table.crewThanks} is not null`),
+      .where(sql`${table.crewThanksPersonId} is not null`),
     // The public aggregate and list query verbatim: this shop's published rows,
     // newest first, so a shop with years of reviews still renders from an index.
     index("trip_reviews_shop_published_idx")
@@ -365,6 +370,8 @@ export const recapPulses = pgTable(
     uniqueIndex("recap_pulses_booking_live_unique")
       .on(table.bookingId)
       .where(sql`${table.deletedAt} is null`),
+    // Merge and erasure scans find a person's rows by person.
+    index("recap_pulses_person_idx").on(table.personId),
     // The staff panel's query verbatim: this shop's open items, newest first.
     index("recap_pulses_shop_open_idx")
       .on(table.shopId, table.createdAt)

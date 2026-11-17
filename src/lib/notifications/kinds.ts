@@ -938,6 +938,31 @@ const demoStartedAlertSchema = z.object({
 });
 
 /**
+ * Somebody is using a preview built for their shop (ADR 20261116-demo-previews):
+ * the founder alert for the one outreach signal that is a person. Sent once per
+ * preview, on the first real input inside its demo shop, never on a fetch of
+ * the link (a mail scanner does that) and never on the open alone.
+ *
+ * Names a business, never a person: the prospect's shop name is what the
+ * founder typed when the preview was built. `shopId` is the minted demo's own
+ * row, for the reason `demoStartedAlertSchema` gives.
+ */
+const previewActiveAlertSchema = z.object({
+  kind: z.literal("operator_alert"),
+  event: z.literal("preview_active"),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  /** The preview's row id, which is what keys the send. */
+  previewId: z.uuid(),
+  prospectName: z.string().trim().min(1).max(120),
+  shopSlug: z.string().trim().min(1).max(120),
+  /** How many times the link's page was requested, scanners included. */
+  fetchCount: z.number().int().min(0),
+  /** How many times a browser entered the shop from the link. */
+  openCount: z.number().int().min(0),
+});
+
+/**
  * A provider ceiling this deployment is approaching or past (docs ADR
  * 20260806-provider-usage-guardrails). The third founder-only alert, on the
  * same SES pipeline and in the same inbox as the two above — English, no
@@ -1003,6 +1028,8 @@ const setupRequestAlertSchema = z.object({
   shopName: setupAnswerSchema(SETUP_TEXT_MAX),
   region: setupAnswerSchema(SETUP_TEXT_MAX),
   runsBoat: z.boolean(),
+  runsShore: z.boolean().optional(),
+  runsPool: z.boolean().optional(),
   currentSystem: z.enum(SETUP_CURRENT_SYSTEMS).optional(),
   /** Which system, as a switching guide's slug, when the requester named one. */
   currentSystemGuide: z
@@ -1589,6 +1616,26 @@ const courseCertifiedSchema = z.object({
 });
 
 /**
+ * **A dive package someone bought for this diver** (issue #4629). Sent once,
+ * on the date the buyer chose in the shop's zone, by the shop tick
+ * (`sendDuePackageGifts`), which claims the gift row before the send. The
+ * dives are already on the recipient's email; there is nothing to claim.
+ */
+const packageGiftSchema = z.object({
+  kind: z.literal("package_gift"),
+  giftId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  buyerName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  packageName: z.string().trim().min(1).max(200),
+  diveCount: z.number().int().min(1).max(10_000),
+  bookUrl: z.url().max(2_000).optional(),
+});
+
+/**
  * **What a group's card checkout settled, told to the lead** (#2566). The
  * booking confirmation goes out before Stripe reports the payment, so it can
  * never carry the group total; this follows once Stripe says paid. One short
@@ -2130,6 +2177,7 @@ export type NotificationSender = z.infer<typeof notificationSenderSchema>;
 const operatorAlertSchema = z.discriminatedUnion("event", [
   newAccountAlertSchema,
   demoStartedAlertSchema,
+  previewActiveAlertSchema,
   usageCeilingAlertSchema,
   setupRequestAlertSchema,
   founderDigestSchema,
@@ -2184,6 +2232,7 @@ export const notificationSchema = z
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
+    packageGiftSchema,
     interestReceivedAckSchema,
     setupRequestReceiptSchema,
     bookkeeperMonthEndSchema,
@@ -2355,6 +2404,8 @@ function operatorAlertKey(notification: Extract<Notification, { kind: "operator_
       return `new-account-alert/${notification.userAccountId}`;
     case "demo_started":
       return `demo-started-alert/${notification.shopSlug}`;
+    case "preview_active":
+      return `preview-active-alert/${notification.previewId}`;
     case "usage_ceiling":
       return `usage-ceiling/${notification.ceilingId}/${notification.periodKey}/${notification.level}`;
     case "setup_request":
@@ -2508,6 +2559,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;
+    // One mail per gift; the gift row is claimed before the send.
+    case "package_gift":
+      return `package-gift/${notification.giftId}`;
     // Never queued; one month per shop, which `bookkeeper_sent_month` claims.
     case "bookkeeper_month_end":
       return `bookkeeper-month-end/${notification.shopId}/${notification.month}`;

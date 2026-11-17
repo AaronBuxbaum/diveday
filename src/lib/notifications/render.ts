@@ -33,6 +33,7 @@ import {
   newAccountAlertEmail,
   passwordChangedEmail,
   passwordResetEmail,
+  previewActiveAlertEmail,
   readinessLinkEmail,
   setupRequestAlertEmail,
   staffInviteEmail,
@@ -52,6 +53,7 @@ import {
 import { incidentMissingDiverEmail, incidentMissingDiverFoundEmail } from "./incident-emails";
 import { interestReceivedAckEmail } from "./interest-received-ack";
 import type { Notification } from "./kinds";
+import { packageGiftEmail } from "./package-gift";
 import { partyPaymentReceiptEmail } from "./party-payment-receipt";
 import { reminderSmsBody } from "./reminder-text";
 import {
@@ -169,6 +171,8 @@ function operatorAlertEmail(
       return newAccountAlertEmail(notification);
     case "demo_started":
       return demoStartedAlertEmail(notification);
+    case "preview_active":
+      return previewActiveAlertEmail(notification);
     case "usage_ceiling":
       return usageCeilingAlertEmail(notification);
     case "setup_request":
@@ -271,6 +275,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "party_not_booked") return partyNotBookedEmail(notification);
   if (notification.kind === "party_payment_receipt") return partyPaymentReceiptEmail(notification);
   if (notification.kind === "course_certified") return courseCertifiedEmail(notification);
+  if (notification.kind === "package_gift") return packageGiftEmail(notification);
   if (notification.kind === "bookkeeper_month_end") return bookkeeperMonthEndEmail(notification);
   if (notification.kind === "bookkeeper_confirmation") {
     return bookkeeperConfirmationEmail(notification);

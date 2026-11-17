@@ -16,6 +16,7 @@ import {
   claudeUsage,
   crewNotices,
   demoEntries,
+  demoPreviews,
   departureNotes,
   emailBounces,
   formDrafts,
@@ -531,6 +532,13 @@ export const PRUNE_ARMS = {
     from: demoEntries,
     id: demoEntries.id,
     clock: demoEntries.enteredAt,
+  },
+  // A prospect's preview link and what happened to it (ADR
+  // 20261116-demo-previews), on the instant it was built.
+  demo_previews: {
+    from: demoPreviews,
+    id: demoPreviews.id,
+    clock: demoPreviews.createdAt,
   },
   // The marks that point into the catch-up's desk lines, on `last_seen_at`
   // rather than a creation time: a mark a staffer keeps moving forward is live

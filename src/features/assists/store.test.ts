@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { claudeDemoSpend, claudeUsage, shops } from "../../db/schema/index";
 import { setShopFeature } from "../../db/shops";
@@ -167,6 +167,7 @@ describe("runAssist", () => {
         return fakeClaudeMessage({ text: JSON.stringify({ draft: "ok" }) });
       },
     };
+    let refused = 0;
     const runs = Array.from({ length: 10 }, () =>
       runAssist(ctx.db, {
         shopId: ctx.shop.id,
@@ -175,10 +176,14 @@ describe("runAssist", () => {
         provider,
         env: keyed,
         now,
+      }).then((value) => {
+        if (value === null) refused += 1;
+        return value;
       }),
     );
-    // Let every reservation settle before the provider answers.
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Every reservation has settled once the over-limit runs have been refused;
+    // the rest are parked on the gate until the provider answers.
+    await vi.waitFor(() => expect(refused).toBe(10 - MAX_CALLS_IN_FLIGHT));
     release();
     const values = await Promise.all(runs);
     expect(started).toBe(MAX_CALLS_IN_FLIGHT);

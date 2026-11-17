@@ -12,6 +12,7 @@ import { openSettingsRow } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   capture,
+  diverCopy,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
   SURFACE_TIMEOUT_MS,
@@ -96,6 +97,46 @@ for (const scheme of ["light", "dark"] as const) {
         // it is what proves the whole run of doors is in the frame.
         await page.getByText("Tip the crew", { exact: true }).waitFor();
         await capture(page, "recap", scheme);
+      });
+
+      /**
+       * **A one-tap thanks to the crew, waiting for the shop** (issue #4261).
+       * The diver taps a crew member on the review form and adds a line; the
+       * recap keeps the tapped pill, and the owner's review queue holds the
+       * thanks under "Needs you" with Pass thanks on its row, because nothing
+       * reaches the crew until staff pass it on. Written through the real
+       * form on the worker's own database, which the next test's reset puts back.
+       */
+      test(`a thanks to the crew waits in the review queue (${scheme})`, async ({
+        page,
+        browser,
+        workerBaseURL,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
+        const thanks = page.getByRole("group", { name: diverCopy("reviews.thanksLegend") });
+        await thanks.getByRole("radio").first().check();
+        await page
+          .getByRole("textbox", { name: diverCopy("reviews.thanksLine") })
+          .fill("Thanks for spotting the turtle");
+        await page
+          .getByRole("radio", { name: diverCopy("reviews.ratingOption", { rating: 5 }) })
+          .check();
+        await page.getByRole("button", { name: diverCopy("reviews.submit") }).click();
+        await page.getByText(diverCopy("reviews.savedPublished")).first().waitFor();
+        await capture(page, "recap-crew-thanks", scheme);
+
+        const ownerContext = await browser.newContext({
+          baseURL: workerBaseURL,
+          storageState: await staffStorageState("owner"),
+        });
+        const ownerPage = makeActivitySafe(await ownerContext.newPage());
+        await ownerPage.goto("/shop/blue-mantis/reviews");
+        await ownerPage.getByRole("region", { name: /^Needs you/ }).waitFor();
+        await ownerPage.getByRole("button", { name: "Pass thanks to the crew" }).first().waitFor();
+        await capture(ownerPage, "staff-reviews-crew-thanks", scheme);
+        await ownerContext.close();
       });
 
       /**

@@ -1,5 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { chooseOrderCustomer } from "./order-customer";
 
 const t = staffTranslator("en-US");
 test.describe("DESK-11 local ancillary amount due", () => {
@@ -9,9 +10,7 @@ test.describe("DESK-11 local ancillary amount due", () => {
     await page.goto("/shop/blue-mantis/orders?purchase=1");
     const form = page.getByRole("form", { name: t("orders.purchase.title"), exact: true });
     await form.getByRole("radio", { name: t("orders.localDue.open"), exact: true }).check();
-    await form
-      .getByLabel(t("orders.new.customerLabel"), { exact: true })
-      .selectOption({ label: "Priya Sharma · priya.sharma@mail.example" });
+    await chooseOrderCustomer(form, "Priya Sharma");
     await form.locator('[name="kind-0"]').selectOption("rental");
     await form.locator('[name="description-0"]').fill("Local regulator rental");
     await form.locator('[name="unitAmount-0"]').fill("25");

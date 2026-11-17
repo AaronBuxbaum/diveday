@@ -62,6 +62,7 @@ import {
   notificationSendQueue,
   orderLineItems,
   orders,
+  packageGifts,
   paymentDisputes,
   paymentOperationIntents,
   people,
@@ -81,6 +82,7 @@ import {
   rentalFitProfiles,
   reviewModerationEvents,
   reviewReplies,
+  rollCallDeckCounts,
   rollCallEvents,
   safetyDrillParticipants,
   safetyDrills,
@@ -207,6 +209,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // bookings, orders *and* the package they came from, so they go before all
   // three (ADR 20260822-a-package-is-entitlements-not-money).
   await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
+  await db.delete(packageGifts).where(eq(packageGifts.shopId, shopId));
   // Counter rentals can name their invoice, so clear them before orders too.
   await db.delete(gearReservations).where(eq(gearReservations.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
@@ -232,6 +235,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // A snag names its boat, its departures and its checklist line, none cascading.
   await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db.delete(rollCallDeckCounts).where(eq(rollCallDeckCounts.shopId, shopId));
   await db
     .delete(departureBoatSafetySnapshots)
     .where(eq(departureBoatSafetySnapshots.shopId, shopId));

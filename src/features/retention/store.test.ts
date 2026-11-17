@@ -24,6 +24,7 @@ import {
 } from "../../test/substrate-fixtures/db/retention-table-classification.test-support";
 import { insertShoreAlertStop } from "../../test/substrate-fixtures/db/shore-alert-test-fixtures";
 import { writeTodayReadMark } from "../today-catch-up-retention-fixture/store";
+import { demoPreviewRetentionFixture } from "./demo-preview.test-support";
 import {
   activityRetentionDays,
   RETENTION_DAYS,
@@ -682,6 +683,7 @@ const STALE_AND_FRESH = {
         .values({ source: token(), role: "owner", enteredAt: at })
         .returning({ id: schema.demoEntries.id }),
     ),
+  demo_previews: demoPreviewRetentionFixture,
   inbound_messages: async ({ db, shop }, at) =>
     idOf(
       await db

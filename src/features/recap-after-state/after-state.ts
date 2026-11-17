@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import type { AppDb } from "@/db/client";
+import { listDivePackages } from "@/db/dive-packages";
 import { tipPresetsMajor } from "@/db/tips";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { handoffHref, issueBookingHandoff } from "@/features/booking-handoff";
 import { BUDDY_PARAM } from "@/features/buddy-links";
 import { buddyReferralId } from "@/features/buddy-tokens";
+import { nextCourseForDiver } from "@/features/course-ladder";
 import type { DiveRecordComparison } from "@/features/dive-record";
 import { type BookedDeparture, bookedDepartures, nextDiveForBooking } from "@/features/next-dive";
 import {
@@ -22,6 +24,7 @@ import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { BrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
+import { packageOnSale } from "@/lib/dive-packages";
 import type { FlySafeAnchor, FlySafeReason } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
@@ -34,7 +37,12 @@ import {
 import type { ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
-import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import {
+  publicCoursePath,
+  publicPackagesPath,
+  publicSchedulePath,
+  publicTripPath,
+} from "@/lib/public-routes";
 import { type SiteMarkCode, siteMarkFor } from "@/lib/site-mark";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
 import { visitMilestone } from "@/lib/visit-milestones";
@@ -205,6 +213,12 @@ export type AfterStateProps = {
    */
   bookedNext?: { date: string; title: string; time: string } | null;
   /**
+   * **One quiet "what's next" row** (issue #4328): the next course on the
+   * shop's ladder for this diver, else the shop's dive package for a diver on
+   * their second day or later. Null when the shop sells neither to them.
+   */
+  whatsNext?: WhatsNextRow | null;
+  /**
    * The diver's other days with the shop, as rows that each send a fresh link
    * (H-20261014-other-days-send-fresh). Rendered only on `/ready`; `/recap` passes nothing.
    */
@@ -293,6 +307,51 @@ export function recapBuddyLinkUrl(
 }
 
 /** The short reference a printed page names its booking by: eight characters of its id. */
+/** The one row under *Your next dive*, already worded. */
+export type WhatsNextRow = { title: string; detail: string; href: string };
+
+/** A diver on at least this many days with the shop is offered a package. */
+const PACKAGE_VISIT_COUNT = 2;
+
+/**
+ * The course comes first: a diver with a rung left to climb is told about it.
+ * The package is for a repeat diver only, and is the shop's first one on sale.
+ */
+async function whatsNextFor(
+  db: AppDb,
+  input: { data: RecapPageData; t: DiverTranslator; locale: string; now: Date },
+): Promise<WhatsNextRow | null> {
+  const { data, t, locale, now } = input;
+  const { shop } = data;
+  const course = shop.coursesEnabled
+    ? await nextCourseForDiver(db, {
+        shopId: shop.id,
+        personId: data.personId,
+        now,
+        timeZone: shop.timezone,
+      })
+    : null;
+  if (course) {
+    return {
+      title: course.title,
+      detail: course.nextSessionStartsAt
+        ? t("recap.whatsNext.courseFrom", {
+            date: formatShortDate(course.nextSessionStartsAt, locale, shop.timezone),
+          })
+        : t("recap.whatsNext.course"),
+      href: publicCoursePath(shop.slug, course.slug),
+    };
+  }
+  if (!shop.divePackagesEnabled || data.visitCount < PACKAGE_VISIT_COUNT) return null;
+  const pkg = (await listDivePackages(db, shop.id)).find((row) => packageOnSale(row, now));
+  if (!pkg) return null;
+  return {
+    title: pkg.name,
+    detail: t("recap.whatsNext.package", { count: pkg.diveCount }),
+    href: publicPackagesPath(shop.slug),
+  };
+}
+
 export function bookingReference(bookingId: string): string {
   return bookingId.replace(/-/g, "").slice(0, 8).toUpperCase();
 }
@@ -340,7 +399,7 @@ export async function buildAfterStateProps(input: {
         excludeTripId: trip.id,
       })
     : Promise.resolve<BookedDeparture[]>([]);
-  const [ownReview, nextDeparture, ownPulse, nextDive, booked] = await Promise.all([
+  const [ownReview, nextDeparture, ownPulse, nextDive, booked, whatsNext] = await Promise.all([
     getReviewForBooking(db, bookingId),
     nextPublicDeparture(db, shop.id, locale, shop.timezone),
     getRecapPulseForBooking(db, bookingId),
@@ -362,6 +421,7 @@ export async function buildAfterStateProps(input: {
       noneIfBooked: true,
     }),
     bookedRead,
+    whatsNextFor(db, { data, t, locale, now: nowDate() }),
   ]);
   const [firstBooked] = booked;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
@@ -469,6 +529,7 @@ export async function buildAfterStateProps(input: {
       nextDive && personWide
         ? await nextDiveHandoffHref(db, shop, bookingId, nextDive.tripId)
         : null,
+    whatsNext,
     bookedNext:
       firstBooked && personWide
         ? {

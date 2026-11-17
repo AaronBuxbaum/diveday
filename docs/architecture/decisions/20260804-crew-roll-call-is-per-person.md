@@ -217,3 +217,19 @@ Two consequences worth stating rather than leaving to be discovered:
   those three surfaces 500 for the length of the production build window. Accepted under H-20260815-no-legacy — no
   users, no data — and said plainly on the migration's acknowledgement line rather than papered
   over. A table with a real reader would have taken two deploys.
+
+## Amendment 2026-11-16 — a deck count beside the names, never in place of them
+
+Issue #4248 adds a **deck count**: the number of heads a crew member counted on deck at a
+checkpoint, crew included, entered in the manifest's details and kept append-only in
+`roll_call_deck_counts`. The newest count at the open checkpoint is compared with everyone the roll
+call marked aboard there (`deckCountView`), and when they differ the deck screen says so in one
+calm line under its progress, in warning ink, never danger.
+
+This is not the count the decision above retired, and not the rejected "optional, informational
+count" alternative either. That count *closed* the crew half and so read as a gate to the person
+typing it; this one closes, opens and blocks nothing, sits in the one-tap tier rather than on the
+row, and covers the whole boat, divers included. Its only job is to make a miscount between the
+deck and the screen visible to a human. The per-person roll call remains the head count, and the
+completeness verdict never reads the deck count. The live manifest takes it; the offline copy does
+not yet. A `dive-domain-expert` review of the wording and placement is owed.

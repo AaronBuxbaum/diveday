@@ -5,10 +5,13 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { listPackagesOnSale } from "@/db/dive-packages";
 import { createDiverPackageOrder } from "@/db/orders";
+import type { PackageGiftInput } from "@/db/package-gifts";
 import { getShopBySlug } from "@/db/shops";
 import { parseForm } from "@/features/form-parse";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
@@ -22,6 +25,10 @@ export type PackagePurchaseState = {
   name?: string;
   email?: string;
   packageId?: string;
+  gift?: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  sendOn?: string;
 };
 
 /** What the diver typed, handed back as-is (bounded) so a refusal does not lose it. */
@@ -29,13 +36,34 @@ const typedBack = z
   .unknown()
   .optional()
   .transform((value) => (typeof value === "string" ? value.slice(0, 200) : undefined));
-const echoSchema = z.object({ name: typedBack, email: typedBack, packageId: typedBack });
+const echoSchema = z.object({
+  name: typedBack,
+  email: typedBack,
+  packageId: typedBack,
+  gift: typedBack,
+  recipientName: typedBack,
+  recipientEmail: typedBack,
+  sendOn: typedBack,
+});
 
 const purchaseSchema = z.object({
   packageId: z.uuid(),
   name: z.string().trim().min(1).max(120),
   email: z.email().max(200),
 });
+
+/**
+ * "This is a gift" (issue #4629): who the dives go to, and the shop-local date
+ * the gift email goes out. Read only when the box is ticked.
+ */
+const giftSchema = z.object({
+  recipientName: z.string().trim().min(1).max(120),
+  recipientEmail: z.email().max(200),
+  sendOn: z.iso.date(),
+});
+
+/** How far ahead a gift email can be set: a birthday next year, not a decade out. */
+const GIFT_DAYS_AHEAD_MAX = 366;
 
 /**
  * A diver buys one dive package from the shop's public pages.
@@ -49,6 +77,10 @@ const purchaseSchema = z.object({
  * posts can change what is billed. A raised invoice sends the diver straight to Stripe's hosted page;
  * Stripe's `invoice.paid` webhook then grants the dives through the same
  * `grantPackageEntitlementsForPaidOrder` a staff-raised invoice uses.
+ *
+ * **A gift** (issue #4629) names a recipient and a send date; the buyer still
+ * pays and gets the receipt, and the dives land on the recipient's email when
+ * the invoice is paid.
  */
 export async function buyPackageAction(
   shopSlug: string,
@@ -77,6 +109,25 @@ async function purchase(shopSlug: string, formData: FormData): Promise<{ error: 
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return { error: t("packages.error.notOnSale") };
+
+  let gift: PackageGiftInput | undefined;
+  if (formData.get("gift") === "yes") {
+    const giftParsed = parseForm(giftSchema, formData);
+    // The date is the shop's: "today" is today where the dives are taken.
+    const today = calendarDateInTimezone(nowDate(), shop.timezone);
+    if (
+      !giftParsed.ok ||
+      giftParsed.data.sendOn < today ||
+      giftParsed.data.sendOn > shiftCalendarDate(today, GIFT_DAYS_AHEAD_MAX)
+    ) {
+      return { error: t("packages.error.gift") };
+    }
+    gift = {
+      fullName: giftParsed.data.recipientName,
+      email: giftParsed.data.recipientEmail.trim().toLowerCase(),
+      sendOn: giftParsed.data.sendOn,
+    };
+  }
   // Per shop and email: a global bucket would let tapping Buy at one shop
   // spend a diver's tries at every other.
   if (
@@ -100,6 +151,7 @@ async function purchase(shopSlug: string, formData: FormData): Promise<{ error: 
     fullName: parsed.data.name,
     email,
     lineDescription: t("packages.invoiceLine", { packageName: pkg.name, count: pkg.diveCount }),
+    ...(gift ? { gift } : {}),
   });
   if (result.ok) {
     const url = result.order.hostedInvoiceUrl;

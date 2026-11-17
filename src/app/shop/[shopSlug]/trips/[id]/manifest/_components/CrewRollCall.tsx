@@ -21,6 +21,8 @@ import {
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
+import { EmergencyTextLink } from "./EmergencyTextLink";
+import type { EmergencyTextFacts } from "./emergency-text";
 import { MissingDiverControls, type MissingDiverRowActions } from "./missing-diver-controls";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
@@ -60,10 +62,13 @@ import {
 function CrewFacts({
   member,
   labelled,
+  textDraft,
   t,
 }: {
   member: TripManifest["crew"][number];
   labelled: boolean;
+  /** "Draft a text" under the contact (issue #4256), on the screen's sheet only. */
+  textDraft?: EmergencyTextFacts;
   t: StaffTranslator;
 }) {
   const { emergencyContactName: name, emergencyContactPhone: phone } = member;
@@ -78,6 +83,16 @@ function CrewFacts({
                 in an emergency is the last string on this page that should be
                 reassembled by eye. Same rule, same reason, as a diver's. */}
             <span className="whitespace-nowrap">{phone}</span>
+            {textDraft ? (
+              <span className="block">
+                <EmergencyTextLink
+                  facts={textDraft}
+                  personName={member.fullName}
+                  phone={phone}
+                  t={t}
+                />
+              </span>
+            ) : null}
           </>
         ) : (
           // Said in words rather than left blank. Nobody is asked for a crew
@@ -113,6 +128,7 @@ export function CrewRollCall({
   rollCallClosed = false,
   buddyTeamLabel,
   paper = false,
+  emergencyText,
   t,
 }: {
   crew: TripManifest["crew"];
@@ -150,6 +166,8 @@ export function CrewRollCall({
    * its name line and its printed facts, and neither crew link renders.
    */
   paper?: boolean;
+  /** "Draft a text" under each crew contact on the sheet (issue #4256). Absent on paper. */
+  emergencyText?: EmergencyTextFacts;
   t: StaffTranslator;
 }) {
   const visibleCrew = selectedPersonId
@@ -395,7 +413,12 @@ export function CrewRollCall({
                           step stands at the sheet's foot, outside it (B08). */}
                         <div>
                           <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                            <CrewFacts member={member} labelled t={t} />
+                            <CrewFacts
+                              member={member}
+                              labelled
+                              textDraft={paper ? undefined : emergencyText}
+                              t={t}
+                            />
                           </div>
                           {/* Both directions out of a stated "not back aboard",
                             at the same cost and neither on the row — the same

@@ -130,6 +130,8 @@ The mobile marketing header keeps the brand, demo or staff return, and Menu on o
 Secondary destinations, including Sign in, are disclosed with keyboard focus and Escape return.
 Setup remains human-assisted. Contact and shop details come first on `/get-set-up`; Current tool
 is optional and an unanswered tool is recorded without inventing a paper or other-tool answer.
+“What do you run?” offers boat dives, shore dives and pool sessions as optional boxes, so a shop
+without a boat reads as welcome (#4319).
 
 Switching guides carry in-page contents. Detailed spreadsheet columns and the full import field
 reference expand in place, with direct fragment links that open the reference. Included and
@@ -529,9 +531,11 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   processing row states Stripe's fee once; the fee-scope FAQ supplies the necessary detail.
 - **The setup door says what happens next.** The close names the person who reads the request,
   using `marketing.common.closingSupport`; each page keeps the shared `FunnelCtas` behavior.
-  `/get-set-up` asks the visitor to tell us about the shop so we can set it up for the way the crew
-  works, and its button says “Request setup.” Do not invent a reply-time or same-week readiness
-  promise, or make a new commercial promise to explain the form.
+  `/get-set-up` opens with what happens after Send, and its button says “Request setup.” Someone
+  from DiveDay replies within one working day (Aaron, 2026-11-16, #4319), the first reply asks
+  about trips, dive sites and schedule, the shop can take its first booking the same week, and
+  asking needs no card. The sent page repeats the reply time. Do not add another turnaround or
+  commercial promise to explain the form.
 - **One primary CTA per screen.** The demo leads everywhere through the shared `FunnelCtas`
   pair (the 2026-08-22 two-doors decision above — this bullet said "the trial on `/pricing`"
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply

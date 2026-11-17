@@ -433,6 +433,15 @@ describe("operator_alert: one kind, five events, the keys the five kinds had", (
       },
       { event: "demo_started", shopId: id, shopSlug: "demo-abc", role: "owner", source: "pricing" },
       {
+        event: "preview_active",
+        shopId: id,
+        previewId: id,
+        prospectName: "Reef Line Divers",
+        shopSlug: "demo-abc",
+        fetchCount: 3,
+        openCount: 1,
+      },
+      {
         event: "usage_ceiling",
         ceilingId: "vercel-bandwidth",
         provider: "vercel",
@@ -473,6 +482,7 @@ describe("operator_alert: one kind, five events, the keys the five kinds had", (
     expect(keys).toEqual([
       `new-account-alert/${id}`,
       "demo-started-alert/demo-abc",
+      `preview-active-alert/${id}`,
       "usage-ceiling/vercel-bandwidth/2026-08/warn",
       `setup-request/${id}`,
       "founder-digest/2026-10-12",

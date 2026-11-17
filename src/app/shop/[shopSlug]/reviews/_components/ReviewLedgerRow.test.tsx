@@ -32,10 +32,10 @@ const copy: ReviewRowCopy = {
   hide: "Hide",
   hideConfirm: "Hide this review",
   hideReasonLabel: "Why are you taking it down?",
-  hideThanks: "Hide thanks",
-  showThanks: "Show thanks",
-  thanksHidden: "Thanks hidden.",
-  thanksShown: "Thanks shown.",
+  holdThanks: "Keep thanks",
+  passThanks: "Pass thanks",
+  thanksHeld: "Thanks kept.",
+  thanksPassed: "Thanks passed.",
   hideReasonPlaceholder: "Choose a reason…",
   hideNoteLabel: "What happened",
   markStandout: "Mark as standout",
@@ -73,7 +73,7 @@ const BASE: StaffReview = {
   replyBody: null,
   crewThanks: null,
   crewThanksFor: null,
-  crewThanksHidden: false,
+  crewThanksRuling: null,
 };
 
 function row(review: Partial<StaffReview>, group: "waiting" | "published" | "hidden" = "waiting") {

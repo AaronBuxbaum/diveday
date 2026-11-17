@@ -60,6 +60,11 @@
  * review may need later (ADR 20260824-pre-departure-safety-check; dive-domain
  * review, 2026-10-13).
  *
+ * **`roll_call_deck_counts` is deliberately unbounded**, for the same reason
+ * as the checklist above: it is what the crew counted on deck at each
+ * checkpoint, beside the per-person roll call it was compared with, and an
+ * incident review reads the two together (issue #4248, 2026-11-16).
+ *
  * **`trip_change_events` and `review_moderation_events` are deliberately
  * unbounded.** The shop activity log reads these as the record of changes and
  * moderation; a note on the diver's own review is redacted on erasure, a mention is not, and staff
@@ -118,6 +123,7 @@ export type RetainedTable =
   | "today_read_marks"
   | "form_drafts"
   | "demo_entries"
+  | "demo_previews"
   | "inbound_messages"
   | "staff_replies"
   | "weekly_digest_sends"
@@ -173,6 +179,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "booking_arrival_events",
   "boarding_observations",
   "pre_departure_check_events",
+  "roll_call_deck_counts",
   "trip_change_events",
   "review_moderation_events",
 ];
@@ -338,6 +345,11 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * week with the same week last year; nothing older is read.
    */
   demo_entries: 400,
+  /**
+   * The same window as `demo_entries`, and for its reason: the record of which
+   * prospect opened a preview is read against the same week a year on.
+   */
+  demo_previews: 400,
   /**
    * 400 days, the same window as `notification_deliveries` and for the same
    * reason: a diver's reply and the shop's answer are the other half of the

@@ -215,6 +215,7 @@
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
     },
     "viewNotBack": "Sin volver en 12 meses",
+    "viewLapsedRegulars": "Habituales que no volvieron",
     "lastDivedGroup": "Inmersión más reciente primero",
     "lastDived": "última inmersión {date}",
     "neverDived": "aún sin inmersiones",

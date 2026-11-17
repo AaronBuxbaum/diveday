@@ -167,6 +167,11 @@ test.describe("before the player has run", () => {
       }),
     ).toHaveCount(0);
     await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toHaveCount(0);
+    // The owner who still carries paper learns it on the roll-call step, whose
+    // link is the page that lists the packet (issue #4322).
+    await expect(
+      stepsBand.getByText(diverTranslator("en-US")("marketing.home.steps.aboard.note3")),
+    ).toBeVisible();
 
     // Each step ends in its feature page, in the booking's order, and none of
     // them is a door into the demo: the page it links to opens the demo on that

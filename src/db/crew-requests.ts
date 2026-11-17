@@ -2,7 +2,7 @@ import { and, asc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { canManageStaffAccounts, canReadCrewAwayNote, STAFF_ROLES } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { courseCrewGap } from "@/lib/course-ratios";
+import { courseCrewGap, courseSession } from "@/lib/course-ratios";
 import {
   type AvailabilityBlock,
   type AwayNoteReader,
@@ -469,7 +469,7 @@ export async function tripRatioGapNeedsInstructor(
 ): Promise<boolean> {
   const [row] = await db
     // The students, its divers (G5 of #2226): a priced rider is a passenger.
-    .select({ course: courses, booked: bookedDiversCount() })
+    .select({ course: courses, diveMode: trips.diveMode, booked: bookedDiversCount() })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatNotCancelled))
@@ -482,7 +482,7 @@ export async function tripRatioGapNeedsInstructor(
     assistantCount: 0,
   };
   const gap = courseCrewGap({
-    course: row.course,
+    course: courseSession(row.course, row.diveMode),
     instructorCount: counts.instructorCount,
     assistantCount: counts.assistantCount,
     booked: row.booked,

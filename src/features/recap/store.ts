@@ -179,6 +179,9 @@ export type RecapPageData = {
      * Off, `photos` below is empty and the page draws no photo door.
      */
     diverPhotosEnabled: boolean;
+    /** The Features switches the after-state's one "what's next" row reads (issue #4328). */
+    coursesEnabled: boolean;
+    divePackagesEnabled: boolean;
     /**
      * The shop's measurement settings, so the recap's conditions tiles read in
      * the units the shop actually works in (src/lib/depth-units.ts,
@@ -502,6 +505,8 @@ async function readRecapRow(db: AppDb, bookingId: string) {
       buddyLinksEnabled: shops.buddyLinksEnabled,
       sightingsEnabled: shops.sightingsEnabled,
       diverPhotosEnabled: shops.diverPhotosEnabled,
+      coursesEnabled: shops.coursesEnabled,
+      divePackagesEnabled: shops.divePackagesEnabled,
       tipsEnabled: shops.tipsEnabled,
       currency: shops.currency,
       depthUnit: shops.depthUnit,
@@ -1061,6 +1066,8 @@ async function loadRecapPageData(
       reviewsEnabled: row.reviewsEnabled,
       buddyLinksEnabled: row.buddyLinksEnabled,
       diverPhotosEnabled: row.diverPhotosEnabled,
+      coursesEnabled: row.coursesEnabled,
+      divePackagesEnabled: row.divePackagesEnabled,
       depthUnit: row.depthUnit,
       temperatureUnit: row.temperatureUnit,
       brandColor: row.brandColor,

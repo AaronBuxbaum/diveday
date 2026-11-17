@@ -105,6 +105,14 @@ export function publicCoursePath(shopSlug: string, courseSlug: string): string {
 }
 
 /**
+ * The medical questions a course's waiver will ask, read-only, before a diver
+ * books (issue #4329).
+ */
+export function publicCourseMedicalQuestionsPath(shopSlug: string, courseSlug: string): string {
+  return `${publicCoursePath(shopSlug, courseSlug)}/medical-questions`;
+}
+
+/**
  * One dive site's public page — the shop's own briefing for a place, at a URL
  * a diver can share and a search engine can index (N-48).
  *

@@ -20,6 +20,7 @@ import {
   listPackagesOnSale,
   listSpendableEntitlements,
   releaseEntitlementsForBooking,
+  singleDivePriceOnSale,
   spendableDivesForTrip,
 } from "./dive-packages";
 import { setBookingPayment } from "./payments";
@@ -27,6 +28,7 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   bookings,
+  courses,
   divePackageEntitlements,
   orders,
   people,
@@ -132,6 +134,45 @@ describe("a shop's package price list", () => {
       "Open card",
       "Season card",
     ]);
+  });
+
+  it("compares a package with the per-tank price of the public fun dives on sale (#4388)", async () => {
+    const { db, shop } = fileCtx;
+    const rows = await db
+      .select({ id: tripsTable.id })
+      .from(tripsTable)
+      .where(eq(tripsTable.shopId, shop.id));
+    await db.update(tripsTable).set({ priceCents: null }).where(eq(tripsTable.shopId, shop.id));
+    expect(await singleDivePriceOnSale(db, shop.id, new Date(0))).toBeNull();
+
+    const [a, b, priv, course] = rows;
+    if (!a || !b || !priv || !course) throw new Error("seed needs four departures");
+    const fun = { status: "scheduled" as const, isPrivate: false, courseId: null, deletedAt: null };
+    await db
+      .update(tripsTable)
+      .set({ ...fun, priceCents: 9500, plannedDives: 2 })
+      .where(eq(tripsTable.id, a.id));
+    await db
+      .update(tripsTable)
+      .set({ ...fun, priceCents: 9500, plannedDives: 2 })
+      .where(eq(tripsTable.id, b.id));
+    // A private charter at a lower price is not what a stranger pays.
+    await db
+      .update(tripsTable)
+      .set({ ...fun, isPrivate: true, priceCents: 2000, plannedDives: 1 })
+      .where(eq(tripsTable.id, priv.id));
+    // Nor is a course, whose price carries instruction.
+    const [someCourse] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.shopId, shop.id))
+      .limit(1);
+    if (!someCourse) throw new Error("seed needs a course");
+    await db
+      .update(tripsTable)
+      .set({ ...fun, courseId: someCourse.id, priceCents: 2000, plannedDives: 1 })
+      .where(eq(tripsTable.id, course.id));
+    expect(await singleDivePriceOnSale(db, shop.id, new Date(0))).toBe(4750);
   });
 
   it("sells nothing while dive packages are switched off, and keeps every dive bought", async () => {

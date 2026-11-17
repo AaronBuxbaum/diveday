@@ -447,6 +447,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/orders?add=1");
         await page.getByRole("heading", { level: 2, name: "New order" }).waitFor();
         await capture(page, "orders-new", scheme);
+        // Issue #4601: the customer is found by typing, a few matches at a
+        // time, with a line saying more match than are shown.
+        await page.getByLabel(staffCopy("orders.new.customerLabel"), { exact: true }).fill("a");
+        await expect(page.getByText(staffCopy("orders.new.moreCustomerMatches"))).toBeVisible();
+        await capture(page, "orders-new-customer-matches", scheme);
+        await page.getByLabel(staffCopy("orders.new.customerLabel"), { exact: true }).fill("");
         await page.getByRole("button", { name: "Add another item", exact: true }).click();
         await page
           .locator('input[name="description-0"]')

@@ -12,6 +12,7 @@ import {
   uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
 } from "@/i18n/today-labels";
+import { courseSession } from "@/lib/course-ratios";
 import type { InWaterCrewCount } from "@/lib/crew-roles";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import type { TodayAction } from "./today";
@@ -53,7 +54,7 @@ export function pushCrewGapRows(
   const counts = courseCrewCounts.get(trip.id) ?? NO_SUPERVISION;
   const decide = (claim: InWaterCrewCount) =>
     crewGapFor({
-      course: trip.course,
+      course: courseSession(trip.course, trip.diveMode),
       counts: claim,
       booked: trip.booked,
       bookedDivers: trip.bookedDivers,
@@ -102,8 +103,8 @@ export function pushCrewGapRows(
       aboutDeparture: true,
       detail:
         crewGap.code === "over_ratio"
-          ? // An intro session's cap is PADI's Discover Scuba open-water
-            // figure (2 per instructor, HD-6) and an assistant does not raise
+          ? // An intro session's cap is PADI's Discover Scuba figure (2 per
+            // instructor in open water, 4 in a pool, HD-6) and an assistant does not raise
             // it, so the entry-level wording — which cites the Open Water
             // 8-plus-2 and tells staff to add an assistant — would both
             // misquote a standard and prescribe a fix that changes nothing.
@@ -111,7 +112,7 @@ export function pushCrewGapRows(
             explainedIf(
               opened,
               crewGap.ratio === "intro"
-                ? overRatioIntroDetailText(t, crewGap.booked, crewGap.capacity)
+                ? overRatioIntroDetailText(t, crewGap)
                 : overRatioDetailText(t, crewGap.booked, crewGap.capacity),
             )
           : // "No instructor assigned" is false beside a lapsed instructor's

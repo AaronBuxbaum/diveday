@@ -5,11 +5,23 @@ import { PurchaseForm } from "./PurchaseForm";
 import type { PurchaseWords } from "./purchase-form-types";
 
 vi.mock("../purchase-actions", () => ({ recordPurchaseAction: vi.fn() }));
+vi.mock("../customer-search-actions", () => ({
+  searchOrderCustomersAction: vi.fn(async () => ({
+    customers: [{ id: "diver", fullName: "Diver", email: null }],
+    more: false,
+  })),
+}));
 afterEach(cleanup);
 const words: PurchaseWords = {
   title: "Purchase",
-  customer: "Customer",
-  choose: "Walk-in",
+  customer: {
+    label: "Customer",
+    placeholder: "Walk-in, or search",
+    choose: "Choose a diver",
+    change: "Change",
+    noMatches: "No one",
+    more: "More match",
+  },
   method: "Method",
   reference: "Reference",
   note: "Note",
@@ -46,13 +58,13 @@ function setup(canCreateDue = true) {
       currency="usd"
       locale="en-US"
       step="0.01"
-      customers={[{ id: "diver", fullName: "Diver", email: null }]}
+      customer={null}
       canCreateDue={canCreateDue}
       words={words}
     />,
   );
 }
-it("distinguishes missing amounts from zero and requires a named diver only for due", () => {
+it("distinguishes missing amounts from zero and requires a named diver only for due", async () => {
   setup();
   expect(screen.getByText("Enter valid amounts")).toBeVisible();
   fireEvent.change(screen.getByLabelText("Price"), { target: { value: "0" } });
@@ -61,7 +73,8 @@ it("distinguishes missing amounts from zero and requires a named diver only for 
   fireEvent.click(screen.getByRole("radio", { name: "Amount due" }));
   expect(screen.getByRole("button", { name: "Create amount due" })).toBeDisabled();
   fireEvent.change(screen.getByLabelText("Price"), { target: { value: "12" } });
-  fireEvent.change(screen.getByLabelText("Customer"), { target: { value: "diver" } });
+  fireEvent.change(screen.getByLabelText("Customer"), { target: { value: "Div" } });
+  fireEvent.click(await screen.findByRole("button", { name: "Diver" }));
   expect(screen.getByRole("button", { name: "Create amount due" })).toBeEnabled();
 });
 it("preserves cart and receipt drafts across modes and moves focus when adding/removing", async () => {
@@ -83,7 +96,8 @@ it("preserves cart and receipt drafts across modes and moves focus when adding/r
 it("keeps paid walk-ins available without offering billing permission", () => {
   setup(false);
   expect(screen.queryByRole("radio", { name: "Amount due" })).not.toBeInTheDocument();
-  expect(screen.getByRole("option", { name: "Walk-in" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Customer")).toHaveAttribute("placeholder", "Walk-in, or search");
+  expect(document.querySelector('input[name="personId"]')).toHaveValue("walk-in");
 });
 
 it("labels an unpaid total as due and retains the received label when switching back", () => {

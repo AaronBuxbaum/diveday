@@ -1204,6 +1204,31 @@ export function demoStartedAlertEmail(input: DemoStartedAlertEmailInput): Notifi
   };
 }
 
+type PreviewActiveAlertEmailInput = {
+  prospectName: string;
+  shopSlug: string;
+  fetchCount: number;
+  openCount: number;
+};
+
+/**
+ * Internal and English, like `demoStartedAlertEmail` above: somebody is using
+ * the preview built for their shop (ADR 20261116-demo-previews). The two
+ * counts sit beside the news so the founder can tell a shop that came straight
+ * in from one whose mail scanner fetched the link a dozen times first.
+ */
+export function previewActiveAlertEmail(input: PreviewActiveAlertEmailInput): NotificationEmail {
+  const name = escapeHtml(input.prospectName);
+  const slug = escapeHtml(input.shopSlug);
+  const counts = `Link requested ${input.fetchCount} time(s), opened in a browser ${input.openCount} time(s).`;
+
+  return {
+    subject: `Preview in use: ${input.prospectName}`,
+    text: `Somebody is using the preview built for ${input.prospectName}. Their shop is /shop/${input.shopSlug}.\n${counts}\n`,
+    html: `<p>Somebody is using the preview built for <strong>${name}</strong>. Their shop is <code>/shop/${slug}</code>.</p><p>${counts}</p>`,
+  };
+}
+
 type UsageCeilingAlertEmailInput = {
   ceilingId: string;
   provider: string;
@@ -1275,6 +1300,8 @@ type SetupRequestAlertEmailInput = {
   shopName: string;
   region: string;
   runsBoat: boolean;
+  runsShore?: boolean;
+  runsPool?: boolean;
   currentSystem?: SetupCurrentSystem;
   /** A switching guide's slug, when the requester named their system. */
   currentSystemGuide?: string;
@@ -1296,6 +1323,18 @@ const currentSystemWords: Record<SetupCurrentSystem, string> = {
   other: "something else",
 };
 
+/** "boat dives, pool sessions": the boxes ticked, or "Not provided" for none. */
+function runsWords(
+  input: Pick<SetupRequestAlertEmailInput, "runsBoat" | "runsShore" | "runsPool">,
+) {
+  const ticked = [
+    input.runsBoat ? "boat dives" : null,
+    input.runsShore ? "shore dives" : null,
+    input.runsPool ? "pool sessions" : null,
+  ].filter(Boolean);
+  return ticked.length > 0 ? ticked.join(", ") : "Not provided";
+}
+
 /** "a booking system, FareHarbor": the answer, then the system when one was named. */
 function usesToday(system: SetupCurrentSystem, guide: string | undefined): string {
   const named = guide ? getMigrationGuide(guide)?.competitor : undefined;
@@ -1305,14 +1344,14 @@ function usesToday(system: SetupCurrentSystem, guide: string | undefined): strin
 /**
  * A shop asked to be set up (ADR 20261007-setup-request-form). To the
  * onboarding inbox, internal and English like the founder alerts above, laid
- * out as the facts a first reply needs: who, where, boat or not, what they use
+ * out as the facts a first reply needs: who, where, what they run, what they use
  * now, and how to reach them. Every value the requester typed is escaped.
  */
 export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): NotificationEmail {
   const lines: Array<[string, string]> = [
     ["Shop", input.shopName],
     ["Where", input.region],
-    ["Runs a boat", input.runsBoat ? "yes" : "no"],
+    ["Runs", runsWords(input)],
     [
       "Uses today",
       input.currentSystem

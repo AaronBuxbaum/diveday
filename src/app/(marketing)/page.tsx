@@ -173,7 +173,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       </section>
 
       {/* The booking's steps, in the order a diver meets the shop:
-          alternating rows, each a marker, a title, two of the builder's notes
+          alternating rows, each a marker, a title, two or three of the builder's notes
           and the feature page's name beside a large drawing (`STEPS`). */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">

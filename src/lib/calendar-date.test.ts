@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calendarDateInTimezone,
+  calendarDateToUtcMidnight,
   calendarDateWeekday,
   calendarDaysBetween,
   formatCalendarDate,
@@ -23,6 +24,11 @@ describe("isValidCalendarDate", () => {
     expect(isValidCalendarDate("2026-07-18")).toBe(true);
     expect(isValidCalendarDate("2024-02-29")).toBe(true); // 2024 is a leap year
     expect(isValidCalendarDate("2026-01-31")).toBe(true);
+  });
+
+  it("reads years below 100 as themselves, not as 19xx", () => {
+    expect(isValidCalendarDate("0000-02-29")).toBe(true); // year 0 is a leap year, 1900 is not
+    expect(calendarDateToUtcMidnight("0050-03-01").getUTCFullYear()).toBe(50);
   });
 
   it("rejects a date that normalizes instead of a real one (CR-009)", () => {

@@ -13,6 +13,7 @@ import { listCatchUpSince } from "@/db/trip-read-marks";
 import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
 import { openSnagsForTrip } from "@/features/boat-snags";
 import { departureVessels } from "@/features/boats";
+import { latestDeckCounts } from "@/features/deck-counts";
 import { diveIntentTallyForTrip } from "@/features/dive-intent";
 import { recordManifestRead } from "@/features/e2e-test-routes";
 import { readOfflineManifestRoster } from "@/features/offline-manifest-snapshots";
@@ -124,6 +125,7 @@ export async function readManifestPage(
     siteHistory,
     meetingWindows,
     boatSafety,
+    deckCounts,
   ] = await Promise.all([
     roster,
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -191,6 +193,8 @@ export async function readManifestPage(
     history,
     windows,
     safety,
+    // What the captain counted on deck at each checkpoint (issue #4248).
+    latestDeckCounts(db, shopId, tripId),
   ]);
   const completeManifests = offlineRoster?.manifests ?? null;
   const dockTrip = completeManifests?.[0]?.trip;
@@ -205,6 +209,7 @@ export async function readManifestPage(
     diverNotes,
     // The boat check, and what earlier crews on this boat said is wrong with it.
     boatCheck: { checklistItems, checklistChecks, snags, offlineRoster },
+    deckCounts,
     plannedDives,
     executedDives,
     liveDiveSites,
