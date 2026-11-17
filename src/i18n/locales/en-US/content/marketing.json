@@ -29,7 +29,8 @@
         "title": "Anyone who can’t board yet is named, with the reason",
         "note2": "There is no “mark everyone ready” button. We left it out on purpose.",
         "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you.",
-        "readyLabel": "Today in the demo shop after Priya signs: 8 of 9 divers ready, then one row under Needs you."
+        "readyLabel": "Today in the demo shop after Priya signs: 8 of 9 divers ready, then one row under Needs you.",
+        "cardLabel": "Priya Sharma’s record in the demo shop: her Advanced Open Water card, with a button to confirm it."
       },
       "aboard": {
         "when": "At the dock, and after every dive",
@@ -45,7 +46,8 @@
         "title": "Give divers a little of the day to take home",
         "note1": "The dive record at the top is the shop’s, written once: boat, crew, site, conditions.",
         "note2": "The crew’s note is a quote. It is whatever the crew typed, with no template behind it.",
-        "mockupLabel": "A diver’s recap page with the day’s dive record, a note from the crew, and one review ask."
+        "mockupLabel": "A diver’s recap page with the day’s dive record, a note from the crew, and one review ask.",
+        "computerLabel": "A diver’s Computer dives page: one dive read from a dive computer’s file, with its depth, time, gas, and depth profile."
       }
     },
     "walk": {
@@ -58,12 +60,14 @@
       "hint": "Tap the screen, swipe, or use the arrow keys.",
       "captions": {
         "book": "Priya Sharma books the Two-Tank Reef from the shop’s own page.",
-        "unsigned": "The next morning her waiver is still open, and the list names it with a button to nudge her.",
+        "unsigned": "Next morning her waiver is still open, so the list offers a nudge.",
         "sign": "She signs the release and answers the medical form on her phone.",
         "ready": "Her row leaves the list and the ready count goes up by one.",
+        "card": "Before the boat, the crew sights her card and confirms it in one tap.",
         "desk": "At the counter, one tap checks her in.",
         "boat": "After dive 1 the crew calls her by name. All nine are back aboard.",
-        "recap": "That evening she gets the day’s dive record and a note from the crew."
+        "computer": "Back at the shop, her dive computer’s file goes into her record.",
+        "recap": "That evening she gets the day’s record and leaves five stars."
       },
       "doorsTitle": "Then try the part that is yours",
       "doorDesk": "I run the desk",

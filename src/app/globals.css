@@ -1848,18 +1848,22 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 /*
- * The homepage walkthrough's tap: a control the beat is about presses in and
- * lets a ring go, just before its screen swaps to the finished one
- * (`HomeWalkthrough`, `data-walk-phase="tap"`). The ring is the control's own
- * box-shadow, so it follows whatever radius the control draws.
+ * The homepage walkthrough's tap (`HomeWalkthrough`, `data-walk-phase="tap"`):
+ * a fingertip drifts in from below and to the side of the control the beat is
+ * about, lands on it, presses, and lets a ring go, so a reader pictures their
+ * own thumb there. The player sets `--walk-tap-ms` to the length of the tap's
+ * phase, so the press is the last beat of it and the screen swaps right after.
+ * The ring is the control's own box-shadow, so it follows whatever radius the
+ * control draws; the fingertip is a pseudo-element, so no drawing carries it.
  */
 @keyframes walk-tap {
-  0% {
+  0%,
+  72% {
     transform: scale(1);
     box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 40%, transparent);
   }
-  35% {
-    transform: scale(0.9);
+  84% {
+    transform: scale(0.92);
   }
   100% {
     transform: scale(1);
@@ -1867,8 +1871,57 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 }
 
+@keyframes walk-finger {
+  0% {
+    opacity: 0;
+    transform: translate(2rem, 2.75rem) scale(1.15);
+  }
+  30% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.8);
+  }
+  100% {
+    opacity: 0.9;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
 [data-walk-phase="tap"] [data-walk-before] [data-tap-target] {
-  animation: walk-tap 1.1s var(--ease-out-soft) infinite;
+  position: relative;
+  animation: walk-tap var(--walk-tap-ms, 2s) var(--ease-out-soft) both;
+}
+
+[data-walk-phase="tap"] [data-walk-before] [data-tap-target]::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -1.125rem 0 0 -1.125rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-primary);
+  background: color-mix(in oklab, var(--color-primary) 22%, transparent);
+  pointer-events: none;
+  animation: walk-finger var(--walk-tap-ms, 2s) var(--ease-out-soft) both;
+}
+
+/* What the tap did arrives with it: the mark the beat is about (a check, a
+   count, a star) settles on its spring, and a new beat's screen rises in. */
+[data-walk] [data-walk-frame-current] {
+  animation: rise-in var(--motion-base) var(--ease-out-soft) both;
+}
+
+[data-walk-phase="after"] [data-walk-after] [data-walk-pop] {
+  animation: settle-in var(--motion-base) var(--ease-spring) both;
 }
 
 @keyframes marketing-device-arrive {
