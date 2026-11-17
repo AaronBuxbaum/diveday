@@ -36,6 +36,7 @@ import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { recordOrderCollection } from "./collection-ledger";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
+import { type PackageGiftInput, recordPackageGift } from "./package-gifts";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
 import {
   awaitingStripeReconciliation,
@@ -47,6 +48,7 @@ import {
 } from "./payment-operations";
 import { getBookingPayment, setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
 import { createPerson, findOrCreatePerson } from "./people";
+import { personSearchMatch } from "./person-search";
 import { queryAll } from "./query-helpers";
 import type {
   Order,
@@ -1355,6 +1357,12 @@ export async function createDiverPackageOrder(
     email: string;
     /** The invoice line, composed by the caller from its own bundle. */
     lineDescription: string;
+    /**
+     * A gift (issue #4629): the dives go to this person's email when the order
+     * is paid, and the gift mail on `sendOn`. The buyer above pays and keeps
+     * the receipt.
+     */
+    gift?: PackageGiftInput;
   },
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
 ): Promise<DiverPackageOrderOutcome> {
@@ -1415,7 +1423,18 @@ export async function createDiverPackageOrder(
       ...(buyer.attached ? {} : { customerEmail: input.email }),
     },
   );
-  if (outcome.ok) return outcome;
+  if (outcome.ok) {
+    // After the order exists, so a refused one leaves no recipient behind; and
+    // long before it can be paid, which only happens on Stripe's page.
+    if (input.gift) {
+      await recordPackageGift(db, {
+        shopId: input.shopId,
+        orderId: outcome.order.id,
+        recipient: input.gift,
+      });
+    }
+    return outcome;
+  }
   // Stripe refused, or something after it did: the emailless record this
   // request made was only ever for this order.
   if (!buyer.attached) await discardUnusedBuyer(db, input.shopId, buyer.personId);
@@ -1426,12 +1445,49 @@ export async function createDiverPackageOrder(
 }
 
 /** Every person at the shop, for the new-order customer picker. */
-export async function listOrderableCustomers(db: DbExecutor, shopId: string) {
-  return db
+/** Someone an order or a recorded purchase may name as its customer. */
+export type OrderableCustomer = { id: string; fullName: string; email: string | null };
+
+/** How many matches the customer picker shows at once (issue #4601). */
+export const ORDER_CUSTOMER_MATCHES = 8;
+
+/**
+ * **The customer picker's search** (issue #4601). It used to list every live
+ * person in the shop as one `<select>`: fine at pilot size, a page of
+ * thousands of options for a shop with years of divers. Now it answers a typed
+ * name, email or phone (`personSearchMatch`) with the first few matches, and
+ * says when there are more, so a cap never hides a diver silently. Nothing is
+ * listed until something is typed.
+ */
+export async function searchOrderableCustomers(
+  db: DbExecutor,
+  shopId: string,
+  query: string,
+  limit = ORDER_CUSTOMER_MATCHES,
+): Promise<{ customers: OrderableCustomer[]; more: boolean }> {
+  const match = personSearchMatch(query);
+  if (!match) return { customers: [], more: false };
+  const rows = await db
     .select({ id: people.id, fullName: people.fullName, email: people.email })
     .from(people)
-    .where(and(eq(people.shopId, shopId), livePerson()))
-    .orderBy(asc(people.fullName));
+    .where(and(eq(people.shopId, shopId), livePerson(), match))
+    .orderBy(asc(people.fullName), asc(people.id))
+    .limit(limit + 1);
+  return { customers: rows.slice(0, limit), more: rows.length > limit };
+}
+
+/** The one customer a link named (`?personId=`), when it is this shop's live person. */
+export async function getOrderableCustomer(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<OrderableCustomer | null> {
+  const [row] = await db
+    .select({ id: people.id, fullName: people.fullName, email: people.email })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
+    .limit(1);
+  return row ?? null;
 }
 
 /** Trip/person context for a booking, so an order started from a roster shows what it's linked to. */
@@ -2527,27 +2583,6 @@ export async function applyInvoicePaid(
     return reread ? { status: "deferred" } : applyInvoicePaid(db, input, true);
   }
   return { status: "counter", order: finished };
-}
-
-/**
- * {@link applyInvoicePaid} for a caller that wants the order: the row as it
- * now stands, or null when no order here holds the invoice or the event must
- * wait.
- */
-export async function markOrderPaidByInvoiceId(
-  db: AppDb,
-  stripeInvoiceId: string,
-  amountPaidCents: number,
-  expectedAccountId?: string,
-  taxCents?: number | null,
-): Promise<Order | null> {
-  const outcome = await applyInvoicePaid(db, {
-    stripeInvoiceId,
-    amountPaidCents,
-    expectedAccountId,
-    taxCents,
-  });
-  return outcome.status === "settled" || outcome.status === "counter" ? outcome.order : null;
 }
 
 /**

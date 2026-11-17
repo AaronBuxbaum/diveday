@@ -83,6 +83,7 @@
     "check:capability-refusals": "node scripts/check-capability-refusals.mjs",
     "check:intl-providers": "node scripts/check-intl-providers.mjs",
     "check:locale": "node scripts/check-locale.mjs",
+    "locale:draft": "node scripts/draft-locale.mjs",
     "check:vocabulary": "node scripts/check-vocabulary.mjs",
     "check:copy": "node scripts/check-copy.mjs",
     "check:words": "node scripts/check-words.mjs",

@@ -502,7 +502,9 @@ self.addEventListener("push", (event) => {
       ]);
       clearTimeout(timer);
 
-      if (payload.title) await showManifestNotification(payload.title, payload);
+      // Always shown: a push that carries no title still owes the user a notification
+      // (`userVisibleOnly`), so it falls back to the product name.
+      await showManifestNotification(payload.title || "DiveDay", payload);
       await work;
     })(),
   );

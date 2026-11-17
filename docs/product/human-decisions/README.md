@@ -299,8 +299,9 @@ and the [2026 UHMS/DMSC participant questionnaire](https://uhms.org/images/Recre
   ratios. An **intro/taster session** (`courses.is_intro_course` — Discover Scuba, Try Scuba) takes
   the PADI Instructor Manual's open-water DSD figure: **2 students per instructor, no assistant
   bonus**, and it applies to **every agency**, because zero prior water time is not an agency-specific
-  fact. (The Manual's 4:1 confined-water figure is recorded but unenforced — DiveDay's trip model has
-  no confined-water session type.) An **Open Water training** session takes PADI's published
+  fact. On a pool departure (`trips.dive_mode = 'pool'`) an intro session takes the Manual's 4:1
+  confined-water figure instead, still with no assistant bonus (Aaron Buxbaum, 2026-11-16, issue
+  #4633); the pool session of an Open Water course keeps the entry-level figure below. An **Open Water training** session takes PADI's published
   entry-level figure — 8 students per instructor, +2 per certified assistant, ceiling 12 — and that
   one stays **PADI-scoped**, since it is a cited PADI number. See
   [20260724-course-admission-standards](../../architecture/decisions/20260724-course-admission-standards.md)

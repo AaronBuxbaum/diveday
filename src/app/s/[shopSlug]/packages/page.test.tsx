@@ -29,14 +29,17 @@ vi.mock("../../../../features/shops-cached/store", () => ({
         : null,
   ),
 }));
-vi.mock("@/db/dive-packages", () => ({ listPackagesOnSale: vi.fn(async () => []) }));
+vi.mock("@/db/dive-packages", () => ({
+  listPackagesOnSale: vi.fn(async () => []),
+  singleDivePriceOnSale: vi.fn(async () => null),
+}));
 vi.mock("@/i18n/request", () => ({
   requestTranslator: vi.fn(async () => ({ locale: "en-US", t: diverTranslator("en-US") })),
 }));
 
 vi.mock("./actions", () => ({ buyPackageAction: vi.fn() }));
 
-const { listPackagesOnSale } = await import("@/db/dive-packages");
+const { listPackagesOnSale, singleDivePriceOnSale } = await import("@/db/dive-packages");
 const { default: PublicPackagesPage } = await import("./page");
 
 afterEach(cleanup);
@@ -135,5 +138,39 @@ describe("the public packages page with a package on sale", () => {
     expect(screen.getByText("Pay once, then book the dives as you go.")).toBeInTheDocument();
     expect(screen.getByText("Courses not included")).toBeInTheDocument();
     expect(screen.getByText("Courses included")).toBeInTheDocument();
+  });
+
+  /**
+   * **A package says what it saves** (issue #4388), computed from what the
+   * shop's own departures charge a tank and never typed; with nothing to
+   * compare against, or nothing saved, it says nothing.
+   */
+  it("says what each card saves against the same dives bought singly", async () => {
+    vi.mocked(singleDivePriceOnSale).mockResolvedValueOnce(4750);
+    await renderOnSale([{ ...card, priceCents: 20_000 }]);
+
+    const facts = screen.getByText("5 dives").parentElement;
+    expect([...(facts?.children ?? [])].map((i) => i.textContent)).toEqual([
+      "5 dives",
+      "$40 a dive",
+      "Saves $37.50 against 5 single dives",
+      "No expiry date",
+    ]);
+  });
+
+  it("says nothing about saving when no departure is priced to compare with", async () => {
+    vi.mocked(singleDivePriceOnSale).mockResolvedValueOnce(null);
+    await renderOnSale([{ ...card, priceCents: 20_000 }]);
+
+    expect(screen.getByText("$40 a dive")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Saves");
+  });
+
+  it("says nothing about saving when the card costs more than single dives", async () => {
+    vi.mocked(singleDivePriceOnSale).mockResolvedValueOnce(4750);
+    await renderOnSale([card]);
+
+    expect(screen.getByText("$80 a dive")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Saves");
   });
 });

@@ -124,21 +124,58 @@ export async function crewTookTheBoatOut(
   shopId: string,
   tripId: string,
 ): Promise<boolean> {
-  const [row] = await db
+  return (await tripsTheCrewTookOut(db, shopId, [tripId])).has(tripId);
+}
+
+/** {@link crewTookTheBoatOut} for many departures in one query: the ids the crew took out. */
+async function tripsTheCrewTookOut(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Set<string>> {
+  if (tripIds.length === 0) return new Set();
+  const rows = await db
     .select({
+      id: trips.id,
       afterDive:
         // diveday:roll-call-both-subjects: an after-dive mark on either half means the boat went out.
-        sql<boolean>`exists (select 1 from ${rollCallEvents} where ${rollCallEvents.shopId} = ${shopId} and ${rollCallEvents.tripId} = ${tripId} and ${rollCallEvents.checkpoint} <> 'departure')`.mapWith(
+        sql<boolean>`exists (select 1 from ${rollCallEvents} where ${rollCallEvents.shopId} = ${shopId} and ${rollCallEvents.tripId} = ${trips.id} and ${rollCallEvents.checkpoint} <> 'departure')`.mapWith(
           Boolean,
         ),
       stage: sql<
         string | null
-      >`(select ${tripStageEvents.stage} from ${tripStageEvents} where ${tripStageEvents.shopId} = ${shopId} and ${tripStageEvents.tripId} = ${tripId} order by ${tripStageEvents.recordedAt} desc, ${tripStageEvents.seq} desc limit 1)`,
+      >`(select ${tripStageEvents.stage} from ${tripStageEvents} where ${tripStageEvents.shopId} = ${shopId} and ${tripStageEvents.tripId} = ${trips.id} order by ${tripStageEvents.recordedAt} desc, ${tripStageEvents.seq} desc limit 1)`,
     })
     .from(trips)
-    .where(and(eq(trips.id, tripId), liveTrip()));
-  if (!row) return false;
-  return row.afterDive || (row.stage !== null && row.stage !== "boarding");
+    .where(and(inArray(trips.id, [...tripIds]), liveTrip()));
+  return new Set(
+    rows
+      .filter((row) => row.afterDive || (row.stage !== null && row.stage !== "boarding"))
+      .map((row) => row.id),
+  );
+}
+
+/**
+ * {@link departureMayBeAtSea} for a list of departures: one query for the crew's word on all of
+ * them, then the per-boat roll-call reads only for those whose time has come. A bulk scan over
+ * future dates is almost all "not yet", so it costs one query rather than one or two per date.
+ * Returns the ids that may be at sea.
+ */
+export async function departuresMayBeAtSea(
+  db: DbExecutor,
+  input: { shopId: string; departures: readonly { tripId: string; startsAt: Date }[]; now: Date },
+): Promise<Set<string>> {
+  const { shopId, departures, now } = input;
+  const out = await tripsTheCrewTookOut(
+    db,
+    shopId,
+    departures.map((departure) => departure.tripId),
+  );
+  for (const { tripId, startsAt } of departures) {
+    if (out.has(tripId) || !departureUnderway({ startsAt, rollCallStarted: false }, now)) continue;
+    if (await departureMayBeAtSea(db, { shopId, tripId, startsAt, now })) out.add(tripId);
+  }
+  return out;
 }
 
 /**

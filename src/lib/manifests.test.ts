@@ -12,7 +12,6 @@ import {
   crewIsAccountedFor,
   crewRollCallCounts,
   isNotBackAboard,
-  isRollCallAccountedFor,
   isRollCallCheckpoint,
   type ManifestDiverInput,
   manifestAtCheckpoint,
@@ -281,17 +280,12 @@ describe("buildTripManifest", () => {
   it("splits the two meanings of not_boarded by checkpoint, once, for every reader", () => {
     // Departure: never left the dock. Benign, and accounted for.
     expect(isNotBackAboard("departure", notBoardedAt())).toBe(false);
-    expect(isRollCallAccountedFor("departure", notBoardedAt())).toBe(true);
     // After a dive: did not return to the boat.
     expect(isNotBackAboard("after_dive_1", notBoardedAt())).toBe(true);
-    expect(isRollCallAccountedFor("after_dive_1", notBoardedAt())).toBe(false);
     // ...unless it was carried forward from the dock, where it still means
     // "never left" and the diver is still accounted for.
     expect(isNotBackAboard("after_dive_1", { ...notBoardedAt(), implied: true })).toBe(false);
-    expect(isRollCallAccountedFor("after_dive_1", { ...notBoardedAt(), implied: true })).toBe(true);
     // Boarded is accounted for anywhere; no result at all never is.
-    expect(isRollCallAccountedFor("after_dive_1", boardedAt())).toBe(true);
-    expect(isRollCallAccountedFor("departure", undefined)).toBe(false);
   });
 
   it("builds bounded departure and after-dive checkpoints", () => {

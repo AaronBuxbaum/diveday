@@ -10,9 +10,8 @@ afterEach(cleanup);
 const words: SetupRequestFormWords = {
   shopName: "Shop name",
   region: "Town or region",
-  runsBoat: "Do you run a boat?",
-  yes: "Yes",
-  no: "No",
+  runs: "What do you run?",
+  runsAnswers: { runsBoat: "Boat dives", runsShore: "Shore dives", runsPool: "Pool sessions" },
   currentSystem: "Current tool (optional)",
   notSpecified: "Not specified",
   current: {
@@ -86,5 +85,17 @@ describe("SetupRequestForm, which system", () => {
       "name",
       "currentSystemGuide",
     );
+  });
+});
+
+describe("SetupRequestForm, what the shop runs (issue 4319)", () => {
+  it("asks with three optional boxes, so a shop with no boat is not turned away", () => {
+    render(<SetupRequestForm source="pricing" words={words} systems={systems} />);
+    for (const name of ["Boat dives", "Shore dives", "Pool sessions"]) {
+      const box = screen.getByRole("checkbox", { name });
+      expect(box).not.toBeChecked();
+      expect(box).not.toBeRequired();
+      expect(box).toHaveAttribute("value", "yes");
+    }
   });
 });

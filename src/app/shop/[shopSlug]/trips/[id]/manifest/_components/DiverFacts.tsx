@@ -9,6 +9,8 @@ import { formatShortDate } from "@/lib/format";
 import type { TripManifest } from "@/lib/manifests";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { medicalWarningDays } from "@/lib/waivers";
+import { EmergencyTextLink } from "./EmergencyTextLink";
+import type { EmergencyTextFacts } from "./emergency-text";
 
 /**
  * A blocker's sentence on this diver's row: the crew's (`crewBlockerText`).
@@ -47,6 +49,7 @@ export function DiverFacts({
   columns,
   waiverHref,
   contactClassName = "",
+  textDraft,
   t,
 }: {
   diver: TripManifest["divers"][number];
@@ -77,6 +80,12 @@ export function DiverFacts({
    * beside it. Paper passes nothing.
    */
   contactClassName?: string;
+  /**
+   * The departure's facts for "Draft a text" under the contact (issue #4256),
+   * on screen only. Never on a held seat: the draft would name a person the
+   * desk has not confirmed is the one aboard.
+   */
+  textDraft?: EmergencyTextFacts;
   t: StaffTranslator;
 }) {
   // The pickup belongs to the booking, not to the matched person, so a held
@@ -149,6 +158,16 @@ export function DiverFacts({
                     the document a coastguard reads — it does not move for a
                     problem it does not have. */}
                 <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
+                {textDraft ? (
+                  <span className="block">
+                    <EmergencyTextLink
+                      facts={textDraft}
+                      personName={diver.fullName}
+                      phone={diver.emergencyContactPhone}
+                      t={t}
+                    />
+                  </span>
+                ) : null}
               </>
             ) : (
               `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`

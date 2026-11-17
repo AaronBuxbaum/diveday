@@ -41,3 +41,22 @@ describe("setupRequestAlertEmail names the system", () => {
     expect(setupRequestAlertEmail(request).text).toContain("Uses today: a booking system\n");
   });
 });
+
+describe("setupRequestAlertEmail says what the shop runs (issue 4319)", () => {
+  const request = {
+    shopName: "Reef Line Divers",
+    region: "Key Largo",
+    runsBoat: false,
+    contactName: "Ana Ruiz",
+    contactEmail: "ana@reefline.example",
+    source: "pricing",
+    requestLocale: "en-US",
+  };
+
+  it("lists every box ticked, and says so when none was", () => {
+    expect(setupRequestAlertEmail({ ...request, runsShore: true, runsPool: true }).text).toContain(
+      "Runs: shore dives, pool sessions",
+    );
+    expect(setupRequestAlertEmail(request).text).toContain("Runs: Not provided");
+  });
+});

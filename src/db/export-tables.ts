@@ -73,6 +73,7 @@ import {
   recoveryActivityOffers,
   recoveryActivityParticipants,
   rentalFitProfiles,
+  rollCallDeckCounts,
   rollCallEvents,
   safetyDrillParticipants,
   safetyDrills,
@@ -629,6 +630,11 @@ export const EXPORT_TABLES = {
       asc(preDepartureCheckEvents.seq),
     ],
     scope: { shopColumn: preDepartureCheckEvents.shopId },
+  },
+  rollCallDeckCounts: {
+    table: rollCallDeckCounts,
+    order: [asc(rollCallDeckCounts.recordedAt), asc(rollCallDeckCounts.seq)],
+    scope: { shopColumn: rollCallDeckCounts.shopId },
   },
   boatSnags: {
     table: boatSnags,

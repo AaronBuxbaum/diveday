@@ -87,14 +87,7 @@ describe("the dive-site catalog", () => {
   });
 
   // Two sites on one point stack their map pins and read as one place to the
-  // distance logic (issue #4597). These two pairs still share a point, waiting
-  // on a sourced coordinate each (FWC reef layer for BO0042/BO0043, a Roatan
-  // source for the West End pair); the list only shrinks.
-  const SHARES_A_POINT_PENDING_SOURCE = new Set([
-    "alpha-wreck-pompano|jay-dorman-wreck",
-    "half-moon-bay-wall-roatan|verns-dropoff-roatan",
-  ]);
-
+  // distance logic (issue #4597).
   it("gives no two sites in an area the same point", () => {
     const byPoint = new Map<string, string[]>();
     for (const { slug, area, briefing } of DIVE_SITE_TEMPLATES) {
@@ -103,8 +96,7 @@ describe("the dive-site catalog", () => {
     }
     const shared = [...byPoint.values()]
       .filter((slugs) => slugs.length > 1)
-      .map((slugs) => slugs.sort().join("|"))
-      .filter((pair) => !SHARES_A_POINT_PENDING_SOURCE.has(pair));
+      .map((slugs) => slugs.sort().join("|"));
     expect(shared).toEqual([]);
   });
 

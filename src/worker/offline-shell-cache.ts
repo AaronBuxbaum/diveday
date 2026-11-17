@@ -23,6 +23,21 @@ export interface OfflineShellCacheEnv {
   build: { id: string; assets: readonly string[] } | null;
 }
 
+/** How many build assets are fetched at once. */
+const FETCH_BATCH = 6;
+
+/** The paths this build's cache already holds, from one read of its keys. */
+async function heldAssets(env: OfflineShellCacheEnv): Promise<Set<string>> {
+  if (!(await env.caches.has(env.cacheName))) return new Set();
+  const cache = await env.caches.open(env.cacheName);
+  return new Set(
+    (await cache.keys()).map((request) => {
+      const url = new URL(request.url, "https://offline.invalid");
+      return `${url.pathname}${url.search}`;
+    }),
+  );
+}
+
 /** The build id the root layout writes into every document (`<meta name="diveday-build">`). */
 export function shellBuildId(html: string): string | null {
   const tag = /<meta\b[^>]*\bname="diveday-build"[^>]*>/i.exec(html)?.[0];
@@ -66,19 +81,26 @@ export async function cacheOfflineShell(env: OfflineShellCacheEnv): Promise<void
       );
     }
   }
-  const missing: string[] = [];
-  for (const asset of build?.assets ?? []) {
-    if (!(await env.caches.match(asset, { cacheName: env.cacheName }))) missing.push(asset);
+  const held = await heldAssets(env);
+  const missing = (build?.assets ?? []).filter((asset) => !held.has(asset));
+  // A few at a time: hundreds of chunks at once starve a boat tablet's connection and fail the
+  // whole install on a timeout.
+  const entries: [string, Response][] = [];
+  for (let start = 0; start < missing.length; start += FETCH_BATCH) {
+    entries.push(
+      ...(await Promise.all(
+        missing
+          .slice(start, start + FETCH_BATCH)
+          .map(async (asset): Promise<[string, Response]> => {
+            const assetResponse = await env.fetch(asset, { cache: "reload" });
+            if (!assetResponse.ok) {
+              throw new Error(`Offline manifest asset ${asset} could not be loaded`);
+            }
+            return [asset, assetResponse];
+          }),
+      )),
+    );
   }
-  const entries = await Promise.all(
-    missing.map(async (asset): Promise<[string, Response]> => {
-      const assetResponse = await env.fetch(asset, { cache: "reload" });
-      if (!assetResponse.ok) {
-        throw new Error(`Offline manifest asset ${asset} could not be loaded`);
-      }
-      return [asset, assetResponse];
-    }),
-  );
   const cache = await env.caches.open(env.cacheName);
   await Promise.all(entries.map(([asset, assetResponse]) => cache.put(asset, assetResponse)));
   await cache.put(env.shellPath, response);

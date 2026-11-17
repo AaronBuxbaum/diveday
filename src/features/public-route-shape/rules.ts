@@ -42,6 +42,9 @@ const SHOP_ONLY_CHILDREN = new Set([
 /** Trip child routes that resolve through the departure row. */
 const TRIP_CHILDREN = new Set(["calendar", "arrival-card"]);
 
+/** Course child routes that resolve through the course row (issue #4329). */
+const COURSE_CHILDREN = new Set(["medical-questions"]);
+
 export function publicRouteShape(pathname: string): PublicRouteShape | null {
   let segments: string[];
   try {
@@ -110,6 +113,9 @@ function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
     return tripShape(shopSlug, second);
   }
   if (rest.length === 3 && first === "trips" && isPreviewImage(third)) return null;
+  if (rest.length === 3 && first === "courses" && second && third && COURSE_CHILDREN.has(third)) {
+    return { kind: "course", shopSlug, courseSlug: second };
+  }
   return unrouted;
 }
 

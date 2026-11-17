@@ -8,8 +8,8 @@ name: CodeQL
 # does not hold a branch to its red (docs/agents/verifying.md).
 on:
   schedule:
-    # 05:30 UTC, ahead of the other nightly work (e2e-nightly 06:00).
-    - cron: "30 5 * * *"
+    # Mondays 05:30 UTC (weekly until the first real booking, #2987).
+    - cron: "30 5 * * 1"
   workflow_dispatch:
 
 concurrency:

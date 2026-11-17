@@ -286,15 +286,38 @@ describe("a private charter ask", () => {
 });
 
 describe("the flexible-dates flag", () => {
-  // The form says it in the "when suits" words; no field sends a flag, and a
-  // stray `dateFlexible=false` must not read as true (any string was truthy).
-  it("never turns a posted dateFlexible string into a flexible request", async () => {
-    const email = "flexible-flag@example.com";
+  // The form's "Flexible dates" checkbox posts `on`; only `on` or `true` reads
+  // as flexible, so a stray `dateFlexible=false` stays false.
+  async function storedFlexible(email: string, value: string | null) {
     const form = requestForm(email);
-    form.set("dateFlexible", "false");
+    if (value !== null) form.set("dateFlexible", value);
     expect(await submit(form)).toEqual({ success: true });
     const page = await listOpenDateInterests(db, ctx.shop.id);
-    expect(page.rows.find((row) => row.email === email)?.dateFlexible).toBe(false);
+    return page.rows.find((row) => row.email === email)?.dateFlexible;
+  }
+
+  it.each([
+    ["on", true],
+    ["true", true],
+    ["false", false],
+    ["yes", false],
+    ["", false],
+    [null, false],
+  ] as const)("reads %j as flexible=%s", async (value, expected) => {
+    expect(await storedFlexible(`flexible-${String(value)}@example.com`, value)).toBe(expected);
+  });
+
+  it("tells the shop the dates can move", async () => {
+    await db
+      .update(shops)
+      .set({ contactEmail: "desk@example.com", contactEmailConfirmedAt: nowDate() })
+      .where(eq(shops.id, ctx.shop.id));
+    await storedFlexible("flexible-mail@example.com", "on");
+    const shopNote = vi
+      .mocked(sendNotification)
+      .mock.calls.map(([, message]) => message as { kind: string; dateFlexible?: boolean })
+      .find((message) => message.kind === "interest_received");
+    expect(shopNote?.dateFlexible).toBe(true);
   });
 });
 

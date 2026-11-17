@@ -43,8 +43,10 @@ export async function countDemoEntriesBySource(
 /** Store one set-up request, exactly as the form validated it. */
 export async function recordSetupRequest(
   db: DbExecutor,
-  input: Omit<SetupRequestInput, "currentSystemGuide"> & {
+  input: Omit<SetupRequestInput, "currentSystemGuide" | "runsShore" | "runsPool"> & {
     currentSystemGuide?: string | null;
+    runsShore?: boolean;
+    runsPool?: boolean;
     receiptPending?: boolean;
     source: FunnelSource | "unknown";
     locale: string;
@@ -59,6 +61,8 @@ export async function recordSetupRequest(
       shopName: input.shopName,
       region: input.region,
       runsBoat: input.runsBoat,
+      runsShore: input.runsShore ?? false,
+      runsPool: input.runsPool ?? false,
       // An unanswered optional tool is stored without inventing an answer.
       currentSystem: input.currentSystem ?? "",
       currentSystemGuide: input.currentSystemGuide ?? null,

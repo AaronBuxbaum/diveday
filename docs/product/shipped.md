@@ -7,6 +7,50 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The courses page answers a course-led shop (built 2026-11-16)
+
+Issue #4321. `/product/courses` now lists what a training-heavy shop asked about and DiveDay
+already does: pool, shore and boat sessions and multi-day courses, learning materials and the
+eLearning fee, referral students and their papers, each student's next step, Certify and the cards
+still to process, and instructor ratings on file. Gaps were filed rather than claimed: per-session
+student progress (#4631), an eLearning code stock (#4632), the confined-water ratio on a pool
+session (#4633), and classroom sessions (#4244).
+
+## Lapsed regulars on the divers roster (built 2026-11-16)
+
+Issue #4246. The staff divers roster has a "Lapsed regulars" view: three or more dive days with the
+shop, imported prior visits merged and counted in the shop's zone, and none in the last twelve
+months. Rows say when the diver last dived. Staff decide on outreach; nothing is sent. Thresholds
+are named in `src/lib/prior-visits.ts`; glossary "Lapsed regular".
+
+## The count on deck beside the roll call (built 2026-11-16)
+
+Issue #4248. In the manifest's details, a crew member types the heads they counted on deck at the
+open checkpoint, crew included (`roll_call_deck_counts`, append-only, newest wins). When it differs
+from everyone the roll call marked aboard, the deck screen says "11 counted on deck, 12 marked
+aboard" under its progress, in warning ink; when it matches, the details say so. It never gates a
+departure or a checkpoint. Live manifest only, not the offline copy. Exported as
+`roll_call_deck_counts.csv`. ADR
+[20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md),
+amendment 2026-11-16.
+
+## A drafted emergency text from the manifest (built 2026-11-16)
+
+Issue #4256. Under an emergency contact in the manifest's person sheet, diver or crew, "Draft a
+text" opens the phone's message app with a draft naming the shop, the person, the departure, its
+date and its captain (the rostered captain, or no captain line without one). A person sends it;
+DiveDay sends and records nothing. Screen only, never on a held seat. The amendment is in ADR
+[20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
+decision 3.
+
+## A quiet day names the week after's blocked boats (built 2026-11-16)
+
+Issue #4257. On a quiet day (`spineIsQuiet`), Today lists at most two departures of the week past
+the queue's one-week horizon that already have a blocked diver, soonest first, each linking to its
+guests (`src/features/today/quiet-day-suggestions.ts`). Nothing shows when nothing is blocked, so
+the quiet pair stays the whole message. Course inquiries are not suggested here: an open one is an
+unanswered-messages row, so the day is not quiet while it waits.
+
 ## Expiring group holds and organizer ledger (built 2026-11-10)
 
 Issue #4209, merged in [#4222](https://github.com/AaronBuxbaum/diveday/pull/4222). Merge evidence is not production activation.
@@ -37,8 +81,7 @@ ledger until that link's normal expiry. It cannot pay, claim, sign a waiver, add
 any booking. A link revoked before hold expiry stays dead. No separate seat cap is introduced.
 
 This is core booking/capacity behavior on the existing public booking and readiness surfaces,
-not a new staff destination or optional subsystem (`BOOKING_FLOW_COVERAGE` in
-`src/lib/feature-coverage.ts`).
+not a new staff destination or optional subsystem.
 
 ## Native departure passes (built dark 2026-11-10)
 
@@ -127,7 +170,7 @@ Market audit item 7, N-59. Settings > Billing (`/shop/[slug]/settings/billing`, 
 
 ## A set-up request form, and the founder's numbers (delivered 2026-10-07)
 
-Every public "Get set up" door, which used to be a mail to `onboarding@dive.day`, now opens `/get-set-up?from=<tag>`. The form asks for shop name, town or region, whether the shop runs a boat, what it uses today, name, email and an optional phone. It checks a per-IP and a global rate limit and a honeypot, stores a `setup_requests` row with the funnel tag, mails onboarding@ (an `operator_alert` of event `setup_request`), fires `setup_requested`, and lands on a thank-you page with the demo door. `trial_started` is deleted ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)).
+Every public "Get set up" door, which used to be a mail to `onboarding@dive.day`, now opens `/get-set-up?from=<tag>`. The form asks for shop name, town or region, what it runs (boat dives, shore dives, pool sessions, any or none; #4319), what it uses today, name, email and an optional phone. It checks a per-IP and a global rate limit and a honeypot, stores a `setup_requests` row with the funnel tag, mails onboarding@ (an `operator_alert` of event `setup_request`), fires `setup_requested`, and lands on a thank-you page with the demo door. `trial_started` is deleted ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)).
 
 A nightly cron (`/api/cron/founder-metrics`) records each real shop's activation milestones in `shop_milestones` (first departure, first public booking, first self-signed waiver, first roll call, and the first paid month, which the billing webhook records) and logs the north star, dive days run end to end per week. On Mondays it mails `FOUNDER_DIGEST_EMAIL` last week's north star, demo entries and set-up requests by source, and each shop stalled 7 or more days, reported once ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
 
@@ -2902,8 +2945,9 @@ is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than b
 - **Intro sessions cap at 2 students per instructor with no assistant bonus** (DOM-H2), the PADI
   Instructor Manual's open-water Discover Scuba figure obtained under HD-6, replacing the Open Water
   training ratio (8, +2 per assistant, ceiling 12) that had been applied to DSD for lack of a real
-  number. DiveDay's trip model has no confined-water session type, so the Manual's 4:1 confined figure
-  is recorded and deliberately unenforced. The cap is **agency-agnostic** — zero prior water time does
+  number. An intro session on a pool departure (`trips.dive_mode = 'pool'`) takes the Manual's 4:1
+  confined figure instead, still with no assistant bonus, and the pool session of an Open Water
+  course keeps its 8/+2/12 cap (Aaron, issue #4633, 2026-11-16). The cap is **agency-agnostic** — zero prior water time does
   not depend on whose logo is on the course — while the cited 8/+2/12 entry-level figure stays
   PADI-scoped; `courses.agency` comparisons are normalized, closing the case where a shop typing
   `"PADI"` silently lost the cap entirely (DATA-L2). `restoreBooking` re-checks the ratio, and a crew

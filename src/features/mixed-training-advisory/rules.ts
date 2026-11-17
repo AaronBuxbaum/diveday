@@ -1,9 +1,9 @@
-import { type CourseCrewGapCourse, courseRatioKind } from "../../lib/course-ratios";
+import { courseRatioKind, type RatioCourse } from "../../lib/course-ratios";
 
 /** Evidence for a conditional desk warning; these sessions are not an assigned group. */
 export type TrainingSession = {
   id: string;
-  course: CourseCrewGapCourse;
+  course: RatioCourse;
   windows: readonly { startsAt: Date; endsAt: Date }[];
   instructorIds: readonly string[];
   students: number;

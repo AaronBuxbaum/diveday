@@ -139,6 +139,36 @@ describe("CourseHero photo", () => {
 });
 
 /** Visual review 2026-10-24, B34: a caption shows only when the photo's record has one. */
+describe("CourseAdmission", () => {
+  // Issue #4329: the medical questions are a link away before booking, and
+  // nowhere on paper.
+  it("links to the medical questions when the page has them, and not on paper", () => {
+    const { rerender } = render(
+      <CourseAdmission
+        certificationRequired="No certification required"
+        minimumAge={10}
+        shopNote={null}
+        medicalQuestionsHref="/s/blue-mantis/courses/discover-scuba/medical-questions"
+        t={t}
+      />,
+    );
+    expect(screen.getByRole("link", { name: t("course.medicalQuestionsLink") })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/courses/discover-scuba/medical-questions",
+    );
+    rerender(
+      <CourseAdmission
+        certificationRequired="No certification required"
+        minimumAge={10}
+        shopNote={null}
+        t={t}
+      />,
+    );
+    expect(screen.getByText(/No certification required/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: t("course.medicalQuestionsLink") })).toBeNull();
+  });
+});
+
 describe("CourseGallery", () => {
   it("captions a photo from its record and leaves a blank one uncaptioned", () => {
     render(

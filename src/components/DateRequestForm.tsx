@@ -149,6 +149,7 @@ export function DateRequestForm({
   const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
   const [message, setMessage] = useState("");
   const [charter, setCharter] = useState(false);
+  const [flexible, setFlexible] = useState(false);
   useEffect(() => {
     if (!askInterest || recoveryActivity) return;
     const group = groupRequestContext(window.location.search);
@@ -193,6 +194,7 @@ export function DateRequestForm({
     if (phone) formData.set("phone", phone);
     if (preferredDate) formData.set("preferredDate", preferredDate);
     if (alternateDate) formData.set("alternateDate", alternateDate);
+    if (flexible) formData.set("dateFlexible", "on");
     if (timing) formData.set("timing", timing);
     if (diversInput) formData.set("divers", diversInput);
     if (experience) formData.set("experience", experience);
@@ -272,28 +274,15 @@ export function DateRequestForm({
               captions and boxes on shared rows so a pair reads as a pair rather
               than as two boxes that happen to be adjacent. */}
           {recoveryActivity ? null : (
-            <fieldset className="sm:col-span-2">
-              <legend className={ITEM_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
-              <FieldGrid columns={2} className="mt-3 gap-y-5">
-                <Field label={copy.preferredDate}>
-                  <DateField
-                    name="preferredDate"
-                    value={preferredDate}
-                    onChange={(event) => setPreferredDate(event.target.value)}
-                  />
-                </Field>
-                <Field label={copy.whenSuits}>
-                  <input
-                    name="timing"
-                    maxLength={200}
-                    value={timing}
-                    onChange={(event) => setTiming(event.target.value)}
-                    placeholder={copy.whenSuitsPlaceholder}
-                    className={controlClass}
-                  />
-                </Field>
-              </FieldGrid>
-            </fieldset>
+            <DateOptions
+              copy={copy}
+              preferredDate={preferredDate}
+              onPreferredDate={setPreferredDate}
+              timing={timing}
+              onTiming={setTiming}
+              flexible={flexible}
+              onFlexible={setFlexible}
+            />
           )}
           <Field label={copy.yourName}>
             <input
@@ -489,6 +478,59 @@ export function DateRequestForm({
       </h2>
       {body}
     </section>
+  );
+}
+
+/** The dates question: a first-choice day, when suits, and whether the dates can move. */
+function DateOptions({
+  copy,
+  preferredDate,
+  onPreferredDate,
+  timing,
+  onTiming,
+  flexible,
+  onFlexible,
+}: {
+  copy: DateRequestCopy;
+  preferredDate: string;
+  onPreferredDate: (value: string) => void;
+  timing: string;
+  onTiming: (value: string) => void;
+  flexible: boolean;
+  onFlexible: (value: boolean) => void;
+}) {
+  return (
+    <fieldset className="sm:col-span-2">
+      <legend className={ITEM_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
+      <FieldGrid columns={2} className="mt-3 gap-y-5">
+        <Field label={copy.preferredDate}>
+          <DateField
+            name="preferredDate"
+            value={preferredDate}
+            onChange={(event) => onPreferredDate(event.target.value)}
+          />
+        </Field>
+        <Field label={copy.whenSuits}>
+          <input
+            name="timing"
+            maxLength={200}
+            value={timing}
+            onChange={(event) => onTiming(event.target.value)}
+            placeholder={copy.whenSuitsPlaceholder}
+            className={controlClass}
+          />
+        </Field>
+      </FieldGrid>
+      <ChoiceRow
+        type="checkbox"
+        name="dateFlexible"
+        checked={flexible}
+        onChange={(event) => onFlexible(event.target.checked)}
+        className="mt-4 text-sm font-medium"
+      >
+        {copy.datesFlexible}
+      </ChoiceRow>
+    </fieldset>
   );
 }
 

@@ -1300,6 +1300,8 @@ type SetupRequestAlertEmailInput = {
   shopName: string;
   region: string;
   runsBoat: boolean;
+  runsShore?: boolean;
+  runsPool?: boolean;
   currentSystem?: SetupCurrentSystem;
   /** A switching guide's slug, when the requester named their system. */
   currentSystemGuide?: string;
@@ -1321,6 +1323,18 @@ const currentSystemWords: Record<SetupCurrentSystem, string> = {
   other: "something else",
 };
 
+/** "boat dives, pool sessions": the boxes ticked, or "Not provided" for none. */
+function runsWords(
+  input: Pick<SetupRequestAlertEmailInput, "runsBoat" | "runsShore" | "runsPool">,
+) {
+  const ticked = [
+    input.runsBoat ? "boat dives" : null,
+    input.runsShore ? "shore dives" : null,
+    input.runsPool ? "pool sessions" : null,
+  ].filter(Boolean);
+  return ticked.length > 0 ? ticked.join(", ") : "Not provided";
+}
+
 /** "a booking system, FareHarbor": the answer, then the system when one was named. */
 function usesToday(system: SetupCurrentSystem, guide: string | undefined): string {
   const named = guide ? getMigrationGuide(guide)?.competitor : undefined;
@@ -1330,14 +1344,14 @@ function usesToday(system: SetupCurrentSystem, guide: string | undefined): strin
 /**
  * A shop asked to be set up (ADR 20261007-setup-request-form). To the
  * onboarding inbox, internal and English like the founder alerts above, laid
- * out as the facts a first reply needs: who, where, boat or not, what they use
+ * out as the facts a first reply needs: who, where, what they run, what they use
  * now, and how to reach them. Every value the requester typed is escaped.
  */
 export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): NotificationEmail {
   const lines: Array<[string, string]> = [
     ["Shop", input.shopName],
     ["Where", input.region],
-    ["Runs a boat", input.runsBoat ? "yes" : "no"],
+    ["Runs", runsWords(input)],
     [
       "Uses today",
       input.currentSystem

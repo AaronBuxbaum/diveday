@@ -326,3 +326,89 @@ describe("DiverFacts, drawn on its own", () => {
     expect(screen.queryByText(t("manifest.heldEmergencyContactLabel"))).toBeNull();
   });
 });
+
+/**
+ * **"Draft a text" under the emergency contact** (issue #4256): a link to the
+ * phone's message app with the draft, on the screen's sheet only. Paper has
+ * nothing to tap, a held seat names nobody, and a missing contact has no link.
+ */
+describe("the drafted emergency text", () => {
+  const textDraft = {
+    shopName: "Blue Mantis Divers",
+    tripTitle: "Morning Two-Tank",
+    startsAt: new Date("2026-07-20T13:00:00Z"),
+    captainName: "Sam Reyes",
+    locale: "en-US",
+    timezone: "America/New_York",
+  };
+  const draftLink = () => screen.queryByRole("link", { name: t("manifest.emergencyText.label") });
+
+  it("opens a draft to the contact's number on screen, and sends nothing itself", () => {
+    render(
+      <DiverFacts
+        diver={diver()}
+        locale="en-US"
+        timezone="America/New_York"
+        columns={1}
+        textDraft={textDraft}
+        t={t}
+      />,
+    );
+    const href = draftLink()?.getAttribute("href") ?? "";
+    expect(href.startsWith("sms:+13055550231?&body=")).toBe(true);
+    const body = decodeURIComponent(href.split("&body=")[1] ?? "");
+    expect(body).toContain("Blue Mantis Divers");
+    expect(body).toContain("Sam Reyes");
+    expect(body).toContain("Morning Two-Tank");
+    expect(screen.queryByRole("button", { name: /send/i })).toBeNull();
+  });
+
+  it("draws no link on paper", () => {
+    render(
+      <DiverFacts
+        diver={diver()}
+        locale="en-US"
+        timezone="America/New_York"
+        columns={2}
+        textDraft={textDraft}
+        t={t}
+      />,
+    );
+    expect(draftLink()).toBeNull();
+  });
+
+  it("draws no link without a contact on file", () => {
+    render(
+      <DiverFacts
+        diver={diver({ emergencyContactName: null, emergencyContactPhone: null })}
+        locale="en-US"
+        timezone="America/New_York"
+        columns={1}
+        textDraft={textDraft}
+        t={t}
+      />,
+    );
+    expect(screen.getByText(t("manifest.notOnFile"))).toBeInTheDocument();
+    expect(draftLink()).toBeNull();
+  });
+
+  it("draws no link on a held seat, even with the desk's contact", () => {
+    render(
+      <DiverFacts
+        diver={diver({
+          identityWithheld: true,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          heldEmergencyContact: { name: "Rosa Vega", phone: "+34 600 333 444" },
+        })}
+        locale="en-US"
+        timezone="America/New_York"
+        columns={1}
+        textDraft={textDraft}
+        t={t}
+      />,
+    );
+    expect(screen.getByText(/Rosa Vega/)).toBeInTheDocument();
+    expect(draftLink()).toBeNull();
+  });
+});

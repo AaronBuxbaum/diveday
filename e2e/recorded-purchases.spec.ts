@@ -1,6 +1,7 @@
 import { OWNER_NAME } from "../src/db/seed-cast";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { chooseOrderCustomer, chosenOrderCustomer } from "./order-customer";
 
 const t = staffTranslator("en-US");
 
@@ -12,9 +13,7 @@ test.describe("record money already received", () => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("link", { name: "Record purchase", exact: true }).click();
     const form = page.getByRole("form", { name: "Record purchase", exact: true });
-    await form
-      .getByLabel("Customer", { exact: true })
-      .selectOption({ label: "Priya Sharma · priya.sharma@mail.example" });
+    await chooseOrderCustomer(form, "Priya Sharma");
     await form.locator('[name="description-0"]').fill("Counter reef shirt");
     await form.locator('[name="quantity-0"]').fill("2");
     await form.locator('[name="unitAmount-0"]').fill("25");
@@ -53,7 +52,7 @@ test.describe("record money already received", () => {
       await page.goto("/shop/blue-mantis/orders");
       await page.getByRole("link", { name: t("orders.purchase.title"), exact: true }).click();
       const form = page.getByRole("form", { name: t("orders.purchase.title"), exact: true });
-      await expect(form.getByLabel("Customer", { exact: true })).toHaveValue("walk-in");
+      await expect(chosenOrderCustomer(form)).toHaveValue("walk-in");
       await expect(form.getByLabel(t("orders.purchase.method"), { exact: true })).toHaveValue(
         "cash",
       );
@@ -174,9 +173,7 @@ test.describe("record money already received", () => {
   }) => {
     await page.goto("/shop/blue-mantis/orders?purchase=1");
     const form = page.getByRole("form", { name: "Record purchase", exact: true });
-    await form
-      .getByLabel("Customer", { exact: true })
-      .selectOption({ label: "Priya Sharma · priya.sharma@mail.example" });
+    await chooseOrderCustomer(form, "Priya Sharma");
     await form.locator('[name="description-0"]').fill("Must stay typed");
     await form.locator('[name="unitAmount-0"]').fill("1");
     await form.getByLabel("Included tax (optional)", { exact: true }).fill("2");

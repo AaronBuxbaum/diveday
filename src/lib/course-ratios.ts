@@ -1,3 +1,5 @@
+import type { TripDiveMode } from "./trip-details";
+
 /** The shape of an in-water ratio: a base, an assistant bonus, and a ceiling. */
 export type CourseRatioRule = {
   /** Students one instructor may supervise before any assistant is counted. */
@@ -39,12 +41,10 @@ export const ENTRY_LEVEL_COURSE_RATIO: CourseRatioRule = {
  * PADI's published Discover Scuba Diving ratio, from the Instructor Manual
  * (HD-6, sourced 2026-08-02): 4 students per instructor in confined/pool
  * water, tightening to 2 students per instructor for the open-water dive.
- * DiveDay's trip model has no confined-water session type — a trip is one
- * dated open-water outing (see
- * docs/architecture/decisions/20260724-course-admission-standards.md,
- * "Alternatives considered") — so only the tighter open-water figure is
- * enforced against a booked DSD session (via {@link INTRO_COURSE_RATIO}); the
- * confined-water number is recorded here for completeness, unenforced.
+ * A departure marked `trips.dive_mode = 'pool'` is confined water, so an
+ * intro session there takes the confined figure ({@link POOL_INTRO_COURSE_RATIO})
+ * and every other intro session the open-water one ({@link INTRO_COURSE_RATIO})
+ * — Aaron's call on issue #4633 (2026-11-16, option A).
  * No published assistant bonus for DSD, so none is credited here.
  */
 export const DSD_RATIO = {
@@ -77,6 +77,19 @@ export const INTRO_COURSE_RATIO: CourseRatioRule = {
 };
 
 /**
+ * The ratio for an intro session that runs in a pool (`trips.dive_mode =
+ * 'pool'`): the Instructor Manual's **confined-water DSD figure**, 4 per
+ * instructor, again with no assistant bonus at all. Agency-independent for the
+ * same reason as {@link INTRO_COURSE_RATIO}, and derived from {@link DSD_RATIO}
+ * so the sourced figure cannot drift (issue #4633).
+ */
+export const POOL_INTRO_COURSE_RATIO: CourseRatioRule = {
+  baseStudentsPerInstructor: DSD_RATIO.confinedWaterStudentsPerInstructor,
+  assistantBonusPerInstructor: 0,
+  maxStudentsPerInstructor: DSD_RATIO.confinedWaterStudentsPerInstructor,
+};
+
+/**
  * How many students a session may seat under `rule` given the instructors and
  * certified assistants (Divemasters) actually assigned as crew. Deliberately
  * conservative: caps at the per-instructor ceiling regardless of assistant
@@ -96,16 +109,34 @@ export function courseRatioCapacity(
 }
 
 /**
- * The subset of a course row the ratio rules need — narrower than the full
- * `courses` row so every caller (a joined query, a form field, a test fixture)
- * can pass its own shape without importing the schema type.
+ * The subset of a course row that decides *whether* a session is ratio-gated
+ * and under which kind of rule — narrower than the full `courses` row so every
+ * caller (a joined query, a form field, a test fixture) can pass its own shape
+ * without importing the schema type.
  */
-export type CourseCrewGapCourse = {
+export type RatioCourse = {
   agency: string;
   minimumCertificationLevel: string | null;
   /** `courses.is_intro_course` — a DSD/Try Scuba taster, gated far tighter. */
   isIntroCourse: boolean;
 } | null;
+
+/**
+ * A course session as the ratio caps read it: the course row's part, plus the
+ * one fact of the departure that changes a figure. Required, never defaulted,
+ * so every surface that counts seats says which water the session is in and
+ * none can disagree with the sale about it.
+ */
+export type CourseCrewGapCourse =
+  | (NonNullable<RatioCourse> & {
+      /**
+       * The session runs in a pool (`trips.dive_mode = 'pool'`), i.e. confined
+       * water. Moves an intro session to {@link POOL_INTRO_COURSE_RATIO}; an
+       * Open Water course's pool session keeps its own cap (issue #4633).
+       */
+      poolSession: boolean;
+    })
+  | null;
 
 /**
  * `courses.agency` is plain shop-set text, so `"PADI"`, `" padi"`, and `"padi"`
@@ -114,6 +145,19 @@ export type CourseCrewGapCourse = {
  */
 function normalizeAgency(agency: string): string {
   return agency.trim().toLowerCase();
+}
+
+/**
+ * A course row read as one session of it: `poolSession` from the departure's
+ * `trips.dive_mode`. Every surface that counts a session's seats builds its
+ * course through this, so none can read the water differently from the sale.
+ */
+export function courseSession<C extends NonNullable<RatioCourse>>(
+  course: C | null | undefined,
+  diveMode: TripDiveMode,
+): (C & { poolSession: boolean }) | null {
+  if (!course) return null;
+  return { ...course, poolSession: diveMode === "pool" };
 }
 
 /** Which of the two ratios a session carries, for callers that must word it differently. */
@@ -142,7 +186,7 @@ export type CourseRatioKind = "intro" | "entry_level";
  * - Everything else is ungated at booking. A missing booking cap is not a
  *   statement that an agency has no in-water ratio.
  */
-export function courseRatioKind(course: CourseCrewGapCourse): CourseRatioKind | null {
+export function courseRatioKind(course: RatioCourse): CourseRatioKind | null {
   if (!course) return null;
   if (course.isIntroCourse) return "intro";
   if (normalizeAgency(course.agency) !== "padi") return null;
@@ -150,15 +194,22 @@ export function courseRatioKind(course: CourseCrewGapCourse): CourseRatioKind | 
   return "entry_level";
 }
 
-const RATIO_BY_KIND: Record<CourseRatioKind, CourseRatioRule> = {
-  intro: INTRO_COURSE_RATIO,
-  entry_level: ENTRY_LEVEL_COURSE_RATIO,
-};
+/**
+ * The figure for a gated session. Only an intro session's figure depends on
+ * the water: the pool takes the confined DSD figure, every other mode the
+ * open-water one. An Open Water course's pool session keeps 8/+2/12, as it
+ * always has (Aaron, issue #4633).
+ */
+function ratioRuleOf(kind: CourseRatioKind, poolSession: boolean): CourseRatioRule {
+  if (kind === "entry_level") return ENTRY_LEVEL_COURSE_RATIO;
+  return poolSession ? POOL_INTRO_COURSE_RATIO : INTRO_COURSE_RATIO;
+}
 
 /** The rule `courseRatioKind` selected, or null when the session carries none. */
 export function courseRatioRule(course: CourseCrewGapCourse): CourseRatioRule | null {
   const kind = courseRatioKind(course);
-  return kind === null ? null : RATIO_BY_KIND[kind];
+  if (kind === null || course === null) return null;
+  return ratioRuleOf(kind, course.poolSession);
 }
 
 /**
@@ -188,10 +239,13 @@ export function trainingCourseRatioRule(
       : ["open-water-diver", "ssi-open-water-diver", "sdi-open-water-scuba-diver"];
     if (!entryTemplates.includes(course.sourceTemplateSlug)) return null;
   }
+  // A marked training dive is taken on another departure, in open water
+  // whatever mode the course's own session ran in: the open-water figure.
   return courseRatioRule({
     agency: course.agency,
     minimumCertificationLevel: course.minimumLevel,
     isIntroCourse: course.intro,
+    poolSession: false,
   });
 }
 
@@ -241,6 +295,12 @@ export type CourseCrewGap =
       booked: number;
       capacity: number;
       ratio: CourseRatioKind;
+      /**
+       * The per-instructor ceiling the gap was measured at — 2 for an intro
+       * session in open water, 4 in a pool — so a sentence quoting the figure
+       * quotes the one the session carries (issue #4633).
+       */
+      perInstructor: number;
       remedy: CourseCrewRemedy;
     };
 
@@ -271,7 +331,7 @@ export function courseCrewGap(input: {
   if (input.instructorCount <= 0) return { code: "no_instructor" };
   const kind = courseRatioKind(input.course);
   if (kind === null) return { code: "none" };
-  const rule = RATIO_BY_KIND[kind];
+  const rule = ratioRuleOf(kind, input.course.poolSession);
   const capacity = courseRatioCapacity(rule, input.instructorCount, input.assistantCount);
   if (input.booked > capacity) {
     const assistantsCanClose =
@@ -282,6 +342,7 @@ export function courseCrewGap(input: {
       booked: input.booked,
       capacity,
       ratio: kind,
+      perInstructor: rule.maxStudentsPerInstructor,
       remedy: assistantsCanClose ? "assistant" : "instructor",
     };
   }

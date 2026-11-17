@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonReadPrivateRecapPulse, canPersonReplyToReviews } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { setCrewThanksHidden } from "@/features/crew-thanks";
+import { ruleCrewThanks } from "@/features/crew-thanks";
 import { parseForm } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { markRecapPulseAddressed } from "@/features/recap";
@@ -20,6 +20,7 @@ import {
 import { requireStaffSession } from "@/features/session";
 import { nowDate } from "@/lib/clock";
 import { publicReviewsPath, publicSchedulePath } from "@/lib/public-routes";
+import { CREW_THANKS_RULINGS } from "@/lib/reviews";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { isUuid } from "@/lib/uuid";
 
@@ -51,7 +52,7 @@ const reviewRowForm = z.object({
   intent: z.string().optional(),
   standout: z.string().optional(),
   publish: z.string().optional(),
-  thanksHidden: z.string().optional(),
+  ruling: z.enum(CREW_THANKS_RULINGS).optional(),
   reason: z.string().optional(),
   reasonNote: z.string().default(""),
 });
@@ -73,8 +74,8 @@ export type ReviewActionResult =
         | "hidden"
         | "standout"
         | "standout-removed"
-        | "thanks-hidden"
-        | "thanks-shown";
+        | "thanks-held"
+        | "thanks-passed";
       /** Set on a hide: the review the land-then-undo toast offers to put back. */
       undoReviewId?: string;
     }
@@ -130,19 +131,20 @@ export async function reviewRowAction(
   }
 
   if (form.intent === "crew-thanks") {
-    // Hide or show the thanks a diver left a crew member (loop 5, row 6).
+    // Pass the thanks a diver left a crew member on to them, or keep it back
+    // (loop 5, row 6; issue #4261). Nothing reaches the crew until passed.
     // Owner or manager only, matching who may reply to reviews and read the thanks.
     if (
       !(await canPersonReplyToReviews(await getDb(), session.user.shopId, session.user.personId))
     ) {
       return { ok: false, reviewId, reason: "error" };
     }
-    const hidden = form.thanksHidden === "true";
-    const outcome = await setCrewThanksHidden(
+    if (!form.ruling) return { ok: false, reviewId, reason: "error" };
+    const outcome = await ruleCrewThanks(
       await getDb(),
       session.user.shopId,
       reviewId,
-      hidden,
+      form.ruling,
       session.user.personId,
       nowDate(),
     );
@@ -150,7 +152,7 @@ export async function reviewRowAction(
     revalidatePath(reviews);
     // The crew member's Today carries the line, so it is that page that changes.
     revalidatePath(shopPath(session.user.shopSlug));
-    return { ok: true, reviewId, effect: hidden ? "thanks-hidden" : "thanks-shown" };
+    return { ok: true, reviewId, effect: form.ruling === "held" ? "thanks-held" : "thanks-passed" };
   }
 
   /*

@@ -55,6 +55,7 @@ export function DiverRowPanel({
     rollCallClosed,
     showMedicalAlert,
     emergencyShowMedicalAlert,
+    emergencyText,
     t,
   } = context;
   const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
@@ -161,6 +162,7 @@ export function DiverRowPanel({
         timezone={timezone}
         columns={1}
         contactClassName={ROW_DISCLOSURE_PANEL_CLASS}
+        textDraft={context.paper ? undefined : emergencyText}
         waiverHref={(record) =>
           shopPath(shopSlug, "divers", record.personId, "waivers", record.recordId)
         }

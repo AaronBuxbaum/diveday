@@ -83,6 +83,26 @@ export function looksAutomated(nav: Pick<Navigator, "userAgent" | "webdriver">):
   return nav.webdriver === true || AUTOMATED_UA.test(nav.userAgent ?? "");
 }
 
+const SAMPLED_KEY = "diveday:rum-sampled";
+
+/**
+ * One draw per browser session, made before the SDK is fetched so the nine
+ * sessions in ten that record nothing never download it. The draw lives in
+ * sessionStorage; where storage is unavailable each page load draws again,
+ * which keeps the rate and costs nothing.
+ */
+export function sessionSampled(rate: number, random: () => number = Math.random): boolean {
+  try {
+    const stored = window.sessionStorage.getItem(SAMPLED_KEY);
+    if (stored === "1" || stored === "0") return stored === "1";
+    const sampled = random() < rate;
+    window.sessionStorage.setItem(SAMPLED_KEY, sampled ? "1" : "0");
+    return sampled;
+  } catch {
+    return random() < rate;
+  }
+}
+
 type PageViewRecorder = { recordPageView: (pageId: string) => void };
 
 export function CloudWatchRum() {
@@ -97,7 +117,7 @@ export function CloudWatchRum() {
 
   useEffect(() => {
     const config = rumConfig();
-    if (!config || looksAutomated(navigator)) return;
+    if (!config || looksAutomated(navigator) || !sessionSampled(config.sessionSampleRate)) return;
     let cancelled = false;
 
     void (async () => {
@@ -107,7 +127,8 @@ export function CloudWatchRum() {
         client.current = new AwsRum(config.applicationId, "1.0.0", config.region, {
           identityPoolId: config.identityPoolId,
           guestRoleArn: config.guestRoleArn,
-          sessionSampleRate: config.sessionSampleRate,
+          // Sampling was decided above, before the download.
+          sessionSampleRate: 1,
           telemetries: ["performance"],
           allowCookies: false,
           enableXRay: false,

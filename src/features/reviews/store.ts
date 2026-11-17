@@ -38,6 +38,7 @@ import {
 } from "../../db/schema/index";
 import { nowDate } from "../../lib/clock";
 import {
+  type CrewThanksRuling,
   EMPTY_REVIEW_AGGREGATE,
   normalizeCrewThanks,
   normalizeReviewComment,
@@ -77,8 +78,9 @@ export async function submitTripReview(
     rating: number;
     comment?: string | null;
     /**
-     * The optional thanks line to one of the departure's crew (loop 5, row 6).
-     * Absent or blank takes an earlier thanks back. `choice` is the menu's
+     * The thanks to one of the departure's crew (loop 5, row 6; issue #4261):
+     * who, picked with one tap, and an optional line. No choice takes an
+     * earlier thanks back. `choice` is the menu's
      * `crewThanksChoice` (src/features/crew-thanks-choice/rules.ts), never a person id
      * (#3912); a choice that matches nobody on this departure's crew is
      * dropped, whatever the form said.
@@ -122,16 +124,17 @@ export async function submitTripReview(
         updatedAt: tripReviews.updatedAt,
         crewThanks: tripReviews.crewThanks,
         crewThanksPersonId: tripReviews.crewThanksPersonId,
-        crewThanksHiddenAt: tripReviews.crewThanksHiddenAt,
-        crewThanksHiddenByPersonId: tripReviews.crewThanksHiddenByPersonId,
+        crewThanksRuling: tripReviews.crewThanksRuling,
+        crewThanksRuledAt: tripReviews.crewThanksRuledAt,
+        crewThanksRuledByPersonId: tripReviews.crewThanksRuledByPersonId,
       })
       .from(tripReviews)
       .where(eq(tripReviews.bookingId, input.bookingId))
       .limit(1);
 
     // The thanks is for someone who worked this departure; anyone else is no thanks.
-    let thanks: { personId: string; text: string } | null = null;
-    if (thanksText && isCrewThanksChoice(thanksChoice)) {
+    let thanks: { personId: string; text: string | null } | null = null;
+    if (isCrewThanksChoice(thanksChoice)) {
       const crew = await tx
         .select({ id: tripAssignments.personId })
         .from(tripAssignments)
@@ -146,7 +149,12 @@ export async function submitTripReview(
       const chosen = crew.find((row) => crewThanksChoice(booking.tripId, row.id) === thanksChoice);
       if (chosen) thanks = { personId: chosen.id, text: thanksText };
     }
-    // A staff hide stays on the review whatever the diver writes next; only staff show it.
+    // Staff's ruling holds only for the thanks they read: a new person or new
+    // words go back to waiting, so nothing unread ever reaches the crew.
+    const sameThanks =
+      thanks !== null &&
+      existing?.crewThanksPersonId === thanks.personId &&
+      (existing?.crewThanks ?? null) === thanks.text;
 
     // `updated_at` is the revision boundary used to distinguish an old hide
     // from the diver's new unread version. Keep it strictly monotonic even
@@ -181,8 +189,9 @@ export async function submitTripReview(
       publishedAt: publish ? now : null,
       crewThanksPersonId: thanks?.personId ?? null,
       crewThanks: thanks?.text ?? null,
-      crewThanksHiddenAt: existing?.crewThanksHiddenAt ?? null,
-      crewThanksHiddenByPersonId: existing?.crewThanksHiddenByPersonId ?? null,
+      crewThanksRuling: sameThanks ? (existing?.crewThanksRuling ?? null) : null,
+      crewThanksRuledAt: sameThanks ? (existing?.crewThanksRuledAt ?? null) : null,
+      crewThanksRuledByPersonId: sameThanks ? (existing?.crewThanksRuledByPersonId ?? null) : null,
       updatedAt: now,
     };
 
@@ -598,10 +607,13 @@ export type StaffReview = {
   createdAt: Date;
   /** The shop's live public reply under it, or null (batch 4, K2). */
   replyBody: string | null;
-  /** The thanks line the diver left a crew member, who it is for and whether staff hid it (loop 5, row 6). */
+  /**
+   * The thanks the diver left a crew member: the optional line, who it is for,
+   * and staff's ruling, null while it waits (loop 5, row 6; issue #4261).
+   */
   crewThanks: string | null;
   crewThanksFor: string | null;
-  crewThanksHidden: boolean;
+  crewThanksRuling: CrewThanksRuling | null;
 };
 
 /** How many reviews the moderation queue shows per page. */
@@ -644,6 +656,22 @@ export function staffReviewNarrow(raw: string | undefined): StaffReviewNarrow | 
   return STAFF_REVIEW_NARROWS.find((narrow) => narrow === raw) ?? null;
 }
 
+/** A thanks to the crew no staffer has ruled on yet (issue #4261). */
+const crewThanksWaiting = and(
+  isNotNull(tripReviews.crewThanksPersonId),
+  isNull(tripReviews.crewThanksRuling),
+);
+
+/**
+ * The worklist: an unpublished review with no current hide, and, for a reader
+ * who may read the crew's thanks, any review whose thanks waits on a ruling.
+ * `moderated` is everything else, so the two still partition `all`.
+ */
+function waitingWhere(hidden: ReturnType<typeof hiddenReviewExists>, withCrewThanks: boolean) {
+  const review = and(eq(tripReviews.isPublished, false), not(hidden));
+  return withCrewThanks ? or(review, crewThanksWaiting) : review;
+}
+
 function narrowWhere(narrow: StaffReviewNarrow | null | undefined) {
   if (narrow === "low") return lte(tripReviews.rating, 3);
   if (narrow === "comment") return sql`length(trim(coalesce(${tripReviews.comment}, ''))) > 0`;
@@ -682,11 +710,11 @@ export async function listShopReviewsForStaff(
   const hidden = hiddenReviewExists(db);
   const moderationActor = alias(people, "review_moderation_actor");
   const thankedCrew = alias(people, "review_thanked_crew");
-  const waiting = and(eq(tripReviews.isPublished, false), not(hidden));
+  const waiting = waitingWhere(hidden, options.withCrewThanks ?? false);
   const scope = and(
     eq(tripReviews.shopId, shopId),
     options.scope === "waiting" ? waiting : undefined,
-    options.scope === "moderated" ? or(eq(tripReviews.isPublished, true), hidden) : undefined,
+    options.scope === "moderated" ? not(waiting) : undefined,
     narrowWhere(options.narrow),
   );
   // One spread in the final argument position, not a conditional spread mid-call:
@@ -728,9 +756,9 @@ export async function listShopReviewsForStaff(
           crewThanksFor: options.withCrewThanks
             ? thankedCrew.fullName
             : sql<string | null>`null::text`,
-          crewThanksHidden: options.withCrewThanks
-            ? sql<boolean>`${tripReviews.crewThanksHiddenAt} is not null`
-            : sql<boolean>`false`,
+          crewThanksRuling: options.withCrewThanks
+            ? tripReviews.crewThanksRuling
+            : sql<CrewThanksRuling | null>`null`,
         })
         .from(tripReviews)
         .innerJoin(people, eq(people.id, tripReviews.personId))
@@ -819,8 +847,10 @@ export async function countStaffReviewGroups(
   db: DbExecutor,
   shopId: string,
   narrow: StaffReviewNarrow | null = null,
+  withCrewThanks = false,
 ): Promise<StaffReviewGroupCounts> {
   const hidden = hiddenReviewExists(db);
+  const worklist = waitingWhere(hidden, withCrewThanks);
   const shop = and(eq(tripReviews.shopId, shopId), narrowWhere(narrow));
   const countWhere = async (where: ReturnType<typeof and>) => {
     const [row] = await db
@@ -830,9 +860,9 @@ export async function countStaffReviewGroups(
     return row?.count ?? 0;
   };
   const [waiting, published, suppressed] = await queryAll(db, [
-    () => countWhere(and(shop, eq(tripReviews.isPublished, false), not(hidden))),
-    () => countWhere(and(shop, eq(tripReviews.isPublished, true))),
-    () => countWhere(and(shop, eq(tripReviews.isPublished, false), hidden)),
+    () => countWhere(and(shop, worklist)),
+    () => countWhere(and(shop, not(worklist), eq(tripReviews.isPublished, true))),
+    () => countWhere(and(shop, not(worklist), eq(tripReviews.isPublished, false), hidden)),
   ]);
   return { waiting, published, hidden: suppressed };
 }
@@ -1113,8 +1143,7 @@ export async function readReviewsAwaitingModeration(
       and(
         eq(tripReviews.shopId, shopId),
         eq(shops.reviewsEnabled, true),
-        eq(tripReviews.isPublished, false),
-        not(hidden),
+        waitingWhere(hidden, true),
       ),
     );
   const count = row?.count ?? 0;

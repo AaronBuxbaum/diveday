@@ -10,10 +10,12 @@ import {
   SETUP_CURRENT_SYSTEMS,
   SETUP_HONEYPOT_FIELD,
   SETUP_PHONE_MAX,
+  SETUP_RUNS,
   SETUP_TEXT_MAX,
   type SetupCurrentSystem,
   type SetupField,
   type SetupFieldError,
+  type SetupRuns,
 } from "@/lib/setup-requests";
 import { submitSetupRequestAction } from "../actions";
 
@@ -21,9 +23,8 @@ import { submitSetupRequestAction } from "../actions";
 export type SetupRequestFormWords = {
   shopName: string;
   region: string;
-  runsBoat: string;
-  yes: string;
-  no: string;
+  runs: string;
+  runsAnswers: Record<SetupRuns, string>;
   currentSystem: string;
   notSpecified: string;
   current: Record<SetupCurrentSystem, string>;
@@ -44,8 +45,9 @@ export type SetupRequestFormWords = {
  * Component only so a refusal can answer in place with everything the reader
  * typed still in the boxes; a stored request redirects to the thank-you page.
  *
- * Contact and shop details come first. The phone and current tool are optional;
- * an unanswered tool stays unanswered through validation and storage.
+ * Contact and shop details come first. The phone, what the shop runs and the
+ * current tool are optional; an unanswered tool stays unanswered through
+ * validation and storage.
  *
  * **"Which one?"** (2026-10-22) follows "A booking system" or "Dive-shop
  * software", and only those: the systems with a switching guide, and
@@ -152,19 +154,20 @@ export function SetupRequestForm({
             className={controlClass}
           />
         </Field>
-        <Field label={words.runsBoat} group required error={errorFor("runsBoat")}>
-          <div className="grid grid-cols-2 gap-2">
-            {(["yes", "no"] as const).map((answer) => (
+        {/* Three boxes, any mix and none required (issue #4319): a shop with
+            no boat reads as welcome, and the reply asks about the rest. */}
+        <Field label={words.runs} group>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {SETUP_RUNS.map((answer) => (
               <ChoicePill
                 key={answer}
-                type="radio"
+                type="checkbox"
                 size="md"
-                name="runsBoat"
-                value={answer}
-                required
-                defaultChecked={values.runsBoat === answer}
+                name={answer}
+                value="yes"
+                defaultChecked={values[answer] === "yes"}
               >
-                {words[answer]}
+                {words.runsAnswers[answer]}
               </ChoicePill>
             ))}
           </div>

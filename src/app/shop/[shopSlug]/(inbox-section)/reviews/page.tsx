@@ -152,7 +152,11 @@ export default async function ReviewsPage({
 
   const published = moderatedPage.reviews.filter((review) => review.isPublished);
   const hidden = moderatedPage.reviews.filter((review) => review.isHidden);
-  const waitingIds = waitingPage.reviews.map((review) => review.id);
+  // Publish-all releases reviews; a published one waiting only on its crew
+  // thanks (issue #4261) has nothing to publish.
+  const waitingIds = waitingPage.reviews
+    .filter((review) => !review.isPublished)
+    .map((review) => review.id);
   // Nothing to read and nothing to do: the page's own empty state speaks
   // instead of three headings over three absences. Narrowed, the chips stay.
   const nothingAtAll = waitingPage.total === 0 && moderatedPage.total === 0;

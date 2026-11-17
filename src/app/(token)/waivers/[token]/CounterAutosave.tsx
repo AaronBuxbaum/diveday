@@ -63,8 +63,15 @@ export function CounterAutosave({
     const form = ref.current?.closest("form");
     if (!form) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // A save's answer only counts while nothing newer has spoken for the form:
+    // after a Sign (or once the form is gone), "closed" can mean the signer's own
+    // signature closed the code, and reloading then threw them off the signed
+    // page (issue #4541).
+    let generation = 0;
     const save = async () => {
+      const asked = generation;
       const outcome = await action(new FormData(form));
+      if (asked !== generation) return;
       if (outcome === "saved") setSaved(true);
       if (outcome === "closed") reloadPage();
     };
@@ -82,12 +89,20 @@ export function CounterAutosave({
       setSaved(false);
       soon(SETTLE_MS);
     };
+    // A submit carries every answer itself, so a step still waiting to save is moot.
+    const onSubmit = () => {
+      clearTimeout(timer);
+      generation += 1;
+    };
     form.addEventListener("focusout", onFocusOut);
     form.addEventListener("change", onChange);
+    form.addEventListener("submit", onSubmit);
     return () => {
       clearTimeout(timer);
+      generation += 1;
       form.removeEventListener("focusout", onFocusOut);
       form.removeEventListener("change", onChange);
+      form.removeEventListener("submit", onSubmit);
     };
   }, [action]);
 

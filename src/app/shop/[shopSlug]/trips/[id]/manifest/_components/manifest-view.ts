@@ -111,6 +111,7 @@ export async function readManifestView({
     actions,
     copies: rollCallCopies(t, shopSlug, tripId),
     buddyTeamLabel: buddy.buddyTeamLabel,
+    shopName: shop.name,
     t,
   });
   const boatPaper = {

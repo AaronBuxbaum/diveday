@@ -2,6 +2,7 @@ import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 import type { bindManifestActions } from "./bound-actions";
 import type { CrewRollCall } from "./CrewRollCall";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
+import { departureCaptain } from "./emergency-text";
 import type { rollCallCopies } from "./roll-call-copy";
 
 type ManifestActions = ReturnType<typeof bindManifestActions>;
@@ -36,9 +37,20 @@ export function manifestRollCallProps({
   actions: ManifestActions;
   copies: ReturnType<typeof rollCallCopies>;
   buddyTeamLabel: DiverRollCallContext["buddyTeamLabel"];
+  /** The shop's name, for the drafted emergency text (issue #4256). */
+  shopName: string;
   t: DiverRollCallContext["t"];
 }): { divers: DiverRollCallContext; crew: CrewRollCallProps } {
   const { idPrefix, shopSlug, tripId, locale, timezone, buddyTeamLabel, t } = shared;
+  // The paper sets `paper` on top of these and never draws the link.
+  const emergencyText = {
+    shopName: shared.shopName,
+    tripTitle: manifest.trip.title,
+    startsAt: manifest.trip.startsAt,
+    captainName: departureCaptain(manifest.crew),
+    locale,
+    timezone,
+  };
   return {
     divers: {
       idPrefix,
@@ -62,6 +74,7 @@ export function manifestRollCallProps({
       // The medical-alert reads, and the words a "Print with medical alerts"
       // packet carries (`TripPacket`).
       ...actions.medicalAlert,
+      emergencyText,
       t,
     },
     crew: {
@@ -80,6 +93,7 @@ export function manifestRollCallProps({
       crewRollCallButtonCopy: copies.crewRollCallButtonCopy,
       missingDiver: actions.missingDiver,
       buddyTeamLabel,
+      emergencyText,
       t,
     },
   };

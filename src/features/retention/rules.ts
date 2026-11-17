@@ -60,6 +60,11 @@
  * review may need later (ADR 20260824-pre-departure-safety-check; dive-domain
  * review, 2026-10-13).
  *
+ * **`roll_call_deck_counts` is deliberately unbounded**, for the same reason
+ * as the checklist above: it is what the crew counted on deck at each
+ * checkpoint, beside the per-person roll call it was compared with, and an
+ * incident review reads the two together (issue #4248, 2026-11-16).
+ *
  * **`trip_change_events` and `review_moderation_events` are deliberately
  * unbounded.** The shop activity log reads these as the record of changes and
  * moderation; a note on the diver's own review is redacted on erasure, a mention is not, and staff
@@ -174,6 +179,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "booking_arrival_events",
   "boarding_observations",
   "pre_departure_check_events",
+  "roll_call_deck_counts",
   "trip_change_events",
   "review_moderation_events",
 ];

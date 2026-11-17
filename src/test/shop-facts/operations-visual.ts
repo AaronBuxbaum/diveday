@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readActiveStaffRoles } from "../../db/authz";
 import { callTripBlowout, getTripBlowout } from "../../db/blowouts";
 import type { AppDb } from "../../db/client";
@@ -19,7 +19,7 @@ import { prepareWeatherAlternatives } from "./prepare-weather-alternatives";
 /** Real private-shop transactions; never manufacture money or seating projections. */
 export async function prepareOperationsVisual(
   db: AppDb,
-  shop: { id: string },
+  shop: { id: string; slug: string },
   _actorId: string,
   now: Date,
 ) {
@@ -83,7 +83,10 @@ export async function prepareOperationsVisual(
   });
   const blowout = await getTripBlowout(db, shop.id, source.sourceTripId);
   if (!blowout?.divers[0]) throw new Error("visual recovery diver missing");
-  const activityId = randomUUID();
+  // Named by the shop's pinned slug, not random: the prepared inquiry link
+  // prints this id, and a different one each run moved the capture's pixels.
+  const hash = createHash("sha256").update(`recovery-activity:${shop.slug}`).digest("hex");
+  const activityId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
   const made = await createRecoveryActivity(db, {
     shopId: shop.id,
     tripId: source.sourceTripId,

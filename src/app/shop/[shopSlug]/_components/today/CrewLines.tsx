@@ -58,14 +58,16 @@ function CrewMonthLine({
 /**
  * **A diver said thanks** (loop 5, row 6): the line a diver left under their
  * review for this reader, in the diver's words and without their name. At most
- * two, newest first, and none that staff hid. Plain, never coral.
+ * two, newest first, and only those staff passed on. Plain, never coral.
  */
 function CrewThanksLines({ thanks, t }: { thanks: CrewReading["thanks"]; t: StaffTranslator }) {
   return (
     <>
       {thanks.map((line) => (
         <p key={`${line.startsAt.toISOString()}-${line.text}`} className="text-sm text-muted">
-          {t("shopHome.spine.crewThanks", { words: line.text, trip: line.tripTitle })}
+          {line.text
+            ? t("shopHome.spine.crewThanks", { words: line.text, trip: line.tripTitle })
+            : t("shopHome.spine.crewThanksBare", { trip: line.tripTitle })}
         </p>
       ))}
     </>

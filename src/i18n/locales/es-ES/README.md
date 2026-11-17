@@ -514,3 +514,8 @@ happened and what the reader can do next, in that order. Then run:
 ```bash
 node scripts/check-locale.mjs   # coverage + ICU placeholder parity across locales
 ```
+
+When it names missing keys, `pnpm locale:draft` asks Claude for drafts of exactly those, with this
+file as the terminology guide, and `pnpm locale:draft --write` puts them in the bundles for you to
+read in `git diff` (ADR 20261116-claude-drafts-missing-locale-strings). It never sends a waiver or
+medical key, and a draft is yours to fix like any other line.

@@ -53,8 +53,15 @@ export function normalizeReviewComment(value: unknown): string | null {
 }
 
 /**
- * The thanks line under a review (loop 5, row 6), trimmed and held to one
- * line of {@link MAX_CREW_THANKS_LENGTH}; blank is no thanks.
+ * Staff's ruling on a diver's thanks to the crew (issue #4261): `passed`
+ * reaches the crew member, `held` stays with the shop; none yet is waiting.
+ */
+export const CREW_THANKS_RULINGS = ["passed", "held"] as const;
+export type CrewThanksRuling = (typeof CREW_THANKS_RULINGS)[number];
+
+/**
+ * The optional line with a thanks to the crew (loop 5, row 6), trimmed and
+ * held to one line of {@link MAX_CREW_THANKS_LENGTH}; blank is no line.
  */
 export function normalizeCrewThanks(value: unknown): string | null {
   if (typeof value !== "string") return null;

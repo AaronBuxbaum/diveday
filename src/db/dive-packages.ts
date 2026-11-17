@@ -1,4 +1,16 @@
-import { and, asc, count, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type DivePackageDefinition,
@@ -6,6 +18,7 @@ import {
   entitlementToSpend,
   packageOnSale,
   type SpendableEntitlement,
+  singleDivePrice,
   spendableCount,
   spendableCountForTrip,
 } from "@/lib/dive-packages";
@@ -16,9 +29,12 @@ import {
   divePackages,
   orderLineItems,
   orders,
+  packageGifts,
   paymentDisputes,
   shops,
+  trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * Reading and writing the shop's prepaid packages
@@ -51,6 +67,36 @@ export async function listPackagesOnSale(db: DbExecutor, shopId: string, now = n
     .limit(1);
   if (!shop?.on) return [];
   return (await listDivePackages(db, shopId)).filter((pkg) => packageOnSale(pkg, now));
+}
+
+/**
+ * **What one dive costs bought singly**, for the saving the public packages
+ * page says beside each package (issue #4388): the most common per-tank price
+ * across the shop's upcoming public fun dives (`singleDivePrice`). Courses are
+ * left out; their price carries instruction, and comparing a package with it
+ * would overstate the saving. Null when nothing on the schedule is priced.
+ */
+export async function singleDivePriceOnSale(
+  db: DbExecutor,
+  shopId: string,
+  now = nowDate(),
+): Promise<number | null> {
+  const departures = await db
+    .select({ priceCents: trips.priceCents, plannedDives: trips.plannedDives })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        isNull(trips.courseId),
+        isNotNull(trips.priceCents),
+        gt(trips.priceCents, 0),
+        gte(trips.startsAt, now),
+        liveTrip(),
+      ),
+    );
+  return singleDivePrice(departures);
 }
 
 export async function createDivePackage(
@@ -501,6 +547,14 @@ export async function grantPackageEntitlementsForPaidOrder(
     .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
     .limit(1);
   if (order?.status !== "paid" || !order.personId) return [];
+  // A gift's dives go straight to its recipient (issue #4629); the buyer
+  // keeps the order and its receipt.
+  const [gift] = await db
+    .select({ personId: packageGifts.recipientPersonId })
+    .from(packageGifts)
+    .where(and(eq(packageGifts.shopId, input.shopId), eq(packageGifts.orderId, input.orderId)))
+    .limit(1);
+  const holder = gift?.personId ?? order.personId;
   const lines = await db
     .select({ packageId: orderLineItems.packageId, quantity: orderLineItems.quantity })
     .from(orderLineItems)
@@ -536,7 +590,7 @@ export async function grantPackageEntitlementsForPaidOrder(
       ...(await grantPackageEntitlements(db, {
         shopId: input.shopId,
         packageId: pkg.id,
-        personId: order.personId,
+        personId: holder,
         orderId: input.orderId,
         diveCount: pkg.diveCount * line.quantity,
         validUntil: pkg.validUntil,

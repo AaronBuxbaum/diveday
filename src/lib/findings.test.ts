@@ -2,12 +2,12 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import type { Certification, TripRequirement, WaiverRecord } from "@/db/schema";
 import { courseCrewGap } from "./course-ratios";
 import { checkDepthCeiling, type DepthCeilingCheck, diverDepthLimit } from "./depth-ceiling";
-import { DIVE_RECENCY_BANDS } from "./dive-recency";
 import { divemasterRatioGap } from "./divemaster-ratio";
 import {
   ADVISORY_CODES,
   type Advisory,
   type AdvisoryCode,
+  type BookingAdvisory,
   courseCrewFinding,
   depthAdvisoryIn,
   depthFinding,
@@ -17,7 +17,6 @@ import {
   findingsStatus,
   minimumSeatsFinding,
   preDepartureFinding,
-  recencyFinding,
 } from "./findings";
 import { minimumSeatsState } from "./minimum-seats";
 import {
@@ -43,13 +42,14 @@ function everyAdvisory(): Advisory[] {
       level: "open_water",
     }),
     depthFinding({ status: "verification_required", verificationReasons: ["junior_limits"] }),
-    recencyFinding("never"),
+    { code: "recency_notable", params: { band: "never" } } satisfies BookingAdvisory,
     courseCrewFinding({ code: "no_instructor" }),
     courseCrewFinding({
       code: "over_ratio",
       booked: 9,
       capacity: 8,
       ratio: "entry_level",
+      perInstructor: 12,
       remedy: "assistant",
     }),
     divemasterFinding(
@@ -234,13 +234,6 @@ describe("the adapters", () => {
     expect(depthFinding(checkDepthCeiling(18.288, limit, "feet"))).toBeNull();
   });
 
-  it("pick out only the two recency answers a divemaster reads twice", () => {
-    const notable = DIVE_RECENCY_BANDS.filter((band) => recencyFinding(band) !== null);
-    expect(notable).toEqual(["over_five_years", "never"]);
-    expect(recencyFinding(null)).toBeNull();
-    expect(recencyFinding(undefined)).toBeNull();
-  });
-
   it("say nothing when a course, a boat or a departure has no gap", () => {
     expect(
       courseCrewFinding(
@@ -289,8 +282,11 @@ describe("the adapters", () => {
       status: "verification_required",
       verificationReasons: ["card_status"],
     });
-    const recency = recencyFinding("over_five_years");
-    if (!depth || !recency) throw new Error("fixture");
+    const recency: BookingAdvisory = {
+      code: "recency_notable",
+      params: { band: "over_five_years" },
+    };
+    if (!depth) throw new Error("fixture");
     expect(depthAdvisoryIn([recency, depth])).toBe(depth);
     expect(depthAdvisoryIn([recency])).toBeUndefined();
     expect(depthAdvisoryIn(undefined)).toBeUndefined();

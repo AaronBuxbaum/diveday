@@ -70,6 +70,7 @@ import {
   notificationSendQueue,
   orderLineItems,
   orders,
+  packageGifts,
   paymentDisputes,
   paymentOperationIntents,
   people,
@@ -88,6 +89,7 @@ import {
   rentalFitProfiles,
   reviewModerationEvents,
   reviewReplies,
+  rollCallDeckCounts,
   safetyDrillParticipants,
   safetyDrills,
   shopBackupDeliveryClaims,
@@ -935,6 +937,7 @@ export async function clearDemoSchedule(
   // Snags name the departures they were written and answered on.
   await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db.delete(rollCallDeckCounts).where(eq(rollCallDeckCounts.shopId, shopId));
   await db
     .delete(departureBoatSafetySnapshots)
     .where(eq(departureBoatSafetySnapshots.shopId, shopId));
@@ -1073,6 +1076,7 @@ export async function clearDemoSchedule(
   // the diff (found while accounting for issue #791's pixels).
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
   await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
+  await db.delete(packageGifts).where(eq(packageGifts.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   // Orders (and their line items) reference bookings and people; the waitlist
   // references trips and people. Both must go before the parents below.

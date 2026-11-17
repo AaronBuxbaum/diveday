@@ -36,7 +36,8 @@
         "when": "En el muelle, y después de cada inmersión",
         "title": "La tripulación pasa lista nombre por nombre, con señal o sin ella",
         "note1": "El recuento de cada inmersión, buceadores y tripulación por su nombre, sigue abierto hasta contar a bordo a todos los que zarparon.",
-        "note2": "Fuera de cobertura, el teléfono sigue pasando lista desde su copia guardada, y los toques se suman al registro al volver la señal."
+        "note2": "Fuera de cobertura, el teléfono sigue pasando lista desde su copia guardada, y los toques se suman al registro al volver la señal.",
+        "note3": "El mismo manifiesto se imprime como paquete de la salida, con el pase de lista y la tarjeta de emergencia, para la tripulación que lleva papel."
       },
       "recap": {
         "when": "Después de que vuelva el barco",
@@ -206,7 +207,12 @@
       "item4": "Una foto de portada y hasta ocho más en cada página de curso",
       "item5": "Las plazas de una sesión de Open Water de PADI, limitadas por sus instructores y asistentes, y las de cualquier bautismo, solo por sus instructores",
       "item6": "La edad mínima de un curso, confirmada por quien reserva en línea y comparada al embarcar con la fecha de nacimiento de la ficha del buceador",
-      "item7": "Una solicitud de fecha desde el horario o una página de curso, leída en el mostrador agrupada por día"
+      "item7": "Una solicitud de fecha desde el horario o una página de curso, leída en el mostrador agrupada por día",
+      "item8": "Sesiones en barco, desde la costa y en piscina, y un curso que se reúne varios días, cada uno con su horario, como una noche de piscina y luego un fin de semana en aguas abiertas",
+      "item9": "Materiales de estudio y enlaces de e-learning enviados con la reserva y el recordatorio de la semana previa, marcados como terminados en el listado, con la cuota de e-learning en su propia línea del pedido",
+      "item10": "Alumnos remitidos marcados en el listado, con el formulario de remisión y el registro de formación del otro instructor, cada uno sellado al recibirlo",
+      "item11": "El siguiente paso de cada alumno en el listado, una certificación que registra la nueva tarjeta y las tarjetas pendientes de enviar a la agencia, de la más antigua a la más reciente",
+      "item12": "Las acreditaciones de instructor y de asistente archivadas, en la lista de Hoy desde treinta días antes de cada renovación"
     },
     "payments": {
       "item1": "Pagos con tarjeta a través de la cuenta de Stripe del centro",
@@ -1387,13 +1393,13 @@
       "step1Title": "Empieza con un catálogo",
       "step1Body": "Copia cursos de PADI, SSI o SDI y edita el precio, el plan y las fotos para hacerlos tuyos.",
       "step2Title": "Programa las sesiones",
-      "step2Body": "Cada fecha es una salida con un instructor asignado. Una sesión de Open Water de PADI vende hasta la ratio de PADI, con lugar agregado por cada asistente, y un bautismo hasta dos buceadores por instructor.",
+      "step2Body": "Cada fecha es una salida con un instructor asignado. Una sesión de Open Water de PADI vende hasta la ratio de PADI, con lugar agregado por cada asistente, y un bautismo hasta dos buceadores por instructor en aguas abiertas.",
       "step3Title": "Reservan y suben de nivel",
       "step3Body": "Los buceadores eligen una fecha en la página del curso, y un curso que primero los certifica les permite reservar la inmersión que pide la tarjeta nueva.",
       "faq1Q": "¿Se puede pedir una fecha que no está publicada?",
       "faq1A": "Sí. La página del curso acepta una solicitud de fecha, y llega a tus Mensajes agrupada por día.",
       "faq2Q": "¿A qué ratios se ajustan las sesiones?",
-      "faq2A": "Open Water de PADI permite ocho alumnos por instructor, dos más por cada divemaster o instructor asistente, y nunca más de doce. DiveDay limita todo bautismo a dos buceadores por instructor, sea cual sea la agencia, y un asistente no suma plazas. Los demás cursos se limitan por las plazas de la salida.",
+      "faq2A": "Open Water de PADI permite ocho alumnos por instructor, dos más por cada divemaster o instructor asistente, y nunca más de doce. DiveDay limita todo bautismo a dos buceadores por instructor en aguas abiertas y a cuatro en piscina, sea cual sea la agencia, y un asistente no suma plazas. Los demás cursos se limitan por las plazas de la salida.",
       "faq3Q": "¿Se aplican edades mínimas?",
       "faq3A": "Sí. Quien reserva en línea confirma que cada buceador cumple la edad mínima del curso y, cuando la fecha de nacimiento del buceador está en su ficha, la edad se verifica el día del curso y un buceador menor de esa edad se queda en tierra. DiveDay no le pide la fecha de nacimiento al buceador, así que confirma las edades en el mostrador.",
       "closeTitle": "Mira el catálogo de la demo y sus fechas de curso",
@@ -1428,12 +1434,20 @@
   },
   "setUp": {
     "title": "Pide tu centro",
-    "description": "Cuéntanos sobre tu centro. Te ayudaremos a configurarlo para la forma en que trabaja tu equipo.",
+    "next": {
+      "reply": "Alguien de DiveDay te responde en un día hábil.",
+      "asks": "La primera respuesta pregunta por tus salidas, lugares de buceo y horarios.",
+      "ready": "Tu centro puede recibir su primera reserva esa misma semana.",
+      "free": "Pedirlo no cuesta nada y no hace falta tarjeta."
+    },
     "shopName": "Nombre del centro",
     "region": "Ciudad o región",
-    "runsBoat": "¿Tienes barco?",
-    "yes": "Sí",
-    "no": "No",
+    "runs": "¿Qué ofrece tu centro?",
+    "runsAnswers": {
+      "boat": "Inmersiones desde barco",
+      "shore": "Inmersiones desde la costa",
+      "pool": "Sesiones en piscina"
+    },
     "currentSystem": "Herramienta actual (opcional)",
     "notSpecified": "Sin especificar",
     "current": {
@@ -1458,7 +1472,7 @@
     "sent": {
       "title": "Solicitud enviada",
       "support": "Contactar a DiveDay",
-      "body": "Te escribiremos para abrir tu centro. Mientras tanto, la demo está abierta.",
+      "body": "Alguien de DiveDay te responde en un día hábil para preguntarte por tus salidas, lugares de buceo y horarios. Tu centro puede recibir su primera reserva esa misma semana. Mientras tanto, la demo está abierta.",
       "paper": "¿En papel? Trae a nuestra primera llamada una foto de la planilla de un día.",
       "spreadsheet": "Guarda tu lista de buceadores como CSV y la leemos contigo.",
       "spreadsheetLink": "Qué leemos en ella",

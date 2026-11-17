@@ -99,7 +99,27 @@ async function emittedEventCodes(): Promise<Set<string>> {
   return codes;
 }
 
+/** The `cron_<id>.scan_failed` code of every `cronRoute({ id })` call in the app source. */
+async function cronRouteFailureCodes(): Promise<string[]> {
+  const files = (await sourceFiles(path.join(process.cwd(), "src"))).filter(
+    (file) => !/\.test\.tsx?$/.test(file),
+  );
+  const contents = await Promise.all(files.map((file) => readFile(file, "utf8")));
+  return contents.flatMap((source) =>
+    [...source.matchAll(/\bcronRoute\(\{\s*id:\s*"([a-z0-9-]+)"/g)].map(
+      (match) => `cron_${(match[1] as string).replaceAll("-", "_")}.scan_failed`,
+    ),
+  );
+}
+
 describe("the log-signal registry", () => {
+  it("lists the scan_failed code of every cronRoute in the cron pass alarm", async () => {
+    const signal = LOG_SIGNALS.find((row) => row.metricName === "CronPassFailures");
+    const codes = await cronRouteFailureCodes();
+    expect(codes.length).toBeGreaterThan(10);
+    expect(signal?.events).toEqual(expect.arrayContaining(codes));
+  });
+
   it("alarms failed and capped dietary sweeps through the existing cron signal", () => {
     const signal = LOG_SIGNALS.find((row) => row.metricName === "CronPassFailures");
     expect(signal?.events).toEqual(

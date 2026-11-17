@@ -1,4 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { chosenOrderCustomer } from "./order-customer";
 import {
   capture,
   installVisualBuildGuard,
@@ -16,7 +17,7 @@ for (const scheme of ["light", "dark"] as const) {
     test(`received purchase and recorded return (${scheme})`, async ({ page }) => {
       await page.goto("/shop/blue-mantis/orders?purchase=1");
       const form = page.getByRole("form", { name: "Record purchase", exact: true });
-      await expect(form.getByLabel("Customer", { exact: true })).toHaveValue("walk-in");
+      await expect(chosenOrderCustomer(form)).toHaveValue("walk-in");
       await form.locator('[name="description-0"]').fill("Reef shirt");
       await form.locator('[name="unitAmount-0"]').fill("50");
       await form.getByLabel("Included tax (optional)", { exact: true }).fill("3");

@@ -1028,6 +1028,8 @@ const setupRequestAlertSchema = z.object({
   shopName: setupAnswerSchema(SETUP_TEXT_MAX),
   region: setupAnswerSchema(SETUP_TEXT_MAX),
   runsBoat: z.boolean(),
+  runsShore: z.boolean().optional(),
+  runsPool: z.boolean().optional(),
   currentSystem: z.enum(SETUP_CURRENT_SYSTEMS).optional(),
   /** Which system, as a switching guide's slug, when the requester named one. */
   currentSystemGuide: z
@@ -1611,6 +1613,26 @@ const courseCertifiedSchema = z.object({
       url: z.url().max(2_000),
     })
     .optional(),
+});
+
+/**
+ * **A dive package someone bought for this diver** (issue #4629). Sent once,
+ * on the date the buyer chose in the shop's zone, by the shop tick
+ * (`sendDuePackageGifts`), which claims the gift row before the send. The
+ * dives are already on the recipient's email; there is nothing to claim.
+ */
+const packageGiftSchema = z.object({
+  kind: z.literal("package_gift"),
+  giftId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  buyerName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  packageName: z.string().trim().min(1).max(200),
+  diveCount: z.number().int().min(1).max(10_000),
+  bookUrl: z.url().max(2_000).optional(),
 });
 
 /**
@@ -2210,6 +2232,7 @@ export const notificationSchema = z
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
+    packageGiftSchema,
     interestReceivedAckSchema,
     setupRequestReceiptSchema,
     bookkeeperMonthEndSchema,
@@ -2536,6 +2559,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;
+    // One mail per gift; the gift row is claimed before the send.
+    case "package_gift":
+      return `package-gift/${notification.giftId}`;
     // Never queued; one month per shop, which `bookkeeper_sent_month` claims.
     case "bookkeeper_month_end":
       return `bookkeeper-month-end/${notification.shopId}/${notification.month}`;

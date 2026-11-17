@@ -2012,6 +2012,29 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["pre_departure_check_events.csv"],
   },
   {
+    file: "roll_call_deck_counts.csv",
+    header: [
+      "id",
+      "trip_id",
+      "checkpoint",
+      "counted",
+      "recorded_by_person_id",
+      "recorded_by_name",
+      "recorded_at",
+    ],
+    rows: ({ personName, deckCountRows }) =>
+      deckCountRows.map((row) => [
+        row.id,
+        row.tripId,
+        row.checkpoint,
+        row.counted,
+        row.recordedByPersonId,
+        personName.get(row.recordedByPersonId),
+        row.recordedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["roll_call_deck_counts.csv"],
+  },
+  {
     file: "boat_snags.csv",
     header: [
       "id",
