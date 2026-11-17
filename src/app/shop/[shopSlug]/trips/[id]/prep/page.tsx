@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { getBoatById } from "@/features/boats";
 import { requireShopSurface } from "@/features/session";
 import { getTripPrepPage } from "@/features/trip-prep";
 import { requestLocale } from "@/i18n/request";
@@ -11,12 +13,15 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { isPrepGrouping, type PrepGrouping } from "@/lib/dive-prep";
 import { PREP_SECTION_ID } from "@/lib/element-id";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
+import { meetingPointOfRows } from "@/lib/meeting-point";
 import { shopPath } from "@/lib/staff-notices";
+import { clockPhaseOf, phaseWhens } from "@/lib/trip-clock";
+import { seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
-import { TripStageBadge, TripTabs } from "../_components/TripTabs";
-import { tripTabsCopy } from "../_components/trip-tabs-copy";
+import { TripHeader, tripFacts } from "../_components/TripHeader";
+import { TripPhaseStrip } from "../_components/TripPhaseStrip";
+import { phaseStripCopy } from "../_components/trip-clock-copy";
+import { tripHeaderDaySpan } from "../_components/trip-header-price";
 import { PrepBody } from "./_components/PrepBody";
 import { RentalTicketSheet } from "./_components/RentalTicketSheet";
 
@@ -30,11 +35,12 @@ import { RentalTicketSheet } from "./_components/RentalTicketSheet";
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Trip prep — DiveDay",
+  title: "Gear — DiveDay",
 };
 
 /**
- * The morning packing list. Everything above the assignments section is
+ * **Gear**: the morning packing list, under the Trip page's own header and
+ * phase strip (ADR 20261117-trip-page-clock), with no phase marked as shown. Everything above the assignments section is
  * derived from the roster's rental fits and the trip's dive plan — the
  * counts and sizes reserve nothing. The one exception is deliberate: a shop
  * that keeps its fleet on the gear register can assign tagged units to
@@ -89,8 +95,19 @@ export default async function TripPrepPage({
   // left the dock, and (once home) every unit still out on this boat.
   const view = await getTripPrepPage(db, shop, tripId, nowDate());
   if (!view) notFound();
-  const { prep, shownStage, sailed, finished, backFromBoat } = view;
+  const { prep, sailed, finished, backFromBoat, stageReading, meetingWindows } = view;
   const { trip } = prep;
+  const clockInput = {
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    now: nowDate(),
+    timeZone: shop.timezone,
+    stage: stageReading,
+    cancelled: trip.status === "cancelled",
+    meetingWindows,
+  };
+  const currentPhase = clockPhaseOf(clockInput);
+  const boat = trip.boatId ? await getBoatById(db, shop.id, trip.boatId) : null;
 
   const body = (
     <PrepBody
@@ -126,29 +143,42 @@ export default async function TripPrepPage({
   return (
     <>
       <FlashParams params={["notice", "count"]} />
-      <TripPageHeader
-        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-        trip={trip}
-        locale={locale}
-        timeZone={shop.timezone}
-        actions={
-          <Link href={shopPath(shopSlug, "trips", tripId, "manifest")} className={buttonClass({})}>
-            {t("trips.folio.openDeck")}
-          </Link>
-        }
-        badge={
-          <>
-            <TripStageBadge stage={shownStage?.stage ?? null} copy={tripTabsCopy(t)} />
-            <TripCapacityBadge
-              trip={trip}
-              finished={sailed}
-              cancelledLabel={t("trips.detail.cancelledBadge")}
-              t={t}
-            />
-          </>
-        }
-      />
-      <TripTabs shopSlug={shopSlug} tripId={tripId} current="gear" copy={tripTabsCopy(t)} />
+      <div className="space-y-6 sm:space-y-10">
+        <TripHeader
+          trip={trip}
+          facts={tripFacts({
+            trip,
+            daySpan: tripHeaderDaySpan(meetingWindows ?? [], locale, shop.timezone, t),
+            boatName: boat?.name,
+            meetingPlace: meetingPointOfRows(shop, trip).label,
+            locale,
+            timeZone: shop.timezone,
+          })}
+          shopSlug={shopSlug}
+          tripId={tripId}
+          rollCallInMore
+          addGuest={false}
+          locale={locale}
+          timeZone={shop.timezone}
+          t={t}
+        />
+        <TripPhaseStrip
+          shopSlug={shopSlug}
+          tripId={tripId}
+          current={currentPhase}
+          shown={null}
+          copy={phaseStripCopy(
+            t,
+            phaseWhens({
+              ...clockInput,
+              booked: trip.booked,
+              capacity: seatsOnSale(trip).capacity,
+            }),
+            { locale, timeZone: shop.timezone },
+          )}
+        />
+        <h2 className={SECTION_TITLE_CLASS}>{t("trips.clock.gear")}</h2>
+      </div>
       {/* The anchor every "fix the packing list" link lands on. */}
       <div id={PREP_SECTION_ID} className="mt-10 scroll-mt-6">
         {body}

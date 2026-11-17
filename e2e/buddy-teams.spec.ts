@@ -39,7 +39,7 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await page.getByRole("link", { name: "The day", exact: true }).click();
-  await expect(page).toHaveURL(/view=details/);
+  await expect(page).toHaveURL(/view=edit/);
   // The panel can arrive open when a team warning needs attention. Inspect its
   // native state before opening so the test never toggles an already-open fold
   // shut. Buddy actions redirect back with `?buddies=open`.
@@ -134,7 +134,7 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await page.getByRole("link", { name: "The day", exact: true }).click();
-  await expect(page).toHaveURL(/view=details/);
+  await expect(page).toHaveURL(/view=edit/);
   // Same collapsed-at-rest panel as the first test: open it once, and the
   // `?buddies=open` redirects keep it open across the acts below.
   await expect(page.getByRole("heading", { name: "Buddy teams" })).toBeVisible();

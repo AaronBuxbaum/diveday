@@ -20,7 +20,7 @@ test("the owner hides and restores conservation without losing recorded actions"
     shopSlug: privateShop.slug,
   });
   const path = await tripPathByTitle(page, privateShop.slug, title, { daysOut: -2 });
-  await page.goto(`${path}?view=details`);
+  await page.goto(`${path}?view=edit`);
   const add = page.locator("#conservation-add");
   await add.locator("summary").click();
   await add.getByRole("spinbutton", { name: t("trips.conservation.quantity") }).fill("1");
@@ -35,7 +35,7 @@ test("the owner hides and restores conservation without losing recorded actions"
   await expect(
     page.getByRole("status").filter({ hasText: t("settings.main.features.saved") }),
   ).toBeVisible();
-  await page.goto(`${path}?view=details`);
+  await page.goto(`${path}?view=edit`);
   await expect(
     page
       .locator("#about #conservation")
@@ -47,7 +47,7 @@ test("the owner hides and restores conservation without losing recorded actions"
   await expect(
     page.getByRole("status").filter({ hasText: t("settings.main.features.saved") }),
   ).toBeVisible();
-  await page.goto(`${path}?view=details`);
+  await page.goto(`${path}?view=edit`);
   await expect(
     page
       .locator("#about #conservation")

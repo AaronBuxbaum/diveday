@@ -240,7 +240,7 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
           ahead.map((entry) => entry.clash),
         ),
         actionLabel: openCrewActionText(t),
-        href: `/shop/${shopSlug}/trips/${trip.id}?view=details#crew`,
+        href: `/shop/${shopSlug}/trips/${trip.id}?view=edit#crew`,
         dueAt: sails,
       });
     }
@@ -286,7 +286,7 @@ export function pushBoatClashRows(actions: TodayAction[], ctx: TodayRowsContext)
       aboutDeparture: true,
       detail: boatClashDetailText(t, standing),
       actionLabel: openTripActionText(t),
-      href: `/shop/${shopSlug}/trips/${trip.id}?view=details`,
+      href: `/shop/${shopSlug}/trips/${trip.id}?view=edit`,
       dueAt: trip.startsAt,
     });
   }

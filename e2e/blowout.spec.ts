@@ -131,7 +131,7 @@ test.describe("weather blow-out cascade", () => {
      * and a crew that now needs to put them back ashore and close the count.
      */
     const tabs = page.getByRole("navigation", { name: "Departure" });
-    await expect(page.getByRole("link", { name: "Open Deck", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Roll call", exact: true })).toBeVisible();
 
     /**
      * **And nothing is packed for a boat that is not going.** Every count on

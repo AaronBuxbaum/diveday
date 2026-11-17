@@ -11,7 +11,7 @@ test("Details only folds its action links when their actual widths do not fit", 
   page,
 }) => {
   const id = await seededTripId(page, "blue-mantis", title);
-  await page.goto(`/shop/blue-mantis/trips/${id}?view=details`);
+  await page.goto(`/shop/blue-mantis/trips/${id}?view=edit`);
   const plan = page.locator("#plan > summary");
   await expect(plan.locator(":scope > div > :nth-child(2)")).toHaveCSS("font-size", "16px");
   await expect(plan.getByText(t("trips.about.edit"), { exact: true })).toHaveCSS(
@@ -60,12 +60,12 @@ async function sendSeededTripHomeEarly(page: Page): Promise<void> {
   await home.click();
   await page.getByRole("button", { name: t("manifest.stage.homeConfirm"), exact: true }).click();
   await expect(home).toHaveAttribute("aria-pressed", "true");
-  await page.goto(`${path}?view=details`);
+  await page.goto(`${path}?view=edit`);
 }
 
 test("early Home locks the plan but leaves conservation correction available", async ({ page }) => {
   const id = await seededTripId(page, "blue-mantis", title);
-  await page.goto(`/shop/blue-mantis/trips/${id}?view=details`);
+  await page.goto(`/shop/blue-mantis/trips/${id}?view=edit`);
   await expect(page.locator("#plan > summary")).toBeVisible();
   await sendSeededTripHomeEarly(page);
   await expect(page.getByText(t("trips.notices.detailsFinished"), { exact: true })).toBeVisible();

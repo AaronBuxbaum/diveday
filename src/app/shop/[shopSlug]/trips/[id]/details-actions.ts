@@ -203,7 +203,7 @@ export async function correctDiveSafetyRecord(
   revalidateAndRedirect(
     back,
     noticeUrl(back, savedNotice, {
-      view: "details",
+      view: "edit",
       form: "safety-record",
       ...(flySafe && flySafe !== "failed" && flySafe.unreached.length > 0
         ? { count: flySafe.unreached.length }
@@ -527,7 +527,7 @@ async function saveDepartureDetails(
   revalidateAndRedirect(
     back,
     noticeUrl(back, savedNotice, {
-      view: "details",
+      view: "edit",
       ...(section ? { form: section } : {}),
       ...(notice ? { held: notice.id, tell: notice.told } : {}),
       ...(savedNotice === "saved-fly-safe-unreached" && flySafe && flySafe !== "failed"

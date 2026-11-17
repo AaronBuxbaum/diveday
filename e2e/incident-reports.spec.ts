@@ -105,7 +105,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // 20261015-incident-draft-discard-and-hold): it leaves the departure's list,
   // and the log still says it existed, and who deleted it.
   const tripPath = reportPath.replace(/\/incidents\/[0-9a-f-]+$/, "");
-  await page.goto(`${tripPath}?view=record`);
+  await page.goto(`${tripPath}?phase=wrapped`);
   await section.getByRole("button", { name: "Report an incident" }).click();
   await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
   await page.getByRole("button", { name: "Delete draft" }).click();

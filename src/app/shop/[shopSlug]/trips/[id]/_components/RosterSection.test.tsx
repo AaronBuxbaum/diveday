@@ -598,7 +598,7 @@ describe("the guest folio workflow", () => {
 
   it("starts with named guest choices and opens each blocker beside its remedy", () => {
     const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
-    expect(screen.getByRole("heading", { name: "Who’s coming" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Guests" })).toBeVisible();
     expect(screen.getByRole("button", { name: blocked.person.fullName })).toBeVisible();
     expect(screen.getByRole("button", { name: ready.person.fullName })).toBeVisible();
     expect(container.querySelector("li#booking-a")).toBeNull();

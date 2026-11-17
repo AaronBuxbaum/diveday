@@ -40,7 +40,7 @@ import { windowOnThisDay } from "./window-on-this-day";
  * preserve keyboard and screen-reader access to shift actions. */
 
 function tripHref(shopSlug: string, tripId: string) {
-  return `/shop/${shopSlug}/trips/${tripId}?view=details#crew`;
+  return `/shop/${shopSlug}/trips/${tripId}?view=edit#crew`;
 }
 
 /** Offer the action available to this viewer for the gap. */

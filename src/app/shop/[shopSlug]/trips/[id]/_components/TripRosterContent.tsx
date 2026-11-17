@@ -607,7 +607,7 @@ export function TripPromoteAndActivity({
         {more}
 
         {!dayOnly ? (
-          <details className="group/activity" open={recordOnly}>
+          <details id="trip-activity" className="group/activity scroll-mt-6" open={recordOnly}>
             <summary className={FOOT_ROW_SUMMARY}>
               <span>{t("trips.guests.activityHeading")}</span>
               <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />

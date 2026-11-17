@@ -299,7 +299,7 @@ describe("deleting a draft and holding a report are an owner's alone", () => {
     const to = await redirectedTo(() =>
       discardIncidentDraftAction(c.shop.slug, c.tripId, c.reportId),
     );
-    expect(to).toBe(`/shop/${c.shop.slug}/trips/${c.tripId}?view=record#incidents`);
+    expect(to).toBe(`/shop/${c.shop.slug}/trips/${c.tripId}?phase=wrapped#incidents`);
     expect((await c.row())?.deletedAt).not.toBeNull();
   });
 

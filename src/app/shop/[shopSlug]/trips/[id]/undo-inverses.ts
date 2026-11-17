@@ -25,9 +25,7 @@ export async function restoreConservationRecord(
   revalidatePath("/recap/[token]", "page");
   revalidateAndRedirect(
     base,
-    result.ok
-      ? `${base}?view=details`
-      : noticeUrl(base, "conservation-undo-failed", { view: "details" }),
+    result.ok ? `${base}?view=edit` : noticeUrl(base, "conservation-undo-failed", { view: "edit" }),
   );
 }
 

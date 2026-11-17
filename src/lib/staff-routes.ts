@@ -119,7 +119,7 @@ export const STAFF_ROUTES = {
   "trip-tags": { parent: SETTINGS },
   // `/trips` has no page: a departure is the board's detail view.
   "trips/[id]": { parent: BOARD },
-  "trips/[id]/incidents/[reportId]": { upHash: "?view=record#incidents" },
+  "trips/[id]/incidents/[reportId]": { upHash: "?phase=wrapped#incidents" },
   "trips/[id]/log": {},
   "trips/[id]/log/print": {},
   "trips/[id]/manifest": { face: true },

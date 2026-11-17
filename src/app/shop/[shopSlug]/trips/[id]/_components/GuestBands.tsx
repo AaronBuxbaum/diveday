@@ -4,11 +4,11 @@ import { DepartureConflicts } from "./DepartureConflicts";
 import { MinimumSeatsBand } from "./MinimumSeatsBand";
 
 /**
- * The bands that open the Divers tab, above the pulse: the minimum head count
+ * The bands that open the guest list, above the pulse: the minimum head count
  * while it is still a question, then what this departure is standing in that a
  * person has to sort out (issue #4474).
  */
-export function DiversTabBands({
+export function GuestBands({
   overview,
   showMinimum,
   shopSlug,

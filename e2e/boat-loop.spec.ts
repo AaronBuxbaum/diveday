@@ -44,7 +44,7 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Tanks", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Open Deck", exact: true }).click();
+  await page.getByRole("link", { name: "Roll call", exact: true }).click();
   await expect(page).toHaveURL(/\/manifest/);
   await expect(page.getByRole("heading", { name: "Deck", exact: true })).toBeVisible();
 

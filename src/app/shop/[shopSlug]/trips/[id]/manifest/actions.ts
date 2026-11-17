@@ -108,7 +108,7 @@ async function manifestStaff(ctx: ManifestTripContext) {
  */
 function manifestBack(ctx: ManifestActionContext): string {
   if (ctx.buddySurface === "day") {
-    return `${shopPath(ctx.shopSlug, "trips", ctx.tripId)}?view=details&buddies=open`;
+    return `${shopPath(ctx.shopSlug, "trips", ctx.tripId)}?view=edit&buddies=open`;
   }
   // `checkpoint` is escaped rather than interpolated raw: it reaches these
   // actions as a bound argument like the slug, and one carrying `&` would

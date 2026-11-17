@@ -506,7 +506,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await page.getByRole("link", { name: "The day", exact: true }).click();
-        await expect(page).toHaveURL(/view=details/);
+        await expect(page).toHaveURL(/view=edit/);
         const panel = page.locator("section", {
           has: page.getByRole("heading", { name: "Buddy teams" }),
         });

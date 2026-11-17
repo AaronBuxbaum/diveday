@@ -229,7 +229,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Trip requirements have not been configured yet.",
-      "identityUnconfirmed": "Matched to this record on a guess: confirm who this is on the Guests tab before boarding.",
+      "identityUnconfirmed": "Matched to this record on a guess: confirm who this is at check-in before boarding.",
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverLapsed": "Signed waiver lapsed; send a fresh link.",

@@ -46,7 +46,7 @@ describe("pushCrewGapRows", () => {
     const [row, ...rest] = rows({ courseCrewCounts: new Map() });
     expect(rest).toEqual([]);
     expect(row).toMatchObject({ kind: "uncrewed_departure", aboutDeparture: true });
-    expect(row?.href).toBe("/shop/blue-mantis/trips/trip-1?view=details#crew");
+    expect(row?.href).toBe("/shop/blue-mantis/trips/trip-1?view=edit#crew");
   });
 
   it("raises nothing on a departure the shop marked self-guided", () => {

@@ -226,7 +226,7 @@ export function RosterRow({
             {outstanding}
             {!identityUnconfirmed && booking.participantType !== "rider" ? (
               <section className="border-t border-border pt-5">
-                <h3 className="font-semibold">{t("trips.tabs.gear")}</h3>
+                <h3 className="font-semibold">{t("trips.clock.gear")}</h3>
                 <p className="mt-2 text-sm text-muted">
                   {rentalFitLineText(
                     t,

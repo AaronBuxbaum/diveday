@@ -775,7 +775,7 @@ test.describe("schedule builder", () => {
     await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
 
     await week.getByRole("link", { name: new RegExp(`^Set a price for ${title},`) }).click();
-    await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\?view=details#details$/);
+    await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\?view=edit#details$/);
     await openTripAbout(page);
     await openTripAboutRow(page, "Booking and payment");
     await page.getByLabel(/Price per diver/).fill("110");

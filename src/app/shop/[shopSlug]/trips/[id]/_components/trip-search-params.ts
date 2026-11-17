@@ -20,8 +20,10 @@ export type TripPageSearchParams = {
   confirmName?: string;
   confirmEmail?: string;
   confirmPhone?: string;
-  /** `details` opens the Details tab; anything else is the Divers tab. */
+  /** `edit` opens Edit trip; anything else is a phase. */
   view?: string;
+  /** The phase on screen (`src/lib/trip-clock.ts`); the current one when absent. */
+  phase?: string;
   buddies?: string;
   buddyError?: string;
   /** A booking id: the page is that booking's paper pass, to print and hand over. */

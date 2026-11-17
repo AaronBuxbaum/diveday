@@ -268,7 +268,7 @@ export async function DepartureLogPage({
             }
           />
           <Link
-            href={`${shopPath(shopSlug, "trips", tripId)}?view=record`}
+            href={`${shopPath(shopSlug, "trips", tripId)}?phase=wrapped`}
             className={buttonClass({ variant: "link", flush: true })}
           >
             {t("trips.surfaces.trip")}

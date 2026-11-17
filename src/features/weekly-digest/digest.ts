@@ -502,7 +502,7 @@ export function digestSectionsWithLinks(
         startsAt: weakest.startsAt,
         booked: weakest.booked,
         capacity: weakest.capacity,
-        url: `${origin}${shopPath(shopSlug, "trips", weakest.tripId)}?view=details#last-minute-deal`,
+        url: `${origin}${shopPath(shopSlug, "trips", weakest.tripId)}?view=edit#last-minute-deal`,
       },
     };
   });

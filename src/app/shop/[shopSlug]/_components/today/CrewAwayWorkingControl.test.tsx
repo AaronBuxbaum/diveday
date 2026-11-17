@@ -72,7 +72,7 @@ describe("CrewAwayWorkingControl", () => {
           detail: "Marcus Webb is away Sat, Aug 29.",
           departure: boat("t9"),
           crewAway: { people: [people[0] as (typeof people)[number]] },
-          href: "/shop/blue-mantis/trips/t9?view=details#crew",
+          href: "/shop/blue-mantis/trips/t9?view=edit#crew",
           dueAt: hoursFromNow(48),
         }),
       ],
@@ -82,9 +82,7 @@ describe("CrewAwayWorkingControl", () => {
     expect(
       within(week)
         .getAllByRole("link")
-        .some(
-          (link) => link.getAttribute("href") === "/shop/blue-mantis/trips/t9?view=details#crew",
-        ),
+        .some((link) => link.getAttribute("href") === "/shop/blue-mantis/trips/t9?view=edit#crew"),
     ).toBe(true);
   });
 
@@ -100,7 +98,7 @@ describe("CrewAwayWorkingControl", () => {
           departure: boat("t9"),
           crewAway: { people: [people[0] as (typeof people)[number]] },
           staffPersonId: "marcus",
-          href: "/shop/blue-mantis/trips/t9?view=details#crew",
+          href: "/shop/blue-mantis/trips/t9?view=edit#crew",
           dueAt: hoursFromNow(48),
         }),
       ],

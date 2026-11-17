@@ -55,7 +55,7 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     test.use({ colorScheme: "light", viewport: { width: 1280, height: 800 } });
 
     test("the buddy team's inner builder exposes its person checkboxes", async ({ page }) => {
-      await page.goto(`${await tripPathByTitle(page, "blue-mantis", REEF)}?view=details`);
+      await page.goto(`${await tripPathByTitle(page, "blue-mantis", REEF)}?view=edit`);
       const outer = page
         .locator("details")
         .filter({ has: page.locator("#buddy-teams-heading") })
@@ -253,7 +253,7 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
 
     test("the departure note opens the message for everyone booked", async ({ page }) => {
       const path = await tripPathByTitle(page, "blue-mantis", REEF);
-      await page.goto(`${path}?view=details#departure-note`);
+      await page.goto(`${path}?view=edit#departure-note`);
       const field = page.getByTestId("departure-note-body");
       await field.fill("Meet at the shop ten minutes early so we can leave together.");
       await expect(

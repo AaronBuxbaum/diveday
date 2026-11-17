@@ -22,7 +22,7 @@ test("staff record and correct measured conservation actions after a departure",
     capacity: 6,
   });
   const path = await tripPathByTitle(page, "blue-mantis", title, { daysOut: -2 });
-  await page.goto(`${path}?view=details`);
+  await page.goto(`${path}?view=edit`);
   await expect(
     page
       .locator("#about #conservation")
@@ -63,7 +63,7 @@ test("a corrected conservation record can be restored with Undo and deleted agai
   const {
     returnedConservationRecap: { tripId },
   } = await seedFacts(request, ["returnedConservationRecap"]);
-  await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details`);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?view=edit`);
   const item = page
     .locator("li")
     .filter({ hasText: "Discarded fishing gear" })
@@ -96,7 +96,7 @@ test("staff record lionfish as whole counts and the diver recap names the remova
   const {
     returnedConservationRecap: { tripId },
   } = await seedFacts(request, ["returnedConservationRecap"]);
-  await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details`);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?view=edit`);
   const add = page.locator("#conservation-add");
   await add.locator("summary").click();
   await add

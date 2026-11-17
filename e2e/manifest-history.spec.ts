@@ -132,7 +132,7 @@ for (const width of [390, 1280]) {
           exact: true,
         })
         .and(page.locator(`#deck-flow a[href="${trip}"]`));
-      const manifestTab = page.getByRole("link", { name: "Open Deck", exact: true });
+      const manifestTab = page.getByRole("link", { name: "Roll call", exact: true });
       const copy = staffTranslator("en-US");
       await manifestReadCounter(page, "reset");
       const copyClaimed = deviceCopyClaimed(page);

@@ -28,7 +28,7 @@ describe("the rental slip on paper", () => {
   it("is a sheet with the way back to the packing list, and no screen-vs-print fork", () => {
     expect(CODE).toContain("<SheetDocument");
     expect(CODE).toContain('shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}');
-    expect(CODE).toContain('backLabel={t("trips.tabs.gear")}');
+    expect(CODE).toContain('backLabel={t("trips.clock.gear")}');
     expect(CODE).not.toMatch(/print:|EyebrowWayUp|PrintButton/);
   });
 });

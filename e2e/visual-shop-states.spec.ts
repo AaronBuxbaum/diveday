@@ -560,7 +560,7 @@ for (const scheme of ["light", "dark"] as const) {
         [{ name: "operationalTrust", state: "ashore" }],
         { slug: privateShop.slug },
       );
-      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}?view=details`);
+      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}?view=edit`);
       await expect(
         page.getByText(
           staffCopy("manifest.buddyTeamCaution", {
@@ -608,7 +608,7 @@ for (const scheme of ["light", "dark"] as const) {
         [{ name: "operationalTrust", state: "intro" }],
         { slug: privateShop.slug },
       );
-      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}?view=details`);
+      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}?view=edit`);
       await expect(
         page.getByText(
           staffCopy("manifest.buddyTeamCaution", {

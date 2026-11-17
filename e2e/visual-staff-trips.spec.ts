@@ -548,7 +548,7 @@ for (const scheme of ["light", "dark"] as const) {
         const seeded = await seedFacts(request, ["troublePanels", "crewClash"]);
         const { crewClash } = seeded as { crewClash?: { tripId: string } };
         if (!crewClash) throw new Error("the fact found no two departures to clash");
-        await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}?view=details`);
+        await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}?view=edit`);
         const crew = await openTripAboutRow(page, "Boat & crew");
         const clashingName = await crew
           .locator("#crew li")

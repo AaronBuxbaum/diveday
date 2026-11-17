@@ -98,7 +98,7 @@ describe("the weekly_digest notification", () => {
             startsAt: new Date("2026-10-08T12:00:00Z"),
             booked: 1,
             capacity: 8,
-            url: "https://diveday.example/shop/blue-mantis/trips/t1?view=details#last-minute-deal",
+            url: "https://diveday.example/shop/blue-mantis/trips/t1?view=edit#last-minute-deal",
           },
         },
       ],
@@ -106,7 +106,7 @@ describe("the weekly_digest notification", () => {
     // The time keeps its units whole with a no-break space, so match around it.
     expect(text).toMatch(/Thursday\s8:00\sAM: Deep <Wreck> Charter has 1 of 8 booked\./u);
     expect(text).toContain(
-      "booked. Send a last-minute deal: https://diveday.example/shop/blue-mantis/trips/t1?view=details#last-minute-deal",
+      "booked. Send a last-minute deal: https://diveday.example/shop/blue-mantis/trips/t1?view=edit#last-minute-deal",
     );
     expect(html).toContain("Deep &lt;Wreck&gt; Charter");
     expect(html).not.toContain("<Wreck>");

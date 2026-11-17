@@ -172,7 +172,7 @@ export function SafetyLists({
       >
         {month.noCrewDepartures.map((departure) => (
           <li key={departure.tripId}>
-            <Row href={`${tripHref(departure.tripId)}?view=details#crew`} paper={paper}>
+            <Row href={`${tripHref(departure.tripId)}?view=edit#crew`} paper={paper}>
               <span className="font-medium">{departure.title}</span>
               <span className="text-sm text-muted">
                 {formatShortDate(departure.startsAt, locale, timeZone)}

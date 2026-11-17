@@ -51,7 +51,7 @@ describe("tripPulseFacts", () => {
 
   it("asks for requirements on a fun dive with none, never on a course or a cancelled trip", () => {
     const facts = tripPulseFacts(input({ requirement: null as never }));
-    expect(facts.map((fact) => fact.href)).toEqual(["?view=details#requirements"]);
+    expect(facts.map((fact) => fact.href)).toEqual(["?view=edit#requirements"]);
     expect(tripPulseFacts(input({ requirement: null as never, cancelled: true }))).toEqual([]);
     expect(
       tripPulseFacts(input({ requirement: null as never, course: { id: "c" } as never })),

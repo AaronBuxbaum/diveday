@@ -122,7 +122,7 @@ test.describe("the day's weather call, for a divemaster", () => {
     // the departure a second time, a server render the 15s budget could not
     // spare on a loaded machine, with this role's sign-in already inside it.
     const path = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
-    await page.goto(`${path}?view=details`);
+    await page.goto(`${path}?view=edit`);
     const more = await openTripMore(page);
     await expect(more.getByRole("link", { name: "Weather blow-out…" })).toBeVisible();
     await expect(

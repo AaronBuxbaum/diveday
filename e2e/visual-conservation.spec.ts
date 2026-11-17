@@ -22,7 +22,7 @@ test("recorded conservation action and its editor (light)", async ({ page }) => 
     capacity: 6,
   });
   const path = await tripPathByTitle(page, "blue-mantis", title, { daysOut: -2 });
-  await page.goto(`${path}?view=details`);
+  await page.goto(`${path}?view=edit`);
   const add = page.locator("#conservation-add");
   await add.locator("summary").click();
   await add

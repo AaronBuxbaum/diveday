@@ -42,7 +42,7 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
   // **A live departure, not only one that is back.** The seeded demo day is
   // mid-morning, so the reef trip is still live; an owner whose boat is
   // overdue needs the record of who is on it, and Record is where it is.
-  await page.goto(`${tripPath}?view=record`);
+  await page.goto(`${tripPath}?phase=wrapped`);
   await page.getByRole("link", { name: "Departure log" }).click();
   await page.waitForURL(/\/log$/);
 
@@ -192,7 +192,7 @@ test.describe("the log is the owner's to produce", () => {
     const tripUrl = new URL(page.url());
 
     // The departure's Record tab is theirs to read; this one door is not on it.
-    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}?view=record`);
+    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}?phase=wrapped`);
     await expect(page.getByRole("link", { name: "View public page" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Departure log" })).toHaveCount(0);
 

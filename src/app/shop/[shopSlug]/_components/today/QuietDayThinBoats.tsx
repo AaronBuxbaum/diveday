@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { tripTabHref } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripTabs";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listThinBoats } from "@/features/thin-boats";
@@ -84,7 +83,7 @@ export async function QuietDayThinBoats({
                   </Link>
                 ) : null}
                 {boat.need.kind === "minimum" ? (
-                  <Link href={tripTabHref(shopSlug, boat.tripId, "details")} className={door}>
+                  <Link href={`${trip}?view=edit`} className={door}>
                     {t("shopHome.thinBoats.minimum")}
                   </Link>
                 ) : null}

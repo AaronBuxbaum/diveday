@@ -341,7 +341,7 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
   const root = url.pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
   if (!root) throw new Error(`openTripTab called from ${url.pathname}, which is not a departure`);
   const target = tab === "Trip" ? root : `${root}/${tab.toLowerCase()}`;
-  // Divers and Details share a path: Details is `?view=details`, and an About
+  // Divers and Details share a path: Details is `?view=edit`, and an About
   // form's save lands on Details with a `form=` that `FlashParams` strips, so the
   // address bar alone cannot say the roster is open. The tab strip can.
   const onTarget =
@@ -416,8 +416,8 @@ export async function openTripAbout(page: Page): Promise<Locator> {
   await page.waitForURL(TRIP_ROOT_URL);
   await expect(page.getByRole("navigation", { name: "Departure" })).toBeVisible();
   const url = new URL(page.url());
-  if (url.searchParams.get("view") !== "details" && (await about.count()) === 0) {
-    url.searchParams.set("view", "details");
+  if (url.searchParams.get("view") !== "edit" && (await about.count()) === 0) {
+    url.searchParams.set("view", "edit");
     url.hash = "";
     await page.goto(url.toString());
   }
@@ -1011,7 +1011,7 @@ export async function openManifestPerson(row: Locator): Promise<void> {
 }
 
 /**
- * Open a departure's activity log on Record (`?view=record`). Call it
+ * Open a departure's activity log on Record (`?phase=wrapped`). Call it
  * from any tab of the departure; it leaves the page on Record, so a spec that
  * goes on to work the roster returns with `openTripTab(page, "Trip")`.
  */
@@ -1020,8 +1020,8 @@ export async function openTripActivity(page: Page): Promise<void> {
   const root = new URL(page.url()).pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
   if (!root)
     throw new Error(`openTripActivity called from ${page.url()}, which is not a departure`);
-  await page.goto(`${root}?view=record`);
-  await page.waitForURL(/\?view=record/);
+  await page.goto(`${root}?phase=wrapped`);
+  await page.waitForURL(/\?phase=wrapped/);
   await openIfClosed(
     page
       .locator("details")

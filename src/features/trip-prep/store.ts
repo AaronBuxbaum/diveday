@@ -456,6 +456,7 @@ export async function getTripPrepPage(db: AppDb, shop: TripPrepShop, tripId: str
   ]);
   if (!prep) return null;
   const { trip } = prep;
+  const meetingWindows = (await meetingWindowsByTrip(db, [trip])).get(tripId);
   const {
     shown: shownStage,
     sailed,
@@ -467,10 +468,11 @@ export async function getTripPrepPage(db: AppDb, shop: TripPrepShop, tripId: str
     timeZone: shop.timezone,
     stage: stageReading,
     cancelled: trip.status === "cancelled",
-    meetingWindows: (await meetingWindowsByTrip(db, [trip])).get(tripId),
+    meetingWindows,
   });
   const backFromBoat = finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
-  return { prep, shownStage, sailed, finished, backFromBoat };
+  // The raw tap and the meeting days ride along for the page's phase strip (`clockPhaseOf`).
+  return { prep, shownStage, sailed, finished, backFromBoat, stageReading, meetingWindows };
 }
 
 /**

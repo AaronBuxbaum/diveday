@@ -615,7 +615,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator('select[name="participantType"]:visible').waitFor();
         await capture(page, "trip-coming-as-editor", scheme);
 
-        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}?view=details`);
+        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}?view=edit`);
         await expect(page.locator("details#participant-terms")).toBeVisible();
         await capture(page, "trip-details-participant-terms", scheme);
 

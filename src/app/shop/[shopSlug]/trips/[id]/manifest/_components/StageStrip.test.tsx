@@ -174,7 +174,7 @@ describe("StageStrip on the way home with a roll call open", () => {
             line: "Dive 2 not counted. If it was called off, set the plan to 1 dive.",
             plan: {
               label: "Change the plan",
-              href: "/shop/blue-mantis/trips/trip-1?view=details#dives",
+              href: "/shop/blue-mantis/trips/trip-1?view=edit#dives",
             },
           },
         }}
@@ -186,7 +186,7 @@ describe("StageStrip on the way home with a roll call open", () => {
     );
     expect(screen.getByRole("link", { name: "Change the plan" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/trip-1?view=details#dives",
+      "/shop/blue-mantis/trips/trip-1?view=edit#dives",
     );
     expect(screen.getByRole("link", { name: "Open roll call" })).toBeInTheDocument();
   });

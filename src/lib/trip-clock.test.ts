@@ -163,7 +163,11 @@ describe("phaseWhens", () => {
   });
 
   it("says nothing past Filling for a cancelled departure", () => {
-    const whens = phaseWhens({ ...base, cancelled: true, now: new Date("2026-11-11T15:00:00.000Z") });
+    const whens = phaseWhens({
+      ...base,
+      cancelled: true,
+      now: new Date("2026-11-11T15:00:00.000Z"),
+    });
     expect(whens.ready).toBeNull();
     expect(whens.wrapped).toBeNull();
   });

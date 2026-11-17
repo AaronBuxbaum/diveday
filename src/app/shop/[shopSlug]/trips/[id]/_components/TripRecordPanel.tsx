@@ -1,5 +1,4 @@
 import type { ComponentProps } from "react";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { TripAboutLinks } from "./TripAboutLinks";
 import { TripDiveRecord } from "./TripDiveRecord";
 import { TripIncidentReports } from "./TripIncidentReports";
@@ -19,7 +18,6 @@ export function TripRecordPanel({
   const shopSlug = shop.slug;
   return (
     <section className="space-y-6">
-      <h2 className={SECTION_TITLE_CLASS}>{t("trips.tabs.record")}</h2>
       <TripAboutLinks
         shop={shop}
         personId={session.user.personId}

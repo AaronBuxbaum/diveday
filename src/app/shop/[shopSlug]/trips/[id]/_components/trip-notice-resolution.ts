@@ -7,7 +7,7 @@ import { tripGateBinding, verifyTripAdmissionGate } from "@/lib/trip-admission-g
 import { DETAILS_SAVE_NOTICES } from "./details-save-notices";
 import { MOVE_SEAT_NOTICES } from "./move-seat-notices";
 import { ROSTER_PAYMENT_NOTICES } from "./roster-payment-notices";
-import { DETAILS_FORMS, ROSTER_FORMS } from "./trip-notice-tabs";
+import { EDIT_TRIP_FORMS, ROSTER_FORMS } from "./trip-notice-views";
 import { TRIP_UNDO_NOTICES } from "./trip-undo-notices";
 
 /**
@@ -790,7 +790,7 @@ const NOTICE_KEYS: Record<
 
 /** Every form name `NOTICE_KEYS` (or an action's `?form=`) may point at. */
 const TRIP_FORMS = new Set([
-  ...DETAILS_FORMS,
+  ...EDIT_TRIP_FORMS,
   ...ROSTER_FORMS,
   "page",
   "recap-note",

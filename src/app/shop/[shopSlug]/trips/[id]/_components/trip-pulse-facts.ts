@@ -107,7 +107,7 @@ export function tripPulseFacts({
           ? [
               {
                 text: t("trips.pulse.needsInstructor"),
-                href: "?view=details#crew",
+                href: "?view=edit#crew",
                 tone: "danger" as const,
               },
             ]
@@ -118,7 +118,7 @@ export function tripPulseFacts({
           ? [
               {
                 text: t("trips.pulse.noRequirements"),
-                href: "?view=details#requirements",
+                href: "?view=edit#requirements",
                 tone: "danger" as const,
               },
             ]
@@ -135,7 +135,7 @@ export function tripPulseFacts({
           ? [
               {
                 text: t(overRatioPulseKey(crewGap)),
-                href: "?view=details#crew",
+                href: "?view=edit#crew",
                 tone: "danger" as const,
               },
             ]

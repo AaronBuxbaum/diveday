@@ -229,7 +229,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Aún no se han configurado los requisitos de la salida.",
-      "identityUnconfirmed": "Asociada a esta ficha sin certeza: confirma quién es en Huéspedes antes de embarcar.",
+      "identityUnconfirmed": "Asociada a esta ficha sin certeza: confirma quién es en el check-in antes de embarcar.",
       "waiverNotSent": "Exención sin firmar. Aún no se ha enviado.",
       "waiverPending": "Exención sin firmar. Enlace enviado.",
       "waiverLapsed": "La exención firmada caducó; envía un enlace nuevo.",

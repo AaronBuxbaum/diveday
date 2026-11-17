@@ -46,7 +46,7 @@ describe("PulseFacts (UX audit item 23)", () => {
     render(
       <PulseFacts
         facts={[
-          { text: "Needs an instructor", href: "?view=details#crew", tone: "danger" },
+          { text: "Needs an instructor", href: "?view=edit#crew", tone: "danger" },
           { text: "4 divers are missing rental sizes", href: "/prep" },
           { text: "1 order is awaiting payment", href: "/orders" },
         ]}

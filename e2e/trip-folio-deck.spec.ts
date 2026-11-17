@@ -174,7 +174,7 @@ test("the Trip opens a guest folio and Deck without recording arrival or presenc
     page.locator("[data-guest-folio]").getByRole("heading", { name: "Priya Sharma", exact: true }),
   ).toBeVisible();
   await expect(page.locator('#roster li[id^="booking-"]')).toHaveCount(1);
-  await page.getByRole("link", { name: "Open Deck", exact: true }).click();
+  await page.getByRole("link", { name: "Roll call", exact: true }).click();
   await expect(page).toHaveURL(/\/manifest(?:[?#]|$)/);
   await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
 });

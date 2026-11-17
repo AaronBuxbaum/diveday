@@ -58,8 +58,8 @@
       },
       "crew": {
         "title": "Checking divers in as they arrive",
-        "desc": "The Guests tab shows who’s arrived, who’s still missing paperwork, and what to do about it.",
-        "tryThis": "Open the next boat’s Guests tab to check divers in as they arrive."
+        "desc": "Check-in shows who’s arrived, who’s still missing paperwork, and what to do about it.",
+        "tryThis": "Open the next boat’s Check-in to check divers in as they arrive."
       }
     }
   },

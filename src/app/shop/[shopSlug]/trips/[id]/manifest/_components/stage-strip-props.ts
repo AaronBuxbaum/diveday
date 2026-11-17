@@ -67,7 +67,7 @@ export function stageStripProps(
   // because nobody was counted there.
   const planHref =
     "manifests" in input && input.manifests[0]
-      ? `${shopPath(input.shopSlug, "trips", input.manifests[0].trip.id)}?view=details#dives`
+      ? `${shopPath(input.shopSlug, "trips", input.manifests[0].trip.id)}?view=edit#dives`
       : undefined;
   const shown = boatStageOf({
     startsAt: trip.startsAt,
