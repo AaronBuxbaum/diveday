@@ -262,7 +262,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Book my seat" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
     await openTripAbout(page);
-    await openTripAboutRow(page, "Departure details");
+    await openTripAboutRow(page, "Name and description");
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("status")).toContainText("Changes saved");
@@ -276,7 +276,7 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
     // Standing a departure down states its cost and takes a second tap
     // (`InlineConfirm`) — no dialog, and the door is the sentence.
-    await page.getByRole("button", { name: "Yes, cancel this departure" }).click();
+    await page.getByRole("button", { name: "Yes, cancel this trip" }).click();
     // The cancellation badge is in the shared masthead and keeps the state
     // visible after the redirect; match the word rather than the lifecycle
     // notice, which is also present on this page.

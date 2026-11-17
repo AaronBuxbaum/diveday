@@ -16,7 +16,7 @@ test("prioritizes an existing shore departure without moving the canceled bookin
   const shore = "Weather alternative shore";
   await page.goto(`/shop/blue-mantis/trips/${values.weatherAlternatives.sourceTripId}`);
   await openTripMore(page);
-  await page.getByRole("link", { name: "Weather blow-out…" }).click();
+  await page.getByRole("link", { name: "Call it off for weather" }).click();
   await page.getByText(t("blowout.alternatives.title"), { exact: true }).click();
   const option = page.getByRole("checkbox", { name: new RegExp(shore) });
   await expect(option).not.toBeChecked();

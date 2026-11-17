@@ -55,7 +55,7 @@ test.describe("the day's weather call", () => {
     // From the departure's own "More", beside the single-trip blow-out.
     await page.goto(morningPath);
     await openTripMore(page);
-    await page.getByRole("link", { name: "Weather blow-out for the whole day…" }).click();
+    await page.getByRole("link", { name: "Call off the whole day for weather" }).click();
     await expect(
       page.getByRole("heading", { level: 1, name: "Call a blow-out for the day?" }),
     ).toBeVisible();
@@ -124,9 +124,9 @@ test.describe("the day's weather call, for a divemaster", () => {
     const path = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
     await page.goto(`${path}?view=edit`);
     const more = await openTripMore(page);
-    await expect(more.getByRole("link", { name: "Weather blow-out…" })).toBeVisible();
+    await expect(more.getByRole("link", { name: "Call it off for weather" })).toBeVisible();
     await expect(
-      more.getByRole("link", { name: "Weather blow-out for the whole day…" }),
+      more.getByRole("link", { name: "Call off the whole day for weather" }),
     ).toHaveCount(0);
   });
 

@@ -1,103 +1,14 @@
 import type { AppDb } from "@/db/client";
-import type { SeriesYardLine } from "@/db/trips";
 import { getTripOpenSeatsDebrief, openSeatsDebriefText } from "@/features/open-seats";
 import { lastAtSites, siteHistoryText } from "@/features/site-history";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
-import { cachedListFormat } from "@/lib/intl-cache";
-import { recurrenceSummary, type WeekdaySet } from "@/lib/recurrence";
-import { recurrenceSummaryText } from "./SeriesSection";
 
 /**
- * The Details tab's fact rows, worked out here so the route file stays
- * the page's shape rather than its arithmetic.
+ * Edit trip's fact rows that need a read of their own, worked out here so the
+ * route file stays the page's shape rather than its arithmetic.
  */
-
-/**
- * The "Repeats" row's words: the cadence, and how much of the run is still on
- * the board — a fact the cadence sentence alone does not carry, and the one the
- * "cancel every upcoming date" confirm is counting. It rides on the row rather
- * than on the collapsed strip, which is one truncating line and has the
- * cadence to fit first.
- */
-export function repeatsRowText(
-  t: StaffTranslator,
-  locale: string,
-  series: {
-    intervalWeeks: number;
-    weekdayMask: WeekdaySet;
-    endsOn: CalendarDate | null;
-    futureScheduledCount: number;
-    /** Who crews every date, by name; empty when the run has no standing crew. */
-    standingCrewNames: string[];
-    /** The run's hull in the yard: its window's last day, and the weeks it touches (#3988, #4010). */
-    yardLine: SeriesYardLine | null;
-  } | null,
-): string {
-  if (!series) return t("trips.about.oneTime");
-  const summary = recurrenceSummaryText(
-    t,
-    locale,
-    recurrenceSummary({
-      intervalWeeks: series.intervalWeeks,
-      weekdays: series.weekdayMask,
-      endsOn: series.endsOn,
-    }),
-  );
-  const counted =
-    series.futureScheduledCount > 0
-      ? t("tripSeries.panel.summaryWithFuture", { summary, count: series.futureScheduledCount })
-      : t("tripSeries.panel.summaryAllDone", { summary });
-  // The run's standing crew, so a staffer sees it before hand-assigning a date
-  // the next apply would overwrite.
-  const crewLine =
-    series.standingCrewNames.length === 0
-      ? ""
-      : t("tripSeries.panel.standingCrewLine", {
-          names: cachedListFormat(locale, { type: "conjunction" }).format(series.standingCrewNames),
-          count: series.standingCrewNames.length,
-        });
-  return [counted, crewLine, yardLineText(t, locale, series.yardLine)].filter(Boolean).join(" ");
-}
-
-/** The most yard dates the row names before the rest are counted. */
-const YARD_DATES_SHOWN = 3;
-
-/**
- * **The run's hull in the yard** (issues #3988, #4010): which hull and until
- * when, the weeks the nightly roll left off for it, and the weeks still on the
- * board inside the window, which sail into the yard unless the desk moves
- * them. The hull is the run's own (the one the roll copies forward), named so
- * a page whose departure sails on another boat is not read as about that one.
- * Read from the board and the window as they stand: nothing is stored, so the
- * line goes when the window moves. Empty when there is no line.
- */
-function yardLineText(t: StaffTranslator, locale: string, line: SeriesYardLine | null): string {
-  if (!line) return "";
-  const dates = (list: readonly CalendarDate[]) => {
-    const named = list.slice(0, YARD_DATES_SHOWN).map((date) => formatCalendarDate(date, locale));
-    const rest = list.length - named.length;
-    if (rest > 0) named.push(t("tripSeries.panel.yardLeftOffMore", { count: rest }));
-    return cachedListFormat(locale, { type: "conjunction" }).format(named);
-  };
-  return [
-    t("tripSeries.panel.yardThrough", {
-      boat: line.boat,
-      from: formatCalendarDate(line.from, locale),
-      until: formatCalendarDate(line.until, locale),
-    }),
-    line.leftOff.length > 0
-      ? t("tripSeries.panel.yardLeftOff", { dates: dates(line.leftOff) })
-      : "",
-    line.onBoard.length > 0
-      ? t("tripSeries.panel.yardStillOn", { dates: dates(line.onBoard) })
-      : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
 
 /**
  * **Why seats went unsold**, once the boat has sailed short (issue #1207,

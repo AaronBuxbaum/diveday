@@ -17,6 +17,7 @@ import {
   openCounterFor,
   openDeckDetails,
   openRosterDetails,
+  openSeriesPage,
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
@@ -133,7 +134,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripAbout(page);
-        await openTripAboutRow(page, "Timing");
+        await openTripAboutRow(page, "When");
         await page.getByLabel("Departs").fill("13:45");
         await page.getByLabel("Returns").fill("17:15");
         await page.getByRole("button", { name: "Save changes" }).click();
@@ -154,7 +155,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripAbout(page);
-        await openTripAboutRow(page, "Timing");
+        await openTripAboutRow(page, "When");
         await page.locator('input[name="dayCount"]').fill("3");
         const dayThree = page.getByLabel("Day 3", { exact: true });
         await dayThree.waitFor();
@@ -717,17 +718,16 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("status")).toContainText(title);
         await openTripFromBoard(page, title);
         await openTripAbout(page);
-        // The About panel's "Repeats" row — its label and cadence sentence are
-        // the summary, and the headed "Repeating trip" card is gone.
-        await page.locator("details#series").waitFor();
+        // Edit trip's Repeats card: the run in one line and its door to Schedule.
+        await page.locator("section#series").waitFor();
         await capture(page, "trip-repeating-panel", scheme);
 
-        // And the cadence editor open — the weekday chips carrying the run's
-        // real answer, which is the state the collapsed panel above can never
-        // show. Same page, one click, so it costs a click rather than a build.
-        await openTripAboutRow(page, "Repeats");
+        // And the run's page under Schedule, the weekday chips carrying the
+        // run's real answer. One click, so it costs a click rather than a build.
+        await openSeriesPage(page);
         await page.getByRole("group", { name: "Repeats on" }).waitFor();
         await capture(page, "trip-repeating-cadence", scheme);
+        await page.goBack();
 
         // And what a diver reads on the same departure: the header's run line,
         // "Runs every … · next …" (fourth UX review, item 35).

@@ -159,9 +159,8 @@ describe("what the assembly readers cost", () => {
           ctx.statements.some((sql) => /from "trip_conservation"|from "trip_lenses"/.test(sql)),
         ).toBe(false);
         const diversQueries = ctx.count();
-        const details = await getTripDetails(ctx.db, shop, trip.id, personId);
+        const details = await getTripDetails(ctx.db, shop);
         expect(ctx.count()).toBeGreaterThan(diversQueries);
-        expect(details.conservation === null).toBe(!enabled);
         if (!hasBoatDiving) expect(details.boats).toEqual([]);
       }
     }

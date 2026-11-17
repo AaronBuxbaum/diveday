@@ -45,7 +45,7 @@ test.describe("weather blow-out cascade", () => {
     // real confirm page — never a zero-confirm cancel of live bookings (the
     // feature's guardrail).
     await openTripMore(page);
-    await page.getByRole("link", { name: "Weather blow-out…" }).click();
+    await page.getByRole("link", { name: "Call it off for weather" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
     // The tab says what the page is, by its cause once there is one (#2460).
     await expect(page).toHaveTitle("Call a blow-out? — DiveDay");

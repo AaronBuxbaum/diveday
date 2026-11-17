@@ -2,11 +2,10 @@ import { eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { courses, diveSites, trips } from "@/db/schema";
-import { createTripSeries, listStaff, setSeriesRepeat } from "@/db/trips";
+import { listStaff } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CoursePricing } from "@/lib/courses";
-import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import { listBoats } from "../../../../../../features/boats/store";
 import { listTripLenses } from "../../../../../../features/trip-lenses/store";
@@ -65,16 +64,18 @@ describe("tripAboutRows (in-memory PGlite)", () => {
   it("lays the departure flat in its rows' order", async () => {
     const rows = await rowsFor();
     const ids = rows.map((row) => row.id);
-    expect(ids.slice(0, 7)).toEqual([
-      "plan",
-      "meeting",
+    expect(ids).toEqual([
       "timing",
+      "meeting",
+      "boat",
+      "about-crew",
+      "plan",
       "details",
-      "departure-details",
-      "conditions",
       "requirements",
+      "conditions",
+      "participant-terms",
+      "departure-details",
     ]);
-    expect(ids.slice(-2)).toEqual(["about-crew", "series"]);
   });
 
   it.each(["timing", "meeting"])(
@@ -132,12 +133,13 @@ describe("tripAboutRows (in-memory PGlite)", () => {
       quote: "$0.00",
     },
   ])(
-    "quotes $label in Booking and payment without changing its stored editor price",
+    "quotes $label in Price without changing its stored editor price",
     async ({ quote, ...pricing }) => {
       const rows = await rowsFor(undefined, true, undefined, pricing);
       const booking = rows.find((row) => row.id === "details");
-      if (quote === null) expect(booking?.value).toBe(t("trips.details.summaryNoPrice"));
-      else expect(String(booking?.value).startsWith(`${quote} · `)).toBe(true);
+      if (quote === null)
+        expect(renderToStaticMarkup(booking?.value)).toBe(t("trips.details.summaryNoPrice"));
+      else expect(renderToStaticMarkup(booking?.value).startsWith(`${quote} · `)).toBe(true);
       expect(booking?.editor).toMatchObject({
         props: { context: { trip: { priceCents: pricing.priceCents } } },
       });
@@ -169,7 +171,7 @@ describe("tripAboutRows (in-memory PGlite)", () => {
     // plan's editor, so the crew knew less than the diver about the dock.
     const rows = await rowsFor();
     const meeting = rows.find((row) => row.id === "meeting");
-    expect(meeting?.label).toBe("Where we meet");
+    expect(meeting?.label).toBe("Meet");
     expect(String(meeting?.value)).toContain(ctx.shop.name);
     expect(meeting?.editor).toMatchObject({ props: { section: "meeting" } });
   });
@@ -201,6 +203,18 @@ describe("tripAboutRows (in-memory PGlite)", () => {
       configured.find((row) => row.id === "requirements")?.value,
     );
     expect(readOnly.find((row) => row.id === "conditions")?.editor).toBeDefined();
+  });
+
+  it("says View, not Edit, on a course's frozen admission rules", async () => {
+    // A course session keeps the rules it was created with; its row opens
+    // read-only text, so the word on the control says so (layer E bug).
+    const rows = await rowsFor(undefined, true, undefined, {
+      priceCents: null,
+      course: { title: "Course", priceCents: null, eLearningPriceCents: null },
+    });
+    expect(rows.find((row) => row.id === "requirements")?.editLabel).toBe("View");
+    const fun = await rowsFor();
+    expect(fun.find((row) => row.id === "requirements")?.editLabel).toBeUndefined();
   });
 
   it("opens the row its own form reported back to", async () => {
@@ -238,28 +252,4 @@ it("keeps the plan read-only while separating truthful crew correction after fin
     editor: expect.anything(),
   });
   expect(rows.find((row) => row.id === "conditions")?.value).toBeTruthy();
-});
-
-it("keeps future-series cadence reachable from a finished occurrence", async () => {
-  const { db, shop } = ctx;
-  const made = await createTripSeries(db, {
-    shopId: shop.id,
-    title: "Finished Monday run",
-    capacity: 6,
-    plannedDives: 1,
-    frequency: "weekly",
-    intervalWeeks: 1,
-    weekdays: weekdaySetFrom([1]),
-    anchorDate: "2026-07-20",
-    endsOn: "2026-07-20",
-    timeZone: shop.timezone,
-    template: {
-      startsAt: new Date("2026-07-20T13:00:00Z"),
-      endsAt: new Date("2026-07-20T17:00:00Z"),
-    },
-  });
-  if (!made?.trips[0]) throw new Error("past series missing");
-  await setSeriesRepeat(db, shop.id, made.series.id, false);
-  const rows = await rowsFor(undefined, true, undefined, undefined, false, made.trips[0].id);
-  expect(rows.find((row) => row.id === "series")?.editor).toBeDefined();
 });

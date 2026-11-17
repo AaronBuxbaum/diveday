@@ -326,46 +326,32 @@ export default async function ManageTripPage({
 
         {details ? (
           <EditTrip
-            labels={{ heading: t("trips.clock.editTrip"), done: t("trips.clock.editDone") }}
             doneHref={tripPath}
-            details={{
-              context: {
-                overview,
-                liveBoatClashes: cancelled ? [] : boatClashes,
-                shop,
-                shopSlug,
-                tripId,
-                locale,
-                t,
-                tripNotice,
-                shopBoats: details.boats,
-                shopLenses: details.lenses,
-                automatedForecast,
-                tideLines,
-                held: held ? { id: held, section: form } : undefined,
-                tell,
-                refundsHeld: !mayWriteOffPayment,
-                detailsEditable,
-              },
-              rows: await readRows,
-              conservation: details.conservation,
-              personId: session.user.personId,
-            }}
-            operations={{
-              context: { db, shop, session },
+            context={{
               overview,
+              liveBoatClashes: cancelled ? [] : boatClashes,
+              shop,
+              shopSlug,
               tripId,
               locale,
               t,
-              guests,
               tripNotice,
-              mayChangeDeparture,
-              lifecycleStatus,
-              mayDiscount: staffGates.mayDiscount,
+              shopBoats: details.boats,
+              shopLenses: details.lenses,
+              automatedForecast,
+              tideLines,
+              held: held ? { id: held, section: form } : undefined,
+              tell,
               refundsHeld: !mayWriteOffPayment,
-              buddies: rest.buddies,
-              buddyError: rest.buddyError,
+              detailsEditable,
             }}
+            readRows={await readRows}
+            db={db}
+            personId={session.user.personId}
+            guests={guests}
+            mayDiscount={staffGates.mayDiscount}
+            mayChangeDeparture={mayChangeDeparture}
+            lifecycleStatus={lifecycleStatus}
           />
         ) : frame.shown === "filling" ? (
           <FillingPhase guests={guestList} next={slots.panel} />

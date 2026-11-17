@@ -77,7 +77,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the plan editor stays with the dive plan (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        const plan = await openTripAboutRow(page, "The plan");
+        const plan = await openTripAboutRow(page, "Plan");
         await expect(plan.getByLabel("Number of dives")).toBeVisible();
         await capture(page, "departure-plan-editor", scheme);
       });
@@ -86,21 +86,21 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await openReefTrip(page);
-        const meeting = await openTripAboutRow(page, "Where we meet");
+        const meeting = await openTripAboutRow(page, "Meet");
         await expect(meeting.locator('[name="meetingPointLabel"]')).toBeVisible();
         await capture(page, "departure-meeting-editor", scheme);
       });
 
       test(`timing has its own explicit save (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        const timing = await openTripAboutRow(page, "Timing");
+        const timing = await openTripAboutRow(page, "When");
         await expect(timing.getByLabel("Departs")).toBeVisible();
         await capture(page, "departure-timing-editor", scheme);
       });
 
       test(`booking and payment has its own explicit save (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        const booking = await openTripAboutRow(page, "Booking and payment");
+        const booking = await openTripAboutRow(page, "Price");
         await expect(booking.locator('[name="capacity"]')).toBeVisible();
         await capture(page, "departure-booking-editor", scheme);
       });
@@ -109,16 +109,15 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await openReefTrip(page);
-        const details = await openTripAboutRow(page, "Departure details");
+        const details = await openTripAboutRow(page, "Name and description");
         await expect(details.getByLabel("Title", { exact: true })).toBeVisible();
         await capture(page, "departure-details-editor", scheme);
       });
 
-      test(`boat assignment edits beside its crew (${scheme})`, async ({ page }) => {
+      test(`boat assignment edits in its own row (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        const crew = await openTripAboutRow(page, "Boat & crew");
-        await crew.getByText("Edit boat", { exact: true }).click();
-        await expect(crew.locator('[name="boatId"]')).toBeVisible();
+        const boat = await openTripAboutRow(page, "Boat");
+        await expect(boat.locator('[name="boatId"]')).toBeVisible();
         await capture(page, "departure-boat-editor", scheme);
       });
 
@@ -549,7 +548,7 @@ for (const scheme of ["light", "dark"] as const) {
         const { crewClash } = seeded as { crewClash?: { tripId: string } };
         if (!crewClash) throw new Error("the fact found no two departures to clash");
         await page.goto(`/shop/blue-mantis/trips/${crewClash.tripId}?view=edit`);
-        const crew = await openTripAboutRow(page, "Boat & crew");
+        const crew = await openTripAboutRow(page, "Crew");
         const clashingName = await crew
           .locator("#crew li")
           .filter({ has: page.getByText(/^Also scheduled on /) })

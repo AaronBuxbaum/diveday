@@ -102,6 +102,10 @@
   "/shop/[shopSlug]/schedule/blowout/day/[date]": {
     "visual": ["blowout-day"]
   },
+  "/shop/[shopSlug]/schedule/series/[tripId]": {
+    "e2e": ["trip-series.spec.ts"],
+    "visual": ["trip-repeating-cadence"]
+  },
   "/shop/[shopSlug]/staffing/print": {
     "e2e": ["visual-print.spec.ts"],
     "visual": ["crew-week"]

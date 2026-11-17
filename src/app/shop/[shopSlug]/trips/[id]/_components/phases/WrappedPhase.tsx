@@ -1,8 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
-import { SummaryCaret } from "@/components/ui/disclosure";
 import { listTripUnitsToCheckIn } from "@/db/gear";
 import { listTripIncidentReports } from "@/db/incident-reports";
 import type { TripGuests } from "@/features/trip-guests";
@@ -12,14 +10,13 @@ import { shopPath } from "@/lib/staff-notices";
 import { readManifestView } from "../../manifest/_components/manifest-view";
 import { recordTripPrintPdfAction } from "../../print-actions";
 import { PrintTripBundleButton } from "../PrintTripBundleButton";
-import { TripAboutLinks } from "../TripAboutLinks";
 import { TripDiveRecord } from "../TripDiveRecord";
 import { TripIncidentReports } from "../TripIncidentReports";
-import { TripPromoteAndActivity } from "../TripRosterContent";
 import { TripSentenceLine } from "../TripSentenceLine";
 import type { TripSentence } from "../trip-sentence";
 import { closeOutItems, wrappedSentence } from "../wrapped-close-out";
 import type { PhaseRecordContext } from "./WaterPhase";
+import { WrappedMore } from "./WrappedMore";
 import { CloseOutCard, WhatHappenedCard } from "./WrappedPanels";
 import { loggableDives, waterStandingOf } from "./water-reading";
 
@@ -28,7 +25,8 @@ import { loggableDives, waterStandingOf } from "./water-reading";
  * boat is back, and where a cancelled trip opens. The sentence says whether
  * the counts have everyone back and how much is left; then what is left, each
  * with its door; what happened; the dive logs and incident reports; the
- * guests as sailed; and, under More, the activity and the trip's links.
+ * guests as sailed; and, under More, what was found aboard, the conservation
+ * record, the activity and the trip's links.
  */
 export async function WrappedPhase({
   guests,
@@ -60,31 +58,7 @@ export async function WrappedPhase({
     listTripIncidentReports(db, shop.id, tripId, personId),
   ]);
   const reports = <TripIncidentReports shop={shop} personId={personId} tripId={tripId} />;
-  const more = (
-    <details className={sectionCardClass({ padding: "none", className: "group/more" })}>
-      <summary className={cardSummaryClass({ className: "min-h-14 px-4 py-4 sm:px-6" })}>
-        <SummaryCaret className="group-open/more:rotate-90" />
-        <span className="font-semibold">{t("trips.clock.wrapped.more")}</span>
-      </summary>
-      <div className="space-y-6 px-4 pb-4 sm:px-6">
-        <TripAboutLinks
-          shop={shop}
-          personId={personId}
-          shopSlug={shop.slug}
-          tripId={tripId}
-          t={t}
-        />
-        <TripPromoteAndActivity
-          guests={roster}
-          shopSlug={shop.slug}
-          locale={locale}
-          shop={shop}
-          mayDiscount={false}
-          recordOnly
-        />
-      </div>
-    </details>
-  );
+  const more = <WrappedMore record={record} roster={roster} />;
   const runAgain = (
     <Link
       href={shopPath(shop.slug, "schedule")}

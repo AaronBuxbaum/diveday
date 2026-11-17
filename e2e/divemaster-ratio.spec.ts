@@ -50,7 +50,7 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
   await page.goto(`/shop/${SHOP}/trips/${tripId}`);
   await openTripAbout(page);
 
-  // `#crew` by id: the crew region inside the About panel's "Boat & crew" row,
+  // `#crew` by id: the crew region inside Edit trip's "Crew" row,
   // which opens itself while the departure is under target (there is work to
   // do) and has no heading of its own — the row above it is the heading.
   const crew = page.locator("section#crew");

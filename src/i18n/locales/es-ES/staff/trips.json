@@ -42,11 +42,10 @@
     "moreDoors": "Más",
     "viewPublic": "Ver página pública",
     "printPacket": "Imprimir paquete",
-    "plan": "El plan",
+    "plan": "Plan del día",
     "meetingPoint": "Dónde nos encontramos",
     "conditions": "Condiciones",
     "whoCanBook": "Quién puede reservar",
-    "boatAndCrew": "Barco y tripulación",
     "repeats": "Repetición",
     "noneSet": "Aún no configurado",
     "noConditions": "No hay previsión de la tripulación publicada",
@@ -56,14 +55,20 @@
     "oneTime": "Salida única",
     "perDiver": "por buceador",
     "cancel": "Cancelar esta salida",
-    "more": "Cancelación y mal tiempo",
     "meetingDaysSummary": "{count, plural, other {# días}} · {first} – {last}",
-    "timing": "Horario",
-    "bookingAndPayment": "Reserva y pago",
-    "departureDetails": "Detalles de la salida",
-    "moreSeries": "Fechas repetidas y cancelaciones",
     "correctCrewRecord": "Corregir registro de tripulación",
-    "manageFutureDates": "Gestionar fechas futuras"
+    "when": "Cuándo",
+    "meet": "Encuentro",
+    "boat": "Barco",
+    "crew": "Tripulación",
+    "price": "Precio",
+    "nameAndDescription": "Nombre y descripción",
+    "view": "Ver",
+    "thisTrip": "Esta salida",
+    "moreSettings": "Más ajustes",
+    "deposit": "Depósito de {amount}",
+    "freeCancel": "Cancelación gratis hasta {hours, plural, one {# hora} other {# horas}} antes",
+    "minimumToRun": "Sale con {count, plural, one {# participante} other {# participantes}}"
   },
   "openSeats": {
     "label": "Plazas sin vender",
@@ -292,8 +297,8 @@
     "reinstating": "Reactivando…",
     "cancelHint": "La quita del calendario público y notifica a los buceadores con reserva.",
     "cancelConfirm": "Sí, cancelar esta salida",
-    "weatherBlowout": "Cancelación por mal tiempo…",
-    "dayBlowout": "Cancelar el día entero por mal tiempo…",
+    "weatherBlowout": "Suspender por mal tiempo",
+    "dayBlowout": "Suspender todo el día por mal tiempo",
     "viewBlowout": "{cause, select, run_ended {Ver a quién se avisó} other {Ver el registro de cancelación}}"
   },
   "details": {
@@ -348,8 +353,7 @@
     "hoursBeforeSuffix": "horas de antelación",
     "coursePrice": "{amount} por buceador, el precio del curso",
     "coursePriceHint": "Se fija en el curso, con su cuota de eLearning.",
-    "diveDetails": "Nombre, trayecto y detalles",
-    "editBoat": "Editar embarcación"
+    "diveDetails": "Nombre, trayecto y detalles"
   },
   "conditions": {
     "description": "Se muestra a los buceadores en lugar del pronóstico marino automático.",
@@ -1233,6 +1237,15 @@
       "turnedAway": "Rechazados",
       "more": "Más",
       "runAgain": "Repetir esta salida"
+    },
+    "edit": {
+      "schedule": "Agenda",
+      "print": "Imprimir",
+      "tripPacket": "Paquete de la salida",
+      "paperPasses": "Pases en papel",
+      "rentalTickets": "Tickets de alquiler",
+      "paperRollCall": "Pase de lista en papel",
+      "callOff": "Suspender"
     }
   },
   "fixList": {

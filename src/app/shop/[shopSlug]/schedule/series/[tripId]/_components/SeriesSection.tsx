@@ -3,68 +3,11 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceRow, FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
-import { weekdayNames } from "@/lib/format";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { cachedListFormat } from "@/lib/intl-cache";
-import {
-  type RecurrenceCadence,
-  type RecurrenceSummary,
-  type WeekdaySet,
-  weekdaysIn,
-} from "@/lib/recurrence";
+import { type WeekdaySet, weekdaysIn } from "@/lib/recurrence";
 import type { FormNotice } from "@/lib/staff-notices";
-
-/**
- * `recurrenceSummary` returns codes, not prose (src/lib/recurrence.ts) — this
- * map is where the cadence half of it becomes a word in the staff bundle.
- * Shared with `trips/[id]/page.tsx`'s "part of a series" line, which composes
- * the same summary into a different parent sentence.
- */
-const RECURRENCE_CADENCE_KEYS: Record<RecurrenceCadence, StaffMessageKey> = {
-  daily: "tripSeries.panel.cadenceDaily",
-  weekly: "tripSeries.panel.cadenceWeekly",
-  everyNWeeks: "tripSeries.panel.cadenceEveryNWeeks",
-};
-
-/**
- * The one sentence a `RecurrenceSummary` renders as, e.g. "Repeats weekly on
- * Mon and Thu · keeps going".
- *
- * Three composed pieces, never string concatenation: the weekday list comes
- * from `Intl.ListFormat` (which knows where a locale puts its "and"), the
- * cadence from one ICU template that receives that list, and the tail from a
- * second template that says whether the run has an end. "Every day" needs no
- * day list at all — spelling out all seven would be noise.
- */
-export function recurrenceSummaryText(
-  t: StaffTranslator,
-  locale: string,
-  summary: RecurrenceSummary,
-): string {
-  const names = weekdayNames(locale);
-  const days = cachedListFormat(locale, { type: "conjunction" }).format(
-    summary.weekdays.map((day) => names[day] ?? ""),
-  );
-  const cadence =
-    // No days at all is the deploy-window sentinel a release that predates the
-    // weekday set could leave behind (see `trip_series.weekday_mask`). It never
-    // generates a date, so the honest line says the cadence is unset rather
-    // than trailing a dangling "on ".
-    summary.weekdays.length === 0
-      ? t("tripSeries.panel.cadenceUnset")
-      : summary.cadence === "daily"
-        ? t(RECURRENCE_CADENCE_KEYS.daily)
-        : summary.cadence === "weekly"
-          ? t(RECURRENCE_CADENCE_KEYS.weekly, { days })
-          : t(RECURRENCE_CADENCE_KEYS.everyNWeeks, { weeks: summary.intervalWeeks, days });
-  return summary.endsOn
-    ? t("tripSeries.panel.summaryUntil", {
-        cadence,
-        date: formatCalendarDate(summary.endsOn, locale),
-      })
-    : t("tripSeries.panel.summaryOpenEnded", { cadence });
-}
 
 /**
  * What "Cancel every upcoming date" will do, said before the tap: how many
@@ -98,15 +41,9 @@ export function cancelConfirmText(
 export type OffCadenceDate = { id: string; title: string; label: string; booked: number };
 
 /**
- * **The cadence, edited where it is stated** — the About panel's "Repeats" row
- * opens onto this.
- *
- * It used to be a headed "Repeating trip" card restating the row's own
- * sentence, with the cadence form behind a second disclosure inside it and
- * three full-width series buttons stacked underneath, each with a standing
- * caption (design review 2026-09-17). The row is the heading now, the summary
- * and the control; the three series-wide acts moved to the panel's "More"
- * disclosure (`SeriesMoreActions`).
+ * **The cadence, edited on the run's page under Schedule** (ADR
+ * 20261117-trip-page-clock); the three series-wide acts sit below it
+ * (`SeriesMoreActions`).
  *
  * Narrowing a run is still never a silent bulk cancellation: the dates that no
  * longer fit are listed here, with their head counts, and taken off the board
@@ -141,7 +78,7 @@ export function SeriesCadenceEditor({
   /**
    * What the last series action did — apply, cadence, repeat, or cancel. One
    * status for all of them: they are one subject and only one can have just run,
-   * and this row is where the About panel puts the answer.
+   * and this is where the run's page puts the answer.
    */
   status?: FormNotice;
   cadenceAction: (formData: FormData) => void;
@@ -233,7 +170,7 @@ export function SeriesCadenceEditor({
 }
 
 /**
- * The three series-wide acts, as items in the About panel's "More" column.
+ * The three series-wide acts, one column on the run's page.
  *
  * Each instance of a repeating trip stays fully independent — these are
  * conveniences over the per-date tooling, never a live link that rewrites

@@ -42,11 +42,10 @@
     "moreDoors": "More",
     "viewPublic": "View public page",
     "printPacket": "Print packet",
-    "plan": "The plan",
+    "plan": "Plan",
     "meetingPoint": "Where we meet",
     "conditions": "Conditions",
     "whoCanBook": "Who can book",
-    "boatAndCrew": "Boat & crew",
     "repeats": "Repeats",
     "noneSet": "Not set yet",
     "noConditions": "No crew prediction published",
@@ -55,15 +54,21 @@
     "noCrew": "No crew assigned",
     "oneTime": "One-time departure",
     "perDiver": "per diver",
-    "cancel": "Cancel this departure",
-    "more": "Cancellation and weather",
+    "cancel": "Cancel this trip",
     "meetingDaysSummary": "{count, plural, other {# days}} · {first} – {last}",
-    "timing": "Timing",
-    "bookingAndPayment": "Booking and payment",
-    "departureDetails": "Departure details",
-    "moreSeries": "Repeating dates and cancellations",
     "correctCrewRecord": "Correct crew record",
-    "manageFutureDates": "Manage future dates"
+    "when": "When",
+    "meet": "Meet",
+    "boat": "Boat",
+    "crew": "Crew",
+    "price": "Price",
+    "nameAndDescription": "Name and description",
+    "view": "View",
+    "thisTrip": "This trip",
+    "moreSettings": "More settings",
+    "deposit": "{amount} deposit",
+    "freeCancel": "Free cancellation until {hours, plural, one {# hour} other {# hours}} before",
+    "minimumToRun": "Runs with {count, plural, one {# guest} other {# guests}}"
   },
   "openSeats": {
     "label": "Unsold seats",
@@ -291,9 +296,9 @@
     "reinstate": "Reinstate trip",
     "reinstating": "Reinstating…",
     "cancelHint": "Takes it off the public schedule and notifies booked divers.",
-    "cancelConfirm": "Yes, cancel this departure",
-    "weatherBlowout": "Weather blow-out…",
-    "dayBlowout": "Weather blow-out for the whole day…",
+    "cancelConfirm": "Yes, cancel this trip",
+    "weatherBlowout": "Call it off for weather",
+    "dayBlowout": "Call off the whole day for weather",
     "viewBlowout": "{cause, select, run_ended {See who was told} other {View cancellation record}}"
   },
   "details": {
@@ -348,8 +353,7 @@
     "hoursBeforeSuffix": "hours before",
     "coursePrice": "{amount} per diver, the course’s price",
     "coursePriceHint": "Set on the course, with its eLearning fee",
-    "diveDetails": "Name, ride, and details",
-    "editBoat": "Edit boat"
+    "diveDetails": "Name, ride, and details"
   },
   "conditions": {
     "description": "Replaces the automated marine outlook for divers.",
@@ -1233,6 +1237,15 @@
       "turnedAway": "Turned away",
       "more": "More",
       "runAgain": "Run this trip again"
+    },
+    "edit": {
+      "schedule": "Schedule",
+      "print": "Print",
+      "tripPacket": "Trip packet",
+      "paperPasses": "Paper passes",
+      "rentalTickets": "Rental tickets",
+      "paperRollCall": "Paper roll call",
+      "callOff": "Call it off"
     }
   },
   "fixList": {

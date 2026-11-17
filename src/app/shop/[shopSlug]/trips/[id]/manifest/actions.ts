@@ -63,7 +63,6 @@ export type ManifestActionContext = {
   shopSlug: string;
   tripId: string;
   checkpoint: RollCallCheckpoint;
-  buddySurface?: "day";
 };
 
 /**
@@ -107,9 +106,6 @@ async function manifestStaff(ctx: ManifestTripContext) {
  * to arrive with it open.
  */
 function manifestBack(ctx: ManifestActionContext): string {
-  if (ctx.buddySurface === "day") {
-    return `${shopPath(ctx.shopSlug, "trips", ctx.tripId)}?view=edit&buddies=open`;
-  }
   // `checkpoint` is escaped rather than interpolated raw: it reaches these
   // actions as a bound argument like the slug, and one carrying `&` would
   // append query params of its own to the URL a notice is then added to.

@@ -413,9 +413,8 @@ const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
 const TRIP_SURFACE_URL = /\/trips\/[^/?#]+/;
 
 /**
- * Open the departure's Details tab before using its rows. Details is its own
- * tab (ADR 20261001-logbook), so a caller standing on Divers is moved across by
- * URL first; the rows are laid flat there, never folded (owner, 2026-10-05).
+ * Open Edit trip (`?view=edit`, ADR 20261117-trip-page-clock) before using its
+ * rows; a caller standing on a phase is moved across by URL first.
  */
 export async function openTripAbout(page: Page): Promise<Locator> {
   const about = page.locator("section#about");
@@ -434,21 +433,26 @@ export async function openTripAbout(page: Page): Promise<Locator> {
 }
 
 /**
- * Open the Details tab's cancellation or repeating-date row — where the rare and
- * destructive acts live (the weather blow-out, cancelling the departure, the
- * series-wide writes), beside Promote and Activity. Opens the tab first.
+ * Edit trip's call-off card: the weather call and cancelling the trip. Opens
+ * Edit trip first. The run-wide acts live on the series page under Schedule
+ * (`openSeriesPage`).
  */
 export async function openTripMore(page: Page): Promise<Locator> {
   await openTripAbout(page);
+  const card = page.locator("section#call-off");
+  await expect(card).toBeVisible();
+  return card;
+}
+
+/** The series page under Schedule for the departure on screen, where the run is changed. */
+export async function openSeriesPage(page: Page): Promise<void> {
+  await openTripAbout(page);
   const t = staffTranslator("en-US");
-  const list = page
-    .getByRole("group", { name: t("trips.about.more"), exact: true })
-    .or(page.getByRole("group", { name: t("trips.about.moreSeries"), exact: true }));
-  if ((await list.getAttribute("open")) === null) {
-    await list.locator(":scope > summary").click();
-  }
-  await expect(list).toHaveAttribute("open", "");
-  return list;
+  await page
+    .locator("section#series")
+    .getByRole("link", { name: t("trips.clock.edit.schedule"), exact: true })
+    .click();
+  await page.waitForURL(/\/schedule\/series\//);
 }
 
 /**
@@ -460,6 +464,11 @@ export async function openTripMore(page: Page): Promise<Locator> {
 export async function openTripAboutRow(page: Page, label: string): Promise<Locator> {
   await openTripAbout(page);
   const row = page.getByRole("group", { name: label, exact: true });
+  // The rare rows fold into Edit trip's closed "More settings".
+  const settings = page.locator("details").filter({ has: page.locator("section#more-settings") });
+  if ((await settings.count()) > 0 && (await settings.locator(row).count()) > 0) {
+    await openIfClosed(settings);
+  }
   await expect(row).toBeVisible();
   await openIfClosed(row);
   return row;

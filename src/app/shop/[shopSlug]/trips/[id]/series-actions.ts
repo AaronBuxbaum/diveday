@@ -26,13 +26,18 @@ import {
   weekdaySetFrom,
 } from "@/lib/recurrence";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { tripPath } from "./roster-booking";
 import { requireTripConfig } from "./trip-config";
 
 // Series-wide operations. A series is materialized as independent trips
 // (20260719-recurring-trip-series); these iterate that instance set so staff
 // can manage the whole run without touching every date by hand. Each settles
-// back on the source trip's Overview, the one page the series banner lives on.
+// back on the run's page under Schedule, opened from this date
+// (`/schedule/series/[tripId]`, ADR 20261117-trip-page-clock).
+
+/** The run's page under Schedule, opened from this date: where every series act lands. */
+function seriesPath(shopSlug: string, tripId: string): string {
+  return shopPath(shopSlug, "schedule", "series", tripId);
+}
 
 /**
  * Push this date's editable details across every upcoming date in the series,
@@ -52,7 +57,7 @@ export async function applySeriesDetailsAction(
   seriesId: string,
   formData: FormData,
 ) {
-  const back = tripPath(shopSlug, tripId);
+  const back = seriesPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const form = readForm(seriesDetailsForm, formData);
   const db = await getDb();
@@ -102,7 +107,7 @@ export async function applySeriesDetailsAction(
  * so the write is scoped by the session's shop, never by the id alone.
  */
 export async function cancelSeriesAction(shopSlug: string, tripId: string, seriesId: string) {
-  const back = tripPath(shopSlug, tripId);
+  const back = seriesPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const db = await getDb();
   const now = nowDate();
@@ -171,7 +176,7 @@ export async function setSeriesRepeatAction(
   seriesId: string,
   formData: FormData,
 ) {
-  const back = tripPath(shopSlug, tripId);
+  const back = seriesPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const { keepRepeating } = readForm(seriesRepeatForm, formData);
   const result = await setSeriesRepeat(await getDb(), s.user.shopId, seriesId, keepRepeating);
@@ -205,7 +210,7 @@ export async function updateSeriesCadenceAction(
   seriesId: string,
   formData: FormData,
 ) {
-  const back = tripPath(shopSlug, tripId);
+  const back = seriesPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const parsed = cadenceSchema.safeParse(Object.fromEntries(formData));
   // The weekday chips repeat one field name, which `Object.fromEntries`
@@ -240,7 +245,7 @@ export async function cancelOffCadenceSeriesAction(
   tripId: string,
   seriesId: string,
 ) {
-  const back = tripPath(shopSlug, tripId);
+  const back = seriesPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const db = await getDb();
   const result = await cancelOffCadenceSeriesTrips(db, {

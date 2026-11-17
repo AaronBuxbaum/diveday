@@ -89,22 +89,24 @@ export type TripAboutRow = {
 };
 
 /**
- * The Details tab lays out the departure definition as rows. Each editable row
- * is its own disclosure: label and value form the summary, with the editor
- * opening below it.
- *
- * The rare and destructive acts live below the card, in `TripMoreDisclosure`,
- * one of the tab's closed rows beside Promote and Activity.
+ * Edit trip lays out the departure definition as rows. Each editable row is
+ * its own disclosure: label and value form the summary, with the editor
+ * opening below it. The rare and destructive acts sit beside the card.
  *
  * Keep focusable descendants out of `<summary>`; nested interactive elements
  * fail accessibility checks, so the edit affordance is a `<span>`.
  * Design: 20260827-the-departure-is-two-working-surfaces, slice 5e.
  */
 export function TripAboutSection({
+  id = "about",
+  heading,
   rows,
   editLabel,
   actions,
 }: {
+  id?: string;
+  /** The card's own heading ("This trip"), above its rows. */
+  heading?: string;
   rows: TripAboutRow[];
   /**
    * The one word on every row's control, "Edit" (visual review 2026-10-24,
@@ -122,10 +124,12 @@ export function TripAboutSection({
 }) {
   return (
     <section
-      id="about"
+      id={id}
+      aria-label={heading}
       className={sectionCardClass({ padding: "none", className: "scroll-mt-24 overflow-hidden" })}
     >
       <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+        {heading ? <h3 className="pt-4 font-semibold sm:pt-5">{heading}</h3> : null}
         {actions ? <div className="flex flex-wrap gap-x-8 gap-y-2 py-3">{actions}</div> : null}
         <div className={ROWS_CLASS}>
           {rows.map((row) => (
@@ -138,7 +142,7 @@ export function TripAboutSection({
 }
 
 /**
- * **The Details tab's foot rows, one bordered group** (visual review
+ * **Edit trip's foot rows, one bordered group** (visual review
  * 2026-10-24, A13): "Note to everyone", "More for this departure", "Activity"
  * and, when a deal went out, "Last-minute deal" are rows of one
  * `DisclosureRowList`, each with its words in the text's ink and the shared
@@ -149,35 +153,3 @@ export const FOOT_ROW_SUMMARY = `flex min-h-14 cursor-pointer list-none items-ce
 
 /** A foot row's body, on its summary's inset. */
 export const FOOT_ROW_BODY = "px-4 pb-5 sm:px-5";
-
-/**
- * **More for this departure** — the rare and destructive acts: apply to every
- * date, stop repeating, cancel every upcoming date, the weather blow-out,
- * cancelling this departure. One closed row on the Details tab, the same kind
- * of row as Promote and Activity beside it (owner, 2026-10-06: they are one
- * category, things done *to* the departure rather than facts *about* it). A
- * single column of quiet items with no standing captions: each one's
- * consequence sentence lives in the confirm or the page it opens
- * (docs/design/principles.md §8, "collapse the rare path").
- */
-export function TripMoreDisclosure({
-  label,
-  open = false,
-  children,
-}: {
-  label: string;
-  /** One of the acts just ran and its outcome is inside. */
-  open?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <details id="about-more" aria-label={label} open={open} className="group/more">
-      <summary className={FOOT_ROW_SUMMARY}>
-        <span>{label}</span>
-        <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />
-      </summary>
-      {/* One column, one item per line, no captions. */}
-      <div className={`flex flex-col items-start ${FOOT_ROW_BODY}`}>{children}</div>
-    </details>
-  );
-}

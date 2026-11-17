@@ -51,7 +51,7 @@ test.describe("the dive arrival arc", () => {
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: helperName });
     await expect(page.getByRole("button", { name: `Unassign ${helperName}` })).toBeVisible();
-    await openTripAboutRow(page, "Where we meet");
+    await openTripAboutRow(page, "Meet");
     await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
     await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
     await page.getByText("Arrival guidance", { exact: true }).click();

@@ -5,11 +5,10 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
-  openIfClosed,
+  openSeriesPage,
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
-  openTripMore,
   selectCrewByName,
 } from "./helpers";
 import { seedFacts } from "./shop-facts";
@@ -65,20 +64,18 @@ test.describe("demo series", () => {
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     const tripUrl = page.url();
     await openTripAbout(page);
-    // The About panel's "Repeats" row: its label and cadence sentence are the
-    // summary, and its editor is the cadence form. There is no headed "Repeating
-    // trip" card any more — the row is the heading.
-    const series = page.locator("details#series");
-    await expect(series).toBeVisible();
-    await expect(series).toContainText("keeps going");
-    await expect(series).toContainText(startWeekday);
-    await expect(series).toContainText(secondDay);
+    // Edit trip's Repeats card says the run in one line and links to its page
+    // under Schedule, where the run is changed (ADR 20261117-trip-page-clock).
+    const repeats = page.locator("section#series");
+    await expect(repeats).toBeVisible();
+    await expect(repeats).toContainText("keeps going");
+    await expect(repeats).toContainText(startWeekday);
+    await expect(repeats).toContainText(secondDay);
+    await openSeriesPage(page);
+    const series = page.locator("main");
 
-    // Widen the run from the trip page: a third day joins it, and nothing that is
-    // already on the board is disturbed.
-    // The cadence editor is a closed <details>; its fields are not reachable
-    // until the summary is clicked.
-    await openIfClosed(series);
+    // Widen the run: a third day joins it, and nothing that is already on the
+    // board is disturbed.
     const thirdDay = ["Mon", "Tue", "Thu"].find(
       (day) => day !== startWeekday && day !== secondDay,
     ) as string;
@@ -90,26 +87,22 @@ test.describe("demo series", () => {
 
     // Narrowing it back is never a silent bulk cancellation: the dates that no
     // longer fit are listed, with head counts, and left on the board until asked.
-    // Saving the cadence revalidates and redirects to this trip; openTripAbout
-    // moves to Details if needed without reloading the departure first.
-    await openTripAbout(page);
-    await openIfClosed(series);
+    // Saving the cadence lands back on the run's page.
     await series.getByText(thirdDay, { exact: true }).click();
     await series.getByRole("button", { name: "Save the days" }).click();
     await expect(series).toContainText("no longer part of this run");
     await expect(series.getByRole("button", { name: /^Cancel those \d+ dates$/ })).toBeVisible();
 
     // Stopping the repeat keeps every date already on the board and closes the
-    // run. It lives in the About panel's "More for this departure" list now,
-    // with the other series-wide acts — and it is the one of the three that
-    // needs no confirm, because the control opposite it puts the run back.
-    const more = await openTripMore(page);
-    await more.getByRole("button", { name: "Stop repeating" }).click();
+    // run. It sits with the other series-wide acts on the run's page, and it is
+    // the one of the three that needs no confirm, because the control opposite
+    // it puts the run back.
+    await series.getByRole("button", { name: "Stop repeating" }).click();
     await expect(page.getByRole("status")).toContainText("Stopped repeating");
 
     // Cancel every upcoming date at once through its confirm on the same fresh
-    // Details page; the stop action has returned its updated state there.
-    const moreAgain = await openTripMore(page);
+    // page; the stop action has returned its updated state there.
+    const moreAgain = series;
     await moreAgain.getByRole("button", { name: "Cancel every upcoming date" }).click();
     // The confirm says who it reaches before anybody taps it: every date goes
     // through the blow-out cascade, so booked divers are told and refunded.
@@ -238,8 +231,9 @@ test("applying a series' standing crew reaches later dates, and spares one a cre
     await expect(page.getByRole("button", { name: `Unassign ${name}` })).toBeVisible();
   }
 
-  // Apply the date's details with the crew box checked.
-  const more = await openTripMore(page);
+  // Apply the date's details with the crew box checked, from the run's page.
+  await openSeriesPage(page);
+  const more = page.locator("main");
   await more.getByRole("button", { name: /^Apply this date.s details/ }).click();
   await more.getByRole("checkbox", { name: /^Crew every upcoming date with/ }).check();
   await more.getByRole("button", { name: "Yes, apply to every date" }).click();
@@ -250,14 +244,15 @@ test("applying a series' standing crew reaches later dates, and spares one a cre
     }),
   ).toContainText(staff("tripSeries.notices.seriesAppliedCrewPartialCount", { count: 1 }));
 
-  // The panel names the standing crew.
+  // The run's line names the standing crew.
+  await page.goto(firstPath);
   await openTripAbout(page);
-  await expect(page.locator("details#series")).toContainText("crew every date.");
+  await expect(page.locator("section#series")).toContainText("crew every date.");
 
   // A later date carries the same crew.
   await page.goto(await tripPathOn(page, third, title, privateShop.slug));
   // A crewed row is settled, so it is shut: open it to read the names.
-  await openTripAboutRow(page, "Boat & crew");
+  await openTripAboutRow(page, "Crew");
   await expect(page.getByRole("button", { name: "Unassign Alex Series" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Unassign Sam Series" })).toBeVisible();
 

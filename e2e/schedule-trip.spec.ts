@@ -99,7 +99,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   // departure" list, behind a blocking confirm.
   const more = await openTripMore(page);
   await more.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
-  await more.getByRole("button", { name: "Yes, cancel this departure" }).click();
+  await more.getByRole("button", { name: "Yes, cancel this trip" }).click();
   await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
 });
 
@@ -151,7 +151,7 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   await row.getByRole("link", { name: title, exact: true }).click();
   await openTripAbout(page);
   // About is already open from the summary read above; the edit disclosure lives inside it.
-  await openTripAboutRow(page, "Timing");
+  await openTripAboutRow(page, "When");
   await expect(page.getByLabel("Days")).toHaveValue("3");
   await page.getByLabel("Days").fill("2");
   await page.getByRole("button", { name: "Save changes" }).click();
@@ -188,14 +188,12 @@ test("staff moves a departure to a different boat after it is on the board", asy
   const tripPath = await tripPathByTitle(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
   await page.goto(tripPath);
 
-  // The Details form lives behind the About panel's "The plan" row — the row
-  // states the settled facts and opens to edit them, as a
-  // `<details>`/`<summary>` rather than a button (a focusable descendant of a
-  // summary fails axe's nested-interactive rule). Every field below is inside
-  // it.
+  // The boat form lives behind Edit trip's "Boat" row: the row states the
+  // settled fact and opens to edit it, as a `<details>`/`<summary>` rather than
+  // a button (a focusable descendant of a summary fails axe's
+  // nested-interactive rule).
   await openTripAbout(page);
-  await openTripAboutRow(page, "Boat & crew");
-  await page.getByText("Edit boat", { exact: true }).click();
+  await openTripAboutRow(page, "Boat");
   // Located by its form name, the same shape the visual specs use for the
   // onboarding inputs. Not by label: `Field` renders its `(optional)` hint
   // inside the caption, so an accessible-name match here is fragile in a way
@@ -235,8 +233,7 @@ test("staff moves a departure to a different boat after it is on the board", asy
   // select kept what was typed into it.
   await page.goto(tripPath);
   await openTripAbout(page);
-  await openTripAboutRow(page, "Boat & crew");
-  await page.getByText("Edit boat", { exact: true }).click();
+  await openTripAboutRow(page, "Boat");
   await expect(page.locator('select[name="boatId"]')).toHaveValue(other[0]);
 });
 
@@ -256,7 +253,7 @@ test("a departure's own meeting point reaches the diver once they hold a seat", 
   await page.goto(tripPath);
 
   await openTripAbout(page);
-  await openTripAboutRow(page, "Where we meet");
+  await openTripAboutRow(page, "Meet");
   // By form name, not label: `Field` renders its "(optional)" hint inside
   // the caption, so an accessible-name match here is fragile — same reason
   // the boat-swap test above locates its `<select>` this way.
@@ -312,37 +309,37 @@ test("departure editors save independently and preserve the other subjects", asy
     await expect(row.locator('button[aria-busy="true"]')).toHaveCount(0);
   }
 
-  const meeting = await openTripAboutRow(page, "Where we meet");
+  const meeting = await openTripAboutRow(page, "Meet");
   await meeting.locator('[name="meetingPointLabel"]').fill("North jetty");
   await meeting.locator('[name="meetingPointAddress"]').fill("12 Dock Road");
   await saveSection(meeting, "meeting");
   await expect(meeting.locator(":scope > summary")).toContainText("North jetty · 12 Dock Road");
 
-  const timing = await openTripAboutRow(page, "Timing");
+  const timing = await openTripAboutRow(page, "When");
   await timing.getByLabel("Departs").fill("09:30");
   await saveSection(timing, "timing");
   await expect(timing.locator(":scope > summary")).toContainText("9:30 AM");
 
-  const booking = await openTripAboutRow(page, "Booking and payment");
+  const booking = await openTripAboutRow(page, "Price");
   await booking.locator('[name="capacity"]').fill("9");
   await booking.locator('[name="priceDollars"]').fill("155");
   await saveSection(booking, "booking");
   await expect(booking.locator(":scope > summary")).toContainText("$155.00");
   await expect(booking.locator(":scope > summary")).toContainText("0 of 9");
 
-  const plan = await openTripAboutRow(page, "The plan");
+  const plan = await openTripAboutRow(page, "Plan");
   await expect(plan.locator('[name="capacity"]')).toHaveCount(0);
   await plan.getByLabel("Number of dives").selectOption("3");
   await saveSection(plan, "plan");
 
   await page.goto(tripPath);
-  const savedMeeting = await openTripAboutRow(page, "Where we meet");
+  const savedMeeting = await openTripAboutRow(page, "Meet");
   await expect(savedMeeting.locator('[name="meetingPointLabel"]')).toHaveValue("North jetty");
-  const savedTiming = await openTripAboutRow(page, "Timing");
+  const savedTiming = await openTripAboutRow(page, "When");
   await expect(savedTiming.getByLabel("Departs")).toHaveValue("09:30");
-  const savedBooking = await openTripAboutRow(page, "Booking and payment");
+  const savedBooking = await openTripAboutRow(page, "Price");
   await expect(savedBooking.locator('[name="capacity"]')).toHaveValue("9");
   await expect(savedBooking.locator('[name="priceDollars"]')).toHaveValue("155");
-  const savedPlan = await openTripAboutRow(page, "The plan");
+  const savedPlan = await openTripAboutRow(page, "Plan");
   await expect(savedPlan.getByLabel("Number of dives")).toHaveValue("3");
 });
