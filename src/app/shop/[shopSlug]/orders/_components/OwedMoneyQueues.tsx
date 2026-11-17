@@ -49,7 +49,7 @@ type QueueProps<Row> = {
  * Cancellation refunds the shop still owes a diver. Use a warning because
  * money is due, but nothing is broken; omit the queue when empty.
  */
-function OwedRefundsQueue({
+export function OwedRefundsQueue({
   queue,
   shopSlug,
   timeZone,
@@ -102,7 +102,7 @@ function OwedRefundsQueue({
  * Card payments that arrive after checkout closes, each with its refund.
  * Omit the queue when empty.
  */
-function PaidAfterCloseQueue({
+export function PaidAfterCloseQueue({
   queue,
   shopSlug,
   timeZone,
@@ -155,7 +155,13 @@ function PaidAfterCloseQueue({
  * Refunds Stripe reports failed or canceled after DiveDay counted them; the
  * money is still owed to the diver. Omit the queue when empty.
  */
-function FailedRefundsQueue({ queue, shopSlug, timeZone, locale, t }: QueueProps<FailedRefund>) {
+export function FailedRefundsQueue({
+  queue,
+  shopSlug,
+  timeZone,
+  locale,
+  t,
+}: QueueProps<FailedRefund>) {
   if (queue.length === 0) return null;
   return (
     <section aria-label={t("orders.index.failedRefunds.sectionLabel")} className="mb-6">
