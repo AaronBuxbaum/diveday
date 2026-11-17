@@ -1,3 +1,4 @@
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { scopedHash } from "@/lib/element-id";
 import { ExecutedDiveLog } from "../manifest/_components/ExecutedDiveLog";
@@ -15,7 +16,7 @@ const prefix = (dive: number) => `dive-log-${dive}`;
 
 /** Where dive `dive`'s log form is on the page, for "Log this dive". */
 export function diveLogHash(dive: number): string {
-  return scopedHash(prefix(dive), "executed-dive-heading");
+  return scopedHash(prefix(dive), "executed-dive");
 }
 
 /**
@@ -25,12 +26,15 @@ export function diveLogHash(dive: number): string {
  */
 export function TripDiveRecord({
   view,
+  dives,
   shop,
   tripId,
   locale,
   t,
 }: {
   view: ReadyManifestView;
+  /** The dives to offer: each one whose count has begun, or that is logged. */
+  dives: readonly number[];
   shop: {
     slug: string;
     timezone: string;
@@ -42,8 +46,15 @@ export function TripDiveRecord({
   t: StaffTranslator;
 }) {
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, view.fieldGuides);
+  const afterDives = view.completeManifests.filter(
+    (manifest) =>
+      manifest.checkpoint !== "departure" &&
+      dives.includes(Number(manifest.checkpoint.slice("after_dive_".length))),
+  );
+  if (afterDives.length === 0) return null;
   const log = executedDiveLogView({
     plannedDives: view.plannedDives,
+    diveCount: view.completeManifests.length - 1,
     executedDives: view.executedDives,
     liveDiveSites: view.liveDiveSites,
     catalogSpecies,
@@ -54,23 +65,25 @@ export function TripDiveRecord({
     t,
   });
   return (
-    <div className="space-y-6">
-      {view.completeManifests
-        .filter((manifest) => manifest.checkpoint !== "departure")
-        .map((manifest) => (
-          <ExecutedDiveLog
-            key={manifest.checkpoint}
-            {...log}
-            idPrefix={prefix(Number(manifest.checkpoint.slice("after_dive_".length)))}
-            checkpoint={manifest.checkpoint}
-            action={saveExecutedDiveAction.bind(null, {
-              shopSlug: shop.slug,
-              tripId,
-              checkpoint: manifest.checkpoint,
-            })}
-            sightingsOn={shop.sightingsEnabled}
-          />
-        ))}
-    </div>
+    <section aria-labelledby="dive-record-heading" className="space-y-4">
+      <h2 id="dive-record-heading" className={SECTION_TITLE_CLASS}>
+        {log.labels.heading}
+      </h2>
+      {afterDives.map((manifest) => (
+        <ExecutedDiveLog
+          key={manifest.checkpoint}
+          {...log}
+          headed={false}
+          idPrefix={prefix(Number(manifest.checkpoint.slice("after_dive_".length)))}
+          checkpoint={manifest.checkpoint}
+          action={saveExecutedDiveAction.bind(null, {
+            shopSlug: shop.slug,
+            tripId,
+            checkpoint: manifest.checkpoint,
+          })}
+          sightingsOn={shop.sightingsEnabled}
+        />
+      ))}
+    </section>
   );
 }

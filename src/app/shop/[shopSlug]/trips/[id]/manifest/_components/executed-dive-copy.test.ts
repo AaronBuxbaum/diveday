@@ -62,4 +62,25 @@ describe("executedDiveLogView", () => {
     expect(view.liveDiveSites).toEqual([{ id: "site-reef", name: "Molasses Reef" }]);
     expect(view.labels).toEqual(executedDiveLabels(t, "meters"));
   });
+
+  it("offers every counted dive for logging, planned site or not", () => {
+    const view = executedDiveLogView({
+      plannedDives: [
+        { dive: { diveNumber: 2 }, diveSite: { id: "site-reef", name: "Molasses Reef" } },
+      ] as never,
+      diveCount: 2,
+      executedDives: [],
+      liveDiveSites: [],
+      catalogSpecies: [],
+      speciesBySite: {},
+      locale: "en-US",
+      timeZone: "America/New_York",
+      depthUnit: "meters",
+      t,
+    });
+    expect(view.planned.map(({ diveNumber, diveSite }) => [diveNumber, diveSite?.name])).toEqual([
+      [1, undefined],
+      [2, "Molasses Reef"],
+    ]);
+  });
 });

@@ -21,7 +21,7 @@ import type { TripSentence } from "../trip-sentence";
 import { closeOutItems, wrappedSentence } from "../wrapped-close-out";
 import type { PhaseRecordContext } from "./WaterPhase";
 import { CloseOutCard, WhatHappenedCard } from "./WrappedPanels";
-import { waterStandingOf } from "./water-reading";
+import { loggableDives, waterStandingOf } from "./water-reading";
 
 /**
  * **Wrapped up** (ADR 20261117-trip-page-clock): the owner's phase once the
@@ -96,7 +96,7 @@ export async function WrappedPhase({
   if (view.status !== "ready") {
     return (
       <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
-        <TripSentenceLine sentence={sentence} rollCall={door} />
+        <TripSentenceLine sentence={sentence} rollCall={cancelled ? null : door} />
         {reports}
         {guests}
         {more}
@@ -123,7 +123,8 @@ export async function WrappedPhase({
           { ...words, cancelled, homeSaidAt: stage?.stage === "home" ? stage.recordedAt : null },
           t,
         )}
-        rollCall={door}
+        // A cancelled trip nobody counted has no roll call to open.
+        rollCall={cancelled && !standing.latest ? null : door}
       />
       <CloseOutCard items={items} shopSlug={shop.slug} tripId={tripId} locale={locale} t={t} />
       {cancelled && !standing.latest ? null : (
@@ -150,7 +151,14 @@ export async function WrappedPhase({
           {...words}
         />
       )}
-      <TripDiveRecord view={view} shop={shop} tripId={tripId} locale={locale} t={t} />
+      <TripDiveRecord
+        view={view}
+        dives={loggableDives(standing, { back: true })}
+        shop={shop}
+        tripId={tripId}
+        locale={locale}
+        t={t}
+      />
       {reports}
       {guests}
       {more}

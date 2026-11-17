@@ -97,9 +97,15 @@ export function ExecutedDiveLog({
   depthUnit,
   checkpoint,
   sightingsOn = true,
+  headed = true,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
+  /**
+   * Whether this log carries its own section heading. The Trip page lists one
+   * log per counted dive under a single heading, so each of those is unheaded.
+   */
+  headed?: boolean;
   /**
    * `diveLabel` and `plannedSiteLabel` arrive already composed. Both interpolate
    * a runtime value, and a Server Component cannot hand a Client Component a
@@ -159,21 +165,15 @@ export function ExecutedDiveLog({
 }) {
   const byNumber = new Map(executed.map((row) => [row.executed.diveNumber, row]));
   const activeDiveNumber = Number(/^after_dive_(\d+)$/.exec(checkpoint)?.[1] ?? 0);
-  return (
-    <section aria-labelledby={scopedId(idPrefix, "executed-dive-heading")}>
-      <h2 id={scopedId(idPrefix, "executed-dive-heading")} className={SECTION_TITLE_CLASS}>
-        {labels.heading}
-      </h2>
-      {/* No standing description. "Record the actual site, times, depth and
-          conditions after each dive" restated the field labels one tap below
-          it, and the summary line now says what state each dive is in — which
-          is the thing a crew at a checkpoint actually needs to know. */}
-      <div className="mt-4 space-y-4">
-        {planned
-          .filter(({ diveNumber }) => diveNumber === activeDiveNumber)
-          .map(({ diveNumber, diveSite, diveLabel, plannedSiteLabel, summaryLine }) => (
-            <div key={diveNumber} className={sectionCardClass({ padding: "none" })}>
-              {/* **Collapsed to its summary** (issue #1055, ADR
+  const cards = planned
+    .filter(({ diveNumber }) => diveNumber === activeDiveNumber)
+    .map(({ diveNumber, diveSite, diveLabel, plannedSiteLabel, summaryLine }) => (
+      <div
+        key={diveNumber}
+        id={scopedId(idPrefix, "executed-dive")}
+        className={sectionCardClass({ padding: "none", className: "scroll-mt-24" })}
+      >
+        {/* **Collapsed to its summary** (issue #1055, ADR
                   20260827-the-departure-is-two-working-surfaces decision 2).
                   This is the largest form in the trip namespace and it stood
                   fully open at every after-dive checkpoint — roughly a third
@@ -184,36 +184,44 @@ export function ExecutedDiveLog({
                   20261117-trip-page-clock: one form, one place), never on the
                   Roll call screen where a crew is counting bodies. The same
                   treatment `PreDepartureCheckList` took in slice 5a. */}
-              <details className="group/dive">
-                <summary
-                  className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}
-                >
-                  <SummaryCaret className="group-open/dive:rotate-90" />
-                  <span className="text-base font-semibold group-hover/summary:underline">
-                    {summaryLine}
-                  </span>
-                </summary>
-                <ExecutedDiveForm
-                  diveNumber={diveNumber}
-                  plannedSite={diveSite}
-                  diveLabel={diveLabel}
-                  plannedSiteLabel={plannedSiteLabel}
-                  row={byNumber.get(diveNumber)}
-                  liveDiveSites={liveDiveSites}
-                  catalogSpecies={catalogSpecies}
-                  speciesBySite={speciesBySite}
-                  sightingsOn={sightingsOn}
-                  action={action}
-                  labels={labels}
-                  timeZone={timeZone}
-                  depthUnit={depthUnit}
-                />
-              </details>
-              {/* Paper states the dive's summary line on the Boat tab's sheet
+        <details className="group/dive">
+          <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}>
+            <SummaryCaret className="group-open/dive:rotate-90" />
+            <span className="text-base font-semibold group-hover/summary:underline">
+              {summaryLine}
+            </span>
+          </summary>
+          <ExecutedDiveForm
+            diveNumber={diveNumber}
+            plannedSite={diveSite}
+            diveLabel={diveLabel}
+            plannedSiteLabel={plannedSiteLabel}
+            row={byNumber.get(diveNumber)}
+            liveDiveSites={liveDiveSites}
+            catalogSpecies={catalogSpecies}
+            speciesBySite={speciesBySite}
+            sightingsOn={sightingsOn}
+            action={action}
+            labels={labels}
+            timeZone={timeZone}
+            depthUnit={depthUnit}
+          />
+        </details>
+        {/* Paper states the dive's summary line on the Boat tab's sheet
                   (`BoatTabSheet`), never this closed form. */}
-            </div>
-          ))}
       </div>
+    ));
+  if (!headed) return <>{cards}</>;
+  return (
+    <section aria-labelledby={scopedId(idPrefix, "executed-dive-heading")}>
+      <h2 id={scopedId(idPrefix, "executed-dive-heading")} className={SECTION_TITLE_CLASS}>
+        {labels.heading}
+      </h2>
+      {/* No standing description. "Record the actual site, times, depth and
+          conditions after each dive" restated the field labels one tap below
+          it, and the summary line now says what state each dive is in — which
+          is the thing a crew at a checkpoint actually needs to know. */}
+      <div className="mt-4 space-y-4">{cards}</div>
     </section>
   );
 }

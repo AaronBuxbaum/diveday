@@ -10,7 +10,7 @@ import { TripSentenceLine } from "../TripSentenceLine";
 import type { TripSentence } from "../trip-sentence";
 import { waterSentence } from "../water-copy";
 import { DaySoFarCard, NotYetBackCard } from "./WaterPanels";
-import { waterStandingOf } from "./water-reading";
+import { loggableDives, waterStandingOf } from "./water-reading";
 
 export type PhaseRecordContext = {
   context: Pick<Awaited<ReturnType<typeof requireShopSurface>>, "db" | "shop" | "session">;
@@ -84,7 +84,14 @@ export async function WaterPhase({
         }
         {...words}
       />
-      <TripDiveRecord view={view} shop={shop} tripId={tripId} locale={locale} t={t} />
+      <TripDiveRecord
+        view={view}
+        dives={loggableDives(standing, { back: false })}
+        shop={shop}
+        tripId={tripId}
+        locale={locale}
+        t={t}
+      />
       {reports}
       {guests}
     </div>

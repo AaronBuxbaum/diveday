@@ -35,3 +35,18 @@ export function waterStandingOf(view: ReadyManifestView): WaterStanding {
     },
   });
 }
+
+/**
+ * The dives whose log is offered. Once the boat is back, every dive. On the
+ * water, each dive whose count has begun or that is logged, and the next one,
+ * the dive the boat is on now: a crew may log it before counting, never a dive
+ * further ahead.
+ */
+export function loggableDives(standing: WaterStanding, { back }: { back: boolean }): number[] {
+  const dives = standing.timeline.flatMap((stop) => (stop.kind === "dive" ? [stop] : []));
+  if (back) return dives.map((stop) => stop.dive);
+  const next = dives.find((stop) => stop.state === "ahead" && !stop.logged);
+  return dives
+    .filter((stop) => stop.state !== "ahead" || stop.logged || stop === next)
+    .map((stop) => stop.dive);
+}

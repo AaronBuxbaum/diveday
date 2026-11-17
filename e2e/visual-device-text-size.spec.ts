@@ -415,7 +415,7 @@ test.describe("light mode largest device body after-dive warnings", () => {
         "Find a person",
         deck.getByRole("button", { name: copy("manifest.deck.find"), exact: true }),
       ],
-      ["Details", deck.locator("details > summary").filter({ hasText: /^Details$/ })],
+      ["More", deck.locator("details > summary").filter({ hasText: /^More$/ })],
       ["Missing guest", deck.getByRole("button", { name: "Ari Vale", exact: true })],
       ["Missing crew", deck.getByRole("button", { name: state.crewName, exact: true })],
     ] as const;

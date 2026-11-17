@@ -145,7 +145,7 @@ export function WhatHappenedCard({
       .filter(Boolean)
       .join(" · ");
     const detail = [
-      logged ? null : t("trips.clock.wrapped.notLogged"),
+      logged || !value ? null : t("trips.clock.wrapped.notLogged"),
       logged?.maxDepthMeters != null
         ? t("trips.clock.wrapped.deepest", { depth: depth(logged.maxDepthMeters) })
         : null,
@@ -158,7 +158,7 @@ export function WhatHappenedCard({
     rows.push({
       key: `dive-${stop.dive}`,
       label: t("trips.clock.water.dive", { dive: stop.dive }),
-      value: value || none,
+      value: value || (logged ? none : t("trips.clock.wrapped.notLogged")),
       detail: detail || null,
     });
   }

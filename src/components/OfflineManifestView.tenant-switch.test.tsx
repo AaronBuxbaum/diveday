@@ -63,7 +63,7 @@ async function routineStatus() {
 
 async function openDetails() {
   await screen.findByRole("region", { name: "Roll call" });
-  fireEvent.click(screen.getByText("Details", { selector: "summary" }));
+  fireEvent.click(screen.getByText("More", { selector: "summary" }));
 }
 
 function savedWithDiscardedNote(tripId: string) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { RollCallRecord } from "@/lib/manifests";
+import { loggableDives } from "./phases/water-reading";
 import type { TripSentence } from "./trip-sentence";
 import { waterPersonStatus, waterSentence } from "./water-copy";
 import { type WaterCount, type WaterStandingInput, waterStanding } from "./water-standing";
@@ -335,5 +336,10 @@ describe("the day so far", () => {
     ]);
     const dive1 = standing.timeline[2];
     expect(dive1).toMatchObject({ site: "Molasses Reef", logged: { maxDepthMeters: 12 } });
+    // On the water: dive 1 is counted, dive 2 is the one the boat is on; home, every dive.
+    expect(loggableDives(standing, { back: false })).toEqual([1, 2]);
+    expect(loggableDives(standing, { back: true })).toEqual([1, 2]);
+    // Nothing counted yet: only the first dive, never one further ahead.
+    expect(loggableDives(read().standing, { back: false })).toEqual([1]);
   });
 });
