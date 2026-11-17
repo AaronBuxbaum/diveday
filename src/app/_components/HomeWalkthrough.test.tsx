@@ -73,10 +73,10 @@ describe("the homepage walkthrough", () => {
     expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
   });
 
-  it("advances by itself over about ninety seconds, and Pause stops it", () => {
+  it("advances by itself over about two minutes, and Pause stops it", () => {
     mockMotion(false);
     setup();
-    act(() => void vi.advanceTimersByTime(30_000));
+    act(() => void vi.advanceTimersByTime(41_000));
     expect(screen.getByText("Second")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
     act(() => void vi.advanceTimersByTime(120_000));
@@ -181,7 +181,7 @@ describe("the homepage walkthrough", () => {
     const fill = () =>
       container.querySelector<HTMLElement>("[data-walk-controls] ~ div > span > span:last-child");
     const group = screen.getByRole("group", { name: "Walk" });
-    act(() => void vi.advanceTimersByTime(15_000));
+    act(() => void vi.advanceTimersByTime(20_000));
     const half = Number.parseFloat(fill()?.style.transform.replace("scaleX(", "") ?? "0");
     expect(half).toBeGreaterThan(0.4);
     expect(half).toBeLessThan(0.6);
@@ -190,7 +190,7 @@ describe("the homepage walkthrough", () => {
     act(() => void vi.advanceTimersByTime(120_000));
     expect(screen.getByText("First")).toBeInTheDocument();
     fireEvent.pointerUp(group, { clientX: 100 });
-    act(() => void vi.advanceTimersByTime(16_000));
+    act(() => void vi.advanceTimersByTime(21_000));
     expect(screen.getByText("Second")).toBeInTheDocument();
   });
 

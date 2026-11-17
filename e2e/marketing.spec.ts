@@ -151,16 +151,27 @@ test.describe("before the player has run", () => {
     await expect(
       stepsBand.getByText(diverTranslator("en-US")("marketing.home.stepsLede")),
     ).toBeVisible();
-    // Each step's own name, from the copy column that is every row's first
+    // Each step's own name (all twelve are in the page; only the listed five show before the player runs), from the copy column that is every row's first
     // child (the alternation is `order`, not DOM order). The screens beside them
     // draw headings of their own ("Find your next dive"), which a screen reader
     // never hears inside a `role="img"` but a heading query still finds.
     await expect(stepsBand.locator("ol > li > div:first-child h3")).toHaveText([
-      diverTranslator("en-US")("marketing.home.steps.book.title"),
-      "They sign the release and answer the medical form at home",
-      "Anyone who can’t board yet is named, with the reason",
-      "The crew calls the roll by name, signal or not",
-      diverTranslator("en-US")("marketing.home.steps.recap.title"),
+      ...(
+        [
+          "shopfront",
+          "book",
+          "money",
+          "unsigned",
+          "sign",
+          "check",
+          "card",
+          "desk",
+          "aboard",
+          "computer",
+          "recap",
+          "review",
+        ] as const
+      ).map((id) => diverTranslator("en-US")(`marketing.home.steps.${id}.title` as never)),
     ]);
     // The screen is the claim in every step, so each one is shown rather than
     // described, and named for a screen reader by a label the *caller* resolves
@@ -169,7 +180,11 @@ test.describe("before the player has run", () => {
     await expect(list).not.toHaveAttribute("data-walk", "");
     await expect(list.getByRole("img")).toHaveCount(5);
     await expect(stepsBand.locator("[data-marketing-illustration]")).toHaveCount(0);
-    await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
+    await expect(
+      stepsBand.getByRole("img", {
+        name: diverTranslator("en-US")("marketing.home.steps.recap.mockupLabel"),
+      }),
+    ).toBeVisible();
     // The roll-call step shows the boat's count after dive 1, with Priya back aboard
     // (the desk screen before it is drawn for the walkthrough and waits for it).
     await expect(
@@ -179,7 +194,7 @@ test.describe("before the player has run", () => {
     ).toBeVisible();
     await expect(
       stepsBand.getByRole("img", {
-        name: diverTranslator("en-US")("marketing.home.steps.aboard.deskLabel"),
+        name: diverTranslator("en-US")("marketing.home.steps.desk.mockupLabel"),
       }),
     ).toHaveCount(0);
     await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toHaveCount(0);
@@ -215,19 +230,31 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
 
   // Reduced motion: it waits on the first beat, paused.
-  await expect(walk.getByText(t("marketing.home.walk.captions.book"))).toBeVisible();
+  await expect(walk.getByText(t("marketing.home.walk.captions.shopfront"))).toBeVisible();
   await expect(walk.getByRole("button", { name: t("marketing.home.walk.play") })).toBeVisible();
   await expect(walk.getByRole("img")).toHaveCount(1);
 
   // Each beat names the diver's state; the arrow keys walk the story.
-  const beats = ["unsigned", "sign", "ready", "card", "desk", "boat", "computer", "recap"] as const;
+  const beats = [
+    "book",
+    "money",
+    "unsigned",
+    "sign",
+    "check",
+    "card",
+    "desk",
+    "aboard",
+    "computer",
+    "recap",
+    "review",
+  ] as const;
   for (const beat of beats) {
     await walk.getByRole("button", { name: t("marketing.home.walk.next") }).press("ArrowRight");
     await expect(walk.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
     await expect(walk.getByRole("img")).toHaveCount(1);
   }
   await expect(
-    walk.getByRole("img", { name: t("marketing.home.steps.recap.mockupLabel") }),
+    walk.getByRole("img", { name: t("marketing.home.steps.review.mockupLabel") }),
   ).toBeVisible();
 });
 
@@ -237,6 +264,9 @@ test("the walkthrough's bar fills as the clock, and holding the screen freezes i
   await page.goto("/");
   const t = diverTranslator("en-US");
   const walk = page.getByRole("group", { name: t("marketing.home.walk.label") });
+  // Scroll once the walk has taken over: before it runs the list is every listed step, and
+  // the page shortens under the reader when it does.
+  await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
   await walk.scrollIntoViewIfNeeded();
   const fill = walk.locator("[data-walk-controls] ~ div > span > span").last();
   const filled = async () =>

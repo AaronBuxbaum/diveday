@@ -594,15 +594,27 @@ export function CoursePageFallback({ locale }: { locale: DiverLocale }) {
  * (`LedgerRow`'s `stacked`), where a 290px panel has no room for both; the
  * page keeps them on one line at a phone's full width.
  */
-export function OrdersLedgerFallback({ locale }: { locale: DiverLocale }) {
+export function OrdersLedgerFallback({
+  locale,
+  state = "paid",
+}: {
+  locale: DiverLocale;
+  /**
+   * `waiting` is the day before Priya's booking lands: her row is not there
+   * yet. `paid` (the default) is the day with it, paid, which says nothing.
+   */
+  state?: "waiting" | "paid";
+}) {
   const t = diverTranslator(locale);
-  const rows = [
+  const waiting = state === "waiting";
+  const allRows = [
     {
       // i18n-exempt: sample diver name used only in marketing mockups
       diver: "Priya Sharma",
       detail: t("fallback.tripName"),
       status: null,
       amount: t("fallback.ordersLedger.amountReef"),
+      arrives: true,
     },
     {
       // i18n-exempt: sample diver name used only in marketing mockups
@@ -624,8 +636,10 @@ export function OrdersLedgerFallback({ locale }: { locale: DiverLocale }) {
       detail: t("fallback.tripName"),
       status: { word: t("fallback.ordersLedger.refunded"), tone: "warning" as const },
       amount: t("fallback.ordersLedger.amountReef"),
+      arrives: false,
     },
   ];
+  const rows = allRows.filter((row) => !(waiting && row.arrives));
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.ordersLedger.label")} />
@@ -639,7 +653,9 @@ export function OrdersLedgerFallback({ locale }: { locale: DiverLocale }) {
         <LedgerGroup
           as="h3"
           label={t("fallback.ordersLedger.today")}
-          meta={t("fallback.ordersLedger.dayMeta")}
+          meta={t(
+            waiting ? "fallback.ordersLedger.dayMetaWaiting" : "fallback.ordersLedger.dayMeta",
+          )}
           className="mt-4"
         >
           <ul>
@@ -654,7 +670,10 @@ export function OrdersLedgerFallback({ locale }: { locale: DiverLocale }) {
                         {row.status.word}
                       </Badge>
                     ) : null}
-                    <span className="min-w-16 text-end text-sm font-semibold tabular-nums">
+                    <span
+                      data-walk-pop={row.arrives ? "" : undefined}
+                      className="min-w-16 text-end text-sm font-semibold tabular-nums"
+                    >
                       {row.amount}
                     </span>
                     <DoorChevron />

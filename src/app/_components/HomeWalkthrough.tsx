@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
+import { useWalkSwipe } from "./useWalkSwipe";
 
 /**
  * One moment of the walkthrough: which step's list item to show, which of its
@@ -28,17 +29,14 @@ export type WalkLabels = {
   hint: string;
 };
 
-/** The whole walk takes about a minute and a half (Aaron, 2026-11-17). */
-const WALK_MS = 90_000;
+/** The whole walk takes two minutes, about ten seconds a slide (Aaron, 2026-11-17). */
+const WALK_MS = 120_000;
 
 /** Fewer than this many pixels sideways is a tap, not a swipe. */
 const SWIPE_PX = 40;
 
 /** A press that has moved this far sideways, more than up or down, is a drag. */
 const DRAG_START_PX = 8;
-
-/** How far a beat slides out and the next slides in from, in pixels. */
-const SLIDE_PX = 72;
 
 /**
  * Where in a beat a tap happens, as shares of its clock: a fingertip lands on
@@ -200,66 +198,15 @@ export function HomeWalkthrough({
     event.preventDefault();
   };
 
-  const clearDrag = () => {
-    const el = listEl();
-    if (!el) return;
-    el.style.transform = "";
-    el.style.opacity = "";
-  };
-
-  const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  /** The beat follows the finger, fading as it leaves. */
-  const dragBy = (dx: number) => {
-    const el = listEl();
-    if (!el) return;
-    el.style.transform = `translateX(${dx}px)`;
-    el.style.opacity = String(1 - Math.min(0.6, Math.abs(dx) / Math.max(el.offsetWidth, 320)));
-  };
-
-  /** A short drag lets go: the beat settles back where it was. */
-  const springBack = (dx: number) => {
-    const el = listEl();
-    clearDrag();
-    if (!el || reducedMotion() || typeof el.animate !== "function") return;
-    el.animate([{ transform: `translateX(${dx}px)` }, { transform: "translateX(0)" }], {
-      duration: 180,
-      easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
-    });
-  };
-
-  /** Slides this beat out, the next (`dir` 1) or previous (-1) one in. */
-  const slide = (dir: 1 | -1, fromDx: number) => {
-    const el = listEl();
-    if (!el || reducedMotion() || typeof el.animate !== "function") {
-      clearDrag();
-      go(index + dir);
-      return;
-    }
-    if (sliding.current) return;
-    sliding.current = true;
-    const out = el.animate(
-      [
-        { transform: `translateX(${fromDx}px)`, opacity: el.style.opacity || "1" },
-        { transform: `translateX(${-dir * SLIDE_PX}px)`, opacity: 0 },
-      ],
-      { duration: 130, easing: "ease-in", fill: "forwards" },
-    );
-    out.onfinish = () => {
-      clearDrag();
-      go(index + dir);
-      out.cancel();
-      el.animate(
-        [
-          { transform: `translateX(${dir * SLIDE_PX}px)`, opacity: 0 },
-          { transform: "translateX(0)", opacity: 1 },
-        ],
-        { duration: 220, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
-      ).onfinish = () => {
-        sliding.current = false;
-      };
-    };
-  };
+  const { dragBy, springBack, slide } = useWalkSwipe({
+    rootRef,
+    sliding,
+    index,
+    total,
+    beats,
+    playing,
+    go,
+  });
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (sliding.current) return;
@@ -341,7 +288,7 @@ export function HomeWalkthrough({
       onPointerUp={onPointerUp}
       onPointerCancel={release}
       onPointerLeave={release}
-      className="scroll-mt-20 touch-pan-y"
+      className="relative scroll-mt-20 touch-pan-y overflow-x-clip"
     >
       {ready ? (
         <>

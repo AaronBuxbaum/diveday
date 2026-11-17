@@ -4015,9 +4015,14 @@
       "visits": "Tu 3.er día de buceo",
       "boatLabel": "Barco",
       "sitesLabel": "Sitios",
-      "conditionsLabel": "Condiciones",
       "reviewAsk": "¿Qué tal tu día?",
-      "reviewSubmit": "Enviar mi opinión"
+      "reviewSubmit": "Enviar mi opinión",
+      "photosHeading": "Fotos desde el barco",
+      "maxDepthLabel": "Profundidad máx.",
+      "avgDepthLabel": "Promedio",
+      "diveTimeLabel": "Tiempo",
+      "waterLabel": "Agua",
+      "depthHeading": "Profundidad a lo largo del tiempo"
     },
     "import": {
       "label": "Vista previa de importación",
@@ -4211,7 +4216,8 @@
       "refunded": "Reembolsado",
       "amountReef": "95,00 US$",
       "amountWreck": "145,00 US$",
-      "amountCounter": "30,00 US$"
+      "amountCounter": "30,00 US$",
+      "dayMetaWaiting": "3 pedidos · 270,00 US$"
     },
     "scheduleWeek": {
       "label": "Agenda",
@@ -4254,6 +4260,11 @@
       "air": "Aire",
       "import": "Importar las inmersiones elegidas",
       "imported": "Importada"
+    },
+    "diveProfile": {
+      "stop": "Parada de seguridad · 3 min",
+      "max": "Máx. {depth}",
+      "minutes": "minutos"
     }
   },
   "demo": {

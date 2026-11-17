@@ -347,19 +347,22 @@ for (const scheme of ["light", "dark"] as const) {
           const next = page.getByRole("button", { name: t("marketing.home.walk.next") });
           await next.waitFor();
           for (const beat of [
+            "shopfront",
             "book",
+            "money",
             "unsigned",
             "sign",
-            "ready",
+            "check",
             "card",
             "desk",
-            "boat",
+            "aboard",
             "computer",
             "recap",
+            "review",
           ] as const) {
             await expect(page.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
             await capture(page, `landing-walk-${beat}`, scheme);
-            if (beat !== "recap") await next.click();
+            if (beat !== "review") await next.click();
           }
         });
       }
