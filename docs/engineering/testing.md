@@ -114,8 +114,9 @@ coverage report. A behavior change edits its story in the same PR.
 | Before a push, optional (CI is the gate) | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
 | Every pull request | repo checks, lint, typecheck (one job), all unit tests (6 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**`, `src/features/**`, `drizzle/**`, the Postgres test harness or `ci.yml` changed |
 | Push to `main` | all of the above with every capture, light and dark: the next baseline |
-| Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL (`codeql.yml`, daily 05:30 UTC), the follow-up scan |
-| Hourly | the public schedule canary (`public-schedule-canary.yml`): the demo shop's schedule draws a trip |
+| Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), the follow-up scan |
+| Every 6 hours | the public schedule canary (`public-schedule-canary.yml`): the demo shop's schedule draws a trip |
+| Weekly | CodeQL (`codeql.yml`, Mondays 05:30 UTC) and the mobile behavior lane (`mobile-behavior.yml`); both return to daily at the first real booking (#2987) |
 | Weekly | the persona walk, the shard-duration refresh |
 
 **Canceling a run stops its jobs.** Postgres, CI verdicts and the infra comment and deploy jobs use
@@ -218,7 +219,7 @@ What a diff runs is decided by reading it, at two places:
 912 images, down from 1,218. The accepted risk is a dark-only defect that shows only at phone
 width.
 
-The mobile behavior lane (`.github/workflows/mobile-behavior.yml`) runs nightly and on manual
+The mobile behavior lane (`.github/workflows/mobile-behavior.yml`) runs weekly (Mondays) and on manual
 dispatch, outside PR shards. `playwright.mobile.config.ts` runs only `e2e/mobile*.spec.ts` under
 touch Chromium (Pixel 7) and mobile WebKit (iPhone 13). Tests assert the engine and touch/mobile
 context and use real taps for public navigation, booking, guardian signature and offline manifest

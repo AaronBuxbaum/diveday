@@ -392,7 +392,20 @@ test.describe("light mode largest device body after-dive warnings", () => {
       },
     });
     const deck = page.getByRole("region", { name: copy("manifest.deck.title"), exact: true });
+    // Issue #4340: the departure's title takes a full-width line of its own,
+    // below the header's actions rather than squeezed beside them.
+    const departure = deck.locator("[data-device-text-deck-checkpoint]");
+    const returnLink = deck.getByRole("link", { name: copy("manifest.deck.return"), exact: true });
+    const [titleBox, returnBox, deckBox] = await Promise.all([
+      departure.boundingBox(),
+      returnLink.boundingBox(),
+      deck.boundingBox(),
+    ]);
+    if (!titleBox || !returnBox || !deckBox) throw new Error("the Deck header is missing");
+    expect.soft(titleBox.y).toBeGreaterThanOrEqual(returnBox.y + returnBox.height - 1);
+    expect.soft(titleBox.width).toBeGreaterThanOrEqual(deckBox.width - 1);
     const navigation = [
+      ["Departure title", departure],
       ["Deck home", deck.getByRole("button", { name: copy("manifest.deck.home"), exact: true })],
       [
         "Return to Guests",

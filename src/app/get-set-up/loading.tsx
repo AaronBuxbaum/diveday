@@ -3,7 +3,7 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
 
 /**
  * Entry-shell-shaped skeleton for `/get-set-up` while it reads the locale and
- * `?from=`: a wordmark, a title and its one-line description, the
+ * `?from=`: a wordmark, a title and its four lines of what happens next, the
  * form's boxes, one sign-in sentence, and the footer.
  */
 export default function GetSetUpLoading() {
@@ -12,15 +12,8 @@ export default function GetSetUpLoading() {
       <EntryShell
         pending
         wordmark
-        fields={[
-          "shopName",
-          "region",
-          "runsBoat",
-          "currentSystem",
-          "contactName",
-          "email",
-          "phone",
-        ]}
+        descriptionLines={{ base: 6, sm: 4 }}
+        fields={["shopName", "region", "runs", "currentSystem", "contactName", "email", "phone"]}
       />
       <MarketingFooterFallback />
     </div>

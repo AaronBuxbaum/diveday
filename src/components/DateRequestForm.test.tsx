@@ -14,6 +14,7 @@ const copy: DateRequestCopy = {
   dateOptionsHeading: "When would you like to dive?",
   preferredDate: "First-choice date",
   alternateDate: "Second-choice date",
+  datesFlexible: "My dates can move a few days",
   yourName: "Your name",
   namePlaceholder: "Priya Sharma",
   yourEmail: "Your email",
@@ -413,6 +414,18 @@ describe("DateRequestForm — asking for a date", () => {
     expect(formData.get("preferredDate")).toBe("2026-09-12");
     expect(formData.get("alternateDate")).toBe("2026-09-19");
     expect(formData.get("dateFlexible")).toBeNull();
+  });
+
+  it("marks the dates flexible when the diver ticks the box", async () => {
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry);
+
+    fillEmail();
+    fireEvent.click(screen.getByRole("checkbox", { name: "My dates can move a few days" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    expect(submitInquiry.mock.calls[0]?.[1].get("dateFlexible")).toBe("on");
   });
 
   it("sends no date fields at all when the diver named none", async () => {

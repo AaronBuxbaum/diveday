@@ -752,10 +752,12 @@
   (DSD/Try Scuba — `courses.is_intro_course`): PADI's published **Discover Scuba** figure from the
   Instructor Manual (HD-6, sourced 2026-08-02) — **4 students per instructor in confined/pool
   water, tightening to 2 students per instructor for the open-water dive**, with **no assistant
-  bonus** (PADI publishes none for DSD). DiveDay's trip model has no confined-water session type —
-  a trip is one dated open-water outing — so **only the tighter 2:1 open-water figure is enforced**
-  as a booking gate (`INTRO_COURSE_RATIO` in `src/lib/course-ratios.ts`, derived from `DSD_RATIO`);
-  the confined-water 4:1 number is recorded for reference, unenforced. A certified assistant aboard
+  bonus** (PADI publishes none for DSD). A session on a pool departure (`trips.dive_mode = 'pool'`)
+  is confined water and takes the 4:1 figure (`POOL_INTRO_COURSE_RATIO`); every other intro
+  session takes the 2:1 open-water figure (`INTRO_COURSE_RATIO`), both in `src/lib/course-ratios.ts`
+  and derived from `DSD_RATIO` (Aaron, issue #4633, 2026-11-16). The pool session of an Open Water
+  course keeps the entry-level ratio below. A DSD that also dives in open water is a boat or shore
+  departure (2:1); the pool mode reads "Pool only (confined water)" in the builder. A certified assistant aboard
   buys an intro session no extra seats; only another instructor does — which is why the staffing
   week words this gap apart as "Over intro ratio: add an instructor" rather than the entry-level
   "Over student ratio: add a DM or AI" (**Crew gap** below).

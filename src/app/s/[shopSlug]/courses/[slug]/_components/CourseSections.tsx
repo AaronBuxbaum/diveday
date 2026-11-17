@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/group-label";
@@ -191,11 +191,18 @@ export function CourseAdmission({
   certificationRequired,
   minimumAge,
   shopNote,
+  medicalQuestionsHref,
   t,
 }: {
   certificationRequired: string;
   minimumAge: number | null;
   shopNote: string | null;
+  /**
+   * The waiver's medical questions, read-only, before the diver pays (issue
+   * #4329): a doctor's sign-off takes days a holiday booking may not have.
+   * Left out on paper, where a link goes nowhere.
+   */
+  medicalQuestionsHref?: string;
   t: DiverTranslator;
 }) {
   return (
@@ -224,6 +231,16 @@ export function CourseAdmission({
           <h3 className={`mt-4 ${groupLabelClass()}`}>{t("course.fromTheShop")}</h3>
           <p className="mt-1 text-sm leading-relaxed text-muted">{shopNote}</p>
         </>
+      ) : null}
+      {medicalQuestionsHref ? (
+        <p className="mt-2 text-sm">
+          <Link
+            href={medicalQuestionsHref}
+            className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
+          >
+            {t("course.medicalQuestionsLink")}
+          </Link>
+        </p>
       ) : null}
     </section>
   );

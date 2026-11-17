@@ -5,6 +5,12 @@ patchedDependencies:
   '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch
   next@16.4.6: patches/next@16.4.6.patch
 
+# sharp loads `detect-libc` and its `@img/*` binaries from the app's own node_modules at run
+# time (the standalone build copies sharp there), so they must sit at the top level.
+publicHoistPattern:
+  - '@img/*'
+  - 'detect-libc'
+
 permissions:
   '@parcel/watcher':
     build: true

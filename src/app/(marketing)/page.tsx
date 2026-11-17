@@ -136,7 +136,7 @@ function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: 
 
 /**
  * One booking, followed from the shop's website to the boat and home again
- * (H-20261005-public-pages-sell, the 2026-10-05 rework). Each step is the screen that does it, two of
+ * (H-20261005-public-pages-sell, the 2026-10-05 rework). Each step is the screen that does it, two or three of
  * the builder's notes beside it, and a link to the feature page that tells the
  * rest. The order is the order a diver meets the shop in, which is also the
  * order an owner's doubts arrive in: will they book, does the paperwork come
@@ -165,7 +165,7 @@ function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: 
 const STEPS: readonly {
   id: "book" | "sign" | "check" | "aboard" | "recap";
   feature: FeaturePageSlug;
-  notes: readonly [DiverMessageKey, DiverMessageKey];
+  notes: readonly [DiverMessageKey, DiverMessageKey, ...DiverMessageKey[]];
   label: DiverMessageKey;
   screen: (locale: DiverLocale) => ReactNode;
 }[] = [
@@ -193,10 +193,16 @@ const STEPS: readonly {
   {
     // The hero draws the roll-call phone, so this step draws the check-in
     // page's dock screen, by key (B14, 2026-10-25); the notes keep H-20260802-may-public-pages-say's
-    // no-signal claim.
+    // no-signal claim. The third note is for the owner who still carries
+    // paper (issue #4322): the same manifest prints, and the step's link is
+    // the boat-manifest page that lists the packet.
     id: "aboard",
     feature: "boat-manifest",
-    notes: ["marketing.home.steps.aboard.note1", "marketing.home.steps.aboard.note2"],
+    notes: [
+      "marketing.home.steps.aboard.note1",
+      "marketing.home.steps.aboard.note2",
+      "marketing.home.steps.aboard.note3",
+    ],
     label: "marketing.featurePages.checkIn.screenLabel",
     screen: (locale) => <ArrivalDeskFallback locale={locale} />,
   },
@@ -253,7 +259,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       </section>
 
       {/* The booking's steps, in the order a diver meets the shop:
-          alternating rows, each a marker, a title, two of the builder's notes
+          alternating rows, each a marker, a title, two or three of the builder's notes
           and the feature page's name beside a large drawing (`STEPS`). */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">

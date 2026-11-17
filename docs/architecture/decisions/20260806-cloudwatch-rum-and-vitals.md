@@ -122,7 +122,8 @@ recorded before they were final.
   no dependency at all.
 - **Five new public environment variables.** `NEXT_PUBLIC_` because the browser is the only
   consumer; none is a secret, since the identity pool hands the same credential to every visitor.
-  `NEXT_PUBLIC_RUM_SAMPLE_RATE` is the cost lever.
+  `NEXT_PUBLIC_RUM_SAMPLE_RATE` is the cost lever. The draw is made once per browser session
+  (sessionStorage) before the SDK is fetched, so unsampled sessions never download it.
 - **A new public unauthenticated endpoint**, `/api/vitals`. Bounded as described above, and now one
   of the surfaces [rate-limiting-runbook.md](../../engineering/rate-limiting-runbook.md) lists.
 - **More AWS cost**: five more custom metrics (~$1.50/month), one log line per page view, and RUM at

@@ -48,7 +48,7 @@ async function PurchasePanelBody({
   locale: string;
   personId?: string;
 }) {
-  const data = await getPurchaseForm(db, shop.id, session.user.personId);
+  const data = await getPurchaseForm(db, shop.id, session.user.personId, personId);
   if (!data) return null;
   const currency = data.currency;
   return (
@@ -56,9 +56,8 @@ async function PurchasePanelBody({
       attemptId={randomUUID()}
       {...{ currency, locale }}
       step={currencyFractionDigits(currency) === 0 ? "1" : "0.01"}
-      customers={data.customers}
+      customer={data.customer}
       canCreateDue={data.canCreateDue}
-      personId={personId}
       words={{
         title: t("orders.purchase.title"),
         entryType: t("orders.purchase.entryType"),
@@ -70,8 +69,14 @@ async function PurchasePanelBody({
         totalInvalid: t("orders.purchase.totalInvalid"),
         submitDue: t("orders.localDue.submit"),
         payerRequired: t("orders.localDue.payerRequired"),
-        customer: t("orders.new.customerLabel"),
-        choose: t("orders.purchase.walkIn"),
+        customer: {
+          label: t("orders.new.customerLabel"),
+          placeholder: t("orders.purchase.walkInPlaceholder"),
+          choose: t("orders.localDue.payerRequired"),
+          change: t("orders.new.changeCustomer"),
+          noMatches: t("orders.new.noCustomerMatches"),
+          more: t("orders.new.moreCustomerMatches"),
+        },
         method: t("orders.purchase.method"),
         reference: t("orders.purchase.reference"),
         note: t("orders.new.noteLabel"),

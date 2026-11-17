@@ -95,6 +95,8 @@ export const accountSessions = pgTable(
   },
   (table) => [
     index("account_sessions_user_account_idx").on(table.userAccountId),
+    // Merge and erasure scans find a person's sessions by person.
+    index("account_sessions_person_idx").on(table.personId),
     // The retention prune deletes by `expires_at` (src/features/retention/store.ts; issue #2357).
     index("account_sessions_expires_idx").on(table.expiresAt),
   ],

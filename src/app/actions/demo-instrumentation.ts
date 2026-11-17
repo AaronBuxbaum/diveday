@@ -1,6 +1,7 @@
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getShopBySlug } from "@/db/shops";
+import { recordPreviewActivity } from "@/features/demo-preview";
 import { recordDemoEntry } from "@/features/funnel";
 import { trackEvent } from "@/lib/analytics";
 import type { DemoRoleId } from "@/lib/demo-roles";
@@ -91,6 +92,38 @@ export async function announceDemoEntry(input: {
     });
   } catch (error) {
     log("demo.entry_alert_failed", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
+}
+
+/**
+ * Note real input inside whatever shop a staff session just touched, and mail
+ * the founder the first time that shop is a prospect's preview (ADR
+ * 20261116-demo-previews). For every other shop the update matches no row and
+ * nothing else happens.
+ *
+ * Best-effort and swallowed whole, for `announceDemoEntry`'s reason: it runs
+ * inside `after()`, and counting a visit is never worth failing one.
+ */
+export async function announcePreviewActivity(shopId: string): Promise<void> {
+  try {
+    const db = await getDb();
+    const preview = await recordPreviewActivity(db, shopId);
+    if (!preview) return;
+    await sendNotification(db, {
+      kind: "operator_alert",
+      event: "preview_active",
+      shopId,
+      to: alertRecipient(),
+      previewId: preview.id,
+      prospectName: preview.prospectName,
+      shopSlug: preview.shopSlug,
+      fetchCount: preview.fetchCount,
+      openCount: preview.openCount,
+    });
+  } catch (error) {
+    log("preview.activity_failed", "error", {
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }

@@ -30,7 +30,7 @@
   "diveModeLabel": "Dive mode",
   "modeBoat": "Boat dive",
   "modeShore": "Shore dive",
-  "modePool": "Pool session",
+  "modePool": "Pool only (confined water)",
   "boatSelectLabel": "Assigned boat",
   "unassignedBoat": "Any / unassigned boat",
   "requestBoatSuggestion": "Suggested boat: {boatName} ({capacity, plural, one {# total occupant} other {# total occupants}})",

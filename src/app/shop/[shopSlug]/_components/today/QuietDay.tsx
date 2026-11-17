@@ -4,6 +4,7 @@ import { LedgerRow } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DayLoadOut } from "@/lib/closeout-kinds";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { QuietDaySuggestions } from "./QuietDaySuggestions";
 import { QuietDayThinBoats } from "./QuietDayThinBoats";
 import { TomorrowFromTonight } from "./TomorrowFromTonight";
 
@@ -12,7 +13,8 @@ import { TomorrowFromTonight } from "./TomorrowFromTonight";
  * could use divers, the one act available, the next departure, and, when
  * tomorrow sails, what it needs from tonight. A no-boat Monday before a full,
  * ready Tuesday is still the evening the fill station and the printed day are
- * for (dive-domain review FIX 2).
+ * for (dive-domain review FIX 2). The week after's boats with someone blocked
+ * come first (issue #4257): that is real work a quiet day can start.
  */
 export function QuietDay({
   shop,
@@ -38,6 +40,13 @@ export function QuietDay({
   const { id: shopId, slug: shopSlug, timezone: timeZone } = shop;
   return (
     <div className="mt-8 flex flex-col gap-4">
+      <QuietDaySuggestions
+        shopId={shopId}
+        shopSlug={shopSlug}
+        locale={locale}
+        timeZone={timeZone}
+        t={t}
+      />
       <QuietDayThinBoats
         shopId={shopId}
         shopSlug={shopSlug}

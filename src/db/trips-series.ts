@@ -45,7 +45,7 @@ import {
 } from "@/lib/service-window";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
-import { departureMayBeAtSea } from "./aboard-at-sea";
+import { departuresMayBeAtSea } from "./aboard-at-sea";
 import { type BlowoutRefundMode, callDayBlowout } from "./blowouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
@@ -1257,13 +1257,12 @@ export async function listOffCadenceSeriesTrips(
     (row): row is typeof row & { occurrenceDate: string } =>
       row.occurrenceDate !== null && !seriesFiresOn(cadence, row.occurrenceDate),
   );
-  const ashore: OffCadenceSeriesTrip[] = [];
-  for (const row of offCadence) {
-    const tripId = row.id;
-    if (await departureMayBeAtSea(db, { shopId, tripId, startsAt: row.startsAt, now })) continue;
-    ashore.push({ ...row });
-  }
-  return ashore;
+  const atSea = await departuresMayBeAtSea(db, {
+    shopId,
+    departures: offCadence.map((row) => ({ tripId: row.id, startsAt: row.startsAt })),
+    now,
+  });
+  return offCadence.filter((row) => !atSea.has(row.id)).map((row) => ({ ...row }));
 }
 
 /** What "Cancel every upcoming date" and "Take them off" did. */

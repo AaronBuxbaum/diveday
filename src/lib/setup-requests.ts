@@ -106,11 +106,20 @@ export function trippedHoneypot(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+/**
+ * **"What do you run?"** (issue #4319): one box each for boat dives, shore
+ * dives and pool sessions, any mix and none required, so a shop that trains in
+ * a pool and never leaves the dock reads as wanted. A ticked box posts `yes`.
+ */
+export const SETUP_RUNS = ["runsBoat", "runsShore", "runsPool"] as const;
+
+export type SetupRuns = (typeof SETUP_RUNS)[number];
+
 /** The fields a person fills in, in the order the form asks them. */
 export const SETUP_FIELDS = [
   "shopName",
   "region",
-  "runsBoat",
+  ...SETUP_RUNS,
   "currentSystem",
   "currentSystemGuide",
   "contactName",
@@ -157,11 +166,16 @@ const PHONE_SHAPE = /^[+\d\s().-]*$/;
 const requiredText = (max: number) =>
   z.string().trim().min(1, "required").max(max, "invalid").refine(isSingleLineText, "invalid");
 
+/** A box: ticked posts `yes`; anything else, an absent box included, is unticked. */
+const ticked = z.string().transform((value) => value === "yes");
+
 const setupRequestSchema = z
   .object({
     shopName: requiredText(SETUP_TEXT_MAX),
     region: requiredText(SETUP_TEXT_MAX),
-    runsBoat: z.enum(["yes", "no"], { error: "required" }).transform((value) => value === "yes"),
+    runsBoat: ticked,
+    runsShore: ticked,
+    runsPool: ticked,
     currentSystem: z.preprocess(
       (value) => (value === "" ? undefined : value),
       z.enum(SETUP_CURRENT_SYSTEMS, { error: "invalid" }).optional(),

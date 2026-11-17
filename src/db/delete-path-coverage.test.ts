@@ -175,6 +175,8 @@ const UNSCOPED_REASONS: Record<string, string> = {
     "a shop asking DiveDay to be set up, before any shop exists — the platform's lead list, not a tenant's (ADR 20261007-setup-request-form)",
   demo_entries:
     "a count of demo entries by funnel tag, deliberately unkeyed from the minted shop so the reaper does not erase the count; pruned by retention",
+  demo_previews:
+    "a prospect's preview link and its opens, keyed to the minted shop by slug so the reaper does not erase who looked; pruned by retention (ADR 20261116-demo-previews)",
   sms_opt_outs:
     "the texting number's STOP list, one for the platform because every shop texts from one number; a shop's delete must not resume texting a diver who said stop",
 };

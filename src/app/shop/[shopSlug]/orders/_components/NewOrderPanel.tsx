@@ -12,6 +12,7 @@ import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { invoiceTargetKey } from "../_lib/order-form";
 import { createOrderAction } from "../create-order-actions";
+import { CustomerPicker } from "./CustomerPicker";
 import { InvoiceAddressFields } from "./InvoiceAddressFields";
 import { InvoiceForm } from "./InvoiceForm";
 import { OrderEditor } from "./OrderEditor";
@@ -133,9 +134,12 @@ export async function NewOrderPanel({
   const demoAddress = shop.isDemo ? shop : null;
   // The index opens this panel only for a shop that can take payment; the
   // reader asks again and reads nothing more when it cannot.
-  const page = await getOrderNewPage(db, shop.id, prefillBookingId);
+  const page = await getOrderNewPage(db, shop.id, {
+    bookingId: prefillBookingId,
+    personId: prefillPersonId,
+  });
   if (!page.acceptsPayments) return null;
-  const { customers, bookingContext } = page;
+  const { customer, bookingContext } = page;
 
   // Auto-fill from the linked booking so staff only review and send. A course
   // session fills two lines — instruction and e-learning — because a student
@@ -194,24 +198,28 @@ export async function NewOrderPanel({
         className="flex flex-col gap-6"
       >
         <FieldGrid columns={1} className="gap-y-6">
-          <Field label={t("orders.new.customerLabel")}>
-            <select
-              name="personId"
-              required
-              defaultValue={prefillPersonId ?? ""}
-              className={controlClass}
-            >
-              <option value="" disabled>
-                {t("orders.new.chooseCustomer")}
-              </option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.fullName}
-                  {customer.email ? ` — ${customer.email}` : ""}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <CustomerPicker
+            name="personId"
+            initial={
+              customer ??
+              (bookingContext
+                ? {
+                    id: bookingContext.person.id,
+                    fullName: bookingContext.person.fullName,
+                    email: bookingContext.person.email,
+                  }
+                : null)
+            }
+            required
+            words={{
+              label: t("orders.new.customerLabel"),
+              placeholder: t("orders.new.customerPlaceholder"),
+              choose: t("orders.new.chooseCustomer"),
+              change: t("orders.new.changeCustomer"),
+              noMatches: t("orders.new.noCustomerMatches"),
+              more: t("orders.new.moreCustomerMatches"),
+            }}
+          />
           <Field label={t("orders.new.noteLabel")} hint={t("orders.new.noteHint")}>
             <input
               type="text"

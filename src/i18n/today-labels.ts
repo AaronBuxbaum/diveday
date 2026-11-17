@@ -2,7 +2,6 @@ import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
 import type { BlockerLabelRef } from "@/lib/blockers";
 import { calendarDateInTimezone, calendarDaysBetween } from "@/lib/calendar-date";
 import { type Copy, resolveCopy } from "@/lib/copy";
-import { DSD_RATIO } from "@/lib/course-ratios";
 import type { DepthUnit } from "@/lib/depth-units";
 import { formatDateTimeTz, formatRelativeDay, formatShortDate, formatWeekday } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -548,21 +547,16 @@ export function overRatioDetailText(t: StaffTranslator, booked: number, capacity
  * The intro-session (`ratio: "intro"`) wording of the same gap. See
  * `overRatioDetailText`.
  *
- * The per-instructor figure is interpolated from `DSD_RATIO` rather than written
- * into the message bundle, so the sourced number (HD-6) lives in exactly one
- * place and the copy cannot drift away from the cap the gate enforces — which is
- * how the previous string ended up citing a figure the code no longer used.
+ * The per-instructor figure is the one the gap was measured at
+ * (`perInstructor`, from the rule `courseCrewGap` chose) rather than written
+ * into the message bundle, so the copy cannot drift away from the cap the gate
+ * enforces: 2 in open water, 4 in a pool (issue #4633).
  */
 export function overRatioIntroDetailText(
   t: StaffTranslator,
-  booked: number,
-  capacity: number,
+  gap: { booked: number; capacity: number; perInstructor: number },
 ): string {
-  return t("today.detail.overRatioIntro", {
-    booked,
-    capacity,
-    perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
-  });
+  return t("today.detail.overRatioIntro", gap);
 }
 
 /**

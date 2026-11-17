@@ -3,11 +3,13 @@ import {
   boolean,
   check,
   index,
+  integer,
   pgEnum,
   pgTable,
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -50,7 +52,14 @@ export const setupRequests = pgTable(
     shopName: text("shop_name").notNull(),
     /** Town or region, as typed. */
     region: text("region").notNull(),
+    /**
+     * What the shop runs, as the form's three boxes (issue #4319): boat dives,
+     * shore dives, pool sessions. Any mix, none included: a training shop with
+     * no boat is as welcome as a liveaboard.
+     */
     runsBoat: boolean("runs_boat").notNull(),
+    runsShore: boolean("runs_shore").notNull().default(false),
+    runsPool: boolean("runs_pool").notNull().default(false),
     /** A `SetupCurrentSystem` code (`src/lib/setup-requests.ts`). */
     currentSystem: text("current_system").notNull(),
     /**
@@ -118,6 +127,67 @@ export const demoEntries = pgTable(
   },
   (table) => [index("demo_entries_entered_idx").on(table.enteredAt)],
 );
+
+/**
+ * **A demo shop built ahead of time for one prospect**, and what happened to
+ * the link that opens it (ADR 20261116-demo-previews). The founder dresses a
+ * minted demo in a shop's own name, colour and town, sends `/preview/<id>`,
+ * and reads here whether anybody came.
+ *
+ * Three separate signals, because a mail scanner fetches every link in a
+ * message and must never read as interest: `fetched_*` counts any request for
+ * the page, `opened_*` a browser that ran the page and entered the shop, and
+ * `active_*` real input inside the shop (the same touch that keeps a staff
+ * session alive, `touchStaffSession`). Only the last one is a person.
+ *
+ * Keyed to the minted shop by its id with no foreign key, for
+ * `demo_entries`' reason above: the demo reaper deletes that shop and
+ * everything it owns, and the record of who looked must outlive it. A preview
+ * whose shop is gone reads as ended.
+ *
+ * It holds a business's name and public website, and no person. The row id is
+ * the link's capability: it opens a demo shop of seeded divers and nothing
+ * else. Pruned on `RETENTION_DAYS.demo_previews`.
+ */
+export const demoPreviews = pgTable(
+  "demo_previews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /**
+     * The minted demo shop this preview opens, by its row id. Not a foreign key
+     * (above), and the id rather than the slug is what every check compares: a
+     * generated slug can be drawn again by a later visitor's demo once the
+     * reaper has taken this one, and a link must never open that stranger's shop.
+     */
+    demoShopId: uuid("demo_shop_id").notNull(),
+    /** That shop's slug when the preview was built, for the founder's list. */
+    shopSlug: text("shop_slug").notNull(),
+    /** The prospect's own name, as the preview wears it. */
+    prospectName: text("prospect_name").notNull(),
+    /** The public site the name and colour were read from, when there was one. */
+    prospectSite: text("prospect_site"),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    fetchCount: integer("fetch_count").notNull().default(0),
+    firstFetchedAt: timestamp("first_fetched_at", { withTimezone: true }),
+    openCount: integer("open_count").notNull().default(0),
+    firstOpenedAt: timestamp("first_opened_at", { withTimezone: true }),
+    lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
+    activeCount: integer("active_count").notNull().default(0),
+    firstActiveAt: timestamp("first_active_at", { withTimezone: true }),
+    lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("demo_previews_demo_shop_key").on(table.demoShopId),
+    index("demo_previews_created_idx").on(table.createdAt),
+    check(
+      "demo_previews_counts_check",
+      sql`${table.fetchCount} >= 0 and ${table.openCount} >= 0 and ${table.activeCount} >= 0`,
+    ),
+  ],
+);
+
+export type DemoPreview = typeof demoPreviews.$inferSelect;
 
 export const shopMilestone = pgEnum("shop_milestone", SHOP_MILESTONES);
 

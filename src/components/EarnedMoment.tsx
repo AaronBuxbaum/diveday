@@ -95,6 +95,12 @@ const INSET = {
   card: "p-4 sm:p-5",
 } as const;
 
+/** A picture across the panel's top edge: the inset's own padding, taken back. */
+const MEDIA_BLEED = {
+  moment: "-mx-5 -mt-5 mb-4 sm:-mx-6 sm:-mt-6 sm:mb-5",
+  card: "-mx-4 -mt-4 mb-4 sm:-mx-5 sm:-mt-5",
+} as const;
+
 export function EarnedMoment({
   eyebrow,
   title,
@@ -103,8 +109,14 @@ export function EarnedMoment({
   as: Heading = "h2",
   titleClassName = "",
   inset = "moment",
+  media,
 }: {
   eyebrow?: string;
+  /**
+   * A picture across the top of the panel, edge to edge: the booked ticket's
+   * site photo (issue #4386). Decorative; the words under it name the place.
+   */
+  media?: React.ReactNode;
   title: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
@@ -124,8 +136,9 @@ export function EarnedMoment({
     // `INSET` is a SectionCard rung (`sectionCardClass`), so the moment's text
     // starts on the same x as the cards stacked under it.
     <section
-      className={`rise-in rounded-panel border border-accent/40 bg-accent/10 ${INSET[inset]} ${className}`.trim()}
+      className={`rise-in rounded-panel border border-accent/40 bg-accent/10 ${INSET[inset]}${media ? " overflow-hidden" : ""} ${className}`.trim()}
     >
+      {media ? <div className={MEDIA_BLEED[inset]}>{media}</div> : null}
       {/* The 4px between eyebrow and heading belongs to the eyebrow: on the
           heading it pushed a lone title 2px below the panel's centre. */}
       {eyebrow ? <p className={`mb-1 ${EYEBROW_CLASS}`}>{eyebrow}</p> : null}

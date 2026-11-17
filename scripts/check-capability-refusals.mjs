@@ -28,6 +28,7 @@ export const KNOWN_ROUTES = [
   "(token)/claim/[token]",
   "(token)/confirm-contact/[token]",
   "(token)/invite/[token]",
+  "(token)/preview/[token]",
   "(token)/ready/[token]",
   "(token)/recap/[token]",
   "(token)/reset-password/[token]",

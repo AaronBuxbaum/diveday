@@ -10,6 +10,13 @@ import { demoRoleEmail } from "@/db/people";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { dismissDemoStarts, getShopById, getShopBySlug } from "@/db/shops";
 import {
+  findPreview,
+  previewIdFrom,
+  previewIsOpen,
+  previewPath,
+  recordPreviewOpen,
+} from "@/features/demo-preview";
+import {
   DEMO_SEAT_COOKIE,
   DEMO_SEAT_MAX_AGE_SECONDS,
   isDemoSeatFor,
@@ -26,6 +33,7 @@ import { demoStartDeparture, demoStartFrom } from "@/features/demo-starts";
 import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/quiet-demo-device";
 import { requireStaffSession } from "@/features/session";
 import { auth, getAuth } from "@/lib/auth";
+import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import { demoLandingFrom, demoLandingPath } from "@/lib/demo-landings";
 import { DEMO_ROLE_IDS, type DemoRoleId } from "@/lib/demo-roles";
@@ -225,6 +233,75 @@ export async function enterDemoAction(formData?: FormData) {
   }
   if (pendingSignIn) redirect("/sign-in?error=two-factor");
   redirect(demoLandingPath(slug, role, landing));
+}
+
+/**
+ * Open the demo shop built for one prospect (ADR 20261116-demo-previews): the
+ * link's page posts its own id here from a browser, and the visitor lands on
+ * Today as that shop's owner with nothing to type.
+ *
+ * **The post is the open.** A mail scanner requests the page and stops there
+ * (`recordPreviewFetch`); reaching this action means a browser ran the page.
+ * Real input inside the shop is counted separately, by the staff-activity
+ * touch, and is the only one of the three the founder is mailed about.
+ *
+ * Anything that is not a live preview goes back to the link's page, which
+ * says the preview has ended: an expired week, a shop the reaper has taken, an
+ * id that never existed. The id is the caller's word, so it is throttled per IP
+ * before it is looked up.
+ *
+ * The first open replays the seeded day, so a link opened on day five shows
+ * this morning's boats and not last week's. Later opens leave the shop as the
+ * visitor left it. A browser the founder marked as his own enters without
+ * being counted (`src/features/quiet-demo-device/rules.ts`).
+ */
+export async function enterPreviewAction(formData: FormData) {
+  const id = previewIdFrom(formData.get("preview"));
+  if (!id) redirect("/");
+
+  const ip = await clientIp();
+  if (!(await checkRateLimit(rateLimitKey("preview-open", ip), RATE_LIMITS.demoSwitch)).allowed) {
+    redirect(DEMO_UNAVAILABLE_PATH);
+  }
+
+  const db = await getDb();
+  const preview = await findPreview(db, id);
+  const now = nowDate();
+  if (!preview || !previewIsOpen(preview, now)) redirect(previewPath(id));
+  const shop = await getShopBySlug(db, preview.shopSlug);
+  // The id, not the slug: a later demo can draw a reaped preview's slug.
+  if (!shop?.isDemo || shop.id !== preview.demoShopId) redirect(previewPath(id));
+  const ownerEmail = await demoRoleEmail(db, shop.id, "owner");
+  if (!ownerEmail) redirect(previewPath(id));
+
+  const quiet = isQuietDemoDevice((await cookies()).get(QUIET_DEMO_COOKIE)?.value);
+  if (!quiet) {
+    const { first } = await recordPreviewOpen(db, id, now);
+    if (first) {
+      await db.transaction(async (tx) => {
+        if (await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id)) {
+          await resetDemoSchedule(tx, shop.id, "history");
+        }
+      });
+    }
+  }
+
+  await takeDemoSeat(shop.id);
+
+  let pendingSignIn = false;
+  try {
+    const instance = await getAuth();
+    const signedIn = await instance.api.signInDiveDayCredentials({
+      body: { email: ownerEmail, password: DEMO_BYPASS_PASSWORD },
+      headers: await demoSignInHeaders(),
+    });
+    pendingSignIn = signedIn.pending;
+  } catch (error) {
+    if (error instanceof APIError) redirect(DEMO_UNAVAILABLE_PATH);
+    throw error;
+  }
+  if (pendingSignIn) redirect("/sign-in?error=two-factor");
+  redirect(demoLandingPath(shop.slug, "owner", null));
 }
 
 export async function resetDemoAction() {

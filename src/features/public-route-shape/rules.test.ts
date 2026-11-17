@@ -43,6 +43,14 @@ describe("publicRouteShape", () => {
     });
   });
 
+  it("reads a course's medical questions off the course they belong to (issue 4329)", () => {
+    expect(publicRouteShape(`/s/${SHOP}/courses/open-water/medical-questions`)).toEqual({
+      kind: "course",
+      shopSlug: SHOP,
+      courseSlug: "open-water",
+    });
+  });
+
   it("reads a dive site, and calls a segment that could never have been minted malformed", () => {
     expect(publicRouteShape(`/s/${SHOP}/sites/molasses-reef`)).toEqual({
       kind: "site",

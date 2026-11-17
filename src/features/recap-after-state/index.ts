@@ -1,1 +1,6 @@
-export { type AfterStateProps, buildAfterStateProps, recapBuddyLinkUrl } from "./after-state";
+export {
+  type AfterStateProps,
+  buildAfterStateProps,
+  recapBuddyLinkUrl,
+  type WhatsNextRow,
+} from "./after-state";

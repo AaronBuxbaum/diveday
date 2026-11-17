@@ -5,7 +5,9 @@ import {
   MAX_PACKAGE_DIVE_COUNT,
   packageCoversTrip,
   packageOnSale,
+  packageSavingCents,
   type SpendableEntitlement,
+  singleDivePrice,
   spendableCount,
   spendableCountForTrip,
   validateDivePackage,
@@ -212,5 +214,46 @@ describe("spendableCountForTrip", () => {
 
   it("treats a dive expiring exactly now as gone", () => {
     expect(spendableCountForTrip([entitlement({ expiresAt: NOW })], funDive, NOW)).toBe(0);
+  });
+});
+
+describe("singleDivePrice", () => {
+  it("is the per-tank price most of the shop's departures charge", () => {
+    expect(
+      singleDivePrice([
+        { priceCents: 9500, plannedDives: 2 },
+        { priceCents: 9500, plannedDives: 2 },
+        { priceCents: 6000, plannedDives: 1 },
+      ]),
+    ).toBe(4750);
+  });
+
+  it("takes the lower price on a tie, so the saving is never overstated", () => {
+    expect(
+      singleDivePrice([
+        { priceCents: 9500, plannedDives: 2 },
+        { priceCents: 6000, plannedDives: 1 },
+      ]),
+    ).toBe(4750);
+  });
+
+  it("is null when no departure carries a price to compare with", () => {
+    expect(singleDivePrice([])).toBeNull();
+    expect(singleDivePrice([{ priceCents: null, plannedDives: 2 }])).toBeNull();
+    expect(singleDivePrice([{ priceCents: 0, plannedDives: 2 }])).toBeNull();
+    expect(singleDivePrice([{ priceCents: 9500, plannedDives: 0 }])).toBeNull();
+  });
+});
+
+describe("packageSavingCents", () => {
+  it("is what the dives cost singly less the package price", () => {
+    // Five dives at $47.50 cost $237.50 against $200 on the card.
+    expect(packageSavingCents({ priceCents: 20000, diveCount: 5 }, 4750)).toBe(3750);
+  });
+
+  it("is null when the package saves nothing or nothing compares", () => {
+    expect(packageSavingCents({ priceCents: 25000, diveCount: 5 }, 4750)).toBeNull();
+    expect(packageSavingCents({ priceCents: 23750, diveCount: 5 }, 4750)).toBeNull();
+    expect(packageSavingCents({ priceCents: 20000, diveCount: 5 }, null)).toBeNull();
   });
 });

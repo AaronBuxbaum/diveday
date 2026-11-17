@@ -284,17 +284,20 @@ describe("hiding a thanks to the crew", () => {
     return { db, shop, owner, captain, reviewId: review.id };
   }
 
-  function post(reviewId: string, hidden: boolean) {
+  function post(reviewId: string, ruling: "passed" | "held") {
     const formData = new FormData();
     formData.set("intent", "crew-thanks");
     formData.set("reviewId", reviewId);
-    formData.set("thanksHidden", hidden ? "true" : "false");
+    formData.set("ruling", ruling);
     return formData;
   }
 
-  async function hiddenState(db: AppDb, reviewId: string) {
+  async function ruledState(db: AppDb, reviewId: string) {
     const [row] = await db
-      .select({ at: tripReviews.crewThanksHiddenAt, by: tripReviews.crewThanksHiddenByPersonId })
+      .select({
+        ruling: tripReviews.crewThanksRuling,
+        by: tripReviews.crewThanksRuledByPersonId,
+      })
       .from(tripReviews)
       .where(eq(tripReviews.id, reviewId));
     return row;
@@ -303,25 +306,26 @@ describe("hiding a thanks to the crew", () => {
   it("refuses a crew login, and the line is unchanged", async () => {
     const { db, shop, captain, reviewId } = await thanksContext();
     signIn(shop, captain);
-    expect(await reviewRowAction(null, post(reviewId, true))).toMatchObject({ ok: false });
-    expect((await hiddenState(db, reviewId))?.at).toBeNull();
+    expect(await reviewRowAction(null, post(reviewId, "passed"))).toMatchObject({ ok: false });
+    expect((await ruledState(db, reviewId))?.ruling).toBeNull();
   });
 
-  it("lets the owner hide it and records the owner", async () => {
+  it("lets the owner pass it on and records the owner", async () => {
     const { db, shop, owner, reviewId } = await thanksContext();
     signIn(shop, owner);
-    expect(await reviewRowAction(null, post(reviewId, true))).toMatchObject({ ok: true });
-    const state = await hiddenState(db, reviewId);
-    expect(state?.at).not.toBeNull();
-    expect(state?.by).toBe(owner);
+    expect(await reviewRowAction(null, post(reviewId, "passed"))).toMatchObject({
+      ok: true,
+      effect: "thanks-passed",
+    });
+    expect(await ruledState(db, reviewId)).toEqual({ ruling: "passed", by: owner });
   });
 
-  it("refuses a crew login who shows a line a manager hid", async () => {
+  it("refuses a crew login who passes on a line a manager kept back", async () => {
     const { db, shop, owner, captain, reviewId } = await thanksContext();
     signIn(shop, owner);
-    await reviewRowAction(null, post(reviewId, true));
+    await reviewRowAction(null, post(reviewId, "held"));
     signIn(shop, captain);
-    expect(await reviewRowAction(null, post(reviewId, false))).toMatchObject({ ok: false });
-    expect((await hiddenState(db, reviewId))?.at).not.toBeNull();
+    expect(await reviewRowAction(null, post(reviewId, "passed"))).toMatchObject({ ok: false });
+    expect((await ruledState(db, reviewId))?.ruling).toBe("held");
   });
 });

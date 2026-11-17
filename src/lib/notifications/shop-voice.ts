@@ -49,6 +49,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
+    case "package_gift":
     case "interest_received_ack":
     // The shore contact is asked, and later told, by the shop it agreed to
     // hear from (H-20261014-stale-roll-call-recipients).

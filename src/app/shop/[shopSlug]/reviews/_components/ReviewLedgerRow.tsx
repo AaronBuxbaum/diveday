@@ -84,7 +84,7 @@ export function ReviewLedgerRow({
       /* A bare rating has no words to feature, so there is nothing to
              mark — the same condition this bar has always carried. */
       canStandout={review.isPublished && Boolean(review.comment)}
-      crewThanks={review.crewThanks ? { hidden: review.crewThanksHidden } : null}
+      crewThanks={review.crewThanksFor ? { ruling: review.crewThanksRuling } : null}
       reasons={reasons}
       copy={copy}
       moreLabel={t("reviews.rowMoreSrLabel", { name: review.diverName })}
@@ -122,13 +122,18 @@ export function ReviewLedgerRow({
         ) : null}
         {/* The thanks the diver left a crew member (loop 5, row 6): private to
             the shop and that crew member, so it is said here and never on the
-            public page. */}
-        {review.crewThanks && review.crewThanksFor ? (
+            public page, and it reaches the crew only once passed on (#4261). */}
+        {review.crewThanksFor ? (
           <p className="mt-1 break-words text-xs text-muted text-pretty">
-            {t(review.crewThanksHidden ? "reviews.crewThanksHidden" : "reviews.crewThanks", {
-              name: review.crewThanksFor,
-              words: review.crewThanks,
-            })}
+            {t(
+              review.crewThanksRuling === "passed"
+                ? "reviews.crewThanks"
+                : review.crewThanksRuling === "held"
+                  ? "reviews.crewThanksHeld"
+                  : "reviews.crewThanksWaiting",
+              { name: review.crewThanksFor },
+            )}
+            {review.crewThanks ? <q className="block">{review.crewThanks}</q> : null}
           </p>
         ) : null}
         {flags.length > 0 ? (

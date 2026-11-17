@@ -172,6 +172,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Fee credit
 - First paid month
 - Free term
+- Gifted package
 - Late cancel
 - Local amount due
 - Mixed payment
@@ -258,10 +259,12 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Days at sea
 - Days away
 - Deal
+- Deck count
 - Decompression card reminder
 - Default course page
 - Delivery receipt
 - Demo mode
+- Demo preview
 - Departure clock
 - Departure count
 - Departure log
@@ -283,6 +286,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Doctor's page
 - Emergency contact
 - Emergency reference
+- Emergency text
 - Export bundle
 - Feature coverage
 - Fill rate
@@ -305,6 +309,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Invite suggestion
 - Invoice
 - Joined at a dive site
+- Lapsed regular
 - Last-minute deal
 - Last-minute list
 - Learning materials

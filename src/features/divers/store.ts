@@ -64,6 +64,11 @@ import { personPurposesThatMerge } from "../../lib/capabilities";
 import { asLevelCard, asNitroxCard, asSpecialtyCard } from "../../lib/card-ledger";
 import { nowDate } from "../../lib/clock";
 import { minorDeclaredOnLiveUpcomingSeat } from "../../lib/guardian";
+import {
+  DID_NOT_HAPPEN_PATTERN,
+  LAPSED_REGULAR_MIN_DAYS,
+  lapsedRegularCutoff,
+} from "../../lib/prior-visits";
 import { shopWaiverStanding, waiverClockInstant } from "../../lib/waivers";
 import { shopDayBounds } from "../../lib/zoned";
 
@@ -425,6 +430,7 @@ export type DiverFilter =
   | "needs_attention"
   | "missing_contact"
   | "not_back"
+  | "lapsed_regulars"
   | "removed";
 
 export const DIVER_FILTERS = [
@@ -435,6 +441,9 @@ export const DIVER_FILTERS = [
   // Dived with the shop, and not in the last twelve months (fourth UX review,
   // item 27): the list a shop pulls to fill a quiet week.
   "not_back",
+  // Three or more dive days with the shop and none in twelve months (issue
+  // #4246): the regulars a shop may want to call. Staff decide; nothing is sent.
+  "lapsed_regulars",
   // The one view that leaves the active roster behind. Removal is reversible
   // by design (`restoreDiver`), but until this existed nothing in the UI could
   // *find* a removed diver — they vanished from the list, matched no search,
@@ -485,6 +494,26 @@ function lastDivedAtSql(shopId: string, now: Date) {
   )`;
 }
 
+/**
+ * **How many dive days this diver has had with the shop** (glossary **Dive
+ * day**), the way `diveDayOrdinal` counts them: distinct shop-local calendar
+ * days across their dive-day bookings that have left and the imported visits
+ * that did not fail to happen. Correlated on `people.id` like
+ * `lastDivedAtSql`, so it is only asked inside the roster's own WHERE.
+ */
+function diveDayCountSql(shopId: string, timeZone: string, now: Date) {
+  return sql<number>`(select count(*) from (
+    select (${trips.startsAt} at time zone ${timeZone})::date as day from ${bookings}
+      inner join ${trips} on ${trips.id} = ${bookings.tripId} and ${trips.shopId} = ${bookings.shopId}
+      where ${bookings.shopId} = ${shopId} and ${bookings.personId} = ${people.id}
+        and ${trips.startsAt} < ${now.toISOString()}::timestamptz and ${diveDay()}
+    union
+    select ${priorVisits.visitedOn}::date as day from ${priorVisits}
+      where ${priorVisits.shopId} = ${shopId} and ${priorVisits.personId} = ${people.id}
+        and coalesce(${priorVisits.statusLabel}, '') !~* ${DID_NOT_HAPPEN_PATTERN}
+  ) as dive_days)`;
+}
+
 /** The instant before which a last dive counts as "not back". */
 export function notBackCutoff(now: Date): Date {
   const cutoff = new Date(now);
@@ -517,6 +546,12 @@ function diverFilterCondition(
   if (filter === "removed") return undefined;
   if (filter === "not_back") {
     return sql`${lastDivedAtSql(shopId, context.now)} < ${notBackCutoff(context.now).toISOString()}::timestamptz`;
+  }
+  if (filter === "lapsed_regulars") {
+    return and(
+      sql`${diveDayCountSql(shopId, context.timeZone, context.now)} >= ${LAPSED_REGULAR_MIN_DAYS}`,
+      sql`${lastDivedAtSql(shopId, context.now)} < ${lapsedRegularCutoff(context.now).toISOString()}::timestamptz`,
+    );
   }
   if (filter === "missing_contact") {
     // "On file" needs both a name and a phone (glossary — Emergency contact), so

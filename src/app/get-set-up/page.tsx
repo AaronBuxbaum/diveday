@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EntryShell } from "@/components/account/EntryShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
-import { diverTranslator } from "@/i18n/messages";
+import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
@@ -17,6 +17,13 @@ import { SetupRequestForm, type SetupRequestFormWords } from "./_components/Setu
 // and `?from=` stream in behind this segment's `loading.tsx` (ADR
 // 20260804-instant-navigation).
 export const instant = true;
+
+const SETUP_NEXT_KEYS = [
+  "marketing.setUp.next.reply",
+  "marketing.setUp.next.asks",
+  "marketing.setUp.next.ready",
+  "marketing.setUp.next.free",
+] as const satisfies readonly DiverMessageKey[];
 
 export const metadata: Metadata = {
   title: "Get set up — DiveDay",
@@ -45,9 +52,12 @@ export default async function GetSetUpPage({
   const words: SetupRequestFormWords = {
     shopName: t("marketing.setUp.shopName"),
     region: t("marketing.setUp.region"),
-    runsBoat: t("marketing.setUp.runsBoat"),
-    yes: t("marketing.setUp.yes"),
-    no: t("marketing.setUp.no"),
+    runs: t("marketing.setUp.runs"),
+    runsAnswers: {
+      runsBoat: t("marketing.setUp.runsAnswers.boat"),
+      runsShore: t("marketing.setUp.runsAnswers.shore"),
+      runsPool: t("marketing.setUp.runsAnswers.pool"),
+    },
     currentSystem: t("marketing.setUp.currentSystem"),
     notSpecified: t("marketing.setUp.notSpecified"),
     current: Object.fromEntries(
@@ -75,7 +85,16 @@ export default async function GetSetUpPage({
         wordmark
         homeLink
         title={t("marketing.setUp.title")}
-        description={t("marketing.setUp.description")}
+        description={
+          // What happens after Send, before the first box (issue #4319): who
+          // replies and how soon (Aaron, 2026-11-16), what they ask, when the
+          // shop is usable, and that asking is free.
+          <ul className="space-y-1">
+            {SETUP_NEXT_KEYS.map((key) => (
+              <li key={key}>{t(key)}</li>
+            ))}
+          </ul>
+        }
         footer={
           <p>
             {t("account.onboard.alreadyHaveShop")}{" "}

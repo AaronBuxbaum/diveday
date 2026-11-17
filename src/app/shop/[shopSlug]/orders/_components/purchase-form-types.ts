@@ -1,3 +1,5 @@
+import type { CustomerPickerWords } from "./CustomerPicker";
+
 export type PurchaseRow = {
   id: number;
   kind: string;
@@ -7,8 +9,8 @@ export type PurchaseRow = {
 };
 export type PurchaseWords = {
   title: string;
-  customer: string;
-  choose: string;
+  /** The customer picker's words; nobody chosen is a walk-in (issue #4601). */
+  customer: CustomerPickerWords;
   method: string;
   reference: string;
   note: string;

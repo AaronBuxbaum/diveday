@@ -1,5 +1,8 @@
+import { after } from "next/server";
+import { announcePreviewActivity } from "@/app/actions/demo-instrumentation";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/quiet-demo-device";
 import { isCrossSiteHeaders } from "@/features/same-origin";
 import { touchStaffSession } from "@/features/session-activity";
 import { auth } from "@/lib/auth";
@@ -34,6 +37,15 @@ export function GET(request: Request) {
   return withE2EApiTiming("/api/staff-activity GET", () => getStaffActivity(request));
 }
 
+/** One cookie off the request itself, so the handler reads no ambient request scope. */
+function requestCookie(request: Request, name: string): string | undefined {
+  for (const pair of (request.headers.get("cookie") ?? "").split(";")) {
+    const at = pair.indexOf("=");
+    if (at > 0 && pair.slice(0, at).trim() === name) return pair.slice(at + 1).trim();
+  }
+  return undefined;
+}
+
 /** Record an input for this session, never a passive refresh or another device. */
 async function postStaffActivity(request: Request) {
   if (isCrossSiteHeaders(request.headers))
@@ -56,6 +68,14 @@ async function postStaffActivity(request: Request) {
     personId: user.personId,
     shopId: user.shopId,
   });
+  // This touch is the one signal in the product that is a person at a keyboard,
+  // so it is also what tells the founder a prospect is using their preview
+  // (ADR 20261116-demo-previews). After the response, and never for a browser
+  // the founder marked as his own.
+  if (touched) {
+    const quiet = isQuietDemoDevice(requestCookie(request, QUIET_DEMO_COOKIE));
+    if (!quiet) after(() => announcePreviewActivity(user.shopId));
+  }
   return touched
     ? new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } })
     : Response.json({ error: "authentication_required" }, { status: 401 });

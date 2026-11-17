@@ -184,6 +184,27 @@ test("the beginner doors precede agency choices and link to the shop catalog", a
   ).toBeVisible();
 });
 
+// Issue #4329: the waiver's medical questions are a link away before booking,
+// read-only, with nothing to answer and a way back to the course.
+test("a visitor reads a course's medical questions before booking", async ({ page }) => {
+  const diver = diverTranslator("en-US");
+  await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
+  await page.getByRole("link", { name: diver("course.medicalQuestionsLink") }).click();
+  await expect(page).toHaveURL("/s/blue-mantis/courses/discover-scuba-diving/medical-questions");
+  await expect(
+    page.getByRole("heading", { name: diver("course.medicalQuestions.title") }),
+  ).toBeVisible();
+  await expect(page.getByText("I am over 45 years of age.")).toBeVisible();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await page
+    .getByRole("link", { name: /Discover Scuba Diving/ })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Discover Scuba Diving" }),
+  ).toBeVisible();
+});
+
 test("a signed-out visitor browses the public course catalog, with the editor still gated", async ({
   page,
 }) => {

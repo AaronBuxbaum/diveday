@@ -155,6 +155,7 @@ export const EXCLUDED_TABLES = [
   // its progress rather than anything the shop recorded. None is a shop record.
   "setup_requests",
   "demo_entries",
+  "demo_previews",
   "shop_milestones",
 ];
 
@@ -176,5 +177,6 @@ export const GLOBAL_SEQ_TABLES = [
   "booking_arrival_events",
   "booking_payment_events",
   "pre_departure_check_events",
+  "roll_call_deck_counts",
   "work_order_bills",
 ] as const;

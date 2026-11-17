@@ -75,6 +75,9 @@ export const TOKEN_ROUTE_PREFIXES = [
   // the shop controls the address that becomes Reply-To, so the token must not
   // leave in a referrer either.
   "confirm-contact",
+  // A prospect's demo preview link (ADR 20261116-demo-previews): the id signs
+  // its holder in as the preview shop's owner.
+  "preview",
 ];
 
 export function securityHeaderRules(): ConfigHeaderRule[] {
