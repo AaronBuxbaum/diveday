@@ -125,6 +125,8 @@ export type RosterFixtureOptions = {
   /** Where "Add a guest" goes, when the trip takes one. */
   addGuestHref?: string | null;
   tripFixes?: TripFix[];
+  /** Getting ready's settled line under "everyone is ready". */
+  afterReady?: import("react").ReactNode;
   paymentsConnected?: boolean;
   canManageOrders?: boolean;
   requiresPayment?: boolean;
@@ -155,6 +157,7 @@ function rosterProps({
   phase,
   addGuestHref = null,
   tripFixes,
+  afterReady,
   paymentsConnected = false,
   canManageOrders = true,
   requiresPayment = false,
@@ -226,6 +229,7 @@ function rosterProps({
       phase: phase ?? (arrival ? "checkin" : "after"),
       addGuestHref,
       tripFixes,
+      afterReady,
       arrival,
       record,
     },

@@ -112,7 +112,7 @@ export function phaseSlots({
   // "Crew and plan are set": said once, folded, when neither is a fix.
   const afterReady =
     phase === "ready" && crew.length > 0 && plan.length > 0 ? (
-      <p data-crew-plan-set className="text-sm text-muted">
+      <p data-crew-plan-set className="px-4 py-3 text-sm text-muted sm:px-6">
         <span className="font-medium text-foreground">{t("trips.fixList.crewPlanSet")}</span>
         {" · "}
         {crew.join(", ")}

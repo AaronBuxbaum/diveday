@@ -235,3 +235,72 @@ describe("a blocked guest who is already here", () => {
     ).toHaveAccessibleDescription("Here · No card on file");
   });
 });
+
+/** Getting ready (ADR 20261117-trip-page-clock): remote remedies, settled things folded. */
+describe("the day before", () => {
+  it("folds everyone ready into one line, with crew and plan set beneath it", () => {
+    renderRoster({
+      roster: [ready, entry("c", "Cleo Stone")],
+      readiness: new Map([
+        ["b", readinessRow("ready")],
+        ["c", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["b", signedWaiver],
+        ["c", signedWaiver],
+      ]) as WaiverByBooking,
+      rentalFit: ownGear(["b", "c"]),
+      phase: "ready",
+      afterReady: <p>Crew and plan are set · Sal · Blue Hole</p>,
+      selectedBookingId: null,
+    });
+    expect(group("cantBoard")).toBeNull();
+    expect(screen.getByText("2 guests are ready")).toBeVisible();
+    expect(screen.getByText("Crew and plan are set · Sal · Blue Hole")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Check in" })).toBeNull();
+  });
+
+  it("puts a trip with no crew on the list, with the door to set it", () => {
+    renderRoster({
+      roster: [ready],
+      readiness: new Map([["b", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["b", signedWaiver]]) as WaiverByBooking,
+      rentalFit: ownGear(["b"]),
+      phase: "ready",
+      tripFixes: [
+        {
+          key: "noCrew",
+          text: "No crew yet",
+          tone: "warning",
+          action: { href: "/trip?view=edit#crew", label: "Set crew" },
+        },
+      ],
+      selectedBookingId: null,
+    });
+    const worth = group("worth");
+    expect(within(worth).getByText("No crew yet")).toBeVisible();
+    expect(within(worth).getByRole("link", { name: "Set crew" })).toHaveAttribute(
+      "href",
+      "/trip?view=edit#crew",
+    );
+  });
+});
+
+/** Filling: days ahead, nothing is urgent, so each reason is said quietly. */
+describe("while the trip fills", () => {
+  it("lists who needs something later under Booked, with no remedy button", () => {
+    renderRoster({
+      roster: [blocked, ready],
+      readiness: blockers,
+      waivers,
+      rentalFit: ownGear(["a", "b"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    const booked = group("booked");
+    expect(within(booked).getByText("Booked")).toBeVisible();
+    expect(within(booked).getByRole("button", { name: "Priya Sharma" })).toBeVisible();
+    expect(within(booked).queryByRole("link", { name: "Check cards" })).toBeNull();
+    expect(within(booked).getByText(/Nothing needed from them yet/)).toBeVisible();
+  });
+});

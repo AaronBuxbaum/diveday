@@ -164,7 +164,10 @@ export function RosterSection({
           </div>
         ) : null}
         {actions.agencyCheckAction ? (
-          <div className="mb-10">
+          // `empty:hidden`: the button draws nothing without the agency
+          // extension, and its wrapper must not keep the gap (it pushed the
+          // Booked card below the trip's facts beside it).
+          <div className="mb-10 empty:hidden">
             <AgencyCheckAll cards={agencyCards} copy={agencyCheckAllCopy(t, agencyCards.length)} />
           </div>
         ) : null}
