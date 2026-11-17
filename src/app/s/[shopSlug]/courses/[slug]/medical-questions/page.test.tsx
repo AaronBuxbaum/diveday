@@ -64,7 +64,7 @@ describe("the course's medical questions page", () => {
     const list = screen.getAllByRole("list")[0];
     if (!list) throw new Error("no question list");
     expect(within(list).getByText("I am over 45 years of age.")).toBeInTheDocument();
-    expect(container.querySelectorAll("ol > li")).toHaveLength(10);
+    expect(list.querySelectorAll(":scope > li")).toHaveLength(10);
     expect(container.querySelector("form, input, textarea, select, button")).toBeNull();
     expect(screen.getByRole("link", { name: /Discover Scuba Diving/ })).toHaveAttribute(
       "href",
@@ -74,7 +74,7 @@ describe("the course's medical questions page", () => {
 
   it("says a yes to an asterisked question means a doctor, and a yes to the others opens follow-ups", async () => {
     const { container } = render(await CourseMedicalQuestionsPage({ params }));
-    const items = [...container.querySelectorAll("ol > li")];
+    const items = [...container.querySelectorAll("ul > li")];
     const exercise = items.find((item) => item.textContent?.includes("moderate exercise"));
     const lungs = items.find((item) => item.textContent?.includes("problems with my lungs"));
 
