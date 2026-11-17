@@ -9,6 +9,7 @@ patchedDependencies:
 overrides:
   'passkit-generator>joi@17.13.4': '17.13.9'
   'next-devtools-mcp>@modelcontextprotocol/sdk@1.25.2': '1.32.2'
+  'reg-suit>inquirer@8.2.6': '8.2.7'
   '@vercel/cli-config>zod@>=4.0.0 <4.6.6': '^4.6.7'
   '@vercel/python-analysis>js-yaml@4.1.1': '^4.3.2'
   '@vercel/python-analysis>minimatch@10.1.1': '^10.2.3'
