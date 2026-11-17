@@ -26,14 +26,14 @@ describe("MarketingIllustration", () => {
       });
     }
   }
-  it("keeps the original hero product proof and the website help and embeds copy", () => {
+  it("keeps the hero's product proof and the website help and embeds copy", () => {
     const home = readFileSync(join(process.cwd(), "src/app/(marketing)/page.tsx"), "utf8");
-    expect(home).toContain("<HomeHeroPhone");
-    const heroPhone = readFileSync(
-      join(process.cwd(), "src/app/_components/HomeHeroPhone.tsx"),
+    expect(home).toContain("<HomeHeroDesk");
+    const heroDesk = readFileSync(
+      join(process.cwd(), "src/app/_components/HomeHeroDesk.tsx"),
       "utf8",
     );
-    expect(heroPhone).toContain("<CaptainPhoneFrame");
+    expect(heroDesk).toContain("<MarketingTryDesk");
     expect(home).toContain("<MarketingMockup");
     const copy = readFileSync(
       join(process.cwd(), "src/i18n/locales/en-US/content/marketing.json"),
