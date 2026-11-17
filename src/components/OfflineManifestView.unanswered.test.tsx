@@ -213,7 +213,7 @@ describe("OfflineManifestView — a copy the worker served because DiveDay did n
     expect(liveOffer()).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
     fireEvent.click(screen.getByRole("button", { name: "Priya Shah" }));
-    fireEvent.click(screen.getByRole("button", { name: "Not aboard / details" }));
+    fireEvent.click(screen.getByRole("button", { name: t("manifest.deck.exception") }));
     const panel = document.querySelector<HTMLDetailsElement>("details[data-roll-call-exception]");
     if (!panel) throw new Error("Missing exception panel");
     fireEvent.click(panel.querySelector("summary") as HTMLElement);

@@ -562,7 +562,12 @@ for (const scheme of ["light", "dark"] as const) {
         });
         await openTripTab(page, "Manifest");
         await openDeckPerson(page, clashingName);
-        await page.getByRole("button", { name: "Not aboard / details", exact: true }).click();
+        await page
+          .getByRole("button", {
+            name: staffTranslator("en-US")("manifest.deck.exception"),
+            exact: true,
+          })
+          .click();
         // The destination's own words, not a timing guess.
         await page
           .getByText(/^Also scheduled on /)
