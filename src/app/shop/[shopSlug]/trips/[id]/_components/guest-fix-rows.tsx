@@ -199,7 +199,8 @@ export function guestFixRows(
   };
 
   const remedyControl = (remedy: FixRemedy, seat: Seat | undefined) => {
-    if (remedy === "send_waiver" && seat?.sendWaiver) return { control: seat.sendWaiver };
+    if (remedy === "send_waiver" && seat?.sendWaiver)
+      return { control: seat.sendWaiver, panelHoldsControl: true };
     if (remedy === "review_cards" && seat)
       return {
         control: (
@@ -213,9 +214,14 @@ export function guestFixRows(
 
   const fixRow = (item: FixItem, tone: FixListRow["tone"], key: string): FixListRow => {
     const seat = item.guestIds.length === 1 ? byId.get(item.guestIds[0] ?? "") : undefined;
-    const { control = null, openLabel = null } = remedyControl(item.remedy, seat) as {
+    const {
+      control = null,
+      openLabel = null,
+      panelHoldsControl = false,
+    } = remedyControl(item.remedy, seat) as {
       control?: ReactNode;
       openLabel?: string;
+      panelHoldsControl?: boolean;
     };
     return {
       key,
@@ -225,6 +231,7 @@ export function guestFixRows(
       tone,
       control: seat ? control : null,
       openLabel: seat ? openLabel : null,
+      panelHoldsControl,
     };
   };
 

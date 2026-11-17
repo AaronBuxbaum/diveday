@@ -30,6 +30,8 @@ export type FixListRow = {
   control: ReactNode | null;
   /** With no control, the remedy that opens the guest in place, worded. */
   openLabel: string | null;
+  /** The opened guest already offers the control (its waiver block sends it). */
+  panelHoldsControl?: boolean;
 };
 
 export type FixListSection = {
@@ -212,6 +214,21 @@ export function GuestFixList({
   );
 }
 
+/** Each name with the punctuation that clings to it (", " gives ","), then the rest. */
+function nameRuns(parts: FixListNamePart[]): { part: FixListNamePart; after: string }[] {
+  const runs: { part: FixListNamePart; after: string }[] = [];
+  for (const part of parts) {
+    const last = runs.at(-1);
+    if (!part.id && last?.part.id && !last.after) {
+      const clinging = part.text.match(/^\S*/)?.[0] ?? "";
+      last.after = clinging;
+      const rest = part.text.slice(clinging.length);
+      if (rest) runs.push({ part: { text: rest }, after: "" });
+    } else runs.push({ part, after: "" });
+  }
+  return runs;
+}
+
 function FixRow({
   row,
   byId,
@@ -240,20 +257,24 @@ function FixRow({
           .map((id) => (
             <span key={id} id={`booking-${id}`} className="block scroll-mt-24" />
           ))}
-        <p className="font-semibold">
-          {row.names.map((part, index) =>
+        <p className="font-semibold leading-8">
+          {nameRuns(row.names).map(({ part, after }, index) =>
             part.id ? (
-              <button
-                // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional.
-                key={index}
-                type="button"
-                data-guest-open={part.id}
-                aria-expanded={openId === part.id}
-                onClick={() => toggle(part.id as string)}
-                className="inline min-h-11 text-start underline-offset-4 hover:underline focus-visible:focus-ring"
-              >
-                {part.text}
-              </button>
+              // A name keeps the comma after it: a button is one box, and a line may
+              // otherwise break between it and its comma.
+              // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional.
+              <span key={index} className="whitespace-nowrap">
+                <button
+                  type="button"
+                  data-guest-open={part.id}
+                  aria-expanded={openId === part.id}
+                  onClick={() => toggle(part.id as string)}
+                  className="text-start underline-offset-4 hover:underline focus-visible:focus-ring"
+                >
+                  {part.text}
+                </button>
+                {after}
+              </span>
             ) : (
               // biome-ignore lint/suspicious/noArrayIndexKey: parts are positional.
               <span key={index}>{part.text}</span>
@@ -340,7 +361,7 @@ function FixRow({
       </div>
       {open ? (
         <div id={`guest-panel-${id}`} className="border-t border-border px-4 pt-4 pb-5 sm:px-6">
-          {row.control ? <div className="mb-4">{row.control}</div> : null}
+          {row.control && !row.panelHoldsControl ? <div className="mb-4">{row.control}</div> : null}
           {guest.panel}
         </div>
       ) : null}
