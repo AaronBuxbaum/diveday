@@ -57,8 +57,8 @@ import {
   reinstateTrip,
   setTripCrew,
   setTripStatus,
-  upcomingTripsWithCounts,
 } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { issueWaiverRequest } from "./waivers";
 
 async function seededContext() {

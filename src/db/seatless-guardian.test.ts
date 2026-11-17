@@ -10,7 +10,8 @@ import {
 } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { mintCapability } from "./capabilities";
 import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { deliverWaiverBatch, issueAndDeliverPersonWaiver } from "./waiver-issue";
 import { completeWaiver, doorNeedsDeskGuardian, waiverLinkDoor } from "./waivers-completion";
 

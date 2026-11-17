@@ -12,14 +12,8 @@ import {
   shops,
   trips,
 } from "../../db/schema/index";
-import {
-  createTrip,
-  getTripRoster,
-  listStaff,
-  moveTrip,
-  setTripCrew,
-  upcomingTripsWithCounts,
-} from "../../db/trips";
+import { createTrip, getTripRoster, listStaff, moveTrip, setTripCrew } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { createBoat } from "../boats/store";
 import { DELIVERY_KIND_CLASSIFICATION, getMovePreflight } from "./store";

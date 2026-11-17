@@ -30,7 +30,8 @@ const { askAnytime, resolveInterestUnsubscribeToken } = await import("./interest
 const { deals, interests, people } = await import("./schema");
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import("./stripe-accounts");
 const { trips } = await import("./schema");
-const { listStaff, setTripCrew, upcomingTripsWithCounts } = await import("./trips");
+const { listStaff, setTripCrew } = await import("./trips");
+const { upcomingTripsWithCounts } = await import("./trips-queries.test-support");
 
 const nora = { fullName: "Nora Quinn", email: "nora@example.com" };
 const priya = { fullName: "Priya Shah", email: "priya@example.com" };

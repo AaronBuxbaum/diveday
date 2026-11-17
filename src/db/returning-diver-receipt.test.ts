@@ -13,7 +13,7 @@ import {
 } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { bookingCapabilities, bookings, people } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 const generationA = "11111111-1111-4111-8111-111111111111";

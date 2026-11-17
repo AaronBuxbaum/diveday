@@ -7,7 +7,8 @@ import { WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { listTripsReadiness, upsertTripRequirements } from "./readiness";
 import { trips, waiverRecords } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 const ctx = fileScopedShopContext();

@@ -12,7 +12,8 @@ import {
   reviewSpecialtyCertification,
 } from "./readiness";
 import { rollCallEvents } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

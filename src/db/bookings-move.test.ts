@@ -30,13 +30,8 @@ import {
   trips,
 } from "./schema";
 import { listCatchUpSince, markTripCaughtUp } from "./trip-read-marks";
-import {
-  createTrip,
-  getTripRoster,
-  listStaff,
-  setTripCrew,
-  upcomingTripsWithCounts,
-} from "./trips";
+import { createTrip, getTripRoster, listStaff, setTripCrew } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A staffer moves a booked seat to another departure** (ADR

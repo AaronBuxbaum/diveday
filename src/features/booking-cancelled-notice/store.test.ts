@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { cancelBooking, createBooking } from "../../db/bookings";
 import { setBookingPayment } from "../../db/payments";
 import { notificationDeliveries, people } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import type { Notification, NotificationProvider } from "../../lib/notifications/index";
 import { notificationIdempotencyKey } from "../../lib/notifications/kinds";
 import { markArrived } from "../../test/arrivals";

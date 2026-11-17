@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
-import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
+import { listStaff } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import * as clock from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { readManifestPage } from "./manifest-reads";

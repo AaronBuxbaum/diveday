@@ -18,7 +18,8 @@ import {
   trips,
   waiverRecords,
 } from "../../db/schema/index";
-import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "../../db/trips";
+import { createTrip, listStaff, setTripCrew } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { getWaiverSignerOnFile } from "../../db/waiver-signing";
 import { issueWaiverRequest, recordWaiverTemplate } from "../../db/waivers";
 import { getWaiverForToken } from "../../db/waivers-completion";

@@ -41,7 +41,7 @@ import {
   recordSelfDeclaredCards,
 } from "../../db/self-declared-cards";
 import { upsertShopStripeAccount } from "../../db/stripe-accounts";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { listUnfinished } from "../../db/unfinished";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
 import { ACTIVITY_REDACTED } from "../../lib/activity";

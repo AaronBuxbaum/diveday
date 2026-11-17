@@ -9,7 +9,8 @@ import {
   upsertTripRequirements,
 } from "./readiness";
 import { cards, diveSites, people, shops } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 async function fixture() {

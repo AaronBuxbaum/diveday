@@ -7,7 +7,8 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, rollCallEvents, shops, userAccounts } from "@/db/schema";
-import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import type { DiveDaySession } from "@/lib/auth";
 import {
   appendOfflineRollCall,

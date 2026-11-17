@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { verifyBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { bookingCapabilities, bookings, people, waiverRecords } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { deliverWaiverBatch, issueAndDeliverWaiver } from "./waiver-issue";
 import { getWaiverForToken, issueWaiverRequest } from "./waivers";
 

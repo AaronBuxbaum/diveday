@@ -77,6 +77,7 @@ export const GUARDS = [
   ["migrations", "check-migrations.mjs"],
   ["migration-graph", "check-migration-graph.mjs"],
   ["open-graph", "check-open-graph.mjs"],
+  ["mockup-mirrors", "check-mockup-mirrors.mjs"],
   ["critical-text", "check-critical-text.mjs"],
   ["ci-change-detection", "check-ci-change-detection.mjs"],
   ["node-version", "check-node-version.mjs"],

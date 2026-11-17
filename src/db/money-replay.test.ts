@@ -12,7 +12,8 @@ import { refundBookingOnCancellation } from "./refunds";
 import { bookingCheckouts, bookings } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
-import { editTrip, upcomingTripsWithCounts } from "./trips";
+import { editTrip } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

@@ -1,6 +1,7 @@
 import { expect, it, vi } from "vitest";
 import { getShopOfflineErasureEpoch } from "@/db/shops";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster, listStaff } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { anonymizeDiver } from "@/features/anonymize/store";
 import {
   signRosterConfirmation,

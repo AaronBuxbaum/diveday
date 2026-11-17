@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { bookings } from "../../db/schema/index";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster, listStaff } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { markReferralStudent, recordReferralPaper } from "./store";
 

@@ -33,7 +33,7 @@ const { listBookableDivers } = await import("../features/divers/store");
 const { capabilities, notificationSendQueue, interests, people } = await import("./schema");
 const { deliverSeatOffer } = await import("./interest-offers");
 const { ensureDepartureInterest } = await import("./interests");
-const { upcomingTripsWithCounts } = await import("./trips");
+const { upcomingTripsWithCounts } = await import("./trips-queries.test-support");
 
 async function context(base: { db: typeof fileCtx.db; shop: typeof fileCtx.shop } = fileCtx) {
   const { db, shop } = base;

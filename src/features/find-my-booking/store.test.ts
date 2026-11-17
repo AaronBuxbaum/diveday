@@ -11,7 +11,8 @@ import {
   shops,
   trips,
 } from "../../db/schema/index";
-import { createTrip, setTripStatus, upcomingTripsWithCounts } from "../../db/trips";
+import { createTrip, setTripStatus } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { sendFindMyBookingLinks } from "./store";

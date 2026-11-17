@@ -6,7 +6,7 @@ import { departureInterest } from "@/test/interests";
 import { createBooking } from "./bookings";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { bookings, interests, notificationSendQueue } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

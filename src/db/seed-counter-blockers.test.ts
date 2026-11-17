@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { listTripReadiness } from "./readiness";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **The fixture's whole reason to exist is the size of one diver's blocker

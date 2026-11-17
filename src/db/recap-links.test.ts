@@ -6,7 +6,7 @@ import { createDiver, editDiver } from "../features/divers/store";
 import { shopStaffer } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { createBooking } from "./bookings";
 import { openRecapLink, recapTokenFor } from "./recap-links";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A corrected contact takes the recap link with it** (issue #3982, option A).

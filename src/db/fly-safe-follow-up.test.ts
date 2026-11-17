@@ -15,7 +15,7 @@ import {
 } from "./fly-safe-correction";
 import { drainNotificationRetries } from "./notifications";
 import { bookings, notificationSendQueue, people, trips as tripRows } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 async function toldSeat() {

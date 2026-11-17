@@ -7,7 +7,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { carriedPreparationForDiver } from "../features/ready/store";
 import { createBookingParty } from "./bookings";
 import { bookings, trips } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 /**

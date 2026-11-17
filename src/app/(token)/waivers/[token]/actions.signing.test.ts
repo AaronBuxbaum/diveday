@@ -10,7 +10,7 @@ import {
   people,
   waiverRecords,
 } from "@/db/schema";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { completeWaiver, threadWaiverKey } from "@/db/waivers-completion";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import {

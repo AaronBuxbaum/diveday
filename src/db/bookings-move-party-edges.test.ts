@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking, moveParty } from "./bookings";
 import type { AppDb } from "./client";
-import { createTrip, upcomingTripsWithCounts } from "./trips";
+import { createTrip } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * The edges of `moveParty` (#2556) the family tests do not reach: a lead that

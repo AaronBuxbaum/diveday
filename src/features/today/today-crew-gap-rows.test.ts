@@ -7,7 +7,8 @@ import {
   tripAssignments,
   trips as tripsTable,
 } from "@/db/schema";
-import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "@/db/trips";
+import { createTrip, listStaff, setTripCrew } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";

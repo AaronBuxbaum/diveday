@@ -22,8 +22,9 @@ import { bookingPaymentEvents, paymentOperationIntents, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { editTrip, getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { editTrip, getTripRoster, setTripStatus } from "./trips";
 import { reinstateTrip } from "./trips-minimum";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { listUnfinished, type UnfinishedOptions } from "./unfinished";
 
 // One seeded database for the file and a rolled-back transaction per test

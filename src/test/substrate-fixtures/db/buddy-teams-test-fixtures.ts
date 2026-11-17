@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "../../../db/buddy-teams";
 import { tripAssignments } from "../../../db/schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../../db/trips";
+import { getTripRoster, listStaff } from "../../../db/trips";
+import { upcomingTripsWithCounts } from "../../../db/trips-queries.test-support";
 import type { fileScopedShopContext } from "../../db";
 
 /**

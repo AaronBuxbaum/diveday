@@ -10,7 +10,8 @@ import type { AppDb } from "./client";
 import { recordRollCall } from "./manifests";
 import { listTripReadiness } from "./readiness";
 import { activityEvents, bookings, cards, tripRequirements, trips, waiverRecords } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { issueWaiverRequest } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test

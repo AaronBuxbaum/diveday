@@ -137,7 +137,7 @@ export type HeldSendClaim =
   | { status: "pending" | "gone" };
 
 /** The one compare-and-swap that starts a held send: `queued` → `processing`. */
-async function claimRow(db: AppDb, where: SQL | undefined) {
+export async function claimRow(db: AppDb, where: SQL | undefined) {
   return db
     .update(notificationSendQueue)
     .set({
@@ -183,33 +183,8 @@ export async function claimHeldSend(
   return { status: "gone" };
 }
 
-/**
- * The drain's sweep of held rows (`drainNotificationRetries`): settle every
- * claim that lapsed as interrupted, then claim every held row whose hold has
- * drained. Each row is claimed by its own compare-and-swap, so a client
- * releasing the same row at the same moment sends it or this does, never both.
- */
-export async function claimDueHeldSends(db: AppDb, now = nowDate()): Promise<HeldSendRow[]> {
-  await settleInterruptedHeldSends(db, now);
-  const claimed: HeldSendRow[] = [];
-  for (const { id } of await dueHeldIds(db, now)) {
-    const [row] = await claimRow(
-      db,
-      and(eq(notificationSendQueue.id, id), isNotNull(notificationSendQueue.intent)),
-    );
-    if (!row) continue;
-    const readable = toRow(row);
-    if (readable) claimed.push(readable);
-    // A payload this release cannot read (one the release before it held) is
-    // settled on its own and never costs the other due rows their send
-    // (security review of #2656, minor 2).
-    else await settleHeldSend(db, row.id, "failed", "held_intent_unreadable");
-  }
-  return claimed;
-}
-
 /** Every held row of every shop whose hold has drained, oldest first. */
-function dueHeldIds(db: AppDb, now: Date) {
+export function dueHeldIds(db: AppDb, now: Date) {
   return db
     .select({ id: notificationSendQueue.id })
     .from(notificationSendQueue)
@@ -224,7 +199,7 @@ function dueHeldIds(db: AppDb, now: Date) {
 }
 
 /** A claim whose lock lapsed died mid-send. It may have reached some divers, so it is not sent again. */
-async function settleInterruptedHeldSends(db: AppDb, now: Date): Promise<void> {
+export async function settleInterruptedHeldSends(db: AppDb, now: Date): Promise<void> {
   const lapsed = await db
     .update(notificationSendQueue)
     .set({
@@ -247,7 +222,7 @@ async function settleInterruptedHeldSends(db: AppDb, now: Date): Promise<void> {
 }
 
 /** The row's last write: settled, with no ids left on it. */
-async function settleHeldSend(
+export async function settleHeldSend(
   db: AppDb,
   id: string,
   status: "sent" | "failed",
@@ -267,7 +242,7 @@ async function settleHeldSend(
 }
 
 /** The row as this release reads it, or null (logged) for a payload it cannot read. */
-function toRow(row: typeof notificationSendQueue.$inferSelect): HeldSendRow | null {
+export function toRow(row: typeof notificationSendQueue.$inferSelect): HeldSendRow | null {
   const parsed = heldSendPayloadSchema.safeParse(row.intent);
   if (!parsed.success) {
     // Never the payload: it names people and bookings.

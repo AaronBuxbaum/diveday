@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createBookingParty } from "../../db/bookings";
 import * as executedDiveReads from "../../db/executed-dives";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { fakeEmail, fakeSms } from "../../test/fakes";
 import { sendTripRecaps } from "../../test/words-wiring";

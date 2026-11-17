@@ -36,7 +36,8 @@ import {
   trips as tripsTable,
 } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
