@@ -127,4 +127,33 @@ describe("the homepage walkthrough", () => {
     fireEvent.pointerUp(screen.getByText("Second"), { clientX: 100 });
     expect(screen.getByText("Second")).toBeInTheDocument();
   });
+
+  it("fills the current segment as the beat's clock, and a hold freezes it", () => {
+    mockMotion(false);
+    const { container } = setup();
+    const fill = () =>
+      container.querySelector<HTMLElement>("[data-walk-controls] ~ div > span > span:last-child");
+    const group = screen.getByRole("group", { name: "Walk" });
+    act(() => void vi.advanceTimersByTime(15_000));
+    const half = Number.parseFloat(fill()?.style.transform.replace("scaleX(", "") ?? "0");
+    expect(half).toBeGreaterThan(0.4);
+    expect(half).toBeLessThan(0.6);
+    // Holding pauses the bar and the beat; letting go carries on from there.
+    fireEvent.pointerDown(group, { clientX: 100 });
+    act(() => void vi.advanceTimersByTime(120_000));
+    expect(screen.getByText("First")).toBeInTheDocument();
+    fireEvent.pointerUp(group, { clientX: 100 });
+    act(() => void vi.advanceTimersByTime(16_000));
+    expect(screen.getByText("Second")).toBeInTheDocument();
+  });
+
+  it("does not treat the release of a hold as a tap", () => {
+    mockMotion(true);
+    const { container } = setup();
+    const frame = container.querySelector("[data-walk-frame]") as HTMLElement;
+    fireEvent.pointerDown(frame, { clientX: 100 });
+    act(() => void vi.advanceTimersByTime(1_000));
+    fireEvent.pointerUp(frame, { clientX: 100 });
+    expect(screen.getByText("First")).toBeInTheDocument();
+  });
 });

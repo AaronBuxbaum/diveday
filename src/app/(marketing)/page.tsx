@@ -216,7 +216,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                   <li
                     key={step.id}
                     data-walk-step={step.id}
-                    className="grid items-center gap-5 lg:grid-cols-11 lg:gap-14"
+                    className="grid items-start gap-5 lg:grid-cols-11 lg:gap-14"
                   >
                     {/* **Below `lg` the copy column dissolves** (`contents`), so
                       its parts and the screen stack in reading order: what

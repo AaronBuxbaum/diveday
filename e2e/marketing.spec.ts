@@ -215,6 +215,28 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   ).toBeVisible();
 });
 
+test("the walkthrough's bar fills as the clock, and holding the screen freezes it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const t = diverTranslator("en-US");
+  const walk = page.getByRole("group", { name: t("marketing.home.walk.label") });
+  await walk.scrollIntoViewIfNeeded();
+  const fill = walk.locator("[data-walk-controls] ~ div > span > span").last();
+  const filled = async () =>
+    Number.parseFloat((await fill.evaluate((el) => (el as HTMLElement).style.transform)).slice(7));
+  await expect.poll(filled).toBeGreaterThan(0);
+  const box = await walk.locator("[data-walk-frame]:visible").first().boundingBox();
+  if (!box) throw new Error("no screen to hold");
+  await page.mouse.move(box.x + box.width / 2, box.y + 40);
+  await page.mouse.down();
+  const frozen = await filled();
+  await page.waitForTimeout(1000);
+  expect(await filled()).toBe(frozen);
+  await page.mouse.up();
+  await expect.poll(filled).toBeGreaterThan(frozen);
+});
+
 test("the walkthrough's three doors open the demo as the desk, the boat and the diver", async ({
   page,
 }) => {
