@@ -65,6 +65,33 @@ type DeckMutation = {
 const DeckMutationContext = createContext<DeckMutation | null>(null);
 export const useDeckMutation = () => useContext(DeckMutationContext);
 
+/** Opens one person, with their exception sheet, from anywhere inside the deck. */
+const DeckOpenPersonContext = createContext<((id: string) => void) | null>(null);
+
+/**
+ * **A name that opens that person** on the roll call: a missing person's chip
+ * in the count panel. The roll call draws one person at a time, so a link to a
+ * row would land nowhere; this opens them with their sheet open. Outside a
+ * deck it is the name alone.
+ */
+export function DeckPersonChip({
+  id,
+  label,
+  className,
+}: {
+  id: string;
+  label: string;
+  className: string;
+}) {
+  const open = useContext(DeckOpenPersonContext);
+  if (!open) return <span className={className}>{label}</span>;
+  return (
+    <button type="button" className={className} onClick={() => open(id)}>
+      {label}
+    </button>
+  );
+}
+
 function DeckFind({
   people,
   copy,
@@ -269,216 +296,228 @@ export function DeckFlow({
         setDeviceNotice,
       }}
     >
-      <section
-        id="deck-flow"
-        data-device-text-deck
-        data-deck-screen={screen}
-        className="mx-auto w-full max-w-xl"
-        aria-label={copy.title}
+      <DeckOpenPersonContext.Provider
+        value={(id) => {
+          if (!people.some((item) => item.id === id)) return;
+          openPerson(id);
+          setException(true);
+        }}
       >
-        <div data-device-text-deck-header className="flex items-center justify-between gap-3">
-          <h1 className={ITEM_TITLE_CLASS} aria-label={copy.title}>
+        <section
+          id="deck-flow"
+          data-device-text-deck
+          data-deck-screen={screen}
+          className="mx-auto w-full max-w-xl"
+          aria-label={copy.title}
+        >
+          <div data-device-text-deck-header className="flex items-center justify-between gap-3">
+            <h1 className={ITEM_TITLE_CLASS} aria-label={copy.title}>
+              <button
+                type="button"
+                disabled={busy}
+                aria-label={copy.home}
+                className={buttonClass({ variant: "link", flush: "padded" })}
+                onClick={() => setScreen("home")}
+              >
+                {copy.title}
+              </button>
+            </h1>
+            {exit}
+          </div>
+          <div data-device-text-deck-checkpoint className="mt-1">
+            {checkpoint}
+          </div>
+          <p className="mt-1 text-base font-semibold tabular-nums">{progress}</p>
+          {status}
+          {deviceNotice ? (
+            <button
+              type="button"
+              data-deck-device-status
+              className={buttonClass({ variant: "danger", className: "mt-2 w-full text-start" })}
+              onClick={() => {
+                if (detailsRef.current) detailsRef.current.open = true;
+              }}
+            >
+              {deviceNotice}
+            </button>
+          ) : null}
+          {observation ? (
+            <p className="mt-1 text-sm font-semibold text-warning-strong">
+              {copy.observe}: {observation.replace("T", " ")} · {timeZone}
+            </p>
+          ) : null}
+          {delivery ? (
+            <div className="mt-1 text-base" role="status">
+              {delivery}
+            </div>
+          ) : null}
+          {hasAttention && screen !== "attention" ? (
             <button
               type="button"
               disabled={busy}
-              aria-label={copy.home}
-              className={buttonClass({ variant: "link", flush: "padded" })}
-              onClick={() => setScreen("home")}
+              className={buttonClass({ variant: "danger", className: "mt-3 w-full" })}
+              onClick={() => setScreen("attention")}
             >
-              {copy.title}
+              {copy.attention}
             </button>
-          </h1>
-          {exit}
-        </div>
-        <div data-device-text-deck-checkpoint className="mt-1">
-          {checkpoint}
-        </div>
-        <p className="mt-1 text-base font-semibold tabular-nums">{progress}</p>
-        {status}
-        {deviceNotice ? (
-          <button
-            type="button"
-            data-deck-device-status
-            className={buttonClass({ variant: "danger", className: "mt-2 w-full text-start" })}
-            onClick={() => {
-              if (detailsRef.current) detailsRef.current.open = true;
-            }}
-          >
-            {deviceNotice}
-          </button>
-        ) : null}
-        {observation ? (
-          <p className="mt-1 text-sm font-semibold text-warning-strong">
-            {copy.observe}: {observation.replace("T", " ")} · {timeZone}
-          </p>
-        ) : null}
-        {delivery ? (
-          <div className="mt-1 text-base" role="status">
-            {delivery}
-          </div>
-        ) : null}
-        {hasAttention && screen !== "attention" ? (
-          <button
-            type="button"
-            disabled={busy}
-            className={buttonClass({ variant: "danger", className: "mt-3 w-full" })}
-            onClick={() => setScreen("attention")}
-          >
-            {copy.attention}
-          </button>
-        ) : null}
-        {screen === "home" ? (
-          <div className="flex min-h-52 flex-col justify-center gap-4 py-6">
-            {complete && !hasAttention ? (
-              <p className={SUB_TITLE_CLASS} role="status">
-                {copy.complete}
-              </p>
-            ) : null}
-            {hasAttention ? (
-              <button type="button" className={primaryClass} onClick={() => setScreen("attention")}>
-                {copy.review}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className={hasAttention ? navigationClass : primaryClass}
-              disabled={!people.length}
-              onClick={() => {
-                const first = people.find((item) => item.outstanding) ?? people[0];
-                if (first) openPerson(first.id);
-              }}
-            >
-              {copy.start}
-            </button>
-          </div>
-        ) : null}
-        {(screen === "person" || screen === "receipt") && person ? (
-          <div className="py-2" key={person.id}>
-            <DeckPersonHeading person={person} />
-            {screen === "receipt" ? (
-              <>
-                <p className={`mt-2 ${ITEM_TITLE_CLASS}`} role="status">
-                  {receipt?.id === person.id
-                    ? receipt.status === "boarded"
-                      ? copy.savedAboard
-                      : isDeparture
-                        ? copy.savedAshore
-                        : copy.savedMissing
-                    : (person.status ?? copy.receipt)}
+          ) : null}
+          {screen === "home" ? (
+            <div className="flex min-h-52 flex-col justify-center gap-4 py-6">
+              {complete && !hasAttention ? (
+                <p className={SUB_TITLE_CLASS} role="status">
+                  {copy.complete}
                 </p>
-                {receipt?.id === person.id &&
-                (receipt.eventId && receipt.eventId === person.eventId
-                  ? person.pending
-                  : receipt.pending) ? (
-                  <p className="mt-1 text-base">{copy.pendingReceipt}</p>
-                ) : null}
-                {receipt?.id === person.id && receipt.observedAt ? (
-                  <p className="mt-1 text-sm">
-                    {copy.observed}:{" "}
-                    <time dateTime={receipt.observedAt}>
-                      {formatDateTimeTz(new Date(receipt.observedAt), locale, timeZone)}
-                    </time>
-                  </p>
-                ) : receipt?.eventId && receipt.eventId === person.eventId && person.observed ? (
-                  <p className="mt-1 text-sm">{person.observed}</p>
-                ) : null}
-                {person.requiresReview ? (
-                  <button
-                    type="button"
-                    className={`${navigationClass} mt-4`}
-                    onClick={() => setException(true)}
-                  >
-                    {copy.review}
-                  </button>
-                ) : (
-                  <div className="mt-2">{person.undo}</div>
-                )}
+              ) : null}
+              {hasAttention ? (
                 <button
                   type="button"
-                  disabled={busy}
-                  className={`${primaryClass} mt-2`}
-                  onClick={next}
+                  className={primaryClass}
+                  onClick={() => setScreen("attention")}
                 >
-                  {copy.next}
+                  {copy.review}
                 </button>
-              </>
-            ) : (
-              <>
-                {person.status ? (
-                  <p className="mt-2 text-sm font-semibold">{person.status}</p>
-                ) : null}
-                <div className="mt-5">{person.record}</div>
-                <div data-device-text-deck-pair className="mt-3 grid grid-cols-2 gap-2">
+              ) : null}
+              <button
+                type="button"
+                className={hasAttention ? navigationClass : primaryClass}
+                disabled={!people.length}
+                onClick={() => {
+                  const first = people.find((item) => item.outstanding) ?? people[0];
+                  if (first) openPerson(first.id);
+                }}
+              >
+                {copy.start}
+              </button>
+            </div>
+          ) : null}
+          {(screen === "person" || screen === "receipt") && person ? (
+            <div className="py-2" key={person.id}>
+              <DeckPersonHeading person={person} />
+              {screen === "receipt" ? (
+                <>
+                  <p className={`mt-2 ${ITEM_TITLE_CLASS}`} role="status">
+                    {receipt?.id === person.id
+                      ? receipt.status === "boarded"
+                        ? copy.savedAboard
+                        : isDeparture
+                          ? copy.savedAshore
+                          : copy.savedMissing
+                      : (person.status ?? copy.receipt)}
+                  </p>
+                  {receipt?.id === person.id &&
+                  (receipt.eventId && receipt.eventId === person.eventId
+                    ? person.pending
+                    : receipt.pending) ? (
+                    <p className="mt-1 text-base">{copy.pendingReceipt}</p>
+                  ) : null}
+                  {receipt?.id === person.id && receipt.observedAt ? (
+                    <p className="mt-1 text-sm">
+                      {copy.observed}:{" "}
+                      <time dateTime={receipt.observedAt}>
+                        {formatDateTimeTz(new Date(receipt.observedAt), locale, timeZone)}
+                      </time>
+                    </p>
+                  ) : receipt?.eventId && receipt.eventId === person.eventId && person.observed ? (
+                    <p className="mt-1 text-sm">{person.observed}</p>
+                  ) : null}
+                  {person.requiresReview ? (
+                    <button
+                      type="button"
+                      className={`${navigationClass} mt-4`}
+                      onClick={() => setException(true)}
+                    >
+                      {copy.review}
+                    </button>
+                  ) : (
+                    <div className="mt-2">{person.undo}</div>
+                  )}
                   <button
                     type="button"
                     disabled={busy}
-                    className={buttonClass({ variant: "link", flush: true, className: "w-full" })}
-                    onClick={() => setException((value) => !value)}
-                  >
-                    {copy.exception}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    className={buttonClass({ variant: "link", flush: true, className: "w-full" })}
+                    className={`${primaryClass} mt-2`}
                     onClick={next}
                   >
-                    {copy.later}
+                    {copy.next}
                   </button>
-                </div>
-              </>
-            )}
-            {exception ? <div className="mt-5">{person.details}</div> : null}
-          </div>
-        ) : null}
-        {screen === "find" ? (
-          <DeckFind {...{ people, copy, query, setQuery, openPerson, navigationClass }} />
-        ) : null}
-        {screen === "attention" ? (
-          <div className="space-y-4 py-4">
-            {attention}
-            {people
-              .filter((item) => item.attention)
-              .map((item) => (
-                <div key={item.id}>
-                  <button
-                    type="button"
-                    className={navigationClass}
-                    onClick={() => {
-                      openPerson(item.id);
-                      setException(true);
-                    }}
-                  >
-                    {item.name}
-                  </button>
-                </div>
-              ))}
-          </div>
-        ) : null}
-        <div data-device-text-deck-pair className="grid grid-cols-2 border-t border-border pt-2">
-          <button
-            type="button"
-            disabled={busy}
-            className={buttonClass({ variant: "link", className: "min-h-11" })}
-            onClick={() => setScreen("find")}
-          >
-            {copy.find}
-          </button>
-          <details ref={detailsRef} className="contents [&::details-content]:col-span-2">
-            <summary className="flex min-h-11 cursor-pointer items-center justify-center font-semibold">
-              {copy.details}
-            </summary>
-            <div className="col-span-2 mt-4 space-y-6">
-              <DeckObservation
-                {...{ copy, timeZone, busy }}
-                value={observation}
-                onChange={setObservation}
-              />
-              {details}
+                </>
+              ) : (
+                <>
+                  {person.status ? (
+                    <p className="mt-2 text-sm font-semibold">{person.status}</p>
+                  ) : null}
+                  <div className="mt-5">{person.record}</div>
+                  <div data-device-text-deck-pair className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className={buttonClass({ variant: "link", flush: true, className: "w-full" })}
+                      onClick={() => setException((value) => !value)}
+                    >
+                      {copy.exception}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className={buttonClass({ variant: "link", flush: true, className: "w-full" })}
+                      onClick={next}
+                    >
+                      {copy.later}
+                    </button>
+                  </div>
+                </>
+              )}
+              {exception ? <div className="mt-5">{person.details}</div> : null}
             </div>
-          </details>
-        </div>
-      </section>
+          ) : null}
+          {screen === "find" ? (
+            <DeckFind {...{ people, copy, query, setQuery, openPerson, navigationClass }} />
+          ) : null}
+          {screen === "attention" ? (
+            <div className="space-y-4 py-4">
+              {attention}
+              {people
+                .filter((item) => item.attention)
+                .map((item) => (
+                  <div key={item.id}>
+                    <button
+                      type="button"
+                      className={navigationClass}
+                      onClick={() => {
+                        openPerson(item.id);
+                        setException(true);
+                      }}
+                    >
+                      {item.name}
+                    </button>
+                  </div>
+                ))}
+            </div>
+          ) : null}
+          <div data-device-text-deck-pair className="grid grid-cols-2 border-t border-border pt-2">
+            <button
+              type="button"
+              disabled={busy}
+              className={buttonClass({ variant: "link", className: "min-h-11" })}
+              onClick={() => setScreen("find")}
+            >
+              {copy.find}
+            </button>
+            <details ref={detailsRef} className="contents [&::details-content]:col-span-2">
+              <summary className="flex min-h-11 cursor-pointer items-center justify-center font-semibold">
+                {copy.details}
+              </summary>
+              <div className="col-span-2 mt-4 space-y-6">
+                <DeckObservation
+                  {...{ copy, timeZone, busy }}
+                  value={observation}
+                  onChange={setObservation}
+                />
+                {details}
+              </div>
+            </details>
+          </div>
+        </section>
+      </DeckOpenPersonContext.Provider>
     </DeckMutationContext.Provider>
   );
 }

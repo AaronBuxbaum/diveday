@@ -10,12 +10,19 @@ import { liveTrip } from "./trips-live";
  * phase rule: an overnight Home on a multi-day course is not its final return,
  * a current late-running crew word beats the clock, and silence gets the
  * standing return buffer. Post-trip evidence (conservation, incidents and
- * executed dives) is separate from the plan and stays recordable.
+ * executed dives) is separate from the plan and stays recordable. A cancelled
+ * departure's plan is closed too: its plan, price and timing are what the
+ * guests were told was called off, and reinstating it reopens them.
  * Writers call this after taking the trip-row lock, also taken by stage taps.
  */
 async function tripEditingState(db: DbExecutor, shopId: string, tripId: string, now = nowDate()) {
   const [trip] = await db
-    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt, timeZone: shops.timezone })
+    .select({
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      timeZone: shops.timezone,
+      status: trips.status,
+    })
     .from(trips)
     .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
@@ -33,7 +40,10 @@ async function tripEditingState(db: DbExecutor, shopId: string, tripId: string, 
     .where(eq(tripScheduleDays.tripId, tripId))
     .orderBy(asc(tripScheduleDays.dayNumber));
   const reading = { ...trip, stage: stage ?? null, meetingWindows, cancelled: false, now };
-  return { planEditable: tripPhaseOf(reading) !== "back", finalHome: finalHomeSaid(reading) };
+  return {
+    planEditable: trip.status !== "cancelled" && tripPhaseOf(reading) !== "back",
+    finalHome: finalHomeSaid(reading),
+  };
 }
 
 /** The plan closes by its existing phase; factual crew and safety evidence are separate. */

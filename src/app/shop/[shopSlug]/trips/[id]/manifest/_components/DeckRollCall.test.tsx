@@ -104,3 +104,59 @@ it("hides a selected crew member's buddy reference when buddy planning is disabl
   expect(within(dialog).queryByText("Ari Chen")).toBeNull();
   expect(within(dialog).queryByText("Buddy team")).toBeNull();
 });
+
+/**
+ * **A cancelled departure nobody counted on is closed, not missing** (#2285).
+ * Every person on it used to read "Missing or conflicting reports remain open",
+ * a missing-diver phrase about people who never left the dock. Only recorded
+ * evidence says missing or conflicting; the rest are simply not counted.
+ */
+function closedDeck() {
+  const context = diverContext({
+    checkpoint: "departure",
+    isDeparture: true,
+    rollCallClosed: true,
+    divers: [diver({ bookingId: "bea", fullName: "Bea Chen" })],
+  });
+  const crew = [
+    { id: "crew-ari", fullName: "Ari Chen", roles: ["divemaster"], standingRatings: [] },
+  ];
+  const deck = DeckRollCall({
+    view: {
+      manifest: {
+        trip: { id: context.tripId },
+        divers: context.divers,
+        crew,
+        completeness: { complete: false },
+      },
+      rollCall: {
+        divers: context,
+        crew: {
+          ...context,
+          crew,
+          crewRollCallAction: context.rollCallAction,
+          crewRollCallButtonCopy: context.rollCallButtonCopy("crew-ari"),
+        },
+      },
+      actions: { rollCall: context.rollCallAction, crewRollCall: context.rollCallAction },
+      checkpoint: "departure",
+      isDeparture: true,
+      cancelled: "closed",
+      reader: { alerted: new Set() },
+    } as never,
+    checkpoint: "Before departure",
+    details: null,
+    buddiesEnabled: true,
+  });
+  return deck.props.people as { id: string; record: React.ReactNode; undo: React.ReactNode }[];
+}
+
+it("says nobody on a closed cancelled departure is missing, diver or crew", () => {
+  for (const person of closedDeck()) {
+    const { container, unmount } = render(<div>{person.record}</div>);
+    expect(container).not.toHaveTextContent("Missing or conflicting reports remain open");
+    expect(container).toHaveTextContent("Not counted");
+    expect(container.querySelector('input[name="status"]')).toBeNull();
+    unmount();
+  }
+});

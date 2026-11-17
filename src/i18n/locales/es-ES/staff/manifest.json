@@ -418,6 +418,7 @@
     "now": "Hora actual",
     "observed": "Observación: {time}",
     "missing": "Los avisos de persona desaparecida o en conflicto siguen abiertos",
+    "notCounted": "Sin contar",
     "savedAboard": "Presencia a bordo registrada",
     "savedAshore": "Permanencia en tierra registrada",
     "savedMissing": "Ausencia a bordo registrada",

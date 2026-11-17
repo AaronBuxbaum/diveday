@@ -28,7 +28,7 @@ export function TripDetailsPanel({
       <TripAboutSection
         rows={[
           ...tripAboutRows(context),
-          ...(detailsEditable === false
+          ...(detailsEditable === false && !context.overview.cancelled
             ? [
                 {
                   id: "safety-record",

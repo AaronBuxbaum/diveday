@@ -142,7 +142,8 @@ export default async function ManageTripPage({
   };
   const details = showDetails ? await reading.details() : null;
   const readRows = detailsReadRows({ db, shop, overview, t, locale, shown: showDetails });
-  const detailsEditable = tripPhaseOf(lifecycle) !== "back";
+  // A cancelled departure's plan is closed with it (`tripDetailsAreEditable`).
+  const detailsEditable = !cancelled && tripPhaseOf(lifecycle) !== "back";
   const mayChangeDeparture = !cancelled && !finalHomeSaid(lifecycle);
   const acceptsDivers = acceptsNewDivers(trip, now);
   // The desk while arrivals are open, or a finished departure's record; the stage is read with

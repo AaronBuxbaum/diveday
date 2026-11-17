@@ -256,8 +256,8 @@ test.describe("light mode largest device body after-dive warnings", () => {
               };
             });
             const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
-            const crew = [...root.querySelectorAll("[data-device-text-missing] a")].find((link) =>
-              normalize(link.textContent ?? "").includes(normalize(labels.crew)),
+            const crew = [...root.querySelectorAll("[data-device-text-missing] button")].find(
+              (link) => normalize(link.textContent ?? "").includes(normalize(labels.crew)),
             );
             // SummaryPanel's HeadCount draws the large numeral inside the
             // progressbar; its separate dl/dd figures hold the smaller counts.

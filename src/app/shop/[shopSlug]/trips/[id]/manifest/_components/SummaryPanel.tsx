@@ -1,10 +1,11 @@
+import { DeckPersonChip } from "@/components/offline-manifest/DeckFlow";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { staffPassengerSplit } from "@/i18n/participant-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { crewRowId, diverRowHash, scopedHash, scopedId } from "@/lib/element-id";
+import { scopedId } from "@/lib/element-id";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
 import { hasNonDivers } from "@/lib/participant-types";
 import { HeadCount } from "./HeadCount";
@@ -206,15 +207,15 @@ export function SummaryPanel({
   // still in the water?", and splitting the answer by whether the person holds
   // a booking makes a captain read two lists to answer one question. Divers
   // first, crew marked "(crew)" in the words the buddy panel already uses.
-  const missing: Array<{ key: string; href: string; label: string }> = [
+  const missing: Array<{ key: string; id: string; label: string }> = [
     ...notBackAboardDivers.map((diver) => ({
       key: `missing-diver-${diver.bookingId}`,
-      href: diverRowHash(diver.bookingId),
+      id: diver.bookingId,
       label: diver.fullName,
     })),
     ...notBackAboardCrew.map((member) => ({
       key: `missing-crew-${member.id}`,
-      href: scopedHash(idPrefix, crewRowId(member.id)),
+      id: member.id,
       label: t("manifest.buddyCrewName", { name: member.fullName }),
     })),
   ];
@@ -346,8 +347,8 @@ export function SummaryPanel({
             {t("manifest.crewNotBackAboard", { count: crewCounts.crewNotBackAboard })}
           </p>
         ) : null}
-        {/* The names behind the two counts above, each a link to that person's
-            own row. Pinned rather than in the scrolling half, and never gated
+        {/* The names behind the two counts above, each opening that person
+            on the roll call (`DeckPersonChip`). Pinned rather than in the scrolling half, and never gated
             on `rollCallStarted`: a stated "did not come back" is the one fact
             on this page that has to be reachable at any moment, and the chip
             is what makes it reachable by keyboard, by screen reader, and for
@@ -362,12 +363,11 @@ export function SummaryPanel({
           >
             {missing.map((person) => (
               <li key={person.key}>
-                <a
-                  href={person.href}
-                  className="inline-flex min-h-11 items-center rounded-full border border-danger/60 bg-surface px-4 text-base font-semibold text-danger hover:bg-surface-sunken"
-                >
-                  {person.label}
-                </a>
+                <DeckPersonChip
+                  id={person.id}
+                  label={person.label}
+                  className="inline-flex min-h-11 items-center rounded-full border border-danger/60 bg-surface px-4 text-base font-semibold text-danger hover:bg-surface-sunken focus-visible:focus-ring"
+                />
               </li>
             ))}
           </ul>

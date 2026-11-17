@@ -418,6 +418,7 @@
     "now": "Current time",
     "observed": "Observed {time}",
     "missing": "Missing or conflicting reports remain open",
+    "notCounted": "Not counted",
     "savedAboard": "Aboard recorded",
     "savedAshore": "Staying ashore recorded",
     "savedMissing": "Not back aboard recorded",
