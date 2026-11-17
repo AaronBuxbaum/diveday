@@ -23,7 +23,7 @@ be a letter from a person who can relate to the shop's morning and wants to lear
 
 Four consequences shape every line below:
 
-1. **One small ask, with a way out.** A 15-minute call, and a one-line "we're fine" is welcome too.
+1. **One small ask, with a way out.** A 20-minute call, and a one-line "we're fine" is welcome too.
    No signup, no trial terms, no demo homework. The reader can satisfy this email with four words
    typed at a dock.
 2. **It tells a little and asks a little.** One sentence says what DiveDay is and one says why this
@@ -73,7 +73,7 @@ sales-tool shape there is, and it is spotted before the email is opened.
 >
 > With DiveDay, each diver gets their own link to sign the waiver, add their cert card, and enter their rental sizes before they arrive. You see who's ready on one list, and that same list becomes your boat manifest, with a head count at the dock and after each dive.
 >
-> There's a live demo at the link below. I've never run a shop, so I'd also like to hear what I've missed. Would you be open to a 15-minute call? If so, just reply and we can sort out how.
+> There's a live demo at the link below. I've never run a shop, so I'd also like to hear what I've missed. Would you be open to a 20-minute call? If so, just reply and we can sort out how.
 >
 > If someone else handles the boat side, I'd be glad to be pointed their way.
 >
@@ -116,7 +116,7 @@ Checks, in the order they'd fail:
 | "I've never run a shop" | The honest weakness, said inside the 'where it stands' paragraph. It sets the relationship as someone who can relate and wants to learn, and it is why the ask to test alongside their paper count is reasonable. |
 | The researched statement | Placed where the owner story used to be. It proves the founder read this shop's pages, shows he can relate to their morning, and asserts nothing about how they work, so there is nothing to defend. The owner story was cut for length; the "I've never run a shop" clause carries the same job. |
 | The water paragraph | The genuine reason this email exists rather than an ad, and the thing the reader has that the founder needs. It asserts only the half that is true and says the rest is untested — see [the offline line](#the-offline-line--read-this-before-editing-the-water-paragraph). |
-| The ask, last | A 15-minute call, with "a one-line 'we\'re fine' helps me too" as the easy way out. That line makes a *no* safe to send; without it the reader assumes a no invites a rebuttal and says nothing at all. |
+| The ask, last | A 20-minute call, with "a one-line 'we\'re fine' helps me too" as the easy way out. That line makes a *no* safe to send; without it the reader assumes a no invites a rebuttal and says nothing at all. |
 | "I'd be glad to be pointed their way" | The forwarding hatch, phrased as a request to a person rather than an instruction to a lead. A reader who isn't the decider gets a way to not-decide, which is the outcome this email most often wins. |
 | What is **absent** | No benefits list, no price or discount, no export pitch, no trial terms, no competitor named. Those belong in the reply, where they answer a question that was actually asked. |
 
@@ -181,7 +181,7 @@ at all from the many readers who simply forgot.
 
 > One follow-up, then I'll stop.
 >
-> Following up on my note about the hour before the boat leaves. Is a 15-minute call something you'd be open to? If it's a no, or just not this season, say the word and I'll leave it there.
+> Following up on my note about the hour before the boat leaves. Is a 20-minute call something you'd be open to? If it's a no, or just not this season, say the word and I'll leave it there.
 >
 > Aaron
 
