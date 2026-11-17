@@ -96,6 +96,8 @@ export const STAFF_ROUTES = {
   "schedule/blowout/day/[date]": { parent: BOARD },
   "schedule/board": {},
   "schedule/day/[date]": { parent: BOARD },
+  // A run is opened from one of its dates' Edit trip, and goes back there.
+  "schedule/series/[tripId]": { parent: "trips/[tripId]", upHash: "?view=edit" },
   settings: {},
   "settings/activity": {},
   "settings/billing": {},

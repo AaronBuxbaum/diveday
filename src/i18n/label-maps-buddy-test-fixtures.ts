@@ -2,10 +2,12 @@ import { COURSE_PERSONAL_GEAR } from "@/lib/course-personal-gear";
 import type { PersonalGearCode } from "@/lib/diver-planning";
 import type { BuddyAlert } from "@/lib/manifests";
 import type { PartyLeftReason } from "@/lib/party-teams";
+import type { RecurrenceCadence } from "@/lib/recurrence";
 import { buddyAlertText, partyLeftReasonText } from "./buddy-labels";
 import { codeRows, everyCodeOf, type LabelMapCase } from "./label-map-test-fixtures";
 import { diverTranslator } from "./messages";
 import { COURSE_PERSONAL_GEAR_STAFF_KEYS, PERSONAL_GEAR_KEYS } from "./packing-labels";
+import { recurrenceSummaryText } from "./series-sentences";
 import { staffTranslator } from "./staff-messages";
 
 const BUDDY_ALERTS = everyCodeOf<BuddyAlert>({
@@ -33,8 +35,30 @@ const PERSONAL_GEAR_CODES = everyCodeOf<PersonalGearCode>({
   boots: true,
 });
 
-/** The buddy maps, and the two packing maps that ride with them (one fixture file keeps the table file short). */
+/** A run's three cadences (`src/lib/recurrence.ts`). */
+const RECURRENCE_CADENCES = everyCodeOf<RecurrenceCadence>({
+  daily: true,
+  weekly: true,
+  everyNWeeks: true,
+});
+
+/**
+ * The buddy maps, the two packing maps that ride with them, and the run's
+ * cadence map (one fixture file keeps the table file short).
+ */
 export const BUDDY_LABEL_MAP_CASES: readonly LabelMapCase[] = [
+  {
+    module: "series-sentences.ts",
+    map: "RECURRENCE_CADENCE_KEYS",
+    rows: codeRows(RECURRENCE_CADENCES, (locale, cadence) =>
+      recurrenceSummaryText(staffTranslator(locale), locale, {
+        cadence,
+        intervalWeeks: 2,
+        weekdays: [1, 4],
+        endsOn: null,
+      }),
+    ),
+  },
   {
     module: "buddy-labels.ts",
     map: "BUDDY_ALERT_KEYS",

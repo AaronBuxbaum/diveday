@@ -266,8 +266,8 @@ export type RecurrenceSummary = {
  * rather than prose: this module is framework- and database-free, so it has no
  * bundle to render into. The caller (a staff page, under `staffTranslator`)
  * resolves `cadence` through its own `Record<RecurrenceCadence, StaffMessageKey>`
- * and spells the weekdays for the request locale — see `SeriesSection.tsx`'s
- * `recurrenceSummaryText`.
+ * and spells the weekdays for the request locale — see
+ * `recurrenceSummaryText` in `src/i18n/series-sentences.ts`.
  *
  * Deliberately carries no trip count. An open-ended series has no total, and
  * the count that *is* meaningful — how many dates are on the board right now —
