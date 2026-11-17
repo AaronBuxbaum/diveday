@@ -87,8 +87,6 @@
   "common": {
     "gettingReady": "Preparando tu centro…",
     "tryDemo": "Probar la demo en vivo",
-    "demoShopName": "El nombre de tu centro",
-    "demoShopNameHint": "Lo usamos para nombrar tu demo.",
     "getSetUp": "Pide tu centro",
     "bookCall": "Reserva una llamada de 20 minutos",
     "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
@@ -764,7 +762,7 @@
     "peopleP1": "Las personas que construyen DiveDay han pasado su carrera en software del que dependen millones de personas, y sus fines de semana en barcos de buceo. Conocemos el mostrador desde el lado del buceador, con la tarjeta de certificación en la mano mientras el dueño busca la exención, y la cubierta, donde un divemaster recorre un portapapeles mojado mientras el barco espera. DiveDay es la herramienta que queríamos en los dos lugares: registros en los que confiar, en una pantalla que se maneja con el pulgar mojado.",
     "peopleP2": "Llevo unos quince años dirigiendo equipos de software, primero en Google y después en coches autónomos. Cuando construyes un coche autónomo, el software es responsable de las personas que van dentro, y no hay margen de error. Aprendes a construir para la peor mañana, no para la media.",
     "peopleP3": "Una ingeniera nueva de mi equipo me preguntó una vez por qué escribíamos la misma verificación aburrida en tres sitios. Le conté el día en que las tres verificaciones discreparon, que fue cómo encontramos un problema potencialmente crítico. Un sistema que dice algo una sola vez puede estar equivocado sin que nadie lo sepa. DiveDay tiene ahora cerca de 1,4 millones de líneas de código, y buena parte existe para que nadie a bordo se quede sin contar.",
-    "peopleP4": "Construí DiveDay para quien lleva el centro de buceo: el dueño que contesta mensajes a las diez de la noche, persigue una exención, rehace a mano la lista de mañana. Quiero que todo el día esté en un solo lugar y que se vea tan bien que dé gusto abrirlo. <email>Dime</email> qué te duele y lo arreglo personalmente.",
+    "peopleP4": "Construí DiveDay para quien lleva el centro de buceo: el dueño que contesta mensajes a las diez de la noche, persigue una exención, rehace a mano la lista de mañana. Quiero que todo el día esté en un solo lugar y que se vea tan bien que dé gusto abrirlo. <email>Dime qué te duele</email> y lo arreglo personalmente.",
     "founderRole": "Fundador",
     "buildEyebrow": "Lo primero",
     "buildTitle": "La única tarea en un barco que no puede fallar",

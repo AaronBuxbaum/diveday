@@ -32,7 +32,6 @@ import { formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { ALL_SWITCHES_ON, shopSwitchesOn } from "@/lib/shop-features";
 import { settingsShortcutsFor } from "../settings/settings-groups";
-import { staffShopName } from "./staff-shop-name";
 
 /**
  * **Everything above a staff page that has to be asked of this request** — the
@@ -262,7 +261,7 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
     navOffers,
   } = await loadShopChrome(shopSlug);
   const demoT = showBanner ? diverTranslator(locale) : undefined;
-  const shopName = shop ? await staffShopName(shop) : "";
+  const shopName = shop?.name ?? "";
   const staffT = staffTranslator(locale);
 
   return (

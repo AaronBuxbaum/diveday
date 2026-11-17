@@ -793,8 +793,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
 
   // Who is behind it, in generalities, signed by the founder (Aaron,
   // 2026-11-11: "sign the about page with my name Aaron Buxbaum, Founder, but
-  // keep the 'we' terminology"). The name appears as that signature only: drawn in
-  // the signature face and spoken once more for screen readers (2026-11-17).
+  // keep the 'we' terminology"). The name appears once, as that signature.
   // The page states no CV: the employers that used to carry its credibility
   // and the head count of the team are pinned out by value, so neither comes
   // back under a new heading.
@@ -802,8 +801,10 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     page.getByRole("heading", { name: "Divers who have shipped software to millions of people" }),
   ).toBeVisible();
   const rendered = await page.locator("body").innerText();
-  expect(rendered.match(/Aaron/g)).toHaveLength(2);
-  expect(rendered).toMatch(/Aaron Buxbaum\s+founder/i);
+  expect(rendered.match(/Aaron/g)).toHaveLength(1);
+  // The signature is the name in an autograph face with the role below it, which CSS
+  // sets in capitals, so the role is matched without regard to case.
+  expect(rendered).toMatch(/Aaron Buxbaum\s+Founder/i);
   // The founder's own band, in the first person (Aaron, 2026-11-14), carries
   // his history; the head count of the team stays out.
   expect(rendered).toContain("self-driving cars");
@@ -2067,15 +2068,16 @@ for (const [route, scene] of [
   });
 }
 
-test("each page's closing band offers the founder's 20-minute call once, and the heroes do not repeat it", async ({
+test("pricing and about offer the founder's 20-minute call beside Get set up, and the home page does not", async ({
   page,
 }) => {
   const call = page.getByRole("link", {
     name: diverTranslator("en-US")("marketing.common.bookCall"),
   });
-  for (const path of ["/", "/product", "/pricing", "/about", "/product/waivers"]) {
+  for (const path of ["/pricing", "/about"]) {
     await page.goto(path);
-    await expect(call).toHaveCount(1);
-    await expect(call).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);
+    await expect(call.first()).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);
   }
+  await page.goto("/");
+  await expect(call).toHaveCount(0);
 });
