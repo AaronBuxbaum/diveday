@@ -461,6 +461,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Marine-life catalog
 - Material generation
 - Observed species
+- Person photo
 - Photo ledger
 - Provider quota observation
 - Recap link epoch
