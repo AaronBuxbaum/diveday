@@ -90,6 +90,8 @@ const FIXED_SOURCES = [
   // pair would have hidden that they land in different places. A third page's
   // door follows the same rule: name where it goes.
   "product-spreadsheet",
+  // The one-list band's door onto the switching guides, on /product.
+  "product-one-list",
   "pricing",
   "pricing-close",
   // The export band's annotated screen ends in one door into the demo as the
