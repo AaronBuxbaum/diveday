@@ -4133,11 +4133,9 @@
     "arrivalDesk": {
       "label": "Huéspedes",
       "hereOf": "<figure>{here}</figure> de {expected} aquí",
-      "remainderCleared": "1 huésped todavía no puede embarcar",
       "stillToClear": "Aún no puede embarcar · {count}",
       "ready": "Por llegar · {count}",
       "checkedInGroup": "Aquí · {count}",
-      "blocked": "Bloqueado",
       "heldReason": "Reservó como {bookedAs} y se asoció a {name} desde la lista de nombres. Confirma quién es.",
       "samePerson": "Misma persona",
       "differentPerson": "Otra persona",

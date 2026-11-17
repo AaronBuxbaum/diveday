@@ -85,7 +85,6 @@
       "hint": "Una lista de ejemplo de la mañana. Toca un botón para ver lo que hace el mostrador.",
       "region": "Una muestra del mostrador de llegadas para la salida de dos tanques de las 7:30.",
       "hereOf": "{here} de {expected} aquí",
-      "toCome": "1 por llegar",
       "allHere": "Todos están aquí y autorizados",
       "done": "Los nueve están listos para las 7:30.",
       "restart": "Empezar de nuevo"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { StatusMark, StatusMarkColumn } from "@/components/ui/StatusMark";
@@ -16,8 +15,7 @@ export type TryDeskLabels = {
   appBar: string;
   /** Holds `{here}` and `{expected}`; the count is set in the figure type. */
   hereOf: string;
-  toCome: string;
-  blockedRemainder: string;
+  /** Said beside the count once all nine are here. */
   allHere: string;
   /** Holds `{count}`. */
   stillToClear: string;
@@ -25,7 +23,6 @@ export type TryDeskLabels = {
   ready: string;
   /** Holds `{count}`. */
   checkedInGroup: string;
-  blocked: string;
   heldReason: string;
   samePerson: string;
   differentPerson: string;
@@ -46,7 +43,7 @@ type Stage = "held" | "ready" | "in";
 const START: Record<Diver, Stage> = { diego: "held", priya: "ready" };
 
 /**
- * **The arrival desk, tappable.** The same screen `ArrivalDeskFallback` draws, with its three
+ * **The arrival desk, tappable.** The Check-in phase `ArrivalDeskFallback` draws, with its three
  * taps working on the page: the held seat's "Same person", then "Check in" on each of the two
  * who are ready, until 9 of 9 are here. The look is the real desk's (the same parts and the
  * same bundle words); the behavior is a script held in the browser. Nothing is sent, saved or
@@ -57,7 +54,7 @@ const START: Record<Diver, Stage> = { diego: "held", priya: "ready" };
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/_arrivals/CounterInstrument.tsx
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/_arrivals/ArrivalTap.tsx
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.tsx
- * @mirrors src/app/shop/[shopSlug]/trips/[id]/_components/RosterGroupBand.tsx
+ * @mirrors src/app/shop/[shopSlug]/trips/[id]/_components/GuestFixList.tsx
  * @mirrors src/components/IdentityCheck.tsx
  */
 export function MarketingTryDesk({ labels }: { labels: TryDeskLabels }) {
@@ -84,14 +81,6 @@ export function MarketingTryDesk({ labels }: { labels: TryDeskLabels }) {
   const [hereBefore = "", hereAfter = ""] = labels.hereOf
     .replace("{expected}", String(EXPECTED))
     .split("{here}");
-  const remainder = allHere
-    ? labels.allHere
-    : held
-      ? stage.priya === "in"
-        ? labels.blockedRemainder
-        : `${labels.toCome} · ${labels.blockedRemainder}`
-      : labels.toCome;
-
   return (
     <div>
       <p className="mb-3 text-sm text-muted">{labels.hint}</p>
@@ -109,7 +98,7 @@ export function MarketingTryDesk({ labels }: { labels: TryDeskLabels }) {
                 <span className={`${FIGURE_LARGE_CLASS} text-foreground`}>{here}</span>
                 {hereAfter}
               </p>
-              <p className="text-xs text-muted">{remainder}</p>
+              {allHere ? <p className="text-xs text-muted">{labels.allHere}</p> : null}
             </div>
             <ProgressBar
               aria-hidden="true"
@@ -130,9 +119,6 @@ export function MarketingTryDesk({ labels }: { labels: TryDeskLabels }) {
                   <div className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
                       <p className="min-w-0 flex-1 text-sm font-semibold">{names.diego}</p>
-                      <Badge tone="danger" size="sm" toneMark={false}>
-                        {labels.blocked}
-                      </Badge>
                       <RowCaret />
                     </div>
                     <p className="flex items-baseline gap-2 text-xs text-danger">
@@ -167,12 +153,8 @@ export function MarketingTryDesk({ labels }: { labels: TryDeskLabels }) {
                         type="button"
                         data-try-tap=""
                         onClick={() => set(who, "in")}
-                        className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 text-xs font-semibold whitespace-nowrap text-primary"
+                        className={`px-3 whitespace-nowrap cursor-pointer ${MOCK_SECONDARY_BUTTON}`}
                       >
-                        <span
-                          aria-hidden="true"
-                          className="size-5 shrink-0 rounded-full border-2 border-current"
-                        />
                         {labels.checkIn}
                       </button>
                       <RowCaret />

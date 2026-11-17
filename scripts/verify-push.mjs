@@ -633,7 +633,9 @@ async function main() {
           `(about ${Math.round(captureMs(captures) / 60000)} CI-minutes):`,
       );
       for (const title of captures) {
-        console.log(`    ${title}  — ${[...selection.captures.get(title)].slice(0, 2).join("; ")}`);
+        // A capture only this branch's own red CI names has no diff reason.
+        const why = selection.captures.get(title) ?? ["red on this branch's last CI run"];
+        console.log(`    ${title}  — ${[...why].slice(0, 2).join("; ")}`);
       }
     }
     if (baseSpecs.length > 0) console.log(`  red on the base: ${baseSpecs.join(" ")}`);

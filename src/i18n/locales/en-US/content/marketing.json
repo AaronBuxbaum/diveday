@@ -85,7 +85,6 @@
       "hint": "A sample morning list. Tap a button to see what the desk does.",
       "region": "A sample of the arrival desk for the 7:30 two-tank trip.",
       "hereOf": "{here} of {expected} here",
-      "toCome": "1 to come",
       "allHere": "Everyone is here and cleared",
       "done": "All nine are cleared for the 7:30.",
       "restart": "Start over"

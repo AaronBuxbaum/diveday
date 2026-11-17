@@ -1,5 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openAddAGuest } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   capture,
@@ -23,6 +24,8 @@ test.describe("mixed training advisory", () => {
       mixedTraining: { tripId: string; otherTripId: string };
     };
     await page.goto(`/shop/blue-mantis/trips/${mixedTraining.tripId}`);
+    // The advisory is about who to add, so it sits in Add a guest.
+    await openAddAGuest(page);
     await expect(page.getByText(staff("trips.addDiver.mixedTrainingBody"))).toBeVisible();
     const other = page.getByRole("link", { name: "Open Water session" });
     await expect(other).toHaveAttribute(
