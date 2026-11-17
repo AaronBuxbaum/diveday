@@ -6,6 +6,7 @@ import {
   capture,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
@@ -33,6 +34,11 @@ test.describe("light mode", () => {
           evidenceIds: string[];
         };
         expect(fact.evidenceIds).toHaveLength(2);
+        // Arm the live read before navigation; the saved phone copy is not live confirmation.
+        const confirmed = liveRosterConfirmation(page, {
+          tripId: fact.tripId,
+          checkpoint: "after_dive_1",
+        });
         await page.goto(
           `/shop/${privateShop.slug}/trips/${fact.tripId}/manifest?checkpoint=after_dive_1`,
         );
@@ -49,8 +55,12 @@ test.describe("light mode", () => {
         await expect(panel).toContainText(staff("manifest.conflicts.aboard"));
         await expect(panel).toContainText(staff("manifest.conflicts.missing"));
         await expect(panel.locator("time").first()).toContainText(/\bEDT\b/);
+        await confirmed;
         await capture(page, `roll-call-${role}-conflict-live`, "light", {
           beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staff("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
             await expect(panel.locator("ul > li > p.font-medium")).toHaveText([
               staff("manifest.conflicts.missing"),
               staff("manifest.conflicts.aboard"),

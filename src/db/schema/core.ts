@@ -22,6 +22,7 @@ import type { EmergencyReference } from "@/lib/emergency-reference";
 import { NITROX_FILL_METHODS } from "@/lib/nitrox-fill";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
+import type { TripDefaults } from "@/lib/trip-defaults";
 import { appNowTimestamp } from "./columns";
 
 /**
@@ -90,6 +91,8 @@ export const shops = pgTable(
      * rather than silently overriding what the shop declared here.
      */
     currency: text("currency").notNull().default("usd"),
+    /** Starting values copied onto newly scheduled departures. */
+    tripDefaults: jsonb("trip_defaults").$type<TripDefaults | null>(),
     /** Whether new Stripe charges should calculate and collect tax. Off by default. */
     taxEnabled: boolean("tax_enabled").notNull().default(false),
     /** Optional shop-configured conservation/park fee passed through per diver. */
@@ -753,6 +756,8 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
+    welcomeText: text("welcome_text"),
+    welcomeSigner: text("welcome_signer"),
     tagline: text("tagline"),
     description: text("description"),
     logoUrl: text("logo_url"),

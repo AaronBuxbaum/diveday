@@ -881,6 +881,20 @@
       "litter_items": "{quantity} litter items collected",
       "line_m": "{quantity} m of fishing line removed",
       "lionfish_count": "{quantity} lionfish removed"
+    },
+    "profile": {
+      "heading": "From your dive computer",
+      "diveN": "Dive {n}",
+      "maxDepth": "Max depth",
+      "avgDepth": "Average depth",
+      "diveTime": "Dive time",
+      "coldest": "Coldest water",
+      "minutesValue": "{minutes} min",
+      "max": "Max {depth}",
+      "stop": "Safety stop · {minutes} min",
+      "axisMinutes": "min",
+      "headingCrew": "What your dive looked like",
+      "crewNote": "From the crew’s computer, so yours may differ a little."
     }
   },
   "register": {
@@ -4266,7 +4280,7 @@
       "imported": "Imported"
     },
     "diveProfile": {
-      "stop": "Safety stop · 3 min",
+      "stop": "Safety stop · {minutes} min",
       "max": "Max {depth}",
       "minutes": "min"
     },

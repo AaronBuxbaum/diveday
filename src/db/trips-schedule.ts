@@ -537,6 +537,9 @@ export async function duplicateTripOrRefusal(
       plannedDives: source.plannedDives,
       priceCents: source.priceCents,
       depositCents: source.depositCents,
+      shopDefaultFields: source.shopDefaultFields,
+      minimumBookings: source.minimumBookings,
+      minimumDecisionHours: source.minimumDecisionHours,
       // A copy carries the same snorkel and ride-along seats; it holds no
       // bookings yet, so no limit can fall below the divers aboard.
       snorkelerPriceCents: source.snorkelerPriceCents,

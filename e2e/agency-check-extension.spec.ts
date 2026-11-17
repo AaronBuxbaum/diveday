@@ -550,7 +550,8 @@ test("signed out of PADI, the check says to sign in first and types nothing into
   agencyPages.padi = "sign-in-redirect";
   agencyPages.requests.length = 0;
   await page.reload();
-  const reloaded = await openDiverFileGroup(page, "Certification records");
+  const reloaded = page.getByTestId("diver-file-group-certifications");
+  await expect(reloaded).toHaveAttribute("open", "");
   const signInAgain = reloaded.getByText("Sign in to the PADI Pros’ Site first, then check again.");
   await expect(signInAgain).toHaveCount(0);
   await reloaded.getByRole("button", { name: "Check with PADI" }).click();

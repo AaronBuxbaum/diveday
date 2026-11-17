@@ -29,6 +29,7 @@ import {
   tripConditionsSnapshot,
 } from "@/lib/trip-change-events";
 import { meetingDayWindows, rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
+import { remainingTripDefaults } from "@/lib/trip-defaults";
 import type { TripDiveMode } from "@/lib/trip-details";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { hasSailed } from "@/lib/trips";
@@ -863,6 +864,8 @@ async function lockTripForDefinitionEdit(tx: DbExecutor, shopId: string, tripId:
       exceedsNoDecoLimits: trips.exceedsNoDecoLimits,
       priceCents: trips.priceCents,
       depositCents: trips.depositCents,
+      lensId: trips.lensId,
+      shopDefaultFields: trips.shopDefaultFields,
       cancellationWindowHours: trips.cancellationWindowHours,
       minimumBookings: trips.minimumBookings,
       minimumDecisionHours: trips.minimumDecisionHours,
@@ -1050,6 +1053,7 @@ async function updateTripRecord(
       .update(trips)
       .set({
         ...(revisionMoved ? { revision: sql`${trips.revision} + 1` } : {}),
+        shopDefaultFields: remainingTripDefaults(existing.shopDefaultFields, existing, requested),
         title: patch.title,
         description: patch.description ?? null,
         meetingPointLabel: patch.meetingPointLabel ?? null,
@@ -1317,7 +1321,13 @@ export async function setTripParticipantTerms(
 ): Promise<SetParticipantTermsOutcome> {
   const outcome = await db.transaction(async (tx): Promise<SetParticipantTermsOutcome> => {
     const [trip] = await tx
-      .select({ id: trips.id, capacity: trips.capacity })
+      .select({
+        id: trips.id,
+        capacity: trips.capacity,
+        shopDefaultFields: trips.shopDefaultFields,
+        snorkelerPriceCents: trips.snorkelerPriceCents,
+        riderPriceCents: trips.riderPriceCents,
+      })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
@@ -1337,6 +1347,7 @@ export async function setTripParticipantTerms(
     await tx
       .update(trips)
       .set({
+        shopDefaultFields: remainingTripDefaults(trip.shopDefaultFields, trip, patch),
         snorkelerPriceCents: patch.snorkelerPriceCents,
         riderPriceCents: patch.riderPriceCents,
         diverCapacity: patch.diverCapacity,

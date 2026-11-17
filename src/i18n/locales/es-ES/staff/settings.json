@@ -131,6 +131,8 @@
     "profile": {
       "heading": "Perfil y marca del centro",
       "description": "Lema, descripción y logotipo visibles en tu calendario público y en las vistas previas de búsqueda.",
+      "welcomeText": "Nota de bienvenida",
+      "welcomeSigner": "Nombre de quien firma",
       "tagline": "Lema",
       "taglinePlaceholder": "ej. Buceando en Key Largo y los Cayos de Florida desde 2012",
       "descriptionLabel": "Acerca de tu centro",
@@ -1516,5 +1518,14 @@
       "crew": "Tripulación y equipo",
       "claude": "IA"
     }
+  },
+  "tripDefaults": {
+    "heading": "Valores predeterminados de la salida",
+    "description": "Las salidas nuevas comienzan con estos valores. Puedes cambiarlos para una salida sin cambiar la configuración.",
+    "saved": "Valores predeterminados guardados.",
+    "invalid": "Revisa los valores e inténtalo de nuevo.",
+    "source": "Valor predeterminado del centro",
+    "minimumHelp": "Si no se alcanza el mínimo {hours, plural, one {# hora} other {# horas}} antes de salir, se cancela la salida. Puedes cambiar la hora límite en cada salida.",
+    "seatPriceHelp": "En blanco, este tipo de plaza no se ofrece; cero la ofrece gratis."
   }
 }

@@ -18,8 +18,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripPhase(page, "water");
 
-  const section = page.getByRole("region", { name: "Incident reports" });
-  await section.getByRole("button", { name: "Report an incident" }).click();
+  await page.locator("#incidents").getByRole("button", { name: "Report one" }).click();
   await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
   await expect(page.getByRole("heading", { level: 1, name: "Incident report" })).toBeVisible();
 

@@ -1,10 +1,10 @@
 import { DiveProfileChart } from "@/components/DiveProfileChart";
-import { PROFILE_MAX_METERS, PROFILE_MINUTES } from "@/components/dive-profile-sample";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { PROFILE_MAX_METERS, PROFILE_MINUTES, SAMPLE_PROFILE } from "@/lib/dive-profile-sample";
 import { AppBar, MOCK_BODY, MOCK_PRIMARY_BUTTON } from "./MarketingScreenFallbacks";
 
 /**
@@ -159,10 +159,11 @@ export function ComputerDivesFallback({
             ) : null}
           </div>
           <DiveProfileChart
+            samples={SAMPLE_PROFILE}
             unit="m"
             className="mt-3 h-auto w-full"
             labels={{
-              stop: t("fallback.diveProfile.stop"),
+              stop: (minutes) => t("fallback.diveProfile.stop", { minutes }),
               max: t("fallback.diveProfile.max", { depth: deepest }),
               minutes: t("fallback.diveProfile.minutes"),
             }}

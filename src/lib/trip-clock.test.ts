@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   CLOCK_PHASES,
   clockPhaseOf,
+  isLookBack,
   phaseStanding,
   phaseWhens,
   readyFrom,
+  sentencePhaseOf,
   shownClockPhase,
   whoWantsInHref,
 } from "./trip-clock";
@@ -179,5 +181,29 @@ describe("whoWantsInHref", () => {
     expect(whoWantsInHref("/shop/blue-mantis/trips/t1")).toBe(
       "/shop/blue-mantis/trips/t1?phase=filling#who-wants-in",
     );
+  });
+});
+
+describe("a look back at an earlier phase", () => {
+  it("is any phase before On the water or Wrapped up, once the trip is there", () => {
+    expect(isLookBack("checkin", "wrapped")).toBe(true);
+    expect(isLookBack("filling", "water")).toBe(true);
+    expect(isLookBack("water", "wrapped")).toBe(true);
+  });
+
+  it("is not the current phase, a later one, a trip still before the boat, or a cancelled one", () => {
+    expect(isLookBack("wrapped", "wrapped")).toBe(false);
+    expect(isLookBack("wrapped", "water")).toBe(false);
+    expect(isLookBack("filling", "checkin")).toBe(false);
+    expect(isLookBack("filling", "ready")).toBe(false);
+    expect(isLookBack("filling", null)).toBe(false);
+  });
+
+  it("says the current phase's sentence, never the earlier phase's chores", () => {
+    expect(sentencePhaseOf("checkin", "wrapped")).toBe("wrapped");
+    expect(sentencePhaseOf("ready", "water")).toBe("water");
+    expect(sentencePhaseOf("checkin", "checkin")).toBe("checkin");
+    expect(sentencePhaseOf("wrapped", "checkin")).toBe("wrapped");
+    expect(sentencePhaseOf("filling", null)).toBe("filling");
   });
 });

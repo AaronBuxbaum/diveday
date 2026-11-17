@@ -3,7 +3,6 @@ import type { listBoats } from "@/features/boats";
 import type { requireShopSurface } from "@/features/session";
 import type { listTripLenses } from "@/features/trip-lenses";
 import type { getTripOverview } from "@/features/trip-overview";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,
@@ -36,6 +35,7 @@ import { moveTripCrewAction, updateTripCrewAction } from "../crew-actions";
 import type { DepartureDetailsSection } from "../departure-detail-sections";
 import { saveDetailsSection } from "../details-actions";
 import { saveRequirementsAction } from "../terms-actions";
+import { admissionDisplay } from "./admission-display";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewAwayWorkingList } from "./CrewAwayWorkingList";
 import { CrewMoveForm } from "./CrewMoveForm";
@@ -43,6 +43,7 @@ import { CrewSection } from "./CrewSection";
 import { DetailsEditor } from "./DetailsEditor";
 import type { departureConditionReads } from "./departure-conditions";
 import { participantTermsRows } from "./ParticipantTermsSection";
+import { crewNamesOf } from "./phases/phase-slots";
 import { RequirementsSection } from "./RequirementsSection";
 import { boatClashText, tripCrewNotesOf } from "./trip-crew-notes";
 
@@ -71,11 +72,9 @@ export type TripAboutRowsContext = {
   detailsEditable?: boolean;
 };
 
-/** The names of the staff assigned to this departure, in the shop's staff order. */
+/** The names of the staff assigned to this departure, in the crew's own order (`getTripCrewAssignmentsByTrip`). */
 export function assignedCrewNames(overview: TripOverview): string[] {
-  return overview.staff
-    .filter((entry) => overview.crew.crewIds.includes(entry.person.id))
-    .map((entry) => entry.person.fullName);
+  return crewNamesOf(overview);
 }
 
 /**
@@ -186,6 +185,41 @@ function crewRoleOptions(t: StaffTranslator) {
   };
 }
 
+function bookingTermsFor(
+  trip: TripAboutRowsContext["overview"]["trip"],
+  currency: string,
+  locale: string,
+  t: StaffTranslator,
+) {
+  const fromShop = (
+    text: string,
+    field: "depositCents" | "cancellationWindowHours" | "minimumBookings",
+  ) =>
+    trip.shopDefaultFields.includes(field)
+      ? `${text} (${t("settings.tripDefaults.source")})`
+      : text;
+  const bookingTerms = [
+    trip.depositCents !== null
+      ? fromShop(
+          t("trips.about.deposit", {
+            amount: formatMoneyCents(trip.depositCents, currency, locale),
+          }),
+          "depositCents",
+        )
+      : null,
+    trip.cancellationWindowHours !== null
+      ? fromShop(
+          t("trips.about.freeCancel", { hours: trip.cancellationWindowHours }),
+          "cancellationWindowHours",
+        )
+      : null,
+    trip.minimumBookings !== null
+      ? fromShop(t("trips.about.minimumToRun", { count: trip.minimumBookings }), "minimumBookings")
+      : null,
+  ].filter((part): part is string => part !== null);
+  return bookingTerms;
+}
+
 function departureDefinitionRows(context: TripAboutRowsContext) {
   const {
     overview,
@@ -197,6 +231,7 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
     t,
     tripNotice,
     shopBoats,
+    shopLenses,
     automatedForecast,
     tideLines,
   } = context;
@@ -220,32 +255,7 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
   const requirementsStatus = noticeForForm(tripNotice, "requirements");
   const siteNames = diveSites.sites.map((site) => site.name);
   const planSummary = siteNames.length > 0 ? siteNames.join(" + ") : t("trips.about.noneSet");
-  const requirementsSummary =
-    requirement === null
-      ? t("trips.about.noRequirements")
-      : [
-          requirement.minimumCertificationLevel
-            ? t("trips.requirements.summaryCert", {
-                level: t(CERTIFICATION_LEVEL_KEYS[requirement.minimumCertificationLevel]),
-              })
-            : null,
-          requirement.requiresWaiver ? t("trips.requirements.summaryWaiver") : null,
-          !trip.course && requirement.requiresPayment
-            ? t("trips.requirements.summaryPayment")
-            : null,
-          ...(!trip.course
-            ? requirement.requiredSpecialties.map((specialty) =>
-                t("trips.requirements.summarySpecialtyCard", {
-                  specialty: t(SPECIALTY_KEYS[specialty]),
-                }),
-              )
-            : []),
-          !trip.course && requirement.requiresNitrox
-            ? t("trips.requirements.summaryNitroxCard")
-            : null,
-        ]
-          .filter((part): part is string => Boolean(part))
-          .join(" · ") || t("trips.requirements.summaryNoneRequired");
+  const requirementsSummary = admissionDisplay(trip.course, requirement, siteRequirement, t);
   const temperatureUnit = temperatureUnitFor(shop);
   const conditionParts = crewConditionFacts(trip, shop.depthUnit, temperatureUnit, t);
   // The tide stands in for the at-rest line only when there is nothing else:
@@ -265,19 +275,7 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
   // The fleet's row for this departure's boat, for its name on the about line.
   // A shore dive or a pool session finds nothing here.
   const boat = shopBoats.find((row) => row.id === trip.boatId);
-  // Deposit, the free-cancellation window and the minimum to run are this
-  // trip's own (no shop default exists), said under its price.
-  const bookingTerms = [
-    trip.depositCents
-      ? t("trips.about.deposit", {
-          amount: formatMoneyCents(trip.depositCents, shop.currency, locale),
-        })
-      : null,
-    trip.cancellationWindowHours !== null
-      ? t("trips.about.freeCancel", { hours: trip.cancellationWindowHours })
-      : null,
-    trip.minimumBookings ? t("trips.about.minimumToRun", { count: trip.minimumBookings }) : null,
-  ].filter((part): part is string => Boolean(part));
+  const bookingTerms = bookingTermsFor(trip, shop.currency, locale, t);
 
   // The clash is a fact about two boats that will both sail, so a called-off
   // departure drops it with the rest of the live-trip nudges — `crewClashes`
@@ -516,7 +514,19 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
     {
       id: "departure-details",
       label: t("trips.about.nameAndDescription"),
-      value: trip.title,
+      value: (
+        <>
+          {trip.title}
+          {trip.lensId ? (
+            <span className="block text-sm text-muted">
+              {shopLenses.find((lens) => lens.id === trip.lensId)?.name}
+              {trip.shopDefaultFields.includes("lensId")
+                ? ` (${t("settings.tripDefaults.source")})`
+                : ""}
+            </span>
+          ) : null}
+        </>
+      ),
       editorOpen: Boolean(noticeForForm(tripNotice, "departure")),
       editor: editorFor("departure"),
     },

@@ -26,7 +26,10 @@ import type { Trip } from "./types";
  */
 function participantTermsSummary(
   t: StaffTranslator,
-  trip: Pick<Trip, "snorkelerPriceCents" | "riderPriceCents" | "diverCapacity" | "capacity">,
+  trip: Pick<
+    Trip,
+    "snorkelerPriceCents" | "riderPriceCents" | "diverCapacity" | "capacity" | "shopDefaultFields"
+  >,
   currency: ShopCurrency,
   locale: string,
 ): string {
@@ -38,7 +41,10 @@ function participantTermsSummary(
       t("participants.terms.priceLine", {
         type: staffParticipantTypeLabel(t, "snorkeler"),
         price: price(trip.snorkelerPriceCents),
-      }),
+      }) +
+        (trip.shopDefaultFields.includes("snorkelerPriceCents")
+          ? ` (${t("settings.tripDefaults.source")})`
+          : ""),
     );
   }
   if (trip.riderPriceCents !== null) {
@@ -46,7 +52,10 @@ function participantTermsSummary(
       t("participants.terms.priceLine", {
         type: staffParticipantTypeLabel(t, "rider"),
         price: price(trip.riderPriceCents),
-      }),
+      }) +
+        (trip.shopDefaultFields.includes("riderPriceCents")
+          ? ` (${t("settings.tripDefaults.source")})`
+          : ""),
     );
   }
   const limit = diverSeatLimit(trip);

@@ -6,7 +6,9 @@
  * is the same on every render and every machine.
  */
 
-export type ProfileSample = { seconds: number; meters: number };
+import type { ProfileSample } from "./dive-profile";
+
+export type { ProfileSample };
 
 const TOTAL_SECONDS = 42 * 60;
 const STEP_SECONDS = 20;

@@ -63,11 +63,8 @@ async function openOffline(page: Page, manifest: string) {
 async function openBuddyPanel(page: Page, trip: string) {
   await page.goto(`${trip}?phase=ready&buddies=open`);
   const panel = page
-    .locator("details")
-    .filter({
-      has: page.getByRole("heading", { name: copy("manifest.buddyHeading"), exact: true }),
-    })
-    .first();
+    .getByRole("region", { name: copy("manifest.buddyHeading"), exact: true })
+    .locator(":scope > details");
   await openIfClosed(panel);
   return panel;
 }

@@ -5,6 +5,7 @@ import type { AfterStateProps } from "@/features/recap-after-state";
 import { formatOrdinal } from "@/lib/format";
 import { visitMilestone } from "@/lib/visit-milestones";
 import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";
+import { RecordComputerDives, RecordPhotoStrip } from "./DiveRecordExtras";
 import { RecordFacts } from "./DiveRecordFacts";
 import { PrintRecordButton } from "./PrintRecordButton";
 import { SavePostcard } from "./SavePostcard";
@@ -42,6 +43,12 @@ import { SavePostcard } from "./SavePostcard";
  * *performed*; the nearest thing it holds is who boarded
  * (`roll_call_events`), and boarding is not a dive either.
  *
+ * **The diver's own computer is the one exception, and it is labeled as theirs.** When staff
+ * imported a file for this person, the card adds "From your dive computer": the recording's depth
+ * chart and its max, average, time and coldest water. With none, it borrows a crew member's
+ * recording from the same day as "What your dive looked like", and says it is the crew's. Either is
+ * evidence read from a file (`recapComputerDives`), never the shop's record, so it stays off the sheet.
+ *
  * **The postcard** — Reef's third moment (ADR 20260901-diveday-reimagined,
  * slice 13i). The record's face is a band of the lagoon wash carrying the
  * day's site drawn in the illustration hand, with the heading in the shop's
@@ -62,6 +69,9 @@ export function DiveRecord({
   sites,
   diveRecord,
   observedSpecies,
+  computerDives,
+  computerDivesSource,
+  photos,
   visitCount,
   siteMark,
   postcard,
@@ -77,6 +87,9 @@ export function DiveRecord({
   | "sites"
   | "diveRecord"
   | "observedSpecies"
+  | "computerDives"
+  | "computerDivesSource"
+  | "photos"
   | "visitCount"
   | "siteMark"
   | "postcard"
@@ -100,6 +113,9 @@ export function DiveRecord({
       // Flat at rest, like every other panel (Clearwater decision 1).
       className="mt-8 overflow-hidden rounded-panel border border-border bg-surface shadow-bed"
     >
+      {/* The boat's photos, as the card's cover. */}
+      <RecordPhotoStrip t={t} photos={photos} tripTitle={trip.title} />
+
       {/* The postcard's face: the site, drawn, and the heading in the shop's
           face on the lagoon wash. The band is the wash, so the tile takes the
           shell to keep its edge.
@@ -158,6 +174,12 @@ export function DiveRecord({
           diveRecord={diveRecord}
           observedSpecies={observedSpecies}
           course={course}
+        />
+        <RecordComputerDives
+          t={t}
+          shop={shop}
+          computerDives={computerDives}
+          computerDivesSource={computerDivesSource}
         />
         <SavePostcard
           postcard={postcard}

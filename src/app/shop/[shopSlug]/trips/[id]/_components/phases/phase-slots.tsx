@@ -2,7 +2,6 @@ import { type ReactNode, Suspense } from "react";
 import type { TripOverview } from "@/features/trip-overview";
 import type { GearToPack } from "@/features/trip-prep";
 import { compassText } from "@/i18n/compass-labels";
-import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
 import { formatMoneyScanned, formatShortDate } from "@/lib/format";
@@ -10,6 +9,7 @@ import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
 import { shopPath } from "@/lib/staff-notices";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
 import type { ClockPhase } from "@/lib/trip-clock";
+import { admissionDisplay } from "../admission-display";
 import { blowoutPath } from "../blowout/blowout-path";
 import type { FixListPhase } from "../guest-fix-rows";
 import { tripFixes } from "../trip-fixes";
@@ -47,7 +47,7 @@ export function planOf(overview: Pick<Overview, "tripDiveList">): string[] {
  * Check-in's quiet line.
  */
 export function phaseSlots({
-  frame: { shown, current, readyFrom, dockBy },
+  frame: { shown, current, lookBack, readyFrom, dockBy },
   overview,
   shop,
   shopSlug,
@@ -62,7 +62,13 @@ export function phaseSlots({
   /** Call off is still on offer (`callOffShown`): not cancelled, not sailed, no Home said. */
   mayCallOff: boolean;
   /** The phase shown and the one now, when Getting ready starts, and when the dock call is. */
-  frame: { shown: ClockPhase; current: ClockPhase | null; readyFrom: Date; dockBy: Date };
+  frame: {
+    shown: ClockPhase;
+    current: ClockPhase | null;
+    lookBack: boolean;
+    readyFrom: Date;
+    dockBy: Date;
+  };
   overview: Overview;
   shop: {
     timezone: string;
@@ -81,10 +87,12 @@ export function phaseSlots({
 }) {
   const { trip, cancelled, requirement } = overview;
   // A cancelled trip has nothing to make ready, and once the boat has left (or
-  // when a later phase is only previewed) Check-in's blockers are nobody's
+  // when Getting ready or Check-in is looked back on) Check-in's blockers are nobody's
   // work: the guests are only listed, and Roll call says who is where.
   const phase: FixListPhase =
-    cancelled || shown === "water" || shown === "wrapped" ? "listed" : shown;
+    cancelled || (lookBack && shown !== "filling") || shown === "water" || shown === "wrapped"
+      ? "listed"
+      : shown;
   const tripPath = shopPath(shopSlug, "trips", tripId);
   const crew = crewNamesOf(overview);
   const plan = planOf(overview);
@@ -96,7 +104,6 @@ export function phaseSlots({
     now,
     t,
   });
-  const level = requirement?.minimumCertificationLevel;
   const beside =
     phase === "filling" ? (
       <TripFactsCard
@@ -107,11 +114,7 @@ export function phaseSlots({
             ? formatMoneyScanned(trip.priceCents, shop.currency, locale)
             : null
         }
-        whoCanBook={
-          level
-            ? t("trips.clock.filling.orHigher", { level: t(CERTIFICATION_LEVEL_KEYS[level]) })
-            : t("trips.clock.filling.anyone")
-        }
+        whoCanBook={admissionDisplay(trip.course, requirement, overview.siteRequirement, t)}
         editHref={(section) => `${tripPath}?view=edit#${section}`}
         locale={locale}
         t={t}

@@ -24,6 +24,9 @@ function RecordOf({ context }: { context: AfterStateProps }) {
       sites={context.sites}
       diveRecord={context.diveRecord}
       observedSpecies={context.observedSpecies}
+      computerDives={context.computerDives}
+      computerDivesSource={context.computerDivesSource}
+      photos={context.photos}
       visitCount={context.visitCount}
       siteMark={context.siteMark}
       postcard={context.postcard}

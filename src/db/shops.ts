@@ -422,6 +422,11 @@ export async function shopHasPricedRecords(db: AppDb, shopId: string): Promise<b
                 ),
               ),
           ),
+          // New departures will use these amounts, so changing currency would
+          // reinterpret the saved minor units even before a trip exists.
+          sql`coalesce((${shops.tripDefaults}->>'depositCents')::integer, 0) > 0
+            or coalesce((${shops.tripDefaults}->>'snorkelerPriceCents')::integer, 0) > 0
+            or coalesce((${shops.tripDefaults}->>'riderPriceCents')::integer, 0) > 0`,
           // The rental price list is a jsonb document rather than a table, so
           // it is asked in its own shape: a set price, a nitrox surcharge, or
           // any per-piece price at all.
@@ -838,6 +843,8 @@ export async function setShopProfile(
   db: AppDb,
   shopId: string,
   profile: {
+    welcomeText?: string | null;
+    welcomeSigner?: string | null;
     tagline?: string | null;
     description?: string | null;
     logoUrl?: string | null;
@@ -854,6 +861,10 @@ export async function setShopProfile(
   const [shop] = await db
     .update(shops)
     .set({
+      ...(profile.welcomeText !== undefined ? { welcomeText: clean(profile.welcomeText) } : {}),
+      ...(profile.welcomeSigner !== undefined
+        ? { welcomeSigner: clean(profile.welcomeSigner) }
+        : {}),
       ...(profile.tagline !== undefined ? { tagline: clean(profile.tagline) } : {}),
       ...(profile.description !== undefined ? { description: clean(profile.description) } : {}),
       ...(profile.logoUrl !== undefined ? { logoUrl: clean(profile.logoUrl) } : {}),
@@ -875,4 +886,13 @@ export async function setShopProfile(
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
+}
+
+/** Save the starting terms for newly created departures. Existing trips are unchanged. */
+export async function setShopTripDefaults(
+  db: AppDb,
+  shopId: string,
+  defaults: import("@/lib/trip-defaults").TripDefaults,
+) {
+  await db.update(shops).set({ tripDefaults: defaults }).where(eq(shops.id, shopId));
 }

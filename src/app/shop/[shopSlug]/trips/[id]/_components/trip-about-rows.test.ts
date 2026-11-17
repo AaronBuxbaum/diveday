@@ -22,6 +22,7 @@ async function rowsFor(
   pricing?: { priceCents: number | null; course: CoursePricing | null },
   detailsEditable = true,
   subjectTripId?: string,
+  admissionCourse?: { minimumCertificationLevel: "rescue" | null; minimumAge: number | null },
 ) {
   const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
@@ -39,7 +40,7 @@ async function rowsFor(
     overview.trip = {
       ...overview.trip,
       priceCents: pricing.priceCents,
-      course: pricing.course ? { ...course, ...pricing.course } : null,
+      course: pricing.course ? { ...course, ...pricing.course, ...admissionCourse } : null,
     };
   }
   return tripAboutRows({
@@ -209,7 +210,7 @@ describe("tripAboutRows (in-memory PGlite)", () => {
   });
 
   it("says View, not Edit, on a course's frozen admission rules", async () => {
-    // A course session keeps the rules it was created with; its row opens
+    // A course session takes the course rule; its row opens
     // read-only text, so the word on the control says so (layer E bug).
     const rows = await rowsFor(undefined, true, undefined, {
       priceCents: null,
@@ -218,6 +219,23 @@ describe("tripAboutRows (in-memory PGlite)", () => {
     expect(rows.find((row) => row.id === "requirements")?.editLabel).toBe("View");
     const fun = await rowsFor();
     expect(fun.find((row) => row.id === "requirements")?.editLabel).toBeUndefined();
+  });
+
+  it("shows the live course rule in Who can book, not the trip snapshot", async () => {
+    const rows = await rowsFor(
+      undefined,
+      true,
+      undefined,
+      {
+        priceCents: null,
+        course: { title: "Course", priceCents: null, eLearningPriceCents: null },
+      },
+      true,
+      undefined,
+      { minimumCertificationLevel: "rescue", minimumAge: 15 },
+    );
+    expect(rows.find((row) => row.id === "requirements")?.value).toContain("Verified Rescue Diver");
+    expect(rows.find((row) => row.id === "requirements")?.value).toContain("Minimum age 15");
   });
 
   it("opens the row its own form reported back to", async () => {

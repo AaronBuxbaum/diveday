@@ -20,6 +20,10 @@ const ctx = fileScopedShopContext();
 
 async function fixture() {
   const { db, shop } = ctx;
+  // The canonical demo seeds one computer dive for its recap diver; these counts are the test's own.
+  await db.delete(computerDiveProfiles).where(eq(computerDiveProfiles.shopId, shop.id));
+  await db.delete(computerDives).where(eq(computerDives.shopId, shop.id));
+  await db.delete(computerImportBatches).where(eq(computerImportBatches.shopId, shop.id));
   const [owner] = await db
     .select({ id: people.id })
     .from(people)

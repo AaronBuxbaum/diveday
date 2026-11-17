@@ -237,6 +237,7 @@ export function AddPanel({
     initialSite,
     requestPlan,
     startExpanded,
+    defaultLensId: price.defaults?.lensId,
   });
   const onCourse = initialCourse !== null && courseId === initialCourse.id;
   const coursePriceLabel = selectedCoursePriceLabel(courseId, options?.courses, initialCourse);

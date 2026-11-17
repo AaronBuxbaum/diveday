@@ -239,7 +239,8 @@ export default async function ManageTripPage({
             beside: slots.beside,
             addGuestHref: `${tripPath}?phase=${frame.shown}&add=1#add-a-booking`,
             arrival: desk?.arrival,
-            record,
+            // The rebooking record belongs to Wrapped up, not to a look back at an earlier phase.
+            record: frame.lookBack ? undefined : record,
             inWaterCrew: overview.crew.inWaterCrew,
             addBand: await addBandFor(db, { shop, shopSlug, tripId, t }, { ...rest, diverq }),
             acceptsDivers,

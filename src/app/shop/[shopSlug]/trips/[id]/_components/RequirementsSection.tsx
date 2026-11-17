@@ -106,9 +106,8 @@ export function RequirementsSection({
     <div className="flex flex-col gap-2 pt-1">
       {trip.course ? (
         <>
-          {/* A course session keeps the rules it was created with, which is a
-              fact about *this* session that nothing else on screen carries.
-              The rules themselves are the row's own value, one line up. */}
+          {/* Course booking uses the live course rule shown in the row;
+              the site note below describes the separate readiness check. */}
           <p className="text-sm text-muted">{t("trips.requirements.courseDescription")}</p>
           {hasSiteRequirement ? siteNote("course") : null}
         </>

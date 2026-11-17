@@ -508,7 +508,7 @@ for (const scheme of ["light", "dark"] as const) {
         });
         // The panel rests collapsed behind its summary line — the capture is
         // of the panel itself, so open it the way a staffer would.
-        await page.getByRole("heading", { name: "Buddy teams" }).click();
+        await panel.locator("summary").first().click();
         await expect(panel.getByText("Keiko Tanaka (crew)", { exact: true })).toBeVisible();
         await panel.scrollIntoViewIfNeeded();
         await capture(page, "manifest-buddy-teams-panel", scheme);
@@ -663,8 +663,14 @@ for (const scheme of ["light", "dark"] as const) {
         // A board crawl out to the day-29 session, then the capture.
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
-        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling`);
+        const courseAdmission = staffCopy("trips.clock.filling.courseCard", {
+          level: staffCopy("shared.readiness.certificationLevels.openWater"),
+        });
+        await expect(page.getByText(courseAdmission).first()).toBeVisible();
+        await capture(page, "trip-filling-course-admission", scheme);
         await openTripAboutRow(page, "Who can book");
+        await expect(page.locator("details#requirements")).toContainText(courseAdmission);
         await page
           .locator("details#requirements")
           .getByText(/never blocks? enrollment/)

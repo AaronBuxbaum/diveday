@@ -1,12 +1,6 @@
 import Image from "next/image";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { DiveProfileChart } from "@/components/DiveProfileChart";
-import {
-  FEET_PER_METER,
-  PROFILE_AVG_METERS,
-  PROFILE_MAX_METERS,
-  PROFILE_MINUTES,
-} from "@/components/dive-profile-sample";
 import { MarketingStorefrontPhoto } from "@/components/MarketingStorefrontPhoto";
 import { RollCallMark } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
@@ -18,6 +12,13 @@ import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/compon
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
+import {
+  FEET_PER_METER,
+  PROFILE_AVG_METERS,
+  PROFILE_MAX_METERS,
+  PROFILE_MINUTES,
+  SAMPLE_PROFILE,
+} from "@/lib/dive-profile-sample";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 
 /**
@@ -730,10 +731,11 @@ export function RecapPageFallback({
                 {t("fallback.recap.depthHeading")}
               </p>
               <DiveProfileChart
+                samples={SAMPLE_PROFILE}
                 unit="ft"
                 className="mt-1 h-auto w-full"
                 labels={{
-                  stop: t("fallback.diveProfile.stop"),
+                  stop: (minutes) => t("fallback.diveProfile.stop", { minutes }),
                   max: t("fallback.diveProfile.max", { depth: deepest }),
                   minutes: t("fallback.diveProfile.minutes"),
                 }}

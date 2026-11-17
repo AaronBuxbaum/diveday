@@ -1,9 +1,6 @@
 {
   "trip": {
-    "title": "Incident reports",
-    "start": "Report an incident",
-    "writtenBy": "Written by {name}",
-    "notTimed": "Time not written yet"
+    "writtenBy": "Written by {name}"
   },
   "missingDiver": {
     "start": "Start a missing diver report",

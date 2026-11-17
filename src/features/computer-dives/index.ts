@@ -4,6 +4,8 @@ export type {
   ComputerImportOptions,
   ComputerScope,
   PreviewDive,
+  RecapComputerDive,
+  RecapComputerDives,
 } from "./store";
 export {
   annotateComputerDive,
@@ -14,5 +16,6 @@ export {
   exportComputerDives,
   historyComputerDives,
   previewComputerFiles,
+  recapComputerDives,
   restoreComputerDive,
 } from "./store";
