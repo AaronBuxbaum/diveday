@@ -771,7 +771,98 @@
     "whatsInIt": "Qué incluye",
     "closingTitle": "Prueba una mañana en el centro de demostración",
     "spreadsheetLink": "Mira cómo DiveDay lee tu hoja de cálculo →",
-    "alsoInPlan": "También en el plan"
+    "alsoInPlan": "También en el plan",
+    "oneList": {
+      "eyebrow": "Una sola lista",
+      "title": "La reserva, la exención y el manifiesto en una sola lista",
+      "lede": "Un buzo que reserva en DiveDay ya está en la salida. Su exención firmada, su tarjeta verificada y sus tallas de alquiler quedan junto a su nombre, y el capitán cuenta desde esa misma lista.",
+      "diagramLabel": "Tres herramientas separadas a la izquierda, una sola lista de buzos a la derecha",
+      "beforeLabel": "Tres lugares donde mirar",
+      "afterLabel": "Una sola lista",
+      "tools": {
+        "calendar": {
+          "name": "El calendario de reservas",
+          "knows": "Sabe quién pagó cada plaza",
+          "has": {
+            "c0": "Nombre",
+            "c1": "Plaza",
+            "c2": "Pago"
+          }
+        },
+        "waiver": {
+          "name": "La app de exenciones",
+          "knows": "Sabe quién firmó, con el nombre que escribió",
+          "has": {
+            "c0": "Firma",
+            "c1": "Respuestas médicas"
+          }
+        },
+        "clipboard": {
+          "name": "El portapapeles",
+          "knows": "Sabe a quién contó la tripulación",
+          "has": {
+            "c0": "Recuento",
+            "c1": "Tallas, a mano"
+          }
+        }
+      },
+      "sampleTrip": "Sáb 7:30 · Arrecife, dos tanques",
+      "sampleGear": "Chaleco M · aletas 8",
+      "sampleGearSmall": "Chaleco S · aletas 6",
+      "sampleOwnGear": "Equipo propio",
+      "sampleMore": "6 buzos más · 2 de tripulación",
+      "chips": {
+        "paid": "Pagado",
+        "deposit": "Depósito",
+        "signed": "Firmada",
+        "notSigned": "Sin firmar",
+        "cardChecked": "Tarjeta verificada",
+        "aboard": "A bordo",
+        "notAboard": "Aún no a bordo",
+        "sendWaiver": "Enviar exención"
+      },
+      "whereEyebrow": "Qué vive dónde",
+      "whereTitle": "Cada dato lo anota quien le corresponde, una vez",
+      "whereHeaders": {
+        "record": "El dato",
+        "who": "Quién lo anota",
+        "sees": "Dónde lo ve tu equipo"
+      },
+      "where": {
+        "seat": {
+          "record": "Plaza y pago",
+          "who": "El buzo, en tu calendario o desde un botón en tu propio sitio",
+          "sees": "La lista de buzos de la salida, con las plazas restantes contadas contra el barco"
+        },
+        "release": {
+          "record": "Exención y formulario médico",
+          "who": "El buzo, desde su enlace, en casa",
+          "sees": "Junto a su nombre. Un sí que requiere a un médico lo retiene hasta que el personal anote la autorización."
+        },
+        "card": {
+          "record": "Certificación",
+          "who": "El buzo la agrega y el personal la verifica una vez con la agencia",
+          "sees": "En la ficha del buzo para todas las salidas siguientes"
+        },
+        "sizes": {
+          "record": "Tallas de alquiler",
+          "who": "El buzo, desde el mismo enlace",
+          "sees": "En la lista de equipo, antes de que llegue el grupo"
+        },
+        "count": {
+          "record": "El recuento",
+          "who": "El capitán, un toque por nombre",
+          "sees": "El manifiesto, a la salida y después de cada inmersión"
+        }
+      },
+      "staysEyebrow": "Lo que sigue igual",
+      "staysTitle": "Conserva tu caja registradora y el portal de tu agencia",
+      "staysBody": "DiveDay no tiene caja registradora ni control de existencias de venta minorista, y no se conecta con ninguna agencia. Los cobros con tarjeta pasan por tu propia cuenta de Stripe.",
+      "movingEyebrow": "El traslado",
+      "movingTitle": "Sube tu lista de clientes y mira qué se traslada antes de que se guarde nada",
+      "movingBody": "Las guías cubren FareHarbor, Peek Pro, EVE, DiveShop360, Smartwaiver y Rezdy. Envíanos el archivo y una persona hace la importación contigo, sin costo. Puedes hacer un viaje en DiveDay mientras el sistema que usas hoy sigue encendido.",
+      "movingLink": "Encuentra la guía de tu sistema →"
+    }
   },
   "pricing": {
     "heroTitle": "Lo que paga un centro, línea por línea",

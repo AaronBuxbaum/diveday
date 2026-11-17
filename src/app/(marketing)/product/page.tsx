@@ -17,6 +17,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { switchingHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
+import { OneListBand } from "./_components/OneListBand";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
 // read this page makes (`requestLocale()`) sits behind this segment's
@@ -150,6 +151,8 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
           The `product-index` demo door that closed the old band went with it:
           on a page this short it stood 880px above the close's pair, the
           pressure that retired `home-mid`. */}
+      <OneListBand t={t} />
+
       <section id="full-list" className="mx-auto max-w-6xl scroll-mt-10 px-6 pb-20 lg:pb-24">
         <FeatureDirectory locale={locale} headingLevel="h2" lines />
         {/* The sections' names, never a count of the rows (B44), and the
