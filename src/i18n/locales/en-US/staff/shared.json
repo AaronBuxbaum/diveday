@@ -102,11 +102,6 @@
     "unansweredWithCopy": "No answer · device copy",
     "unansweredTitle": "DiveDay didn’t answer, so this is the copy saved on this device."
   },
-  "capacity": {
-    "full": "Full",
-    "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
-    "certificateCap": "Certificate: {sellable} of {stated} seats"
-  },
   "compass": {
     "n": "N",
     "ne": "NE",

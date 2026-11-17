@@ -33,9 +33,7 @@ test.describe("light mode", () => {
     await page.goto(`/shop/${privateShop.slug}`);
     await expect(page.getByText(note)).toBeVisible();
     await capture(page, "today-future-crew-rating", "light");
-    await page.goto(
-      `/shop/${privateShop.slug}/trips/${futureCrew.uncrewedTripId}?view=edit#crew`,
-    );
+    await page.goto(`/shop/${privateShop.slug}/trips/${futureCrew.uncrewedTripId}?view=edit#crew`);
     await expect(page.getByText(staffCopy("trips.crew.courseNeedsInstructor"))).toBeVisible();
     await page.goto(`/shop/${privateShop.slug}/trips/${futureCrew.tripId}?view=edit#crew`);
     await expect(page.getByText(note)).toBeVisible();

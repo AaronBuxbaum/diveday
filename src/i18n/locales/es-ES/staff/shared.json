@@ -102,11 +102,6 @@
     "unansweredWithCopy": "Sin respuesta · copia en el dispositivo",
     "unansweredTitle": "DiveDay no respondió, así que esta es la copia guardada en este dispositivo."
   },
-  "capacity": {
-    "full": "Completo",
-    "seatsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
-    "certificateCap": "Certificado: {sellable} de {stated} plazas"
-  },
   "compass": {
     "n": "N",
     "ne": "NE",

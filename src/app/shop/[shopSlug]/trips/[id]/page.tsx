@@ -1,37 +1,22 @@
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
-import { getBoatById } from "@/features/boats";
-import { rosterRowIsBlocked } from "@/features/roster-filters";
 import { requireShopSurface } from "@/features/session";
 import { readTripPage } from "@/features/trip-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { dockCallAt } from "@/lib/dock-call";
-import { meetingPointOfRows } from "@/lib/meeting-point";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { shopPath } from "@/lib/staff-notices";
-import {
-  CLOCK_PHASES,
-  type ClockPhase,
-  clockPhaseOf,
-  nextMeetingStart,
-  phaseWhens,
-  shownClockPhase,
-} from "@/lib/trip-clock";
-import { boatStageOf, finalHomeSaid, tripPhaseOf } from "@/lib/trip-phase";
-import { acceptsNewDivers, seatsOnSale } from "@/lib/trips";
+import { finalHomeSaid, tripPhaseOf } from "@/lib/trip-phase";
+import { acceptsNewDivers } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
-import { CoursePulse } from "./_components/CoursePulse";
-import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { departureStateOf } from "./_components/departure-states";
 import { detailsReadRows } from "./_components/details-rows";
 import { FlySafeFollowUps } from "./_components/FlySafeFollowUps";
-import { GuestBands } from "./_components/GuestBands";
-import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
+import { shownPulseFacts } from "./_components/PulseFacts";
 import { CheckInPhase } from "./_components/phases/CheckInPhase";
 import { EditTrip } from "./_components/phases/EditTrip";
 import { FillingPhase } from "./_components/phases/FillingPhase";
@@ -42,18 +27,17 @@ import { tripRosterActions } from "./_components/roster-actions";
 import { addBandFor } from "./_components/seat-request-band";
 import { TripCancellation } from "./_components/TripCancellation";
 import { TripDeskConnectivity } from "./_components/TripDeskConnectivity";
-import { TripHeader, tripFacts } from "./_components/TripHeader";
+import { TripGuestList } from "./_components/TripGuestList";
+import { TripHeader } from "./_components/TripHeader";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripPhaseStrip } from "./_components/TripPhaseStrip";
 import { TripRosterContent } from "./_components/TripRosterContent";
 import { TripSentenceLine } from "./_components/TripSentenceLine";
-import { phaseStripCopy } from "./_components/trip-clock-copy";
-import { tripHeaderDaySpan } from "./_components/trip-header-price";
+import { tripFrame } from "./_components/trip-frame";
 import { showsEditTrip } from "./_components/trip-notice-views";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
 import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
 import { type TripPageSearchParams, tripFlashParams } from "./_components/trip-search-params";
-import { tripSentence } from "./_components/trip-sentence";
 import { readStaffGates } from "./_lib/staff-gates";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -161,9 +145,6 @@ export default async function ManageTripPage({
     cancelled: false,
     meetingWindows: scheduleDays,
   };
-  const clockInput = { ...lifecycle, cancelled };
-  const currentPhase = clockPhaseOf(clockInput);
-  const shownPhase: ClockPhase = shownClockPhase(askedPhase, currentPhase);
   const pulseFacts = tripPulseFactsOf(overview, {
     liveBoatClashes: cancelled ? [] : boatClashes,
     shopSlug,
@@ -225,130 +206,76 @@ export default async function ManageTripPage({
     params: rest,
   });
 
-  // The counts the strip and the sentence say, off the roster already read.
-  const active = guests.roster.filter(({ booking }) => booking.status !== "no_show");
-  const here = active.filter((entry) => entry.checkedIn).length;
-  const blocked = active.filter(({ booking }) =>
-    rosterRowIsBlocked(guests.byBooking.readiness.get(booking.id)?.readiness),
-  ).length;
-  const capacity = seatsOnSale(trip).capacity;
-  const nextStartsAt = nextMeetingStart(clockInput);
-  const boat = trip.boatId ? await getBoatById(db, shop.id, trip.boatId) : null;
-  const facts = tripFacts({
+  const frame = tripFrame({
+    clock: { ...lifecycle, cancelled },
     trip,
-    daySpan: tripHeaderDaySpan(scheduleDays, locale, shop.timezone, t),
-    boatName: boat?.name,
-    meetingPlace: meetingPointOfRows(shop, trip).label,
+    shop,
+    roster: guests.roster,
+    readiness: guests.byBooking.readiness,
+    notBack: unaccounted.size,
+    askedPhase,
+    boatName: (await reading.boat(trip.boatId))?.name,
     locale,
-    timeZone: shop.timezone,
+    t,
   });
-  const stripCopy = phaseStripCopy(
-    t,
-    phaseWhens({ ...clockInput, booked: trip.booked, capacity, here }),
-    { locale, timeZone: shop.timezone },
-  );
-  const sentence = tripSentence(
-    {
-      phase: shownPhase,
-      cancelled,
-      now,
-      startsAt: trip.startsAt,
-      endsAt: trip.endsAt,
-      nextStartsAt,
-      dockCallAt: dockCallAt(nextStartsAt, shop.dockCallMinutes),
-      booked: trip.booked,
-      capacity,
-      guests: active.length,
-      here,
-      blocked,
-      notBack: unaccounted.size,
-      stage: boatStageOf(clockInput),
-      homeSaid: finalHomeSaid(clockInput),
-      locale,
-      timeZone: shop.timezone,
-    },
-    t,
-  );
-  // **Roll call has a door from Check-in on, and on every cancelled trip**: a blow-out
-  // cancels the trip and leaves every booking active, so the crew may still need the
-  // roll call to put people back ashore (dive-domain review 20260920). Before
-  // Check-in it is in More.
-  const rollCallDoor =
-    currentPhase === null || CLOCK_PHASES.indexOf(currentPhase) >= CLOCK_PHASES.indexOf("checkin");
   const tripPath = shopPath(shopSlug, "trips", tripId);
 
   const guestList = showDetails ? null : (
-    <DeskRefresh
-      open={Boolean(desk)}
-      copy={{
-        pulling: t("checkIn.pullToRefresh.pulling"),
-        release: t("checkIn.pullToRefresh.release"),
-        refreshing: t("checkIn.pullToRefresh.refreshing"),
-      }}
-    >
-      <div className="space-y-6 group-has-[[data-guest-folio]]/folio:hidden">
-        <GuestBands
-          overview={overview}
-          showMinimum={pulseNeeded && !sailed}
-          shopSlug={shopSlug}
-          locale={locale}
-          timeZone={shop.timezone}
-          t={t}
+    <TripGuestList
+      deskOpen={Boolean(desk)}
+      overview={overview}
+      showMinimum={pulseNeeded && !sailed}
+      pulseFacts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
+      coursePulse={coursePulse}
+      shopSlug={shopSlug}
+      tripId={tripId}
+      locale={locale}
+      timeZone={shop.timezone}
+      t={t}
+      roster={
+        <TripRosterContent
+          context={{
+            arrival: desk?.arrival,
+            record,
+            inWaterCrew: overview.crew.inWaterCrew,
+            addBand: await addBandFor(db, { shop, shopSlug, tripId, t }, { ...rest, diverq }),
+            acceptsDivers,
+            guests,
+            shopSlug,
+            shopName: shop.name,
+            locale,
+            timezone: shop.timezone,
+            shopRentalItems: shop.rentalItems,
+            offersHotelPickup: shop.offersHotelPickup,
+            tripNotice,
+            pageNotice: rosterPageNotice,
+            noteDeleted: noteId ? { noteId } : undefined,
+            confirmName,
+            confirmEmail,
+            confirmPhone,
+            undoBookingId:
+              notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
+                ? bid
+                : undefined,
+            // Keep refused booking operations open at their source row.
+            keepOpenBookingId: notice?.startsWith("booking-removed") ? undefined : bid,
+            paymentMarkRetry,
+            partyPreview,
+            // The one paper-release refusal with a way through (issue #1573), scoped to
+            // the seat it named, so a roster of minors does not all sprout the confirmation.
+            namesakeRefusedBookingId: notice === "waiver-guardian-name" ? bid : undefined,
+            participantTypeCertBookingId:
+              notice === "participant-type-cert" && staffGates.mayOverrideCertBlock
+                ? bid
+                : undefined,
+            mayWriteOffPayment,
+            currency: shop.currency,
+            ...staffGates,
+            actions: rosterActions,
+          }}
         />
-
-        <PulseFacts
-          facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
-          foldLabel={(count) => t("trips.pulse.needsYou", { count })}
-        />
-
-        <CoursePulse
-          shopSlug={shopSlug}
-          pulse={coursePulse}
-          tripId={tripId}
-          locale={locale}
-          timeZone={shop.timezone}
-        />
-      </div>
-      <TripRosterContent
-        context={{
-          arrival: desk?.arrival,
-          record,
-          inWaterCrew: overview.crew.inWaterCrew,
-          addBand: await addBandFor(db, { shop, shopSlug, tripId, t }, { ...rest, diverq }),
-          acceptsDivers,
-          guests,
-          shopSlug,
-          shopName: shop.name,
-          locale,
-          timezone: shop.timezone,
-          shopRentalItems: shop.rentalItems,
-          offersHotelPickup: shop.offersHotelPickup,
-          tripNotice,
-          pageNotice: rosterPageNotice,
-          noteDeleted: noteId ? { noteId } : undefined,
-          confirmName,
-          confirmEmail,
-          confirmPhone,
-          undoBookingId:
-            notice?.startsWith("booking-removed") && notice !== "booking-removed-refunded"
-              ? bid
-              : undefined,
-          // Keep refused booking operations open at their source row.
-          keepOpenBookingId: notice?.startsWith("booking-removed") ? undefined : bid,
-          paymentMarkRetry,
-          partyPreview,
-          // The one paper-release refusal with a way through (issue #1573), scoped to
-          // the seat it named, so a roster of minors does not all sprout the confirmation.
-          namesakeRefusedBookingId: notice === "waiver-guardian-name" ? bid : undefined,
-          participantTypeCertBookingId:
-            notice === "participant-type-cert" && staffGates.mayOverrideCertBlock ? bid : undefined,
-          mayWriteOffPayment,
-          currency: shop.currency,
-          ...staffGates,
-          actions: rosterActions,
-        }}
-      />
-    </DeskRefresh>
+      }
+    />
   );
   const recordContext = { context: { db, shop, session }, tripId, locale, t };
 
@@ -361,11 +288,11 @@ export default async function ManageTripPage({
       <div className="group/folio space-y-6 sm:space-y-10 group-has-[[data-guest-folio]]/folio:space-y-3">
         <TripHeader
           trip={trip}
-          facts={facts}
+          facts={frame.facts}
           shopSlug={shopSlug}
           tripId={tripId}
-          rollCallInMore={!rollCallDoor}
-          addGuest={acceptsDivers && capacity > trip.booked}
+          rollCallInMore={!frame.rollCallDoor}
+          addGuest={acceptsDivers && frame.capacity > trip.booked}
           locale={locale}
           timeZone={shop.timezone}
           t={t}
@@ -375,15 +302,15 @@ export default async function ManageTripPage({
         <TripPhaseStrip
           shopSlug={shopSlug}
           tripId={tripId}
-          current={currentPhase}
-          shown={showDetails ? null : shownPhase}
-          copy={stripCopy}
+          current={frame.current}
+          shown={showDetails ? null : frame.shown}
+          copy={frame.strip}
         />
         {showDetails ? null : (
           <TripSentenceLine
-            sentence={sentence}
+            sentence={frame.sentence}
             rollCall={
-              rollCallDoor
+              frame.rollCallDoor
                 ? { href: `${tripPath}/manifest`, label: t("trips.clock.rollCall") }
                 : null
             }
@@ -441,13 +368,13 @@ export default async function ManageTripPage({
               buddyError: rest.buddyError,
             }}
           />
-        ) : shownPhase === "filling" ? (
+        ) : frame.shown === "filling" ? (
           <FillingPhase guests={guestList} />
-        ) : shownPhase === "ready" ? (
+        ) : frame.shown === "ready" ? (
           <ReadyPhase guests={guestList} />
-        ) : shownPhase === "checkin" ? (
+        ) : frame.shown === "checkin" ? (
           <CheckInPhase guests={guestList} />
-        ) : shownPhase === "water" ? (
+        ) : frame.shown === "water" ? (
           <WaterPhase guests={guestList} record={recordContext} />
         ) : (
           <WrappedPhase guests={guestList} record={{ ...recordContext, guests }} />

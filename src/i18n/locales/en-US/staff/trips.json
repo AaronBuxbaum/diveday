@@ -285,7 +285,6 @@
   "detail": {
     "copyBookingLink": "Copy link",
     "linkCopyFailed": "Couldn’t copy. Select the link above instead.",
-    "cancelledBadge": "Canceled",
     "meetingDaysSummary": "{count} meeting days · same instructors each day",
     "dayLabel": "Day {number}: {date} · {timeRange}",
     "courseSession": "Course session · <course>{title}</course>",
@@ -1130,7 +1129,7 @@
       "scheduledToLeave": "Scheduled to leave at {time}.",
       "scheduledBack": "Scheduled back at {time}.",
       "everyoneBack": "Everyone is back.",
-      "cancelled": "This trip is cancelled.",
+      "cancelled": "This trip is canceled.",
       "scheduledFor": "Was scheduled for {date}, {time}",
       "leavesInMinutes": "The boat leaves in {count, plural, one {# minute} other {# minutes}}.",
       "leavesAt": "The boat leaves at {time}.",

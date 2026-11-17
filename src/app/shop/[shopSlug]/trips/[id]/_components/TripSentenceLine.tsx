@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripSentence } from "./trip-sentence";
 
 /**
@@ -21,7 +22,7 @@ export function TripSentenceLine({
       className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8"
     >
       <div className="min-w-0">
-        <p className="text-xl leading-snug font-semibold tracking-tight text-balance sm:text-2xl">
+        <p className={`${SECTION_TITLE_CLASS} text-balance`}>
           <Emphasised text={sentence.headline} emphasis={sentence.emphasis} />
         </p>
         {sentence.sub ? (

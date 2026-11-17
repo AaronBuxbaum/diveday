@@ -285,7 +285,6 @@
   "detail": {
     "copyBookingLink": "Copiar enlace",
     "linkCopyFailed": "No se pudo copiar. Selecciona el enlace de arriba.",
-    "cancelledBadge": "Cancelada",
     "meetingDaysSummary": "{count, plural, one {# día de encuentro} other {# días de encuentro}} · mismos instructores cada día",
     "dayLabel": "Día {number}: {date} · {timeRange}",
     "courseSession": "Sesión de curso · <course>{title}</course>",
@@ -1117,7 +1116,7 @@
       "guestCount": "{count, plural, one {# huésped} other {# huéspedes}}",
       "seatsToFill": "{count, plural, one {Queda # plaza} other {Quedan # plazas}} por llenar.",
       "full": "Todas las plazas están ocupadas.",
-      "booked": "{booked} de {capacity} reservadas",
+      "booked": "Reservadas: {booked} de {capacity}",
       "noGuests": "Aún no hay huéspedes.",
       "notReady": "{count, plural, one {# huésped no está listo} other {# huéspedes no están listos}} todavía.",
       "allReady": "Todos los huéspedes están listos.",

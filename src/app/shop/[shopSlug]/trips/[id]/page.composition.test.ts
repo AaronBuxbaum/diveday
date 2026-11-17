@@ -47,6 +47,8 @@ describe("the trip page as The Clock", () => {
    * 20260920): a cancelled trip has no current phase, and keeps its door.
    */
   it("keeps the Roll call door on a cancelled trip", () => {
-    expect(BODY).toMatch(/const rollCallDoor =\s*currentPhase === null \|\|/);
+    const frame = readFileSync(join(__dirname, "_components", "trip-frame.ts"), "utf8");
+    expect(frame).toMatch(/rollCallDoor:\s*current === null \|\|/);
+    expect(BODY).toMatch(/rollCall=\{\s*frame\.rollCallDoor/);
   });
 });

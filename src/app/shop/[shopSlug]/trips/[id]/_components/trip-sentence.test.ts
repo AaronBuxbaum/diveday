@@ -51,9 +51,7 @@ describe("tripSentence", () => {
   });
 
   it("Getting ready: who is not ready, and when they meet", () => {
-    expect(
-      say({ phase: "ready", now: new Date("2026-11-15T15:00:00.000Z"), blocked: 2 }),
-    ).toEqual({
+    expect(say({ phase: "ready", now: new Date("2026-11-15T15:00:00.000Z"), blocked: 2 })).toEqual({
       headline: "2 guests aren’t ready yet. The boat leaves tomorrow at 9:00 AM.",
       emphasis: "2 guests",
       sub: "11 guests · at the dock by 8:30 AM",
@@ -94,7 +92,7 @@ describe("tripSentence", () => {
       "1 guest is recorded not back aboard.",
     );
     expect(say({ ...wrapped, cancelled: true })).toEqual({
-      headline: "This trip is cancelled.",
+      headline: "This trip is canceled.",
       emphasis: null,
       sub: "Was scheduled for Mon, Nov 16, 9:00 AM",
     });

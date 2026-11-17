@@ -5,7 +5,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { getBoatById } from "@/features/boats";
 import { requireShopSurface } from "@/features/session";
 import { getTripPrepPage } from "@/features/trip-prep";
 import { requestLocale } from "@/i18n/request";
@@ -95,7 +94,7 @@ export default async function TripPrepPage({
   // left the dock, and (once home) every unit still out on this boat.
   const view = await getTripPrepPage(db, shop, tripId, nowDate());
   if (!view) notFound();
-  const { prep, sailed, finished, backFromBoat, stageReading, meetingWindows } = view;
+  const { prep, sailed, finished, backFromBoat, stageReading, meetingWindows, boat } = view;
   const { trip } = prep;
   const clockInput = {
     startsAt: trip.startsAt,
@@ -107,7 +106,6 @@ export default async function TripPrepPage({
     meetingWindows,
   };
   const currentPhase = clockPhaseOf(clockInput);
-  const boat = trip.boatId ? await getBoatById(db, shop.id, trip.boatId) : null;
 
   const body = (
     <PrepBody

@@ -1,4 +1,4 @@
-import { listBoats } from "@/features/boats";
+import { getBoatById, listBoats } from "@/features/boats";
 import { getTripConservationPanel } from "@/features/conservation";
 import { getCoursePulse } from "@/features/course-pulse";
 import { getDepartureNeeds } from "@/features/today";
@@ -81,6 +81,8 @@ export function readTripPage(
   return {
     manifest: getTripManifest(db, shop, tripId, input),
     details: () => getTripDetails(db, shop, tripId, input.session.user.personId),
+    /** The departure's boat, for the header's facts line; null for a shore dive or a pool session. */
+    boat: (boatId: string | null) => (boatId ? getBoatById(db, shop.id, boatId) : null),
     departureNeeds: () => getDepartureNeeds(db, shop, tripId, input),
   };
 }

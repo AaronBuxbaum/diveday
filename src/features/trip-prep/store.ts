@@ -1,4 +1,5 @@
 import { getTripCrewAssignments, getTripWithBooked, listStaff } from "@/db/trips";
+import { getBoatById } from "@/features/boats";
 import { counterRentalsHeldDuring } from "@/features/gear-counter-rentals";
 import { proposalKey, proposeRentalUnits } from "@/features/gear-proposals";
 import { latestTripStage, readDepartureStage } from "@/features/trip-stages";
@@ -470,9 +471,13 @@ export async function getTripPrepPage(db: AppDb, shop: TripPrepShop, tripId: str
     cancelled: trip.status === "cancelled",
     meetingWindows,
   });
-  const backFromBoat = finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
-  // The raw tap and the meeting days ride along for the page's phase strip (`clockPhaseOf`).
-  return { prep, shownStage, sailed, finished, backFromBoat, stageReading, meetingWindows };
+  const [backFromBoat, boat] = await Promise.all([
+    finished ? listTripUnitsToCheckIn(db, shop.id, tripId) : [],
+    trip.boatId ? getBoatById(db, shop.id, trip.boatId) : null,
+  ]);
+  // The raw tap, the meeting days and the boat ride along for the page's header and phase
+  // strip (`clockPhaseOf`).
+  return { prep, shownStage, sailed, finished, backFromBoat, stageReading, meetingWindows, boat };
 }
 
 /**
