@@ -127,4 +127,58 @@ describe("the homepage walkthrough", () => {
     fireEvent.pointerUp(screen.getByText("Second"), { clientX: 100 });
     expect(screen.getByText("Second")).toBeInTheDocument();
   });
+
+  it("fills the current segment as the beat's clock, and a hold freezes it", () => {
+    mockMotion(false);
+    const { container } = setup();
+    const fill = () =>
+      container.querySelector<HTMLElement>("[data-walk-controls] ~ div > span > span:last-child");
+    const group = screen.getByRole("group", { name: "Walk" });
+    act(() => void vi.advanceTimersByTime(15_000));
+    const half = Number.parseFloat(fill()?.style.transform.replace("scaleX(", "") ?? "0");
+    expect(half).toBeGreaterThan(0.4);
+    expect(half).toBeLessThan(0.6);
+    // Holding pauses the bar and the beat; letting go carries on from there.
+    fireEvent.pointerDown(group, { clientX: 100 });
+    act(() => void vi.advanceTimersByTime(120_000));
+    expect(screen.getByText("First")).toBeInTheDocument();
+    fireEvent.pointerUp(group, { clientX: 100 });
+    act(() => void vi.advanceTimersByTime(16_000));
+    expect(screen.getByText("Second")).toBeInTheDocument();
+  });
+
+  it("does not treat the release of a hold as a tap", () => {
+    mockMotion(true);
+    const { container } = setup();
+    const frame = container.querySelector("[data-walk-frame]") as HTMLElement;
+    fireEvent.pointerDown(frame, { clientX: 100 });
+    act(() => void vi.advanceTimersByTime(1_000));
+    fireEvent.pointerUp(frame, { clientX: 100 });
+    expect(screen.getByText("First")).toBeInTheDocument();
+  });
+
+  it("plays a beat as before, tap, after, and shows the finished screen when stopped", () => {
+    mockMotion(false);
+    const { container } = setup();
+    const list = container.querySelector("[data-walk-list]") as HTMLElement;
+    const phase = () => list.getAttribute("data-walk-phase");
+    expect(phase()).toBe("before");
+    // Three beats of 30 seconds: the tap starts at 16% and the swap at 38%.
+    act(() => void vi.advanceTimersByTime(6_000));
+    expect(phase()).toBe("tap");
+    act(() => void vi.advanceTimersByTime(8_000));
+    expect(phase()).toBe("after");
+    // Pause shows the finished screen; a new beat plays from its first.
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    fireEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(["before", "tap", "after"]).toContain(phase());
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    expect(phase()).toBe("after");
+  });
+
+  it("shows the finished screen under reduced motion", () => {
+    mockMotion(true);
+    const { container } = setup();
+    expect(container.querySelector("[data-walk-list]")).toHaveAttribute("data-walk-phase", "after");
+  });
 });
