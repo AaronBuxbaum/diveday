@@ -27,7 +27,7 @@ export const EMBED_WIDGETS = ["grid", "departure", "courses", "reviews"] as cons
 export type EmbedWidget = (typeof EMBED_WIDGETS)[number];
 
 /** The static segment under `embed/` the framed schedule renders from. Never a widget. */
-export const EMBED_CALENDAR_SEGMENT = "calendar";
+const EMBED_CALENDAR_SEGMENT = "calendar";
 /** The static segment under `embed/` whose `[id]` child is the framed trip page. */
 export const EMBED_TRIP_SEGMENT = "trip";
 

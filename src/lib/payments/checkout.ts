@@ -23,7 +23,7 @@ import { logStripeRequestThrew } from "./stripe-request-log";
  * caller's composed label (a message-bundle string plus a shop-authored trip or
  * course title) is clamped rather than gambled on.
  */
-export const MAX_LINE_DESCRIPTION_LENGTH = 250;
+const MAX_LINE_DESCRIPTION_LENGTH = 250;
 
 /** A caller-composed line label, trimmed and clamped to what Stripe will accept. */
 export function stripeLineDescription(value: string): string {
@@ -259,10 +259,7 @@ function toSnapshot(body: z.infer<typeof sessionResponseSchema>): CheckoutSessio
   };
 }
 
-export function stripeCheckoutProvider(
-  config: StripeKeySource,
-  fetchImpl: Fetch,
-): CheckoutProvider {
+function stripeCheckoutProvider(config: StripeKeySource, fetchImpl: Fetch): CheckoutProvider {
   /** One request on the shop's connected account, with the key chosen for it. */
   async function onAccount(
     stripeAccountId: string,

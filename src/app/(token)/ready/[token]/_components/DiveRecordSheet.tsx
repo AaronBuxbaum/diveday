@@ -12,7 +12,7 @@ import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";
 import { RecordFacts } from "./DiveRecordFacts";
 
 /** The paper a logbook entry is printed on: whatever the diver's printer holds. */
-export const DIVE_RECORD_PAPER = PACKET_PAPER;
+const DIVE_RECORD_PAPER = PACKET_PAPER;
 
 /**
  * **The dive record on paper** (issue #2745): a logbook page in the shop's

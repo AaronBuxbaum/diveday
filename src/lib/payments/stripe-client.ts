@@ -84,7 +84,7 @@ async function asError(response: Response): Promise<Response> {
 }
 
 /** The `fetch` the SDK calls: the adapter's own, under the policies above. */
-export function wireFetch(fetchImpl: Fetch): Fetch {
+function wireFetch(fetchImpl: Fetch): Fetch {
   return async (input, init) => {
     const headers = plainHeaders(init?.headers);
     delete headers[SDK_VERSION_HEADER];
@@ -101,7 +101,7 @@ export function wireFetch(fetchImpl: Fetch): Fetch {
 }
 
 /** A client for one secret key. Built per call: the key is chosen per call. */
-export function stripeClient(secretKey: string, fetchImpl: Fetch): Stripe {
+function stripeClient(secretKey: string, fetchImpl: Fetch): Stripe {
   return new Stripe(secretKey, {
     httpClient: Stripe.createFetchHttpClient(wireFetch(fetchImpl)),
     maxNetworkRetries: 0,

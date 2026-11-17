@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { orders, shops } from "@/db/schema";
-import { setShopTaxEnabled } from "@/db/shops";
+import { setShopTaxEnabled } from "@/db/shops.test-support";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import { fileScopedShopContext } from "@/test/db";
 import {

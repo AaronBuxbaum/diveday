@@ -5,7 +5,7 @@ import { HomeBodySkeleton } from "./HomeBodySkeleton";
 
 afterEach(cleanup);
 
-/** The hero's two columns: the claim, then the captain's phone. */
+/** The hero's two columns: the claim, then the arrival desk. */
 function heroColumns(container: HTMLElement) {
   const grid = container.querySelector("section > div");
   const [claim, phone] = [...(grid?.children ?? [])];
@@ -53,11 +53,10 @@ describe("the landing's skeleton", () => {
     expect(heroColumns(container).claim.querySelector(".rounded-panel")).toBeNull();
   });
 
-  it("draws the phone at the 544px the frame renders at", () => {
+  it("draws the desk at the height it renders at: 574px from lg, 610px on a phone", () => {
     const { container } = render(<HomeBodySkeleton />);
-    const phone = heroColumns(container).phone.firstElementChild;
-    expect(phone).toHaveClass("h-[544px]");
-    expect(phone).not.toHaveClass("h-[450px]");
+    const desk = heroColumns(container).phone.firstElementChild;
+    expect(desk).toHaveClass("h-[610px]", "lg:h-[574px]");
   });
 
   it("reserves the longer Spanish title: five phone lines and four from sm", () => {
@@ -72,13 +71,6 @@ describe("the landing's skeleton", () => {
     const lines = [...heroColumns(container).claim.querySelectorAll(".h-8")];
     expect(lines).toHaveLength(5);
     expect(shownAt(lines)).toEqual([5, 3, 3]);
-  });
-
-  it("draws the dock card's detail as three lines in a phone's column and two from sm", () => {
-    const { container } = render(<HomeBodySkeleton />);
-    const card = heroColumns(container).phone.children[1];
-    const lines = [...(card?.querySelectorAll(".h-5") ?? [])];
-    expect(shownAt(lines)).toEqual([3, 2, 2]);
   });
 });
 

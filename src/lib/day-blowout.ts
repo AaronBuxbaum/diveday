@@ -16,14 +16,14 @@ import { addCalendarDays, utcToWallTime, wallTimeToUtc } from "./zoned";
  */
 
 /** A departure leaving before this local hour is a "before noon" one. */
-export const MORNING_ENDS_HOUR = 12;
+const MORNING_ENDS_HOUR = 12;
 
 /**
  * The presets the day page offers; a staffer can still select any departures.
  * The page opens with **none** selected (dive-domain review, 2026-10-09): a
  * call that cancels boats is chosen, never accepted by default.
  */
-export const DAY_BLOWOUT_PICKS = ["all", "morning"] as const;
+const DAY_BLOWOUT_PICKS = ["all", "morning"] as const;
 export type DayBlowoutPick = (typeof DAY_BLOWOUT_PICKS)[number];
 
 export function isDayBlowoutPick(value: unknown): value is DayBlowoutPick {

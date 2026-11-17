@@ -505,7 +505,7 @@ export type CourseContent = {
 };
 
 /** Route segments under `/shop/[slug]/courses/` that are staff pages, not course slugs; slug minting refuses these words. */
-export const RESERVED_COURSE_SEGMENTS = new Set(["catalog", "new"]);
+const RESERVED_COURSE_SEGMENTS = new Set(["catalog", "new"]);
 
 /**
  * A stable, readable URL segment for a course. Collides by design when two

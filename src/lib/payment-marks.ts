@@ -30,7 +30,7 @@ export type ManualPaymentMarkReading =
   /** Something was typed that cannot be read; never guessed at. */
   | { kind: "invalid"; field: "amount" | "method" };
 
-export function isManualPaymentMethod(value: unknown): value is ManualPaymentMethodCode {
+function isManualPaymentMethod(value: unknown): value is ManualPaymentMethodCode {
   return (MANUAL_PAYMENT_METHODS as readonly unknown[]).includes(value);
 }
 
@@ -84,7 +84,7 @@ export function readExternalRefundAmount(
  * amount is the parsed figure, the status and method are matched against their
  * own lists, so an unreadable value is dropped, never repeated.
  */
-export const MARK_RETRY_PARAMS = {
+const MARK_RETRY_PARAMS = {
   status: "markStatus",
   amount: "markAmount",
   method: "markMethod",

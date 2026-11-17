@@ -345,7 +345,7 @@ function guardianRedactedMetadata(record: WaiverSealedFields): IntegrityValue {
   };
 }
 
-export function waiverIntegrityMetadata(
+function waiverIntegrityMetadata(
   record: WaiverSealedFields,
   version: WaiverIntegrityVersion = WAIVER_INTEGRITY_VERSION_SIGNED,
 ): IntegrityValue {

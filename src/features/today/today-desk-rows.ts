@@ -14,7 +14,7 @@ import { at } from "./today-shared";
  * manifest is primed in (ADR 20260726-shopwide-offline-manifest-priming), so the
  * row arrives while the copy the crew will carry can still be fixed.
  */
-export const EMERGENCY_CARD_WINDOW_MS = 48 * HOUR_MS;
+const EMERGENCY_CARD_WINDOW_MS = 48 * HOUR_MS;
 
 /** The two desk facts Today reads with its wave (fifth loop, items 3 and 7). */
 export type DeskFacts = { emergencyCardHasNumbers: boolean; lostItemsWaiting: number };

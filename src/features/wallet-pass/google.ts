@@ -3,7 +3,7 @@ import { nowDate } from "@/lib/clock";
 import type { PassContent } from "@/lib/wallet-passes";
 import { googleCredentials } from "./config";
 
-export function signWalletJwt(payload: object, key: string): string {
+function signWalletJwt(payload: object, key: string): string {
   const input = [{ alg: "RS256", typ: "JWT" }, payload]
     .map((part) => Buffer.from(JSON.stringify(part)).toString("base64url"))
     .join(".");

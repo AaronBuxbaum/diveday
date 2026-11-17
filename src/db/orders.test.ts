@@ -55,7 +55,8 @@ import {
   personRoles,
   shops,
 } from "./schema";
-import { setShopCurrency, setShopTaxEnabled } from "./shops";
+import { setShopCurrency } from "./shops";
+import { setShopTaxEnabled } from "./shops.test-support";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { editTrip, getTripRoster } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

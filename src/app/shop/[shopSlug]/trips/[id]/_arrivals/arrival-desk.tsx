@@ -58,7 +58,7 @@ export type ArrivalDesk = {
  * counter's window (`arrivalsWindow`). A boat next week or one long gone is the
  * roster alone.
  */
-export function deskIsOpen(trip: { status: string; startsAt: Date }, now: Date): boolean {
+function deskIsOpen(trip: { status: string; startsAt: Date }, now: Date): boolean {
   const window = arrivalsWindow(now);
   return trip.status === "scheduled" && trip.startsAt >= window.from && trip.startsAt <= window.to;
 }

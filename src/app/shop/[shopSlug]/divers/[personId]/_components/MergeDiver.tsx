@@ -8,7 +8,7 @@ import { MergeCandidateList } from "./MergeCandidateList";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
 /** The words for why a record was offered, strongest signal first. */
-export const MERGE_REASON_KEYS: Record<DiverMergeCandidateReason, StaffMessageKey> = {
+const MERGE_REASON_KEYS: Record<DiverMergeCandidateReason, StaffMessageKey> = {
   same_email: "divers.merge.sameEmail",
   same_phone: "divers.merge.samePhone",
   same_name_and_birth_date: "divers.merge.sameNameAndBirthDate",

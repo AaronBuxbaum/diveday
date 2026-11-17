@@ -11,7 +11,7 @@ import { walletPlatformForAgent } from "./rules";
 import { applePassService } from "./service";
 import { googleSaveUrl, issueWalletPass, renderApplePass } from "./store";
 
-export const WALLET_HEADERS = {
+const WALLET_HEADERS = {
   "Cache-Control": "private, no-store",
   "Referrer-Policy": "no-referrer",
   "X-Robots-Tag": "noindex, nofollow",

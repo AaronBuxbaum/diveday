@@ -25,7 +25,7 @@ export type TidePrediction = {
  * the turn itself — the band either side of a predicted high or low where the
  * current eases before it reverses.
  */
-export const TIDE_PHASES = ["slack", "flood", "ebb"] as const;
+const TIDE_PHASES = ["slack", "flood", "ebb"] as const;
 export type TidePhase = (typeof TIDE_PHASES)[number];
 
 /**

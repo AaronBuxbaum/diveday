@@ -14,7 +14,7 @@
 import { slugFrom } from "./slug";
 
 /** The shape `dive_sites.slug` holds: lowercase words joined by single hyphens. */
-export const DIVE_SITE_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const DIVE_SITE_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
  * The longest a site slug may run. Longer than a lens's forty because a site

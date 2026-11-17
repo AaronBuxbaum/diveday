@@ -6,9 +6,6 @@
     "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
     "diverDoor": "Booked a dive?",
     "diverDoorLink": "Find your booking",
-    "phoneFrameLabel": "A captain calling the roll in DiveDay at the dock: 4 of 9 divers aboard, one name tapped aboard and the next still to call.",
-    "dockEyebrow": "At the dock",
-    "dockDetail": "Saved to this phone before the boat left, so the roll call keeps working with no signal.",
     "whyEyebrow": "Why the roll call is by name",
     "whyStory": "In January 1998, Tom and Eileen Lonergan went out on a dive boat to the Great Barrier Reef. The boat went back to port without them, and nobody noticed for two days. Neither of them was ever found.",
     "whyTie": "A tally can add up while someone is still in the water. So the roll call in DiveDay calls every diver and crew member by name, before the boat leaves and after every dive, and the count stays open until each name is accounted for.",
@@ -83,7 +80,16 @@
     "guidesLink": "Find the guide for your current system",
     "tryTitle": "Come run a dive day in the demo shop",
     "stepLink": "{name} →",
-    "percentArm": {}
+    "percentArm": {},
+    "try": {
+      "hint": "A sample morning list. Tap a button to see what the desk does.",
+      "region": "A sample of the arrival desk for the 7:30 two-tank trip.",
+      "hereOf": "{here} of {expected} here",
+      "toCome": "1 to come",
+      "allHere": "Everyone is here and cleared",
+      "done": "All nine are cleared for the 7:30.",
+      "restart": "Start over"
+    }
   },
   "common": {
     "gettingReady": "Getting your shop ready…",

@@ -103,7 +103,7 @@ export async function aboardAtSeaBookingIds(
  * (`departureUnderway`, the blow-out's clock), or the crew took it out
  * ({@link crewTookTheBoatOut}).
  */
-export async function boatHasLeft(
+async function boatHasLeft(
   db: DbExecutor,
   input: { shopId: string; tripId: string; startsAt: Date; now: Date },
 ): Promise<boolean> {
@@ -119,7 +119,7 @@ export async function boatHasLeft(
  * checkpoint is taken at the dock, so a boat taken out early is caught with no
  * stage tapped.
  */
-export async function crewTookTheBoatOut(
+async function crewTookTheBoatOut(
   db: DbExecutor,
   shopId: string,
   tripId: string,

@@ -4133,9 +4133,11 @@
     "arrivalDesk": {
       "label": "Guests",
       "hereOf": "<figure>{here}</figure> of {expected} here",
+      "remainderCleared": "1 guest can’t board yet",
       "stillToClear": "Can’t board yet · {count}",
       "ready": "To come · {count}",
       "checkedInGroup": "Here · {count}",
+      "blocked": "Blocked",
       "heldReason": "Booked as {bookedAs}, then matched to {name} from the name list. Confirm who this is.",
       "samePerson": "Same person",
       "differentPerson": "Different person",

@@ -57,7 +57,7 @@ import {
  * gap that made copying easier than importing: the shape and the touch target,
  * with the fill left to the row.
  */
-export const BOAT_TARGET_CLASS = buttonClass({
+const BOAT_TARGET_CLASS = buttonClass({
   variant: "bare",
   size: "boat",
   // These disable themselves for the moment their own submit is in flight.

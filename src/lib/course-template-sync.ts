@@ -30,7 +30,7 @@ export const COURSE_TEMPLATE_SYNC_FIELDS = [
 ] as const;
 
 /** The prose fields where a shop may have edited the template's starting words. */
-export const COURSE_TEMPLATE_SHOP_EDITABLE_FIELDS = [
+const COURSE_TEMPLATE_SHOP_EDITABLE_FIELDS = [
   "summary",
   "overview",
   "durationText",

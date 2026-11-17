@@ -15,7 +15,7 @@ const CLEAR_CHANNEL = "diveday:returning-diver-clear-v2";
 export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
 export const RETURNING_DIVER_DEVICE_SLOT_MS = 24 * HOUR_MS;
 export const MAX_RETURNING_DIVER_DEVICE_SLOTS = 32;
-export const MAX_RETURNING_DIVER_MEMORIES = 32;
+const MAX_RETURNING_DIVER_MEMORIES = 32;
 export const RETURNING_DIVER_DEVICE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{40,128}$/;
 
 export type ReturningDiver = { fullName: string; email: string };

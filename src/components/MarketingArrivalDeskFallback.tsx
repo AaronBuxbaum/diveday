@@ -8,11 +8,11 @@ import type { DiverLocale } from "@/i18n/settings";
 import { AppBar, MOCK_BODY, MOCK_SECONDARY_BUTTON } from "./MarketingScreenFallbacks";
 
 /** A roster group's band: its label over the sunken strip (`RosterGroupBand.tsx`). */
-const ROSTER_BAND =
+export const ROSTER_BAND =
   "flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 bg-surface-sunken/50 px-4 py-1.5";
 
 /** The roster row's disclosure, at the row's end (`RosterSection.tsx`). */
-function RowCaret() {
+export function RowCaret() {
   return (
     <span
       aria-hidden="true"

@@ -123,7 +123,7 @@ export function counterRentalLineCents(
  * rent them, and none of them gets anybody into water they could not already
  * reach. Weights stay soft goods: lead does not take anyone under on its own.
  */
-export const COUNTER_LIFE_SUPPORT_KINDS: ReadonlySet<GearItemKind> = new Set<GearItemKind>([
+const COUNTER_LIFE_SUPPORT_KINDS: ReadonlySet<GearItemKind> = new Set<GearItemKind>([
   "regulator",
   "bcd",
   "tank",

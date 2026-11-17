@@ -112,7 +112,7 @@ function CopyLink({
  * points a shop at the wrong setting, which is the confusion `no_app_origin`
  * already exists to prevent.
  */
-export function reasonCopy(
+function reasonCopy(
   copy: WaiverSendCopy,
   reason: WaiverFallbackLink["reason"],
   count: number,
@@ -231,7 +231,7 @@ function LinkGroups({
 /** Where a seat's "Send by text" posts: the same surface the first tap was on. */
 type ResendTarget = { surface: WaiverSendSurface; tripId?: string; ticketId?: string };
 
-export function ResultNotice({
+function ResultNotice({
   state,
   copy,
   resend,

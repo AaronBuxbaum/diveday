@@ -101,10 +101,7 @@ type Fetch = typeof fetch;
 const couponResponseSchema = z.object({ id: z.string().min(1) });
 const promotionCodeResponseSchema = z.object({ id: z.string().min(1) });
 
-export function stripePromotionProvider(
-  config: StripeKeySource,
-  fetchImpl: Fetch,
-): PromotionProvider {
+function stripePromotionProvider(config: StripeKeySource, fetchImpl: Fetch): PromotionProvider {
   /** One POST on the shop's connected account, with the key chosen for it. */
   async function postOnAccount(
     stripeAccountId: string,

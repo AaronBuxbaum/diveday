@@ -77,7 +77,7 @@ type Session = {
  * a diver, a staffer or the shop: the sample diver is made up, and nothing
  * was looked up with any agency. Plain JSON, unwrapped, so it pastes whole.
  */
-export function certCheckTryReport(session: Session, installed: string | null): string {
+function certCheckTryReport(session: Session, installed: string | null): string {
   const samples = Object.fromEntries(
     Object.entries(session.samples).map(([agency, outcome]) => [
       agency,

@@ -26,7 +26,7 @@ import { createHash } from "node:crypto";
  */
 
 /** The digest stored for a raw session token: lowercase hex SHA-256. */
-export function hashSessionToken(token: string): string {
+function hashSessionToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
 }
 

@@ -27,7 +27,7 @@ export function importIdentityConflicts(
   return conflicts;
 }
 
-export function refuseImportIdentityConflicts(rows: PreparedRow[]): void {
+function refuseImportIdentityConflicts(rows: PreparedRow[]): void {
   const conflicts = importIdentityConflicts(rows);
   for (const row of rows) {
     if (!row.email || !conflicts.has(row.email.toLowerCase())) continue;

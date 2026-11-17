@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { SubmitButton } from "@/components/SubmitButton";
 import type { AppDb } from "@/db/client";
+import { getShopBySlug } from "@/db/shops";
 import {
-  getShopBySlug,
   setShopCrewScheduleEnabled,
   setShopDivingOptions,
   setShopFeature,
-} from "@/db/shops";
+} from "@/db/shops.test-support";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";

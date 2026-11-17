@@ -34,7 +34,7 @@ import type {
 
 export const noop = () => {};
 /** The paper-waiver door is a `useActionState` reducer (issue #1674). */
-export const noRefusal = async () => PAPER_WAIVER_IDLE;
+const noRefusal = async () => PAPER_WAIVER_IDLE;
 
 export function entry(
   id: string,

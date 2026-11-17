@@ -149,7 +149,7 @@ export type CredentialedRole = "instructor" | "assistant_instructor" | "divemast
  * no role: a free-text "other" is never read as a rating. Words only, never a
  * gate (H-20260825-staff-credentials-renewal-clock).
  */
-export const ROLE_CREDENTIAL_KINDS: Record<CredentialedRole, readonly string[]> = {
+const ROLE_CREDENTIAL_KINDS: Record<CredentialedRole, readonly string[]> = {
   instructor: ["instructor_rating"],
   assistant_instructor: ["instructor_rating", "assistant_instructor_rating"],
   divemaster: ["instructor_rating", "assistant_instructor_rating", "divemaster_rating"],
@@ -490,7 +490,7 @@ export function divesOnTrip(member: TripCrewAssignment): boolean {
  * crew are offices or a general hand, not a rating anybody reading an incident
  * document is asking about.
  */
-export const PROFESSIONAL_RATINGS = [
+const PROFESSIONAL_RATINGS = [
   "instructor",
   "assistant_instructor",
   "divemaster",

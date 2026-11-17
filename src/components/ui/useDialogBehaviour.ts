@@ -9,7 +9,7 @@ import { useFocusTrap } from "@/components/useFocusTrap";
  * spell them. The role stays written at the call site because Biome's ARIA rules read it there
  * to check the panel's `aria-label`/`aria-labelledby`.
  */
-export const DIALOG_PANEL_PROPS = {
+const DIALOG_PANEL_PROPS = {
   "aria-modal": "true",
   tabIndex: -1,
 } as const;

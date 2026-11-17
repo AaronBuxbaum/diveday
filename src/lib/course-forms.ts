@@ -186,7 +186,7 @@ export function courseFormGaps(input: {
  * acknowledgment missed for a child is the failure nobody catches at the
  * dock, so an unknown birthday asks rather than skips.
  */
-export function courseFormAskedOf(
+function courseFormAskedOf(
   form: Pick<RequiredCourseForm, "maxAgeYears" | "sessionFirstDay" | "medicalScreening">,
   dateOfBirth: CalendarDate | null | undefined,
 ): boolean {

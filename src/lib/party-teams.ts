@@ -43,7 +43,7 @@
 import { ADULT_AGE, JUNIOR_AGE_END, JUNIOR_YOUNGEST_BAND_END } from "@/lib/age";
 
 /** The largest party one tap makes a team of. */
-export const PARTY_TEAM_MAX = 3;
+const PARTY_TEAM_MAX = 3;
 
 /** One diver seat in a party, as the decision needs it. */
 export type PartyMember = {

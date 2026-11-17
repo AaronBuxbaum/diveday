@@ -118,7 +118,7 @@ export function percentFeeCents(volumeCents: number, basisPoints: number): numbe
 }
 
 /** Whether a number sits inside one of `PRICING_BOUNDS`, as a whole number. */
-export function withinBounds(value: number, bound: keyof typeof PRICING_BOUNDS): boolean {
+function withinBounds(value: number, bound: keyof typeof PRICING_BOUNDS): boolean {
   const { min, max } = PRICING_BOUNDS[bound];
   return Number.isInteger(value) && value >= min && value <= max;
 }

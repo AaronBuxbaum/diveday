@@ -7,7 +7,7 @@ import { addDiverNote, listDiverRecordNotes } from "./operations";
 import { writeTargetPersonId } from "./people";
 import { getRentalFit, recordRentalFit, recordRentalFitNote } from "./rental-fit";
 import { internalNotes, people, personRoles, rentalFitProfiles } from "./schema";
-import { setShopRentalItems } from "./shops";
+import { setShopRentalItems } from "./shops.test-support";
 
 /**
  * A staffer with a diver's record open in another tab keeps saving after the
