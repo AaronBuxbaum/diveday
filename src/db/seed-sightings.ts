@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lt, notInArray, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { sightingWindowStart } from "@/lib/sightings";
 import type { DbExecutor } from "./client";
@@ -201,9 +201,13 @@ export async function seedMonthSightings(db: DbExecutor, shopId: string) {
         notRehearsal(),
         lt(trips.startsAt, now),
         month,
-        // The sightings specs start from this departure with an empty "Seen"
-        // box, so the shelf's evidence goes on the others.
-        ne(trips.title, "Dawn Two-Tank — Molasses Reef"),
+        // The sightings specs start from the 30-day log's departures and the
+        // dawn boat with an empty "Seen" box, and read each site's tally
+        // there as one line, so the shelf's evidence goes on the others.
+        notInArray(trips.title, [
+          ...REEF_LOG.map((entry) => entry.tripTitle),
+          "Dawn Two-Tank — Molasses Reef",
+        ]),
       ),
     )
     .orderBy(desc(trips.startsAt))
