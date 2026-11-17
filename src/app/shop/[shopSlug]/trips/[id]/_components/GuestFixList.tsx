@@ -105,8 +105,19 @@ export function GuestFixList({
     const url = new URL(window.location.href);
     url.hash = next ? `booking-${next}` : "roster";
     window.history.replaceState(window.history.state, "", url);
+    if (next) {
+      window.requestAnimationFrame?.(() =>
+        document.getElementById(`booking-${next}`)?.scrollIntoView?.({ block: "nearest" }),
+      );
+    }
   };
   const byId = new Map(guests.map((guest) => [guest.id, guest]));
+  // Guests with a row of their own; a shared line naming them opens that row.
+  const ownRow = new Set(
+    sections.flatMap((section) =>
+      section.rows.flatMap((row) => (row.guestIds.length === 1 ? row.guestIds : [])),
+    ),
+  );
   const lastFolded = sections.findLast((section) => section.folded && section.rows.length)?.key;
 
   return (
@@ -184,6 +195,7 @@ export function GuestFixList({
                     openId={openId}
                     toggle={toggle}
                     closeLabel={copy.close}
+                    ownRow={ownRow}
                   />
                 ))}
               </ul>
@@ -206,23 +218,28 @@ function FixRow({
   openId,
   toggle,
   closeLabel,
+  ownRow,
 }: {
   row: FixListRow;
   byId: ReadonlyMap<string, FixListGuest>;
   openId: string | null;
   toggle: (id: string) => void;
   closeLabel: string;
+  ownRow: ReadonlySet<string>;
 }) {
   const phrase = row.phrase ? (
     <span className={`block text-sm ${PHRASE_TONE[row.tone]}`}>{row.phrase}</span>
   ) : null;
   if (row.names && row.guestIds.length > 1) {
-    const opened = openId && row.guestIds.includes(openId) ? byId.get(openId) : undefined;
+    const opened =
+      openId && row.guestIds.includes(openId) && !ownRow.has(openId) ? byId.get(openId) : undefined;
     return (
       <li className="px-4 py-3 sm:px-6">
-        {row.guestIds.map((id) => (
-          <span key={id} id={`booking-${id}`} className="block scroll-mt-24" />
-        ))}
+        {row.guestIds
+          .filter((id) => !ownRow.has(id))
+          .map((id) => (
+            <span key={id} id={`booking-${id}`} className="block scroll-mt-24" />
+          ))}
         <p className="font-semibold">
           {row.names.map((part, index) =>
             part.id ? (

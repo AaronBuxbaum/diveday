@@ -61,6 +61,8 @@ type Seat = {
   party: string | null;
   sendWaiver: ReactNode | null;
   cardsHref: string;
+  /** The depth sentence this guest shares with much of the boat, if any. */
+  sharedDepth: string | null;
 };
 
 /**
@@ -71,7 +73,9 @@ type Seat = {
 function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
   const { booking, person } = entry;
   const { rows, arrival, t, trip } = context;
-  const seat = rosterSeat(entry, false, { ...context, sharedAdvisoryTexts: new Set() });
+  // Read against the boat's shared depth sentences: one much of the boat
+  // shares is said once, on its own line, not on every row (principle 9).
+  const seat = rosterSeat(entry, false, context);
   const { reasonLines } = rowReasonLines({ ...seat, ...rowNotices(seat) });
   const blocked = seat.readiness?.status === "blocked";
   // A held seat says only its own reasons (`heldSeatBlockers`); a blocked
@@ -126,7 +130,7 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
             ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
             : undefined
         }
-        className={buttonClass({ variant: control.variant, size: "sm" })}
+        className={buttonClass({ variant: "primary", size: "sm" })}
         wrapperClassName=""
         copy={waiverSendCopy(t)}
       />
@@ -152,6 +156,7 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
       : null,
     sendWaiver,
     cardsHref: `/shop/${trip.shopSlug}/divers/${person.id}#cards`,
+    sharedDepth: seat.depthShared && seat.depthText !== null ? seat.depthText : null,
   };
 }
 
@@ -254,6 +259,27 @@ export function guestFixRows(
     rows: ids.map((id) => plainRow(id)),
   });
 
+  /** Each depth sentence much of the boat shares: one row naming everyone it is about. */
+  const sharedDepthRows = (): FixListRow[] => {
+    const bySentence = new Map<string, string[]>();
+    for (const seat of seats) {
+      if (!seat.sharedDepth || seat.guest.released) continue;
+      bySentence.set(seat.sharedDepth, [
+        ...(bySentence.get(seat.sharedDepth) ?? []),
+        seat.guest.id,
+      ]);
+    }
+    return [...bySentence].map(([sentence, ids]) => ({
+      key: `depth:${sentence}`,
+      guestIds: ids,
+      names: nameParts(ids),
+      phrase: sentence,
+      tone: "warning",
+      control: null,
+      openLabel: null,
+    }));
+  };
+
   const sections: FixListSection[] = [
     {
       key: "cantBoard",
@@ -274,7 +300,10 @@ export function guestFixRows(
       key: "worth",
       label: t("trips.fixList.groups.worth"),
       tone: "default",
-      rows: list.worthAMinute.map((item) => fixRow(item, "warning", item.guestIds.join())),
+      rows: [
+        ...sharedDepthRows(),
+        ...list.worthAMinute.map((item) => fixRow(item, "warning", item.guestIds.join())),
+      ],
     },
     folded(
       "fine",
