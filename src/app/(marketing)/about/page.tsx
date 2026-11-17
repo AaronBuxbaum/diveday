@@ -163,11 +163,12 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               {/* The band is in the first person and signed by the one person
                   the page names (Aaron, 2026-11-11; #4316). */}
               <p className="pt-2">
+                <span className="sr-only">{FOUNDER_NAME}</span>
                 <span
+                  aria-hidden="true"
                   className="block font-[family-name:var(--font-signature)] text-6xl leading-none text-foreground"
-                  aria-label={FOUNDER_NAME}
                 >
-                  <span aria-hidden="true">{FOUNDER_NAME}</span>
+                  {FOUNDER_NAME}
                 </span>
                 <span className="mt-2 block text-sm font-medium uppercase tracking-wide text-muted">
                   {t("marketing.about.founderRole")}
