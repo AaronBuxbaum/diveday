@@ -2586,27 +2586,6 @@ export async function applyInvoicePaid(
 }
 
 /**
- * {@link applyInvoicePaid} for a caller that wants the order: the row as it
- * now stands, or null when no order here holds the invoice or the event must
- * wait.
- */
-export async function markOrderPaidByInvoiceId(
-  db: AppDb,
-  stripeInvoiceId: string,
-  amountPaidCents: number,
-  expectedAccountId?: string,
-  taxCents?: number | null,
-): Promise<Order | null> {
-  const outcome = await applyInvoicePaid(db, {
-    stripeInvoiceId,
-    amountPaidCents,
-    expectedAccountId,
-    taxCents,
-  });
-  return outcome.status === "settled" || outcome.status === "counter" ? outcome.order : null;
-}
-
-/**
  * Remember which PaymentIntent paid this invoice — the one handle a later
  * `charge.refunded` or `charge.dispute.*` event carries back to the order
  * (ADR 20261009-stripe-reversals-reach-diveday). Write-once: a first answer is

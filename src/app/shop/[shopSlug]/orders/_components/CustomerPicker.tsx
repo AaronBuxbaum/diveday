@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { keptTypedKey } from "@/components/kept-typed-scope";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import type { OrderableCustomer } from "@/db/orders";
+import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { searchOrderCustomersAction } from "../customer-search-actions";
 
 export type CustomerPickerWords = {
@@ -16,6 +18,32 @@ export type CustomerPickerWords = {
   /** More people match than are shown: keep typing. */
   more: string;
 };
+
+/** A refusal comes back in a second; a chosen customer older than this is a different visit. */
+const KEPT_FOR_MS = 10 * MINUTE_MS;
+
+function readKeptCustomer(key: string): OrderableCustomer | null {
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at?: unknown; customer?: Partial<OrderableCustomer> };
+    const { at, customer } = parsed;
+    if (typeof at !== "number" || nowMs() - at > KEPT_FOR_MS) return null;
+    if (typeof customer?.id !== "string" || typeof customer.fullName !== "string") return null;
+    return { id: customer.id, fullName: customer.fullName, email: customer.email ?? null };
+  } catch {
+    return null;
+  }
+}
+
+function writeKeptCustomer(key: string, customer: OrderableCustomer | null) {
+  try {
+    if (customer) window.sessionStorage.setItem(key, JSON.stringify({ at: nowMs(), customer }));
+    else window.sessionStorage.removeItem(key);
+  } catch {
+    // Storage refused: a refusal then shows the search box again, as before.
+  }
+}
 
 /** How long typing rests before the search is asked; a name is typed in bursts. */
 const SEARCH_PAUSE_MS = 200;
@@ -41,6 +69,7 @@ export function CustomerPicker({
   description,
   onChange,
   words,
+  keep,
 }: {
   name: string;
   initial: OrderableCustomer | null;
@@ -49,6 +78,11 @@ export function CustomerPicker({
   description?: string;
   onChange?: (personId: string) => void;
   words: CustomerPickerWords;
+  /**
+   * Keeps the chosen person for this tab so a refusal of the form still shows
+   * who was chosen: the form's scope, and whether this page is that refusal.
+   */
+  keep?: { scope: string; restore: boolean };
 }) {
   const [chosen, setChosen] = useState<OrderableCustomer | null>(initial);
   const [query, setQuery] = useState("");
@@ -79,6 +113,22 @@ export function CustomerPicker({
     return () => clearTimeout(timer);
   }, [query]);
 
+  const keptKey = keep ? keptTypedKey("order-customer", keep.scope) : null;
+  const restoring = keep?.restore ?? false;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  useEffect(() => {
+    if (!keptKey) return;
+    if (!restoring) {
+      writeKeptCustomer(keptKey, null);
+      return;
+    }
+    const kept = readKeptCustomer(keptKey);
+    if (!kept) return;
+    setChosen((now) => now ?? kept);
+    onChangeRef.current?.(kept.id);
+  }, [keptKey, restoring]);
+
   // A required picker refuses the send while nobody is chosen, on the box.
   useEffect(() => {
     box.current?.setCustomValidity(required && !chosen ? words.choose : "");
@@ -86,6 +136,7 @@ export function CustomerPicker({
 
   function choose(customer: OrderableCustomer | null) {
     setChosen(customer);
+    if (keptKey) writeKeptCustomer(keptKey, customer);
     setQuery("");
     setAnswer(null);
     onChange?.(customer?.id ?? emptyValue);

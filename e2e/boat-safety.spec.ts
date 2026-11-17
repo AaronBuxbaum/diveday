@@ -26,8 +26,6 @@ test("a distress-channel refusal reopens the new boat editor", async ({ page, pr
   await add.getByLabel(t("boats.nameLabel")).fill("Radio test");
   await add.getByLabel(t("boats.capacityLabel")).fill("10");
   await add.getByLabel(t("boats.descriptionLabel")).fill("Dock test boat");
-  await add.getByLabel(t("boats.certifiedPassengersLabel")).fill("10");
-  await add.getByLabel(t("boats.certifiedTotalPersonsLabel")).fill("12");
   const paperDates = [
     [t("boats.coiExpiresLabel"), daysFromNow(-1)],
     [t("boats.inspectionDueLabel"), daysFromNow(70)],

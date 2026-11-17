@@ -211,6 +211,7 @@ export async function NewOrderPanel({
                 : null)
             }
             required
+            keep={{ scope: invoiceScope, restore: Boolean(noticeKey) }}
             words={{
               label: t("orders.new.customerLabel"),
               placeholder: t("orders.new.customerPlaceholder"),

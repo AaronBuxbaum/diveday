@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diveIntentTally } from "./dive-intent";
+import { diveIntentTally } from "./dive-intent.test-support";
 
 describe("diveIntentTally", () => {
   it("counts nothing for an empty roster", () => {

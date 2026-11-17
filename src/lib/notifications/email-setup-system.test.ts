@@ -54,9 +54,9 @@ describe("setupRequestAlertEmail says what the shop runs (issue 4319)", () => {
   };
 
   it("lists every box ticked, and says so when none was", () => {
-    expect(
-      setupRequestAlertEmail({ ...request, runsShore: true, runsPool: true }).text,
-    ).toContain("Runs: shore dives, pool sessions");
+    expect(setupRequestAlertEmail({ ...request, runsShore: true, runsPool: true }).text).toContain(
+      "Runs: shore dives, pool sessions",
+    );
     expect(setupRequestAlertEmail(request).text).toContain("Runs: Not provided");
   });
 });
