@@ -8,7 +8,7 @@ import { heldRows, insertHeldRow } from "@/test/held-sends";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { cancelDeparture } from "./aboard-at-sea";
 import { confirmBookingIdentity, createBooking } from "./bookings";
-import { claimDueHeldSends } from "./held-sends";
+import { claimDueHeldSends } from "./held-sends.test-support";
 import { bookings, people, shops, tripScheduleDays, trips } from "./schema";
 import { holdRescheduleNotice, sendRescheduleNotices } from "./trip-rescheduled";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";

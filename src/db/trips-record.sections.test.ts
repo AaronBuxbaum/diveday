@@ -12,8 +12,8 @@ import {
   getTripWithBooked,
   listStaff,
   listTripScheduleDays,
-  upcomingTripsWithCounts,
 } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

@@ -5,7 +5,7 @@ import { seededShopContext } from "@/test/db";
 import { listBookingNotes, listTripActivity } from "./operations";
 import { getBookingReadiness } from "./readiness";
 import { internalNotes } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * The Guests tab's history on today's reef boat (src/db/seed-desk-trail.ts).

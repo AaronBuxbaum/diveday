@@ -5,7 +5,7 @@ import { addPartySeat } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { activityEvents, collectionEntries, shops } from "@/db/schema";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { closePricingMonth } from "@/features/pricing-volume";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {

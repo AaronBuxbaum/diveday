@@ -10,7 +10,8 @@ import { moveSeat } from "../features/seat-diver/store";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBookingParty } from "./bookings";
 import { bookingCapabilities, bookings, people } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { issueAndDeliverWaiver, resendConfirmationWithWaiver } from "./waiver-issue";
 
 /**

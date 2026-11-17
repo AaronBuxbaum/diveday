@@ -7,7 +7,8 @@ import { fileScopedShopContext } from "@/test/db";
 import { confirmBookingIdentity, createBooking, splitBookingIdentity } from "./bookings";
 import { getTripManifest } from "./manifests";
 import { bookings, people } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { recordBookingEmergencyContact } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test.

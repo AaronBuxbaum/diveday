@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { createBookingParty } from "../../db/bookings";
 import { people } from "../../db/schema/index";
-import { livePerson, upcomingTripsWithCounts } from "../../db/trips";
+import { livePerson } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import type { fileScopedShopContext } from "../../test/db";
 
 export async function buildReviewContext(

@@ -9,7 +9,7 @@ import {
   personRoles,
   shops,
 } from "@/db/schema";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getBookableDiver } from "../../../../../../features/divers/store";

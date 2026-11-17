@@ -5,7 +5,8 @@ import { anonymizeDiver } from "../features/anonymize/store";
 import { getIncidentExport } from "../features/incident-export/store";
 import { cancelBooking, restoreBooking, splitBookingIdentity } from "./bookings";
 import { activityEvents, bookings, people } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

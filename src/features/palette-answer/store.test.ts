@@ -1,13 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { bookings, people, shops, trips } from "../../db/schema/index";
-import {
-  createTrip,
-  listStaff,
-  setTripCrew,
-  setTripStatus,
-  upcomingTripsWithCounts,
-} from "../../db/trips";
+import { createTrip, listStaff, setTripCrew, setTripStatus } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { calendarDateInTimezone } from "../../lib/calendar-date";
 import { HOUR_MS } from "../../lib/clock";
 import { shopDaysBounds } from "../../lib/zoned";

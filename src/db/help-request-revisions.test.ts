@@ -7,7 +7,8 @@ import {
   recordHelpRequest,
   undoHelpRequestCompletion,
 } from "../features/help-requests/store";
-import { getTripCrewAssignments, getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripCrewAssignments, getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 async function requestFixture() {

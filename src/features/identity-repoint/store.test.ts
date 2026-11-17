@@ -15,7 +15,8 @@ import {
   trips,
   waiverRecords,
 } from "../../db/schema/index";
-import { listStaff, upcomingTripsWithCounts } from "../../db/trips";
+import { listStaff } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { issueWaiverRequest } from "../../db/waivers";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";

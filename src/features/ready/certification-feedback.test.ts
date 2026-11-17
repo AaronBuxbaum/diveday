@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createBooking } from "@/db/bookings";
 import { createCertification, getBookingReadiness, upsertTripRequirements } from "@/db/readiness";
-import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getReadyPageData } from "./store";

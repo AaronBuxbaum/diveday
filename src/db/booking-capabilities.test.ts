@@ -16,7 +16,8 @@ import {
 } from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
 import { bookings, people, trips as tripRows } from "./schema";
-import { setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { setTripStatus } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 async function seededContext() {
   const { db, shop } = fileCtx;

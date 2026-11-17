@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { staffShifts } from "@/db/schema";
-import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
+import { listStaff } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { fileScopedShopContext } from "@/test/db";
 import { createStaffShift, crewShiftCoverage } from "./store";
 

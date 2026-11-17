@@ -7,7 +7,7 @@ import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
 import { mergeDiverRecords } from "./diver-merge";
 import { bookings, people, personRoles } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * The parent's door opens only on a person this booking made, and the record

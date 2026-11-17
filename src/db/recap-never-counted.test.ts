@@ -11,7 +11,8 @@ import {
 } from "../features/recap/store";
 import { createBookingParty } from "./bookings";
 import { bookingArrivalEvents, notificationDeliveries } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

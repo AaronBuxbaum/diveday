@@ -29,7 +29,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { levelShort } from "../../test/admission-refusals";
 import { seatDiver } from "./store";
 

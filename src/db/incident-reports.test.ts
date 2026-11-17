@@ -39,7 +39,8 @@ import {
   incidentReports,
   trips,
 } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test:
 // every test writes its own report and reads it back.

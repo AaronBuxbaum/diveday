@@ -6,7 +6,7 @@ import { createBookingParty } from "./bookings";
 import { recordFlySafeTold, sendFlySafeCorrections } from "./fly-safe-correction";
 import { sendNotification } from "./notifications";
 import { bookings, trips as tripRows } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A throw mid-batch strands nobody** (issue #2927, domain review). Every

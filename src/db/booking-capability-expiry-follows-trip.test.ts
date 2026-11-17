@@ -8,7 +8,8 @@ import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking, moveBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { bookingCapabilities, trips } from "./schema";
-import { editTripSection, moveTrip, upcomingTripsWithCounts } from "./trips";
+import { editTripSection, moveTrip } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **Every live link of a moved departure follows its new end** (issue #2711,

@@ -55,7 +55,7 @@ vi.mock("./waiver-issue", async (importOriginal) => {
 
 import { seatDiver } from "../features/seat-diver/store";
 import { activityEvents, bookings, people, personRoles, waiverRecords } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /** The same two seeded departures `bookings.test.ts` works against. */
 async function context() {

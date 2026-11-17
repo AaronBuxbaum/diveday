@@ -26,8 +26,8 @@ import {
   listUpcomingSessionsForCourse,
   nextSessionStartByCourse,
   setTripCrew,
-  upcomingTripsWithCounts,
 } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate, nowMs } from "../../lib/clock";
 import { canonicalAgency } from "../../lib/courses";
 import { fileScopedShopContext, unseededTestDb } from "../../test/db";

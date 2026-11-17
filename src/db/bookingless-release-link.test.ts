@@ -18,7 +18,8 @@ import {
   waiverDrafts,
   waiverRecords,
 } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { emailFreshWaiverLink, issueAndDeliverPersonWaiver } from "./waiver-issue";
 import {
   completeWaiver,

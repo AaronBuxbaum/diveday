@@ -16,7 +16,8 @@ import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests
 import { boats, people, personRoles, rollCallEvents, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
-import { getTripRoster, setTripCrew, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, setTripCrew } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 // Main c627897c5 on PostgreSQL16.15 reproduced 2 aboard for one dual-role person,

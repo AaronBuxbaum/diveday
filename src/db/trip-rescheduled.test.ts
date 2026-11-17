@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { deleteHeldRows, heldRows } from "@/test/held-sends";
 import { confirmBookingIdentity, createBookingParty, splitBookingIdentity } from "./bookings";
-import { claimDueHeldSends } from "./held-sends";
+import { claimDueHeldSends } from "./held-sends.test-support";
 import {
   bookingCapabilities,
   bookings,
@@ -21,7 +21,8 @@ import {
   sendMissedRescheduleNotice,
   sendRescheduleNotices,
 } from "./trip-rescheduled";
-import { createTrip, listStaff, moveTrip, upcomingTripsWithCounts } from "./trips";
+import { createTrip, listStaff, moveTrip } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **The reschedule notice** (ux review 2026-10-11, item 1). The security

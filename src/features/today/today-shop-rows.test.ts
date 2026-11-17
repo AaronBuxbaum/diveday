@@ -19,7 +19,8 @@ import {
   tripReviews,
 } from "@/db/schema";
 import { applyStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
-import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster, listStaff, setTripStatus } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { unansweredMessagesSubjectText } from "@/i18n/today-labels";
 import { nowDate, nowMs } from "@/lib/clock";

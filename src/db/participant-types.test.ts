@@ -36,12 +36,8 @@ import {
   waiverRecords,
 } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import {
-  getTripRoster,
-  listStaff,
-  setTripParticipantTerms,
-  upcomingTripsWithCounts,
-} from "./trips";
+import { getTripRoster, listStaff, setTripParticipantTerms } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { issueWaiverRequest } from "./waivers";
 
 // (src/test/db.ts, `fileScopedShopContext`).

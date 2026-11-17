@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { interests, people, shops } from "../../db/schema/index";
-import { getTripRoster, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { MINUTE_MS } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { departureInterest } from "../../test/interests";

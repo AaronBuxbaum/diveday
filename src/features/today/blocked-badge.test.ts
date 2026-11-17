@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { upsertTripRequirements } from "@/db/readiness";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { nowDate } from "@/lib/clock";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
