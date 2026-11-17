@@ -60,6 +60,7 @@ type EditorPage = (props: {
 const PAGES: Record<string, EditorPage> = {
   profile: (await import("./profile/page")).default,
   "dock-day": (await import("./dock-day/page")).default,
+  "trip-defaults": (await import("./trip-defaults/page")).default,
   "emergency-reference": (await import("./emergency-reference/page")).default,
   rentals: (await import("./rentals/page")).default,
 };

@@ -25,10 +25,6 @@ import { CallOffCard, PrintCard, RepeatsCard } from "./EditTripSide";
  * "More settings"; the deal history and the note to guests sit below. Beside
  * them: the run's one line and its door to Schedule, Print, and last, calling
  * the trip off.
- *
- * Deposit, cancellation window, minimum to run, snorkeler and rider prices and
- * the trip tag have no shop default to show "From your shop settings": they
- * are this trip's own, and stay in its rows.
  */
 export async function EditTrip({
   context,

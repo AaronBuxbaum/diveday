@@ -186,6 +186,41 @@ function crewRoleOptions(t: StaffTranslator) {
   };
 }
 
+function bookingTermsFor(
+  trip: TripAboutRowsContext["overview"]["trip"],
+  currency: string,
+  locale: string,
+  t: StaffTranslator,
+) {
+  const fromShop = (
+    text: string,
+    field: "depositCents" | "cancellationWindowHours" | "minimumBookings",
+  ) =>
+    trip.shopDefaultFields.includes(field)
+      ? `${text} (${t("settings.tripDefaults.source")})`
+      : text;
+  const bookingTerms = [
+    trip.depositCents !== null
+      ? fromShop(
+          t("trips.about.deposit", {
+            amount: formatMoneyCents(trip.depositCents, currency, locale),
+          }),
+          "depositCents",
+        )
+      : null,
+    trip.cancellationWindowHours !== null
+      ? fromShop(
+          t("trips.about.freeCancel", { hours: trip.cancellationWindowHours }),
+          "cancellationWindowHours",
+        )
+      : null,
+    trip.minimumBookings !== null
+      ? fromShop(t("trips.about.minimumToRun", { count: trip.minimumBookings }), "minimumBookings")
+      : null,
+  ].filter((part): part is string => part !== null);
+  return bookingTerms;
+}
+
 function departureDefinitionRows(context: TripAboutRowsContext) {
   const {
     overview,
@@ -197,6 +232,7 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
     t,
     tripNotice,
     shopBoats,
+    shopLenses,
     automatedForecast,
     tideLines,
   } = context;
@@ -265,19 +301,7 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
   // The fleet's row for this departure's boat, for its name on the about line.
   // A shore dive or a pool session finds nothing here.
   const boat = shopBoats.find((row) => row.id === trip.boatId);
-  // Deposit, the free-cancellation window and the minimum to run are this
-  // trip's own (no shop default exists), said under its price.
-  const bookingTerms = [
-    trip.depositCents
-      ? t("trips.about.deposit", {
-          amount: formatMoneyCents(trip.depositCents, shop.currency, locale),
-        })
-      : null,
-    trip.cancellationWindowHours !== null
-      ? t("trips.about.freeCancel", { hours: trip.cancellationWindowHours })
-      : null,
-    trip.minimumBookings ? t("trips.about.minimumToRun", { count: trip.minimumBookings }) : null,
-  ].filter((part): part is string => Boolean(part));
+  const bookingTerms = bookingTermsFor(trip, shop.currency, locale, t);
 
   // The clash is a fact about two boats that will both sail, so a called-off
   // departure drops it with the rest of the live-trip nudges — `crewClashes`
@@ -513,7 +537,19 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
     {
       id: "departure-details",
       label: t("trips.about.nameAndDescription"),
-      value: trip.title,
+      value: (
+        <>
+          {trip.title}
+          {trip.lensId ? (
+            <span className="block text-sm text-muted">
+              {shopLenses.find((lens) => lens.id === trip.lensId)?.name}
+              {trip.shopDefaultFields.includes("lensId")
+                ? ` (${t("settings.tripDefaults.source")})`
+                : ""}
+            </span>
+          ) : null}
+        </>
+      ),
       editorOpen: Boolean(noticeForForm(tripNotice, "departure")),
       editor: editorFor("departure"),
     },

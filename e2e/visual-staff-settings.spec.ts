@@ -6,7 +6,15 @@ import { staffTranslator } from "../src/i18n/staff-messages";
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openDeckDetails, openSettingsRail, openSettingsRow, openTripTab } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  openDeckDetails,
+  openSettingsRail,
+  openSettingsRow,
+  openTripTab,
+  tripPathByTitle,
+} from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { seedFacts } from "./shop-facts";
 import {
@@ -65,6 +73,31 @@ for (const scheme of ["light", "dark"] as const) {
             await assertPacking();
           },
         });
+      });
+    });
+
+    test.describe("private trip defaults", () => {
+      test.use({ privateShopSlug: `trip-defaults-visual-${scheme}` });
+      test(`trip defaults appear on a new trip (${scheme})`, async ({ page, privateShop }) => {
+        await page.goto(`/shop/${privateShop.slug}/settings/trip-defaults`);
+        await page.locator('input[name="deposit"]').fill("50");
+        await page.locator('input[name="minimum"]').fill("3");
+        await page.locator('input[name="snorkeler"]').fill("0");
+        await page.getByRole("button", { name: "Save" }).click();
+        await expect(page.getByText("Trip defaults saved.")).toBeVisible();
+        await createTrip(page, {
+          shopSlug: privateShop.slug,
+          title: "Default reef",
+          date: daysFromNow(5),
+          departsAt: "08:00",
+          returnsAt: "12:00",
+          capacity: 10,
+          price: 120,
+        });
+        const path = await tripPathByTitle(page, privateShop.slug, "Default reef", { daysOut: 5 });
+        await page.goto(`${path}?view=edit`);
+        await expect(page.getByText(/Shop default/).first()).toBeVisible();
+        await capture(page, "trip-edit-shop-defaults", scheme);
       });
     });
 
@@ -164,6 +197,15 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator("#tag-new summary").click();
         await page.locator("#tag-new").getByLabel(staffCopy("lenses.nameLabel")).waitFor();
         await capture(page, "settings-trip-tags-add", scheme);
+      });
+
+      test(`the trip defaults page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/trip-defaults");
+        await page.getByRole("heading", { level: 1, name: "Trip defaults" }).waitFor();
+        await page.locator('input[name="deposit"]').fill("50");
+        await page.locator('input[name="minimum"]').fill("3");
+        await page.locator('input[name="snorkeler"]').fill("0");
+        await capture(page, "settings-trip-defaults", scheme);
       });
 
       /**

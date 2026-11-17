@@ -1518,5 +1518,14 @@
       "crew": "Crew and gear",
       "claude": "AI"
     }
+  },
+  "tripDefaults": {
+    "heading": "Trip defaults",
+    "description": "New trips start with these values. You can change them for a trip without changing your settings.",
+    "saved": "Trip defaults saved.",
+    "invalid": "Check the values and try again.",
+    "source": "Shop default",
+    "minimumHelp": "If the minimum is not met {hours, plural, one {# hour} other {# hours}} before departure, the trip is canceled. You can change the deadline on a trip.",
+    "seatPriceHelp": "Blank closes this seat type; zero offers it free."
   }
 }
