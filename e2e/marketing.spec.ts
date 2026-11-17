@@ -132,8 +132,12 @@ test.describe("before the player has run", () => {
     await expect(
       stepsBand.getByRole("heading", {
         level: 2,
-        name: "One booking, from your website to the boat and home again",
+        name: diverTranslator("en-US")("marketing.home.stepsTitle"),
       }),
+    ).toBeVisible();
+    // The heading says what the steps are in one line; no picture stands beside it.
+    await expect(
+      stepsBand.getByText(diverTranslator("en-US")("marketing.home.stepsLede")),
     ).toBeVisible();
     // Each step's own name, from the copy column that is every row's first
     // child (the alternation is `order`, not DOM order). The screens beside them
@@ -152,7 +156,7 @@ test.describe("before the player has run", () => {
     const list = stepsBand.locator("ol[data-walk-list]");
     await expect(list).not.toHaveAttribute("data-walk", "");
     await expect(list.getByRole("img")).toHaveCount(5);
-    await expect(stepsBand.locator("[data-marketing-illustration] img")).toHaveCount(1);
+    await expect(stepsBand.locator("[data-marketing-illustration]")).toHaveCount(0);
     await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
     // The roll-call step shows the boat's count after dive 1, with Priya back aboard
     // (the desk screen before it is drawn for the walkthrough and waits for it).
@@ -2048,7 +2052,6 @@ test("guide contents reveal the complete spreadsheet reference on the same page"
 });
 
 for (const [route, scene] of [
-  ["/", "harbor"],
   ["/product/online-booking", "harbor"],
   ["/product/website", "harbor"],
   ["/product/courses", "classroom"],
