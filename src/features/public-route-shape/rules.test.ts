@@ -188,6 +188,7 @@ describe("publicRouteShape", () => {
     // `MIGRATION_GUIDE_SLUGS` because a spreadsheet is not an incumbent.
     expect(publicRouteShape("/switching")).toBeNull();
     expect(publicRouteShape("/switching/spreadsheet")).toBeNull();
+    expect(publicRouteShape("/switching/alongside")).toBeNull();
   });
 
   it("refuses a feature page that does not exist, and has no opinion about one that does", () => {

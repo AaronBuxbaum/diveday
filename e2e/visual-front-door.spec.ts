@@ -728,6 +728,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "switching-spreadsheet", scheme);
       });
 
+      test(`the alongside switching guide renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/switching/alongside");
+        await page
+          .getByRole("heading", { name: diverTranslator("en-US")("switching.alongside.title") })
+          .waitFor();
+        await capture(page, "switching-alongside", scheme);
+      });
+
       // The FareHarbor guide: the coexist-led variant of the composition, for a
       // booking channel a shop keeps rather than a records system it leaves —
       // the "keep it, or leave it" section (the ruled run-the-day list plus the

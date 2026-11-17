@@ -150,6 +150,9 @@ const FIXED_SOURCES = [
   "switching-spreadsheet-mid",
   "switching-spreadsheet-close",
   "switching-spreadsheet-concierge",
+  "switching-alongside",
+  "switching-alongside-close",
+  "switching-alongside-concierge",
   // Retired 2026-10-02 with the demo's three story doors (`/demo/<story>`,
   // issue #1215), one tag per story. Kept for history, not for reuse.
   "story-first-booking",

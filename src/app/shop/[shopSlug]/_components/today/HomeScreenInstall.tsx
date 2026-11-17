@@ -154,14 +154,14 @@ export function HomeScreenInstall({ copy }: { copy: HomeScreenInstallCopy }) {
         </button>
       </div>
       {stepsOpen ? (
-        <ol aria-label={copy.stepsLabel} className="list-decimal space-y-1 ps-5">
+        <ul aria-label={copy.stepsLabel} className="list-disc space-y-1 ps-5">
           {steps.map((step) => (
             <li key={step}>
               {step === copy.share ? <ShareGlyph /> : null}
               {step}
             </li>
           ))}
-        </ol>
+        </ul>
       ) : null}
     </aside>
   );

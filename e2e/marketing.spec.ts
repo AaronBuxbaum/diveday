@@ -2,7 +2,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { MIGRATION_GUIDES } from "../src/lib/migration-guides";
-import { ONBOARDING_EMAIL } from "../src/lib/platform-mail";
+import { ONBOARDING_EMAIL, SWITCH_EMAIL } from "../src/lib/platform-mail";
 import { expect, test } from "./fixtures";
 import { mintOnboardFormPath } from "./setup-link";
 
@@ -1588,6 +1588,31 @@ test("the homepage's spreadsheet door survives, tagged, and lands on the columns
   // heading is two to three screens below the fold, behind the hero, the wedge
   // list and the mid-page CTA.
   await expect(columns.locator("summary")).toBeInViewport();
+});
+
+test("the hub's Not listed here row opens an email to the switch mailbox", async ({ page }) => {
+  await page.goto("/switching");
+  await expect(
+    page.getByRole("link", { name: diverTranslator("en-US")("switching.hub.dontSeeSystem") }),
+  ).toHaveAttribute("href", `mailto:${SWITCH_EMAIL}`);
+});
+
+test("the alongside guide is listed on the hub and says what DiveDay does not connect to", async ({
+  page,
+}) => {
+  await page.goto("/switching");
+  await expect(
+    page.getByRole("link", { name: diverTranslator("en-US")("switching.hub.alongsideTitle") }),
+  ).toHaveAttribute("href", "/switching/alongside");
+  await page.goto("/switching/alongside");
+  await expect(
+    page.getByRole("heading", { name: diverTranslator("en-US")("switching.alongside.title") }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: diverTranslator("en-US")("switching.alongside.tools.agency.title"),
+    }),
+  ).toBeVisible();
 });
 
 test("the spreadsheet guide brings a no-system shop across for free", async ({ page }) => {

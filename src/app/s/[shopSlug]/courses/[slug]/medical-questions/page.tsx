@@ -68,9 +68,9 @@ export default async function CourseMedicalQuestionsPage({
           title={t("course.medicalQuestions.title")}
           description={t("course.medicalQuestions.lede", { shopName: shop.name })}
         />
-        <ol className="list-decimal divide-y divide-border border-y border-border ps-6">
+        <ul className="divide-y divide-border border-y border-border">
           {questions.map((question) => (
-            <li key={question.id} className="py-3 ps-1">
+            <li key={question.id} className="py-3">
               <p lang="en" className="font-medium text-pretty">
                 {question.prompt}
               </p>
@@ -103,7 +103,7 @@ export default async function CourseMedicalQuestionsPage({
               ) : null}
             </li>
           ))}
-        </ol>
+        </ul>
         <p className="mt-6 text-sm text-muted">
           {t("course.medicalQuestions.askShop", { shopName: shop.name })}
         </p>

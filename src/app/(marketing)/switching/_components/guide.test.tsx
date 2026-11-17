@@ -211,10 +211,10 @@ describe("the move rail's lede", () => {
  * 8px under it.
  */
 describe("a move phase", () => {
-  it("sizes its marker to the heading's 32px first line, with no nudge", () => {
+  it("sizes its dot marker to the heading's 32px first line, with no nudge", () => {
     render(
       <ol>
-        <MovePhase number={2} title="What comes across" />
+        <MovePhase title="What comes across" />
       </ol>,
     );
     const heading = screen.getByRole("heading", { name: "What comes across" });
@@ -224,7 +224,7 @@ describe("a move phase", () => {
     const [marker, rail] = Array.from(
       heading.parentElement?.querySelectorAll("[aria-hidden]") ?? [],
     );
-    expect(marker.textContent).toBe("2");
+    expect(marker.textContent).toBe("");
     expect(marker).toHaveClass("absolute", "top-0", "start-0", "size-8");
     expect(rail).toHaveClass("top-10", "start-4");
   });
@@ -395,7 +395,7 @@ describe("guide contents and import reference", () => {
   it.each(["en-US", "es-ES"] as const)(
     "offers a destination-only pricing link when requested in %s",
     (locale) => {
-      render(<ScopePhase locale={locale} number={2} showPricingLink />);
+      render(<ScopePhase locale={locale} showPricingLink />);
       const link = screen.getByRole("link", {
         name: diverTranslator(locale)("switching.common.seePricing"),
       });
@@ -407,7 +407,7 @@ describe("guide contents and import reference", () => {
     const { ScopePhase } = await import("./guide");
     const { container } = render(
       <ol>
-        <ScopePhase locale="en-US" number={2} />
+        <ScopePhase locale="en-US" />
       </ol>,
     );
     const reference = container.querySelector("details#import-reference");
@@ -424,7 +424,7 @@ describe("FareHarbor transfer honesty", () => {
   it.each(["en-US", "es-ES"] as const)(
     "keeps the import completion step within FareHarbor export coverage in %s",
     (locale) => {
-      const { container } = render(<ImportPhase locale={locale} number={3} source="fareharbor" />);
+      const { container } = render(<ImportPhase locale={locale} source="fareharbor" />);
       expect(container.textContent).toContain(
         locale === "en-US"
           ? "Import contacts, then prepare upcoming trips"
@@ -441,7 +441,7 @@ describe("FareHarbor transfer honesty", () => {
   it.each(["en-US", "es-ES"] as const)(
     "separates source coverage from supported imports in %s",
     (locale) => {
-      render(<ScopePhase locale={locale} number={2} source="fareharbor" />);
+      render(<ScopePhase locale={locale} source="fareharbor" />);
       const scope = document.querySelector("#scope");
       const reference = document.querySelector("#import-reference");
       expect(scope).toBeTruthy();
@@ -485,7 +485,7 @@ it.each(["en-US", "es-ES"] as const)(
     const { container } = render(
       <>
         <FareHarborTransferChoice locale={locale} />
-        <ScopePhase locale={locale} number={2} source="fareharbor" />
+        <ScopePhase locale={locale} source="fareharbor" />
       </>,
     );
     expect(container.textContent).toContain(
