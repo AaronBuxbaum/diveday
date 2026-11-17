@@ -24,7 +24,7 @@ import {
   UNCLASSIFIED_HELP,
 } from "../../test/substrate-fixtures/db/retention-table-classification.test-support";
 import { insertShoreAlertStop } from "../../test/substrate-fixtures/db/shore-alert-test-fixtures";
-import { writeTodayReadMark } from "../today-catch-up-retention-fixture/store";
+import { writeTodayReadMark } from "../today-catch-up-retention-fixture";
 import { demoPreviewRetentionFixture } from "./demo-preview.test-support";
 import {
   activityRetentionDays,

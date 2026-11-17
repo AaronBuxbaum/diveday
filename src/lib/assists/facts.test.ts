@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  boundedText,
   fillFacts,
   hasNumberWord,
   numbersCameFrom,
@@ -128,13 +127,5 @@ describe("samePlaceholders", () => {
       true,
     );
     expect(samePlaceholders("To {depth18}", "Hasta {depth30}")).toBe(false);
-  });
-});
-
-describe("boundedText", () => {
-  it("drops blank and over-long text", () => {
-    expect(boundedText("  hi ", 5)).toBe("hi");
-    expect(boundedText("   ", 5)).toBeNull();
-    expect(boundedText("toolong", 3)).toBeNull();
   });
 });

@@ -167,14 +167,3 @@ export function lapsedRegularCutoff(now: Date): Date {
   cutoff.setUTCMonth(cutoff.getUTCMonth() - LAPSED_REGULAR_MONTHS);
   return cutoff;
 }
-
-export function isLapsedRegular(
-  diver: { diveDays: number; lastDivedAt: Date | null },
-  now: Date,
-): boolean {
-  return (
-    diver.diveDays >= LAPSED_REGULAR_MIN_DAYS &&
-    diver.lastDivedAt !== null &&
-    diver.lastDivedAt.getTime() < lapsedRegularCutoff(now).getTime()
-  );
-}

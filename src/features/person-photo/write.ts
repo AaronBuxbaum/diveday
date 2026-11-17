@@ -191,7 +191,7 @@ async function changePhoto(
       if (!staged) return "failed";
     }
     const [person] = await tx
-      .select({ privatePath: people.diverPhotoPath, legacyPath: people.staffPhotoPath })
+      .select({ privatePath: people.diverPhotoPath })
       .from(people)
       // diveday:allow-deleted-people: the live subject was checked and locked by lockedSubject above.
       .where(and(eq(people.shopId, subject.shopId), eq(people.id, subject.personId)));
@@ -214,22 +214,11 @@ async function changePhoto(
         purgeVersions: true,
       });
     }
-    // Only old diver uploads are removed from the shared staff field; bundled and staff profile assets remain.
-    const legacy = person.legacyPath?.includes("/person-photos/") ? person.legacyPath : null;
-    if (legacy)
-      await queueMediaDeletion(tx, {
-        shopId: subject.shopId,
-        personId: subject.personId,
-        kind: "staff_profile",
-        url: legacy,
-        purgeVersions: true,
-      });
     await tx
       .update(people)
       .set({
         diverPhotoPath: url,
         diverPhotoSuppressed: !url,
-        ...(legacy ? { staffPhotoPath: null } : {}),
       })
       .where(and(eq(people.shopId, subject.shopId), eq(people.id, subject.personId)));
     return "saved";

@@ -188,7 +188,6 @@ const PUBLIC_MEDIA_PREFIXES = [
   "arrival",
   "courses",
   "dive-sites",
-  "person-photos",
   "recap",
   "shop-heroes",
   "shop-logos",
@@ -233,7 +232,6 @@ const MEDIA_WRITE_PREFIXES = [
   "import-receipts",
   "import-waivers",
   MEDICAL_CLEARANCE_PREFIX,
-  "person-photos",
   "private-person-photos",
   "recap",
   "shop-heroes",
@@ -4585,7 +4583,7 @@ exports.handler = async () => {
     new cdk.CfnOutput(this, "MediaDistributionDomain", {
       value: mediaDistribution.distributionDomainName,
       description:
-        "CloudFront domain serving the eight public media prefixes (arrival, courses, dive-sites, person-photos, recap, shop-heroes, shop-logos, staff-profiles). Any other path reaches no origin, so import-* and medical-clearances are never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md. This is also the CNAME target when mediaDomainName is set: the alias answers, this value is what it points at.",
+        "CloudFront domain serving the seven public media prefixes (arrival, courses, dive-sites, recap, shop-heroes, shop-logos, staff-profiles). Any other path reaches no origin, so import-*, medical-clearances and private-person-photos are never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md. This is also the CNAME target when mediaDomainName is set: the alias answers, this value is what it points at.",
     });
     return mediaDistribution;
   }
