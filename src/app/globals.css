@@ -1916,6 +1916,24 @@ select:not([multiple]):not([size]):dir(rtl) {
   animation: walk-finger var(--walk-tap-ms, 2s) var(--ease-out-soft) both;
 }
 
+/* Text she types (`data-walk-type`): in the first part of a beat the characters
+   arrive one at a time, left to right, `--type-chars` of them from `--type-delay`.
+   Every other phase draws the finished text, so the tap and the screen after
+   it never replay it. */
+@keyframes walk-type {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+[data-walk-phase="before"] [data-walk-before] [data-walk-type] {
+  animation: walk-type calc(var(--type-chars, 10) * 70ms) steps(var(--type-chars, 10)) both;
+  animation-delay: var(--type-delay, 0ms);
+}
+
 /* What the tap did arrives with it: the mark the beat is about (a check, a
    count, a star) settles on its spring, and a new beat's screen rises in. */
 [data-walk] [data-walk-frame-current] {

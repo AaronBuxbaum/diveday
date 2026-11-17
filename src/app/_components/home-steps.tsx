@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
 import { ArrivalDeskFallback } from "@/components/MarketingArrivalDeskFallback";
+import {
+  CheckoutFallback,
+  RegisterFallback,
+  SeatPickFallback,
+} from "@/components/MarketingBookingWalkScreens";
 import { OrdersLedgerFallback, WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
 import {
   CaptainRollCallFallback,
@@ -27,19 +32,21 @@ import type { FeaturePageSlug } from "@/lib/feature-pages";
  * the diver take home. The rest are the walk's: they are in the page, hidden until it runs
  * (`WALK_CLASSES`), so the server HTML stays the one place the story is written.
  *
- * A slide that draws a feature page's own screen reads that page's notes by key (the release on the
- * diver's phone, the readiness rows), so the homepage and a feature page can never describe one
- * drawing two ways. The rest carry their own under `marketing.home.steps.<id>`.
+ * Every slide carries its own words under `marketing.home.steps.<id>`: what is going on and why it is
+ * good for the shop, in a sentence or two, never a list of what the screen holds.
  *
  * `id` is the bundle namespace under `marketing.home.steps` and the caption's under
  * `marketing.home.walk.captions`, never a rendered string. The order of this list is the order of the
  * story: Priya's day is a slide per entry, about ten seconds each.
  */
 export type StepId =
-  | "shopfront"
-  | "book"
+  | "browse"
+  | "select"
+  | "pay"
   | "money"
+  | "onboard"
   | "unsigned"
+  | "medical"
   | "sign"
   | "check"
   | "card"
@@ -53,6 +60,8 @@ export const STEPS: readonly {
   id: StepId;
   /** Seen by a reader without the player. */
   listed?: true;
+  /** She types into this slide's screen first, so the beat runs longer and taps later. */
+  typed?: true;
   /** The feature page the slide ends in; none where there is no page to send a reader to. */
   feature?: FeaturePageSlug;
   notes: readonly [DiverMessageKey, DiverMessageKey, ...DiverMessageKey[]];
@@ -64,29 +73,47 @@ export const STEPS: readonly {
   screen: (locale: DiverLocale) => ReactNode;
 }[] = [
   {
-    id: "shopfront",
+    // Browsing, selecting and buying are three slides on purpose: a reader sees her look, choose,
+    // and pay as three things, not one tap on a button (Aaron, 2026-11-17).
+    id: "browse",
     feature: "website",
-    notes: ["marketing.home.steps.shopfront.note1", "marketing.home.steps.shopfront.note2"],
-    label: "marketing.home.steps.shopfront.mockupLabel",
+    notes: ["marketing.home.steps.browse.note1", "marketing.home.steps.browse.note2"],
+    label: "marketing.home.steps.browse.mockupLabel",
     before: (locale) => <StorefrontFallback locale={locale} tapBook />,
-    screen: (locale) => <DiverBookingFallback locale={locale} state="browse" />,
+    screen: (locale) => <DiverBookingFallback locale={locale} />,
   },
   {
-    id: "book",
-    listed: true,
+    id: "select",
     feature: "online-booking",
-    notes: ["marketing.home.steps.book.note1", "marketing.home.steps.book.note2"],
-    label: "marketing.home.steps.book.mockupLabel",
-    before: (locale) => <DiverBookingFallback locale={locale} state="browse" />,
-    screen: (locale) => <DiverBookingFallback locale={locale} state="booked" />,
+    notes: ["marketing.home.steps.select.note1", "marketing.home.steps.select.note2"],
+    label: "marketing.home.steps.select.mockupLabel",
+    before: (locale) => <DiverBookingFallback locale={locale} />,
+    screen: (locale) => <SeatPickFallback locale={locale} />,
+  },
+  {
+    id: "pay",
+    listed: true,
+    typed: true,
+    feature: "payments",
+    notes: ["marketing.home.steps.pay.note1", "marketing.home.steps.pay.note2"],
+    label: "marketing.home.steps.pay.mockupLabel",
+    before: (locale) => <CheckoutFallback locale={locale} state="entering" />,
+    screen: (locale) => <CheckoutFallback locale={locale} state="paid" />,
   },
   {
     id: "money",
-    feature: "payments",
     notes: ["marketing.home.steps.money.note1", "marketing.home.steps.money.note2"],
     label: "marketing.home.steps.money.mockupLabel",
     before: (locale) => <OrdersLedgerFallback locale={locale} state="waiting" />,
     screen: (locale) => <OrdersLedgerFallback locale={locale} state="paid" />,
+  },
+  {
+    id: "onboard",
+    typed: true,
+    notes: ["marketing.home.steps.onboard.note1", "marketing.home.steps.onboard.note2"],
+    label: "marketing.home.steps.onboard.mockupLabel",
+    before: (locale) => <RegisterFallback locale={locale} state="filling" />,
+    screen: (locale) => <RegisterFallback locale={locale} state="done" />,
   },
   {
     id: "unsigned",
@@ -97,21 +124,29 @@ export const STEPS: readonly {
     screen: (locale) => <FrontDeskReadinessFallback locale={locale} state="nudged" />,
   },
   {
+    id: "medical",
+    feature: "waivers",
+    notes: ["marketing.home.steps.medical.note1", "marketing.home.steps.medical.note2"],
+    label: "marketing.home.steps.medical.mockupLabel",
+    before: (locale) => <WaiverSigningFallback locale={locale} state="unanswered" />,
+    screen: (locale) => <WaiverSigningFallback locale={locale} state="answered" />,
+  },
+  {
     id: "sign",
     listed: true,
+    typed: true,
     feature: "waivers",
-    notes: ["marketing.featurePages.waivers.note1", "marketing.featurePages.waivers.note3"],
-    label: "marketing.featurePages.waivers.screenLabel",
-    before: (locale) => <WaiverSigningFallback locale={locale} state="open" />,
+    notes: ["marketing.home.steps.sign.note1", "marketing.home.steps.sign.note2"],
+    label: "marketing.home.steps.sign.mockupLabel",
+    before: (locale) => <WaiverSigningFallback locale={locale} state="typing" />,
     screen: (locale) => <WaiverSigningFallback locale={locale} state="signed" />,
   },
   {
-    // The readiness list a reader without the player sees: the boarding check's own rows, quoting
-    // the certifications page's line about them.
+    // The readiness list a reader without the player sees: the boarding check's own rows.
     id: "check",
     listed: true,
     feature: "certifications",
-    notes: ["marketing.featurePages.certifications.note3", "marketing.home.steps.check.note2"],
+    notes: ["marketing.home.steps.check.note1", "marketing.home.steps.check.note2"],
     label: "marketing.home.steps.check.readyLabel",
     before: (locale) => <FrontDeskReadinessFallback locale={locale} state="nudged" />,
     screen: (locale) => <FrontDeskReadinessFallback locale={locale} state="ready" />,
@@ -119,7 +154,7 @@ export const STEPS: readonly {
   {
     id: "card",
     feature: "certifications",
-    notes: ["marketing.featurePages.certifications.note2", "marketing.home.steps.card.note2"],
+    notes: ["marketing.home.steps.card.note1", "marketing.home.steps.card.note2"],
     label: "marketing.home.steps.card.mockupLabel",
     before: (locale) => <CardCheckFallback locale={locale} state="pending" />,
     screen: (locale) => <CardCheckFallback locale={locale} state="certified" />,
@@ -135,16 +170,11 @@ export const STEPS: readonly {
   {
     // The hero draws the dock's roll-call phone, so this slide draws the same screen a dive later,
     // after the desk (B14, 2026-10-25); the notes keep H-20260802-may-public-pages-say's no-signal
-    // claim. The third note is for the owner who still carries paper (issue #4322): the same manifest
-    // prints, and the slide's link is the boat-manifest page that lists the packet.
+    // claim, and the paper packet is for the owner who still carries it (issue #4322).
     id: "aboard",
     listed: true,
     feature: "boat-manifest",
-    notes: [
-      "marketing.home.steps.aboard.note1",
-      "marketing.home.steps.aboard.note2",
-      "marketing.home.steps.aboard.note3",
-    ],
+    notes: ["marketing.home.steps.aboard.note1", "marketing.home.steps.aboard.note2"],
     label: "marketing.home.steps.aboard.boatLabel",
     before: (locale) => <CaptainRollCallFallback locale={locale} state="afterDivePending" />,
     screen: (locale) => <CaptainRollCallFallback locale={locale} state="afterDive" />,

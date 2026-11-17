@@ -4149,7 +4149,8 @@
       "agreement": "I have read this waiver, understand it, and agree to it.",
       "signButton": "Sign waiver",
       "progressDone": "3 of 3 done",
-      "signedDone": "Signed. You’re all set."
+      "signedDone": "Signed. You’re all set.",
+      "progressOne": "1 of 3 done"
     },
     "arrivalDesk": {
       "label": "Guests",
@@ -4255,14 +4256,17 @@
       "add": "Add",
       "rowActions": "Move, copy, or remove"
     },
-    "youreBooked": "You’re booked",
     "nudgeSent": "Nudge sent",
     "cardCheck": {
       "label": "Diver",
       "heading": "Certifications",
       "selfDeclared": "Self-declared. Card not sighted yet.",
-      "confirm": "Confirm certification",
-      "certifiedBy": "Certified by {name}"
+      "cardNumber": "Card number {number}, from her registration",
+      "checkWithPadi": "Check with PADI",
+      "extName": "DiveDay certification check",
+      "extOpened": "Opened PADI’s lookup in your browser",
+      "extFound": "Found {name} with card number {number}",
+      "matched": "PADI shows this certification. Marked certified."
     },
     "computerDives": {
       "label": "Computer dives",
@@ -4279,6 +4283,24 @@
       "stop": "Safety stop · {minutes} min",
       "max": "Max {depth}",
       "minutes": "min"
+    },
+    "seatPick": {
+      "fare": "$95.00 × 1 diver",
+      "total": "$95.00"
+    },
+    "checkout": {
+      "label": "Checkout",
+      "meta": "Tomorrow · 7:30 AM · 1 diver",
+      "cardHeading": "Pay by card",
+      "cardNumber": "Card number",
+      "expiry": "Expiry",
+      "cvc": "Security code",
+      "pay": "Pay $95.00",
+      "paidTitle": "Paid $95.00",
+      "paidBody": "You’re booked. Your trip link is on its way to your email."
+    },
+    "register": {
+      "label": "Register"
     }
   },
   "demo": {

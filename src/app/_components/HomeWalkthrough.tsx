@@ -17,7 +17,13 @@ import { useWalkSwipe } from "./useWalkSwipe";
  * come up twice (the morning list before Priya signs and after), and can hold
  * more than one screen (the desk, then the boat).
  */
-export type WalkBeat = { step: string; frame: string; caption: string };
+export type WalkBeat = {
+  step: string;
+  frame: string;
+  caption: string;
+  /** She types into this screen first, so its beat runs longer and taps later. */
+  typed?: boolean;
+};
 
 export type WalkLabels = {
   label: string;
@@ -26,11 +32,16 @@ export type WalkLabels = {
   play: string;
   previous: string;
   next: string;
+  /** A segment of the bar, which jumps to its step: "Go to step {n}". */
+  goTo: string;
   hint: string;
 };
 
-/** The whole walk takes two minutes, about ten seconds a slide (Aaron, 2026-11-17). */
-const WALK_MS = 120_000;
+/** The whole walk takes two and a half minutes, about ten seconds a slide (Aaron, 2026-11-17). */
+const WALK_MS = 150_000;
+
+/** A beat she types into runs this much longer than the rest, so the typing is read before the tap. */
+const TYPED_FACTOR = 1.5;
 
 /** Fewer than this many pixels sideways is a tap, not a swipe. */
 const SWIPE_PX = 40;
@@ -45,6 +56,9 @@ const DRAG_START_PX = 8;
  */
 const TAP_AT = 0.1;
 const AFTER_AT = 0.3;
+/** The same for a beat she types into: the typing comes first. */
+const TYPED_TAP_AT = 0.4;
+const TYPED_AFTER_AT = 0.58;
 
 /** A press held this long is a hold (it pauses, and its release is not a tap). */
 const HOLD_MS = 250;
@@ -167,8 +181,11 @@ export function HomeWalkthrough({
   // biome-ignore lint/correctness/useExhaustiveDependencies: a move by hand restarts the beat's clock
   useEffect(() => {
     if (!running) return;
-    const beatMs = WALK_MS / total;
-    listEl()?.style.setProperty("--walk-tap-ms", `${(AFTER_AT - TAP_AT) * beatMs}ms`);
+    const typed = beats[index]?.typed === true;
+    const tapAt = typed ? TYPED_TAP_AT : TAP_AT;
+    const afterAt = typed ? TYPED_AFTER_AT : AFTER_AT;
+    const beatMs = (WALK_MS / total) * (typed ? TYPED_FACTOR : 1);
+    listEl()?.style.setProperty("--walk-tap-ms", `${(afterAt - tapAt) * beatMs}ms`);
     let last = performance.now();
     let frame = 0;
     const tick = (now: number) => {
@@ -176,7 +193,7 @@ export function HomeWalkthrough({
       last = now;
       if (fillRef.current) fillRef.current.style.transform = `scaleX(${progress.current})`;
       setPhase(
-        progress.current >= AFTER_AT ? "after" : progress.current >= TAP_AT ? "tap" : "before",
+        progress.current >= afterAt ? "after" : progress.current >= tapAt ? "tap" : "before",
       );
       if (progress.current >= 1) {
         setIndex((i) => (i + 1) % total);
@@ -186,7 +203,7 @@ export function HomeWalkthrough({
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [running, index, total]);
+  }, [running, index, total, beats]);
 
   const go = (to: number) => setIndex(((to % total) + total) % total);
 
@@ -320,23 +337,30 @@ export function HomeWalkthrough({
           >
             {beat?.caption}
           </p>
-          <div className="mt-3 flex gap-1.5" aria-hidden="true">
+          <div className="mt-1 flex gap-1.5">
             {beats.map((b, i) => (
-              <span
+              // Each segment is a door to its step: tall enough to hit, thin to look at.
+              <button
+                type="button"
                 key={`${b.step}-${b.frame}`}
-                className="h-1 flex-1 overflow-hidden rounded-full bg-border"
+                onClick={() => go(i)}
+                aria-label={labels.goTo.replace("{n}", String(i + 1))}
+                aria-current={i === index ? "step" : undefined}
+                className="group flex h-6 flex-1 items-center"
               >
-                {i < index ? (
-                  <span className="block size-full bg-primary" />
-                ) : i === index ? (
-                  <span
-                    key={index}
-                    ref={fillRef}
-                    className="block size-full origin-left bg-primary"
-                    style={{ transform: "scaleX(0)" }}
-                  />
-                ) : null}
-              </span>
+                <span className="block h-1 w-full overflow-hidden rounded-full bg-border transition-[height] group-hover:h-1.5">
+                  {i < index ? (
+                    <span className="block size-full bg-primary" />
+                  ) : i === index ? (
+                    <span
+                      key={index}
+                      ref={fillRef}
+                      className="block size-full origin-left bg-primary"
+                      style={{ transform: "scaleX(0)" }}
+                    />
+                  ) : null}
+                </span>
+              </button>
             ))}
           </div>
         </>

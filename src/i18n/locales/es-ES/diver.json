@@ -4149,7 +4149,8 @@
       "agreement": "He leído esta exención, la entiendo y estoy de acuerdo con ella.",
       "signButton": "Firmar exención",
       "progressDone": "3 de 3 listos",
-      "signedDone": "Firmado. Todo listo."
+      "signedDone": "Firmado. Todo listo.",
+      "progressOne": "1 de 3 completados"
     },
     "arrivalDesk": {
       "label": "Huéspedes",
@@ -4255,14 +4256,17 @@
       "add": "Agregar",
       "rowActions": "Mover, copiar o quitar"
     },
-    "youreBooked": "Reserva confirmada",
     "nudgeSent": "Recordatorio enviado",
     "cardCheck": {
       "label": "Buceador",
       "heading": "Certificaciones",
       "selfDeclared": "Declarada por ella. Tarjeta aún sin ver.",
-      "confirm": "Confirmar certificación",
-      "certifiedBy": "Certificada por {name}"
+      "cardNumber": "Número de tarjeta {number}, de su registro",
+      "checkWithPadi": "Verificar con PADI",
+      "extName": "Verificación de certificación de DiveDay",
+      "extOpened": "Abrió la búsqueda de PADI en tu navegador",
+      "extFound": "Encontró a {name} con el número de tarjeta {number}",
+      "matched": "PADI muestra esta certificación. Marcada como certificada."
     },
     "computerDives": {
       "label": "Inmersiones de la computadora",
@@ -4279,6 +4283,24 @@
       "stop": "Parada de seguridad · {minutes} min",
       "max": "Máx. {depth}",
       "minutes": "minutos"
+    },
+    "seatPick": {
+      "fare": "95,00 US$ × 1 buceador",
+      "total": "95,00 US$"
+    },
+    "checkout": {
+      "label": "Pago",
+      "meta": "Mañana · 7:30 · 1 buceador",
+      "cardHeading": "Paga con tarjeta",
+      "cardNumber": "Número de tarjeta",
+      "expiry": "Caducidad",
+      "cvc": "Código de seguridad",
+      "pay": "Pagar 95,00 US$",
+      "paidTitle": "Pagado: 95,00 US$",
+      "paidBody": "Reserva confirmada. El enlace a tu salida va camino de tu correo."
+    },
+    "register": {
+      "label": "Registro"
     }
   },
   "demo": {

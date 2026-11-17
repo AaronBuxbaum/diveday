@@ -151,17 +151,20 @@ test.describe("before the player has run", () => {
     await expect(
       stepsBand.getByText(diverTranslator("en-US")("marketing.home.stepsLede")),
     ).toBeVisible();
-    // Each step's own name (all twelve are in the page; only the listed five show before the player runs), from the copy column that is every row's first
+    // Each step's own name (all fifteen are in the page; only the listed five show before the player runs), from the copy column that is every row's first
     // child (the alternation is `order`, not DOM order). The screens beside them
     // draw headings of their own ("Find your next dive"), which a screen reader
     // never hears inside a `role="img"` but a heading query still finds.
     await expect(stepsBand.locator("ol > li > div:first-child h3")).toHaveText([
       ...(
         [
-          "shopfront",
-          "book",
+          "browse",
+          "select",
+          "pay",
           "money",
+          "onboard",
           "unsigned",
+          "medical",
           "sign",
           "check",
           "card",
@@ -201,7 +204,7 @@ test.describe("before the player has run", () => {
     // The owner who still carries paper learns it on the roll-call step, whose
     // link is the page that lists the packet (issue #4322).
     await expect(
-      stepsBand.getByText(diverTranslator("en-US")("marketing.home.steps.aboard.note3")),
+      stepsBand.getByText(diverTranslator("en-US")("marketing.home.steps.aboard.note2")),
     ).toBeVisible();
 
     // Each step ends in its feature page, in the booking's order, and none of
@@ -212,7 +215,7 @@ test.describe("before the player has run", () => {
       .getByRole("link")
       .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
     expect(stepPages).toEqual(
-      (["online-booking", "waivers", "certifications", "boat-manifest", "messages"] as const).map(
+      (["payments", "waivers", "certifications", "boat-manifest", "messages"] as const).map(
         (slug) => featurePagePath(slug),
       ),
     );
@@ -230,15 +233,18 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
 
   // Reduced motion: it waits on the first beat, paused.
-  await expect(walk.getByText(t("marketing.home.walk.captions.shopfront"))).toBeVisible();
+  await expect(walk.getByText(t("marketing.home.walk.captions.browse"))).toBeVisible();
   await expect(walk.getByRole("button", { name: t("marketing.home.walk.play") })).toBeVisible();
   await expect(walk.getByRole("img")).toHaveCount(1);
 
   // Each beat names the diver's state; the arrow keys walk the story.
   const beats = [
-    "book",
+    "select",
+    "pay",
     "money",
+    "onboard",
     "unsigned",
+    "medical",
     "sign",
     "check",
     "card",
@@ -256,6 +262,12 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   await expect(
     walk.getByRole("img", { name: t("marketing.home.steps.review.mockupLabel") }),
   ).toBeVisible();
+
+  // Every segment of the bar is a door to its step.
+  await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 5 }) }).click();
+  await expect(walk.getByText(t("marketing.home.walk.captions.onboard"))).toBeVisible();
+  await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 1 }) }).click();
+  await expect(walk.getByText(t("marketing.home.walk.captions.browse"))).toBeVisible();
 });
 
 test("the walkthrough's bar fills as the clock, and holding the screen freezes it", async ({
@@ -268,7 +280,7 @@ test("the walkthrough's bar fills as the clock, and holding the screen freezes i
   // the page shortens under the reader when it does.
   await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
   await walk.scrollIntoViewIfNeeded();
-  const fill = walk.locator("[data-walk-controls] ~ div > span > span").last();
+  const fill = walk.locator("[data-walk-controls] ~ div > button > span > span").last();
   const filled = async () =>
     Number.parseFloat((await fill.evaluate((el) => (el as HTMLElement).style.transform)).slice(7));
   await expect.poll(filled).toBeGreaterThan(0);

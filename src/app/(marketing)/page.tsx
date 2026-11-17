@@ -194,6 +194,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 step: step.id,
                 frame: step.id,
                 caption: t(`marketing.home.walk.captions.${step.id}`),
+                typed: step.typed,
               }),
             )}
             labels={{
@@ -203,6 +204,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               play: t("marketing.home.walk.play"),
               previous: t("marketing.home.walk.previous"),
               next: t("marketing.home.walk.next"),
+              goTo: t("marketing.home.walk.goTo", { n: "{n}" }),
               hint: t("marketing.home.walk.hint"),
             }}
           >
