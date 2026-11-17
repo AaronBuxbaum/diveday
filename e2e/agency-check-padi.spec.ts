@@ -272,7 +272,7 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   // With the extension here, the record says why there is no button, and who can change it.
   await expect(cards.getByText(PADI_CHECKS_OFF)).toBeVisible();
 
-  // The departure's Divers tab offers the SSI card beside it, never the PADI one.
+  // The departure's Trip page offers the SSI card beside it, never the PADI one.
   const trip = await findTripOnBoard(page, privateShop.slug, DEPARTURE);
   await trip.click();
   await openTripTab(page, "Trip");

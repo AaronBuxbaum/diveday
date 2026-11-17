@@ -30,7 +30,7 @@ import { noteRosterActions } from "./note-roster-actions";
 import { seatMoveFor } from "./seat-move";
 
 /**
- * Every server action the Divers tab's roster posts to, bound to this
+ * Every server action the Trip page's roster posts to, bound to this
  * departure, plus the one read it needs to offer them: the departures a seat
  * may move to (`seatMoveFor`). Out of the route file so the page only places
  * the roster.

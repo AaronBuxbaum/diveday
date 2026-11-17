@@ -47,7 +47,7 @@ import { RowActionForm } from "./RowActionForm";
 import { noShowSalvageCopy } from "./salvage-copy";
 import { TurnAwayDoor, TurnAwayScript } from "./TurnAwayScript";
 
-/** What the Divers tab adds while a departure's arrivals are open. */
+/** What the Trip page adds while a departure's arrivals are open. */
 export type ArrivalDesk = {
   /** The count, the taps and the groups the roster draws (`RosterSection`'s `arrival`). */
   arrival: RosterArrival;
@@ -64,7 +64,7 @@ function deskIsOpen(trip: { status: string; startsAt: Date }, now: Date): boolea
 }
 
 /**
- * **The desk, composed for the Divers tab** (owner, 2026-10-05). The counter
+ * **The desk, composed for the Trip page** (owner, 2026-10-05). The counter
  * used to be a tab of its own that listed the same divers as the roster, with
  * the same blockers and the same fixes; arrival is a state of the roster now,
  * and this is the part of the old counter that the roster does not already

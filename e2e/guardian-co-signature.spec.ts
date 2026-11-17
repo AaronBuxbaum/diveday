@@ -183,7 +183,7 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   };
   if (!blockedMinor) throw new Error("the fact found no seat for the demo's minor");
 
-  // Straight to her departure's Divers tab — the counter while its arrivals
+  // Straight to her departure's Trip page — the counter while its arrivals
   // are open — which puts her row on screen in one render and keeps it there.
   // The paper form is the roster row's own, behind the row's disclosure.
   await page.goto(counterPath(SHOP, blockedMinor.tripId));

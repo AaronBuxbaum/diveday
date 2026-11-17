@@ -376,7 +376,7 @@ export type RosterArrival = {
 };
 
 /**
- * **A finished departure's Divers tab is its record** (UX review 2026-10-10,
+ * **A finished departure's Trip page is its record** (UX review 2026-10-10,
  * item 10): once the boat is home there is nothing to clear, check in or sell,
  * so the list says who sailed and who did not, seat by seat, by the evening
  * count's own rule (`seatSailed`, src/features/seat-sailed/rules.ts).
@@ -438,7 +438,7 @@ export type RosterRecord = {
 export type RosterSlots = {
   /**
    * **The desk, once arrivals open** (`_arrivals/arrival-desk.tsx`). The
-   * Divers tab and the old Check-in tab were one list drawn twice, with the
+   * Trip page and the old Check-in tab were one list drawn twice, with the
    * same blockers and the same fixes on both (owner, 2026-10-05), so arrival is
    * now a state of this list rather than a tab of its own: a cleared seat's row
    * ends in its check-in tap, an arrived seat sinks into "Checked in", and a

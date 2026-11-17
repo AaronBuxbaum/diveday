@@ -219,8 +219,8 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-reschedule-hold", scheme);
       });
 
-      // The new-diver form for a boat's Divers tab, no required email. The boat
-      // is the form's own `tripId`, so there is no picker. The boat's Divers tab
+      // The new-diver form for a boat's Trip page, no required email. The boat
+      // is the form's own `tripId`, so there is no picker. The boat's Trip page
       // (its search and "Add diver") is the departure capture's.
       const openWalkInForm = async (page: Page) => {
         const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
@@ -270,7 +270,7 @@ for (const scheme of ["light", "dark"] as const) {
       // "Add a booking" with no boat chosen (#2737): the shop home's panel,
       // its departure picker one ledger grouped by day (slice 9g of ADR
       // 20260827-the-shops-shelves), seats-left on every row. A row opens that
-      // departure's own Divers tab with the add band focused (`?add=1`), the
+      // departure's own Trip page with the add band focused (`?add=1`), the
       // one place a diver is seated; that band is the second capture. Two
       // tests, so a broken picker cannot take the band's baseline with it.
       test(`the Add-booking departure picker renders true to the design (${scheme})`, async ({

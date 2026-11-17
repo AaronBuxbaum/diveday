@@ -84,7 +84,7 @@ export function rowNotices(seat: RowNoticesInput) {
     </>
   );
   /**
-   * **The row's lines of why** (owner, 2026-10-05: the Divers tab read as a
+   * **The row's lines of why** (owner, 2026-10-05: the Trip page read as a
    * wall of open panels). Every sentence a seat with work left has to say —
    * what stops them boarding, then what is worth a word before they do —
    * stands under the name as one plain line each, with no tinted box; the

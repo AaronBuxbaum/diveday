@@ -4,7 +4,7 @@ import type { AgencyCheckQuery, AgencyListedKind, CheckableAgency } from "./agen
  * **"Check all N with their agencies", one card at a time** (H-20261008-cert-check-extension, layer 1 of
  * the cert-check extension's second round).
  *
- * A departure's Divers tab can hand every card the extension can check to the
+ * A departure's Trip page can hand every card the extension can check to the
  * extension in one tap. Each check is still the one-card check the diver record
  * runs: the extension reads the agency's page in the staffer's own browser, and
  * `agencyCheckAction` decides on the server whether it certifies. This module is

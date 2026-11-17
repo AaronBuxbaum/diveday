@@ -40,7 +40,7 @@ export async function canPersonUseCoursePulse(
   return assignment !== undefined;
 }
 
-/** Private preparation summary on a course departure's existing Divers tab. */
+/** Private preparation summary on a course departure's Trip page. */
 export async function getCoursePulse(
   db: AppDb,
   shopId: string,

@@ -69,7 +69,7 @@ export function OfflineCounter({
           ) : null;
           // **No tap on a seat the desk cannot take one on**, which is
           // the live counter's own grammar: such a row shows what is in
-          // the way instead of a control (the Divers tab's desk). Offering
+          // the way instead of a control (the Trip page's desk). Offering
           // one here would offer a tap the server refuses the moment it
           // lands. Two seats qualify, for two different reasons, and
           // each says which in a badge rather than in a sentence.

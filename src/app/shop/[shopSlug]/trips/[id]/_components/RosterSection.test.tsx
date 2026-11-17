@@ -79,7 +79,7 @@ describe("the decompression reminder on the roster (H-20261017-decompression-dep
 
 describe("the guests ledger (slice 5d)", () => {
   /**
-   * **The bands are the Divers tab's second level** (UX review 2026-10-13,
+   * **The bands are the Trip page's second level** (UX review 2026-10-13,
    * item 39). The departure page draws the roster under its own H1 with no
    * summary heading, and the bands were H3: a screen reader moving by level
    * found nothing at 2 on the page the desk uses most.
@@ -121,7 +121,7 @@ describe("the guests ledger (slice 5d)", () => {
   });
 
   /**
-   * **A finished departure's Divers tab is its record** (UX review
+   * **A finished departure's Trip page is its record** (UX review
    * 2026-10-10, item 10): "Sailed" and "Didn't sail", never "Still to clear",
    * "Ready" or a Blocked capsule on a boat that is home.
    */

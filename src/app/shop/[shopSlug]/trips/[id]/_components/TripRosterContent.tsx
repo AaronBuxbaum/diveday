@@ -176,7 +176,7 @@ export type TripRosterContentContext = {
 };
 
 /**
- * The Trip ledger body, which the departure's Divers tab renders.
+ * The Trip ledger body, which the departure's Trip page renders.
  */
 export function TripRosterContent({ context }: { context: TripRosterContentContext }) {
   const {
@@ -557,7 +557,7 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
 
 /**
  * **Promote and Activity, on Details** (owner, 2026-10-05). Both used to close
- * the Divers tab, under the roster. Neither is about the people coming: one
+ * the Trip page, under the roster. Neither is about the people coming: one
  * sells the departure's empty seats to people who are not on it, the other is
  * the departure's audit trail. Details is the tab about the departure itself,
  * beside its booking link and its public page. "More for this departure" sits
@@ -593,7 +593,7 @@ export function TripPromoteAndActivity({
   // The value is supplied by the page after the session gate. Keeping the role
   // check at the page boundary prevents a client-rendered roster from ever
   // deciding whether money controls should exist.
-  // Deals sent stay as history; the sender is the Divers tab's panel.
+  // Deals sent stay as history; the sender is the Trip page's panel.
   const showPromote = !recordOnly && lastMinute.promos.length > 0 && mayDiscount;
   const canOffer = !cancelled && spotsRemaining(seatsOnSale(trip)) > 0;
   return (

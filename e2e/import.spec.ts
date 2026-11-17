@@ -224,7 +224,7 @@ test.describe("contact import — specialty cards", () => {
     await page.getByRole("checkbox", { name: "Deep" }).check();
     await page.getByRole("button", { name: /Save requirements/ }).click();
     await expect(page.getByRole("status")).toBeVisible();
-    // The save lands on Details, beside its form; the roster is the Divers tab.
+    // The save lands on Details, beside its form; the roster is the Trip page.
     await openTripTab(page, "Trip");
 
     const returningDiverSearch = await openAddAGuest(page);

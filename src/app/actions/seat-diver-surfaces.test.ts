@@ -62,7 +62,7 @@ describe("every seat surface escapes what it puts in a path segment", () => {
       personId: "22222222-2222-4222-8222-222222222222",
     };
     // From a departure, seated or refused, the staffer lands on that boat's
-    // Divers tab — the roster's add-diver band, the global Add booking and the
+    // Trip page — the roster's add-diver band, the global Add booking and the
     // counter walk-in all stand on the same boat.
     expect(SEAT_SURFACES.departure.seatedPath(landing)).toBe(
       "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111",

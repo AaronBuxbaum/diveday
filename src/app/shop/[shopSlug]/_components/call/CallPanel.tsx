@@ -66,7 +66,7 @@ export type CallPanelSearch = {
  * "Someone just called, put them on Saturday's boat": the departures with a
  * seat, by day, and a row is the door to that boat's add band, a date request
  * being booked carried along. It used to be a page of its own, step one of
- * two; step two is the departure's own Divers tab now.
+ * two; step two is the departure's own Trip page now.
  *
  * **A caller with no seat to book is taken down at the foot** (N-22): the
  * boat they want is full, so it is a wait-list entry, or the day they want is

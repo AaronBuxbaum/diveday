@@ -81,7 +81,7 @@ export type PaperWaiverSurface = "roster" | "counter" | "diver";
  * Every refusal the form can say, in each surface's own words.
  *
  * **These are the keys the three page-level notice tables already used** —
- * `TripNoticeBanner.tsx`, the counter's page (since folded into the Divers tab)
+ * `TripNoticeBanner.tsx`, the counter's page (since folded into the Trip page)
  * and `src/lib/diver-notices.ts` — read
  * from here now that the refusal lands in the form instead of the banner. The
  * tones come across unchanged with them: the medical attestation is a

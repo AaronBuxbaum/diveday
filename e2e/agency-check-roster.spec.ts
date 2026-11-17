@@ -72,7 +72,7 @@ function lookups(page: Page): Promise<number> {
 }
 
 /**
- * A new diver seated on a departure from its Divers tab, with a pending GUE
+ * A new diver seated on a departure from its Trip page, with a pending GUE
  * card captured on their record; the page is back on the departure after.
  */
 async function seatNewcomerWithPendingCard(page: Page, departure: RegExp, prefix = "Rory") {
@@ -199,7 +199,7 @@ test("one row's own check certifies that card with the diver record's toast", as
   await expect(row.getByRole("button", { name: "Check with GUE" })).toBeVisible();
 });
 
-test("without the extension the Divers tab offers no check at all", async ({ page }) => {
+test("without the extension the Trip page offers no check at all", async ({ page }) => {
   const trip = await findTripOnBoard(page, SHOP, DEPARTURE);
   await trip.click();
   await openTripTab(page, "Trip");

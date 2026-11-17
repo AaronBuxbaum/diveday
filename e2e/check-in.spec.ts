@@ -29,7 +29,7 @@ test.describe.configure({ timeout: 45_000 });
 signedInAsOwner();
 
 /**
- * The counter's own URL — a departure's Divers tab — allowing the
+ * The counter's own URL — a departure's Trip page — allowing the
  * `#booking-<id>` an arrival-lookup match lands on: the hash scrolls to that
  * diver's row and changes nothing else.
  */
@@ -38,7 +38,7 @@ function onCounter(path: string): RegExp {
 }
 
 /**
- * One diver's seat on the Divers tab. Scoped to the roster's booking rows and
+ * One diver's seat on the Trip page. Scoped to the roster's booking rows and
  * matched on the name's own link, so a name repeated in a reason line, the
  * packing list or a salvage sentence never makes it two rows.
  */
@@ -74,7 +74,7 @@ test("counter check-in finds a diver's boat, confirms live readiness, and keeps 
   page,
 }) => {
   // Today's arrival lookup finds the boat; its match opens that departure's
-  // Divers tab, which is the counter for that one boat while arrivals are open.
+  // Trip page, which is the counter for that one boat while arrivals are open.
   const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
   await expect(page).toHaveURL(onCounter(counterPath("blue-mantis", tripId)));
   // The desk is open: the count leads the roster.
@@ -186,7 +186,7 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Add a guest", exact: true })).toHaveCount(1);
 
-  // A boat that is home is read rather than worked: its Divers tab is the
+  // A boat that is home is read rather than worked: its Trip page is the
   // record, every seat filed by the crew's roll call (UX review 2026-10-10,
   // item 10). The seeded dawn boat carried only divers readiness cleared
   // (#2415; UX review 2026-10-13, item 40), so every seat stands under
@@ -351,7 +351,7 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
 
   // The held folio itself must name the unresolved match; its transient add
   // notice can clear before the streamed guest record arrives.
-  // Back on this boat's Divers tab, with the notice's code already stripped —
+  // Back on this boat's Trip page, with the notice's code already stripped —
   // so the render the row is acted on below is the settled one, not one a
   // navigation is about to replace (and with it the confirm's client state).
   // Still at the counter: the prompt was answered in the counter's mode.
@@ -398,7 +398,7 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   await expect(row.getByText(/^Last dive day here: Tue, Jul\s21$/)).toBeVisible();
   await row.getByRole("button", { name: "Yes, this is them" }).click();
 
-  // It lands in place — still this boat's Divers tab — and the row it landed
+  // It lands in place — still this boat's Trip page — and the row it landed
   // on now offers the boarding the flag was refusing.
   await expect(row.getByRole("button", { name: "Check in Zoe Bennett" })).toBeVisible();
   await expect(page).toHaveURL(onCounter(counter));
@@ -478,7 +478,7 @@ test("a full boat refuses another add with the wait-list nudge", async ({ page }
   await page.getByLabel("Full name").fill("Turned Away Tara");
   await page.getByRole("button", { name: "Add to trip" }).click();
 
-  // A refusal lands on the boat's Divers tab, where the add-diver form says
+  // A refusal lands on the boat's Trip page, where the add-diver form says
   // why and the wait list is one tap away.
   await expect(page).toHaveURL(
     new RegExp(`/shop/blue-mantis/trips/${tripId}(?:\\?notice=diver-full)?$`),
@@ -495,7 +495,7 @@ test("a full boat refuses another add with the wait-list nudge", async ({ page }
 /**
  * **A paper release at the desk.** A diver standing at the counter with a
  * signed release in hand is cleared by the roster row's own "Mark signed on
- * paper" control — the same one the Divers tab always had — and with the desk
+ * paper" control — the same one the Trip page always had — and with the desk
  * open the same row then offers the check-in, without leaving the list.
  */
 // story: DESK-06
@@ -952,7 +952,7 @@ test("a phone number read off a diver's record finds their seat at the counter",
   await search.press("Enter");
 
   // Matched to the departure she holds a seat on — the match is her row on
-  // that boat's Divers tab, which is where its link goes.
+  // that boat's Trip page, which is where its link goes.
   const match = page.getByRole("link", { name: /check-in for Priya Sharma$/ }).first();
   await expect(match).toBeVisible();
   await match.click();

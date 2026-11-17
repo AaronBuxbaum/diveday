@@ -7,6 +7,7 @@
 import { AT_SEA_DAY_TITLE } from "../src/db/seed-identifiers";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  addFoundGuest,
   manifestRow,
   offlineCopySaved,
   openDeckDetails,
@@ -629,7 +630,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Diego Alvarez is on file with a verified Open Water card and nothing
         // above it, so the refusal can only be about the rung.
         await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Diego+Alvarez`);
-        await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
+        await addFoundGuest(page, "Diego Alvarez");
         await page.getByText("This charter requires Advanced Open Water.").waitFor();
         await capture(page, "trip-guests-refusal-level", scheme);
       });
@@ -642,7 +643,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Odile Marchand holds a verified Instructor card — the top rung — and
         // no specialty card at all, so nothing about her level can explain it.
         await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Odile+Marchand`);
-        await page.getByRole("button", { name: "Add Odile Marchand to the trip" }).click();
+        await addFoundGuest(page, "Odile Marchand");
         await page.getByText("This charter requires a Deep certification.").waitFor();
         await capture(page, "trip-guests-refusal-card", scheme);
       });
