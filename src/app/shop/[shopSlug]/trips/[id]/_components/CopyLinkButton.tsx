@@ -73,7 +73,7 @@ export function CopyLinkButton({
           value={url}
           aria-label={failedLabel}
           onFocus={(event) => event.currentTarget.select()}
-          className={`${controlClass} min-w-0 max-w-full font-mono text-xs`}
+          className={`${controlClass} min-w-0 max-w-full font-mono`}
         />
       ) : null}
     </span>
