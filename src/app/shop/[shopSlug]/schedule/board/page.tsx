@@ -10,7 +10,7 @@ import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { toShopCurrency } from "@/lib/money";
+import { minorToMajor, toShopCurrency } from "@/lib/money";
 import { serviceWindowFrom } from "@/lib/service-window";
 import { uuidParam } from "@/lib/uuid";
 import { resolveWeekStart } from "@/lib/week-board";
@@ -185,7 +185,16 @@ export default async function ScheduleBoardPage({
   // whole-number entry and a symbol-only placeholder for a zero-decimal
   // currency, where "$0.00" would be wrong twice over.
   const currency = toShopCurrency(shop.currency);
-  const priceInput = builderPriceInput(currency, locale);
+  const defaults = shop.tripDefaults;
+  const priceInput = {
+    ...builderPriceInput(currency, locale),
+    defaults: {
+      deposit: defaults?.depositCents == null ? "" : minorToMajor(defaults.depositCents, currency),
+      cancellation: defaults?.cancellationWindowHours ?? "",
+      minimum: defaults?.minimumBookings ?? "",
+      lensId: defaults?.lensId ?? "",
+    },
+  };
 
   // The date an add panel opens on when the URL names none. Read off
   // `upcomingScheduleRange` since the stream that used to supply the first row

@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
+import type { TripDefaultField } from "@/lib/trip-defaults";
 import { maxPlannedDives } from "@/lib/trip-dive-limits";
 import type { AppTransaction, DbExecutor } from "./client";
 import type { Course, Trip, TripRequirement } from "./schema";
@@ -39,6 +40,9 @@ export type NewTrip = {
   dives?: TripDiveDraft[];
   priceCents?: number | null;
   depositCents?: number | null;
+  snorkelerPriceCents?: number | null;
+  riderPriceCents?: number | null;
+  shopDefaultFields?: TripDefaultField[];
   cancellationWindowHours?: number | null;
   minimumBookings?: number | null;
   minimumDecisionHours?: number | null;
@@ -198,6 +202,7 @@ export type TripInstanceParams = {
   snorkelerPriceCents?: number | null;
   riderPriceCents?: number | null;
   diverCapacity?: number | null;
+  shopDefaultFields?: TripDefaultField[];
   cancellationWindowHours?: number | null;
   minimumBookings?: number | null;
   minimumDecisionHours?: number | null;
@@ -314,6 +319,7 @@ export async function insertTripInstances(tx: AppTransaction, list: TripInstance
           // trip fee is the established fallback.
           priceCents:
             rehearsal || params.course?.priceCents != null ? null : (params.priceCents ?? null),
+          shopDefaultFields: rehearsal ? [] : (params.shopDefaultFields ?? []),
           depositCents: rehearsal ? null : params.depositCents,
           snorkelerPriceCents: rehearsal ? null : (params.snorkelerPriceCents ?? null),
           riderPriceCents: rehearsal ? null : (params.riderPriceCents ?? null),
@@ -472,6 +478,9 @@ async function createTripAskingTheYard(db: DbExecutor, input: NewTrip, askTheYar
       plannedDives,
       priceCents: input.priceCents,
       depositCents: input.depositCents,
+      snorkelerPriceCents: input.snorkelerPriceCents,
+      riderPriceCents: input.riderPriceCents,
+      shopDefaultFields: input.shopDefaultFields,
       cancellationWindowHours: input.cancellationWindowHours,
       minimumBookings: input.minimumBookings,
       minimumDecisionHours: input.minimumDecisionHours,

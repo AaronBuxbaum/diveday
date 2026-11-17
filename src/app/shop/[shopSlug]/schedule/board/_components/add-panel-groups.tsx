@@ -76,6 +76,7 @@ export function PayAtBookingGroup({
             description={copy.depositDescription}
           >
             <input
+              defaultValue={price.defaults?.deposit ?? ""}
               name="depositDollars"
               type="number"
               step={price.step}
@@ -93,6 +94,7 @@ export function PayAtBookingGroup({
           >
             <div className="flex items-center gap-2">
               <input
+                defaultValue={price.defaults?.cancellation ?? ""}
                 name="cancellationWindowHours"
                 type="number"
                 step={1}
@@ -111,6 +113,7 @@ export function PayAtBookingGroup({
           >
             <div className="flex items-center gap-2">
               <input
+                defaultValue={price.defaults?.minimum ?? ""}
                 name="minimumBookings"
                 type="number"
                 step={1}

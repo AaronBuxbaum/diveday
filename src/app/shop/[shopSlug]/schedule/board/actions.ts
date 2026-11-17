@@ -50,7 +50,6 @@ import { shopPath } from "@/lib/staff-notices";
 import { laterHoursFromForm, MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
 import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
-import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { uuidParam } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { builderCourseOptions } from "./_components/builder-course-options";
@@ -59,6 +58,7 @@ import { addRefusalLanding, landAfterAdd } from "./add-landing";
 import { attachRequestedInterests, requestsAskForCharter } from "./attach-interests";
 import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
 import { crewPersonIdsFrom, repeatWeekdaysFrom } from "./crew-form";
+import { plannedDiveCardsFrom, selectTripDefaults } from "./select-trip-defaults";
 
 const removeDepartureForm = z.object({ tripId: z.uuid() });
 
@@ -491,12 +491,9 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     redirect(`${back}&builder=days-span-repeat${returnWeek}`);
   }
 
-  // The per-dive cards only exist while the panel is expanded, so an all-blank
-  // read means they were never on screen — fall back to the quick row's single
-  // dive-site select rather than writing four empty dives over it.
-  const diveDrafts = tripDiveDraftsFromForm(formData, plannedDives);
-  const plannedDiveCards = hasTripDiveContent(diveDrafts) ? diveDrafts : undefined;
+  const plannedDiveCards = plannedDiveCardsFrom(formData, plannedDives);
 
+  const selected = await selectTripDefaults(db, shop, formData, details.patch, lensId);
   const common = {
     shopId: shop.id,
     courseId,
@@ -507,16 +504,19 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     // Dive one's site from the quick row's select when no per-dive card was filled.
     dives: plannedDiveCards ?? (diveSiteId ? [{ diveSiteId }] : undefined),
     priceCents: details.patch.priceCents,
-    depositCents: details.patch.depositCents,
-    cancellationWindowHours: details.patch.cancellationWindowHours,
-    minimumBookings: details.patch.minimumBookings,
+    depositCents: selected.values.depositCents,
+    snorkelerPriceCents: selected.values.snorkelerPriceCents,
+    riderPriceCents: selected.values.riderPriceCents,
+    shopDefaultFields: selected.inherited,
+    cancellationWindowHours: selected.values.cancellationWindowHours,
+    minimumBookings: selected.values.minimumBookings,
     minimumDecisionHours: details.patch.minimumDecisionHours,
     isPrivate,
     isRehearsal,
     selfGuided,
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
-    lensId: lensId ?? null,
+    lensId: selected.values.lensId,
   };
 
   if (repeatIntervalWeeks > 0) {
