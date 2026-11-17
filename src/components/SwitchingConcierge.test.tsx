@@ -17,7 +17,9 @@ describe("the concierge's door", () => {
     const links = Array.from(container.querySelectorAll("a"));
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/get-set-up?from=switching-eve-concierge",
+      "https://calendar.app.google/weoxPQBhbZDviHCp9?utm_source=dive.day&utm_content=switching-eve-concierge",
     ]);
     expect(links[0]).toHaveTextContent("Get set up");
+    expect(links[1]).toHaveTextContent("Book a 20-minute call");
   });
 });

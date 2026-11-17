@@ -13,7 +13,7 @@ import { FOUNDER_EMAIL, FOUNDER_NAME } from "@/features/company-identity";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { setUpHref, switchingHref } from "@/lib/funnel";
+import { switchingHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
@@ -251,12 +251,6 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                   under the two outline doors onto a line of its own, where the
                   size's `px-4` set its words 16px inside the column (K-397). */}
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  href={setUpHref("about-work")}
-                  className={buttonClass({ variant: "outline" })}
-                >
-                  {t("marketing.common.getSetUp")}
-                </Link>
                 <Link href="/pricing" className={buttonClass({ variant: "outline" })}>
                   {t("marketing.about.seeCost")}
                 </Link>
