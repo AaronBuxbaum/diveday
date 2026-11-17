@@ -65,7 +65,7 @@ for (const width of [390, 1280]) {
               ].map((scene) => `/demo-shop/generated/${scene}.webp`),
             ),
           );
-          await expect(page.getByAltText(demoIllustration("boat").alt)).toBeVisible();
+          await expect(page.getByAltText(demoIllustration("sunset-boat").alt)).toBeVisible();
           const strip = page.getByRole("list", {
             name: diverTranslator("en-US")("schedule.shopPhotos"),
           });
