@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useId, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { ChoicePill, controlClass, Field, FormStatus } from "@/components/ui/form";
+import { ChoicePill, controlClass, DateField, Field, FormStatus } from "@/components/ui/form";
 import { buyPackageAction, type PackagePurchaseState } from "../actions";
 
 /** One package as the page offers it, every figure already in the diver's words. */
@@ -184,14 +184,7 @@ export function PackagePurchaseForm({
               />
             </Field>
             <Field label={t("packages.gift.sendOn")}>
-              <input
-                name="sendOn"
-                type="date"
-                required
-                min={today}
-                defaultValue={state.sendOn ?? today}
-                className={controlClass}
-              />
+              <DateField name="sendOn" required min={today} defaultValue={state.sendOn ?? today} />
             </Field>
           </div>
         ) : null}

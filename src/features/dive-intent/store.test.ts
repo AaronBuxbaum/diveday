@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AppDb } from "../../db/client";
 import { bookings, people, shops, trips } from "../../db/schema/index";
 import { createTrip } from "../../db/trips";
-import { diveIntentTally } from "../../lib/dive-intent";
+import { diveIntentTally } from "../../lib/dive-intent.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { diveIntentTallyForTrip, diveIntentTallyForTrips } from "./store";
 

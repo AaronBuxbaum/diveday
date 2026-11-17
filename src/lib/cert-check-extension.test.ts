@@ -11,7 +11,6 @@ import {
   EXTENSION_MARKER_ATTRIBUTE,
   EXTENSION_MESSAGE_SOURCE,
   EXTENSION_READY_EVENT,
-  extensionChecks,
   extensionFailure,
   extensionFailureReason,
   extensionPresence,
@@ -771,17 +770,7 @@ describe("the extension's version", () => {
     expect(versionAtLeast(manifest.version, MIN_EXTENSION_VERSION)).toBe(true);
   });
 
-  it("offers an agency only when a current copy says it checks it", () => {
-    const hello = parseExtensionHello({
-      ok: true,
-      version: manifest.version,
-      agencies: ["ssi", "padi"],
-      elearning: ["padi"],
-    });
-    expect(extensionChecks(hello, "ssi")).toBe(true);
-    expect(extensionChecks(hello, "naui")).toBe(false);
-    expect(extensionChecks(hello && { ...hello, version: "1.4.0" }, "ssi")).toBe(false);
-    expect(extensionChecks(null, "ssi")).toBe(false);
+  it("rejects a hello that lists an unsafe agency or a bad version", () => {
     expect(parseExtensionHello({ ok: true, version: "1.5.0", agencies: ["<script>"] })).toBeNull();
     expect(parseExtensionHello({ ok: true, version: "x", agencies: [], elearning: [] })).toBeNull();
   });

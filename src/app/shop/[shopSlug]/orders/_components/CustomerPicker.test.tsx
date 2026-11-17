@@ -73,3 +73,34 @@ it("opens with the customer a link named, and sends the walk-in value when clear
   fireEvent.click(screen.getByRole("button", { name: "Change" }));
   expect(hidden()).toHaveValue("walk-in");
 });
+
+it("shows the customer again when the form comes back refused, and forgets them on a fresh visit", async () => {
+  window.sessionStorage.clear();
+  search.mockResolvedValue({ customers: [maya], more: false });
+  const keep = { scope: "shop.staffer", restore: false };
+  const first = render(
+    <CustomerPicker name="personId" initial={null} required keep={keep} words={words} />,
+  );
+  fireEvent.change(screen.getByLabelText("Customer"), { target: { value: "may" } });
+  fireEvent.click(await screen.findByRole("button", { name: /Maya Torres/ }));
+  first.unmount();
+
+  // The refusal lands: the same form, remounted with nobody chosen by the page.
+  render(
+    <CustomerPicker
+      name="personId"
+      initial={null}
+      required
+      keep={{ ...keep, restore: true }}
+      words={words}
+    />,
+  );
+  expect(await screen.findByText("Maya Torres")).toBeVisible();
+  expect(hidden()).toHaveValue("p-maya");
+  cleanup();
+
+  // A later visit that is not a refusal starts empty.
+  render(<CustomerPicker name="personId" initial={null} required keep={keep} words={words} />);
+  expect(screen.getByLabelText("Customer")).toHaveValue("");
+  expect(hidden()).toHaveValue("");
+});

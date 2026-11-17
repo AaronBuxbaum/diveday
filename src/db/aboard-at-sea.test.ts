@@ -662,6 +662,28 @@ describe("departuresMayBeAtSea", () => {
     }
   });
 
+  it("reads the roll call of a departure whose time has come, as the single read does", async () => {
+    const { db, shop, open } = await seededContext();
+    const now = nowDate();
+    const departed = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    await db
+      .update(trips)
+      .set({ startsAt: departed, endsAt: new Date(departed.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(trips.id, open.id));
+    const single = await departureMayBeAtSea(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      startsAt: departed,
+      now,
+    });
+    const batch = await departuresMayBeAtSea(db, {
+      shopId: shop.id,
+      departures: [{ tripId: open.id, startsAt: departed }],
+      now,
+    });
+    expect(batch.has(open.id)).toBe(single);
+  });
+
   it("is empty for no departures", async () => {
     const { db, shop } = await seededContext();
     expect(

@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  OFF_BY_DECISION,
-  parseShopFeature,
-  SHOP_FEATURE_COLUMNS,
-  SHOP_FEATURES,
-  shopOffers,
-} from "./shop-features";
+import { OFF_BY_DECISION, SHOP_FEATURE_COLUMNS, SHOP_FEATURES, shopOffers } from "./shop-features";
 
 const allOn = {
   walletPassesEnabled: true,
@@ -54,16 +48,6 @@ describe("shopOffers", () => {
   });
 });
 
-describe("parseShopFeature", () => {
-  it("accepts only a known feature", () => {
-    expect(parseShopFeature("reviews")).toBe("reviews");
-    expect(parseShopFeature("padiChecks")).toBe("padiChecks");
-    expect(parseShopFeature("crewSchedule")).toBeNull();
-    expect(parseShopFeature("tipsEnabled")).toBeNull();
-    expect(parseShopFeature(null)).toBeNull();
-  });
-});
-
 describe("a new shop", () => {
   it("starts with every feature on but the ones decided off, and the crew schedule too (Aaron, 2026-10-23)", async () => {
     const { shops } = await import("@/db/schema");
@@ -78,10 +62,5 @@ describe("a new shop", () => {
   it("keeps Stripe Tax off until the shop's owner decides otherwise", async () => {
     const { shops } = await import("@/db/schema");
     expect(shops.taxEnabled.default).toBe(false);
-  });
-
-  it("knows the assist switches by name", () => {
-    expect(parseShopFeature("claudeSuggestions")).toBe("claudeSuggestions");
-    expect(parseShopFeature("recapAutoApprove")).toBe("recapAutoApprove");
   });
 });

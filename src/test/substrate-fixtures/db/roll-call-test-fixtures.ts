@@ -1,6 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, notExists } from "drizzle-orm";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
-import { bookings as bookingsTable, people, trips as tripsTable } from "../../../db/schema/index";
+import {
+  bookings as bookingsTable,
+  people,
+  trips as tripsTable,
+  waiverRecords,
+} from "../../../db/schema/index";
 import { seedArrivals } from "../../../db/seed-arrivals";
 import { listStaff } from "../../../db/trips";
 import { livePerson } from "../../../db/trips-live";
@@ -48,7 +53,26 @@ export async function returnedTrip(
   const divers = await db
     .select({ id: people.id })
     .from(people)
-    .where(and(eq(people.shopId, shopId), livePerson()))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        livePerson(),
+        // Not the demo's diver who is waiting on a physician: this fixture is
+        // about the log a boat leaves, and an unordered pick that landed on
+        // them put a medical blocker into every Today read.
+        notExists(
+          db
+            .select({ id: waiverRecords.id })
+            .from(waiverRecords)
+            .where(
+              and(
+                eq(waiverRecords.personId, people.id),
+                eq(waiverRecords.medicalReviewRequired, true),
+              ),
+            ),
+        ),
+      ),
+    )
     .limit(options.divers);
   if (divers.length < options.divers) throw new Error("seed has too few people for this fixture");
   const rows = await db

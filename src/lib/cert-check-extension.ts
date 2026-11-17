@@ -139,15 +139,6 @@ export function parseExtensionHello(data: Record<string, unknown>): ExtensionHel
   return { version: data.version, agencies, elearning };
 }
 
-/** Whether this copy of the extension checks this agency: current, and listing it. */
-export function extensionChecks(hello: ExtensionHello | null, agency: string): boolean {
-  return (
-    hello !== null &&
-    versionAtLeast(hello.version, MIN_EXTENSION_VERSION) &&
-    hello.agencies.includes(agency)
-  );
-}
-
 /**
  * A sample page's dry run: what the filler found, typed and pressed, and
  * whether this browser lets the extension on the agency's own site (Chrome's

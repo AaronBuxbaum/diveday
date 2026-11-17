@@ -27,28 +27,6 @@ export const STAFF_SHELL_COVERAGE = {
   },
 } satisfies Record<string, FeatureCoverage>;
 
-/** Core options within existing booking/money flows, not separate destinations or subsystems. */
-export const BOOKING_FLOW_COVERAGE = {
-  tripCredit: {
-    core: "a promotional settlement option in core booking payments; outstanding balances and their audit history must stay visible once granted",
-  },
-  classroomRecovery: {
-    core: "a complimentary follow-up outcome within the existing cancellation workspace, never a booking or training service",
-  },
-  groupSeatSharing: {
-    core: "a narrower invitation into existing companion seat claims, never a separate booking or readiness authority",
-  },
-  squareReceiptEvidence: {
-    core: "an evidence attachment in core Orders, offered only after the shop opts in by connecting Square",
-  },
-  recordedPurchases: {
-    core: "recording money already received is part of core Orders and fee correctness, not a POS",
-  },
-  groupHolds: {
-    core: "a per-seat booking reservation option; its expiry is part of capacity and payment correctness",
-  },
-} satisfies Record<string, FeatureCoverage>;
-
 export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCoverage> = {
   today: { core: "daily operations: the shop home" },
   divers: {
