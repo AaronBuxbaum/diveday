@@ -1902,8 +1902,8 @@ select:not([multiple]):not([size]):dir(rtl) {
   content: "";
   position: absolute;
   z-index: 1;
-  top: 50%;
-  left: 50%;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
   width: 2.25rem;
   height: 2.25rem;
   margin: -1.125rem 0 0 -1.125rem;
