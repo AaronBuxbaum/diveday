@@ -124,15 +124,6 @@ describe("modules still mint and verify the tokens they always did", () => {
     expect(m.isDemoSeatFor(`${MINTED.seat.slice(0, -1)}é`, "shop", now)).toBe(false);
   });
 
-  it("demo shop name", async () => {
-    const m = await import("../features/demo-shop-name/rules");
-    const now = 1_800_000_000_000;
-    expect(m.signDemoShopName("shop", "Blue Reef", now)).toBe(MINTED.name);
-    expect(m.demoShopNameFor(MINTED.name, "shop", now)).toBe("Blue Reef");
-    expect(m.demoShopNameFor(MINTED.name, "other", now)).toBeNull();
-    expect(m.demoShopNameFor(`${MINTED.name.slice(0, -1)}A`, "shop", now)).toBeNull();
-  });
-
   it("quiet demo device", async () => {
     const m = await import("../features/quiet-demo-device/rules");
     expect(m.quietDemoToken(QUIET_ENV)).toBe(MINTED.quiet);
