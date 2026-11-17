@@ -248,11 +248,18 @@ function DeckFooter({
 }
 
 /** Navigation never invokes a recording action. Receipts are an explicit saved outcome. */
-function DeckPersonHeading({ person }: { person: DeckPerson }) {
+function DeckPersonHeading({ person, receipt = false }: { person: DeckPerson; receipt?: boolean }) {
   return (
     <div className="flex items-center gap-4">
       {person.photoPath ? (
-        <PersonAvatar name={person.name} photoPath={person.photoPath} size="lg" />
+        <PersonAvatar
+          name={person.name}
+          photoPath={person.photoPath}
+          size="lg"
+          // The face is for knowing who to record. Once the receipt names
+          // what was recorded, a short phone gives its room to Next person.
+          className={receipt ? "[@media(max-height:640px)]:hidden" : ""}
+        />
       ) : null}
       <div className="min-w-0">
         <p className="text-sm text-muted">{person.role}</p>
@@ -439,7 +446,7 @@ export function DeckFlow({
           ) : null}
           {(screen === "person" || screen === "receipt") && person ? (
             <div className="py-2" key={person.id}>
-              <DeckPersonHeading person={person} />
+              <DeckPersonHeading person={person} receipt={screen === "receipt"} />
               {screen === "receipt" ? (
                 <>
                   <p className={`mt-2 ${ITEM_TITLE_CLASS}`} role="status">

@@ -30,7 +30,7 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
  * that would push it off the left of the screen (a phone's wrapped header).
  *
  * It closes on a second tap, Escape (focus back to the trigger), a tap
- * outside, or any navigation (`useMenuDismissal`). The first row takes focus
+ * outside, any navigation (`useMenuDismissal`), or following one of its links. The first row takes focus
  * as it opens.
  */
 export function MoreMenu({
@@ -73,6 +73,18 @@ export function MoreMenu({
     window.addEventListener("resize", keepOnScreen);
     return () => window.removeEventListener("resize", keepOnScreen);
   }, [open]);
+
+  // A row that stays on this path (a `?phase=` or `?add=`) is not a
+  // pathname change, so following any of its links closes the menu too.
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!open || !panel) return;
+    const onClick = (event: MouseEvent) => {
+      if (event.target instanceof Element && event.target.closest("a[href]")) close();
+    };
+    panel.addEventListener("click", onClick);
+    return () => panel.removeEventListener("click", onClick);
+  }, [open, close]);
 
   useEffect(() => {
     if (!open) return;

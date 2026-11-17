@@ -64,8 +64,10 @@ export function departureInterestRows(input: {
     const summary =
       (interest.personId ? input.certificationSummaries.get(interest.personId) : null) ?? null;
     const belowBar = ranksBelow({ certification: summary }, input.departureRequirement);
+    // One phrase: the address is for the offer, not the row; only its
+    // absence is news, because a seat cannot be offered without one.
     const parts = [
-      contact.email ?? t("trips.whoWantsIn.noEmail"),
+      contact.email ? null : t("trips.whoWantsIn.noEmail"),
       t(interest.askedBy === "shop" ? "trips.whoWantsIn.invited" : "trips.whoWantsIn.asked", {
         date: formatShortDate(interest.askedAt, locale, timezone),
       }),
@@ -78,7 +80,7 @@ export function departureInterestRows(input: {
       interestId: interest.id,
       name: contact.name ?? t("trips.whoWantsIn.noName"),
       email: contact.email,
-      facts: parts.join(" · "),
+      facts: parts.filter(Boolean).join(" · "),
       certification: interest.personId
         ? {
             text: belowBar
@@ -173,7 +175,7 @@ export function dateInterestRows(input: {
       .flatMap((date) => (date ? [formatCalendarDate(date, locale)] : []))
       .join(t("trips.whoWantsIn.dateOr"));
     const parts = [
-      row.email ?? t("trips.whoWantsIn.noEmail"),
+      row.email ? null : t("trips.whoWantsIn.noEmail"),
       dates,
       row.dateFlexible ? t("trips.whoWantsIn.flexible") : null,
       (row.partySize ?? 1) > 1 ? t("trips.whoWantsIn.party", { count: row.partySize ?? 1 }) : null,
@@ -247,7 +249,9 @@ export function anytimeInterestRows(input: {
       interestId: interest.id,
       name: person.fullName,
       email: person.email,
-      facts: [person.email ?? t("trips.whoWantsIn.noEmail"), window].join(" · "),
+      facts: [person.email ? null : t("trips.whoWantsIn.noEmail"), window]
+        .filter(Boolean)
+        .join(" · "),
       certification: {
         text: belowRequirement
           ? certificationSummaryBelowRequirementText(t, recipient.certification, locale)

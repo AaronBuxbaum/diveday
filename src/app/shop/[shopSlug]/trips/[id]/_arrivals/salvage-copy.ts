@@ -2,6 +2,7 @@ import type { SailedRebooking } from "@/features/sailed-rebooking";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { SalvageOffer } from "@/lib/no-show";
 import { shopPath } from "@/lib/staff-notices";
+import { whoWantsInHref } from "@/lib/trip-clock";
 import type { NoShowSalvageCopy } from "./NoShowScript";
 
 /** Build salvage wording and links. The money line is descriptive and links to
@@ -43,7 +44,7 @@ export function noShowSalvageCopy(input: {
         line: t("checkIn.noShow.waiting", { count: offer.count }),
         links: [
           {
-            href: `/shop/${shopSlug}/trips/${tripId}#who-wants-in`,
+            href: whoWantsInHref(`/shop/${shopSlug}/trips/${tripId}`),
             label: t("checkIn.noShow.waitingDoor"),
           },
         ],
@@ -63,7 +64,7 @@ export function noShowSalvageCopy(input: {
       line: t("checkIn.noShow.waiting", { count: offer.count }),
       links: [
         {
-          href: `/shop/${shopSlug}/trips/${tripId}#who-wants-in`,
+          href: whoWantsInHref(`/shop/${shopSlug}/trips/${tripId}`),
           label: t("checkIn.noShow.waitingDoor"),
         },
       ],

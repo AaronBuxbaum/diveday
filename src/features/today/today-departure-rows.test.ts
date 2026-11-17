@@ -434,7 +434,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     // Nobody waits for this boat itself, so there is no one to offer in place:
     // the tap opens the panel, where the list is offered a seat together.
     expect(row?.offer).toBeUndefined();
-    expect(row?.href).toContain("#who-wants-in");
+    expect(row?.href).toContain("?phase=filling#who-wants-in");
     expect(work.actions.some((action) => action.id.startsWith("last-minute-fill"))).toBe(false);
   });
 

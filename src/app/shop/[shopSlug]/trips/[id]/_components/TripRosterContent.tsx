@@ -336,7 +336,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         phase: context.phase,
         tripFixes: context.tripFixes,
         afterReady: context.afterReady,
-        addGuestHref: acceptsDivers ? context.addGuestHref : null,
+        // The list's own door to the add form, gone while that form is open.
+        addGuestHref: acceptsDivers && !context.addBand?.open ? context.addGuestHref : null,
       }}
     />
   );

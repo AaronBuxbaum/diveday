@@ -11,6 +11,7 @@ import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages"
 import { publicFindMyBookingPath } from "../src/lib/public-routes";
 import { enrollSignInChallenge, startSignInChallenge } from "./auth-challenge";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openNewGuestForm } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 import { seedFacts } from "./shop-facts";
@@ -1076,7 +1077,7 @@ for (const scheme of ["light", "dark"] as const) {
         // second link to the departure itself.
         await page.locator('a[href*="?add=1"][aria-label*="Two-Tank Morning Reef"]').click();
         await page.waitForURL(/\/trips\/[^/?]+\?add=1/);
-        await page.getByRole("link", { name: "Add diver" }).click();
+        await openNewGuestForm(page);
         await page.waitForURL(/\/divers\?add=1&/);
         await page.getByLabel("Full name").fill("Marisol Vega");
         await page.getByLabel("Email", { exact: true }).fill(`marisol-${scheme}@example.com`);

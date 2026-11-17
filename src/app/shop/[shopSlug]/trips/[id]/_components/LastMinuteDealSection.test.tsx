@@ -54,7 +54,7 @@ describe("LastMinuteDealSection", () => {
     renderSection();
     expect(screen.getByRole("link", { name: "Offer a seat with a discount" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/trip-1#who-wants-in",
+      "/shop/blue-mantis/trips/trip-1?phase=filling#who-wants-in",
     );
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByRole("checkbox")).toBeNull();

@@ -20,6 +20,7 @@ import {
   openTripAbout,
   openTripAboutRow,
   openTripFromBoard,
+  openTripPhase,
   openTripTab,
   rosterRow,
   seatFromRoster,
@@ -202,7 +203,6 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Trip");
         await page.locator("#roster").waitFor();
-        await page.locator("#add-diver").waitFor();
         await capture(page, "trip-guests", scheme);
       });
 
@@ -244,7 +244,7 @@ for (const scheme of ["light", "dark"] as const) {
         // preview bar. Neither affects the surface being photographed.
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         // The Divers tab's "Who wants in" panel is where the list is offered a seat.
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling#who-wants-in`);
         await page.getByText("Open Water — unverified").waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-recipients", scheme);
@@ -336,7 +336,7 @@ for (const scheme of ["light", "dark"] as const) {
           "blue-mantis",
           "Two-Tank Reef — Christ of the Abyss",
         );
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling#who-wants-in`);
         // Both seeded joiners now read unverified (#2428: a staff-typed card
         // nobody checked is not vouched for), so wait on the first of them.
         await page
@@ -383,7 +383,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling#who-wants-in`);
         // Scoped to the ledger: the deal panel further down the same page
         // renders the identical phrase for its own recipients, and this test is
         // about the list that was still silent until now. (`#who-wants-in` is the
@@ -490,7 +490,7 @@ for (const scheme of ["light", "dark"] as const) {
         if (!rehearsal) throw new Error("the fact could not put a rehearsal on");
         await page.goto(`/shop/blue-mantis/trips/${rehearsal.tripId}`);
         await page.locator("[data-rehearsal-banner]").waitFor();
-        await page.getByRole("navigation", { name: "Departure" }).waitFor();
+        await page.locator("[data-trip-phases]").waitFor();
         await capture(page, "trip-rehearsal", scheme);
       });
 
@@ -717,16 +717,13 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "departure-log", scheme);
       });
 
-      // A fresh incident report, opened from the departure's Record tab (ADR
+      // A fresh incident report, opened from the trip's On the water phase (ADR
       // 20261012-incident-reports): the draft's three cards, every yes/no
       // unanswered rather than defaulted to "no", the people list, and the
       // filing card naming what a report needs before it can be filed.
       test(`a new incident report renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        await page
-          .getByRole("navigation", { name: "Departure" })
-          .getByRole("link", { name: "Record", exact: true })
-          .click();
+        await openTripPhase(page, "water");
         await page
           .getByRole("region", { name: "Incident reports" })
           .getByRole("button", { name: "Report an incident" })
@@ -741,10 +738,7 @@ for (const scheme of ["light", "dark"] as const) {
       // and when, opening the draft. Started here, so the seed stays clean.
       test(`an unfiled incident report is one line on Today (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        await page
-          .getByRole("navigation", { name: "Departure" })
-          .getByRole("link", { name: "Record", exact: true })
-          .click();
+        await openTripPhase(page, "water");
         await page
           .getByRole("region", { name: "Incident reports" })
           .getByRole("button", { name: "Report an incident" })
@@ -760,10 +754,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the departure log lists its incident reports (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         const tripPath = new URL(page.url()).pathname;
-        await page
-          .getByRole("navigation", { name: "Departure" })
-          .getByRole("link", { name: "Record", exact: true })
-          .click();
+        await openTripPhase(page, "water");
         await page
           .getByRole("region", { name: "Incident reports" })
           .getByRole("button", { name: "Report an incident" })

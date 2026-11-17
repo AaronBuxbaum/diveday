@@ -6,6 +6,7 @@ import {
   createTrip,
   daysFromNow,
   openIfClosed,
+  openNewGuestForm,
   openRosterRow,
   openTripFromBoard,
   openTripTab,
@@ -90,11 +91,7 @@ export function registerRequestPaymentOverlayAuditCaptures(
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, title);
       await openTripTab(page, "Trip");
-      await page
-        .locator("#add-diver")
-        .getByRole("link", { name: "Add diver", exact: true })
-        .click();
-      await page.waitForURL(/\/divers\?add=1/);
+      await openNewGuestForm(page);
       await page.getByLabel("Full name").fill(NAMESAKE);
       // This trip hand-entry door requires contact details before its on-file prompt.
       await page

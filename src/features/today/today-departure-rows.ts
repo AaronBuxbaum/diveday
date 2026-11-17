@@ -29,6 +29,7 @@ import { PREP_SECTION_ID } from "@/lib/element-id";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/interests";
 import { publicTripPath } from "@/lib/public-routes";
 import { shopPath } from "@/lib/staff-notices";
+import { whoWantsInHref } from "@/lib/trip-clock";
 import {
   blockedDiverActions,
   collapseEmailDeliveries,
@@ -205,7 +206,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         // the href stays the row's real destination — a pre-hydration tap, a
         // middle-click or an open-in-new-tab lands on the trip's panel.
         actionLabel: offerSeatActionText(t),
-        href: `${tripHref}#who-wants-in`,
+        href: whoWantsInHref(tripHref),
         ...(fits
           ? {
               offer: {

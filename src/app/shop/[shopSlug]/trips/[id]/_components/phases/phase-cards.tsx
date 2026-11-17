@@ -22,7 +22,7 @@ function listOf(locale: string, items: readonly string[]): string {
 /** A labelled list of short facts: the label column, then the value. */
 function FactList({ rows }: { rows: { key: string; label: string; value: ReactNode }[] }) {
   return (
-    <dl className="grid grid-cols-[minmax(5.5rem,auto)_minmax(0,1fr)] gap-x-6 gap-y-2 text-sm">
+    <dl className="grid grid-cols-[minmax(5.5rem,auto)_minmax(0,1fr)] items-baseline gap-x-6 gap-y-2 text-sm">
       {rows.map((row) => (
         <div key={row.key} className="contents">
           <dt className="text-muted">{row.label}</dt>
@@ -60,7 +60,7 @@ export function TripFactsCard({
   const edit = (section: string, label: string) => (
     <Link
       href={editHref(section)}
-      className={LINK}
+      className={`${LINK} shrink-0`}
       aria-label={`${t("trips.clock.filling.edit")} · ${label}`}
     >
       {t("trips.clock.filling.edit")}
@@ -73,8 +73,10 @@ export function TripFactsCard({
     key: row.key,
     label: row.label,
     value: (
-      <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-        <span>{row.value.length > 0 ? listOf(locale, row.value) : notSet}</span>
+      <span className="flex items-baseline justify-between gap-x-3">
+        <span className="min-w-0 flex-1">
+          {row.value.length > 0 ? listOf(locale, row.value) : notSet}
+        </span>
         {edit(row.section, row.label)}
       </span>
     ),
@@ -84,8 +86,8 @@ export function TripFactsCard({
       key: "price",
       label: t("trips.clock.filling.price"),
       value: (
-        <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-          <span>{price ?? notSet}</span>
+        <span className="flex items-baseline justify-between gap-x-3">
+          <span className="min-w-0 flex-1">{price ?? notSet}</span>
           {edit("about", t("trips.clock.filling.price"))}
         </span>
       ),
@@ -94,8 +96,8 @@ export function TripFactsCard({
       key: "who",
       label: t("trips.clock.filling.whoCanBook"),
       value: (
-        <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-          <span>{whoCanBook}</span>
+        <span className="flex items-baseline justify-between gap-x-3">
+          <span className="min-w-0 flex-1">{whoCanBook}</span>
           {edit("requirements", t("trips.clock.filling.whoCanBook"))}
         </span>
       ),

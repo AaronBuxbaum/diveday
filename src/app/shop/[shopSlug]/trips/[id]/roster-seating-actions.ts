@@ -39,6 +39,7 @@ import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { signTripAdmissionGate, tripGateBinding } from "@/lib/trip-admission-gate";
+import { whoWantsInHref } from "@/lib/trip-clock";
 import { uuidParam } from "@/lib/uuid";
 import { refundNotice } from "./refund-notice";
 import { removeSeat, requireRosterBooking, tripPath } from "./roster-booking";
@@ -199,16 +200,16 @@ async function inviteOneDiver(
     // A suggestion is past-diver invites' (the Features page): off, the list
     // is not drawn and a post from a page left open invites nobody.
     if (!(await shopHasFeatureOn(db, s.user.shopId, "pastDiverInvites"))) {
-      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-unavailable"));
+      redirect(noticeUrl(whoWantsInHref(guests), "invite-unavailable"));
     }
     // A suggestion: the cooldown and the departure's own gate, re-checked
     // under one lock for a page left open (H-20261014-one-to-one-invite; review F1, N2).
     const outcome = await createInvitationUnderCooldown(db, { ...input, now: nowDate() });
     if (outcome.status === "cooldown") {
-      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-cooldown"));
+      redirect(noticeUrl(whoWantsInHref(guests), "invite-cooldown"));
     }
     if (outcome.status === "unavailable") {
-      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-unavailable"));
+      redirect(noticeUrl(whoWantsInHref(guests), "invite-unavailable"));
     }
     interestId = outcome.status === "created" ? outcome.interestId : null;
   } else {
@@ -227,8 +228,8 @@ async function inviteOneDiver(
   revalidatePath(guests);
   redirect(
     delivery === "opted_out"
-      ? noticeUrl(`${guests}#who-wants-in`, "invitation-opted-out")
-      : `${guests}#who-wants-in`,
+      ? noticeUrl(whoWantsInHref(guests), "invitation-opted-out")
+      : whoWantsInHref(guests),
   );
 }
 

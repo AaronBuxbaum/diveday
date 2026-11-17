@@ -1,3 +1,4 @@
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
@@ -28,7 +29,10 @@ export async function WrappedMore({
   // `null` when the shop has conservation off, or the trip was cancelled.
   const conservation = await getTripConservationPanel(db, shop.id, tripId, personId);
   return (
-    <details
+    // The header's Activity row links to `#trip-activity`, inside this card:
+    // the card opens for it.
+    <AutoOpenDetails
+      openOnHash={["trip-activity", "conservation"]}
       id="wrapped-more"
       className={sectionCardClass({ padding: "none", className: "group/more" })}
     >
@@ -80,6 +84,6 @@ export async function WrappedMore({
           recordOnly
         />
       </div>
-    </details>
+    </AutoOpenDetails>
   );
 }

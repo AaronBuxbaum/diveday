@@ -6,6 +6,7 @@ import {
   phaseWhens,
   readyFrom,
   shownClockPhase,
+  whoWantsInHref,
 } from "./trip-clock";
 import type { TripStage } from "./trip-stages";
 
@@ -170,5 +171,13 @@ describe("phaseWhens", () => {
     });
     expect(whens.ready).toBeNull();
     expect(whens.wrapped).toBeNull();
+  });
+});
+
+describe("whoWantsInHref", () => {
+  it("opens Filling at the wait list, whatever phase the trip is in now", () => {
+    expect(whoWantsInHref("/shop/blue-mantis/trips/t1")).toBe(
+      "/shop/blue-mantis/trips/t1?phase=filling#who-wants-in",
+    );
   });
 });

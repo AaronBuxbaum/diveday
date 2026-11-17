@@ -35,7 +35,10 @@ describe("noShowSalvageCopy", () => {
 
     expect(copy.line).toBe("2 divers are waiting for this seat");
     expect(copy.links).toEqual([
-      { href: "/shop/blue-mantis/trips/trip-1#who-wants-in", label: "See who wants in" },
+      {
+        href: "/shop/blue-mantis/trips/trip-1?phase=filling#who-wants-in",
+        label: "See who wants in",
+      },
     ]);
   });
 

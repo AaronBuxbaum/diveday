@@ -9,7 +9,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatMoneyScanned } from "@/lib/format";
 import { promoDiscountOf } from "@/lib/promo-codes";
 import type { FormNotice } from "@/lib/staff-notices";
-import { WHO_WANTS_IN_ID } from "./FillSeatsCard";
+import { whoWantsInHref } from "@/lib/trip-clock";
 
 const STATUS_TONE: Record<TripLastMinutePromo["status"], BadgeTone> = {
   active: "success",
@@ -75,7 +75,7 @@ export function LastMinuteDealSection({
       {leadTime}
       {tripPath ? (
         <p className="mt-2 text-sm">
-          <a href={`${tripPath}#${WHO_WANTS_IN_ID}`} className={proseLinkClass}>
+          <a href={whoWantsInHref(tripPath)} className={proseLinkClass}>
             {t("trips.lastMinute.offerWithDiscount")}
           </a>
         </p>

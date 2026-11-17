@@ -6,6 +6,7 @@ import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { publicTripPath } from "@/lib/public-routes";
+import { WHO_WANTS_IN_ID } from "@/lib/trip-clock";
 import { CopyLinkButton } from "./CopyLinkButton";
 import {
   type OfferDiscountCopy,
@@ -16,9 +17,6 @@ import {
 import { OfferSeat } from "./OfferSeat";
 import { offeredAgoText, offerSeatCopy } from "./offer-seat-copy";
 import type { WhoWantsInRow } from "./who-wants-in-rows";
-
-/** The element id the Today row, the held send and Edit trip link to. */
-export const WHO_WANTS_IN_ID = "who-wants-in";
 
 /** One labelled run of wait-list rows. The card draws a group only when it has rows. */
 export type WhoWantsInGroup = {
@@ -84,6 +82,14 @@ export function FillSeatsCard({
         <p className="font-semibold [overflow-wrap:anywhere]">{row.name}</p>
         <p className="text-sm text-muted wrap-anywhere">
           {row.facts}
+          {row.certification ? (
+            <>
+              {" · "}
+              <span className={row.certification.unchecked ? "text-warning-strong" : undefined}>
+                {row.certification.text}
+              </span>
+            </>
+          ) : null}
           {row.offeredAt ? (
             <>
               {" · "}
@@ -93,13 +99,6 @@ export function FillSeatsCard({
             </>
           ) : null}
         </p>
-        {row.certification ? (
-          <p
-            className={`text-sm ${row.certification.unchecked ? "text-warning-strong" : "text-muted"}`}
-          >
-            {row.certification.text}
-          </p>
-        ) : null}
       </div>
       {canOffer ? (
         <OfferSeat

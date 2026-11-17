@@ -38,7 +38,7 @@ async function joinTheList(
 /** The reef morning's "Who wants in" panel, opened by the trip's own address. */
 async function openWhoWantsIn(page: Page): Promise<void> {
   const tripPath = await tripPathByTitle(page, "blue-mantis", REEF);
-  await page.goto(`${tripPath}#who-wants-in`);
+  await page.goto(`${tripPath}?phase=filling#who-wants-in`);
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
   // A tick before React owns the panel is lost when it hydrates (CI saw
   // "Clicking the checkbox did not change its state" on main too), so every
@@ -153,7 +153,7 @@ test.describe("staff and the list", () => {
     // the tests below; following the door here would render the trip page twice.
     await expect(nudge.getByRole("link", { name: "Offer a seat" })).toHaveAttribute(
       "href",
-      /\/shop\/blue-mantis\/trips\/[0-9a-f-]+#who-wants-in$/,
+      /\/shop\/blue-mantis\/trips\/[0-9a-f-]+\?phase=filling#who-wants-in$/,
     );
   });
 

@@ -134,3 +134,15 @@ export function phaseWhens(
     wrapped: pick("wrapped", timeOrDay(input.endsAt), { kind: "done" }),
   };
 }
+
+/** The element id of Filling's wait list (`FillSeatsCard`). */
+export const WHO_WANTS_IN_ID = "who-wants-in";
+
+/**
+ * Where "who wants in" lives: Filling's card. Every link to the wait list
+ * names the phase, because on the day the page opens on Check-in or later,
+ * where the card is not drawn.
+ */
+export function whoWantsInHref(tripPath: string): string {
+  return `${tripPath}?phase=filling#${WHO_WANTS_IN_ID}`;
+}

@@ -491,6 +491,8 @@ export async function addGuestForm(page: Page): Promise<Locator> {
     const add = page
       .locator("[data-more-menu-panel]")
       .getByRole("link", { name: t("trips.clock.addGuest"), exact: true });
+    // The page takes `add=1` off the address once the form is open, so the
+    // form itself is the wait, not the URL.
     if (await add.count()) {
       await add.click();
     } else {
@@ -499,7 +501,6 @@ export async function addGuestForm(page: Page): Promise<Locator> {
       url.searchParams.set("add", "1");
       await page.goto(url.toString());
     }
-    await page.waitForURL(/[?&]add=1/);
   }
   await expect(form).toBeVisible();
   return form;
@@ -565,11 +566,10 @@ export async function openSeriesPage(page: Page): Promise<void> {
 export async function openTripAboutRow(page: Page, label: string): Promise<Locator> {
   await openTripAbout(page);
   const row = page.getByRole("group", { name: label, exact: true });
-  // The rare rows fold into Edit trip's closed "More settings".
+  // The rare rows fold into Edit trip's closed "More settings". Role queries
+  // see only what is on screen, so a row behind the fold counts as none.
   const settings = page.locator("details").filter({ has: page.locator("section#more-settings") });
-  if ((await settings.count()) > 0 && (await settings.locator(row).count()) > 0) {
-    await openIfClosed(settings);
-  }
+  if ((await row.count()) === 0 && (await settings.count()) > 0) await openIfClosed(settings);
   await expect(row).toBeVisible();
   await openIfClosed(row);
   return row;
@@ -1146,24 +1146,19 @@ export async function openManifestPerson(row: Locator): Promise<void> {
 }
 
 /**
- * Open a departure's activity log on Record (`?phase=wrapped`). Call it
- * from any tab of the departure; it leaves the page on Record, so a spec that
- * goes on to work the roster returns with `openTripTab(page, "Trip")`.
+ * Open a trip's activity log the way staff do: the header's More menu, then
+ * Activity, which lands on Wrapped up with the log open. A spec that goes on
+ * to work the guests returns with `openTripTab(page, "Trip")`.
  */
 export async function openTripActivity(page: Page): Promise<void> {
+  const t = staffTranslator("en-US");
   await page.waitForURL(TRIP_SURFACE_URL);
-  const root = new URL(page.url()).pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
-  if (!root)
-    throw new Error(`openTripActivity called from ${page.url()}, which is not a departure`);
-  await page.goto(`${root}?phase=wrapped`);
-  await page.waitForURL(/\?phase=wrapped/);
-  await openIfClosed(
-    page
-      .locator("details")
-      .filter({ hasText: /^Activity/ })
-      .filter({ visible: true })
-      .first(),
-  );
+  if (!/\/trips\/[^/?#]+(?:[?#]|$)/.test(page.url())) await openTripTab(page, "Trip");
+  await openTripMenuLink(page, t("trips.clock.activity"));
+  await page.waitForURL(/\?phase=wrapped#trip-activity/);
+  const activity = page.locator("details#trip-activity");
+  await expect(activity).toBeVisible();
+  await openIfClosed(activity);
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   e2eNow,
   findTripOnBoard,
   HELD_SEND_TIMEOUT_MS,
+  openAddAGuest,
   openNewGuestForm,
   openRosterNotes,
   openRosterRow,
@@ -227,9 +228,10 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   await expect(roster.getByText("Priya Sharma").filter({ visible: true })).toBeVisible();
 
   // Picking the same diver again is no longer offered — the roster can't
-  // double-book them. The search keeps the add form open.
-  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill("Priya");
-  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
+  // double-book them.
+  const again = await openAddAGuest(page);
+  await again.fill("Priya");
+  await again.press("Enter");
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 });
 
@@ -288,7 +290,9 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   // Seated, and blocked on the identity the shop only guessed at — the seat
   // does not inherit her certifications or her waiver on a spelling.
   const roster = page.locator("#roster");
-  await expect(roster.getByRole("heading", { name: "Marisol Vega", exact: true })).toBeVisible();
+  await expect(
+    roster.getByRole("button", { name: "Marisol Vega", exact: true, expanded: true }),
+  ).toBeVisible();
   await expect(roster.getByRole("button", { name: "Same person as Marisol Vega" })).toBeVisible();
 
   // One tap at the roster, the same one the shared-inbox path has always cost.
