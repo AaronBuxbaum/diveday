@@ -206,8 +206,9 @@ describe("the sentence On the water", () => {
     });
     expect(headline).toBe("Everyone is recorded back aboard after dive 1.");
     expect(standing.notYetBack).toEqual([]);
-    // Who sailed, for Wrapped up's close-out when a later count is never finished.
-    expect(standing.boarded).toEqual(["Tom Okafor", "Lena Fischer", "Sal Reyes"]);
+    // Who the latest count has aboard, for Wrapped up's close-out when a later
+    // count is never finished.
+    expect(standing.lastAboard).toEqual(["Tom Okafor", "Lena Fischer", "Sal Reyes"]);
   });
 
   it("never says everyone is back while the roll call keeps the count open", () => {

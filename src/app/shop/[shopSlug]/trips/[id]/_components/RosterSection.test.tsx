@@ -600,7 +600,7 @@ describe("the guest folio workflow", () => {
 describe("a cancelled trip's guests", () => {
   it("lists who was booked with no readiness to fix", () => {
     renderRoster({
-      phase: "cancelled",
+      phase: "listed",
       roster: [entry("g", "Gus Lin"), entry("m", "Meera Iyer")],
       readiness: new Map([
         ["g", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],

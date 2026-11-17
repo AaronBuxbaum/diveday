@@ -1,8 +1,10 @@
 /**
  * Whether Edit trip shows the dive safety record (whether these dives went
  * past no-decompression limits): once the plan is closed, and on a cancelled
- * trip only when someone boarded. A blow-out after the first tank still
- * counts for flying guidance; a trip that never sailed has nothing to record.
+ * trip only when the dock count put someone aboard. The cancel and blow-out
+ * writers refuse a boat that may have left the dock (`src/db/blowouts.ts`,
+ * `src/db/aboard-at-sea.ts`), so this is the rare record of a boat scrubbed
+ * with people aboard; a trip nobody boarded has nothing to record.
  */
 export function safetyRecordShown({
   detailsEditable,

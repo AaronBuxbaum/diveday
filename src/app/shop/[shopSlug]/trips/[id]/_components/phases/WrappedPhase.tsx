@@ -76,10 +76,15 @@ export async function WrappedPhase({
     </Link>
   );
   if (view.status !== "ready") {
+    // The roll call cannot be read: what is left from every other record still shows.
+    const left = closeOutItems({
+      ...{ standing: null, rentalsOut, reports: incidents.reports, cancelled, flySafe },
+    });
     return (
       <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
         {/* A cancelled trip's own panel above says it, with the Roll call door. */}
         {cancelled ? null : <TripSentenceLine sentence={sentence} rollCall={door} />}
+        <CloseOutCard items={left} shopSlug={shop.slug} tripId={tripId} locale={locale} t={t} />
         {moneyCard}
         {reports}
         {guests}

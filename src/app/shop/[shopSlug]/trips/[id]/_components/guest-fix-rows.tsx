@@ -52,7 +52,7 @@ const RE_ENTRY_PHRASE_KEYS = {
  * `filling` days ahead (one quiet Booked card), `ready` the day before (the
  * remote remedies), `checkin` at the desk, `after` once the boat has left.
  */
-export type FixListPhase = "filling" | "ready" | "checkin" | "after" | "cancelled";
+export type FixListPhase = "filling" | "ready" | "checkin" | "after" | "listed";
 
 /** A trip-level fix: what holds the whole boat up, and the door to it. */
 export type TripFix = {
@@ -206,7 +206,8 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
  * - `filling`: one quiet Booked card: everyone fine as one counted line, then
  *   whoever will need something later, without a button.
  * - `after`: Can't board yet, Worth a minute, then everyone else folded.
- * - `cancelled`: everyone who was booked, by name, with nothing to make ready.
+ * - `listed`: everyone who was booked, by name, with nothing to make ready: a
+ *   cancelled trip, or a wrapped-up one with no roll call taken.
  *
  * Released guests fold under Not here and Turned away. A trip-level fix
  * (`tripFixes`) leads its group.
@@ -425,7 +426,7 @@ export function guestFixRows(
 
   const booked = seats.filter((seat) => !seat.guest.released).map((seat) => seat.guest.id);
   const sections: FixListSection[] =
-    phase === "cancelled"
+    phase === "listed"
       ? [
           {
             key: "booked",

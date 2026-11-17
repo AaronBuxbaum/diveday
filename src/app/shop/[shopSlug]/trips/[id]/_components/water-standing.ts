@@ -121,8 +121,8 @@ export type WaterStanding = {
   alerts: number;
   /** Not yet recorded back at the latest after-dive count, worst first. */
   notYetBack: WaterPerson[];
-  /** Who the dock count recorded aboard, by name: who sailed. */
-  boarded: string[];
+  /** Who the latest started count (dock or after a dive) recorded aboard, by name. */
+  lastAboard: string[];
   timeline: WaterStop[];
 };
 
@@ -152,23 +152,22 @@ export function waterStanding(input: WaterStandingInput): WaterStanding {
       input.openAlerts ?? 0,
     ),
     notYetBack,
-    boarded: boardedAtDock(counts),
+    lastAboard: latestCount ? aboardAt(latestCount, counts) : [],
     timeline: timeline(input, counts, results),
   };
 }
 
-/** Everyone the dock count recorded aboard, once each, guests first. */
-function boardedAtDock(counts: readonly WaterCount[]): string[] {
-  const dock = counts.find((count) => count.checkpoint === "departure");
-  if (!dock) return [];
+/** Everyone one count recorded aboard, once each, guests first. */
+function aboardAt(count: WaterCount, counts: readonly WaterCount[]): string[] {
   const names = new Map<string, string>();
-  for (const seat of dock.divers) {
-    if (isTurnedAwayOffBoat(seat)) continue;
-    if (roleAt("departure", seat.rollCall) === "aboard") names.set(seatKey(seat), seat.fullName);
+  for (const seat of count.divers) {
+    if (isTurnedAwayOffBoat(seat) || expectedNowhere(seat, counts)) continue;
+    if (roleAt(count.checkpoint, seat.rollCall) === "aboard")
+      names.set(seatKey(seat), seat.fullName);
   }
-  for (const member of dock.crew) {
+  for (const member of count.crew) {
     const key = `p:${member.id}`;
-    if (!names.has(key) && roleAt("departure", member.rollCall) === "aboard") {
+    if (!names.has(key) && roleAt(count.checkpoint, member.rollCall) === "aboard") {
       names.set(key, member.fullName);
     }
   }

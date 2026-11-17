@@ -3,9 +3,8 @@ import { safetyRecordShown } from "./safety-record-shown";
 
 /**
  * **The dive safety record stays reachable wherever someone sailed** (domain
- * review of layer D, finding 4): a blow-out called after the first tank still
- * counts for flying guidance, so a cancelled trip keeps the record when the
- * dock count boarded anyone, and loses it only when nobody sailed.
+ * review of layer D, finding 4): a cancelled trip keeps the record when the
+ * dock count boarded anyone, and loses it only when nobody boarded.
  */
 describe("the dive safety record row", () => {
   it("waits until the plan is closed", () => {

@@ -320,12 +320,12 @@ export async function openTripFromBoard(page: Page, title: string) {
 }
 
 /**
- * Move between a departure's surfaces: Trip is the Divers tab, Manifest the
- * Boat tab, Prep the Gear tab (ADR 20261001-logbook, decision 3).
+ * Move between a departure's surfaces: Trip is the page of phases, Manifest
+ * Roll call, Prep the Gear page (ADR 20261117-trip-page-clock).
  *
- * This navigates by URL rather than by clicking a tab: a helper every spec
- * leans on should put the caller on a surface, and `boat-loop.spec.ts` is
- * where the tabs themselves are the subject.
+ * This navigates by URL rather than by clicking: a helper every spec leans on
+ * should put the caller on a surface. Trip lands on the phase the trip is in
+ * now, with no `?phase=` or `?view=` left from a form's redirect.
  */
 export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep") {
   // **Wait for the departure before reading the address bar.** A click that
@@ -341,14 +341,11 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
   const root = url.pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
   if (!root) throw new Error(`openTripTab called from ${url.pathname}, which is not a departure`);
   const target = tab === "Trip" ? root : `${root}/${tab.toLowerCase()}`;
-  // Divers and Details share a path: Details is `?view=edit`, and an About
-  // form's save lands on Details with a `form=` that `FlashParams` strips, so the
-  // address bar alone cannot say the roster is open. The tab strip can.
+  // The phases and Edit trip share a path: Edit trip is `?view=edit`, and a
+  // phase is `?phase=`. Only the bare path is the trip as it stands now.
   const onTarget =
     url.pathname === target &&
-    (tab !== "Trip" ||
-      (await page.locator('nav[data-trip-tabs] a[aria-current="page"]').getAttribute("href")) ===
-        root);
+    (tab !== "Trip" || (!url.searchParams.has("view") && !url.searchParams.has("phase")));
   if (onTarget) return;
   await page.goto(target);
   await page.waitForURL(
@@ -419,9 +416,9 @@ const TRIP_SURFACE_URL = /\/trips\/[^/?#]+/;
 export async function openTripAbout(page: Page): Promise<Locator> {
   const about = page.locator("section#about");
   // A caller often clicks its way here, and the click resolves before the URL
-  // commits: wait for the departure's own tabs before reading the address.
+  // commits: wait for the trip's phase strip before reading the address.
   await page.waitForURL(TRIP_ROOT_URL);
-  await expect(page.getByRole("navigation", { name: "Departure" })).toBeVisible();
+  await expect(page.locator("[data-trip-phases]")).toBeVisible();
   const url = new URL(page.url());
   if (url.searchParams.get("view") !== "edit" && (await about.count()) === 0) {
     url.searchParams.set("view", "edit");

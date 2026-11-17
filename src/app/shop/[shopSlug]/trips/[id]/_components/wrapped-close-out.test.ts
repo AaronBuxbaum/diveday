@@ -33,7 +33,7 @@ function standing(over: Partial<WaterStanding> = {}, dives: WaterStop[] = []): W
     latest: count(2, true),
     alerts: 0,
     notYetBack: [],
-    boarded: ["Tom Okafor", "Lena Fischer", "Sal Reyes"],
+    lastAboard: ["Tom Okafor", "Lena Fischer", "Sal Reyes"],
     timeline: [
       { kind: "dock", state: "done", count: count(0, true), checks: null },
       ...dives,
@@ -115,6 +115,65 @@ describe("the close-out list", () => {
     expect(say(s).headline).toBe("Scheduled back at 12:30 PM. 1 thing to close out.");
   });
 
+  it("names a later dive nobody counted, though the dock count was skipped", () => {
+    // No dock count; dive 1 counted complete; dive 2 never counted. The people
+    // dive 1 recorded aboard are not recorded back after dive 2.
+    const s = standing({ latest: count(1, true), lastAboard: ["Tom Okafor"] }, [
+      { kind: "dive", state: "done", dive: 1, site: null, count: count(1, true), logged },
+      { kind: "dive", state: "ahead", dive: 2, site: null, count: null, logged: null },
+    ]);
+    s.timeline[0] = { kind: "dock", state: "done", count: null, checks: null };
+    expect(closeOutItems({ standing: s, rentalsOut: [], reports: [], cancelled: false })).toEqual([
+      { kind: "rollCall", names: ["Tom Okafor"], dive: 2 },
+    ]);
+    expect(say(s).headline).toBe("Scheduled back at 12:30 PM. 1 thing to close out.");
+  });
+
+  it("names a dock count that was started and not finished", () => {
+    const s = standing({ latest: count(0, false) }, [
+      { kind: "dive", state: "ahead", dive: 1, site: null, count: null, logged: null },
+    ]);
+    s.timeline[0] = { kind: "dock", state: "now", count: count(0, false), checks: null };
+    expect(closeOutItems({ standing: s, rentalsOut: [], reports: [], cancelled: false })).toEqual([
+      { kind: "rollCall", names: ["Tom Okafor", "Lena Fischer", "Sal Reyes"], dive: 0 },
+    ]);
+  });
+
+  it("sends a trip scrubbed at the dock back to the dock count, never to a dive", () => {
+    // Cancelled while still tied up: whoever the dock count put aboard is put
+    // ashore at the dock; an after-dive count would record a dive that never was.
+    const s = standing({ latest: count(0, true) }, [
+      { kind: "dive", state: "ahead", dive: 1, site: null, count: null, logged: null },
+    ]);
+    expect(closeOutItems({ standing: s, rentalsOut: [], reports: [], cancelled: true })).toEqual([
+      { kind: "rollCall", names: ["Tom Okafor", "Lena Fischer", "Sal Reyes"], dive: 0 },
+    ]);
+    // Nobody aboard at the dock: nothing to put ashore.
+    expect(
+      closeOutItems({
+        standing: { ...s, lastAboard: [] },
+        rentalsOut: [],
+        reports: [],
+        cancelled: true,
+      }),
+    ).toEqual([]);
+  });
+
+  it("still lists what it can when the roll call cannot be read", () => {
+    expect(
+      closeOutItems({
+        standing: null,
+        rentalsOut: [{ personName: "Sam Whitfield" }],
+        reports: [],
+        cancelled: false,
+        flySafe: [{ name: "Tom Okafor" }],
+      }),
+    ).toEqual([
+      { kind: "flySafe", names: ["Tom Okafor"] },
+      { kind: "rentals", count: 1, names: ["Sam Whitfield"] },
+    ]);
+  });
+
   it("names a dive count that was started and not finished", () => {
     const s = standing({ latest: count(2, false) }, [
       { kind: "dive", state: "done", dive: 1, site: null, count: count(1, true), logged },
@@ -126,7 +185,7 @@ describe("the close-out list", () => {
   });
 
   it("says no roll call was taken, never an all-clear", () => {
-    const s = standing({ latest: null, boarded: [] }, [
+    const s = standing({ latest: null, lastAboard: [] }, [
       { kind: "dive", state: "ahead", dive: 1, site: null, count: null, logged: null },
     ]);
     s.timeline[0] = { kind: "dock", state: "ahead", count: null, checks: null };

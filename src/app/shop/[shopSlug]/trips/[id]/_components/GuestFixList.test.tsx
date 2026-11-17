@@ -195,6 +195,24 @@ describe("a cancelled trip", () => {
   });
 });
 
+/** Domain review 2, ruling: with no roll call, Wrapped up lists guests plainly, no fixes. */
+describe("a wrapped trip with no roll call", () => {
+  it("lists every guest by name, with no fix and no Worth a minute", () => {
+    renderRoster({
+      roster: [blocked, ready] as RosterEntry[],
+      readiness: blockers,
+      waivers,
+      rentalFit: ownGear(["a", "b"]),
+      selectedBookingId: null,
+      phase: "listed",
+    });
+    expect(group("cantBoard")).toBeNull();
+    expect(group("worth")).toBeNull();
+    expect(group("booked")).not.toBeNull();
+    expect(within(group("booked")).getByRole("button", { name: "Lena Fischer" })).toBeVisible();
+  });
+});
+
 /** Domain review of layer B, F2: at Check-in the crew can read what the guest asked for. */
 describe("a guest easing back in, at Check-in", () => {
   it("names the ask on the row and says it in full in the opened guest", () => {

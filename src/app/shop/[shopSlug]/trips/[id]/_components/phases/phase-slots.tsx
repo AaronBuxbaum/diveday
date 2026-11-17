@@ -54,10 +54,13 @@ export function phaseSlots({
   tripId,
   gearToPack,
   water,
+  noRollCall = false,
   now,
   locale,
   t,
 }: {
+  /** No roll call was taken: no dock count and no after-dive result (`RosterRecord`). */
+  noRollCall?: boolean;
   /** The phase shown, when Getting ready starts, and when the dock call is. */
   frame: { shown: ClockPhase; readyFrom: Date; dockBy: Date };
   overview: Overview;
@@ -77,12 +80,14 @@ export function phaseSlots({
   t: StaffTranslator;
 }) {
   const { trip, cancelled, requirement } = overview;
-  // A cancelled trip has nothing to make ready: its guests are only listed.
-  const phase: FixListPhase = cancelled
-    ? "cancelled"
-    : shown === "filling" || shown === "ready" || shown === "checkin"
-      ? shown
-      : "after";
+  // A cancelled trip has nothing to make ready, and a wrapped-up one with no
+  // roll call has nothing honest to fix: its guests are only listed.
+  const phase: FixListPhase =
+    cancelled || (shown === "wrapped" && noRollCall)
+      ? "listed"
+      : shown === "filling" || shown === "ready" || shown === "checkin"
+        ? shown
+        : "after";
   const tripPath = shopPath(shopSlug, "trips", tripId);
   const crew = crewNamesOf(overview);
   const plan = planOf(overview);

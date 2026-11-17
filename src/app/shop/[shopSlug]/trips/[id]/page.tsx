@@ -12,6 +12,7 @@ import { finalHomeSaid, tripPhaseOf } from "@/lib/trip-phase";
 import { acceptsNewDivers } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
+import { callOffShown } from "./_components/call-off-shown";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { departureStateOf } from "./_components/departure-states";
 import { detailsReadRows } from "./_components/details-rows";
@@ -143,7 +144,9 @@ export default async function ManageTripPage({
   const readRows = detailsReadRows({ db, shop, overview, t, locale, shown: showDetails });
   // A cancelled departure's plan is closed with it (`tripDetailsAreEditable`).
   const detailsEditable = !cancelled && tripPhaseOf(lifecycle) !== "back";
-  const mayChangeDeparture = !cancelled && !finalHomeSaid(lifecycle);
+  const mayChangeDeparture = callOffShown({
+    ...{ cancelled, homeSaid: finalHomeSaid(lifecycle), startsAt: trip.startsAt, now },
+  });
   const acceptsDivers = acceptsNewDivers(trip, now);
   // The desk while arrivals are open, or a finished departure's record; the stage is read with
   // it, since a diver counted out and not back keeps the departure open (`readDepartureStage`).
@@ -209,6 +212,7 @@ export default async function ManageTripPage({
     ...{ frame, overview, shop, shopSlug, tripId, now, locale, t },
     gearToPack: reading.gearToPack,
     water: { automatedForecast, tideLines },
+    noRollCall: Boolean(record && !record.rollCallTaken && record.afterDive.size === 0),
   });
 
   const guestList = showDetails ? null : (

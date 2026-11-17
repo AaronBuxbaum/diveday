@@ -30,7 +30,8 @@ export function closeOutItems({
   cancelled,
   flySafe = [],
 }: {
-  standing: WaterStanding;
+  /** The roll call's reading, or null when it could not be read: no roll-call items then. */
+  standing: WaterStanding | null;
   /** A cancelled trip nobody boarded has no roll call to take. */
   cancelled: boolean;
   /** Units handed over for a seat on this departure and not back (`listTripUnitsToCheckIn`). */
@@ -40,22 +41,7 @@ export function closeOutItems({
   flySafe?: readonly { name: string }[];
 }): CloseOutItem[] {
   const items: CloseOutItem[] = [];
-  if (standing.notYetBack.length > 0) {
-    items.push({
-      kind: "rollCall",
-      names: standing.notYetBack.map((person) => person.name),
-      dive: standing.latest?.dive ?? 0,
-    });
-  } else if (standing.boarded.length > 0) {
-    // People boarded at the dock: the first dive whose count is not finished,
-    // started or not, still has every one of them to record back.
-    const open = standing.timeline.find((stop) => stop.kind === "dive" && !stop.count?.complete);
-    if (open?.kind === "dive") {
-      items.push({ kind: "rollCall", names: standing.boarded, dive: open.dive });
-    }
-  } else if (!cancelled && standing.latest === null) {
-    items.push({ kind: "noRollCall" });
-  }
+  if (standing) items.push(...rollCallItems(standing, cancelled));
   if (flySafe.length > 0) {
     items.push({ kind: "flySafe", names: [...new Set(flySafe.map((guest) => guest.name))] });
   }
@@ -66,7 +52,7 @@ export function closeOutItems({
       names: [...new Set(rentalsOut.map((unit) => unit.personName))],
     });
   }
-  for (const stop of standing.timeline) {
+  for (const stop of standing?.timeline ?? []) {
     if (stop.kind === "dive" && stop.count && !stop.logged) {
       items.push({ kind: "noLog", dive: stop.dive, site: stop.site });
     }
@@ -77,6 +63,43 @@ export function closeOutItems({
     }
   }
   return items;
+}
+
+/**
+ * The roll call's part of what is left, from the latest count anyone started,
+ * dock or after a dive:
+ *
+ * - someone that count has not recorded back comes first;
+ * - a dock count left unfinished, or a cancelled trip that put people aboard
+ *   at the dock, goes back to the dock count: a boat scrubbed at the dock
+ *   made no dive, and an after-dive count would record one;
+ * - otherwise the first dive from the latest on whose count is not finished,
+ *   started or not, still has everyone that count recorded aboard to record
+ *   back, the dock count skipped or not;
+ * - no count at all on a trip that ran is "No roll call taken".
+ */
+function rollCallItems(standing: WaterStanding, cancelled: boolean): CloseOutItem[] {
+  const latest = standing.latest;
+  if (standing.notYetBack.length > 0) {
+    return [
+      {
+        kind: "rollCall",
+        names: standing.notYetBack.map((person) => person.name),
+        dive: latest?.dive ?? 0,
+      },
+    ];
+  }
+  if (latest === null) return cancelled ? [] : [{ kind: "noRollCall" }];
+  const names = standing.lastAboard;
+  if (latest.dive === 0 && cancelled) {
+    return names.length > 0 ? [{ kind: "rollCall", names, dive: 0 }] : [];
+  }
+  if (latest.dive === 0 && !latest.complete) return [{ kind: "rollCall", names, dive: 0 }];
+  if (latest.aboard === 0) return [];
+  const open = standing.timeline.find(
+    (stop) => stop.kind === "dive" && stop.dive >= latest.dive && !stop.count?.complete,
+  );
+  return open?.kind === "dive" ? [{ kind: "rollCall", names, dive: open.dive }] : [];
 }
 
 /**

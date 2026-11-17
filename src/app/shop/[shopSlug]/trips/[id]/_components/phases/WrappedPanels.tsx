@@ -39,10 +39,7 @@ export function CloseOutCard({
         return {
           title: t("trips.clock.wrapped.rollCallOpen"),
           sub: listOf(locale, item.names),
-          href:
-            item.dive > 0
-              ? `${trip("manifest")}?checkpoint=after_dive_${item.dive}`
-              : trip("manifest"),
+          href: `${trip("manifest")}?checkpoint=${item.dive > 0 ? `after_dive_${item.dive}` : "departure"}`,
           fix: t("trips.clock.water.openRollCall"),
         };
       case "noRollCall":
