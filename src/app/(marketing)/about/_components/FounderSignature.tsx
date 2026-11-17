@@ -1,6 +1,6 @@
 /**
- * The founder's signature on `/about`, traced from his real handwriting
- * rather than set in a typeface (Aaron, 2026-11-17: a script font "doesn't look
+ * The founder's signature on `/about`, traced from his real handwriting (the A, the B and the run after it), with
+ * "aron" redrawn clearer, rather than set in a typeface (Aaron, 2026-11-17: a script font "doesn't look
  * real"). Filled with `currentColor`, so it follows the theme. The name is read
  * from the screen-reader text beside it, so the drawing is hidden from them.
  */
