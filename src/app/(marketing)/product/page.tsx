@@ -153,7 +153,10 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
           pressure that retired `home-mid`. */}
       <OneListBand t={t} />
 
-      <section id="full-list" className="mx-auto max-w-6xl scroll-mt-10 px-6 pb-20 lg:pb-24">
+      <section
+        id="full-list"
+        className="mx-auto max-w-6xl scroll-mt-10 px-6 pt-14 pb-20 lg:pt-20 lg:pb-24"
+      >
         <FeatureDirectory locale={locale} headingLevel="h2" lines />
         {/* The sections' names, never a count of the rows (B44), and the
             export promise as a link to the one place it is written (B10). */}

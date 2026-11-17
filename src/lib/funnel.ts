@@ -119,9 +119,9 @@ const FIXED_SOURCES = [
   "about-rules",
   "about-closing",
   "about-switching",
-  // `/about`'s work band, whose first door is the set-up form beside the
-  // pricing and switching doors — a set-up door with no demo beside it, so it
-  // takes its own tag rather than folding into the page's two pair positions.
+  // Retired 2026-11-17 — kept for history, not for reuse. `/about`'s work band
+  // had its own set-up button beside the pricing and switching doors; the
+  // page's closing pair carries Get set up, so the band keeps the other two.
   "about-work",
   "sign-in",
   // `/onboard`'s footer line, on both of the page's faces (issue #1956). The
