@@ -247,20 +247,18 @@
     "unrecordedSailings": "{count, plural, one {# sailing} other {# sailings}} this month",
     "noDepartures": "No departures came back this month",
     "year": {
-      "print": "Print the year",
       "figuresLabel": "The year’s safety record",
       "noDepartures": "No departures came back this year",
       "noCrewNone": "No crew recorded on any departure this year",
       "activityLink": "The year’s safety activity",
-      "noCrewDetail": "of {back, plural, one {# boat} other {# boats}} back, listed on each month",
+      "noCrewDetail": "of {back, plural, one {# boat} other {# boats}} back",
       "noCrewMonths": "No crew recorded in {none} of {months, plural, one {# month} other {# months}}",
-      "rollCallsOpen": "{open, plural, one {# not closed} other {# not closed}} · {none, plural, one {# with no roll call taken} other {# with no roll call taken}}, listed on each month",
-      "boardedDetail": "{count, plural, =0 {Every seat marked at the dock} one {# seat never marked at the dock, on a roll call listed as open on its month} other {# seats never marked at the dock, on roll calls listed as open on each month}}",
+      "rollCallsOpen": "{open, plural, one {# not closed} other {# not closed}} · {none, plural, one {# with no roll call taken} other {# with no roll call taken}}",
       "printedFor": "{shopName} · {start} to {end}, {year} · {zone}",
       "printedOn": "Printed {date}"
     },
     "incidentsValue": "{filed} filed{drafts, plural, =0 {} one { · # draft} other { · # drafts}}",
-    "printMonth": "Print month",
+    "print": "Print",
     "preparation": {
       "title": "Crew and preparation",
       "credentials": "Crew credentials",

@@ -43,7 +43,7 @@ describe("the funnel's two doors", () => {
     expect(container.querySelectorAll("form")).toHaveLength(1);
   });
 
-  it("offers the 20-minute call only where a page asks for it, tagged with the page's source", () => {
+  it("offers the 20-minute call only where a pair asks for it, tagged with the page's source", () => {
     const { rerender } = render(<FunnelCtas locale="en-US" source="pricing" />);
     expect(screen.queryByRole("link", { name: "Book a 20-minute call" })).not.toBeInTheDocument();
     rerender(<FunnelCtas locale="en-US" source="pricing" call />);
@@ -54,6 +54,12 @@ describe("the funnel's two doors", () => {
     );
     expect(door).toHaveAttribute("target", "_blank");
     expect(screen.getByRole("link", { name: "Get set up" })).toBeInTheDocument();
+  });
+
+  it("leaves Get set up out when a page's concierge panel already carries it", () => {
+    render(<FunnelCtas locale="en-US" source="switching-eve-close" setUp={false} />);
+    expect(screen.queryByRole("link", { name: "Get set up" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try the live demo" })).toBeInTheDocument();
   });
 
   it("fills the column on a phone and hugs its doors from sm up", () => {
