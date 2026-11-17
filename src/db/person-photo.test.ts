@@ -18,11 +18,11 @@ describe("setPersonPhoto", () => {
     });
     const set = (photoPath: string | null) =>
       setPersonPhoto(db, { shopId: shop.id, personId: person.id, photoPath });
-    expect(await set("https://media.invalid/person-photos/a.jpg")).toEqual({ previous: null });
-    expect(await set("https://media.invalid/person-photos/b.jpg")).toEqual({
-      previous: "https://media.invalid/person-photos/a.jpg",
+    expect(await set("https://media.invalid/staff-profiles/a.jpg")).toEqual({ previous: null });
+    expect(await set("https://media.invalid/staff-profiles/b.jpg")).toEqual({
+      previous: "https://media.invalid/staff-profiles/a.jpg",
     });
-    expect(await set(null)).toEqual({ previous: "https://media.invalid/person-photos/b.jpg" });
+    expect(await set(null)).toEqual({ previous: "https://media.invalid/staff-profiles/b.jpg" });
     const [row] = await db.select().from(people).where(eq(people.id, person.id));
     expect(row?.staffPhotoPath).toBeNull();
   });

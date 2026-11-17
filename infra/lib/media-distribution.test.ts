@@ -82,7 +82,7 @@ function prefixesTheAppWrites(): string[] {
   // vacuously true -- the one way a test that reads a file is worse than one
   // that restates a list. Pinned to the exact count rather than a floor, so a
   // new prefix has to come here and choose a side.
-  expect(found.length, "MEDIA_KEY_PREFIXES did not parse as twelve prefixes").toBe(12);
+  expect(found.length, "MEDIA_KEY_PREFIXES did not parse as eleven prefixes").toBe(11);
   return [...new Set(found)].sort();
 }
 
@@ -100,13 +100,12 @@ describe("media distribution", () => {
     expect(committed.context.cloudfrontVerified).toBe(true);
   });
 
-  it("serves exactly the eight public prefixes", () => {
+  it("serves exactly the seven public prefixes", () => {
     const patterns = (mediaDistribution().CacheBehaviors ?? []).map((b) => b.PathPattern).sort();
     expect(patterns).toEqual([
       "arrival/*",
       "courses/*",
       "dive-sites/*",
-      "person-photos/*",
       "recap/*",
       "shop-heroes/*",
       "shop-logos/*",
@@ -163,6 +162,7 @@ describe("media distribution", () => {
       // evaluation of one named diver (issue #1252).
       expect(pattern.startsWith("medical-clearances")).toBe(false);
       expect(pattern.startsWith("private-person-photos")).toBe(false);
+      expect(pattern.startsWith("person-photos")).toBe(false);
       // A catch-all in the allowlist would publish the whole bucket.
       expect(pattern).not.toBe("*");
     }
