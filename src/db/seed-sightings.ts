@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lt, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { sightingWindowStart } from "@/lib/sightings";
 import type { DbExecutor } from "./client";
@@ -195,7 +195,17 @@ export async function seedMonthSightings(db: DbExecutor, shopId: string) {
   const candidates = await db
     .select({ id: trips.id })
     .from(trips)
-    .where(and(livePublicTripForShop(shopId), notRehearsal(), lt(trips.startsAt, now), month))
+    .where(
+      and(
+        livePublicTripForShop(shopId),
+        notRehearsal(),
+        lt(trips.startsAt, now),
+        month,
+        // The sightings specs start from this departure with an empty "Seen"
+        // box, so the shelf's evidence goes on the others.
+        ne(trips.title, "Dawn Two-Tank — Molasses Reef"),
+      ),
+    )
     .orderBy(desc(trips.startsAt))
     .limit(24);
   // A sighting is the crew's tap after a dive at that site, so only departures
