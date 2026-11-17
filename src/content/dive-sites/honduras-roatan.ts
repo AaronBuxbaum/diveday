@@ -1551,12 +1551,13 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
     },
   },
   // Denominator row: Half Moon Bay Wall
-  // Approximate pin: the wall is shared by the Dixie's, Half Moon Bay and Divemaster's Choice moorings; placed on the Vern's Dropoff mooring at the north end of the same wall, about 300 m from the Dixie's Place pin.
+  // Approximate pin: the wall is shared by the Dixie's, Half Moon Bay and Divemaster's Choice moorings; placed on the Dixies mooring on the Marine Park list, the south end of the wall, about 300 m from the Vern's Dropoff pin.
   {
     slug: "half-moon-bay-wall-roatan",
     version: 1,
     area: "honduras-roatan",
     sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
       "https://roatansplashinn.com/en/roatan-diving-sites/half-moon-bay-wall/",
       "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
       "https://www.roatandivingnativesons.com/fun-dives-1",
@@ -1566,8 +1567,8 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
     briefing: {
       name: "Half Moon Bay Wall",
       locationName: "West End, Roatán",
-      forecastLatitude: 16.3092,
-      forecastLongitude: -86.5961,
+      forecastLatitude: 16.30646,
+      forecastLongitude: -86.59742,
       description:
         "A small semicircular wall almost directly off the West End beach. The reef starts at about 5 m (15 ft) and the wall drops past 45 m (150 ft). Black coral, gorgonians, and orange elephant ear sponges hang on the sides, with flamingo tongue snails on the fans.",
       marineLife: "Eagle rays · groupers · creole wrasse · blue chromis",
@@ -2077,8 +2078,8 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
     briefing: {
       name: "Vern's Dropoff",
       locationName: "West End, Roatán",
-      forecastLatitude: 16.3092,
-      forecastLongitude: -86.5961,
+      forecastLatitude: 16.30919,
+      forecastLongitude: -86.59612,
       description:
         "A dramatic vertical drop-off starting near Half Moon Bay. The reef terrace abruptly plunges into deep blue water, adorned with gigantic barrel sponges and bushy black coral trees.",
       marineLife: "Giant barrel sponge · black coral · great barracuda · horse-eye jack",
