@@ -793,7 +793,8 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
 
   // Who is behind it, in generalities, signed by the founder (Aaron,
   // 2026-11-11: "sign the about page with my name Aaron Buxbaum, Founder, but
-  // keep the 'we' terminology"). The name appears once, as that signature.
+  // keep the 'we' terminology"). The name appears as that signature only: drawn in
+  // the signature face and spoken once more for screen readers (2026-11-17).
   // The page states no CV: the employers that used to carry its credibility
   // and the head count of the team are pinned out by value, so neither comes
   // back under a new heading.
@@ -801,8 +802,8 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     page.getByRole("heading", { name: "Divers who have shipped software to millions of people" }),
   ).toBeVisible();
   const rendered = await page.locator("body").innerText();
-  expect(rendered.match(/Aaron/g)).toHaveLength(1);
-  expect(rendered).toContain("Aaron Buxbaum, Founder");
+  expect(rendered.match(/Aaron/g)).toHaveLength(2);
+  expect(rendered).toMatch(/Aaron Buxbaum\s+founder/i);
   // The founder's own band, in the first person (Aaron, 2026-11-14), carries
   // his history; the head count of the team stays out.
   expect(rendered).toContain("self-driving cars");
