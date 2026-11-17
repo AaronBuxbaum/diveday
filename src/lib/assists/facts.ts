@@ -280,13 +280,6 @@ export function samePlaceholders(a: string, b: string): boolean {
   return left.length === right.length && left.every((key, index) => key === right[index]);
 }
 
-/** Trimmed, at most `max` characters, or null when nothing is left. */
-export function boundedText(value: string | null | undefined, max: number): string | null {
-  const text = value?.trim() ?? "";
-  if (!text) return null;
-  return text.length > max ? null : text;
-}
-
 /** The text with every placeholder blanked, for checking only what the model wrote. */
 function bareText(text: string): string {
   return text.replace(PLACEHOLDER, " ");
