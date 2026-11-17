@@ -223,6 +223,15 @@ export default async function CoursePage({
       t={t}
     />
   );
+  // On paper a link goes nowhere, so the sheet reads the same facts without it.
+  const admissionOnPaper = (
+    <CourseAdmission
+      certificationRequired={certificationRequired}
+      minimumAge={course.minimumAge}
+      shopNote={course.prerequisiteNote}
+      t={t}
+    />
+  );
 
   return (
     <main className={SHOP_MAIN_CLASS}>
@@ -234,7 +243,7 @@ export default async function CoursePage({
         totalCents={totalCents}
         currency={currency}
         facts={facts}
-        admission={admission}
+        admission={admissionOnPaper}
         sessions={sessions}
         locale={locale}
         t={t}
