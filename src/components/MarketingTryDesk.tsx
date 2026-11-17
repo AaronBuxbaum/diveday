@@ -95,9 +95,10 @@ export function MarketingTryDesk({ labels }: { labels: TryDeskLabels }) {
   return (
     <div>
       <p className="mb-3 text-sm text-muted">{labels.hint}</p>
-      <section
+      {/* A `<figure>`, not a `<section>`: the home spec counts the page's sections by position. */}
+      <figure
         aria-label={labels.region}
-        className="min-h-[502px] overflow-hidden rounded-3xl border border-border bg-background text-start lg:min-h-[486px]"
+        className="min-h-[502px] m-0 overflow-hidden rounded-3xl border border-border bg-background text-start lg:min-h-[486px]"
       >
         <div className="bg-background">
           <AppBar label={labels.appBar} />
@@ -195,7 +196,7 @@ export function MarketingTryDesk({ labels }: { labels: TryDeskLabels }) {
             </div>
           </div>
         </div>
-      </section>
+      </figure>
       <div className="mt-3 flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <p className="text-sm font-medium">{allHere ? labels.done : ""}</p>
         {touched ? (

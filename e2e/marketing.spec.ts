@@ -93,7 +93,7 @@ test("the homepage hero's sample desk clears all nine in three taps and starts o
   page,
 }) => {
   await page.goto("/");
-  const desk = page.getByRole("region", { name: /A sample of the arrival desk/ });
+  const desk = page.getByRole("figure", { name: /A sample of the arrival desk/ });
   await expect(desk.getByText("of 9 here")).toBeVisible();
   await expect(desk.getByText("7", { exact: true })).toBeVisible();
 
