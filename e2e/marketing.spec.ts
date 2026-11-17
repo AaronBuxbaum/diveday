@@ -2074,7 +2074,16 @@ test("each page's closing band offers the founder's 20-minute call once, and the
   const call = page.getByRole("link", {
     name: diverTranslator("en-US")("marketing.common.bookCall"),
   });
-  for (const path of ["/", "/product", "/pricing", "/about", "/product/waivers"]) {
+  for (const path of [
+    "/",
+    "/product",
+    "/product/waivers",
+    "/pricing",
+    "/about",
+    "/switching",
+    "/switching/spreadsheet",
+    "/switching/fareharbor",
+  ]) {
     await page.goto(path);
     await expect(call).toHaveCount(1);
     await expect(call).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);

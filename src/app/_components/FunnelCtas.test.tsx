@@ -56,6 +56,12 @@ describe("the funnel's two doors", () => {
     expect(screen.getByRole("link", { name: "Get set up" })).toBeInTheDocument();
   });
 
+  it("leaves Get set up out when a page's concierge panel already carries it", () => {
+    render(<FunnelCtas locale="en-US" source="switching-eve-close" setUp={false} />);
+    expect(screen.queryByRole("link", { name: "Get set up" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try the live demo" })).toBeInTheDocument();
+  });
+
   it("fills the column on a phone and hugs its doors from sm up", () => {
     const { container } = render(<FunnelCtas locale="en-US" source="product" />);
     expect(container.firstElementChild).toHaveClass(

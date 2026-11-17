@@ -77,6 +77,7 @@ export function FunnelCtas({
   footnotes = false,
   hero = false,
   call = false,
+  setUp = true,
   className,
 }: {
   locale: DiverLocale;
@@ -93,10 +94,16 @@ export function FunnelCtas({
   hero?: boolean;
   /**
    * Offers the founder's 20-minute call beside Get set up, at quiet link weight. Every page's
-   * closing band says so ({@link ClosingCta}), and a switching guide's hero does too; no other
-   * pair does, so the call appears once or twice a page (Aaron, 2026-11-17, after #4316).
+   * closing band says so ({@link ClosingCta}), and a switching guide's concierge panel does in
+   * place of a closing call; no other pair does, so the call appears once a page (Aaron,
+   * 2026-11-17, after #4316).
    */
   call?: boolean;
+  /**
+   * `false` leaves Get set up out: a page whose concierge panel already carries it offers only
+   * the demo here, so the reader is not asked for the same thing three times.
+   */
+  setUp?: boolean;
   /** Placement only — margins, `justify-*`, `shrink-0`. Never colour or weight. */
   className?: string;
 }) {
@@ -118,16 +125,18 @@ export function FunnelCtas({
             {t("marketing.common.tryDemo")}
           </SubmitButton>
         </form>
-        <Link
-          href={setUpHref(source)}
-          className={
-            hero
-              ? `${tapTargetLinkClass} font-medium text-primary hover:underline`
-              : buttonClass({ variant: "outline", className: width })
-          }
-        >
-          {t("marketing.common.getSetUp")}
-        </Link>
+        {setUp ? (
+          <Link
+            href={setUpHref(source)}
+            className={
+              hero
+                ? `${tapTargetLinkClass} font-medium text-primary hover:underline`
+                : buttonClass({ variant: "outline", className: width })
+            }
+          >
+            {t("marketing.common.getSetUp")}
+          </Link>
+        ) : null}
         {call ? (
           <a
             href={callHref(source)}
