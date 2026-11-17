@@ -165,7 +165,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                   the page names (Aaron, 2026-11-11; #4316). */}
               <p className="pt-2">
                 <span className="sr-only">{FOUNDER_NAME}</span>
-                <FounderSignature className="h-auto w-56 text-foreground sm:w-64" />
+                <FounderSignature className="h-auto w-64 text-foreground sm:w-72" />
                 <span className="mt-2 block text-sm font-medium uppercase tracking-wide text-muted">
                   {t("marketing.about.founderRole")}
                 </span>
