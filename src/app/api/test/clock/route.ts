@@ -3,7 +3,7 @@ import { getDb } from "@/db/client";
 import { bringDemoBoatsAtSeaHome } from "@/db/seed-boat-at-sea";
 import { e2eTestRouteAuthorized, testRouteRefused } from "@/features/e2e-test-routes";
 import { nowDate } from "@/lib/clock";
-import { moveServerClock } from "../../../../features/test-clock/rules";
+import { moveServerClock } from "../../../../features/test-clock";
 
 /**
  * Move this server's frozen clock — the one-day simulation's hand on time.
@@ -18,7 +18,7 @@ import { moveServerClock } from "../../../../features/test-clock/rules";
  * **The fleet calls this through the `clock` fixture** (`e2e/fixtures.ts`). A
  * worker's clock is process-wide, shared by every spec that worker runs, so a
  * move is safe only because `/api/test/reset` puts the clock back to the
- * instant the server booted at before the next test (`src/features/test-clock/rules.ts`,
+ * instant the server booted at before the next test (`src/features/test-clock.ts`,
  * issue #2761). Only the reset moves it backwards; this route refuses to.
  *
  * Moving it past the demo's boat at sea brings her home

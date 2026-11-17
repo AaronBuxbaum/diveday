@@ -9,17 +9,17 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/db/seed", () => ({
   purgeMintedDemoShops: vi.fn(),
 }));
-vi.mock("../../../../features/demo-reset-snapshot/store", () => ({
+vi.mock("../../../../features/demo-reset-snapshot", () => ({
   resetDemoFromSnapshot: vi.fn(),
 }));
 vi.mock("@/db/shops", () => ({ getShopBySlug: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { purgeMintedDemoShops } = await import("@/db/seed");
-const { resetDemoFromSnapshot } = await import("../../../../features/demo-reset-snapshot/store");
+const { resetDemoFromSnapshot } = await import("../../../../features/demo-reset-snapshot");
 const { getShopBySlug } = await import("@/db/shops");
 const { POST } = await import("./route");
-const { moveServerClock } = await import("../../../../features/test-clock/rules");
+const { moveServerClock } = await import("../../../../features/test-clock");
 
 // `execute` is what the route reclaims dead tuples through; a bare object
 // would make that call throw into the route's own catch and the assertion

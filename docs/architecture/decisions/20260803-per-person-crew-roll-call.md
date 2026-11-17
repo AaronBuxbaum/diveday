@@ -79,7 +79,7 @@ key carries no subject kind.
    figures, and it returned `complete: true` with nobody named (D7). It also returns `crewReason`
    — the crew half's own reason, independent of the divers' — because a crew panel keyed off the
    single top `reason` shows "nobody has attested" on a boat where a named crew member is missing. "Accounted for" is the *same* predicate a diver's result goes through
-   (`isRollCallAccountedFor` / `isNotBackAboard`), and crew results carry forward from the dock the
+   (`isNotBackAboard`, `src/lib/roll-call.ts`), and crew results carry forward from the dock the
    same way — so a crew member marked not boarded at departure is ashore at every later checkpoint,
    while an after-dive `not_boarded` means *did not come back* and never carries (DOM-H3).
 
