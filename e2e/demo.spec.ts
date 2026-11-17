@@ -118,9 +118,7 @@ test("a new demo shows its example brand and images in settings", async ({ page 
       .poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth))
       .toBeGreaterThan(0);
   }
-  await expect(
-    page.getByText(diver("brand.demoBadge", { badge: diver("brand.badges.padi_5_star") })),
-  ).toBeVisible();
+  await expect(page.getByText(diver("brand.badges.padi_5_star"))).toBeVisible();
 });
 
 for (const start of [

@@ -23,6 +23,7 @@ export function StoredPhoto({
   className,
   sizes,
   priority = false,
+  focus = "object-center",
 }: {
   src: string;
   alt: string;
@@ -31,10 +32,19 @@ export function StoredPhoto({
   sizes: string;
   /** The page's largest image above the fold — the storefront's cover — is fetched eagerly. */
   priority?: boolean;
+  /** An `object-*` position class: where the crop keeps when the box is not the photo's own shape. */
+  focus?: string;
 }) {
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className="object-cover" />
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        priority={priority}
+        className={`object-cover ${focus}`}
+      />
     </div>
   );
 }
