@@ -16,7 +16,7 @@ it("says what was collected, the rentals, and that nothing is owed", () => {
         currency: "usd",
         collectedCents: 132_000,
         rentalCents: 18_000,
-        rentalSets: 6,
+        rentalGuests: 6,
         owedCents: 0,
         otherCurrencySeats: 0,
       }}
@@ -26,6 +26,6 @@ it("says what was collected, the rentals, and that nothing is owed", () => {
   );
   const card = screen.getByRole("region", { name: "Money" });
   expect(card).toHaveTextContent("Collected$1,320.00");
-  expect(card).toHaveTextContent("Rentals$180.00 · 6 sets");
+  expect(card).toHaveTextContent("Rentals$180.00 · 6 guests");
   expect(card).toHaveTextContent("OwedNothing");
 });

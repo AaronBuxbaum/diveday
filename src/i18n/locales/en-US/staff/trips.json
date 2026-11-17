@@ -1243,7 +1243,7 @@
       "money": "Money",
       "collected": "Collected",
       "rentalsLabel": "Rentals",
-      "rentalSets": "{amount} · {count, plural, one {# set} other {# sets}}",
+      "rentalGuests": "{amount} · {count, plural, one {# guest} other {# guests}}",
       "owed": "Owed",
       "nothingOwed": "Nothing",
       "otherCurrency": "{count, plural, one {# seat paid} other {# seats paid}} in another currency, not counted here.",

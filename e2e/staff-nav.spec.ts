@@ -640,7 +640,7 @@ test.describe("the phone", () => {
     // The roll call owns the phone: no tab bar while it is open.
     await expect(tabs).toBeHidden();
 
-    await page.getByRole("link", { name: "Return to Guests", exact: true }).click();
+    await page.getByRole("link", { name: "Trip", exact: true }).click();
     await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
     await expect(tabs).toBeVisible();
 

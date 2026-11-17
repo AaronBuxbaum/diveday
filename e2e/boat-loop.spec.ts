@@ -1,6 +1,8 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openOnThisPhone, openTripAbout } from "./helpers";
+import { openOnThisPhone, openTripAbout, openTripMenuLink } from "./helpers";
+
+const t = staffTranslator("en-US");
 
 /**
  * Not READ_ONLY, despite neither test submitting anything: both start from a
@@ -17,7 +19,7 @@ import { openOnThisPhone, openTripAbout } from "./helpers";
 
 signedInAsOwner();
 
-test("the departure's tabs reach its gear and its manifest", async ({ page }) => {
+test("the trip's phases, its gear and its roll call are each one tap away", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
   // A station's title is the door to its departure (ADR
@@ -25,26 +27,25 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
   await page.locator("ol li h3 a").first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
-  // Guest preparation and boat recording have separate entrances.
-  const tabs = page.getByRole("navigation", { name: "Departure" });
-  // Check-in is not one of them: arrival is a state of the Divers roster once
-  // a departure's arrivals open (owner, 2026-10-05).
-  await expect(tabs.getByRole("link")).toHaveText(["Guests", "Equipment", "The day", "Record"]);
-  await expect(tabs.getByRole("link", { name: "Guests" })).toHaveAttribute("aria-current", "page");
+  // The trip is five phases, shown one at a time (ADR 20261117-trip-page-clock);
+  // the phase on screen is the one it is in now.
+  const phases = page.getByRole("navigation", { name: t("trips.clock.label") });
+  await expect(phases.getByRole("link")).toHaveCount(5);
+  await expect(phases.locator('a[aria-current="page"]')).toHaveCount(1);
   // The header's stage is the crew's own word or nothing — never a phase
   // the clock made up (UX review 2026-10-10, item 1).
   await expect(
     page.locator("header").getByText(/^Stage: (Prep|Check-in|Aboard|Back)$/),
   ).toHaveCount(0);
 
-  // **The packing list is the Gear tab**, not the bottom of the roster.
+  // **The packing list is the Gear page**, not the bottom of the guest list.
   await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toHaveCount(0);
-  await tabs.getByRole("link", { name: "Equipment" }).click();
+  await openTripMenuLink(page, t("trips.clock.gear"));
   await expect(page).toHaveURL(/\/prep$/);
   await expect(page.getByRole("heading", { name: "Tanks", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toBeVisible();
 
-  await page.getByRole("link", { name: "Roll call", exact: true }).click();
+  await openTripMenuLink(page, t("trips.clock.rollCall"));
   await expect(page).toHaveURL(/\/manifest/);
   await expect(page.getByRole("heading", { name: "Roll call", exact: true })).toBeVisible();
 
@@ -57,7 +58,7 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
     .filter({ has: page.locator("#offline-heading") })
     .first();
   await expect(onThisPhone).toBeVisible();
-  await page.getByRole("link", { name: "Return to Guests", exact: true }).click();
+  await page.getByRole("link", { name: t("manifest.deck.return"), exact: true }).click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await expect(page.locator("#roster")).toBeVisible();
 });

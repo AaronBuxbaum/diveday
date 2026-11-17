@@ -1,12 +1,13 @@
 import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   daysFromNow,
   e2eNow,
   openThreadStep,
-  openTripAbout,
   openTripFromBoard,
+  openTripMenuLink,
   openTripMore,
   seededTripId,
 } from "./helpers";
@@ -26,6 +27,7 @@ signedInAsOwner();
 
 const SHOP = "blue-mantis";
 const diver = diverTranslator("en-US");
+const staff = staffTranslator("en-US");
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
 test.describe("weather blow-out cascade", () => {
@@ -33,7 +35,7 @@ test.describe("weather blow-out cascade", () => {
     page,
   }) => {
     // Five pages and a confirm: the board, the departure, the confirm, the
-    // cascade, and the departure's Divers, Details and Gear tabs after it.
+    // cascade, and the trip, its Gear page and its cancellation record after it.
     test.setTimeout(30_000);
     // `openTripFromBoard` clicks a row on the board; it does not navigate to
     // it. `signedInAsOwner` only seeds storage state, so without this the test
@@ -109,28 +111,19 @@ test.describe("weather blow-out cascade", () => {
     ).toBeVisible();
 
     // The trip record now reads cancelled and keeps the way back to the
-    // cascade; the quiet per-trip cancel control is gone with it.
+    // cascade; the cancellation is said first, with Reinstate beside it.
     await page.getByRole("main").getByRole("link", { name: "Trip", exact: true }).click();
-    await openTripAbout(page);
-    // The cancellation badge lives in the shared masthead; the About panel is
-    // open here so the trip's lifecycle controls remain in the same reading.
-    // Not `exact: true`: the status is a `<Badge tone="danger">`, which renders
-    // an aria-hidden glyph inside the same span as the label, so the element's
-    // text is "❌Cancelled" and no element has the exact text "Cancelled".
-    // `import.spec.ts` matches this badge the same way. The "Reinstate trip"
-    // button on the next line is what makes the pair specific to a cancelled
-    // trip rather than to any prose containing the word.
-    await expect(page.getByText("Canceled").filter({ visible: true }).first()).toBeVisible();
+    await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
+    await expect(page.getByText(/^Called off for weather on /)).toBeVisible();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     /**
      * **But the roll call is still one tap away** (dive-domain review
-     * 20260920). The tab strip is gone (ADR 20260919-one-idea, slice 23c), so
-     * this chip is the departure's only door to the manifest. A roll call is a
-     * record of people. The cancellation that bites is the one that
-     * lands after check-in has started, with six divers already tapped aboard
-     * and a crew that now needs to put them back ashore and close the count.
+     * 20260920; ADR 20261117-trip-page-clock: Roll call has a door on every
+     * cancelled trip). A roll call is a record of people. The cancellation
+     * that bites is the one that lands after check-in has started, with six
+     * divers already tapped aboard and a crew that now needs to put them back
+     * ashore and close the count.
      */
-    const tabs = page.getByRole("navigation", { name: "Departure" });
     await expect(page.getByRole("link", { name: "Roll call", exact: true })).toBeVisible();
 
     /**
@@ -140,15 +133,15 @@ test.describe("weather blow-out cascade", () => {
      * happening. Said rather than simply absent, because a list that vanishes
      * without a word reads as "nothing to pull".
      */
-    await tabs.getByRole("link", { name: "Equipment" }).click();
+    await openTripMenuLink(page, staff("trips.clock.gear"));
     await expect(page).toHaveURL(/\/prep$/);
     await expect(page.getByText("The departure is canceled. Nothing to pack.")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Tanks", exact: true })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toHaveCount(0);
 
     await page
-      .getByRole("navigation", { name: "Departure" })
-      .getByRole("link", { name: "Guests" })
+      .getByRole("navigation", { name: staff("trips.clock.label") })
+      .getByRole("link", { name: new RegExp(staff("trips.clock.phases.wrapped")) })
       .click();
     await page.getByRole("link", { name: "View cancellation record" }).click();
     await expect(

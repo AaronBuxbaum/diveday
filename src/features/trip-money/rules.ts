@@ -22,7 +22,10 @@ export type TripMoneySeat = {
   paymentCurrency: string | null;
   /** What it still owes (`seatBalanceOwedCents`), or null for nothing or no price. */
   owedCents: number | null;
-  /** Rental gear it paid for: completed checkouts' gear and paid rental order lines. */
+  /**
+   * Rental gear it paid for, net of refunds (`netOfRefund`): completed
+   * checkouts' gear and paid rental order lines. A cancelled seat's is left out.
+   */
   rentalCents: number;
 };
 
@@ -30,8 +33,8 @@ export type TripMoney = {
   currency: string;
   collectedCents: number;
   rentalCents: number;
-  /** Seats that paid for rental gear. */
-  rentalSets: number;
+  /** Live seats whose guest paid for rental gear. */
+  rentalGuests: number;
   owedCents: number;
   /** Seats whose money is in another currency, left out of the sums. */
   otherCurrencySeats: number;
@@ -42,7 +45,7 @@ export function tallyTripMoney(seats: readonly TripMoneySeat[], currency: string
     currency,
     collectedCents: 0,
     rentalCents: 0,
-    rentalSets: 0,
+    rentalGuests: 0,
     owedCents: 0,
     otherCurrencySeats: 0,
   };
@@ -55,11 +58,22 @@ export function tallyTripMoney(seats: readonly TripMoneySeat[], currency: string
     if (seat.paymentStatus && COLLECTED_STATUSES.has(seat.paymentStatus)) {
       money.collectedCents += Math.max(0, seat.amountCents ?? 0);
     }
-    if (seat.rentalCents > 0) {
+    if (seat.live && seat.rentalCents > 0) {
       money.rentalCents += seat.rentalCents;
-      money.rentalSets += 1;
+      money.rentalGuests += 1;
     }
     if (seat.live && seat.owedCents && seat.owedCents > 0) money.owedCents += seat.owedCents;
   }
   return money;
+}
+
+/**
+ * What is left of `partCents` of a payment of `totalCents` once
+ * `refundedCents` of it went back, in the share the part was of the whole: a
+ * refund is recorded on the checkout or order, not on its gear.
+ */
+export function netOfRefund(partCents: number, totalCents: number, refundedCents: number): number {
+  if (partCents <= 0 || totalCents <= 0) return 0;
+  const kept = Math.max(0, totalCents - refundedCents);
+  return Math.floor((partCents * kept) / totalCents);
 }

@@ -8,7 +8,6 @@ import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { buttonClass } from "@/components/ui/button";
 import { requireShopSurface } from "@/features/session";
-import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
@@ -224,9 +223,10 @@ export default async function TripManifestPage({
             // dive is one tap away rather than behind More.
             checkpoint={
               <>
-                <p className="font-semibold">
-                  {vessel?.name ?? manifest.trip.title} · {rollCallCheckpointText(t, checkpoint)}
-                </p>
+                {/* The tabs name the count and "Trip" leads back to the boat's
+                    own page, so no title line spends a phone's height (ADR
+                    20261114-trip-folio-and-individual-deck: routine roll call
+                    fits one small phone screen). */}
                 <CheckpointSwitch
                   manifests={completeManifests}
                   checkpoint={checkpoint}

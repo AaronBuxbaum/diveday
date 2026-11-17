@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
-const copy = { unconfirmed: "Roster not freshly confirmed", confirmed: "Roster checked" };
+const copy = { unconfirmed: "Guest list not checked lately", confirmed: "Guest list checked" };
 
 for (const failure of ["no-scope", "cookie-unavailable"] as const) {
   it(`bounds stale fallback refreshes when ${failure}`, () => {

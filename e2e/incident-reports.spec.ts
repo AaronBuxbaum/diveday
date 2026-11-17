@@ -1,11 +1,11 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, openTripFromBoard } from "./helpers";
+import { daysFromNow, openTripFromBoard, openTripPhase } from "./helpers";
 
 signedInAsOwner();
 
 /**
  * An incident report on a departure (ADR 20261012-incident-reports), end to
- * end: started from Record, written as a draft, a diver named by
+ * end: started from On the water, written as a draft, a diver named by
  * their seat, filed once, a dated note added after, and the report found
  * again on the Safety tab beside Reports. Safety-critical record, so the
  * whole path runs in a browser.
@@ -16,10 +16,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   test.setTimeout(60_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await page
-    .getByRole("navigation", { name: "Departure" })
-    .getByRole("link", { name: "Record", exact: true })
-    .click();
+  await openTripPhase(page, "water");
 
   const section = page.getByRole("region", { name: "Incident reports" });
   await section.getByRole("button", { name: "Report an incident" }).click();
@@ -111,7 +108,8 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await page.getByRole("button", { name: "Delete draft" }).click();
   await page.getByRole("button", { name: "Yes, delete the draft" }).click();
   await page.waitForURL((url) => url.pathname === tripPath);
-  await expect(page.getByRole("heading", { name: "Record", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/[?&]phase=wrapped/);
+  await expect(section).toBeVisible();
   await expect(section.getByText("Draft", { exact: true })).toHaveCount(0);
   await page.goto(`${tripPath}/log`);
   await expect(page.getByText(/^Draft started by .+, deleted unfiled by .+ on /)).toBeVisible();

@@ -429,10 +429,10 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
 
   // Seated: the shared seat-a-diver action lands on the trip's roster.
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-  // Seating opens this guest’s folio directly; checking its heading keeps
-  // the complete journey keyboard-only, including the durable booked outcome.
+  // Seating opens this guest in place; checking the opened row keeps the
+  // complete journey keyboard-only, including the durable booked outcome.
   await expect(
-    page.locator("#roster").getByRole("heading", { name: diver, exact: true }),
+    page.locator("#roster").getByRole("button", { name: diver, exact: true, expanded: true }),
   ).toBeVisible();
 
   // And the outcome was *announced*, not merely rendered. The e2e fleet

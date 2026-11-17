@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openAddAGuest, openTripFromBoard } from "./helpers";
 
 /**
  * **"Took a call"** (N-22): the desk phone's answer for a caller with no seat
@@ -44,9 +44,9 @@ async function fullDeparture(page: Page): Promise<string> {
     capacity: 1,
   });
   await openTripFromBoard(page, title);
-  // Tomorrow's boat is inside the arrivals window, where "Add a diver" is one
-  // search field and a booked seat is its empty result's "Add a guest".
-  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  // The trip's add form is one search field, and a new guest is its empty
+  // result's "Add a guest".
+  const find = await openAddAGuest(page);
   await find.fill("Fills The Boat");
   await find.press("Enter");
   await page.getByRole("link", { name: "Add a guest", exact: true }).first().click();

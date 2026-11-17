@@ -407,10 +407,7 @@ test.describe("light mode largest device body after-dive warnings", () => {
     const navigation = [
       ["Departure title", departure],
       ["Deck home", deck.getByRole("button", { name: copy("manifest.deck.home"), exact: true })],
-      [
-        "Return to Guests",
-        deck.getByRole("link", { name: copy("manifest.deck.return"), exact: true }),
-      ],
+      ["Trip", deck.getByRole("link", { name: copy("manifest.deck.return"), exact: true })],
       [
         "Find a person",
         deck.getByRole("button", { name: copy("manifest.deck.find"), exact: true }),

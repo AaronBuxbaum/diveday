@@ -247,10 +247,10 @@ export function MoneyCard({ money, locale, t }: { money: TripMoney } & Omit<Word
       key: "rentals",
       label: t("trips.clock.wrapped.rentalsLabel"),
       value:
-        money.rentalSets > 0
-          ? t("trips.clock.wrapped.rentalSets", {
+        money.rentalGuests > 0
+          ? t("trips.clock.wrapped.rentalGuests", {
               amount: amount(money.rentalCents),
-              count: money.rentalSets,
+              count: money.rentalGuests,
             })
           : t("trips.clock.wrapped.none"),
     },

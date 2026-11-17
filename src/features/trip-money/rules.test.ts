@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type TripMoneySeat, tallyTripMoney } from "./rules";
+import { netOfRefund, type TripMoneySeat, tallyTripMoney } from "./rules";
 
 const seat = (over: Partial<TripMoneySeat>): TripMoneySeat => ({
   live: true,
@@ -41,7 +41,7 @@ describe("a departure's money", () => {
       currency: "usd",
       collectedCents: 27_500,
       rentalCents: 3_000,
-      rentalSets: 1,
+      rentalGuests: 1,
       owedCents: 25_000,
       otherCurrencySeats: 0,
     });
@@ -61,6 +61,21 @@ describe("a departure's money", () => {
 
   it("leaves a cancelled seat's balance out of what is owed", () => {
     expect(tallyTripMoney([seat({ live: false, owedCents: 15_000 })], "usd").owedCents).toBe(0);
+  });
+
+  it("leaves a cancelled seat's rentals out", () => {
+    const money = tallyTripMoney([seat({ live: false, rentalCents: 3_000 })], "usd");
+    expect(money).toMatchObject({ rentalCents: 0, rentalGuests: 0 });
+  });
+
+  it("takes a refund off the rental money in the share the rentals were of the whole", () => {
+    // A $200 checkout with $50 of gear, $100 refunded: half of it is left.
+    expect(netOfRefund(5_000, 20_000, 10_000)).toBe(2_500);
+    expect(netOfRefund(5_000, 20_000, 0)).toBe(5_000);
+    expect(netOfRefund(5_000, 20_000, 20_000)).toBe(0);
+    // More refunded than taken never reads as money owed back on gear.
+    expect(netOfRefund(5_000, 20_000, 30_000)).toBe(0);
+    expect(netOfRefund(0, 0, 0)).toBe(0);
   });
 
   it("never adds another currency's amount to the shop's", () => {

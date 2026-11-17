@@ -441,6 +441,51 @@ export async function openTripMore(page: Page): Promise<Locator> {
   return card;
 }
 
+/** One of the trip page's five phases (ADR 20261117-trip-page-clock). */
+export type TripPhase = "filling" | "ready" | "checkin" | "water" | "wrapped";
+
+/**
+ * Open one phase of the trip on screen from its phase strip, the way staff
+ * do, and wait for its panel.
+ */
+export async function openTripPhase(page: Page, phase: TripPhase): Promise<void> {
+  await page.waitForURL(TRIP_SURFACE_URL);
+  await page.locator(`[data-trip-phases] a[data-phase="${phase}"]`).click();
+  await expect(page.locator(`[data-trip-phases] a[data-phase="${phase}"]`)).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+}
+
+/**
+ * Follow one of the trip header's More menu rows (Gear, Roll call before
+ * Check-in, Add a guest, Activity, Edit trip on a phone) by its name.
+ */
+export async function openTripMenuLink(page: Page, name: string): Promise<void> {
+  const t = staffTranslator("en-US");
+  const menu = page
+    .locator("[data-more-menu]")
+    .filter({ has: page.getByRole("button", { name: t("trips.clock.more"), exact: true }) })
+    .filter({ visible: true })
+    .first();
+  const trigger = menu.getByRole("button", { name: t("trips.clock.more"), exact: true });
+  if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click();
+  await menu.locator("[data-more-menu-panel]").getByRole("link", { name, exact: true }).click();
+}
+
+/**
+ * Open the trip's add form (`?add=1`) from the header's More menu, and wait
+ * for its returning-diver search.
+ */
+export async function openAddAGuest(page: Page): Promise<Locator> {
+  const t = staffTranslator("en-US");
+  await openTripMenuLink(page, t("trips.clock.addGuest"));
+  await page.waitForURL(/[?&]add=1/);
+  const find = page.getByRole("searchbox", { name: t("trips.addDiver.findLabel") });
+  await expect(find).toBeVisible();
+  return find;
+}
+
 /** The series page under Schedule for the departure on screen, where the run is changed. */
 export async function openSeriesPage(page: Page): Promise<void> {
   await openTripAbout(page);
@@ -770,13 +815,13 @@ export function addDiverFormPath(shopSlug: string, tripId: string): string {
 }
 
 /**
- * Seat a returning diver from the boat's Divers tab: search, then the row's own
+ * Seat a returning diver from the trip's add form: search, then the row's own
  * add button. This is the roster's door, so the seat lands as an ordinary
  * "Diver added…" (`notice=diver-added…`).
  */
 export async function seatFromRoster(page: Page, tripId: string, name: string): Promise<void> {
   await page.goto(counterPath("blue-mantis", tripId));
-  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  const find = await openAddAGuest(page);
   await find.fill(name);
   await find.press("Enter");
   await page.getByRole("button", { name: `Add ${name} to the trip` }).click();

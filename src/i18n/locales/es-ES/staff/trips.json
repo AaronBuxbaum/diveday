@@ -1243,7 +1243,7 @@
       "money": "Dinero",
       "collected": "Cobrado",
       "rentalsLabel": "Alquileres",
-      "rentalSets": "{amount} · {count, plural, one {# equipo} other {# equipos}}",
+      "rentalGuests": "{amount} · {count, plural, one {# participante} other {# participantes}}",
       "owed": "Pendiente",
       "nothingOwed": "Nada",
       "otherCurrency": "{count, plural, one {# plaza pagó} other {# plazas pagaron}} en otra moneda; no se cuentan aquí.",

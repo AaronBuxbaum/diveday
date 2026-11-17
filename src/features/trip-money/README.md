@@ -13,4 +13,4 @@ Payment state, balances and refunds stay in their own modules (`payment-marks`, 
 
 ## Invariants
 
-Reads only; no new state. Collected counts the payment states Reports counts (`paid`, `deposit_paid`, `partly_refunded`) at what the shop still holds. Owed counts live seats only. Money in a currency other than the shop's is never added to its sums.
+Reads only; no new state. Collected counts the payment states Reports counts (`paid`, `deposit_paid`, `partly_refunded`) at what the shop still holds. Owed and Rentals count live seats only; rental money is net of its share of any refund on its checkout or order, and is counted by guest. Money in a currency other than the shop's is never added to its sums.
