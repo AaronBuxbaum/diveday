@@ -77,6 +77,7 @@ export function FunnelCtas({
   footnotes = false,
   hero = false,
   call = false,
+  setUp = true,
   className,
 }: {
   locale: DiverLocale;
@@ -92,10 +93,17 @@ export function FunnelCtas({
   /** Home and Product heroes keep the secondary setup door at quiet link weight. */
   hero?: boolean;
   /**
-   * Offers the founder's 20-minute call beside Get set up, at quiet link weight. Only `/pricing`
-   * and `/about` say so (Aaron, 2026-11-11, #4316).
+   * Offers the founder's 20-minute call beside Get set up, at quiet link weight. Every page's
+   * closing band says so ({@link ClosingCta}), and a switching guide's concierge panel does in
+   * place of a closing call; no other pair does, so the call appears once a page (Aaron,
+   * 2026-11-17, after #4316).
    */
   call?: boolean;
+  /**
+   * `false` leaves Get set up out: a page whose concierge panel already carries it offers only
+   * the demo here, so the reader is not asked for the same thing three times.
+   */
+  setUp?: boolean;
   /** Placement only — margins, `justify-*`, `shrink-0`. Never colour or weight. */
   className?: string;
 }) {
@@ -117,16 +125,18 @@ export function FunnelCtas({
             {t("marketing.common.tryDemo")}
           </SubmitButton>
         </form>
-        <Link
-          href={setUpHref(source)}
-          className={
-            hero
-              ? `${tapTargetLinkClass} font-medium text-primary hover:underline`
-              : buttonClass({ variant: "outline", className: width })
-          }
-        >
-          {t("marketing.common.getSetUp")}
-        </Link>
+        {setUp ? (
+          <Link
+            href={setUpHref(source)}
+            className={
+              hero
+                ? `${tapTargetLinkClass} font-medium text-primary hover:underline`
+                : buttonClass({ variant: "outline", className: width })
+            }
+          >
+            {t("marketing.common.getSetUp")}
+          </Link>
+        ) : null}
         {call ? (
           <a
             href={callHref(source)}
@@ -185,7 +195,6 @@ export function ClosingCta({
   source,
   title,
   demo,
-  call = false,
   supportKey = "marketing.common.closingSupport",
   measure = "shell",
 }: {
@@ -193,8 +202,6 @@ export function ClosingCta({
   source: FunnelSource;
   title: string;
   demo?: { role: DemoRoleId; landing: DemoLanding | null };
-  /** Offers the 20-minute call beside Get set up; see {@link FunnelCtas}. */
-  call?: boolean;
   /** The support line's bundle key; its sentence names `{email}`. */
   supportKey?: DiverMessageKey;
   /** The page's own column, so the close lines up with the bands above it. */
@@ -226,7 +233,7 @@ export function ClosingCta({
             </>
           )}
         </p>
-        <FunnelCtas locale={locale} source={source} demo={demo} call={call} className="mt-8" />
+        <FunnelCtas locale={locale} source={source} demo={demo} call className="mt-8" />
       </div>
     </section>
   );

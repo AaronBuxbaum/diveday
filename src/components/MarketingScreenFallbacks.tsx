@@ -126,6 +126,9 @@ export function ChecklistRow({
  * the Dive 1 checkpoint (`CheckpointSwitch`, the count `HeadCount` keeps open
  * until everyone who left the dock is counted back aboard): all nine back,
  * Priya's and Tom's rows both tapped, the heading the checkpoint's own.
+ * `state="afterDivePending"` is the moment before: eight back, Tom's mark the
+ * one the crew taps next (`data-tap-target`, which the homepage walkthrough
+ * pulses before it swaps to `afterDive`).
  *
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.tsx
  * @mirrors src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CheckpointSwitch.tsx
@@ -138,13 +141,14 @@ export function CaptainRollCallFallback({
   state = "dock",
 }: {
   locale: DiverLocale;
-  state?: "dock" | "afterDive";
+  state?: "dock" | "afterDive" | "afterDivePending";
 }) {
   const t = diverTranslator(locale);
   // i18n-exempt: sample diver names used only in marketing mockups
   const divers = ["Priya Sharma", "Tom Okafor"];
-  const afterDive = state === "afterDive";
-  const aboard = afterDive ? 9 : 4;
+  const afterDive = state !== "dock";
+  const bothBack = state === "afterDive";
+  const aboard = bothBack ? 9 : state === "afterDivePending" ? 8 : 4;
   return (
     <div className="bg-background text-foreground">
       <AppBar label={t("fallback.boatLabel")} inset={PHONE_INSET_X} />
@@ -200,7 +204,7 @@ export function CaptainRollCallFallback({
             {divers.map((name, index) => {
               // At the dock Priya has been tapped aboard and Tom is the one the
               // crew is still to call; after the dive both are counted back.
-              const isAboard = afterDive || index === 0;
+              const isAboard = bothBack || index === 0;
               return (
                 <div
                   key={name}
@@ -218,7 +222,12 @@ export function CaptainRollCallFallback({
                     </span>
                     <p className="min-w-0 flex-1 text-sm font-semibold">{name}</p>
                     <DiveDayIcon name="chevron-right" className="size-4 shrink-0 text-muted" />
-                    <RollCallMark state={isAboard ? "aboard" : "toCall"} />
+                    <span
+                      data-tap-target={isAboard ? undefined : ""}
+                      className="inline-flex rounded-full"
+                    >
+                      <RollCallMark state={isAboard ? "aboard" : "toCall"} />
+                    </span>
                   </div>
                 </div>
               );
