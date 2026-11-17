@@ -278,6 +278,7 @@
     "overRatio": "Over student ratio: add a DM or AI",
     "overRatioInstructor": "Over student ratio: add an instructor",
     "overIntroRatio": "Over intro ratio: add an instructor",
+    "noRequirements": "Set the requirements before anyone can board",
     "boatClash": "{boat} is also on {departure}"
   },
   "detail": {

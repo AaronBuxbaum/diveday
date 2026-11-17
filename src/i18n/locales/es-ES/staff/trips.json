@@ -278,6 +278,7 @@
     "overRatio": "Ratio de alumnos excedida: agrega un divemaster o AI",
     "overRatioInstructor": "Ratio de alumnos excedida: agrega un instructor",
     "overIntroRatio": "Ratio de bautismo excedida: agrega un instructor",
+    "noRequirements": "Define los requisitos para que alguien pueda embarcar",
     "boatClash": "{boat} también está asignado a {departure}"
   },
   "detail": {
