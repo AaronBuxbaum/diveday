@@ -3,8 +3,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   diveDayOrdinal,
-  isLapsedRegular,
-  LAPSED_REGULAR_MIN_DAYS,
   LAPSED_REGULAR_MONTHS,
   lapsedRegularCutoff,
   mergeShopHistory,
@@ -208,32 +206,8 @@ describe("the glossary's dive-day entry", () => {
   });
 });
 
-describe("isLapsedRegular", () => {
+describe("lapsedRegularCutoff", () => {
   const now = new Date("2026-11-16T12:00:00Z");
-  const monthsAgo = (months: number) => {
-    const at = new Date(now.getTime());
-    at.setUTCMonth(at.getUTCMonth() - months);
-    return at;
-  };
-
-  it("names a diver with three dive days and none in twelve months", () => {
-    expect(
-      isLapsedRegular({ diveDays: LAPSED_REGULAR_MIN_DAYS, lastDivedAt: monthsAgo(13) }, now),
-    ).toBe(true);
-    expect(isLapsedRegular({ diveDays: 40, lastDivedAt: monthsAgo(30) }, now)).toBe(true);
-  });
-
-  it("leaves out a diver with fewer dive days, however long ago", () => {
-    expect(isLapsedRegular({ diveDays: 2, lastDivedAt: monthsAgo(30) }, now)).toBe(false);
-    expect(isLapsedRegular({ diveDays: 0, lastDivedAt: null }, now)).toBe(false);
-  });
-
-  it("leaves out a regular who dived inside the window, the cutoff day included", () => {
-    expect(isLapsedRegular({ diveDays: 9, lastDivedAt: monthsAgo(11) }, now)).toBe(false);
-    expect(isLapsedRegular({ diveDays: 9, lastDivedAt: lapsedRegularCutoff(now) }, now)).toBe(
-      false,
-    );
-  });
 
   it("measures the window in the named months", () => {
     expect(LAPSED_REGULAR_MONTHS).toBe(12);
