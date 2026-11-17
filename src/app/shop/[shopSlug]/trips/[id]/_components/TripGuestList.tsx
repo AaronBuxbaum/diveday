@@ -42,7 +42,9 @@ export function TripGuestList({
         refreshing: t("checkIn.pullToRefresh.refreshing"),
       }}
     >
-      <div className="space-y-6">
+      {/* `empty:hidden`: with no band and no course pulse, an empty box would
+          still take the stack's gap above the guest list. */}
+      <div className="space-y-6 empty:hidden">
         <GuestBands {...{ overview, showMinimum, shopSlug, locale, timeZone, t }} />
         <CoursePulse
           shopSlug={shopSlug}
