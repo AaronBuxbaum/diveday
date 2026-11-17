@@ -141,7 +141,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
             email: found.email,
             password: found.password,
             warning:
-              "Sample shop only. No real customer data. Temporary demo may be removed at any time; normally cleared after seven days.",
+              "Sample shop only. No real customer data. Temporary demo may be removed at any time; normally cleared after seven days without use.",
           },
           null,
           2,

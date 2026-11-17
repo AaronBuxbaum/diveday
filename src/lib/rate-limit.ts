@@ -525,7 +525,7 @@ export const RATE_LIMITS = {
   /**
    * "Try the live demo" mints a whole seeded demo shop, so throttle it per IP.
    * Generous (a curious visitor may reload a few times), but it stops one IP
-   * from spraying seeded shops faster than the 7-day reaper clears them
+   * from spraying seeded shops faster than the idle-demo reaper clears them
    * (ADR 20260724-per-visitor-demo-shops).
    */
   demoCreate: perHour(10),

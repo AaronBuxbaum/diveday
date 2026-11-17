@@ -717,8 +717,8 @@ export async function createDemoShop(
   const shape = opts.shape ?? "history";
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
-  // attacker could pile up minted shops between 7-day reaper passes. Before
-  // minting, evict the oldest minted demos so the live count never exceeds the
+  // attacker could pile up minted shops between reaper passes. Before
+  // minting, evict the longest-idle minted demos so the live count never exceeds the
   // ceiling — the canonical demo and real shops are never eligible (see below).
   await enforceMintedDemoCap(db);
 

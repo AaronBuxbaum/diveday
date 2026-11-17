@@ -140,7 +140,7 @@ function requestedDemoRole(formData?: FormData): DemoRoleId {
  * (`role`, one of `DemoRoleId` — owner when the form sends none, the primary
  * CTA's long-standing behavior). Each visitor gets their own throwaway shop
  * rather than sharing the canonical fixture (ADR 20260724-per-visitor-demo-shops);
- * a 7-day reaper clears them. Forms may carry a hidden `source` field naming
+ * a reaper clears them after 7 days with no sign-in or staff input. Forms may carry a hidden `source` field naming
  * the page the click came from, and a hidden `landing` naming the staff page
  * the door was about (`src/lib/demo-landings.ts`, a closed list) — a feature
  * page about the gear register opens the demo on the gear register rather
