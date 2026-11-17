@@ -73,7 +73,7 @@ export async function EditTrip({
       {detailsEditable === false && !cancelled ? (
         <p className="text-sm text-muted">{t("trips.notices.detailsFinished")}</p>
       ) : null}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
         <div className="min-w-0 space-y-6">
           <TripAboutSection
             heading={t("trips.about.thisTrip")}

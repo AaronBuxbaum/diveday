@@ -74,6 +74,7 @@ export function PrintCard({
           popupBlockedLabel={t("shared.printButton.popupBlocked")}
           recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
           flush
+          link
         />
         <Link href={`${trip}?phase=checkin`} className={LINK}>
           {t("trips.clock.edit.paperPasses")}
