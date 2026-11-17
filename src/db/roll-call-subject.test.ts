@@ -18,7 +18,8 @@ import {
   splitRollCallRows,
 } from "./roll-call-subject";
 import { rollCallEvents, tripAssignments } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **Seat and crew are one ledger** (issue #2700): `roll_call_events` holds

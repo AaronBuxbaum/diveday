@@ -45,7 +45,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 const { requestFindMyBookingAction } = await import("./actions");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { createBooking } = await import("@/db/bookings");
-const { upcomingTripsWithCounts } = await import("@/db/trips");
+const { upcomingTripsWithCounts } = await import("@/db/trips-queries.test-support");
 
 beforeEach(() => {
   hoisted.afterTasks.length = 0;

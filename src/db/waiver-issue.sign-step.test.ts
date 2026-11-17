@@ -5,7 +5,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import { bookings, waiverRecords } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { issueWaiverOnJoin, openJoinSignStep, settleJoinWaiverDelivery } from "./waiver-issue";
 import { completeWaiver, getWaiverForToken, issueWaiverRequest, threadWaiverKey } from "./waivers";
 

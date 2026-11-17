@@ -13,7 +13,7 @@ import {
   personRoles,
   waiverRecords,
 } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import * as completionDb from "../../db/waivers-completion";
 import {
   completeWaiver,

@@ -10,7 +10,8 @@ import { undoBookingNoShow } from "../features/no-show/store";
 import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import { moveBooking, restoreBooking, selfCancelBooking } from "./bookings";
 import { bookingArrivalEvents, bookings, rollCallEvents, trips } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { moveTrip } from "./trips-schedule";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 

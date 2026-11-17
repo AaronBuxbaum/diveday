@@ -7,7 +7,8 @@ import { people, personRoles, rollCallEvents, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
 import { changeStaffCredential, createStaffCredential } from "./staff-credentials";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 describePostgres("crew boarding credential observation", () => {
   it("captures only committed credentials when a renewal is blocked, then sees the committed renewal", async () => {

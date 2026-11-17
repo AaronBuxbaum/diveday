@@ -8,7 +8,7 @@ import {
   subscribeManifestEvents,
 } from "@/db/manifest-events";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";

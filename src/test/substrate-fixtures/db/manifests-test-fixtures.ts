@@ -1,6 +1,7 @@
 import type { DbExecutor } from "@/db/client";
 import { bookings, tripAssignments } from "@/db/schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../../db/trips";
+import { getTripRoster, listStaff } from "../../../db/trips";
+import { upcomingTripsWithCounts } from "../../../db/trips-queries.test-support";
 import { getCurrentWaiverTemplate } from "../../../db/waivers";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../../lib/medical";
 import { fileScopedShopContext } from "../../db";

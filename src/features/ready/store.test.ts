@@ -27,7 +27,8 @@ import {
   waiverRecords,
 } from "../../db/schema/index";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../../db/stripe-accounts";
-import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster, listStaff, setTripStatus } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { completeWaiver } from "../../db/waivers";
 import { issueWaiverRequest } from "../../db/waivers-requests";
 import { diverTranslator } from "../../i18n/messages";

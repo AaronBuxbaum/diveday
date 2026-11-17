@@ -10,7 +10,8 @@ import { issuePartySeatClaims } from "../features/seat-claims/store";
 import { createBookingParty } from "./bookings";
 import { listTripsReadiness, upsertTripRequirements } from "./readiness";
 import { bookings, trips, waiverRecords } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 import { recordInPersonWaiver } from "./waivers-in-person";
 

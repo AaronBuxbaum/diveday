@@ -14,7 +14,7 @@ import type { AppDb } from "./client";
 import { latestDeliveryOnly } from "./latest-delivery";
 import { listNotificationDeliveryIssues, recordNotificationDelivery } from "./notifications";
 import { notificationDeliveries, notificationKind, people, personRoles } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **One `notification_deliveries` row per send** (issue #2728). The attempt

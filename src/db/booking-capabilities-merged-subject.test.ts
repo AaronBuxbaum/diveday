@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { bookings, people } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const fileContext = fileScopedShopContext();
 

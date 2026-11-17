@@ -25,13 +25,8 @@ import {
 } from "./readiness";
 import { cards, courses, diveSites, shops, tripAssignments, trips } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
-import {
-  createTrip,
-  getTripRoster,
-  listStaff,
-  listTripDives,
-  upcomingTripsWithCounts,
-} from "./trips";
+import { createTrip, getTripRoster, listStaff, listTripDives } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 /** Ids of the shop's live (unarchived) level cards, read straight off the table. */

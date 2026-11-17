@@ -44,7 +44,8 @@ const { bookings, dateRequestOfferBookings, interests, people, shops, deals, tri
   "./schema"
 );
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import("./stripe-accounts");
-const { createTrip, upcomingTripsWithCounts } = await import("./trips");
+const { createTrip } = await import("./trips");
+const { upcomingTripsWithCounts } = await import("./trips-queries.test-support");
 
 const ana = { fullName: "Ana Reyes", email: "ana@example.com" };
 const openWater = { level: "open_water" as const, noCertification: false, nitrox: false };

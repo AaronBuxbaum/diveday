@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { lockDateRequestOffer } from "./date-request-offer-bookings";
 import { askForDate } from "./interests";
 import { interests } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

@@ -17,7 +17,8 @@ import {
   tripRequirements,
   trips as tripsTable,
 } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One database for the file, a rolled-back transaction per test. The one race
 // below ("two taps that land together") takes its own: inside one transaction

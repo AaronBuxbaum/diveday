@@ -22,7 +22,7 @@ import {
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { bookingCapabilities, bookings, people, shops, trips } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **Booking links computed from their row** (issue #2711, ADR

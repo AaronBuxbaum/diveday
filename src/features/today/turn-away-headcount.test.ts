@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getTripManifest } from "@/db/manifests";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster, listStaff } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";

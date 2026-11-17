@@ -72,7 +72,8 @@ const { getShopStripeAccount, setShopStripeAccountStatus, upsertShopStripeAccoun
   "@/db/stripe-accounts"
 );
 const { startTipCheckout } = await import("@/db/tips");
-const { upcomingTripsWithCounts, editTrip } = await import("@/db/trips");
+const { editTrip } = await import("@/db/trips");
+const { upcomingTripsWithCounts } = await import("@/db/trips-queries.test-support");
 const { POST } = await import("./route");
 
 type Db = AppDb;

@@ -6,7 +6,7 @@ import { createDiver, editDiver } from "../features/divers/store";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { activityEvents, courses, people, trips } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **What the diver record's date of birth says about age** (H-20261007-held-seat-split-into, issue

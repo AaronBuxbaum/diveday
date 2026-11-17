@@ -19,7 +19,8 @@ import {
   sendMissingDiverAlerts,
 } from "./missing-diver-alerts";
 import { incidentReports, personRoles, shops, trips, userAccounts } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // The push half of the send path, counted and made to throw on demand: the
 // email half reports a provider failure as a status, so a throw is the database's.

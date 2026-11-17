@@ -32,7 +32,7 @@ vi.mock("@/i18n/request", async () => {
 
 const { getDb } = await import("@/db/client");
 const { GET } = await import("./route");
-const { upcomingTripsWithCounts } = await import("@/db/trips");
+const { upcomingTripsWithCounts } = await import("@/db/trips-queries.test-support");
 const { courses, shops, trips, tripScheduleDays } = await import("@/db/schema");
 const { eq } = await import("drizzle-orm");
 

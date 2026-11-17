@@ -4,7 +4,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { proposalKey } from "../features/gear-proposals/rules";
 import { getTripPrep, screenGearPicks } from "../features/trip-prep/store";
 import { bookings, cards, gearItems } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const fileCtx = fileScopedShopContext();
 

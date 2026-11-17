@@ -66,10 +66,8 @@ import { liveTrip, notRehearsal } from "./trips-live";
  * feeds — everything that answers "what is coming up" rather than "what is this
  * one departure".
  *
- * The paged reads are the ones to reach for. `upcomingTripsWithCounts` loads
- * every future trip and survives ONLY as a test fixture — no production code
- * calls it, and none should ever again, because a busy shop's board grows
- * without bound (`pagedUpcomingTripsWithCounts` keysets it instead).
+ * The paged reads are the ones to reach for. `pagedUpcomingTripsWithCounts`
+ * keysets the board, because a busy shop's board grows without bound.
  */
 
 /**
@@ -114,10 +112,12 @@ const {
   scheduleDays: _scheduleDays,
   faqs: _faqs,
   learningMaterials: _learningMaterials,
-  ...boardCourseColumns
+  ...boardCourseColumnsRest
 } = getTableColumns(courses);
-const { templateUpdateUndo: _templateUpdateUndo, ...boardDiveSiteColumns } =
+export const boardCourseColumns = boardCourseColumnsRest;
+const { templateUpdateUndo: _templateUpdateUndo, ...boardDiveSiteColumnsRest } =
   getTableColumns(diveSites);
+export const boardDiveSiteColumns = boardDiveSiteColumnsRest;
 
 /** A course as a board row carries it ({@link boardCourseColumns}). */
 export type BoardCourse = Omit<
@@ -156,70 +156,6 @@ export type TripWithBookedCount = typeof trips.$inferSelect & {
   course: BoardCourse | null;
   diveSite: BoardDiveSite | null;
 };
-
-/**
- * Upcoming scheduled trips with their active-booking counts.
- * Cancelled bookings free the spot; every other status holds one.
- *
- * **Test fixture only.** This is an unbounded whole-schedule read — every
- * future trip in one query — and it has no production callers left. It stays
- * because dozens of test files use it to find a seeded trip by title; it must
- * never be reached for in product code, where a busy shop's board grows
- * without bound. Product surfaces page instead: `pagedUpcomingTripsWithCounts`
- * (keyset) or a window-bounded read like
- * `listTripIdsInOfflineManifestWindow`.
- */
-export async function upcomingTripsWithCounts(
-  db: AppDb,
-  shopId: string,
-  now: Date = nowDate(),
-): Promise<TripWithBookedCount[]> {
-  const rows = await db
-    .select({
-      trip: trips,
-      course: boardCourseColumns,
-      diveSite: boardDiveSiteColumns,
-      booked: count(bookings.id),
-      bookedDivers: bookedDiversCount(),
-      certifiedPassengers: tripBoatCertifiedPassengers(),
-      boatCapacity: tripBoatCapacity(),
-      assignedCrewCount: tripAssignedCrewCount(),
-    })
-    .from(trips)
-    .leftJoin(courses, eq(courses.id, trips.courseId))
-    .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
-    .leftJoin(bookings, liveBookingJoin)
-    .where(
-      and(
-        liveTrip(),
-        eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
-        gte(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
-      ),
-    )
-    .groupBy(trips.id, courses.id, diveSites.id)
-    // The paged board's own order, so the two never disagree over same-minute boats.
-    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
-
-  return rows.map(
-    ({
-      trip,
-      course,
-      diveSite,
-      booked,
-      bookedDivers,
-      certifiedPassengers,
-      boatCapacity,
-      assignedCrewCount,
-    }) => ({
-      ...withSellableCapacity(trip, certifiedPassengers, boatCapacity, assignedCrewCount),
-      course,
-      diveSite,
-      booked,
-      bookedDivers,
-    }),
-  );
-}
 
 /** A shop-local day of scheduled staff departures, including private/rehearsal trips. */
 export async function shopDayTripsWithCounts(
@@ -463,7 +399,7 @@ export function tripSellableSeatsSql() {
 }
 
 /** A counted trip row with its seats on sale beside its stated capacity. */
-function withSellableCapacity<T extends { capacity: number }>(
+export function withSellableCapacity<T extends { capacity: number }>(
   trip: T,
   certifiedPassengers: number | null,
   boatCapacity: number | null,

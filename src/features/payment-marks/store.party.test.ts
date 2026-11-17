@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { addPartySeat, createBooking } from "../../db/bookings";
 import { getBookingPayment, setBookingPayment } from "../../db/payments";
 import { bookings, trips } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { markPartyPaid, previewPartyPayment } from "./store";
 

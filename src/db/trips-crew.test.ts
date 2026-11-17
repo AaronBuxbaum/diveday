@@ -24,12 +24,12 @@ import {
   reinstateTrip,
   setTripCrew,
   setTripStatus,
-  upcomingTripsWithCounts,
 } from "./trips";
 // Direct, not through the `./trips` barrel: the outcome-carrying door is read
 // by the trip page's crew panel and by this file, and both name the module
 // that owns the transaction.
 import { changeTripCrewOutcome, getTripCrewAssignmentsByTrip } from "./trips-crew";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const FOREIGN_SHOP_ID = "00000000-0000-4000-8000-000000000099";
 

@@ -12,7 +12,8 @@ import { cancelBooking, restoreBooking } from "./bookings";
 import { type RosterTripActivityEntry, recordTripActivity } from "./operations";
 import { getBookingReadiness } from "./readiness";
 import { activityEvents, bookings, people } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

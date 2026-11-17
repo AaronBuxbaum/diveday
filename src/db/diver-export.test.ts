@@ -21,7 +21,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 const ctx = fileScopedShopContext();

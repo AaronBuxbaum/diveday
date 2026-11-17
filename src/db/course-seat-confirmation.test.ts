@@ -7,7 +7,8 @@ import { seatDiver } from "../features/seat-diver/store";
 import { createBooking } from "./bookings";
 import { retryBookingConfirmation, sendCourseSeatConfirmation } from "./notifications";
 import { courses, notificationDeliveries } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A staff-seated course student gets the learning materials too** (ADR

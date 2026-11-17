@@ -6,7 +6,8 @@ import { anonymizeDiver } from "../features/anonymize/store";
 import { recordCrewRollCall } from "./manifests";
 import { people, personRoles, rollCallEvents, tripAssignments } from "./schema";
 import { changeStaffCredential, createStaffCredential } from "./staff-credentials";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

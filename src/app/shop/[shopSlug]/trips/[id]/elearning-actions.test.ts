@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { bookings, courses, people, shops, trips } from "@/db/schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster, listStaff } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { fileScopedShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
 

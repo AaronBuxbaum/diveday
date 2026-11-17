@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { bookings, people } from "./schema";
 import { recordSmsKeyword } from "./sms-opt-outs";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { deliverWaiverBatch, issueAndDeliverWaiver, textableSeats } from "./waiver-issue";
 
 /**

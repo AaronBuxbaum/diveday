@@ -15,7 +15,7 @@ import {
   correctFlySafeForTripChange,
 } from "./fly-safe-correction";
 import { bookingCapabilities, bookings } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * A booking, trip or person id from one shop, handed to a mutator that is

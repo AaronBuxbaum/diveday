@@ -11,7 +11,7 @@ import {
 import { createBookingParty } from "./bookings";
 import * as readinessDb from "./readiness";
 import { bookings, waiverRecords } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { issueWaiverOnJoin } from "./waiver-issue";
 import { threadWaiverKey } from "./waivers";
 

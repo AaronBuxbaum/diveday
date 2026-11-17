@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { getTripManifest } from "@/db/manifests";
-import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";

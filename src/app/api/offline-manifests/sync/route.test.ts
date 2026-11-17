@@ -12,7 +12,8 @@ import {
   shops,
   userAccounts,
 } from "@/db/schema";
-import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { getTripRoster } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";

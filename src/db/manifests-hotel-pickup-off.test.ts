@@ -5,7 +5,8 @@ import { getTripPrep } from "../features/trip-prep/store";
 import { getBookingPickupTime } from "./bookings";
 import { getTripManifest } from "./manifests";
 import { bookings, shops } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

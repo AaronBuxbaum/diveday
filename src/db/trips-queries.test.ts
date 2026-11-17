@@ -21,9 +21,9 @@ import {
   tripDiveSiteSummaries,
   upcomingScheduleRange,
   upcomingScheduleStats,
-  upcomingTripsWithCounts,
   weekBoard,
 } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * File-scoped database (issue #1244): one PGlite for the whole file, and a

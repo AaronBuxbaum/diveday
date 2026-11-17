@@ -9,7 +9,8 @@ import { createBooking, moveParty } from "./bookings";
 import { formBuddyTeam } from "./buddy-teams";
 import type { AppDb } from "./client";
 import { activityEvents, bookings } from "./schema";
-import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A whole party moves between departures in one step** (#2556, ADR
