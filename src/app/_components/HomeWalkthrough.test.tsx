@@ -156,4 +156,29 @@ describe("the homepage walkthrough", () => {
     fireEvent.pointerUp(frame, { clientX: 100 });
     expect(screen.getByText("First")).toBeInTheDocument();
   });
+
+  it("plays a beat as before, tap, after, and shows the finished screen when stopped", () => {
+    mockMotion(false);
+    const { container } = setup();
+    const list = container.querySelector("[data-walk-list]") as HTMLElement;
+    const phase = () => list.getAttribute("data-walk-phase");
+    expect(phase()).toBe("before");
+    // Three beats of 30 seconds: the tap starts at 16% and the swap at 38%.
+    act(() => void vi.advanceTimersByTime(6_000));
+    expect(phase()).toBe("tap");
+    act(() => void vi.advanceTimersByTime(8_000));
+    expect(phase()).toBe("after");
+    // Pause shows the finished screen; a new beat plays from its first.
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    fireEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(["before", "tap", "after"]).toContain(phase());
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    expect(phase()).toBe("after");
+  });
+
+  it("shows the finished screen under reduced motion", () => {
+    mockMotion(true);
+    const { container } = setup();
+    expect(container.querySelector("[data-walk-list]")).toHaveAttribute("data-walk-phase", "after");
+  });
 });

@@ -34,6 +34,14 @@ const WALK_MS = 90_000;
 /** Fewer than this many pixels sideways is a tap, not a swipe. */
 const SWIPE_PX = 40;
 
+/**
+ * Where in a beat a tap happens, as shares of its clock: the control pulses
+ * from `TAP_AT` and the screen swaps to the finished one at `AFTER_AT`. Only
+ * frames drawn with a `before` have anything to show for it.
+ */
+const TAP_AT = 0.16;
+const AFTER_AT = 0.38;
+
 /** A press held this long is a hold (it pauses, and its release is not a tap). */
 const HOLD_MS = 250;
 
@@ -128,11 +136,21 @@ export function HomeWalkthrough({
     return () => document.removeEventListener("visibilitychange", sync);
   }, []);
 
-  // A new beat starts with an empty segment.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the index is the trigger
+  const setPhase = (phase: "before" | "tap" | "after") => {
+    const list = rootRef.current?.querySelector("[data-walk-list]");
+    if (list && list.getAttribute("data-walk-phase") !== phase) {
+      list.setAttribute("data-walk-phase", phase);
+    }
+  };
+
+  // A new beat starts with an empty segment, on its first screen when it is
+  // playing and on its finished one when it is not (a reader who stopped it,
+  // or asked for no motion, gets the screen that says the most).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the index and playing are the trigger
   useEffect(() => {
     progress.current = 0;
-  }, [index]);
+    setPhase(playing ? "before" : "after");
+  }, [index, playing]);
 
   const running = playing && onScreen && tabVisible && !held;
   // biome-ignore lint/correctness/useExhaustiveDependencies: a move by hand restarts the beat's clock
@@ -145,6 +163,9 @@ export function HomeWalkthrough({
       progress.current = Math.min(1, progress.current + (now - last) / beatMs);
       last = now;
       if (fillRef.current) fillRef.current.style.transform = `scaleX(${progress.current})`;
+      setPhase(
+        progress.current >= AFTER_AT ? "after" : progress.current >= TAP_AT ? "tap" : "before",
+      );
       if (progress.current >= 1) {
         setIndex((i) => (i + 1) % total);
         return;
