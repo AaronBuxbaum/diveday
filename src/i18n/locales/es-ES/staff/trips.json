@@ -49,7 +49,6 @@
     "repeats": "Repetición",
     "noneSet": "Aún no configurado",
     "noConditions": "No hay previsión de la tripulación publicada",
-    "noRequirements": "No hay requisitos de admisión configurados",
     "noBoat": "Barco sin asignar",
     "oneTime": "Salida única",
     "cancel": "Cancelar esta salida",
@@ -279,7 +278,6 @@
     "overRatio": "Ratio de alumnos excedida: agrega un divemaster o AI",
     "overRatioInstructor": "Ratio de alumnos excedida: agrega un instructor",
     "overIntroRatio": "Ratio de bautismo excedida: agrega un instructor",
-    "noRequirements": "Define los requisitos para que alguien pueda embarcar",
     "boatClash": "{boat} también está asignado a {departure}"
   },
   "detail": {
@@ -421,7 +419,7 @@
     "emptySummary": "Aún no hay nota. Los resúmenes se envían sin ella."
   },
   "requirements": {
-    "courseDescription": "Esta sesión mantiene las reglas de admisión con las que se creó. Editar el curso más tarde no cambiará lo que necesitan los alumnos ya inscritos.",
+    "courseDescription": "La reserva usa las reglas actuales de inscripción del curso. En el check-in también se verifica si cada alumno está listo para embarcar.",
     "certOrHigher": "{level} o superior",
     "requireWaiver": "Exigir una exención de responsabilidad firmada",
     "requirePayment": "Exigir el pago para embarcar",
@@ -439,13 +437,7 @@
     "save": "Guardar requisitos",
     "notConfigured": "Los requisitos de esta salida no están configurados, así que cada buceador queda bloqueado hasta que lo estén.",
     "levelIsDefault": "Open Water es el nivel con el que empieza cada salida, no uno que alguien haya fijado. Una inmersión de formación marcada, con su instructor a bordo, puede quedar por debajo en una salida de una inmersión a un solo punto que fije un nivel. Cambia el nivel, o marca la casilla de abajo, para fijar el tuyo.",
-    "keepLevel": "Mantener este nivel, incluso para inmersiones de formación marcadas",
-    "summaryWaiver": "Una exención de responsabilidad firmada",
-    "summaryPayment": "El pago realizado antes de embarcar",
-    "summaryCert": "Certificación {level} o superior",
-    "summarySpecialtyCard": "Una certificación verificada de especialidad de {specialty}",
-    "summaryNitroxCard": "Una certificación de nitrox verificada",
-    "summaryNoneRequired": "Nada que verificar. Cualquier buceador con plaza puede embarcar."
+    "keepLevel": "Mantener este nivel, incluso para inmersiones de formación marcadas"
   },
   "recapPhotos": {
     "hiddenFromDivers": "Las fotos del resumen están desactivadas, así que los buceadores no las ven.",
@@ -1138,6 +1130,10 @@
       "edit": "Editar",
       "notSet": "Sin fijar",
       "anyone": "Cualquiera",
+      "courseCard": "Certificación {level} verificada o superior",
+      "courseAge": "Edad mínima {age} (el personal verifica las fechas de nacimiento conocidas)",
+      "specialty": "Especialidad de {specialty}",
+      "nitrox": "Certificación de nitrox",
       "orHigher": "{level} o superior",
       "heading": "Esta salida"
     },

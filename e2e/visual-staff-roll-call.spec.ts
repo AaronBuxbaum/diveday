@@ -663,8 +663,15 @@ for (const scheme of ["light", "dark"] as const) {
         // A board crawl out to the day-29 session, then the capture.
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
-        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?phase=filling`);
+        await expect(
+          page.getByText(/Verified Open Water Diver certification or higher/).first(),
+        ).toBeVisible();
+        await capture(page, "trip-filling-course-admission", scheme);
         await openTripAboutRow(page, "Who can book");
+        await expect(page.locator("details#requirements")).toContainText(
+          "Verified Open Water Diver certification or higher",
+        );
         await page
           .locator("details#requirements")
           .getByText(/never blocks? enrollment/)
