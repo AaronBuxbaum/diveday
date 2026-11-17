@@ -13,13 +13,12 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
-import { MAX_IMAGE_MB } from "@/lib/storage";
 import { uuidParam } from "@/lib/uuid";
 import { OfferedUndo } from "../../_components/OfferedUndo";
 import { BookActivity } from "./_components/BookActivity";
 import { DiverFile } from "./_components/DiverFile";
 import { DiverHeader } from "./_components/DiverHeader";
-import { DiverPhotoControl } from "./_components/DiverPhotoControl";
+import { DiverPhotoSlot } from "./_components/DiverPhotoSlot";
 import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverRecordMenu } from "./_components/DiverRecordMenu";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
@@ -29,7 +28,6 @@ import { DiverFormStatus, NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { TripCreditGroup } from "./_components/TripCreditGroup";
 import { bookingPageNumber, DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
-import { savePersonPhotoAction } from "./photo-actions";
 import { deletePersonAction } from "./record-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -215,18 +213,12 @@ export default async function DiverDetailPage({
         packages={packages}
         photo={
           removed ? undefined : (
-            <DiverPhotoControl
+            <DiverPhotoSlot
+              shopSlug={shopSlug}
+              personId={personId}
               name={diver.person.fullName}
               photoPath={diver.person.staffPhotoPath}
-              action={savePersonPhotoAction.bind(null, shopSlug, personId)}
-              copy={{
-                add: t("divers.header.photoAdd"),
-                change: t("divers.header.photoChange"),
-                remove: t("divers.header.photoRemove"),
-                adding: t("divers.header.photoAdding"),
-                wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-              }}
+              t={t}
             />
           )
         }
