@@ -57,7 +57,7 @@ describe("the switching hub's skeleton", () => {
     const [, list] = sections().sections;
     expect(list.className).toBe(HUB_LIST_SECTION_CLASS);
     const rows = Array.from(list.querySelectorAll("ul > li"));
-    expect(rows).toHaveLength(MIGRATION_GUIDES.length + 1);
+    expect(rows).toHaveLength(MIGRATION_GUIDES.length + 2);
     for (const row of rows) {
       const [title, summary] = Array.from(row.firstElementChild?.children ?? []);
       expect(title).toHaveClass("h-7");
@@ -107,7 +107,7 @@ describe("the switching hub's skeleton", () => {
 
   it("knows the summary lines of every row the hub lists", () => {
     expect(Object.keys(HUB_ROW_SUMMARY_LINES).sort()).toEqual(
-      ["spreadsheet", ...MIGRATION_GUIDES.map((guide) => guide.slug)].sort(),
+      ["spreadsheet", "alongside", ...MIGRATION_GUIDES.map((guide) => guide.slug)].sort(),
     );
   });
 });

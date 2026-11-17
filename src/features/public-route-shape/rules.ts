@@ -74,7 +74,7 @@ function closedListShape(namespace: string, rest: string[]): PublicRouteShape | 
 }
 
 /** Real pages that sit where a closed-list segment would otherwise be read. */
-const STATIC_SIBLINGS = new Set(["switching/spreadsheet"]);
+const STATIC_SIBLINGS = new Set(["switching/spreadsheet", "switching/alongside"]);
 
 /** Next image routes, including hashed variants, pass through the edge gate. */
 const isPreviewImage = (segment: string | undefined) =>

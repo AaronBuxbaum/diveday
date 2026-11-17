@@ -14,6 +14,9 @@
  */
 export const SUPPORT_EMAIL = "support@dive.day";
 
+/** Where a shop that is moving to DiveDay writes, from the switching hub's "Not listed here". */
+export const SWITCH_EMAIL = "switch@dive.day"; // i18n-exempt: a mailbox address
+
 /**
  * Where a shop writes in to be set up, and where a trial shop's owner writes in
  * to move to a paid plan. Every shop is opened by hand from this inbox (ADR
