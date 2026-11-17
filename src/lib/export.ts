@@ -346,6 +346,7 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
     `account closes; the URL itself does not. A link the CSV carries that was`,
     `never stored through DiveDay (an external link, or a bundled template`,
     `asset) has no file here — see "Not included" below.`,
+    `Private diver_photo_path values are bundle-relative paths, not public URLs.`,
     ``,
     `Not included in this bundle:`,
     ...NOT_INCLUDED.map((line) => `- ${line}`),
@@ -407,6 +408,7 @@ export function buildDiverExportBundle(input: DiverExportBundleInput, now: Date)
     `status: missing entries are not copied. Included copies are under photos/, at the same`,
     `path as the URL. A link that was never stored through DiveDay (an external`,
     `link, or a bundled template asset) has no file here.`,
+    `Private diver_photo_path values are bundle-relative paths, not public URLs.`,
     ``,
     `Not included in this bundle:`,
     ...DIVER_NOT_INCLUDED.map((line) => `- ${line}`),
@@ -569,7 +571,8 @@ export async function fetchExportPhotos(
       if (
         prefix === "import-waivers" ||
         prefix === "import-receipts" ||
-        prefix === "medical-clearances"
+        prefix === "medical-clearances" ||
+        prefix === "private-person-photos"
       ) {
         const config = mediaStorageConfigFromEnvironment(env);
         if (!config.success) return missing("storage_unconfigured");

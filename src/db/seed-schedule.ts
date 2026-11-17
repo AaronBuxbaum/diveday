@@ -31,6 +31,7 @@ import { seedDiveIntents } from "./seed-dive-intents";
 import { seedDiveRecency } from "./seed-dive-recency";
 import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
 import { seedDiveSites } from "./seed-dive-sites";
+import { seedDiverPortraits } from "./seed-diver-portraits";
 import { seedDiverTrail } from "./seed-diver-trail";
 import { seedDivers } from "./seed-divers";
 import { seedFrontDesk, seedFrontDeskLists } from "./seed-front-desk";
@@ -243,6 +244,7 @@ async function seedTheBoard(
   await seedWaiverVersions(db, shopId);
 
   const cast = await seedDivers(db, shopId, instructor.id);
+  await seedDiverPortraits(db, shopId, cast.all);
   const catalog = await seedCatalog(db, shopId);
   // A photo of its own on every course, none of them the cover or a site's.
   await seedCoursePhotos(db, shopId);

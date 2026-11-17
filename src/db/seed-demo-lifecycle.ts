@@ -1,8 +1,14 @@
 import { and, asc, eq, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
 import { DAY_MS, nowMs } from "@/lib/clock";
+import { log } from "@/lib/log";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
+import {
+  clearCompletedDemoPhotoObligations,
+  DEMO_PRIVATE_PHOTO_CLEANUP_REQUIRED,
+} from "./private-photo-demo-guard";
+import { isTransactionExecutor } from "./query-helpers";
 import {
   accountSecurity,
   accountSessions,
@@ -176,6 +182,8 @@ export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
  * held in server memory. A supplied real-shop slug alone is never ownership.
  */
 export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Promise<void> {
+  if (!isTransactionExecutor(db)) return db.transaction((tx) => deleteDemoShopCascade(tx, shopId));
+  await clearCompletedDemoPhotoObligations(db, shopId);
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);
   const shopPeople = await db
@@ -502,10 +510,18 @@ export async function reapExpiredDemoShops(
       and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG), lt(demoLastActiveAt(), cutoff)),
     );
 
+  const slugs: string[] = [];
   for (const shop of expired) {
-    await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
+    try {
+      await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
+      slugs.push(shop.slug);
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== DEMO_PRIVATE_PHOTO_CLEANUP_REQUIRED)
+        throw error;
+      log("demo_private_photo_cleanup_pending", "warn", { shopId: shop.id });
+    }
   }
-  return { deleted: expired.length, slugs: expired.map((s) => s.slug) };
+  return { deleted: slugs.length, slugs };
 }
 
 /**

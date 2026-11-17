@@ -1204,6 +1204,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   const courseTitle = new Map(inquiryCourseRows.map((row) => [row.id, row.title]));
 
   const photoUrls = [
+    ...(person.diverPhotoPath ? [person.diverPhotoPath] : []),
     ...(person.publicStaffProfile?.photoUrls ?? []),
     ...recapPhotoRows.map((row) => row.imageUrl),
     // The imported signed release and its scanned medical intake form: the
@@ -1609,10 +1610,14 @@ export { PAGE_SIZE } from "./paging";
 
 /** Public introductions hold personal pictures even when their shop display is off. */
 function profileAndRecapPhotoUrls(
-  peopleRows: readonly { publicStaffProfile: { photoUrls: string[] } | null }[],
+  peopleRows: readonly {
+    publicStaffProfile: { photoUrls: string[] } | null;
+    diverPhotoPath: string | null;
+  }[],
   recapPhotoRows: readonly { imageUrl: string }[],
 ) {
   return [
+    ...peopleRows.flatMap((row) => (row.diverPhotoPath ? [row.diverPhotoPath] : [])),
     ...peopleRows.flatMap((row) => row.publicStaffProfile?.photoUrls ?? []),
     ...recapPhotoRows.map((row) => row.imageUrl),
   ];

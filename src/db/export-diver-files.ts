@@ -1,4 +1,5 @@
 import { EXPORT_FILE_NOTES } from "@/lib/export";
+import { privatePersonPhotoId } from "@/lib/person-photo";
 import type { DiverExportContext } from "./export";
 import {
   BOOKING_ARRIVAL_EVENTS_CSV,
@@ -88,6 +89,8 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
       "id",
       "full_name",
       "staff_photo_path",
+      "diver_photo_path",
+      "diver_photo_suppressed",
       "public_staff_profile_enabled",
       "public_staff_profile",
       "email",
@@ -109,6 +112,10 @@ export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
         person.id,
         person.fullName,
         person.staffPhotoPath,
+        privatePersonPhotoId(person.diverPhotoPath)
+          ? `photos/private-person-photos/${privatePersonPhotoId(person.diverPhotoPath)}`
+          : null,
+        person.diverPhotoSuppressed,
         person.publicStaffProfileEnabled,
         person.publicStaffProfile ? JSON.stringify(person.publicStaffProfile) : null,
         person.email,

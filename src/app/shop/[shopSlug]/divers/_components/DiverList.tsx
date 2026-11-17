@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -30,6 +31,8 @@ export type RosterBadge = { tone: "danger" | "warning"; label: string };
 export type RosterRow = {
   personId: string;
   fullName: string;
+  /** The diver's picture, when they have one; initials stand in otherwise. */
+  photoPath: string | null;
   href: string;
   /** The letter this name files under, or null when it starts with none. */
   letter: string | null;
@@ -475,25 +478,28 @@ export function DiverList({
                       // down the right of every row on a page whose whole
                       // interaction is "tap the row".
                       <LedgerRow key={row.personId} href={row.href} linkLabel={row.fullName}>
-                        <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
-                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                            <span className="break-words font-semibold">{row.fullName}</span>
-                            {row.badges.map((badge) => (
-                              <Badge
-                                key={badge.label}
-                                tone={badge.tone}
-                                size="sm"
-                                className="shrink-0"
-                              >
-                                {badge.label}
-                              </Badge>
-                            ))}
-                          </div>
-                          {row.fact ? (
-                            <div className="mt-1 flex min-w-0 shrink-0 items-center gap-2 text-sm text-muted tabular-nums sm:mt-0 sm:max-w-[45%]">
-                              <span className="min-w-0 truncate">{row.fact}</span>
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <PersonAvatar name={row.fullName} photoPath={row.photoPath} size="sm" />
+                          <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
+                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                              <span className="break-words font-semibold">{row.fullName}</span>
+                              {row.badges.map((badge) => (
+                                <Badge
+                                  key={badge.label}
+                                  tone={badge.tone}
+                                  size="sm"
+                                  className="shrink-0"
+                                >
+                                  {badge.label}
+                                </Badge>
+                              ))}
                             </div>
-                          ) : null}
+                            {row.fact ? (
+                              <div className="mt-1 flex min-w-0 shrink-0 items-center gap-2 text-sm text-muted tabular-nums sm:mt-0 sm:max-w-[45%]">
+                                <span className="min-w-0 truncate">{row.fact}</span>
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </LedgerRow>
                     ))}

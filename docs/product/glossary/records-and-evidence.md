@@ -43,6 +43,12 @@
   (`src/content/photo-records.json`). It says where a file came from, under what licence, how big
   the original was and the day a person looked at it and kept it. Written only by
   `pnpm content:photos`; the folders' credit lists are rendered from it.
+- **Person photo** — an optional picture of a diver, added by a live staffer or through the diver's
+  delivered readiness link and shown beside their name on staff surfaces. Real diver uploads use
+  `people.diver_photo_path` and authenticated delivery; public staff and fictional demo portraits
+  remain separate. Initials stand in without a photo. A held seat, printed sheet and offline copy
+  show no photo. Removing or erasing the reference retires the stored object for cleanup; copies
+  already downloaded cannot be recalled.
 - **Field guide** — the faces a **dive site** is known for: up to eight catalog species a shop picks
   for that site (`dive_site_creatures`, `MAX_SITE_CREATURES`), in the order it chose. A **briefing
   selection**, not an inventory — the point is to tell a diver what to *expect*, so it holds the

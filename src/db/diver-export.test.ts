@@ -26,6 +26,26 @@ import { getCurrentWaiverTemplate } from "./waivers";
 
 const ctx = fileScopedShopContext();
 
+it("exports a private portrait as a bundle path only for its subject and shop", async () => {
+  const { db, shop } = ctx;
+  const personId = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
+  const otherPersonId = await personIdForEmail(db, DEV_STAFF_LOGINS.instructor.email);
+  const url = "https://media.example.com/private-person-photos/abcdefghijklmnopqrstuv.jpg";
+  await db.update(people).set({ diverPhotoPath: url }).where(eq(people.id, personId));
+  const own = await loadDiverExportBundleInput(db, shop.id, personId);
+  const other = await loadDiverExportBundleInput(db, shop.id, otherPersonId);
+  const all = await loadShopExportBundleInput(db, shop.id);
+  const profile = own?.tables.find((table) => table.file === "profile.csv");
+  expect(profile?.rows[0]?.[profile.header.indexOf("diver_photo_path")]).toBe(
+    "photos/private-person-photos/abcdefghijklmnopqrstuv.jpg",
+  );
+  expect(own?.photoUrls).toContain(url);
+  expect(other?.photoUrls).not.toContain(url);
+  expect(all?.photoUrls).toContain(url);
+  expect(JSON.stringify(own?.tables)).not.toContain(url);
+  expect(JSON.stringify(all?.tables)).not.toContain(url);
+});
+
 it("includes the staff portrait path in the person's and shop's exports", async () => {
   const { db, shop } = ctx;
   const personId = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);

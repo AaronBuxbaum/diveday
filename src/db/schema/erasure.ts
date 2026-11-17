@@ -61,6 +61,33 @@ export const mediaDeletionStatus = pgEnum("media_deletion_status", [
   "failed",
 ]);
 
+/** A preallocated object remains tracked even if its PUT has an uncertain outcome. */
+export const privatePersonPhotoUploads = pgTable(
+  "private_person_photo_uploads",
+  {
+    url: text("url").primaryKey(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    state: text("state", { enum: ["staged", "active", "retired"] }).notNull(),
+    putFinished: boolean("put_finished").notNull().default(false),
+    cleanAfterPut: boolean("clean_after_put").notNull().default(false),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    lastCleanupAt: timestamp("last_cleanup_at", { withTimezone: true }),
+    lastCleanupError: text("last_cleanup_error"),
+  },
+  (table) => [
+    check(
+      "private_person_photo_uploads_state_check",
+      sql`${table.state} in ('staged', 'active', 'retired')`,
+    ),
+    index("private_person_photo_uploads_cleanup_idx").on(table.state, table.lastCleanupAt),
+  ],
+);
+
 /**
  * One row per "this blob object should no longer exist" decision — a recap
  * photo's row deleted by staff moderation, or a course hero/gallery photo

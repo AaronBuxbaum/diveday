@@ -31,6 +31,7 @@ import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventInstant } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
+import { diverPhotoDisplayPath } from "@/lib/person-photo";
 import type { RollCallEventStatus, RollCallSubjectKind } from "@/lib/roll-call";
 import {
   foldRollCallEvidence,
@@ -198,6 +199,7 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
     const crew = byId.get(person.id) ?? {
       id: person.id,
       fullName: person.fullName,
+      photoPath: person.staffPhotoPath,
       // Straight off the person record — crew are `people` rows, so the columns
       // a diver's contact lives in were already here and already populated for
       // anyone who has ever been a diver at this shop. Nothing was stored; it
@@ -1312,6 +1314,10 @@ export async function getTripManifests(
       // A held seat is named as booked here, once, so the alarm, the buddy
       // builder and every copy downstream inherit it (issue #1690).
       fullName: seatName(person.fullName, booking),
+      photoPath:
+        !booking.identityUnconfirmedAt && !person.anonymizedAt
+          ? diverPhotoDisplayPath(person)
+          : null,
       // Diver, snorkeler or rider — shown on the row, never used to drop it.
       participantType: booking.participantType,
       bookedAs: booking.bookedAs,

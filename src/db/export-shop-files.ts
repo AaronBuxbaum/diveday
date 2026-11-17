@@ -1,6 +1,7 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { type AwayNoteReader, awayNoteFor } from "@/lib/crew-requests";
 import { EXPORT_FILE_NOTES } from "@/lib/export";
+import { privatePersonPhotoId } from "@/lib/person-photo";
 import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { ShopExportContext } from "./export";
 import { CREW_ROLL_CALL_CSV } from "./export-crew-roll-call";
@@ -554,6 +555,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "id",
       "full_name",
       "staff_photo_path",
+      "diver_photo_path",
+      "diver_photo_suppressed",
       "email",
       "phone",
       "roles",
@@ -636,6 +639,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.id,
         row.fullName,
         row.staffPhotoPath,
+        privatePersonPhotoId(row.diverPhotoPath)
+          ? `photos/private-person-photos/${privatePersonPhotoId(row.diverPhotoPath)}`
+          : null,
+        row.diverPhotoSuppressed,
         row.email,
         row.phone,
         personRolesText(row.id),

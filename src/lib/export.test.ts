@@ -316,6 +316,51 @@ it("reads private import evidence through signed S3, never a public CDN request"
   expect(result.manifest.complete).toBe(true);
 });
 
+it("exports a private diver photo through a signed S3 read", async () => {
+  const fetchImpl = vi.fn(async () => new Response(new Uint8Array([7, 8])));
+  const result = await fetchExportPhotos(
+    ["https://media.example.com/private-person-photos/abcdefghijklmnopqrstuv.jpg"],
+    fetchImpl as typeof fetch,
+    {
+      MEDIA_PUBLIC_URL_BASE: "https://media.example.com",
+      MEDIA_BUCKET_NAME: "diveday-media",
+      MEDIA_AWS_REGION: "us-east-1",
+      MEDIA_AWS_ACCESS_KEY_ID: "test-access",
+      MEDIA_AWS_SECRET_ACCESS_KEY: "test-secret",
+    },
+  );
+  const [url, init] = fetchImpl.mock.calls[0] as unknown as [URL, RequestInit];
+  expect(String(url)).toBe(
+    "https://diveday-media.s3.us-east-1.amazonaws.com/private-person-photos/abcdefghijklmnopqrstuv.jpg",
+  );
+  expect(new Headers(init.headers).get("authorization")).toMatch(/^AWS4-HMAC-SHA256 /);
+  expect(result.photos).toEqual([
+    {
+      path: "photos/private-person-photos/abcdefghijklmnopqrstuv.jpg",
+      bytes: new Uint8Array([7, 8]),
+    },
+  ]);
+  expect(JSON.stringify(result.manifest)).not.toContain("media.example.com");
+});
+
+it("does not fall back to an unsigned fetch for a private diver photo", async () => {
+  const fetchImpl = vi.fn();
+  const result = await fetchExportPhotos(
+    ["https://media.example.com/private-person-photos/abcdefghijklmnopqrstuv.jpg"],
+    fetchImpl,
+    {
+      MEDIA_PUBLIC_URL_BASE: "https://media.example.com",
+      MEDIA_BUCKET_NAME: "diveday-media",
+      MEDIA_AWS_REGION: "us-east-1",
+    },
+  );
+  expect(fetchImpl).not.toHaveBeenCalled();
+  expect(result.manifest).toMatchObject({
+    complete: false,
+    files: [{ status: "missing", reason: "storage_unconfigured" }],
+  });
+});
+
 it("does not fall back to public reads when private evidence credentials are absent", async () => {
   const fetchImpl = vi.fn();
   const result = await fetchExportPhotos(

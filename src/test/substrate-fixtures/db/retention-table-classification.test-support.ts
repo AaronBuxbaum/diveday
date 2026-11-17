@@ -211,6 +211,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // erased diver a processor still holds — which is the opposite of what it
   // would be for.
   "media_deletion_attempts",
+  "private_person_photo_uploads", // provider cleanup obligations must not expire on a clock
   "payment_operation_intents",
   "processor_erasure_obligations",
   // Bounded by a table that *is* pruned: an integration delivery is a child of

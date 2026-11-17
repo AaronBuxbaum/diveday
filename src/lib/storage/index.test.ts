@@ -659,6 +659,7 @@ describe("readS3Object", () => {
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [URL, RequestInit];
     expect(url.pathname).toBe("/medical-clearances/abc.pdf");
     expect(init.method).toBe("GET");
+    expect(init.cache).toBe("no-store");
     // Signed as the uploader credential — never a presigned URL, which would
     // outlive the permission check that minted it.
     expect((init.headers as Record<string, string>).authorization).toContain("AWS4-HMAC-SHA256");

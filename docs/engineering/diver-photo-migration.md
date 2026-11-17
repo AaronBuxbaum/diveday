@@ -1,0 +1,7 @@
+# Existing public diver photos
+
+The `person-photos/` CloudFront behavior shipped by the preceding change is public to anyone who knows an object URL. New real diver uploads use `private-person-photos/` and an authenticated app route. Fictional `/demo-divers/` images and public staff profile assets are separate and must remain available.
+
+Before relying on private delivery for existing objects, an operator must inventory live `people.staff_photo_path` references to managed `person-photos/` URLs, including merged and removed records, and reconcile the inventory against the bucket and its versions. The same field also contains bundled and staff images; do not bulk-delete or rewrite it. For each live real-diver object, copy its bytes through the validated private pipeline, atomically replace the reference while preserving concurrent changes, and verify authorized and unauthorized reads. Reconcile failures and outstanding deletions before removing the public CloudFront behavior. Retire and version-purge each superseded public object only after its replacement is confirmed; then invalidate the affected CloudFront paths and verify direct-origin and edge access. Review and authorize that operation separately; this change does not run an automatic destructive migration.
+
+A CloudFront invalidation, object deletion or application access revocation cannot retract copies already downloaded or retained by browsers or other caches. Track failures and retries; do not represent them as completed deletion until the provider confirms the applicable operation.

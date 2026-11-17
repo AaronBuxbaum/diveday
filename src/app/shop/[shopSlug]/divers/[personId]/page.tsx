@@ -12,12 +12,14 @@ import { resolveDiverNotice } from "@/i18n/diver-notice-text";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { diverPhotoDisplayPath } from "@/lib/person-photo";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { OfferedUndo } from "../../_components/OfferedUndo";
 import { BookActivity } from "./_components/BookActivity";
 import { DiverFile } from "./_components/DiverFile";
 import { DiverHeader } from "./_components/DiverHeader";
+import { DiverPhotoSlot } from "./_components/DiverPhotoSlot";
 import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverRecordMenu } from "./_components/DiverRecordMenu";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
@@ -210,6 +212,17 @@ export default async function DiverDetailPage({
         standing={standing}
         locale={locale}
         packages={packages}
+        photo={
+          removed ? undefined : (
+            <DiverPhotoSlot
+              shopSlug={shopSlug}
+              personId={personId}
+              name={diver.person.fullName}
+              photoPath={diverPhotoDisplayPath(diver.person)}
+              t={t}
+            />
+          )
+        }
         status={cleared ? undefined : detailsStatus}
         menu={
           <>

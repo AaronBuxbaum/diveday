@@ -178,7 +178,7 @@ const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
  * reader's failure, not the writer's.
  *
  * Adding a prefix here publishes it, so this list is checked in **both**
- * directions by `infra/lib/media-distribution.test.ts`: the three private ones
+ * directions by `infra/lib/media-distribution.test.ts`: the private prefixes
  * must be absent, and every prefix the app writes must be either served here or
  * in that file's explicit private list -- never both, never neither. One
  * direction alone is what let two prefixes go missing while the tests stayed
@@ -188,6 +188,7 @@ const PUBLIC_MEDIA_PREFIXES = [
   "arrival",
   "courses",
   "dive-sites",
+  "person-photos",
   "recap",
   "shop-heroes",
   "shop-logos",
@@ -232,6 +233,8 @@ const MEDIA_WRITE_PREFIXES = [
   "import-receipts",
   "import-waivers",
   MEDICAL_CLEARANCE_PREFIX,
+  "person-photos",
+  "private-person-photos",
   "recap",
   "shop-heroes",
   "shop-logos",
@@ -1465,9 +1468,12 @@ exports.handler = async (event) => {
       new iam.PolicyStatement({
         sid: "ReadPrivateEvidenceOnly",
         actions: ["s3:GetObject"],
-        resources: [MEDICAL_CLEARANCE_PREFIX, "import-waivers", "import-receipts"].map((prefix) =>
-          mediaBucket.arnForObjects(`${prefix}/*`),
-        ),
+        resources: [
+          MEDICAL_CLEARANCE_PREFIX,
+          "import-waivers",
+          "import-receipts",
+          "private-person-photos",
+        ].map((prefix) => mediaBucket.arnForObjects(`${prefix}/*`)),
       }),
     );
 
@@ -4579,7 +4585,7 @@ exports.handler = async () => {
     new cdk.CfnOutput(this, "MediaDistributionDomain", {
       value: mediaDistribution.distributionDomainName,
       description:
-        "CloudFront domain serving the seven public media prefixes (arrival, courses, dive-sites, recap, shop-heroes, shop-logos, staff-profiles). Any other path reaches no origin, so import-* and medical-clearances are never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md. This is also the CNAME target when mediaDomainName is set: the alias answers, this value is what it points at.",
+        "CloudFront domain serving the eight public media prefixes (arrival, courses, dive-sites, person-photos, recap, shop-heroes, shop-logos, staff-profiles). Any other path reaches no origin, so import-* and medical-clearances are never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md. This is also the CNAME target when mediaDomainName is set: the alias answers, this value is what it points at.",
     });
     return mediaDistribution;
   }

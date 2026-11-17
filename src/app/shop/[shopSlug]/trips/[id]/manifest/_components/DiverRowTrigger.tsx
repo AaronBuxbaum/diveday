@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -55,6 +56,7 @@ export function DiverRowTrigger({
       <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
         {String(index + 1).padStart(2, "0")}
       </span>
+      {paper ? null : <PersonAvatar name={diver.fullName} photoPath={diver.photoPath} size="sm" />}
       <span data-person-row-name="" className={`min-w-0 flex-1 ${nameColumn}`}>
         <span className={`block ${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
           {diver.fullName}

@@ -35,6 +35,7 @@ function rosterRow(overrides: Partial<RosterRow> = {}): RosterRow {
   return {
     personId: "person-2",
     fullName: "Mira Castellanos",
+    photoPath: null,
     href: "/shop/blue-mantis/divers/person-2",
     letter: "M",
     badges: [],
@@ -377,7 +378,9 @@ describe("DiverList ledger", () => {
     // to the ledger, because the view chips above it wear the same shape for a
     // different job: if a badge ever comes back for an expected state, this is
     // where it lands first.
-    expect(screen.getByRole("list").querySelectorAll(".rounded-full")).toHaveLength(0);
+    expect(
+      screen.getByRole("list").querySelectorAll(".rounded-full:not([aria-hidden])"),
+    ).toHaveLength(0);
   });
 
   it("badges the exceptional states, and every one of them carries a word", () => {
@@ -542,7 +545,9 @@ describe("DiverList removed view", () => {
     expect(screen.getByText(/off every list and out of trip prep/i)).toBeInTheDocument();
     // Not the count line, and not a badge on the row either.
     expect(screen.queryByText(/^\d+ divers?$/)).toBeNull();
-    expect(screen.getByRole("list").querySelectorAll(".rounded-full")).toHaveLength(0);
+    expect(
+      screen.getByRole("list").querySelectorAll(".rounded-full:not([aria-hidden])"),
+    ).toHaveLength(0);
   });
 
   it("still links the row through to the diver record, which now resolves for them", () => {

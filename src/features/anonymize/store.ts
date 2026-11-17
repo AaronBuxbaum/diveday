@@ -133,6 +133,7 @@ import {
   personRoles,
   priorGearAssignments,
   priorVisits,
+  privatePersonPhotoUploads,
   pushSubscriptions,
   recapPhotos,
   recapPulses,
@@ -295,6 +296,8 @@ async function linkedToHeldIncident(
 const ERASED_PERSON_COLUMNS = {
   fullName: ANONYMIZED_PERSON_NAME,
   staffPhotoPath: null,
+  diverPhotoPath: null,
+  diverPhotoSuppressed: true,
   // Must be null, not a sentinel: `people_shop_email_unique` is a partial
   // unique index on lower(email) over the live rows, and while an erased
   // person is always soft-deleted (so outside that index), a shared sentinel
@@ -663,6 +666,24 @@ export async function anonymizeDiver(
       owedMediaDeletions++;
     }
   }
+  // A purge that ran before an ambiguous PUT finished is not proof the object
+  // is gone. Keep those private upload obligations visible on erasure retries.
+  const photoOwners = await db.transaction(async (tx) => [
+    input.personId,
+    ...(await mergedIntoChain(tx, input.shopId, input.personId)),
+  ]);
+  const uncertainPrivatePhotos = await db
+    .select({ url: privatePersonPhotoUploads.url })
+    .from(privatePersonPhotoUploads)
+    .where(
+      and(
+        eq(privatePersonPhotoUploads.shopId, input.shopId),
+        inArray(privatePersonPhotoUploads.personId, photoOwners),
+        eq(privatePersonPhotoUploads.state, "retired"),
+        eq(privatePersonPhotoUploads.cleanAfterPut, false),
+      ),
+    );
+  owedMediaDeletions += uncertainPrivatePhotos.length;
   const { discharged, stillOwed } = await attemptProcessorErasures(
     db,
     outcome.raisedProcessorErasures,
@@ -833,12 +854,30 @@ async function scrubPersonRecord(
   const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
   const profileOwners = [personId, ...mergedShellIds];
   const profileRows = await tx
-    .select({ profile: people.publicStaffProfile })
+    .select({
+      profile: people.publicStaffProfile,
+      photoPath: people.staffPhotoPath,
+      diverPhotoPath: people.diverPhotoPath,
+    })
     .from(people)
     // diveday:allow-deleted-people: erasure includes removed staff and merged shells.
     .where(and(eq(people.shopId, shopId), inArray(people.id, profileOwners)));
-  for (const row of profileRows)
+  for (const row of profileRows) {
     for (const url of row.profile?.photoUrls ?? []) await ctx.retire("staff_profile", url);
+    await ctx.retire("staff_profile", row.photoPath);
+  }
+  // Include staged PUTs: erasure may race an upload whose provider response has not arrived.
+  const uploads = await tx
+    .update(privatePersonPhotoUploads)
+    .set({ state: "retired" })
+    .where(
+      and(
+        eq(privatePersonPhotoUploads.shopId, shopId),
+        inArray(privatePersonPhotoUploads.personId, profileOwners),
+      ),
+    )
+    .returning({ url: privatePersonPhotoUploads.url });
+  for (const upload of uploads) await ctx.retire("staff_profile", upload.url);
   await tx
     .update(people)
     .set({

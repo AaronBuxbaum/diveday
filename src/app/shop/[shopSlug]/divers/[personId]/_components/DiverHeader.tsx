@@ -41,6 +41,7 @@ export function DiverHeader({
   locale,
   packages,
   menu,
+  photo,
 }: {
   diver: DiverProfile;
   t: StaffTranslator;
@@ -68,6 +69,8 @@ export function DiverHeader({
   packages?: { left: number; of: number } | null;
   /** The record's "⋯" (`DiverRecordMenu`): download and delete, beside the name; absent when neither is allowed. */
   menu?: ReactNode;
+  /** The diver's picture and the way to change it (`DiverPhotoControl`). */
+  photo?: ReactNode;
 }) {
   return (
     <>
@@ -77,8 +80,10 @@ export function DiverHeader({
         align="start"
         actions={menu}
         meta={
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-            {/* `mailtoHref`/`telHref` (src/lib/contact-links.ts), not a template
+          <div className="flex flex-col gap-3">
+            {photo}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+              {/* `mailtoHref`/`telHref` (src/lib/contact-links.ts), not a template
                 string with the sanitizing regex copied in beside it: a shop
                 stores a number the way it prints it, and a `tel:` URI carrying
                 spaces and parentheses is refused outright by several diallers —
@@ -96,67 +101,68 @@ export function DiverHeader({
                 would run their focus ring through the facts. A line of its own
                 at every width changes nothing on a phone and costs every
                 desktop record with a visit 24px. */}
-            {diver.person.email ? (
-              <a
-                href={mailtoHref(diver.person.email)}
-                // `wrap-anywhere`: a button box keeps the whole address as its
-                // narrowest width, so a long one ran off a phone's edge.
-                className={buttonClass({
-                  variant: "link",
-                  size: "sm",
-                  flush: true,
-                  className: "min-w-0 wrap-anywhere",
-                })}
-              >
-                {diver.person.email}
-              </a>
-            ) : null}
-            {diver.person.phone ? (
-              <a
-                href={telHref(diver.person.phone)}
-                className={buttonClass({ variant: "link", size: "sm", flush: true })}
-              >
-                {displayStoredPhone(diver.person.phone)}
-              </a>
-            ) : null}
-            {!diver.person.email && !diver.person.phone ? (
-              <span>{t("divers.header.noContactDetails")}</span>
-            ) : null}
-            {diver.person.diveInsurance ? (
-              <span>{t("divers.header.diveInsuranceOnFile")}</span>
-            ) : null}
-            {standing.diveDays > 0 ? (
-              <span className="tabular-nums">
-                {standing.since
-                  ? t("divers.header.diveDaysSince", {
-                      count: standing.diveDays,
-                      since: formatCalendarMonth(standing.since, locale),
-                    })
-                  : t("divers.header.diveDays", { count: standing.diveDays })}
-              </span>
-            ) : null}
-            {standing.lastOut ? (
-              <span className="tabular-nums">
-                {t("divers.header.lastOut", {
-                  date: formatCalendarDate(standing.lastOut, locale),
-                })}
-              </span>
-            ) : null}
-            {standing.spent ? (
-              <span className="tabular-nums">
-                {t("divers.header.spent", {
-                  amount: formatMoneyCents(standing.spent.cents, standing.spent.currency, locale),
-                })}
-              </span>
-            ) : null}
-            {standing.friends > 0 ? (
-              <span className="tabular-nums">
-                {t("divers.header.broughtFriends", { count: standing.friends })}
-              </span>
-            ) : null}
-            {packages ? (
-              <span className="tabular-nums">{t("divers.header.packageBalance", packages)}</span>
-            ) : null}
+              {diver.person.email ? (
+                <a
+                  href={mailtoHref(diver.person.email)}
+                  // `wrap-anywhere`: a button box keeps the whole address as its
+                  // narrowest width, so a long one ran off a phone's edge.
+                  className={buttonClass({
+                    variant: "link",
+                    size: "sm",
+                    flush: true,
+                    className: "min-w-0 wrap-anywhere",
+                  })}
+                >
+                  {diver.person.email}
+                </a>
+              ) : null}
+              {diver.person.phone ? (
+                <a
+                  href={telHref(diver.person.phone)}
+                  className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                >
+                  {displayStoredPhone(diver.person.phone)}
+                </a>
+              ) : null}
+              {!diver.person.email && !diver.person.phone ? (
+                <span>{t("divers.header.noContactDetails")}</span>
+              ) : null}
+              {diver.person.diveInsurance ? (
+                <span>{t("divers.header.diveInsuranceOnFile")}</span>
+              ) : null}
+              {standing.diveDays > 0 ? (
+                <span className="tabular-nums">
+                  {standing.since
+                    ? t("divers.header.diveDaysSince", {
+                        count: standing.diveDays,
+                        since: formatCalendarMonth(standing.since, locale),
+                      })
+                    : t("divers.header.diveDays", { count: standing.diveDays })}
+                </span>
+              ) : null}
+              {standing.lastOut ? (
+                <span className="tabular-nums">
+                  {t("divers.header.lastOut", {
+                    date: formatCalendarDate(standing.lastOut, locale),
+                  })}
+                </span>
+              ) : null}
+              {standing.spent ? (
+                <span className="tabular-nums">
+                  {t("divers.header.spent", {
+                    amount: formatMoneyCents(standing.spent.cents, standing.spent.currency, locale),
+                  })}
+                </span>
+              ) : null}
+              {standing.friends > 0 ? (
+                <span className="tabular-nums">
+                  {t("divers.header.broughtFriends", { count: standing.friends })}
+                </span>
+              ) : null}
+              {packages ? (
+                <span className="tabular-nums">{t("divers.header.packageBalance", packages)}</span>
+              ) : null}
+            </div>
           </div>
         }
       />

@@ -18,6 +18,7 @@ import { addPanelOpen } from "@/lib/add-panel";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
+import { diverPhotoDisplayPath } from "@/lib/person-photo";
 import type { AboardBlockerKind } from "@/lib/readiness";
 import { rosterLetter, rosterRowFact } from "@/lib/roster-rows";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -213,6 +214,7 @@ export default async function DiversPage({
   const rows: RosterRow[] = diverPage.divers.map((diver) => ({
     personId: diver.id,
     fullName: diver.fullName,
+    photoPath: diverPhotoDisplayPath(diver),
     href: shopPath(shopSlug, "divers", diver.id),
     letter: rosterLetter(diver.fullName),
     badges: badgesFor(diver.id),

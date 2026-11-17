@@ -259,7 +259,11 @@ export async function readS3Object(
       region: config.region,
     });
 
-    const response = await fetchImpl(getUrl, { method: "GET", headers: signedHeaders });
+    const response = await fetchImpl(getUrl, {
+      method: "GET",
+      headers: signedHeaders,
+      cache: "no-store",
+    });
     if (!response.ok) return { ok: false, error: `provider responded ${response.status}` };
     return {
       ok: true,

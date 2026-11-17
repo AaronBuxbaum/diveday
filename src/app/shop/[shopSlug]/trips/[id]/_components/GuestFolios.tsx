@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import {
@@ -12,6 +13,7 @@ import {
 export type GuestFolio = {
   id: string;
   name: string;
+  photoPath?: string | null;
   status: string;
   summary?: string;
   needsAttention: boolean;
@@ -144,7 +146,10 @@ export function GuestFolios({
                 {copy.party} · {current.party}
               </p>
             ) : null}
-            <h2 className={`mt-2 ${PAGE_TITLE_CLASS}`}>{current.name}</h2>
+            <div className="mt-2 flex items-center gap-3">
+              <PersonAvatar name={current.name} photoPath={current.photoPath} />
+              <h2 className={PAGE_TITLE_CLASS}>{current.name}</h2>
+            </div>
             <p className="mt-2 text-muted">
               {current.summary ?? (current.needsAttention ? copy.attention : copy.requirementsMet)}
             </p>
@@ -172,24 +177,27 @@ export function GuestFolios({
                   aria-labelledby={`guest-name-${guest.id}`}
                   aria-describedby={`guest-status-${guest.id}`}
                   onClick={() => select(guest.id)}
-                  className="flex min-h-20 w-full flex-col items-start justify-center gap-1 py-4 text-start hover:bg-surface-sunken focus-visible:focus-ring-inset"
+                  className="flex min-h-20 w-full items-center gap-3 py-4 text-start hover:bg-surface-sunken focus-visible:focus-ring-inset"
                 >
-                  <span id={`guest-name-${guest.id}`} className={ITEM_TITLE_CLASS}>
-                    {guest.name}
-                  </span>
-                  <span
-                    id={`guest-status-${guest.id}`}
-                    className={
-                      guest.needsAttention ? "text-sm text-warning-strong" : "text-sm text-muted"
-                    }
-                  >
-                    {guest.status}
-                  </span>
-                  {guest.party ? (
-                    <span className="text-sm text-muted">
-                      {copy.party} · {guest.party}
+                  <PersonAvatar name={guest.name} photoPath={guest.photoPath} size="sm" />
+                  <span className="flex min-w-0 flex-col items-start gap-1">
+                    <span id={`guest-name-${guest.id}`} className={ITEM_TITLE_CLASS}>
+                      {guest.name}
                     </span>
-                  ) : null}
+                    <span
+                      id={`guest-status-${guest.id}`}
+                      className={
+                        guest.needsAttention ? "text-sm text-warning-strong" : "text-sm text-muted"
+                      }
+                    >
+                      {guest.status}
+                    </span>
+                    {guest.party ? (
+                      <span className="text-sm text-muted">
+                        {copy.party} · {guest.party}
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
               </li>
             ))}

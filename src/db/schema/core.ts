@@ -996,6 +996,10 @@ export const people = pgTable(
     fullName: text("full_name").notNull(),
     /** Internal staff-directory image. Does not imply consent for public crew profiles. */
     staffPhotoPath: text("staff_photo_path"),
+    /** Private, access-checked diver portrait; public staff portraits stay separate. */
+    diverPhotoPath: text("diver_photo_path"),
+    /** Hide diver roster fallback after an explicit photo removal. */
+    diverPhotoSuppressed: boolean("diver_photo_suppressed").notNull().default(false),
     /** Nullable: walk-ups may not have one on file yet. */
     email: text("email"),
     phone: text("phone"),

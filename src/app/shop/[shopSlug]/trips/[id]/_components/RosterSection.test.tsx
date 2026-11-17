@@ -554,6 +554,48 @@ it("keeps readiness neutral for a booked diver already boarded without counter c
 });
 
 describe("the guest folio workflow", () => {
+  it("shows a private image directly and honors suppression on the guest folio", () => {
+    const confirmed = entry("photo", "Priya Sharma");
+    confirmed.person = {
+      ...confirmed.person,
+      diverPhotoPath: "https://media.invalid/private-person-photos/abcdefghijklmnopqrstuv.jpg",
+      staffPhotoPath: "/priya.webp",
+    };
+    const hidden = entry("hidden", "June Park");
+    hidden.person = { ...hidden.person, diverPhotoSuppressed: true, staffPhotoPath: "/june.webp" };
+    const { container } = renderRoster({
+      ...fixtures,
+      roster: [confirmed, hidden],
+      selectedBookingId: null,
+    });
+    expect(container.querySelector('img[src^="/api/person-photos/"]')).not.toBeNull();
+    expect(container.querySelector('img[src*="june.webp"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "June Park" }));
+    expect(container.querySelector('img[src*="june.webp"]')).toBeNull();
+    expect(screen.getByText("JP")).toBeVisible();
+  });
+
+  it("shows confirmed guests' photos while held seats keep initials in the list and folio", () => {
+    const confirmed = entry("photo", "Priya Sharma");
+    confirmed.person = { ...confirmed.person, staffPhotoPath: "/priya.webp" };
+    const held = entry("held-photo", "June Park");
+    held.person = { ...held.person, staffPhotoPath: "/june.webp" };
+    held.booking = { ...held.booking, identityUnconfirmedAt: new Date() } as typeof held.booking;
+    const { container } = renderRoster({
+      ...fixtures,
+      roster: [confirmed, held],
+      selectedBookingId: null,
+    });
+    expect(container.querySelector('img[src*="priya.webp"]')).not.toBeNull();
+    expect(container.querySelector('img[src*="june.webp"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "June Park" }));
+    expect(container.querySelector('img[src*="june.webp"]')).toBeNull();
+    expect(screen.getByText("JP")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /All guests/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Priya Sharma" }));
+    expect(container.querySelector('img[src*="priya.webp"]')).not.toBeNull();
+  });
+
   it("starts with named guest choices and opens each blocker beside its remedy", () => {
     const { container } = renderRoster({ ...fixtures, selectedBookingId: null });
     expect(screen.getByRole("heading", { name: "Who’s coming" })).toBeVisible();

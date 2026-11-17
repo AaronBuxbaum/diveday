@@ -1,6 +1,7 @@
 import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES, PDF_CONTENT_TYPE } from "./limits";
 
 export { MAX_IMAGE_BYTES, MAX_IMAGE_MB } from "./limits";
+export { allocatePrivatePersonPhoto, uploadPrivatePersonPhoto } from "./private-person-photo";
 
 import { processImage } from "./process-image";
 import { deleteS3Image, s3ImageStorageProvider, s3StorageConfigSchema } from "./s3";
@@ -43,6 +44,8 @@ export const MEDIA_KEY_PREFIXES = [
   "import-receipts",
   "import-waivers",
   "medical-clearances",
+  "person-photos",
+  "private-person-photos",
   "recap",
   "shop-heroes",
   "shop-logos",
@@ -69,6 +72,7 @@ const MAX_RECAP_IMAGE_BYTES = MAX_IMAGE_BYTES;
 const MAX_DIVE_SITE_IMAGE_BYTES = MAX_IMAGE_BYTES;
 const MAX_SHOP_LOGO_BYTES = MAX_IMAGE_BYTES;
 export const MAX_SHOP_HERO_BYTES = MAX_IMAGE_BYTES;
+export const MAX_PERSON_PHOTO_BYTES = MAX_IMAGE_BYTES;
 const MAX_ARRIVAL_IMAGE_BYTES = MAX_IMAGE_BYTES;
 const ALLOWED_CONTENT_TYPES = new Set<string>(ALLOWED_IMAGE_CONTENT_TYPES);
 
@@ -254,6 +258,18 @@ export async function storeStaffProfileImage(
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
   return storeImage({ ...upload, keyPrefix: "staff-profiles" }, MAX_SHOP_HERO_BYTES, provider);
+}
+
+/**
+ * A picture of a person (diver or crew), shown beside their name on rosters,
+ * the manifest and the roll call. Public at the edge like the other media
+ * prefixes: the key is a random suffix and only shop staff pages render it.
+ */
+export async function storePersonPhoto(
+  upload: Omit<ImageUpload, "keyPrefix">,
+  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
+): Promise<StoredImage> {
+  return storeImage({ ...upload, keyPrefix: "person-photos" }, MAX_PERSON_PHOTO_BYTES, provider);
 }
 
 export async function storeShopHeroImage(
