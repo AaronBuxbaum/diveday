@@ -3,7 +3,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { sendDueReminders } from "../features/reminders/store";
 import { createBookingParty } from "./bookings";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A shared inbox's other diver is reminded at the inbox that booked them**

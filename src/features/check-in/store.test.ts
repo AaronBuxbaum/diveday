@@ -14,7 +14,8 @@ import {
   trips,
   userAccounts,
 } from "../../db/schema/index";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster, listStaff } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
 import { STAFF_ROLES } from "../../lib/authz";
 import { nowDate } from "../../lib/clock";

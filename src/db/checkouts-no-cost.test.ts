@@ -6,7 +6,8 @@ import { createBookingParty } from "./bookings";
 import { refreshCheckoutFromStripe, startBookingCheckout } from "./checkouts";
 import { getBookingPayment } from "./payments";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { editTrip, upcomingTripsWithCounts } from "./trips";
+import { editTrip } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A checkout discounted to nothing is settled, at zero.** A 100% code, or a

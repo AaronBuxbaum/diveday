@@ -6,13 +6,8 @@ import { recordNotificationDelivery } from "@/db/notifications";
 import { listTripReadiness } from "@/db/readiness";
 import { boats, diveSites, shops as shopsTable, tripAssignments, tripDives } from "@/db/schema";
 import { markShopUnitsConfirmed } from "@/db/shops";
-import {
-  createTrip,
-  getTripRoster,
-  listStaff,
-  setTripCrew,
-  upcomingTripsWithCounts,
-} from "@/db/trips";
+import { createTrip, getTripRoster, listStaff, setTripCrew } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";

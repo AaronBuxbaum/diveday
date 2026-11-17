@@ -12,7 +12,8 @@ import {
 } from "../../db/schema/index";
 import { setShopFeature, setShopTaxEnabled, setShopTimezone } from "../../db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../../db/stripe-accounts";
-import { editTrip, upcomingTripsWithCounts } from "../../db/trips";
+import { editTrip } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import type { CheckoutProvider } from "../../lib/payments/checkout";
 import { fileScopedShopContext } from "../../test/db";
 import { fakeCheckout, fakeEmail } from "../../test/fakes";

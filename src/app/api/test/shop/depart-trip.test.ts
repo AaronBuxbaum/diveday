@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { shops, trips } from "@/db/schema";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { HOUR_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { noShowClaim, noShowGate } from "@/lib/no-show";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";

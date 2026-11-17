@@ -19,8 +19,9 @@ import { setBookingPayment } from "./payments";
 import { refundBookingsForShopCancelledTrip } from "./refunds";
 import { crewNotices, notificationSendQueue, people, trips as tripsTable } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { createTrip, upcomingTripsWithCounts } from "./trips";
+import { createTrip } from "./trips";
 import { changeTripCrew, listStaff } from "./trips-crew";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { listUnfinished } from "./unfinished";
 
 // One seeded database for the file and a rolled-back transaction per test

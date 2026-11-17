@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { listShopFlySafeFollowUps, recordFlySafeTold } from "./fly-safe-correction";
 import { bookings } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

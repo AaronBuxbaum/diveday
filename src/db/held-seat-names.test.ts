@@ -8,7 +8,8 @@ import { getIncidentExport } from "../features/incident-export/store";
 import { formBuddyTeam, listTripBuddyTeams } from "./buddy-teams";
 import { getTripManifests, recordRollCall } from "./manifests";
 import { bookings } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 const ctx = fileScopedShopContext();
 

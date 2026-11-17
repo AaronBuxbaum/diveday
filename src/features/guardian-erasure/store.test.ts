@@ -10,7 +10,8 @@ import {
   shops,
   waiverRecords,
 } from "../../db/schema/index";
-import { getTripRoster, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { refileWaiverRecords } from "../../db/waiver-refile";
 import {
   completeWaiver,

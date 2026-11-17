@@ -13,14 +13,8 @@ import {
 } from "./interests";
 import { bookings, courses, interests, people, personRoles, shops } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
-import {
-  createTrip,
-  getTripRoster,
-  getTripWithBooked,
-  listStaff,
-  setTripCrew,
-  upcomingTripsWithCounts,
-} from "./trips";
+import { createTrip, getTripRoster, getTripWithBooked, listStaff, setTripCrew } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 async function seededContext() {
   const { db, shop } = ctx;

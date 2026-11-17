@@ -9,7 +9,8 @@ import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { personRoles, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
-import { getTripRoster, setTripCrew, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, setTripCrew } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 describePostgres("dual-role homecoming physical totals", () => {

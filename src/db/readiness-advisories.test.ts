@@ -8,7 +8,8 @@ import {
   upsertTripRequirements,
 } from "./readiness";
 import { bookings, cards, diveSites, shops } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **Advisories never gate boarding** (ADR 20261103-advisory-is-a-finding): at

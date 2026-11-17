@@ -20,7 +20,7 @@ import {
 import { openFlySafeExposures } from "./fly-safe-exposures";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { bookings, notificationSendQueue, people, trips as tripRows } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **A diver told a fly-safe wait hears once that it no longer applies**

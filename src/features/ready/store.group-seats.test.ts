@@ -4,7 +4,7 @@ import { addPartySeat, cancelBooking, createBooking } from "../../db/bookings";
 import { setBookingPayment } from "../../db/payments";
 import { bookings } from "../../db/schema/index";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../../db/stripe-accounts";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { getReadyPageData } from "./store";

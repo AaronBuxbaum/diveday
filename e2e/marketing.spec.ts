@@ -108,72 +108,126 @@ test("the homepage offers a way to ask before the footer", async ({ page }) => {
   ).toHaveAttribute("href", "mailto:support@dive.day");
 });
 
-test("the homepage follows one booking to the boat and home, a feature page per step", async ({
+// Before the player has run the walkthrough is the list it wraps: every step, each with its one screen.
+test.describe("before the player has run", () => {
+  // The page's own chunks never load, so React never hydrates the player; the streamed
+  // HTML still swaps in. That is the list a reader gets without script.
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/_next/static/**/*.js", (route) => route.abort());
+  });
+
+  test("the homepage follows one booking to the boat and home, a feature page per step", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // The practical dive day welcomes the reader before the compact origin story.
+    const whyBand = page.getByRole("main").locator("section").nth(2);
+    await expect(whyBand.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
+    await expect(whyBand.getByRole("link", { name: /Why DiveDay exists/ })).toHaveAttribute(
+      "href",
+      "/about",
+    );
+    const stepsBand = page.getByRole("main").locator("section").nth(1);
+    await expect(
+      stepsBand.getByRole("heading", {
+        level: 2,
+        name: "One booking, from your website to the boat and home again",
+      }),
+    ).toBeVisible();
+    // Each step's own name, from the copy column that is every row's first
+    // child (the alternation is `order`, not DOM order). The screens beside them
+    // draw headings of their own ("Find your next dive"), which a screen reader
+    // never hears inside a `role="img"` but a heading query still finds.
+    await expect(stepsBand.locator("ol > li > div:first-child h3")).toHaveText([
+      diverTranslator("en-US")("marketing.home.steps.book.title"),
+      "They sign the release and answer the medical form at home",
+      "Anyone who can’t board yet is named, with the reason",
+      "The crew calls the roll by name, signal or not",
+      diverTranslator("en-US")("marketing.home.steps.recap.title"),
+    ]);
+    // The screen is the claim in every step, so each one is shown rather than
+    // described, and named for a screen reader by a label the *caller* resolves
+    // from the bundle, never an English literal in the component.
+    const list = stepsBand.locator("ol[data-walk-list]");
+    await expect(list).not.toHaveAttribute("data-walk", "");
+    await expect(list.getByRole("img")).toHaveCount(5);
+    await expect(stepsBand.locator("[data-marketing-illustration] img")).toHaveCount(1);
+    await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
+    // The roll-call step shows the boat's count after dive 1, with Priya back aboard
+    // (the desk screen before it is drawn for the walkthrough and waits for it).
+    await expect(
+      stepsBand.getByRole("img", {
+        name: diverTranslator("en-US")("marketing.home.steps.aboard.boatLabel"),
+      }),
+    ).toBeVisible();
+    await expect(
+      stepsBand.getByRole("img", {
+        name: diverTranslator("en-US")("marketing.home.steps.aboard.deskLabel"),
+      }),
+    ).toHaveCount(0);
+    await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toHaveCount(0);
+    // The owner who still carries paper learns it on the roll-call step, whose
+    // link is the page that lists the packet (issue #4322).
+    await expect(
+      stepsBand.getByText(diverTranslator("en-US")("marketing.home.steps.aboard.note3")),
+    ).toBeVisible();
+
+    // Each step ends in its feature page, in the booking's order, and none of
+    // them is a door into the demo: the page it links to opens the demo on that
+    // very screen, as the role that uses it, which a door here could only do by
+    // repeating it.
+    const stepPages = await stepsBand
+      .getByRole("link")
+      .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
+    expect(stepPages).toEqual(
+      (["online-booking", "waivers", "certifications", "boat-manifest", "messages"] as const).map(
+        (slug) => featurePagePath(slug),
+      ),
+    );
+    await expect(list.locator("button:not([disabled])")).toHaveCount(0);
+    await expect(list.locator('input[name="source"]')).toHaveCount(0);
+  });
+});
+
+// The player: one step at a time, Priya from booking to counted back aboard, and a door per role.
+test("the homepage walkthrough follows one diver, by hand and by itself", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const t = diverTranslator("en-US");
+  const walk = page.getByRole("group", { name: t("marketing.home.walk.label") });
+  await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
+
+  // Reduced motion: it waits on the first beat, paused.
+  await expect(walk.getByText(t("marketing.home.walk.captions.book"))).toBeVisible();
+  await expect(walk.getByRole("button", { name: t("marketing.home.walk.play") })).toBeVisible();
+  await expect(walk.getByRole("img")).toHaveCount(1);
+
+  // Each beat names the diver's state; the arrow keys walk the story.
+  const beats = ["unsigned", "sign", "ready", "desk", "boat", "recap"] as const;
+  for (const beat of beats) {
+    await walk.getByRole("button", { name: t("marketing.home.walk.next") }).press("ArrowRight");
+    await expect(walk.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
+    await expect(walk.getByRole("img")).toHaveCount(1);
+  }
+  await expect(
+    walk.getByRole("img", { name: t("marketing.home.steps.recap.mockupLabel") }),
+  ).toBeVisible();
+});
+
+test("the walkthrough's three doors open the demo as the desk, the boat and the diver", async ({
   page,
 }) => {
   await page.goto("/");
-
-  // The practical dive day welcomes the reader before the compact origin story.
-  const whyBand = page.getByRole("main").locator("section").nth(2);
-  await expect(whyBand.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
-  await expect(whyBand.getByRole("link", { name: /Why DiveDay exists/ })).toHaveAttribute(
-    "href",
-    "/about",
-  );
-  const stepsBand = page.getByRole("main").locator("section").nth(1);
-  await expect(
-    stepsBand.getByRole("heading", {
-      level: 2,
-      name: "One booking, from your website to the boat and home again",
-    }),
-  ).toBeVisible();
-  // Each step's own name, from the copy column that is every row's first
-  // child (the alternation is `order`, not DOM order). The screens beside them
-  // draw headings of their own ("Find your next dive"), which a screen reader
-  // never hears inside a `role="img"` but a heading query still finds.
-  await expect(stepsBand.locator("ol > li > div:first-child h3")).toHaveText([
-    diverTranslator("en-US")("marketing.home.steps.book.title"),
-    "They sign the release and answer the medical form at home",
-    "Anyone who can’t board yet is named, with the reason",
-    "The crew calls the roll by name, signal or not",
-    diverTranslator("en-US")("marketing.home.steps.recap.title"),
-  ]);
-  // The screen is the claim in every step, so each one is shown rather than
-  // described, and named for a screen reader by a label the *caller* resolves
-  // from the bundle, never an English literal in the component.
-  await expect(stepsBand.locator(":scope > ol").getByRole("img")).toHaveCount(5);
-  await expect(stepsBand.locator("[data-marketing-illustration] img")).toHaveCount(1);
-  await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
-  // The roll-call step draws the dock check-in, the check-in feature page's
-  // own screen by its key (H-20260802-may-public-pages-say, applied 2026-10-25): the screen the crew taps
-  // at the dock, under notes that keep the no-signal claim.
-  await expect(
-    stepsBand.getByRole("img", {
-      name: diverTranslator("en-US")("marketing.featurePages.checkIn.screenLabel"),
-    }),
-  ).toBeVisible();
-  await expect(stepsBand.getByRole("img", { name: /roll call after dive 1/i })).toHaveCount(0);
-  await expect(stepsBand.getByRole("img", { name: /dive site briefing/i })).toHaveCount(0);
-  // The owner who still carries paper learns it on the roll-call step, whose
-  // link is the page that lists the packet (issue #4322).
-  await expect(
-    stepsBand.getByText(diverTranslator("en-US")("marketing.home.steps.aboard.note3")),
-  ).toBeVisible();
-
-  // Each step ends in its feature page, in the booking's order, and none of
-  // them is a door into the demo: the page it links to opens the demo on that
-  // very screen, as the role that uses it, which a door here could only do by
-  // repeating it.
-  const stepPages = await stepsBand
-    .getByRole("link")
-    .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
-  expect(stepPages).toEqual(
-    (["online-booking", "waivers", "certifications", "boat-manifest", "messages"] as const).map(
-      (slug) => featurePagePath(slug),
-    ),
-  );
-  await expect(stepsBand.locator("button:not([disabled])")).toHaveCount(0);
-  await expect(stepsBand.locator('input[name="source"]')).toHaveCount(0);
+  const doors = page
+    .getByRole("main")
+    .locator("form:has(input[name='source'][value^='home-walk-'])");
+  await expect(doors).toHaveCount(3);
+  expect(
+    await doors
+      .locator("input[name='role']")
+      .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value)),
+  ).toEqual(["divemaster", "captain", "diver"]);
 });
 
 test("the homepage leads to every feature page through the Product catalogue", async ({ page }) => {
@@ -747,8 +801,10 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     page.getByRole("heading", { name: "Divers who have shipped software to millions of people" }),
   ).toBeVisible();
   const rendered = await page.locator("body").innerText();
-  expect(rendered.match(/Aaron/g)).toHaveLength(1);
-  expect(rendered).toContain("Aaron Buxbaum, Founder");
+  // The signature is drawn in an autograph face and also read aloud (sr-only), so
+  // the text holds the name twice; no other mention is allowed.
+  expect(rendered.match(/Aaron/g)).toHaveLength(2);
+  expect(rendered).toMatch(/Aaron Buxbaum\s+Founder/i);
   // The founder's own band, in the first person (Aaron, 2026-11-14), carries
   // his history; the head count of the team stays out.
   expect(rendered).toContain("self-driving cars");

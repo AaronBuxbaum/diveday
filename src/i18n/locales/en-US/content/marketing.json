@@ -30,14 +30,17 @@
         "when": "Each morning, for the week ahead",
         "title": "Anyone who can’t board yet is named, with the reason",
         "note2": "There is no “mark everyone ready” button. We left it out on purpose.",
-        "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you."
+        "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you.",
+        "readyLabel": "Today in the demo shop after Priya signs: 8 of 9 divers ready, then one row under Needs you."
       },
       "aboard": {
         "when": "At the dock, and after every dive",
         "title": "The crew calls the roll by name, signal or not",
         "note1": "Each dive’s count, divers and crew by name, stays open until everyone who left the dock is counted aboard.",
         "note2": "Out of range, the phone keeps calling from its saved copy, and the taps join the record when signal returns.",
-        "note3": "The same manifest prints as a trip packet, roll call and emergency card included, for crews who carry paper."
+        "note3": "The same manifest prints as a trip packet, roll call and emergency card included, for crews who carry paper.",
+        "deskLabel": "The arrivals desk, 8 of 9 here: Priya Sharma has just been checked in, and one held seat still asks whether it is the same person.",
+        "boatLabel": "The boat’s roll call after dive 1: 9 of 9 divers aboard, with Priya Sharma and Tom Okafor both tapped back aboard."
       },
       "recap": {
         "when": "After the boat is back",
@@ -46,6 +49,31 @@
         "note2": "The crew’s note is a quote. It is whatever the crew typed, with no template behind it.",
         "mockupLabel": "A diver’s recap page with the day’s dive record, a note from the crew, and one review ask."
       }
+    },
+    "walk": {
+      "label": "Follow one diver through a dive day",
+      "position": "Step {n} of {total}",
+      "pause": "Pause",
+      "play": "Play",
+      "previous": "Previous step",
+      "next": "Next step",
+      "hint": "Tap the screen, swipe, or use the arrow keys.",
+      "captions": {
+        "book": "Priya Sharma books the Two-Tank Reef from the shop’s own page.",
+        "unsigned": "The next morning her waiver is still open, and the list names it with a button to nudge her.",
+        "sign": "She signs the release and answers the medical form on her phone.",
+        "ready": "Her row leaves the list and the ready count goes up by one.",
+        "desk": "At the counter, one tap checks her in.",
+        "boat": "After dive 1 the crew calls her by name. All nine are back aboard.",
+        "recap": "That evening she gets the day’s dive record and a note from the crew."
+      },
+      "doorsTitle": "Then try the part that is yours",
+      "doorDesk": "I run the desk",
+      "doorDeskNote": "See who is ready and check divers in.",
+      "doorBoat": "I run the boat",
+      "doorBoatNote": "Call the roll by name at the dock and after each dive.",
+      "doorDiver": "I’m the diver",
+      "doorDiverNote": "Book a seat and sign the release from a phone."
     },
     "featuresLink": "Explore the features",
     "exportTitle": "Get your records ready for the next dive day",
@@ -59,8 +87,6 @@
   "common": {
     "gettingReady": "Getting your shop ready…",
     "tryDemo": "Try the live demo",
-    "demoShopName": "Your shop’s name",
-    "demoShopNameHint": "We use it to name your demo.",
     "getSetUp": "Get set up",
     "bookCall": "Book a 20-minute call",
     "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card.",
@@ -736,7 +762,7 @@
     "peopleP1": "The people who build DiveDay have spent their careers on software that millions of people rely on, and their weekends on dive boats. We know the desk from the diver’s side, cert card out while the owner hunts for the waiver, and the deck, where a divemaster works down a wet clipboard while the boat waits. DiveDay is the tool we wanted in both places: records a shop can trust, on a screen a wet thumb can work.",
     "peopleP2": "I’ve led software teams for about fifteen years, first at Google and then on self-driving cars. When you build a self-driving car, the software is responsible for the people in it, and there is no margin for error. You learn to build for the worst morning, not the average one.",
     "peopleP3": "A new engineer on my team once asked why we wrote the same boring check in three places. I told her about the day all three disagreed, which is how we found a potentially critical problem. A system that says something once can be wrong without anyone knowing. DiveDay is about 1.4 million lines of code now, and a great deal of it exists so that no one on a boat is ever left uncounted.",
-    "peopleP4": "That is why DiveDay’s roll call is by name, with a tap on each one, so a mistake has somewhere to show up. The people on a boat should never have to wonder whether the software lost track of them. Keeping software honest about who is in its care is the work I know, and I’m doing it for dive boats now.",
+    "peopleP4": "I built DiveDay for the person who runs the shop: the owner answering messages at ten at night, chasing a waiver, redoing tomorrow’s list by hand. I want the whole day in one place, looking good enough that you’re glad to open it. <email>Tell me</email> what’s painful and I’ll fix it personally.",
     "founderRole": "Founder",
     "buildEyebrow": "What comes first",
     "buildTitle": "The one job on a boat that can’t go wrong",
@@ -771,7 +797,98 @@
     "whatsInIt": "What’s in it",
     "closingTitle": "Try a morning at the demo shop",
     "spreadsheetLink": "See how DiveDay reads your spreadsheet →",
-    "alsoInPlan": "Also in the plan"
+    "alsoInPlan": "Also in the plan",
+    "oneList": {
+      "eyebrow": "One list",
+      "title": "The booking, the waiver, and the manifest on one list",
+      "lede": "A diver who books in DiveDay is already on the departure. Their signed release, checked card, and rental sizes land beside their name, and the captain counts from the same list.",
+      "diagramLabel": "Three separate tools on the left, one list of divers on the right",
+      "beforeLabel": "Three places to look",
+      "afterLabel": "One list",
+      "tools": {
+        "calendar": {
+          "name": "The booking calendar",
+          "knows": "Knows who paid for which seat",
+          "has": {
+            "c0": "Name",
+            "c1": "Seat",
+            "c2": "Payment"
+          }
+        },
+        "waiver": {
+          "name": "The waiver app",
+          "knows": "Knows who signed, under whatever name they typed",
+          "has": {
+            "c0": "Signature",
+            "c1": "Medical answers"
+          }
+        },
+        "clipboard": {
+          "name": "The clipboard",
+          "knows": "Knows who the crew counted",
+          "has": {
+            "c0": "Head count",
+            "c1": "Sizes, by hand"
+          }
+        }
+      },
+      "sampleTrip": "Sat 7:30 AM · Two-Tank Reef",
+      "sampleGear": "BCD M · fins 8",
+      "sampleGearSmall": "BCD S · fins 6",
+      "sampleOwnGear": "Own gear",
+      "sampleMore": "6 more divers · 2 crew",
+      "chips": {
+        "paid": "Paid",
+        "deposit": "Deposit",
+        "signed": "Signed",
+        "notSigned": "Not signed",
+        "cardChecked": "Card checked",
+        "aboard": "Aboard",
+        "notAboard": "Not yet aboard",
+        "sendWaiver": "Send waiver"
+      },
+      "whereEyebrow": "What lives where",
+      "whereTitle": "Each record is entered once, by the person it belongs to",
+      "whereHeaders": {
+        "record": "The record",
+        "who": "Who enters it",
+        "sees": "Where your crew sees it"
+      },
+      "where": {
+        "seat": {
+          "record": "Seat and payment",
+          "who": "The diver, on your schedule, or from a button on your own site",
+          "sees": "The departure’s diver list, with seats left counted against the boat"
+        },
+        "release": {
+          "record": "Release and medical form",
+          "who": "The diver, from their link, at home",
+          "sees": "Beside their name. A yes that needs a doctor holds them until staff record the clearance."
+        },
+        "card": {
+          "record": "Certification card",
+          "who": "The diver adds it, and staff check it with the agency once",
+          "sees": "On the diver’s file for every later trip"
+        },
+        "sizes": {
+          "record": "Rental sizes",
+          "who": "The diver, from the same link",
+          "sees": "On the gear list, before the group arrives"
+        },
+        "count": {
+          "record": "The count",
+          "who": "The captain, one tap per name",
+          "sees": "The manifest, at departure, and after each dive"
+        }
+      },
+      "staysEyebrow": "What stays as it is",
+      "staysTitle": "Keep your register and your agency portal",
+      "staysBody": "DiveDay has no retail register and no stock count, and it connects to no agency. Card payments go through your own Stripe account.",
+      "movingEyebrow": "Moving across",
+      "movingTitle": "Upload your customer list and see what comes across before anything saves",
+      "movingBody": "Guides cover FareHarbor, Peek Pro, EVE, DiveShop360, Smartwaiver, and Rezdy. Send us the file and a person does the import with you, free. You can run one trip in DiveDay while your old setup keeps running.",
+      "movingLink": "Find the guide for your system →"
+    }
   },
   "pricing": {
     "heroTitle": "What a shop pays, line by line",

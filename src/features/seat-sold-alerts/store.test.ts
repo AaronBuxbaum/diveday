@@ -2,7 +2,7 @@ import { and, eq, max } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "../../db/bookings";
 import { activityEvents, bookings, people, shops } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate, nowMs } from "../../lib/clock";
 import type { Notification, NotificationProvider } from "../../lib/notifications/index";
 import { advanceClock } from "../../test/clock";

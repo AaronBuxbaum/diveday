@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { cancelBooking, createBookingParty } from "../../db/bookings";
 import { people } from "../../db/schema/index";
-import { upcomingTripsWithCounts } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { fakeEmail } from "../../test/fakes";
 import { heldSeatOnTrip, tellPartyNotBooked, tellSeatAlreadyHeld } from "./store";

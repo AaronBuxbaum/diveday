@@ -12,7 +12,8 @@ import { mergeDiverRecords } from "./diver-merge";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { createCertification, reviewCertification } from "./readiness";
 import { bookings, cards, people, personRoles, rollCallEvents } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);

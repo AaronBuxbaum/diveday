@@ -4,7 +4,8 @@ import { fileScopedShopContext } from "@/test/db";
 import { recordCourseNextStep } from "../features/course-next-step/store";
 import { getRecapPageData } from "../features/recap/store";
 import { bookings, people, shops } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

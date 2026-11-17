@@ -6,8 +6,9 @@ import { recordCrewRollCall } from "./manifests";
 import { tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips";
 import { changeTripCrewOutcome } from "./trips-crew";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 describePostgres("crew changes serialize with training plan writes", () => {
   it("waits for a planning transaction before changing the crew", async () => {

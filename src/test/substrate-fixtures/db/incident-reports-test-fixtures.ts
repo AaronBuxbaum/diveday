@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import type { AppDb } from "../../../db/client";
 import { incidentReports, tripAssignments } from "../../../db/schema/index";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../../db/trips";
+import { getTripRoster, listStaff } from "../../../db/trips";
+import { upcomingTripsWithCounts } from "../../../db/trips-queries.test-support";
 import type { IncidentDraftFields } from "../../../lib/incident-reports";
 
 /** Shared by the incident report db tests: a departure, its people, and two drafts' worth of answers. */

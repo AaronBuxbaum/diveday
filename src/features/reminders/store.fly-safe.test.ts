@@ -5,7 +5,8 @@ import { listShopFlySafeFollowUps, sendFlySafeCorrections } from "../../db/fly-s
 import { openFlySafeExposures } from "../../db/fly-safe-exposures";
 import { drainNotificationRetries, sendNotification } from "../../db/notifications";
 import { bookings, notificationSendQueue, people, trips } from "../../db/schema/index";
-import { createTrip, upcomingTripsWithCounts } from "../../db/trips";
+import { createTrip } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import type { Notification, NotificationProvider } from "../../lib/notifications/index";
 import { fileScopedShopContext } from "../../test/db";
 import { fakeEmail } from "../../test/fakes";

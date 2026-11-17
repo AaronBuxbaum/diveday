@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
+import { listStaff } from "@/db/trips";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { fileScopedShopContext } from "@/test/db";
 import { latestDeckCounts, recordDeckCount } from "./store";
 

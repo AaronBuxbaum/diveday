@@ -23,7 +23,7 @@ import {
 } from "./rental-fit";
 import { bookings, people, rentalFitProfiles } from "./schema";
 import { setShopRentalItems } from "./shops";
-import { upcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 async function context() {
   const { db, shop } = ctx;

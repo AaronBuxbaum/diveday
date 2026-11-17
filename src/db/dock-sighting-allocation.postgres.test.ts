@@ -16,8 +16,9 @@ import { getBookingReadiness } from "./readiness";
 import { activityEvents, boardingObservations, bookings, people, trips } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
-import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, getTripRoster, listStaff } from "./trips";
 import { heldSeatCounts } from "./trips-queries";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /**
  * **How a dock sighting is measured** on a real server (issue #4474 review):

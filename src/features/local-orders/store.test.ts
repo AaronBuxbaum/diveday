@@ -7,7 +7,8 @@ import { getBookingPayment } from "../../db/payments";
 import { createPerson } from "../../db/people";
 import { activityEvents, collectionEntries, orders, shops } from "../../db/schema";
 import * as currencies from "../../db/stripe-accounts";
-import { getTripRoster, upcomingTripsWithCounts } from "../../db/trips";
+import { getTripRoster } from "../../db/trips";
+import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import {
