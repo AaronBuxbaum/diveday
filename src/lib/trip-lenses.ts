@@ -11,7 +11,7 @@
 import { slugFrom } from "./slug";
 
 /** The shape `trip_lenses.slug` holds: lowercase words joined by single hyphens. */
-export const LENS_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const LENS_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /** The longest a lens name may be, and the longest its slug may run. */
 export const LENS_NAME_MAX = 40;

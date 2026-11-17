@@ -416,7 +416,7 @@ export function buildDiverExportBundle(input: DiverExportBundleInput, now: Date)
 }
 
 /** In-memory export ceilings, not a promise that whole-shop DB hydration is bounded. */
-export const EXPORT_RESOURCE_LIMITS = {
+const EXPORT_RESOURCE_LIMITS = {
   photoConcurrency: 4,
   totalPhotoTimeoutMs: 30_000,
   photoBytes: 16 * 1024 * 1024,

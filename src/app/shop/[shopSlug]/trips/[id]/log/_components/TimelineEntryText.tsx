@@ -219,7 +219,7 @@ function actText(entry: IncidentTimelineEntry, t: StaffTranslator): string {
 }
 
 /** "Sana Malik — Boarded", "Keiko Tanaka (crew) — Not back aboard": one mark's words. */
-export function rollCallActText(entry: RollCallTimelineEntry, t: StaffTranslator): string {
+function rollCallActText(entry: RollCallTimelineEntry, t: StaffTranslator): string {
   const who =
     entry.kind === "crew"
       ? `${entry.subjectName} (${t("incidentExport.crewTag")})`

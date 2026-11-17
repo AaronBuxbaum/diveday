@@ -79,7 +79,7 @@ export type StructuredCall<S extends z.ZodType> = {
   readonly keepTranscript?: (transcript: CallTranscript) => CallTranscript;
 };
 
-export const STRUCTURED_OUTCOMES = [
+const STRUCTURED_OUTCOMES = [
   "ok",
   "refused",
   "truncated",
@@ -140,7 +140,7 @@ export function buildStructuredRequest<S extends z.ZodType>(
 }
 
 /** The token counts on one response, with absent fields as zero. */
-export function usageOf(message: ClaudeMessage): TokenUsage {
+function usageOf(message: ClaudeMessage): TokenUsage {
   const usage = message.usage;
   return {
     inputTokens: usage?.input_tokens ?? 0,

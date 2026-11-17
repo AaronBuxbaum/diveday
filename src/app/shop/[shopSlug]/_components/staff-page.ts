@@ -29,7 +29,7 @@ export const STAFF_PAGE_WIDTHS = {
 export type StaffPageWidth = keyof typeof STAFF_PAGE_WIDTHS;
 
 /** The one inset every staff page takes, phone and desk alike. */
-export const STAFF_PAGE_INSET = "px-4 py-8 sm:px-6 sm:py-10";
+const STAFF_PAGE_INSET = "px-4 py-8 sm:px-6 sm:py-10";
 
 /** The `<main>` class of a staff page: centred, at one of the two widths. */
 export function staffPageClass(width: StaffPageWidth = "reading", className?: string): string {

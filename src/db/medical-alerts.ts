@@ -81,7 +81,7 @@ export async function bookingsWithMedicalAlert(
  * **for a reader the caller has already admitted** for this departure. Seats
  * with none are absent.
  */
-export async function medicalAlertsForTrip(
+async function medicalAlertsForTrip(
   db: DbExecutor,
   shopId: string,
   tripId: string,
@@ -128,7 +128,7 @@ export async function medicalAlertTextsForTrip(
  * opening the same sheet three times at the rail is one read, and a script
  * cannot push earlier reads off the trail's first page.
  */
-export const MEDICAL_ALERT_READ_WINDOW_MS = 10 * MINUTE_MS;
+const MEDICAL_ALERT_READ_WINDOW_MS = 10 * MINUTE_MS;
 
 /**
  * **Puts one read of a diver's medical alert on their trail**, unless this

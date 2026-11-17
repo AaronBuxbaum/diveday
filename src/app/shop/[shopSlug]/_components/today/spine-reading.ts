@@ -126,7 +126,7 @@ const BOAT_TIER: Partial<Record<TodayActionKind, number>> = {
   lost_items_waiting: 4,
 };
 
-export function boatTier(action: TodayAction): number {
+function boatTier(action: TodayAction): number {
   if (rowTone(action) === "danger") return 0;
   if (action.diver?.readiness === true) return 0;
   return BOAT_TIER[action.kind] ?? 0;

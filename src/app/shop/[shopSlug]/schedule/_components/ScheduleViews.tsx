@@ -10,13 +10,13 @@ import { SectionTabs } from "@/components/SectionTabs";
  * Both views read `?week=`, so switching keeps the reader on the week they
  * were looking at. A staff component takes its words as props.
  */
-export const SCHEDULE_VIEWS = ["week", "crew", "plan"] as const;
+const SCHEDULE_VIEWS = ["week", "crew", "plan"] as const;
 
 export type ScheduleView = (typeof SCHEDULE_VIEWS)[number];
 
 export type ScheduleViewsCopy = { label: string } & Record<ScheduleView, string>;
 
-export function scheduleViewHref(shopSlug: string, view: ScheduleView, week?: string): string {
+function scheduleViewHref(shopSlug: string, view: ScheduleView, week?: string): string {
   const path = view === "week" ? `/shop/${shopSlug}/schedule/board` : `/shop/${shopSlug}/staffing`;
   const params = [
     view === "plan" ? "view=plan" : null,

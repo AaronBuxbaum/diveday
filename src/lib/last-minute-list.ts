@@ -9,8 +9,8 @@ import { isValidPromoDiscountAmountCents, type PromoDiscount } from "./promo-cod
  */
 
 /** Discount bounds mirrored from the `trip_last_minute_promos_discount_range` check constraint. */
-export const LAST_MINUTE_DISCOUNT_MIN = 5;
-export const LAST_MINUTE_DISCOUNT_MAX = 90;
+const LAST_MINUTE_DISCOUNT_MIN = 5;
+const LAST_MINUTE_DISCOUNT_MAX = 90;
 
 export function isValidLastMinuteDiscountPercent(value: number): boolean {
   return (

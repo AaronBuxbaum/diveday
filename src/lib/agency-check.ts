@@ -273,7 +273,7 @@ export const LISTED_CARD_WORDING: Record<
  * diver holds for it (the ledger's unique indexes are keyed per kind, and
  * `cards_nitrox_shop_agency_identifier_unique` says why that is no collision).
  */
-export const BUNDLED_NITROX: Partial<Record<CheckableAgency, readonly string[]>> = {
+const BUNDLED_NITROX: Partial<Record<CheckableAgency, readonly string[]>> = {
   gue: ["Recreational Diver 1"],
 };
 
@@ -293,7 +293,7 @@ const SPECIALTY_SUFFIX: ReadonlySet<CheckableAgency> = new Set(["padi"]);
  * a word nobody explained. Each agency's own words; a closed list, like the
  * table above.
  */
-export const PASS_OVER_WORDING: Record<CheckableAgency, readonly string[]> = {
+const PASS_OVER_WORDING: Record<CheckableAgency, readonly string[]> = {
   ssi: [
     "Perfect Buoyancy",
     "Navigation",

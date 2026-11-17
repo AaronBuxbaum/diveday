@@ -1169,7 +1169,7 @@ export async function wipeOfflineMedicalAlerts(
   );
 }
 
-export async function deleteOfflineManifest(
+async function deleteOfflineManifest(
   tripId: string,
   existingDb?: IDBDatabase,
   isCurrent?: () => boolean,

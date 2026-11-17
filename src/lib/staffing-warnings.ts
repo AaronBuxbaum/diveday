@@ -47,7 +47,7 @@ import { parseWallTime, wallTimeToUtc } from "./zoned";
 export const LONG_DAY_HOURS = 12;
 
 /** The credentials a departure should have at least one holder of aboard, in the order they are checked. */
-export const ABOARD_CREDENTIAL_KINDS = ["oxygen_provider", "first_aid_cpr"] as const;
+const ABOARD_CREDENTIAL_KINDS = ["oxygen_provider", "first_aid_cpr"] as const;
 export type AboardCredentialKind = (typeof ABOARD_CREDENTIAL_KINDS)[number];
 
 /** One recorded credential, as much of it as currency needs. */

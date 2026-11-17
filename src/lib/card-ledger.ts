@@ -9,15 +9,15 @@ import type { Card, Certification, NitroxCertification, SpecialtyCertification }
  * nitrox card, and none of them may be handed another kind's row.
  */
 
-export function isLevelCard(card: Card): card is Certification {
+function isLevelCard(card: Card): card is Certification {
   return card.kind === "level" && card.level !== null && card.specialty === null;
 }
 
-export function isSpecialtyCard(card: Card): card is SpecialtyCertification {
+function isSpecialtyCard(card: Card): card is SpecialtyCertification {
   return card.kind === "specialty" && card.specialty !== null && card.level === null;
 }
 
-export function isNitroxCard(card: Card): card is NitroxCertification {
+function isNitroxCard(card: Card): card is NitroxCertification {
   return card.kind === "nitrox" && card.level === null && card.specialty === null;
 }
 

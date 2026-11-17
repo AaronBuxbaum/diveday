@@ -82,7 +82,7 @@ export function drysuitExperienceRecordable(
  * Who may record it, by live roles (domain review A4): the people who lead
  * dives and would have watched one. A captain, crew or desk role may not.
  */
-export const DRYSUIT_EXPERIENCE_RECORDER_ROLES = [
+const DRYSUIT_EXPERIENCE_RECORDER_ROLES = [
   "owner",
   "manager",
   "instructor",

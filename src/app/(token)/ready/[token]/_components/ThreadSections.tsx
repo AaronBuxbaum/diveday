@@ -68,7 +68,7 @@ export type ReadyThreadSectionsContext = {
  * this seat can be given it (`nitroxAvailableOn`, the same answer as the
  * request box) and a verified card authorizes the fill (`nitroxPlanningLines`).
  */
-export function readyNitroxPlan(data: ReadyPageData): NitroxMod[] {
+function readyNitroxPlan(data: ReadyPageData): NitroxMod[] {
   return nitroxPlanningLines({
     wantsNitrox: data.wantsNitrox,
     cardVerified: data.nitroxCardVerified,

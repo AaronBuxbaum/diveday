@@ -80,7 +80,7 @@ export function sayHelloSentences(
 }
 
 /** The words for what a first-timer chose to add (#2425): fragments that end the dock line. */
-export const WELCOME_HELLO_KEYS = {
+const WELCOME_HELLO_KEYS = {
   first_ocean_dive: "shared.welcomeCue.hello.firstOceanDive",
   celebrating: "shared.welcomeCue.hello.celebrating",
   nervous: "shared.welcomeCue.hello.nervous",

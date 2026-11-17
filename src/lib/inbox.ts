@@ -29,7 +29,7 @@ export type InboxChannel = InboundChannel | "page";
  * (issue #2667, decided by Aaron 2026-10-17): within a day the Inbox may be
  * read too late; farther out it is enough.
  */
-export const MOVE_ASK_ALERT_WINDOW_MS = 24 * HOUR_MS;
+const MOVE_ASK_ALERT_WINDOW_MS = 24 * HOUR_MS;
 
 /** Whether an ask filed `now` about a seat leaving at `startsAt` emails staff. */
 export function moveAskAlertDue(startsAt: Date, now: Date): boolean {
@@ -69,7 +69,7 @@ export const REPLY_BODY_MAX_LENGTH = 4_000;
 export const WHATSAPP_REPLY_WINDOW_MS = 24 * HOUR_MS;
 
 /** The local-part prefix of every shop's inbound reply address. */
-export const INBOUND_REPLY_PREFIX = "reply+";
+const INBOUND_REPLY_PREFIX = "reply+";
 
 /**
  * The bare address out of anything an email header carries — `Priya Sharma

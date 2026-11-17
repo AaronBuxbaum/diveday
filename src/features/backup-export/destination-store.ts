@@ -44,7 +44,7 @@ export type BackupSecretOptions = {
  * DiveDay is not configured to hold a credential safely, instead of watching
  * the form appear to succeed and the backup never run.
  */
-export function resolveBackupKey(options: BackupSecretOptions): SecretKey | BackupKeyRefusal {
+function resolveBackupKey(options: BackupSecretOptions): SecretKey | BackupKeyRefusal {
   return resolveSecretKey(options.key);
 }
 

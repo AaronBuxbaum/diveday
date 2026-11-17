@@ -48,15 +48,15 @@ export const COALESCE_WINDOW_MS = 60_000;
  * realistically has a phone and maybe a tablet; a boat crew is not fifty
  * devices.
  */
-export const MAX_SUBSCRIPTIONS_PER_PERSON_TRIP = 5;
-export const MAX_SUBSCRIPTIONS_PER_TRIP = 50;
+const MAX_SUBSCRIPTIONS_PER_PERSON_TRIP = 5;
+const MAX_SUBSCRIPTIONS_PER_TRIP = 50;
 /**
  * Ceiling on one fan-out, independent of the caps above, so a claim can never
  * expand without bound even if rows arrive some other way.
  */
-export const MAX_PUSH_TARGETS_PER_EVENT = 50;
+const MAX_PUSH_TARGETS_PER_EVENT = 50;
 /** Sends run in chunks of this size rather than all at once — see `pushManifestChanged`. */
-export const PUSH_SEND_CONCURRENCY = 10;
+const PUSH_SEND_CONCURRENCY = 10;
 
 export interface SavePushSubscriptionInput {
   shopId: string;

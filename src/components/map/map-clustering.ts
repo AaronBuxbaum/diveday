@@ -5,7 +5,7 @@ export type ProjectedMapPoint<T extends { id: string }> = {
 };
 
 /** Enough separation for 44px cluster buttons and their hover/focus treatment. */
-export const MAP_CLUSTER_GRID_SIZE = 56;
+const MAP_CLUSTER_GRID_SIZE = 56;
 
 /**
  * Group nearby points around fixed representatives, checking neighboring cells

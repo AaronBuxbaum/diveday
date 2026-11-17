@@ -13,7 +13,7 @@ import {
 } from "@/lib/assists/shop-translate";
 import { draftTranslationAction, saveTranslationAction } from "../content-assist-actions";
 
-export function translationEditorCopy(t: StaffTranslator): TranslationEditorCopy {
+function translationEditorCopy(t: StaffTranslator): TranslationEditorCopy {
   return {
     label: t("deskAssists.translate.label"),
     draft: t("deskAssists.translate.draft"),

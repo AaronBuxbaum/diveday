@@ -6,7 +6,7 @@ import type { CertificationLevel } from "./readiness";
 import { sameTemplateValue } from "./template-value-comparison";
 
 /** Fields a template snapshot can compare. Conservation guidance is compared but stays local. */
-export const DIVE_SITE_TEMPLATE_SYNC_FIELDS = [
+const DIVE_SITE_TEMPLATE_SYNC_FIELDS = [
   "description",
   "locationName",
   "forecastLatitude",

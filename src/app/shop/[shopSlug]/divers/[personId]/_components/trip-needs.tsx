@@ -90,7 +90,7 @@ function needText(t: StaffTranslator, blocker: ReadinessBlocker): string {
 }
 
 /** The list itself, shared by the file row and the status ledger. */
-export function TripNeedsList({ lines }: { lines: TripNeedsLine[] }) {
+function TripNeedsList({ lines }: { lines: TripNeedsLine[] }) {
   return (
     <ul className="mt-2 list-disc space-y-1 ps-5 text-sm">
       {lines.map((line) => (

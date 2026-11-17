@@ -31,7 +31,7 @@ import { normalizeImportKey } from "../import-key";
  * or name.
  */
 export const SAMPLE_ROWS = 50;
-export const SAMPLES_PER_COLUMN = 5;
+const SAMPLES_PER_COLUMN = 5;
 const MAX_LEVEL_SPELLINGS = 30;
 const SAMPLE_CELL_MAX = 60;
 
@@ -112,7 +112,7 @@ export function importAssistSample(text: string): ImportSample | null {
 
 const NONE = "none";
 
-export const ImportMapping = z.object({
+const ImportMapping = z.object({
   columns: z.array(
     z.object({
       header: z.string(),
@@ -182,7 +182,7 @@ export function importAssistFrom(
 }
 
 /** An `ImportAssist` as it comes back from the browser on confirm: re-read, never trusted. */
-export const ImportAssistInput = z.object({
+const ImportAssistInput = z.object({
   headers: z.record(
     z.string().max(200),
     z.enum(ASSIST_MAPPABLE_FIELDS as [ImportField, ...ImportField[]]),

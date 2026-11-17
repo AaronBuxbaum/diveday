@@ -20,7 +20,7 @@ import {
 } from "@/lib/safety-drills";
 
 /** The words for one drill kind, DiveDay's, from the incidents bundle. */
-export function drillKindLabel(t: StaffTranslator, kind: DrillKind): string {
+function drillKindLabel(t: StaffTranslator, kind: DrillKind): string {
   return t(`incidents.safety.drills.kinds.${kind}`);
 }
 

@@ -13,11 +13,11 @@ import { requirementDemandsNothing } from "./requirement";
  */
 
 /** What the interest asked for. Mirrors the `interest_scope` enum (`src/db/schema/interests.ts`). */
-export const INTEREST_SCOPES = ["departure", "date", "anytime"] as const;
+const INTEREST_SCOPES = ["departure", "date", "anytime"] as const;
 export type InterestScope = (typeof INTEREST_SCOPES)[number];
 
 /** `diver`: their form, or staff taking their call. `shop`: cold outreach. */
-export const INTEREST_ASKED_BY = ["diver", "shop"] as const;
+const INTEREST_ASKED_BY = ["diver", "shop"] as const;
 export type InterestAskedBy = (typeof INTEREST_ASKED_BY)[number];
 
 /** How an interest ended. Mirrors the `interest_closed_as` enum. */
@@ -253,7 +253,7 @@ export type CourseTargetInfo = {
 /**
  * Returns the target certification level a course confers, or "intro" / "specialty" / null.
  */
-export function courseTargetCertificationLevel(
+function courseTargetCertificationLevel(
   course: CourseTargetInfo,
 ): CertificationLevel | "intro" | "specialty" | null {
   const slug = (course.sourceTemplateSlug || course.slug || "").toLowerCase();

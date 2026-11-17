@@ -324,13 +324,7 @@ function focusOnMount(el: HTMLElement | null) {
  * review; one element now, and the caller supplies only the width it belongs
  * to (`xl:hidden` on the stream's, nothing on the grid's).
  */
-export function AllUnpricedNotice({
-  children,
-  className = "",
-}: {
-  children: string;
-  className?: string;
-}) {
+function AllUnpricedNotice({ children, className = "" }: { children: string; className?: string }) {
   return (
     <p
       className={`mt-4 rounded-inset border border-warning/40 bg-surface p-4 text-sm font-medium text-warning ${className}`.trim()}

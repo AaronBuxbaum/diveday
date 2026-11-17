@@ -112,7 +112,7 @@ export function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): Ex
  * label, and the one line it shows collapsed — "not recorded yet", or what the
  * crew recorded against it.
  */
-export function executedDivePlanned({
+function executedDivePlanned({
   plannedDives,
   executedDives,
   locale,

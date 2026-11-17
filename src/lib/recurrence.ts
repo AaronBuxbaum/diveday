@@ -101,7 +101,7 @@ export const WEEKDAY_EXPORT_CODES = ["su", "mo", "tu", "we", "th", "fr", "sa"] a
 export const EVERY_WEEKDAY: WeekdaySet = 0b111_1111;
 
 /** The bit standing for one weekday, 0 = Sunday … 6 = Saturday. */
-export function weekdayBit(weekday: number): number {
+function weekdayBit(weekday: number): number {
   return 1 << weekday;
 }
 

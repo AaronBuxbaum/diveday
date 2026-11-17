@@ -352,7 +352,7 @@ async function whatsNextFor(
   };
 }
 
-export function bookingReference(bookingId: string): string {
+function bookingReference(bookingId: string): string {
   return bookingId.replace(/-/g, "").slice(0, 8).toUpperCase();
 }
 

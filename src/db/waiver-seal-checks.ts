@@ -19,9 +19,9 @@ import { WAIVER_SEALED_COLUMNS } from "./waiver-record-columns";
 import { acknowledgedWaiverSeals } from "./waiver-seal-acknowledgements";
 
 /** Rows read and re-checked per statement. */
-export const WAIVER_SEAL_CHECK_BATCH = 200;
+const WAIVER_SEAL_CHECK_BATCH = 200;
 /** Rows one nightly pass re-checks at most; the rest wait for the next night, oldest first. */
-export const WAIVER_SEAL_CHECK_LIMIT = 4_000;
+const WAIVER_SEAL_CHECK_LIMIT = 4_000;
 
 /**
  * From when DiveDay sealed every release it took a signature for: the

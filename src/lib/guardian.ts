@@ -132,7 +132,7 @@ export function signingDate(signedAt: Date, timezone: string): CalendarDate {
 }
 
 /** A record a guardian has co-signed, whatever else is true about it. */
-export function waiverSignedByGuardian(record: Pick<WaiverRecord, "guardianSignedAt">): boolean {
+function waiverSignedByGuardian(record: Pick<WaiverRecord, "guardianSignedAt">): boolean {
   return Boolean(record.guardianSignedAt);
 }
 

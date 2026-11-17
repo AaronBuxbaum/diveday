@@ -96,10 +96,10 @@ export function hoursFromNow(hours: number, from = nowDate()): Date {
 }
 
 /** The earliest local hour today's seeded departure leaves: after the dawn boat docks. */
-export const DEMO_DAY_FIRST_SAILING_HOUR = 9;
+const DEMO_DAY_FIRST_SAILING_HOUR = 9;
 
 /** The desk's own day, for the cast who crew nothing when today's boat sails at night. */
-export const DEMO_DESK_DAY = {
+const DEMO_DESK_DAY = {
   opens: { hour: 9, minute: 0 },
   closes: { hour: 17, minute: 0 },
 } as const;
@@ -119,7 +119,7 @@ export const DEMO_DAWN_BOAT = {
  * after the shop's 7:00 morning boat (`seed-more-trips.ts`) is back at 10:30
  * with the same crew aboard.
  */
-export const DEMO_NEXT_MORNING_SAILING = { hour: 11, minute: 30 } as const;
+const DEMO_NEXT_MORNING_SAILING = { hour: 11, minute: 30 } as const;
 
 /**
  * **Start of the demo's readiness departure**: the boat the Today queue, the
@@ -165,7 +165,7 @@ export function demoTodayDepartureStart(
  * (issue #2440). Past it, the readiness departure sails tomorrow morning
  * instead (`demoTodayDepartureStart`).
  */
-export const DEMO_DAY_LAST_SAILING_MINUTE = 20 * 60;
+const DEMO_DAY_LAST_SAILING_MINUTE = 20 * 60;
 
 /** Whether a departure starting at `startsAt` leaves after the day boats do, in shop time. */
 export function sailsAfterDayBoats(startsAt: Date, timeZone: string = DEMO_SHOP_TIMEZONE): boolean {

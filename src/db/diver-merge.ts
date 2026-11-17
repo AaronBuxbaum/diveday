@@ -168,8 +168,8 @@ const SINGLETON_PER_PERSON_TABLES = singletonPersonTables();
 export const DIVER_HISTORY_TABLES = movedPersonTables();
 
 /** These rows identify a staff account or crew assignment, not a diver history. */
-export const STAFF_HISTORY_TABLES = refusedPersonTables();
-export const STAFF_PERSON_ONLY_TABLES = refusedPersonOnlyTables();
+const STAFF_HISTORY_TABLES = refusedPersonTables();
+const STAFF_PERSON_ONLY_TABLES = refusedPersonOnlyTables();
 
 function quotedTable(identifier: string) {
   // The only callers pass names from the static person-columns registry; the
@@ -497,7 +497,7 @@ async function holdsCardOrRelease(db: DbExecutor, shopId: string, personId: stri
  * difference (`assessment_changed`): a release signed, or a medical answer
  * parked, between the two must be read before it is merged.
  */
-export function diverMergeAcknowledgement(
+function diverMergeAcknowledgement(
   warnings: readonly DiverMergeWarning[],
   releaseNames: readonly string[],
 ): string {

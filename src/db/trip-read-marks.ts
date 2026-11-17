@@ -47,7 +47,7 @@ export function deskLine() {
  * one tab and tapped *Got it* in another must not be shown the intervening
  * lines again because the older write landed second.
  */
-export async function advanceReadMark(
+async function advanceReadMark(
   db: DbExecutor,
   input: { shopId: string; tripId: string; personId: string; seq: number; now: Date },
 ): Promise<void> {

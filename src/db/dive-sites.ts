@@ -243,7 +243,7 @@ export async function shopSearchAnchor(
 }
 
 /** Three rows of cards on the widest grid the library page uses. */
-export const DIVE_SITE_PAGE_SIZE = PAGE_SIZE.list;
+const DIVE_SITE_PAGE_SIZE = PAGE_SIZE.list;
 
 export type DiveSiteListFilter = {
   /** Matched against the site name *and* its location — staff recall either. */
@@ -1002,7 +1002,7 @@ export async function listDiveSiteBriefingExtras(
 }
 
 /** How many published site templates the "Common dive sites" catalog shows per page. */
-export const GLOBAL_DIVE_SITE_PAGE_SIZE = PAGE_SIZE.list;
+const GLOBAL_DIVE_SITE_PAGE_SIZE = PAGE_SIZE.list;
 
 export type GlobalDiveSiteTemplateRow = {
   template: typeof globalDiveSites.$inferSelect;
@@ -1116,7 +1116,7 @@ export async function listGlobalDiveSiteTemplates(
  * answers the same words the shop's own sites do. Always a condition, never
  * `undefined`: it also sits inside a `count(*) filter`.
  */
-export function globalTemplateMatch(filter: DiveSiteListFilter) {
+function globalTemplateMatch(filter: DiveSiteListFilter) {
   const briefing = globalDiveSiteVersions.briefing;
   const like = filter.query?.trim() ? containsPattern(filter.query.trim()) : undefined;
   const latitude = sql`(${briefing}->>'forecastLatitude')::double precision`;

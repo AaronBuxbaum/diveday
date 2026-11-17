@@ -79,7 +79,7 @@ function survivingFacts(record: SealableRecord): { [key: string]: IntegrityValue
   };
 }
 
-export function courseFormIntegrityMetadata(
+function courseFormIntegrityMetadata(
   record: SealableRecord,
   version: CourseFormIntegrityVersion,
 ): IntegrityValue {
@@ -99,7 +99,7 @@ export function courseFormIntegrityMetadata(
   };
 }
 
-export function computeCourseFormIntegrityHash(
+function computeCourseFormIntegrityHash(
   record: SealableRecord,
   version: CourseFormIntegrityVersion,
 ): string {

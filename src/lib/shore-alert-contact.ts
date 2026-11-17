@@ -37,7 +37,7 @@ export type ShoreAlertContact = {
   confirmedAt: Date | null;
 };
 
-export const NO_SHORE_ALERT_CONTACT: ShoreAlertContact = {
+const NO_SHORE_ALERT_CONTACT: ShoreAlertContact = {
   email: null,
   consentAt: null,
   consentByPersonId: null,

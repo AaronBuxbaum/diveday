@@ -120,7 +120,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
  * ("Send waiver"), as a `Copy` the renderer resolves. Used by the Today queue
  * (`src/features/today/today.ts`) through `blockerDestination`, the one blocker→fix rule.
  */
-export function blockerActionLabelCopy(code: ReadinessBlockerCode): Copy {
+function blockerActionLabelCopy(code: ReadinessBlockerCode): Copy {
   return { key: BLOCKER_ACTION_LABEL_KEYS[code] };
 }
 
