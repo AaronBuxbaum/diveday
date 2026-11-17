@@ -17,10 +17,8 @@ it.each(DIVER_LOCALES)("shows the crew workflow and opens its Today demo in %s",
   expect(screen.getByText("Diego Alvarez")).toBeVisible();
   expect(container.querySelector('input[name="role"]')).toHaveValue("owner");
   expect(container.querySelector('input[name="landing"]')).toHaveValue("today");
-  expect(screen.getByRole("link", { name: t("marketing.common.getSetUp") })).toHaveAttribute(
-    "href",
-    "/get-set-up?from=switching-peek-mid",
-  );
+  // The concierge panel below carries Get set up; this band offers only the demo.
+  expect(screen.queryByRole("link", { name: t("marketing.common.getSetUp") })).toBeNull();
   const routes = new Set(FEATURE_PAGES.map(({ slug }) => `/product/${slug}`));
   for (const link of container.querySelectorAll('a[href^="/product/"]')) {
     expect(routes.has(link.getAttribute("href") ?? "")).toBe(true);

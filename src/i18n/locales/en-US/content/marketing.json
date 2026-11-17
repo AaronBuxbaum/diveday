@@ -13,7 +13,8 @@
     "whyStory": "In January 1998, Tom and Eileen Lonergan went out on a dive boat to the Great Barrier Reef. The boat went back to port without them, and nobody noticed for two days. Neither of them was ever found.",
     "whyTie": "A tally can add up while someone is still in the water. So the roll call in DiveDay calls every diver and crew member by name, before the boat leaves and after every dive, and the count stays open until each name is accounted for.",
     "whyLink": "Why DiveDay exists",
-    "stepsTitle": "One booking, from your website to the boat and home again",
+    "stepsTitle": "Follow Priya’s booking from your website to the boat and home again",
+    "stepsLede": "Priya books a dive. Each step is the screen your shop sees at that moment.",
     "steps": {
       "book": {
         "when": "Days before",
@@ -87,8 +88,6 @@
   "common": {
     "gettingReady": "Getting your shop ready…",
     "tryDemo": "Try the live demo",
-    "demoShopName": "Your shop’s name",
-    "demoShopNameHint": "We use it to name your demo.",
     "getSetUp": "Get set up",
     "bookCall": "Book a 20-minute call",
     "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card.",
@@ -764,7 +763,7 @@
     "peopleP1": "The people who build DiveDay have spent their careers on software that millions of people rely on, and their weekends on dive boats. We know the desk from the diver’s side, cert card out while the owner hunts for the waiver, and the deck, where a divemaster works down a wet clipboard while the boat waits. DiveDay is the tool we wanted in both places: records a shop can trust, on a screen a wet thumb can work.",
     "peopleP2": "I’ve led software teams for about fifteen years, first at Google and then on self-driving cars. When you build a self-driving car, the software is responsible for the people in it, and there is no margin for error. You learn to build for the worst morning, not the average one.",
     "peopleP3": "A new engineer on my team once asked why we wrote the same boring check in three places. I told her about the day all three disagreed, which is how we found a potentially critical problem. A system that says something once can be wrong without anyone knowing. DiveDay is about 1.4 million lines of code now, and a great deal of it exists so that no one on a boat is ever left uncounted.",
-    "peopleP4": "I built DiveDay for the person who runs the shop: the owner answering messages at ten at night, chasing a waiver, redoing tomorrow’s list by hand. I want the whole day in one place, looking good enough that you’re glad to open it. <email>Tell me</email> what’s painful and I’ll fix it personally.",
+    "peopleP4": "I built DiveDay for the person who runs the shop: the owner answering messages at ten at night, chasing a waiver, redoing tomorrow’s list by hand. I want the whole day in one place, looking good enough that you’re glad to open it. <email>Tell me what’s painful</email> and I’ll fix it personally.",
     "founderRole": "Founder",
     "buildEyebrow": "What comes first",
     "buildTitle": "The one job on a boat that can’t go wrong",
@@ -883,12 +882,7 @@
           "sees": "The manifest, at departure, and after each dive"
         }
       },
-      "staysEyebrow": "What stays as it is",
-      "staysTitle": "Keep your register and your agency portal",
-      "staysBody": "DiveDay has no retail register and no stock count, and it connects to no agency. Card payments go through your own Stripe account.",
-      "movingEyebrow": "Moving across",
-      "movingTitle": "Upload your customer list and see what comes across before anything saves",
-      "movingBody": "Guides cover FareHarbor, Peek Pro, EVE, DiveShop360, Smartwaiver, and Rezdy. Send us the file and a person does the import with you, free. You can run one trip in DiveDay while your old setup keeps running.",
+      "movingTitle": "Coming from another system?",
       "movingLink": "Find the guide for your system →"
     }
   },

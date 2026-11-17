@@ -123,10 +123,22 @@ export function CaptainPhoneFrame({
 export function MarginNotes({
   notes,
   className = "",
+  plain = false,
 }: {
   notes: readonly string[];
   className?: string;
+  /** Plain sentences, no list and no numbers: for notes that are not an order (the homepage's steps). */
+  plain?: boolean;
 }) {
+  if (plain) {
+    return (
+      <div className={`space-y-3 text-sm leading-6 text-muted ${className}`}>
+        {notes.map((note) => (
+          <p key={note}>{note}</p>
+        ))}
+      </div>
+    );
+  }
   return (
     <ol className={`space-y-3 text-sm leading-6 text-muted ${className}`}>
       {notes.map((note, index) => (

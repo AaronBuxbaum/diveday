@@ -23,6 +23,7 @@ export function StoredPhoto({
   className,
   sizes,
   priority = false,
+  focus = "object-center",
 }: {
   src: string;
   alt: string;
@@ -31,6 +32,8 @@ export function StoredPhoto({
   sizes: string;
   /** The page's largest image above the fold — the storefront's cover — is fetched eagerly. */
   priority?: boolean;
+  /** An `object-*` position class: where the crop keeps when the box is not the photo's own shape. */
+  focus?: string;
 }) {
   return (
     <div className={`relative overflow-hidden ${className}`}>
@@ -41,7 +44,7 @@ export function StoredPhoto({
         sizes={sizes}
         priority={priority}
         unoptimized={src.startsWith("/api/person-photos/")}
-        className="object-cover"
+        className={`object-cover ${focus}`}
       />
     </div>
   );

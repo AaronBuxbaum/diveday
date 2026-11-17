@@ -134,6 +134,7 @@ export function ArrivalDeskFallback({
                 <button
                   type="button"
                   disabled
+                  data-tap-target=""
                   className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-semibold whitespace-nowrap text-primary"
                 >
                   <span
