@@ -29,7 +29,6 @@ import {
   getOrder,
   listShopOrders,
   MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR,
-  markOrderPaidByInvoiceId,
   markOrderVoidedByInvoiceId,
   maxLineItemUnitAmountCents,
   openOrdersForBookings,
@@ -42,6 +41,7 @@ import {
   voidCounterOrder,
   voidOrder,
 } from "./orders";
+import { markOrderPaidByInvoiceId } from "./orders.test-support";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import {

@@ -7,12 +7,8 @@ import {
   recordCheckoutPaymentIntent,
   startBookingCheckout,
 } from "../../db/checkouts";
-import {
-  createOrder,
-  markOrderPaidByInvoiceId,
-  recordOrderPaymentIntent,
-  refundOrder,
-} from "../../db/orders";
+import { createOrder, recordOrderPaymentIntent, refundOrder } from "../../db/orders";
+import { markOrderPaidByInvoiceId } from "../../db/orders.test-support";
 import { getBookingPayment, listBookingPaymentEvents } from "../../db/payments";
 import { refundBookingOnCancellation } from "../../db/refunds";
 import { bookingCheckouts, orders } from "../../db/schema/index";

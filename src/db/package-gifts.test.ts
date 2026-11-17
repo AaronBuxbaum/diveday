@@ -4,7 +4,8 @@ import type { CreateInvoiceRequest, InvoicingProvider } from "@/lib/payments/inv
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { countSpendableDives, createDivePackage, deleteDivePackage } from "./dive-packages";
-import { createDiverPackageOrder, markOrderPaidByInvoiceId, refundOrder } from "./orders";
+import { createDiverPackageOrder, refundOrder } from "./orders";
+import { markOrderPaidByInvoiceId } from "./orders.test-support";
 import { sendDuePackageGifts } from "./package-gifts";
 import { packageGifts, people } from "./schema";
 import { setShopTimezone } from "./shops";
