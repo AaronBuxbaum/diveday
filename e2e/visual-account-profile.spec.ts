@@ -1,4 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
@@ -14,14 +15,28 @@ for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
     signedInAsOwner();
-    test("account public visibility controls", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/me/security");
-      await page.getByText(staffCopy("staffing.crewConsent.rowLabel"), { exact: true }).click();
-      await expect(
-        page.getByRole("checkbox", { name: staffCopy("staffing.crewConsent.label") }),
-      ).toBeVisible();
-      await page.getByText(staffCopy("staffing.publicProfile.heading"), { exact: true }).click();
-      await capture(page, "account-public-profile", scheme);
+    test.describe("public visibility", () => {
+      test.use({
+        storageState: { cookies: [], origins: [] },
+        privateShopSlug: "public-visibility-review",
+      });
+      test("account public visibility controls", async ({ page, privateShop }) => {
+        // Better Auth mints session timestamps on the wall clock, while the
+        // visual server is frozen. Pin only this private shop's display time.
+        await seedFacts(page.request, ["staffSessionsSeenNow"], { slug: privateShop.slug });
+        await page.goto(`/shop/${privateShop.slug}/me/security`);
+        await expect(
+          page.getByText(
+            staffCopy("settings.security.sessions.group", { count: 1, when: "today" }),
+          ),
+        ).toBeVisible();
+        await page.getByText(staffCopy("staffing.crewConsent.rowLabel"), { exact: true }).click();
+        await expect(
+          page.getByRole("checkbox", { name: staffCopy("staffing.crewConsent.label") }),
+        ).toBeVisible();
+        await page.getByText(staffCopy("staffing.publicProfile.heading"), { exact: true }).click();
+        await capture(page, "account-public-profile", scheme);
+      });
     });
     test.describe("private introduction", () => {
       // privateShop signs into its minted owner; a canonical owner session
