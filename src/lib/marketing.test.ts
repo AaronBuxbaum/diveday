@@ -310,9 +310,24 @@ describe("the builder's notes say we", () => {
     expect(singular).toEqual([]);
   });
 
-  it("says we left the ready-everyone button out, in both locales", () => {
-    expect(marketingMessages("en-US")["marketing.home.steps.check.note2"]).toMatch(/\bWe left\b/);
-    expect(marketingMessages("es-ES")["marketing.home.steps.check.note2"]).toMatch(/\bdejamos\b/);
+  it("promises no ready-everyone button in the check step, in both locales", () => {
+    // The walkthrough rewrite (#4660, round 6) dropped the sentence that said we left the
+    // button out. The intent stands: no readiness is bulk-marked, so no copy in the step
+    // may offer a way to make everyone ready at once.
+    const bulk: Record<string, RegExp> = {
+      "en-US":
+        /\b(?:ready|clear|check)(?:s|ed)? (?:everyone|all|every diver)\b|\ball (?:ready|clear)\b/i,
+      "es-ES": /\b(?:todos|todas)\b.{0,20}\b(?:list[oa]s|confirmad[oa]s)\b|\blist[oa]s? a todos\b/i,
+    };
+    for (const locale of ["en-US", "es-ES"] as const) {
+      const step = Object.entries(marketingMessages(locale)).filter(([key]) =>
+        key.startsWith("marketing.home.steps.check."),
+      );
+      expect(step.length).toBeGreaterThan(0);
+      for (const [key, value] of step) {
+        expect(value, `${locale} ${key}`).not.toMatch(bulk[locale] as RegExp);
+      }
+    }
   });
 });
 
