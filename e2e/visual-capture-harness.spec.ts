@@ -459,6 +459,14 @@ test.describe("capture harness", () => {
     test("is invisible to getAnimations(), so only the switch-off settles it", async ({ page }) => {
       await openDiverProfile(page, "Priya", "Priya Sharma");
       await page.getByRole("region", { name: "The story" }).waitFor();
+      // The profile helper parks the pointer after navigation. Let any hover
+      // transitions caused by that move finish before measuring the resize.
+      await page.evaluate(async () => {
+        const transitions = document
+          .getAnimations()
+          .filter((animation) => animation.constructor.name === "CSSTransition");
+        await Promise.allSettled(transitions.map((animation) => animation.finished));
+      });
 
       // Crossing 40rem downward is what starts it — the same resize `capture()`
       // performs on its first viewport.
