@@ -89,14 +89,23 @@ and listed the rest in a closed index on `/product`.
   checklist is its group, whole.
 - **The homepage follows one booking** (`src/app/(marketing)/page.tsx`). The title says what the shop gets
   ("Every diver booked, signed, checked and accounted for") and the lede says what DiveDay is: the
-  journey from online booking to dock readiness. Then five steps in the order a diver meets the shop:
-  book, sign the release and medical form, the morning check, the roll call, and the recap. Each is
-  a screen, two builder's notes and a link that names the feature page. Check-in at the counter was
-  a sixth step until review the same day: its screen read as the morning check's twin, and its one
-  claim was the only one on the page a rival makes. Its page is still in the Product directory. The
-  roll-call step draws the dock check-in screen, read by key from the check-in page, because the
-  hero already draws the roll-call phone (visual review B14, decided 2026-10-25 under H-20260802-may-public-pages-say); its
-  notes keep the no-signal roll-call claim with its condition.
+  journey from online booking to dock readiness. Beside the headline, a miniature of the 7:30 boat
+  takes the visitor from a card check at the dock desk to the reef after dive one. Priya Sharma
+  waits on the pier while the visitor compares a sample certification card with the verified
+  certification on her booking. Choosing a different card changes its number. A mismatch holds
+  her at the desk for a recheck. Recording a match by hand opens the departure roll call
+  at ten of eleven aboard, including Tom Okafor. Calling Priya by name and marking her aboard
+  closes that roll call. At the reef, visitors can explore underwater or go straight to the post-dive
+  roll call. Selecting the spotted eagle ray, green sea turtle or blue tang reveals identifying
+  features. Logging or removing a sighting changes the trip record. Visitors can return to the
+  animals after starting the roll call. Nine people are already accounted for after dive one and
+  both Priya and Tom need fresh confirmations. Selecting a diver on deck or in the roster
+  shows their location and gear. The final record keeps the desk’s card check and each roll call’s
+  confirmations in order. Starting over clears the record and restores the pending card check.
+  Dragging and arrow keys turn the boat. Reduced motion changes views immediately. The roster
+  works without canvas. Below the hero,
+  the walkthrough follows Priya’s booking from the storefront to the recap and review. Its check-in
+  step shows the arrivals desk and its roll-call step shows the captain’s screen.
   A step ends in its feature page rather than in a door into the demo, because that page's own door
   opens the demo on the same screen as the role that uses it. The page keeps its two demo doors,
   hero and close.
@@ -563,7 +572,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   destination: the roles moved into the in-demo switcher, the diver preview into the band of
   annotated screens it illustrates (since 2026-09-24 each screen there has its own role door), and
   both are still reachable and still tagged. `e2e/marketing.spec.ts` counts
-  the hero's enabled controls so the budget can't quietly grow back.
+  the hero’s doors separately from the controls inside the sample roll call.
   **One line under the doors is a diver's, and sits outside the budget** (fourth review, item 50):
   "Booked a dive? Find your booking", a sentence for the diver who followed a shop footer here, not a
   door for the shop deciding. The spec pins it to exactly one link to `/find-your-booking` and counts
@@ -774,8 +783,8 @@ rendered through the shared wrappers in `src/components/MarketingSections.tsx`:
 | `WaiverSigningFallback` | Signing the waiver and medical form on a diver's phone | The waivers page, and the homepage's signing step |
 | `FrontDeskReadinessFallback` | Today's readiness for one departure | The certification checks page, and the homepage's morning step |
 | `NightBeforeBriefFallback` | The diver's trip page the night before | The messages page |
-| `ArrivalDeskFallback` | A departure's guest list at the counter | The check-in page, and the homepage's roll-call step |
-| `CaptainRollCallFallback` | Captain manifest roll call on a phone (`CaptainPhoneFrame`), at departure | The homepage hero, the boat manifest page, the `/about` hero |
+| `ArrivalDeskFallback` | A departure's guest list at the counter | The check-in page and the homepage’s check-in step |
+| `CaptainRollCallFallback` | Captain manifest roll call on a phone (`CaptainPhoneFrame`), at departure | The homepage’s roll-call step, the boat manifest page and the `/about` hero |
 | `SiteBriefingFallback` | A dive site's briefing as a diver reads it | The dive sites page |
 | `GearRegisterFallback` | The gear register | The rental gear page |
 | `ScheduleWeekFallback` | Schedule's week view | The schedule page |

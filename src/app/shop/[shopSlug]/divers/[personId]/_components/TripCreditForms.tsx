@@ -86,7 +86,7 @@ export function TripCreditForms({
     );
   }
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pt-2">
       <p className="text-sm text-muted">{words.policy}</p>
       {state?.ok ? (
         <p className="text-sm font-medium">

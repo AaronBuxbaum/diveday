@@ -101,10 +101,14 @@ test.describe("recovery and goodwill", () => {
     await page.keyboard.press("Space");
     await expect(copy).toBeHidden();
     await page.goto(`/shop/${privateShop.slug}/divers/${fact.personId}`);
-    const credit = page.locator("summary").filter({ hasText: t("divers.tripCredit.title") });
+    // The streamed response may contain a hidden copy before the page swaps it in.
+    const credit = page
+      .getByRole("region", { name: t("divers.tripCredit.title"), exact: true })
+      .locator("summary");
     await credit.focus();
     await page.keyboard.press("Enter");
-    await expect(page.getByText(t("divers.tripCredit.policy"), { exact: true })).toBeVisible();
+    const policy = page.getByText(t("divers.tripCredit.policy"), { exact: true });
+    await expect(policy).toBeVisible();
     await expect(page.getByText(t("divers.tripCredit.history"), { exact: true })).toBeVisible();
     await expect(
       page.getByRole("button", {
@@ -112,7 +116,18 @@ test.describe("recovery and goodwill", () => {
         exact: true,
       }),
     ).toBeEnabled();
-    await photograph(page, "operations-goodwill-history");
+    await capture(page, "operations-goodwill-history", "light", {
+      locale: SPANISH,
+      beforeScreenshot: async () => {
+        await expect(credit).toBeFocused();
+        const [summaryBox, policyBox] = await Promise.all([
+          credit.boundingBox(),
+          policy.boundingBox(),
+        ]);
+        if (!summaryBox || !policyBox) throw new Error("Credit disclosure geometry missing");
+        expect(policyBox.y).toBeGreaterThanOrEqual(summaryBox.y + summaryBox.height + 4);
+      },
+    });
   });
 });
 

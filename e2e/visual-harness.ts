@@ -44,6 +44,7 @@ export const CATALOG_MAP_SITE_COUNT = DIVE_SITE_TEMPLATES.filter(
 export async function liveRosterConfirmation(
   page: Page,
   scope?: { tripId: string; checkpoint: string },
+  locale = "en-US",
 ) {
   await page.waitForResponse((response) => {
     const request = response.request();
@@ -58,7 +59,7 @@ export async function liveRosterConfirmation(
     );
   });
   await expect(
-    page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+    page.getByText(staffTranslator(locale)("manifest.rosterUnconfirmed"), { exact: true }),
   ).toHaveCount(0);
 }
 
