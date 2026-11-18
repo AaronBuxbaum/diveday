@@ -1,10 +1,10 @@
 import { and, asc, eq, gt, gte, isNull, lt, sql } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
+import { lockDemoResetEvidenceFirst } from "./boarding-certification-snapshot";
 import { rebindDepartureBoatSafetyTime } from "./boat-safety";
 import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
-import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops, trips } from "./schema";
 import { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
@@ -150,7 +150,7 @@ async function refreshCanonicalDemoScheduleInTransaction(
       today: null,
     };
   }
-  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, demoShop.id))) {
+  if (!(await lockDemoResetEvidenceFirst(db, demoShop.id))) {
     const [current] = await db
       .select({ isDemo: shops.isDemo })
       .from(shops)
@@ -249,7 +249,7 @@ async function ensureDemoSailsTodayInTransaction(
   timeZone: string,
   now: Date,
 ): Promise<DemoTodayOutcome> {
-  if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(db, shopId))) return "no_candidate";
+  if (!(await lockDemoResetEvidenceFirst(db, shopId))) return "no_candidate";
   const { from, to } = shopDayBounds(now, timeZone);
   const [sailingToday] = await db
     .select({ id: trips.id })

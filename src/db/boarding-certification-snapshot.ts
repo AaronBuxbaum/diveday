@@ -72,8 +72,9 @@ export async function tryLockBoardingEvidenceForReceipt(
  * A true result is only the existing demo identity gate under these locks. It
  * is not authorization to delete or proof that a booking or device event is
  * preserved. Current reset, reap, revocation and older servers do not all use
- * this order, and the exclusive fence prevents prompt intake while held. No
- * production path calls this helper while the receipt contract is incomplete.
+ * this order, and the exclusive fence prevents prompt intake while held.
+ * This experimental branch uses this order for named reset paths only; the
+ * receipt contract, all other writers and rollout remain incomplete.
  */
 export async function lockDemoResetEvidenceFirst(tx: DbExecutor, shopId: string): Promise<boolean> {
   if (!isTransactionExecutor(tx)) throw new Error("Coordinated demo gate requires a transaction");
