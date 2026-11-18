@@ -100,6 +100,7 @@ type ScratchHooks = {
   /** Test barriers only; never a production authorization or persistence hook. */
   afterFirstLookup?: () => Promise<void>;
   afterReservation?: () => Promise<void>;
+  afterLink?: () => Promise<void>;
 };
 
 /**
@@ -175,6 +176,7 @@ export async function recordScratchReceipt(
         returning observation_id
       `);
       if (linked.rows.length !== 1) throw new ScratchUnavailable();
+      if (hooks.afterLink) await hooks.afterLink();
       return { ok: true, replay: false, observationId };
     });
   } catch (error) {

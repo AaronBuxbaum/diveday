@@ -107,18 +107,21 @@ describe("scratch-only receipt ledger prototype", () => {
     expect(new Set([a.observationId, b.observationId, c.observationId]).size).toBe(3);
   });
 
-  it("rolls back an event-key reservation when the transaction fails before its observation", async () => {
-    const db = await unseededTestDb();
-    await createScratchLedger(db);
-    await expect(
-      recordScratchReceipt(db, first, {
-        afterReservation: async () => {
-          throw new Error("injected failure");
-        },
-      }),
-    ).rejects.toThrow("injected failure");
-    expect((await db.execute(sql`select * from scratch_receipt`)).rows).toEqual([]);
-    expect((await db.execute(sql`select * from scratch_observation`)).rows).toEqual([]);
-    expect(await recordScratchReceipt(db, first)).toMatchObject({ ok: true, replay: false });
-  });
+  it.each(["afterReservation", "afterLink"] as const)(
+    "rolls back a failed transaction at %s",
+    async (hook) => {
+      const db = await unseededTestDb();
+      await createScratchLedger(db);
+      await expect(
+        recordScratchReceipt(db, first, {
+          [hook]: async () => {
+            throw new Error("injected failure");
+          },
+        }),
+      ).rejects.toThrow("injected failure");
+      expect((await db.execute(sql`select * from scratch_receipt`)).rows).toEqual([]);
+      expect((await db.execute(sql`select * from scratch_observation`)).rows).toEqual([]);
+      expect(await recordScratchReceipt(db, first)).toMatchObject({ ok: true, replay: false });
+    },
+  );
 });

@@ -240,21 +240,50 @@ describePostgres("scratch receipt key reservation", () => {
     }
   });
 
-  it("rolls back an uncommitted reservation and permits a later retry", async () => {
+  it.each(["afterReservation", "afterLink"] as const)(
+    "rolls back failure at %s and permits a later retry",
+    async (hook) => {
+      const pg = await postgresTestDb();
+      await createScratchLedger(pg.db);
+      await expect(
+        recordScratchReceipt(pg.connect(), original, {
+          [hook]: async () => {
+            throw new Error("injected failure");
+          },
+        }),
+      ).rejects.toThrow("injected failure");
+      expect((await pg.db.execute(sql`select * from scratch_receipt`)).rows).toEqual([]);
+      expect((await pg.db.execute(sql`select * from scratch_observation`)).rows).toEqual([]);
+      expect(await recordScratchReceipt(pg.connect(), original)).toMatchObject({
+        ok: true,
+        replay: false,
+      });
+    },
+  );
+
+  it("preserves the original receipt when a joined receipt fails after linking", async () => {
     const pg = await postgresTestDb();
     await createScratchLedger(pg.db);
+    const first = await recordScratchReceipt(pg.connect(), original);
+    if (!first.ok) throw new Error("first tap not recorded");
+    const second = { ...original, eventId: "event-b", actorId: "staff-b" };
     await expect(
-      recordScratchReceipt(pg.connect(), original, {
-        afterReservation: async () => {
+      recordScratchReceipt(pg.connect(), second, {
+        afterLink: async () => {
           throw new Error("injected failure");
         },
       }),
     ).rejects.toThrow("injected failure");
-    expect((await pg.db.execute(sql`select * from scratch_receipt`)).rows).toEqual([]);
-    expect((await pg.db.execute(sql`select * from scratch_observation`)).rows).toEqual([]);
-    expect(await recordScratchReceipt(pg.connect(), original)).toMatchObject({
+    expect(
+      (await pg.db.execute(sql`select event_id, observation_id from scratch_receipt`)).rows,
+    ).toEqual([{ event_id: original.eventId, observation_id: first.observationId }]);
+    expect((await pg.db.execute(sql`select id from scratch_observation`)).rows).toEqual([
+      { id: first.observationId },
+    ]);
+    expect(await recordScratchReceipt(pg.connect(), second)).toEqual({
       ok: true,
       replay: false,
+      observationId: first.observationId,
     });
   });
 });
