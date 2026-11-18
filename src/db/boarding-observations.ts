@@ -70,7 +70,7 @@ export type RecordObservationOutcome =
         | "staff_not_found"
         /** The seat is not released: nothing to observe back. */
         | "not_marked"
-        /** This key was already spent on another seat. */
+        /** This key was already spent on another seat or departure. */
         | "key_reused";
     };
 
