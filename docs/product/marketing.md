@@ -35,7 +35,7 @@ continues to state supported fields, not guaranteed source exports.
 Every visitor sees the same configured offer. `PRICING_MONTHLY_CENTS` and
 `PRICING_BASIS_POINTS` independently set the monthly fee and percentage of money recorded as
 received in DiveDay by any payment method. Omit either component when configuring the other to
-charge only that component. With both unset, the default is $0/month plus 2% (Aaron, 2026-11-18: "We're currently doing 2%"; the /pricing comparison and every figure on the public pages read this one value); explicit zeroes mean free.
+charge only that component. With both unset, the default is $0/month plus 1% (Aaron, 2026-11-18: cut from 2% to 1%; the /pricing comparison and every figure on the public pages read this one value); explicit zeroes mean free.
 Copy names only the components charged, and percentage offers never claim no cut of bookings.
 Existing subscribers keep their sold terms. This supersedes references below to a universal flat
 price; see [configured pricing](../architecture/decisions/20261108-configured-pricing.md).

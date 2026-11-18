@@ -6,20 +6,20 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe("trial timing", () => {
   it("runs for three weeks", () => {
-    expect(TRIAL_DURATION_DAYS).toBe(21);
+    expect(TRIAL_DURATION_DAYS).toBe(14);
   });
 
   it("ends exactly TRIAL_DURATION_DAYS after the shop was created", () => {
-    expect(trialEndsAt(CREATED_AT).getTime()).toBe(CREATED_AT.getTime() + 21 * DAY_MS);
+    expect(trialEndsAt(CREATED_AT).getTime()).toBe(CREATED_AT.getTime() + 14 * DAY_MS);
   });
 
   it("reads as the full window on day one", () => {
-    expect(trialDaysRemaining(CREATED_AT, CREATED_AT)).toBe(21);
+    expect(trialDaysRemaining(CREATED_AT, CREATED_AT)).toBe(14);
   });
 
   it("counts down as the trial runs", () => {
     const midway = new Date(CREATED_AT.getTime() + 10 * DAY_MS);
-    expect(trialDaysRemaining(CREATED_AT, midway)).toBe(11);
+    expect(trialDaysRemaining(CREATED_AT, midway)).toBe(4);
   });
 
   it("rounds a partial day left up rather than reading as expired", () => {

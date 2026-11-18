@@ -25,7 +25,7 @@ const renderIt = () =>
     <FeeComparison
       labels={labels}
       locale="en-US"
-      diveDay={{ monthlyCents: 0, basisPoints: 200 }}
+      diveDay={{ monthlyCents: 0, basisPoints: 100 }}
     />,
   );
 
@@ -40,7 +40,7 @@ describe("FeeComparison", () => {
     // $30,000: 37% through the agencies ($11,100), the rest direct ($18,900).
     const booking = screen.getByRole("row", { name: /Booking fee/ });
     expect(booking.textContent).toContain("6% ($1,134)");
-    expect(booking.textContent).toContain("2% ($378)");
+    expect(booking.textContent).toContain("1% ($189)");
     const ota = screen.getByRole("row", { name: /OTA booking fee/ });
     expect(ota.textContent).toContain("2% ($222)");
     expect(screen.getByText("(estimated)")).toBeTruthy();

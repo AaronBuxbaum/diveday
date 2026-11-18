@@ -515,12 +515,12 @@ describe("the pricing plan (ADR 20261022-pricing-ab-test)", () => {
     expect(
       await setShopPricingPlan(
         db,
-        { shopSlug: slug, plan: "percent_of_volume", monthlyCents: 0, basisPoints: 200 },
+        { shopSlug: slug, plan: "percent_of_volume", monthlyCents: 0, basisPoints: 100 },
         ON,
       ),
     ).toEqual({
       status: "set",
-      terms: { plan: "percent_of_volume", monthlyCents: 0, basisPoints: 200 },
+      terms: { plan: "percent_of_volume", monthlyCents: 0, basisPoints: 100 },
     });
   });
 

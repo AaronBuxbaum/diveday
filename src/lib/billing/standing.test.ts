@@ -38,7 +38,7 @@ function withSubscription(
 }
 
 describe("billingStanding without a subscription", () => {
-  it("is trialing inside the three-week window", () => {
+  it("is trialing inside the two-week window", () => {
     const standing = billingStanding(input({ trialEndsAt: new Date("2026-10-20T00:00:00Z") }));
     expect(standing.status).toBe("trialing");
     expect(standing.hasSubscription).toBe(false);

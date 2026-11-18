@@ -182,28 +182,28 @@ describe("with default percentage pricing", () => {
     expect(text).toContain(
       "The demo opens a working sample shop in one click. No sign-up and no card.",
     );
-    expect(text).not.toContain("2% when you record a payment, with no monthly fee.");
+    expect(text).not.toContain("1% when you record a payment, with no monthly fee.");
   });
 
   it("gives the percentage offer its own terms on /about, /product and a feature page", async () => {
     asReader("percent_of_volume");
     const about = await pageText("about");
     expect(about).toContain("See pricing");
-    expect(about).not.toMatch(/2%|\$99|shuts down/);
+    expect(about).not.toMatch(/1%|\$99|shuts down/);
 
     const product = await pageText("product");
     expect(product).toContain(
-      "2% of money recorded as received in DiveDay, cash included, with no monthly fee.",
+      "1% of money recorded as received in DiveDay, cash included, with no monthly fee.",
     );
     expect(product).not.toMatch(FLAT_CLAIMS);
 
     const payments = await pageText("payments");
     expect(payments).toContain(
-      "2% of money recorded as received in DiveDay, cash included, with no monthly fee.",
+      "1% of money recorded as received in DiveDay, cash included, with no monthly fee.",
     );
-    expect(payments).toContain("DiveDay’s 2% is billed to you once a month");
+    expect(payments).toContain("DiveDay’s 1% is billed to you once a month");
     expect(payments).toContain(
-      "Yes. 2% of money recorded as received in DiveDay, cash included, with no monthly fee.",
+      "Yes. 1% of money recorded as received in DiveDay, cash included, with no monthly fee.",
     );
     expect(payments).not.toMatch(FLAT_CLAIMS);
     expect(payments).not.toContain("$99");
@@ -232,7 +232,7 @@ describe("with default percentage pricing", () => {
     for (const guide of ["rezdy", "fareharbor", "peek"] as const) {
       const text = await pageText(guide);
       expect(text).toContain(
-        "2% of money recorded as received in DiveDay, cash included, with no monthly fee.",
+        "1% of money recorded as received in DiveDay, cash included, with no monthly fee.",
       );
       expect(text).not.toMatch(FLAT_CLAIMS);
       const metadata = await guideMetadata({ params: Promise.resolve({ competitor: guide }) });
@@ -246,12 +246,12 @@ describe("with default percentage pricing", () => {
     expect(about).toContain("Ver precios");
     expect(about).not.toMatch(/2\s?%|\$99/);
     const payments = await pageText("payments");
-    expect(payments).toMatch(/Sí\. El 2\s?%/);
+    expect(payments).toMatch(/Sí\. El 1\s?%/);
     expect(payments).toContain("Los pagos con tarjeta en línea cuentan automáticamente");
     expect(payments).not.toContain("DiveDay es un precio mensual fijo");
     const rezdy = await pageText("rezdy");
     expect(rezdy).toMatch(
-      /El 2\s?% del dinero registrado como recibido en DiveDay, incluido el efectivo, sin cuota mensual/,
+      /El 1\s?% del dinero registrado como recibido en DiveDay, incluido el efectivo, sin cuota mensual/,
     );
     expect(rezdy).not.toContain("comisión por reserva y toma");
     expect(rezdy).not.toContain("O deja atrás la cuota mensual");

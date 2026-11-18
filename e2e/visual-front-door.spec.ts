@@ -917,7 +917,7 @@ for (const scheme of ["light", "dark"] as const) {
        * use the same visible slug without leaking a real shop. The captures
        * share one onboarded session. The trial's standing is clock-anchored and
        * deterministic: this shop's `created_at` is the harness's one frozen
-       * instant, so "21 days left" and the end date never drift between runs.
+       * instant, so "14 days left" and the end date never drift between runs.
        */
       test(`a freshly onboarded shop's Today tab renders true to the design (${scheme})`, async ({
         page,

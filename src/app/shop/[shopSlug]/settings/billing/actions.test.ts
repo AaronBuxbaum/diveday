@@ -161,7 +161,7 @@ describe("Add a card", () => {
     expect(await getShopSubscription(db, shop.id)).toMatchObject({
       pricingPlan: "percent_of_volume",
       planMonthlyCents: 0,
-      planBasisPoints: 200,
+      planBasisPoints: 100,
     });
   });
 

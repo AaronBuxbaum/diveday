@@ -98,12 +98,12 @@ describe("/pricing with default percentage pricing", () => {
 
   it("hands the comparison the configured offer", async () => {
     const { offer, text } = await pricingBody(null);
-    expect(offer).toEqual({ plan: "percent_of_volume", monthlyCents: 0, basisPoints: 200 });
+    expect(offer).toEqual({ plan: "percent_of_volume", monthlyCents: 0, basisPoints: 100 });
     expect(text).toContain("What a month could cost");
     expect(text).not.toContain("The same month on FareHarbor and on DiveDay");
     expect(text).toContain("estimates, not quotes");
     // The DiveDay column's words come from the offer, so a changed rate is a changed column.
-    expect(text).toContain("2% of money recorded as received in DiveDay");
+    expect(text).toContain("1% of money recorded as received in DiveDay");
     vi.stubEnv("PRICING_BASIS_POINTS", "250");
     vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
     const changed = await pricingBody(null);
@@ -113,15 +113,15 @@ describe("/pricing with default percentage pricing", () => {
       basisPoints: 250,
     });
     expect(changed.text).toContain("2.5% of money recorded as received in DiveDay");
-    expect(changed.text).not.toContain("2% of money recorded as received in DiveDay");
+    expect(changed.text).not.toContain("1% of money recorded as received in DiveDay");
   });
 
   it("shows the percentage offer its own lines, and none of the monthly-only offer’s", async () => {
     const { text } = await pricingBody("percent_of_volume");
-    expect(text).toContain("2%");
+    expect(text).toContain("1%");
     expect(text).toContain("of money recorded as received in DiveDay, with no monthly fee");
     expect(text).toContain("DiveDay’s fee");
-    expect(text).toContain("What counts toward the 2%?");
+    expect(text).toContain("What counts toward the 1%?");
     expect(text).toContain(
       "whether paid online, in cash, by bank transfer, on your own card machine or another method",
     );
@@ -137,7 +137,7 @@ describe("/pricing with default percentage pricing", () => {
   it("promises the percentage offer no cut anywhere, its FAQ JSON-LD included (issue 2947)", async () => {
     for (const locale of ["en-US", "es-ES"] as const) {
       const t = diverTranslator(locale);
-      const offer = { plan: "percent_of_volume", monthlyCents: 0, basisPoints: 200 } as const;
+      const offer = { plan: "percent_of_volume", monthlyCents: 0, basisPoints: 100 } as const;
       const faq = JSON.stringify(pricingFaq(t, "Rezdy and FareHarbor", offer, locale));
       expect(faq).not.toMatch(/no cut|sin comisión|ninguna comisión/i);
       const { text } = await pricingBody("percent_of_volume", locale);
