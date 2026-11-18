@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { recordBoardingObservation } from "./boarding-observations";
+import { openBoardingObservationsByTrip, recordBoardingObservation } from "./boarding-observations";
 import type { AppDb } from "./client";
 import { boardingObservations, bookings } from "./schema";
 import { resetDemoSchedule, seedDemo } from "./seed";
@@ -235,6 +235,12 @@ describePostgres("demo reset and committed dock sightings", () => {
         .from(boardingObservations)
         .where(eq(boardingObservations.id, observation.id)),
     ).toEqual([observation]);
+    const visible = await openBoardingObservationsByTrip(pg.db, shop.id, [trip.id]);
+    expect(visible.get(trip.id)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: observation.id, bookingId: seat.booking.id }),
+      ]),
+    );
     expect(await pg.db.select().from(bookings).where(eq(bookings.id, seat.booking.id))).toEqual([
       beforeBooking,
     ]);
