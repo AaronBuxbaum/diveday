@@ -14,40 +14,52 @@ const trip = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}`;
 const deck = `${trip}/manifest?checkpoint=after_dive_1`;
 signedInAsOwner();
 
-test("offline Deck records a named person on one small phone screen", async ({
-  page,
-  context,
-  request,
-}) => {
-  await page.setViewportSize({ width: 320, height: 568 });
-  const { operationalTrust: ready } = await seedFacts(request, [
-    { name: "operationalTrust", state: "capacity" },
-  ]);
-  const name = ready.seats[0].fullName;
-  await page.goto(`/shop/blue-mantis/trips/${ready.tripId}/manifest?checkpoint=after_dive_1`);
-  await offlineCopySaved(page);
-  await settleOfflineShellWorker(page);
-  await page.goto(`/offline-manifest?trip=${ready.tripId}&checkpoint=after_dive_1`);
-  await expect(page).toHaveURL(/offline-manifest/);
-  await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: t("manifest.deck.attention"), exact: true }),
-  ).toHaveCount(0);
-  await context.setOffline(true);
-  await openDeckPerson(page, name);
-  await page
-    .getByRole("button", { name: t("manifest.deck.record", { name }), exact: true })
-    .click();
-  const receipt = page.locator('[data-deck-screen="receipt"]');
-  await expect(receipt.getByRole("heading", { name: name, exact: true })).toBeVisible();
-  await expect(receipt.getByText(t("manifest.deck.pendingReceipt"), { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
-    true,
-  );
-  await page.getByRole("button", { name: t("manifest.deck.next"), exact: true }).click();
-  await expect(page.locator('[data-deck-screen="person"]')).toBeVisible();
-  await expect(page.getByText(/^1 of \d+ people accounted for$/)).toBeVisible();
+test.describe("isolated operational fixture", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+  test("offline Deck records a named person on one small phone screen", async ({
+    page,
+    context,
+    request,
+    privateShop,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    const { operationalTrust: ready } = await seedFacts(
+      request,
+      [{ name: "operationalTrust", state: "capacity" }],
+      { slug: privateShop.slug },
+    );
+    const name = ready.seats[0].fullName;
+    await page.goto(
+      `/shop/${privateShop.slug}/trips/${ready.tripId}/manifest?checkpoint=after_dive_1`,
+    );
+    await offlineCopySaved(page);
+    await settleOfflineShellWorker(page);
+    await page.goto(`/offline-manifest?trip=${ready.tripId}&checkpoint=after_dive_1`);
+    await expect(page).toHaveURL(/offline-manifest/);
+    await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: t("manifest.deck.attention"), exact: true }),
+    ).toHaveCount(0);
+    await context.setOffline(true);
+    await openDeckPerson(page, name);
+    await page
+      .getByRole("button", { name: t("manifest.deck.record", { name }), exact: true })
+      .click();
+    const receipt = page.locator('[data-deck-screen="receipt"]');
+    await expect(receipt.getByRole("heading", { name: name, exact: true })).toBeVisible();
+    await expect(
+      receipt.getByText(t("manifest.deck.pendingReceipt"), { exact: true }),
+    ).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
+      true,
+    );
+    await page.getByRole("button", { name: t("manifest.deck.next"), exact: true }).click();
+    await expect(page.locator('[data-deck-screen="person"]')).toBeVisible();
+    await expect(page.getByText(/^1 of \d+ people accounted for$/)).toBeVisible();
+  });
 });
 
 test("Deck records one named person and navigation creates no aboard evidence", async ({

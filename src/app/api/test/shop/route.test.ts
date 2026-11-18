@@ -4,7 +4,8 @@ import { standingArrivalStatus } from "@/db/arrival-provenance";
 import { getGearItemDetail } from "@/db/gear-register";
 import { getTripManifest } from "@/db/manifests";
 import { listTripReadiness } from "@/db/readiness";
-import { bookings, people, shops, trips } from "@/db/schema";
+import { boats, bookings, people, shops, trips } from "@/db/schema";
+import { resetDemoSchedule } from "@/db/seed";
 import { liveTrip } from "@/db/trips-live";
 import { listUnfinished } from "@/db/unfinished";
 import { createSignedUpShop } from "@/features/shop-signup";
@@ -381,6 +382,32 @@ describe("POST /api/test/shop", () => {
       expect(await response.json()).toEqual({ error: "not_available" });
       expect(await listUnfinished(db, shop.id, "payment_operation")).toEqual([]);
     }, 60_000);
+
+    it.each([
+      { name: "operationalTrust", state: "boat" },
+      { name: "boatOnTheWater", state: "outstanding" },
+    ])(
+      "keeps $name fleet settings out of later canonical captures",
+      async (fact) => {
+        const { db, shop } = await seededShopContext();
+        vi.mocked(getDb).mockResolvedValue(db);
+        const fleet = () =>
+          db
+            .select({ id: boats.id })
+            .from(boats)
+            .where(eq(boats.shopId, shop.id))
+            .orderBy(boats.id);
+        const before = await fleet();
+
+        const response = await POST(seedRequest([fact]));
+        await resetDemoSchedule(db, shop.id, "lean");
+
+        expect(await fleet()).toEqual(before);
+        expect(response.status).toBe(404);
+        expect(await response.json()).toEqual({ error: "not_available" });
+      },
+      60_000,
+    );
 
     it("writes to another demo shop by slug, and refuses it once it is real", async () => {
       const { db, shop } = await seededShopContext();

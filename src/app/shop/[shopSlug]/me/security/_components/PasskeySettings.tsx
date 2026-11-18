@@ -38,7 +38,7 @@ export function PasskeySettings({
   passkeys: { id: string; name: string; lastUsed: string }[];
   words: PasskeyWords;
 }) {
-  const [supported, setSupported] = useState(false);
+  const [supported, setSupported] = useState<boolean | null>(null);
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<"saved" | "error" | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export function PasskeySettings({
     });
   }
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" aria-busy={supported === null}>
       {passkeys.length ? (
         <ul className="divide-y divide-border">
           {passkeys.map((key) => (
@@ -168,9 +168,9 @@ export function PasskeySettings({
             {pending ? words.adding : words.add}
           </button>
         </form>
-      ) : (
+      ) : supported === false ? (
         <p className="text-sm text-muted">{words.unavailable}</p>
-      )}
+      ) : null}
       {status ? (
         <FormStatus tone={status === "error" ? "danger" : "success"}>{words[status]}</FormStatus>
       ) : null}
