@@ -3,6 +3,7 @@
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it } from "vitest";
 import { forgetThisDevice } from "@/components/forget-device";
+import { rawStoredRecord } from "@/test/offline-raw-record";
 import {
   appendOfflineRollCall,
   listOfflineManifests,
@@ -199,6 +200,36 @@ describe("the medical alerts' words on a device copy", () => {
     }
     const tripCopy = copies.find((copy) => copy.snapshot.manifests[0]?.trip.id === TRIP);
     expect(tripCopy?.events.map((event) => event.status)).toEqual(["boarded"]);
+  });
+
+  it("wipes readable copies and reports incomplete when another is unreadable", async () => {
+    await saveOfflineManifest(payloadFor(TRIP));
+    await saveOfflineManifest(payloadFor(OTHER_TRIP));
+    await saveOfflineMedicalAlerts(TRIP, { [ALERTED]: ALERT }, DIVEMASTER);
+    await saveOfflineMedicalAlerts(OTHER_TRIP, { [ALERTED]: ALERT }, DIVEMASTER);
+    const opaque = (await rawStoredRecord(OTHER_TRIP)) as Record<string, unknown>;
+    opaque.ciphertext = new Uint8Array([1, 2, 3]).buffer;
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("manifests", "readwrite");
+        tx.objectStore("manifests").put(opaque);
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    const before = await rawStoredRecord(OTHER_TRIP);
+    await expect(wipeOfflineMedicalAlerts()).rejects.toMatchObject({ code: "unavailable" });
+    expect(words(await loadOfflineManifest(TRIP))).toEqual([{}, undefined]);
+    expect(await rawStoredRecord(OTHER_TRIP)).toEqual(before);
   });
 
   it("wipes another person's words when someone else signs in, and keeps the signed-in person's own", async () => {

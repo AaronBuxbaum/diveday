@@ -19,6 +19,7 @@ import {
   readDiscardedOfflineRecords,
   saveOfflineManifest,
   syncOfflineManifest,
+  wipeOfflineMedicalAlerts,
 } from "./offline-manifest-store";
 import {
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
@@ -380,6 +381,8 @@ describe("loadOfflineManifest", () => {
     await expect(loadOfflineManifest(tripId)).rejects.toMatchObject({ code: "unavailable" });
     expect(await rawStoredRecord(tripId)).toEqual(before);
     await expect(saveOfflineManifest(payload)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+    await expect(wipeOfflineMedicalAlerts()).rejects.toMatchObject({ code: "unavailable" });
     expect(await rawStoredRecord(tripId)).toEqual(before);
   });
   it("withholds past-grace pending evidence without deleting or overwriting it on refresh", async () => {

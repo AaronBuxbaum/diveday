@@ -1047,19 +1047,42 @@ export async function saveOfflineMedicalAlerts(
 }
 
 /**
- * **Takes the medical alerts' words off every copy on this device** (H-20261023-medical-alert-for-the
- * amendment), keeping the rest of each copy: the roster, the fact of each
+ * Attempts to remove medical alert words from readable copies on this device
+ * (H-20261023-medical-alert-for-the amendment), keeping the rest of each copy: the roster, the fact of each
  * alert, and every queued roll-call event. Run on sign-out with no argument,
  * and with `keepSavedBy` whenever the server names who is signed in now
  * (`/api/offline-manifests/upcoming`), so a shared tablet never shows one
- * person's saved words to the next.
+ * person's saved words to the next. Rejects if a known record cannot be
+ * inspected or rewritten. Inventory races and older shells remain unresolved;
+ * rejection does not erase the unreadable copy or its key.
  */
 export async function wipeOfflineMedicalAlerts(
   keepSavedBy?: string,
   tenantRound?: number,
 ): Promise<void> {
-  const saved = await listOfflineManifests();
-  await Promise.all(
+  const inventoryDb = await openDatabase();
+  let tripIds: string[];
+  let preservedKeys: IDBValidKey[];
+  try {
+    const tx = inventoryDb.transaction([KEY_STORE, MANIFEST_STORE], "readonly");
+    const done = transactionDone(tx);
+    const [ids, keys] = await Promise.all([
+      requestResult(tx.objectStore(MANIFEST_STORE).getAllKeys()),
+      requestResult(tx.objectStore(KEY_STORE).getAllKeys()),
+    ]);
+    await done;
+    tripIds = ids as string[];
+    preservedKeys = keys.filter(
+      (key) => typeof key === "string" && key.startsWith(PRESERVATION_PREFIX),
+    );
+  } finally {
+    inventoryDb.close();
+  }
+  const reads = await Promise.allSettled(tripIds.map((tripId) => loadOfflineManifest(tripId)));
+  const saved = reads.flatMap((read) =>
+    read.status === "fulfilled" && read.value ? [read.value] : [],
+  );
+  const writes = await Promise.allSettled(
     saved
       .filter(
         (envelope) =>
@@ -1070,13 +1093,13 @@ export async function wipeOfflineMedicalAlerts(
         const tripId = envelope.snapshot.manifests[0]?.trip.id;
         if (!tripId) return Promise.resolve();
         return withManifestLock(tripId, async () => {
-          const current = await loadOfflineManifest(tripId).catch(() => null);
+          const current = await loadOfflineManifest(tripId);
           if (!current?.medicalAlertsSavedBy) return;
           if (keepSavedBy && current.medicalAlertsSavedBy.personId === keepSavedBy) return;
           const { medicalAlertsSavedBy: _wiped, ...rest } = current;
           const db = await openDatabase();
           try {
-            await persistEnvelope(
+            const persisted = await persistEnvelope(
               db,
               {
                 ...rest,
@@ -1088,12 +1111,20 @@ export async function wipeOfflineMedicalAlerts(
               tenantRound,
               "medical-alerts",
             );
+            if (!persisted) throw new OfflineManifestError("shop_changed");
           } finally {
             db.close();
           }
         });
       }),
   );
+  if (
+    preservedKeys.length > 0 ||
+    reads.some((read) => read.status === "rejected") ||
+    writes.some((write) => write.status === "rejected")
+  ) {
+    throw new OfflineManifestError("unavailable");
+  }
 }
 
 async function deleteOfflineManifest(
