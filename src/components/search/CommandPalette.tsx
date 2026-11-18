@@ -18,7 +18,7 @@ import {
   staffPaletteDestinations,
 } from "@/lib/staff-destinations";
 import type { SearchResults } from "../../lib/search-results";
-import { forgetThisDevice } from "../forget-device";
+import { signOutAfterCleanup } from "../sign-out-after-cleanup";
 import { PaletteGlyph } from "./PaletteGlyph";
 import { hintKeyClass, PaletteLegend } from "./PaletteLegend";
 import { PaletteSearchField } from "./PaletteSearchField";
@@ -191,7 +191,7 @@ function paletteGroups({
   languages: readonly LanguageChoice[];
   locale: string;
   setLocaleAction: (locale: string) => Promise<void>;
-  signOutAction: () => Promise<void>;
+  signOutAction: (offlineCleanupIncomplete?: boolean) => Promise<void>;
   createDiverAction: (formData: FormData) => Promise<void>;
   settingsShortcuts: readonly SettingsShortcut[];
   startTransition: (action: () => void | Promise<void>) => void;
@@ -517,7 +517,7 @@ export function CommandPalette({
   languages: readonly LanguageChoice[];
   setLocaleAction: (locale: string) => Promise<void>;
   /** The same Server Action the shop-name menu's Sign out submits to. */
-  signOutAction: () => Promise<void>;
+  signOutAction: (offlineCleanupIncomplete?: boolean) => Promise<void>;
   /** Creates a typed search identity and lands on its Diver record. */
   createDiverAction: (formData: FormData) => Promise<void>;
   /**
@@ -541,8 +541,7 @@ export function CommandPalette({
   const recentsKey = recentsStorageKey(shopSlug, readerId);
   // A shared desk's next staffer inherits none of these; the wipe is awaited.
   const signOutForgetting = useCallback(async () => {
-    await forgetThisDevice();
-    return signOutAction();
+    return signOutAfterCleanup(signOutAction);
   }, [signOutAction]);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
