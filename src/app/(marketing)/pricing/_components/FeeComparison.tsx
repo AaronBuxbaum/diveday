@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Switch } from "@/components/ui/Switch";
 import { FIGURE_LARGE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
@@ -13,15 +13,19 @@ import { formatMoneyScanned } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { MoneySlider } from "./MoneySlider";
 
-/** Words resolved on the server; `totalNote` and `saving` hold `{percent}`. */
+/** Words resolved on the server; `range` holds `{low}` and `{high}`, `totalNote` and `saving` hold percents. */
 export type FeeComparisonLabels = {
   sliderLabel: string;
-  bookingToggle: string;
-  bookingShareLabel: string;
-  software: string;
+  marketplaceToggle: string;
+  marketplaceShareLabel: string;
+  subscription: string;
+  free: string;
+  bookingFee: string;
+  otaFee: string;
   processing: string;
-  bookingCom: string;
+  marketplace: string;
   total: string;
+  range: string;
   totalNote: string;
   saving: string;
   systems: Record<ComparedSystem, { name: string; note: string }>;
@@ -43,16 +47,16 @@ export function FeeComparison({
   labels,
   locale,
   diveDay,
-  savingPercent,
+  saving,
 }: {
   labels: FeeComparisonLabels;
   locale: string;
   diveDay: DiveDayTerms;
-  /** Booking.com's rate less DiveDay's all-in rate, as a ready percent string. */
-  savingPercent: string;
+  /** What a sale moved off a marketplace keeps, at each end of their range, as fractions of the sale. */
+  saving: { low: number; high: number };
 }) {
   const [received, setReceived] = useState(START_CENTS);
-  const [withBooking, setWithBooking] = useState(false);
+  const [withMarketplace, setWithMarketplace] = useState(false);
   const [share, setShare] = useState(START_SHARE);
   const money = (cents: number) => formatMoneyScanned(cents, "usd", locale);
   const percent = (fraction: number) =>
@@ -60,7 +64,9 @@ export function FeeComparison({
       style: "percent",
       maximumFractionDigits: 1,
     }).format(fraction);
-  const rows = compareMonth(received, withBooking ? share / 100 : 0, diveDay);
+  const rows = compareMonth(received, withMarketplace ? share / 100 : 0, diveDay);
+  const range = (low: string, high: string, same: boolean) =>
+    same ? low : labels.range.replace("{low}", low).replace("{high}", high);
   return (
     <div className="mt-10">
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
@@ -74,10 +80,14 @@ export function FeeComparison({
           onChange={setReceived}
         />
         <div className="space-y-4">
-          <Switch checked={withBooking} onChange={setWithBooking} label={labels.bookingToggle} />
-          {withBooking ? (
+          <Switch
+            checked={withMarketplace}
+            onChange={setWithMarketplace}
+            label={labels.marketplaceToggle}
+          />
+          {withMarketplace ? (
             <MoneySlider
-              label={labels.bookingShareLabel}
+              label={labels.marketplaceShareLabel}
               value={share}
               min={0}
               max={80}
@@ -104,29 +114,43 @@ export function FeeComparison({
                 {labels.systems[system].note}
               </p>
               <dl className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted">{labels.software}</dt>
-                  <dd className="tabular-nums">{money(row.softwareCents)}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted">{labels.processing}</dt>
-                  <dd className="tabular-nums">{money(row.processingCents)}</dd>
-                </div>
-                {withBooking ? (
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-muted">{labels.bookingCom}</dt>
-                    <dd className="tabular-nums">{money(row.bookingComCents)}</dd>
-                  </div>
+                <Line label={labels.subscription}>
+                  {row.subscriptionCents === 0 ? labels.free : money(row.subscriptionCents)}
+                </Line>
+                <Line label={labels.bookingFee}>{money(row.bookingFeeCents)}</Line>
+                {withMarketplace ? (
+                  <Line label={labels.otaFee}>{money(row.otaFeeCents)}</Line>
+                ) : null}
+                <Line label={labels.processing}>{money(row.processingCents)}</Line>
+                {withMarketplace ? (
+                  <Line label={labels.marketplace}>
+                    {range(
+                      money(row.marketplaceLowCents),
+                      money(row.marketplaceHighCents),
+                      row.marketplaceLowCents === row.marketplaceHighCents,
+                    )}
+                  </Line>
                 ) : null}
               </dl>
               <div className="mt-4 border-t border-border pt-4">
                 <p className="text-sm text-muted">{labels.total}</p>
                 <p className={FIGURE_LARGE_CLASS} aria-live="polite">
-                  {money(row.totalCents)}
+                  {range(
+                    money(row.totalLowCents),
+                    money(row.totalHighCents),
+                    row.totalLowCents === row.totalHighCents,
+                  )}
                 </p>
                 {received > 0 ? (
                   <p className="mt-1 text-sm text-muted">
-                    {labels.totalNote.replace("{percent}", percent(row.totalCents / received))}
+                    {labels.totalNote.replace(
+                      "{percent}",
+                      range(
+                        percent(row.totalLowCents / received),
+                        percent(row.totalHighCents / received),
+                        row.totalLowCents === row.totalHighCents,
+                      ),
+                    )}
                   </p>
                 ) : null}
               </div>
@@ -135,11 +159,22 @@ export function FeeComparison({
         })}
       </ul>
 
-      {withBooking ? (
+      {withMarketplace ? (
         <p className="mt-6 max-w-2xl border-l-2 border-primary ps-5 text-lg leading-8">
-          {labels.saving.replace("{percent}", savingPercent)}
+          {labels.saving
+            .replace("{low}", percent(saving.low))
+            .replace("{high}", percent(saving.high))}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function Line({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-muted">{label}</dt>
+      <dd className="text-end tabular-nums">{children}</dd>
     </div>
   );
 }

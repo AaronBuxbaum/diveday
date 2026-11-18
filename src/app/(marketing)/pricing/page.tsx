@@ -16,7 +16,7 @@ import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { formatMoneyScanned } from "@/lib/format";
-import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, marketingFee } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
@@ -87,21 +87,20 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
    * guide registry, so a de-registered guide drops its link.
    */
   const fareHarborGuide = getMigrationGuide("fareharbor");
-  const percentOf = (fraction: number) =>
-    cachedFormatter("num", Intl.NumberFormat, locale, {
-      style: "percent",
-      maximumFractionDigits: 1,
-    }).format(fraction);
   const comparison = {
     sliderLabel: t("marketing.pricing.compare.sliderLabel"),
-    bookingToggle: t("marketing.pricing.compare.bookingToggle"),
-    bookingShareLabel: t("marketing.pricing.compare.bookingShareLabel"),
-    software: t("marketing.pricing.compare.lines.software"),
+    marketplaceToggle: t("marketing.pricing.compare.marketplaceToggle"),
+    marketplaceShareLabel: t("marketing.pricing.compare.marketplaceShareLabel"),
+    subscription: t("marketing.pricing.compare.lines.subscription"),
+    free: t("marketing.pricing.compare.lines.free"),
+    bookingFee: t("marketing.pricing.compare.lines.bookingFee"),
+    otaFee: t("marketing.pricing.compare.lines.otaFee"),
     processing: t("marketing.pricing.compare.lines.processing"),
-    bookingCom: t("marketing.pricing.compare.lines.bookingCom"),
+    marketplace: t("marketing.pricing.compare.lines.marketplace"),
     total: t("marketing.pricing.compare.lines.total"),
+    range: t("marketing.pricing.compare.range", { low: "{low}", high: "{high}" }),
     totalNote: t("marketing.pricing.compare.totalNote", { percent: "{percent}" }),
-    saving: t("marketing.pricing.compare.saving", { percent: "{percent}" }),
+    saving: t("marketing.pricing.compare.saving", { low: "{low}", high: "{high}" }),
     systems: {
       fareharbor: {
         name: fareHarborGuide?.competitor ?? "FareHarbor", // i18n-exempt: a product name
@@ -274,7 +273,10 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               locale={locale}
               diveDay={offer}
               labels={comparison}
-              savingPercent={percentOf(directSavingBasisPoints(offer) / 10_000)}
+              saving={{
+                low: directSavingBasisPoints(offer).low / 10_000,
+                high: directSavingBasisPoints(offer).high / 10_000,
+              }}
             />
             <details className="mt-8 max-w-3xl">
               <summary className="cursor-pointer font-medium">

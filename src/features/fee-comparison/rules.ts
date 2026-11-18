@@ -6,24 +6,27 @@ import { percentFeeCents } from "../../lib/billing/pricing-plans";
  * estimate for a reader to move, never a quote: the assumptions below are named
  * on the page beside the sources and the date each was checked.
  *
- * Software fee and card processing are counted together and the same way:
- * three of four write-ups say FareHarbor's percent is charged with card
- * processing on top (CaptainBook 2026-04-09, TrekkSoft 2026-06-30, Levy 2026),
- * one says it is included (hamzaliaqat.com 2026-04-29), and Aaron says on top, so
- * both columns add processing to their percent. Amounts are USD cents.
+ * Both columns are a subscription, a percent of the money the shop takes directly,
+ * and the same card processing on top. Three of four write-ups say FareHarbor's
+ * percent is charged with card processing on top (CaptainBook 2026-04-09,
+ * TrekkSoft 2026-06-30, Levy 2026), and Aaron agrees. Marketplace sales (Booking.com,
+ * Viator, GetYourGuide) are shown as a range, because Aaron puts their commission
+ * at 15% to 30%; FareHarbor adds a 2% OTA booking fee on them and DiveDay adds
+ * nothing. Amounts are USD cents.
  */
 export const FEE_ASSUMPTIONS = {
   /** An average sale, which only the card processor's fixed part depends on. */
   averageSaleCents: 15_000,
-  /** Stripe's published US rate for a domestic card: 2.9% + 30¢ (stripe.com/pricing, 2026-11-18). */
+  /** The published US rate for a domestic card, Stripe's 2.9% + 30¢ (stripe.com/pricing, 2026-11-18), for both columns. */
   cardBasisPoints: 290,
   cardFixedCents: 30,
-  /** FareHarbor: no published schedule; third-party reports of ~6% of a direct booking (2026). */
+  /** FareHarbor: no published schedule; third-party reports of ~6% of a direct booking, no monthly fee (2026). */
   fareHarborBasisPoints: 600,
-  /** One write-up (Levy, 2026) puts a third-party or API booking at 2%; the others give 6% on every channel. */
-  fareHarborThirdPartyBasisPoints: 200,
-  /** Booking.com publishes no rate we could confirm for dive activities; hotels pay 10 to 25%. */
-  bookingComBasisPoints: 1_500,
+  /** FareHarbor's OTA booking fee on a marketplace sale (Aaron, 2026-11-18). */
+  fareHarborOtaBasisPoints: 200,
+  /** What Booking.com, Viator and GetYourGuide take from a sale, as a range (Aaron, 2026-11-18). */
+  marketplaceLowBasisPoints: 1_500,
+  marketplaceHighBasisPoints: 3_000,
 } as const;
 
 export const COMPARED_SYSTEMS = ["fareharbor", "diveday"] as const;
@@ -31,75 +34,95 @@ export type ComparedSystem = (typeof COMPARED_SYSTEMS)[number];
 
 export type SystemCost = {
   system: ComparedSystem;
-  /** The system's own percent (and monthly fee), before card processing. */
-  softwareCents: number;
-  /** Card processing paid on top of the software fee. */
+  /** The monthly subscription: nothing for FareHarbor, the offer's monthly fee for DiveDay. */
+  subscriptionCents: number;
+  /** The system's percent of the money taken directly. */
+  bookingFeeCents: number;
+  /** FareHarbor's OTA booking fee on marketplace sales; 0 for DiveDay. */
+  otaFeeCents: number;
+  /** Card processing on the money taken directly. */
   processingCents: number;
-  /** Booking.com's commission on the share of money that comes through it; the same in every column. */
-  bookingComCents: number;
-  totalCents: number;
+  /** The marketplaces' own commission on their share of the money; the same in every column. */
+  marketplaceLowCents: number;
+  marketplaceHighCents: number;
+  totalLowCents: number;
+  totalHighCents: number;
 };
 
 export type DiveDayTerms = { monthlyCents: number; basisPoints: number };
 
 /**
- * `bookingComShare` is the fraction (0 to 1) of the month's money that comes
- * through Booking.com, or 0 with the toggle off. Money through Booking.com
- * pays no card processing to the shop. FareHarbor charges its lower third-party
- * percent on it (the sources disagree; this leans toward the competitor), and
- * DiveDay its percent, because it counts money recorded as received.
+ * `marketplaceShare` is the fraction (0 to 1) of the month's money that comes
+ * through the marketplaces, or 0 with the switch off. That money pays no card
+ * processing to the shop, no percent to DiveDay, and FareHarbor's OTA fee.
  */
 export function compareMonth(
   receivedCents: number,
-  bookingComShare: number,
+  marketplaceShare: number,
   diveDay: DiveDayTerms,
 ): readonly SystemCost[] {
   const received = Math.max(0, Math.round(receivedCents));
-  const share = Math.min(1, Math.max(0, bookingComShare));
-  const viaBookingCom = Math.round(received * share);
-  const direct = received - viaBookingCom;
+  const share = Math.min(1, Math.max(0, marketplaceShare));
+  const viaMarketplace = Math.round(received * share);
+  const direct = received - viaMarketplace;
   const sales = Math.ceil(direct / FEE_ASSUMPTIONS.averageSaleCents);
-  const processing =
+  const processingCents =
     percentFeeCents(direct, FEE_ASSUMPTIONS.cardBasisPoints) +
     sales * FEE_ASSUMPTIONS.cardFixedCents;
-  const bookingCom = percentFeeCents(viaBookingCom, FEE_ASSUMPTIONS.bookingComBasisPoints);
+  const marketplaceLowCents = percentFeeCents(
+    viaMarketplace,
+    FEE_ASSUMPTIONS.marketplaceLowBasisPoints,
+  );
+  const marketplaceHighCents = percentFeeCents(
+    viaMarketplace,
+    FEE_ASSUMPTIONS.marketplaceHighBasisPoints,
+  );
   const row = (
     system: ComparedSystem,
-    softwareCents: number,
-    processingCents: number,
-  ): SystemCost => ({
-    system,
-    softwareCents,
-    processingCents,
-    bookingComCents: bookingCom,
-    totalCents: softwareCents + processingCents + bookingCom,
-  });
+    subscriptionCents: number,
+    bookingFeeCents: number,
+    otaFeeCents: number,
+  ): SystemCost => {
+    const own = subscriptionCents + bookingFeeCents + otaFeeCents + processingCents;
+    return {
+      system,
+      subscriptionCents,
+      bookingFeeCents,
+      otaFeeCents,
+      processingCents,
+      marketplaceLowCents,
+      marketplaceHighCents,
+      totalLowCents: own + marketplaceLowCents,
+      totalHighCents: own + marketplaceHighCents,
+    };
+  };
   return [
     row(
       "fareharbor",
-      percentFeeCents(direct, FEE_ASSUMPTIONS.fareHarborBasisPoints) +
-        percentFeeCents(viaBookingCom, FEE_ASSUMPTIONS.fareHarborThirdPartyBasisPoints),
-      processing,
+      0,
+      percentFeeCents(direct, FEE_ASSUMPTIONS.fareHarborBasisPoints),
+      percentFeeCents(viaMarketplace, FEE_ASSUMPTIONS.fareHarborOtaBasisPoints),
     ),
-    row(
-      "diveday",
-      diveDay.monthlyCents + percentFeeCents(received, diveDay.basisPoints),
-      processing,
-    ),
+    row("diveday", diveDay.monthlyCents, percentFeeCents(direct, diveDay.basisPoints), 0),
   ];
 }
 
 /**
- * What one sale moved from Booking.com to the shop's own booking page saves,
- * as a share of the sale: Booking.com's rate less DiveDay's all-in rate on a
- * card sale of the average size. Zero when moving would cost more.
+ * What one sale moved from a marketplace to the shop's own booking page keeps,
+ * as basis points of the sale, at the low and the high end of the marketplace
+ * range: the marketplace's commission less DiveDay's percent and a card sale's
+ * processing. Zero when moving would cost more.
  */
-export function directSavingBasisPoints(diveDay: DiveDayTerms): number {
+export function directSavingBasisPoints(diveDay: DiveDayTerms): { low: number; high: number } {
   const sale = FEE_ASSUMPTIONS.averageSaleCents;
   const own =
     percentFeeCents(sale, diveDay.basisPoints) +
     percentFeeCents(sale, FEE_ASSUMPTIONS.cardBasisPoints) +
     FEE_ASSUMPTIONS.cardFixedCents;
-  const theirs = percentFeeCents(sale, FEE_ASSUMPTIONS.bookingComBasisPoints);
-  return Math.max(0, Math.round(((theirs - own) / sale) * 10_000));
+  const keeps = (basisPoints: number) =>
+    Math.max(0, Math.round(((percentFeeCents(sale, basisPoints) - own) / sale) * 10_000));
+  return {
+    low: keeps(FEE_ASSUMPTIONS.marketplaceLowBasisPoints),
+    high: keeps(FEE_ASSUMPTIONS.marketplaceHighBasisPoints),
+  };
 }
