@@ -323,7 +323,7 @@ test("the homepage leads to every feature page through the Product catalogue", a
   // click before that is lost to the hydration pass.
   await expect(page.locator('button[aria-expanded][data-hydrated="true"]').first()).toBeAttached();
   const catalogue = page.getByRole("main").getByRole("link", {
-    name: diverTranslator("en-US")("marketing.home.featuresLink"),
+    name: `${diverTranslator("en-US")("marketing.home.featuresLink")} →`,
     exact: true,
   });
   await expect(catalogue).toHaveAttribute("href", "/product#full-list");
@@ -517,14 +517,14 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await page.keyboard.press("Enter");
   await expect(firstLine).toBeVisible();
 
-  // The closing band's door onto the switching surface carries its own tag too
-  // (2026-08-15). It was bare while the homepage's two were tagged, so the
-  // number that answers "does the spreadsheet audience need a direct door" was
-  // about to be read against a denominator missing this page — the one a reader
-  // reaches *after* the homepage convinced them.
+  // The one-list band's migration-guide door replaces the old closing
+  // spreadsheet paragraph. Keep its actual destination and attribution tag pinned.
   await expect(
-    productMain.getByRole("link", { name: /See how DiveDay reads your spreadsheet/ }),
-  ).toHaveAttribute("href", "/switching/spreadsheet?from=product-spreadsheet");
+    productMain.getByRole("link", {
+      name: `${diverTranslator("en-US")("marketing.product.oneList.movingLink")} →`,
+      exact: true,
+    }),
+  ).toHaveAttribute("href", "/switching?from=product-one-list");
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(
@@ -1605,7 +1605,7 @@ test("the homepage's spreadsheet door survives, tagged, and lands on the columns
   // split to answer, so neither may quietly lose its tag.
   await expect(
     page.getByRole("main").getByRole("link", {
-      name: diverTranslator("en-US")("marketing.home.guidesLink"),
+      name: `${diverTranslator("en-US")("marketing.home.guidesLink")} →`,
       exact: true,
     }),
   ).toHaveAttribute("href", "/switching?from=home-records");
