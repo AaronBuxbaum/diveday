@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished } from "vitest";
 import { readActiveStaffRoles } from "../../db/authz";
-import { tryLockBoardingEvidenceForReceipt } from "../../db/boarding-receipt-fence";
+import { tryLockBoardingEvidenceForReceipt } from "../../db/boarding-certification-snapshot";
 import type { AppDb } from "../../db/client";
 import { people, personRoles, shops, userAccounts } from "../../db/schema/index";
 import { isStaff, type Role } from "../../lib/authz";

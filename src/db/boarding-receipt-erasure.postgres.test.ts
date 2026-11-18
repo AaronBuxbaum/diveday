@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished } from "vitest";
 import { anonymizeDiver } from "@/features/anonymize/store";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { tryLockBoardingEvidenceForReceipt } from "./boarding-receipt-fence";
+import { tryLockBoardingEvidenceForReceipt } from "./boarding-certification-snapshot";
 import type { AppDb } from "./client";
 import { people } from "./schema";
 import { seedDemo } from "./seed";
