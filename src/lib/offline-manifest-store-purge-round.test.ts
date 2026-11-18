@@ -60,6 +60,24 @@ afterEach(async () => {
 });
 
 describe("overlapping verified-tenant purge rounds", () => {
+  it("refuses a superseded round even when the inventory is empty", async () => {
+    const stale = await beginOfflineTenantVerificationRound();
+    await beginOfflineTenantVerificationRound();
+    await expect(purgeOfflineManifestsExceptShop("blue-mantis", stale)).rejects.toMatchObject({
+      code: "shop_changed",
+    });
+  });
+
+  it("does not return an existing copy to a superseded refresh round", async () => {
+    const first = await beginOfflineTenantVerificationRound();
+    const framed = { ...reefRunners, erasureEpochToken: `1.1.${"a".repeat(43)}` };
+    await saveOfflineManifest(framed, { tenantRound: first });
+    await beginOfflineTenantVerificationRound();
+    await expect(saveOfflineManifest(framed, { tenantRound: first })).rejects.toMatchObject({
+      code: "shop_changed",
+    });
+    expect((await loadOfflineManifest(tripId))?.snapshot.shop.slug).toBe("reef-runners");
+  });
   it("keeps a newer shop's IndexedDB snapshot when its round supersedes the locked reread", async () => {
     await saveOfflineManifest(reefRunners);
 
@@ -94,7 +112,7 @@ describe("overlapping verified-tenant purge rounds", () => {
     const deleted = await olderPurge;
     await newerStarted;
 
-    expect(currentChecks).toBe(6);
+    expect(currentChecks).toBe(7);
     expect(deleted).toEqual([]);
     expect(newerPurge).not.toBeNull();
     if (!newerPurge) throw new Error("newly verified purge was not started");
@@ -117,7 +135,9 @@ describe("overlapping verified-tenant purge rounds", () => {
     };
     await saveOfflineManifest(blueMantis, { tenantRound: currentShopARound });
 
-    expect(await purgeOfflineManifestsExceptShop("reef-runners", delayedShopBRound)).toEqual([]);
+    await expect(
+      purgeOfflineManifestsExceptShop("reef-runners", delayedShopBRound),
+    ).rejects.toMatchObject({ code: "shop_changed" });
     expect((await loadOfflineManifest(tripId))?.snapshot.shop.slug).toBe("blue-mantis");
     expect(await purgeOfflineManifestsExceptShop("blue-mantis", currentShopARound)).toEqual([]);
     expect((await loadOfflineManifest(tripId))?.snapshot.shop.slug).toBe("blue-mantis");
