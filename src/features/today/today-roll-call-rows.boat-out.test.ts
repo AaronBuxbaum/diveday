@@ -8,7 +8,7 @@ import {
   unreviewCertification,
   upsertTripRequirements,
 } from "@/db/readiness";
-import { bookings as bookingsTable, trips as tripsTable } from "@/db/schema";
+import { bookings as bookingsTable, people, trips as tripsTable } from "@/db/schema";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -842,6 +842,18 @@ describe("a card review undone after the diver boarded", () => {
     });
     const [bookingId] = bookingIds;
     if (!bookingId) throw new Error("fixture booking missing");
+    // The general roll-call fixture selects an unordered seeded person. A
+    // different verified card on that person can still satisfy this trip after
+    // the card under test is unreviewed, so use a person with no other cards.
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Undo review test diver" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("fixture diver missing");
+    await db
+      .update(bookingsTable)
+      .set({ personId: diver.id })
+      .where(eq(bookingsTable.id, bookingId));
     await upsertTripRequirements(db, {
       shopId: shop.id,
       tripId: trip.id,
@@ -894,6 +906,10 @@ describe("a card review undone after the diver boarded", () => {
       ok: true,
     });
 
+    const readiness = await listTripReadiness(db, shop.id, trip.id);
+    expect(readiness.find((row) => row.booking.id === bookingId)?.readiness.blockers).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "certification_pending" })]),
+    );
     const rows = await aboardRows();
     expect(rows.map((row) => row.id)).toEqual([`blocker:${bookingId}:certification_pending`]);
   });
