@@ -33,7 +33,20 @@ for (const scheme of ["light", "dark"] as const) {
     });
     test("saved welcome profile", async ({ page, privateShop }) => {
       await saveWelcome(page, privateShop.slug);
-      await capture(page, "settings-owner-welcome", scheme);
+      await capture(page, "settings-owner-welcome", scheme, {
+        beforeScreenshot: async () => {
+          // Each width needs a fresh real confirmation: the four-second toast
+          // can leave while the harness paints the previous width.
+          const scrollY = await page.evaluate(() => window.scrollY);
+          const status = page.getByRole("status");
+          await expect(status).toBeHidden();
+          await page
+            .getByRole("button", { name: staffCopy("settings.main.profile.submit") })
+            .click();
+          await expect(status).toContainText(staffCopy("settings.main.notice.profileSaved"));
+          await page.evaluate((top) => window.scrollTo(0, top), scrollY);
+        },
+      });
     });
     test("saved welcome storefront", async ({ page, privateShop }) => {
       await saveWelcome(page, privateShop.slug);
