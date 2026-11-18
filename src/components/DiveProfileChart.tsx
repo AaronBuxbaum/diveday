@@ -7,8 +7,8 @@ import {
 import { FEET_PER_METER } from "@/lib/dive-profile-sample";
 
 const WIDTH = 320;
-const HEIGHT = 150;
-const PAD = { left: 30, right: 8, top: 8, bottom: 20 };
+const HEIGHT = 164;
+const PAD = { left: 30, right: 8, top: 8, bottom: 34 };
 
 export type DiveProfileLabels = {
   /** "Safety stop · 3 min", worded for the stop the samples actually hold. */
@@ -121,7 +121,7 @@ export function DiveProfileChart({
           />
           <text
             x={x(minute * 60)}
-            y={HEIGHT - 6}
+            y={HEIGHT - 20}
             textAnchor="middle"
             className="fill-muted text-[8px] tabular-nums"
           >
@@ -129,7 +129,13 @@ export function DiveProfileChart({
           </text>
         </g>
       ))}
-      <text x={PAD.left - 8} y={HEIGHT - 6} textAnchor="end" className="fill-muted text-[8px]">
+      {/* Keep translated unit captions separate from the zero-minute tick. */}
+      <text
+        x={PAD.left + plotW / 2}
+        y={HEIGHT - 6}
+        textAnchor="middle"
+        className="fill-muted text-[8px]"
+      >
         {labels.minutes}
       </text>
       {/* The safety stop: a band the line rests in near 5 m, found in the samples. */}
