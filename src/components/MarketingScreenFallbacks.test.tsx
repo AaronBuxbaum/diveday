@@ -19,6 +19,15 @@ import {
 
 afterEach(cleanup);
 
+it.each([
+  ["en-US", "Email (optional)", "Card number (optional)"],
+  ["es-ES", "Correo electrónico (opcional)", "Número de tarjeta (opcional)"],
+] as const)("RegisterFallback marks optional fields in %s", (locale, email, card) => {
+  render(<RegisterFallback locale={locale} />);
+  expect(screen.getByText(email)).toBeVisible();
+  expect(screen.getByText(card)).toBeVisible();
+});
+
 it("RecapPageFallback shows the dive log entry, then the trip's photos, then three species seen", () => {
   const { container } = render(<RecapPageFallback locale="en-US" />);
   const text = container.textContent ?? "";

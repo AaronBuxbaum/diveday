@@ -20,6 +20,7 @@ test.describe("light mode", () => {
   test("UI cleanup expanded past divers", async ({ page }) => {
     const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — French Reef");
     await page.goto(`/shop/blue-mantis/trips/${id}?phase=filling#invite-suggestions`);
+    await expect(page.locator("html")).toHaveAttribute("data-hash-landed", "true");
     const initial = page.getByTestId("invite-suggestions");
     await expect(initial).toBeVisible();
     const details = initial.locator("+ details");
