@@ -346,7 +346,7 @@ function ExecutedDiveForm({
       <h3 className="font-semibold">{diveLabel}</h3>
       <p className="mt-1 text-sm text-muted">{plannedSiteLabel}</p>
       <FieldGrid columns={2} className="mt-4">
-        <Field label={labels.actualSite}>
+        <Field label={labels.actualSite} hint={labels.optional}>
           <input
             list={`sites-${diveNumber}`}
             value={actualSiteName}

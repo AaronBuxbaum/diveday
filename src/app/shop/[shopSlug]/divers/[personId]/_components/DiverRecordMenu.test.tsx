@@ -3,6 +3,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DiverRecordMenu } from "./DiverRecordMenu";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+  usePathname: () => "/",
+}));
+
 afterEach(cleanup);
 
 const download = { href: "/shop/blue-mantis/divers/p1/export", label: "Download record" };

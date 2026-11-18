@@ -117,7 +117,10 @@ export function DiverRecordMenu({
                 setConfirming(false);
               }}
             >
-              <SubmitButton pendingLabel={photo.label} className={buttonClass()}>
+              <SubmitButton
+                pendingLabel={photo.label}
+                className={buttonClass({ variant: "danger" })}
+              >
                 {photo.label}
               </SubmitButton>
             </form>

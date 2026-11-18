@@ -299,7 +299,7 @@ describe("the executed-dive record is collapsed", () => {
       actualSite: { id: "site-2", name: "French Reef" },
     };
     renderLog("Dive 1", [logged]);
-    const site = screen.getByLabelText("Actual site");
+    const site = screen.getByLabelText("Actual site (optional)");
     await userEvent.clear(site);
     await userEvent.type(site, "Molasses Reef");
     expect(document.querySelector<HTMLInputElement>('input[name="planChangeReason"]')?.value).toBe(
@@ -344,7 +344,7 @@ describe("the species picker", () => {
   it("only asks why when the actual site differs from the plan", async () => {
     renderLog("Dive 1 — not recorded yet");
     expect(screen.queryByText("Why the plan changed")).toBeNull();
-    await userEvent.clear(screen.getByLabelText("Actual site"));
+    await userEvent.clear(screen.getByLabelText("Actual site (optional)"));
     expect(screen.getByText("Why the plan changed")).toBeTruthy();
   });
 
@@ -363,7 +363,7 @@ describe("the species picker", () => {
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     await userEvent.type(picker, "Tiny shrimp");
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
-    await userEvent.clear(screen.getByLabelText("Actual site"));
+    await userEvent.clear(screen.getByLabelText("Actual site (optional)"));
     const values = [
       ...document.querySelectorAll<HTMLInputElement>('input[name="observedSpeciesEntries"]'),
     ].map((element) => JSON.parse(element.value));

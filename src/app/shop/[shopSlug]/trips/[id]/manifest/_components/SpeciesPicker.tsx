@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import type { ExecutedDive } from "@/db/schema";
@@ -99,7 +100,7 @@ export function SpeciesPicker({
                 aria-label={`${labels.speciesRemove}: ${name}`}
                 onClick={() => setSpecies(species.filter((item) => item !== entry))}
               >
-                ×
+                <DiveDayIcon name="close" className="size-4" />
               </button>
             </li>
           );

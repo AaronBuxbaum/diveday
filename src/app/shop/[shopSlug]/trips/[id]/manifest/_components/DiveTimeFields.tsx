@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { controlClass, Field } from "@/components/ui/form";
+import { DateField, Field } from "@/components/ui/form";
 import type { ExecutedDive } from "@/db/schema";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import { utcToWallTime } from "@/lib/zoned";
@@ -62,7 +62,7 @@ export function DiveTimeFields({
   const exitedAt = effectiveDate && exit ? `${exitDay}T${exit}` : "";
   const dateInput = (value: string, required: boolean) => (
     <Field label={labels.diveDate} hint={required ? undefined : labels.optional}>
-      <input
+      <DateField
         type="date"
         value={value}
         required={required}
@@ -70,7 +70,6 @@ export function DiveTimeFields({
           setDate(event.target.value);
           setConfirmed(Boolean(event.target.value));
         }}
-        className={controlClass}
       />
     </Field>
   );
@@ -91,24 +90,14 @@ export function DiveTimeFields({
         hint={labels.optional}
         error={timesError ? labels.refusals.times_transposed : undefined}
       >
-        <input
-          type="time"
-          value={entry}
-          onChange={(event) => setEntry(event.target.value)}
-          className={controlClass}
-        />
+        <DateField type="time" value={entry} onChange={(event) => setEntry(event.target.value)} />
       </Field>
       <Field
         label={labels.exitedAt}
         hint={labels.optional}
         error={timesError ? labels.refusals.times_transposed : undefined}
       >
-        <input
-          type="time"
-          value={exit}
-          onChange={(event) => setExit(event.target.value)}
-          className={controlClass}
-        />
+        <DateField type="time" value={exit} onChange={(event) => setExit(event.target.value)} />
       </Field>
     </>
   );
