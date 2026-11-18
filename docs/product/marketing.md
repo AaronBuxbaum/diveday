@@ -90,12 +90,13 @@ and listed the rest in a closed index on `/product`.
 - **The homepage follows one booking** (`src/app/(marketing)/page.tsx`). The title says what the shop gets
   ("Every diver booked, signed, checked and accounted for") and the lede says what DiveDay is: the
   journey from online booking to dock readiness. Beside the headline, a miniature of the 7:30 boat
-  lets the visitor find Priya Sharma and Tom Okafor on deck after dive one. Drag or use the arrows
-  to turn the boat. Selecting a diver on deck or in the roster brings their position and gear into
-  view. A separate confirmation marks that person back aboard. The sample starts with nine of
-  eleven aboard and closes once both names have been confirmed. Its record lists the two names in
-  confirmation order. Starting over clears the record and opens the roll call again. Reduced motion
-  changes views immediately. The roster also works when the browser cannot draw the boat. Below the hero,
+  takes the visitor from the dock before departure to the reef after dive one. At the dock,
+  ten of eleven people are aboard, including Tom Okafor. Confirming Priya Sharma closes that
+  roll call. The visitor chooses when to continue to the reef. There, nine are accounted for
+  and both Priya and Tom need fresh confirmations. Selecting a diver on deck or in the roster
+  shows their location and gear. The final record keeps each checkpoint’s confirmations in order.
+  Starting over returns to the dock and clears the record. Dragging and arrow keys turn the boat.
+  Reduced motion changes views immediately. The roster works without canvas. Below the hero,
   the walkthrough follows Priya’s booking from the storefront to the recap and review. Its check-in
   step shows the arrivals desk and its roll-call step shows the captain’s screen.
   A step ends in its feature page rather than in a door into the demo, because that page's own door

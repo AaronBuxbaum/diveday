@@ -2,11 +2,10 @@ import Image from "next/image";
 import { MarketingBoatRollCall } from "@/components/MarketingBoatRollCall";
 import { MarketingHeroMotion } from "@/components/MarketingReveal";
 import { sectionCardClass } from "@/components/ui/card";
-import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
-/** The last two names on a sample trip with nine divers and two crew. */
+/** Two named checkpoints on a sample trip with nine divers and two crew. */
 export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   function diver(name: string, shortName: string, place: string, gear: string) {
@@ -18,7 +17,21 @@ export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
       select: t("marketing.home.boat.select", { name }),
       marker: t("marketing.home.boat.marker", { name }),
       confirm: t("marketing.home.boat.markAboard", { name: shortName }),
+      dockConfirm: t("marketing.home.boat.dockConfirm", { name: shortName }),
     };
+  }
+  function poster(src: string, alt: string) {
+    return (
+      <Image
+        src={src}
+        width={1040}
+        height={693}
+        alt={alt}
+        sizes="(min-width: 1200px) 512px, (min-width: 1024px) 44vw, (min-width: 496px) 448px, calc(100vw - 48px)"
+        loading="eager"
+        className="aspect-[3/2] w-full object-cover"
+      />
+    );
   }
   return (
     <MarketingHeroMotion>
@@ -29,23 +42,22 @@ export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
           className: "marketing-roll-call-frame mx-auto w-full max-w-md lg:max-w-lg",
         })}
       >
-        <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3 sm:px-5">
-          <p className={ITEM_TITLE_CLASS}>{t("marketing.home.boat.title")}</p>
-          <p className="text-sm text-muted">{t("marketing.home.boat.checkpoint")}</p>
-        </div>
         <MarketingBoatRollCall
-          poster={
-            <Image
-              src="/marketing/boat-roll-call.webp"
-              width={1040}
-              height={693}
-              alt={t("marketing.home.boat.illustration")}
-              sizes="(min-width: 1200px) 512px, (min-width: 1024px) 44vw, (min-width: 496px) 448px, calc(100vw - 48px)"
-              loading="eager"
-              className="aspect-[3/2] w-full object-cover"
-            />
-          }
+          dockPoster={poster(
+            "/marketing/boat-dock.webp",
+            t("marketing.home.boat.dockIllustration"),
+          )}
+          reefPoster={poster(
+            "/marketing/boat-roll-call.webp",
+            t("marketing.home.boat.illustration"),
+          )}
           labels={{
+            title: t("marketing.home.boat.title"),
+            dockCheckpoint: t("marketing.home.boat.dockCheckpoint"),
+            dockChoose: t("marketing.home.boat.dockChoose"),
+            dockAboard: t("marketing.home.boat.dockAboard"),
+            dockPreviously: t("marketing.home.boat.dockPreviously"),
+            depart: t("marketing.home.boat.depart"),
             rotateLeft: t("marketing.home.boat.rotateLeft"),
             rotateRight: t("marketing.home.boat.rotateRight"),
             pause: t("marketing.home.boat.pause"),

@@ -102,8 +102,8 @@
     "boat": {
       "region": "Try the roll call on the 7:30 boat.",
       "title": "The 7:30 boat",
-      "checkpoint": "After dive one",
-      "illustration": "Priya stands at the stern with her yellow fins. Tom is amidships by the tanks.",
+      "checkpoint": "At the reef · After dive one",
+      "illustration": "The boat at the reef. Priya stands at the stern with her yellow fins. Tom is amidships by the tanks.",
       "rotateLeft": "Rotate left",
       "rotateRight": "Rotate right",
       "pause": "Pause motion",
@@ -115,7 +115,7 @@
       "aboard": "Back aboard",
       "markAboard": "Mark {name} back aboard",
       "restart": "Start over",
-      "choose": "Select a diver to check them back aboard.",
+      "choose": "The crew has called nine names again. Check Priya and Tom back aboard.",
       "overview": "Whole boat",
       "marker": "Find {name} on deck",
       "select": "Inspect {name}",
@@ -124,7 +124,14 @@
       "priyaGear": "Teal-trimmed black wetsuit and a silver tank. She holds her yellow fins by the heel straps.",
       "tomGear": "Black wetsuit with blue trim.",
       "record": "View roll-call record",
-      "previously": "9 people already accounted for"
+      "previously": "9 people already accounted for after the dive",
+      "dockCheckpoint": "At the dock · Before departure",
+      "dockIllustration": "The dive boat alongside the dock. Priya is at the stern and Tom is amidships.",
+      "dockChoose": "Priya is the last name to call before departure.",
+      "dockAboard": "Aboard for departure",
+      "dockConfirm": "Mark {name} aboard",
+      "dockPreviously": "10 people already accounted for, including Tom Okafor",
+      "depart": "Continue to the reef"
     }
   },
   "common": {

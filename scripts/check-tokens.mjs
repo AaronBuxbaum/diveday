@@ -89,6 +89,7 @@ const metadataFileNames = new Set(["opengraph-image.tsx", "twitter-image.tsx", "
  */
 const exemptPaths = new Set([
   // Paints the fixed materials of a boat illustration into a canvas bitmap.
+  "src/components/marketing-boat-model.ts",
   "src/components/marketing-boat-renderer.ts",
   "src/app/_og/card.tsx",
   "src/app/_brand/colors.ts",

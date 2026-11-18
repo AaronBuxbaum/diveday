@@ -1,3 +1,4 @@
+import type { Locator } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
@@ -87,6 +88,38 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   await expect(heroSection.getByText(/^One flat price of/)).toHaveCount(0);
 });
 
+async function takeSampleBoatToReef(boat: Locator, t: ReturnType<typeof diverTranslator>) {
+  const status = boat.getByRole("status");
+  const depart = boat.getByRole("button", { name: t("marketing.home.boat.depart") });
+  const stage = boat.locator("[data-boat-scene]");
+  await expect(stage).toHaveAttribute("data-boat-phase", "dock");
+  await expect(
+    boat.getByText(t("marketing.home.boat.dockCheckpoint"), { exact: true }),
+  ).toBeVisible();
+  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 10 }));
+  await expect(depart).toHaveCount(0);
+
+  await boat
+    .getByRole("button", { name: t("marketing.home.boat.select", { name: "Tom Okafor" }) })
+    .click();
+  await expect(
+    boat.getByRole("button", { name: t("marketing.home.boat.dockAboard") }),
+  ).toBeDisabled();
+  await boat
+    .getByRole("button", { name: t("marketing.home.boat.select", { name: "Priya Sharma" }) })
+    .press("Enter");
+  await boat
+    .getByRole("button", { name: t("marketing.home.boat.dockConfirm", { name: "Priya" }) })
+    .press("Enter");
+  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 11 }));
+  await expect(stage).toHaveAttribute("data-boat-phase", "dock");
+  await depart.click();
+
+  await expect(stage).toHaveAttribute("data-boat-phase", "reef");
+  await expect(boat.getByText(t("marketing.home.boat.checkpoint"), { exact: true })).toBeVisible();
+  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 9 }));
+}
+
 test("each diver on the sample boat needs an individual roll-call confirmation", async ({
   page,
 }) => {
@@ -100,7 +133,7 @@ test("each diver on the sample boat needs an individual roll-call confirmation",
     boat.getByRole("button", { name: t("marketing.home.boat.select", { name }) });
   const markAboard = (name: string) =>
     boat.getByRole("button", { name: t("marketing.home.boat.markAboard", { name }) });
-  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 9 }));
+  await takeSampleBoatToReef(boat, t);
   await boat.getByRole("button", { name: t("marketing.home.boat.pause") }).click();
   await boat.getByRole("button", { name: t("marketing.home.boat.resume") }).click();
 
@@ -121,9 +154,16 @@ test("each diver on the sample boat needs an individual roll-call confirmation",
   await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 11 }));
 
   await boat.getByText(t("marketing.home.boat.record"), { exact: true }).click();
-  await expect(boat.locator("details ol > li")).toHaveText(["Priya Sharma", "Tom Okafor"]);
+  await expect(boat.locator("details [data-boat-checkpoint=dock] ol > li")).toHaveText([
+    "Priya Sharma",
+  ]);
+  await expect(boat.locator("details [data-boat-checkpoint=reef] ol > li")).toHaveText([
+    "Priya Sharma",
+    "Tom Okafor",
+  ]);
   await boat.getByRole("button", { name: t("marketing.home.boat.restart") }).click();
-  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 9 }));
+  await expect(boat.locator("[data-boat-scene]")).toHaveAttribute("data-boat-phase", "dock");
+  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 10 }));
   await expect(canvas).toHaveAttribute("data-boat-focus", "overview");
   await expect(boat.locator("details")).toHaveCount(0);
   await expect(inspect("Priya Sharma")).toHaveAttribute("aria-pressed", "false");
@@ -156,6 +196,7 @@ test("the 3D boat can be turned by dragging or keyboard with reduced motion", as
   await page.mouse.up();
   await expect.poll(() => canvas.getAttribute("data-boat-yaw")).not.toBe(keyboardYaw);
 
+  await takeSampleBoatToReef(boat, t);
   const marker = (name: string) =>
     boat.getByRole("button", { name: t("marketing.home.boat.marker", { name }) });
   await marker("Tom Okafor").click();
@@ -177,7 +218,10 @@ test("the 3D boat can be turned by dragging or keyboard with reduced motion", as
     .click();
   await expect(boat.getByRole("status")).toContainText(t("marketing.home.boat.closed"));
   await boat.getByText(t("marketing.home.boat.record"), { exact: true }).click();
-  await expect(boat.locator("details ol > li")).toHaveText(["Tom Okafor", "Priya Sharma"]);
+  await expect(boat.locator("details [data-boat-checkpoint=reef] ol > li")).toHaveText([
+    "Tom Okafor",
+    "Priya Sharma",
+  ]);
 });
 
 test("the boat roster still works without canvas support", async ({ page }) => {
@@ -192,9 +236,13 @@ test("the boat roster still works without canvas support", async ({ page }) => {
   await page.goto("/");
   const t = diverTranslator("en-US");
   const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
-  await expect(
-    boat.getByRole("img", { name: t("marketing.home.boat.illustration") }),
-  ).toBeVisible();
+  const dockPoster = boat.getByRole("img", { name: t("marketing.home.boat.dockIllustration") });
+  await expect(dockPoster).toHaveAttribute("src", /boat-dock/);
+  await dockPoster.evaluate((image: HTMLImageElement) => image.decode());
+  await takeSampleBoatToReef(boat, t);
+  const reefPoster = boat.getByRole("img", { name: t("marketing.home.boat.illustration") });
+  await expect(reefPoster).toHaveAttribute("src", /boat-roll-call/);
+  await reefPoster.evaluate((image: HTMLImageElement) => image.decode());
   for (const [name, firstName] of [
     ["Tom Okafor", "Tom"],
     ["Priya Sharma", "Priya"],

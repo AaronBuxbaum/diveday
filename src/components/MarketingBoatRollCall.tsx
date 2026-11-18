@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import {
   type BoatStageLabels,
   DIVER_INDICES,
@@ -12,6 +12,12 @@ import { StatusMark } from "@/components/ui/StatusMark";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 
 type BoatLabels = BoatStageLabels & {
+  title: string;
+  dockCheckpoint: string;
+  dockChoose: string;
+  dockAboard: string;
+  dockPreviously: string;
+  depart: string;
   open: string;
   closed: string;
   counts: [string, string, string];
@@ -25,35 +31,62 @@ type BoatLabels = BoatStageLabels & {
 
 export function MarketingBoatRollCall({
   labels,
-  poster,
+  dockPoster,
+  reefPoster,
 }: {
   labels: BoatLabels;
-  poster: ReactNode;
+  dockPoster: ReactNode;
+  reefPoster: ReactNode;
 }) {
   const descriptionId = useId();
   const [selected, setSelected] = useState<DiverIndex | null>(null);
-  const [confirmationOrder, setConfirmationOrder] = useState<DiverIndex[]>([]);
-  const checked: [boolean, boolean] = [
-    confirmationOrder.includes(0),
-    confirmationOrder.includes(1),
-  ];
-  const complete = confirmationOrder.length === 2;
+  const [atReef, setAtReef] = useState(false);
+  const [dockOrder, setDockOrder] = useState<DiverIndex[]>([]);
+  const [reefOrder, setReefOrder] = useState<DiverIndex[]>([]);
+  const checkpointRef = useRef<HTMLParagraphElement>(null);
+  const previousPhase = useRef(atReef);
+  useEffect(() => {
+    if (previousPhase.current !== atReef) checkpointRef.current?.focus();
+    previousPhase.current = atReef;
+  }, [atReef]);
+  const checked: [boolean, boolean] = atReef
+    ? [reefOrder.includes(0), reefOrder.includes(1)]
+    : [dockOrder.includes(0), true];
+  const complete = checked[0] && checked[1];
+  const recorded = atReef ? labels.aboard : labels.dockAboard;
   const diver = selected === null ? null : labels.divers[selected];
 
   function confirm(index: DiverIndex) {
-    setConfirmationOrder((order) => (order.includes(index) ? order : [...order, index]));
+    if (!atReef && index === 1) return;
+    const save = atReef ? setReefOrder : setDockOrder;
+    save((order) => (order.includes(index) ? order : [...order, index]));
+  }
+
+  function depart() {
+    if (!dockOrder.includes(0)) return;
+    setSelected(null);
+    setAtReef(true);
   }
 
   function restart() {
-    setConfirmationOrder([]);
     setSelected(null);
+    setDockOrder([]);
+    setReefOrder([]);
+    setAtReef(false);
   }
 
   return (
     <>
+      <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 sm:px-5">
+        <p className={`${ITEM_TITLE_CLASS} shrink-0`}>{labels.title}</p>
+        <p ref={checkpointRef} tabIndex={-1} className="text-end text-sm text-pretty text-muted">
+          {atReef ? labels.checkpoint : labels.dockCheckpoint}
+        </p>
+      </div>
       <MarketingBoatStage
         labels={labels}
-        poster={poster}
+        atReef={atReef}
+        poster={atReef ? reefPoster : dockPoster}
         checked={checked}
         selected={selected}
         onSelect={setSelected}
@@ -67,21 +100,12 @@ export function MarketingBoatRollCall({
         >
           <span className={ITEM_TITLE_CLASS}>{complete ? labels.closed : labels.open}</span>
           <span className="text-sm font-medium text-muted tabular-nums">
-            {labels.counts[confirmationOrder.length]}
+            {labels.counts[Number(checked[0]) + Number(checked[1])]}
           </span>
         </div>
-        {complete ? (
-          <button
-            type="button"
-            data-try-tap=""
-            onClick={restart}
-            className={buttonClass({ variant: "link", size: "sm", flush: true })}
-          >
-            {labels.restart}
-          </button>
-        ) : (
-          <p className="mt-2 text-sm text-muted">{labels.choose}</p>
-        )}
+        {!complete ? (
+          <p className="mt-2 text-sm text-muted">{atReef ? labels.choose : labels.dockChoose}</p>
+        ) : null}
         <div className="mt-2 grid grid-cols-2 gap-2">
           {DIVER_INDICES.map((index) => {
             const person = labels.divers[index];
@@ -108,7 +132,7 @@ export function MarketingBoatRollCall({
                 <span>{person.name}</span>
                 {checked[index] ? (
                   <span className="sr-only" id={`${descriptionId}-${index}`}>
-                    {labels.aboard}
+                    {recorded}
                   </span>
                 ) : null}
               </button>
@@ -133,28 +157,64 @@ export function MarketingBoatRollCall({
               })}
             >
               {checked[selected] ? <StatusMark variant="success" className="text-success" /> : null}
-              {checked[selected] ? labels.aboard : diver.confirm}
+              {checked[selected] ? recorded : atReef ? diver.confirm : diver.dockConfirm}
             </button>
           </div>
         ) : null}
-        {complete ? (
+        {atReef && complete ? (
           <details className="mt-3 border-t border-border">
             <summary className="min-h-11 cursor-pointer content-center py-2 text-sm font-semibold text-primary">
               {labels.record}
             </summary>
-            <div className="rounded-inset bg-surface-sunken px-3 py-2 text-sm">
-              <p className="font-semibold">{labels.checkpoint}</p>
-              <p className="mt-1 text-muted">{labels.previously}</p>
-              <ol className="mt-2 divide-y divide-border">
-                {confirmationOrder.map((index) => (
-                  <li key={index} className="flex items-center gap-2 py-1">
-                    <StatusMark variant="success" className="text-success" />
-                    {labels.divers[index].name}
-                  </li>
-                ))}
-              </ol>
+            <div className="divide-y divide-border rounded-inset bg-surface-sunken px-3 text-sm">
+              {[
+                {
+                  phase: "dock",
+                  checkpoint: labels.dockCheckpoint,
+                  previously: labels.dockPreviously,
+                  marks: dockOrder,
+                },
+                {
+                  phase: "reef",
+                  checkpoint: labels.checkpoint,
+                  previously: labels.previously,
+                  marks: reefOrder,
+                },
+              ].map(({ phase, checkpoint, previously, marks }) => (
+                <section
+                  key={phase}
+                  data-boat-checkpoint={phase}
+                  aria-label={checkpoint}
+                  className="py-2"
+                >
+                  <p className="font-semibold">{checkpoint}</p>
+                  <p className="mt-1 text-muted">{previously}</p>
+                  <ol className="mt-2 divide-y divide-border">
+                    {marks.map((index) => (
+                      <li key={index} className="flex items-center gap-2 py-1">
+                        <StatusMark variant="success" className="text-success" />
+                        {labels.divers[index].name}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ))}
             </div>
           </details>
+        ) : null}
+        {complete ? (
+          <button
+            type="button"
+            data-try-tap=""
+            onClick={atReef ? restart : depart}
+            className={
+              atReef
+                ? buttonClass({ variant: "link", size: "sm", flush: true })
+                : buttonClass({ variant: "primary", size: "sm", className: "mt-2" })
+            }
+          >
+            {atReef ? labels.restart : labels.depart}
+          </button>
         ) : null}
       </figcaption>
     </>

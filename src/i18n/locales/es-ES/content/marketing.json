@@ -102,8 +102,8 @@
     "boat": {
       "region": "Prueba a pasar lista en la salida de las 7:30.",
       "title": "El barco de las 7:30",
-      "checkpoint": "Tras la primera inmersión",
-      "illustration": "Priya está en la popa con sus aletas amarillas. Tom está en el centro del barco, junto a los tanques.",
+      "checkpoint": "En el arrecife · Tras la primera inmersión",
+      "illustration": "El barco en el arrecife. Priya está en la popa con sus aletas amarillas y Tom está junto a los tanques, en el centro.",
       "rotateLeft": "Girar a la izquierda",
       "rotateRight": "Girar a la derecha",
       "pause": "Pausar el movimiento",
@@ -115,7 +115,7 @@
       "aboard": "De vuelta a bordo",
       "markAboard": "Confirmar a {name} a bordo",
       "restart": "Empezar de nuevo",
-      "choose": "Elige a un buceador para confirmar su regreso a bordo.",
+      "choose": "La tripulación ya volvió a pasar lista a nueve personas. Confirma que Priya y Tom han regresado a bordo.",
       "overview": "Ver todo el barco",
       "marker": "Buscar a {name} en cubierta",
       "select": "Ver a {name}",
@@ -124,7 +124,14 @@
       "priyaGear": "Traje negro con ribetes verde azulado y tanque plateado. Sostiene sus aletas amarillas por las correas del talón.",
       "tomGear": "Traje negro con ribetes azules.",
       "record": "Ver el registro del pase de lista",
-      "previously": "9 personas ya confirmadas a bordo"
+      "previously": "9 personas ya confirmadas a bordo después de la inmersión",
+      "dockCheckpoint": "En el muelle · Embarque",
+      "dockIllustration": "El barco está junto al muelle. Priya está en la popa y Tom está en el centro del barco.",
+      "dockChoose": "Solo falta que Priya confirme que está a bordo.",
+      "dockAboard": "A bordo para la salida",
+      "dockConfirm": "Marcar a {name} a bordo",
+      "dockPreviously": "10 personas ya confirmadas a bordo, entre ellas Tom Okafor",
+      "depart": "Continuar al arrecife"
     }
   },
   "common": {

@@ -22,6 +22,7 @@ type BoatDiverLabels = {
   marker: string;
   select: string;
   confirm: string;
+  dockConfirm: string;
 };
 
 export type BoatStageLabels = {
@@ -76,30 +77,23 @@ function SceneButton({
   );
 }
 
-export function MarketingBoatStage({
-  labels,
-  poster,
+function useBoatCanvas({
   checked,
   selected,
-  onSelect,
-  onOverview,
+  paused,
+  atReef,
 }: {
-  labels: BoatStageLabels;
-  poster: ReactNode;
   checked: [boolean, boolean];
   selected: DiverIndex | null;
-  onSelect: (index: DiverIndex) => void;
-  onOverview: () => void;
+  paused: boolean;
+  atReef: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const markers = useRef<(HTMLButtonElement | null)[]>([]);
-  const pointer = useRef<{ id: number; x: number } | null>(null);
-  const markerTouch = useRef<{ id: number; x: number; y: number } | null>(null);
   const yaw = useRef(0);
   const invalidate = useRef<(() => void) | null>(null);
   const [ready, setReady] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const settings = useRef({ checked, selected, paused });
+  const settings = useRef({ checked, selected, paused, atReef });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -119,27 +113,37 @@ export function MarketingBoatStage({
     let width = 0;
     let height = 0;
     let time = 0;
+    let voyage = 0;
     const progress: [number, number] = [0, 0];
     const focus: [number, number] = [0, 0];
     let cameraYaw = 0;
     let seafloor: HTMLImageElement | undefined;
-    let reefSettled = false;
-    let reefTimeout: number | undefined;
-    const reef = new Image();
-    reef.decoding = "async";
-    function showScene() {
-      window.clearTimeout(reefTimeout);
-      reefSettled = true;
+    let harborWater: HTMLImageElement | undefined;
+    let dockReady = false;
+    let dockTimeout: number | undefined;
+    const harbor = new Image();
+    harbor.decoding = "async";
+
+    function showDock() {
+      window.clearTimeout(dockTimeout);
+      dockReady = true;
       schedule();
     }
+    harbor.onload = () => {
+      harborWater = harbor;
+      showDock();
+    };
+    harbor.onerror = showDock;
+    const reef = new Image();
+    reef.decoding = "async";
     reef.onload = () => {
       seafloor = reef;
-      showScene();
+      schedule();
     };
-    reef.onerror = showScene;
 
     function schedule() {
-      if (reefSettled && inView && !document.hidden && !frame) frame = requestAnimationFrame(paint);
+      if ((dockReady || settings.current.atReef) && inView && !document.hidden && !frame)
+        frame = requestAnimationFrame(paint);
     }
 
     function paint(now: number) {
@@ -160,7 +164,7 @@ export function MarketingBoatStage({
         const remaining = target - focus[index];
         focus[index] += Math.abs(remaining) < 0.001 ? remaining : remaining * ease;
         progress[index] = marks[index]
-          ? animate
+          ? animate && painted
             ? Math.min(1, progress[index] + elapsed / 0.8)
             : 1
           : 0;
@@ -170,6 +174,12 @@ export function MarketingBoatStage({
       cameraYaw =
         !animate || Math.abs(remainingYaw) < 0.001 ? yaw.current : cameraYaw + remainingYaw * ease;
       const idleOrbit = 0.12 * Math.sin((time * 2 * Math.PI) / 14);
+      voyage = settings.current.atReef
+        ? animate && painted
+          ? Math.min(1, voyage + elapsed / 1.5)
+          : 1
+        : 0;
+      const reefMix = voyage * voyage * (3 - 2 * voyage);
       const anchors = drawBoatScene(
         ctx,
         width,
@@ -179,7 +189,10 @@ export function MarketingBoatStage({
         progress,
         seafloor,
         focus,
+        reefMix,
+        harborWater,
       );
+      if (harborWater && canvas.dataset.boatHarbor !== "ready") canvas.dataset.boatHarbor = "ready";
       if (seafloor && canvas.dataset.boatReef !== "ready") canvas.dataset.boatReef = "ready";
       if (canvas.dataset.boatYaw !== String(cameraYaw)) canvas.dataset.boatYaw = String(cameraYaw);
       const focusName = subject === null ? "overview" : subject === 0 ? "priya" : "tom";
@@ -224,8 +237,9 @@ export function MarketingBoatStage({
 
     const visibility = new IntersectionObserver(([entry]) => {
       inView = entry?.isIntersecting ?? false;
-      if (inView && !reef.src) {
-        reefTimeout = window.setTimeout(showScene, 2500);
+      if (inView && !harbor.src) {
+        dockTimeout = window.setTimeout(showDock, 2500);
+        harbor.src = "/marketing/boat-harbor-water.webp";
         reef.src = "/marketing/boat-reef.webp";
       }
       updateVisibility();
@@ -240,9 +254,10 @@ export function MarketingBoatStage({
     return () => {
       if (frame) cancelAnimationFrame(frame);
       invalidate.current = null;
-      window.clearTimeout(reefTimeout);
+      window.clearTimeout(dockTimeout);
+      harbor.onload = null;
+      harbor.onerror = null;
       reef.onload = null;
-      reef.onerror = null;
       visibility.disconnect();
       size.disconnect();
       motion.removeEventListener("change", updateVisibility);
@@ -253,16 +268,46 @@ export function MarketingBoatStage({
   useEffect(() => {
     // A fresh inspection starts at the modeled side of the deck. Manual orbit
     // remains relative to that subject until another name or the overview is chosen.
-    const replay = settings.current.checked.some(Boolean) && !checked.some(Boolean);
-    if (replay || settings.current.selected !== selected) yaw.current = 0;
-    settings.current = { checked, selected, paused };
+    if (settings.current.atReef !== atReef || settings.current.selected !== selected)
+      yaw.current = 0;
+    settings.current = { checked, selected, paused, atReef };
     invalidate.current?.();
-  }, [checked, selected, paused]);
+  }, [checked, selected, paused, atReef]);
 
   function rotate(delta: number) {
     yaw.current += delta;
     invalidate.current?.();
   }
+
+  return { canvasRef, markers, ready, rotate };
+}
+
+export function MarketingBoatStage({
+  labels,
+  poster,
+  atReef,
+  checked,
+  selected,
+  onSelect,
+  onOverview,
+}: {
+  labels: BoatStageLabels;
+  poster: ReactNode;
+  atReef: boolean;
+  checked: [boolean, boolean];
+  selected: DiverIndex | null;
+  onSelect: (index: DiverIndex) => void;
+  onOverview: () => void;
+}) {
+  const [paused, setPaused] = useState(false);
+  const pointer = useRef<{ id: number; x: number } | null>(null);
+  const markerTouch = useRef<{ id: number; x: number; y: number } | null>(null);
+  const { canvasRef, markers, ready, rotate } = useBoatCanvas({
+    checked,
+    selected,
+    paused,
+    atReef,
+  });
 
   function keyRotate(event: KeyboardEvent<HTMLFieldSetElement>) {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -284,7 +329,11 @@ export function MarketingBoatStage({
   }
 
   return (
-    <div data-boat-scene="" className="relative isolate aspect-[3/2] w-full overflow-hidden">
+    <div
+      data-boat-scene=""
+      data-boat-phase={atReef ? "reef" : "dock"}
+      className="relative isolate aspect-[3/2] w-full overflow-hidden"
+    >
       <div className="absolute inset-0">{poster}</div>
       <div aria-hidden="true">
         <canvas
@@ -334,7 +383,7 @@ export function MarketingBoatStage({
                   onSelect(index);
               }}
               onClick={() => onSelect(index)}
-              className="absolute z-10 flex min-h-11 w-max min-w-11 -translate-x-1/2 -translate-y-full touch-manipulation cursor-pointer items-end justify-center pb-1 focus-visible:outline-offset-0"
+              className="absolute z-10 flex min-h-11 w-max min-w-11 -translate-x-1/2 -translate-y-full touch-manipulation cursor-pointer items-end justify-center pb-1 focus-visible:focus-ring-inset"
             >
               <span className="relative flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-1 text-xs font-semibold text-foreground shadow-bed after:absolute after:top-full after:start-1/2 after:h-2 after:w-px after:bg-foreground">
                 <StatusMark
