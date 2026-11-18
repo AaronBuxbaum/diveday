@@ -527,8 +527,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   ).toHaveAttribute("href", "/switching?from=product-one-list");
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
+  const pricingHero = page.getByRole("main").locator("section").first();
   await expect(
-    page.getByRole("heading", {
+    pricingHero.getByRole("heading", {
       level: 1,
       name: diverTranslator("en-US")("marketing.pricing.heroTitle"),
       exact: true,
@@ -546,7 +547,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // sections saying overlapping things.
   await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Notes on the invoice" })).toHaveCount(0);
-  await expect(page.getByText("$99", { exact: true })).toBeVisible();
+  await expect(pricingHero.getByText("$99", { exact: true })).toBeVisible();
   // And the terms stand at the figure and at the door, which is the whole of
   // this slice (docs/product/marketing-review-20260827.md, "the terms never
   // stand at the doors"). The lock is a restatement of a binding commercial
@@ -646,10 +647,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // one component (src/app/_components/FunnelCtas.tsx), not per page.
   // The two doors only: the notes above them end in a link to the product
   // page's full list, which is a reference, not a door.
-  const priceHeroDoors = page
-    .getByRole("main")
-    .locator("section")
-    .first()
+  const priceHeroDoors = pricingHero
     .locator("a, button")
     .filter({ hasText: /^(Try the live demo|Get set up)$/ });
   await expect(priceHeroDoors.first()).toHaveText("Try the live demo");
