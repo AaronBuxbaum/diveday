@@ -444,6 +444,7 @@ async function persistEnvelope(
   envelope: OfflineManifestEnvelope,
   tenantRound?: number,
   changeReason: OfflineManifestChangeReason = "unknown",
+  expectedRecord?: StoredRecord | null,
 ): Promise<boolean> {
   const tripId = envelope.snapshot.manifests[0]?.trip.id;
   if (!tripId) throw new Error("Manifest snapshot has no trip");
@@ -457,6 +458,7 @@ async function persistEnvelope(
   const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
   const done = transactionDone(transaction);
   let persisted = false;
+  let staleRecord = false;
   const manifestStore = transaction.objectStore(MANIFEST_STORE);
   const write = () => {
     manifestStore.put({
@@ -469,14 +471,42 @@ async function persistEnvelope(
     } satisfies StoredRecord);
     persisted = true;
   };
-  if (tenantRound === undefined) {
+  let roundReady = tenantRound === undefined;
+  let recordReady = expectedRecord === undefined;
+  let currentRound: unknown;
+  let currentRecord: unknown;
+  const maybeWrite = () => {
+    if (!roundReady || !recordReady) return;
+    if (tenantRound !== undefined && currentRound !== tenantRound) return;
+    if (expectedRecord !== undefined) {
+      const same =
+        expectedRecord === null
+          ? currentRecord === undefined
+          : sameStoredRecord(expectedRecord, currentRecord);
+      if (!same) {
+        staleRecord = true;
+        return;
+      }
+    }
     write();
-  } else {
+  };
+  if (tenantRound !== undefined) {
     transaction.objectStore(KEY_STORE).get(TENANT_ROUND_KEY).onsuccess = (event) => {
-      if ((event.target as IDBRequest<unknown>).result === tenantRound) write();
+      currentRound = (event.target as IDBRequest<unknown>).result;
+      roundReady = true;
+      maybeWrite();
     };
   }
+  if (expectedRecord !== undefined) {
+    manifestStore.get(tripId).onsuccess = (event) => {
+      currentRecord = (event.target as IDBRequest<unknown>).result;
+      recordReady = true;
+      maybeWrite();
+    };
+  }
+  maybeWrite();
   await done;
+  if (staleRecord) throw new OfflineManifestError("unavailable");
   if (persisted) announceManifestChange(tripId, changeReason);
   return persisted;
 }
@@ -507,6 +537,51 @@ export async function beginOfflineTenantVerificationRound(): Promise<number> {
     await done;
     if (allocatedRound === null) throw new Error("IndexedDB tenant round was not allocated");
     return allocatedRound;
+  } finally {
+    db.close();
+  }
+}
+
+async function requireOfflineTenantRound(tenantRound: number): Promise<void> {
+  const db = await openDatabase();
+  try {
+    const transaction = db.transaction(KEY_STORE, "readonly");
+    const current = await requestResult(transaction.objectStore(KEY_STORE).get(TENANT_ROUND_KEY));
+    await transactionDone(transaction);
+    if (current !== tenantRound) throw new OfflineManifestError("shop_changed");
+  } finally {
+    db.close();
+  }
+}
+
+/** Verify the no-write refresh result against a single current IDB snapshot. */
+async function requireCurrentOfflineRecord(
+  tripId: string,
+  expected: StoredRecord,
+  tenantRound?: number,
+): Promise<void> {
+  const db = await openDatabase();
+  try {
+    const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+    const done = transactionDone(transaction);
+    const record = requestResult(transaction.objectStore(MANIFEST_STORE).get(tripId));
+    const round =
+      tenantRound === undefined
+        ? Promise.resolve(undefined)
+        : requestResult(transaction.objectStore(KEY_STORE).get(TENANT_ROUND_KEY));
+    let current: unknown;
+    let currentRound: unknown;
+    try {
+      [current, currentRound] = await Promise.all([record, round]);
+    } catch (error) {
+      await done.catch(() => {});
+      throw error;
+    }
+    await done;
+    if (tenantRound !== undefined && currentRound !== tenantRound) {
+      throw new OfflineManifestError("shop_changed");
+    }
+    if (!sameStoredRecord(expected, current)) throw new OfflineManifestError("unavailable");
   } finally {
     db.close();
   }
@@ -608,7 +683,10 @@ function isPastPendingGrace(
   return new Date(record.expiresAt).getTime() + OFFLINE_MANIFEST_PENDING_GRACE_MS <= now.getTime();
 }
 
-export async function loadOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
+async function readOfflineManifest(tripId: string): Promise<{
+  envelope: OfflineManifestEnvelope;
+  record: StoredRecord;
+} | null> {
   const db = await openDatabase();
   try {
     const record = await readStoredRecord(db, tripId);
@@ -662,10 +740,14 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
         return null;
       }
     }
-    return envelope;
+    return { envelope, record };
   } finally {
     db.close();
   }
+}
+
+export async function loadOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
+  return (await readOfflineManifest(tripId))?.envelope ?? null;
 }
 
 /**
@@ -807,6 +889,7 @@ export async function purgeOfflineManifestsExceptShop(
     return [];
   const isCurrent = options.isCurrent;
   if (isCurrent && !isCurrent()) return [];
+  await requireOfflineTenantRound(tenantRound);
   const saved = await listOfflineManifests();
   if (isCurrent && !isCurrent()) return [];
   const candidates = saved.filter((envelope) => envelope.snapshot.shop.slug !== currentShopSlug);
@@ -819,21 +902,30 @@ export async function purgeOfflineManifestsExceptShop(
         // waited for the trip lock. Do not let an older tenant answer delete
         // records after the browser has established a newer tenant.
         if (isCurrent && !isCurrent()) return null;
-        const current = await loadOfflineManifest(tripId);
+        const current = await readOfflineManifest(tripId);
         if (!current) return null;
         // Re-evaluate ownership from the locked record, not the pre-lock list.
-        if (current.snapshot.shop.slug === currentShopSlug) return null;
-        if (pendingOfflineEventCount(current) > 0) return null;
+        if (current.envelope.snapshot.shop.slug === currentShopSlug) return null;
+        if (pendingOfflineEventCount(current.envelope) > 0) return null;
         // loadOfflineManifest can yield to IndexedDB; the verification round
         // may have changed while it was reading. Keep the final guard adjacent
         // to deletion, inside the same per-trip lock.
         if (isCurrent && !isCurrent()) return null;
-        const deleted = await deletePurgeCandidate(tripId, currentShopSlug, tenantRound, isCurrent);
+        const deleted = await deletePurgeCandidate(
+          tripId,
+          current.record,
+          current.envelope.snapshot.shop.slug,
+          currentShopSlug,
+          tenantRound,
+          isCurrent,
+        );
         if (!deleted) return null;
         return tripId;
       });
     }),
   );
+  if (isCurrent && !isCurrent()) return [];
+  await requireOfflineTenantRound(tenantRound);
   // Report only records this locked pass actually removed; selected-trip UI
   // uses that proof to distinguish a purge from a bookmark never saved here.
   return deletedTripIds.filter((tripId): tripId is string => tripId !== null);
@@ -848,6 +940,8 @@ export async function purgeOfflineManifestsExceptShop(
  */
 async function deletePurgeCandidate(
   tripId: string,
+  expected: StoredRecord,
+  expectedShopSlug: string,
   currentShopSlug: string,
   tenantRound: number,
   isCurrent?: () => boolean,
@@ -865,18 +959,26 @@ async function deletePurgeCandidate(
     let latestRound: unknown;
     let record: StoredRecord | undefined;
     let deleted = false;
+    let changed = false;
+    let superseded = false;
     const maybeDelete = () => {
       if (!roundReady || !recordReady || (isCurrent && !isCurrent())) return;
-      if (latestRound !== tenantRound || !record) return;
-      if (typeof record.shopSlug !== "string" || record.shopSlug.length === 0) return;
-      if (record.shopSlug === currentShopSlug) return;
-      if (
-        typeof record.pendingEvents !== "number" ||
-        !Number.isSafeInteger(record.pendingEvents) ||
-        record.pendingEvents < 0 ||
-        record.pendingEvents > 0
-      )
+      if (latestRound !== tenantRound) {
+        superseded = true;
         return;
+      }
+      if (!record || !sameStoredRecord(expected, record)) {
+        changed = true;
+        return;
+      }
+      if (
+        record.shopSlug !== expectedShopSlug ||
+        record.shopSlug === currentShopSlug ||
+        record.pendingEvents !== 0
+      ) {
+        changed = true;
+        return;
+      }
       manifestStore.delete(tripId);
       deleted = true;
     };
@@ -891,6 +993,8 @@ async function deletePurgeCandidate(
       maybeDelete();
     };
     await done;
+    if (superseded) throw new OfflineManifestError("shop_changed");
+    if (changed) throw new OfflineManifestError("unavailable");
     if (deleted) announceManifestChange(tripId, "delete");
     return deleted;
   } finally {
@@ -916,9 +1020,14 @@ export async function saveOfflineManifest(
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
   return withManifestLock(trip.id, async () => {
+    if (options.tenantRound !== undefined) await requireOfflineTenantRound(options.tenantRound);
     // A failed read is not an empty record: it may contain unsent evidence.
     // Refuse this refresh rather than replacing bytes that cannot be inspected.
-    const existing = await loadOfflineManifest(trip.id);
+    const observed = await readOfflineManifest(trip.id);
+    const existing = observed?.envelope ?? null;
+    if (existing && existing.snapshot.shop.slug !== payload.shop.slug) {
+      throw new OfflineManifestError("shop_changed");
+    }
     const savedAt = nowDate();
     // Snapshot tokens carry a server-authenticated epoch. This local comparison
     // only removes retained text from this device; every sync writer still
@@ -938,7 +1047,11 @@ export async function saveOfflineManifest(
       // An older in-flight render must not replace a post-erasure copy and put
       // erased names back on this device, or mark old facts fresh. A revoked
       // medical-alert grant still takes effect when the roster payload is stale.
-      if (keepMedicalAlertWords) return existing;
+      if (keepMedicalAlertWords) {
+        if (!observed) throw new OfflineManifestError("unavailable");
+        await requireCurrentOfflineRecord(trip.id, observed.record, options.tenantRound);
+        return existing;
+      }
       const { medicalAlertsSavedBy: _previous, ...withoutSavedBy } = existing;
       const revoked: OfflineManifestEnvelope = {
         ...withoutSavedBy,
@@ -949,7 +1062,13 @@ export async function saveOfflineManifest(
       };
       const db = await openDatabase();
       try {
-        const persisted = await persistEnvelope(db, revoked, options.tenantRound, "snapshot");
+        const persisted = await persistEnvelope(
+          db,
+          revoked,
+          options.tenantRound,
+          "snapshot",
+          observed?.record ?? null,
+        );
         if (!persisted && options.tenantRound !== undefined)
           throw new OfflineManifestError("shop_changed");
       } finally {
@@ -1009,7 +1128,13 @@ export async function saveOfflineManifest(
     };
     const db = await openDatabase();
     try {
-      const persisted = await persistEnvelope(db, envelope, options.tenantRound, "snapshot");
+      const persisted = await persistEnvelope(
+        db,
+        envelope,
+        options.tenantRound,
+        "snapshot",
+        observed?.record ?? null,
+      );
       if (!persisted && options.tenantRound !== undefined)
         throw new OfflineManifestError("shop_changed");
     } finally {
