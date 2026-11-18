@@ -13,7 +13,7 @@ import {
   settleOpenBoardingObservations,
 } from "./boarding-observations";
 import { createBooking } from "./bookings";
-import { boardingObservations, bookings, trips } from "./schema/index";
+import { boardingObservations, bookings, trips, userAccounts } from "./schema/index";
 import { getTripRoster, listStaff } from "./trips";
 import { heldSeatCounts } from "./trips-queries";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
@@ -102,6 +102,92 @@ describe("recording a dock sighting", () => {
     expect(again).toMatchObject({ ok: true, replay: true });
     if (!first.ok || !again.ok) throw new Error("unreachable");
     expect(again.observationId).toBe(first.observationId);
+    expect(await observationRows(ctx)).toHaveLength(1);
+  });
+
+  it("does not disclose a prior observation to an unauthorized replay", async () => {
+    const ctx = await released();
+    const key = randomUUID();
+    expect(await record(ctx, key)).toMatchObject({ ok: true });
+    await expect(
+      recordBoardingObservation(ctx.db, {
+        shopId: ctx.shopId,
+        tripId: ctx.trip.id,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: randomUUID(),
+        clientKey: key,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+    expect(await observationRows(ctx)).toHaveLength(1);
+  });
+
+  it("does not disclose a prior observation after the staff account is disabled", async () => {
+    const ctx = await released();
+    const key = randomUUID();
+    expect(await record(ctx, key)).toMatchObject({ ok: true });
+    await ctx.db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, ctx.staffId));
+    await expect(record(ctx, key)).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+    expect(await observationRows(ctx)).toHaveLength(1);
+  });
+
+  it("refuses the same event key for a different original departure", async () => {
+    const ctx = await released();
+    const key = randomUUID();
+    expect(await record(ctx, key)).toMatchObject({ ok: true });
+    await expect(
+      recordBoardingObservation(ctx.db, {
+        shopId: ctx.shopId,
+        tripId: ctx.otherTripId,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        clientKey: key,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "key_reused" });
+    expect(await observationRows(ctx)).toHaveLength(1);
+  });
+
+  it("does not treat an empty supplied departure as an omitted departure on replay", async () => {
+    const ctx = await released();
+    const key = randomUUID();
+    expect(await record(ctx, key)).toMatchObject({ ok: true });
+    await expect(
+      recordBoardingObservation(ctx.db, {
+        shopId: ctx.shopId,
+        tripId: "",
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        clientKey: key,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "key_reused" });
+  });
+
+  it("keeps the original departure on an exact retry after the booking moves", async () => {
+    const ctx = await released();
+    const key = randomUUID();
+    const first = await record(ctx, key);
+    if (!first.ok) throw new Error("observation was not recorded");
+    await ctx.db
+      .update(bookings)
+      .set({ tripId: ctx.otherTripId })
+      .where(eq(bookings.id, ctx.bookingId));
+    await expect(record(ctx, key)).resolves.toMatchObject({
+      ok: true,
+      observationId: first.observationId,
+      tripId: ctx.trip.id,
+      replay: true,
+    });
+    await expect(
+      recordBoardingObservation(ctx.db, {
+        shopId: ctx.shopId,
+        tripId: ctx.otherTripId,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        clientKey: key,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "key_reused" });
     expect(await observationRows(ctx)).toHaveLength(1);
   });
 
