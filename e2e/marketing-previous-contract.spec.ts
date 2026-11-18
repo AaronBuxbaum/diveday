@@ -115,13 +115,28 @@ test("the pricing comparison is interactive", async ({ page }) => {
   await expect(comparison.locator("table").getByText("FareHarbor", { exact: true })).toBeVisible();
   await expect(comparison.locator("table").getByText("DiveDay", { exact: true })).toBeVisible();
   const totals = comparison.locator("tfoot");
+  // $30,000 in direct sales: 6% plus 2.9% and 200 fixed card fees.
+  await expect(totals.locator("td").first()).toContainText("$2,730");
   const before = await totals.innerText();
   const slider = comparison.getByRole("slider", {
     name: diverTranslator("en-US")("marketing.pricing.compare.sliderLabel"),
   });
   await slider.focus();
+  await slider.press("Home");
+  await expect(totals.locator("td").first()).toContainText("$0");
   await slider.press("End");
   await expect(totals).not.toHaveText(before);
+  await comparison
+    .getByText(diverTranslator("en-US")("marketing.pricing.compare.marketplaceToggle"), {
+      exact: true,
+    })
+    .click();
+  await expect(comparison.getByText(/Every sale you move from those sites/)).toBeVisible();
+  await expect(
+    comparison.getByRole("slider", {
+      name: diverTranslator("en-US")("marketing.pricing.compare.marketplaceShareLabel"),
+    }),
+  ).toBeVisible();
 });
 
 test.describe("the Spanish pricing title", () => {
