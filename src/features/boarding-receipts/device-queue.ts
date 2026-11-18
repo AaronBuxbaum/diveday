@@ -18,10 +18,13 @@ type TapInput = {
   actorId: string;
   originalMeeting: Meeting;
 };
+type PreparedTap = Readonly<{ eventId: string; serialized: string }>;
 type CaptureResult =
-  | { status: "disabled" | "not_saved" }
+  | { status: "disabled" | "not_saved" | "not_confirmed"; attempt: PreparedTap }
+  | { status: "invalid" }
   | { status: "retained_locally"; eventId: string };
 const DB_NAME = "diveday-dock-queue-disabled-v1";
+const preparedAttempts = new WeakSet<PreparedTap>();
 
 function validId(value: unknown): value is string {
   return (
@@ -55,8 +58,7 @@ function transactionDone(tx: IDBTransaction): Promise<void> {
   });
 }
 
-export async function captureDockTap(input: TapInput): Promise<CaptureResult> {
-  if (!dockQueueEnabled()) return { status: "disabled" };
+export function prepareDockTap(input: TapInput): PreparedTap | null {
   try {
     if (
       !validId(input.shopId) ||
@@ -64,15 +66,14 @@ export async function captureDockTap(input: TapInput): Promise<CaptureResult> {
       !validId(input.bookingId) ||
       !validId(input.actorId)
     )
-      return { status: "not_saved" };
+      return null;
     const meeting = input.originalMeeting;
-    if (!meeting || (meeting.kind !== "unknown" && meeting.kind !== "asserted"))
-      return { status: "not_saved" };
+    if (!meeting || (meeting.kind !== "unknown" && meeting.kind !== "asserted")) return null;
     if (
       meeting.kind === "asserted" &&
       (!validId(meeting.generationId) || !validId(meeting.meetingId))
     )
-      return { status: "not_saved" };
+      return null;
     const eventId = crypto.randomUUID();
     const event = {
       eventId,
@@ -87,7 +88,22 @@ export async function captureDockTap(input: TapInput): Promise<CaptureResult> {
           : { kind: "asserted", generationId: meeting.generationId, meetingId: meeting.meetingId },
       capturedAt: nowDate().toISOString(),
     };
-    const bytes = new TextEncoder().encode(JSON.stringify(event));
+    const attempt = Object.freeze({ eventId, serialized: JSON.stringify(event) });
+    preparedAttempts.add(attempt);
+    return attempt;
+  } catch {
+    return null;
+  }
+}
+
+/** The attempt is memory only until the transaction completes. */
+export async function persistPreparedDockTap(attempt: PreparedTap): Promise<CaptureResult> {
+  if (!dockQueueEnabled()) return { status: "disabled", attempt };
+  if (!preparedAttempts.has(attempt)) return { status: "invalid" };
+  const { eventId, serialized } = attempt;
+  let writeStarted = false;
+  try {
+    const bytes = new TextEncoder().encode(serialized);
     const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
       "encrypt",
       "decrypt",
@@ -106,6 +122,7 @@ export async function captureDockTap(input: TapInput): Promise<CaptureResult> {
     try {
       const tx = db.transaction("events", "readwrite");
       const done = transactionDone(tx);
+      writeStarted = true;
       tx.objectStore("events").add({ key, iv, ciphertext }, eventId);
       await done;
     } finally {
@@ -113,6 +130,12 @@ export async function captureDockTap(input: TapInput): Promise<CaptureResult> {
     }
     return { status: "retained_locally", eventId };
   } catch {
-    return { status: "not_saved" };
+    return { status: writeStarted ? "not_confirmed" : "not_saved", attempt };
   }
+}
+
+export async function captureDockTap(input: TapInput): Promise<CaptureResult> {
+  const attempt = prepareDockTap(input);
+  if (!attempt) return { status: "invalid" };
+  return persistPreparedDockTap(attempt);
 }
