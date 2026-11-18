@@ -306,13 +306,14 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
       const courseSeat = await openRosterRow(page, "Inez Noguera");
       const paper = courseSeat.locator("[data-course-forms-owed] details");
       await openIfClosed(paper);
+      const form = paper.getByLabel(staff("trips.roster.courseForms.formLabel"), { exact: true });
+      await expect(form).toBeVisible();
+      await expect(form).toHaveAttribute("required", "");
       await expect(
-        paper.getByLabel(`${staff("trips.roster.courseForms.formLabel")} (optional)`, {
-          exact: true,
-        }),
-      ).toBeVisible();
-      await expect(
-        paper.getByLabel(staff("trips.roster.courseForms.signedOn"), { exact: true }),
+        paper.getByLabel(
+          `${staff("trips.roster.courseForms.signedOn")} ${staff("trips.details.optionalHint")}`,
+          { exact: true },
+        ),
       ).toBeVisible();
       await expect(paper.getByRole("checkbox")).toBeVisible();
       await capture(page, "roster-paper-course-form-editor", "light", {
