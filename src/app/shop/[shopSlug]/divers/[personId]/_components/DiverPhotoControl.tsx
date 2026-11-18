@@ -1,12 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { type ChangeEvent, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { describeImageProblem, IMAGE_ACCEPT } from "@/components/ImageFileInput";
 import { PersonAvatar } from "@/components/PersonAvatar";
-import { SubmitButton } from "@/components/SubmitButton";
-import { ErrorToast } from "@/components/Toast";
-import { buttonClass } from "@/components/ui/button";
+import { ErrorToast, Toast } from "@/components/Toast";
 
 export type DiverPhotoCopy = {
   add: string;
@@ -15,9 +14,21 @@ export type DiverPhotoCopy = {
   adding: string;
   wrongTypeSuffix: string;
   tooBigSuffix: string;
+  saved: string;
+  error: string;
 };
 
-function PickButton({ copy, hasPhoto }: { copy: DiverPhotoCopy; hasPhoto: boolean }) {
+function PickButton({
+  copy,
+  hasPhoto,
+  name,
+  photoPath,
+}: {
+  copy: DiverPhotoCopy;
+  hasPhoto: boolean;
+  name: string;
+  photoPath: string | null;
+}) {
   const { pending } = useFormStatus();
   const [error, setError] = useState<string | null>(null);
   function onChange(event: ChangeEvent<HTMLInputElement>) {
@@ -36,17 +47,17 @@ function PickButton({ copy, hasPhoto }: { copy: DiverPhotoCopy; hasPhoto: boolea
   return (
     <>
       <label
-        className={`${buttonClass({ variant: "secondary", size: "sm" })} has-[:focus-visible]:focus-ring ${
-          pending ? "cursor-progress" : "cursor-pointer"
-        }`}
+        className="inline-flex cursor-pointer rounded-full has-[:focus-visible]:focus-ring"
+        title={hasPhoto ? copy.change : copy.add}
       >
-        <span aria-live="polite">{pending ? copy.adding : hasPhoto ? copy.change : copy.add}</span>
+        <PersonAvatar name={name} photoPath={photoPath} size="lg" />
         <input
           type="file"
           name="photo"
           accept={IMAGE_ACCEPT}
           disabled={pending}
           onChange={onChange}
+          aria-label={hasPhoto ? copy.change : copy.add}
           className="sr-only"
         />
       </label>
@@ -56,9 +67,7 @@ function PickButton({ copy, hasPhoto }: { copy: DiverPhotoCopy; hasPhoto: boolea
 }
 
 /**
- * The diver's picture on their record: their face (or initials), one button to
- * add or change it that uploads the moment a photo is picked, and a quiet
- * remove link once there is one.
+ * The avatar opens the picker and uploads as soon as a photo is chosen.
  */
 export function DiverPhotoControl({
   name,
@@ -68,28 +77,31 @@ export function DiverPhotoControl({
 }: {
   name: string;
   photoPath: string | null;
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<boolean>;
   copy: DiverPhotoCopy;
 }) {
+  const router = useRouter();
+  const [outcome, setOutcome] = useState<"saved" | "error" | null>(null);
   return (
-    <div className="flex items-center gap-3">
-      <PersonAvatar name={name} photoPath={photoPath} size="lg" />
-      <div className="flex flex-wrap items-center gap-2">
-        <form action={action}>
-          <PickButton copy={copy} hasPhoto={Boolean(photoPath)} />
-        </form>
-        {photoPath ? (
-          <form action={action}>
-            <input type="hidden" name="remove" value="1" />
-            <SubmitButton
-              pendingLabel={copy.adding}
-              className={buttonClass({ variant: "link", size: "sm" })}
-            >
-              {copy.remove}
-            </SubmitButton>
-          </form>
-        ) : null}
-      </div>
-    </div>
+    <>
+      <form
+        action={async (data) => {
+          try {
+            const ok = await action(data);
+            setOutcome(ok ? "saved" : "error");
+            if (ok) router.refresh();
+          } catch {
+            setOutcome("error");
+          }
+        }}
+      >
+        <PickButton copy={copy} hasPhoto={Boolean(photoPath)} name={name} photoPath={photoPath} />
+      </form>
+      {outcome === "saved" ? (
+        <Toast message={copy.saved} />
+      ) : outcome === "error" ? (
+        <ErrorToast message={copy.error} />
+      ) : null}
+    </>
   );
 }

@@ -118,6 +118,10 @@ const executedDiveSchema = z.object({
   // catalog *and* against the site's own field guide, since a constraint that
   // lives in a `<select>` is a suggestion (issue #1190).
   observedSpeciesSlug: z.union([z.literal(""), z.string().trim().max(80)]).optional(),
+  observedSpeciesEntries: z
+    .array(z.object({ slug: z.string().max(80).nullable(), name: z.string().max(80).nullable() }))
+    .max(30)
+    .optional(),
   // Bounded here and refused again in the write: a note with no reason above it
   // is `upsertExecutedDive`'s own refusal, because the pairing is a domain rule
   // and a `<select>` beside a `<textarea>` is a suggestion (issue #1184).
@@ -170,7 +174,15 @@ export async function saveExecutedDiveAction(
   formData: FormData,
 ): Promise<ExecutedDiveResult> {
   const staff = await manifestStaff(ctx);
-  const parsed = executedDiveSchema.safeParse(Object.fromEntries(formData));
+  const fields = Object.fromEntries(formData);
+  const rawSpecies = formData.getAll("observedSpeciesEntries");
+  let entries: unknown;
+  try {
+    entries = rawSpecies.length ? rawSpecies.map((entry) => JSON.parse(String(entry))) : [];
+  } catch {
+    return { status: "error", reason: "invalid" };
+  }
+  const parsed = executedDiveSchema.safeParse({ ...fields, observedSpeciesEntries: entries });
   if (!parsed.success) return { status: "error", reason: "invalid" };
   const checkpointDive = /^after_dive_(\d+)$/.exec(ctx.checkpoint)?.[1];
   if (!checkpointDive || Number(checkpointDive) !== parsed.data.diveNumber) {
@@ -210,7 +222,11 @@ export async function saveExecutedDiveAction(
       current: parsed.data.current || null,
     },
     notRecorded,
-    observedSpeciesSlug: parsed.data.observedSpeciesSlug || null,
+    observedSpeciesSlug:
+      parsed.data.observedSpeciesSlug ||
+      parsed.data.observedSpeciesEntries?.find((entry) => entry.slug)?.slug ||
+      null,
+    observedSpeciesEntries: parsed.data.observedSpeciesEntries,
     // A form that drew no species picker keeps the one logged before. Read off
     // the form, not the switch: a form loaded with sightings on saves the
     // species the crew picked even if the switch went off before Save.

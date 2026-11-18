@@ -3,6 +3,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExecutedDive } from "@/db/schema";
+import { DEFAULT_FLY_SAFE_HOURS, flySafeFrom } from "@/lib/fly-safe";
+import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./ExecutedDiveLog";
 
 /**
@@ -31,6 +33,8 @@ const labels: ExecutedDiveLabels = {
   actualSite: "Actual site",
   unknown: "Not recorded",
   maxDepth: "Maximum depth (m)",
+  diveDate: "Dive date",
+  changeDiveDate: "Change dive date",
   enteredAt: "Entered the water",
   exitedAt: "Exited the water",
   visibility: "Visibility",
@@ -39,6 +43,9 @@ const labels: ExecutedDiveLabels = {
   observedSpecies: "Seen on this dive",
   observedSpeciesHint: "Divers read this on their recap.",
   observedSpeciesNone: "Nothing to note",
+  speciesAdd: "Add",
+  speciesRemove: "Remove",
+  speciesPlaceholder: "Search or enter a species",
   planChangeReason: "Why the plan changed",
   planChangeReasonOptions: {
     current: "Current",
@@ -71,9 +78,14 @@ function renderLog(
   executed: ExecutedDiveLogRow[] = [],
   sightingsOn = true,
   depthUnit: "meters" | "feet" = "meters",
+  multiDay = false,
+  tripStartTime = "",
 ) {
   return render(
     <ExecutedDiveLog
+      tripDate="2026-08-01"
+      multiDay={multiDay}
+      tripStartTime={tripStartTime}
       planned={[
         {
           diveNumber: 1,
@@ -83,7 +95,10 @@ function renderLog(
           summaryLine,
         },
       ]}
-      liveDiveSites={[{ id: "site-1", name: "Molasses Reef" }]}
+      liveDiveSites={[
+        { id: "site-1", name: "Molasses Reef" },
+        { id: "site-2", name: "French Reef" },
+      ]}
       catalogSpecies={[
         { slug: "blue-tang", name: "Blue tang" },
         { slug: "spotted-eagle-ray", name: "Spotted eagle ray" },
@@ -133,6 +148,168 @@ describe("the executed-dive record is collapsed", () => {
     }
   });
 
+  it("uses the departure date with time-only entry and exit fields", async () => {
+    renderLog("Dive 1 — not recorded yet");
+    const entry = screen.getByLabelText("Entered the water (optional)");
+    const exit = screen.getByLabelText("Exited the water (optional)");
+    await userEvent.type(entry, "23:40");
+    await userEvent.type(exit, "00:20");
+    expect(document.querySelector<HTMLInputElement>('input[name="enteredAt"]')?.value).toBe(
+      "2026-08-01T23:40",
+    );
+    expect(document.querySelector<HTMLInputElement>('input[name="exitedAt"]')?.value).toBe(
+      "2026-08-02T00:20",
+    );
+  });
+
+  it("asks for the actual date on a multi-day trip and keeps it on time edits", async () => {
+    renderLog("Dive 1 — not recorded yet", [], true, "meters", true);
+    const date = screen.getByLabelText("Dive date (optional)");
+    const entry = screen.getByLabelText("Entered the water (optional)");
+    const exit = screen.getByLabelText("Exited the water (optional)");
+    expect(date).toHaveProperty("value", "");
+    await userEvent.type(date, "2026-08-03");
+    await userEvent.type(entry, "09:00");
+    await userEvent.type(exit, "09:50");
+    expect(document.querySelector<HTMLInputElement>('input[name="exitedAt"]')?.value).toBe(
+      "2026-08-03T09:50",
+    );
+    await userEvent.clear(exit);
+    await userEvent.type(exit, "09:55");
+    expect(document.querySelector<HTMLInputElement>('input[name="exitedAt"]')?.value).toBe(
+      "2026-08-03T09:55",
+    );
+    const value = document.querySelector<HTMLInputElement>('input[name="exitedAt"]')?.value ?? "";
+    const [day, time] = value.split("T");
+    const wall = parseWallTime(day, time);
+    if (!wall) throw new Error("missing exit time");
+    const exitAt = wallTimeToUtc(wall, "America/New_York");
+    const advice = flySafeFrom({
+      executedDives: [{ diveNumber: 1, exitedAt: exitAt }],
+      plannedDives: 1,
+      endsAt: new Date("2026-08-03T15:00:00Z"),
+      divedRecently: false,
+      now: new Date("2026-08-03T16:00:00Z"),
+      hours: DEFAULT_FLY_SAFE_HOURS,
+    });
+    expect(advice?.from).toEqual(new Date("2026-08-04T07:55:00Z"));
+  });
+
+  it("infers the next day when a same-day boat runs past midnight", async () => {
+    renderLog("Dive 1", [], true, "meters", false, "17:30");
+    await userEvent.type(screen.getByLabelText("Entered the water (optional)"), "00:10");
+    await userEvent.type(screen.getByLabelText("Exited the water (optional)"), "00:50");
+    expect(document.querySelector<HTMLInputElement>('input[name="exitedAt"]')?.value).toBe(
+      "2026-08-02T00:50",
+    );
+  });
+
+  it("infers midnight for a dive lasting about an hour", async () => {
+    renderLog("Dive 1");
+    await userEvent.type(screen.getByLabelText("Entered the water (optional)"), "22:59");
+    await userEvent.type(screen.getByLabelText("Exited the water (optional)"), "00:00");
+    expect(document.querySelector<HTMLInputElement>('input[name="exitedAt"]')?.value).toBe(
+      "2026-08-02T00:00",
+    );
+  });
+
+  it("keeps a saved later dive date when changing its time", async () => {
+    const logged = {
+      executed: {
+        diveNumber: 1,
+        enteredAt: new Date("2026-08-03T13:00:00Z"),
+        exitedAt: new Date("2026-08-03T13:50:00Z"),
+        maxDepthMeters: null,
+        observedConditions: null,
+        notRecorded: [],
+        observedSpeciesSlug: null,
+        planChangeReason: null,
+        planChangeNote: null,
+      } as unknown as ExecutedDive,
+      actualSite: { id: "site-1", name: "Molasses Reef" },
+    };
+    renderLog("Dive 1", [logged], true, "meters", true);
+    const exit = screen.getByLabelText("Exited the water (optional)");
+    await userEvent.clear(exit);
+    await userEvent.type(exit, "09:55");
+    expect(document.querySelector<HTMLInputElement>('input[name="exitedAt"]')?.value).toBe(
+      "2026-08-03T09:55",
+    );
+  });
+
+  it("preserves a recorded overnight exit even when the dive lasted over two hours", () => {
+    const logged = {
+      executed: {
+        diveNumber: 1,
+        enteredAt: new Date("2026-08-02T00:30:00Z"),
+        exitedAt: new Date("2026-08-02T04:30:00Z"),
+        maxDepthMeters: null,
+        observedConditions: null,
+        notRecorded: [],
+        observedSpeciesSlug: null,
+        planChangeReason: null,
+        planChangeNote: null,
+      } as unknown as ExecutedDive,
+      actualSite: { id: "site-1", name: "Molasses Reef" },
+    };
+    renderLog("Dive 1", [logged]);
+    expect(document.querySelector<HTMLInputElement>('input[name="exitedAt"]')?.value).toBe(
+      "2026-08-02T00:30",
+    );
+  });
+
+  it("preserves a saved plan-change explanation when the plan now matches", () => {
+    const logged = {
+      executed: {
+        diveNumber: 1,
+        enteredAt: null,
+        exitedAt: null,
+        maxDepthMeters: null,
+        observedConditions: null,
+        notRecorded: [],
+        observedSpeciesSlug: null,
+        planChangeReason: "weather",
+        planChangeNote: "Wind picked up",
+      } as unknown as ExecutedDive,
+      actualSite: { id: "site-1", name: "Molasses Reef" },
+    };
+    renderLog("Dive 1", [logged]);
+    expect(screen.queryByText("Why the plan changed")).toBeNull();
+    expect(document.querySelector<HTMLInputElement>('input[name="planChangeReason"]')?.value).toBe(
+      "weather",
+    );
+    expect(document.querySelector<HTMLInputElement>('input[name="planChangeNote"]')?.value).toBe(
+      "Wind picked up",
+    );
+  });
+
+  it("clears a change explanation when staff correct the site to the plan", async () => {
+    const logged = {
+      executed: {
+        diveNumber: 1,
+        enteredAt: null,
+        exitedAt: null,
+        maxDepthMeters: null,
+        observedConditions: null,
+        notRecorded: [],
+        observedSpeciesSlug: null,
+        planChangeReason: "weather",
+        planChangeNote: "Wind picked up",
+      } as unknown as ExecutedDive,
+      actualSite: { id: "site-2", name: "French Reef" },
+    };
+    renderLog("Dive 1", [logged]);
+    const site = screen.getByLabelText("Actual site (optional)");
+    await userEvent.clear(site);
+    await userEvent.type(site, "Molasses Reef");
+    expect(document.querySelector<HTMLInputElement>('input[name="planChangeReason"]')?.value).toBe(
+      "",
+    );
+    expect(document.querySelector<HTMLInputElement>('input[name="planChangeNote"]')?.value).toBe(
+      "",
+    );
+  });
+
   it("renders only the dive the crew is standing at", () => {
     renderLog("Dive 1 — not recorded yet");
     // One checkpoint, one dive: `after_dive_1` shows dive 1 and nothing else.
@@ -156,24 +333,19 @@ describe("the executed-dive record is collapsed", () => {
  * dropped the ordering would be invisible in a diff.
  */
 describe("the species picker", () => {
-  function speciesOptions() {
-    const select = document.querySelector(
-      'select[name="observedSpeciesSlug"]',
-    ) as HTMLSelectElement | null;
-    if (!select) throw new Error("species picker is not mounted");
-    return [...select.options].map((option) => option.value);
-  }
-
-  it("offers every species DiveDay carries, with this site's own faces first", () => {
+  it("offers site species first and the rest of the catalog", () => {
     renderLog("Dive 1 — not recorded yet");
+    const options = [...document.querySelectorAll("datalist[id^=species-] option")].map((option) =>
+      option.getAttribute("value"),
+    );
+    expect(options).toEqual(["Blue tang", "Spotted eagle ray"]);
+  });
 
-    // "Nothing to note" leads, because most dives are most dives.
-    expect(speciesOptions()[0]).toBe("");
-    // The site's guide next…
-    expect(speciesOptions()[1]).toBe("blue-tang");
-    // …and the animal nobody promises in a briefing is still reachable, which
-    // is the whole correction.
-    expect(speciesOptions()).toContain("spotted-eagle-ray");
+  it("only asks why when the actual site differs from the plan", async () => {
+    renderLog("Dive 1 — not recorded yet");
+    expect(screen.queryByText("Why the plan changed")).toBeNull();
+    await userEvent.clear(screen.getByLabelText("Actual site (optional)"));
+    expect(screen.getByText("Why the plan changed")).toBeTruthy();
   });
 
   it("draws the speciesShown marker beside the picker, so the save writes what it posts", () => {
@@ -184,23 +356,21 @@ describe("the species picker", () => {
     expect(marker?.value).toBe("1");
   });
 
-  it("keeps a chosen species when the crew changes the site", async () => {
-    // A sighting is a claim about a moment, not about a row in the site
-    // library, so re-picking the site reorders the list and drops nothing.
+  it("keeps catalog and free-text species when the site changes", async () => {
     renderLog("Dive 1 — not recorded yet");
-    const picker = document.querySelector(
-      'select[name="observedSpeciesSlug"]',
-    ) as HTMLSelectElement;
-    await userEvent.selectOptions(picker, "spotted-eagle-ray");
-    expect(picker.value).toBe("spotted-eagle-ray");
-
-    await userEvent.selectOptions(
-      document.querySelector('select[name="actualSiteId"]') as HTMLSelectElement,
-      "",
-    );
-    expect(
-      (document.querySelector('select[name="observedSpeciesSlug"]') as HTMLSelectElement).value,
-    ).toBe("spotted-eagle-ray");
+    const picker = screen.getByPlaceholderText("Search or enter a species");
+    await userEvent.type(picker, "Spotted eagle ray");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.type(picker, "Tiny shrimp");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.clear(screen.getByLabelText("Actual site (optional)"));
+    const values = [
+      ...document.querySelectorAll<HTMLInputElement>('input[name="observedSpeciesEntries"]'),
+    ].map((element) => JSON.parse(element.value));
+    expect(values).toEqual([
+      { slug: "spotted-eagle-ray", name: null },
+      { slug: null, name: "Tiny shrimp" },
+    ]);
   });
 });
 
@@ -313,6 +483,7 @@ it("keeps the shown unit with an open edit across a preference refresh", async (
   };
   const view = render(
     <ExecutedDiveLog
+      tripDate="2026-08-01"
       {...props}
       labels={{ ...labels, maxDepth: "Maximum depth (feet)" }}
       depthUnit="feet"
@@ -320,6 +491,7 @@ it("keeps the shown unit with an open edit across a preference refresh", async (
   );
   view.rerender(
     <ExecutedDiveLog
+      tripDate="2026-08-01"
       {...props}
       labels={{ ...labels, maxDepth: "Maximum depth (meters)" }}
       depthUnit="meters"

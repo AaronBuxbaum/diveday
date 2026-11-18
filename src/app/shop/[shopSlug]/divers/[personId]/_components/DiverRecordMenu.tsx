@@ -1,8 +1,13 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ErrorToast, Toast } from "@/components/Toast";
+import { buttonClass } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/layer";
 import { menuRowClass } from "@/components/ui/menu";
 
 /**
@@ -21,11 +26,20 @@ export function DiverRecordMenu({
   label,
   download,
   remove,
+  photo,
 }: {
   /** The "⋯" button's accessible name. */
   label: string;
   /** "Download record"; absent for a reader who may not export. */
   download?: { href: string; label: string };
+  photo?: {
+    action: (data: FormData) => Promise<boolean>;
+    label: string;
+    confirm: string;
+    cancel: string;
+    saved: string;
+    error: string;
+  };
   /** "Delete diver"; absent for a reader who may not delete, and on a deleted record. */
   remove?: {
     action: (formData: FormData) => Promise<void>;
@@ -34,34 +48,90 @@ export function DiverRecordMenu({
     confirmMessage: string;
   };
 }) {
-  if (!download && !remove) return null;
+  const [confirming, setConfirming] = useState(false);
+  const [outcome, setOutcome] = useState<{ ok: boolean; message: string } | null>(null);
+  const router = useRouter();
+  if (!download && !remove && !photo && !outcome) return null;
   return (
-    <RowMenu label={label} panelClassName="w-56">
-      {(close) => (
-        <>
-          {download ? (
-            <a
-              href={download.href}
-              download
-              onClick={close}
-              className={menuRowClass("quiet", { gutter: false })}
-            >
-              {download.label}
-            </a>
-          ) : null}
-          {remove ? (
-            <form action={remove.action}>
-              <SubmitButton
-                pendingLabel={remove.pendingLabel}
-                confirmMessage={remove.confirmMessage}
-                className={menuRowClass("danger", { gutter: false })}
+    <>
+      <RowMenu label={label} panelClassName="w-56">
+        {(close) => (
+          <>
+            {download ? (
+              <a
+                href={download.href}
+                download
+                onClick={close}
+                className={menuRowClass("quiet", { gutter: false })}
               >
-                {remove.label}
+                {download.label}
+              </a>
+            ) : null}
+            {photo ? (
+              <button
+                type="button"
+                className={menuRowClass("quiet", { gutter: false })}
+                onClick={() => {
+                  close();
+                  setConfirming(true);
+                }}
+              >
+                {photo.label}
+              </button>
+            ) : null}
+            {remove ? (
+              <form action={remove.action}>
+                <SubmitButton
+                  pendingLabel={remove.pendingLabel}
+                  confirmMessage={remove.confirmMessage}
+                  className={menuRowClass("danger", { gutter: false })}
+                >
+                  {remove.label}
+                </SubmitButton>
+              </form>
+            ) : null}
+          </>
+        )}
+      </RowMenu>
+      {photo ? (
+        <Dialog open={confirming} onClose={() => setConfirming(false)} title={photo.confirm}>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              className={buttonClass({ variant: "secondary" })}
+              onClick={() => setConfirming(false)}
+            >
+              {photo.cancel}
+            </button>
+            <form
+              action={async () => {
+                const data = new FormData();
+                data.set("remove", "1");
+                try {
+                  const ok = await photo.action(data);
+                  setOutcome({ ok, message: ok ? photo.saved : photo.error });
+                  if (ok) router.refresh();
+                } catch {
+                  setOutcome({ ok: false, message: photo.error });
+                }
+                setConfirming(false);
+              }}
+            >
+              <SubmitButton
+                pendingLabel={photo.label}
+                className={buttonClass({ variant: "danger" })}
+              >
+                {photo.label}
               </SubmitButton>
             </form>
-          ) : null}
-        </>
-      )}
-    </RowMenu>
+          </div>
+        </Dialog>
+      ) : null}
+      {outcome?.ok ? (
+        <Toast message={outcome.message} />
+      ) : outcome ? (
+        <ErrorToast message={outcome.message} />
+      ) : null}
+    </>
   );
 }

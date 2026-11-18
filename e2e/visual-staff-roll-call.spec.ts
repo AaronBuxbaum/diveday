@@ -247,6 +247,7 @@ for (const scheme of ["light", "dark"] as const) {
           await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}`);
           const log = await openDiveLog(page, boatOnTheWater.tripId, 1);
           // Waits on a control the open form renders and the closed one does not.
+          await log.getByLabel("Actual site").fill("French Reef");
           await log.getByLabel("Why the plan changed").waitFor();
           await page.mouse.move(0, 0);
           await capture(page, "manifest-plan-change", scheme);

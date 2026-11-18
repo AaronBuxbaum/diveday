@@ -1,0 +1,1 @@
+ALTER TABLE "executed_dives" ADD COLUMN "observed_species_entries" jsonb DEFAULT '[]' NOT NULL;

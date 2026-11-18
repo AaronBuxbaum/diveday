@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { revalidateAndRedirect } from "@/features/navigation";
 import { changePrivatePersonPhoto } from "@/features/person-photo";
-import { backTo, requireDiverActionContext } from "./action-helpers";
+import { requireDiverActionContext } from "./action-helpers";
 
 /** Live staff may add, replace, or remove a diver's portrait. */
 export async function savePersonPhotoAction(
@@ -12,12 +11,11 @@ export async function savePersonPhotoAction(
   formData: FormData,
 ) {
   const context = await requireDiverActionContext(shopSlug, personId, "invalid");
-  const { base, db, staff } = context;
+  const { db, staff } = context;
   const remove = formData.get("remove") === "1";
   const file = formData.get("photo");
   if (!remove && (!(file instanceof File) || file.size === 0)) {
-    revalidateAndRedirect(base, backTo(base, "invalid"));
-    return;
+    return false;
   }
   const result = await changePrivatePersonPhoto(db, {
     actor: {
@@ -32,8 +30,8 @@ export async function savePersonPhotoAction(
         : null,
   });
   if (result !== "saved") {
-    revalidateAndRedirect(base, backTo(base, "invalid"));
-    return;
+    return false;
   }
   revalidatePath(`/shop/${shopSlug}`, "layout");
+  return true;
 }

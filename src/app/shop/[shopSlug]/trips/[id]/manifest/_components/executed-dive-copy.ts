@@ -70,6 +70,8 @@ export function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): Ex
     actualSite: t("manifest.executedDive.actualSite"),
     unknown: t("manifest.executedDive.unknown"),
     maxDepth: t("manifest.executedDive.maxDepth", { unit: depthUnit === "feet" ? "ft" : "m" }),
+    diveDate: t("manifest.executedDive.diveDate"),
+    changeDiveDate: t("manifest.executedDive.changeDiveDate"),
     enteredAt: t("manifest.executedDive.enteredAt"),
     exitedAt: t("manifest.executedDive.exitedAt"),
     visibility: t("manifest.executedDive.visibility"),
@@ -78,6 +80,9 @@ export function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): Ex
     observedSpecies: t("manifest.executedDive.observedSpecies"),
     observedSpeciesHint: t("manifest.executedDive.observedSpeciesHint"),
     observedSpeciesNone: t("manifest.executedDive.observedSpeciesNone"),
+    speciesAdd: t("manifest.executedDive.speciesAdd"),
+    speciesRemove: t("manifest.executedDive.speciesRemove"),
+    speciesPlaceholder: t("manifest.executedDive.speciesPlaceholder"),
     planChangeReason: t("manifest.planChange.reasonLabel"),
     planChangeReasonOptions: {
       current: t("manifest.planChange.reason.current"),

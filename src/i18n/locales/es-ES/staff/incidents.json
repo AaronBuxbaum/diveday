@@ -246,7 +246,6 @@
       "figuresLabel": "Registro de seguridad del año",
       "noDepartures": "Ninguna salida volvió este año",
       "noCrewNone": "No hay tripulación registrada en ninguna salida este año",
-      "activityLink": "La actividad de seguridad del año",
       "noCrewDetail": "de {back, plural, one {# barco} other {# barcos}} de vuelta",
       "noCrewMonths": "Sin tripulación registrada en {none} de {months, plural, one {# mes} other {# meses}}",
       "rollCallsOpen": "{open, plural, one {# sin cerrar} other {# sin cerrar}} · {none, plural, one {# sin recuento} other {# sin recuento}}",

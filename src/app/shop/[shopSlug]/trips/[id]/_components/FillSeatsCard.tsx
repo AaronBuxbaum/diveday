@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { PersonAvatar } from "@/components/PersonAvatar";
@@ -214,9 +215,13 @@ export function FillSeatsCard({
                   </span>
                 </span>
                 {addForm ? null : (
-                  <a href={addHref} className={buttonClass({ variant: "secondary", size: "sm" })}>
+                  <Link
+                    href={addHref}
+                    scroll={false}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
                     {t("trips.clock.filling.add")}
-                  </a>
+                  </Link>
                 )}
               </div>
               {addForm}

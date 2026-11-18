@@ -6,15 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import {
-  ChoiceRow,
-  controlClass,
-  DateField,
-  Field,
-  FieldGrid,
-  FormStatus,
-  textareaClassFor,
-} from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ExecutedDive } from "@/db/schema";
 import { type DepthUnit, maxEnteredDepth, metersToFeet } from "@/lib/depth-units";
@@ -25,16 +17,9 @@ import {
   PLAN_CHANGE_REASONS,
   type PlanChangeReason,
 } from "@/lib/plan-change";
-import { utcToWallTime } from "@/lib/zoned";
 import type { ExecutedDiveResult } from "../actions";
-import { SPECIES_SHOWN_FIELD } from "./species-shown";
-
-function dateTimeValue(value: Date | null, timeZone: string) {
-  if (!value) return "";
-  const wall = utcToWallTime(value, timeZone);
-  const pad = (part: number) => String(part).padStart(2, "0");
-  return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}T${pad(wall.hour)}:${pad(wall.minute)}`;
-}
+import { DiveTimeFields } from "./DiveTimeFields";
+import { SpeciesPicker } from "./SpeciesPicker";
 
 /**
  * The words this surface needs, resolved on the server and handed down —
@@ -46,6 +31,8 @@ export type ExecutedDiveLabels = {
   actualSite: string;
   unknown: string;
   maxDepth: string;
+  diveDate: string;
+  changeDiveDate: string;
   enteredAt: string;
   exitedAt: string;
   visibility: string;
@@ -60,6 +47,9 @@ export type ExecutedDiveLabels = {
   observedSpeciesHint: string;
   /** The empty option: a dive where nothing stood out is an ordinary dive. */
   observedSpeciesNone: string;
+  speciesAdd: string;
+  speciesRemove: string;
+  speciesPlaceholder: string;
   /**
    * **Why the boat did not dive the plan** (issue #1184, delight report D24).
    * Four coded reasons plus an empty option, because this one reaches a diver's
@@ -98,6 +88,9 @@ export function ExecutedDiveLog({
   timeZone,
   depthUnit,
   checkpoint,
+  tripDate,
+  tripStartTime = "",
+  multiDay = false,
   sightingsOn = true,
   headed = true,
   row: inList,
@@ -171,6 +164,9 @@ export function ExecutedDiveLog({
   timeZone: string;
   depthUnit: DepthUnit;
   checkpoint: RollCallCheckpoint;
+  tripDate: string;
+  tripStartTime?: string;
+  multiDay?: boolean;
 }) {
   const byNumber = new Map(executed.map((row) => [row.executed.diveNumber, row]));
   const activeDiveNumber = Number(/^after_dive_(\d+)$/.exec(checkpoint)?.[1] ?? 0);
@@ -226,6 +222,9 @@ export function ExecutedDiveLog({
             action={action}
             labels={labels}
             timeZone={timeZone}
+            tripDate={tripDate}
+            tripStartTime={tripStartTime}
+            multiDay={multiDay}
             depthUnit={depthUnit}
           />
         </AutoOpenDetails>
@@ -261,6 +260,9 @@ function ExecutedDiveForm({
   action,
   labels,
   timeZone,
+  tripDate,
+  tripStartTime,
+  multiDay,
   depthUnit,
 }: {
   diveNumber: number;
@@ -278,6 +280,9 @@ function ExecutedDiveForm({
   ) => Promise<ExecutedDiveResult>;
   labels: ExecutedDiveLabels;
   timeZone: string;
+  tripDate: string;
+  tripStartTime: string;
+  multiDay: boolean;
   depthUnit: DepthUnit;
 }) {
   const [result, formAction] = useActionState(action, undefined);
@@ -285,6 +290,7 @@ function ExecutedDiveForm({
   // unknown; only a missing row gets the planned-site default.
   const executedSite = row ? row.actualSite : plannedSite;
   const [actualSiteId, setActualSiteId] = useState(executedSite?.id ?? "");
+  const [actualSiteName, setActualSiteName] = useState(executedSite?.name ?? "");
   const [initialDepth] = useState(() => {
     const meters = row?.executed.maxDepthMeters ?? null;
     const value =
@@ -299,18 +305,10 @@ function ExecutedDiveForm({
   const depthUnchanged = !depthEdited;
   const submittedDepth = depthUnchanged ? (initialDepth.meters ?? "") : maxDepth;
   const submittedUnit = depthUnchanged ? "meters" : initialDepth.unit;
-  const [enteredAt, setEnteredAt] = useState(
-    dateTimeValue(row?.executed.enteredAt ?? null, timeZone),
-  );
-  const [exitedAt, setExitedAt] = useState(dateTimeValue(row?.executed.exitedAt ?? null, timeZone));
   const [visibility, setVisibility] = useState(
     String(row?.executed.observedConditions?.visibility ?? ""),
   );
   const [current, setCurrent] = useState(String(row?.executed.observedConditions?.current ?? ""));
-  const [depthNotRecorded, setDepthNotRecorded] = useState(
-    row?.executed.notRecorded.includes("depth") ?? false,
-  );
-  const [species, setSpecies] = useState(row?.executed.observedSpeciesSlug ?? "");
   const [planChangeReason, setPlanChangeReason] = useState<PlanChangeReason | "">(
     row?.executed.planChangeReason ?? "",
   );
@@ -344,23 +342,32 @@ function ExecutedDiveForm({
       <input type="hidden" name="diveNumber" value={diveNumber} />
       <input type="hidden" name="maxDepthMeters" value={submittedDepth} />
       <input type="hidden" name="depthUnit" value={submittedUnit} />
+      <input type="hidden" name="actualSiteId" value={actualSiteId} />
       <h3 className="font-semibold">{diveLabel}</h3>
       <p className="mt-1 text-sm text-muted">{plannedSiteLabel}</p>
       <FieldGrid columns={2} className="mt-4">
-        <Field label={labels.actualSite}>
-          <select
-            name="actualSiteId"
-            value={actualSiteId}
-            onChange={(event) => setActualSiteId(event.target.value)}
+        <Field label={labels.actualSite} hint={labels.optional}>
+          <input
+            list={`sites-${diveNumber}`}
+            value={actualSiteName}
+            onChange={(event) => {
+              const name = event.target.value;
+              const site = liveDiveSites.find((candidate) => candidate.name === name);
+              event.target.setCustomValidity(name && !site ? labels.refusals.invalid : "");
+              if (site?.id && site.id === plannedSite?.id && actualSiteId !== site.id) {
+                setPlanChangeReason("");
+                setPlanChangeNote("");
+              }
+              setActualSiteName(name);
+              setActualSiteId(site?.id ?? "");
+            }}
             className={controlClass}
-          >
-            <option value="">{labels.unknown}</option>
+          />
+          <datalist id={`sites-${diveNumber}`}>
             {liveDiveSites.map((site) => (
-              <option key={site.id} value={site.id}>
-                {site.name}
-              </option>
+              <option key={site.id} value={site.name} />
             ))}
-          </select>
+          </datalist>
         </Field>
         {/* **Why the plan changed, beside the site that changed** (issue
             #1184, delight report D24). Both fields are optional and neither
@@ -368,42 +375,53 @@ function ExecutedDiveForm({
             why still has a record saying the site changed, which is the true
             thing. The reason is a code because a diver reads it on their own
             record; the note is free text because nobody but the shop does. */}
-        <Field
-          label={labels.planChangeReason}
-          error={
-            planChangeReasonError ? labels.refusals.plan_change_note_without_reason : undefined
-          }
-        >
-          <select
-            name="planChangeReason"
-            value={planChangeReason}
-            onChange={(event) => setPlanChangeReason(event.target.value as PlanChangeReason | "")}
-            className={controlClass}
-          >
-            <option value="">{labels.unknown}</option>
-            {PLAN_CHANGE_REASONS.map((reason) => (
-              <option key={reason} value={reason}>
-                {labels.planChangeReasonOptions[reason]}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field
-          label={labels.planChangeNote}
-          description={labels.planChangeNoteHint}
-          hint={labels.optional}
-          error={planChangeNoteError ? labels.refusals.plan_change_note_too_long : undefined}
-          className="sm:col-span-2"
-        >
-          <textarea
-            name="planChangeNote"
-            rows={2}
-            maxLength={PLAN_CHANGE_NOTE_MAX}
-            value={planChangeNote}
-            onChange={(event) => setPlanChangeNote(event.target.value)}
-            className={textareaClassFor(2)}
-          />
-        </Field>
+        {actualSiteId !== (plannedSite?.id ?? "") ? (
+          <>
+            <Field
+              label={labels.planChangeReason}
+              error={
+                planChangeReasonError ? labels.refusals.plan_change_note_without_reason : undefined
+              }
+            >
+              <select
+                name="planChangeReason"
+                value={planChangeReason}
+                onChange={(event) =>
+                  setPlanChangeReason(event.target.value as PlanChangeReason | "")
+                }
+                className={controlClass}
+              >
+                <option value="">{labels.unknown}</option>
+                {PLAN_CHANGE_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {labels.planChangeReasonOptions[reason]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field
+              label={labels.planChangeNote}
+              description={labels.planChangeNoteHint}
+              hint={labels.optional}
+              error={planChangeNoteError ? labels.refusals.plan_change_note_too_long : undefined}
+              className="sm:col-span-2"
+            >
+              <textarea
+                name="planChangeNote"
+                rows={2}
+                maxLength={PLAN_CHANGE_NOTE_MAX}
+                value={planChangeNote}
+                onChange={(event) => setPlanChangeNote(event.target.value)}
+                className={textareaClassFor(2)}
+              />
+            </Field>
+          </>
+        ) : (
+          <>
+            <input type="hidden" name="planChangeReason" value={planChangeReason} />
+            <input type="hidden" name="planChangeNote" value={planChangeNote} />
+          </>
+        )}
         <Field
           label={initialDepth.label}
           hint={labels.optional}
@@ -422,30 +440,15 @@ function ExecutedDiveForm({
             className={`${controlClass} tabular-nums`}
           />
         </Field>
-        <Field
-          label={labels.enteredAt}
-          hint={labels.optional}
-          error={timesError ? labels.refusals.times_transposed : undefined}
-        >
-          <DateField
-            name="enteredAt"
-            type="datetime-local"
-            value={enteredAt}
-            onChange={(event) => setEnteredAt(event.target.value)}
-          />
-        </Field>
-        <Field
-          label={labels.exitedAt}
-          hint={labels.optional}
-          error={timesError ? labels.refusals.times_transposed : undefined}
-        >
-          <DateField
-            name="exitedAt"
-            type="datetime-local"
-            value={exitedAt}
-            onChange={(event) => setExitedAt(event.target.value)}
-          />
-        </Field>
+        <DiveTimeFields
+          row={row?.executed}
+          timeZone={timeZone}
+          tripDate={tripDate}
+          tripStartTime={tripStartTime}
+          multiDay={multiDay}
+          labels={labels}
+          timesError={timesError}
+        />
         <Field label={labels.visibility} hint={labels.optional}>
           <input
             name="visibility"
@@ -462,50 +465,15 @@ function ExecutedDiveForm({
             className={controlClass}
           />
         </Field>
-        {/* **One species the crew saw** (issue #1190, delight report D30).
-            Not free text: what a diver reads has to arrive in their language,
-            and the catalog is DiveDay's copy in both (ADR
-            20260813-marine-life-is-diveday-copy).
-
-            The whole catalog, with this site's own field guide floated to the
-            top — a first pass bounded it *to* the guide, which had it exactly
-            backwards. The guide is at most eight faces a shop names because
-            the reef shows them reliably; the eagle ray and the nurse shark are
-            in the catalog and on nobody's eight, so the bounded version
-            admitted the blue tang and refused the thing anyone would actually
-            write down. Guide-first keeps the ordinary pick one thumb-flick
-            away without ruling the extraordinary one out. */}
         {sightingsOn ? (
-          <Field label={labels.observedSpecies} description={labels.observedSpeciesHint}>
-            <select
-              name="observedSpeciesSlug"
-              value={species}
-              onChange={(event) => setSpecies(event.target.value)}
-              className={controlClass}
-            >
-              <option value="">{labels.observedSpeciesNone}</option>
-              {speciesOptions.map((entry) => (
-                <option key={entry.slug} value={entry.slug}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-            {/* The save writes the species only from a form that drew this
-                picker; without the marker it keeps the one logged before. */}
-            <input type="hidden" name={SPECIES_SHOWN_FIELD} value="1" />
-          </Field>
+          <SpeciesPicker
+            diveNumber={diveNumber}
+            options={speciesOptions}
+            row={row?.executed}
+            labels={labels}
+          />
         ) : null}
       </FieldGrid>
-      <ChoiceRow
-        name="notRecorded"
-        type="checkbox"
-        value="depth"
-        checked={depthNotRecorded}
-        onChange={(event) => setDepthNotRecorded(event.target.checked)}
-        className="mt-4 text-sm"
-      >
-        {labels.notRecordedDepth}
-      </ChoiceRow>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <SubmitButton pendingLabel={labels.save} className={buttonClass({ size: "sm" })}>
           {labels.save}

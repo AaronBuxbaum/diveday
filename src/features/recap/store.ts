@@ -980,8 +980,7 @@ async function loadRecapPageData(
   // same turtle says "turtle" once: this is a keepsake line, not a tally.
   //
   // **Two places a crew writes a sighting, one line a diver reads.** The dive
-  // log's own species field is one thing a divemaster wrote up beside the depth
-  // and the times; the Seen chips are what the crew tapped at the rail
+  // log's species are what a divemaster wrote up beside the depth and times; the Seen chips are what the crew tapped at the rail
   // (`trip_sightings`). They are the same claim made on two surfaces, and a
   // diver who was in the water for it should not have their day depend on which
   // one the crew reached for. The log leads because it is per dive and
@@ -995,8 +994,12 @@ async function loadRecapPageData(
     ? [...livedDives].sort((a, b) => a.executed.diveNumber - b.executed.diveNumber)
     : [];
   for (const { executed } of logged) {
-    const slug = executed.observedSpeciesSlug;
-    if (slug && !observedSpecies.includes(slug)) observedSpecies.push(slug);
+    const entries = executed.observedSpeciesEntries ?? [];
+    const species = entries.length
+      ? entries.map((entry) => entry.slug ?? (entry.name ? `custom:${entry.name}` : null))
+      : [executed.observedSpeciesSlug];
+    for (const item of species)
+      if (item && !observedSpecies.includes(item)) observedSpecies.push(item);
   }
   for (const tapped of row.sightingsEnabled ? tappedSightings : []) {
     if (!observedSpecies.includes(tapped.speciesSlug)) observedSpecies.push(tapped.speciesSlug);

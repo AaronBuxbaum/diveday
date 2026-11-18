@@ -459,15 +459,34 @@ test.describe("capture harness", () => {
     test("is invisible to getAnimations(), so only the switch-off settles it", async ({ page }) => {
       await openDiverProfile(page, "Priya", "Priya Sharma");
       await page.getByRole("region", { name: "The story" }).waitFor();
+      // The profile helper parks the pointer after navigation. Let any hover
+      // transitions caused by that move finish before measuring the resize.
+      await page.evaluate(async () => {
+        const transitions = document
+          .getAnimations()
+          .filter((animation) => animation.constructor.name === "CSSTransition");
+        await Promise.allSettled(transitions.map((animation) => animation.finished));
+      });
 
       // Crossing 40rem downward is what starts it — the same resize `capture()`
       // performs on its first viewport.
       await page.setViewportSize({ width: 390, height: 844 });
       const running = await page.evaluate(() =>
-        document.getAnimations().map((animation) => animation.constructor.name),
+        document
+          .getAnimations()
+          .filter((animation) => animation.constructor.name === "CSSTransition")
+          .map((animation) => {
+            const effect = animation.effect as KeyframeEffect | null;
+            const target = effect?.target;
+            return {
+              property: (animation as CSSTransition).transitionProperty,
+              target: target instanceof Element ? target.outerHTML.slice(0, 500) : null,
+              pseudoElement: effect?.pseudoElement ?? null,
+            };
+          }),
       );
       expect(
-        running.filter((name) => name === "CSSTransition"),
+        running,
         "a CSSTransition is running at the moment `capture()` resizes, and there are two " +
           "readings. Either Chromium has started listing ::details-content transitions, in " +
           'which case Playwright\'s animations: "disabled" may now settle this on its own — ' +

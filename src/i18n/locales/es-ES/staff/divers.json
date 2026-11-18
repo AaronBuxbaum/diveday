@@ -251,6 +251,10 @@
     "photoAdd": "Agregar foto",
     "photoChange": "Cambiar foto",
     "photoRemove": "Quitar foto",
+    "photoSaved": "Foto guardada.",
+    "photoError": "No se pudo guardar la foto. Inténtalo de nuevo.",
+    "photoConfirm": "¿Quitar esta foto?",
+    "photoRemoved": "Foto quitada.",
     "photoAdding": "Agregando foto…"
   },
   "bookActivity": {

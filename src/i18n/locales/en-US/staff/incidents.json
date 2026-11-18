@@ -246,7 +246,6 @@
       "figuresLabel": "The year’s safety record",
       "noDepartures": "No departures came back this year",
       "noCrewNone": "No crew recorded on any departure this year",
-      "activityLink": "The year’s safety activity",
       "noCrewDetail": "of {back, plural, one {# boat} other {# boats}} back",
       "noCrewMonths": "No crew recorded in {none} of {months, plural, one {# month} other {# months}}",
       "rollCallsOpen": "{open, plural, one {# not closed} other {# not closed}} · {none, plural, one {# with no roll call taken} other {# with no roll call taken}}",

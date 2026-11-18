@@ -77,11 +77,11 @@ export function DiverHeader({
       <ShopPageHeader
         eyebrow={t("divers.page.title")}
         title={diver.person.fullName}
+        titlePrefix={photo}
         align="start"
         actions={menu}
         meta={
           <div className="flex flex-col gap-3">
-            {photo}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
               {/* `mailtoHref`/`telHref` (src/lib/contact-links.ts), not a template
                 string with the sanitizing regex copied in beside it: a shop

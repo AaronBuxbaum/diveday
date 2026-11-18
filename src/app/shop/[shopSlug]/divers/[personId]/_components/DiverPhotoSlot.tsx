@@ -27,6 +27,8 @@ export function DiverPhotoSlot({
         change: t("divers.header.photoChange"),
         remove: t("divers.header.photoRemove"),
         adding: t("divers.header.photoAdding"),
+        saved: t("divers.header.photoSaved"),
+        error: t("divers.header.photoError"),
         wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
         tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
       }}

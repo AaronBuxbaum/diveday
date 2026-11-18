@@ -52,6 +52,7 @@ import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
 import { seedPartnerReferrals } from "./seed-partner-referrals";
 import { seedPromos } from "./seed-promos";
+import { seedRecapDetails } from "./seed-recap-details";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedRentalFleet } from "./seed-rental-fleet";
@@ -493,6 +494,7 @@ const THE_DAY: readonly SeedStep[] = [
   history((db, c) => seedDeskFollowThrough(db, c.shopId, c.staff.instructor.id)),
   // What the boats, crew and rental fleet actually did on those sailed days.
   history((db, c) => seedSailedRecords(db, c.shopId)),
+  history((db, c) => seedRecapDetails(db, c.shopId, c.staff.instructor.id)),
   history((db, c) => seedRentalFleet(db, c.shopId)),
   history((db, c) =>
     seedRentalHistory(

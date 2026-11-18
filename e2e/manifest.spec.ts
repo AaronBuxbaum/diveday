@@ -1245,6 +1245,7 @@ test("the crew records why the plan changed, and the plan itself does not move",
 
   // A note with no reason above it is refused rather than dropped, and what
   // the divemaster typed survives the refusal (issue #1018's rule).
+  await log.getByLabel("Actual site").fill("French Reef");
   await log.getByLabel("Note for the shop").fill("The mooring was taken.");
   await log.getByRole("button", { name: "Save dive record" }).click();
   await expect(log.getByText(/Choose why the plan changed/).first()).toBeVisible();
@@ -1270,19 +1271,19 @@ test("a transposed dive log entry is refused out loud and keeps what was typed",
   const summary = page.locator("summary").filter({ hasText: "Dive 1" });
   const log = await openDiveLog(page, tripIdFromUrl(page));
   await expect(summary).toContainText("not recorded yet");
-  await log.getByLabel("Entered the water").fill("2026-07-21T14:35");
-  await log.getByLabel("Exited the water").fill("2026-07-21T14:05");
+  await log.getByLabel("Entered the water").fill("14:35");
+  await log.getByLabel("Exited the water").fill("14:05");
   await log.getByLabel(/Maximum depth/).fill("27");
   await log.getByRole("button", { name: "Save dive record" }).click();
 
   await expect(log.getByText(/exit time must be after the entry time/).first()).toBeVisible();
   // The whole point: nothing the divemaster entered is lost to the refusal.
-  await expect(log.getByLabel("Entered the water")).toHaveValue("2026-07-21T14:35");
-  await expect(log.getByLabel("Exited the water")).toHaveValue("2026-07-21T14:05");
+  await expect(log.getByLabel("Entered the water")).toHaveValue("14:35");
+  await expect(log.getByLabel("Exited the water")).toHaveValue("14:05");
   await expect(log.getByLabel(/Maximum depth/)).toHaveValue("27");
 
   // Correcting the one wrong field is all it takes.
-  await log.getByLabel("Exited the water").fill("2026-07-21T15:05");
+  await log.getByLabel("Exited the water").fill("15:05");
   await log.getByRole("button", { name: "Save dive record" }).click();
   await expect(log.getByText("Dive record saved")).toBeVisible();
   // And the summary now states the record rather than its absence, which is

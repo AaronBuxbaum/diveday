@@ -29,6 +29,7 @@ import { DiverFormStatus, NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { TripCreditGroup } from "./_components/TripCreditGroup";
 import { bookingPageNumber, DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
+import { savePersonPhotoAction } from "./photo-actions";
 import { deletePersonAction } from "./record-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -228,6 +229,18 @@ export default async function DiverDetailPage({
           <>
             <DiverRecordMenu
               label={t("divers.record.menuLabel")}
+              photo={
+                !removed && diverPhotoDisplayPath(diver.person)
+                  ? {
+                      action: savePersonPhotoAction.bind(null, shopSlug, personId),
+                      label: t("divers.header.photoRemove"),
+                      confirm: t("divers.header.photoConfirm"),
+                      cancel: t("divers.page.cancel"),
+                      saved: t("divers.header.photoRemoved"),
+                      error: t("divers.header.photoError"),
+                    }
+                  : undefined
+              }
               download={
                 canExport
                   ? {
