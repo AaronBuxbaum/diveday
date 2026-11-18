@@ -645,7 +645,8 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       if (
         typeof parsed !== "object" ||
         parsed === null ||
-        !Array.isArray((parsed as { snapshot?: { manifests?: unknown } }).snapshot?.manifests)
+        !Array.isArray((parsed as { snapshot?: { manifests?: unknown } }).snapshot?.manifests) ||
+        !recognizedEnvelope(parsed)
       ) {
         throw new Error("Stored offline-manifest envelope has an unrecognized shape");
       }
@@ -672,7 +673,9 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
         throw new OfflineManifestError("unavailable");
       }
       if (pendingEvents === 0) {
-        await deleteOfflineManifest(tripId, db);
+        if (!(await deleteOfflineManifest(tripId, record, db))) {
+          throw new OfflineManifestError("unavailable");
+        }
         return null;
       }
     }
@@ -1129,24 +1132,95 @@ export async function wipeOfflineMedicalAlerts(
 
 async function deleteOfflineManifest(
   tripId: string,
-  existingDb?: IDBDatabase,
-  isCurrent?: () => boolean,
+  expected: StoredRecord,
+  db: IDBDatabase,
 ): Promise<boolean> {
-  const ownsDb = existingDb === undefined;
-  const db = existingDb ?? (await openDatabase());
-  try {
-    // The purge may have waited for openDatabase after its locked record
-    // reread. Recheck at the last synchronous point before queuing the delete
-    // request so a newer tenant round cannot be crossed by that await.
-    if (isCurrent && !isCurrent()) return false;
-    const transaction = db.transaction(MANIFEST_STORE, "readwrite");
-    transaction.objectStore(MANIFEST_STORE).delete(tripId);
-    await transactionDone(transaction);
-    announceManifestChange(tripId, "delete");
-    return true;
-  } finally {
-    if (ownsDb) db.close();
+  const transaction = db.transaction(MANIFEST_STORE, "readwrite");
+  const done = transactionDone(transaction);
+  const store = transaction.objectStore(MANIFEST_STORE);
+  let deleted = false;
+  store.get(tripId).onsuccess = (event) => {
+    const current: unknown = (event.target as IDBRequest<unknown>).result;
+    if (!sameStoredRecord(current, expected)) return;
+    store.delete(tripId);
+    deleted = true;
+  };
+  await done;
+  if (deleted) announceManifestChange(tripId, "delete");
+  return deleted;
+}
+
+/** Compare inside the delete transaction; unknown non-scalar metadata fails closed. */
+function sameStoredRecord(current: unknown, expected: StoredRecord): boolean {
+  if (!current || typeof current !== "object" || Array.isArray(current)) return false;
+  const a = current as Record<string, unknown>;
+  const b = expected as unknown as Record<string, unknown>;
+  const supported = new Set([
+    "tripId",
+    "expiresAt",
+    "shopSlug",
+    "pendingEvents",
+    "iv",
+    "ciphertext",
+  ]);
+  if (
+    typeof b.tripId !== "string" ||
+    typeof b.expiresAt !== "string" ||
+    (b.shopSlug !== undefined && typeof b.shopSlug !== "string") ||
+    (b.pendingEvents !== undefined &&
+      (!Number.isSafeInteger(b.pendingEvents) || (b.pendingEvents as number) < 0)) ||
+    Object.keys(b).some((key) => !supported.has(key))
+  )
+    return false;
+  const keys = Object.keys(b);
+  if (Object.keys(a).length !== keys.length) return false;
+  for (const key of keys) {
+    if (!Object.hasOwn(a, key)) return false;
+    if (key === "iv" || key === "ciphertext") {
+      try {
+        const byteLength = Object.getOwnPropertyDescriptor(
+          ArrayBuffer.prototype,
+          "byteLength",
+        )?.get;
+        if (!byteLength || byteLength.call(a[key]) !== byteLength.call(b[key])) return false;
+        const left = new Uint8Array(a[key] as ArrayBuffer);
+        const right = new Uint8Array(b[key] as ArrayBuffer);
+        if (left.some((byte, index) => byte !== right[index])) return false;
+      } catch {
+        return false;
+      }
+    } else if ((a[key] !== null && typeof a[key] === "object") || a[key] !== b[key]) return false;
   }
+  return true;
+}
+
+/** Unknown queues and statuses cannot safely be treated as an empty queue. */
+function recognizedEnvelope(value: object): boolean {
+  const row = value as Record<string, unknown>;
+  const supported = new Set([
+    "snapshot",
+    "events",
+    "checklistEvents",
+    "arrivalEvents",
+    "medicalAlertsSavedBy",
+    "selectedRollCallMeetingDay",
+  ]);
+  if (Object.keys(row).some((key) => !supported.has(key))) return false;
+  return ["events", "checklistEvents", "arrivalEvents"].every((key) => {
+    const queue = row[key];
+    if (queue === undefined) return true;
+    return (
+      Array.isArray(queue) &&
+      queue.every(
+        (event) =>
+          event !== null &&
+          typeof event === "object" &&
+          ["pending", "applied", "rejected"].includes(
+            (event as { syncStatus?: string }).syncStatus ?? "",
+          ),
+      )
+    );
+  });
 }
 
 /**

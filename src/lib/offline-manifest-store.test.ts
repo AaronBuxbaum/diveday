@@ -2,7 +2,7 @@
 import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import { purgeAsVerifiedShop } from "@/test/offline-manifest-purge";
@@ -23,6 +23,7 @@ import {
 } from "./offline-manifest-store";
 import {
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
+  OFFLINE_MANIFEST_RECORD_VERSION,
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
 } from "./offline-manifests";
@@ -298,6 +299,143 @@ describe("saveOfflineManifest", () => {
 });
 
 describe("loadOfflineManifest", () => {
+  it("retains a readable expired envelope with an unknown queue", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+    const key = await new Promise<CryptoKey>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const get = db
+          .transaction("keys", "readonly")
+          .objectStore("keys")
+          .get("manifest-aes-gcm-v1");
+        get.onsuccess = () => {
+          db.close();
+          resolve(get.result as CryptoKey);
+        };
+        get.onerror = () => {
+          db.close();
+          reject(get.error);
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    const record = (await rawStoredRecord(tripId)) as {
+      iv: ArrayBuffer;
+      ciphertext: ArrayBuffer;
+    } & Record<string, unknown>;
+    const additionalData = new TextEncoder().encode(`${OFFLINE_MANIFEST_RECORD_VERSION}:${tripId}`);
+    const plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: record.iv, additionalData },
+      key,
+      record.ciphertext,
+    );
+    const envelope = JSON.parse(new TextDecoder().decode(plaintext)) as Record<string, unknown>;
+    envelope.futureQueue = [{ syncStatus: "pending" }];
+    record.iv = crypto.getRandomValues(new Uint8Array(12)).buffer;
+    record.ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: record.iv, additionalData },
+      key,
+      new TextEncoder().encode(JSON.stringify(envelope)),
+    );
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("manifests", "readwrite");
+        tx.objectStore("manifests").put(record);
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    const before = await rawStoredRecord(tripId);
+    await expect(loadOfflineManifest(tripId)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+  });
+  it("retains an expired row with unknown storage metadata", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+    const record = (await rawStoredRecord(tripId)) as Record<string, unknown>;
+    record.futureQueueMarker = true;
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("manifests", "readwrite");
+        tx.objectStore("manifests").put(record);
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    const before = await rawStoredRecord(tripId);
+    await expect(loadOfflineManifest(tripId)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+  });
+  it("does not delete a newer pending record after decrypting an expired empty version", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+    let resume!: () => void;
+    let signal!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const ready = new Promise<void>((resolve) => {
+      signal = resolve;
+    });
+    const decrypt = crypto.subtle.decrypt.bind(crypto.subtle);
+    const spy = vi
+      .spyOn(crypto.subtle, "decrypt")
+      .mockImplementationOnce(async (algorithm, key, data) => {
+        const bytes = await decrypt(algorithm, key, data);
+        signal();
+        await gate;
+        return bytes;
+      });
+    const staleRead = loadOfflineManifest(tripId);
+    void staleRead.catch(() => undefined);
+    onTestFinished(async () => {
+      resume();
+      await Promise.allSettled([staleRead]);
+      spy.mockRestore();
+    });
+    try {
+      await Promise.race([
+        ready,
+        staleRead.then(() => {
+          throw new Error("read ended before barrier");
+        }),
+      ]);
+      await saveOfflineManifest(payload);
+      await appendOfflineRollCall(tripId, {
+        bookingId: payload.manifests[0].divers[0].bookingId,
+        checkpoint: "departure",
+        status: "not_boarded",
+      });
+    } finally {
+      resume();
+    }
+    await expect(staleRead).rejects.toMatchObject({ code: "unavailable" });
+    const current = await loadOfflineManifest(tripId);
+    expect(current?.events).toMatchObject([{ syncStatus: "pending", status: "not_boarded" }]);
+  });
   it("does not install a replacement key over ciphertext that may hold unsent evidence", async () => {
     const tripId = payload.manifests[0].trip.id;
     await saveOfflineManifest(payload);
