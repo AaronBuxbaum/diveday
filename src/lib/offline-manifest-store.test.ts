@@ -205,6 +205,43 @@ afterEach(
 );
 
 describe("saveOfflineManifest", () => {
+  it("retains an unreadable record that may contain pending evidence when saving a snapshot", async () => {
+    // Simulate storage corruption (a bad key, a version/AAD mismatch, flipped
+    // bytes) by writing a record straight into IndexedDB that this module's
+    // own AES-GCM key can never decrypt. Its queue is unknown, so a refresh
+    // must not silently replace the only copy of possible safety evidence.
+    const tripId = payload.manifests[0].trip.id;
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains("keys")) db.createObjectStore("keys");
+        if (!db.objectStoreNames.contains("manifests")) {
+          db.createObjectStore("manifests", { keyPath: "tripId" });
+        }
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction("manifests", "readwrite");
+        transaction.objectStore("manifests").put({
+          tripId,
+          expiresAt: new Date(nowMs() + 60 * 60 * 1000).toISOString(),
+          iv: new Uint8Array(12).buffer,
+          ciphertext: new Uint8Array([1, 2, 3, 4]).buffer,
+        });
+        transaction.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        transaction.onerror = () => reject(transaction.error);
+      };
+      request.onerror = () => reject(request.error);
+    });
+
+    await expect(saveOfflineManifest(payload)).rejects.toThrow();
+    const retained = (await rawStoredRecord(tripId)) as { ciphertext: ArrayBuffer };
+    expect(Array.from(new Uint8Array(retained.ciphertext))).toEqual([1, 2, 3, 4]);
+  });
   it("still saves a fresh snapshot when the existing device record is corrupt or undecryptable", async () => {
     // Simulate storage corruption (a bad key, a version/AAD mismatch, flipped
     // bytes) by writing a record straight into IndexedDB that this module's
@@ -248,6 +285,22 @@ describe("saveOfflineManifest", () => {
 });
 
 describe("loadOfflineManifest", () => {
+  it("withholds but retains unsent evidence after the pending grace period", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+    const before = await rawStoredRecord(tripId);
+
+    await expect(loadOfflineManifest(tripId)).rejects.toThrow();
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+    await expect(saveOfflineManifest(payload)).rejects.toThrow();
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+  });
   it("keeps an expired record alive if it still has an unsynced pending event", async () => {
     const tripId = payload.manifests[0].trip.id;
     await saveOfflineManifest(payload);
