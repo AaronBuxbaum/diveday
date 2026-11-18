@@ -5,7 +5,7 @@ import { DAY_MS, MINUTE_MS } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import type { NotificationProvider } from "@/lib/notifications";
 import type { CourtesyProviders } from "@/lib/notifications/courtesy";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { openOnDevice, shopStaffer } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { mintCapability } from "./capabilities";
@@ -49,7 +49,7 @@ vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
   };
 });
 
-const ctx = fileScopedShopContext({ realShop: true });
+const ctx = isolatedShopContext({ realShop: true });
 const now = new Date("2026-07-18T12:00:00.000Z");
 
 afterEach(() => vi.unstubAllEnvs());

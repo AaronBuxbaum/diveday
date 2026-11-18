@@ -6,7 +6,7 @@ import { setShopFeature } from "../../db/shops.test-support";
 import { createTrip } from "../../db/trips";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "../../lib/reviews";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
 import {
   countStaffReviewGroups,
@@ -30,8 +30,8 @@ import { buildReviewContext } from "./store.test-support";
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
-const ctx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`); nothing here commits or races.
+const ctx = isolatedShopContext();
 const reviewContext = (divers?: string[]) => buildReviewContext(ctx, divers);
 
 describe("submitTripReview", () => {

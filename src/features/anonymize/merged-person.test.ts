@@ -2,13 +2,11 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { mergeDiverRecords } from "../../db/diver-merge";
 import { people, personRoles } from "../../db/schema/index";
-import { fileScopedShopContext } from "../../test/db";
+import { seededShopContext } from "../../test/db";
 import { anonymizeDiver } from "./store";
 
-const fileCtx = fileScopedShopContext({ history: true });
-
 async function erasureFixtures() {
-  const { db, shop } = fileCtx;
+  const { db, shop } = await seededShopContext({ history: true });
   const [owner] = await db
     .select({ id: people.id })
     .from(people)

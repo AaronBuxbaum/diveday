@@ -16,14 +16,14 @@ import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../../db/st
 import { editTrip } from "../../db/trips";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import type { CheckoutProvider } from "../../lib/payments/checkout";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { fakeCheckout, fakeEmail } from "../../test/fakes";
 import { anonymizeDiver } from "../anonymize/store";
 import { sendDueCheckoutRecoveries } from "./store";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const ctx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const ctx = isolatedShopContext();
 
 const NOW = new Date("2026-08-01T12:00:00Z");
 const HOUR_MS = 60 * 60 * 1000;

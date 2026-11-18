@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { activityEvents, bookings, people, personRoles } from "./schema";
@@ -11,10 +11,8 @@ import { activityEvents, bookings, people, personRoles } from "./schema";
  * acts they did on other divers, without their name. Lines about the erased
  * person themselves are still redacted whole.
  */
-const ctx = fileScopedShopContext();
-
 async function fixtures() {
-  const { db, shop } = ctx;
+  const { db, shop } = await seededShopContext();
   const [owner] = await db
     .select({ id: people.id })
     .from(people)

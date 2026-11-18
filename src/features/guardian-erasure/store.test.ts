@@ -28,7 +28,7 @@ import {
   WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
   WAIVER_INTEGRITY_VERSION_MOVED,
 } from "../../lib/waiver-integrity";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import {
   draftsOf,
   medicalReferralAnswers,
@@ -38,8 +38,8 @@ import { anonymizeDiver } from "../anonymize/store";
 import { eraseGuardianEmail, listGuardianEmails } from "./store";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const ctx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const ctx = isolatedShopContext();
 
 /**
  * **A guardian's address, erased on its own** (H-20261007-guardian-email-erasure, issue #1673). The

@@ -1,8 +1,9 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
+import type { AppDb } from "./client";
 import { bookings, people, personRoles } from "./schema";
 
 /**
@@ -11,10 +12,8 @@ import { bookings, people, personRoles } from "./schema";
  * and a public confirmation that does not match.
  * Each refusal leaves the record exactly as it was.
  */
-const ctx = fileScopedShopContext();
-
 async function setting() {
-  const { db, shop } = ctx;
+  const { db, shop } = await seededShopContext();
   const roleOf = async (role: "owner" | "instructor" | "divemaster" | "captain") => {
     const [row] = await db
       .select({ id: people.id })
@@ -36,7 +35,7 @@ async function setting() {
   return { db, shop, owner, diver: diver.personId, roleOf };
 }
 
-async function nameOf(db: typeof ctx.db, personId: string) {
+async function nameOf(db: AppDb, personId: string) {
   const [row] = await db
     .select({ fullName: people.fullName, anonymizedAt: people.anonymizedAt })
     .from(people)

@@ -22,11 +22,11 @@ import {
 } from "@/db/schema";
 import { setTripStatus } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { tripCreditTestFixture } from "@/test/trip-credit-fixture";
 import { grantTripCredit, readTripCredit, redeemTripCredit } from "./store";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 function fixture() {
   return tripCreditTestFixture(ctx.db, ctx.shop);

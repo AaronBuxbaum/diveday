@@ -9,7 +9,7 @@ import {
   shopWaiverStanding,
   waiverStanding,
 } from "@/lib/waivers";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   clearAnswers,
@@ -28,8 +28,8 @@ import { issueWaiverRequest } from "./waivers-requests";
 import { getCurrentWaiverTemplate } from "./waivers-templates";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const fileCtx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const fileCtx = isolatedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
 
 /**

@@ -2,13 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { courses, people, personRoles, shops, tripAssignments } from "../../db/schema/index";
 import { clearTrainingDive, dropTrainingMarkWithin } from "../../db/training-marks";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { charterContext, markSeat } from "../../test/training-mark-context";
 import { anonymizeDiver } from "../anonymize/store";
 import { trainingPlanView } from "../training-plan-view/store";
 import { readTrainingPlan, setTrainingPlanAssignment } from "./store";
 
-const fileCtx = fileScopedShopContext();
+const fileCtx = isolatedShopContext();
 
 describe("training planning assignments", () => {
   it("records one assistant with one rostered instructor without changing the training mark", async () => {

@@ -1,7 +1,7 @@
 import { and, eq, ne, notExists } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { removeIncidentPerson } from "./incident-reports";
 import {
@@ -24,7 +24,7 @@ import { liveTrip } from "./trips-live";
  * person (a booking on its departure, a name on the report, a place on its
  * crew), the erasure is refused with `incident_hold` and nothing changes.
  */
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 async function setting() {
   const { db, shop } = ctx;

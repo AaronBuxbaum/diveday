@@ -6,7 +6,7 @@ import { hashPassword } from "@/lib/password-hashing";
 import { hashPendingHandle } from "@/lib/pending-sign-in";
 import { totpCode } from "@/lib/totp";
 import { advanceClock } from "@/test/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { removeStaffMember, setStaffAccountStatus } from "../features/staff-accounts/store";
 import {
@@ -33,7 +33,7 @@ import {
 } from "./sign-in-challenges";
 import { setAccountPassword } from "./user-accounts";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 async function persist(tx: AppTransaction, user: VerifiedUser) {
   const provider = await createAuth(tx).$context;
   const session = await provider.internalAdapter.createSession(user.id, false, {

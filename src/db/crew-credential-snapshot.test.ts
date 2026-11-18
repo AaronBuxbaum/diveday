@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { recordCrewRollCall } from "./manifests";
 import { people, personRoles, rollCallEvents, tripAssignments } from "./schema";
@@ -9,7 +9,7 @@ import { changeStaffCredential, createStaffCredential } from "./staff-credential
 import { listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 describe("crew credential evidence on live boarding marks", () => {
   it("captures committed card facts with an observation interval, not a sailing assertion", async () => {

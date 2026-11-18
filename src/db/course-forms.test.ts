@@ -8,7 +8,7 @@ import {
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { verifyCourseFormIntegrity } from "@/lib/course-form-integrity";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   coursesAwaitingFormText,
@@ -49,8 +49,8 @@ import {
 import { listStaff } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const fileCtx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const fileCtx = isolatedShopContext();
 
 const BODY =
   "I understand the course's in-water sessions follow the instructor's plan, and I will tell the instructor before any session if anything about my health changes.";

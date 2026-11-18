@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { anonymizeDiver } from "@/features/anonymize/store";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { mergeDiverRecords } from "./diver-merge";
 import { loadDiverExportBundleInput, loadShopExportBundleInput } from "./export";
 import { table } from "./export-bundle-table.test-support";
@@ -16,7 +16,7 @@ import {
 } from "./schema";
 import { clearDemoSchedule, deleteDemoShopCascade } from "./seed";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 async function fixture() {
   const { db, shop } = ctx;

@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   clearAnswers,
@@ -25,7 +25,7 @@ import { issueWaiverRequest } from "./waivers-requests";
  * stale between passes, an erasure or merge that would launder a broken seal,
  * and a row that never had a seal.
  */
-const fileCtx = fileScopedShopContext();
+const fileCtx = isolatedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
 // After every seeded check time, which the seed stamps from its own clock.
 const later = new Date("2099-01-01T00:00:00.000Z");

@@ -4,7 +4,7 @@ import { createBookingParty } from "../../db/bookings";
 import { activityEvents, bookings, people, reviewReplies } from "../../db/schema/index";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { MAX_REVIEW_REPLY_LENGTH } from "../../lib/reviews";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
 import {
   listPublishedShopReviews,
@@ -21,7 +21,7 @@ import { deleteReviewReply, liveReviewReply, writeReviewReply } from "./store";
  */
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 async function publishedReview(comment: string | null = "The crew found us a turtle.") {
   const { db, shop } = ctx;

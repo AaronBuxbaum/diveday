@@ -17,7 +17,7 @@ import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import type { ParticipantType } from "@/lib/participant-types";
 import { advanceClock } from "@/test/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { generateWalletTestCredentials } from "@/test/wallet-credentials";
 import { googlePassObject } from "./google";
 import { passAuthenticationToken } from "./rules";
@@ -29,7 +29,7 @@ import {
   voidWalletPassesForPerson,
 } from "./store";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 const credentials = generateWalletTestCredentials();
 beforeEach(() => {
   vi.stubEnv("APPLE_PASS_TYPE_ID", "pass.app.diveday.test");

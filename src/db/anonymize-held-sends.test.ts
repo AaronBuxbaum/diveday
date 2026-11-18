@@ -1,12 +1,10 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { heldRows } from "@/test/held-sends";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { holdSend } from "./held-sends";
 import { bookings, people, personRoles } from "./schema";
-
-const ctx = fileScopedShopContext();
 
 /**
  * A held send names its people only inside `intent` (issue #2730). Erasing
@@ -15,7 +13,7 @@ const ctx = fileScopedShopContext();
  */
 describe("erasing a diver with a send still held", () => {
   it("takes back the holds that name them and no other", async () => {
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext();
     const [owner] = await db
       .select({ id: personRoles.personId })
       .from(personRoles)

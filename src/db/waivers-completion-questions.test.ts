@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { restoreDraftShopAnswers, type ShopQuestion } from "@/lib/waiver-questions";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   clearAnswers,
@@ -22,8 +22,8 @@ import { issueWaiverRequest } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`), as in waivers-completion.test.ts.
-const fileCtx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`), as in waivers-completion.test.ts.
+const fileCtx = isolatedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
 
 afterEach(() => {

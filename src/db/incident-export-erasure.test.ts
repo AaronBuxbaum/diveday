@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { getIncidentExport } from "../features/incident-export/store";
 import { cancelBooking, restoreBooking, splitBookingIdentity } from "./bookings";
@@ -9,7 +9,7 @@ import { getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test.
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 /**
  * **An erased diver's late seat change leaves no name on the departure log**

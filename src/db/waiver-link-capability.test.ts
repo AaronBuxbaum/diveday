@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { DAY_MS, MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   clearAnswers,
@@ -31,7 +31,7 @@ import {
  * revoked or other shop's link, a seat that changed hands, a forged key, and
  * what a merge and an erasure do with it, each against a real record.
  */
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 async function owner() {
   const { db, shop } = ctx;

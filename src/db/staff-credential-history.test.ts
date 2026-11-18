@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { loadShopExportBundleInput } from "./export";
@@ -12,7 +12,7 @@ import {
   listStaffCredentials,
 } from "./staff-credentials";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 const OTHER_SHOP = "00000000-0000-0000-0000-000000000000";
 
 async function fixture() {

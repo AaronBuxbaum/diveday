@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
@@ -30,7 +30,7 @@ import { issueWaiverRequest } from "./waivers-requests";
  * cannot write it. An acknowledgement covers the release as it stood when it
  * was made; a further edit, or a different release, rings again.
  */
-const fileCtx = fileScopedShopContext();
+const fileCtx = isolatedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
 const later = new Date("2099-01-01T00:00:00.000Z");
 const nightAfter = new Date(later.getTime() + 24 * 60 * 60 * 1000);

@@ -4,7 +4,7 @@ import { createBookingParty } from "../../db/bookings";
 import { bookings, people, personRoles, tripAssignments, tripReviews } from "../../db/schema/index";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
 import { crewThanksChoice } from "../crew-thanks-choice/rules";
 import {
@@ -17,7 +17,7 @@ import {
 import { readCrewThanks, ruleCrewThanks } from "./store";
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 /** A seeded reef departure with one booked diver, and the seeded owner who reviews and moderates. */
 async function reviewContext(divers = ["Reviewing Diver"]) {

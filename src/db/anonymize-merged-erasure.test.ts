@@ -1,17 +1,15 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
 import { recordCrewRollCall } from "./manifests";
 import { crewSubject } from "./roll-call-subject";
 import { people, personRoles, rollCallEvents, shops, tripAssignments, trips } from "./schema";
 
-const fileCtx = fileScopedShopContext({ history: true });
-
 async function erasureFixtures() {
-  const { db, shop } = fileCtx;
+  const { db, shop } = await seededShopContext({ history: true });
   const [owner] = await db
     .select({ id: people.id })
     .from(people)

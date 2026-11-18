@@ -3,7 +3,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { schemaTableNameOf } from "@/test/schema-tables";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { ERASURE_KEEPS } from "../test/substrate-fixtures/db/erasure-coverage-keeps.test-support";
@@ -21,7 +21,7 @@ import {
 import * as schema from "./schema";
 import { bookings, people, personRoles } from "./schema";
 
-const ctx = fileScopedShopContext({ history: true });
+const ctx = isolatedShopContext({ history: true });
 
 /** Follow the sweep's actual module location, including named feature contracts. */
 function sweepText(sweep: string): string {

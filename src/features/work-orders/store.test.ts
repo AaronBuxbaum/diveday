@@ -21,7 +21,7 @@ import {
   workOrders,
 } from "../../db/schema/index";
 import type { Role } from "../../lib/authz";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
 import { createDiver } from "../divers/store";
 import {
@@ -45,8 +45,8 @@ import {
 } from "./store";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const ctx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const ctx = isolatedShopContext();
 
 const TODAY = "2026-10-08";
 

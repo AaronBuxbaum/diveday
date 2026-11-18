@@ -14,14 +14,14 @@ import {
 } from "@/db/schema";
 import { anonymizeDiver } from "@/features/anonymize";
 import { removeStaffMember } from "@/features/staff-accounts";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { generateWalletTestCredentials } from "@/test/wallet-credentials";
 import { googlePassObject } from "./google";
 import { passAuthenticationToken } from "./rules";
 import { applePassService } from "./service";
 import { issueWalletPass, pushChangedWalletPasses } from "./store";
 
-const ctx = fileScopedShopContext({ realShop: true });
+const ctx = isolatedShopContext({ realShop: true });
 const generated = generateWalletTestCredentials();
 const alias = "CrewUniqueErasure";
 beforeEach(() => {

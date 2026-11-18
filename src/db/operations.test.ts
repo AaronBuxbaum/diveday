@@ -4,7 +4,7 @@ import { activityLine } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { isolatedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import type { AppDb } from "./client";
 import {
@@ -25,8 +25,8 @@ import { getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const ctx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const ctx = isolatedShopContext();
 
 /** The notes written on the diver record itself, not on one of their bookings. */
 async function personScopedNotes(db: AppDb, shopId: string, personId: string) {

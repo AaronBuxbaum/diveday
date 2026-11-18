@@ -1,11 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { recordInboundMessage, recordStaffReply } from "./inbound-messages";
 import { inboundMessages, people, personRoles, staffReplies } from "./schema";
-
-const ctx = fileScopedShopContext();
 
 /**
  * Erasure reaches the inbox (ADR 20260907-two-way-inbox). A diver's message is
@@ -17,7 +15,7 @@ const ctx = fileScopedShopContext();
  */
 describe("anonymizeDiver — the inbox", () => {
   it("redacts what the diver wrote, what they wrote from, and what the shop wrote back", async () => {
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext();
     const [owner] = await db
       .select({ id: people.id })
       .from(people)

@@ -7,7 +7,7 @@ import { getTripRoster, listStaff } from "../../db/trips";
 import { createTrip } from "../../db/trips-create";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { verifyOfflineErasureEpoch } from "../../lib/offline-erasure-epoch";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
 import { seatDiver } from "../seat-diver/store";
 import {
@@ -18,7 +18,7 @@ import {
 } from "./store";
 import { offlineSyncInstants } from "./sync-instants";
 
-const context = fileScopedShopContext();
+const context = isolatedShopContext();
 
 async function revisionRows(tripId: string) {
   return context.db

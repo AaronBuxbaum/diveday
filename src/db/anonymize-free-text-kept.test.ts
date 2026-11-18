@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { REDACTED_TEXT } from "../features/anonymization/rules";
 import { anonymizeDiver } from "../features/anonymize/store";
 import type { AppDb } from "./client";
@@ -13,8 +13,6 @@ import {
   tripReviews,
   trips,
 } from "./schema";
-
-const ctx = fileScopedShopContext({ history: true });
 
 /**
  * Erasure removes a person's own data only (owner, 2026-11-01, reversing issue
@@ -80,7 +78,7 @@ async function erase(db: AppDb, shopId: string, personId: string) {
 
 describe("anonymizeDiver — words other people wrote that mention the diver", () => {
   it("leaves a departure title naming them, public or private", async () => {
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext({ history: true });
     const person = await diver(db, shop.id, "Ruth Abernathy");
     const publicTrip = await departure(db, shop.id, "Ruth Abernathy birthday dive");
     const privateTrip = await departure(db, shop.id, "Abernathy charter", true);
@@ -99,7 +97,7 @@ describe("anonymizeDiver — words other people wrote that mention the diver", (
   });
 
   it("leaves a moderation note on someone else's review, and redacts the one on their own", async () => {
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext({ history: true });
     const actor = await owner(db, shop.id);
     const person = await diver(db, shop.id, "Teodor Halvorsen");
     const other = await diver(db, shop.id, "Mina Park");
@@ -152,7 +150,7 @@ describe("anonymizeDiver — words other people wrote that mention the diver", (
   });
 
   it("leaves a departure change value that names them", async () => {
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext({ history: true });
     const person = await diver(db, shop.id, "Teodor Halvorsen");
     const trip = await departure(db, shop.id, "Reef morning");
     await seat(db, shop.id, trip.id, person.id);

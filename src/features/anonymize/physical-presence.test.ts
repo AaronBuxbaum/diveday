@@ -3,13 +3,20 @@ import { expect, it } from "vitest";
 import { recordRollCall } from "@/db/manifests";
 import { getBookingReadiness } from "@/db/readiness";
 import { bookings, rollCallEvents, trips } from "@/db/schema";
+import { listStaff } from "@/db/trips";
 import { seatHeld } from "@/db/trips-queries";
+import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { nowDate } from "@/lib/clock";
-import { manifestContext } from "@/test/substrate-fixtures/db/manifests-test-fixtures";
+import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./store";
 
 it("erases physical-observation blocker details while preserving causal context and retry intent", async () => {
-  const { db, shop, reef, staff: owner } = await manifestContext();
+  const { db, shop } = await seededShopContext();
+  const departures = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const reef = departures.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+  const [staff] = await listStaff(db, shop.id);
+  if (!reef || !staff) throw new Error("demo reef trip or staff missing");
+  const owner = staff.person;
   // Only the demo reef trip: reading readiness for every scheduled seat was the slow part.
   const candidates = await db
     .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })

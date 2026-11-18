@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { complete, fixture } from "../test/substrate-fixtures/db/incident-reports-test-fixtures";
 import {
@@ -12,7 +12,7 @@ import {
 } from "./incident-reports";
 import { incidentReports } from "./schema";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 describe("erasing a diver named in a report under a legal hold", () => {
   /**

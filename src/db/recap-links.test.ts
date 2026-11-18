@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { signRecapToken } from "@/lib/recap-links";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { createDiver, editDiver } from "../features/divers/store";
 import { shopStaffer } from "../test/substrate-fixtures/db/waivers-test-fixtures";
@@ -14,7 +14,7 @@ import { upcomingTripsWithCounts } from "./trips-queries.test-support";
  * booking's recap epoch, and a contact change bumps the epoch of every one of
  * the person's bookings, so a link mailed to the old address opens nothing.
  */
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 async function bookedDiver(suffix: string) {
   const { db, shop } = ctx;

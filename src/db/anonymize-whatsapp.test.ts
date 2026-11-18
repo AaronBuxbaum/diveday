@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import type { AppDb } from "./client";
 import { recordStaffReply } from "./inbound-messages";
@@ -18,8 +18,6 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
-
-const ctx = fileScopedShopContext();
 
 /**
  * WhatsApp at erasure (issue #1721, ADR 20260803-processor-erasure-obligations,
@@ -110,7 +108,7 @@ describe("anonymizeDiver — WhatsApp (issue #1721)", () => {
    * found by the `wamid.` prefix, and no longer a number.
    */
   it("forgets the number inside every WhatsApp message id it keeps", async () => {
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext();
     const NUMBER_B64 = "MTMwNTU1NTAxNTU";
     const wamid = (tag: string) => `wamid.HBgL${NUMBER_B64}=${tag}`;
     const diverId = await diverAt(db, shop.id, { fullName: "Gone Gale", phone: "+13055550155" });

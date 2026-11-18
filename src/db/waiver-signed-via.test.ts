@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   clearAnswers,
@@ -23,7 +23,7 @@ import { issueWaiverRequest } from "./waivers-requests";
  * erasure deletes the link rows, so the release itself says which kind of
  * door its signature came through, inside its seal.
  */
-const fileCtx = fileScopedShopContext();
+const fileCtx = isolatedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
 
 afterEach(() => vi.unstubAllEnvs());

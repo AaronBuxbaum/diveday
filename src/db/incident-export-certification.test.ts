@@ -4,7 +4,7 @@ import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { advanceClock } from "@/test/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { getIncidentExport } from "../features/incident-export/store";
 import { cancelBooking } from "./bookings";
@@ -17,7 +17,7 @@ import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 async function exportContext() {
   const { db, shop } = ctx;
   const reef = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find((trip) =>

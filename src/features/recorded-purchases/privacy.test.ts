@@ -3,12 +3,12 @@ import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createPerson } from "../../db/people";
 import { collectionEntries, orders } from "../../db/schema";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "../../test/staff-session";
 import { anonymizeDiver } from "../anonymize";
 import { recordPurchase } from "./store";
 
-const context = fileScopedShopContext();
+const context = isolatedShopContext();
 it("erases identifying receipt reference but preserves numerical fee evidence", async () => {
   const { db, shop } = context;
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);

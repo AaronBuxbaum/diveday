@@ -563,6 +563,7 @@ export const NOTICE_KEYS: DiverNoticeMap = {
     field: "erase-confirm-name",
   },
   "erase-refused": { form: "erase", tone: "danger", key: "divers.notices.eraseRefused" },
+  "erase-busy": { form: "erase", tone: "danger", key: "divers.notices.eraseBusy" },
   // Issue #3805: a held incident report links the diver; the owner releases the hold first.
   "erase-incident-hold": {
     form: "erase",

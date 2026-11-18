@@ -7,7 +7,7 @@ import {
   ONCE_ONLY_DELIVERY_KINDS,
 } from "@/lib/once-only-delivery-kinds";
 import { advanceClock } from "@/test/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -23,7 +23,7 @@ import { upcomingTripsWithCounts } from "./trips-queries.test-support";
  * data, so these are the adversarial cases first: the double insert, the
  * retry, the superseded failure and the erasure.
  */
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 async function seededBooking(email = "nora@example.com") {
   const { db, shop } = ctx;

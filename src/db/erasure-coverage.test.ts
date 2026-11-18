@@ -4,7 +4,7 @@ import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { passContentHash } from "@/features/wallet-pass";
 import { hashBearerToken } from "@/lib/bearer-tokens";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { schemaTableNameOf } from "@/test/schema-tables";
 import { walletContentFixture } from "@/test/wallet-credentials";
 import { anonymizeDiver } from "../features/anonymize/store";
@@ -30,7 +30,7 @@ import {
   walletPassRegistrations,
 } from "./schema";
 
-const ctx = fileScopedShopContext({ history: true });
+const ctx = isolatedShopContext({ history: true });
 
 /**
  * The structural guard on the erasure path (`src/features/anonymize/store.ts`, ADR

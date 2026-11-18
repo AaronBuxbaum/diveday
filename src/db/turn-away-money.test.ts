@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DESK_FLAGGED_CODES } from "@/lib/activity";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { turnAwayReasons } from "@/lib/turn-away";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail, fakeSms } from "@/test/fakes";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { markBookingNoShow } from "../features/no-show/store";
@@ -28,8 +28,8 @@ import { editTrip, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const ctx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const ctx = isolatedShopContext();
 
 /**
  * **A turned-away seat after the desk** (layer 3 review, 2026-10-16: dde-1 F2,

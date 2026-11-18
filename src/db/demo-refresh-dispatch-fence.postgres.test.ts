@@ -1,10 +1,20 @@
 import { eq, sql } from "drizzle-orm";
-import { expect, it, onTestFinished } from "vitest";
+import { expect, it, onTestFinished, vi } from "vitest";
 import { anonymizeDiver } from "@/features/anonymize";
-import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import type { AppDb } from "./client";
 import { ensureDemoSailsToday } from "./demo-refresh";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
-import { bookings, people, personRoles, shops, trips, userAccounts } from "./schema";
+import { queueMediaDeletion } from "./media-deletions";
+import {
+  bookings,
+  mediaDeletionAttempts,
+  people,
+  personRoles,
+  shops,
+  trips,
+  userAccounts,
+} from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 
 describePostgres("demo refresh and coordinated dispatch lock order", () => {
@@ -138,6 +148,68 @@ describePostgres("demo refresh and coordinated dispatch lock order", () => {
 });
 
 describePostgres("erasure and an older shop-first dispatch", () => {
+  it("reports a held shop as busy without erasing or calling providers", async () => {
+    const pg = await postgresTestDb();
+    const [shop] = await pg.db
+      .insert(shops)
+      .values({ name: "Busy erasure", slug: "busy-erasure", timezone: "UTC" })
+      .returning();
+    if (!shop) throw new Error("shop missing");
+    const [owner, diver] = await pg.db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Owner", email: "owner@busy.example" },
+        { shopId: shop.id, fullName: "Diver", email: "diver@busy.example" },
+      ])
+      .returning();
+    if (!owner || !diver) throw new Error("people missing");
+    await pg.db.insert(personRoles).values({ personId: owner.id, role: "owner" });
+    await pg.db.insert(userAccounts).values({ personId: owner.id, email: "owner@busy.example" });
+    const pending = await queueMediaDeletion(pg.db, {
+      shopId: shop.id,
+      personId: diver.id,
+      kind: "recap_photo",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/busy.jpg",
+    });
+    if (!pending) throw new Error("media deletion fixture missing");
+    const beforeShop = await pg.db.select().from(shops).where(eq(shops.id, shop.id));
+    const beforeDiver = await pg.db.select().from(people).where(eq(people.id, diver.id));
+    const beforeMedia = await pg.db
+      .select()
+      .from(mediaDeletionAttempts)
+      .where(eq(mediaDeletionAttempts.id, pending.id));
+    const held = await holdRowLock(pg, sql`select id from shops where id = ${shop.id} for share`);
+    const deleteCustomer = vi.fn(async () => ({ status: "deleted" as const }));
+    const mediaDeleteFn = vi.fn(async () => ({ ok: true as const }));
+    try {
+      const result = await anonymizeDiver(
+        pg.connect(),
+        { shopId: shop.id, personId: diver.id, actorPersonId: owner.id },
+        { customerProvider: { deleteCustomer }, mediaDeleteFn },
+      );
+      expect(result).toEqual({ ok: false, reason: "busy" });
+    } finally {
+      await held.release();
+    }
+    expect(await pg.db.select().from(shops).where(eq(shops.id, shop.id))).toEqual(beforeShop);
+    expect(await pg.db.select().from(people).where(eq(people.id, diver.id))).toEqual(beforeDiver);
+    expect(
+      await pg.db
+        .select()
+        .from(mediaDeletionAttempts)
+        .where(eq(mediaDeletionAttempts.id, pending.id)),
+    ).toEqual(beforeMedia);
+    expect(deleteCustomer).not.toHaveBeenCalled();
+    expect(mediaDeleteFn).not.toHaveBeenCalled();
+    const retried = await anonymizeDiver(
+      pg.connect(),
+      { shopId: shop.id, personId: diver.id, actorPersonId: owner.id },
+      { customerProvider: { deleteCustomer }, mediaDeleteFn },
+    );
+    expect(retried).toMatchObject({ ok: true, alreadyAnonymized: false });
+    expect(mediaDeleteFn).toHaveBeenCalledTimes(1);
+  });
+
   it("finishes without a lock cycle or a send after erasure commits", async () => {
     const pg = await postgresTestDb();
     const [shop] = await pg.db
@@ -181,6 +253,21 @@ describePostgres("erasure and an older shop-first dispatch", () => {
       .returning();
     if (!booking) throw new Error("booking missing");
 
+    await pg.db.transaction(async (tx) => {
+      await expect(
+        anonymizeDiver(tx as unknown as AppDb, {
+          shopId: shop.id,
+          personId: diver.id,
+          actorPersonId: owner.id,
+        }),
+      ).rejects.toThrow("Erasure requires a root transaction");
+      const [unchanged] = await tx
+        .select({ anonymizedAt: people.anonymizedAt })
+        .from(people)
+        .where(eq(people.id, diver.id));
+      expect(unchanged?.anonymizedAt).toBeNull();
+    });
+
     let release!: () => void;
     let ready!: () => void;
     const resume = new Promise<void>((resolve) => {
@@ -219,6 +306,7 @@ describePostgres("erasure and an older shop-first dispatch", () => {
     void dispatch.catch(() => undefined);
     let erasure: ReturnType<typeof anonymizeDiver> | undefined;
     let waiting: Promise<unknown> | undefined;
+    let evidenceWasLocked: boolean | undefined;
     onTestFinished(async () => {
       release();
       await Promise.allSettled([
@@ -254,10 +342,16 @@ describePostgres("erasure and an older shop-first dispatch", () => {
         where datname = current_database() and wait_event_type = 'Lock'
           and query like '%"shops"%'`);
       expect(Number((waiters.rows[0] as { count: number }).count)).toBeGreaterThan(0);
+      evidenceWasLocked = !(await pg.connect().transaction(async (tx) => {
+        const result = await tx.execute(sql`select pg_try_advisory_xact_lock_shared(
+          hashtext('boarding_certification_evidence'), hashtext(${shop.id})) as acquired`);
+        return (result.rows[0] as { acquired: boolean }).acquired;
+      }));
     } finally {
       release();
       if (waiting) await waiting.catch(() => undefined);
     }
+    expect(evidenceWasLocked).toBe(false);
     const delivery = await dispatch;
     expect(await erasure).toMatchObject({ ok: true });
     if (delivery === "sent") expect(events).toEqual(["sent", "erased"]);

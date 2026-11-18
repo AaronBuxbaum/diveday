@@ -4,7 +4,7 @@ import type { AppDb } from "../../db/client";
 import { listDateInterestsByIds } from "../../db/interest-dates";
 import { setDateInterestOutcome } from "../../db/interests";
 import { interestReplies, interests, shops } from "../../db/schema/index";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { fakeCourtesy, fakeEmail, fakeSms } from "../../test/fakes";
 import { SEEDED_CAPTAIN_EMAIL, seededStaffPersonId } from "../../test/staff-session";
 import {
@@ -18,9 +18,9 @@ import { INTEREST_REPLY_DAILY_CAP, INTEREST_REPLY_MAX } from "../interest-reply/
 import { sendInterestReply } from "./store";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`). A real shop, so mail is not held
+// (src/test/db.ts, `isolatedShopContext`). A real shop, so mail is not held
 // as a demo shop's would be.
-const ctx = fileScopedShopContext({ realShop: true });
+const ctx = isolatedShopContext({ realShop: true });
 const now = new Date("2031-04-01T12:00:00.000Z");
 
 async function repliesTo(db: AppDb, interestId: string) {

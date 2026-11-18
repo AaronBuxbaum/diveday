@@ -257,6 +257,42 @@ export function fileScopedShopContext(
   };
 }
 
+/** A fresh root database per test for operations that must commit before external work. */
+export function isolatedShopContext(options: { history?: boolean; realShop?: boolean } = {}) {
+  let current:
+    | { db: AppDb; shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>> }
+    | undefined;
+  beforeEach(async () => {
+    const db = await seededTestDbWithoutTeardown(options);
+    try {
+      const shop = await getShopBySlug(db, "blue-mantis");
+      if (!shop) throw new Error('isolatedShopContext: seeded shop "blue-mantis" missing');
+      if (options.realShop) {
+        await db.execute(sql`update shops set is_demo = false where slug = 'blue-mantis'`);
+      }
+      current = { db, shop };
+    } catch (error) {
+      await closePglite(db.$client as PGlite);
+      throw error;
+    }
+  });
+  afterEach(async () => {
+    const db = current?.db;
+    current = undefined;
+    if (db) await closePglite(db.$client as PGlite);
+  });
+  return {
+    get db() {
+      if (!current) throw new Error("isolatedShopContext: read outside a test");
+      return current.db;
+    },
+    get shop() {
+      if (!current) throw new Error("isolatedShopContext: read outside a test");
+      return current.shop;
+    },
+  };
+}
+
 /** Empty counterpart for read-only projections, never transaction/locking subjects. */
 export function fileScopedEmptyContext() {
   return fileScopedDbContext(unseededTestDbWithoutTeardown);

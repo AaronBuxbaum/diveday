@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   bookings,
@@ -12,10 +12,8 @@ import {
   trips,
 } from "./schema";
 
-const ctx = fileScopedShopContext({ history: true });
-
 it("keeps the id-only offer booking link after erasure scrubs its date request", async () => {
-  const { db, shop } = ctx;
+  const { db, shop } = await seededShopContext({ history: true });
   const [owner] = await db
     .select({ id: people.id })
     .from(people)

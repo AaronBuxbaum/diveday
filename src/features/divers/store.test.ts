@@ -50,7 +50,7 @@ import { displayStoredPhone } from "../../lib/forgiving-fields";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";
 import type { DeleteCustomerResult } from "../../lib/payments/customers";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "../../lib/waiver-integrity";
-import { fileScopedShopContext, seededShopContext } from "../../test/db";
+import { isolatedShopContext, seededShopContext } from "../../test/db";
 import { departureInterest } from "../../test/interests";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "../anonymization/rules";
 import { anonymizeDiver } from "../anonymize/store";
@@ -73,7 +73,7 @@ import { DATE_INTEREST, saved, standingSeatEvidence } from "./store.test-support
  * surface — thirty tests that seat, search, page and filter, each reading back
  * what it just wrote — so nothing here needs its rows committed.
  */
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 describe("person-first diver records", () => {
   it("uses contact information as the temporary name for contact-first intake", async () => {

@@ -1,6 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   clearAnswers,
@@ -33,8 +33,8 @@ import {
 import { issueWaiverRequest } from "./waivers-requests";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const fileCtx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const fileCtx = isolatedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
 
 const MEDIA = "https://media.example.com";

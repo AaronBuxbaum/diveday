@@ -14,13 +14,13 @@ import {
 } from "../../db/schema";
 import { createTrip } from "../../db/trips";
 import { nowDate } from "../../lib/clock";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { fakeEmail } from "../../test/fakes";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "../../test/staff-session";
 import { anonymizeDiver } from "../anonymize";
 import { recordRecoveryFollowUp } from "./store";
 
-const context = fileScopedShopContext();
+const context = isolatedShopContext();
 async function setup() {
   const { db, shop } = context;
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);

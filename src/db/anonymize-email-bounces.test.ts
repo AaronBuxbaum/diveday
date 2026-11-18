@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   bookings,
@@ -14,13 +14,13 @@ import {
   waiverTemplates,
 } from "./schema";
 
-const ctx = fileScopedShopContext();
-
 /**
  * Erasure reaches `email_bounces`: a bounce record is the diver's address in
  * clear. Swept by address on the shop's own rows only: neither another shop's
  * nor DiveDay's own mail that named no shop is this shop's to delete.
  */
+const ctx = isolatedShopContext();
+
 describe("anonymizeDiver — bounce records", () => {
   it("deletes the diver's bounces here and leaves another shop's and DiveDay's own", async () => {
     const { db, shop } = ctx;

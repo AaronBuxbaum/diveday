@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { createDiver } from "../features/divers/store";
 import {
@@ -12,7 +12,7 @@ import { askForDate, attachDateInterestsToDeparture } from "./interests";
 import { interests, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 /** A shop with no date interests seeded, so nothing but the test's own is swept. */
 async function emptyDateShop() {

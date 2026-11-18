@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import type { AppDb } from "./client";
 import {
@@ -24,9 +24,9 @@ import { editTrip, getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`): every test here writes rows and
+// (src/test/db.ts, `isolatedShopContext`): every test here writes rows and
 // reads them back, and nothing moves money or holds a lock.
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 const OTHER_SHOP = "99999999-8888-4777-8666-555555555555";
 

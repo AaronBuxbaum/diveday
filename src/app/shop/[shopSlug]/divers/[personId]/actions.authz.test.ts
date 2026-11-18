@@ -15,7 +15,7 @@ import {
 } from "@/db/schema";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -23,10 +23,6 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
-
-// One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const ctx = fileScopedShopContext();
 
 /**
  * The diver record holds the two most consequential buttons in the product:
@@ -124,7 +120,7 @@ async function personRow(db: AppDb, personId: string) {
 }
 
 async function context() {
-  const { db, shop } = ctx;
+  const { db, shop } = await seededShopContext();
   vi.mocked(getDb).mockResolvedValue(db);
   return {
     db,

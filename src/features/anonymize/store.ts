@@ -86,9 +86,10 @@ import {
   rewriteBoardingSnapshotReviewer,
 } from "../../db/boarding-certification-snapshot";
 import type { AppDb, AppTransaction } from "../../db/client";
-import { boundLockWaits } from "../../db/lock-bounds";
+import { boundLockWaits, isLockWaitRefusal } from "../../db/lock-bounds";
 import { type DeleteFn, queueMediaDeletion, retryMediaDeletion } from "../../db/media-deletions";
 import { erasedPersonRowDeletes } from "../../db/person-columns";
+import { isTransactionExecutor } from "../../db/query-helpers";
 import { retireRecapLinks } from "../../db/recap-links";
 import { crewMarks, seatMarks } from "../../db/roll-call-subject";
 import type { ProcessorErasureObligation } from "../../db/schema/index";
@@ -176,6 +177,8 @@ import {
 } from "../../lib/waiver-integrity";
 
 export type AnonymizeDiverRefusal =
+  /** A conflicting operation held the shop; nothing was erased. */
+  | "busy"
   /** No live person with this id at this shop. */
   | "not_found"
   /** The actor is not a current, active owner of this shop. */
@@ -539,6 +542,45 @@ function logFuzzyMatch(
  * which is the disabled provider when no Stripe key is configured (and that
  * records "stripe not configured" on the row rather than pretending success).
  */
+class ErasureShopBusy extends Error {
+  constructor() {
+    super("Erasure shop is busy; retry the erasure");
+  }
+}
+
+async function erasureTransaction<T>(
+  db: AppDb,
+  shopId: string,
+  run: (tx: AppTransaction) => Promise<T>,
+): Promise<T> {
+  // A savepoint cannot release locks held by its caller, and provider work
+  // after this function must follow a real commit, not a savepoint release.
+  if (isTransactionExecutor(db)) throw new Error("Erasure requires a root transaction");
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await db.transaction(run);
+    } catch (error) {
+      if (!(error instanceof ErasureShopBusy) || attempt >= 2) throw error;
+      // The failed transaction has rolled back. Wait without the evidence
+      // fence, then repeat authorization and every target check from scratch.
+      try {
+        await db.transaction(async (tx) => {
+          await boundLockWaits(tx);
+          const [shop] = await tx
+            .select({ id: shops.id })
+            .from(shops)
+            .where(eq(shops.id, shopId))
+            .for("no key update");
+          if (!shop) throw new Error("Erasure shop disappeared while waiting");
+        });
+      } catch (waitError) {
+        if (isLockWaitRefusal(waitError)) throw new ErasureShopBusy();
+        throw waitError;
+      }
+    }
+  }
+}
+
 export async function anonymizeDiver(
   db: AppDb,
   input: {
@@ -550,8 +592,9 @@ export async function anonymizeDiver(
   },
   options: { customerProvider?: CustomerProvider; mediaDeleteFn?: DeleteFn } = {},
 ): Promise<AnonymizeDiverResult> {
-  const now = nowDate();
-  const outcome = await db.transaction(async (tx) => {
+  let now = nowDate();
+  const outcome = await erasureTransaction(db, input.shopId, async (tx) => {
+    now = nowDate();
     // Serialize with merge before looking up the target; a stale source must
     // never be erased successfully after its data moved to another person.
     await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
@@ -560,6 +603,22 @@ export async function anonymizeDiver(
       return { ok: false, reason: "not_authorized" } as const;
     }
     if (input.actorPersonId === input.personId) return { ok: false, reason: "self" } as const;
+
+    // A sender may already hold this shop row and be about to request the
+    // shared evidence fence. Never wait for it while holding the exclusive
+    // fence: unwind the whole attempt before waiting in a fresh transaction.
+    let shop: { id: string } | undefined;
+    try {
+      [shop] = await tx
+        .select({ id: shops.id })
+        .from(shops)
+        .where(eq(shops.id, input.shopId))
+        .for("no key update", { noWait: true });
+    } catch (error) {
+      if (isLockWaitRefusal(error)) throw new ErasureShopBusy();
+      throw error;
+    }
+    if (!shop) throw new Error("Erasure shop not found");
 
     // Match sign-in completion's account -> person lock order. The target is
     // then re-read under its row lock, so restore or rename cannot invalidate
@@ -648,6 +707,9 @@ export async function anonymizeDiver(
     if (!epoch) throw new Error("anonymizeDiver: shop erasure epoch update returned no row");
 
     return { ok: true, alreadyAnonymized: false, ...result } as const;
+  }).catch((error: unknown) => {
+    if (error instanceof ErasureShopBusy) return { ok: false, reason: "busy" } as const;
+    throw error;
   });
 
   if (!outcome.ok) return outcome;

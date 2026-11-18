@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { verifyWaiverIntegrity, WAIVER_INTEGRITY_VERSION_ERASED } from "@/lib/waiver-integrity";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
@@ -24,8 +24,8 @@ import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const fileCtx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const fileCtx = isolatedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
 
 it("withholds the signers, questionnaire, and alert while the seat is unconfirmed", async () => {

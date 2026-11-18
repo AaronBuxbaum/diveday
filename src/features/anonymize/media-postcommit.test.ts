@@ -2,14 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
 import { queueMediaDeletion } from "@/db/media-deletions";
 import { mediaDeletionAttempts, people, personRoles } from "@/db/schema";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { ANONYMIZED_PERSON_NAME } from "../anonymization/rules";
 import { createDiver } from "../divers/store";
 import { anonymizeDiver } from "./store";
 
-const ctx = fileScopedShopContext();
 it("attempts all-version media erasure after local redaction commits", async () => {
-  const { db, shop } = ctx;
+  const { db, shop } = await seededShopContext();
   const [owner] = await db
     .select({ id: personRoles.personId })
     .from(personRoles)
@@ -49,7 +48,7 @@ it("attempts all-version media erasure after local redaction commits", async () 
 });
 
 it("retries outstanding media on an erased replay until recovery succeeds", async () => {
-  const { db, shop } = ctx;
+  const { db, shop } = await seededShopContext();
   const [owner] = await db
     .select({ id: personRoles.personId })
     .from(personRoles)
@@ -90,7 +89,7 @@ it("retries outstanding media on an erased replay until recovery succeeds", asyn
 });
 
 it("erases a diver who has nothing but a name", async () => {
-  const { db, shop } = ctx;
+  const { db, shop } = await seededShopContext();
   const [owner] = await db
     .select({ id: personRoles.personId })
     .from(personRoles)

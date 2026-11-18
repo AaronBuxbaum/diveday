@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { loadDiverExportBundleInput } from "../../db/export";
 import { createCertification, reviewCertification } from "../../db/readiness";
 import { cards, certificationJuniorReviews, people } from "../../db/schema/index";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
 import { createDiver } from "../divers/store";
 import { recordJuniorCardStatus } from "./store";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 async function setup() {
   const { db, shop } = ctx;

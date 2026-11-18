@@ -983,7 +983,7 @@
     "src/db/trips-series.test.ts": 1337,
     "src/db/waiver-issue.test.ts": 1080,
     "src/db/waivers-medical.test.ts": 1001,
-    "src/features/anonymize/store.test.ts": 1549,
+    "src/features/anonymize/store.test.ts": 1547,
     "src/features/check-in/store.test.ts": 1198,
     "src/features/checkout-recovery/store.test.ts": 902,
     "src/features/courses/store.test.ts": 1676,

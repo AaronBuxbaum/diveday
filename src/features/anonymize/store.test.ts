@@ -38,12 +38,10 @@ import { upsertShopStripeAccount } from "../../db/stripe-accounts";
 import { listUnfinished } from "../../db/unfinished";
 import { STAFF_ROLES } from "../../lib/authz";
 import type { DeleteCustomerResult } from "../../lib/payments/customers";
-import { fileScopedShopContext } from "../../test/db";
+import { seededShopContext } from "../../test/db";
 import { insertTip, tipsOf } from "../../test/tips";
 import { recordShopIntegration } from "../integrations/store";
 import { anonymizeDiver } from "./store";
-
-const fileCtx = fileScopedShopContext({ history: true });
 
 /**
  * A managed storage origin, the shape `isManagedStorageUrl` accepts. A blob URL
@@ -52,7 +50,7 @@ const fileCtx = fileScopedShopContext({ history: true });
 const MANAGED_BLOB_HOST = "https://diveday-media.s3.us-east-1.amazonaws.com";
 
 async function erasureFixtures() {
-  const { db, shop } = fileCtx;
+  const { db, shop } = await seededShopContext({ history: true });
   const [owner] = await db
     .select({ id: people.id })
     .from(people)

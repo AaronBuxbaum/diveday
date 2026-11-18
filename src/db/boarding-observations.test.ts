@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { markBookingNoShow, undoBookingNoShow } from "../features/no-show/store";
 import { MINUTE_MS } from "../lib/clock";
-import { fileScopedShopContext } from "../test/db";
+import { isolatedShopContext } from "../test/db";
 import {
   dismissBoardingObservation,
   openBoardingObservationsByTrip,
@@ -19,7 +19,7 @@ import { heldSeatCounts } from "./trips-queries";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test.
-const fileCtx = fileScopedShopContext();
+const fileCtx = isolatedShopContext();
 
 /**
  * **A diver seen at the dock** (issue #4474): the desk's sighting is recorded

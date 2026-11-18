@@ -10,7 +10,7 @@ import * as currencies from "../../db/stripe-accounts";
 import { getTripRoster } from "../../db/trips";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -20,7 +20,7 @@ import { anonymizeDiver } from "../anonymize";
 import { recordPurchaseRefund } from "../recorded-purchases";
 import { createLocalOrder, recordLocalOrderReceipt, voidLocalOrder } from "./store";
 
-const context = fileScopedShopContext();
+const context = isolatedShopContext();
 async function setup() {
   const { db, shop } = context;
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);

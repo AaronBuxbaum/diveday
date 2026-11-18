@@ -6,7 +6,7 @@ import { claudeCallContent, claudeUsage, people, personRoles, shops } from "../.
 import { replyDraftCall } from "../../lib/assists/inbox";
 import type { StructuredCall } from "../../lib/claude/structured";
 import { nowDate } from "../../lib/clock";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { fakeClaude, fakeClaudeMessage } from "../../test/fakes";
 import { anonymizeDiver } from "../anonymize/store";
 import { IN_FLIGHT_WINDOW_MS, runAssist } from "../assists/store";
@@ -18,7 +18,7 @@ import { ERASURE_OVERLAP_MS } from "./store";
  * 2026-10-23). The 30-day prune itself is the generic window case in
  * `retention.test.ts`; this file is the write path and the erasure.
  */
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 beforeEach(async () => {
   await ctx.db.update(shops).set({ isDemo: false }).where(eq(shops.id, ctx.shop.id));

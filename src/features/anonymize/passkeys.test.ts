@@ -10,10 +10,10 @@ import {
   userAccounts,
 } from "@/db/schema";
 import { nowDate, nowMs } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./store";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 async function loginRows(personId: string, email: string) {
   const { db, shop } = ctx;

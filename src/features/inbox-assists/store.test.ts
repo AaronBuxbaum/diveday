@@ -6,7 +6,7 @@ import { setShopFeature, setShopReplyNotes } from "../../db/shops.test-support";
 import type { ClaudeProvider, ClaudeRequest } from "../../lib/claude/provider";
 import { nowDate, nowMs } from "../../lib/clock";
 import { formatShortDate } from "../../lib/format";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { fakeClaude, fakeClaudeMessage } from "../../test/fakes";
 import { REDACTED_TEXT } from "../anonymization/rules";
 import { anonymizeDiver } from "../anonymize/store";
@@ -20,7 +20,7 @@ import {
   triageInboundMessage,
 } from "./store";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 // The seed shop is the canonical demo, and a demo is always dark; these
 // tests are about a real shop running the assist through the fake provider.

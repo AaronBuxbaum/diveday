@@ -11,12 +11,12 @@ import {
 } from "../../db/schema/index";
 import { nowDate } from "../../lib/clock";
 import { checkDrysuitCard } from "../../lib/drysuit-card";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
 import { createDiver, getDiverProfile } from "../divers/store";
 import { clearDrysuitExperienceSeen, recordDrysuitExperienceSeen } from "./store";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 const NOTE = "Own DUI shell, three Breakwater shore dives in October";
 
 async function ownerId() {

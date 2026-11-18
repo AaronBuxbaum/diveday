@@ -2,7 +2,7 @@ import { and, eq, getTableColumns, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { isolatedShopContext, seededShopContext } from "@/test/db";
 import { schemaTableNames } from "@/test/schema-tables";
 import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
 import { anonymizeDiver } from "../features/anonymize/store";
@@ -45,7 +45,7 @@ const FOLDED_TABLES = [
 ];
 
 // One seeded database for the file and a rolled-back transaction per test (src/test/db.ts), never committed.
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 describe("schema coverage", () => {
   it("forces every schema table to be exported, folded, or deliberately excluded", () => {

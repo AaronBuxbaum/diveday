@@ -4,7 +4,7 @@ import { isMinorOnDate } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { charterContext, markSeat } from "@/test/training-mark-context";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
@@ -23,8 +23,8 @@ import { recordInPersonWaiver } from "./waivers-in-person";
 import { issueWaiverRequest } from "./waivers-requests";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const fileCtx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`).
+const fileCtx = isolatedShopContext();
 const waiverContext = waiverContextFor(fileCtx);
 
 afterEach(() => {

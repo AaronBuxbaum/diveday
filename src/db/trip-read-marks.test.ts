@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, isNull, ne, notExists } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { markArrived } from "@/test/arrivals";
-import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { isolatedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { seatCheckedIn } from "./arrival-provenance";
 import type { DbExecutor } from "./client";
@@ -123,8 +123,8 @@ async function askForAHand(
 }
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
-const ctx = fileScopedShopContext();
+// (src/test/db.ts, `isolatedShopContext`); nothing here commits or races.
+const ctx = isolatedShopContext();
 
 describe("listCatchUpSince", () => {
   it("tells a first-time reader nothing, however busy the morning was", async () => {

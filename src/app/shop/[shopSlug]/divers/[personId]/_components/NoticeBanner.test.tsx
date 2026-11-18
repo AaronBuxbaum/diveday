@@ -245,6 +245,7 @@ describe("resolveDiverNotice", () => {
     expect(resolve("restored")?.form).toBe("page");
     expect(resolve("restore-refused")?.form).toBe("restore");
     expect(resolve("erase-name-mismatch")?.form).toBe("erase");
+    expect(resolve("erase-busy")).toMatchObject({ form: "erase", tone: "danger" });
   });
 
   /**

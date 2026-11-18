@@ -1,7 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { bookings, people, personRoles } from "./schema";
 
@@ -10,11 +10,9 @@ import { bookings, people, personRoles } from "./schema";
  * the second call, so the typed-name confirmation that guarded the first call
  * cannot match it, and must not turn a finished erasure into a refusal.
  */
-const ctx = fileScopedShopContext();
-
 describe("anonymizeDiver retried with its public confirmation", () => {
   it("reports the erasure as already done, not as a name mismatch", async () => {
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext();
     const [owner] = await db
       .select({ id: people.id })
       .from(people)

@@ -1,10 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { mediaDeletionAttempts, people, personRoles } from "@/db/schema";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./store";
 
-const fileCtx = fileScopedShopContext({ history: true });
+const fileCtx = isolatedShopContext({ history: true });
 const MANAGED_BLOB_HOST = "https://diveday-media.s3.us-east-1.amazonaws.com";
 async function erasureFixtures() {
   const { db, shop } = fileCtx;

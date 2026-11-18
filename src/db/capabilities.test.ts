@@ -8,7 +8,7 @@ import {
   capabilityExpiry,
   personPurposesThatMerge,
 } from "@/lib/capabilities";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { recordSetupRequest } from "../features/funnel/store";
 import {
@@ -34,7 +34,7 @@ import { issueWaiverRequest } from "./waivers-requests";
  * never crosses purposes, the table refuses a row naming the wrong subject, and
  * the database never holds a usable token.
  */
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 async function subjects() {
   const { db, shop } = ctx;

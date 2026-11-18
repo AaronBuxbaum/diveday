@@ -4,13 +4,13 @@ import { recordPaymentOnOpenOrder } from "../../db/orders";
 import { orders, people } from "../../db/schema/index";
 import { DAY_MS, nowDate } from "../../lib/clock";
 import type { InvoicingProvider } from "../../lib/payments/invoicing";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "../../test/staff-session";
 import { REDACTED_TEXT } from "../anonymization/rules";
 import { anonymizeDiver } from "../anonymize/store";
 import { roomChargesByHotel } from "./store";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 /** Stripe agrees the invoice was paid at the counter; nothing else is reached. */
 const invoicing = {

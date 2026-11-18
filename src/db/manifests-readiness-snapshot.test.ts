@@ -2,7 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { loadShopExportBundleInput } from "./export";
 import { listCountedAboardBlockedByTrip, recordRollCall } from "./manifests";
@@ -15,7 +15,7 @@ import { rollCallEvents } from "./schema";
 import { getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 /**
  * **A roll-call event keeps what readiness said when it was written** (issue

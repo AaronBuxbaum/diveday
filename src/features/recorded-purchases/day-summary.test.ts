@@ -6,13 +6,13 @@ import { collectionEntries, orders } from "../../db/schema";
 import { calendarDateInTimezone } from "../../lib/calendar-date";
 import { nowDate } from "../../lib/clock";
 import { shopDaysBounds } from "../../lib/zoned";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "../../test/staff-session";
 import { anonymizeDiver } from "../anonymize";
 import { recordedPurchaseDay } from "./day-summary";
 import { recordPurchase, recordPurchaseRefund } from "./store";
 
-const context = fileScopedShopContext();
+const context = isolatedShopContext();
 async function sale() {
   const { db, shop } = context;
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);

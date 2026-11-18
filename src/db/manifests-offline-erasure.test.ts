@@ -3,17 +3,15 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { people, rollCallEvents, shops } from "./schema";
 import { getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
-const context = fileScopedShopContext();
-
 async function fixture() {
-  const { db, shop } = context;
+  const { db, shop } = await seededShopContext();
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const trip = trips.find((candidate) => candidate.title.startsWith("Two-Tank Reef — Molasses"));
   if (!trip) throw new Error("demo reef trip missing");

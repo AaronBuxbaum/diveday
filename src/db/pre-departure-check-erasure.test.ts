@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import {
   issueOfflineManifestSnapshot,
@@ -13,7 +13,7 @@ import { preDepartureCheckEvents } from "./schema";
 import { getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
-const context = fileScopedShopContext();
+const context = isolatedShopContext();
 
 async function fixture() {
   const { db, shop } = context;

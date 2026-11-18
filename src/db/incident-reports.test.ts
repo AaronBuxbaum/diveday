@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { isolatedShopContext } from "@/test/db";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { pruneExpiredRecords } from "../features/retention/store";
@@ -44,7 +44,7 @@ import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test:
 // every test writes its own report and reads it back.
-const ctx = fileScopedShopContext();
+const ctx = isolatedShopContext();
 
 describe("starting a report", () => {
   it("lets the departure's crew and the owner start one, and nobody else", async () => {

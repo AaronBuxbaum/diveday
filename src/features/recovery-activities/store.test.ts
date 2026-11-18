@@ -18,12 +18,12 @@ import {
 } from "../../db/schema";
 import { nowDate } from "../../lib/clock";
 import { advanceClock } from "../../test/clock";
-import { fileScopedShopContext } from "../../test/db";
+import { isolatedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize";
 import { classroomFixture } from "./fixture.test-support";
 import { createRecoveryActivity, transitionRecoveryActivity } from "./store";
 
-const context = fileScopedShopContext();
+const context = isolatedShopContext();
 const setup = () => classroomFixture(context.db, context.shop);
 describe("complimentary non-diving classroom recovery", () => {
   it("requires deliberate arrangements, a live coordinator and cancellation; creation retries remain durable", async () => {
