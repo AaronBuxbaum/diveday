@@ -147,10 +147,6 @@ test.describe("before the player has run", () => {
         name: diverTranslator("en-US")("marketing.home.stepsTitle"),
       }),
     ).toBeVisible();
-    // The heading says what the steps are in one line; no picture stands beside it.
-    await expect(
-      stepsBand.getByText(diverTranslator("en-US")("marketing.home.stepsLede")),
-    ).toBeVisible();
     // Each step's own name (all twelve are in the page; only the listed five show before the player runs), from the copy column that is every row's first
     // child (the alternation is `order`, not DOM order). The screens beside them
     // draw headings of their own ("Find your next dive"), which a screen reader

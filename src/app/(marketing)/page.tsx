@@ -147,9 +147,6 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.home.stepsTitle")}
             </h2>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
-              {t("marketing.home.stepsLede")}
-            </p>
           </div>
 
           {/* 96px between steps at every width, against 20px inside one below
