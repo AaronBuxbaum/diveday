@@ -156,6 +156,156 @@ async function timed<T>(work: Promise<T>): Promise<{ value: T; ms: number }> {
 }
 
 describePostgres("a dock sighting is never held behind a schedule edit", () => {
+  it("does not retarget a joined key while its transaction is uncommitted", async () => {
+    const ctx = await releasedSeat();
+    await ctx.pg.db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, ctx.aboard));
+    const input = { shopId: ctx.shopId, tripId: ctx.trip.id, recordedByPersonId: ctx.staffId };
+    const original = await recordBoardingObservation(ctx.pg.connect(), {
+      ...input,
+      bookingId: ctx.late,
+      clientKey: randomUUID(),
+    });
+    if (!original.ok) throw new Error(`original sighting refused: ${original.reason}`);
+    const before = await observationsOf(ctx.pg.db, ctx.late);
+    const seatsBefore = await ctx.pg.db
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.shopId, ctx.shopId), eq(bookings.tripId, ctx.trip.id)));
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const joinedReady = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    let heldPid = 0;
+    const heldConnection = ctx.pg.connect();
+    const held = new Proxy(heldConnection, {
+      get(target, property, receiver) {
+        if (property === "transaction") {
+          return (work: Parameters<AppDb["transaction"]>[0]) =>
+            target.transaction(async (tx) => {
+              const pid = await tx.execute(sql`select pg_backend_pid() as pid`);
+              heldPid = Number((pid.rows[0] as { pid: number }).pid);
+              const result = await work(tx);
+              ready();
+              await gate;
+              return result;
+            });
+        }
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    let identify!: (pid: number) => void;
+    const contenderPid = new Promise<number>((resolve) => {
+      identify = resolve;
+    });
+    const contenderConnection = ctx.pg.connect();
+    const contender = new Proxy(contenderConnection, {
+      get(target, property, receiver) {
+        if (property === "transaction") {
+          return (work: Parameters<AppDb["transaction"]>[0]) =>
+            target.transaction(async (tx) => {
+              const pid = await tx.execute(sql`select pg_backend_pid() as pid`);
+              identify(Number((pid.rows[0] as { pid: number }).pid));
+              return work(tx);
+            });
+        }
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const key = randomUUID();
+    const joined = recordBoardingObservation(held, {
+      ...input,
+      bookingId: ctx.late,
+      clientKey: key,
+    });
+    void joined.catch(() => undefined);
+    let competing: ReturnType<typeof recordBoardingObservation> | undefined;
+    onTestFinished(async () => {
+      release();
+      await Promise.allSettled([joined, ...(competing ? [competing] : [])]);
+    });
+    try {
+      const reachedGate = await Promise.race([
+        joinedReady.then(() => true),
+        joined.then(() => false),
+      ]);
+      if (!reachedGate) throw new Error("joined transaction finished before commit gate");
+      competing = recordBoardingObservation(contender, {
+        ...input,
+        bookingId: ctx.aboard,
+        clientKey: key,
+      });
+      void competing.catch(() => undefined);
+      const pid = await Promise.race([
+        contenderPid,
+        competing.then(() => {
+          throw new Error("contender not identified");
+        }),
+      ]);
+      let finished = false;
+      void competing.then(
+        () => {
+          finished = true;
+        },
+        () => {
+          finished = true;
+        },
+      );
+      let blocked = false;
+      const deadline = performance.now() + 4_000;
+      while (performance.now() < deadline && !finished) {
+        const waiting = await ctx.pg.db.execute(sql`
+          select count(*)::int as count from pg_stat_activity
+          where datname = current_database() and pid = ${pid} and wait_event_type = 'Lock'
+            and ${heldPid} = any(pg_blocking_pids(pid))
+        `);
+        if (Number((waiting.rows[0] as { count: number }).count) > 0) {
+          blocked = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(
+        blocked || finished,
+        "contender neither refused nor blocked on joined transaction",
+      ).toBe(true);
+    } finally {
+      release();
+    }
+    expect(await joined).toMatchObject({
+      ok: true,
+      replay: true,
+      observationId: original.observationId,
+    });
+    if (!competing) throw new Error("contender did not start");
+    expect(await competing).toEqual({ ok: false, reason: "key_reused" });
+    expect(
+      await recordBoardingObservation(ctx.pg.connect(), {
+        ...input,
+        bookingId: ctx.late,
+        clientKey: key,
+      }),
+    ).toMatchObject({
+      ok: true,
+      replay: true,
+      observationId: original.observationId,
+    });
+    expect(await observationsOf(ctx.pg.db, ctx.late)).toEqual(before);
+    expect(await observationsOf(ctx.pg.db, ctx.aboard)).toEqual([]);
+    const seatsAfter = await ctx.pg.db
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.shopId, ctx.shopId), eq(bookings.tripId, ctx.trip.id)));
+    expect(seatsAfter.sort((a, b) => a.id.localeCompare(b.id))).toEqual(
+      seatsBefore.sort((a, b) => a.id.localeCompare(b.id)),
+    );
+  });
+
   it("does not retarget an original key while its first receipt is uncommitted", async () => {
     const ctx = await releasedSeat();
     await ctx.pg.db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, ctx.aboard));
