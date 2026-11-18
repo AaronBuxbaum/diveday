@@ -205,6 +205,55 @@ afterEach(
 );
 
 describe("saveOfflineManifest", () => {
+  it("does not elect a new key when only preserved ciphertext remains", async () => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        db.createObjectStore("keys");
+        db.createObjectStore("manifests", { keyPath: "tripId" });
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("keys", "readwrite");
+        tx.objectStore("keys").put(
+          { ciphertext: new Uint8Array([1, 2, 3]) },
+          "unreadable-preservation-v1:example",
+        );
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    await expect(saveOfflineManifest(payload)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(payload.manifests[0].trip.id)).toBeUndefined();
+    const saved = await new Promise<{ key: unknown; archive: unknown }>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("keys", "readonly");
+        const key = tx.objectStore("keys").get("manifest-aes-gcm-v1");
+        const archive = tx.objectStore("keys").get("unreadable-preservation-v1:example");
+        tx.oncomplete = () => {
+          db.close();
+          resolve({ key: key.result, archive: archive.result });
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    expect(saved.key).toBeUndefined();
+    expect(Array.from((saved.archive as { ciphertext: Uint8Array }).ciphertext)).toEqual([1, 2, 3]);
+  });
   it("still saves a fresh snapshot when the existing device record is corrupt or undecryptable", async () => {
     // Simulate storage corruption (a bad key, a version/AAD mismatch, flipped
     // bytes) by writing a record straight into IndexedDB that this module's
@@ -248,6 +297,107 @@ describe("saveOfflineManifest", () => {
 });
 
 describe("loadOfflineManifest", () => {
+  it("does not install a replacement key over ciphertext that may hold unsent evidence", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    const before = await rawStoredRecord(tripId);
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("keys", "readwrite");
+        tx.objectStore("keys").delete("manifest-aes-gcm-v1");
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    await expect(loadOfflineManifest(tripId)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+    await expect(saveOfflineManifest(payload)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+    const storedKey = await new Promise<unknown>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const get = db
+          .transaction("keys", "readonly")
+          .objectStore("keys")
+          .get("manifest-aes-gcm-v1");
+        get.onsuccess = () => {
+          db.close();
+          resolve(get.result);
+        };
+        get.onerror = () => {
+          db.close();
+          reject(get.error);
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    expect(storedKey).toBeUndefined();
+  });
+  it("retains unreadable expired ciphertext instead of deleting or replacing it", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+    const record = (await rawStoredRecord(tripId)) as Record<string, unknown>;
+    record.ciphertext = new Uint8Array([1, 2, 3]).buffer;
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("manifests", "readwrite");
+        tx.objectStore("manifests").put(record);
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+      request.onerror = () => reject(request.error);
+    });
+    const before = await rawStoredRecord(tripId);
+    await expect(loadOfflineManifest(tripId)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+    await expect(saveOfflineManifest(payload)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+  });
+  it("withholds past-grace pending evidence without deleting or overwriting it on refresh", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+    const before = await rawStoredRecord(tripId);
+    await expect(loadOfflineManifest(tripId)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+    await expect(saveOfflineManifest(payload)).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+    expect(await readDiscardedOfflineRecords()).toEqual([]);
+  });
   it("keeps an expired record alive if it still has an unsynced pending event", async () => {
     const tripId = payload.manifests[0].trip.id;
     await saveOfflineManifest(payload);

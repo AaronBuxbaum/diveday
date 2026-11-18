@@ -1,6 +1,5 @@
 "use client";
 import { nowDate } from "./clock";
-import { log } from "./log";
 import {
   canRecordOfflineArrival,
   canRecordOfflineChecklistCheck,
@@ -35,6 +34,7 @@ const DB_VERSION = 1;
 const KEY_STORE = "keys";
 const MANIFEST_STORE = "manifests";
 const KEY_ID = "manifest-aes-gcm-v1";
+const PRESERVATION_PREFIX = "unreadable-preservation-v1:";
 const TENANT_ROUND_KEY = "tenant-verification-round-v1";
 const MANIFEST_CHANGE_EVENT = "diveday-offline-manifest-change";
 const MANIFEST_CHANGE_CHANNEL = "diveday-offline-manifest-changes-v1";
@@ -161,53 +161,9 @@ export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeL
   };
 }
 
-/**
- * The hard ceiling on the pending-event exception below: how long past a
- * record's own `expiresAt` it may be kept readable *because* it still holds an
- * unsynced roll-call event. Past this it is deleted regardless of what is
- * queued on it, and the loss is written to the discard notice this module
- * keeps (see {@link readDiscardedOfflineRecords}) instead of vanishing.
- *
- * **Why there has to be one at all** (security review, 2026-08-06, F3). The
- * exception was bounded by prose rather than by arithmetic: a foreign shop's
- * record survives "until the original shop's own session next runs a purge pass
- * and finds it resolved". That moment is not guaranteed to arrive. A pending
- * event can only reconcile under the shop that recorded it, so if that shop's
- * staff never sign into this tablet again — a freelance captain who moves on, a
- * boat sold, a tablet reassigned — the record is retained forever, past both its
- * 14-day and its 7-day window. `/offline-manifest` has no auth gate by design
- * (the shell must open with the radio off), so "forever" means anyone holding
- * the tablet can read that shop's diver names, emergency contacts and
- * readiness/medical blockers, with no session, indefinitely. An unbounded
- * exception to a retention rule is not a retention rule.
- *
- * **Why 28 days.** Twice {@link OFFLINE_MANIFEST_MAX_RETENTION_MS}, the longest
- * a copy of a roster is ever meant to live on a device, expressed as that
- * constant rather than as a fresh number so shortening the retention window
- * shortens this with it. Bracketed on both sides:
- *
- * - *Long enough that a real trip's events always get their chance.* A record
- *   only reaches this ceiling after it has already expired, which is at most 7
- *   days after the boat came home (`OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS`).
- *   Four further weeks of any signal, any sign-in by the shop that recorded it,
- *   any push the worker wakes on, is longer than a liveaboard charter, a crew
- *   rotation, or a tablet away for repair. Nothing plausible about a dive
- *   operation makes 35 days from the trip ending "too soon to have tried".
- * - *Short enough that "indefinitely" stops being true.* The worst case is
- *   `savedAt + 14 + 28` = 42 days, and measured from the trip itself
- *   `endsAt + 7 + 28` = 35. That lands the grace period itself just under the 30
- *   days `RETENTION_DAYS.push_subscriptions` (`src/features/retention/rules.ts`) gives the
- *   closest analogue in the server-side table — a *device* credential, kept only
- *   while its trip is near, "pure blast radius" afterwards. The reasoning there
- *   applies with more force here, not less: this is a shared boat tablet holding
- *   emergency contacts and medical blockers, not a row in a managed database.
- *
- * `offline-manifest-store.test.ts` asserts both bounds rather than trusting this
- * comment, the same way `retentionWindowsOutlastStripeRetries` does for Stripe.
- *
- * It lives here rather than beside the other windows in `offline-manifests.ts`
- * because it is a rule about *this store's* deletion behaviour — nothing that
- * merely reads a snapshot has any use for it.
+/** Past this grace period, pending records are withheld from ordinary reads.
+ * Their ciphertext is retained for a future authenticated recovery path. This
+ * does not erase the key or prevent an older shell from opening the record.
  */
 export const OFFLINE_MANIFEST_PENDING_GRACE_MS = 2 * OFFLINE_MANIFEST_MAX_RETENTION_MS;
 
@@ -245,9 +201,6 @@ export type DiscardedOfflineRecord = {
  * invisible to every version of this module that only ever reads `KEY_ID`.
  */
 const DISCARD_NOTICE_KEY = "discarded-pending-roll-call-v1";
-
-/** Newest kept; a device that somehow discards more than this has bigger news. */
-const DISCARD_NOTICE_LIMIT = 50;
 
 type StoredRecord = {
   tripId: string;
@@ -402,21 +355,75 @@ function withKeyLock<T>(fn: () => Promise<T>): Promise<T> {
   return navigator.locks.request("diveday-offline-manifest-key", fn);
 }
 
+function isManifestKey(value: unknown): value is CryptoKey {
+  return (
+    value instanceof CryptoKey &&
+    value.type === "secret" &&
+    !value.extractable &&
+    value.algorithm.name === "AES-GCM" &&
+    (value.algorithm as AesKeyAlgorithm).length === 256 &&
+    value.usages.includes("encrypt") &&
+    value.usages.includes("decrypt")
+  );
+}
+
 async function encryptionKey(db: IDBDatabase): Promise<CryptoKey> {
   return withKeyLock(async () => {
     const read = db.transaction(KEY_STORE, "readonly");
     const existing = await requestResult(read.objectStore(KEY_STORE).get(KEY_ID));
     await transactionDone(read);
-    if (existing instanceof CryptoKey) return existing;
+    if (isManifestKey(existing)) return existing;
 
     const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
       "encrypt",
       "decrypt",
     ]);
-    const write = db.transaction(KEY_STORE, "readwrite");
-    write.objectStore(KEY_STORE).put(key, KEY_ID);
-    await transactionDone(write);
-    return key;
+    // Elect a key atomically with the empty-store check, even where Web Locks
+    // are unavailable. Never replace an invalid key or strand existing bytes.
+    const write = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+    const done = transactionDone(write);
+    const keys = write.objectStore(KEY_STORE);
+    let winner: unknown;
+    let count = 0;
+    let archived: IDBValidKey[] = [];
+    let ready = 0;
+    let refused = false;
+    let selected: CryptoKey | undefined;
+    const choose = () => {
+      if (++ready !== 3) return;
+      if (isManifestKey(winner)) selected = winner;
+      else if (
+        winner === undefined &&
+        count === 0 &&
+        !archived.some((key) => typeof key === "string" && key.startsWith(PRESERVATION_PREFIX))
+      ) {
+        keys.put(key, KEY_ID);
+        selected = key;
+      } else {
+        refused = true;
+        write.abort();
+      }
+    };
+    keys.get(KEY_ID).onsuccess = (event) => {
+      winner = (event.target as IDBRequest<unknown>).result;
+      choose();
+    };
+    keys.getAllKeys().onsuccess = (event) => {
+      archived = (event.target as IDBRequest<IDBValidKey[]>).result;
+      choose();
+    };
+    write.objectStore(MANIFEST_STORE).count().onsuccess = (event) => {
+      count = (event.target as IDBRequest<number>).result;
+      choose();
+    };
+    try {
+      await done;
+    } catch (error) {
+      if (refused) throw new OfflineManifestError("unavailable");
+      throw error;
+    }
+    if (!selected) throw new OfflineManifestError("unavailable");
+    return selected;
   });
 }
 
@@ -558,51 +565,6 @@ async function readNotices(db: IDBDatabase): Promise<DiscardedOfflineRecord[]> {
 }
 
 /**
- * Appends the loss so a screen can report it later. **Never a throw path**: the
- * caller is mid-delete on a record that must go regardless (see
- * {@link OFFLINE_MANIFEST_PENDING_GRACE_MS}), and failing here would either
- * abort a retention deletion to preserve a footnote about it, or — worse —
- * delete the record and then propagate an error to a caller that treats it as
- * "storage is broken". Losing the notice is bad; keeping a foreign shop's
- * roster because the notice could not be written is the finding.
- */
-async function noteDiscardedRecord(
-  db: IDBDatabase,
-  envelope: OfflineManifestEnvelope,
-  pendingEvents: number,
-): Promise<void> {
-  const trip = envelope.snapshot.manifests[0]?.trip;
-  try {
-    await withNoticeLock(async () => {
-      const existing = await readNotices(db);
-      const next = [
-        ...existing,
-        {
-          noticeId: crypto.randomUUID(),
-          tripId: trip?.id ?? "",
-          tripTitle: trip?.title ?? "",
-          shopName: envelope.snapshot.shop.name,
-          shopSlug: envelope.snapshot.shop.slug,
-          pendingEvents,
-          discardedAt: nowDate().toISOString(),
-        } satisfies DiscardedOfflineRecord,
-      ].slice(-DISCARD_NOTICE_LIMIT);
-      const transaction = db.transaction(KEY_STORE, "readwrite");
-      transaction.objectStore(KEY_STORE).put(next, DISCARD_NOTICE_KEY);
-      await transactionDone(transaction);
-    });
-  } catch (error) {
-    // Deliberately not rethrown — see the docblock above: the deletion must
-    // win over its own footnote. But leave a trace, or a device that can
-    // never write the notice looks identical to one with nothing to say.
-    log("offline_manifest.discard_notice_failed", "error", {
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-    return;
-  }
-}
-
-/**
  * Every unsynced roll-call record this device has thrown away at the retention
  * ceiling and not had acknowledged yet — the offline shell reads this and says
  * so on screen.
@@ -650,7 +612,7 @@ export async function acknowledgeDiscardedOfflineRecords(
 
 /**
  * True once a record is far enough past its own `expiresAt` that the
- * pending-event exception stops applying — see
+ * pending-event exception stops allowing ordinary reads — see
  * {@link OFFLINE_MANIFEST_PENDING_GRACE_MS} for the window and why it is bounded
  * at all. Reads the *stored* (plaintext) expiry, the same field
  * `isOfflineManifestExpired` is given here, so the two answers can never be
@@ -697,39 +659,19 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       envelope.events ??= [];
       envelope.checklistEvents ??= [];
       envelope.arrivalEvents ??= [];
-    } catch (error) {
-      // Nothing recoverable from ciphertext this key can't open — if it's
-      // also past its retention window, clean it up now rather than leaving
-      // unreadable bytes behind forever with no delete button to clear them.
-      if (isOfflineManifestExpired(record)) await deleteOfflineManifest(tripId, db);
-      throw error;
+    } catch {
+      // An unreadable record can still contain the only copy of an event.
+      // Retain its bytes and prevent a refresh from treating it as absent.
+      throw new OfflineManifestError("unavailable");
     }
     if (isOfflineManifestExpired(record)) {
-      // A record still holding a roll-call event that never reached the
-      // server is the only copy of that evidence — keep serving it (as
-      // stale) rather than silently discarding it, until every event is
-      // resolved and it can expire for real on the next read.
-      //
-      // **Until the ceiling.** That exception used to have no end (security
-      // review, 2026-08-06, F3): an event can only reconcile under the shop
-      // that recorded it, so a record whose shop never signs into this device
-      // again was kept — decryptable, listed, and openable with no session on
-      // a shell that has no auth gate — forever. Past
-      // OFFLINE_MANIFEST_PENDING_GRACE_MS the record goes regardless of what
-      // is queued on it, and the loss is written down (readDiscardedOfflineRecords)
-      // rather than dropped in silence, because unsynced evidence of who came
-      // back from a dive is not something to delete quietly.
-      //
-      // The rule lives here, in the one function that decrypts a record and
-      // decides whether it still exists, so `listOfflineManifests` and
-      // `purgeOfflineManifestsExceptShop` inherit it instead of re-deriving
-      // it — the same chokepoint discipline the purge's own slug guard
-      // follows. It is enforced lazily, on read: IndexedDB has no background
-      // expiry, so the guarantee is "no read after the ceiling ever returns
-      // it", exactly as the ordinary retention window has always worked.
+      // Beyond grace, withhold rather than destroy pending evidence. The
+      // browser still holds the key; this is not cryptographic erasure.
       const pendingEvents = pendingOfflineEventCount(envelope);
-      if (pendingEvents === 0 || isPastPendingGrace(record)) {
-        if (pendingEvents > 0) await noteDiscardedRecord(db, envelope, pendingEvents);
+      if (pendingEvents > 0 && isPastPendingGrace(record)) {
+        throw new OfflineManifestError("unavailable");
+      }
+      if (pendingEvents === 0) {
         await deleteOfflineManifest(tripId, db);
         return null;
       }
@@ -743,13 +685,8 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
 /**
  * Every saved trip on this device, for the offline shell's list view (see
  * ADR 20260726-shopwide-offline-manifest-priming). Reuses loadOfflineManifest
- * per trip rather than a bespoke bulk-decrypt path so the same expiry/
- * pending-event rules (keep an expired record alive only while it still
- * holds an unsynced roll-call event, and only until
- * OFFLINE_MANIFEST_PENDING_GRACE_MS past its expiry) apply exactly once, in
- * one place, instead of being re-implemented here and risking drift. That is
- * also what makes simply *opening the shell* enough to clear a record past the
- * ceiling — no session, no network, no purge pass required.
+ * per trip. Unavailable records are omitted from this list; their evidence
+ * remains on the device and cannot yet be recovered through this API.
  *
  * Ordered upcoming-or-active trips first (soonest departure on top — "the
  * next boat leaving"), then past trips still within their post-trip
@@ -813,17 +750,9 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
  * `loadOfflineManifest` already makes for the single-shop expiry case,
  * applied here too.
  *
- * **That reprieve is bounded, and not by this function.** It lasts until the
- * original shop's own session next reconciles it, or until
- * OFFLINE_MANIFEST_PENDING_GRACE_MS past the record's expiry, whichever comes
- * first — and the ceiling is enforced inside `loadOfflineManifest`, which this
- * function reads every candidate through. So a past-ceiling record is already
- * gone by the time the pending check below looks at it (`current` is null), and
- * there is deliberately no second copy of the rule here to drift from the
- * first. Before that ceiling existed, "until the original shop signs in again"
- * was the only bound on record that never had to arrive at all — see
- * OFFLINE_MANIFEST_PENDING_GRACE_MS for why that is a finding rather than a
- * tradeoff (security review, 2026-08-06, F3).
+ * Past-grace pending records and unreadable records are withheld by the
+ * reader and retained. That retention is not selective erasure, and recovery
+ * still needs an authenticated path.
  *
  * The pending check and the delete both run under this trip's
  * `withManifestLock`, re-reading the record once the lock is held rather than
@@ -979,11 +908,9 @@ export async function saveOfflineManifest(
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
   return withManifestLock(trip.id, async () => {
-    // A corrupt or undecryptable existing record (storage corruption, a stale
-    // key, a version/AAD mismatch) must not abort the save — there's no delete
-    // button anymore, so failing here would brick this device's offline copy
-    // for good instead of just losing that record's own queued events.
-    const existing = await loadOfflineManifest(trip.id).catch(() => null);
+    // An unavailable record may contain unsent evidence. Do not overwrite it
+    // merely because its contents cannot currently be read.
+    const existing = await loadOfflineManifest(trip.id);
     const savedAt = nowDate();
     // Snapshot tokens carry a server-authenticated epoch. This local comparison
     // only removes retained text from this device; every sync writer still
