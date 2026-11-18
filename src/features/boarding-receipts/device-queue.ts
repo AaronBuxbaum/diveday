@@ -1,6 +1,7 @@
 "use client";
 
 import { nowDate } from "@/lib/clock";
+import { isUuid } from "@/lib/uuid";
 import { dockQueueEnabled } from "./device-queue-gate";
 
 /**
@@ -70,6 +71,20 @@ function transactionDone(tx: IDBTransaction): Promise<void> {
 
 export function prepareDockTap(input: TapInput): PreparedTap | null {
   try {
+    return prepareDockTapForKey(input, crypto.randomUUID());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Accept a preselected tap key literally; this does not authenticate its context.
+ * Retrying must reuse the prepared attempt: preparing again creates a new capture time.
+ */
+export function prepareDockTapForKey(input: TapInput, eventId: string): PreparedTap | null {
+  try {
+    if (typeof eventId !== "string" || !isUuid(eventId) || eventId !== eventId.toLowerCase())
+      return null;
     if (
       !validId(input.shopId) ||
       !validId(input.tripId) ||
@@ -84,7 +99,6 @@ export function prepareDockTap(input: TapInput): PreparedTap | null {
       (!validId(meeting.generationId) || !validId(meeting.meetingId))
     )
       return null;
-    const eventId = crypto.randomUUID();
     const event = {
       eventId,
       kind: "dock_sighting",
