@@ -13,7 +13,10 @@ import { ShopIdentityMenu, shopInitials } from "./ShopIdentityMenu";
 vi.mock("next/navigation", () => ({
   usePathname: () => "/shop/blue-mantis/trips/abc",
 }));
-vi.mock("./forget-device", () => ({ forgetThisDevice: vi.fn(async () => {}) }));
+vi.mock("./forget-device", () => ({
+  forgetThisDevice: vi.fn(async () => {}),
+  markDeviceCleanupIncomplete: vi.fn(),
+}));
 
 afterEach(() => {
   cleanup();
@@ -146,8 +149,8 @@ describe("ShopIdentityMenu — the open panel", () => {
     let finishWipe!: () => void;
     vi.mocked(forgetThisDevice).mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          finishWipe = resolve;
+        new Promise<{ status: "attempted" }>((resolve) => {
+          finishWipe = () => resolve({ status: "attempted" });
         }),
     );
     const signOutAction = vi.fn(async () => {});
@@ -167,6 +170,25 @@ describe("ShopIdentityMenu — the open panel", () => {
     await vi.waitFor(() => expect(forgetThisDevice).toHaveBeenCalledTimes(1));
     expect(signOutAction).not.toHaveBeenCalled();
     await act(async () => finishWipe());
+    await vi.waitFor(() => expect(signOutAction).toHaveBeenCalledTimes(1));
+  });
+
+  it("still signs out when cleanup unexpectedly rejects", async () => {
+    vi.mocked(forgetThisDevice).mockRejectedValueOnce(new Error("storage unavailable"));
+    const signOutAction = vi.fn(async () => {});
+    render(
+      <ShopIdentityMenu
+        shopName="Blue Mantis Divers"
+        signOutAction={signOutAction}
+        locale="en-US"
+        languages={LANGUAGES}
+        setLocaleAction={vi.fn()}
+        copy={COPY}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sign out now?" }));
     await vi.waitFor(() => expect(signOutAction).toHaveBeenCalledTimes(1));
   });
 

@@ -3881,6 +3881,7 @@
       "twoFactorCode": "Código de acceso",
       "twoFactorHint": "Usa un código de tu aplicación de autenticación o uno de tus códigos de recuperación.",
       "sessionEnded": "Se cerró tu sesión porque esta cuenta ya no está activa. Contacta al propietario del centro si esto no era lo esperado.",
+      "deviceCleanupIncomplete": "No se pudo borrar toda la información sin conexión de este dispositivo. Mantenlo en privado y contacta a tu centro.",
       "forgotPassword": "¿Olvidaste tu contraseña?",
       "signingIn": "Iniciando sesión…",
       "submit": "Iniciar sesión",

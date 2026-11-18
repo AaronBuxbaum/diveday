@@ -7,11 +7,28 @@ import { announceSessionInvalidation } from "./session-invalidation";
 
 /** How long a sign-out waits for the offline wipes before it goes on regardless. */
 const WIPE_WAIT_MS = 2_000;
+const INCOMPLETE_KEY = "diveday-device-cleanup-incomplete";
+
+/** A generic, tab-local warning; it carries no identity or offline contents. */
+export function markDeviceCleanupIncomplete(): void {
+  try {
+    sessionStorage.setItem(INCOMPLETE_KEY, "1");
+  } catch {
+    /* unavailable storage */
+  }
+}
+
+export function deviceCleanupMayBeIncomplete(): boolean {
+  try {
+    return sessionStorage.getItem(INCOMPLETE_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
 
 /**
- * **A shared device keeps nothing of the last staffer** (security review F2,
- * N1): ⌘K's recents, any form kept for a refusal, the medical alerts
- * revealed in this visit, the medical alert words on every offline copy
+ * Clear session-local data and attempt to clear the medical alert words on
+ * readable offline copies
  * (H-20261023-medical-alert-for-the amendment; the rest of each copy stays, queued roll call included),
  * and any diver's `/ready` page kept on this browser (issue #2693).
  * Run by both sign-out doors and by the sign-in page, where every ended
@@ -24,24 +41,43 @@ const WIPE_WAIT_MS = 2_000;
  * the sign-in page loading (the browser closed, the session expiring on the
  * offline page) runs none of this: the words stay on the device until the
  * copy expires or the next sign-in (ADR 20260718 amendment, H-20261023-medical-alert-for-the).
+ * An incomplete result is not selective erasure: ciphertext and keys may remain.
  */
-export async function forgetThisDevice(): Promise<void> {
-  announceSessionInvalidation();
-  forgetAllRecents();
-  forgetAllKeptTyped();
-  forgetRevealedMedicalAlerts();
+export async function forgetThisDevice(): Promise<{ status: "attempted" | "incomplete" }> {
+  let setupIncomplete = false;
+  for (const clear of [
+    announceSessionInvalidation,
+    forgetAllRecents,
+    forgetAllKeptTyped,
+    forgetRevealedMedicalAlerts,
+  ]) {
+    try {
+      clear();
+    } catch {
+      setupIncomplete = true;
+    }
+  }
   let timer: ReturnType<typeof setTimeout> | undefined;
-  await Promise.race([
-    Promise.all([
-      // A browser with no IndexedDB has no copies.
-      typeof indexedDB === "undefined" ? undefined : wipeOfflineMedicalAlerts().catch(() => {}),
+  const result = await Promise.race([
+    Promise.allSettled([
+      // An unavailable API does not prove the device has no saved copies.
+      typeof indexedDB === "undefined"
+        ? Promise.reject(new Error("unavailable"))
+        : Promise.resolve().then(() => wipeOfflineMedicalAlerts()),
       // A diver's /ready page this browser kept (issue #2693): a shop tablet
       // that opened a diver's link keeps nothing of them past a sign-out.
-      forgetReadyPageCopy(),
-    ]),
-    new Promise<void>((resolve) => {
-      timer = setTimeout(resolve, WIPE_WAIT_MS);
+      Promise.resolve().then(forgetReadyPageCopy),
+    ]).then((results) => {
+      const failed =
+        setupIncomplete ||
+        results.some((entry) => entry.status === "rejected" || entry.value === false);
+      return { status: failed ? ("incomplete" as const) : ("attempted" as const) };
+    }),
+    new Promise<{ status: "incomplete" }>((resolve) => {
+      timer = setTimeout(() => resolve({ status: "incomplete" }), WIPE_WAIT_MS);
     }),
   ]);
   clearTimeout(timer);
+  if (result.status === "incomplete") markDeviceCleanupIncomplete();
+  return result;
 }

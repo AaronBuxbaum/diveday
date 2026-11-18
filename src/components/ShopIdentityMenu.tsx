@@ -13,7 +13,7 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { isBoatModeOn, setBoatMode } from "@/lib/boat-mode";
 import { motionMs } from "@/lib/motion";
 import { tellUsMailto, tellUsPath } from "@/lib/tell-us";
-import { forgetThisDevice } from "./forget-device";
+import { forgetThisDevice, markDeviceCleanupIncomplete } from "./forget-device";
 
 export type ShopIdentityMenuCopy = {
   boatMode: string;
@@ -113,7 +113,7 @@ export function ShopIdentityMenu({
   // contract every staff menu uses (useMenuDismissal).
   const close = useCallback(() => setOpen(false), []);
   const signOutForgetting = useCallback(async () => {
-    await forgetThisDevice();
+    await forgetThisDevice().catch(() => markDeviceCleanupIncomplete());
     await signOutAction();
   }, [signOutAction]);
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });

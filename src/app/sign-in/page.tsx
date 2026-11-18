@@ -45,11 +45,11 @@ export default async function SignInPage({
   // Keep complete native-form rendering outside prerendering. This auth route
   // always waits for the actual request.
   await connection();
+  const t = diverTranslator(await requestLocale());
   const form = await SignInForm({ searchParams });
   return (
     <div className="flex flex-1 flex-col">
-      {/* Every ended session lands here; the device keeps nothing of it. */}
-      <ForgetThisDevice />
+      <ForgetThisDevice incompleteMessage={t("account.signIn.deviceCleanupIncomplete")} />
       {form}
     </div>
   );

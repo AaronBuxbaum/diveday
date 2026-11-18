@@ -3881,6 +3881,7 @@
       "twoFactorCode": "Sign-in code",
       "twoFactorHint": "Use a code from your authenticator app or one of your recovery codes.",
       "sessionEnded": "You’ve been signed out because this account is no longer active. Contact your shop owner if that’s unexpected.",
+      "deviceCleanupIncomplete": "Some offline information could not be cleared from this device. Keep it private and contact your shop.",
       "forgotPassword": "Forgot password?",
       "signingIn": "Signing in…",
       "submit": "Sign in",

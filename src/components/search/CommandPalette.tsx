@@ -18,7 +18,7 @@ import {
   staffPaletteDestinations,
 } from "@/lib/staff-destinations";
 import type { SearchResults } from "../../lib/search-results";
-import { forgetThisDevice } from "../forget-device";
+import { forgetThisDevice, markDeviceCleanupIncomplete } from "../forget-device";
 import { PaletteGlyph } from "./PaletteGlyph";
 import { hintKeyClass, PaletteLegend } from "./PaletteLegend";
 import { PaletteSearchField } from "./PaletteSearchField";
@@ -541,7 +541,7 @@ export function CommandPalette({
   const recentsKey = recentsStorageKey(shopSlug, readerId);
   // A shared desk's next staffer inherits none of these; the wipe is awaited.
   const signOutForgetting = useCallback(async () => {
-    await forgetThisDevice();
+    await forgetThisDevice().catch(() => markDeviceCleanupIncomplete());
     return signOutAction();
   }, [signOutAction]);
   const inputRef = useRef<HTMLInputElement>(null);

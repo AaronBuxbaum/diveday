@@ -1,12 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
-import { forgetThisDevice } from "./forget-device";
+import { useEffect, useState } from "react";
+import { deviceCleanupMayBeIncomplete, forgetThisDevice } from "./forget-device";
 
-/** Mounted on the sign-in page: whoever signs in next starts with nothing kept. */
-export function ForgetThisDevice() {
+/** Mounted on sign-in to attempt local cleanup without delaying sign-out. */
+export function ForgetThisDevice({ incompleteMessage }: { incompleteMessage?: string }) {
+  const [incomplete, setIncomplete] = useState(false);
   useEffect(() => {
-    void forgetThisDevice();
+    let active = true;
+    if (deviceCleanupMayBeIncomplete()) setIncomplete(true);
+    void forgetThisDevice().then(
+      (result) => {
+        if (active && result.status === "incomplete") setIncomplete(true);
+      },
+      () => {
+        if (active) setIncomplete(true);
+      },
+    );
+    return () => {
+      active = false;
+    };
   }, []);
-  return null;
+  return incomplete && incompleteMessage ? <p role="alert">{incompleteMessage}</p> : null;
 }
