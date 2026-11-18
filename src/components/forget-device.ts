@@ -9,7 +9,7 @@ import { announceSessionInvalidation } from "./session-invalidation";
 const WIPE_WAIT_MS = 2_000;
 
 /**
- * **A shared device keeps nothing of the last staffer** (security review F2,
+ * **Attempt cleanup on a shared device** (security review F2,
  * N1): ⌘K's recents, any form kept for a refusal, the medical alerts
  * revealed in this visit, the medical alert words on every offline copy
  * (H-20261023-medical-alert-for-the amendment; the rest of each copy stays, queued roll call included),
@@ -25,23 +25,44 @@ const WIPE_WAIT_MS = 2_000;
  * offline page) runs none of this: the words stay on the device until the
  * copy expires or the next sign-in (ADR 20260718 amendment, H-20261023-medical-alert-for-the).
  */
-export async function forgetThisDevice(): Promise<void> {
-  announceSessionInvalidation();
-  forgetAllRecents();
-  forgetAllKeptTyped();
-  forgetRevealedMedicalAlerts();
+/** The result covers reported offline sensitive cleanup, not full device erasure. */
+export async function forgetThisDevice(): Promise<{
+  offlineSensitiveCleanupReportedComplete: boolean;
+}> {
+  let localComplete = true;
+  for (const clear of [
+    announceSessionInvalidation,
+    forgetAllRecents,
+    forgetAllKeptTyped,
+    forgetRevealedMedicalAlerts,
+  ]) {
+    try {
+      clear();
+    } catch {
+      localComplete = false;
+    }
+  }
   let timer: ReturnType<typeof setTimeout> | undefined;
-  await Promise.race([
-    Promise.all([
-      // A browser with no IndexedDB has no copies.
-      typeof indexedDB === "undefined" ? undefined : wipeOfflineMedicalAlerts().catch(() => {}),
+  const result = await Promise.race([
+    Promise.allSettled([
+      // An unavailable API does not establish that no saved copy exists.
+      Promise.resolve().then(async () => {
+        if (typeof indexedDB === "undefined") return false;
+        await wipeOfflineMedicalAlerts();
+        return true;
+      }),
       // A diver's /ready page this browser kept (issue #2693): a shop tablet
       // that opened a diver's link keeps nothing of them past a sign-out.
-      forgetReadyPageCopy(),
+      Promise.resolve().then(() => forgetReadyPageCopy()),
     ]),
-    new Promise<void>((resolve) => {
-      timer = setTimeout(resolve, WIPE_WAIT_MS);
+    new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), WIPE_WAIT_MS);
     }),
   ]);
   clearTimeout(timer);
+  return {
+    offlineSensitiveCleanupReportedComplete:
+      localComplete &&
+      (result?.every((item) => item.status === "fulfilled" && item.value !== false) ?? false),
+  };
 }
