@@ -81,6 +81,11 @@ test("pricing shows the comparison and its provider terms", async ({ page }) => 
     .click();
   await expect.soft(page.getByText(/estimates, not quotes/)).toBeVisible();
   await expect.soft(page.getByText(/contract is negotiated shop by shop/)).toBeVisible();
+  const assumptions = page.getByText(/These are estimates, not quotes/);
+  await expect(assumptions).toContainText("Stripe");
+  await expect(assumptions).toContainText("CaptainBook");
+  await expect(assumptions).toContainText("TrekkSoft");
+  await expect(assumptions).toContainText("November 18, 2026");
   await expect
     .soft(page.getByRole("link", { name: /What moving off FareHarbor looks like/ }))
     .toHaveAttribute("href", "/switching/fareharbor");
@@ -115,8 +120,8 @@ test("the pricing comparison is interactive", async ({ page }) => {
   await expect(comparison.locator("table").getByText("FareHarbor", { exact: true })).toBeVisible();
   await expect(comparison.locator("table").getByText("DiveDay", { exact: true })).toBeVisible();
   const totals = comparison.locator("tfoot");
-  // $30,000 in direct sales: 6% plus 2.9% and 200 fixed card fees.
-  await expect(totals.locator("td").first()).toContainText("$2,730");
+  // $30,000 received: 63% direct, 37% via OTAs; include both fees and processing.
+  await expect(totals.locator("td").first()).toContainText("$1,941.90");
   const before = await totals.innerText();
   const slider = comparison.getByRole("slider", {
     name: diverTranslator("en-US")("marketing.pricing.compare.sliderLabel"),
@@ -126,17 +131,17 @@ test("the pricing comparison is interactive", async ({ page }) => {
   await expect(totals.locator("td").first()).toContainText("$0");
   await slider.press("End");
   await expect(totals).not.toHaveText(before);
-  await comparison
-    .getByText(diverTranslator("en-US")("marketing.pricing.compare.marketplaceToggle"), {
-      exact: true,
-    })
-    .click();
-  await expect(comparison.getByText(/Every sale you move from those sites/)).toBeVisible();
   await expect(
-    comparison.getByRole("slider", {
-      name: diverTranslator("en-US")("marketing.pricing.compare.marketplaceShareLabel"),
-    }),
+    comparison.getByText(
+      diverTranslator("en-US")("marketing.pricing.compare.otaFootnote", { share: "37%" }),
+      { exact: false },
+    ),
   ).toBeVisible();
+  await expect(
+    comparison.getByRole("link", {
+      name: diverTranslator("en-US")("marketing.pricing.compare.otaSource"),
+    }),
+  ).toHaveAttribute("href", "https://arival.travel/article/direct-bookings-dive-otas-rise/");
 });
 
 test.describe("the Spanish pricing title", () => {

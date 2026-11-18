@@ -403,10 +403,11 @@ describe("the fee comparison identifies estimates and agreement-dependent costs"
   for (const locale of DIVER_LOCALES) {
     it(`distinguishes reported FareHarbor fees and the provider agreements in ${locale}`, () => {
       const messages = marketingMessages(locale);
-      expect(messages["marketing.pricing.compare.systems.fareharbor.note"]).toMatch(
+      const assumptions = messages["marketing.pricing.compare.assumptions"];
+      expect(assumptions).toMatch(
         locale === "en-US"
-          ? /reported figure, not a published one.*negotiated shop by shop/i
-          : /cifra comunicada, no publicada.*negociada centro por centro/i,
+          ? /FareHarbor publishes no rates.*three industry write-ups report.*contract is negotiated shop by shop/i
+          : /FareHarbor no publica sus tarifas.*informan tres artículos del sector.*contrato se negocia centro por centro/i,
       );
       for (const rival of ["fareharbor", "rezdy"] as const) {
         const guide = messages[`marketing.guides.${rival}.context.item3`];
