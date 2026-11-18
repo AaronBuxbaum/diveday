@@ -99,6 +99,8 @@ export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
 
   // Plumbing: provider coordination and delivery ledgers, holding no person.
   notification_rate_limit_state: "provider coordination keyed by ceiling and period",
+  rate_limit_buckets:
+    "token buckets keyed by a hash of an IP, email or link; swept when idle, holds no person",
   stripe_webhook_events: "the platform's delivery ledger, pruned by retention; no payload",
   claude_demo_spend: "a month and every minted demo's Claude spend; no person",
   sms_opt_outs:

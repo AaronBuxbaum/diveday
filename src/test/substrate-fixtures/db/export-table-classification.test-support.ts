@@ -64,6 +64,7 @@ export const EXCLUDED_TABLES = [
   "trip_blowouts", // operational cascade record for a weather cancel; the cancellation itself lives on the trip
   "trip_blowout_divers", // per-diver message/rebooking state for that cascade — same reasoning as notification_send_queue
   "notification_rate_limit_state", // provider coordination, not shop records
+  "rate_limit_buckets", // abuse-control counters keyed by hash, not shop records
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
   // What the shop pays DiveDay (ADRs 20261007-subscription-billing, 20261022-pricing-ab-test):
   // DiveDay's own billing of the shop, not a record the shop keeps. Ids on DiveDay's

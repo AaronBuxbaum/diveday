@@ -22,7 +22,7 @@ cannot see it.
 | Surface | File | Dimension(s) | Policy |
 | --- | --- | --- | --- |
 | Onboarding (account + shop creation) | `src/app/onboard/actions.ts` | IP | `RATE_LIMITS.onboard` (5/hour) |
-| "Get set up" request (the public set-up form; ADR 20261007-setup-request-form) | `src/app/get-set-up/actions.ts` | IP, checked first; then every IP together, checked only after the honeypot and validation pass | `RATE_LIMITS.setupRequestByIp` (5/hour) + `RATE_LIMITS.setupRequestGlobal` (30/hour). The global bucket is a per-instance first filter; the real cap is `SETUP_REQUESTS_PER_HOUR` (30), counted in `setup_requests` over the last hour before each insert, so it holds across instances |
+| "Get set up" request (the public set-up form; ADR 20261007-setup-request-form) | `src/app/get-set-up/actions.ts` | IP, checked first; then every IP together, checked only after the honeypot and validation pass | `RATE_LIMITS.setupRequestByIp` (5/hour) + `RATE_LIMITS.setupRequestGlobal` (30/hour). The global bucket is only a first filter; the real cap is `SETUP_REQUESTS_PER_HOUR` (30), counted in `setup_requests` over the last hour before each insert, so it holds across instances |
 | "Try the live demo" (mints a seeded demo shop) | `src/app/actions/demo.ts` | IP | `RATE_LIMITS.demoCreate` (10/hour) |
 | Marking a browser as the founder's, so its demos send no alert | `src/app/api/demo/quiet/route.ts` | IP | `RATE_LIMITS.demoQuiet` (10/hour) |
 | The demo banner's role switch | `src/app/actions/demo.ts` `switchDemoRoleAction` | IP, checked before the slug is looked up | `RATE_LIMITS.demoSwitch` (30/hour); a staff role also needs a session in that shop or the signed demo seat (`src/features/demo-seat/rules.ts`) |
@@ -192,39 +192,26 @@ a legitimate user who used their burst a minute ago already has a little
 budget back, rather than waiting for a hard window edge. `checkRateLimit` is
 `async` and every call site awaits it.
 
-**Distributed when configured, per-instance otherwise.** Set both
-`KV_REST_API_URL` and `KV_REST_API_TOKEN` (Vercel's own Upstash
-integration provisions both together) and `rateLimitStoreFromEnvironment()`
-switches to `upstashRateLimitStore` — a real global ceiling across every
-serverless instance/region, enforced atomically via one Redis `EVAL`'d Lua
-script per check (ADR 20260801-distributed-rate-limit-store). Leave either
-var unset (every environment until one is provisioned, and all of dev/e2e/CI)
-and it falls back to the original in-memory `Map`, scoped to one Node
-process — bounding abuse per function instance only, not globally (ADR
-20260724-rate-limiting's original, still-real gap when the distributed store
-isn't configured). In production that fallback is loud rather than silent: the
-first check on each instance logs `rate_limit.memory_store_in_production`
-(warn), and `pnpm check:env` fails when run with `VERCEL_ENV=production` and
-either var unset (both are rows in `config/env-registry.mjs`). There is currently no dashboard or query surface into
-live bucket state either way; if you suspect active abuse, look at Vercel's
-own request logs/analytics for the IP/path pattern first, and consider a
-platform-level (WAF/Vercel Firewall) block for anything the in-app limiter
-alone isn't containing.
+**Shared in Postgres on a deployment, in-process everywhere else.** A real deployment
+(`DATABASE_URL` set) installs `postgresRateLimitStore` at boot (`src/instrumentation.ts`): one row per
+key in `rate_limit_buckets`, taken in a single atomic upsert, so every serverless instance spends
+from the same bucket (ADR 20261118-rate-limits-in-postgres). Dev, the e2e fleet and unit tests keep
+the in-memory `Map`: there are no other instances to share with. There is no separate service and
+no environment variable. There is no dashboard into live bucket state; if you suspect active abuse,
+`select * from rate_limit_buckets order by updated_at desc` shows the hot keys (hashed), and
+Vercel's request logs show the IP and path pattern. Consider a platform-level (WAF/Vercel Firewall)
+block for anything the in-app limiter alone isn't containing.
 
 **Fail-open, and no longer silent.** `checkRateLimit` never throws — a store
-error, a non-2xx Upstash response, or a malformed Upstash response body all
-resolve to `{ allowed: true }`. A broken rate limiter (in-memory or
-distributed) must never become a reason legitimate traffic gets 5xx'd. Since
+error (the database being unreachable, say) resolves to `{ allowed: true }`. A broken rate limiter (in-memory or
+Postgres) must never become a reason legitimate traffic gets 5xx'd. Since
 2026-08-06 that catch also **reports** before it allows (OPS-7): one
 `rate_limit.store_failed` structured log line and one Sentry exception, damped
 to at most one per minute per instance. See
 [When the store is failing](#when-the-store-is-failing) below.
 
 **Bounded storage either way.** The in-memory store caps at 50,000 distinct
-keys and evicts the oldest on overflow. The Upstash store instead sets a
-24-hour `PEXPIRE` on every bucket key in the same Lua script that reads and
-writes it — generous relative to every configured window (15min-1hr), so a
-key only expires after it would have legitimately refilled to full anyway.
+keys and evicts the oldest on overflow. The Postgres store sweeps buckets idle for 24 hours (one take in 200 runs the delete) — generous relative to every configured window (15min-1hr), so a bucket is only removed after it would have refilled to full anyway.
 Under a sustained high-cardinality attack (a fresh IP per request) the
 in-memory store's old buckets can be evicted before their window naturally
 expires — an accepted degrade, not a route to unbounded memory growth.
@@ -234,10 +221,10 @@ expires — an accepted degrade, not a route to unbounded memory growth.
 **The signal.** A `rate_limit.store_failed` line in the log drain:
 
 ```json
-{"time":"…","level":"error","event":"rate_limit.store_failed","store":"upstash","error":"TypeError","swallowed":842}
+{"time":"…","level":"error","event":"rate_limit.store_failed","store":"postgres","error":"TypeError","swallowed":842}
 ```
 
-- `store` — `upstash` (the distributed store, i.e. a network/Upstash incident),
+- `store` — `postgres` (the shared store, i.e. a database incident),
   `memory` (a bug in this file: the in-process store does no I/O and should
   never throw), or `injected` (a store passed explicitly by a caller; only
   tests do this).
@@ -259,17 +246,12 @@ designed, and it is not up for renegotiation in an incident.
 
 **What to do.**
 
-1. Check `store`. `upstash` → check the Upstash console/status and the
-   `KV_REST_API_*` values on the deployment (a rotated token reads as a
-   401 from the REST API, which the store turns into a throw). `memory` → this
+1. Check `store`. `postgres` → this is a database incident (Neon status, connection limits); fix that. `memory` → this
    is a code bug, not an outage; open it as one.
 2. Treat "unprotected" as the live risk, not the log volume. If the incident is
    long, put a platform-level (Vercel Firewall/WAF) rule in front of the
    affected paths — the in-app limiter cannot be the answer while its store is
    down.
-3. Removing both `KV_REST_API_*` env vars is a valid last resort: the
-   next cold start falls back to the in-memory store, which is per-instance but
-   working. Re-add them once the incident is over.
 
 There is deliberately no key in the log line. `checkRateLimit`'s `key` is by
 convention a `rateLimitKey()` SHA-256 hash, but nothing enforces that at the
@@ -303,30 +285,3 @@ second look of an afternoon — a refusal the script then waited out in
 silence. The script now signs in once per run and reports a refusal by name;
 the dev switch is what stops it happening at all. To watch the limiter itself
 locally, start the server with `DIVEDAY_RATE_LIMIT_DISABLED=0 pnpm dev`.
-
-## Provisioning the distributed store
-
-Create an Upstash Redis database (directly, or through Vercel's Upstash
-integration, which sets both env vars on the project automatically) and set
-`KV_REST_API_URL` + `KV_REST_API_TOKEN` on the deployment. No
-code change or redeploy-time flag needed — `rateLimitStoreFromEnvironment()`
-picks it up from the environment on the next cold start. No SDK package is
-involved; `upstashRateLimitStore` calls Upstash's REST API directly with
-`fetch`, matching this codebase's existing Stripe/Vercel Blob precedent. See
-[20260801-distributed-rate-limit-store ADR](../architecture/decisions/20260801-distributed-rate-limit-store.md)
-for the atomicity design (one `EVAL`'d Lua script per check) and
-[20260724-rate-limiting ADR](../architecture/decisions/20260724-rate-limiting.md)
-for why the in-memory store shipped first. `RateLimitStore` is a small
-interface (`take(key, config, now)` and `refund(key, config, now)`, which returns one try); a future store other than Upstash can
-implement it and be passed as `checkRateLimit`'s fourth argument (or swap the
-module-level default) without touching any call site.
-
-Until it is provisioned, be precise about what the per-instance gap costs. It
-does not disable a policy; it multiplies it. A limit of 8 failed sign-ins per 15
-minutes per email is, across N warm instances, up to 8N — because each instance
-counts that email's bucket independently, and an attacker who keeps enough
-connections in flight is spread across all of them. The dual IP-and-email
-dimensions still narrow the attack (rotating source addresses does not reset
-the email bucket on the instance serving that request), but the ceiling is a
-function of a number nobody controls. That is the whole reason provisioning
-Upstash is on the roadmap rather than optional.

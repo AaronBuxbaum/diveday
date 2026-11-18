@@ -169,7 +169,7 @@ script again.
 | 20260801-cache-components-activity-state | ~~Audit `/shop/**` staff surfaces for…~~ |
 | 20260801-cache-components-e2e-activity-migration | Make the e2e suite Activity-safe… |
 | 20260801-checkout-upsells-rental-gear | Move rental-gear selection ahead of… |
-| 20260801-distributed-rate-limit-store | Upstash Redis behind the existing… |
+| 20260801-distributed-rate-limit-store | ~~Upstash Redis behind the existing…~~ → 20261118-rate-limits-in-postgres |
 | 20260802-aws-cost-guardrails | Alert-only AWS Budgets + Cost… |
 | 20260802-backup-and-restore-posture | Back production up with Neon… |
 | 20260802-cache-components-cross-render-state | Put same-route ephemeral state in… |
@@ -479,5 +479,6 @@ script again.
 | 20261116-local-customer-import-mapping | Map customer exports locally with… |
 | 20261116-promotional-trip-credit-ledger | Settle plain booking fares with… |
 | 20261117-trip-page-clock | Show a trip as five… |
+| 20261118-rate-limits-in-postgres | Shared rate-limit buckets live in… |
 
 <!-- adr-index:end -->

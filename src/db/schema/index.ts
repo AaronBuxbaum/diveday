@@ -35,6 +35,7 @@ export * from "./notifications";
 export * from "./offline-manifests";
 export * from "./passkeys";
 export * from "./payments";
+export * from "./rate-limits";
 export * from "./recovery-activities";
 export * from "./retention";
 export * from "./reviews";

@@ -21,55 +21,16 @@ const checkEnv = (env, cwd = workspace()) =>
     env: { PATH: process.env.PATH, ...env },
   });
 
-const UPSTASH = {
-  KV_REST_API_URL: "https://example.upstash.io",
-  KV_REST_API_TOKEN: "token",
-};
-
-// Every key production must carry: the Upstash pair and the sealing key.
+// Every key production must carry: the sealing key.
 // A well-formed sealing key: 32 bytes, base64, as `openssl rand -base64 32` prints one.
 const SEALING_KEY = Buffer.alloc(32, 7).toString("base64");
-const PRODUCTION = { ...UPSTASH, SECRET_ENCRYPTION_KEY: SEALING_KEY };
+const PRODUCTION = { SECRET_ENCRYPTION_KEY: SEALING_KEY };
 
 afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { recursive: true });
 });
 
 describe("check-env", () => {
-  it("leaves a local run without the rate-limit store alone", () => {
-    // The in-process store is the intended state everywhere but production.
-    const run = checkEnv({});
-
-    expect(run.status).toBe(0);
-    expect(run.stderr).toBe("");
-  });
-
-  it("leaves a preview deployment without the rate-limit store alone", () => {
-    const run = checkEnv({ VERCEL_ENV: "preview" });
-
-    expect(run.status).toBe(0);
-  });
-
-  it("fails production when the Upstash pair is absent, naming both keys", () => {
-    const run = checkEnv({ VERCEL_ENV: "production" });
-
-    expect(run.status).toBe(1);
-    expect(run.stderr).toContain("KV_REST_API_URL");
-    expect(run.stderr).toContain("KV_REST_API_TOKEN");
-    expect(run.stderr).toContain("per-instance in-memory store");
-  });
-
-  it("fails production when only half the pair is set", () => {
-    const run = checkEnv({
-      VERCEL_ENV: "production",
-      ...PRODUCTION,
-      KV_REST_API_TOKEN: "  ",
-    });
-
-    expect(run.status).toBe(1);
-    expect(run.stderr).toContain("missing KV_REST_API_TOKEN");
-  });
-
   it("passes production when every required key is set", () => {
     const run = checkEnv({ VERCEL_ENV: "production", ...PRODUCTION });
 
@@ -79,7 +40,7 @@ describe("check-env", () => {
   it("fails production without the sealing key, naming it and the two-factor lockout", () => {
     // Without it every staffer who turned on two-factor is locked out and the notification retry
     // queue drops what it should keep, so a deploy without it fails at build rather than at sign-in.
-    const run = checkEnv({ VERCEL_ENV: "production", ...UPSTASH });
+    const run = checkEnv({ VERCEL_ENV: "production" });
 
     expect(run.status).toBe(1);
     expect(run.stderr).toContain("production is missing SECRET_ENCRYPTION_KEY.");
@@ -87,7 +48,7 @@ describe("check-env", () => {
   });
 
   it("fails production when the sealing key is only whitespace", () => {
-    const run = checkEnv({ VERCEL_ENV: "production", ...UPSTASH, SECRET_ENCRYPTION_KEY: " " });
+    const run = checkEnv({ VERCEL_ENV: "production", SECRET_ENCRYPTION_KEY: " " });
 
     expect(run.status).toBe(1);
     expect(run.stderr).toContain("missing SECRET_ENCRYPTION_KEY");
@@ -99,7 +60,6 @@ describe("check-env", () => {
     const truncated = SEALING_KEY.slice(0, 20);
     const run = checkEnv({
       VERCEL_ENV: "production",
-      ...UPSTASH,
       SECRET_ENCRYPTION_KEY: truncated,
     });
 
@@ -120,7 +80,7 @@ describe("check-env", () => {
   });
 
   it("leaves a mistyped sealing key alone outside production", () => {
-    const run = checkEnv({ VERCEL_ENV: "preview", ...UPSTASH, SECRET_ENCRYPTION_KEY: "short" });
+    const run = checkEnv({ VERCEL_ENV: "preview", SECRET_ENCRYPTION_KEY: "short" });
 
     expect(run.status).toBe(0);
   });
@@ -128,7 +88,7 @@ describe("check-env", () => {
   it("leaves a preview deployment without the sealing key alone", () => {
     // Previews are not asked for any production requirement, and a preview never runs check-env
     // from the build (scripts/vercel-build.mjs gates it on VERCEL_ENV=production).
-    const run = checkEnv({ VERCEL_ENV: "preview", ...UPSTASH });
+    const run = checkEnv({ VERCEL_ENV: "preview" });
 
     expect(run.status).toBe(0);
   });

@@ -25,8 +25,7 @@ if (process.env.VERCEL_ENV === "production") {
   // (the default), it passes every build, as before.
   run("node", ["scripts/deploy-gate.mjs", "check"], SUBPROCESS_TIMEOUTS.nodeScript);
   // Then the cheapest refusal a human has to act on: every registry row
-  // marked `requiredInProduction` (the Upstash pair, without which every rate
-  // limit is per serverless instance, and SECRET_ENCRYPTION_KEY, without which
+  // marked `requiredInProduction` (SECRET_ENCRYPTION_KEY, without which
   // two-factor sign-in and the retry queue stop) must be set on the Vercel
   // project, or the deploy fails here naming the keys. A deploy that fails
   // loudly beats a feature that fails quietly; decided 2026-10-07 (issue
