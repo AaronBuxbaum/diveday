@@ -13,7 +13,7 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { isBoatModeOn, setBoatMode } from "@/lib/boat-mode";
 import { motionMs } from "@/lib/motion";
 import { tellUsMailto, tellUsPath } from "@/lib/tell-us";
-import { forgetThisDevice } from "./forget-device";
+import { signOutAfterCleanup } from "./sign-out-after-cleanup";
 
 export type ShopIdentityMenuCopy = {
   boatMode: string;
@@ -88,7 +88,7 @@ export function ShopIdentityMenu({
 }: {
   shopName: string;
   logoUrl?: string;
-  signOutAction: () => Promise<void>;
+  signOutAction: (offlineCleanupIncomplete?: boolean) => Promise<void>;
   /** The language this render was written in — the one marked as in force. */
   locale: string;
   /** Every language DiveDay carries, each named in itself. */
@@ -113,8 +113,7 @@ export function ShopIdentityMenu({
   // contract every staff menu uses (useMenuDismissal).
   const close = useCallback(() => setOpen(false), []);
   const signOutForgetting = useCallback(async () => {
-    await forgetThisDevice();
-    await signOutAction();
+    await signOutAfterCleanup(signOutAction);
   }, [signOutAction]);
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
   // The shared base rung pairs with .animate-scale-out; motion-tokens.test.ts checks parity.
@@ -226,9 +225,8 @@ export function ShopIdentityMenu({
           {/* Signing out is the destructive end of the menu, so it sits below
               the rule rather than in the same stack as the language rows. */}
           <form
-            // A shared tablet keeps no recents, kept forms or offline medical
-            // alert words past a sign-out; the wipe is awaited before the
-            // sign-out navigates away.
+            // Attempt device cleanup before sign-out; incomplete cleanup is
+            // reported without claiming all stored data was erased.
             action={signOutForgetting}
             data-scroll-reset="true"
             className="mt-1 border-t border-border pt-1"
