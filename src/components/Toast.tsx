@@ -116,7 +116,7 @@ export function ToastShell({
   }
 
   function resume() {
-    if (dismissing || timerRef.current !== null) return;
+    if (autoDismissMs === null || dismissing || timerRef.current !== null) return;
     startedAtMsRef.current = Date.now();
     timerRef.current = setTimeout(() => setDismissing(true), remainingMsRef.current);
   }
@@ -292,7 +292,7 @@ export function ErrorToast({
 }: {
   message: ReactNode;
   tone?: "danger" | "warning";
-  durationMs?: number;
+  durationMs?: number | null;
   occurrenceKey?: Key;
 }) {
   return (
