@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
-/** One typing rate for every field in the walk: 185 ms a character is about 65 words a minute. */
-export const WALK_TYPE_CHAR_MS = 185;
+/** One typing rate for every field in the walk: 40 ms a character is about 300 words a minute. */
+export const WALK_TYPE_CHAR_MS = 40;
 
 /**
  * Text Priya types into a drawn field. In the homepage walkthrough's first phase the characters

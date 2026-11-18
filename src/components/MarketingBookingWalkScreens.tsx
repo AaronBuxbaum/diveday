@@ -129,10 +129,10 @@ export function CheckoutFallback({
                   {blank ? null : <WalkTyped text="4242 4242 4242 4242" delay={300} />}
                 </WalkField>
                 <WalkField label={t("fallback.checkout.expiry")}>
-                  {blank ? null : <WalkTyped text="08 / 29" delay={4100} />}
+                  {blank ? null : <WalkTyped text="08 / 29" delay={1300} />}
                 </WalkField>
                 <WalkField label={t("fallback.checkout.cvc")}>
-                  {blank ? null : <WalkTyped text="123" delay={5700} />}
+                  {blank ? null : <WalkTyped text="123" delay={1700} />}
                 </WalkField>
               </div>
               <button
@@ -198,7 +198,7 @@ export function RegisterFallback({
               </WalkField>
               <WalkField label={`${t("register.emailLabel")} ${t("common.optional")}`}>
                 {/* i18n-exempt: sample address used only in marketing mockups */}
-                <WalkTyped text="priya@example.com" delay={2700} />
+                <WalkTyped text="priya@example.com" delay={1000} />
               </WalkField>
               <WalkField label={`${t("register.phoneLabel")} ${t("common.optional")}`} />
             </div>
@@ -209,21 +209,21 @@ export function RegisterFallback({
                 placeholder={t("register.agencyNone")}
                 // i18n-exempt: agency name used only in marketing mockups
                 value="PADI"
-                at={6100}
+                at={2000}
               />
               <WalkSelect
                 label={t("register.levelLabel")}
                 placeholder={t("register.levelPlaceholder")}
                 // i18n-exempt: certification level used only in marketing mockups
                 value="Advanced Open Water"
-                at={6700}
+                at={2600}
               />
               <WalkField
                 label={`${t("register.identifierLabel")} ${t("common.optional")}`}
                 className="col-span-2"
               >
                 {/* i18n-exempt: sample card number used only in marketing mockups */}
-                <WalkTyped text="3481926" delay={7100} />
+                <WalkTyped text="3481926" delay={3000} />
               </WalkField>
             </div>
             <p className="mt-4 text-sm font-semibold">{t("register.sizesHeading")}</p>
