@@ -157,4 +157,22 @@ describe("disabled dock queue", () => {
     expect(await captureDockTap(input)).toEqual({ status: "not_saved" });
     expect(open).not.toHaveBeenCalled();
   });
+  it("retains two simultaneous taps under distinct generated keys", async () => {
+    vi.mocked(dockQueueEnabled).mockReturnValue(true);
+    const [first, second] = await Promise.all([
+      captureDockTap(input),
+      captureDockTap({ ...input, bookingId: "other-booking" }),
+    ]);
+    if (first.status !== "retained_locally" || second.status !== "retained_locally")
+      throw new Error("captures failed");
+    expect(first.eventId).not.toBe(second.eventId);
+    expect(await row(first.eventId)).toBeDefined();
+    expect(await row(second.eventId)).toBeDefined();
+  });
+  it("refuses a tap with missing identity before opening storage", async () => {
+    vi.mocked(dockQueueEnabled).mockReturnValue(true);
+    const open = vi.spyOn(indexedDB, "open");
+    expect(await captureDockTap({ ...input, actorId: "" })).toEqual({ status: "not_saved" });
+    expect(open).not.toHaveBeenCalled();
+  });
 });
