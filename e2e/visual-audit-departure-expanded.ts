@@ -307,12 +307,14 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
       const paper = courseSeat.locator("[data-course-forms-owed] details");
       await openIfClosed(paper);
       await expect(
-        paper.getByLabel(`${staff("trips.roster.courseForms.formLabel")} (optional)`, {
+        paper.getByLabel(staff("trips.roster.courseForms.formLabel"), {
           exact: true,
         }),
       ).toBeVisible();
       await expect(
-        paper.getByLabel(staff("trips.roster.courseForms.signedOn"), { exact: true }),
+        paper.getByLabel(`${staff("trips.roster.courseForms.signedOn")} (optional)`, {
+          exact: true,
+        }),
       ).toBeVisible();
       await expect(paper.getByRole("checkbox")).toBeVisible();
       await capture(page, "roster-paper-course-form-editor", "light", {
