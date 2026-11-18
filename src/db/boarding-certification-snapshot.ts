@@ -64,6 +64,18 @@ export async function tryLockBoardingEvidenceForReceipt(
   return (result.rows[0] as { acquired: boolean } | undefined)?.acquired === true;
 }
 
+/** A rewrite may refuse promptly when another participant owns this fence. */
+export async function tryLockBoardingEvidenceForRewrite(
+  tx: DbExecutor,
+  shopId: string,
+): Promise<boolean> {
+  if (!isTransactionExecutor(tx)) throw new Error("Evidence fence requires a transaction");
+  await boundLockWaits(tx);
+  const result = await tx.execute(sql`select pg_try_advisory_xact_lock(
+    hashtext('boarding_certification_evidence'), hashtext(${shopId})) as acquired`);
+  return (result.rows[0] as { acquired: boolean } | undefined)?.acquired === true;
+}
+
 /**
  * Proposed first step for an eventual coordinated demo reset. The caller must
  * pass a fresh transaction with no earlier shop, account, person, or booking

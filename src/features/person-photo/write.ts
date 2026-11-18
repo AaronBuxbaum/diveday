@@ -1,6 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { readActiveStaffRoles } from "@/db/authz";
-import { lockBoardingCertificationEvidence } from "@/db/boarding-certification-snapshot";
+import {
+  lockBoardingCertificationEvidence,
+  tryLockBoardingEvidenceForRewrite,
+} from "@/db/boarding-certification-snapshot";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb, DbExecutor } from "@/db/client";
 import { isLockWaitRefusal } from "@/db/lock-bounds";
@@ -24,6 +27,8 @@ type Actor =
 type Photo = { filename: string; contentType: string; bytes: ArrayBuffer } | null;
 type Subject = { shopId: string; personId: string; bookingId?: string; tripId?: string };
 
+class PhotoEvidenceBusy extends Error {}
+
 async function identify(db: DbExecutor, actor: Actor): Promise<Subject | null> {
   if (actor.kind === "staff") return { shopId: actor.shopId, personId: actor.personId };
   const cap = await verifyBookingCapability(db, { token: actor.token, purpose: "readiness" });
@@ -38,7 +43,13 @@ async function lockedSubject(tx: DbExecutor, actor: Actor, subject: Subject): Pr
     if (!subject.tripId) return false;
     await lockTripRevisionNotificationFence(tx, subject.shopId, subject.tripId, "dispatch");
   }
-  await lockBoardingCertificationEvidence(tx, subject.shopId, "rewrite");
+  if (actor.kind === "staff") {
+    if (!(await tryLockBoardingEvidenceForRewrite(tx, subject.shopId))) {
+      throw new PhotoEvidenceBusy();
+    }
+  } else {
+    await lockBoardingCertificationEvidence(tx, subject.shopId, "rewrite");
+  }
   if (actor.kind === "readiness" && subject.tripId) {
     if (
       !subject.bookingId ||
@@ -136,7 +147,7 @@ export async function changePrivatePersonPhoto(
   try {
     return await changePhoto(db, input);
   } catch (error) {
-    if (isLockWaitRefusal(error)) return "failed";
+    if (error instanceof PhotoEvidenceBusy || isLockWaitRefusal(error)) return "failed";
     throw error;
   }
 }

@@ -21,7 +21,10 @@ import { removeStaffMember } from "../staff-accounts/store";
 import { cleanupPrivatePersonPhotos } from "./cleanup";
 import { changePrivatePersonPhoto } from "./write";
 
-const { requests } = vi.hoisted(() => ({ requests: [] as string[] }));
+const { requests, commandInputs } = vi.hoisted(() => ({
+  requests: [] as string[],
+  commandInputs: [] as Array<{ name: string; input: unknown }>,
+}));
 // Stub only the outbound S3 transport; all lifecycle and DB functions are real.
 vi.mock("@aws-sdk/client-s3", () => {
   class Command {
@@ -34,6 +37,7 @@ vi.mock("@aws-sdk/client-s3", () => {
     S3Client: class {
       async send(command: Command) {
         requests.push(command.constructor.name);
+        commandInputs.push({ name: command.constructor.name, input: command.input });
         return {};
       }
       destroy() {}
@@ -43,6 +47,7 @@ vi.mock("@aws-sdk/client-s3", () => {
 
 beforeEach(() => {
   requests.length = 0;
+  commandInputs.length = 0;
   vi.stubEnv("MEDIA_BUCKET_NAME", "test-photo-bucket");
   vi.stubEnv("MEDIA_AWS_REGION", "us-east-1");
   vi.stubEnv("MEDIA_AWS_ACCESS_KEY_ID", "test");
@@ -109,7 +114,148 @@ async function fixture() {
   return { pg, shop, person, owner, booking, file, actor };
 }
 
+async function promptly<T>(operation: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("photo operation waited on the evidence fence")),
+          2_000,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 describePostgres("private photo lifecycle races", () => {
+  it("refuses a busy staff photo before staging or uploading and permits a later retry", async () => {
+    const f = await fixture();
+    const actor = {
+      kind: "staff" as const,
+      shopId: f.shop.id,
+      personId: f.person.id,
+      staffPersonId: f.owner.id,
+    };
+    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await changePrivatePersonPhoto(f.pg.db, { actor, file: f.file })).toBe("saved");
+    const [before] = await f.pg.db.select().from(people).where(eq(people.id, f.person.id));
+    if (!before?.diverPhotoPath) throw new Error("existing photo missing");
+    const uploadsBefore = await f.pg.db.select().from(privatePersonPhotoUploads);
+    expect(uploadsBefore).toMatchObject([{ url: before.diverPhotoPath, state: "active" }]);
+    const fetchesBefore = fetchMock.mock.calls.length;
+    const requestsBefore = requests.length;
+    const held = await holdRowLock(
+      f.pg,
+      sql`select pg_advisory_xact_lock_shared(
+      hashtext('boarding_certification_evidence'), hashtext(${f.shop.id}))`,
+    );
+    let pending: ReturnType<typeof changePrivatePersonPhoto> | undefined;
+    try {
+      for (const file of [null, f.file]) {
+        pending = changePrivatePersonPhoto(f.pg.connect(), { actor, file });
+        expect(await promptly(pending)).toBe("failed");
+      }
+      expect(fetchMock).toHaveBeenCalledTimes(fetchesBefore);
+      expect(requests).toHaveLength(requestsBefore);
+      expect(await f.pg.db.select().from(privatePersonPhotoUploads)).toEqual(uploadsBefore);
+      const [after] = await f.pg.db.select().from(people).where(eq(people.id, f.person.id));
+      expect(after?.diverPhotoPath).toBe(before.diverPhotoPath);
+      expect(after?.diverPhotoSuppressed).toBe(before.diverPhotoSuppressed);
+    } finally {
+      await held.release();
+      if (pending) await Promise.allSettled([pending]);
+    }
+    expect(await changePrivatePersonPhoto(f.pg.db, { actor, file: f.file })).toBe("saved");
+  });
+
+  it("retains an uploaded staff photo for cleanup when the publication fence is busy", async () => {
+    const f = await fixture();
+    const actor = {
+      kind: "staff" as const,
+      shopId: f.shop.id,
+      personId: f.person.id,
+      staffPersonId: f.owner.id,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 200 })),
+    );
+    expect(await changePrivatePersonPhoto(f.pg.db, { actor, file: f.file })).toBe("saved");
+    const [before] = await f.pg.db.select().from(people).where(eq(people.id, f.person.id));
+    if (!before?.diverPhotoPath) throw new Error("existing photo missing");
+    let releasePut!: () => void;
+    let entered!: () => void;
+    const putGate = new Promise<void>((resolve) => {
+      releasePut = resolve;
+    });
+    const putStarted = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        entered();
+        await putGate;
+        return new Response(null, { status: 200 });
+      }),
+    );
+    const pending = changePrivatePersonPhoto(f.pg.connect(), { actor, file: f.file });
+    void pending.catch(() => undefined);
+    let held: Awaited<ReturnType<typeof holdRowLock>> | undefined;
+    try {
+      await Promise.race([
+        putStarted,
+        pending.then(() => {
+          throw new Error("upload ended before barrier");
+        }),
+      ]);
+      held = await holdRowLock(
+        f.pg,
+        sql`select pg_advisory_xact_lock_shared(
+        hashtext('boarding_certification_evidence'), hashtext(${f.shop.id}))`,
+      );
+      releasePut();
+      expect(await promptly(pending)).toBe("failed");
+    } finally {
+      releasePut();
+      if (held) await held.release();
+      await Promise.allSettled([pending]);
+    }
+    const [after] = await f.pg.db.select().from(people).where(eq(people.id, f.person.id));
+    expect(after?.diverPhotoPath).toBe(before.diverPhotoPath);
+    expect(after?.diverPhotoSuppressed).toBe(before.diverPhotoSuppressed);
+    const uploads = await f.pg.db.select().from(privatePersonPhotoUploads);
+    expect(uploads).toHaveLength(2);
+    expect(uploads.find((row) => row.url === before.diverPhotoPath)?.state).toBe("active");
+    const orphan = uploads.find((row) => row.url !== before.diverPhotoPath);
+    expect(orphan).toMatchObject({ state: "staged", putFinished: true, cleanAfterPut: false });
+    if (!orphan) throw new Error("staged cleanup obligation missing");
+    await f.pg.db
+      .update(privatePersonPhotoUploads)
+      .set({ createdAt: new Date(nowDate().getTime() - 7_200_000) })
+      .where(eq(privatePersonPhotoUploads.url, orphan.url));
+    commandInputs.length = 0;
+    await cleanupPrivatePersonPhotos(f.pg.db);
+    const cleaned = await f.pg.db.select().from(privatePersonPhotoUploads);
+    expect(cleaned.find((row) => row.url === orphan.url)).toMatchObject({
+      state: "retired",
+      cleanAfterPut: true,
+    });
+    expect(cleaned.find((row) => row.url === before.diverPhotoPath)?.state).toBe("active");
+    const deletedKeys = commandInputs
+      .filter((call) => call.name === "DeleteObjectCommand")
+      .map((call) => (call.input as { Key: string }).Key);
+    expect(deletedKeys).toEqual([decodeURIComponent(new URL(orphan.url).pathname.slice(1))]);
+    expect(deletedKeys).not.toContain(
+      decodeURIComponent(new URL(before.diverPhotoPath).pathname.slice(1)),
+    );
+  });
+
   it("fails promptly rather than deadlocking with staff removal, then refuses the removed staffer", async () => {
     const f = await fixture();
     const [staff] = await f.pg.db
