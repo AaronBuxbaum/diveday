@@ -1,6 +1,8 @@
 import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { DbExecutor } from "./client";
+import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { boundLockWaits } from "./lock-bounds";
+import { isTransactionExecutor } from "./query-helpers";
 import { seatMarks } from "./roll-call-subject";
 import { cards, people, rollCallEvents } from "./schema";
 
@@ -36,6 +38,53 @@ export async function lockBoardingCertificationEvidence(
       sql`select pg_advisory_xact_lock(hashtext('boarding_certification_evidence'), hashtext(${shopId}))`,
     );
   }
+}
+
+/**
+ * Attempt the existing erasure/reset fence without waiting behind a rewrite.
+ * This only coordinates participating writers. It is not authorization, a
+ * durable receipt, a device acknowledgement, or a reset-preservation policy.
+ * No production intake calls this while the receipt contract is incomplete.
+ * Call before any person, booking, or schedule lock, then re-read live
+ * authorization and subject state within the same READ COMMITTED transaction.
+ */
+export async function tryLockBoardingEvidenceForReceipt(
+  tx: DbExecutor,
+  shopId: string,
+): Promise<boolean> {
+  if (!isTransactionExecutor(tx)) throw new Error("Receipt fence requires a transaction");
+  const isolation = await tx.execute(
+    sql`select current_setting('transaction_isolation') as isolation`,
+  );
+  if ((isolation.rows[0] as { isolation: string } | undefined)?.isolation !== "read committed") {
+    throw new Error("Receipt fence requires a READ COMMITTED transaction");
+  }
+  const result = await tx.execute(sql`select pg_try_advisory_xact_lock_shared(
+    hashtext('boarding_certification_evidence'), hashtext(${shopId})) as acquired`);
+  return (result.rows[0] as { acquired: boolean } | undefined)?.acquired === true;
+}
+
+/**
+ * Proposed first step for an eventual coordinated demo reset. The caller must
+ * pass a fresh transaction with no earlier shop, account, person, or booking
+ * locks; this function cannot detect locks already taken by its caller.
+ *
+ * A true result is only the existing demo identity gate under these locks. It
+ * is not authorization to delete or proof that a booking or device event is
+ * preserved. Current reset, reap, revocation and older servers do not all use
+ * this order, and the exclusive fence prevents prompt intake while held. No
+ * production path calls this helper while the receipt contract is incomplete.
+ */
+export async function lockDemoResetEvidenceFirst(tx: DbExecutor, shopId: string): Promise<boolean> {
+  if (!isTransactionExecutor(tx)) throw new Error("Coordinated demo gate requires a transaction");
+  const isolation = await tx.execute(
+    sql`select current_setting('transaction_isolation') as isolation`,
+  );
+  if ((isolation.rows[0] as { isolation: string } | undefined)?.isolation !== "read committed") {
+    throw new Error("Coordinated demo gate requires a READ COMMITTED transaction");
+  }
+  await lockBoardingCertificationEvidence(tx, shopId, "rewrite");
+  return isDemoShopWithDemoOwnerOrCaptainAccount(tx, shopId);
 }
 
 /**
