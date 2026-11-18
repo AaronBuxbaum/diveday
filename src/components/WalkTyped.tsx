@@ -129,3 +129,24 @@ export function WalkSwap({
     </div>
   );
 }
+
+/**
+ * A long page she scrolls: in the homepage walkthrough the page sits in a window of fixed height
+ * and slides up over `ms` while a fingertip swipes down it, then rests at the bottom. Everywhere
+ * else (a reader without the player, another page that draws this screen) it is the whole page,
+ * unwindowed, so nothing here shows until the walk has marked its list (`data-walk`, `globals.css`).
+ */
+export function WalkScroll({ ms, children }: { ms: number; children: React.ReactNode }) {
+  return (
+    <div data-walk-window="">
+      <div data-walk-scroll="" style={{ "--scroll-ms": `${ms}ms` } as CSSProperties}>
+        {children}
+      </div>
+      <span
+        aria-hidden="true"
+        data-walk-swipe=""
+        style={{ "--scroll-ms": `${ms}ms` } as CSSProperties}
+      />
+    </div>
+  );
+}

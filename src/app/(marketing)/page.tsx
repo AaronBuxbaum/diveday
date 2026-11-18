@@ -3,7 +3,6 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DiverDoor } from "@/app/_components/DiverDoor";
-import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { HomeHeroDesk } from "@/app/_components/HomeHeroDesk";
@@ -125,8 +124,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-12 lg:py-16">
           <div className="max-w-2xl">
-            <Eyebrow>{t("marketing.home.eyebrow")}</Eyebrow>
-            <h1 className="mt-4 text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
+            <h1 className="text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
               {t("marketing.home.heroTitle")}
             </h1>
             <p className="mt-4 max-w-xl text-lg leading-8 text-muted sm:text-xl">
