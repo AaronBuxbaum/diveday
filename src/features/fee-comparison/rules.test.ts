@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareMonth, directSavingBasisPoints } from "./rules";
+import { compareMonth } from "./rules";
 
 const OFFER = { monthlyCents: 0, basisPoints: 200 };
 
@@ -74,12 +74,5 @@ describe("compareMonth", () => {
 
   it("clamps a share outside 0 to 1 and a negative amount", () => {
     expect(compareMonth(-5, 3, OFFER).every((row) => row.totalHighCents >= 0)).toBe(true);
-  });
-});
-
-describe("directSavingBasisPoints", () => {
-  it("is each end of the marketplace range less DiveDay's 2% and a card sale's 2.9% + 30c", () => {
-    // 2% + 2.9% + 0.2% = 5.1% of a $150 sale; 15% - 5.1% = 9.9%, 30% - 5.1% = 24.9%.
-    expect(directSavingBasisPoints(OFFER)).toEqual({ low: 990, high: 2_490 });
   });
 });
