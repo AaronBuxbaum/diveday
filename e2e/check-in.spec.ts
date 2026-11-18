@@ -720,6 +720,12 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   ).toBeVisible();
   await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
 
+  // Wait for the submitted state to move this row before opening its new More.
+  await expect(odile.locator("xpath=ancestor::section[@data-fix-group][1]")).toHaveAttribute(
+    "data-fix-group",
+    "notHere",
+  );
+
   // The row stays on the page in its own group — never folded, because it is
   // the one row left with work attached to it — with a way back for the diver
   // who walks up as the lines come off.

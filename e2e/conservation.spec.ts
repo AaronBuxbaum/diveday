@@ -3,7 +3,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, tripPathByTitle } from "./helpers";
+import { createTrip, daysFromNow, openIfClosed, tripPathByTitle } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 signedInAsOwner();
@@ -35,7 +35,9 @@ test("staff record and correct measured conservation actions after a departure",
       .getByText(t("trips.conservation.heading"), { exact: true }),
   ).toBeVisible();
   const add = page.locator("#conservation-add");
-  await add.locator("summary").click();
+  // Wait for this disclosure's own hydration before toggling its native state.
+  await expect(add).toHaveAttribute("data-hydrated", "true");
+  await openIfClosed(add);
   await add.getByRole("spinbutton", { name: t("trips.conservation.quantity") }).fill("2.5");
   await add.getByRole("textbox", { name: t("trips.conservation.location") }).fill("Molasses Reef");
   await add

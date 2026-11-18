@@ -262,11 +262,15 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   ).toBeVisible();
 
   // Every segment of the bar is a door to its step.
-  await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 4 }) }).click();
+  await walk
+    .getByRole("button", { name: t("marketing.home.walk.goTo", { n: 4 }), exact: true })
+    .click();
   await expect(
     walk.getByRole("heading", { name: t("marketing.home.steps.onboard.title") }),
   ).toBeVisible();
-  await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 1 }) }).click();
+  await walk
+    .getByRole("button", { name: t("marketing.home.walk.goTo", { n: 1 }), exact: true })
+    .click();
   await expect(
     walk.getByRole("heading", { name: t("marketing.home.steps.browse.title") }),
   ).toBeVisible();
