@@ -69,6 +69,9 @@ export function useTripPendingManifestInventory({
       // latest read settles, selected-trip sync must not claim everything was
       // sent: the device-wide pending queue may contain another shop's work.
       inventoryReadyRef.current = false;
+      if (allCaughtUpMessage) {
+        setMessage((message) => (message === allCaughtUpMessage ? "" : message));
+      }
       void listOfflineManifests()
         .then((saved) => {
           if (!active || request !== latestRequest) return;
