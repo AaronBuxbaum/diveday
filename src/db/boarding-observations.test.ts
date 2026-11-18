@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { setStaffAccountStatus } from "@/features/staff-accounts";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { markBookingNoShow, undoBookingNoShow } from "../features/no-show/store";
 import { MINUTE_MS } from "../lib/clock";
@@ -12,13 +13,21 @@ import {
   settleBoardingObservations,
   settleOpenBoardingObservations,
 } from "./boarding-observations";
-import { createBooking } from "./bookings";
-import { boardingObservations, bookings, trips } from "./schema/index";
-import { getTripRoster, listStaff } from "./trips";
+import { createBooking, moveBooking } from "./bookings";
+import {
+  boardingObservations,
+  bookings,
+  people,
+  personRoles,
+  shops,
+  trips,
+  userAccounts,
+} from "./schema/index";
+import { createTrip, getTripRoster, listStaff } from "./trips";
 import { heldSeatCounts } from "./trips-queries";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
-// One seeded database for the file and a rolled-back transaction per test.
+// A fresh root database per test lets erasure reach its real commit boundary.
 const fileCtx = isolatedShopContext();
 
 /**
@@ -93,6 +102,83 @@ async function fillTheBoat(ctx: Ctx) {
 }
 
 describe("recording a dock sighting", () => {
+  it("rechecks staff authorization on a replay without deleting the observation", async () => {
+    const ctx = await released();
+    const [captain] = await ctx.db
+      .select({ personId: people.id, accountId: userAccounts.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
+      .where(
+        and(
+          eq(people.shopId, ctx.shopId),
+          eq(personRoles.role, "captain"),
+          eq(userAccounts.status, "active"),
+        ),
+      )
+      .limit(1);
+    const [owner] = await ctx.db
+      .select({ personId: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
+      .where(
+        and(
+          eq(people.shopId, ctx.shopId),
+          eq(personRoles.role, "owner"),
+          eq(userAccounts.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (!captain || !owner || captain.personId === owner.personId) {
+      throw new Error("distinct active captain and owner required");
+    }
+    const key = randomUUID();
+    const input = {
+      shopId: ctx.shopId,
+      tripId: ctx.trip.id,
+      bookingId: ctx.bookingId,
+      recordedByPersonId: captain.personId,
+      clientKey: key,
+    };
+    const first = await recordBoardingObservation(ctx.db, input);
+    expect(first).toMatchObject({ ok: true, replay: false });
+    const before = await observationRows(ctx);
+    expect(
+      await setStaffAccountStatus(ctx.db, {
+        shopId: ctx.shopId,
+        personId: captain.personId,
+        userAccountId: captain.accountId,
+        status: "disabled",
+      }),
+    ).toEqual({ ok: true });
+    expect(await recordBoardingObservation(ctx.db, input)).toEqual({
+      ok: false,
+      reason: "staff_not_found",
+    });
+    expect(
+      await recordBoardingObservation(ctx.db, { ...input, recordedByPersonId: owner.personId }),
+    ).toMatchObject({ ok: true, replay: true });
+    const [otherShop] = await ctx.db
+      .insert(shops)
+      .values({ name: "Other shop", slug: `other-${randomUUID()}`, timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("other shop missing");
+    const [otherStaff] = await ctx.db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Other owner", email: "other@scope.example" })
+      .returning();
+    if (!otherStaff) throw new Error("other staff missing");
+    await ctx.db.insert(personRoles).values({ personId: otherStaff.id, role: "owner" });
+    await ctx.db
+      .insert(userAccounts)
+      .values({ personId: otherStaff.id, email: "other@scope.example", status: "active" });
+    expect(
+      await recordBoardingObservation(ctx.db, { ...input, recordedByPersonId: otherStaff.id }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+    expect(await observationRows(ctx)).toEqual(before);
+  });
+
   it("records one row per tap, however often the same tap is sent", async () => {
     const ctx = await released();
     const key = randomUUID();
@@ -117,6 +203,75 @@ describe("recording a dock sighting", () => {
       ok: false,
       reason: "key_reused",
     });
+  });
+
+  it("refuses a spent key sent for a different departure", async () => {
+    const ctx = await released();
+    const key = randomUUID();
+    const first = await record(ctx, key);
+    expect(first).toMatchObject({ ok: true, replay: false });
+    const before = await observationRows(ctx);
+    expect(
+      await recordBoardingObservation(ctx.db, {
+        shopId: ctx.shopId,
+        tripId: ctx.otherTripId,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        clientKey: key,
+      }),
+    ).toEqual({ ok: false, reason: "key_reused" });
+    expect(await observationRows(ctx)).toEqual(before);
+  });
+
+  it("keeps an exact replay on its original departure after a booking move", async () => {
+    const ctx = await released();
+    const key = randomUUID();
+    await ctx.db
+      .update(bookings)
+      .set({
+        turnedAwayAt: new Date(ctx.trip.startsAt.getTime() - MINUTE_MS),
+        turnedAwayReason: "waiver",
+      })
+      .where(eq(bookings.id, ctx.bookingId));
+    const first = await record(ctx, key);
+    expect(first).toMatchObject({ ok: true, replay: false });
+    const before = await observationRows(ctx);
+    const target = await createTrip(ctx.db, {
+      shopId: ctx.shopId,
+      title: "Replay move target",
+      startsAt: new Date(ctx.trip.startsAt.getTime() + 3 * 24 * 60 * MINUTE_MS),
+      endsAt: new Date(ctx.trip.startsAt.getTime() + (3 * 24 * 60 + 240) * MINUTE_MS),
+      capacity: 20,
+    });
+    if (!target) throw new Error("target departure missing");
+    const moved = await moveBooking(ctx.db, {
+      shopId: ctx.shopId,
+      fromTripId: ctx.trip.id,
+      toTripId: target.id,
+      bookingId: ctx.bookingId,
+      actorPersonId: ctx.staffId,
+      now: new Date(ctx.trip.startsAt.getTime() - MINUTE_MS),
+    });
+    expect(moved).toMatchObject({ ok: true });
+    expect(await record(ctx, key)).toMatchObject({ ok: true, replay: true, tripId: ctx.trip.id });
+    expect(
+      await recordBoardingObservation(ctx.db, {
+        shopId: ctx.shopId,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        clientKey: key,
+      }),
+    ).toMatchObject({ ok: true, replay: true, tripId: ctx.trip.id });
+    expect(
+      await recordBoardingObservation(ctx.db, {
+        shopId: ctx.shopId,
+        tripId: target.id,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        clientKey: key,
+      }),
+    ).toEqual({ ok: false, reason: "key_reused" });
+    expect(await observationRows(ctx)).toEqual(before);
   });
 
   it("joins a second staffer's tap for the same seat to the open one", async () => {

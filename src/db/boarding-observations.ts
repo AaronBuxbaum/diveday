@@ -12,7 +12,7 @@ import type { CourseAdmissionRefusal } from "@/lib/course-admission";
 import { log } from "@/lib/log";
 import { isDiver, seatRefusal } from "@/lib/participant-types";
 import { hasReturned } from "@/lib/trips";
-import { loadActiveStaffRoles } from "./authz";
+import { loadActiveStaffRoles, readActiveStaffRoles } from "./authz";
 import { courseSeatRefusal } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { boundLockWaits, isLockWaitRefusal } from "./lock-bounds";
@@ -91,11 +91,11 @@ export async function recordBoardingObservation(
     // Bounded like every other write, though this one takes no row lock of
     // its own and references no row a schedule writer locks.
     await boundLockWaits(tx);
+    const roles = await readActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
+    if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" };
+
     const replayed = await observationByKey(tx, input.shopId, clientKey);
     if (replayed) return replayOf(replayed, input);
-
-    const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
-    if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" };
 
     // Read, never locked: a move or a sale may hold this seat `FOR UPDATE`
     // right now, and the observation must not wait for it. The allocation
@@ -197,11 +197,15 @@ async function observationByKey(tx: DbExecutor, shopId: string, clientKey: strin
 
 function replayOf(
   row: { id: string; tripId: string; bookingId: string },
-  input: { bookingId: string },
+  input: { bookingId: string; tripId?: string },
 ): RecordObservationOutcome {
-  // A key names one tap about one seat; the same key about another seat is a
-  // client bug or a forged replay, and neither may move a seat.
-  if (row.bookingId !== input.bookingId) return { ok: false, reason: "key_reused" };
+  // A key names the original seat and departure. A changed departure cannot
+  // silently retarget the observation after a booking move.
+  if (
+    row.bookingId !== input.bookingId ||
+    (input.tripId !== undefined && row.tripId !== input.tripId)
+  )
+    return { ok: false, reason: "key_reused" };
   return {
     ok: true,
     observationId: row.id,

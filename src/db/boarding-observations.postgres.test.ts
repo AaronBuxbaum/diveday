@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { settleDockObservations, undoBookingNoShow } from "@/features/no-show";
+import { setStaffAccountStatus } from "@/features/staff-accounts";
 import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
@@ -10,12 +11,12 @@ import {
   settleBoardingObservations,
   settleOpenBoardingObservations,
 } from "./boarding-observations";
-import { createBookingParty } from "./bookings";
+import { createBookingParty, moveBooking } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { lockCrewSchedule } from "./crew-schedule-lock";
 import { recordRollCall } from "./manifests";
 import { personClashesByTrip } from "./person-clashes";
-import { boardingObservations, bookings, trips } from "./schema";
+import { boardingObservations, bookings, people, personRoles, trips, userAccounts } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
 import { changeTripCrewOutcome, createTrip, listStaff, moveTripCrewMember } from "./trips";
@@ -155,6 +156,133 @@ async function timed<T>(work: Promise<T>): Promise<{ value: T; ms: number }> {
 }
 
 describePostgres("a dock sighting is never held behind a schedule edit", () => {
+  it("keeps a replay tied to its original departure after a real booking move", async () => {
+    const ctx = await releasedSeat();
+    const target = await departure(ctx.pg.db, ctx.shopId, 24);
+    await ctx.pg.db
+      .update(bookings)
+      .set({ turnedAwayAt: ctx.now, turnedAwayReason: "waiver" })
+      .where(eq(bookings.id, ctx.late));
+    const input = {
+      shopId: ctx.shopId,
+      tripId: ctx.trip.id,
+      bookingId: ctx.late,
+      recordedByPersonId: ctx.staffId,
+      clientKey: randomUUID(),
+    };
+    expect(await recordBoardingObservation(ctx.pg.connect(), input)).toMatchObject({
+      ok: true,
+      replay: false,
+    });
+    const before = await ctx.pg.db
+      .select()
+      .from(boardingObservations)
+      .where(eq(boardingObservations.clientKey, input.clientKey));
+    expect(before).toHaveLength(1);
+    expect(
+      await moveBooking(ctx.pg.connect(), {
+        shopId: ctx.shopId,
+        fromTripId: ctx.trip.id,
+        toTripId: target.id,
+        bookingId: ctx.late,
+        actorPersonId: ctx.staffId,
+        now: ctx.now,
+      }),
+    ).toMatchObject({ ok: true });
+    const [moved] = await ctx.pg.db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.id, ctx.late));
+    expect(moved?.tripId).toBe(target.id);
+    expect(await recordBoardingObservation(ctx.pg.connect(), input)).toMatchObject({
+      ok: true,
+      replay: true,
+      tripId: ctx.trip.id,
+    });
+    expect(
+      await recordBoardingObservation(ctx.pg.connect(), { ...input, tripId: target.id }),
+    ).toEqual({ ok: false, reason: "key_reused" });
+    expect(
+      await ctx.pg.db
+        .select()
+        .from(boardingObservations)
+        .where(eq(boardingObservations.bookingId, ctx.late)),
+    ).toEqual(before);
+  });
+
+  it("refuses a replay after staff revocation while retaining the committed sighting", async () => {
+    const ctx = await releasedSeat();
+    const [captain] = await ctx.pg.db
+      .select({ personId: people.id, accountId: userAccounts.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
+      .where(
+        and(
+          eq(people.shopId, ctx.shopId),
+          eq(personRoles.role, "captain"),
+          eq(userAccounts.status, "active"),
+        ),
+      )
+      .limit(1);
+    const [owner] = await ctx.pg.db
+      .select({ personId: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
+      .where(
+        and(
+          eq(people.shopId, ctx.shopId),
+          eq(personRoles.role, "owner"),
+          eq(userAccounts.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (!captain || !owner || captain.personId === owner.personId) {
+      throw new Error("distinct active captain and owner required");
+    }
+    const input = {
+      shopId: ctx.shopId,
+      tripId: ctx.trip.id,
+      bookingId: ctx.late,
+      recordedByPersonId: captain.personId,
+      clientKey: randomUUID(),
+    };
+    expect(await recordBoardingObservation(ctx.pg.connect(), input)).toMatchObject({
+      ok: true,
+      replay: false,
+    });
+    const before = await ctx.pg.db
+      .select()
+      .from(boardingObservations)
+      .where(eq(boardingObservations.clientKey, input.clientKey));
+    expect(before).toHaveLength(1);
+    expect(
+      await setStaffAccountStatus(ctx.pg.connect(), {
+        shopId: ctx.shopId,
+        personId: captain.personId,
+        userAccountId: captain.accountId,
+        status: "disabled",
+      }),
+    ).toEqual({ ok: true });
+    expect(await recordBoardingObservation(ctx.pg.connect(), input)).toEqual({
+      ok: false,
+      reason: "staff_not_found",
+    });
+    expect(
+      await recordBoardingObservation(ctx.pg.connect(), {
+        ...input,
+        recordedByPersonId: owner.personId,
+      }),
+    ).toMatchObject({ ok: true, replay: true });
+    expect(
+      await ctx.pg.db
+        .select()
+        .from(boardingObservations)
+        .where(eq(boardingObservations.clientKey, input.clientKey)),
+    ).toEqual(before);
+  });
+
   it("commits while a move holds the departure and the seat for update", async () => {
     const ctx = await releasedSeat();
     const move = await holding(ctx.pg, moveLocks(ctx.trip.id, ctx.late));
