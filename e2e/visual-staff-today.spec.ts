@@ -402,7 +402,17 @@ for (const scheme of ["light", "dark"] as const) {
         await seedFacts(request, ["troublePanels", "failedEmails"]);
         await page.goto("/shop/blue-mantis");
         await page.getByRole("button", { name: "Resend confirmations" }).waitFor();
-        await capture(page, "today-failed-emails", scheme);
+        // The button is server-rendered before ArrivalSearch hydrates and takes
+        // its normal initial focus. Photograph that real focused state at each width.
+        const search = page.locator("#arrival-search");
+        await expect(search).toHaveAttribute("data-hydrated", "true");
+        await expect(search).toBeFocused();
+        await capture(page, "today-failed-emails", scheme, {
+          beforeScreenshot: async () => {
+            await expect(search).toBeFocused();
+            await expect(page.locator("#arrival-search:focus-visible")).toBeVisible();
+          },
+        });
       });
 
       /**
