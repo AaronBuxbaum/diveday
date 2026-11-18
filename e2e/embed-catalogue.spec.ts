@@ -266,7 +266,9 @@ test.describe("the generator", () => {
     await tile(/^Partner link/).click();
     // By role: "Partner" also labels the tile's radio and the section, and
     // "Referral link" the section and its Copy button.
-    await page.getByRole("textbox", { name: "Partner", exact: true }).fill("The Reef Hotel");
+    await page
+      .getByRole("textbox", { name: "Partner (optional)", exact: true })
+      .fill("The Reef Hotel");
     await expect(page.getByRole("textbox", { name: /^Referral link/ })).toHaveValue(
       /utm_campaign=the-reef-hotel/,
     );

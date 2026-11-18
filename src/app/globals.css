@@ -1934,6 +1934,47 @@ select:not([multiple]):not([size]):dir(rtl) {
   animation-delay: var(--type-delay, 0ms);
 }
 
+/* Something that happens to the first screen in the first phase (`data-walk-late`, such as her tap
+   on a choice): it is not there until `--late-delay`, and what it replaces (`data-walk-gone`) goes
+   at the same moment. The tap phase and the finished screen show the result. */
+@keyframes walk-late {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes walk-gone {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+[data-walk-phase="before"] [data-walk-before] [data-walk-late] {
+  animation: walk-late var(--motion-base) var(--ease-out-soft) both;
+  animation-delay: var(--late-delay, 0ms);
+}
+
+[data-walk-phase="before"] [data-walk-before] [data-walk-gone] {
+  animation: walk-gone var(--motion-base) var(--ease-out-soft) both;
+  animation-delay: var(--late-delay, 0ms);
+}
+
+[data-walk-phase="tap"] [data-walk-gone],
+[data-walk-phase="after"] [data-walk-gone] {
+  opacity: 0;
+}
+
+/* A walk that is stopped shows the first frame of its slide: the animations wait at their start. */
+[data-walk-still] [data-walk-before] :is([data-walk-type], [data-walk-late], [data-walk-gone]) {
+  animation-play-state: paused;
+}
+
 /* What the tap did arrives with it: the mark the beat is about (a check, a
    count, a star) settles on its spring, and a new beat's screen rises in. */
 [data-walk] [data-walk-frame-current] {

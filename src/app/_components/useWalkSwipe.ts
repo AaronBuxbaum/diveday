@@ -21,7 +21,6 @@ export function useWalkSwipe({
   index,
   total,
   beats,
-  playing,
   go,
 }: {
   rootRef: RefObject<HTMLDivElement | null>;
@@ -29,7 +28,6 @@ export function useWalkSwipe({
   index: number;
   total: number;
   beats: readonly WalkBeat[];
-  playing: boolean;
   go: (to: number) => void;
 }) {
   const listEl = () => rootRef.current?.querySelector<HTMLElement>("[data-walk-list]") ?? null;
@@ -67,7 +65,7 @@ export function useWalkSwipe({
     copy.removeAttribute("data-walk-list");
     copy.setAttribute("aria-hidden", "true");
     copy.setAttribute("inert", "");
-    copy.setAttribute("data-walk-phase", playing ? "before" : "after");
+    copy.setAttribute("data-walk-phase", "before");
     for (const item of copy.querySelectorAll("[data-walk-step]")) {
       const current = item.getAttribute("data-walk-step") === to.step;
       item.toggleAttribute("data-walk-current", current);

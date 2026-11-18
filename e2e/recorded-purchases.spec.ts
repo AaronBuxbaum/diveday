@@ -59,10 +59,12 @@ test.describe("record money already received", () => {
       await form.getByLabel(t("orders.purchase.item"), { exact: true }).fill("Walk-in reef shirt");
       await form.getByLabel("Quantity", { exact: true }).fill("2");
       await form.getByLabel("Unit price (USD)", { exact: true }).fill("25");
-      await form.getByLabel(t("orders.purchase.tax"), { exact: true }).fill("3");
-      await form.getByLabel(t("orders.purchase.tip"), { exact: true }).fill("2");
+      await form.getByLabel(`${t("orders.purchase.tax")} (optional)`, { exact: true }).fill("3");
+      await form.getByLabel(`${t("orders.purchase.tip")} (optional)`, { exact: true }).fill("2");
       const reference = `synthetic-money-${viewport.name}`;
-      await form.getByLabel(t("orders.purchase.reference"), { exact: true }).fill(reference);
+      await form
+        .getByLabel(`${t("orders.purchase.reference")} (optional)`, { exact: true })
+        .fill(reference);
       // Tax and tip are included in the received amount, never added to it.
       await expect(form.getByRole("status")).toHaveText("$50.00");
       await form.getByRole("button", { name: t("orders.purchase.submit"), exact: true }).click();

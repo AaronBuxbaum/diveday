@@ -334,9 +334,9 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "landing", scheme);
       });
 
-      // The walkthrough, one capture per beat: Priya browsing, picking, paying by card, the money in Orders,
-      // her onboarding, the medical answer, her signature, her PADI card checked, checked in, aboard,
-      // her dive file imported, and the recap and review.
+      // The walkthrough, one capture per beat, each a stopped walk's first frame: Priya picking a boat,
+      // paying by card, the money in Orders, her onboarding, her paperwork, her PADI card checked,
+      // checked in, aboard, and the recap and review.
       // The beats are one theme's work, so the dark pass does not register the test.
       if (scheme === "light") {
         test(`the landing walkthrough shows each beat of one diver's day (${scheme})`, async ({
@@ -349,18 +349,15 @@ for (const scheme of ["light", "dark"] as const) {
           await next.waitFor();
           for (const beat of [
             "browse",
-            "select",
             "pay",
             "money",
             "onboard",
             "unsigned",
-            "medical",
             "sign",
             "check",
             "card",
             "desk",
             "aboard",
-            "computer",
             "recap",
             "review",
           ] as const) {

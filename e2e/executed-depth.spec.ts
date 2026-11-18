@@ -25,12 +25,12 @@ for (const { unit, entered, meters } of [
       const { tripId } = privateShop.values.executedDepth as { tripId: string };
       const log = await openLog(page, privateShop.slug, tripId);
       await expect(log.getByLabel(/Maximum depth/)).toHaveValue(entered);
-      await log.getByLabel("Visibility", { exact: true }).fill("Good");
+      await log.getByLabel("Visibility (optional)", { exact: true }).fill("Good");
       await log.getByRole("button", { name: "Save dive record" }).click();
       await expect(log.getByText("Dive record saved")).toBeVisible();
       await openDiveLog(page, tripId);
       await expect(log.locator('input[name="maxDepthMeters"]')).toHaveValue(String(meters));
-      await expect(log.getByLabel("Visibility", { exact: true })).toHaveValue("Good");
+      await expect(log.getByLabel("Visibility (optional)", { exact: true })).toHaveValue("Good");
     });
   });
 }

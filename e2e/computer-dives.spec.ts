@@ -10,8 +10,8 @@ signedInAsOwner();
 test("computer import previews, cancels, retries and restores a personal record", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/divers?q=Priya");
-  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  await page.goto("/shop/blue-mantis/divers?q=Amara");
+  await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
   await page.getByRole("link", { name: t("computerDives.title"), exact: true }).click();
   await expect(page).toHaveURL(/\/divers\/[a-f0-9-]+\/computer-dives$/);
   await expect(page.getByText(t("computerDives.empty"), { exact: true })).toBeVisible();
@@ -71,8 +71,8 @@ test("computer import previews, cancels, retries and restores a personal record"
 test.describe("phone keyboard import", () => {
   test.use({ viewport: { width: 390, height: 844 } });
   test("unknown timezone stays explicit and cancel returns focus", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/divers?q=Priya");
-    await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+    await page.goto("/shop/blue-mantis/divers?q=Amara");
+    await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
     await page.getByRole("link", { name: t("computerDives.title"), exact: true }).click();
     await page.getByLabel(t("computerDives.files"), { exact: true }).setInputFiles(upload);
     await page
@@ -102,8 +102,8 @@ test.describe("phone keyboard import", () => {
 test("Garmin FIT retains the UTC instant and profile without inventing a local timezone", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/divers?q=Priya");
-  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  await page.goto("/shop/blue-mantis/divers?q=Amara");
+  await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
   await page.getByRole("link", { name: t("computerDives.title"), exact: true }).click();
   await page
     .getByLabel(t("computerDives.files"), { exact: true })
@@ -139,8 +139,8 @@ test("Garmin FIT retains the UTC instant and profile without inventing a local t
 test("ZIP import rejects an empty archive and preserves preview-only behavior for extracted UDDF", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/divers?q=Priya");
-  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  await page.goto("/shop/blue-mantis/divers?q=Amara");
+  await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
   await page.getByRole("link", { name: t("computerDives.title"), exact: true }).click();
   await expect(page.getByText(t("computerDives.zipHint"), { exact: true })).toBeVisible();
   // An empty ZIP has no importable dives. It must not create history.
@@ -180,8 +180,8 @@ for (const locale of ["en-US", "es-ES"] as const) {
       page,
     }) => {
       const words = staffTranslator(locale);
-      await page.goto("/shop/blue-mantis/divers?q=Priya");
-      await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+      await page.goto("/shop/blue-mantis/divers?q=Amara");
+      await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
       await page.getByRole("link", { name: words("computerDives.title"), exact: true }).click();
       const source = page.getByLabel(words("computerDives.provider"), { exact: true });
       for (const provider of ["padi", "ssi"] as const) {
@@ -216,8 +216,8 @@ for (const locale of ["en-US", "es-ES"] as const) {
 test("manual CSV transfer requires explicit mapping and preserves a date without an invented time", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/divers?q=Priya");
-  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  await page.goto("/shop/blue-mantis/divers?q=Amara");
+  await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
   await page.getByRole("link", { name: t("computerDives.title"), exact: true }).click();
   await page.getByLabel(t("computerDives.provider"), { exact: true }).selectOption("padi");
   await page.getByLabel(t("computerDives.files"), { exact: true }).setInputFiles({
@@ -287,8 +287,8 @@ test("manual CSV transfer requires explicit mapping and preserves a date without
 test("multi-entry ZIP preview cancels without saving and extracted files deduplicate after import", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/divers?q=Priya");
-  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  await page.goto("/shop/blue-mantis/divers?q=Amara");
+  await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
   await page.getByRole("link", { name: t("computerDives.title"), exact: true }).click();
   const files = page.getByLabel(t("computerDives.files"), { exact: true });
   await files.setInputFiles("src/lib/computer-import/fixtures/multi-entry.zip");

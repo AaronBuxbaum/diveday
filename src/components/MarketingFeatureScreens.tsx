@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { RouteWaypoint } from "@/components/RouteWaypoint";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
@@ -140,6 +141,21 @@ export function BookingCardFallback({ locale }: { locale: DiverLocale }) {
   );
 }
 
+/** The selected pill's radio and its label, as the medical question draws a chosen answer. */
+function NoSelected({ label }: { label: string }) {
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className="flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-primary"
+      >
+        <span className="size-1.5 rounded-full bg-primary" />
+      </span>
+      {label}
+    </>
+  );
+}
+
 /**
  * **Signing the waiver on a diver's phone** — `src/app/(token)/waivers/[token]/page.tsx`
  * with its step rail (`WaiverStepRail.tsx`) two steps in, one release question
@@ -158,20 +174,20 @@ export function WaiverSigningFallback({
   locale: DiverLocale;
   /**
    * `open` is the feature page's screen: the question answered and the name in the box.
-   * The homepage walkthrough tells it in three pictures: `unanswered` (Priya taps No),
-   * `answered` and `typing` (the same page while she types her name, then taps Sign waiver),
-   * and `signed` a tap later.
+   * The homepage walkthrough tells it in two pictures: `filling` (Priya taps No, types her name,
+   * then taps Sign waiver, the first two playing out in the walk's first phase) and `signed` a
+   * tap later.
    */
-  state?: "open" | "unanswered" | "answered" | "typing" | "signed";
+  state?: "open" | "filling" | "signed";
 }) {
   const t = diverTranslator(locale);
   const signed = state === "signed";
-  const unanswered = state === "unanswered";
+  const filling = state === "filling";
   // i18n-exempt: sample diver name used only in marketing mockups
   const signerName = "Priya Sharma";
   const steps = [
     { label: t("fallback.waiverSigning.railRelease"), done: true },
-    { label: t("fallback.waiverSigning.railMedical"), done: !unanswered },
+    { label: t("fallback.waiverSigning.railMedical"), done: !filling },
     { label: t("fallback.waiverSigning.railSign"), done: signed },
   ];
   return (
@@ -196,7 +212,7 @@ export function WaiverSigningFallback({
             {t(
               signed
                 ? "fallback.waiverSigning.progressDone"
-                : unanswered
+                : filling
                   ? "fallback.waiverSigning.progressOne"
                   : "fallback.waiverSigning.progress",
             )}
@@ -233,26 +249,29 @@ export function WaiverSigningFallback({
                   <StatusMark variant="pending" className="text-muted" />
                   {t("waiver.answerYes")}
                 </span>
-                {unanswered ? (
-                  <span
-                    data-tap-target=""
-                    className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-xs"
-                  >
-                    <StatusMark variant="pending" className="text-muted" />
-                    {t("waiver.answerNo")}
-                  </span>
-                ) : (
-                  <span
-                    data-walk-pop=""
-                    className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-primary bg-primary-tint px-3 text-xs font-medium text-primary"
-                  >
+                {filling ? (
+                  <span className="relative inline-flex">
+                    <span
+                      data-walk-gone=""
+                      style={{ "--late-delay": "900ms" } as CSSProperties}
+                      className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-xs"
+                    >
+                      <StatusMark variant="pending" className="text-muted" />
+                      {t("waiver.answerNo")}
+                    </span>
+                    {/* Her tap on No lands 900 ms into the walk's first phase. */}
                     <span
                       aria-hidden="true"
-                      className="flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-primary"
+                      data-walk-late=""
+                      style={{ "--late-delay": "900ms" } as CSSProperties}
+                      className="absolute inset-0 inline-flex items-center gap-2 rounded-lg border border-primary bg-primary-tint px-3 text-xs font-medium text-primary"
                     >
-                      <span className="size-1.5 rounded-full bg-primary" />
+                      <NoSelected label={t("waiver.answerNo")} />
                     </span>
-                    {t("waiver.answerNo")}
+                  </span>
+                ) : (
+                  <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-primary bg-primary-tint px-3 text-xs font-medium text-primary">
+                    <NoSelected label={t("waiver.answerNo")} />
                   </span>
                 )}
               </div>
@@ -264,19 +283,10 @@ export function WaiverSigningFallback({
               {t("fallback.waiverSigning.typeFullName")}
             </p>
             <div className="mt-1 flex min-h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm">
-              {state === "unanswered" || state === "answered" ? null : state === "typing" ? (
-                <WalkTyped text={signerName} delay={300} />
-              ) : (
-                <span>{signerName}</span>
-              )}
+              {filling ? <WalkTyped text={signerName} delay={2200} /> : <span>{signerName}</span>}
             </div>
             <p className="mt-3 flex items-baseline gap-2 text-xs">
-              <StatusMarkColumn
-                variant={state === "unanswered" || state === "answered" ? "unchecked" : "checked"}
-                className={
-                  state === "unanswered" || state === "answered" ? "text-muted" : "text-primary"
-                }
-              />
+              <StatusMarkColumn variant="checked" className="text-primary" />
               <span>{t("fallback.waiverSigning.agreement")}</span>
             </p>
             {signed ? (
@@ -291,7 +301,7 @@ export function WaiverSigningFallback({
               <button
                 type="button"
                 disabled
-                data-tap-target={state === "open" || state === "typing" ? "" : undefined}
+                data-tap-target={state === "open" || filling ? "" : undefined}
                 className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}
               >
                 {t("fallback.waiverSigning.signButton")}
