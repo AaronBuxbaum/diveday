@@ -92,6 +92,20 @@ it("keeps a detailed success report and its link available after the toast inter
 });
 
 describe("ErrorToast", () => {
+  it("keeps an untimed warning visible after pointer and keyboard focus leave", async () => {
+    vi.useFakeTimers();
+    render(<ErrorToast message="Cleanup incomplete" durationMs={null} />);
+    const alert = screen.getByRole("alert");
+    fireEvent.mouseEnter(alert);
+    fireEvent.mouseLeave(alert);
+    fireEvent.focus(alert);
+    fireEvent.blur(alert);
+    await act(async () => {
+      vi.advanceTimersByTime(120_000);
+    });
+    expect(alert).toBeVisible();
+    expect(alert).not.toHaveClass("toast-dismiss");
+  });
   it("keeps expiry paused when keyboard focus moves from the toast to its recovery link", async () => {
     vi.useFakeTimers();
     render(
