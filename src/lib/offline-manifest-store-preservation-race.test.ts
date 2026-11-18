@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { rawStoredRecord } from "@/test/offline-raw-record";
 import {
   beginOfflineTenantVerificationRound,
+  loadOfflineManifest,
   purgeOfflineManifestsExceptShop,
   saveOfflineManifest,
 } from "./offline-manifest-store";
@@ -113,3 +114,77 @@ it.each(["ciphertext", "unknown field"] as const)(
     }
   },
 );
+
+it("uses the winning encryption key when two first saves generate keys without Web Locks", async () => {
+  const prior = Object.getOwnPropertyDescriptor(navigator, "locks");
+  Object.defineProperty(navigator, "locks", { configurable: true, value: undefined });
+  const generate = crypto.subtle.generateKey.bind(crypto.subtle);
+  let release!: () => void;
+  const barrier = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let calls = 0;
+  const spy = vi.spyOn(crypto.subtle, "generateKey").mockImplementation((async (
+    ...args: Parameters<typeof crypto.subtle.generateKey>
+  ) => {
+    calls += 1;
+    if (calls === 2) release();
+    await barrier;
+    return generate(...args);
+  }) as typeof crypto.subtle.generateKey);
+  try {
+    await Promise.all([
+      saveOfflineManifest(payload("trip-one")),
+      saveOfflineManifest(payload("trip-two")),
+    ]);
+    expect(calls).toBe(2);
+    expect((await loadOfflineManifest("trip-one"))?.snapshot.manifests[0].trip.id).toBe("trip-one");
+    expect((await loadOfflineManifest("trip-two"))?.snapshot.manifests[0].trip.id).toBe("trip-two");
+  } finally {
+    spy.mockRestore();
+    if (prior) Object.defineProperty(navigator, "locks", prior);
+    else Reflect.deleteProperty(navigator, "locks");
+  }
+});
+
+it("does not create a replacement key while an unreadable saved record remains", async () => {
+  await saveOfflineManifest(payload("original"));
+  const original = await new Promise<unknown>((resolve, reject) => {
+    const request = indexedDB.open("diveday-offline-manifests", 1);
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction(["keys", "manifests"], "readwrite");
+      const get = transaction.objectStore("manifests").get("original");
+      let record: unknown;
+      get.onsuccess = () => {
+        record = get.result;
+      };
+      transaction.objectStore("keys").delete("manifest-aes-gcm-v1");
+      transaction.oncomplete = () => {
+        db.close();
+        resolve(record);
+      };
+      transaction.onerror = () => reject(transaction.error);
+    };
+    request.onerror = () => reject(request.error);
+  });
+  await expect(loadOfflineManifest("original")).rejects.toThrow();
+  await expect(saveOfflineManifest(payload("new-trip"))).rejects.toThrow();
+  const after = await new Promise<{ key: unknown; record: unknown }>((resolve, reject) => {
+    const request = indexedDB.open("diveday-offline-manifests", 1);
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction(["keys", "manifests"], "readonly");
+      const key = transaction.objectStore("keys").get("manifest-aes-gcm-v1");
+      const record = transaction.objectStore("manifests").get("original");
+      transaction.oncomplete = () => {
+        db.close();
+        resolve({ key: key.result, record: record.result });
+      };
+      transaction.onerror = () => reject(transaction.error);
+    };
+    request.onerror = () => reject(request.error);
+  });
+  expect(after.key).toBeUndefined();
+  expect(after.record).toEqual(original);
+});
