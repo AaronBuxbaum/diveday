@@ -176,13 +176,14 @@ export const STEPS: readonly {
     // The report goes out by itself a few hours after the boat is due back, which is why it is the
     // messages page this slide opens. Its drawing carries the label `RecapPageFallback` names.
     id: "recap",
-    hold: 5200,
+    lead: 3600,
+    hold: 2400,
     listed: true,
     feature: "messages",
     note: "marketing.home.steps.recap.note",
     label: "marketing.home.steps.recap.mockupLabel",
-    before: (locale) => <RecapPageFallback locale={locale} view="report" />,
-    screen: (locale) => <RecapPageFallback locale={locale} view="report" />,
+    before: (locale) => <RecapPageFallback locale={locale} view="report" scroll />,
+    screen: (locale) => <RecapPageFallback locale={locale} view="report" scroll />,
   },
   {
     id: "review",
