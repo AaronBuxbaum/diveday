@@ -401,15 +401,11 @@ async function refreshSavedManifests(): Promise<void> {
     // cross-tenant failure this sequence exists to prevent.
     const shopSlug = offlineManifestShopSlug(body);
     if (!shopSlug) return;
-    // Uncaught on purpose: a purge that throws falls to this function's own
-    // catch below, which abandons the round before anything is written — the
-    // same fail-closed order the page-side auto-save keeps, rather than
-    // leaving both shops' rosters readable side by side.
-    await purgeOfflineManifestsExceptShop(shopSlug, tenantRound);
     // Medical alert words another person saved on this device go before
-    // anything is saved for this one (H-20261023-medical-alert-for-the amendment). A body that names
-    // nobody wipes them all: fail closed.
+    // the purge too, so a blocked inventory does not skip readable cleanup.
     await wipeOfflineMedicalAlerts(offlineManifestViewerPersonId(body) ?? undefined, tenantRound);
+    // A failed wipe or purge abandons the round before any cross-tenant save.
+    await purgeOfflineManifestsExceptShop(shopSlug, tenantRound);
     for (const payload of offlineManifestPayloads(body)) {
       // Sequential, not Promise.all: these share one IndexedDB lock inside the
       // store, and a locked phone is not where to discover lock contention.
