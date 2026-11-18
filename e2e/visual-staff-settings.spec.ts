@@ -21,6 +21,7 @@ import {
   capture,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   openDisputeSheet,
   openReefTrip,
   SURFACE_TIMEOUT_MS,
@@ -730,11 +731,20 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await openReefTrip(page);
+        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)$/)?.[1];
+        if (!tripId) throw new Error("The reef trip must identify its trip");
+        const rosterConfirmed = liveRosterConfirmation(page, { tripId, checkpoint: "departure" });
         await openTripTab(page, "Manifest");
         await openDeckDetails(page);
         await page.locator("#dock-rider summary").click();
+        await rosterConfirmed;
         const form = page.getByTestId("dock-rider-form");
         await capture(page, "manifest-dock-rider-controls", scheme, {
+          beforeScreenshot: async () => {
+            await expect(
+              page.getByText(staffCopy("manifest.rosterUnconfirmed"), { exact: true }),
+            ).toHaveCount(0);
+          },
           beforeShot: async () => {
             const date = form.locator('input[name="dateOfBirth"]');
             const aboard = form.getByRole("group", { name: "Aboard as" });

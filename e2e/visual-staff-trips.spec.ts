@@ -4,6 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
@@ -41,6 +42,26 @@ import {
   VISUAL_STEP_BOUNDS,
   waitForHashLanding,
 } from "./visual-harness";
+
+/** The real grouping pill replaces the server-rendered selected fill after measurement. */
+async function expectPrepGroupingReady(page: Page, label: string) {
+  const grouping = page.getByRole("navigation", {
+    name: staffCopy("tripPrep.groupLabel"),
+    exact: true,
+  });
+  const current = grouping.getByRole("link", { name: label, exact: true });
+  await expect(current).toHaveAttribute("aria-current", "true");
+  await expect
+    .poll(() =>
+      grouping.evaluate((nav) => {
+        const pill = nav.querySelector<HTMLElement>(":scope > span[aria-hidden='true']");
+        return Boolean(
+          pill && getComputedStyle(pill).opacity === "1" && pill.getBoundingClientRect().width > 0,
+        );
+      }),
+    )
+    .toBe(true);
+}
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
@@ -814,7 +835,9 @@ for (const scheme of ["light", "dark"] as const) {
         // The by-item grouping has no Diver column, so this cannot resolve
         // against the view that was on screen a moment ago.
         await page.getByRole("columnheader", { name: "Diver" }).waitFor();
-        await capture(page, "prep-by-diver", scheme);
+        await capture(page, "prep-by-diver", scheme, {
+          beforeScreenshot: () => expectPrepGroupingReady(page, staffCopy("tripPrep.groupByDiver")),
+        });
       });
 
       /**
@@ -865,7 +888,9 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
         await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
         await page.getByRole("heading", { name: "Rental assignments" }).waitFor();
-        await capture(page, "prep-assignments", scheme);
+        await capture(page, "prep-assignments", scheme, {
+          beforeScreenshot: () => expectPrepGroupingReady(page, staffCopy("tripPrep.groupByItem")),
+        });
       });
 
       /**
