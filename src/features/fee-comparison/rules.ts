@@ -106,23 +106,3 @@ export function compareMonth(
     row("diveday", diveDay.monthlyCents, percentFeeCents(direct, diveDay.basisPoints), 0),
   ];
 }
-
-/**
- * What one sale moved from a marketplace to the shop's own booking page keeps,
- * as basis points of the sale, at the low and the high end of the marketplace
- * range: the marketplace's commission less DiveDay's percent and a card sale's
- * processing. Zero when moving would cost more.
- */
-export function directSavingBasisPoints(diveDay: DiveDayTerms): { low: number; high: number } {
-  const sale = FEE_ASSUMPTIONS.averageSaleCents;
-  const own =
-    percentFeeCents(sale, diveDay.basisPoints) +
-    percentFeeCents(sale, FEE_ASSUMPTIONS.cardBasisPoints) +
-    FEE_ASSUMPTIONS.cardFixedCents;
-  const keeps = (basisPoints: number) =>
-    Math.max(0, Math.round(((percentFeeCents(sale, basisPoints) - own) / sale) * 10_000));
-  return {
-    low: keeps(FEE_ASSUMPTIONS.marketplaceLowBasisPoints),
-    high: keeps(FEE_ASSUMPTIONS.marketplaceHighBasisPoints),
-  };
-}
