@@ -35,7 +35,7 @@ continues to state supported fields, not guaranteed source exports.
 Every visitor sees the same configured offer. `PRICING_MONTHLY_CENTS` and
 `PRICING_BASIS_POINTS` independently set the monthly fee and percentage of money recorded as
 received in DiveDay by any payment method. Omit either component when configuring the other to
-charge only that component. With both unset, the default is $0/month plus 3%; explicit zeroes mean free.
+charge only that component. With both unset, the default is $0/month plus 2% (Aaron, 2026-11-18: "We're currently doing 2%"; the /pricing comparison and every figure on the public pages read this one value); explicit zeroes mean free.
 Copy names only the components charged, and percentage offers never claim no cut of bookings.
 Existing subscribers keep their sold terms. This supersedes references below to a universal flat
 price; see [configured pricing](../architecture/decisions/20261108-configured-pricing.md).
@@ -181,7 +181,7 @@ records prepares future departures. A guide's dedicated records-control block re
 assistance; its close invites a sample and a review of the move instead of pitching departure
 assistance again.
 
-Concede loudly what we don't do: retail POS, agency (PADI) sync. An honest no on these buys
+Concede loudly what we don't do: retail POS and agency roster sync. The certification-check extension is not a sync (it looks one card up, on the agency's own page, when staff press the button), and the pages say so in those words; **never write that DiveDay "connects to no agency"** (2026-11-18), because the extension makes that sentence misleading. An honest no on these buys
 trust our claims can't. **Gear inventory is not on that list** — the gear register shipped
 2026-08-20 ([shipped.md](shipped.md), ADR
 [20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md)), and
@@ -243,6 +243,14 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   (`marketing.price.item4`) is **the demo shop**, DiveDay's one sample shop that "Try the live
   demo" opens, and promises no practice copy of a shop's own (Aaron Buxbaum, 2026-10-05, #1959).
   Until that date it said "a practice shop", which nothing in the code built.
+- **The certification-check extension is described as what it is** (Aaron, 2026-11-18). DiveDay
+  has no agency account, roster sync or live connection of its own, and a page may say so; it may
+  not say DiveDay "connects to no agency" or that staff must check every card by hand, because the
+  browser extension looks a card up on the agency's own page from the staffer's browser. Say what it
+  does in one sentence (staff press the check, the extension looks the card up in their browser,
+  the answer comes back), that a match certifies the card and anything else is left for staff, and
+  that PADI checks are a beta the shop turns on. Never say it works with an agency it does not
+  (`extension/agencies.js` lists them) or that it replaces staff judgment.
 - **Authorized service offers** are the one exception to shipped-only: a commitment the shop makes
   to a customer, not a product feature, may be stated once the product owner has authorized it.
   Currently authorized (a Jane-style concierge, authorized 2026-07-24, extended H-20260724-contact-importer-trust-shop): **free,

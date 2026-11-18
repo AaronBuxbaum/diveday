@@ -81,8 +81,9 @@ that out in week two of a pilot is the expensive way.
   gear inventory outright ([marketing.md](../marketing.md)). A shop whose day is the till will be
   disappointed, honestly and correctly.
 - **Multi-location operation.** Out of scope and explicitly unclaimable under the claims policy.
-- **The shop needs agency-roster sync.** No agency exposes a usable C-card verification API; staff
-  verification is manual by design (H-20261007-request-supported-c-card, dropped).
+- **The shop needs agency-roster sync.** No agency exposes a usable C-card verification API; DiveDay
+  checks one card at a time through the browser extension, on the agency's own page
+  (H-20261007-request-supported-c-card, dropped; H-20261008-cert-check-extension).
 - **A Spanish-first shop, for now.** The diver bundle's Spanish translation has not had its native
   review (V-06), and the waiver, the medical questionnaire, and `/ready` are still English pending
   H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit — the shop would meet a language seam at exactly the wrong page.

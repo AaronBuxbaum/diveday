@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
-import Link from "next/link";
 import { Suspense } from "react";
 import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
@@ -8,14 +7,12 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { FrontDeskReadinessFallback } from "@/components/MarketingScreenFallbacks";
 import { FeatureDirectory, MarketingMockup } from "@/components/MarketingSections";
-import { buttonClass } from "@/components/ui/button";
 import { DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
 import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
-import { switchingHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import { OneListBand } from "./_components/OneListBand";
 
@@ -158,26 +155,6 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
         className="mx-auto max-w-6xl scroll-mt-10 px-6 pt-14 pb-20 lg:pt-20 lg:pb-24"
       >
         <FeatureDirectory locale={locale} headingLevel="h2" lines />
-        {/* The sections' names, never a count of the rows (B44), and the
-            export promise as a link to the one place it is written (B10). */}
-        <p className="mt-12 max-w-2xl text-lg leading-8 text-muted">
-          {t("marketing.product.boxDescription")}
-        </p>
-        <div className="mt-4 flex flex-col items-start gap-1">
-          <Link
-            href="/pricing#export"
-            className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
-          >
-            {t("marketing.common.recordsLink")}
-          </Link>
-          {/* Tagged, like the homepage's doors onto the same surface. */}
-          <Link
-            href={switchingHref("/switching/spreadsheet", "product-spreadsheet")}
-            className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
-          >
-            {t("marketing.product.spreadsheetLink")}
-          </Link>
-        </div>
       </section>
 
       <ClosingCta locale={locale} source="product" title={t("marketing.product.closingTitle")} />
