@@ -727,8 +727,8 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       );
       const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
       // Decrypting proves the bytes are ours, not that their shape is current:
-      // a record written by an older build can drift. Reject it into the same
-      // cleanup path as an unreadable one instead of returning a lying cast.
+      // a record written by an older build can drift. Treat an unrecognized
+      // shape as unavailable rather than returning a lying cast.
       if (
         typeof parsed !== "object" ||
         parsed === null ||
@@ -746,12 +746,11 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       envelope.events ??= [];
       envelope.checklistEvents ??= [];
       envelope.arrivalEvents ??= [];
-    } catch (error) {
-      // Nothing recoverable from ciphertext this key can't open — if it's
-      // also past its retention window, clean it up now rather than leaving
-      // unreadable bytes behind forever with no delete button to clear them.
-      if (isOfflineManifestExpired(record)) await deleteOfflineManifest(tripId, db);
-      throw error;
+    } catch {
+      // An unreadable copy may contain the only unsent evidence. Retaining
+      // ciphertext is not recovery or selective erasure, but deleting it
+      // would make either impossible.
+      throw new OfflineManifestError("unavailable");
     }
     if (isOfflineManifestExpired(record)) {
       // A record still holding a roll-call event that never reached the
@@ -807,7 +806,10 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
  * once the board has run for more than a few days, which is the opposite of
  * what this list is for.
  */
-export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]> {
+async function collectOfflineManifests(): Promise<{
+  saved: OfflineManifestEnvelope[];
+  incomplete: boolean;
+}> {
   const db = await openDatabase();
   let tripIds: string[];
   try {
@@ -819,9 +821,11 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
   } finally {
     db.close();
   }
-  const envelopes = await Promise.all(
-    tripIds.map((tripId) => loadOfflineManifest(tripId).catch(() => null)),
-  );
+  // Wait for every read so cleanup can still process the readable copies.
+  // A failed read is not proof that the device has no other unsent work.
+  const reads = await Promise.allSettled(tripIds.map((tripId) => loadOfflineManifest(tripId)));
+  const incomplete = reads.some((read) => read.status === "rejected");
+  const envelopes = reads.flatMap((read) => (read.status === "fulfilled" ? [read.value] : []));
   const now = nowDate();
   const byStartsAt = (a: OfflineManifestEnvelope, b: OfflineManifestEnvelope) =>
     (a.snapshot.manifests[0]?.trip.startsAt ?? "").localeCompare(
@@ -834,10 +838,19 @@ export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]>
     const endsAt = envelope.snapshot.manifests[0]?.trip.endsAt;
     return !!endsAt && new Date(endsAt) < now;
   };
-  return [
-    ...saved.filter((envelope) => !isPast(envelope)).sort(byStartsAt),
-    ...saved.filter(isPast).sort(byStartsAt),
-  ];
+  return {
+    saved: [
+      ...saved.filter((envelope) => !isPast(envelope)).sort(byStartsAt),
+      ...saved.filter(isPast).sort(byStartsAt),
+    ],
+    incomplete,
+  };
+}
+
+export async function listOfflineManifests(): Promise<OfflineManifestEnvelope[]> {
+  const inventory = await collectOfflineManifests();
+  if (inventory.incomplete) throw new OfflineManifestError("unavailable");
+  return inventory.saved;
 }
 
 /**
@@ -1028,11 +1041,9 @@ export async function saveOfflineManifest(
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
   return withManifestLock(trip.id, async () => {
-    // A corrupt or undecryptable existing record (storage corruption, a stale
-    // key, a version/AAD mismatch) must not abort the save — there's no delete
-    // button anymore, so failing here would brick this device's offline copy
-    // for good instead of just losing that record's own queued events.
-    const existing = await loadOfflineManifest(trip.id).catch(() => null);
+    // A failed read is not an empty record: it may contain unsent evidence.
+    // Refuse this refresh rather than replacing bytes that cannot be inspected.
+    const existing = await loadOfflineManifest(trip.id);
     const savedAt = nowDate();
     // Snapshot tokens carry a server-authenticated epoch. This local comparison
     // only removes retained text from this device; every sync writer still
@@ -1180,9 +1191,9 @@ export async function wipeOfflineMedicalAlerts(
   keepSavedBy?: string,
   tenantRound?: number,
 ): Promise<void> {
-  const saved = await listOfflineManifests();
-  await Promise.all(
-    saved
+  const inventory = await collectOfflineManifests();
+  const results = await Promise.allSettled(
+    inventory.saved
       .filter(
         (envelope) =>
           envelope.medicalAlertsSavedBy &&
@@ -1192,13 +1203,13 @@ export async function wipeOfflineMedicalAlerts(
         const tripId = envelope.snapshot.manifests[0]?.trip.id;
         if (!tripId) return Promise.resolve();
         return withManifestLock(tripId, async () => {
-          const current = await loadOfflineManifest(tripId).catch(() => null);
+          const current = await loadOfflineManifest(tripId);
           if (!current?.medicalAlertsSavedBy) return;
           if (keepSavedBy && current.medicalAlertsSavedBy.personId === keepSavedBy) return;
           const { medicalAlertsSavedBy: _wiped, ...rest } = current;
           const db = await openDatabase();
           try {
-            await persistEnvelope(
+            const persisted = await persistEnvelope(
               db,
               {
                 ...rest,
@@ -1210,12 +1221,16 @@ export async function wipeOfflineMedicalAlerts(
               tenantRound,
               "medical-alerts",
             );
+            if (!persisted) throw new OfflineManifestError("shop_changed");
           } finally {
             db.close();
           }
         });
       }),
   );
+  if (inventory.incomplete || results.some((result) => result.status === "rejected")) {
+    throw new OfflineManifestError("unavailable");
+  }
 }
 
 async function deleteOfflineManifest(
