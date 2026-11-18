@@ -13,7 +13,9 @@ import { ShopIdentityMenu, shopInitials } from "./ShopIdentityMenu";
 vi.mock("next/navigation", () => ({
   usePathname: () => "/shop/blue-mantis/trips/abc",
 }));
-vi.mock("./forget-device", () => ({ forgetThisDevice: vi.fn(async () => {}) }));
+vi.mock("./forget-device", () => ({
+  forgetThisDevice: vi.fn(async () => ({ offlineSensitiveCleanupReportedComplete: true })),
+}));
 
 afterEach(() => {
   cleanup();
@@ -146,8 +148,8 @@ describe("ShopIdentityMenu — the open panel", () => {
     let finishWipe!: () => void;
     vi.mocked(forgetThisDevice).mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          finishWipe = resolve;
+        new Promise<{ offlineSensitiveCleanupReportedComplete: boolean }>((resolve) => {
+          finishWipe = () => resolve({ offlineSensitiveCleanupReportedComplete: true });
         }),
     );
     const signOutAction = vi.fn(async () => {});
