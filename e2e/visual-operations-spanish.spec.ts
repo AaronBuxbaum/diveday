@@ -101,7 +101,10 @@ test.describe("recovery and goodwill", () => {
     await page.keyboard.press("Space");
     await expect(copy).toBeHidden();
     await page.goto(`/shop/${privateShop.slug}/divers/${fact.personId}`);
-    const credit = page.locator("summary").filter({ hasText: t("divers.tripCredit.title") });
+    // The streamed response may contain a hidden copy before the page swaps it in.
+    const credit = page
+      .getByRole("region", { name: t("divers.tripCredit.title"), exact: true })
+      .locator("summary");
     await credit.focus();
     await page.keyboard.press("Enter");
     await expect(page.getByText(t("divers.tripCredit.policy"), { exact: true })).toBeVisible();
