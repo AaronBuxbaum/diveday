@@ -179,7 +179,7 @@ export const STEPS: readonly {
     // The report goes out by itself a few hours after the boat is due back. She scrolls it for the whole slide (`lead`), so the page
     // reaches its end as the slide does. Its drawing carries the label `RecapPageFallback` names.
     id: "recap",
-    lead: 7000,
+    lead: 9000,
     tapMs: 0,
     hold: 600,
     listed: true,
