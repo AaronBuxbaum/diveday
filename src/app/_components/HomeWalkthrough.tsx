@@ -20,9 +20,12 @@ import { useWalkSwipe } from "./useWalkSwipe";
 export type WalkBeat = {
   step: string;
   frame: string;
+  /** What she is doing, for a reader whose screen reader follows the walk. */
   caption: string;
-  /** She types into this screen first, so its beat runs longer and taps later. */
-  typed?: boolean;
+  /** How long the screen plays on its own before the tap, in ms; the default is a beat with nothing to do first. */
+  lead?: number;
+  /** How long its finished screen stays, in ms; the default is for a screen with a line to read. */
+  hold?: number;
 };
 
 export type WalkLabels = {
@@ -37,28 +40,20 @@ export type WalkLabels = {
   hint: string;
 };
 
-/** The whole walk takes two and a half minutes, about ten seconds a slide (Aaron, 2026-11-17). */
-const WALK_MS = 150_000;
+/** A beat with nothing to do before its tap waits this long (ms) on its first screen. */
+export const DEFAULT_LEAD_MS = 700;
 
-/** A beat she types into runs this much longer than the rest, so the typing is read before the tap. */
-const TYPED_FACTOR = 1.5;
+/** The tap itself, from a fingertip landing to the finished screen (ms). */
+const TAP_MS = 1800;
+
+/** How long the finished screen stays for reading (ms), about a hundred seconds a walk (Aaron, 2026-11-18). */
+const HOLD_AFTER_MS = 4200;
 
 /** Fewer than this many pixels sideways is a tap, not a swipe. */
 const SWIPE_PX = 40;
 
 /** A press that has moved this far sideways, more than up or down, is a drag. */
 const DRAG_START_PX = 8;
-
-/**
- * Where in a beat a tap happens, as shares of its clock: a fingertip lands on
- * the control from `TAP_AT` and the screen swaps to the finished one at
- * `AFTER_AT`. Only frames drawn with a `before` have anything to show for it.
- */
-const TAP_AT = 0.1;
-const AFTER_AT = 0.3;
-/** The same for a beat she types into: the typing comes first. */
-const TYPED_TAP_AT = 0.4;
-const TYPED_AFTER_AT = 0.58;
 
 /** A press held this long is a hold (it pauses, and its release is not a tap). */
 const HOLD_MS = 250;
@@ -168,24 +163,29 @@ export function HomeWalkthrough({
     }
   };
 
-  // A new beat starts with an empty segment, on its first screen. A walk that is not playing (a
-  // reader who stopped it, or asked for no motion) holds that first frame, its animations still.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the index and playing are the trigger
+  // A beat opened by hand or by the clock starts with an empty segment, on its first frame.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the index is the trigger
   useEffect(() => {
     progress.current = 0;
-    listEl()?.toggleAttribute("data-walk-still", !playing);
+    if (fillRef.current) fillRef.current.style.transform = "scaleX(0)";
     setPhase("before");
-  }, [index, playing]);
+  }, [index]);
 
   const running = playing && onScreen && tabVisible && !held;
+  // A walk that is not running holds where it is: stopped mid-play it keeps the frame it reached,
+  // and a slide opened while it is stopped waits on its first frame (`globals.css`).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: listEl reads a ref, and running is the trigger
+  useEffect(() => {
+    listEl()?.toggleAttribute("data-walk-still", !running);
+  }, [running]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: a move by hand restarts the beat's clock
   useEffect(() => {
     if (!running) return;
-    const typed = beats[index]?.typed === true;
-    const tapAt = typed ? TYPED_TAP_AT : TAP_AT;
-    const afterAt = typed ? TYPED_AFTER_AT : AFTER_AT;
-    const beatMs = (WALK_MS / total) * (typed ? TYPED_FACTOR : 1);
-    listEl()?.style.setProperty("--walk-tap-ms", `${(afterAt - tapAt) * beatMs}ms`);
+    const lead = beats[index]?.lead ?? DEFAULT_LEAD_MS;
+    const beatMs = lead + TAP_MS + (beats[index]?.hold ?? HOLD_AFTER_MS);
+    const tapAt = lead / beatMs;
+    const afterAt = (lead + TAP_MS) / beatMs;
+    listEl()?.style.setProperty("--walk-tap-ms", `${TAP_MS}ms`);
     let last = performance.now();
     let frame = 0;
     const tick = (now: number) => {
@@ -330,13 +330,10 @@ export function HomeWalkthrough({
               {labels.position.replace("{n}", String(index + 1)).replace("{total}", String(total))}
             </p>
           </div>
-          <p
-            className="mt-3 min-h-14 max-w-4xl text-lg leading-7 text-balance sm:min-h-8"
-            aria-live={playing ? "off" : "polite"}
-          >
+          <p className="sr-only" aria-live={playing ? "off" : "polite"}>
             {beat?.caption}
           </p>
-          <div className="mt-1 flex gap-1.5">
+          <div className="mt-3 flex gap-1.5">
             {beats.map((b, i) => (
               // Each segment is a door to its step: tall enough to hit, thin to look at.
               <button

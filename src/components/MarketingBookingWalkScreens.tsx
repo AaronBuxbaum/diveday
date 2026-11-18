@@ -4,7 +4,7 @@ import { FIGURE_INLINE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { AppBar, MOCK_BODY, MOCK_PRIMARY_BUTTON } from "./MarketingScreenFallbacks";
-import { WalkField, WalkTyped } from "./WalkTyped";
+import { WalkField, WalkSelect, WalkTyped } from "./WalkTyped";
 
 /**
  * The three screens of Priya's own side of the booking that no feature page draws: picking her
@@ -22,7 +22,14 @@ import { WalkField, WalkTyped } from "./WalkTyped";
  *
  * @mirrors src/app/s/[shopSlug]/trips/[id]/_components/BookingSections.tsx
  */
-export function SeatPickFallback({ locale }: { locale: DiverLocale }) {
+export function SeatPickFallback({
+  locale,
+  tapPay = false,
+}: {
+  locale: DiverLocale;
+  /** The homepage walkthrough taps "Book and pay" (`data-tap-target`); no other caller does. */
+  tapPay?: boolean;
+}) {
   const t = diverTranslator(locale);
   return (
     <div className="bg-background">
@@ -43,7 +50,6 @@ export function SeatPickFallback({ locale }: { locale: DiverLocale }) {
             {[1, 2, 3].map((count) => (
               <span
                 key={count}
-                data-walk-pop={count === 1 ? "" : undefined}
                 className={`inline-flex min-h-9 min-w-9 flex-1 items-center justify-center px-2 text-sm tabular-nums ${segmentClass(
                   { selected: count === 1 },
                 )}`}
@@ -62,7 +68,12 @@ export function SeatPickFallback({ locale }: { locale: DiverLocale }) {
               <dd className={FIGURE_INLINE_CLASS}>{t("fallback.seatPick.total")}</dd>
             </div>
           </dl>
-          <button type="button" disabled className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}>
+          <button
+            type="button"
+            disabled
+            data-tap-target={tapPay ? "" : undefined}
+            className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}
+          >
             {t("fallback.bookingCard.bookAndPay")}
           </button>
         </div>
@@ -73,8 +84,8 @@ export function SeatPickFallback({ locale }: { locale: DiverLocale }) {
 
 /**
  * **Paying by card** — the checkout a diver lands on from Book and pay: the order, the card's
- * three boxes, and the one button. `state="entering"` is Priya typing her card in, then the
- * tap on Pay; `state="paid"` is the page a moment later, with the order paid and her trip link
+ * three boxes, and the one button. `state="blank"` is the page the moment it loads, `state="entering"`
+ * is Priya typing her card in, then the tap on Pay; `state="paid"` is the page a moment later, with the order paid and her trip link
  * on its way. The card number is the processor's own test number, no real card.
  */
 export function CheckoutFallback({
@@ -82,10 +93,11 @@ export function CheckoutFallback({
   state = "entering",
 }: {
   locale: DiverLocale;
-  state?: "entering" | "paid";
+  state?: "blank" | "entering" | "paid";
 }) {
   const t = diverTranslator(locale);
   const paid = state === "paid";
+  const blank = state === "blank";
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.checkout.label")} />
@@ -114,19 +126,19 @@ export function CheckoutFallback({
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <WalkField label={t("fallback.checkout.cardNumber")} className="col-span-2">
                   {/* i18n-exempt: the processor's test card, used only in marketing mockups */}
-                  <WalkTyped text="4242 4242 4242 4242" delay={300} />
+                  {blank ? null : <WalkTyped text="4242 4242 4242 4242" delay={300} />}
                 </WalkField>
                 <WalkField label={t("fallback.checkout.expiry")}>
-                  <WalkTyped text="08 / 29" delay={2000} />
+                  {blank ? null : <WalkTyped text="08 / 29" delay={1800} />}
                 </WalkField>
                 <WalkField label={t("fallback.checkout.cvc")}>
-                  <WalkTyped text="123" delay={2600} />
+                  {blank ? null : <WalkTyped text="123" delay={2300} />}
                 </WalkField>
               </div>
               <button
                 type="button"
                 disabled
-                data-tap-target=""
+                data-tap-target={blank ? undefined : ""}
                 className={`mt-4 w-full ${MOCK_PRIMARY_BUTTON}`}
               >
                 {t("fallback.checkout.pay")}
@@ -144,7 +156,7 @@ export function CheckoutFallback({
  * (`src/app/s/[shopSlug]/register/RegisterForm.tsx`): her name and email, the certification she
  * says she holds with its card number (the number the crew checks later), and Send it to the
  * shop. `state="filling"` is Priya typing; `state="done"` is the page after she sends it. Left
- * out: phone, sizes and the card photo.
+ * out: the card photo and the not-certified note.
  *
  * @mirrors src/app/s/[shopSlug]/register/RegisterForm.tsx
  */
@@ -178,33 +190,47 @@ export function RegisterFallback({
             <h3 className={SUB_TITLE_CLASS}>
               {t("register.title", { shop: "Blue Mantis Divers" })}
             </h3>
+            <p className="mt-1 text-sm text-muted">{t("register.intro")}</p>
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <WalkField label={t("register.nameLabel")}>
+              <WalkField label={t("register.nameLabel")} className="col-span-2">
                 {/* i18n-exempt: sample diver name used only in marketing mockups */}
-                <WalkTyped text="Priya Sharma" delay={200} />
+                <WalkTyped text="Priya Sharma" delay={300} />
               </WalkField>
-              <WalkField label={`${t("register.emailLabel")} ${t("common.optional")}`}>
+              <WalkField label={t("register.emailLabel")}>
                 {/* i18n-exempt: sample address used only in marketing mockups */}
-                <WalkTyped text="priya@example.com" delay={1200} />
+                <WalkTyped text="priya@example.com" delay={1300} />
               </WalkField>
+              <WalkField label={`${t("register.phoneLabel")} ${t("common.optional")}`} />
             </div>
             <p className="mt-4 text-sm font-semibold">{t("register.certHeading")}</p>
             <div className="mt-2 grid grid-cols-2 gap-3">
-              <WalkField label={t("register.agencyLabel")}>
-                {/* i18n-exempt: agency name used only in marketing mockups */}
-                <WalkTyped text="PADI" delay={2500} />
-              </WalkField>
-              <WalkField label={t("register.levelLabel")}>
-                {/* i18n-exempt: certification level used only in marketing mockups */}
-                <WalkTyped text="Advanced Open Water" delay={2900} />
-              </WalkField>
+              <WalkSelect
+                label={t("register.agencyLabel")}
+                placeholder={t("register.agencyNone")}
+                // i18n-exempt: agency name used only in marketing mockups
+                value="PADI"
+                at={3000}
+              />
+              <WalkSelect
+                label={t("register.levelLabel")}
+                placeholder={t("register.levelPlaceholder")}
+                // i18n-exempt: certification level used only in marketing mockups
+                value="Advanced Open Water"
+                at={3600}
+              />
               <WalkField
                 label={`${t("register.identifierLabel")} ${t("common.optional")}`}
                 className="col-span-2"
               >
                 {/* i18n-exempt: sample card number used only in marketing mockups */}
-                <WalkTyped text="3481926" delay={4300} />
+                <WalkTyped text="3481926" delay={4200} />
               </WalkField>
+            </div>
+            <p className="mt-4 text-sm font-semibold">{t("register.sizesHeading")}</p>
+            <div className="mt-2 grid grid-cols-3 gap-3">
+              <WalkField label={`${t("register.wetsuitLabel")} ${t("common.optional")}`} />
+              <WalkField label={`${t("register.bootLabel")} ${t("common.optional")}`} />
+              <WalkField label={`${t("register.finLabel")} ${t("common.optional")}`} />
             </div>
             <button
               type="button"

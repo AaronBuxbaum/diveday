@@ -226,7 +226,8 @@ describe("MarketingScreenFallbacks", () => {
       expect(screen.getByText("Waiver not signed, link sent")).toBeInTheDocument();
       expect(screen.getByText("7 of 9 ready")).toBeInTheDocument();
       rerender(<FrontDeskReadinessFallback locale="en-US" state="ready" />);
-      expect(screen.queryByText("Priya Sharma")).toBeNull();
+      // Her row is on the finished screen only as the collapsed one the walk closes (`walk-shrink`).
+      expect(screen.getByText("Priya Sharma").closest("li")).toHaveClass("walk-shrink");
       expect(screen.getByText("8 of 9 ready")).toBeInTheDocument();
       expect(screen.getByText("1 blocked")).toBeInTheDocument();
       expect(screen.getByText("Diego Alvarez")).toBeInTheDocument();
