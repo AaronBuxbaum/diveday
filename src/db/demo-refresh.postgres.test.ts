@@ -2,13 +2,35 @@ import { randomBytes } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { refreshCanonicalDemoSchedule } from "./demo-refresh";
+import type { AppDb } from "./client";
+import { ensureDemoSailsToday, refreshCanonicalDemoSchedule } from "./demo-refresh";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { executedDives, people, personRoles, shops, trips, userAccounts } from "./schema";
 import { seedDemo } from "./seed";
 import { AT_SEA_DAY_TITLE } from "./seed-boat-at-sea";
 
 describePostgres("the canonical demo refresh identity lock", () => {
+  it("refuses nested refresh without aborting its caller", async () => {
+    const pg = await postgresTestDb();
+    await seedDemo(pg.db, "lean");
+    await pg.db.transaction(async (tx) => {
+      const nested = tx as unknown as AppDb;
+      const divesBefore = await tx.select().from(executedDives).orderBy(executedDives.id);
+      const tripsBefore = await tx.select().from(trips).orderBy(trips.id);
+      // The seeded boats are due by this time; rejection must precede the boat pass.
+      await expect(
+        refreshCanonicalDemoSchedule(nested, { now: new Date("2100-01-01Z") }),
+      ).rejects.toThrow("Demo refresh requires a root transaction");
+      await expect(ensureDemoSailsToday(nested, "missing", "UTC")).rejects.toThrow(
+        "Demo refresh requires a root transaction",
+      );
+      const result = await tx.execute(sql`select 1 as value`);
+      expect(result.rows[0]).toMatchObject({ value: 1 });
+      expect(await tx.select().from(executedDives).orderBy(executedDives.id)).toEqual(divesBefore);
+      expect(await tx.select().from(trips).orderBy(trips.id)).toEqual(tripsBefore);
+    });
+  });
+
   it("keeps the refresh ahead of concurrent shop, role, and account identity edits", async () => {
     const pg = await postgresTestDb();
     await seedDemo(pg.db, "lean");

@@ -6,6 +6,7 @@ import { rebindDepartureBoatSafetyTime } from "./boat-safety";
 import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { isTransactionExecutor } from "./query-helpers";
 import { shops, trips } from "./schema";
 import { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 import { demoTodayDepartureStart } from "./seed-clock";
@@ -15,6 +16,35 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { upcomingScheduleRange } from "./trips";
 import { liveTrip } from "./trips-live";
+
+class DemoTripFenceBusy extends Error {
+  constructor(
+    readonly shopId: string,
+    readonly tripId: string,
+  ) {
+    super("Demo trip revision fence is busy");
+  }
+}
+
+/** Retry only after the root transaction has released its evidence and shop locks. */
+async function withDemoTripFenceRetry<T>(
+  db: AppDb,
+  run: (tx: DbExecutor) => Promise<T>,
+): Promise<T> {
+  if (isTransactionExecutor(db)) throw new Error("Demo refresh requires a root transaction");
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await db.transaction(run);
+    } catch (error) {
+      if (!(error instanceof DemoTripFenceBusy) || attempt >= 2) throw error;
+      // Wait without holding the evidence or shop fence. This does not reserve
+      // the trip for the next attempt, which must repeat every eligibility read.
+      await db.transaction((tx) =>
+        lockTripRevisionNotificationFence(tx, error.shopId, error.tripId, "revision-write"),
+      );
+    }
+  }
+}
 
 /**
  * The keeper of the canonical demo shop's schedule.
@@ -122,12 +152,15 @@ export async function refreshCanonicalDemoSchedule(
   db: AppDb,
   opts: { now?: Date; minRunwayDays?: number } = {},
 ): Promise<DemoScheduleRefresh> {
+  if (isTransactionExecutor(db)) throw new Error("Demo refresh requires a root transaction");
   const now = opts.now ?? nowDate();
   // Each boat-return write takes its own identity-then-trip lock. Run it before
   // the canonical schedule transaction takes the shop lock, so the passes do
   // not nest their own per-boat transaction under the canonical lock.
   await bringDemoBoatsAtSeaHome(db, now);
-  return db.transaction((tx) => refreshCanonicalDemoScheduleInTransaction(tx, { ...opts, now }));
+  return withDemoTripFenceRetry(db, (tx) =>
+    refreshCanonicalDemoScheduleInTransaction(tx, { ...opts, now: opts.now ?? nowDate() }),
+  );
 }
 
 async function refreshCanonicalDemoScheduleInTransaction(
@@ -238,9 +271,11 @@ export async function ensureDemoSailsToday(
   db: AppDb,
   shopId: string,
   timeZone: string,
-  now: Date = nowDate(),
+  now?: Date,
 ): Promise<DemoTodayOutcome> {
-  return db.transaction((tx) => ensureDemoSailsTodayInTransaction(tx, shopId, timeZone, now));
+  return withDemoTripFenceRetry(db, (tx) =>
+    ensureDemoSailsTodayInTransaction(tx, shopId, timeZone, now ?? nowDate()),
+  );
 }
 
 async function ensureDemoSailsTodayInTransaction(
@@ -287,7 +322,12 @@ async function ensureDemoSailsTodayInTransaction(
   if (!candidate) return "no_candidate";
 
   return db.transaction(async (tx) => {
-    await lockTripRevisionNotificationFence(tx, shopId, candidate.id, "revision-write");
+    const key = `${shopId}:${candidate.id}`;
+    const lock = await tx.execute(sql`select pg_try_advisory_xact_lock(
+      hashtext('trip_revision_notification'), hashtext(${key})) as acquired`);
+    if ((lock.rows[0] as { acquired?: unknown } | undefined)?.acquired !== true) {
+      throw new DemoTripFenceBusy(shopId, candidate.id);
+    }
     // A count or staff edit may have changed the candidate since selection.
     // Share its lock with capture and recheck every eligibility condition.
     const [current] = await tx

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
-import { fileScopedShopContext, unseededTestDb } from "@/test/db";
+import { seededShopContext, unseededTestDb } from "@/test/db";
 import { createBoat } from "../features/boats/store";
 import { captureDepartureBoatSafety } from "./boat-safety";
 import type { AppDb } from "./client";
@@ -43,13 +43,8 @@ import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { upcomingScheduleRange } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
-// One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`).
-const ctx = fileScopedShopContext();
-const historyCtx = fileScopedShopContext({ history: true });
-
 it("rebinds known-unsailed safety provenance atomically when the demo moves a future departure", async () => {
-  const { db } = ctx;
+  const { db } = await seededShopContext();
   const [shop] = await db
     .insert(shops)
     .values({ name: "Provenance Demo", slug: "provenance-demo", timezone: "UTC", isDemo: true })
@@ -185,7 +180,7 @@ async function runwayDays(db: AppDb, shopId: string): Promise<number> {
 
 describe("refreshCanonicalDemoSchedule", () => {
   it("restores a board that has sailed out from under the seed", async () => {
-    const { db, shop } = historyCtx;
+    const { db, shop } = await seededShopContext({ history: true });
     const seededRunway = await runwayDays(db, shop.id);
 
     // The bug this exists for. Every seeded departure is anchored to the moment
@@ -211,7 +206,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // so what it must never do is take the demo's sign-ins with it —
     // `resetDemoSchedule` restores only the playground half by design (ADR
     // 20260718-demo-mode), and nothing else here would notice if that changed.
-    const { db, shop } = historyCtx;
+    const { db, shop } = await seededShopContext({ history: true });
     await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);
 
     await refreshCanonicalDemoSchedule(db);
@@ -235,7 +230,7 @@ describe("refreshCanonicalDemoSchedule", () => {
    * the shop's second instructor).
    */
   it("restores a cast member the shop was seeded before, instead of failing the pass", async () => {
-    const { db, shop } = historyCtx;
+    const { db, shop } = await seededShopContext({ history: true });
     const relief = await db
       .select({ id: people.id })
       .from(people)
@@ -291,7 +286,7 @@ describe("refreshCanonicalDemoSchedule", () => {
    * customer is the serious half; the failing lens test was only the symptom.
    */
   it("never mistakes a diver who shares a staff member's name for that staff member", async () => {
-    const { db, shop } = historyCtx;
+    const { db, shop } = await seededShopContext({ history: true });
     // Read off the cast rather than typed here, so this keeps testing the
     // captain even if the demo's crew is recast.
     const captain = staffDefs.find((member) => member.fullName === "Sal Moretti");
@@ -327,7 +322,7 @@ describe("refreshCanonicalDemoSchedule", () => {
 
   /** A role lost on its own is the same outage: the lookups join through `person_roles`. */
   it("restores a cast member's missing role", async () => {
-    const { db, shop } = historyCtx;
+    const { db, shop } = await seededShopContext({ history: true });
     const [lead] = await db
       .select({ id: people.id })
       .from(people)
@@ -345,7 +340,7 @@ describe("refreshCanonicalDemoSchedule", () => {
   });
 
   it("leaves a board with weeks of departures on it alone", async () => {
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext();
     const before = await upcomingTripsWithCounts(db, shop.id);
 
     const result = await refreshCanonicalDemoSchedule(db);
@@ -363,7 +358,7 @@ describe("refreshCanonicalDemoSchedule", () => {
   });
 
   it("restores as soon as the board runs below the threshold, not once it is empty", async () => {
-    const { db, shop } = historyCtx;
+    const { db, shop } = await seededShopContext({ history: true });
     // Leave one day less than the threshold demands — still a schedule a diver
     // could book from, which is the point: the demo is restored while it still
     // looks like a working dive shop.
@@ -382,7 +377,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // departures is a healthy demo to a *diver*, and staff still open
     // /shop/blue-mantis to an empty day — for about forty days out of every
     // six-week restore cycle.
-    const { db, shop } = historyCtx;
+    const { db, shop } = await seededShopContext({ history: true });
     await pushTheBoardLater(db, shop.id, 4);
     expect(await sailsToday(db, shop.id, DEMO_SHOP_TIMEZONE)).toBe(false);
     const before = await board(db, shop.id);
@@ -423,7 +418,7 @@ describe("refreshCanonicalDemoSchedule", () => {
   });
 
   it("leaves a shop that already has a boat today entirely alone", async () => {
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext();
     const before = await board(db, shop.id);
 
     expect(await ensureDemoSailsToday(db, shop.id, DEMO_SHOP_TIMEZONE)).toBe("already");
@@ -436,7 +431,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // still being out: the shop home reads an ended departure as work (its
     // close-out handoff keys on exactly that), so a morning trip that is already
     // back must not trigger a second one being dragged onto today.
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext();
     const { from } = shopDayBounds(nowDate(), DEMO_SHOP_TIMEZONE);
     const [todaysBoat] = await upcoming(db, shop.id);
     // Park it just after local midnight and give it a short, already-finished run.
@@ -456,7 +451,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // roll does not re-fill the date it left (ADR 20260810-open-ended-recurring-trips),
     // so pulling one onto today would punch a permanent hole in a cadence staff
     // can see. The next non-series departure is moved instead.
-    const { db, shop } = historyCtx;
+    const { db, shop } = await seededShopContext({ history: true });
     await pushTheBoardLater(db, shop.id, 4);
     const [nearest, second] = await upcoming(db, shop.id);
     const [series] = await db
@@ -501,7 +496,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // here: this pass deletes and re-seeds, and it runs unattended in
     // production. `minRunwayDays` is set past any possible board so the only
     // thing that can stop it is the `isDemo` check.
-    const { db, shop } = ctx;
+    const { db, shop } = await seededShopContext();
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
     const before = await upcomingTripsWithCounts(db, shop.id);
 
@@ -542,7 +537,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     }
 
     it("leaves her count open while she is still due out", async () => {
-      const { db, shop } = historyCtx;
+      const { db, shop } = await seededShopContext({ history: true });
       const boat = await boatAtSea(db, shop.id);
       const before = await marks(db, boat.id);
 
@@ -554,7 +549,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     });
 
     it("does not fabricate boat-at-sea records for a demo-flagged shop with a real owner account", async () => {
-      const { db, shop } = historyCtx;
+      const { db, shop } = await seededShopContext({ history: true });
       const boat = await boatAtSea(db, shop.id);
       const [ownerAccount] = await db
         .select({ id: userAccounts.id })
@@ -613,7 +608,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     });
 
     it("fails closed when the owner is demo-scoped but a captain account is real", async () => {
-      const { db, shop } = historyCtx;
+      const { db, shop } = await seededShopContext({ history: true });
       const boat = await boatAtSea(db, shop.id);
       const identities = await db
         .select({ role: personRoles.role, accountId: userAccounts.id, email: userAccounts.email })
@@ -671,7 +666,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     });
 
     it("fails closed when a demo-flagged shop has no owner or captain account", async () => {
-      const { db, shop } = historyCtx;
+      const { db, shop } = await seededShopContext({ history: true });
       const boat = await boatAtSea(db, shop.id);
       const accountOwners = await db
         .select({ personId: people.id })
@@ -707,7 +702,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // Issue 2917: the hourly trip-reminder pass runs this alone, so an hour
     // past her return is enough, with no daily restore behind it.
     it("closes her count on the hourly pass an hour past her return, and a second pass writes nothing", async () => {
-      const { db, shop } = historyCtx;
+      const { db, shop } = await seededShopContext({ history: true });
       const boat = await boatAtSea(db, shop.id);
       const anHourLater = new Date(boat.endsAt.getTime() + 60 * 60_000);
 
@@ -747,7 +742,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // Review 2 of issue 2917: a visitor drilling a lost diver takes a mark
     // back or sets one to not boarded. Only a standing "boarded" is back.
     it("brings home a diver whose return mark was taken back or set to not boarded", async () => {
-      const { db, shop } = historyCtx;
+      const { db, shop } = await seededShopContext({ history: true });
       const boat = await boatAtSea(db, shop.id);
       const anHourLater = new Date(boat.endsAt.getTime() + 60 * 60_000);
       const back = await db
@@ -788,7 +783,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     });
 
     it("leaves a cancelled boat at sea alone", async () => {
-      const { db, shop } = historyCtx;
+      const { db, shop } = await seededShopContext({ history: true });
       const boat = await boatAtSea(db, shop.id);
       await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, boat.id));
       const before = await marks(db, boat.id);
@@ -804,7 +799,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     });
 
     it("counts every diver and both guides back after dive 2, and logs it, once she is past her return", async () => {
-      const { db, shop } = historyCtx;
+      const { db, shop } = await seededShopContext({ history: true });
       const boat = await boatAtSea(db, shop.id);
       const later = new Date(boat.endsAt.getTime() + 5 * 60 * 60_000);
 

@@ -123,6 +123,7 @@ describePostgres("demo refresh and coordinated dispatch lock order", () => {
       release();
       if (waiting) await waiting.catch(() => undefined);
     }
+    expect(evidenceWasLocked).toBe(false);
     expect(await dispatch, `evidence locked while nudge waited: ${String(evidenceWasLocked)}`).toBe(
       "sent",
     );

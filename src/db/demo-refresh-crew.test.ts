@@ -1,15 +1,13 @@
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { ensureDemoSailsToday } from "./demo-refresh";
 import { staffShifts, tripAssignments, trips } from "./schema";
 import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-boat-at-sea";
 import { demoTodayDepartureStart } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
-
-const historyCtx = fileScopedShopContext({ history: true });
 
 async function pushTheBoardLater(db: AppDb, shopId: string, days: number): Promise<void> {
   const shift = sql.raw(`interval '${days} days'`);
@@ -51,7 +49,7 @@ async function upcoming(db: AppDb, shopId: string) {
 }
 
 it("preserves a crew member's day off and clears stale acknowledgements when a demo departure moves", async () => {
-  const { db, shop } = historyCtx;
+  const { db, shop } = await seededShopContext({ history: true });
   const { crewAvailabilityBlocks, crewAwayAcknowledgements } = await import("./schema");
   const { calendarDateInTimezone, shiftCalendarDate } = await import("@/lib/calendar-date");
   await pushTheBoardLater(db, shop.id, 4);
