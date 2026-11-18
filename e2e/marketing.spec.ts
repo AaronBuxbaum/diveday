@@ -130,6 +130,19 @@ async function takeSampleBoatToReef(boat: Locator, t: ReturnType<typeof diverTra
   await expect(stage).toHaveAttribute("data-boat-phase", "dock");
   await depart.click();
 
+  await expect(stage).toHaveAttribute("data-boat-phase", "arrival");
+  await expect(
+    boat.getByText(t("marketing.home.boat.dive.arrival"), { exact: true }),
+  ).toBeFocused();
+  await expect(
+    boat.getByRole("button", { name: t("marketing.home.boat.select", { name: "Priya Sharma" }) }),
+  ).toHaveCount(0);
+}
+
+async function openPostDiveRoll(boat: Locator, t: ReturnType<typeof diverTranslator>) {
+  await boat.getByRole("button", { name: t("marketing.home.boat.dive.surface") }).click();
+  const stage = boat.locator("[data-boat-scene]");
+  const status = boat.getByRole("status");
   await expect(stage).toHaveAttribute("data-boat-phase", "reef");
   await expect(boat.getByText(t("marketing.home.boat.checkpoint"), { exact: true })).toBeVisible();
   await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 9 }));
@@ -179,6 +192,7 @@ test("each diver on the sample boat needs an individual roll-call confirmation",
   await expect(sampleCard).toContainText("SAMPLE-072");
   await recordSampleCardMatch(boat, t);
   await takeSampleBoatToReef(boat, t);
+  await openPostDiveRoll(boat, t);
   await boat.getByRole("button", { name: t("marketing.home.boat.pause") }).click();
   await boat.getByRole("button", { name: t("marketing.home.boat.resume") }).click();
 
@@ -199,6 +213,9 @@ test("each diver on the sample boat needs an individual roll-call confirmation",
   await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 11 }));
 
   await boat.getByText(t("marketing.home.boat.record"), { exact: true }).click();
+  await expect(boat.locator("[data-boat-checkpoint=sightings]")).toContainText(
+    t("marketing.home.boat.dive.none"),
+  );
   const deskRecord = boat.locator("details [data-boat-checkpoint=desk]");
   await expect(deskRecord).toContainText("Priya Sharma");
   await expect(deskRecord).toContainText(t("marketing.home.boat.desk.verified"));
@@ -250,6 +267,7 @@ test("the 3D boat can be turned by dragging or keyboard with reduced motion", as
   await boat.getByRole("button", { name: t("marketing.home.boat.desk.pin") }).click();
   await recordSampleCardMatch(boat, t);
   await takeSampleBoatToReef(boat, t);
+  await openPostDiveRoll(boat, t);
   const marker = (name: string) =>
     boat.getByRole("button", { name: t("marketing.home.boat.marker", { name }) });
   await marker("Tom Okafor").click();
@@ -298,6 +316,21 @@ test("the boat roster still works without canvas support", async ({ page }) => {
   await expect(dockPoster).toHaveAttribute("src", /boat-dock/);
   await dockPoster.evaluate((image: HTMLImageElement) => image.decode());
   await takeSampleBoatToReef(boat, t);
+  await boat.getByRole("button", { name: t("marketing.home.boat.dive.explore") }).press("Enter");
+  const turtle = t("marineLife.species.green-sea-turtle.name");
+  await boat
+    .getByRole("button", {
+      name: t("marketing.home.boat.dive.inspect", { name: turtle }),
+      exact: true,
+    })
+    .press("Enter");
+  await expect(
+    boat.getByText(t("marketing.home.boat.dive.turtleDetail"), { exact: true }),
+  ).toBeVisible();
+  await boat
+    .getByRole("button", { name: t("marketing.home.boat.dive.log"), exact: true })
+    .press("Enter");
+  await openPostDiveRoll(boat, t);
   const reefPoster = boat.getByRole("img", { name: t("marketing.home.boat.illustration") });
   await expect(reefPoster).toHaveAttribute("src", /boat-roll-call/);
   await reefPoster.evaluate((image: HTMLImageElement) => image.decode());
@@ -312,6 +345,80 @@ test("the boat roster still works without canvas support", async ({ page }) => {
   }
   await expect(boat.getByRole("status")).toContainText(t("marketing.home.boat.closed"));
 });
+
+const reefSpecies = ["spotted-eagle-ray", "green-sea-turtle", "blue-tang"] as const;
+const [ray, turtle, tang] = reefSpecies;
+
+for (const kept of [
+  [],
+  [ray],
+  [turtle],
+  [tang],
+  [ray, turtle],
+  [ray, tang],
+  [turtle, tang],
+  [ray, turtle, tang],
+]) {
+  test(`the trip record keeps the selected reef sightings: ${kept.join(", ") || "empty"}`, async ({
+    page,
+  }) => {
+    const t = diverTranslator("en-US");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
+    const button = (name: string) => boat.getByRole("button", { name, exact: true });
+    await button(t("marketing.home.boat.desk.open")).click();
+    await recordSampleCardMatch(boat, t);
+    await takeSampleBoatToReef(boat, t);
+    const explore = button(t("marketing.home.boat.dive.explore"));
+    await explore.click();
+    const log = button(t("marketing.home.boat.dive.log"));
+    const remove = button(t("marketing.home.boat.dive.remove"));
+    await expect(log).toHaveCount(0);
+    for (const id of reefSpecies) {
+      const name = t(`marineLife.species.${id}.name`);
+      const inspect = button(t("marketing.home.boat.dive.inspect", { name }));
+      await inspect.click();
+      await log.click();
+      // Looking at an identified animal again must preserve its single sighting.
+      await inspect.click();
+      await expect(remove).toBeVisible();
+      if (!kept.includes(id)) await remove.click();
+    }
+    await expect(boat.getByRole("status")).toHaveText(
+      t("marketing.home.boat.dive.count", { count: kept.length }),
+    );
+    await openPostDiveRoll(boat, t);
+    await button(t("marketing.home.boat.select", { name: "Priya Sharma" })).click();
+    await button(t("marketing.home.boat.markAboard", { name: "Priya" })).click();
+    await explore.click();
+    await expect(boat.getByRole("status")).toHaveText(
+      t("marketing.home.boat.dive.count", { count: kept.length }),
+    );
+    await button(t("marketing.home.boat.dive.surface")).click();
+    await expect(boat.getByRole("status")).toContainText(
+      t("marketing.home.boat.count", { aboard: 10 }),
+    );
+    await button(t("marketing.home.boat.select", { name: "Tom Okafor" })).click();
+    await button(t("marketing.home.boat.markAboard", { name: "Tom" })).click();
+    await boat.getByText(t("marketing.home.boat.record"), { exact: true }).click();
+    const record = boat.locator("[data-boat-checkpoint=sightings]");
+    await expect(record.getByRole("listitem")).toHaveText(
+      kept.map((id) => t(`marineLife.species.${id}.name`)),
+    );
+    if (!kept.length) await expect(record).toContainText(t("marketing.home.boat.dive.none"));
+    if (kept.length === reefSpecies.length) {
+      await button(t("marketing.home.boat.restart")).click();
+      await button(t("marketing.home.boat.desk.open")).click();
+      await recordSampleCardMatch(boat, t);
+      await takeSampleBoatToReef(boat, t);
+      await explore.click();
+      await expect(boat.getByRole("status")).toHaveText(
+        t("marketing.home.boat.dive.count", { count: 0 }),
+      );
+    }
+  });
+}
 
 test("the homepage offers a way to ask before the footer", async ({ page }) => {
   await page.goto("/");

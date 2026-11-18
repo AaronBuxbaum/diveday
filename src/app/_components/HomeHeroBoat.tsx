@@ -20,6 +20,10 @@ export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
       dockConfirm: t("marketing.home.boat.dockConfirm", { name: shortName }),
     };
   }
+  function species(slug: "spotted-eagle-ray" | "green-sea-turtle" | "blue-tang", detail: string) {
+    const name = t(`marineLife.species.${slug}.name`);
+    return { name, detail, inspect: t("marketing.home.boat.dive.inspect", { name }) };
+  }
   function poster(src: string, alt: string) {
     return (
       <Image
@@ -56,6 +60,31 @@ export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
             t("marketing.home.boat.illustration"),
           )}
           labels={{
+            dive: {
+              arrival: t("marketing.home.boat.dive.arrival"),
+              underwater: t("marketing.home.boat.dive.underwater"),
+              scene: t("marketing.home.boat.dive.scene"),
+              explore: t("marketing.home.boat.dive.explore"),
+              surface: t("marketing.home.boat.dive.surface"),
+              title: t("marketing.home.boat.dive.title"),
+              purpose: t("marketing.home.boat.dive.purpose"),
+              identify: t("marketing.home.boat.dive.identify"),
+              log: t("marketing.home.boat.dive.log"),
+              logged: t("marketing.home.boat.dive.logged"),
+              remove: t("marketing.home.boat.dive.remove"),
+              none: t("marketing.home.boat.dive.none"),
+              counts: [
+                t("marketing.home.boat.dive.count", { count: 0 }),
+                t("marketing.home.boat.dive.count", { count: 1 }),
+                t("marketing.home.boat.dive.count", { count: 2 }),
+                t("marketing.home.boat.dive.count", { count: 3 }),
+              ],
+              species: [
+                species("spotted-eagle-ray", t("marineLife.species.spotted-eagle-ray.description")),
+                species("green-sea-turtle", t("marketing.home.boat.dive.turtleDetail")),
+                species("blue-tang", t("marketing.home.boat.dive.tangDetail")),
+              ],
+            },
             desk: {
               checkpoint: t("marketing.home.boat.desk.checkpoint"),
               open: t("marketing.home.boat.desk.open"),

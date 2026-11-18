@@ -95,8 +95,11 @@ and listed the rest in a closed index on `/product`.
   certification on her booking. Choosing a different card changes its number. A mismatch holds
   her at the desk for a recheck. Recording a match by hand opens the departure roll call
   at ten of eleven aboard, including Tom Okafor. Calling Priya by name and marking her aboard
-  closes that roll call. The visitor chooses when to continue to the reef. There, nine are already
-  accounted for and both Priya and Tom need fresh confirmations. Selecting a diver on deck or in the roster
+  closes that roll call. At the reef, visitors can explore underwater or go straight to the post-dive
+  roll call. Selecting the spotted eagle ray, green sea turtle or blue tang reveals identifying
+  features. Logging or removing a sighting changes the trip record. Visitors can return to the
+  animals after starting the roll call. Nine people are already accounted for after dive one and
+  both Priya and Tom need fresh confirmations. Selecting a diver on deck or in the roster
   shows their location and gear. The final record keeps the desk’s card check and each roll call’s
   confirmations in order. Starting over clears the record and restores the pending card check.
   Dragging and arrow keys turn the boat. Reduced motion changes views immediately. The roster

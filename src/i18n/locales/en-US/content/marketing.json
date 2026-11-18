@@ -154,6 +154,24 @@
         "tomCard": "View Tom’s checked card",
         "previouslyChecked": "Card already checked",
         "corrected": "The crew requested a matching card before boarding."
+      },
+      "dive": {
+        "arrival": "At the reef · Dive one",
+        "underwater": "Underwater · Dive one",
+        "scene": "Three animals swimming over a coral reef. Select one to inspect it.",
+        "explore": "Explore the reef",
+        "surface": "Go to post-dive roll call",
+        "title": "Dive sightings",
+        "purpose": "Animals you log here appear in the trip record.",
+        "identify": "Select an animal to identify it.",
+        "inspect": "Inspect {name}",
+        "logged": "Sighting logged",
+        "log": "Log sighting",
+        "remove": "Remove sighting",
+        "none": "No sightings logged",
+        "count": "{count, plural, one {# sighting logged} other {# sightings logged}}",
+        "turtleDetail": "Look for the smooth rear edge of its oval shell.",
+        "tangDetail": "A bright spine marks the base of its deep blue tail."
       }
     }
   },

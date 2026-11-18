@@ -300,6 +300,9 @@ export function MarketingBoatStage({
   labels,
   poster,
   deskPin,
+  paused,
+  togglePause,
+  isArrival,
   atReef,
   isDesk,
   checked,
@@ -310,6 +313,9 @@ export function MarketingBoatStage({
   labels: BoatStageLabels;
   poster: ReactNode;
   deskPin: string;
+  paused: boolean;
+  togglePause: () => void;
+  isArrival: boolean;
   atReef: boolean;
   isDesk: boolean;
   checked: [boolean, boolean];
@@ -317,7 +323,6 @@ export function MarketingBoatStage({
   onSelect: (index: DiverIndex) => void;
   onOverview: () => void;
 }) {
-  const [paused, setPaused] = useState(false);
   const pointer = useRef<{ id: number; x: number } | null>(null);
   const markerTouch = useRef<{ id: number; x: number; y: number } | null>(null);
   const { canvasRef, markers, ready, rotate } = useBoatCanvas({
@@ -350,7 +355,7 @@ export function MarketingBoatStage({
   return (
     <div
       data-boat-scene=""
-      data-boat-phase={isDesk ? "desk" : atReef ? "reef" : "dock"}
+      data-boat-phase={isDesk ? "desk" : isArrival ? "arrival" : atReef ? "reef" : "dock"}
       className="relative isolate aspect-[3/2] w-full overflow-hidden"
     >
       <div className="absolute inset-0">{poster}</div>
@@ -383,7 +388,10 @@ export function MarketingBoatStage({
               aria-label={isDesk ? deskPin : diver.marker}
               aria-pressed={selected === index}
               hidden={
-                !ready || (isDesk && index !== 0) || (selected !== null && selected !== index)
+                !ready ||
+                isArrival ||
+                (isDesk && index !== 0) ||
+                (selected !== null && selected !== index)
               }
               onPointerDown={(event) => {
                 if (event.pointerType === "touch" && event.isPrimary) {
@@ -449,7 +457,7 @@ export function MarketingBoatStage({
               <SceneButton
                 icon={paused ? "resume" : "pause"}
                 label={paused ? labels.resume : labels.pause}
-                onClick={() => setPaused(!paused)}
+                onClick={togglePause}
               />
             </div>
           </div>

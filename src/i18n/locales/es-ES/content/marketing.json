@@ -154,6 +154,24 @@
         "tomCard": "Ver la tarjeta revisada de Tom",
         "previouslyChecked": "Tarjeta ya revisada",
         "corrected": "La tripulación pidió la tarjeta correcta antes del embarque."
+      },
+      "dive": {
+        "arrival": "En el arrecife · Primera inmersión",
+        "underwater": "Bajo el agua · Primera inmersión",
+        "scene": "Tres animales nadan sobre un arrecife de coral. Elige uno para verlo de cerca.",
+        "explore": "Explorar el arrecife",
+        "surface": "Ir al pase de lista tras la inmersión",
+        "title": "Avistamientos",
+        "purpose": "Los animales que anotes aquí aparecerán en el registro de la salida.",
+        "identify": "Elige un animal para identificarlo.",
+        "inspect": "Inspeccionar {name}",
+        "logged": "Avistamiento registrado",
+        "log": "Anotar avistamiento",
+        "remove": "Quitar avistamiento",
+        "none": "Sin avistamientos registrados",
+        "count": "{count, plural, one {# avistamiento registrado} other {# avistamientos registrados}}",
+        "turtleDetail": "Fíjate en el borde trasero liso de su caparazón ovalado.",
+        "tangDetail": "Una espina brillante destaca en la base de su cola azul intenso."
       }
     }
   },
