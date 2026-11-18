@@ -23,7 +23,7 @@ import { DIVER_CERT_LEVEL_KEYS, NEXT_DIVE_REASON_KEYS } from "@/i18n/next-dive-l
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { BrandDisplayFontCode } from "@/lib/brand";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { packageOnSale } from "@/lib/dive-packages";
@@ -31,10 +31,12 @@ import { type ProfileSample, profileStats, thinProfile } from "@/lib/dive-profil
 import type { FlySafeAnchor, FlySafeReason } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
+  formatDateWithYear,
   formatOrdinal,
   formatRelativeDay,
   formatShortDate,
   formatTime,
+  formatTimeTz,
   formatWeekdayTime,
 } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
@@ -142,8 +144,6 @@ export type AfterStateProps = {
    * state and renders nothing, so no chart is ever drawn without a recording behind it.
    */
   computerDives: RecapProfileDive[];
-  /** Whose computer drew them: the diver's own, or the crew's ("what your dive looked like"). */
-  computerDivesSource: "own" | "crew";
   /**
    * The course this departure taught, with what the shop recorded for it
    * (issues #1196, #1205). Null on an ordinary charter and then nothing about
@@ -369,6 +369,8 @@ function bookingReference(bookingId: string): string {
 
 /** One recorded dive as the recap draws it; samples are thinned for the page. */
 export type RecapProfileDive = {
+  /** Source date/time, with an explicit known or unknown timezone. Never a trip association. */
+  recordedAt: string;
   device: string | null;
   maxMeters: number | null;
   averageMeters: number | null;
@@ -448,12 +450,11 @@ export async function buildAfterStateProps(input: {
       recapComputerDives(db, {
         shopId: shop.id,
         personId: data.personId,
-        crewPersonIds: data.crewPersonIds,
         date: calendarDateInTimezone(trip.startsAt, shop.timezone),
         timeZone: shop.timezone,
       }),
     ]);
-  const computerDives = computerRows.dives.flatMap((row): RecapProfileDive[] => {
+  const computerDives = computerRows.dives.map((row): RecapProfileDive => {
     const samples = row.samples.map(({ seconds, depthMeters }) => ({
       seconds,
       meters: depthMeters,
@@ -463,6 +464,18 @@ export async function buildAfterStateProps(input: {
       sample.temperatureC === undefined ? [] : [sample.temperatureC],
     );
     const dive: RecapProfileDive = {
+      recordedAt: row.startInstant
+        ? t("recap.profile.recordedAt", {
+            date: formatDateWithYear(new Date(row.startInstant), locale, shop.timezone),
+            time: formatTimeTz(new Date(row.startInstant), locale, shop.timezone),
+          })
+        : row.localStart
+          ? t("recap.profile.unknownZone", {
+              date: formatCalendarDate(row.localStart.slice(0, 10), locale),
+              // UTC is a formatting reference for a zone-less wall clock, not an inferred instant.
+              time: formatTime(new Date(`${row.localStart}Z`), locale, "UTC"),
+            })
+          : t("recap.profile.dateOnly", { date: formatCalendarDate(row.localDate, locale) }),
       device: row.device,
       maxMeters: row.maxDepthMeters ?? stats?.maxMeters ?? null,
       averageMeters: stats?.averageMeters ?? null,
@@ -470,10 +483,7 @@ export async function buildAfterStateProps(input: {
       coldestC: temperatures.length > 0 ? Math.min(...temperatures) : null,
       samples: thinProfile(samples),
     };
-    // A recording with no profile, depth or time has nothing to say.
-    return dive.samples.length > 0 || dive.maxMeters !== null || dive.durationSeconds !== null
-      ? [dive]
-      : [];
+    return dive;
   });
   const [firstBooked] = booked;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
@@ -542,7 +552,6 @@ export async function buildAfterStateProps(input: {
     fieldGuide: data.fieldGuide,
     observedSpecies: data.observedSpecies,
     computerDives,
-    computerDivesSource: computerRows.source,
     conservation: data.conservation,
     shoutout: data.shoutout,
     photos: data.photos,

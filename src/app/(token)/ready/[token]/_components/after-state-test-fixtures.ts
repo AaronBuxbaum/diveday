@@ -71,7 +71,6 @@ export function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps
     fieldGuide: [],
     observedSpecies: [],
     computerDives: [],
-    computerDivesSource: "own",
     canShareWithBoat: true,
     actions: {
       submitReview: noop,

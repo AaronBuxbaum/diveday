@@ -262,11 +262,15 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   ).toBeVisible();
 
   // Every segment of the bar is a door to its step.
-  await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 4 }) }).click();
+  await walk
+    .getByRole("button", { name: t("marketing.home.walk.goTo", { n: 4 }), exact: true })
+    .click();
   await expect(
     walk.getByRole("heading", { name: t("marketing.home.steps.onboard.title") }),
   ).toBeVisible();
-  await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 1 }) }).click();
+  await walk
+    .getByRole("button", { name: t("marketing.home.walk.goTo", { n: 1 }), exact: true })
+    .click();
   await expect(
     walk.getByRole("heading", { name: t("marketing.home.steps.browse.title") }),
   ).toBeVisible();
@@ -319,7 +323,7 @@ test("the homepage leads to every feature page through the Product catalogue", a
   // click before that is lost to the hydration pass.
   await expect(page.locator('button[aria-expanded][data-hydrated="true"]').first()).toBeAttached();
   const catalogue = page.getByRole("main").getByRole("link", {
-    name: diverTranslator("en-US")("marketing.home.featuresLink"),
+    name: `${diverTranslator("en-US")("marketing.home.featuresLink")} →`,
     exact: true,
   });
   await expect(catalogue).toHaveAttribute("href", "/product#full-list");
@@ -332,7 +336,7 @@ test("the homepage leads to every feature page through the Product catalogue", a
     "Before the dive day",
     "On the day",
     "Across the season",
-    "Also in the plan",
+    diverTranslator("en-US")("marketing.product.runningTheShop"),
   ]);
   const listed = await directory
     .locator('a[href^="/product/"]')
@@ -448,7 +452,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // One group per feature page since 2026-10-05 (H-20261005-public-pages-sell), under that page's
   // own row of the directory, then the three groups no page owns.
   const fullList = page.locator("#full-list");
-  await expect(fullList.getByRole("heading", { name: "Also in the plan" })).toBeVisible();
+  await expect(
+    fullList.getByRole("heading", {
+      name: diverTranslator("en-US")("marketing.product.runningTheShop"),
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(fullList.locator("summary").filter({ hasText: /^Your records/ })).toBeVisible();
   // The product hero has the same decision budget as the homepage hero: the
   // live demo and trial are its two doors, while the price is a fact stated
@@ -508,17 +517,24 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await page.keyboard.press("Enter");
   await expect(firstLine).toBeVisible();
 
-  // The closing band's door onto the switching surface carries its own tag too
-  // (2026-08-15). It was bare while the homepage's two were tagged, so the
-  // number that answers "does the spreadsheet audience need a direct door" was
-  // about to be read against a denominator missing this page — the one a reader
-  // reaches *after* the homepage convinced them.
+  // The one-list band's migration-guide door replaces the old closing
+  // spreadsheet paragraph. Keep its actual destination and attribution tag pinned.
   await expect(
-    productMain.getByRole("link", { name: /See how DiveDay reads your spreadsheet/ }),
-  ).toHaveAttribute("href", "/switching/spreadsheet?from=product-spreadsheet");
+    productMain.getByRole("link", {
+      name: `${diverTranslator("en-US")("marketing.product.oneList.movingLink")} →`,
+      exact: true,
+    }),
+  ).toHaveAttribute("href", "/switching?from=product-one-list");
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
-  await expect(page.getByRole("heading", { name: "What a shop pays, line by line" })).toBeVisible();
+  const pricingHero = page.getByRole("main").locator("section").first();
+  await expect(
+    pricingHero.getByRole("heading", {
+      level: 1,
+      name: diverTranslator("en-US")("marketing.pricing.heroTitle"),
+      exact: true,
+    }),
+  ).toBeVisible();
   // The price as an invoice (2026-09-24): seven labelled lines under the
   // figure, beside the builder's notes on them, so the terms a buyer scans
   // for are on the first screen as a ledger rather than as prose. The trial
@@ -531,7 +547,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // sections saying overlapping things.
   await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Notes on the invoice" })).toHaveCount(0);
-  await expect(page.getByText("$99", { exact: true })).toBeVisible();
+  await expect(pricingHero.getByText("$99", { exact: true })).toBeVisible();
   // And the terms stand at the figure and at the door, which is the whole of
   // this slice (docs/product/marketing-review-20260827.md, "the terms never
   // stand at the doors"). The lock is a restatement of a binding commercial
@@ -610,17 +626,19 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // owner (issue #1955): link weight, so the count above does not move and the
   // band holds no primary, and tagged by name so a typo or a recycled tag
   // fails here rather than opening a second bucket (src/lib/funnel.ts).
-  const exportDoor = page.getByRole("main").getByRole("button", {
-    name: "Open the demo as the owner →",
-  });
+  const exportForm = page
+    .getByRole("main")
+    .locator("form")
+    .filter({
+      has: page.getByRole("button", {
+        name: diverTranslator("en-US")("marketing.pricing.dataExit.door"),
+      }),
+    });
+  const exportDoor = exportForm.getByRole("button");
   await expect(exportDoor).toBeVisible();
   await expect(exportDoor).not.toHaveClass(/(^|\s)bg-primary(\s|$)/);
-  await expect(
-    page.locator('form:has(button:text-is("Open the demo as the owner →")) input[name="source"]'),
-  ).toHaveValue("pricing-export");
-  await expect(
-    page.locator('form:has(button:text-is("Open the demo as the owner →")) input[name="role"]'),
-  ).toHaveValue("owner");
+  await expect(exportForm.locator('input[name="source"]')).toHaveValue("pricing-export");
+  await expect(exportForm.locator('input[name="role"]')).toHaveValue("owner");
 
   // And the demo *leads*: first in the DOM, primary weight, with the trial
   // behind it. This page carried them the other way round under the same two
@@ -629,10 +647,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // one component (src/app/_components/FunnelCtas.tsx), not per page.
   // The two doors only: the notes above them end in a link to the product
   // page's full list, which is a reference, not a door.
-  const priceHeroDoors = page
-    .getByRole("main")
-    .locator("section")
-    .first()
+  const priceHeroDoors = pricingHero
     .locator("a, button")
     .filter({ hasText: /^(Try the live demo|Get set up)$/ });
   await expect(priceHeroDoors.first()).toHaveText("Try the live demo");
@@ -1588,7 +1603,7 @@ test("the homepage's spreadsheet door survives, tagged, and lands on the columns
   // split to answer, so neither may quietly lose its tag.
   await expect(
     page.getByRole("main").getByRole("link", {
-      name: diverTranslator("en-US")("marketing.home.guidesLink"),
+      name: `${diverTranslator("en-US")("marketing.home.guidesLink")} →`,
       exact: true,
     }),
   ).toHaveAttribute("href", "/switching?from=home-records");
@@ -1880,8 +1895,11 @@ test.describe("with Accept-Language: es", () => {
       spanish: "De la primera reserva al pase de lista después de la última inmersión",
     },
     "/pricing": {
-      english: "What a shop pays, line by line",
-      spanish: "Lo que paga un centro, línea por línea",
+      // The title now also names the navigation link. Watch body-only copy so
+      // the default-locale chrome is not mistaken for an English page body.
+      english: diverTranslator("en-US")("marketing.pricing.lockNote"),
+      spanish: diverTranslator("es-ES")("marketing.pricing.lockNote"),
+      heading: diverTranslator("es-ES")("marketing.pricing.heroTitle"),
     },
     // The three that still carried the fallback-is-the-body shape on
     // 2026-08-14 (FU-20260814-remaining-fallback-is-the-body-marketing-pages).

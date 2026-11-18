@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { queueMediaDeletion } from "../../db/media-deletions";
@@ -133,9 +134,24 @@ export async function oweStripeTwoErasures(
   now: Date,
 ): Promise<void> {
   const externalIds = ["cus_e2e_owed", "in_e2e_owed"];
+  // The reset preserves permanent staff and their real obligations. Give this
+  // trouble state its own erased fixture person so it cannot leak to the next capture.
+  const hash = createHash("sha256").update(`owed-erasures:${shopId}`).digest("hex");
+  const personId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+  await db
+    .insert(people)
+    .values({
+      id: personId,
+      shopId,
+      fullName: "Erased diver",
+      deletedAt: now,
+      anonymizedAt: now,
+      anonymizedByPersonId: actorId,
+    })
+    .onConflictDoNothing({ target: people.id });
   await recordProcessorErasureObligations(db, {
     shopId,
-    personId: actorId,
+    personId,
     targets: [
       { target: "stripe_customer", externalId: externalIds[0], stripeAccountId: "acct_e2e_test" },
       {

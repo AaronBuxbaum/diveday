@@ -7,8 +7,8 @@ import {
 import { FEET_PER_METER } from "@/lib/dive-profile-sample";
 
 const WIDTH = 320;
-const HEIGHT = 150;
-const PAD = { left: 30, right: 8, top: 8, bottom: 20 };
+const HEIGHT = 164;
+const PAD = { left: 30, right: 8, top: 8, bottom: 34 };
 
 export type DiveProfileLabels = {
   /** "Safety stop · 3 min", worded for the stop the samples actually hold. */
@@ -73,6 +73,7 @@ export function DiveProfileChart({
   const stop = stats.safetyStop;
   const stopY = y(5);
   const stopMinutes = stop ? Math.round((stop.toSeconds - stop.fromSeconds) / 60) : 0;
+  const stopX = stop ? (x(stop.fromSeconds) + x(stop.toSeconds)) / 2 : 0;
   const deepestX = x(stats.maxSeconds);
   // The label sits left of the point when the point is near the right edge.
   const maxAnchorEnd = deepestX > WIDTH * 0.7;
@@ -120,7 +121,7 @@ export function DiveProfileChart({
           />
           <text
             x={x(minute * 60)}
-            y={HEIGHT - 6}
+            y={HEIGHT - 20}
             textAnchor="middle"
             className="fill-muted text-[8px] tabular-nums"
           >
@@ -128,7 +129,13 @@ export function DiveProfileChart({
           </text>
         </g>
       ))}
-      <text x={PAD.left - 8} y={HEIGHT - 6} textAnchor="end" className="fill-muted text-[8px]">
+      {/* Keep translated unit captions separate from the zero-minute tick. */}
+      <text
+        x={PAD.left + plotW / 2}
+        y={HEIGHT - 6}
+        textAnchor="middle"
+        className="fill-muted text-[8px]"
+      >
         {labels.minutes}
       </text>
       {/* The safety stop: a band the line rests in near 5 m, found in the samples. */}
@@ -170,9 +177,9 @@ export function DiveProfileChart({
       </text>
       {stop ? (
         <text
-          x={(x(stop.fromSeconds) + x(stop.toSeconds)) / 2}
+          x={stopX}
           y={stopY - 8}
-          textAnchor="middle"
+          textAnchor={stopX > WIDTH / 2 ? "end" : "start"}
           className="fill-success-strong text-[7px] font-medium"
         >
           {labels.stop(stopMinutes)}
