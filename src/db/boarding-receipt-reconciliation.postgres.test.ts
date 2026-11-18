@@ -114,8 +114,11 @@ describePostgres("boarding receipt reconciliation", () => {
         ]),
       );
       expect(report).toMatchObject({
+        storedOriginalKeys: 1,
         matchingSelectedFields: 1,
         missing: 0,
+        conflicting: 0,
+        unclassifiedReceiptKeys: 0,
         writerDrain: "unverified",
         priorJoinedKeyCoverage: "unknown",
         cutoverPermitted: false,
