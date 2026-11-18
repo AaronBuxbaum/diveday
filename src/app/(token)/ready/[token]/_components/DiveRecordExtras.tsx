@@ -68,14 +68,20 @@ export function RecordComputerDives({
   t,
   shop,
   computerDives,
-  computerDivesSource,
-}: Pick<AfterStateProps, "t" | "shop" | "computerDives" | "computerDivesSource">) {
+}: Pick<AfterStateProps, "t" | "shop" | "computerDives">) {
   if (computerDives.length === 0) return null;
   const feet = shop.depthUnit === "feet";
-  const crew = computerDivesSource === "crew";
-  const heading = t(crew ? "recap.profile.headingCrew" : "recap.profile.heading");
+  const heading = t("recap.profile.heading");
   return (
-    <div data-testid={AFTER_STATE_TEST_IDS.computerDives} className="mt-6 space-y-6">
+    <section
+      data-testid={AFTER_STATE_TEST_IDS.computerDives}
+      aria-label={heading}
+      className="mt-8 space-y-6 rounded-panel border border-border bg-surface p-5 sm:p-6"
+    >
+      <div>
+        <h2 className={groupLabelClass()}>{heading}</h2>
+        <p className="mt-2 text-sm text-muted">{t("recap.profile.unlinked")}</p>
+      </div>
       {computerDives.map((dive, index) => {
         const minutes =
           dive.durationSeconds === null ? null : Math.max(1, Math.round(dive.durationSeconds / 60));
@@ -98,17 +104,11 @@ export function RecordComputerDives({
             // A day holds a handful of recordings in file order; the index is their identity.
             // biome-ignore lint/suspicious/noArrayIndexKey: see above
             key={index}
-            aria-label={heading}
+            aria-label={dive.recordedAt}
           >
             <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-              <h3 className={groupLabelClass()}>
-                {computerDives.length > 1 ? t("recap.profile.diveN", { n: index + 1 }) : heading}
-              </h3>
-              {crew && index === 0 ? (
-                <p className="text-xs text-muted">{t("recap.profile.crewNote")}</p>
-              ) : dive.device ? (
-                <p className="text-xs text-muted">{dive.device}</p>
-              ) : null}
+              <h3 className={groupLabelClass()}>{dive.recordedAt}</h3>
+              {dive.device ? <p className="text-xs text-muted">{dive.device}</p> : null}
             </div>
             {facts.length > 0 ? (
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -137,6 +137,6 @@ export function RecordComputerDives({
           </section>
         );
       })}
-    </div>
+    </section>
   );
 }

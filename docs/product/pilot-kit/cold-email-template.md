@@ -241,8 +241,8 @@ each is an existing rule rather than a new one:
   If a shop offers "just run it on Saturday's charter", the answer is yes *and* paper, never yes
   instead of paper. The stop rule gets said out loud to the crew on the morning, not written into
   an email.
-- **Anything implying DiveDay checks a card with an agency.** There is no agency integration: a
-  staffer looks the number up in the agency's own portal and marks it certified. DiveDay holds the
+- **Anything implying DiveDay checks a card with an agency.** There is no agency account or roster sync: the
+  DiveDay browser extension (or the staffer) looks one card up on the agency's own page and the card is marked certified. DiveDay holds the
   evidence and the gate; a human does the verifying.
 - **That any of it satisfies the Coast Guard, a regulator, or an insurer.** DiveDay records what a
   crew did and prints it. Whether that satisfies anyone is their auditor's call, and no version of

@@ -883,8 +883,7 @@
       "lionfish_count": "Peces león recolectados: {quantity}"
     },
     "profile": {
-      "heading": "De tu computadora de buceo",
-      "diveN": "Inmersión {n}",
+      "heading": "Tus registros de computadora de esta fecha",
       "maxDepth": "Profundidad máxima",
       "avgDepth": "Profundidad media",
       "diveTime": "Tiempo de inmersión",
@@ -893,8 +892,10 @@
       "max": "Máx. {depth}",
       "stop": "Parada de seguridad · {minutes} min",
       "axisMinutes": "minutos",
-      "headingCrew": "Cómo fue tu inmersión",
-      "crewNote": "De la computadora del equipo, así que la tuya puede variar un poco."
+      "unlinked": "Estos registros no están vinculados a esta salida ni a su entrada en la bitácora.",
+      "recordedAt": "{date} · {time}",
+      "unknownZone": "{date} · {time} · zona horaria desconocida",
+      "dateOnly": "{date} · hora y zona horaria desconocidas"
     }
   },
   "register": {

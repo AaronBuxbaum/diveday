@@ -19,6 +19,9 @@ choice connects an account, fetches remote data, or verifies vendor compatibilit
 [the interchange decision](../../../docs/architecture/decisions/20261115-online-logbook-file-interchange.md)
 and the parser fixture README for the tested compatibility scope.
 
-A diver's own recap reads their live dives for the trip's calendar day (`recapComputerDives`) and draws
-the depth profile and facts as "From your dive computer". It is shown to the diver as their evidence,
-never printed on the logbook sheet, and a recording with no samples shows its facts without a chart.
+A diver's recap reads only their live personal recordings matching the recap date (`recapComputerDives`),
+limited to six. A known instant is matched in the shop's timezone; an unknown-zone wall date is retained
+without conversion. Source dates and times are shown with known or unknown timezone attribution.
+The separate computer-recording section explicitly states that these date-level records are not linked
+to the departure or its logbook entry. Crew recordings are never substituted. Profiles and facts stay
+out of the printed/countersigned logbook and saved postcard, and a recording without samples has no chart.

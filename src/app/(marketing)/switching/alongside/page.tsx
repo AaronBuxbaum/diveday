@@ -28,7 +28,7 @@ export const instant = true;
  * try one departure than commit to a move.
  *
  * Every line states what the product does today and no more. There is no live
- * sync with a booking site, no agency connection, no retail register, and card
+ * sync with a booking site, no agency account (the browser extension checks one card at a time), no retail register, and card
  * payments run through the shop's own Stripe account; the keep-it answers come
  * from the pricing FAQ and the FareHarbor and EVE guides, the import lines from
  * `IMPORT_HONESTY_TABLE`. Never add an integration here that the demo cannot show.

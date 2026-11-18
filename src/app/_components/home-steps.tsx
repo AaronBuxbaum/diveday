@@ -77,14 +77,14 @@ export const STEPS: readonly {
     // the week's list, the seat page opens, and she taps Book and pay, which loads the checkout
     // the next slide fills in (Aaron, 2026-11-17 and 2026-11-18).
     id: "browse",
-    lead: 2300,
-    hold: 1200,
+    lead: 4400,
+    hold: 1600,
     feature: "online-booking",
     note: "marketing.home.steps.browse.note",
     label: "marketing.home.steps.browse.mockupLabel",
     before: (locale) => (
       <WalkSwap
-        at={1150}
+        at={1750}
         from={<StorefrontFallback locale={locale} tapBoat />}
         to={<SeatPickFallback locale={locale} tapPay />}
       />
@@ -93,7 +93,7 @@ export const STEPS: readonly {
   },
   {
     id: "pay",
-    lead: 3400,
+    lead: 2900,
     listed: true,
     feature: "payments",
     note: "marketing.home.steps.pay.note",
@@ -110,7 +110,7 @@ export const STEPS: readonly {
   },
   {
     id: "onboard",
-    lead: 5300,
+    lead: 4200,
     note: "marketing.home.steps.onboard.note",
     label: "marketing.home.steps.onboard.mockupLabel",
     before: (locale) => <RegisterFallback locale={locale} state="filling" />,
@@ -126,7 +126,7 @@ export const STEPS: readonly {
   },
   {
     id: "sign",
-    lead: 3400,
+    lead: 3700,
     listed: true,
     feature: "waivers",
     note: "marketing.home.steps.sign.note",
@@ -176,17 +176,18 @@ export const STEPS: readonly {
     // The report goes out by itself a few hours after the boat is due back, which is why it is the
     // messages page this slide opens. Its drawing carries the label `RecapPageFallback` names.
     id: "recap",
-    hold: 5200,
+    lead: 3600,
+    hold: 2400,
     listed: true,
     feature: "messages",
     note: "marketing.home.steps.recap.note",
     label: "marketing.home.steps.recap.mockupLabel",
-    before: (locale) => <RecapPageFallback locale={locale} view="report" />,
-    screen: (locale) => <RecapPageFallback locale={locale} view="report" />,
+    before: (locale) => <RecapPageFallback locale={locale} view="report" scroll />,
+    screen: (locale) => <RecapPageFallback locale={locale} view="report" scroll />,
   },
   {
     id: "review",
-    lead: 5800,
+    lead: 4500,
     feature: "messages",
     note: "marketing.home.steps.review.note",
     label: "marketing.home.steps.review.mockupLabel",

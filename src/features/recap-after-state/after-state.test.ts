@@ -1,10 +1,21 @@
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "@/db/bookings";
-import { bookings, divePackages, diveSites, people, shops, tripSightings } from "@/db/schema";
+import {
+  bookings,
+  computerDives,
+  computerImportBatches,
+  divePackages,
+  diveSites,
+  people,
+  shops,
+  tripSightings,
+} from "@/db/schema";
 import { createTrip } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { diverTranslator } from "@/i18n/messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getRecapPageData, type RecapPageData } from "../recap/store";
@@ -50,6 +61,115 @@ function serialized(props: Awaited<ReturnType<typeof buildAfterStateProps>>): st
 }
 
 describe("buildAfterStateProps", () => {
+  it("keeps two same-day departures' personal recordings date-level, timed and free of private import fields", async () => {
+    const { data, bookingId } = await recapData();
+    const day = calendarDateInTimezone(data.trip.startsAt, data.shop.timezone);
+    const second = await createTrip(ctx.db, {
+      shopId: data.shop.id,
+      title: "Another departure that day",
+      startsAt: new Date(data.trip.startsAt.getTime() + 60 * 60 * 1000),
+      endsAt: new Date(data.trip.startsAt.getTime() + 2 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!second) throw new Error("second departure missing");
+    expect(calendarDateInTimezone(second.startsAt, data.shop.timezone)).toBe(day);
+    const [seat] = await ctx.db
+      .insert(bookings)
+      .values({
+        shopId: data.shop.id,
+        tripId: second.id,
+        personId: data.personId,
+        bookedAs: "diver",
+      })
+      .returning();
+    const otherData = await getRecapPageData(ctx.db, seat.id);
+    if (!otherData) throw new Error("second recap missing");
+    const [batch] = await ctx.db
+      .insert(computerImportBatches)
+      .values({
+        shopId: data.shop.id,
+        personId: data.personId,
+        requestKey: randomUUID(),
+        selectionHash: "private-import-selection",
+        importedCount: 2,
+        skippedCount: 0,
+      })
+      .returning();
+    for (const time of ["08:00:00", "16:00:00"]) {
+      await ctx.db.insert(computerDives).values({
+        shopId: data.shop.id,
+        personId: data.personId,
+        batchId: batch.id,
+        fingerprint: randomUUID(),
+        annotation: "private annotation",
+        record: {
+          localStart: `${day}T${time}`,
+          startInstant: null,
+          offsetMinutes: null,
+          device: "Own computer",
+          durationSeconds: 1800,
+          maxDepthMeters: 12,
+          sourceId: "private-source-id",
+          gases: [{ private: "not for recap" }],
+        },
+      });
+    }
+    const build = (recap: RecapPageData, id: string) =>
+      buildAfterStateProps({
+        db: ctx.db,
+        data: recap,
+        bookingId: id,
+        locale: "en-US",
+        t: diverTranslator("en-US"),
+        params: {},
+        actions,
+        mintHandoff: false,
+        delivered: false,
+      });
+    const morning = await build(data, bookingId);
+    const afternoon = await build(otherData, seat.id);
+    expect(morning.computerDives).toHaveLength(2);
+    expect(afternoon.computerDives).toEqual(morning.computerDives);
+    expect(morning.computerDives.map((dive) => dive.recordedAt)).toEqual([
+      expect.stringMatching(/8:00.*time zone unknown/),
+      expect.stringMatching(/4:00.*time zone unknown/),
+    ]);
+    const text = serialized(morning);
+    for (const secret of [
+      batch.id,
+      data.personId,
+      "private annotation",
+      "private-source-id",
+      "not for recap",
+    ])
+      expect(text).not.toContain(secret);
+    expect(morning.sheet).not.toHaveProperty("computerDives");
+    expect(JSON.stringify(morning.postcard)).not.toContain("Own computer");
+    // A valid date-only import can have no depth, duration or samples. Preserve
+    // the dated personal record without inventing any of those missing facts.
+    await ctx.db
+      .update(computerDives)
+      .set({
+        record: {
+          localDate: day,
+          localStart: null,
+          startInstant: null,
+          device: null,
+          maxDepthMeters: null,
+          durationSeconds: null,
+        },
+      })
+      .where(eq(computerDives.batchId, batch.id));
+    const dateOnly = await build(data, bookingId);
+    expect(dateOnly.computerDives).toHaveLength(2);
+    expect(
+      dateOnly.computerDives.every((dive) =>
+        dive.recordedAt.includes("time and time zone unknown"),
+      ),
+    ).toBe(true);
+  });
+
   it("never carries the person, the trip, the course or the lens id onto the bearer-token page", async () => {
     const { data, bookingId } = await recapData();
     const props = await buildAfterStateProps({

@@ -314,6 +314,26 @@ describe("the builder's notes say we", () => {
     expect(marketingMessages("en-US")["marketing.home.steps.check.note2"]).toMatch(/\bWe left\b/);
     expect(marketingMessages("es-ES")["marketing.home.steps.check.note2"]).toMatch(/\bdejamos\b/);
   });
+
+  it("promises no ready-everyone button in the check step, in both locales", () => {
+    // The walkthrough rewrite (#4660, round 6) dropped the sentence that said we left the
+    // button out. The intent stands: no readiness is bulk-marked, so no copy in the step
+    // may offer a way to make everyone ready at once.
+    const bulk: Record<string, RegExp> = {
+      "en-US":
+        /\b(?:ready|clear|check)(?:s|ed)? (?:everyone|all|every diver)\b|\ball (?:ready|clear)\b/i,
+      "es-ES": /\b(?:todos|todas)\b.{0,20}\b(?:list[oa]s|confirmad[oa]s)\b|\blist[oa]s? a todos\b/i,
+    };
+    for (const locale of ["en-US", "es-ES"] as const) {
+      const step = Object.entries(marketingMessages(locale)).filter(([key]) =>
+        key.startsWith("marketing.home.steps.check."),
+      );
+      expect(step.length).toBeGreaterThan(0);
+      for (const [key, value] of step) {
+        expect(value, `${locale} ${key}`).not.toMatch(bulk[locale] as RegExp);
+      }
+    }
+  });
 });
 
 /**
@@ -388,6 +408,28 @@ describe("the fee anchor compares contractual terms without inventing a rival ra
       for (const rival of ["fareharbor", "rezdy"] as const) {
         expect(messages[`marketing.pricing.feeAnchor.${rival}`]).not.toMatch(/\d+%/);
       }
+    });
+  }
+});
+
+/**
+ * The fee comparison (Aaron, 2026-11-18) states a rival's number only as an estimate
+ * with its source and the date it was checked, and writes DiveDay's own percent from
+ * the configured offer, never into the bundle.
+ */
+describe("the fee comparison labels its figures as sourced estimates", () => {
+  for (const locale of DIVER_LOCALES) {
+    it(`names the sources and the date, and spells no DiveDay rate, in ${locale}`, () => {
+      const assumptions = marketingMessages(locale)["marketing.pricing.compare.assumptions"];
+      expect(assumptions).toMatch(/CaptainBook/);
+      expect(assumptions).toMatch(/Levy/);
+      expect(assumptions).toMatch(/2026/);
+      expect(assumptions).toMatch(
+        locale === "en-US" ? /estimates, not quotes/ : /estimaciones, no presupuestos/,
+      );
+      const diveDayNote =
+        marketingMessages(locale)["marketing.pricing.compare.systems.diveday.noteFlat"];
+      expect(diveDayNote).not.toMatch(/\d+\s?%/);
     });
   }
 });

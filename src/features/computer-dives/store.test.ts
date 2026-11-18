@@ -146,7 +146,6 @@ describe("a diver's recap reads their own computer's dives for the trip day", ()
       timeZone: "UTC",
     };
     const found = await recapComputerDives(db, { ...day, date: "2026-01-01" });
-    expect(found.source).toBe("own");
     expect(found.dives).toHaveLength(1);
     expect(found.dives[0]).toMatchObject({
       device: "Computer",
@@ -164,7 +163,7 @@ describe("a diver's recap reads their own computer's dives for the trip day", ()
     expect((await recapComputerDives(db, { ...day, date: "2026-01-01" })).dives).toEqual([]);
   });
 
-  it("falls back to a crew member's recording with a profile, without naming their device", async () => {
+  it("does not expose a crew member's recording, even with a profile", async () => {
     const db = await unseededTestDb();
     const scope = await computerFixture(db);
     const guide = await createPerson(db, {
@@ -197,11 +196,9 @@ describe("a diver's recap reads their own computer's dives for the trip day", ()
       ],
     });
     const found = await recapComputerDives(db, input);
-    expect(found.source).toBe("crew");
-    expect(found.dives).toHaveLength(1);
-    expect(found.dives[0]?.device).toBeNull();
+    expect(found.dives).toEqual([]);
     // The diver's own recording wins once they have one.
     await commitComputerFiles(db, scope, await selectedInput(db, scope));
-    expect((await recapComputerDives(db, input)).source).toBe("own");
+    expect((await recapComputerDives(db, input)).dives[0]?.device).toBe("Computer");
   });
 });

@@ -3,7 +3,6 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DiverDoor } from "@/app/_components/DiverDoor";
-import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { HomeHeroDesk } from "@/app/_components/HomeHeroDesk";
@@ -125,8 +124,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-12 lg:py-16">
           <div className="max-w-2xl">
-            <Eyebrow>{t("marketing.home.eyebrow")}</Eyebrow>
-            <h1 className="mt-4 text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
+            <h1 className="text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
               {t("marketing.home.heroTitle")}
             </h1>
             <p className="mt-4 max-w-xl text-lg leading-8 text-muted sm:text-xl">
@@ -179,7 +177,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             }}
           >
             <ol data-walk-list className={`mt-6 space-y-16 lg:mt-8 lg:space-y-20 ${WALK_CLASSES}`}>
-              {STEPS.map((step, index) => {
+              {STEPS.map((step) => {
                 const page = step.feature ? getFeaturePage(step.feature) : undefined;
                 return (
                   // One list item per step, so a screen reader hears the
@@ -199,10 +197,9 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                       phone they used to come before the screen they caption,
                       with the link reading as the drawing's title. From `lg`
                       it is a column beside the screen again, every `order`
-                      reset, and the alternation is the column's own. */}
-                    <div
-                      className={`contents lg:col-span-5 lg:flex lg:flex-col ${index % 2 === 1 ? "lg:order-last" : ""}`}
-                    >
+                      reset, always on the same side so the story reads the same way
+                      on every step. */}
+                    <div className="contents lg:col-span-5 lg:flex lg:flex-col">
                       <h3 className={`${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
                         {t(`marketing.home.steps.${step.id}.title`)}
                       </h3>
@@ -211,8 +208,8 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                       </p>
                       {/* The page's own name is the link's words: the reader
                         has just read what the step does, and the name says
-                        where the rest of it is. Its arrow is the "→" glyph
-                        every other link on the page carries, not an icon.
+                        where the rest of it is. Its arrow is drawn by the link
+                        style (`arrow`), not typed into the words.
                         `self-start` keeps the link its own width in the `lg`
                         flex column, `justify-self-start` in the phone's grid. */}
                       {page ? (
@@ -220,6 +217,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                           href={featurePagePath(page.slug)}
                           className={buttonClass({
                             variant: "link",
+                            arrow: true,
                             flush: true,
                             className:
                               "order-3 self-start justify-self-start text-start lg:order-none lg:mt-4",
@@ -256,7 +254,10 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
 
       {/* The product directory holds the full feature list. */}
       <div className="mx-auto w-full max-w-7xl px-6 pb-12">
-        <Link href="/product#full-list" className={buttonClass({ variant: "link", flush: true })}>
+        <Link
+          href="/product#full-list"
+          className={buttonClass({ variant: "link", arrow: true, flush: true })}
+        >
           {t("marketing.home.featuresLink")}
         </Link>
       </div>
@@ -280,19 +281,34 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
             <Link
               href={switchingHref("/switching", "home-records")}
-              className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+              className={buttonClass({
+                variant: "link",
+                arrow: true,
+                flush: true,
+                className: "text-start",
+              })}
             >
               {t("marketing.home.guidesLink")}
             </Link>
             <Link
               href={switchingHref("/switching/spreadsheet", "home-records-arriving", "columns")}
-              className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+              className={buttonClass({
+                variant: "link",
+                arrow: true,
+                flush: true,
+                className: "text-start",
+              })}
             >
               {t("marketing.home.spreadsheetLink")}
             </Link>
             <Link
               href="/pricing#export"
-              className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+              className={buttonClass({
+                variant: "link",
+                arrow: true,
+                flush: true,
+                className: "text-start",
+              })}
             >
               {t("marketing.common.recordsLink")}
             </Link>

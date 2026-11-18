@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { tapTargetLinkClass } from "@/components/ui/button";
+import { ARROW_LINK_CLASS, tapTargetLinkClass } from "@/components/ui/button";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
@@ -10,7 +10,7 @@ import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
  * 24px, so the target bleeds 10px into the gap above and the callout's
  * padding below and the callout keeps its shape.
  */
-export const CALLOUT_LINK_CLASS = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-4 hover:decoration-2`;
+export const CALLOUT_LINK_CLASS = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-4 hover:decoration-2 ${ARROW_LINK_CLASS}`;
 
 /**
  * The coexist band's "or leave it" box: drop the channel and take the booking

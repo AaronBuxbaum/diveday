@@ -1929,9 +1929,20 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 }
 
+/* The last step of a short word (a 3-digit security code) was left a character short until the
+   phase moved on, so a second, instant animation lands the finished text the moment the typing ends. */
+@keyframes walk-typed {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
 [data-walk-phase="before"] [data-walk-before] [data-walk-type] {
-  animation: walk-type calc(var(--type-chars, 10) * 70ms) steps(var(--type-chars, 10)) both;
-  animation-delay: var(--type-delay, 0ms);
+  animation:
+    walk-type calc(var(--type-chars, 10) * var(--type-ms, 40ms)) steps(var(--type-chars, 10)) both
+    var(--type-delay, 0ms),
+    walk-typed 1ms linear forwards
+    calc(var(--type-delay, 0ms) + var(--type-chars, 10) * var(--type-ms, 40ms));
 }
 
 /* Something that happens to the first screen in the first phase (`data-walk-late`, such as her tap
@@ -1977,19 +1988,22 @@ select:not([multiple]):not([size]):dir(rtl) {
   animation-play-state: paused;
 }
 
-/* A pointer the walk moves (`data-walk-cursor`, drawn in the control it goes to): in the first
-   phase it travels in, presses at `--cursor-at`, and is gone. The control's own change
+/* The fingertip the walk moves (`data-walk-cursor`, the same ring as the tap, drawn in the control
+   it goes to): in the first phase it travels in, presses at `--cursor-at`, and is gone. The control's own change
    (`data-walk-late`, `data-walk-star`) lands on the same beat. */
 [data-walk-cursor] {
   position: absolute;
   z-index: 3;
-  inset-block-start: 55%;
-  inset-inline-start: 60%;
-  width: 1.5rem;
-  height: 1.5rem;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -1.125rem 0 0 -1.125rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-primary);
+  background: color-mix(in oklab, var(--color-primary) 22%, transparent);
   opacity: 0;
   pointer-events: none;
-  filter: drop-shadow(0 1px 2px color-mix(in oklab, var(--color-foreground) 35%, transparent));
 }
 
 @keyframes walk-cursor-in {
@@ -2020,9 +2034,73 @@ select:not([multiple]):not([size]):dir(rtl) {
 
 [data-walk-phase="before"] [data-walk-before] [data-walk-cursor] {
   animation:
-    walk-cursor-in calc(var(--cursor-at, 900ms) - 200ms) var(--ease-out-soft) both,
+    walk-cursor-in var(--cursor-travel, 650ms) var(--ease-out-soft)
+    max(0ms, calc(var(--cursor-at, 900ms) - 850ms)) both,
     walk-cursor-click 300ms ease-in-out calc(var(--cursor-at, 900ms) - 150ms),
     walk-cursor-out 250ms ease-in calc(var(--cursor-at, 900ms) + 300ms) forwards;
+}
+
+/* A page she scrolls (`WalkScroll`): inside a walk it is a window of fixed height; in the first phase
+   the page slides up to its end over `--scroll-ms` while a fingertip ring drifts down the side,
+   and every other phase rests at the end. Outside a walk it is the whole page. */
+@keyframes walk-scroll {
+  from {
+    transform: translateY(0);
+  }
+}
+
+@keyframes walk-swipe {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(11rem);
+  }
+}
+
+[data-walk] [data-walk-window] {
+  position: relative;
+  height: 28rem;
+  overflow: hidden;
+}
+
+[data-walk] [data-walk-scroll] {
+  transform: translateY(calc(28rem - 100%));
+}
+
+[data-walk-phase="before"] [data-walk-before] [data-walk-scroll] {
+  animation: walk-scroll var(--scroll-ms, 3s) ease-in-out both;
+}
+
+[data-walk-swipe] {
+  display: none;
+}
+
+[data-walk] [data-walk-swipe] {
+  display: block;
+  position: absolute;
+  z-index: 3;
+  inset-block-start: 4rem;
+  inset-inline-end: 2.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-primary);
+  background: color-mix(in oklab, var(--color-primary) 22%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-walk-phase="before"] [data-walk-before] [data-walk-swipe] {
+  animation: walk-swipe var(--scroll-ms, 3s) ease-in-out both;
 }
 
 /* A star she rates: it springs in from small, overshoots, and settles. */
@@ -2042,7 +2120,7 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 [data-walk-phase="before"] [data-walk-before] [data-walk-star] {
-  animation: walk-star 520ms var(--ease-spring) both;
+  animation: walk-star var(--motion-unfold) var(--ease-spring) both;
   animation-delay: var(--late-delay, 0ms);
 }
 
@@ -2099,11 +2177,11 @@ select:not([multiple]):not([size]):dir(rtl) {
 
 [data-walk-phase="after"] [data-walk-after] .walk-grow {
   overflow: hidden;
-  animation: walk-grow 1200ms var(--ease-out-soft) both;
+  animation: walk-grow var(--motion-unfold) var(--ease-out-soft) both;
 }
 
 [data-walk-phase="after"] [data-walk-after] .walk-shrink {
-  animation: walk-shrink 1200ms var(--ease-out-soft) 300ms both;
+  animation: walk-shrink var(--motion-unfold) var(--ease-out-soft) 300ms both;
 }
 
 /* What the tap did arrives with it: the mark the beat is about (a check, a

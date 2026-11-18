@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { AFTER_STATE_TEST_IDS } from "../src/app/(token)/ready/[token]/_components/after-state-test-ids";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
+import { diverTranslator } from "../src/i18n/messages";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openBookingActions, openRecapDoor, openSettingsRow, rosterRow, signOut } from "./helpers";
@@ -297,14 +298,18 @@ test("the day's facts render once, inside the one record a diver keeps", async (
   // "Recorded by {shop}", never "Verified log entry from {shop}": this card
   // prints, under a divemaster signature rule, and DiveDay verifies nothing
   // about the dive itself. For the same reason it states no dive count and no
-  // depth — both were numbers nobody observed (review, 2026-08-28). The one depth on the card is
-  // the diver's own computer's, drawn as its chart.
+  // depth — both were numbers nobody observed (review, 2026-08-28). Personal
+  // date-level recordings have their own section outside the logbook card.
   await expect(page.getByText(/Recorded by/i).filter({ visible: true })).toBeVisible();
   await expect(page.getByText(/dives? logged/i)).toHaveCount(0);
-  await expect(record.getByText(/Max depth/i)).toHaveCount(1);
-  await expect(
-    record.getByTestId(AFTER_STATE_TEST_IDS.computerDives).getByText(/Max depth/i),
-  ).toHaveCount(1);
+  await expect(record.getByText(/Max depth/i)).toHaveCount(0);
+  await expect(record.getByTestId(AFTER_STATE_TEST_IDS.computerDives)).toHaveCount(0);
+  const recordings = page.getByTestId(AFTER_STATE_TEST_IDS.computerDives);
+  const t = diverTranslator("en-US");
+  await expect(recordings.getByRole("heading", { name: t("recap.profile.heading") })).toBeVisible();
+  await expect(recordings.getByText(t("recap.profile.unlinked"))).toBeVisible();
+  await expect(recordings.getByText(/Max depth/i)).toHaveCount(1);
+  await expect(recordings.getByRole("heading", { level: 3 })).toContainText(/\d{4}/);
 
   // The one rule this surface exists to keep (ADR 20260827-the-divers-thread,
   // decision 4): the page it replaced said the day's conditions and its sites
@@ -331,10 +336,13 @@ test("the day's facts render once, inside the one record a diver keeps", async (
       .or(sheet.getByTestId("dive-record-print-unconfirmed")),
   ).toBeVisible();
   await expect(sheet.getByTestId("dive-record-sites")).toHaveCount(1);
+  await expect(sheet.getByTestId(AFTER_STATE_TEST_IDS.computerDives)).toHaveCount(0);
+  await expect(sheet.getByText("Shearwater Perdix")).toHaveCount(0);
   await expect(sheet.locator("button, a, input, textarea, form")).toHaveCount(0);
   await expect(page.getByTestId("dive-record")).toHaveCount(0);
   await page.getByRole("button", { name: "Back to your day" }).click();
   await expect(page.getByTestId("dive-record")).toBeVisible();
+  await expect(recordings).toBeVisible();
 });
 
 /**
