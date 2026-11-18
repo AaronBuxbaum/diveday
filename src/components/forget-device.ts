@@ -1,5 +1,6 @@
 import { wipeOfflineMedicalAlerts } from "@/lib/offline-manifest-store";
 import { forgetReadyPageCopy } from "@/lib/ready-offline";
+import { markDeviceCleanupIncomplete } from "./device-cleanup-warning";
 import { forgetAllKeptTyped } from "./KeepTypedOnRefusal";
 import { forgetRevealedMedicalAlerts } from "./MedicalAlertReveal";
 import { forgetAllRecents } from "./search/palette-recents";
@@ -60,9 +61,11 @@ export async function forgetThisDevice(): Promise<{
     }),
   ]);
   clearTimeout(timer);
-  return {
+  const outcome = {
     offlineSensitiveCleanupReportedComplete:
       localComplete &&
       (result?.every((item) => item.status === "fulfilled" && item.value !== false) ?? false),
   };
+  if (!outcome.offlineSensitiveCleanupReportedComplete) markDeviceCleanupIncomplete();
+  return outcome;
 }
