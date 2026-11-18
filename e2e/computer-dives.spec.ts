@@ -39,7 +39,7 @@ test("computer import previews, cancels, retries and restores a personal record"
   await expect(history.locator("details")).toHaveCount(1);
   await page.getByRole("button", { name: t("computerDives.retry"), exact: true }).click();
   await expect(history.locator("details")).toHaveCount(1);
-  await history.locator("summary").click();
+  await history.locator("summary").filter({ hasText: "2031-10-14T23:40:00" }).click();
   await history
     .getByLabel(t("computerDives.notes"), { exact: true })
     .fill("Device clock checked at the counter");
@@ -125,7 +125,7 @@ test("Garmin FIT retains the UTC instant and profile without inventing a local t
   await page.getByRole("button", { name: t("computerDives.importMore"), exact: true }).click();
   const history = page.getByRole("region", { name: t("computerDives.history") });
   await expect(history.locator("details")).toHaveCount(1);
-  await history.locator("summary").click();
+  await history.locator("summary").filter({ hasText: "2000-01-01T00:00:00.000Z" }).click();
   await expect(history.getByRole("img", { name: t("computerDives.profile") })).toBeVisible();
   await expect(
     history.getByText(`${t("computerDives.samples")}: 3267`, { exact: true }),
@@ -271,8 +271,9 @@ test("manual CSV transfer requires explicit mapping and preserves a date without
   await page.getByRole("button", { name: t("computerDives.importMore"), exact: true }).click();
   await expect(page.getByLabel(t("computerDives.files"), { exact: true })).toBeFocused();
   const history = page.getByRole("region", { name: t("computerDives.history") });
-  await expect(history.locator("summary")).toContainText("2031-10-14");
-  await history.locator("summary").click();
+  const imported = history.locator("summary").filter({ hasText: "2031-10-14" });
+  await expect(imported).toHaveCount(1);
+  await imported.click();
   await expect(
     history.getByText(`${t("computerDives.providers.padi.label")} · ${t("computerDives.beta")}`, {
       exact: true,

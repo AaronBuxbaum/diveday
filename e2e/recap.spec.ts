@@ -302,6 +302,9 @@ test("the day's facts render once, inside the one record a diver keeps", async (
   await expect(page.getByText(/Recorded by/i).filter({ visible: true })).toBeVisible();
   await expect(page.getByText(/dives? logged/i)).toHaveCount(0);
   await expect(record.getByText(/Max depth/i)).toHaveCount(1);
+  await expect(
+    record.getByTestId(AFTER_STATE_TEST_IDS.computerDives).getByText(/Max depth/i),
+  ).toHaveCount(1);
 
   // The one rule this surface exists to keep (ADR 20260827-the-divers-thread,
   // decision 4): the page it replaced said the day's conditions and its sites

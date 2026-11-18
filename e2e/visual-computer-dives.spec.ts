@@ -69,9 +69,13 @@ for (const scheme of ["light", "dark"] as const) {
         .getByRole("button", { name: staffCopy("computerDives.importMore"), exact: true })
         .click();
       const history = page.getByRole("region", { name: staffCopy("computerDives.history") });
-      await history.locator("summary").click();
+      const imported = history.locator("details").filter({
+        has: page.locator("summary").filter({ hasText: "2000-01-01T00:00:00.000Z" }),
+      });
+      await expect(imported).toHaveCount(1);
+      await imported.locator("summary").click();
       await expect(
-        history.getByRole("img", { name: staffCopy("computerDives.profile") }),
+        imported.getByRole("img", { name: staffCopy("computerDives.profile") }),
       ).toBeVisible();
       await capture(page, "computer-dives-fit-profile", scheme);
     });
@@ -152,6 +156,9 @@ for (const scheme of ["light", "dark"] as const) {
       await expect(
         page.getByRole("heading", { level: 1, name: staffCopy("computerDives.title") }),
       ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: staffCopy("computerDives.empty"), exact: true }),
+      ).toBeVisible();
       await capture(page, "computer-dives-empty", scheme);
       const csv =
         "local_start,utc_offset,device,source_id,duration_seconds,max_depth_m\n2031-10-14T23:40:00,unknown,Fixture Computer,visual-computer,1800,18\n";
@@ -192,9 +199,13 @@ for (const scheme of ["light", "dark"] as const) {
         .getByRole("button", { name: staffCopy("computerDives.importMore"), exact: true })
         .click();
       const history = page.getByRole("region", { name: staffCopy("computerDives.history") });
-      await history.locator("summary").click();
+      const imported = history.locator("details").filter({
+        has: page.locator("summary").filter({ hasText: "2026-11-01T23:50:00" }),
+      });
+      await expect(imported).toHaveCount(1);
+      await imported.locator("summary").click();
       await expect(
-        history.getByRole("img", { name: staffCopy("computerDives.profile") }),
+        imported.getByRole("img", { name: staffCopy("computerDives.profile") }),
       ).toBeVisible();
       await capture(page, "computer-dives-profile", scheme);
     });
