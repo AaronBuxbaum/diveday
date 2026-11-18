@@ -284,6 +284,37 @@ describe("recording a dock sighting", () => {
     expect(await observationRows(ctx)).toHaveLength(1);
   });
 
+  it("does not let a joined tap's key be spent on a different seat", async () => {
+    const ctx = await released();
+    const [otherSeat] = (await getTripRoster(ctx.db, ctx.shopId, ctx.trip.id)).filter(
+      (row) => row.booking.id !== ctx.bookingId,
+    );
+    if (!otherSeat) throw new Error("second seat missing");
+    await ctx.db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(eq(bookings.id, otherSeat.booking.id));
+    const original = await record(ctx, randomUUID());
+    const joinedKey = randomUUID();
+    const joined = await record(ctx, joinedKey);
+    expect(original).toMatchObject({ ok: true, replay: false });
+    expect(joined).toMatchObject({ ok: true, replay: true });
+    if (!original.ok || !joined.ok) throw new Error("observation missing");
+    expect(joined.observationId).toBe(original.observationId);
+    const before = await observationRows(ctx);
+    expect(before).toHaveLength(1);
+    expect(await record(ctx, joinedKey, otherSeat.booking.id)).toEqual({
+      ok: false,
+      reason: "key_reused",
+    });
+    expect(await observationRows(ctx)).toEqual(before);
+    const otherRows = await ctx.db
+      .select()
+      .from(boardingObservations)
+      .where(eq(boardingObservations.bookingId, otherSeat.booking.id));
+    expect(otherRows).toEqual([]);
+  });
+
   it("refuses a seat that was never released", async () => {
     const ctx = await released();
     const [held] = (await getTripRoster(ctx.db, ctx.shopId, ctx.trip.id)).filter(
