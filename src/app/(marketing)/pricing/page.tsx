@@ -21,7 +21,6 @@ import { earlyAccessPrice, marketingFee } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { FeeComparison } from "./_components/FeeComparison";
-import { PricingCalculator } from "./_components/PricingCalculator";
 import { PricingExportBand } from "./_components/PricingExportBand";
 import { offerFigure, pricingFaq } from "./faq";
 
@@ -101,6 +100,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
     range: t("marketing.pricing.compare.range", { low: "{low}", high: "{high}" }),
     totalNote: t("marketing.pricing.compare.totalNote", { percent: "{percent}" }),
     saving: t("marketing.pricing.compare.saving", { low: "{low}", high: "{high}" }),
+    directNote: t("marketing.pricing.compare.directNote", { amount: "{amount}", rest: "{rest}" }),
     systems: {
       fareharbor: {
         name: fareHarborGuide?.competitor ?? "FareHarbor", // i18n-exempt: a product name
@@ -235,26 +235,6 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
             </div>
 
             <FunnelCtas locale={locale} source="pricing" footnotes={{ offer }} className="mt-12" />
-          </div>
-        </section>
-
-        <section className="border-b border-border" aria-labelledby="worked-months">
-          <div className={`${CONTAINER} py-16 lg:py-24`}>
-            <h2 id="worked-months" className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.pricing.calculator.title")}
-            </h2>
-            <p className="mt-4 max-w-2xl leading-7 text-muted">
-              {t("marketing.pricing.calculator.note")}
-            </p>
-            <PricingCalculator
-              locale={locale}
-              terms={offer}
-              labels={{
-                sliderLabel: t("marketing.pricing.calculator.sliderLabel"),
-                received: t("marketing.pricing.calculator.received", { amount: "{amount}" }),
-                feeLabel: t("marketing.pricing.calculator.feeLabel"),
-              }}
-            />
           </div>
         </section>
 

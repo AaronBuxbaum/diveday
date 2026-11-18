@@ -17,6 +17,7 @@ const labels: FeeComparisonLabels = {
   range: "{low} to {high}",
   totalNote: "{percent} of the month",
   saving: "Moving a sale keeps {low} to {high}",
+  directNote: "Fees apply to {amount}; {rest} goes through marketplaces.",
   systems: {
     fareharbor: { name: "FareHarbor", note: "note" },
     diveday: { name: "DiveDay", note: "note" },
@@ -39,6 +40,11 @@ describe("FeeComparison", () => {
   it("shows a single total per column and Free for a zero subscription", () => {
     renderIt();
     expect(screen.getAllByText("Free").length).toBe(2);
+    // One row per fee, the rate and the dollars side by side.
+    const booking = screen.getByRole("row", { name: /Booking fee/ });
+    expect(booking.textContent).toContain("6% ($1,800)");
+    expect(booking.textContent).toContain("2% ($600)");
+    expect(screen.getAllByText("2.9% + $0.30 ($930)").length).toBe(2);
     // $30,000: FareHarbor 6% + 2.9% + 30c x 200, DiveDay 2% + the same processing.
     expect(screen.getByText("$2,730")).toBeTruthy();
     expect(screen.getAllByText("$1,530").length).toBeGreaterThan(0);
@@ -48,8 +54,11 @@ describe("FeeComparison", () => {
   it("turns each total into a range with the marketplaces switch on", () => {
     renderIt();
     fireEvent.click(screen.getByRole("switch"));
-    expect(screen.getAllByText("Marketplace commission").length).toBe(2);
-    expect(screen.getAllByText("$900 to $1,800").length).toBe(2);
+    expect(screen.getAllByText("Marketplace commission").length).toBe(1);
+    const marketplace = screen.getByRole("row", { name: /Marketplace commission/ });
+    expect(marketplace.textContent).toContain("15% to 30% ($900 to $1,800)");
+    const ota = screen.getByRole("row", { name: /OTA booking fee/ });
+    expect(ota.textContent).toContain("2% ($120)");
     expect(screen.getByText("Moving a sale keeps 9.9% to 24.9%")).toBeTruthy();
   });
 });
