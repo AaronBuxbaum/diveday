@@ -212,6 +212,41 @@ type StoredRecord = {
   ciphertext: ArrayBuffer;
 };
 
+const loadedRecords = new WeakMap<OfflineManifestEnvelope, StoredRecord>();
+
+function samePurgeRecord(expected: StoredRecord, actual: StoredRecord): boolean {
+  const supported = new Set([
+    "tripId",
+    "expiresAt",
+    "shopSlug",
+    "pendingEvents",
+    "iv",
+    "ciphertext",
+  ]);
+  if (
+    Object.keys(expected).some((key) => !supported.has(key)) ||
+    Object.keys(actual).some((key) => !supported.has(key)) ||
+    !(expected.iv instanceof ArrayBuffer) ||
+    !(actual.iv instanceof ArrayBuffer) ||
+    !(expected.ciphertext instanceof ArrayBuffer) ||
+    !(actual.ciphertext instanceof ArrayBuffer)
+  )
+    return false;
+  const sameBytes = (a: ArrayBuffer, b: ArrayBuffer) => {
+    const left = new Uint8Array(a);
+    const right = new Uint8Array(b);
+    return left.length === right.length && left.every((byte, index) => byte === right[index]);
+  };
+  return (
+    expected.tripId === actual.tripId &&
+    expected.expiresAt === actual.expiresAt &&
+    expected.shopSlug === actual.shopSlug &&
+    expected.pendingEvents === actual.pendingEvents &&
+    sameBytes(expected.iv, actual.iv) &&
+    sameBytes(expected.ciphertext, actual.ciphertext)
+  );
+}
+
 export type OfflineSyncResult = {
   clientEventId: string;
   status: "applied" | "duplicate" | "rejected";
@@ -679,6 +714,7 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
         return null;
       }
     }
+    loadedRecords.set(envelope, record);
     return envelope;
   } finally {
     db.close();
@@ -824,7 +860,15 @@ export async function purgeOfflineManifestsExceptShop(
         // may have changed while it was reading. Keep the final guard adjacent
         // to deletion, inside the same per-trip lock.
         if (isCurrent && !isCurrent()) return null;
-        const deleted = await deletePurgeCandidate(tripId, currentShopSlug, tenantRound, isCurrent);
+        const expected = loadedRecords.get(current);
+        if (!expected) return null;
+        const deleted = await deletePurgeCandidate(
+          tripId,
+          currentShopSlug,
+          tenantRound,
+          expected,
+          isCurrent,
+        );
         if (!deleted) return null;
         return tripId;
       });
@@ -836,16 +880,15 @@ export async function purgeOfflineManifestsExceptShop(
 }
 
 /**
- * Atomically compare the shared verification round and plaintext safety
- * metadata with the delete. A different context can start a newer tenant
- * request between any preceding await and this transaction; IDB serializes
- * this read/write transaction against that round allocation. Missing metadata
- * is treated as unknown and retained, never guessed to be safe to delete.
+ * Compare the exact examined supported record and verification round inside
+ * the delete transaction. Missing or unknown metadata is retained. Older
+ * writers can still mutate the database after this transaction commits.
  */
 async function deletePurgeCandidate(
   tripId: string,
   currentShopSlug: string,
   tenantRound: number,
+  expected: StoredRecord,
   isCurrent?: () => boolean,
 ): Promise<boolean> {
   if (isCurrent && !isCurrent()) return false;
@@ -864,6 +907,7 @@ async function deletePurgeCandidate(
     const maybeDelete = () => {
       if (!roundReady || !recordReady || (isCurrent && !isCurrent())) return;
       if (latestRound !== tenantRound || !record) return;
+      if (!samePurgeRecord(expected, record)) return;
       if (typeof record.shopSlug !== "string" || record.shopSlug.length === 0) return;
       if (record.shopSlug === currentShopSlug) return;
       if (

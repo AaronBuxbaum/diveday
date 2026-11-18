@@ -56,7 +56,7 @@ afterEach(
     }),
 );
 
-it.each(["ciphertext", "unknown field"] as const)(
+it.each(["ciphertext", "iv", "unknown field"] as const)(
   "does not purge an older shell replacement that changes %s",
   async (change) => {
     const tripId = "foreign-copy";
@@ -90,7 +90,9 @@ it.each(["ciphertext", "unknown field"] as const)(
       const replacement =
         change === "ciphertext"
           ? { ...existing, ciphertext: new Uint8Array([1, 2, 3]).buffer }
-          : { ...existing, futureSafetyEvidence: "unknown" };
+          : change === "iv"
+            ? { ...existing, iv: new Uint8Array(12).fill(1).buffer }
+            : { ...existing, futureSafetyEvidence: "unknown" };
       await new Promise<void>((resolve, reject) => {
         const request = indexedDB.open("diveday-offline-manifests", 1);
         request.onerror = () => reject(request.error);
