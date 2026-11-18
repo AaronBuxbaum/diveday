@@ -421,7 +421,7 @@ briefing is plain sentences in the order the day happens, and the confidence is 
   not a wizard", "A head count, not a printout", "not a spec written far from the water". The
   contrast frame is the second-strongest tell and it is everywhere. Name the thing and stop; the
   reader supplies the alternative. The one exception is a *factual* refusal the reader needs
-  ("No retail register and no agency sync"), which is a scope statement, not a rhetorical shape.
+  ("No retail register and no agency roster sync"), which is a scope statement, not a rhetorical shape.
 - **No staccato runs.** "No setup fee. No per-seat math. No feature tiers. No cut of your bookings."
   Four fragments in a row is a cadence, not a claim. Write it as a sentence with the facts in it.
 - **No triplets for rhythm.** Three parallel nouns or clauses because three sounds finished. A list

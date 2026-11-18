@@ -212,7 +212,7 @@ export function FeatureDirectory({
       {lines ? (
         <div className="lg:col-span-3">
           <Heading className={groupLabelClass("primary")}>
-            {t("marketing.product.alsoInPlan")}
+            {t("marketing.product.runningTheShop")}
           </Heading>
           {/* One row per group, in the directory's three columns from `lg`.
               Each row draws its own rules there, because the gutters between

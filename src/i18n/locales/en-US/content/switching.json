@@ -186,7 +186,7 @@
     "eyebrow": "Alongside your tools",
     "title": "Keep what works. Add what your dive day is missing",
     "heroLede": "You don’t have to leave anything to start. Try DiveDay on one trip while the booking site, the register, and the sheet you already use keep doing their jobs, then decide what to move.",
-    "intro1": "DiveDay has no live link to other software. It connects to no agency, has no retail register, and doesn’t talk to your booking site on its own. What it has is files in, files out, and a booking link you control, so the two sides meet where a person can see them.",
+    "intro1": "DiveDay has no live link to other software. It has no retail register and doesn’t talk to your booking site on its own. What it has is files in, files out, a booking link you control, and a browser extension that looks up cards on your agency’s own page, so the two sides meet where a person can see them.",
     "intro2": "So the useful question isn’t what DiveDay plugs into. It’s which part of the day each tool should own while you try it.",
     "tools": {
       "booking": {
@@ -207,7 +207,7 @@
       },
       "agency": {
         "title": "Your certification agency",
-        "body": "DiveDay connects to no agency. Staff check a diver’s card with the agency once and confirm it in DiveDay. Submitting new certifications stays with the agency."
+        "body": "DiveDay has no agency account of its own. Staff check a diver’s card in one click with the DiveDay browser extension, which looks it up on the agency’s own page from their browser, and confirm it in DiveDay. Submitting new certifications stays with the agency."
       },
       "website": {
         "title": "Your own website",
