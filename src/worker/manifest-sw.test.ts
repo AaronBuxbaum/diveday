@@ -299,11 +299,7 @@ describe("flushPendingRollCall (the sync event)", () => {
 });
 
 describe("refreshSavedManifests (the push event)", () => {
-  // Security review, 2026-08-06. This response already carries the
-  // server-verified tenant at zero extra cost, and the worker was writing the
-  // board without acting on it — so a push landing on a shared boat tablet with
-  // no page open wrote shop B's whole 48-hour roster in beside shop A's
-  // resident records, and nothing on the device ever removed them.
+  // The verified tenant must be acted on before the worker saves its board.
   it("purges the other shop's records before writing this shop's board", async () => {
     routeFetch({
       upcoming: () => upcomingResponse("blue-mantis", [tripPayload("trip-1", "blue-mantis")]),
