@@ -59,6 +59,8 @@ export const STEPS: readonly {
   listed?: true;
   /** How long the screen plays before the tap (ms): her typing, her pointer, a page giving way to the next. */
   lead?: number;
+  /** How long the tap lasts (ms); none where the drawing's own pointer has just pressed the last control. */
+  tapMs?: number;
   /** How long the finished screen stays (ms); a screen that only leads into the next needs little. */
   hold?: number;
   /** The feature page the slide ends in; none where there is no page to send a reader to. */
@@ -126,7 +128,8 @@ export const STEPS: readonly {
   },
   {
     id: "sign",
-    lead: 3700,
+    lead: 4150,
+    tapMs: 0,
     listed: true,
     feature: "waivers",
     note: "marketing.home.steps.sign.note",
@@ -176,7 +179,7 @@ export const STEPS: readonly {
     // The report goes out by itself a few hours after the boat is due back, which is why it is the
     // messages page this slide opens. Its drawing carries the label `RecapPageFallback` names.
     id: "recap",
-    lead: 3600,
+    lead: 3900,
     hold: 2400,
     listed: true,
     feature: "messages",
