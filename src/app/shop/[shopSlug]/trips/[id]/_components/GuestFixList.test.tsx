@@ -113,6 +113,21 @@ describe("a row says the name, one phrase, and one button", () => {
     expect(screen.queryByRole("button", { name: "Send waiver" })).toBeNull();
   });
 
+  it("offers no arrival undo after departure even if a desk control exists", () => {
+    const arrived = entry("h", "Hana Ito", { checkedIn: true });
+    const arrival = desk(["h"]);
+    arrival.controls.set("h", <button type="button">Undo Hana’s check-in</button>);
+    renderRoster({
+      roster: [arrived],
+      readiness: new Map([["h", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["h", signedWaiver]]) as WaiverByBooking,
+      arrival,
+      phase: "listed",
+      selectedBookingId: null,
+    });
+    expect(screen.queryByRole("button", { name: "Undo Hana’s check-in" })).toBeNull();
+  });
+
   it("names each guest once, with all their reasons, and counts people", () => {
     const deep = (id: string, name: string) => {
       const row = entry(id, name);
@@ -193,6 +208,30 @@ describe("a row says the name, one phrase, and one button", () => {
 });
 
 describe("at Check-in", () => {
+  it("keeps undo accessible for an arrived guest with an advisory", () => {
+    const arrived = entry("h", "Hana Ito", { checkedIn: true });
+    const arrival = desk(["h"]);
+    arrival.controls.set("h", <button type="button">Undo Hana’s check-in</button>);
+    renderRoster({
+      roster: [
+        {
+          ...arrived,
+          person: { ...arrived.person, emergencyContactName: null, emergencyContactPhone: null },
+        },
+      ],
+      readiness: new Map([["h", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["h", signedWaiver]]) as WaiverByBooking,
+      rentalFit: ownGear(["h"]),
+      arrival,
+      selectedBookingId: null,
+    });
+    const worth = group("worth");
+    expect(within(worth).getAllByRole("button", { name: "Undo Hana’s check-in" })).toHaveLength(1);
+    fireEvent.click(within(worth).getByRole("button", { name: "Hana Ito" }));
+    expect(within(worth).getAllByRole("button", { name: "Undo Hana’s check-in" })).toHaveLength(1);
+    expect(within(worth).getByText("Emergency contact · Not on file")).toBeVisible();
+  });
+
   it("gives each guest to come the desk's Check in, and folds who is here into one line", () => {
     const june = entry("j", "June Park", { checkedIn: true });
     renderRoster({
@@ -365,6 +404,31 @@ describe("a blocked guest who is already here", () => {
     expect(
       within(group("cantBoard")).getByRole("button", { name: "Hana Ito" }),
     ).toHaveAccessibleDescription("Here · No card on file");
+  });
+
+  it("keeps both the remedy and exactly one undo before and after opening", () => {
+    const arrived = entry("h", "Hana Ito", { checkedIn: true });
+    const arrival = desk(["h"]);
+    arrival.controls.set("h", <button type="button">Undo Hana’s check-in</button>);
+    renderRoster({
+      roster: [arrived],
+      readiness: new Map([
+        ["h", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["h", signedWaiver]]) as WaiverByBooking,
+      rentalFit: ownGear(["h"]),
+      arrival,
+      selectedBookingId: null,
+    });
+    const section = group("cantBoard");
+    expect(within(section).getByRole("link", { name: "Check cards" })).toBeVisible();
+    expect(within(section).getAllByRole("button", { name: "Undo Hana’s check-in" })).toHaveLength(
+      1,
+    );
+    fireEvent.click(within(section).getByRole("button", { name: "Hana Ito" }));
+    expect(within(section).getAllByRole("button", { name: "Undo Hana’s check-in" })).toHaveLength(
+      1,
+    );
   });
 });
 

@@ -40,7 +40,7 @@ monthly run rate. The report retains this history separately with its source and
 | External monitoring | [Global stack](../../infra/lib/global-stack.ts) defines Route 53 health checks and SNS alarms. | Verify deployed checks and an alert drill before claiming coverage. Do not buy a duplicate canary on this document's authority. |
 | Database dumps | [Infrastructure stack](../../infra/lib/infra-stack.ts) schedules weekly dumps. | Verify successful artifact age and restoration; a schedule is not a completed backup. |
 | Media | S3 implementation has replaced Vercel Blob. | Attribute actual storage, requests and transfer before projecting costs. |
-| Rate limiting | [Environment registry](../../config/env-registry.mjs) requires production Upstash configuration; [runtime](../../src/lib/rate-limit.ts) warns on unexpected fallback. | Verify deployed settings and behavior without printing secrets. Source is not evidence of current fallback. |
+| Rate limiting | Buckets live in the app's own Postgres (`rate_limit_buckets`), installed at boot by [instrumentation](../../src/instrumentation.ts); no separate service. | Check `rate_limit.store_failed` in the logs; a `postgres` store tag means a database incident. |
 | Migrations | Build-time application of migrations can overlap the prior release. | Keep expand/contract checks; verify deployment procedure before changing hosting. |
 
 ## Budget alerts do not prove quota headroom

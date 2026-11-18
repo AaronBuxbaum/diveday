@@ -212,7 +212,7 @@ export async function planReadinessLinkRescue(
  * Two taps a millisecond apart both read "nothing mailed lately" and both send
  * otherwise — normally bounded by the per-inbox rate limit, except that
  * `checkRateLimit` fails *open* on a store error and the default store is
- * per-process unless Upstash is provisioned. So on the day that limiter is
+ * per-process. So on the day that limiter is
  * unavailable, this guard is the only thing between a leaked dead URL and an
  * unbounded run of mail at one diver, and a guard that is not serialized is
  * exactly the kind you defeat by racing it (`security-reviewer`, issue #850).

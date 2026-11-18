@@ -1,3 +1,4 @@
+import { exposeDeviceBody } from "./device-text-size-fixture";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { mintOnboardFormPath } from "./setup-link";
 
@@ -120,6 +121,29 @@ test.describe("owner", () => {
       expect(cueBounds?.x).toBe(scrolledCueBounds?.x);
       expect((cueBounds?.x ?? 0) + (cueBounds?.width ?? 0)).toBeLessThanOrEqual(moreBounds?.x ?? 0);
     });
+  });
+
+  test("removes the scroll cue when large-text tabs fit after a tablet resize", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await exposeDeviceBody(page, 53);
+    await page.goto("/shop/blue-mantis/settings/profile");
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    await expect(nav).toHaveAttribute("data-staff-tab-scroll-state", "right");
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await expect(nav).toHaveAttribute("data-staff-tab-scroll-state", "none");
+    const rail = nav.locator("[data-staff-tab-scroll]");
+    const dimensions = await rail.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    const inbox = nav.getByRole("link", { name: "Inbox", exact: true });
+    await inbox.focus();
+    await expect(inbox).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(nav.getByRole("button", { name: "More", exact: true })).toBeFocused();
   });
 
   /**

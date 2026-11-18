@@ -1,6 +1,6 @@
 # 20260801-distributed-rate-limit-store — Upstash Redis behind the existing RateLimitStore seam
 
-- **Status:** Accepted
+- **Status:** Superseded by [20261118-rate-limits-in-postgres](20261118-rate-limits-in-postgres.md) (2026-11-18). Was: Accepted
 - **Date:** 2026-08-01
 
 ## Context

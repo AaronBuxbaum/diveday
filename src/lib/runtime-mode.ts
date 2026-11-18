@@ -53,8 +53,6 @@ export type RuntimeMode = Readonly<{
   secureCookies: boolean;
   /** Session cookies (proxy, Better Auth) carry `Secure`: everything except the e2e fleet's HTTP loopback. */
   secureSessionCookies: boolean;
-  /** A memory-backed rate limiter in this process is worth a warning: production, not the e2e fleet. */
-  warnMemoryRateLimit: boolean;
 }>;
 
 export function runtimeMode(env: Environment = process.env): RuntimeMode {
@@ -70,7 +68,6 @@ export function runtimeMode(env: Environment = process.env): RuntimeMode {
       fixtureSignIn: false,
       secureCookies: true,
       secureSessionCookies: true,
-      warnMemoryRateLimit: env.NODE_ENV === "production",
     });
   }
   const harness = env.DIVEDAY_E2E === "1";
@@ -88,6 +85,5 @@ export function runtimeMode(env: Environment = process.env): RuntimeMode {
     fixtureSignIn: harness,
     secureCookies: env.NODE_ENV === "production" && !harness,
     secureSessionCookies: !harness,
-    warnMemoryRateLimit: env.NODE_ENV === "production" && !harness,
   });
 }

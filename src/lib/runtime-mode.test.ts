@@ -16,7 +16,6 @@ describe("runtimeMode", () => {
       fixtureSignIn: false,
       secureCookies: false,
       secureSessionCookies: true,
-      warnMemoryRateLimit: false,
     });
   });
 
@@ -32,7 +31,6 @@ describe("runtimeMode", () => {
         fixtureSignIn: true,
         secureCookies: false,
         secureSessionCookies: false,
-        warnMemoryRateLimit: false,
       },
     );
   });
@@ -68,7 +66,6 @@ describe("runtimeMode", () => {
         fixtureSignIn: false,
         secureCookies: true,
         secureSessionCookies: true,
-        warnMemoryRateLimit: NODE_ENV === "production",
       });
     }
   });

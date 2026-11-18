@@ -167,6 +167,7 @@ const UNSCOPED_REASONS: Record<string, string> = {
   global_dive_site_versions: "the catalog's own history, beside the table above",
   notification_rate_limit_state:
     "provider coordination keyed by ceiling and period, holding no person",
+  rate_limit_buckets: "abuse-control counters keyed by a hash, holding no person or shop",
   stripe_webhook_events:
     "the platform's delivery ledger, pruned by retention; it carries no payload",
   claude_demo_spend:
@@ -244,6 +245,7 @@ const RESET_KEEPS: Record<string, string> = {
   // Operational and provider plumbing a reset has no seeded state to restore
   // and no visitor path that writes one.
   notification_rate_limit_state: "provider coordination state, not shop records",
+  rate_limit_buckets: "abuse-control counters, not shop records",
   stripe_webhook_events: "provider delivery ledger, pruned by retention, not by a reset",
   email_bounces:
     "DiveDay's record of mail SES bounced, pruned by retention, not by a reset; a demo mails only the simulator's success address",

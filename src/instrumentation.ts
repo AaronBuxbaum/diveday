@@ -1,5 +1,6 @@
 import type { captureRequestError } from "@sentry/nextjs";
 import { SENTRY_DSN } from "@/features/sentry-dsn";
+import { runtimeMode } from "@/lib/runtime-mode";
 
 /**
  * Runs once per server instance before it accepts requests. APP_HOST is
@@ -40,6 +41,18 @@ export async function register() {
   // Nothing was lost by inverting it — a browser has no CloudWatch credentials,
   // so that code returned on its first config read wherever it landed.
   setLogSink(recordLogLine);
+
+  // A real deployment shares its rate-limit buckets in Postgres, so a limit holds across every
+  // serverless instance (ADR 20261118-rate-limits-in-postgres). Installed here for the same
+  // reason as the sink above: `src/lib` takes no value import from `src/db`. Dev, the e2e fleet
+  // and unit tests have no database to share, so they keep the in-process store.
+  if (runtimeMode().realDatabase) {
+    const [{ setDefaultRateLimitStore }, { postgresRateLimitStore }] = await Promise.all([
+      import("@/lib/rate-limit"),
+      import("@/db/rate-limit-buckets"),
+    ]);
+    setDefaultRateLimitStore(postgresRateLimitStore(), "postgres");
+  }
 
   // Validates the *effective* origin, not the raw variable: with the default
   // compiled in, an override is the only thing that can be malformed, and it

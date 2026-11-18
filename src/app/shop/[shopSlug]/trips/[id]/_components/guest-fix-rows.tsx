@@ -342,6 +342,9 @@ export function guestFixRows(
           : phrase,
       tone,
       control,
+      arrivalControl:
+        mode === "checkin" && seat?.guest.checkedIn ? arrival?.controls.get(item.guestId) : null,
+      panelHoldsArrival: seat?.panelHoldsArrival,
       openLabel,
       panelHoldsControl,
     };
