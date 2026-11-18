@@ -28,6 +28,9 @@ test("every phase of a departure opens from the strip, and Edit trip beside them
     "page",
   );
   await expect(page.locator('[data-phase-panel="checkin"]')).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: t("trips.clock.wrapped.reportOne") }),
+  ).toBeVisible();
   for (const phase of PHASES) {
     await openTripPhase(page, phase);
     await expect(page.locator(`[data-phase-panel="${phase}"]`)).toBeVisible();
@@ -82,7 +85,11 @@ test.describe("isolated wrapped fixture", () => {
       [{ name: "boatOnTheWater", state: "unfinished" }],
       { slug: privateShop.slug },
     )) as { boatOnTheWater: { tripId: string } };
-    await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
+    await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=checkin`);
+    await page
+      .getByRole("link", { name: t("trips.clock.wrapped.lookBackOpen", { count: 2 }) })
+      .click();
+    await page.waitForURL(/phase=wrapped$/);
     const wrapped = page.locator('[data-phase-panel="wrapped"]');
     const noLog = wrapped.getByText(t("trips.clock.wrapped.noLog", { dive: 2 }), { exact: true });
     await expect(noLog).toBeVisible();
