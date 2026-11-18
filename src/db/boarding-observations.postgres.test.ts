@@ -168,11 +168,14 @@ describePostgres("a dock sighting is never held behind a schedule edit", () => {
       ready = resolve;
     });
     const connection = ctx.pg.connect();
+    let firstPid = 0;
     const delayed = new Proxy(connection, {
       get(target, property, receiver) {
         if (property === "transaction") {
           return (work: Parameters<AppDb["transaction"]>[0]) =>
             target.transaction(async (tx) => {
+              const pid = await tx.execute(sql`select pg_backend_pid() as pid`);
+              firstPid = Number((pid.rows[0] as { pid: number }).pid);
               const result = await work(tx);
               ready();
               await gate;
@@ -191,6 +194,25 @@ describePostgres("a dock sighting is never held behind a schedule edit", () => {
     };
     const first = recordBoardingObservation(delayed, { ...input, bookingId: ctx.late });
     void first.catch(() => undefined);
+    let identifyContender!: (pid: number) => void;
+    const contenderPid = new Promise<number>((resolve) => {
+      identifyContender = resolve;
+    });
+    const contenderConnection = ctx.pg.connect();
+    const contender = new Proxy(contenderConnection, {
+      get(target, property, receiver) {
+        if (property === "transaction") {
+          return (work: Parameters<AppDb["transaction"]>[0]) =>
+            target.transaction(async (tx) => {
+              const result = await tx.execute(sql`select pg_backend_pid() as pid`);
+              identifyContender(Number((result.rows[0] as { pid: number }).pid));
+              return work(tx);
+            });
+        }
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
     let second: ReturnType<typeof recordBoardingObservation> | undefined;
     onTestFinished(async () => {
       release();
@@ -199,20 +221,38 @@ describePostgres("a dock sighting is never held behind a schedule edit", () => {
     try {
       const held = await Promise.race([inserted.then(() => true), first.then(() => false)]);
       if (!held) throw new Error("first transaction finished before its commit gate");
-      second = recordBoardingObservation(ctx.pg.connect(), { ...input, bookingId: ctx.aboard });
+      second = recordBoardingObservation(contender, { ...input, bookingId: ctx.aboard });
       void second.catch(() => undefined);
-      await Promise.race([
-        waitForLockWaiters(ctx.pg.db, 1, 1_500),
+      const pid = await Promise.race([
+        contenderPid,
         second.then(() => {
-          throw new Error("second transaction finished before blocking on the key");
+          throw new Error("second transaction finished before identifying its connection");
         }),
       ]);
-      const waiting = await ctx.pg.db.execute(sql`
-        select count(*)::int as count from pg_stat_activity
-        where datname = current_database() and wait_event_type = 'Lock'
-          and query like '%boarding_%'
-      `);
-      expect(Number((waiting.rows[0] as { count: number }).count)).toBeGreaterThan(0);
+      let contenderFinished = false;
+      void second.then(
+        () => {
+          contenderFinished = true;
+        },
+        () => {
+          contenderFinished = true;
+        },
+      );
+      const deadline = performance.now() + 4_000;
+      let blocked = false;
+      while (performance.now() < deadline && !contenderFinished) {
+        const waiting = await ctx.pg.db.execute(sql`
+          select count(*)::int as count from pg_stat_activity
+          where datname = current_database() and pid = ${pid} and wait_event_type = 'Lock'
+            and ${firstPid} = any(pg_blocking_pids(pid)) and query like '%boarding_%'
+        `);
+        if (Number((waiting.rows[0] as { count: number }).count) > 0) {
+          blocked = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(blocked, "second transaction did not block on the first boarding write").toBe(true);
     } finally {
       release();
     }
