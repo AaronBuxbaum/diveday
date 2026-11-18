@@ -292,6 +292,7 @@ describe("loadOfflineManifest", () => {
     const unreadable = {
       ...previous,
       expiresAt: EXPIRED_PAST_GRACE,
+      pendingEvents: 0,
       ciphertext: new Uint8Array([1, 2, 3, 4]).buffer,
     };
     await new Promise<void>((resolve, reject) => {
@@ -310,6 +311,59 @@ describe("loadOfflineManifest", () => {
     });
     await expect(loadOfflineManifest(tripId)).rejects.toThrow();
     expect(await rawStoredRecord(tripId)).toEqual(unreadable);
+  });
+  it("retains a real pending event's ciphertext when the device key no longer matches", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    expect((await loadOfflineManifest(tripId))?.events[0].syncStatus).toBe("pending");
+    const previous = (await rawStoredRecord(tripId)) as Record<string, unknown>;
+    const retained = { ...previous, expiresAt: EXPIRED_PAST_GRACE, pendingEvents: 0 };
+    const otherKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+      "encrypt",
+      "decrypt",
+    ]);
+    const iv = new Uint8Array(12);
+    const plaintext = new TextEncoder().encode("key continuity");
+    const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, otherKey, plaintext);
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction(["manifests", "keys"], "readwrite");
+        tx.objectStore("manifests").put(retained);
+        tx.objectStore("keys").put(otherKey, "manifest-aes-gcm-v1");
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+    await expect(loadOfflineManifest(tripId)).rejects.toThrow();
+    expect(await rawStoredRecord(tripId)).toEqual(retained);
+    const storedKey = await new Promise<CryptoKey>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("keys", "readonly");
+        const read = tx.objectStore("keys").get("manifest-aes-gcm-v1");
+        read.onsuccess = () => {
+          db.close();
+          resolve(read.result as CryptoKey);
+        };
+        read.onerror = () => reject(read.error);
+      };
+    });
+    expect(
+      new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, storedKey, encrypted)),
+    ).toEqual(plaintext);
   });
   it("withholds but retains unsent evidence after the pending grace period", async () => {
     const tripId = payload.manifests[0].trip.id;
