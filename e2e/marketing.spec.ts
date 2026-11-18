@@ -364,8 +364,10 @@ for (const kept of [
   }) => {
     const t = diverTranslator("en-US");
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto("/");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
+    await boat.locator("[data-boat-scene]").scrollIntoViewIfNeeded();
+    await expect(boat.locator("canvas")).toHaveAttribute("data-boat-focus", "overview");
     const button = (name: string) => boat.getByRole("button", { name, exact: true });
     await button(t("marketing.home.boat.desk.open")).click();
     await recordSampleCardMatch(boat, t);
