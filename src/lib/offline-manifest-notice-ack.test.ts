@@ -2,6 +2,7 @@
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it } from "vitest";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
+import { rawStoredRecord } from "@/test/offline-raw-record";
 import {
   acknowledgeDiscardedOfflineRecords,
   appendOfflineArrival,
@@ -65,12 +66,48 @@ const payload: OfflineManifestPayload = {
   ],
 };
 
-async function recordLoss(record: OfflineManifestPayload = payload): Promise<void> {
+async function recordLoss(
+  record: OfflineManifestPayload = payload,
+  pendingEvents = 1,
+): Promise<void> {
   const id = record.manifests[0].trip.id;
+  // These notices represent losses recorded by an older release. Seed the
+  // historical metadata rather than destroy a current pending event to make one.
   await saveOfflineManifest(record);
-  await appendOfflineRollCall(id, { bookingId, checkpoint: "departure", status: "not_boarded" });
-  await backdateExpiry(id);
-  await loadOfflineManifest(id);
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("diveday-offline-manifests", 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction("keys", "readwrite");
+      const store = tx.objectStore("keys");
+      const get = store.get("discarded-pending-roll-call-v1");
+      get.onsuccess = () =>
+        store.put(
+          [
+            ...(get.result ?? []),
+            {
+              noticeId: crypto.randomUUID(),
+              tripId: id,
+              tripTitle: record.manifests[0].trip.title,
+              shopName: record.shop.name,
+              shopSlug: record.shop.slug,
+              pendingEvents,
+              discardedAt: TEST_FROZEN_CLOCK,
+            },
+          ],
+          "discarded-pending-roll-call-v1",
+        );
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+    };
+  });
 }
 
 function backdateExpiry(id: string): Promise<void> {
@@ -105,6 +142,32 @@ afterEach(
 );
 
 describe("acknowledgeDiscardedOfflineRecords", () => {
+  it("reads and acknowledges a historical combined-event count", async () => {
+    await recordLoss(payload, 2);
+    const notices = await readDiscardedOfflineRecords();
+    expect(notices).toMatchObject([{ pendingEvents: 2 }]);
+    await acknowledgeDiscardedOfflineRecords(notices);
+    expect(await readDiscardedOfflineRecords()).toEqual([]);
+  });
+  it("acknowledges historical minimal metadata without changing current pending evidence", async () => {
+    await recordLoss();
+    await appendOfflineRollCall(tripId, {
+      bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    const before = await rawStoredRecord(tripId);
+    const notices = await readDiscardedOfflineRecords();
+    expect(notices).toHaveLength(1);
+    const encoded = JSON.stringify(notices);
+    for (const secret of [bookingId, "Nora Quinn", "Sam Quinn", "+1-305-555-0100"]) {
+      expect(encoded).not.toContain(secret);
+    }
+    await acknowledgeDiscardedOfflineRecords(notices);
+    expect(await readDiscardedOfflineRecords()).toEqual([]);
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+    expect((await loadOfflineManifest(tripId))?.events[0]?.syncStatus).toBe("pending");
+  });
   it("keeps another shop's notice unseen when the visible shop is acknowledged", async () => {
     await recordLoss();
     await recordLoss({
@@ -136,7 +199,7 @@ describe("acknowledgeDiscardedOfflineRecords", () => {
     expect(await readDiscardedOfflineRecords()).toEqual([newer]);
   });
 
-  it("counts arrival and checklist evidence without describing it as roll call", async () => {
+  it("retains pending arrival and checklist evidence without a false discard notice", async () => {
     const withChecklist = {
       ...payload,
       checklist: { items: [{ id: "oxygen", label: "Oxygen kit" }] },
@@ -150,7 +213,9 @@ describe("acknowledgeDiscardedOfflineRecords", () => {
     });
     await backdateExpiry(tripId);
 
-    expect(await loadOfflineManifest(tripId)).toBeNull();
-    expect(await readDiscardedOfflineRecords()).toMatchObject([{ pendingEvents: 2 }]);
+    const before = await rawStoredRecord(tripId);
+    await expect(loadOfflineManifest(tripId)).rejects.toMatchObject({ code: "recovery_required" });
+    expect(await rawStoredRecord(tripId)).toEqual(before);
+    expect(await readDiscardedOfflineRecords()).toEqual([]);
   });
 });
