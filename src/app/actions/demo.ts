@@ -4,8 +4,8 @@ import { APIError } from "better-auth/api";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
+import { lockDemoResetEvidenceFirst } from "@/db/boarding-certification-snapshot";
 import { getDb } from "@/db/client";
-import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { DemoSightingCleanupBlocked } from "@/db/demo-sighting-guard";
 import { demoRoleEmail } from "@/db/people";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
@@ -252,7 +252,7 @@ export async function enterPreviewAction(formData: FormData) {
       await db.transaction(async (tx) => {
         const { first } = await recordPreviewOpen(tx, id, now);
         if (first) {
-          if (await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id)) {
+          if (await lockDemoResetEvidenceFirst(tx, shop.id)) {
             await resetDemoSchedule(tx, shop.id, "history");
           }
         }
@@ -289,7 +289,7 @@ export async function resetDemoAction() {
   if (shop?.isDemo) {
     try {
       reset = await db.transaction(async (tx) => {
-        if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id))) return false;
+        if (!(await lockDemoResetEvidenceFirst(tx, shop.id))) return false;
         await resetDemoSchedule(tx, shop.id, "history");
         return true;
       });

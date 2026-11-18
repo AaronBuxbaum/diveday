@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { releaseHelpRequestsOfPerson } from "@/features/help-requests";
 import { withdrawAccountTokens } from "../../db/account-tokens";
+import { lockBoardingCertificationEvidence } from "../../db/boarding-certification-snapshot";
 import { revokePersonCapabilities } from "../../db/capabilities";
 import type { AppDb, DbExecutor } from "../../db/client";
 import { lockDemoShopIdentityChanges } from "../../db/demo-account-guard";
@@ -353,6 +354,7 @@ export async function inviteStaffMember(
 
   try {
     const created = await db.transaction(async (tx) => {
+      await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
       await lockDemoShopIdentityChanges(tx, input.shopId);
       // A different shop's account already owns this email — user_accounts.email
       // is globally unique, so this must be refused before the insert throws a
@@ -532,6 +534,7 @@ export async function setStaffRoles(
   input: { shopId: string; personId: string; roles: Role[]; baseline?: readonly string[] },
 ): Promise<StaffMutationResult | { ok: false; reason: "roles_conflict" }> {
   return db.transaction(async (tx) => {
+    await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
     await lockDemoShopIdentityChanges(tx, input.shopId);
     if (!(await personInShop(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "not_found" };
@@ -592,6 +595,7 @@ export async function setStaffAccountStatus(
   input: { shopId: string; personId: string; userAccountId: string; status: "active" | "disabled" },
 ): Promise<StaffMutationResult> {
   return db.transaction(async (tx) => {
+    await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
     await lockDemoShopIdentityChanges(tx, input.shopId);
     if (!(await staffAccountInShop(tx, input.shopId, input.personId, input.userAccountId))) {
       return { ok: false, reason: "not_found" };
@@ -693,6 +697,7 @@ export async function removeStaffMember(
   input: { shopId: string; personId: string; userAccountId: string },
 ): Promise<StaffMutationResult> {
   return db.transaction(async (tx) => {
+    await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
     await lockDemoShopIdentityChanges(tx, input.shopId);
     if (!(await staffAccountInShop(tx, input.shopId, input.personId, input.userAccountId))) {
       return { ok: false, reason: "not_found" };
