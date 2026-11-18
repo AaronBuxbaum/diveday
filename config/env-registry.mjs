@@ -612,8 +612,8 @@ export const ENV_GROUPS = [
     doc: [
       "The public pricing offer: monthly fee plus a share of card money collected",
       "through DiveDay. PRICING_MONTHLY_CENTS 0-100000; PRICING_BASIS_POINTS 0-1000",
-      "(300 is 3%). Set either component and the omitted component is zero. With",
-      "both unset or blank, the default is $0/month plus 3%. Explicit",
+      "(100 is 1%). Set either component and the omitted component is zero. With",
+      "both unset or blank, the default is $0/month plus 1%. Explicit",
       "zeroes configure a free offer. One invalid value refuses the whole offer",
       "and restores the default. Edit the values and redeploy to change the offer.",
       "A subscriber keeps the numbers Checkout sold it whatever these say later.",
@@ -633,7 +633,7 @@ export const ENV_GROUPS = [
         key: "PRICING_BASIS_POINTS",
         from: "manual",
         targets: LOCAL_AND_VERCEL,
-        absent: "3% when neither pricing component is set; zero when only monthly cents is set",
+        absent: "1% when neither pricing component is set; zero when only monthly cents is set",
       },
       {
         key: "BILLING_STRIPE_PERCENT_PRICE_ID",

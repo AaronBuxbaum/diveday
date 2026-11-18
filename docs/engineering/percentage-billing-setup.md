@@ -5,7 +5,7 @@ This guide configures Stripe; source defaults alone do not enable collections.
 
 ```text
 Enable percentage billing
-    when     before accepting subscriptions on the default $0/month plus 3% offer; test mode first
+    when     before accepting subscriptions on the default $0/month plus 1% offer; test mode first
     why      DiveDay computes the fee in cents from money recorded received by any payment method, net of linked reversals, excluding separately recorded tax, tips, pass-through fees and imported history. Stripe collects that fee via a Billing Meter, not a Connect application fee.
     run      Finish [10], retaining BILLING_STRIPE_PRICE_ID as the original $99 monthly price for flat subscriptions. It is still required even when the new offer has no monthly charge.
              In DiveDay's Stripe account, create a Billing Meter with sum aggregation, event name diveday_percent_fee, customer mapping stripe_customer_id and value field value.
@@ -15,7 +15,7 @@ Enable percentage billing
              Set PRICING_MONTHLY_CENTS=0 and PRICING_BASIS_POINTS=100 explicitly, then redeploy. Both blank also select this default; setting only monthly cents makes the omitted percentage zero.
     store    Billing credentials in 1Password and .env.manual, deployed through .env.vercel. Keep test and live Stripe objects and keys separate.
     verify   In test mode, a non-demo owner's Billing page shows 1% and no monthly fee, and Add a card opens Checkout with only the metered price. Complete test Checkout and confirm the signed billing webhook records the subscription and terms.
-             Exercise the monthly close in staging with controlled eligible receipts: $1,000 net eligible volume produces a $20 statement, a meter value of 2000, and a $20 usage charge, not $2,000. Check invoice timing and refunds before switching to live.
+             Exercise the monthly close in staging with controlled eligible receipts: $1,000 net eligible volume produces a $10 statement, a meter value of 1000 fee-cent units, and a $10 usage charge, not $1,000. Check invoice timing and refunds before switching to live.
              The existing /api/cron/pricing-volume schedule closes months on the 2nd and 3rd. Verify CRON_SECRET and scheduled invocations work, inspect failed reports, and confirm a canceled subscription's final month produces its invoice.
     if not   Without both percentage variables, percentage Checkout is disabled and closes can write statements but cannot report usage. A configured key with insufficient Stripe permissions can still render Add a card, so a real test-mode checkout and close are required.
     note     Subscriber snapshots and hand-set deals retain their terms. No customers exist yet; there is no receipt backfill. Changing source defaults does not create Stripe resources or change deployed environment overrides.
