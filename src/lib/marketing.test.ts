@@ -310,9 +310,13 @@ describe("the builder's notes say we", () => {
     expect(singular).toEqual([]);
   });
 
-  it("says we left the ready-everyone button out, in both locales", () => {
-    expect(marketingMessages("en-US")["marketing.home.steps.check.note2"]).toMatch(/\bWe left\b/);
-    expect(marketingMessages("es-ES")["marketing.home.steps.check.note2"]).toMatch(/\bdejamos\b/);
+  it("says the list contains people who still need attention, in both locales", () => {
+    expect(marketingMessages("en-US")["marketing.home.steps.check.note"]).toMatch(
+      /only holds.*still need you/i,
+    );
+    expect(marketingMessages("es-ES")["marketing.home.steps.check.note"]).toMatch(
+      /solo quedan.*todavía te necesitan/i,
+    );
   });
 
   it("promises no ready-everyone button in the check step, in both locales", () => {
@@ -394,19 +398,27 @@ describe("the manifest's offline answer lives on the boat manifest page alone", 
   }
 });
 
-/** Rival fees belong to the operator's actual plan and agreement, not a guessed rate. */
-describe("the fee anchor compares contractual terms without inventing a rival rate", () => {
+/** The current comparison labels estimates and directs shops to their own agreements. */
+describe("the fee comparison identifies estimates and agreement-dependent costs", () => {
   for (const locale of DIVER_LOCALES) {
-    it(`keeps FareHarbor's agreement and Rezdy's plan in view in ${locale}`, () => {
+    it(`distinguishes reported FareHarbor fees and the provider agreements in ${locale}`, () => {
       const messages = marketingMessages(locale);
-      expect(messages["marketing.pricing.feeAnchor.fareharbor"]).toMatch(
-        locale === "en-US" ? /provider agreement/ : /contrato con el proveedor/,
-      );
-      expect(messages["marketing.pricing.feeAnchor.rezdy"]).toMatch(
-        locale === "en-US" ? /plan, market, and booking channel/ : /plan, el mercado y el canal/,
+      expect(messages["marketing.pricing.compare.systems.fareharbor.note"]).toMatch(
+        locale === "en-US"
+          ? /reported figure, not a published one.*negotiated shop by shop/i
+          : /cifra comunicada, no publicada.*negociada centro por centro/i,
       );
       for (const rival of ["fareharbor", "rezdy"] as const) {
-        expect(messages[`marketing.pricing.feeAnchor.${rival}`]).not.toMatch(/\d+%/);
+        const guide = messages[`marketing.guides.${rival}.context.item3`];
+        expect(guide).toMatch(
+          locale === "en-US"
+            ? /agreement.*contract and booking mix/i
+            : /acuerdo.*contrato y tus reservas/i,
+        );
+        expect(guide).toMatch(
+          locale === "en-US" ? /does not estimate savings/i : /no calcula ahorros/i,
+        );
+        expect(guide).not.toMatch(/\d+\s?%/);
       }
     });
   }
