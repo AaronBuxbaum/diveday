@@ -255,11 +255,15 @@ const FACTS = {
     { privateOnly: true },
   ),
   manifestOverCapacity: ({ db, shop, now }) => seedManifestOverCapacityState(db, shop.id, now),
-  operationalTrust: withArgs(operationalTrustArgs, ({ db, shop, now }, args) =>
-    seedOperationalTrustFact(db, shop, args, now),
+  operationalTrust: withArgs(
+    operationalTrustArgs,
+    ({ db, shop, now }, args) => seedOperationalTrustFact(db, shop, args, now),
+    { privateOnly: true },
   ),
-  boatOnTheWater: withArgs(boatOnTheWaterArgs, ({ db, shop, now }, args) =>
-    putABoatOnTheWater(db, shop, args, now),
+  boatOnTheWater: withArgs(
+    boatOnTheWaterArgs,
+    ({ db, shop, now }, args) => putABoatOnTheWater(db, shop, args, now),
+    { privateOnly: true },
   ),
   fiveDivePrint: ({ db, shop, now }) => logFiveDivesForPrint(db, shop, now),
   flySafeFollowUp: ({ db, shop, now }) => failTheFlySafeCorrections(db, shop, now),

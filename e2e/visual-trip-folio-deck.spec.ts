@@ -73,12 +73,17 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         context,
         request,
+        privateShop,
       }) => {
-        const { operationalTrust: ready } = await seedFacts(request, [
-          { name: "operationalTrust", state: "capacity" },
-        ]);
+        const { operationalTrust: ready } = await seedFacts(
+          request,
+          [{ name: "operationalTrust", state: "capacity" }],
+          { slug: privateShop.slug },
+        );
         const name = ready.seats[0].fullName;
-        await page.goto(`/shop/blue-mantis/trips/${ready.tripId}/manifest?checkpoint=after_dive_1`);
+        await page.goto(
+          `/shop/${privateShop.slug}/trips/${ready.tripId}/manifest?checkpoint=after_dive_1`,
+        );
         await offlineCopySaved(page);
         await settleOfflineShellWorker(page);
         await page.goto(`/offline-manifest?trip=${ready.tripId}&checkpoint=after_dive_1`);

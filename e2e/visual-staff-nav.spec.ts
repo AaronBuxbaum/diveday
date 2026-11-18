@@ -348,6 +348,26 @@ test.describe("staff navigation", () => {
       });
       await capture(page, "staff-navigation-spanish-enlarged-text-divers", "light", {
         locale: SPANISH,
+        beforeScreenshot: async () => {
+          const divers = page
+            .locator("[data-staff-tab-scroll] a")
+            .filter({ hasText: "Buceadores" });
+          if (await divers.isVisible()) {
+            await expect
+              .poll(() =>
+                divers.evaluate((tab) => {
+                  const rail = tab.closest("[data-staff-tab-scroll]");
+                  if (!rail) throw new Error("Buceadores tab has no scroll rail");
+                  const bounds = rail.getBoundingClientRect();
+                  const box = tab.getBoundingClientRect();
+                  return box.left >= bounds.left - 0.5 && box.right <= bounds.right + 0.5;
+                }),
+              )
+              .toBe(true);
+          }
+          await expectNavigationDoesNotExpandPage(page);
+          await expectScrollCueMatchesRail(page);
+        },
         beforeShot: async () => {
           await page.locator("[data-staff-tab-scroll]").evaluate((element) => {
             const links = [...element.querySelectorAll<HTMLAnchorElement>("a")];

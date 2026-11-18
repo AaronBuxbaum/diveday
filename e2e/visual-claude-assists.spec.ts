@@ -23,6 +23,7 @@ import {
   capture,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   REEF_TRIP,
   SAILED_TRIP,
   SURFACE_TIMEOUT_MS,
@@ -289,11 +290,16 @@ test.describe("light mode — Claude's assists, lit", () => {
       await openTripTab(page, "Manifest");
       await offlineCopySaved(page);
       await openDeckDetails(page);
+      const confirmed = liveRosterConfirmation(page, {
+        tripId: new URL(page.url()).pathname.split("/")[4],
+        checkpoint: "after_dive_1",
+      });
       await page
         .getByRole("link", { name: "After dive 1" })
         .evaluate((link: HTMLElement) => link.click());
       await page.waitForURL(/checkpoint=after_dive_1/);
       await openDeckDetails(page);
+      await confirmed;
       const seen = page.getByRole("region", { name: "Seen" });
       await seen.getByRole("combobox").fill("seaho");
       await expect(seen.getByRole("option").first()).toBeVisible();
@@ -309,6 +315,16 @@ test.describe("light mode — Claude's assists, lit", () => {
       await capture(page, "assist-sightings", "light");
       await add.click();
       await expect(seen.getByRole("listitem").first()).toBeVisible();
+      // Sighting writes supersede the roster proof. Keep the immediate save
+      // assertion above, then photograph the persisted list and a live roster.
+      const persisted = liveRosterConfirmation(page, {
+        tripId: new URL(page.url()).pathname.split("/")[4],
+        checkpoint: "after_dive_1",
+      });
+      await page.reload();
+      await openDeckDetails(page);
+      await persisted;
+      await expect(seen.getByRole("listitem")).toHaveCount(1);
       await capture(page, "sightings-custom-saved", "light");
 
       // Free-text sightings stay out of AI facts. Give the recap a catalog fact.

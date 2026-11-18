@@ -47,11 +47,14 @@ test("every phase of a departure opens from the strip, and Edit trip beside them
 test("On the water opens the roll call for the dive that just ended in one tap", async ({
   page,
   request,
+  privateShop,
 }) => {
-  const { boatOnTheWater } = (await seedFacts(request, [
-    { name: "boatOnTheWater", state: "outstanding" },
-  ])) as { boatOnTheWater: { tripId: string } };
-  await page.goto(`/shop/blue-mantis/trips/${boatOnTheWater.tripId}`);
+  const { boatOnTheWater } = (await seedFacts(
+    request,
+    [{ name: "boatOnTheWater", state: "outstanding" }],
+    { slug: privateShop.slug },
+  )) as { boatOnTheWater: { tripId: string } };
+  await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}`);
   const water = page.locator('[data-phase-panel="water"]');
   await expect(water).toBeVisible();
   await water.getByRole("link", { name: t("trips.clock.water.openRollCall"), exact: true }).click();
@@ -62,11 +65,17 @@ test("On the water opens the roll call for the dive that just ended in one tap",
  * **Close out a wrapped trip.** Wrapped up lists what is left (a dive with no
  * log), each with its fix; logging the dive takes it off the list.
  */
-test("Wrapped up lists what is left, and logging the dive closes it", async ({ page, request }) => {
-  const { boatOnTheWater } = (await seedFacts(request, [
-    { name: "boatOnTheWater", state: "unfinished" },
-  ])) as { boatOnTheWater: { tripId: string } };
-  await page.goto(`/shop/blue-mantis/trips/${boatOnTheWater.tripId}?phase=wrapped`);
+test("Wrapped up lists what is left, and logging the dive closes it", async ({
+  page,
+  request,
+  privateShop,
+}) => {
+  const { boatOnTheWater } = (await seedFacts(
+    request,
+    [{ name: "boatOnTheWater", state: "unfinished" }],
+    { slug: privateShop.slug },
+  )) as { boatOnTheWater: { tripId: string } };
+  await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
   const wrapped = page.locator('[data-phase-panel="wrapped"]');
   const noLog = wrapped.getByText(t("trips.clock.wrapped.noLog", { dive: 2 }), { exact: true });
   await expect(noLog).toBeVisible();
@@ -77,7 +86,7 @@ test("Wrapped up lists what is left, and logging the dive closes it", async ({ p
   await log.getByLabel(/Maximum depth/).fill("12");
   await log.getByRole("button", { name: "Save dive record" }).click();
   await expect(log.getByText("Dive record saved")).toBeVisible();
-  await page.goto(`/shop/blue-mantis/trips/${boatOnTheWater.tripId}?phase=wrapped`);
+  await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
   await expect(wrapped).toBeVisible();
   await expect(noLog).toHaveCount(0);
 });
