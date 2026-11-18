@@ -238,14 +238,14 @@ test.describe("as owner", () => {
   }) => {
     await seedFacts(request, ["stripeAccount"]);
 
-    // A customer but no line items at all: refused by the action itself, no
-    // payment intent and no Stripe call.
+    // A customer but no line items at all: the browser stops the submit at the empty
+    // description, so no payment intent and no Stripe call.
     await page.goto(NEW_ORDER);
     await chooseOrderCustomer(page, CUSTOMER);
     await page.getByRole("button", { name: "Create and send invoice" }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "Pick a customer" })).toContainText(
-      "Pick a customer and at least one line item with an amount.",
-    );
+    await expect(
+      page.locator('input[name="description-0"]:invalid').filter({ visible: true }),
+    ).toHaveCount(1);
 
     // A typed line whose amount is past the bound fails the *whole*
     // submission rather than silently dropping that row — a staff member who
@@ -255,7 +255,6 @@ test.describe("as owner", () => {
     // as the one above, so asserting against a page that still carries the
     // previous banner would pass without the second submission ever happening.
     await page.goto(NEW_ORDER);
-    await expect(page.getByRole("alert").filter({ hasText: "Pick a customer" })).toHaveCount(0);
     await chooseOrderCustomer(page, CUSTOMER);
     await page
       .locator('input[name="description-0"]')
@@ -298,6 +297,12 @@ test.describe("as owner", () => {
         .fill(String(index + 1));
     }
     await page.locator('input[name="description-19"]').filter({ visible: true }).clear();
+    // The browser would stop an empty description first; this line is about the server's refusal.
+    await page
+      .locator("form", { has: page.locator('input[name="description-19"]') })
+      .evaluate((form) => {
+        (form as HTMLFormElement).noValidate = true;
+      });
     const invalidLanding = page.waitForURL(/notice=invalid/);
     await page.getByRole("button", { name: staffCopy("orders.new.submit") }).click();
     await invalidLanding;

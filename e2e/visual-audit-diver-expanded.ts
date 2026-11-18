@@ -111,7 +111,7 @@ export function registerDiverExpandedAuditCaptures(capture: AuditCapture) {
       await openRecord(page);
       const gear = await openDiverFileGroup(page, copy("divers.file.gearHeading"));
       await gear.getByText("Edit", { exact: true }).click();
-      await gear.getByLabel("BCD size", { exact: true }).waitFor();
+      await gear.getByLabel("BCD size (optional)", { exact: true }).waitFor();
       await gear.getByRole("button", { name: "Save rental fit", exact: true }).waitFor();
       await capture(page, "diver-rental-fit-editor-open", "light");
     });

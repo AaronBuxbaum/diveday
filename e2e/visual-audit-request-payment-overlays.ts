@@ -184,7 +184,9 @@ export function registerRequestPaymentOverlayAuditCaptures(
         .getByLabel(staffCopy("orders.detail.recordPayment.roomNumber"), { exact: true })
         .fill("214B");
       await room
-        .getByLabel(staffCopy("orders.detail.recordPayment.roomHotel"), { exact: true })
+        .getByLabel(`${staffCopy("orders.detail.recordPayment.roomHotel")} (optional)`, {
+          exact: true,
+        })
         .fill("Harbor House Resort");
       await room
         .getByRole("button", { name: staffCopy("orders.detail.recordPayment.roomConfirm") })
