@@ -3878,6 +3878,7 @@
     "signIn": {
       "metaTitle": "Iniciar sesión — DiveDay",
       "title": "Bienvenido de nuevo",
+      "deviceCleanupIncomplete": "Este dispositivo todavía puede contener información privada o cambios sin enviar. Conserva el dispositivo y sus datos de navegación, y pide ayuda a tu centro.",
       "error": "Ese correo y contraseña no coinciden.",
       "twoFactorCode": "Código de acceso",
       "twoFactorHint": "Usa un código de tu aplicación de autenticación o uno de tus códigos de recuperación.",
