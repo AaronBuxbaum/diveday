@@ -1,7 +1,14 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { demoRoleEmail } from "@/db/people";
-import { demoPreviews, shops } from "@/db/schema";
+import {
+  boardingObservations,
+  bookings,
+  demoPreviews,
+  people,
+  personRoles,
+  shops,
+} from "@/db/schema";
 import { DEMO_SHOP_BRAND } from "@/db/seed-shop-brand";
 import { findPreview, issuePreview, type PreviewInput } from "@/features/demo-preview";
 import { nowDate } from "@/lib/clock";
@@ -98,6 +105,36 @@ beforeEach(() => {
 });
 
 describe("enterPreviewAction", () => {
+  it("refuses a first open without consuming it when reset encounters a sighting", async () => {
+    const preview = await issuePreview(ctx.db, PROSPECT, NOW);
+    const [shop] = await ctx.db.select().from(shops).where(eq(shops.slug, preview.shopSlug));
+    const [booking] = await ctx.db.select().from(bookings).where(eq(bookings.shopId, shop.id));
+    const [staff] = await ctx.db
+      .select({ id: personRoles.personId })
+      .from(personRoles)
+      .innerJoin(people, eq(people.id, personRoles.personId))
+      .where(eq(people.shopId, shop.id));
+    if (!booking || !staff) throw new Error("fixture missing");
+    const [observation] = await ctx.db
+      .insert(boardingObservations)
+      .values({
+        shopId: shop.id,
+        bookingId: booking.id,
+        tripId: booking.tripId,
+        recordedByPersonId: staff.id,
+        clientKey: crypto.randomUUID(),
+      })
+      .returning();
+    expect(await enter(preview.id)).toBe("/sign-in?error=demo");
+    expect((await findPreview(ctx.db, preview.id))?.openCount).toBe(0);
+    expect(hoisted.signInDiveDayCredentials).not.toHaveBeenCalled();
+    expect(
+      await ctx.db
+        .select()
+        .from(boardingObservations)
+        .where(eq(boardingObservations.id, observation.id)),
+    ).toEqual([observation]);
+  });
   it("signs the visitor in as the preview shop's owner, lands on Today, and counts one open", async () => {
     const preview = await issuePreview(ctx.db, PROSPECT, NOW);
 

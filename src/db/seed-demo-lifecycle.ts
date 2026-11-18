@@ -3,6 +3,7 @@ import { DAY_MS, nowMs } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { DemoSightingCleanupBlocked, refuseEncounteredDockSightings } from "./demo-sighting-guard";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import {
   clearCompletedDemoPhotoObligations,
@@ -17,7 +18,6 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
-  boardingObservations,
   boatSnags,
   boats,
   bookingArrivalEvents,
@@ -231,7 +231,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
-  await db.delete(boardingObservations).where(eq(boardingObservations.shopId, shopId));
+  await refuseEncounteredDockSightings(db, shopId);
   // Incident reports name bookings, people and the departure, so they go first.
   await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
   // Each report takes its people rows with it (cascade): a raised report
@@ -516,6 +516,10 @@ export async function reapExpiredDemoShops(
       await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
       slugs.push(shop.slug);
     } catch (error) {
+      if (error instanceof DemoSightingCleanupBlocked) {
+        log("demo_sighting_cleanup_blocked", "warn", { shopId: shop.id });
+        continue;
+      }
       if (!(error instanceof Error) || error.message !== DEMO_PRIVATE_PHOTO_CLEANUP_REQUIRED)
         throw error;
       log("demo_private_photo_cleanup_pending", "warn", { shopId: shop.id });
