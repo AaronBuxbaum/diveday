@@ -3878,6 +3878,7 @@
     "signIn": {
       "metaTitle": "Sign in — DiveDay",
       "title": "Welcome back",
+      "deviceCleanupIncomplete": "This device may still hold private information or unsent changes. Keep the device and its browser data, and contact your shop for help.",
       "error": "That email and password don’t match.",
       "twoFactorCode": "Sign-in code",
       "twoFactorHint": "Use a code from your authenticator app or one of your recovery codes.",
