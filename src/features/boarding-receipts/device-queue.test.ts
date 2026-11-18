@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { captureDockTap } from "./device-queue";
+import { captureDockTap, persistPreparedDockTap, prepareDockTap } from "./device-queue";
 import { dockQueueEnabled } from "./device-queue-gate";
 
 vi.mock("./device-queue-gate", () => ({ dockQueueEnabled: vi.fn(() => false) }));
@@ -44,7 +44,10 @@ async function row(id: string) {
 describe("disabled dock queue", () => {
   it("does not open storage when disabled", async () => {
     const open = vi.spyOn(indexedDB, "open");
-    expect(await captureDockTap(input)).toEqual({ status: "disabled" });
+    expect(await captureDockTap(input)).toMatchObject({
+      status: "disabled",
+      attempt: { eventId: expect.any(String) },
+    });
     expect(open).not.toHaveBeenCalled();
   });
   it("commits a unique key and encrypted original intent before returning local retention", async () => {
@@ -81,14 +84,18 @@ describe("disabled dock queue", () => {
       request.addEventListener("success", () => this.transaction.abort());
       return request;
     });
-    expect(await captureDockTap(input)).toEqual({ status: "not_saved" });
+    expect(await captureDockTap(input)).toMatchObject({
+      status: "not_confirmed",
+      attempt: { eventId: expect.any(String) },
+    });
   });
   it("does not replace an existing event when IDs collide", async () => {
     vi.mocked(dockQueueEnabled).mockReturnValue(true);
     vi.spyOn(crypto, "randomUUID").mockReturnValue("00000000-0000-4000-8000-000000000001");
     expect((await captureDockTap(input)).status).toBe("retained_locally");
-    expect(await captureDockTap({ ...input, bookingId: "other-booking" })).toEqual({
-      status: "not_saved",
+    expect(await captureDockTap({ ...input, bookingId: "other-booking" })).toMatchObject({
+      status: "not_confirmed",
+      attempt: { eventId: "00000000-0000-4000-8000-000000000001" },
     });
     const stored = await row("00000000-0000-4000-8000-000000000001");
     if (!stored) throw new Error("original missing");
@@ -154,7 +161,10 @@ describe("disabled dock queue", () => {
     vi.mocked(dockQueueEnabled).mockReturnValue(true);
     const open = vi.spyOn(indexedDB, "open");
     vi.spyOn(crypto.subtle, "encrypt").mockRejectedValueOnce(new Error("failed"));
-    expect(await captureDockTap(input)).toEqual({ status: "not_saved" });
+    expect(await captureDockTap(input)).toMatchObject({
+      status: "not_saved",
+      attempt: { eventId: expect.any(String) },
+    });
     expect(open).not.toHaveBeenCalled();
   });
   it("retains two simultaneous taps under distinct generated keys", async () => {
@@ -172,7 +182,39 @@ describe("disabled dock queue", () => {
   it("refuses a tap with missing identity before opening storage", async () => {
     vi.mocked(dockQueueEnabled).mockReturnValue(true);
     const open = vi.spyOn(indexedDB, "open");
-    expect(await captureDockTap({ ...input, actorId: "" })).toEqual({ status: "not_saved" });
+    expect(await captureDockTap({ ...input, actorId: "" })).toEqual({ status: "invalid" });
     expect(open).not.toHaveBeenCalled();
+  });
+  it("keeps the same unsaved event and original context when a local write is retried", async () => {
+    vi.mocked(dockQueueEnabled).mockReturnValue(true);
+    vi.spyOn(crypto.subtle, "encrypt").mockRejectedValueOnce(new Error("unavailable"));
+    const failed = await captureDockTap(input);
+    if (failed.status !== "not_saved") throw new Error("expected unsaved attempt");
+    const parsed = JSON.parse(failed.attempt.serialized);
+    expect(parsed).toMatchObject({
+      eventId: failed.attempt.eventId,
+      bookingId: "booking-old",
+      originalMeeting: { kind: "unknown" },
+    });
+    expect(Object.isFrozen(failed.attempt)).toBe(true);
+    expect(await persistPreparedDockTap({ ...failed.attempt, eventId: "different" })).toEqual({
+      status: "invalid",
+    });
+    const retried = await persistPreparedDockTap(failed.attempt);
+    expect(retried).toEqual({ status: "retained_locally", eventId: failed.attempt.eventId });
+  });
+  it("keeps the same attempt when concurrent retries have an ambiguous outcome", async () => {
+    vi.mocked(dockQueueEnabled).mockReturnValue(true);
+    const attempt = prepareDockTap(input);
+    if (!attempt) throw new Error("preparation failed");
+    const results = await Promise.all([
+      persistPreparedDockTap(attempt),
+      persistPreparedDockTap(attempt),
+    ]);
+    expect(results.filter((item) => item.status === "retained_locally")).toHaveLength(1);
+    expect(results.filter((item) => item.status === "not_confirmed")).toEqual([
+      { status: "not_confirmed", attempt },
+    ]);
+    expect(await row(attempt.eventId)).toBeDefined();
   });
 });
