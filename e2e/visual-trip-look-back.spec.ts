@@ -15,7 +15,10 @@ for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
     test.describe("staff", () => {
-      test.use({ storageState: { cookies: [], origins: [] } });
+      test.use({
+        storageState: { cookies: [], origins: [] },
+        privateShopSlug: "trip-look-back-review",
+      });
       test(`a historical check-in points to open close-out items (${scheme})`, async ({
         page,
         request,
