@@ -324,6 +324,9 @@ describe("refreshSavedManifests (the push event)", () => {
     // names nobody, so all of them.
     expect(wipeOfflineMedicalAlerts).toHaveBeenCalledWith(undefined, 1);
     expect(vi.mocked(wipeOfflineMedicalAlerts).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(purgeOfflineManifestsExceptShop).mock.invocationCallOrder[0],
+    );
+    expect(vi.mocked(wipeOfflineMedicalAlerts).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
     );
   });
