@@ -50,7 +50,12 @@ export function GuideProof({ locale, source }: { locale: DiverLocale; source: Fu
                 </p>
                 <Link
                   href={href}
-                  className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
+                  className={buttonClass({
+                    variant: "link",
+                    arrow: true,
+                    flush: true,
+                    className: "mt-2",
+                  })}
                 >
                   {t(`switching.common.proof.${key}Link`)}
                 </Link>

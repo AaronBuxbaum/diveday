@@ -19,3 +19,10 @@ describe("a flush link", () => {
     );
   });
 });
+
+describe("an arrow link", () => {
+  it("draws its arrow from the style, only on a link", () => {
+    expect(buttonClass({ variant: "link", arrow: true })).toContain("after:content-['→']");
+    expect(buttonClass({ variant: "link" })).not.toContain("after:content-");
+  });
+});

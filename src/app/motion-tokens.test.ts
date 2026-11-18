@@ -78,17 +78,18 @@ describe("the motion tokens", () => {
     // reveal. They state a duration because they *are* the exception the
     // 600ms ceiling exists for, so the ceiling is asserted below rather than
     // waived.
-    // The homepage walkthrough's `walk-*` beats are paced to a demo a visitor watches, not to the
-    // app's speeds, so they state their own durations and the ceiling does not apply to them.
     const MOMENTS = ["boat-leaves", "marketing-device-arrive", "marketing-roll-call-settle"];
-    const literals = [...CSS.matchAll(/animation:\s*([\w-]+)\s+(\d+)ms/g)].filter(
-      ([, name]) => !name.startsWith("walk-"),
-    );
+    // The homepage walkthrough's drawn changes (a star landing, a row growing or closing) are paced
+    // to be seen across a room, not felt under a thumb, so the 600ms ceiling does not apply to them.
+    const WALK_MOMENTS = ["walk-star", "walk-grow", "walk-shrink"];
+    const literals = [...CSS.matchAll(/animation:\s*([\w-]+)\s+(\d+)ms/g)];
     expect(
-      literals.filter(([, name]) => !MOMENTS.includes(name)).map(([, n, ms]) => `${n} ${ms}ms`),
+      literals
+        .filter(([, name]) => !MOMENTS.includes(name) && !WALK_MOMENTS.includes(name))
+        .map(([, n, ms]) => `${n} ${ms}ms`),
       "a duration in milliseconds where a rung belongs",
     ).toEqual([]);
-    for (const [, name, ms] of literals) {
+    for (const [, name, ms] of literals.filter(([, name]) => !WALK_MOMENTS.includes(name))) {
       expect(
         Number(ms),
         `${name} is a drawn moment and sits under the ceiling`,

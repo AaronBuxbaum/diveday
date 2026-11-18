@@ -570,7 +570,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   ).toBeVisible();
 
   // The comparison counts FareHarbor and DiveDay the same way, with its sources written beside
-  // the figures (Aaron, 2026-11-18), and the calculator is one slider of money received.
+  // the figures (Aaron, 2026-11-18), with one slider of money received.
   const pricingCopy = diverTranslator("en-US");
   await expect(
     page.getByRole("heading", { name: pricingCopy("marketing.pricing.compare.title") }),
@@ -578,14 +578,8 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByRole("link", { name: /What moving off FareHarbor looks like/ }),
   ).toHaveAttribute("href", "/switching/fareharbor");
-  const calculator = page.getByRole("region", {
-    name: pricingCopy("marketing.pricing.calculator.title"),
-  });
-  await expect(calculator).toBeVisible();
   await expect(
-    calculator.getByRole("slider", {
-      name: pricingCopy("marketing.pricing.calculator.sliderLabel"),
-    }),
+    page.getByRole("slider", { name: pricingCopy("marketing.pricing.compare.sliderLabel") }),
   ).toBeVisible();
   for (const key of ["shopSize", "diverApp", "printedManifest", "devices", "currency"] as const) {
     await expect(

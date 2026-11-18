@@ -96,12 +96,11 @@ describe("/pricing with default percentage pricing", () => {
     vi.stubEnv("PRICING_BASIS_POINTS", "");
   });
 
-  it("hands the calculator and the comparison the configured offer", async () => {
+  it("hands the comparison the configured offer", async () => {
     const { offer, text } = await pricingBody(null);
     expect(offer).toEqual({ plan: "percent_of_volume", monthlyCents: 0, basisPoints: 200 });
     expect(text).toContain("What a month could cost");
-    expect(text).toContain("Illustrative months");
-    expect(text).toContain("The same month on FareHarbor and on DiveDay");
+    expect(text).not.toContain("The same month on FareHarbor and on DiveDay");
     expect(text).toContain("estimates, not quotes");
     // The DiveDay column's words come from the offer, so a changed rate is a changed column.
     expect(text).toContain("2% of money recorded as received in DiveDay");

@@ -4,7 +4,7 @@ import { Eyebrow } from "@/app/_components/Eyebrow";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { ARROW_LINK_CLASS, buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { DisclosureRow } from "@/components/ui/disclosure";
 import { groupLabelClass } from "@/components/ui/group-label";
 import {
@@ -633,7 +633,12 @@ export function ImportPhase({
           2026-10-24, B14); every guide links to it. */}
       <Link
         href="/switching#preview"
-        className={buttonClass({ variant: "link", flush: true, className: "mt-4 text-start" })}
+        className={buttonClass({
+          variant: "link",
+          arrow: true,
+          flush: true,
+          className: "mt-4 text-start",
+        })}
       >
         {t("switching.common.previewLink")}
       </Link>
@@ -692,7 +697,7 @@ export function ClosingCta({
           <FunnelCtas locale={locale} source={source} setUp={false} />
           <Link
             href="/switching"
-            className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
+            className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline ${ARROW_LINK_CLASS}`}
           >
             {backLabel}
           </Link>

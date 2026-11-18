@@ -255,7 +255,12 @@ export async function FeaturePageBody({
               </p>
               <Link
                 href="/pricing"
-                className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
+                className={buttonClass({
+                  variant: "link",
+                  arrow: true,
+                  flush: true,
+                  className: "mt-2",
+                })}
               >
                 {t("marketing.featureChrome.pricingLink")}
               </Link>
@@ -317,7 +322,10 @@ export async function FeaturePageBody({
               <h2 className={`${SUB_TITLE_CLASS} sm:text-2xl`}>
                 {t("marketing.featureChrome.relatedTitle")}
               </h2>
-              <Link href="/product" className={buttonClass({ variant: "link", flush: true })}>
+              <Link
+                href="/product"
+                className={buttonClass({ variant: "link", arrow: true, flush: true })}
+              >
                 {t("marketing.featureChrome.allFeatures")}
               </Link>
             </div>

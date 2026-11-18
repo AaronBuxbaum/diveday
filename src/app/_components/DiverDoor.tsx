@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ARROW_LINK_CLASS } from "@/components/ui/button";
 import { homeDiverDoorEnabled } from "@/features/home-diver-door";
 import type { DiverTranslator } from "@/i18n/messages";
 import { FIND_YOUR_BOOKING_PATH } from "@/lib/public-routes";
@@ -23,7 +24,7 @@ export function DiverDoor({ t }: { t: DiverTranslator }) {
       {t("marketing.home.diverDoor")}{" "}
       <Link
         href={FIND_YOUR_BOOKING_PATH}
-        className="font-medium text-primary underline-offset-4 hover:underline"
+        className={`font-medium text-primary underline-offset-4 hover:underline ${ARROW_LINK_CLASS}`}
       >
         {t("marketing.home.diverDoorLink")}
       </Link>

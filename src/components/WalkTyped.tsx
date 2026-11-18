@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
+/** One typing rate for every field in the walk: 40 ms a character is about 300 words a minute. */
+export const WALK_TYPE_CHAR_MS = 40;
+
 /**
  * Text Priya types into a drawn field. In the homepage walkthrough's first phase the characters
  * arrive left to right (`data-walk-type`, `globals.css`), starting `delay` ms into the beat; in
@@ -11,7 +14,13 @@ export function WalkTyped({ text, delay = 0 }: { text: string; delay?: number })
     <span
       data-walk-type=""
       className="inline-block align-bottom"
-      style={{ "--type-chars": text.length, "--type-delay": `${delay}ms` } as CSSProperties}
+      style={
+        {
+          "--type-chars": text.length,
+          "--type-delay": `${delay}ms`,
+          "--type-ms": `${WALK_TYPE_CHAR_MS}ms`,
+        } as CSSProperties
+      }
     >
       {text}
     </span>
