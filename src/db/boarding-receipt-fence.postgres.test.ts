@@ -1,8 +1,10 @@
 import { sql } from "drizzle-orm";
 import { expect, it, onTestFinished } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
-import { tryLockBoardingEvidenceForReceipt } from "./boarding-receipt-fence";
+import {
+  lockBoardingCertificationEvidence,
+  tryLockBoardingEvidenceForReceipt,
+} from "./boarding-certification-snapshot";
 
 // This tests one lock primitive only; no receipt, reset, authorization, or
 // device-retention contract is implemented or enabled by it.

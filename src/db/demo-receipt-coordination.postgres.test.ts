@@ -1,8 +1,10 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { tryLockBoardingEvidenceForReceipt } from "./boarding-receipt-fence";
-import { lockDemoResetEvidenceFirst } from "./demo-receipt-coordination";
+import {
+  lockDemoResetEvidenceFirst,
+  tryLockBoardingEvidenceForReceipt,
+} from "./boarding-certification-snapshot";
 import { people, personRoles, shops, userAccounts } from "./schema";
 
 // Tests an uncalled ordering helper, not production reset, durable intake, or
