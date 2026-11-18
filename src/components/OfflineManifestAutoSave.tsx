@@ -48,6 +48,9 @@ export function OfflineManifestAutoSave() {
   const run = useCallback((): Promise<void> => {
     if (!navigator.onLine) return Promise.resolve();
     if (inFlight.current) return inFlight.current;
+    // A new round supersedes the previous success: any failure in this round
+    // must leave the next reconnect or visibility trigger free to retry.
+    lastSuccessAt.current = null;
     const task = (async () => {
       // Independent of the fetch/purge/save sequence below: the shell is
       // static and shop-agnostic, and must prime even if the upcoming fetch
@@ -70,16 +73,15 @@ export function OfflineManifestAutoSave() {
         const shopSlug = offlineManifestShopSlug(body);
         // No tenant, no round: saving without a purge is a cross-tenant leak.
         if (!shopSlug) return;
-        // Not caught on purpose: a failed purge fails the round so the next
-        // trigger retries it first, rather than saving across tenants.
-        await purgeOfflineManifestsExceptShop(shopSlug, tenantRound);
         // Medical alert words saved by another person on this device are
-        // wiped before saving. An unnamed viewer wipes all of them (fail closed).
+        // wiped first, even if a later inventory or purge cannot complete.
         await wipeOfflineMedicalAlerts(
           offlineManifestViewerPersonId(body) ?? undefined,
           tenantRound,
         );
-        await Promise.all(
+        // A failed wipe or purge stops the round before any cross-tenant save.
+        await purgeOfflineManifestsExceptShop(shopSlug, tenantRound);
+        const saves = await Promise.allSettled(
           offlineManifestPayloads(body).map((payload) =>
             saveOfflineManifest(payload, {
               // Words this viewer may no longer hold go (security review 2, L3).
@@ -88,10 +90,12 @@ export function OfflineManifestAutoSave() {
                 payload.manifests[0]?.trip.id,
               ),
               tenantRound,
-            }).catch(() => {}),
+            }),
           ),
         );
-        lastSuccessAt.current = nowMs();
+        // A failed copy must not make the whole round look fresh or suppress
+        // the next reconnect/visibility retry. Wait for every other trip too.
+        if (saves.every((save) => save.status === "fulfilled")) lastSuccessAt.current = nowMs();
       } catch {
         // Best-effort; see the module comment.
       }
