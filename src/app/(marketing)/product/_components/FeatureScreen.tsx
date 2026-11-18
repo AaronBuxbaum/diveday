@@ -13,6 +13,7 @@ import {
 import {
   FrontDeskReadinessFallback,
   NightBeforeBriefFallback,
+  RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
 import { CaptainPhoneFrame, MarketingMockup } from "@/components/MarketingSections";
 import type { DiverLocale } from "@/i18n/settings";
@@ -44,6 +45,8 @@ const SCREENS: Record<
   scheduleWeek: (locale) => <ScheduleWeekFallback locale={locale} />,
   coursePage: (locale) => <CoursePageFallback locale={locale} />,
   ordersLedger: (locale) => <OrdersLedgerFallback locale={locale} />,
+  recapPage: (locale) => <RecapPageFallback locale={locale} view="report" />,
+  reviewAsk: (locale) => <RecapPageFallback locale={locale} view="review" state="posted" />,
 };
 
 export function FeatureScreen({

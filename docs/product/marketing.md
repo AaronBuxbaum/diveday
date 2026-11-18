@@ -1,6 +1,6 @@
 # Public marketing surfaces — what they are and how to write them
 
-DiveDay's public pages are the homepage (`/`), product page (`/product`), the twelve feature pages
+DiveDay's public pages are the homepage (`/`), product page (`/product`), the fourteen feature pages
 under it (`/product/<feature>`), pricing page (`/pricing`), the about page (`/about`), and the
 onboarding entry (`/onboard`); switching guides (`/switching/*`) join them as they ship. They are a truthful sales surface for the product that
 exists today.
@@ -67,7 +67,7 @@ and listed the rest in a closed index on `/product`.
   the boat manifest and roll call, dive sites, rental gear, the schedule and crew, courses, and
   payments. The list, its order, and each page's demo role, landing screen and three related pages
   are one registry, `src/lib/feature-pages.ts`. An unknown slug is refused at the edge
-  (`src/features/public-route-shape/rules.ts`), and the sitemap lists all twelve.
+  (`src/features/public-route-shape/rules.ts`), and the sitemap lists all fourteen.
 - **One template**, `src/app/(marketing)/product/_components/FeaturePageBody.tsx`: the hero says
   what the shop gets beside the screen that proves it, with builder's notes and a contextual demo
   door; then how it works, the feature's whole group of `productCapabilityIndex`, its questions,
@@ -860,7 +860,7 @@ structure* live; none of them may contain an English sentence:
 | Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product`, one group per feature page | `src/lib/marketing.ts` (`productCapabilityIndex`, `capabilityGroup()`) | `marketing.capabilities.*` in the bundles; a feature page's group is titled by its `name` |
-| The twelve feature pages | `src/lib/feature-pages.ts` (slugs, demo role and landing, related pages, screen); one template in `src/app/(marketing)/product/_components/FeaturePageBody.tsx` | `marketing.featurePages.<page>.*` for each page's words, `marketing.featureChrome.*` for the template's own |
+| The fourteen feature pages | `src/lib/feature-pages.ts` (slugs, demo role and landing, related pages, screen); one template in `src/app/(marketing)/product/_components/FeaturePageBody.tsx` | `marketing.featurePages.<page>.*` for each page's words, `marketing.featureChrome.*` for the template's own |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
 | Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |
 | Why DiveDay exists, who builds it, and how a shop gets set up | `src/app/(marketing)/about/page.tsx` | `marketing.about.*` in the bundles |

@@ -16,7 +16,7 @@ import type { DemoRoleId } from "./demo-roles";
  * Keys and codes only, never words (ADR 20260731-domain-layer-copy-leaks; this
  * file is in `scripts/check-domain-strings.mjs`'s `proseFreeFiles`). Every
  * page's copy lives in the diver bundle under `marketing.featurePages.<key>`,
- * the same fields for every page, so the one template renders all twelve and
+ * the same fields for every page, so the one template renders every page and
  * a page cannot quietly grow a section the others lack.
  *
  * The slug list is closed, and three things read it as such: the route's
@@ -32,9 +32,11 @@ export const FEATURE_PAGE_SLUGS = [
   "messages",
   "check-in",
   "boat-manifest",
+  "recap",
   "dive-sites",
   "rental-gear",
   "website",
+  "reviews",
   "schedule",
   "courses",
   "payments",
@@ -50,11 +52,13 @@ export type FeaturePageSlug = (typeof FEATURE_PAGE_SLUGS)[number];
 export type FeaturePageKey =
   | "onlineBooking"
   | "website"
+  | "reviews"
   | "waivers"
   | "certifications"
   | "messages"
   | "checkIn"
   | "boatManifest"
+  | "recap"
   | "diveSites"
   | "rentalGear"
   | "schedule"
@@ -83,6 +87,8 @@ export type FeatureScreen =
   | "nightBefore"
   | "arrivalDesk"
   | "rollCall"
+  | "recapPage"
+  | "reviewAsk"
   | "siteBriefing"
   | "gearRegister"
   | "scheduleWeek"
@@ -157,6 +163,14 @@ export const FEATURE_PAGES: readonly FeaturePage[] = [
     related: ["check-in", "dive-sites", "certifications"],
   },
   {
+    slug: "recap",
+    key: "recap",
+    phase: "day",
+    screen: "recapPage",
+    demo: { role: "owner", landing: "today" },
+    related: ["reviews", "messages", "boat-manifest"],
+  },
+  {
     slug: "dive-sites",
     key: "diveSites",
     phase: "day",
@@ -182,6 +196,14 @@ export const FEATURE_PAGES: readonly FeaturePage[] = [
     screen: "storefront",
     demo: { role: "diver", landing: null },
     related: ["online-booking", "courses", "dive-sites"],
+  },
+  {
+    slug: "reviews",
+    key: "reviews",
+    phase: "season",
+    screen: "reviewAsk",
+    demo: { role: "owner", landing: "reviews" },
+    related: ["recap", "website", "messages"],
   },
   {
     slug: "schedule",

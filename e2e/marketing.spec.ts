@@ -533,8 +533,8 @@ test.describe("before the player has run", () => {
       .getByRole("link")
       .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
     expect(stepPages).toEqual(
-      (["payments", "waivers", "certifications", "boat-manifest", "messages"] as const).map(
-        (slug) => featurePagePath(slug),
+      (["payments", "waivers", "certifications", "boat-manifest", "recap"] as const).map((slug) =>
+        featurePagePath(slug),
       ),
     );
     await expect(list.locator("button:not([disabled])")).toHaveCount(0);

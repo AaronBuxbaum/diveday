@@ -610,7 +610,7 @@ function ReviewStar({ filled }: { filled: boolean }) {
  */
 /** The report page as the walk draws it (scrolled in a window) or as everyone else does (all of it). */
 function ScrollIf({ scroll, children }: { scroll: boolean; children: React.ReactNode }) {
-  return scroll ? <WalkScroll ms={3600}>{children}</WalkScroll> : <>{children}</>;
+  return scroll ? <WalkScroll ms={7000}>{children}</WalkScroll> : <>{children}</>;
 }
 
 export function RecapPageFallback({

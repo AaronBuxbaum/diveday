@@ -182,8 +182,6 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.website.item8",
       "marketing.capabilities.website.item9",
       "marketing.capabilities.website.item10",
-      "marketing.capabilities.website.item11",
-      "marketing.capabilities.website.item12",
     ],
   },
   {
@@ -229,8 +227,6 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.messages.item6",
       "marketing.capabilities.messages.item7",
       "marketing.capabilities.messages.item8",
-      "marketing.capabilities.messages.item9",
-      "marketing.capabilities.messages.item10",
     ],
   },
   {
@@ -268,6 +264,20 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
     ],
   },
   {
+    id: "recap",
+    title: "marketing.featurePages.recap.name",
+    items: [
+      "marketing.capabilities.recap.item1",
+      "marketing.capabilities.recap.item2",
+      "marketing.capabilities.recap.item3",
+      "marketing.capabilities.recap.item4",
+      "marketing.capabilities.recap.item5",
+      "marketing.capabilities.recap.item6",
+      "marketing.capabilities.recap.item7",
+      "marketing.capabilities.recap.item8",
+    ],
+  },
+  {
     id: "diveSites",
     title: "marketing.featurePages.diveSites.name",
     items: [
@@ -302,6 +312,18 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.rentalGear.item14",
       "marketing.capabilities.rentalGear.item15",
       "marketing.capabilities.rentalGear.item16",
+    ],
+  },
+  {
+    id: "reviews",
+    title: "marketing.featurePages.reviews.name",
+    items: [
+      "marketing.capabilities.reviews.item1",
+      "marketing.capabilities.reviews.item2",
+      "marketing.capabilities.reviews.item3",
+      "marketing.capabilities.reviews.item4",
+      "marketing.capabilities.reviews.item5",
+      "marketing.capabilities.reviews.item6",
     ],
   },
   {
