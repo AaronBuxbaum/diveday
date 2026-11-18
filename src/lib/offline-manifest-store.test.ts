@@ -285,6 +285,32 @@ describe("saveOfflineManifest", () => {
 });
 
 describe("loadOfflineManifest", () => {
+  it("retains expired unreadable ciphertext whose pending evidence is unknown", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    const previous = (await rawStoredRecord(tripId)) as Record<string, unknown>;
+    const unreadable = {
+      ...previous,
+      expiresAt: EXPIRED_PAST_GRACE,
+      ciphertext: new Uint8Array([1, 2, 3, 4]).buffer,
+    };
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("manifests", "readwrite");
+        tx.objectStore("manifests").put(unreadable);
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+    await expect(loadOfflineManifest(tripId)).rejects.toThrow();
+    expect(await rawStoredRecord(tripId)).toEqual(unreadable);
+  });
   it("withholds but retains unsent evidence after the pending grace period", async () => {
     const tripId = payload.manifests[0].trip.id;
     await saveOfflineManifest(payload);
