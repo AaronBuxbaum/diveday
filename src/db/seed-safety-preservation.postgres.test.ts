@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished } from "vitest";
-import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { recordBoardingObservation } from "./boarding-observations";
 import type { AppDb } from "./client";
 import { boardingObservations, bookings } from "./schema";
@@ -174,5 +174,75 @@ describePostgres("demo reset and committed dock sightings", () => {
     // The paused writer holds a person FK lock; the reset currently times out
     // trying to lock that staff row and rolls back rather than committing.
     await expect(reset).rejects.toMatchObject({ cause: { code: "55P03" } });
+  });
+  it("does not finish reset when intake commits after the sighting delete", async () => {
+    const pg = await postgresTestDb();
+    await seedDemo(pg.db, "history");
+    const shop = await getShopBySlug(pg.db, "blue-mantis");
+    if (!shop) throw new Error("shop missing");
+    const [trip] = await upcomingTripsWithCounts(pg.db, shop.id, new Date(0));
+    if (!trip) throw new Error("trip missing");
+    const [seat] = await getTripRoster(pg.db, shop.id, trip.id);
+    const [staff] = await listStaff(pg.db, shop.id);
+    if (!seat || !staff) throw new Error("seat or staff missing");
+    await pg.db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, seat.booking.id));
+    const [beforeBooking] = await pg.db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, seat.booking.id));
+    await pg.db.execute(
+      sql.raw(`
+      create function gate_after_sighting_delete() returns trigger language plpgsql as $$
+      begin perform pg_advisory_xact_lock(73044); return null; end $$;
+      create trigger gate_after_sighting_delete after delete on boarding_observations
+      for each statement execute function gate_after_sighting_delete();
+    `),
+    );
+    const gate = await holdRowLock(pg, sql`select pg_advisory_xact_lock(73044)`);
+    const reset = resetDemoSchedule(pg.connect(), shop.id, "history");
+    void reset.catch(() => undefined);
+    onTestFinished(async () => {
+      await gate.release();
+      await Promise.allSettled([reset]);
+    });
+    let observation: typeof boardingObservations.$inferSelect | undefined;
+    try {
+      await waitForLockWaiters(pg.db, 1);
+      const intake = await recordBoardingObservation(pg.connect(), {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: staff.person.id,
+        clientKey: crypto.randomUUID(),
+      });
+      if (!intake.ok) throw new Error(`intake refused: ${intake.reason}`);
+      [observation] = await pg.db
+        .select()
+        .from(boardingObservations)
+        .where(eq(boardingObservations.id, intake.observationId));
+      if (!observation) throw new Error("committed sighting missing");
+    } finally {
+      await gate.release();
+    }
+    const outcome = await reset.then(
+      () => ({ ok: true as const }),
+      (error: unknown) => ({ ok: false as const, error }),
+    );
+    if (!observation) throw new Error("committed sighting missing");
+    expect(
+      await pg.db
+        .select()
+        .from(boardingObservations)
+        .where(eq(boardingObservations.id, observation.id)),
+    ).toEqual([observation]);
+    expect(await pg.db.select().from(bookings).where(eq(bookings.id, seat.booking.id))).toEqual([
+      beforeBooking,
+    ]);
+    expect(outcome).toMatchObject({
+      ok: false,
+      error: expect.objectContaining({
+        message: expect.stringContaining("unresolved safety evidence"),
+      }),
+    });
   });
 });
