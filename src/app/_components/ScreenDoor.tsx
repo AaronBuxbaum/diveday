@@ -41,7 +41,12 @@ export function ScreenDoor({
       <input type="hidden" name="role" value={demoRole} />
       <SubmitButton
         pendingLabel={t("marketing.common.gettingReady")}
-        className={buttonClass({ variant: "link", flush: true, className: "mt-2 self-start" })}
+        className={buttonClass({
+          variant: "link",
+          arrow: true,
+          flush: true,
+          className: "mt-2 self-start",
+        })}
       >
         {label}
       </SubmitButton>

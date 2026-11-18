@@ -19,7 +19,7 @@
     "scopeTableTitle": "Qué se traslada, y qué no",
     "scopeTableDescription": "Estos son los campos que DiveDay acepta cuando se proporcionan. Tu archivo puede incluir solo algunos.",
     "comesAcross": "Se traslada",
-    "seePricing": "Ver cuánto cuesta DiveDay →",
+    "seePricing": "Ver cuánto cuesta DiveDay",
     "staysBehind": "Se queda atrás",
     "bothWaysTitle": "Conserva el control de tus registros",
     "bothWaysBody": "Puedes revisar la importación antes de confirmarla y exportar los registros de DiveDay si te vas. {claim}",
@@ -32,7 +32,7 @@
     "importReadyTitle": "Revisa los registros antes de la primera salida",
     "importReadyBody": "Revisa las identidades importadas, las certificaciones y las pruebas de exención aceptada. Las visitas históricas no crean reservas futuras; prepara la salida y revisa los requisitos de cada buceador por separado.",
     "openImportCta": "Abrir Importar en tu centro",
-    "previewLink": "La pantalla de vista previa, con nuestras notas →",
+    "previewLink": "La pantalla de vista previa, con nuestras notas",
     "proofLink": "Ver el trabajo de la salida",
     "proof": {
       "eyebrow": "Prueba el siguiente trabajo de tu equipo",
@@ -43,10 +43,10 @@
       "note2": "La certificación pendiente de Diego sigue visible bajo la salida.",
       "certTitle": "Revisa la certificación según la inmersión",
       "certBody": "Revisa los requisitos de certificación y especialidad de la salida y el sitio.",
-      "certLink": "Ver las revisiones de certificación →",
+      "certLink": "Ver las revisiones de certificación",
       "boatTitle": "Pasa lista a cada persona después de cada inmersión",
       "boatBody": "Guarda el manifiesto en el teléfono del equipo antes de perder señal para mantener el pase de lista.",
-      "boatLink": "Ver el manifiesto del barco →"
+      "boatLink": "Ver el manifiesto del barco"
     }
   },
   "hub": {
@@ -62,7 +62,7 @@
     "previewNote2": "“No reconocidas, así que se ignoran” nombra las dos columnas que descarta en vez de adivinarlas.",
     "previewNote3": "Una fila está marcada como omitida: no tiene nombre. El nombre es lo único que una fila necesita.",
     "previewNote4": "“No se guarda nada hasta que tú lo digas” es el título de la pantalla. En la demo: Ajustes → Importar contactos.",
-    "previewDoor": "Abre la demo como propietario →",
+    "previewDoor": "Abre la demo como propietario",
     "previewMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
     "dontSeeSystem": "No está en la lista",
     "dontSeeSystemBody": "Escribe a {email} con lo que usas y lo que quieres mejorar. Podemos revisar una muestra de exportación contigo antes de decidir el cambio.",
@@ -80,7 +80,7 @@
     "runTheDay": "Prueba la próxima salida de tu equipo en DiveDay",
     "readyToMove": "Mira cómo funciona la próxima salida en DiveDay",
     "walkDemoFirst": "Recorre el centro de ejemplo con tu equipo. Cuando estés listo, revisaremos contigo los archivos y el traspaso.",
-    "otherGuides": "Otras guías de cambio →",
+    "otherGuides": "Otras guías de cambio",
     "sources": "Fuentes"
   },
   "spreadsheet": {
@@ -175,7 +175,7 @@
     "parallelRunNote": "Sigue usando la hoja todo el tiempo que quieras. Una reimportación reconoce a los buceadores por correo y los actualiza en vez de duplicarlos, así que el día que dejes de mantenerla lo eliges tú.",
     "closingTitle": "La demo es el centro en el que caería tu hoja",
     "closingDescription": "Ábrela como propietario, capitán o buceador. Sin registro, y nada de lo que hay dentro es tuyo para romperlo.",
-    "otherSystems": "Cambiar desde otro software →"
+    "otherSystems": "Cambiar desde otro software"
   },
   "concierge": {
     "eyebrow": "Una persona hace la importación contigo",

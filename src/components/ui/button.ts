@@ -493,7 +493,7 @@ export type ButtonSize = keyof typeof sizes;
 
 /**
  * The horizontal padding, dropped. For a `link`-variant button that has to sit
- * flush with the prose it belongs to — a "See the full list →" under a
+ * flush with the prose it belongs to — a "See the full list" under a
  * checklist, a guide link under the claim it cites — where the size's `px-*`
  * reads as an unexplained indent.
  *
@@ -638,6 +638,18 @@ const OUTDENT: Record<ButtonSize, Record<ButtonOutdent, string>> = {
   mark: OUTDENT_16,
 };
 
+/**
+ * **The arrow on a link that goes to another page**, drawn by the style so
+ * no string carries a typed "→" to forget, mistype or translate (2026-11-18).
+ * A text link that opens another page on this site wears it; a button, an
+ * in-page jump (`#id`), a back link (its "←" leads), a `mailto:` and an
+ * external link (its "↗" is a literal in the label) do not. A space of
+ * `0.375em` before it, not a typed space, so the arrow can never wrap alone.
+ * `buttonClass({ variant: "link", arrow: true })` adds it; a link that is not
+ * a button style appends this constant.
+ */
+export const ARROW_LINK_CLASS = "after:ms-[0.375em] after:content-['→']";
+
 function blockEndOutdent(variant: ButtonVariant, size: ButtonSize, outdent?: ButtonOutdent) {
   if (!outdent || !(PAINTS_NOTHING.has(variant) || HOVER_FILL.has(variant))) return "";
   return OUTDENT[size][outdent];
@@ -649,6 +661,7 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   flush,
   outdent,
   edge,
+  arrow = false,
   busy = false,
   shape = "rounded",
   className = "",
@@ -682,6 +695,8 @@ export function buttonClass<V extends ButtonVariant = "primary">({
    * hairline. `secondary` only. See `EDGES`.
    */
   edge?: V extends "secondary" ? ButtonEdge : undefined;
+  /** Draw the arrow of a link to another page (`ARROW_LINK_CLASS`). `link` only. */
+  arrow?: V extends "link" ? boolean : false;
   /**
    * This control's disabled state means "in flight", not "unavailable" — every
    * `SubmitButton`, which disables itself for the duration of its own submit.
@@ -698,7 +713,8 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   const padding = edged ? EDGE_X[size] : horizontalPadding(variant, x, flush ?? false);
   // Only where flush took effect: a square target has no label edge to line up.
   const start = variant === "link" && flush && padding !== x ? flushLinkBase : base;
+  const arrowed = arrow ? ` ${ARROW_LINK_CLASS}` : "";
   return `${start} ${DISABLED[busy ? "busy" : "default"]} ${paint} ${rest} ${corner} ${padding}${
     end ? ` ${end}` : ""
-  } ${className}`.trim();
+  }${arrowed} ${className}`.trim();
 }

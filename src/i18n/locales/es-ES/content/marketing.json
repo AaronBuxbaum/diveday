@@ -95,10 +95,10 @@
     "featuresLink": "Explora las funciones",
     "exportTitle": "Prepara tus registros para tu siguiente día de buceo",
     "exportDescription1": "Trae una muestra de tu lista de buceadores. Sube una hoja de cálculo y revisa las columnas y las filas que se omitirán antes de guardar, o envíanosla por correo y una persona te ayudará a importarla, gratis.",
-    "spreadsheetLink": "Tu hoja de cálculo, columna por columna →",
+    "spreadsheetLink": "Tu hoja de cálculo, columna por columna",
     "guidesLink": "Encuentra la guía para tu sistema actual",
     "tryTitle": "Ven a organizar un día de buceo en el centro de demostración",
-    "stepLink": "{name} →",
+    "stepLink": "{name}",
     "percentArm": {},
     "try": {
       "hint": "Una lista de ejemplo de la mañana. Toca un botón para ver lo que hace el mostrador.",
@@ -920,7 +920,7 @@
         }
       },
       "movingTitle": "¿Vienes de otro sistema?",
-      "movingLink": "Encuentra la guía de tu sistema →"
+      "movingLink": "Encuentra la guía de tu sistema"
     },
     "runningTheShop": "Llevar el centro"
   },
@@ -966,11 +966,11 @@
       "note1": "Cada acceso del personal está en el precio, de recepción a capitán. Nada se cuenta por asiento.",
       "note2": "Las exenciones, la revisión médica y el control de certificación están en el precio. Nada de eso es un extra."
     },
-    "seeFullList": "La lista completa está en la página del producto →",
+    "seeFullList": "La lista completa está en la página del producto",
     "dataExit": {
       "eyebrow": "Tus registros",
       "title": "Tus registros siguen siendo tuyos",
-      "door": "Abre la demo como propietario →",
+      "door": "Abre la demo como propietario",
       "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y las credenciales de cuenta que siguen protegidas"
     },
     "faqTitle": "Las preguntas que los dueños hacen primero",
@@ -993,7 +993,7 @@
       "switching": {
         "question": "¿Qué implica cambiarse a DiveDay?",
         "answer": "Exporta una hoja de cálculo de clientes desde tu sistema actual. El importador de DiveDay trae a tus buceadores, registros de certificación y tallas de alquiler, y muestra qué va a pasar antes de guardar nada. Hay guías para {competitors}.",
-        "guidesLink": "Ver las guías de cambio →"
+        "guidesLink": "Ver las guías de cambio"
       },
       "agency": {
         "question": "¿DiveDay se conecta con PADI o SSI?",
@@ -1072,7 +1072,7 @@
       "saving": "Cada venta que pasas de esos sitios a tu propia página de reservas te deja alrededor de {low} a {high} más.",
       "assumptionsTitle": "Cómo lo contamos",
       "assumptions": "Son estimaciones, no presupuestos. El procesamiento de tarjetas se cuenta en las dos columnas sobre el dinero que tomas tú, con cada venta como un pago con tarjeta de {sale} de media, a la tarifa publicada de Stripe de 2,9 % más 30 ¢. FareHarbor no publica sus tarifas y no cobra suscripción. Su 6 % de una reserva que tomas tú, con el procesamiento de tarjetas cobrado aparte, es lo que informan tres artículos del sector (CaptainBook, 9 de abril de 2026; TrekkSoft, 30 de junio de 2026; Levy, 2026), y un cuarto (hamzaliaqat.com, 29 de abril de 2026) dice que el procesamiento está incluido, así que usamos la lectura más común. Agrega una cuota del 2 % por reservas de terceros (OTA) en las ventas de otros sitios, y su contrato se negocia centro por centro. Booking.com, Viator y GetYourGuide se quedan con el 15 % al 30 % de una venta, así que con ese control activado cada total es un rango, y la comisión es la misma en las dos columnas. El porcentaje de DiveDay se cuenta solo sobre el dinero que tomas tú, y sobre nada de lo vendido por esos sitios. Cada porcentaje se calcula sobre la venta completa, nunca sobre lo que queda después de otra cuota. Consultado el 18 de noviembre de 2026.",
-      "guideLink": "Cómo es dejar {competitor} →",
+      "guideLink": "Cómo es dejar {competitor}",
       "marketplaceToggle": "Incluir Booking.com, Viator y GetYourGuide",
       "marketplaceShareLabel": "Parte de ese dinero que llega por ellos",
       "range": "de {low} a {high}"
