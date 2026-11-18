@@ -196,7 +196,7 @@ export function RegisterFallback({
                 {/* i18n-exempt: sample diver name used only in marketing mockups */}
                 <WalkTyped text="Priya Sharma" delay={300} />
               </WalkField>
-              <WalkField label={t("register.emailLabel")}>
+              <WalkField label={`${t("register.emailLabel")} ${t("common.optional")}`}>
                 {/* i18n-exempt: sample address used only in marketing mockups */}
                 <WalkTyped text="priya@example.com" delay={1300} />
               </WalkField>

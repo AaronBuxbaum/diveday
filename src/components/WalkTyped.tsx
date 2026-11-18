@@ -39,8 +39,9 @@ export function WalkField({
 }
 
 /**
- * The pointer the homepage walkthrough moves: it travels to the control that holds it (which is
- * `relative`), presses `at` ms into the beat, and goes. Only the walk's first phase draws it
+ * The fingertip the homepage walkthrough moves (the same ring as the tap that ends a beat, never an
+ * arrow): it travels to the control that holds it (which is `relative`), presses `at` ms into the
+ * beat, and goes. Only the walk's first phase draws it
  * (`data-walk-cursor`, `globals.css`); the control's own change is timed by the caller to the same `at`.
  */
 export function WalkCursor({ at }: { at: number }) {
@@ -49,16 +50,7 @@ export function WalkCursor({ at }: { at: number }) {
       aria-hidden="true"
       data-walk-cursor=""
       style={{ "--cursor-at": `${at}ms` } as CSSProperties}
-    >
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6" focusable="false">
-        <path
-          d="M5 3l14 8-6.2 1.6L9.6 19 5 3z"
-          className="fill-surface stroke-foreground"
-          strokeWidth={1.5}
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
+    ></span>
   );
 }
 

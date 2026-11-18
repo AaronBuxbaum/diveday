@@ -775,7 +775,7 @@ export function RecapPageFallback({
                 ))}
               </div>
               <div className="mt-3 flex min-h-16 items-start rounded-lg border border-border bg-surface px-3 py-2 text-sm">
-                <WalkTyped text={t("fallback.recap.reviewText")} delay={2000} />
+                <WalkTyped text={t("fallback.recap.reviewText")} delay={1700} />
               </div>
               {posted ? (
                 <p
