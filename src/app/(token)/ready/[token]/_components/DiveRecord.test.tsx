@@ -24,8 +24,6 @@ function RecordOf({ context }: { context: AfterStateProps }) {
       sites={context.sites}
       diveRecord={context.diveRecord}
       observedSpecies={context.observedSpecies}
-      computerDives={context.computerDives}
-      computerDivesSource={context.computerDivesSource}
       photos={context.photos}
       visitCount={context.visitCount}
       siteMark={context.siteMark}
@@ -76,6 +74,33 @@ type AssertNever<T extends never> = T;
 type _RecapSiteCarriesOnlyItsName = AssertNever<Exclude<keyof RecapSite, "name">>;
 
 describe("what the record may claim", () => {
+  it("keeps personal date-level recordings outside the logbook card and its sheet", () => {
+    const context = props({
+      computerDives: [
+        {
+          recordedAt: "Jan 1, 2026 · 8:00 AM · time zone unknown",
+          device: "Own computer",
+          maxMeters: 12,
+          averageMeters: null,
+          durationSeconds: 1800,
+          coldestC: null,
+          samples: [],
+        },
+      ],
+    });
+    render(<AfterState context={context} />);
+    const record = screen.getByTestId(AFTER_STATE_TEST_IDS.record);
+    const recordings = screen.getByTestId(AFTER_STATE_TEST_IDS.computerDives);
+    expect(record.contains(recordings)).toBe(false);
+    expect(recordings.textContent).toContain("recap.profile.unlinked");
+    expect(recordings.textContent).toContain("Jan 1, 2026");
+    const { container } = render(<SheetOf context={context} />);
+    expect(container.textContent).not.toContain("Own computer");
+    expect(
+      container.querySelector(`[data-testid="${AFTER_STATE_TEST_IDS.computerDives}"]`),
+    ).toBeNull();
+  });
+
   it("counts no dives — DiveDay has no record of dives performed", () => {
     // It printed `max(trips.planned_dives, sites.length)` as "{n} dives
     // logged": a number a shop typed on the trip row weeks earlier, so a diver

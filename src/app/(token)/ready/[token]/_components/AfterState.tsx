@@ -16,6 +16,7 @@ import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";
 import { BuddyShareButton } from "./BuddyShareButton";
 import { CourseAfterState } from "./CourseAfterState";
 import { DiveRecord } from "./DiveRecord";
+import { RecordComputerDives } from "./DiveRecordExtras";
 import { DiveRecordSheet } from "./DiveRecordSheet";
 import { NextDiveCard } from "./NextDiveCard";
 import { Door, FieldGuideDoor, PhotoDoor, TipDoor } from "./RecapDoors";
@@ -116,7 +117,6 @@ export function AfterState({
     shoutout,
     photos,
     computerDives,
-    computerDivesSource,
     maxPhotos,
     photosOn,
     visitCount,
@@ -233,8 +233,6 @@ export function AfterState({
           sites={sites}
           diveRecord={diveRecord}
           observedSpecies={observedSpecies}
-          computerDives={computerDives}
-          computerDivesSource={computerDivesSource}
           photos={photos}
           visitCount={visitCount}
           siteMark={siteMark}
@@ -242,6 +240,8 @@ export function AfterState({
           course={course}
           logFilePath={logFilePath}
         />
+
+        <RecordComputerDives t={t} shop={shop} computerDives={computerDives} />
 
         {conservation.length > 0 ? (
           <section className="mt-10" aria-label={t("recap.conservation.heading")}>

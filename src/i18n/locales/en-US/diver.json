@@ -883,8 +883,7 @@
       "lionfish_count": "{quantity} lionfish removed"
     },
     "profile": {
-      "heading": "From your dive computer",
-      "diveN": "Dive {n}",
+      "heading": "Your computer recordings from this date",
       "maxDepth": "Max depth",
       "avgDepth": "Average depth",
       "diveTime": "Dive time",
@@ -893,8 +892,10 @@
       "max": "Max {depth}",
       "stop": "Safety stop · {minutes} min",
       "axisMinutes": "min",
-      "headingCrew": "What your dive looked like",
-      "crewNote": "From the crew’s computer, so yours may differ a little."
+      "unlinked": "These recordings aren’t linked to this departure or its logbook entry.",
+      "recordedAt": "{date} · {time}",
+      "unknownZone": "{date} · {time} · time zone unknown",
+      "dateOnly": "{date} · time and time zone unknown"
     }
   },
   "register": {

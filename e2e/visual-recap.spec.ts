@@ -6,6 +6,7 @@
  */
 import { AFTER_STATE_TEST_IDS } from "../src/app/(token)/ready/[token]/_components/after-state-test-ids";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
+import { diverTranslator } from "../src/i18n/messages";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, test } from "./fixtures";
 import { openSettingsRow } from "./helpers";
@@ -15,6 +16,7 @@ import {
   diverCopy,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  SPANISH,
   SURFACE_TIMEOUT_MS,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
@@ -30,6 +32,21 @@ for (const scheme of ["light", "dark"] as const) {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
     test.describe("public", () => {
+      test.describe("Spanish personal recordings", () => {
+        test.use({ locale: SPANISH });
+        test("personal computer recordings remain separate and unlinked", async ({ page }) => {
+          const t = diverTranslator(SPANISH);
+          await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
+          const recordings = page.getByTestId(AFTER_STATE_TEST_IDS.computerDives);
+          await expect(recordings.getByText(t("recap.profile.unlinked"))).toBeVisible();
+          await expect(
+            page
+              .getByTestId(AFTER_STATE_TEST_IDS.record)
+              .getByTestId(AFTER_STATE_TEST_IDS.computerDives),
+          ).toHaveCount(0);
+          await capture(page, "recap", scheme, { locale: SPANISH });
+        });
+      });
       /**
        * **The thread's after-state**, reached through the recap token: the same
        * surface `/ready` renders once the boat is home (ADR
@@ -92,6 +109,11 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
         await page.getByRole("heading", { name: /Welcome back/ }).waitFor();
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        await expect(
+          page
+            .getByTestId(AFTER_STATE_TEST_IDS.computerDives)
+            .getByText(diverCopy("recap.profile.unlinked")),
+        ).toBeVisible();
         // The tip door renders at all only for a shop that can take a tip, and
         // that is what the seed-stripe-account write above buys — so waiting on
         // it is what proves the whole run of doors is in the frame.

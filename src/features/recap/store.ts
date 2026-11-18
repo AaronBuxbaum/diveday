@@ -303,8 +303,6 @@ export type RecapPageData = {
    * by the next dive's admission filter and by nothing that renders.
    */
   personId: string;
-  /** The crew assigned to the trip, for the recap's dive chart. **Server-side only**, like `personId`. */
-  crewPersonIds: string[];
   /**
    * **What the shop saw of this diver on the day**, for the logbook sheet's
    * signature line (reviews of #2745). Server-side only, like `personId`:
@@ -1116,7 +1114,6 @@ async function loadRecapPageData(
     observedSpecies,
     bookingId,
     personId: row.personId,
-    crewPersonIds: (crewMap.get(row.tripId) ?? []).map((member) => member.id),
     seenThatDay: {
       boardedAtRollCall: dockEvidence.boarded.has(bookingId),
       arrivedAtDesk: row.arrivedAtDesk,
