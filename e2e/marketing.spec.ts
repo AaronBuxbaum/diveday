@@ -97,7 +97,7 @@ test("the homepage sample closes the roll call for Priya and can be replayed", a
     boat.getByText(t("marketing.home.boat.count", { aboard: 10 }), { exact: true }),
   ).toBeVisible();
 
-  await expect(boat.getByText(t("marketing.home.boat.name"), { exact: true })).toBeVisible();
+  await expect(boat.getByText("Priya Sharma", { exact: true })).toBeVisible();
   await markAboard.focus();
   await markAboard.press("Enter");
   await expect(boat.getByText(t("marketing.home.boat.closed"), { exact: true })).toBeVisible();
