@@ -1,6 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
-import { createTrip, daysFromNow, tripPathByTitle } from "./helpers";
+import { createTrip, daysFromNow, openIfClosed, tripPathByTitle } from "./helpers";
 
 const t = staffTranslator("en-US");
 
@@ -23,7 +23,7 @@ test("the owner hides and restores conservation without losing recorded actions"
   // The conservation record sits under Wrapped up's More (ADR 20261117-trip-page-clock).
   await page.goto(`${path}?phase=wrapped#conservation`);
   const add = page.locator("#conservation-add");
-  await add.locator("summary").click();
+  await openIfClosed(add);
   await add.getByRole("spinbutton", { name: t("trips.conservation.quantity") }).fill("1");
   await add
     .getByRole("textbox", { name: t("trips.conservation.location") })
