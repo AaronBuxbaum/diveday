@@ -40,12 +40,13 @@ describe("the homepage's walk", () => {
     expect(ids).not.toContain("computer");
   });
 
-  it("gives the slides with something to do before the tap a longer first phase", () => {
+  it("gives the slides with something to do before the tap (typing, a scroll) a longer first phase", () => {
     expect(STEPS.filter((step) => (step.lead ?? 0) > 0).map((step) => step.id)).toEqual([
       "browse",
       "pay",
       "onboard",
       "sign",
+      "recap",
       "review",
     ]);
   });

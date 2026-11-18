@@ -9,7 +9,7 @@ import { LedgerRow } from "@/components/ui/ledger";
 import { ReadinessBar } from "@/components/ui/ProgressBar";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
-import { WalkCursor, WalkTyped } from "@/components/WalkTyped";
+import { WalkCursor, WalkScroll, WalkTyped } from "@/components/WalkTyped";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -608,10 +608,16 @@ function ReviewStar({ filled }: { filled: boolean }) {
  * Every control stays `disabled`: the homepage's steps open no door into the
  * demo, and this screen is not one (`e2e/marketing.spec.ts`).
  */
+/** The report page as the walk draws it (scrolled in a window) or as everyone else does (all of it). */
+function ScrollIf({ scroll, children }: { scroll: boolean; children: React.ReactNode }) {
+  return scroll ? <WalkScroll ms={3200}>{children}</WalkScroll> : <>{children}</>;
+}
+
 export function RecapPageFallback({
   locale,
   view = "report",
   state = "writing",
+  scroll = false,
 }: {
   locale: DiverLocale;
   /**
@@ -625,6 +631,8 @@ export function RecapPageFallback({
    * Leave my review (the walkthrough's tap); `posted` is the page a moment after.
    */
   state?: "writing" | "posted";
+  /** The homepage walkthrough scrolls the report page (`WalkScroll`) instead of drawing it all at once. */
+  scroll?: boolean;
 }) {
   const t = diverTranslator(locale);
   const posted = state === "posted";
@@ -646,7 +654,7 @@ export function RecapPageFallback({
       <AppBar label={t("fallback.recap.label")} />
       <div className={MOCK_BODY}>
         {view === "report" ? (
-          <>
+          <ScrollIf scroll={scroll}>
             <h3 className={SUB_TITLE_CLASS}>{t("fallback.recap.greeting")}</h3>
             <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
 
@@ -744,7 +752,7 @@ export function RecapPageFallback({
                 </li>
               ))}
             </ul>
-          </>
+          </ScrollIf>
         ) : (
           <>
             {/* The crew's word, as a quote rather than a boxed panel. */}
