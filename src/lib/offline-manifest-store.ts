@@ -656,7 +656,9 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
         throw new OfflineManifestError("recovery_required");
       }
       if (pendingEvents === 0) {
-        await deleteOfflineManifest(tripId, db);
+        if (!(await deleteOfflineManifest(tripId, record, db))) {
+          throw new OfflineManifestError("unavailable");
+        }
         return null;
       }
     }
@@ -1106,26 +1108,62 @@ export async function wipeOfflineMedicalAlerts(
   }
 }
 
+/** Compare only understood record shapes; unknown metadata is never deleted. */
+function sameStoredRecord(expected: StoredRecord, current: unknown): boolean {
+  if (!current || typeof current !== "object") return false;
+  const allowed = ["tripId", "expiresAt", "shopSlug", "pendingEvents", "iv", "ciphertext"];
+  const a = expected as unknown as Record<string, unknown>;
+  const b = current as Record<string, unknown>;
+  if (Object.keys(a).some((key) => !allowed.includes(key))) return false;
+  if (Object.keys(b).some((key) => !allowed.includes(key))) return false;
+  for (const key of allowed) {
+    if (Object.hasOwn(a, key) !== Object.hasOwn(b, key)) return false;
+    if (key === "iv" || key === "ciphertext") {
+      const left = a[key];
+      const right = b[key];
+      let x: Uint8Array;
+      let y: Uint8Array;
+      try {
+        // The built-in brand check accepts structured-cloned buffers from a
+        // different realm, unlike instanceof, and rejects non-buffer values.
+        x = new Uint8Array(ArrayBuffer.prototype.slice.call(left as ArrayBuffer, 0));
+        y = new Uint8Array(ArrayBuffer.prototype.slice.call(right as ArrayBuffer, 0));
+      } catch {
+        return false;
+      }
+      if (x.length !== y.length || x.some((byte, index) => byte !== y[index])) return false;
+    } else if (a[key] !== b[key]) return false;
+  }
+  return (
+    typeof a.tripId === "string" &&
+    typeof a.expiresAt === "string" &&
+    (a.shopSlug === undefined || typeof a.shopSlug === "string") &&
+    (a.pendingEvents === undefined ||
+      (typeof a.pendingEvents === "number" &&
+        Number.isSafeInteger(a.pendingEvents) &&
+        a.pendingEvents >= 0))
+  );
+}
+
 async function deleteOfflineManifest(
   tripId: string,
-  existingDb?: IDBDatabase,
-  isCurrent?: () => boolean,
+  expected: StoredRecord,
+  db: IDBDatabase,
 ): Promise<boolean> {
-  const ownsDb = existingDb === undefined;
-  const db = existingDb ?? (await openDatabase());
-  try {
-    // The purge may have waited for openDatabase after its locked record
-    // reread. Recheck at the last synchronous point before queuing the delete
-    // request so a newer tenant round cannot be crossed by that await.
-    if (isCurrent && !isCurrent()) return false;
-    const transaction = db.transaction(MANIFEST_STORE, "readwrite");
-    transaction.objectStore(MANIFEST_STORE).delete(tripId);
-    await transactionDone(transaction);
-    announceManifestChange(tripId, "delete");
-    return true;
-  } finally {
-    if (ownsDb) db.close();
-  }
+  const transaction = db.transaction(MANIFEST_STORE, "readwrite");
+  const done = transactionDone(transaction);
+  const store = transaction.objectStore(MANIFEST_STORE);
+  let deleted = false;
+  const get = store.get(tripId);
+  get.onsuccess = () => {
+    if (sameStoredRecord(expected, get.result)) {
+      store.delete(tripId);
+      deleted = true;
+    }
+  };
+  await done;
+  if (deleted) announceManifestChange(tripId, "delete");
+  return deleted;
 }
 
 /**
