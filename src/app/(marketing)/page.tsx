@@ -12,6 +12,7 @@ import { HomeWalkthroughDoors } from "@/app/_components/HomeWalkthroughDoors";
 import { HomeWhyBand } from "@/app/_components/HomeWhyBand";
 import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
 import { STEPS, WALK_CLASSES } from "@/app/_components/home-steps";
+import { DeviceCleanupWarning } from "@/components/DeviceCleanupWarning";
 import { JsonLd } from "@/components/JsonLd";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingReveal } from "@/components/MarketingReveal";
@@ -90,8 +91,10 @@ export default function Home() {
 
 async function LocalizedHomeBody() {
   const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
+  const t = diverTranslator(locale);
   return (
     <>
+      <DeviceCleanupWarning message={t("account.signIn.deviceCleanupIncomplete")} />
       {/* For the configured offer, so it streams with the body (`homeSoftwareJsonLd`). */}
       <JsonLd data={homeSoftwareJsonLd(offer)} />
       <HomeBody locale={locale} />

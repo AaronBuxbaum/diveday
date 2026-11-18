@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { deviceCleanupMayBeIncomplete, forgetThisDevice } from "./forget-device";
+import { deviceCleanupMayBeIncomplete } from "./device-cleanup-status";
+import { forgetThisDevice } from "./forget-device";
 
 /** Mounted on sign-in to attempt local cleanup without delaying sign-out. */
 export function ForgetThisDevice({ incompleteMessage }: { incompleteMessage?: string }) {

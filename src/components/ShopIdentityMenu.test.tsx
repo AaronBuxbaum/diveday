@@ -15,7 +15,6 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("./forget-device", () => ({
   forgetThisDevice: vi.fn(async () => {}),
-  markDeviceCleanupIncomplete: vi.fn(),
 }));
 
 afterEach(() => {
@@ -171,6 +170,7 @@ describe("ShopIdentityMenu — the open panel", () => {
     expect(signOutAction).not.toHaveBeenCalled();
     await act(async () => finishWipe());
     await vi.waitFor(() => expect(signOutAction).toHaveBeenCalledTimes(1));
+    expect(signOutAction).toHaveBeenCalledWith(false);
   });
 
   it("still signs out when cleanup unexpectedly rejects", async () => {
@@ -190,6 +190,7 @@ describe("ShopIdentityMenu — the open panel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
     await userEvent.click(screen.getByRole("button", { name: "Sign out now?" }));
     await vi.waitFor(() => expect(signOutAction).toHaveBeenCalledTimes(1));
+    expect(signOutAction).toHaveBeenCalledWith(true);
   });
 
   it("puts the LANGUAGE label, both languages and Sign out on the tick gutter and no other inset", async () => {

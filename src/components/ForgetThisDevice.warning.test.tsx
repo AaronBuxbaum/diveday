@@ -3,12 +3,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 vi.mock("./forget-device", () => ({
-  deviceCleanupMayBeIncomplete: vi.fn(() => false),
   forgetThisDevice: vi.fn(async () => ({ status: "incomplete" })),
 }));
+vi.mock("./device-cleanup-status", () => ({ deviceCleanupMayBeIncomplete: vi.fn(() => false) }));
 
+import { deviceCleanupMayBeIncomplete } from "./device-cleanup-status";
 import { ForgetThisDevice } from "./ForgetThisDevice";
-import { deviceCleanupMayBeIncomplete, forgetThisDevice } from "./forget-device";
+import { forgetThisDevice } from "./forget-device";
 
 afterEach(cleanup);
 

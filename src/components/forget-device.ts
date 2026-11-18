@@ -1,5 +1,6 @@
 import { wipeOfflineMedicalAlerts } from "@/lib/offline-manifest-store";
 import { forgetReadyPageCopy } from "@/lib/ready-offline";
+import { markDeviceCleanupIncomplete } from "./device-cleanup-status";
 import { forgetAllKeptTyped } from "./KeepTypedOnRefusal";
 import { forgetRevealedMedicalAlerts } from "./MedicalAlertReveal";
 import { forgetAllRecents } from "./search/palette-recents";
@@ -7,24 +8,6 @@ import { announceSessionInvalidation } from "./session-invalidation";
 
 /** How long a sign-out waits for the offline wipes before it goes on regardless. */
 const WIPE_WAIT_MS = 2_000;
-const INCOMPLETE_KEY = "diveday-device-cleanup-incomplete";
-
-/** A generic, tab-local warning; it carries no identity or offline contents. */
-export function markDeviceCleanupIncomplete(): void {
-  try {
-    sessionStorage.setItem(INCOMPLETE_KEY, "1");
-  } catch {
-    /* unavailable storage */
-  }
-}
-
-export function deviceCleanupMayBeIncomplete(): boolean {
-  try {
-    return sessionStorage.getItem(INCOMPLETE_KEY) === "1";
-  } catch {
-    return true;
-  }
-}
 
 /**
  * Clear session-local data and attempt to clear the medical alert words on

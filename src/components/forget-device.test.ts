@@ -8,7 +8,7 @@ vi.mock("@/lib/offline-manifest-store", () => ({
 const { forgetReadyPageCopy } = await import("@/lib/ready-offline");
 const { wipeOfflineMedicalAlerts } = await import("@/lib/offline-manifest-store");
 const { forgetThisDevice } = await import("./forget-device");
-const { deviceCleanupMayBeIncomplete } = await import("./forget-device");
+const { deviceCleanupMayBeIncomplete } = await import("./device-cleanup-status");
 
 /**
  * **A shop tablet keeps no diver's `/ready` page past a sign-out** (issue

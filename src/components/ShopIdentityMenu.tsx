@@ -13,7 +13,8 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { isBoatModeOn, setBoatMode } from "@/lib/boat-mode";
 import { motionMs } from "@/lib/motion";
 import { tellUsMailto, tellUsPath } from "@/lib/tell-us";
-import { forgetThisDevice, markDeviceCleanupIncomplete } from "./forget-device";
+import { markDeviceCleanupIncomplete } from "./device-cleanup-status";
+import { forgetThisDevice } from "./forget-device";
 
 export type ShopIdentityMenuCopy = {
   boatMode: string;
@@ -88,7 +89,7 @@ export function ShopIdentityMenu({
 }: {
   shopName: string;
   logoUrl?: string;
-  signOutAction: () => Promise<void>;
+  signOutAction: (cleanupIncomplete?: boolean) => Promise<void>;
   /** The language this render was written in — the one marked as in force. */
   locale: string;
   /** Every language DiveDay carries, each named in itself. */
@@ -113,8 +114,11 @@ export function ShopIdentityMenu({
   // contract every staff menu uses (useMenuDismissal).
   const close = useCallback(() => setOpen(false), []);
   const signOutForgetting = useCallback(async () => {
-    await forgetThisDevice().catch(() => markDeviceCleanupIncomplete());
-    await signOutAction();
+    const cleanup = await forgetThisDevice().catch(() => {
+      markDeviceCleanupIncomplete();
+      return { status: "incomplete" as const };
+    });
+    await signOutAction(cleanup.status === "incomplete");
   }, [signOutAction]);
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
   // The shared base rung pairs with .animate-scale-out; motion-tokens.test.ts checks parity.

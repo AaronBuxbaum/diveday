@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StaffDestinationLabels } from "@/lib/staff-destinations";
 import type { SearchResults } from "../../lib/search-results";
+import * as deviceCleanup from "../forget-device";
 import { CommandPalette, type CommandPaletteCopy } from "./CommandPalette";
 
 const routerPush = vi.fn();
@@ -100,6 +101,21 @@ afterEach(() => {
   cleanup();
   routerPush.mockClear();
   vi.unstubAllGlobals();
+});
+
+it("reports incomplete cleanup to sign-out from the command palette", async () => {
+  const wipe = vi
+    .spyOn(deviceCleanup, "forgetThisDevice")
+    .mockResolvedValueOnce({ status: "incomplete" });
+  try {
+    const signOutAction = vi.fn(async () => {});
+    renderPalette(undefined, { signOutAction });
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await userEvent.click(screen.getByRole("option", { name: "Sign out" }));
+    await waitFor(() => expect(signOutAction).toHaveBeenCalledWith(true));
+  } finally {
+    wipe.mockRestore();
+  }
 });
 
 /** ADR 20260906-before-you-ask, decision 3: ask it, and it answers. */
