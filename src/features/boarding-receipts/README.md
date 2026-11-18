@@ -15,6 +15,11 @@ persisting them, so those keys cannot be reconstructed from this inventory.
 
 The PostgreSQL test models a temporary table barrier on a disposable database.
 That global lock would block safety traffic and is not an activation procedure.
+The separate `src/test/boarding-receipt-prototype/claim.ts` prototype uses a
+table installed only inside disposable PostgreSQL and PGlite test databases. It
+exercises atomic draft-table claims and rollback but does not authenticate a caller,
+verify a meeting, exclude old writers or create a device receipt. Production
+sources must not import it; the architecture check rejects direct imports.
 
 ## Cutover requirements — not implemented
 

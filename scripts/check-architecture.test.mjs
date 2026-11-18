@@ -68,6 +68,25 @@ describe("dependency direction", () => {
 });
 
 describe("the seams", () => {
+  it("keeps the boarding receipt prototype out of production imports", async () => {
+    const root = await fixture({
+      "src/app/claim.ts":
+        'import { claimDraftReceipt } from "@/test/boarding-receipt-prototype/claim";\n',
+      "src/app/lazy.ts": 'const draft = await import("@/test/boarding-receipt-prototype/claim");\n',
+      "scripts/unsafe.mjs":
+        'const draft = await import("../src/test/boarding-receipt-prototype/claim");\n',
+      "src/app/claim.test.ts":
+        'import { claimDraftReceipt } from "@/test/boarding-receipt-prototype/claim";\n',
+    });
+    expect(flat(await collectViolations(root)).sort()).toEqual([
+      expect.stringContaining(
+        "scripts/unsafe.mjs: imports ../src/test/boarding-receipt-prototype/claim",
+      ),
+      expect.stringContaining("src/app/claim.ts: imports @/test/boarding-receipt-prototype/claim"),
+      expect.stringContaining("src/app/lazy.ts: imports @/test/boarding-receipt-prototype/claim"),
+    ]);
+  });
+
   it("reads which imports are type-only, across lines", () => {
     const source = [
       'import type { A } from "@/db/a";',

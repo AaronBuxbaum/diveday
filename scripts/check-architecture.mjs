@@ -150,6 +150,12 @@ export const forbidden = [
  */
 export const seams = [
   {
+    roots: ["src", "scripts"],
+    refuses: (target) => target !== null && isWithin(target, "src/test/boarding-receipt-prototype"),
+    message: (file, specifier) =>
+      `${file}: imports ${specifier} — the boarding receipt prototype is test-only and cannot acknowledge live evidence`,
+  },
+  {
     roots: ["src/lib"],
     refuses: (target) => target !== null && isWithin(target, "src/db"),
     typeOnlyAllowed: true,
