@@ -23,8 +23,13 @@ describe("the trip page as The Clock", () => {
     // Never behind `cancelled`: a cancelled trip opens on Wrapped up, and every
     // phase stays a tap away.
     // Edit trip is not a phase (design review of the final screens, finding 12).
-    const guard = BODY.slice(BODY.lastIndexOf("*/}", strip) + 3, strip);
-    expect(guard.replace(/\s/g, "")).toBe("{showDetails?null:(");
+    const heading = readFileSync(
+      join(__dirname, "_components", "phases", "PhaseHeading.tsx"),
+      "utf8",
+    );
+    expect(BODY.slice(header, strip)).toContain("<PhaseHeading");
+    expect(heading).toContain("if (showDetails) return null");
+    expect(heading).toContain("{strip}");
   });
 
   it("renders one panel per phase, each from its own file, and Edit trip", () => {
