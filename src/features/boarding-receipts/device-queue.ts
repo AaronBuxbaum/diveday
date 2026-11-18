@@ -23,6 +23,16 @@ type CaptureResult =
   | { status: "disabled" | "not_saved" | "not_confirmed"; attempt: PreparedTap }
   | { status: "invalid" }
   | { status: "retained_locally"; eventId: string };
+type ObservationResult =
+  | {
+      status:
+        | "disabled"
+        | "same_attempt_observed"
+        | "different_or_unreadable"
+        | "absent_or_unavailable";
+      attempt: PreparedTap;
+    }
+  | { status: "invalid" };
 const DB_NAME = "diveday-dock-queue-disabled-v1";
 const preparedAttempts = new WeakSet<PreparedTap>();
 
@@ -138,4 +148,84 @@ export async function captureDockTap(input: TapInput): Promise<CaptureResult> {
   const attempt = prepareDockTap(input);
   if (!attempt) return { status: "invalid" };
   return persistPreparedDockTap(attempt);
+}
+
+/** A historical read only: this is neither a receipt nor proof the row still exists. */
+export async function observePreparedDockTap(attempt: PreparedTap): Promise<ObservationResult> {
+  if (!dockQueueEnabled()) return { status: "disabled", attempt };
+  if (!preparedAttempts.has(attempt)) return { status: "invalid" };
+  let row: unknown;
+  try {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME);
+      let blocked = false;
+      // Reading must never create or upgrade a database.
+      request.onupgradeneeded = () => request.transaction?.abort();
+      request.onblocked = () => {
+        blocked = true;
+        reject(new Error("blocked"));
+      };
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        if (blocked) request.result.close();
+        else resolve(request.result);
+      };
+    });
+    try {
+      const tx = db.transaction("events", "readonly");
+      const done = transactionDone(tx);
+      const request = tx.objectStore("events").get(attempt.eventId);
+      request.onsuccess = () => {
+        row = request.result;
+      };
+      await done;
+    } finally {
+      db.close();
+    }
+  } catch {
+    return { status: "absent_or_unavailable", attempt };
+  }
+  if (row === undefined) return { status: "absent_or_unavailable", attempt };
+  try {
+    if (
+      !row ||
+      typeof row !== "object" ||
+      !("key" in row) ||
+      !("iv" in row) ||
+      !("ciphertext" in row)
+    )
+      throw new Error("invalid row");
+    const { key, iv, ciphertext } = row as {
+      key: CryptoKey;
+      iv: Uint8Array<ArrayBuffer>;
+      ciphertext: ArrayBuffer;
+    };
+    if (
+      key?.type !== "secret" ||
+      key.extractable ||
+      key.algorithm.name !== "AES-GCM" ||
+      !ArrayBuffer.isView(iv) ||
+      iv.byteLength !== 12
+    )
+      throw new Error("invalid row");
+    const plain = new Uint8Array(
+      await crypto.subtle.decrypt(
+        {
+          name: "AES-GCM",
+          iv,
+          additionalData: new TextEncoder().encode(
+            JSON.stringify(["dock-tap-v1", attempt.eventId]),
+          ),
+        },
+        key,
+        ciphertext,
+      ),
+    );
+    const expected = new TextEncoder().encode(attempt.serialized);
+    if (plain.length !== expected.length || !plain.every((byte, i) => byte === expected[i]))
+      throw new Error("different attempt");
+    return { status: "same_attempt_observed", attempt };
+  } catch {
+    return { status: "different_or_unreadable", attempt };
+  }
 }
