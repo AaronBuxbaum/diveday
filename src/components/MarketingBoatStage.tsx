@@ -82,18 +82,20 @@ function useBoatCanvas({
   selected,
   paused,
   atReef,
+  isDesk,
 }: {
   checked: [boolean, boolean];
   selected: DiverIndex | null;
   paused: boolean;
   atReef: boolean;
+  isDesk: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const markers = useRef<(HTMLButtonElement | null)[]>([]);
   const yaw = useRef(0);
   const invalidate = useRef<(() => void) | null>(null);
   const [ready, setReady] = useState(false);
-  const settings = useRef({ checked, selected, paused, atReef });
+  const settings = useRef({ checked, selected, paused, atReef, isDesk });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -114,6 +116,7 @@ function useBoatCanvas({
     let height = 0;
     let time = 0;
     let voyage = 0;
+    let transfer = 0;
     const progress: [number, number] = [0, 0];
     const focus: [number, number] = [0, 0];
     let cameraYaw = 0;
@@ -180,6 +183,12 @@ function useBoatCanvas({
           : 1
         : 0;
       const reefMix = voyage * voyage * (3 - 2 * voyage);
+      transfer = settings.current.isDesk
+        ? 0
+        : animate && painted
+          ? Math.min(1, transfer + elapsed)
+          : 1;
+      const boarding = transfer * transfer * (3 - 2 * transfer);
       const anchors = drawBoatScene(
         ctx,
         width,
@@ -191,6 +200,7 @@ function useBoatCanvas({
         focus,
         reefMix,
         harborWater,
+        boarding,
       );
       if (harborWater && canvas.dataset.boatHarbor !== "ready") canvas.dataset.boatHarbor = "ready";
       if (seafloor && canvas.dataset.boatReef !== "ready") canvas.dataset.boatReef = "ready";
@@ -268,11 +278,15 @@ function useBoatCanvas({
   useEffect(() => {
     // A fresh inspection starts at the modeled side of the deck. Manual orbit
     // remains relative to that subject until another name or the overview is chosen.
-    if (settings.current.atReef !== atReef || settings.current.selected !== selected)
+    if (
+      settings.current.atReef !== atReef ||
+      settings.current.isDesk !== isDesk ||
+      settings.current.selected !== selected
+    )
       yaw.current = 0;
-    settings.current = { checked, selected, paused, atReef };
+    settings.current = { checked, selected, paused, atReef, isDesk };
     invalidate.current?.();
-  }, [checked, selected, paused, atReef]);
+  }, [checked, selected, paused, atReef, isDesk]);
 
   function rotate(delta: number) {
     yaw.current += delta;
@@ -285,7 +299,9 @@ function useBoatCanvas({
 export function MarketingBoatStage({
   labels,
   poster,
+  deskPin,
   atReef,
+  isDesk,
   checked,
   selected,
   onSelect,
@@ -293,7 +309,9 @@ export function MarketingBoatStage({
 }: {
   labels: BoatStageLabels;
   poster: ReactNode;
+  deskPin: string;
   atReef: boolean;
+  isDesk: boolean;
   checked: [boolean, boolean];
   selected: DiverIndex | null;
   onSelect: (index: DiverIndex) => void;
@@ -307,6 +325,7 @@ export function MarketingBoatStage({
     selected,
     paused,
     atReef,
+    isDesk,
   });
 
   function keyRotate(event: KeyboardEvent<HTMLFieldSetElement>) {
@@ -331,7 +350,7 @@ export function MarketingBoatStage({
   return (
     <div
       data-boat-scene=""
-      data-boat-phase={atReef ? "reef" : "dock"}
+      data-boat-phase={isDesk ? "desk" : atReef ? "reef" : "dock"}
       className="relative isolate aspect-[3/2] w-full overflow-hidden"
     >
       <div className="absolute inset-0">{poster}</div>
@@ -361,9 +380,11 @@ export function MarketingBoatStage({
               }}
               type="button"
               data-try-tap=""
-              aria-label={diver.marker}
+              aria-label={isDesk ? deskPin : diver.marker}
               aria-pressed={selected === index}
-              hidden={!ready || (selected !== null && selected !== index)}
+              hidden={
+                !ready || (isDesk && index !== 0) || (selected !== null && selected !== index)
+              }
               onPointerDown={(event) => {
                 if (event.pointerType === "touch" && event.isPrimary) {
                   markerTouch.current = { id: event.pointerId, x: event.clientX, y: event.clientY };

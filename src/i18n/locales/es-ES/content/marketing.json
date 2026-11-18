@@ -131,7 +131,30 @@
       "dockAboard": "A bordo para la salida",
       "dockConfirm": "Marcar a {name} a bordo",
       "dockPreviously": "10 personas ya confirmadas a bordo, entre ellas Tom Okafor",
-      "depart": "Continuar al arrecife"
+      "depart": "Continuar al arrecife",
+      "desk": {
+        "checkpoint": "Mostrador del muelle · Credenciales",
+        "imageAlt": "Priya espera en el muelle junto al barco mientras Tom está en cubierta.",
+        "open": "Revisar la tarjeta de Priya",
+        "pin": "Abrir la credencial de Priya Sharma en el muelle",
+        "booking": "En la reserva",
+        "cardTitle": "Credencial de buceo de muestra",
+        "match": "Registrar la coincidencia",
+        "mismatch": "No coincide",
+        "hold": "Priya sigue en el muelle",
+        "recheck": "Volver a revisar la tarjeta de Priya",
+        "verified": "El personal del mostrador confirmó que la tarjeta coincide",
+        "otherCard": "Probar con otra tarjeta",
+        "number": "Número de tarjeta",
+        "pending": "Queda una tarjeta por revisar",
+        "prompt": "Priya espera en el muelle. La tarjeta de Tom ya está revisada.",
+        "compare": "Compara la tarjeta de Priya con su reserva",
+        "agencyChecked": "La certificación de esta reserva de muestra ya se verificó con PADI.",
+        "holdHint": "Pide a Priya la tarjeta que coincide con su reserva y revísala de nuevo.",
+        "tomCard": "Ver la tarjeta revisada de Tom",
+        "previouslyChecked": "Tarjeta ya revisada",
+        "corrected": "La tripulación pidió la tarjeta correcta antes del embarque."
+      }
     }
   },
   "common": {

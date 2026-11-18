@@ -29,11 +29,11 @@ installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use(VISUAL_STEP_BOUNDS);
 
-/** Capture the boat at the dock and the walkthrough at its first, still frame. */
+/** Capture the boat at the dock desk and the walkthrough at its first, still frame. */
 async function openStillLanding(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.locator("[data-boat-phase=dock] canvas[data-boat-harbor=ready]").waitFor();
+  await page.locator("[data-boat-phase=desk] canvas[data-boat-harbor=ready]").waitFor();
 }
 
 for (const scheme of ["light", "dark"] as const) {

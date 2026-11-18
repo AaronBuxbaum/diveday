@@ -11,7 +11,7 @@ const rubber = "#253d3d";
 const metal = "#a8c1bc";
 const bright = "#e1eee1";
 
-function shape(points: Point[], paint: string, layer = 0, line = 0): Face {
+export function shape(points: Point[], paint: string, layer = 0, line = 0): Face {
   const center: Point = [0, 0, 0];
   for (const [x, y, z] of points) {
     center[0] += x / points.length;
@@ -21,11 +21,11 @@ function shape(points: Point[], paint: string, layer = 0, line = 0): Face {
   return { points, paint, line, center, layer };
 }
 
-function rod(mesh: Face[], a: Point, b: Point, paint: string, weight: number, layer = 2) {
+export function rod(mesh: Face[], a: Point, b: Point, paint: string, weight: number, layer = 2) {
   mesh.push(shape([a, b], paint, layer, weight));
 }
 
-function block(
+export function block(
   mesh: Face[],
   x: number,
   y: number,
@@ -95,7 +95,7 @@ function block(
   );
 }
 
-function cylinder(
+export function cylinder(
   mesh: Face[],
   x: number,
   y: number,
@@ -634,7 +634,53 @@ function addFins(mesh: Face[]) {
     );
   }
 }
-const boat = [...makeBoat(), ...makeDiver(0), ...makeDiver(1)];
+export const dockPaint = {
+  cream,
+  teal,
+  varnish,
+  rubber,
+  metal,
+  bright,
+  shade: "#195052",
+  canvas: "#cf9d69",
+  shirt: "#6bafa0",
+  skin: "#a87555",
+  lens: "#8ac2c4",
+};
+const priya = makeDiver(0);
+const boat = [...makeBoat(), ...makeDiver(1)];
+export function priyaPosition(boarding: number): Point {
+  // Turn along the pier, cross the boarding boards, then step into the stern.
+  const start: Point = [-2.23, 0.67, -2.38],
+    foot: Point = [-3.24, 0.67, -1.79],
+    gate: Point = [-3.24, 0.72, -0.8];
+  const [from, to, amount]: [Point, Point, number] =
+    boarding < 0.32
+      ? [start, foot, boarding / 0.32]
+      : boarding < 0.68
+        ? [foot, gate, (boarding - 0.32) / 0.36]
+        : [gate, diverPositions[0], (boarding - 0.68) / 0.32];
+  return [
+    from[0] + (to[0] - from[0]) * amount,
+    from[1] + (to[1] - from[1]) * amount + 0.03 * Math.abs(Math.sin(boarding * 4 * Math.PI)),
+    from[2] + (to[2] - from[2]) * amount,
+  ];
+}
+function moveToDock(mesh: Face[], position: Point) {
+  const offset = position.map((v, i) => v - diverPositions[0][i]);
+  const move = ([x, y, z]: Point): Point => [x + offset[0], y + offset[1], z + offset[2]];
+  return mesh.map((f) => ({ ...f, center: move(f.center), points: f.points.map(move) }));
+}
+const priyaOnDock = moveToDock(priya, priyaPosition(0));
+export function priyaAt(time: number, confirmed: number, boarding: number) {
+  const arm = wavingArm(0, time, boarding < 1 ? 0.72 : confirmed);
+  if (boarding === 1) return [...priya, ...arm];
+  const position = priyaPosition(boarding);
+  return [
+    ...(boarding === 0 ? priyaOnDock : moveToDock(priya, position)),
+    ...moveToDock(arm, position),
+  ];
+}
 
 // The jetty stays in harbor coordinates. During the trip transition it slips
 // astern while the camera continues to track the boat and its name markers.
@@ -736,11 +782,7 @@ function makeJetty() {
 export const jetty = makeJetty();
 
 export function boatAt(time: number, confirmed: readonly [number, number]) {
-  const pieces = [
-    ...boat,
-    ...wavingArm(0, time, confirmed[0]),
-    ...wavingArm(1, time, confirmed[1]),
-  ];
+  const pieces = [...boat, ...wavingArm(1, time, confirmed[1])];
   // The triangular pennant flexes between its stitched panels in the breeze.
   const flagPoint = (u: number, v: number): Point => [
     2.01 - u * 0.75,

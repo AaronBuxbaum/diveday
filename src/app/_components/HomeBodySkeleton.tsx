@@ -41,7 +41,7 @@ const TITLE_LINES = [
  *   - the demo note (`mt-3`): 20px lines, two on a phone and one from `sm`;
  *   - the diver's line (`mt-6`): one 20px line, "Booked a dive? Find your
  *     booking" (fourth review, item 50), only while `HOME_DIVER_DOOR` is on;
- *   - the boat: a trip header, a 3:2 illustration, and two diver selections.
+ *   - the boat: a trip header, a 3:2 illustration, and a dockside card check.
  *
  * **The first step is drawn at its height**, the same way: the band's title
  * (three lines on a phone, two from `sm`), then the row — the marker, the
@@ -98,14 +98,12 @@ export function HomeBodySkeleton() {
               </div>
               <div className="aspect-[3/2] w-full bg-surface-sunken" />
               <div className="@container px-4 py-4 sm:px-5">
-                <div className="flex min-h-7 flex-wrap items-center justify-between gap-x-3">
-                  <div className="h-6 w-32 rounded bg-surface-sunken" />
-                  <div className="h-4 w-24 rounded bg-surface-sunken" />
-                </div>
-                <div className="mt-2 h-5 w-3/4 rounded bg-surface-sunken" />
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <div className="h-11 rounded-lg bg-surface-sunken" />
-                  <div className="h-11 rounded-lg bg-surface-sunken" />
+                <div className="h-7 w-44 rounded bg-surface-sunken" />
+                <div className="mt-2 h-5 w-full rounded bg-surface-sunken" />
+                <div className="h-5 w-1/3 rounded bg-surface-sunken sm:hidden" />
+                <div className="mt-3 h-11 w-36 rounded-lg bg-surface-sunken" />
+                <div className="mt-2 flex h-11 items-center border-t border-border">
+                  <div className="h-4 w-36 rounded bg-surface-sunken" />
                 </div>
               </div>
             </div>

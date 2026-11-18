@@ -43,6 +43,10 @@ export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
         })}
       >
         <MarketingBoatRollCall
+          deskPoster={poster(
+            "/marketing/boat-check-in.webp",
+            t("marketing.home.boat.desk.imageAlt"),
+          )}
           dockPoster={poster(
             "/marketing/boat-dock.webp",
             t("marketing.home.boat.dockIllustration"),
@@ -52,6 +56,32 @@ export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
             t("marketing.home.boat.illustration"),
           )}
           labels={{
+            desk: {
+              checkpoint: t("marketing.home.boat.desk.checkpoint"),
+              open: t("marketing.home.boat.desk.open"),
+              pin: t("marketing.home.boat.desk.pin"),
+              booking: t("marketing.home.boat.desk.booking"),
+              cardTitle: t("marketing.home.boat.desk.cardTitle"),
+              match: t("marketing.home.boat.desk.match"),
+              mismatch: t("marketing.home.boat.desk.mismatch"),
+              hold: t("marketing.home.boat.desk.hold"),
+              recheck: t("marketing.home.boat.desk.recheck"),
+              verified: t("marketing.home.boat.desk.verified"),
+              otherCard: t("marketing.home.boat.desk.otherCard"),
+              number: t("marketing.home.boat.desk.number"),
+              pending: t("marketing.home.boat.desk.pending"),
+              prompt: t("marketing.home.boat.desk.prompt"),
+              compare: t("marketing.home.boat.desk.compare"),
+              agencyChecked: t("marketing.home.boat.desk.agencyChecked"),
+              holdHint: t("marketing.home.boat.desk.holdHint"),
+              tomCard: t("marketing.home.boat.desk.tomCard"),
+              previouslyChecked: t("marketing.home.boat.desk.previouslyChecked"),
+              tomLevel: t("course.certificationLevels.rescue"),
+              corrected: t("marketing.home.boat.desk.corrected"),
+              // i18n-exempt: certification agency name
+              issuedBy: "PADI",
+              level: t("course.certificationLevels.advancedOpenWater"),
+            },
             title: t("marketing.home.boat.title"),
             dockCheckpoint: t("marketing.home.boat.dockCheckpoint"),
             dockChoose: t("marketing.home.boat.dockChoose"),

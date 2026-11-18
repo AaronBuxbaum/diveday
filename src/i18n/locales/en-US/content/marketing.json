@@ -131,7 +131,30 @@
       "dockAboard": "Aboard for departure",
       "dockConfirm": "Mark {name} aboard",
       "dockPreviously": "10 people already accounted for, including Tom Okafor",
-      "depart": "Continue to the reef"
+      "depart": "Continue to the reef",
+      "desk": {
+        "checkpoint": "Dock desk · Card check",
+        "imageAlt": "Priya stands on the pier beside the boat while Tom waits on deck.",
+        "open": "Check Priya’s card",
+        "pin": "Check Priya Sharma’s card on the pier",
+        "booking": "On the booking",
+        "cardTitle": "Sample certification card",
+        "match": "Record card match",
+        "mismatch": "Doesn’t match",
+        "hold": "Priya is on hold at the dock",
+        "recheck": "Recheck Priya’s card",
+        "verified": "Certification card matched by desk staff",
+        "otherCard": "Try a different card",
+        "number": "Card number",
+        "pending": "One card left to check",
+        "prompt": "Priya is waiting on the pier. Tom’s card is already checked.",
+        "compare": "Compare Priya’s card with her booking",
+        "agencyChecked": "The certification on this sample booking was already verified with PADI.",
+        "holdHint": "Ask Priya for the card that matches her booking, then check it again.",
+        "tomCard": "View Tom’s checked card",
+        "previouslyChecked": "Card already checked",
+        "corrected": "The crew requested a matching card before boarding."
+      }
     }
   },
   "common": {

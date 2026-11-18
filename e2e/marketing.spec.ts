@@ -88,6 +88,21 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   await expect(heroSection.getByText(/^One flat price of/)).toHaveCount(0);
 });
 
+async function recordSampleCardMatch(boat: Locator, t: ReturnType<typeof diverTranslator>) {
+  const card = boat.locator("[data-sample-card]");
+  await expect(
+    boat.getByRole("region", { name: t("marketing.home.boat.desk.booking") }),
+  ).toContainText("SAMPLE-072");
+  await expect(
+    card.getByText(t("marketing.home.boat.desk.cardTitle"), { exact: true }),
+  ).toBeVisible();
+  await boat.getByRole("button", { name: t("marketing.home.boat.desk.match") }).press("Enter");
+  await expect(boat.locator("[data-boat-scene]")).toHaveAttribute("data-boat-phase", "dock");
+  await expect(
+    boat.getByText(t("marketing.home.boat.dockCheckpoint"), { exact: true }),
+  ).toBeFocused();
+}
+
 async function takeSampleBoatToReef(boat: Locator, t: ReturnType<typeof diverTranslator>) {
   const status = boat.getByRole("status");
   const depart = boat.getByRole("button", { name: t("marketing.home.boat.depart") });
@@ -133,6 +148,36 @@ test("each diver on the sample boat needs an individual roll-call confirmation",
     boat.getByRole("button", { name: t("marketing.home.boat.select", { name }) });
   const markAboard = (name: string) =>
     boat.getByRole("button", { name: t("marketing.home.boat.markAboard", { name }) });
+  const desk = boat.locator("[data-boat-phase=desk]");
+  const openCard = boat.getByRole("button", {
+    name: t("marketing.home.boat.desk.open"),
+    exact: true,
+  });
+  const recheckCard = boat.getByRole("button", { name: t("marketing.home.boat.desk.recheck") });
+  await expect(desk).toBeVisible();
+  const tomCard = boat.getByText(t("marketing.home.boat.desk.tomCard"), { exact: true });
+  await tomCard.click();
+  await expect(boat.locator("details [data-sample-card]")).toContainText("SAMPLE-041");
+  await expect(boat.locator("details [data-sample-card]")).toContainText("Tom Okafor");
+  await tomCard.click();
+  await openCard.press("Enter");
+  const sampleCard = boat.locator("[data-sample-card]");
+  await boat.getByRole("button", { name: t("marketing.home.boat.desk.otherCard") }).click();
+  await expect(sampleCard).toContainText("SAMPLE-027");
+  await expect(
+    boat.getByRole("button", { name: t("marketing.home.boat.desk.match") }),
+  ).toBeDisabled();
+  await boat.getByRole("button", { name: t("marketing.home.boat.desk.mismatch") }).click();
+  await expect(boat.getByText(t("marketing.home.boat.desk.hold"), { exact: true })).toBeVisible();
+  await expect(desk).toBeVisible();
+  await expect(
+    boat.getByRole("button", { name: t("marketing.home.boat.dockConfirm", { name: "Priya" }) }),
+  ).toHaveCount(0);
+  await expect(boat.getByRole("button", { name: t("marketing.home.boat.depart") })).toHaveCount(0);
+  await recheckCard.press("Enter");
+  await expect(sampleCard).not.toContainText("SAMPLE-027");
+  await expect(sampleCard).toContainText("SAMPLE-072");
+  await recordSampleCardMatch(boat, t);
   await takeSampleBoatToReef(boat, t);
   await boat.getByRole("button", { name: t("marketing.home.boat.pause") }).click();
   await boat.getByRole("button", { name: t("marketing.home.boat.resume") }).click();
@@ -154,6 +199,11 @@ test("each diver on the sample boat needs an individual roll-call confirmation",
   await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 11 }));
 
   await boat.getByText(t("marketing.home.boat.record"), { exact: true }).click();
+  const deskRecord = boat.locator("details [data-boat-checkpoint=desk]");
+  await expect(deskRecord).toContainText("Priya Sharma");
+  await expect(deskRecord).toContainText(t("marketing.home.boat.desk.verified"));
+  await expect(deskRecord).toContainText(t("marketing.home.boat.desk.corrected"));
+  await expect(deskRecord).toContainText("Tom Okafor");
   await expect(boat.locator("details [data-boat-checkpoint=dock] ol > li")).toHaveText([
     "Priya Sharma",
   ]);
@@ -162,11 +212,11 @@ test("each diver on the sample boat needs an individual roll-call confirmation",
     "Tom Okafor",
   ]);
   await boat.getByRole("button", { name: t("marketing.home.boat.restart") }).click();
-  await expect(boat.locator("[data-boat-scene]")).toHaveAttribute("data-boat-phase", "dock");
-  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 10 }));
-  await expect(canvas).toHaveAttribute("data-boat-focus", "overview");
-  await expect(boat.locator("details")).toHaveCount(0);
-  await expect(inspect("Priya Sharma")).toHaveAttribute("aria-pressed", "false");
+  await expect(desk).toBeVisible();
+  await expect(openCard).toBeVisible();
+  await expect(recheckCard).toHaveCount(0);
+  await expect(boat.getByText(t("marketing.home.boat.record"), { exact: true })).toHaveCount(0);
+  await expect(boat.locator("[data-sample-card]:visible")).toHaveCount(0);
 });
 
 test("the 3D boat can be turned by dragging or keyboard with reduced motion", async ({ page }) => {
@@ -175,6 +225,7 @@ test("the 3D boat can be turned by dragging or keyboard with reduced motion", as
   const t = diverTranslator("en-US");
   const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
   const canvas = boat.locator("canvas[data-boat-yaw]");
+  await boat.locator("[data-boat-scene]").scrollIntoViewIfNeeded();
   await expect(canvas).toBeVisible();
   await expect(boat.getByRole("button", { name: t("marketing.home.boat.pause") })).toHaveCount(0);
 
@@ -196,6 +247,8 @@ test("the 3D boat can be turned by dragging or keyboard with reduced motion", as
   await page.mouse.up();
   await expect.poll(() => canvas.getAttribute("data-boat-yaw")).not.toBe(keyboardYaw);
 
+  await boat.getByRole("button", { name: t("marketing.home.boat.desk.pin") }).click();
+  await recordSampleCardMatch(boat, t);
   await takeSampleBoatToReef(boat, t);
   const marker = (name: string) =>
     boat.getByRole("button", { name: t("marketing.home.boat.marker", { name }) });
@@ -236,6 +289,11 @@ test("the boat roster still works without canvas support", async ({ page }) => {
   await page.goto("/");
   const t = diverTranslator("en-US");
   const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
+  const deskPoster = boat.getByRole("img", { name: t("marketing.home.boat.desk.imageAlt") });
+  await expect(deskPoster).toHaveAttribute("src", /boat-check-in/);
+  await deskPoster.evaluate((image: HTMLImageElement) => image.decode());
+  await boat.getByRole("button", { name: t("marketing.home.boat.desk.open"), exact: true }).click();
+  await recordSampleCardMatch(boat, t);
   const dockPoster = boat.getByRole("img", { name: t("marketing.home.boat.dockIllustration") });
   await expect(dockPoster).toHaveAttribute("src", /boat-dock/);
   await dockPoster.evaluate((image: HTMLImageElement) => image.decode());

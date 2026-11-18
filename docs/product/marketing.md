@@ -90,13 +90,17 @@ and listed the rest in a closed index on `/product`.
 - **The homepage follows one booking** (`src/app/(marketing)/page.tsx`). The title says what the shop gets
   ("Every diver booked, signed, checked and accounted for") and the lede says what DiveDay is: the
   journey from online booking to dock readiness. Beside the headline, a miniature of the 7:30 boat
-  takes the visitor from the dock before departure to the reef after dive one. At the dock,
-  ten of eleven people are aboard, including Tom Okafor. Confirming Priya Sharma closes that
-  roll call. The visitor chooses when to continue to the reef. There, nine are accounted for
-  and both Priya and Tom need fresh confirmations. Selecting a diver on deck or in the roster
-  shows their location and gear. The final record keeps each checkpoint’s confirmations in order.
-  Starting over returns to the dock and clears the record. Dragging and arrow keys turn the boat.
-  Reduced motion changes views immediately. The roster works without canvas. Below the hero,
+  takes the visitor from a card check at the dock desk to the reef after dive one. Priya Sharma
+  waits on the pier while the visitor compares a sample certification card with the verified
+  certification on her booking. Choosing a different card changes its number. A mismatch holds
+  her at the desk for a recheck. Recording a match by hand opens the departure roll call
+  at ten of eleven aboard, including Tom Okafor. Calling Priya by name and marking her aboard
+  closes that roll call. The visitor chooses when to continue to the reef. There, nine are already
+  accounted for and both Priya and Tom need fresh confirmations. Selecting a diver on deck or in the roster
+  shows their location and gear. The final record keeps the desk’s card check and each roll call’s
+  confirmations in order. Starting over clears the record and restores the pending card check.
+  Dragging and arrow keys turn the boat. Reduced motion changes views immediately. The roster
+  works without canvas. Below the hero,
   the walkthrough follows Priya’s booking from the storefront to the recap and review. Its check-in
   step shows the arrivals desk and its roll-call step shows the captain’s screen.
   A step ends in its feature page rather than in a door into the demo, because that page's own door

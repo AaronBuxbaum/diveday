@@ -5,8 +5,14 @@ import {
   type Face,
   jetty,
   type Point,
+  priyaAt,
+  priyaPosition,
   tau,
 } from "./marketing-boat-model";
+
+import { checkInDesk } from "./marketing-dock-desk";
+
+const equippedJetty = [...jetty, ...checkInDesk];
 
 type ScreenPoint = { x: number; y: number };
 type Project = (x: number, y: number, z: number) => ScreenPoint;
@@ -230,18 +236,21 @@ export function drawBoatScene(
   focus: readonly [number, number] = [0, 0],
   reefMix = 1,
   harborWater?: HTMLImageElement,
+  boarding = 1,
 ): [ScreenPoint, ScreenPoint] {
   const underway = Math.sin(Math.PI * reefMix);
   const heading = 2.24 + yaw;
   const cx = Math.cos(heading),
     cz = Math.sin(heading);
-  const elevation = 0.54,
+  const elevation = 0.54 + 0.12 * (1 - boarding),
     up = Math.cos(elevation),
     down = Math.sin(elevation);
   const zoom = 1 + 1.45 * (focus[0] + focus[1]);
   const s = Math.min(width / 10.5, height / 7.05) * zoom;
-  const targetX = diverPositions[0][0] * focus[0] + diverPositions[1][0] * focus[1];
-  const targetZ = diverPositions[0][2] * focus[0] + diverPositions[1][2] * focus[1];
+  const priya = priyaPosition(boarding);
+  const deskView = (1 - boarding) * (1 - focus[0] - focus[1]);
+  const targetX = priya[0] * focus[0] + diverPositions[1][0] * focus[1] - 0.75 * deskView;
+  const targetZ = priya[2] * focus[0] + diverPositions[1][2] * focus[1] - 0.9 * deskView;
   const targetY = 1.32 * (focus[0] + focus[1]);
   const ox = width * 0.5 - s * (-cz * targetX + cx * targetZ),
     oy = height * 0.57 - s * ((cx * targetX + cz * targetZ) * down - targetY * up);
@@ -255,10 +264,17 @@ export function drawBoatScene(
   const depth = (p: Point) => (cx * p[0] + cz * p[2]) * up + p[1] * down;
   const byDepth = (a: Face, b: Face) => a.layer - b.layer || depth(a.center) - depth(b.center);
   const dockProject: Project = (x, y, z) => project(x - reefMix * 11, y, z - reefMix * 1.9);
+  const onPier = priya[2] < -1.52;
+  const priyaFaces = priyaAt(time, confirmed[0], boarding);
   function drawJetty() {
     ctx.save();
     ctx.globalAlpha = Math.min(1, (1 - reefMix) * 2);
-    paintFaces(ctx, jetty.slice().sort(byDepth), dockProject, s);
+    paintFaces(
+      ctx,
+      (onPier ? [...equippedJetty, ...priyaFaces] : equippedJetty.slice()).sort(byDepth),
+      dockProject,
+      s,
+    );
     ctx.restore();
   }
   if (reefMix < 1) {
@@ -296,6 +312,7 @@ export function drawBoatScene(
   const aboard: Project = (x, y, z) =>
     project(x + underway * 0.22, y + bob + z * roll + x * pitch, z - y * roll);
   const pieces = boatAt(time, confirmed);
+  if (!onPier) pieces.push(...priyaFaces);
   // Window panes only render on the two visible sides of the wheelhouse.
   const visible = pieces.filter((f) => {
     if (f.layer !== 2.01 && f.layer !== 2.02) return true;
@@ -324,5 +341,8 @@ export function drawBoatScene(
     ctx.restore();
   }
   const anchor = ([x, y, z]: Point) => aboard(x, y + diverHeadHeight, z);
-  return [anchor(diverPositions[0]), anchor(diverPositions[1])];
+  return [
+    onPier ? dockProject(priya[0], priya[1] + diverHeadHeight, priya[2]) : anchor(priya),
+    anchor(diverPositions[1]),
+  ];
 }
