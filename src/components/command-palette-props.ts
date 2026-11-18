@@ -20,11 +20,11 @@ import type { CommandPaletteCopy } from "./search/CommandPalette";
  * (code review 2026-10-13, item 4).
  */
 
-export async function signOutAction() {
+export async function signOutAction(offlineCleanupIncomplete = true) {
   "use server";
   const auth = await getAuth();
   await auth.api.signOut({ headers: await headers() });
-  redirect("/");
+  redirect(offlineCleanupIncomplete ? "/?device_cleanup=incomplete" : "/");
 }
 
 /**
