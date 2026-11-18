@@ -89,8 +89,16 @@ it.each(["apply", "note_disposition"] as const)(
     await expect(syncOfflineManifest("trip-1")).rejects.toMatchObject({ code: "unavailable" });
     intercepted.mockRestore();
     expect(await rawStoredRecord("trip-1")).toEqual(pending);
-    expect(
-      (await loadOfflineManifest("trip-1"))?.events.map((event) => event.clientEventId),
-    ).toEqual(both.events.map((event) => event.clientEventId));
+    const retained = await loadOfflineManifest("trip-1");
+    expect(retained?.events.map((event) => event.clientEventId)).toEqual(
+      both.events.map((event) => event.clientEventId),
+    );
+    if (stage === "note_disposition") {
+      // The refusal is an incomplete cleanup, not proof that the server's
+      // instruction was applied to the concurrently replaced ciphertext.
+      expect(retained?.events[0].note).toBe("first note");
+      expect(retained?.events[0].noteDisposition).toBeUndefined();
+      expect(retained?.events[0].syncStatus).toBe("pending");
+    }
   },
 );
