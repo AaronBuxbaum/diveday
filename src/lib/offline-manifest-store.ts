@@ -402,21 +402,70 @@ function withKeyLock<T>(fn: () => Promise<T>): Promise<T> {
   return navigator.locks.request("diveday-offline-manifest-key", fn);
 }
 
+function isManifestKey(value: unknown): value is CryptoKey {
+  return (
+    value instanceof CryptoKey &&
+    value.type === "secret" &&
+    !value.extractable &&
+    value.algorithm.name === "AES-GCM" &&
+    (value.algorithm as AesKeyAlgorithm).length === 256 &&
+    value.usages.includes("encrypt") &&
+    value.usages.includes("decrypt")
+  );
+}
+
 async function encryptionKey(db: IDBDatabase): Promise<CryptoKey> {
   return withKeyLock(async () => {
     const read = db.transaction(KEY_STORE, "readonly");
-    const existing = await requestResult(read.objectStore(KEY_STORE).get(KEY_ID));
+    const existing: unknown = await requestResult(read.objectStore(KEY_STORE).get(KEY_ID));
     await transactionDone(read);
-    if (existing instanceof CryptoKey) return existing;
-
-    const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+    if (isManifestKey(existing)) return existing;
+    if (existing !== undefined) throw new OfflineManifestError("unavailable");
+    // Generate outside the transaction: awaiting Web Crypto inside an IDB
+    // transaction can allow it to close before the key is written.
+    const candidate = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
       "encrypt",
       "decrypt",
     ]);
-    const write = db.transaction(KEY_STORE, "readwrite");
-    write.objectStore(KEY_STORE).put(key, KEY_ID);
-    await transactionDone(write);
-    return key;
+    // Elect a key under one IndexedDB write transaction, even on browsers
+    // without Web Locks. A missing key alongside existing ciphertext is not
+    // an empty device: replacing it would strand potentially unsent evidence.
+    const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+    const done = transactionDone(transaction);
+    const keys = transaction.objectStore(KEY_STORE);
+    let selected: CryptoKey | undefined;
+    let unavailable = false;
+    const get = keys.get(KEY_ID);
+    get.onsuccess = () => {
+      const current: unknown = get.result;
+      if (current !== undefined) {
+        if (isManifestKey(current)) {
+          selected = current;
+        } else {
+          unavailable = true;
+          transaction.abort();
+        }
+        return;
+      }
+      const count = transaction.objectStore(MANIFEST_STORE).count();
+      count.onsuccess = () => {
+        if (count.result !== 0) {
+          unavailable = true;
+          transaction.abort();
+          return;
+        }
+        keys.add(candidate, KEY_ID);
+        selected = candidate;
+      };
+    };
+    try {
+      await done;
+    } catch (error) {
+      if (unavailable) throw new OfflineManifestError("unavailable");
+      throw error;
+    }
+    if (!selected) throw new OfflineManifestError("unavailable");
+    return selected;
   });
 }
 
