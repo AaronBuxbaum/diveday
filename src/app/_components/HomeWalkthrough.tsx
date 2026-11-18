@@ -168,13 +168,13 @@ export function HomeWalkthrough({
     }
   };
 
-  // A new beat starts with an empty segment, on its first screen when it is
-  // playing and on its finished one when it is not (a reader who stopped it,
-  // or asked for no motion, gets the screen that says the most).
+  // A new beat starts with an empty segment, on its first screen. A walk that is not playing (a
+  // reader who stopped it, or asked for no motion) holds that first frame, its animations still.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the index and playing are the trigger
   useEffect(() => {
     progress.current = 0;
-    setPhase(playing ? "before" : "after");
+    listEl()?.toggleAttribute("data-walk-still", !playing);
+    setPhase("before");
   }, [index, playing]);
 
   const running = playing && onScreen && tabVisible && !held;
@@ -221,7 +221,6 @@ export function HomeWalkthrough({
     index,
     total,
     beats,
-    playing,
     go,
   });
 

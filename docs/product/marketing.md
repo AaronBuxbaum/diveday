@@ -761,9 +761,8 @@ rendered through the shared wrappers in `src/components/MarketingSections.tsx`:
 
 | Component | Represents | Marketing use |
 | --- | --- | --- |
-| `DiverBookingFallback` | The shop's public schedule | The homepage's booking step |
 | `BookingCardFallback` | A departure's booking card on the public trip page | The online booking page |
-| `StorefrontFallback` | The shop's own booking page | The website page |
+| `StorefrontFallback` | The shop's own booking page | The website page, and the homepage's first step |
 | `WaiverSigningFallback` | Signing the waiver and medical form on a diver's phone | The waivers page, and the homepage's signing step |
 | `FrontDeskReadinessFallback` | Today's readiness for one departure | The certification checks page, and the homepage's morning step |
 | `NightBeforeBriefFallback` | The diver's trip page the night before | The messages page |

@@ -5,7 +5,7 @@ import { STEPS } from "./home-steps";
 
 describe("the homepage's walk", () => {
   it("has one slide per step, in a story with a beginning and an end", () => {
-    expect(STEPS.length).toBeGreaterThanOrEqual(15);
+    expect(STEPS.length).toBeGreaterThanOrEqual(12);
     expect(new Set(STEPS.map((step) => step.id)).size).toBe(STEPS.length);
   });
 
@@ -31,8 +31,16 @@ describe("the homepage's walk", () => {
     }
   });
 
-  it("walks browsing, selecting and buying as three slides before the money lands", () => {
-    expect(STEPS.slice(0, 4).map((step) => step.id)).toEqual(["browse", "select", "pay", "money"]);
+  it("walks picking a boat from the page, paying, and the money landing, in that order", () => {
+    expect(STEPS.slice(0, 3).map((step) => step.id)).toEqual(["browse", "pay", "money"]);
+  });
+
+  it("holds her medical answer and her signature in one slide, and cuts the dive computer", () => {
+    const ids = STEPS.map((step) => step.id);
+    expect(ids).toContain("sign");
+    expect(ids).not.toContain("medical");
+    expect(ids).not.toContain("select");
+    expect(ids).not.toContain("computer");
   });
 
   it("gives the slides she types into a longer beat", () => {
@@ -40,6 +48,7 @@ describe("the homepage's walk", () => {
       "pay",
       "onboard",
       "sign",
+      "review",
     ]);
   });
 

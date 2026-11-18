@@ -216,7 +216,7 @@ describe("the homepage walkthrough", () => {
     expect(screen.getByText("First")).toBeInTheDocument();
   });
 
-  it("plays a beat as before, tap, after, and shows the finished screen when stopped", () => {
+  it("plays a beat as before, tap, after, and shows the first frame when stopped", () => {
     mockMotion(false);
     const { container } = setup();
     const list = container.querySelector("[data-walk-list]") as HTMLElement;
@@ -227,12 +227,13 @@ describe("the homepage walkthrough", () => {
     expect(phase()).toBe("tap");
     act(() => void vi.advanceTimersByTime(10_000));
     expect(phase()).toBe("after");
-    // Pause shows the finished screen; a new beat plays from its first.
+    // Pause goes back to the first frame and holds it; Play runs the beat from there.
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    expect(phase()).toBe("before");
+    expect(list).toHaveAttribute("data-walk-still");
     fireEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(list).not.toHaveAttribute("data-walk-still");
     expect(["before", "tap", "after"]).toContain(phase());
-    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
-    expect(phase()).toBe("after");
   });
 
   it("gives a beat she types into a longer first phase before its tap", () => {
@@ -259,9 +260,11 @@ describe("the homepage walkthrough", () => {
     expect(list.getAttribute("data-walk-phase")).toBe("tap");
   });
 
-  it("shows the finished screen under reduced motion", () => {
+  it("holds the first frame, its animations still, under reduced motion", () => {
     mockMotion(true);
     const { container } = setup();
-    expect(container.querySelector("[data-walk-list]")).toHaveAttribute("data-walk-phase", "after");
+    const list = container.querySelector("[data-walk-list]");
+    expect(list).toHaveAttribute("data-walk-phase", "before");
+    expect(list).toHaveAttribute("data-walk-still");
   });
 });

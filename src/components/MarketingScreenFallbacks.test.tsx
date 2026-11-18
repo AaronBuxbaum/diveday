@@ -10,7 +10,6 @@ import {
 } from "./MarketingBookingWalkScreens";
 import {
   CaptainRollCallFallback,
-  DiverBookingFallback,
   ExportBundleFallback,
   FrontDeskReadinessFallback,
   ImportPreviewFallback,
@@ -20,12 +19,19 @@ import {
 
 afterEach(cleanup);
 
-it("DiverBookingFallback shows the demo shop’s reef cover inside its accessible screen", () => {
-  const { container } = render(<DiverBookingFallback locale="en-US" />);
-  const photo = container.querySelector("img");
-  expect(photo).not.toBeNull();
-  expect(photo).toHaveAttribute("alt", "");
-  expect(photo?.getAttribute("src")).toContain("Elkhorn");
+it("RecapPageFallback shows the dive log entry, then the trip's photos, then three species seen", () => {
+  const { container } = render(<RecapPageFallback locale="en-US" />);
+  const text = container.textContent ?? "";
+  expect(text.indexOf("Dive log entry")).toBeGreaterThan(-1);
+  expect(text.indexOf("Photos from the trip")).toBeGreaterThan(text.indexOf("Dive log entry"));
+  expect(text.indexOf("Seen on your dive")).toBeGreaterThan(text.indexOf("Photos from the trip"));
+  expect(container.querySelectorAll("ul img")).toHaveLength(3);
+});
+
+it("RecapPageFallback's review has her typing a glowing review before she sends it", () => {
+  const { container } = render(<RecapPageFallback locale="en-US" view="review" state="writing" />);
+  expect(container.querySelector("[data-walk-type]")).not.toBeNull();
+  expect(container.querySelector("[data-tap-target]")?.textContent).toBe("Leave my review");
 });
 
 const EVERY_MOCK = [
@@ -33,7 +39,6 @@ const EVERY_MOCK = [
   ["FrontDeskReadinessFallback", FrontDeskReadinessFallback],
   ["ImportPreviewFallback", ImportPreviewFallback],
   ["ExportBundleFallback", ExportBundleFallback],
-  ["DiverBookingFallback", DiverBookingFallback],
   ["RecapPageFallback", RecapPageFallback],
   [
     "RecapPageFallback (review)",
@@ -282,8 +287,9 @@ describe("MarketingScreenFallbacks", () => {
       // The keepsake and the one ask, the two blocks the homepage's recap
       // step quotes: the shop wrote something, and the diver is asked once.
       expect(screen.getByText("Dive log entry")).toBeInTheDocument();
-      expect(screen.getByText("Photos from the boat")).toBeInTheDocument();
+      expect(screen.getByText("Photos from the trip")).toBeInTheDocument();
       expect(screen.getByText("Depth over time")).toBeInTheDocument();
+      expect(screen.getByText("Seen on your dive")).toBeInTheDocument();
     });
 
     it("draws the crew's note and the one ask on the review view", () => {
@@ -294,7 +300,7 @@ describe("MarketingScreenFallbacks", () => {
 
     it("renders in Spanish", () => {
       render(<RecapPageFallback locale="es-ES" />);
-      expect(screen.getByText("Fotos desde el barco")).toBeInTheDocument();
+      expect(screen.getByText("Fotos del viaje")).toBeInTheDocument();
       expect(
         screen.getByText("Arrecife de dos tanques · Sábado · 13 de junio"),
       ).toBeInTheDocument();
