@@ -90,10 +90,11 @@ and listed the rest in a closed index on `/product`.
 - **The homepage follows one booking** (`src/app/(marketing)/page.tsx`). The title says what the shop gets
   ("Every diver booked, signed, checked and accounted for") and the lede says what DiveDay is: the
   journey from online booking to dock readiness. Beside the headline, a miniature of the 7:30 boat
-  lets the visitor mark Priya back aboard after dive one and see the roll call close. The example
-  runs in the browser. Below the hero, the walkthrough follows her booking from the storefront to
-  the recap and review. Its check-in step shows the arrivals desk and its roll-call step shows the
-  captain’s screen.
+  lets the visitor turn the boat, find Priya on deck and mark her back aboard after dive one.
+  Dragging and the arrow controls change the view. Marking Priya closes the local sample roll call,
+  which visitors can replay. The manual controls also work with reduced motion. Below the hero,
+  the walkthrough follows her booking from the storefront to the recap and review. Its check-in
+  step shows the arrivals desk and its roll-call step shows the captain’s screen.
   A step ends in its feature page rather than in a door into the demo, because that page's own door
   opens the demo on the same screen as the role that uses it. The page keeps its two demo doors,
   hero and close.

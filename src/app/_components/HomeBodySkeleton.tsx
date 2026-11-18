@@ -97,14 +97,14 @@ export function HomeBodySkeleton() {
                 <div className="h-4 w-24 rounded bg-surface-sunken" />
               </div>
               <div className="aspect-[3/2] w-full bg-surface-sunken" />
-              <div className="px-4 py-4 sm:px-5">
+              <div className="@container px-4 py-4 sm:px-5">
                 <div className="flex min-h-7 flex-wrap items-center justify-between gap-x-3">
                   <div className="h-6 w-32 rounded bg-surface-sunken" />
                   <div className="h-4 w-24 rounded bg-surface-sunken" />
                 </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+                <div className="mt-3 grid items-center gap-3 border-t border-border pt-3 @min-[18rem]:grid-cols-[minmax(0,1fr)_auto]">
                   <div className="h-10 w-28 rounded bg-surface-sunken" />
-                  <div className="h-11 w-36 rounded-lg bg-surface-sunken" />
+                  <div className="h-11 w-full rounded-lg bg-surface-sunken @min-[18rem]:w-44" />
                 </div>
               </div>
             </div>

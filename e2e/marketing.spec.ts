@@ -68,7 +68,7 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   // once offered ~9 (a five-chip role picker, the diver preview, demo, trial),
   // and every retired destination moved rather than disappeared — the roles
   // into the in-demo switcher, the preview onto the online booking page's own
-  // door. The boat’s local roll-call button stays within the sample.
+  // door. The boat's controls only operate the sample.
   const heroSection = page.getByRole("main").locator("section").first();
   await expect(heroSection.locator("button:not([disabled]):not([data-try-tap])")).toHaveCount(1);
   // The shop's budget is counted without the one line for a diver (fourth
@@ -89,6 +89,7 @@ test("the homepage hero offers one demo door without a price sentence", async ({
 
 test("the homepage sample closes the roll call for Priya and can be replayed", async ({ page }) => {
   const t = diverTranslator("en-US");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
   const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
   const markAboard = boat.getByRole("button", { name: t("marketing.home.boat.markAboard") });
@@ -97,7 +98,9 @@ test("the homepage sample closes the roll call for Priya and can be replayed", a
     boat.getByText(t("marketing.home.boat.count", { aboard: 10 }), { exact: true }),
   ).toBeVisible();
 
-  await expect(boat.getByText("Priya Sharma", { exact: true })).toBeVisible();
+  await boat.getByRole("button", { name: t("marketing.home.boat.pause") }).click();
+  await boat.getByRole("button", { name: t("marketing.home.boat.resume") }).click();
+  await expect(boat.locator("figcaption").getByText("Priya Sharma", { exact: true })).toBeVisible();
   await markAboard.focus();
   await markAboard.press("Enter");
   await expect(boat.getByText(t("marketing.home.boat.closed"), { exact: true })).toBeVisible();
@@ -110,6 +113,41 @@ test("the homepage sample closes the roll call for Priya and can be replayed", a
   await expect(markAboard).toBeVisible();
   await expect(
     boat.getByText(t("marketing.home.boat.count", { aboard: 10 }), { exact: true }),
+  ).toBeVisible();
+});
+
+test("the 3D boat can be turned by dragging or keyboard with reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const t = diverTranslator("en-US");
+  const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
+  const canvas = boat.locator("canvas[data-boat-yaw]");
+  await expect(canvas).toBeVisible();
+  await expect(boat.getByRole("button", { name: t("marketing.home.boat.pause") })).toHaveCount(0);
+
+  const initialYaw = await canvas.getAttribute("data-boat-yaw");
+  const left = boat.getByRole("button", { name: t("marketing.home.boat.rotateLeft") });
+  await left.focus();
+  await left.press("ArrowLeft");
+  await expect.poll(() => canvas.getAttribute("data-boat-yaw")).not.toBe(initialYaw);
+
+  const keyboardYaw = await canvas.getAttribute("data-boat-yaw");
+  await canvas.scrollIntoViewIfNeeded();
+  const bounds = await canvas.boundingBox();
+  if (!bounds) throw new Error("Missing boat viewport");
+  const x = bounds.x + bounds.width * 0.25;
+  const y = bounds.y + bounds.height * 0.5;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + bounds.width * 0.25, y, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(() => canvas.getAttribute("data-boat-yaw")).not.toBe(keyboardYaw);
+
+  await boat.getByRole("button", { name: t("marketing.home.boat.markerOpen") }).click();
+  await expect(boat.getByText(t("marketing.home.boat.closed"), { exact: true })).toBeVisible();
+  await boat.getByRole("button", { name: t("marketing.home.boat.restart") }).click();
+  await expect(
+    boat.getByRole("button", { name: t("marketing.home.boat.markerOpen") }),
   ).toBeVisible();
 });
 

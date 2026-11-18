@@ -22,17 +22,26 @@ export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
           <p className={ITEM_TITLE_CLASS}>{t("marketing.home.boat.title")}</p>
           <p className="text-sm text-muted">{t("marketing.home.boat.checkpoint")}</p>
         </div>
-        <Image
-          src="/marketing/boat-roll-call.webp"
-          width={1040}
-          height={693}
-          alt={t("marketing.home.boat.illustration")}
-          sizes="(min-width: 1200px) 512px, (min-width: 1024px) 44vw, (min-width: 496px) 448px, calc(100vw - 48px)"
-          loading="eager"
-          className="aspect-[3/2] w-full object-cover"
-        />
         <MarketingBoatRollCall
+          poster={
+            <Image
+              src="/marketing/boat-roll-call.webp"
+              width={1040}
+              height={693}
+              alt={t("marketing.home.boat.illustration")}
+              sizes="(min-width: 1200px) 512px, (min-width: 1024px) 44vw, (min-width: 496px) 448px, calc(100vw - 48px)"
+              loading="eager"
+              className="aspect-[3/2] w-full object-cover"
+            />
+          }
           labels={{
+            rotateLeft: t("marketing.home.boat.rotateLeft"),
+            rotateRight: t("marketing.home.boat.rotateRight"),
+            pause: t("marketing.home.boat.pause"),
+            resume: t("marketing.home.boat.resume"),
+            dragHint: t("marketing.home.boat.dragHint"),
+            markerOpen: t("marketing.home.boat.markerOpen"),
+            markerClosed: t("marketing.home.boat.markerClosed"),
             open: t("marketing.home.boat.open"),
             closed: t("marketing.home.boat.closed"),
             countOpen: t("marketing.home.boat.count", { aboard: 10 }),

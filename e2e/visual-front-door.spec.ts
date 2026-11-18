@@ -29,6 +29,13 @@ installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use(VISUAL_STEP_BOUNDS);
 
+/** Capture the rendered boat and walkthrough at their first, still frames. */
+async function openStillLanding(page: Page) {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.locator("[data-boat-scene] canvas[data-boat-reef=ready]").waitFor();
+}
+
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     // Base viewport for navigation and clicks; `capture` resizes to each entry
@@ -59,7 +66,8 @@ for (const scheme of ["light", "dark"] as const) {
           ["/product/payments", "feature-payments"],
         ]) {
           test(`${name} renders the revised copy (${scheme})`, async ({ page }) => {
-            await page.goto(route);
+            if (route === "/") await openStillLanding(page);
+            else await page.goto(route);
             await page.getByRole("heading", { level: 1 }).waitFor();
             await capture(page, name, scheme, { locale: SPANISH });
           });
@@ -73,7 +81,7 @@ for (const scheme of ["light", "dark"] as const) {
             page,
           }) => {
             await page.setViewportSize({ width: 390, height: 844 });
-            await page.goto("/");
+            await openStillLanding(page);
             const words = diverTranslator(locale);
             const nav = page.getByRole("navigation", { name: words("nav.mainNavigation") });
             const menu = nav.getByRole("button", { name: words("nav.menu"), exact: true });
@@ -328,9 +336,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
-        // Still: the walkthrough would otherwise change its beat under the camera.
-        await page.emulateMedia({ reducedMotion: "reduce" });
-        await page.goto("/");
+        await openStillLanding(page);
         await capture(page, "landing", scheme);
       });
 
@@ -342,8 +348,7 @@ for (const scheme of ["light", "dark"] as const) {
         test(`the landing walkthrough shows each beat of one diver's day (${scheme})`, async ({
           page,
         }) => {
-          await page.emulateMedia({ reducedMotion: "reduce" });
-          await page.goto("/");
+          await openStillLanding(page);
           const t = diverCopy;
           const next = page.getByRole("button", { name: t("marketing.home.walk.next") });
           await next.waitFor();
