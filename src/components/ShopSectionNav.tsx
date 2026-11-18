@@ -177,6 +177,7 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
   const hydratedKey = useHydratedKey();
   const pathname = usePathname() ?? "";
   const tabScrollRef = useRef<HTMLDivElement>(null);
+  const scrollCueRef = useRef<HTMLSpanElement>(null);
   const [scrollCue, setScrollCue] = useState<"none" | "left" | "right" | "both">("none");
   const current = currentStaffSection(pathname, root, gates);
   const tabs = items.filter((item) =>
@@ -192,6 +193,21 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
     if (!rail) return;
 
     const update = () => {
+      // The cue consumes space itself. Measure whether the tabs would fit
+      // without it, or a cue left over from a narrow viewport can create the
+      // very overflow that keeps it visible at a wider one.
+      const cue = scrollCueRef.current;
+      const previousScroll = rail.scrollLeft;
+      if (cue) cue.style.display = "none";
+      const fitsWithoutCue = rail.scrollWidth - rail.clientWidth <= 1;
+      if (cue) {
+        cue.style.removeProperty("display");
+        rail.scrollLeft = previousScroll;
+      }
+      if (fitsWithoutCue) {
+        setScrollCue("none");
+        return;
+      }
       const maxScroll = rail.scrollWidth - rail.clientWidth;
       const atStart = rail.scrollLeft <= 1;
       const atEnd = rail.scrollLeft >= maxScroll - 1;
@@ -288,6 +304,7 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
         </div>
         {scrollCue !== "none" ? (
           <span
+            ref={scrollCueRef}
             aria-hidden="true"
             data-staff-tab-scroll-cue={scrollCue}
             className="flex w-6 flex-none items-center justify-center gap-px border-s border-e border-border text-muted"

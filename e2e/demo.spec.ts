@@ -149,6 +149,9 @@ test("demo role switcher moves from owner to instructor and back", async ({ page
   test.setTimeout(30_000);
   await page.goto("/");
   await page.getByRole("button", { name: "Try the live demo" }).first().click();
+  // The homepage mockup also says “Demo shop”; wait for the real staff
+  // destination before using that text as the banner assertion.
+  await expect(page).toHaveURL(/\/shop\/[^/?]+\/?$/);
   await expect(page.getByText("Demo shop")).toBeVisible();
   await expect(page.locator("p", { hasText: /Viewing as/ })).toContainText("Owner");
 
