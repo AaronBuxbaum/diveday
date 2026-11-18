@@ -214,6 +214,57 @@ describe("OfflineManifestAutoSave", () => {
     await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(2));
   });
 
+  it("attempts cleanup before purge and refuses to save when cleanup is incomplete", async () => {
+    setOnline(true);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(fetch).mockResolvedValue(upcomingResponse([payloadFor("a")]));
+    vi.mocked(wipeOfflineMedicalAlerts).mockRejectedValueOnce(new Error("incomplete"));
+    render(<OfflineManifestAutoSave />);
+    await waitFor(() => expect(wipeOfflineMedicalAlerts).toHaveBeenCalled());
+    expect(purgeOfflineManifestsExceptShop).not.toHaveBeenCalled();
+    expect(saveOfflineManifest).not.toHaveBeenCalled();
+  });
+
+  it("retries on reconnect when one trip could not be saved", async () => {
+    setOnline(true);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    vi.mocked(nowMs).mockReturnValue(1_000);
+    vi.mocked(fetch).mockImplementation(async () =>
+      upcomingResponse([payloadFor("a"), payloadFor("b")]),
+    );
+    vi.mocked(saveOfflineManifest).mockImplementation(async (payload) => {
+      if (payload.manifests[0].trip.id === "a") throw new Error("unreadable copy");
+      return {} as never;
+    });
+    render(<OfflineManifestAutoSave />);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    window.dispatchEvent(new Event("online"));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    vi.mocked(saveOfflineManifest).mockReset();
+  });
+
+  it("does not let an earlier success suppress a retry after a failed round", async () => {
+    setOnline(true);
+    vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+    let clock = 1_000;
+    vi.mocked(nowMs).mockImplementation(() => clock);
+    vi.mocked(fetch).mockImplementation(async () => upcomingResponse([payloadFor("a")]));
+    vi.mocked(saveOfflineManifest)
+      .mockResolvedValueOnce({} as never)
+      .mockRejectedValueOnce(new Error("unreadable copy"));
+    render(<OfflineManifestAutoSave />);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    clock += MIN_TRIGGERED_GAP_MS;
+    window.dispatchEvent(new Event("online"));
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    window.dispatchEvent(new Event("online"));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+    vi.mocked(saveOfflineManifest).mockReset();
+  });
+
   it("fails closed — never saves this shop's trips when the cross-shop purge itself fails", async () => {
     // Saving anyway would leave both shops' rosters readable side by side in
     // the device-wide list until the next successful purge — the opposite of
