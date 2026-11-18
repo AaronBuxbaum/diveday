@@ -146,6 +146,28 @@ describe("buildAfterStateProps", () => {
       expect(text).not.toContain(secret);
     expect(morning.sheet).not.toHaveProperty("computerDives");
     expect(JSON.stringify(morning.postcard)).not.toContain("Own computer");
+    // A valid date-only import can have no depth, duration or samples. Preserve
+    // the dated personal record without inventing any of those missing facts.
+    await ctx.db
+      .update(computerDives)
+      .set({
+        record: {
+          localDate: day,
+          localStart: null,
+          startInstant: null,
+          device: null,
+          maxDepthMeters: null,
+          durationSeconds: null,
+        },
+      })
+      .where(eq(computerDives.batchId, batch.id));
+    const dateOnly = await build(data, bookingId);
+    expect(dateOnly.computerDives).toHaveLength(2);
+    expect(
+      dateOnly.computerDives.every((dive) =>
+        dive.recordedAt.includes("time and time zone unknown"),
+      ),
+    ).toBe(true);
   });
 
   it("never carries the person, the trip, the course or the lens id onto the bearer-token page", async () => {

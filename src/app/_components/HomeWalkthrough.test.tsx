@@ -74,10 +74,11 @@ describe("the homepage walkthrough", () => {
     expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
   });
 
-  it("advances by itself over about two minutes, and Pause stops it", () => {
+  it("advances by itself, a beat at a time, and Pause stops it", () => {
     mockMotion(false);
     setup();
-    act(() => void vi.advanceTimersByTime(51_000));
+    // A beat with nothing to do first is 0.7 s of lead, 1.8 s of tap and 4.2 s on the finished screen.
+    act(() => void vi.advanceTimersByTime(7_000));
     expect(screen.getByText("Second")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
     act(() => void vi.advanceTimersByTime(120_000));
@@ -184,7 +185,7 @@ describe("the homepage walkthrough", () => {
         "[data-walk-controls] ~ div > button > span > span:last-child",
       );
     const group = screen.getByRole("group", { name: "Walk" });
-    act(() => void vi.advanceTimersByTime(25_000));
+    act(() => void vi.advanceTimersByTime(3_350));
     const half = Number.parseFloat(fill()?.style.transform.replace("scaleX(", "") ?? "0");
     expect(half).toBeGreaterThan(0.4);
     expect(half).toBeLessThan(0.6);
@@ -193,7 +194,7 @@ describe("the homepage walkthrough", () => {
     act(() => void vi.advanceTimersByTime(120_000));
     expect(screen.getByText("First")).toBeInTheDocument();
     fireEvent.pointerUp(group, { clientX: 100 });
-    act(() => void vi.advanceTimersByTime(26_000));
+    act(() => void vi.advanceTimersByTime(3_700));
     expect(screen.getByText("Second")).toBeInTheDocument();
   });
 
@@ -216,31 +217,34 @@ describe("the homepage walkthrough", () => {
     expect(screen.getByText("First")).toBeInTheDocument();
   });
 
-  it("plays a beat as before, tap, after, and shows the first frame when stopped", () => {
+  it("plays a beat as before, tap, after, and stays on the frame it was paused on", () => {
     mockMotion(false);
     const { container } = setup();
     const list = container.querySelector("[data-walk-list]") as HTMLElement;
     const phase = () => list.getAttribute("data-walk-phase");
     expect(phase()).toBe("before");
-    // Three beats of 50 seconds: the tap starts at 10% and the swap at 30%.
-    act(() => void vi.advanceTimersByTime(6_000));
+    // The tap starts 0.7 s in and the finished screen 1.8 s after that.
+    act(() => void vi.advanceTimersByTime(1_000));
     expect(phase()).toBe("tap");
-    act(() => void vi.advanceTimersByTime(10_000));
+    act(() => void vi.advanceTimersByTime(2_000));
     expect(phase()).toBe("after");
-    // Pause goes back to the first frame and holds it; Play runs the beat from there.
+    // Paused mid-play, it stays on that frame, its animations held where they are.
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    expect(phase()).toBe("after");
+    expect(list).toHaveAttribute("data-walk-still");
+    // A slide opened while it is paused starts on its first frame, still.
+    fireEvent.click(screen.getByRole("button", { name: "Next step" }));
     expect(phase()).toBe("before");
     expect(list).toHaveAttribute("data-walk-still");
     fireEvent.click(screen.getByRole("button", { name: "Play" }));
     expect(list).not.toHaveAttribute("data-walk-still");
-    expect(["before", "tap", "after"]).toContain(phase());
   });
 
-  it("gives a beat she types into a longer first phase before its tap", () => {
+  it("gives a beat with something to do first a longer first phase before its tap", () => {
     mockMotion(false);
-    const typedBeats: WalkBeat[] = [{ ...(BEATS[0] as WalkBeat), typed: true }, ...BEATS.slice(1)];
+    const longBeats: WalkBeat[] = [{ ...(BEATS[0] as WalkBeat), lead: 5_000 }, ...BEATS.slice(1)];
     const { container } = render(
-      <HomeWalkthrough beats={typedBeats} labels={LABELS}>
+      <HomeWalkthrough beats={longBeats} labels={LABELS}>
         <ol data-walk-list>
           <li data-walk-step="a">
             <div data-walk-frame="one" />
@@ -253,10 +257,9 @@ describe("the homepage walkthrough", () => {
       </HomeWalkthrough>,
     );
     const list = container.querySelector("[data-walk-list]") as HTMLElement;
-    // A typed beat runs 75 seconds here and taps at 40%, so 6 seconds in she is still typing.
-    act(() => void vi.advanceTimersByTime(6_000));
+    act(() => void vi.advanceTimersByTime(4_000));
     expect(list.getAttribute("data-walk-phase")).toBe("before");
-    act(() => void vi.advanceTimersByTime(25_000));
+    act(() => void vi.advanceTimersByTime(2_000));
     expect(list.getAttribute("data-walk-phase")).toBe("tap");
   });
 

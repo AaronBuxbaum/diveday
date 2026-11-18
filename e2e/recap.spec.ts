@@ -342,6 +342,7 @@ test("the day's facts render once, inside the one record a diver keeps", async (
   await expect(page.getByTestId("dive-record")).toHaveCount(0);
   await page.getByRole("button", { name: "Back to your day" }).click();
   await expect(page.getByTestId("dive-record")).toBeVisible();
+  await expect(recordings).toBeVisible();
 });
 
 /**

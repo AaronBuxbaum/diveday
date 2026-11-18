@@ -1970,9 +1970,140 @@ select:not([multiple]):not([size]):dir(rtl) {
   opacity: 0;
 }
 
-/* A walk that is stopped shows the first frame of its slide: the animations wait at their start. */
-[data-walk-still] [data-walk-before] :is([data-walk-type], [data-walk-late], [data-walk-gone]) {
+/* A walk that is not running holds still: a slide it opens waits on its first frame, and one
+   stopped mid-play stays on the frame it reached, every animation paused where it is. */
+[data-walk-still] *:not([data-walk-frame-current]),
+[data-walk-still] *::after {
   animation-play-state: paused;
+}
+
+/* A pointer the walk moves (`data-walk-cursor`, drawn in the control it goes to): in the first
+   phase it travels in, presses at `--cursor-at`, and is gone. The control's own change
+   (`data-walk-late`, `data-walk-star`) lands on the same beat. */
+[data-walk-cursor] {
+  position: absolute;
+  z-index: 3;
+  inset-block-start: 55%;
+  inset-inline-start: 60%;
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px color-mix(in oklab, var(--color-foreground) 35%, transparent));
+}
+
+@keyframes walk-cursor-in {
+  from {
+    opacity: 0;
+    transform: translate(3.5rem, 3rem);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes walk-cursor-click {
+  50% {
+    scale: 0.75;
+  }
+}
+
+@keyframes walk-cursor-out {
+  to {
+    opacity: 0;
+  }
+}
+
+[data-walk-phase="before"] [data-walk-before] [data-walk-cursor] {
+  animation:
+    walk-cursor-in calc(var(--cursor-at, 900ms) - 200ms) var(--ease-out-soft) both,
+    walk-cursor-click 300ms ease-in-out calc(var(--cursor-at, 900ms) - 150ms),
+    walk-cursor-out 250ms ease-in calc(var(--cursor-at, 900ms) + 300ms) forwards;
+}
+
+/* A star she rates: it springs in from small, overshoots, and settles. */
+@keyframes walk-star {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-25deg);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.45) rotate(8deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+[data-walk-phase="before"] [data-walk-before] [data-walk-star] {
+  animation: walk-star 520ms var(--ease-spring) both;
+  animation-delay: var(--late-delay, 0ms);
+}
+
+/* A row that arrives (`.walk-grow`) opens to its height with a wash of the brand colour, and one
+   that leaves (`.walk-shrink`, drawn only on the finished screen, collapsed) closes the same way,
+   so the change in a list is the thing the eye follows. */
+@keyframes walk-grow {
+  from {
+    max-height: 0;
+    min-height: 0;
+    padding-block: 0;
+    border-block-width: 0;
+    opacity: 0;
+    background-color: color-mix(in oklab, var(--color-primary) 24%, transparent);
+  }
+  40% {
+    opacity: 1;
+  }
+  to {
+    max-height: 8rem;
+    background-color: transparent;
+  }
+}
+
+@keyframes walk-shrink {
+  from {
+    max-height: 8rem;
+    min-height: 3.25rem;
+    padding-block: 0.5rem;
+    border-block-end-width: 1px;
+    opacity: 1;
+    background-color: color-mix(in oklab, var(--color-success) 16%, transparent);
+  }
+  60% {
+    opacity: 0;
+  }
+  to {
+    max-height: 0;
+    min-height: 0;
+    padding-block: 0;
+    border-block-width: 0;
+    opacity: 0;
+  }
+}
+
+.walk-shrink {
+  max-height: 0;
+  min-height: 0;
+  padding-block: 0;
+  border-block-width: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+[data-walk-phase="after"] [data-walk-after] .walk-grow {
+  overflow: hidden;
+  animation: walk-grow 1200ms var(--ease-out-soft) both;
+}
+
+[data-walk-phase="after"] [data-walk-after] .walk-shrink {
+  animation: walk-shrink 1200ms var(--ease-out-soft) 300ms both;
 }
 
 /* What the tap did arrives with it: the mark the beat is about (a check, a

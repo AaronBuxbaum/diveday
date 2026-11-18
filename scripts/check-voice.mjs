@@ -525,8 +525,13 @@ export function threeDots(value) {
  * with to keep diver messages in a plain voice.
  * `notifications.whatsappTemplate.body` is exempt because Meta reviews that
  * registered template for each shop; changing it requires a new template.
+ * `fallback.recap.reviewText` is exempt because it is a sample diver's own typed review.
  */
-export const EXCLAMATION_ALLOWLIST = new Set(["notifications.whatsappTemplate.body"]);
+export const EXCLAMATION_ALLOWLIST = new Set([
+  "notifications.whatsappTemplate.body",
+  // The review the homepage walkthrough has Priya type: her words, not the shop's voice (Aaron, 2026-11-18).
+  "fallback.recap.reviewText",
+]);
 
 /** The bundle file the exclamation rule reads, with its `content/` sections. */
 export const EXCLAMATION_BUNDLE = "diver.json";

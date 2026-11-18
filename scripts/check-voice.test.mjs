@@ -411,8 +411,11 @@ describe("the exclamation mark in a diver's message (ideas item 24)", () => {
     expect(exclamations("See you on the boat.")).toEqual([]);
   });
 
-  it("exempts only the WhatsApp template body Meta reviews", () => {
-    expect([...EXCLAMATION_ALLOWLIST]).toEqual(["notifications.whatsappTemplate.body"]);
+  it("exempts only the WhatsApp template body Meta reviews and the review a sample diver types", () => {
+    expect([...EXCLAMATION_ALLOWLIST]).toEqual([
+      "notifications.whatsappTemplate.body",
+      "fallback.recap.reviewText",
+    ]);
     expect(exclamations("Hi! An update", "notifications.whatsappTemplate.body")).toEqual([]);
     expect(exclamations("Hi! An update", "notifications.sms.recap")).toHaveLength(1);
   });

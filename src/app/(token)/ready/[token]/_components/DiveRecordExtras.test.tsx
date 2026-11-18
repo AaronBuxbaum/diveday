@@ -43,7 +43,7 @@ describe("RecordComputerDives", () => {
             device: null,
             maxMeters: null,
             averageMeters: null,
-            durationSeconds: 1800,
+            durationSeconds: null,
             coldestC: null,
             samples: [],
           },

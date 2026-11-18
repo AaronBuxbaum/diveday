@@ -454,7 +454,7 @@ export async function buildAfterStateProps(input: {
         timeZone: shop.timezone,
       }),
     ]);
-  const computerDives = computerRows.dives.flatMap((row): RecapProfileDive[] => {
+  const computerDives = computerRows.dives.map((row): RecapProfileDive => {
     const samples = row.samples.map(({ seconds, depthMeters }) => ({
       seconds,
       meters: depthMeters,
@@ -483,10 +483,7 @@ export async function buildAfterStateProps(input: {
       coldestC: temperatures.length > 0 ? Math.min(...temperatures) : null,
       samples: thinProfile(samples),
     };
-    // A recording with no profile, depth or time has nothing to say.
-    return dive.samples.length > 0 || dive.maxMeters !== null || dive.durationSeconds !== null
-      ? [dive]
-      : [];
+    return dive;
   });
   const [firstBooked] = booked;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
