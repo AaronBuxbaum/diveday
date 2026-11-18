@@ -1,7 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished, vi } from "vitest";
 import { anonymizeDiver } from "@/features/anonymize";
+import { setStaffAccountStatus } from "@/features/staff-accounts";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { canPersonErasePersonalData } from "./authz";
 import type { AppDb } from "./client";
 import { ensureDemoSailsToday } from "./demo-refresh";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
@@ -148,6 +150,231 @@ describePostgres("demo refresh and coordinated dispatch lock order", () => {
 });
 
 describePostgres("erasure and an older shop-first dispatch", () => {
+  it("suppresses a dispatch when the real erasure commits first", async () => {
+    const pg = await postgresTestDb();
+    const [shop] = await pg.db
+      .insert(shops)
+      .values({ name: "Erasure first", slug: "erasure-first", timezone: "UTC" })
+      .returning();
+    if (!shop) throw new Error("shop missing");
+    const [owner, diver] = await pg.db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Owner", email: "owner@first.example" },
+        { shopId: shop.id, fullName: "Diver", email: "diver@first.example" },
+      ])
+      .returning();
+    if (!owner || !diver) throw new Error("people missing");
+    await pg.db.insert(personRoles).values({ personId: owner.id, role: "owner" });
+    await pg.db.insert(userAccounts).values({ personId: owner.id, email: "owner@first.example" });
+    const [trip] = await pg.db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Future boat",
+        startsAt: new Date("2026-03-02T12:00:00Z"),
+        endsAt: new Date("2026-03-02T16:00:00Z"),
+        capacity: 10,
+      })
+      .returning();
+    if (!trip) throw new Error("trip missing");
+    const [booking] = await pg.db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: trip.id, personId: diver.id, bookedAs: "diver" })
+      .returning();
+    if (!booking) throw new Error("booking missing");
+
+    let resume!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const erasureReady = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    let transactionCount = 0;
+    const connection = pg.connect();
+    const delayed = new Proxy(connection, {
+      get(target, property, receiver) {
+        if (property === "transaction") {
+          return (work: Parameters<AppDb["transaction"]>[0]) => {
+            const number = ++transactionCount;
+            return target.transaction(async (tx) => {
+              const result = await work(tx);
+              if (number === 1) {
+                ready();
+                await gate;
+              }
+              return result;
+            });
+          };
+        }
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const erasure = anonymizeDiver(delayed, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: owner.id,
+    });
+    void erasure.catch(() => undefined);
+    const provider = vi.fn(async () => "sent");
+    let dispatch: ReturnType<typeof withErasureCoordinatedBookingSend> | undefined;
+    let waiting: ReturnType<typeof waitForLockWaiters> | undefined;
+    onTestFinished(async () => {
+      resume();
+      await Promise.allSettled([
+        erasure,
+        ...(dispatch ? [dispatch] : []),
+        ...(waiting ? [waiting] : []),
+      ]);
+    });
+    try {
+      await Promise.race([
+        erasureReady,
+        erasure.then(() => {
+          throw new Error("erasure ended before the commit barrier");
+        }),
+      ]);
+      dispatch = withErasureCoordinatedBookingSend(
+        pg.connect(),
+        {
+          shopId: shop.id,
+          bookingId: booking.id,
+          expectedPersonId: diver.id,
+          expectedTripId: trip.id,
+          shopMaterialFence: true,
+        },
+        provider,
+      );
+      void dispatch.catch(() => undefined);
+      waiting = waitForLockWaiters(pg.db, 1);
+      await Promise.race([
+        waiting,
+        dispatch.then(() => {
+          throw new Error("dispatch ended before the erasure committed");
+        }),
+      ]);
+      const waiters = await pg.db.execute(sql`select count(*)::int as count from pg_stat_activity
+        where datname = current_database() and wait_event_type = 'Lock'
+          and query like '%"shops"%' and lower(query) like '%for share%'`);
+      expect(Number((waiters.rows[0] as { count: number }).count)).toBeGreaterThan(0);
+    } finally {
+      resume();
+    }
+    expect(await erasure).toMatchObject({ ok: true });
+    expect(await dispatch).toBeNull();
+    expect(provider).not.toHaveBeenCalled();
+    const [after] = await pg.db
+      .select({ anonymizedAt: people.anonymizedAt })
+      .from(people)
+      .where(eq(people.id, diver.id));
+    expect(after?.anonymizedAt).toBeInstanceOf(Date);
+    expect(await pg.db.select().from(bookings).where(eq(bookings.id, booking.id))).toHaveLength(1);
+  });
+
+  it("rechecks owner authorization after waiting for the shop", async () => {
+    const pg = await postgresTestDb();
+    const [shop] = await pg.db
+      .insert(shops)
+      .values({ name: "Erasure retry auth", slug: "erasure-retry-auth", timezone: "UTC" })
+      .returning();
+    if (!shop) throw new Error("shop missing");
+    const [owner, otherOwner, diver] = await pg.db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Owner", email: "owner@retry.example" },
+        { shopId: shop.id, fullName: "Other owner", email: "other@retry.example" },
+        { shopId: shop.id, fullName: "Diver", email: "diver@retry.example" },
+      ])
+      .returning();
+    if (!owner || !otherOwner || !diver) throw new Error("people missing");
+    await pg.db.insert(personRoles).values([
+      { personId: owner.id, role: "owner" },
+      { personId: otherOwner.id, role: "owner" },
+    ]);
+    const [account] = await pg.db
+      .insert(userAccounts)
+      .values({ personId: owner.id, email: "owner@retry.example" })
+      .returning();
+    await pg.db
+      .insert(userAccounts)
+      .values({ personId: otherOwner.id, email: "other@retry.example" });
+    if (!account) throw new Error("account missing");
+    expect(await canPersonErasePersonalData(pg.db, shop.id, owner.id)).toBe(true);
+    const before = await pg.db.select().from(people).where(eq(people.id, diver.id));
+    const beforeShop = await pg.db.select().from(shops).where(eq(shops.id, shop.id));
+    const held = await holdRowLock(pg, sql`select id from shops where id = ${shop.id} for share`);
+    let resume!: () => void;
+    let waited!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const waitCommitted = new Promise<void>((resolve) => {
+      waited = resolve;
+    });
+    let transactionCount = 0;
+    const connection = pg.connect();
+    const delayed = new Proxy(connection, {
+      get(target, property, receiver) {
+        if (property === "transaction") {
+          return async (work: Parameters<AppDb["transaction"]>[0]) => {
+            const number = ++transactionCount;
+            const result = await target.transaction(work);
+            if (number === 2) {
+              waited();
+              await gate;
+            }
+            return result;
+          };
+        }
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const erasure = anonymizeDiver(delayed, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: owner.id,
+    });
+    void erasure.catch(() => undefined);
+    onTestFinished(async () => {
+      resume();
+      await held.release();
+      await Promise.allSettled([erasure]);
+    });
+    try {
+      await waitForLockWaiters(pg.db, 1);
+      const waiters = await pg.db.execute(sql`select count(*)::int as count from pg_stat_activity
+        where datname = current_database() and wait_event_type = 'Lock'
+          and query like '%"shops"%' and lower(query) like '%for no key update%'`);
+      expect(Number((waiters.rows[0] as { count: number }).count)).toBeGreaterThan(0);
+      await held.release();
+      await Promise.race([
+        waitCommitted,
+        erasure.then(() => {
+          throw new Error("erasure finished before the retry barrier");
+        }),
+      ]);
+      expect(
+        await setStaffAccountStatus(pg.connect(), {
+          shopId: shop.id,
+          personId: owner.id,
+          userAccountId: account.id,
+          status: "disabled",
+        }),
+      ).toEqual({ ok: true });
+      expect(await canPersonErasePersonalData(pg.db, shop.id, owner.id)).toBe(false);
+    } finally {
+      resume();
+      await held.release();
+    }
+    expect(await erasure).toEqual({ ok: false, reason: "not_authorized" });
+    expect(await pg.db.select().from(people).where(eq(people.id, diver.id))).toEqual(before);
+    expect(await pg.db.select().from(shops).where(eq(shops.id, shop.id))).toEqual(beforeShop);
+  });
+
   it("reports a held shop as busy without erasing or calling providers", async () => {
     const pg = await postgresTestDb();
     const [shop] = await pg.db

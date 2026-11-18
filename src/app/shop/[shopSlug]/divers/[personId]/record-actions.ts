@@ -202,6 +202,10 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     revalidateAndRedirect(base, backTo(base, "erase-name-mismatch", "erase"));
     return;
   }
+  if (!result.ok && result.reason === "not_authorized") {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-erase", "erase"));
+    return;
+  }
   // Issue #3805: the erasure waits for a held incident's evidence.
   if (!result.ok && result.reason === "incident_hold") {
     revalidateAndRedirect(base, backTo(base, "erase-incident-hold", "erase"));
