@@ -109,5 +109,16 @@ export async function openPerEventKeyExperiment(name: string) {
         return { status: "unavailable" };
       }
     },
+    /** A historical read observation, never a retry acknowledgment or authorization. */
+    async observeRetryForTest(
+      tenant: string,
+      id: string,
+      expected: string,
+    ): Promise<"observed_match" | "observed_mismatch" | "missing" | "unavailable"> {
+      if (typeof expected !== "string" || !validText(expected)) return "unavailable";
+      const observed = await this.readForTest(tenant, id);
+      if (observed.status !== "readable") return observed.status;
+      return observed.text === expected ? "observed_match" : "observed_mismatch";
+    },
   };
 }
