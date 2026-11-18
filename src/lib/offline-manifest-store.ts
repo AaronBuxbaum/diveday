@@ -1158,8 +1158,9 @@ export async function saveOfflineMedicalAlerts(
   tenantRound?: number,
 ): Promise<OfflineManifestEnvelope | null> {
   return withManifestLock(tripId, async () => {
-    const existing = await loadOfflineManifest(tripId).catch(() => null);
-    if (!existing) return null;
+    const observed = await readOfflineManifest(tripId);
+    if (!observed) return null;
+    const existing = observed.envelope;
     const manifests = withMedicalAlertWords(existing.snapshot.manifests, texts);
     const carriesWords = Object.keys(medicalAlertWordsOf(manifests)).length > 0;
     const { medicalAlertsSavedBy: _previous, ...rest } = existing;
@@ -1170,7 +1171,13 @@ export async function saveOfflineMedicalAlerts(
     };
     const db = await openDatabase();
     try {
-      const persisted = await persistEnvelope(db, envelope, tenantRound, "medical-alerts");
+      const persisted = await persistEnvelope(
+        db,
+        envelope,
+        tenantRound,
+        "medical-alerts",
+        observed.record,
+      );
       if (!persisted && tenantRound !== undefined) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
@@ -1203,8 +1210,10 @@ export async function wipeOfflineMedicalAlerts(
         const tripId = envelope.snapshot.manifests[0]?.trip.id;
         if (!tripId) return Promise.resolve();
         return withManifestLock(tripId, async () => {
-          const current = await loadOfflineManifest(tripId);
-          if (!current?.medicalAlertsSavedBy) return;
+          const observed = await readOfflineManifest(tripId);
+          if (!observed) throw new OfflineManifestError("unavailable");
+          const current = observed.envelope;
+          if (!current.medicalAlertsSavedBy) return;
           if (keepSavedBy && current.medicalAlertsSavedBy.personId === keepSavedBy) return;
           const { medicalAlertsSavedBy: _wiped, ...rest } = current;
           const db = await openDatabase();
@@ -1220,6 +1229,7 @@ export async function wipeOfflineMedicalAlerts(
               },
               tenantRound,
               "medical-alerts",
+              observed.record,
             );
             if (!persisted) throw new OfflineManifestError("shop_changed");
           } finally {
@@ -1343,8 +1353,9 @@ export async function appendOfflineRollCall(
   }
   const eventIdentity = crypto.randomUUID();
   return withManifestLock(tripId, async () => {
-    const envelope = await loadOfflineManifest(tripId);
-    if (!envelope) throw new OfflineManifestError("unavailable");
+    const observed = await readOfflineManifest(tripId);
+    if (!observed) throw new OfflineManifestError("unavailable");
+    const { envelope } = observed;
     // A snapshot kept alive past its retention window (loadOfflineManifest
     // preserves one that still has an unsynced event) is not a boarding
     // source — the H-20260724-product-now-uses-explicit stop rule treats expired the same as missing. It
@@ -1398,7 +1409,7 @@ export async function appendOfflineRollCall(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope, undefined, "record");
+      await persistEnvelope(db, envelope, undefined, "record", observed.record);
     } finally {
       db.close();
     }
@@ -1420,8 +1431,9 @@ export async function appendOfflineChecklistCheck(
   >,
 ): Promise<OfflineManifestEnvelope> {
   return withManifestLock(tripId, async () => {
-    const envelope = await loadOfflineManifest(tripId);
-    if (!envelope) throw new OfflineManifestError("unavailable");
+    const observed = await readOfflineManifest(tripId);
+    if (!observed) throw new OfflineManifestError("unavailable");
+    const { envelope } = observed;
     if (isOfflineManifestExpired(envelope.snapshot)) {
       throw new OfflineManifestError("expired");
     }
@@ -1440,7 +1452,7 @@ export async function appendOfflineChecklistCheck(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope, undefined, "record");
+      await persistEnvelope(db, envelope, undefined, "record", observed.record);
     } finally {
       db.close();
     }
@@ -1467,8 +1479,9 @@ export async function appendOfflineArrival(
   input: Pick<OfflineArrivalEvent, "bookingId" | "status" | "retractsClientEventId">,
 ): Promise<OfflineManifestEnvelope> {
   return withManifestLock(tripId, async () => {
-    const envelope = await loadOfflineManifest(tripId);
-    if (!envelope) throw new OfflineManifestError("unavailable");
+    const observed = await readOfflineManifest(tripId);
+    if (!observed) throw new OfflineManifestError("unavailable");
+    const { envelope } = observed;
     if (isOfflineManifestExpired(envelope.snapshot)) {
       throw new OfflineManifestError("expired");
     }
@@ -1487,7 +1500,7 @@ export async function appendOfflineArrival(
     });
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope, undefined, "record");
+      await persistEnvelope(db, envelope, undefined, "record", observed.record);
     } finally {
       db.close();
     }
@@ -1584,8 +1597,9 @@ async function discardSyncReceiptNotes(
   );
   if (!discarded.size) return;
   await withManifestLock(tripId, async () => {
-    const current = await loadOfflineManifest(tripId);
-    if (!current || current.snapshot.shop.slug !== shopSlug) return;
+    const observed = await readOfflineManifest(tripId);
+    if (!observed || observed.envelope.snapshot.shop.slug !== shopSlug) return;
+    const current = observed.envelope;
     const clear = <T extends OfflineRollCallEvent | OfflineChecklistEvent>(event: T): T => {
       const disposition = discarded.get(event.clientEventId);
       return disposition ? { ...event, note: null, noteDisposition: disposition } : event;
@@ -1594,7 +1608,7 @@ async function discardSyncReceiptNotes(
     current.checklistEvents = current.checklistEvents.map(clear);
     const db = await openDatabase();
     try {
-      if (!(await persistEnvelope(db, current, tenantRound, "sync")))
+      if (!(await persistEnvelope(db, current, tenantRound, "sync", observed.record)))
         throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
@@ -1678,8 +1692,12 @@ export async function syncOfflineManifest(
   // (this tab or another) could have recorded a new pending event while the
   // request was in flight, and writing the pre-fetch snapshot would discard it.
   return withManifestLock(tripId, async () => {
-    const current = await loadOfflineManifest(tripId);
-    if (!current) return null;
+    const observed = await readOfflineManifest(tripId);
+    if (!observed) return null;
+    const current = observed.envelope;
+    if (current.snapshot.shop.slug !== envelope.snapshot.shop.slug) {
+      throw new OfflineManifestError("shop_changed");
+    }
     const revision = body.snapshotRevisions?.[tripId];
     const syncedAtRevision =
       typeof revision === "number" && Number.isSafeInteger(revision) && revision >= 0
@@ -1711,7 +1729,7 @@ export async function syncOfflineManifest(
     current.arrivalEvents = offlineArrivalEvents(current).map(applyResult);
     const db = await openDatabase();
     try {
-      const persisted = await persistEnvelope(db, current, tenantRound, "sync");
+      const persisted = await persistEnvelope(db, current, tenantRound, "sync", observed.record);
       if (!persisted) throw new OfflineManifestError("shop_changed");
     } finally {
       db.close();
@@ -1800,15 +1818,16 @@ export async function selectOfflineRollCallDay(
   day: number,
 ): Promise<OfflineManifestEnvelope> {
   return withManifestLock(tripId, async () => {
-    const envelope = await loadOfflineManifest(tripId);
-    if (!envelope) throw new OfflineManifestError("unavailable");
+    const observed = await readOfflineManifest(tripId);
+    if (!observed) throw new OfflineManifestError("unavailable");
+    const { envelope } = observed;
     const total = envelope.snapshot.rollCallMeetingDays?.length ?? 1;
     if (!Number.isInteger(day) || day < 0 || day >= total)
       throw new OfflineManifestError("not_allowed");
     envelope.selectedRollCallMeetingDay = day;
     const db = await openDatabase();
     try {
-      await persistEnvelope(db, envelope, undefined, "record");
+      await persistEnvelope(db, envelope, undefined, "record", observed.record);
     } finally {
       db.close();
     }
