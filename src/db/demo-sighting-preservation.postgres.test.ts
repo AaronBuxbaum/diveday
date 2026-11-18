@@ -171,7 +171,7 @@ describePostgres("demo cleanup encountering a dock sighting", () => {
     const result = await reapExpiredDemoShops(pg.db);
     expect(result.slugs).toContain(removed.slug);
     expect(result.slugs).not.toContain(kept.slug);
-    expect(await getShopBySlug(pg.db, kept.slug)).toBeDefined();
+    expect(await getShopBySlug(pg.db, kept.slug)).not.toBeNull();
     expect(await getShopBySlug(pg.db, removed.slug)).toBeNull();
     expect(
       await pg.db
@@ -208,7 +208,7 @@ describePostgres("demo cleanup encountering a dock sighting", () => {
     } finally {
       vi.unstubAllEnvs();
     }
-    expect(await getShopBySlug(pg.db, minted.slug)).toBeDefined();
+    expect(await getShopBySlug(pg.db, minted.slug)).not.toBeNull();
     expect(
       await pg.db
         .select()
