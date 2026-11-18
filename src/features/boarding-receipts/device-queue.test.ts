@@ -30,12 +30,32 @@ async function row(id: string) {
   });
   try {
     return await new Promise<
-      { key: CryptoKey; iv: Uint8Array<ArrayBuffer>; ciphertext: ArrayBuffer } | undefined
+      { key: CryptoKey | null; iv: Uint8Array<ArrayBuffer>; ciphertext: ArrayBuffer } | undefined
     >((resolve, reject) => {
       const tx = db.transaction("events", "readonly");
       const request = tx.objectStore("events").get(id);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+async function removeTestKey(id: string) {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open("diveday-dock-queue-disabled-v1", 1);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("events", "readwrite");
+      const store = tx.objectStore("events");
+      const get = store.get(id);
+      get.onsuccess = () => store.put({ ...get.result, key: null }, id);
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error);
+      tx.onerror = () => reject(tx.error);
     });
   } finally {
     db.close();
@@ -57,7 +77,7 @@ describe("disabled dock queue", () => {
     if (result.status !== "retained_locally") throw new Error("capture failed");
     const stored = await row(result.eventId);
     expect(stored).toBeDefined();
-    if (!stored) throw new Error("record missing");
+    if (!stored?.key) throw new Error("record or key missing");
     const plaintext = await crypto.subtle.decrypt(
       {
         name: "AES-GCM",
@@ -98,7 +118,7 @@ describe("disabled dock queue", () => {
       attempt: { eventId: "00000000-0000-4000-8000-000000000001" },
     });
     const stored = await row("00000000-0000-4000-8000-000000000001");
-    if (!stored) throw new Error("original missing");
+    if (!stored?.key) throw new Error("original or key missing");
     const plaintext = await crypto.subtle.decrypt(
       {
         name: "AES-GCM",
@@ -138,7 +158,7 @@ describe("disabled dock queue", () => {
       if (result.status !== "retained_locally") throw new Error("capture failed");
       spy.mockRestore();
       const stored = await row(result.eventId);
-      if (!stored) throw new Error("event missing");
+      if (!stored?.key) throw new Error("event or key missing");
       const plaintext = await crypto.subtle.decrypt(
         {
           name: "AES-GCM",
@@ -216,5 +236,62 @@ describe("disabled dock queue", () => {
       { status: "not_confirmed", attempt },
     ]);
     expect(await row(attempt.eventId)).toBeDefined();
+  });
+  it("observes the same encrypted record after a module reload, without claiming recovery", async () => {
+    vi.mocked(dockQueueEnabled).mockReturnValue(true);
+    const attempt = prepareDockTap(input);
+    if (!attempt) throw new Error("preparation failed");
+    expect(await persistPreparedDockTap(attempt)).toEqual({
+      status: "retained_locally",
+      eventId: attempt.eventId,
+    });
+    const before = await row(attempt.eventId);
+    if (!before) throw new Error("record missing");
+    vi.resetModules();
+    const reopened = await import("./device-queue");
+    const gate = await import("./device-queue-gate");
+    vi.mocked(gate.dockQueueEnabled).mockReturnValue(true);
+    const after = await row(attempt.eventId);
+    if (!after?.key) throw new Error("record or key missing after reopen");
+    expect(after.key.extractable).toBe(false);
+    expect(new Uint8Array(after.ciphertext)).toEqual(new Uint8Array(before.ciphertext));
+    expect(after.iv).toEqual(before.iv);
+    const plaintext = await crypto.subtle.decrypt(
+      {
+        name: "AES-GCM",
+        iv: after.iv,
+        additionalData: new TextEncoder().encode(JSON.stringify(["dock-tap-v1", attempt.eventId])),
+      },
+      after.key,
+      after.ciphertext,
+    );
+    expect(new TextDecoder().decode(plaintext)).toBe(attempt.serialized);
+    expect(await reopened.persistPreparedDockTap(attempt)).toEqual({ status: "invalid" });
+  });
+
+  it("cannot restore an unsaved in-memory attempt after a module reload", async () => {
+    vi.mocked(dockQueueEnabled).mockReturnValue(true);
+    vi.spyOn(crypto.subtle, "encrypt").mockRejectedValueOnce(new Error("unavailable"));
+    const failed = await captureDockTap(input);
+    if (failed.status !== "not_saved") throw new Error("expected unsaved attempt");
+    vi.resetModules();
+    const reopened = await import("./device-queue");
+    const gate = await import("./device-queue-gate");
+    vi.mocked(gate.dockQueueEnabled).mockReturnValue(true);
+    expect(await reopened.persistPreparedDockTap(failed.attempt)).toEqual({ status: "invalid" });
+  });
+  it("leaves an unreadable ciphertext intact when another tenant captures a tap", async () => {
+    vi.mocked(dockQueueEnabled).mockReturnValue(true);
+    const first = await captureDockTap(input);
+    if (first.status !== "retained_locally") throw new Error("capture failed");
+    const original = await row(first.eventId);
+    if (!original) throw new Error("record missing");
+    await removeTestKey(first.eventId);
+    expect((await captureDockTap({ ...input, shopId: "shop-b" })).status).toBe("retained_locally");
+    const after = await row(first.eventId);
+    if (!after) throw new Error("opaque record was deleted");
+    expect(after.key).toBeNull();
+    expect(new Uint8Array(after.ciphertext)).toEqual(new Uint8Array(original.ciphertext));
+    expect(after.iv).toEqual(original.iv);
   });
 });
