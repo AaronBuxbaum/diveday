@@ -48,8 +48,9 @@ export default async function SignInPage({
   const form = await SignInForm({ searchParams });
   return (
     <div className="flex flex-1 flex-col">
-      {/* Every ended session lands here; the device keeps nothing of it. */}
-      <ForgetThisDevice />
+      <ForgetThisDevice
+        warning={diverTranslator(await requestLocale())("account.signIn.deviceCleanupIncomplete")}
+      />
       {form}
     </div>
   );
