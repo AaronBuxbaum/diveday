@@ -1,5 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished } from "vitest";
+import { inspectLegacyBoardingKeys } from "@/features/boarding-receipts";
 import { checkBoardingReconciliation } from "@/test/boarding-reconciliation-cases";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { recordBoardingObservation } from "./boarding-observations";
@@ -40,6 +41,9 @@ describePostgres("boarding receipt reconciliation", () => {
       .select()
       .from(boardingObservations)
       .where(eq(boardingObservations.bookingId, seat.booking.id));
+    expect(before).toHaveLength(1);
+    const [canonical] = before;
+    if (!canonical) throw new Error("canonical observation missing");
     const beforeBooking = await pg.db
       .select()
       .from(bookings)
@@ -97,6 +101,25 @@ describePostgres("boarding receipt reconciliation", () => {
     try {
       const held = await Promise.race([readerHeld.then(() => true), joined.then(() => false)]);
       if (!held) throw new Error("old writer finished before its commit gate");
+      const report = await pg.db.transaction((tx) =>
+        inspectLegacyBoardingKeys(tx, shop.id, [
+          {
+            shopId: shop.id,
+            clientKey: canonical.clientKey,
+            observationId: canonical.id,
+            bookingId: canonical.bookingId,
+            tripId: canonical.tripId,
+            recordedByPersonId: canonical.recordedByPersonId,
+          },
+        ]),
+      );
+      expect(report).toMatchObject({
+        matchingSelectedFields: 1,
+        missing: 0,
+        writerDrain: "unverified",
+        priorJoinedKeyCoverage: "unknown",
+        cutoverPermitted: false,
+      });
       const refused = await pg
         .connect()
         .transaction(async (tx) => {
