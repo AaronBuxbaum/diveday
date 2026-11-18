@@ -3,7 +3,6 @@ export {
   type ComparedSystem,
   compareMonth,
   type DiveDayTerms,
-  directSavingBasisPoints,
   FEE_ASSUMPTIONS,
   type SystemCost,
 } from "./rules";
