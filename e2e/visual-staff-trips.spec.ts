@@ -650,6 +650,9 @@ for (const scheme of ["light", "dark"] as const) {
         // Both cleared the same way a staffer does, so neither row wears a
         // blocker that would compete with the one chip under test.
         await page.goto(counterPath("blue-mantis", tripId));
+        // The empty roster shell precedes the guest masthead. Its presence
+        // prevents rosterRow from taking its absent-person fallback too early.
+        await expect(page.locator("[data-guest-folios]").filter({ visible: true })).toBeVisible();
         for (const name of ["Odile Marchand", "Hana Kobayashi"]) {
           const row = await rosterRow(page, name);
           await openRosterDetails(row);
