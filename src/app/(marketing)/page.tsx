@@ -11,6 +11,7 @@ import { HomeWalkthroughDoors } from "@/app/_components/HomeWalkthroughDoors";
 import { HomeWhyBand } from "@/app/_components/HomeWhyBand";
 import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
 import { STEPS, WALK_CLASSES } from "@/app/_components/home-steps";
+import { DeviceCleanupWarning } from "@/components/DeviceCleanupWarning";
 import { JsonLd } from "@/components/JsonLd";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingReveal } from "@/components/MarketingReveal";
@@ -121,6 +122,9 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
 
   return (
     <main className="flex-1">
+      <Suspense fallback={null}>
+        <DeviceCleanupWarning message={t("account.signIn.deviceCleanupIncomplete")} />
+      </Suspense>
       <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-12 lg:py-16">
           <div className="max-w-2xl">
