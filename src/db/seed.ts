@@ -715,15 +715,29 @@ export async function createDemoShop(
    * `demo: false` mints a real-shaped shop (issue #2783) for the e2e harness, so the first-run
    * checklist, trial row and payments row render. Only `fixtureSignIn` lets its staff in.
    */
-  opts: { shape?: SeedShape; slug?: string; brand?: boolean; demo?: boolean } = {},
+  opts: {
+    shape?: SeedShape;
+    slug?: string;
+    brand?: boolean;
+    demo?: boolean;
+    onTiming?: (phase: string, durationMs: number) => void;
+  } = {},
 ): Promise<{ slug: string; ownerEmail: string }> {
   const shape = opts.shape ?? "history";
+  let phaseStart = opts.onTiming ? performance.now() : 0;
+  const mark = (phase: string) => {
+    if (!opts.onTiming) return;
+    const now = performance.now();
+    opts.onTiming(phase, now - phaseStart);
+    phaseStart = now;
+  };
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
   // attacker could pile up minted shops between reaper passes. Before
   // minting, evict the longest-idle minted demos so the live count never exceeds the
   // ceiling — the canonical demo and real shops are never eligible (see below).
   await enforceMintedDemoCap(db);
+  mark("mint.cap");
 
   const { shop, identity } = await insertDemoShop(db, opts.slug, opts.brand, opts.demo !== false);
 
@@ -826,12 +840,18 @@ export async function createDemoShop(
   // The same checklist the canonical demo keeps, for the same reason and in
   // the same place: before the schedule, whose dawn boat records against it.
   await seedPreDepartureChecklist(db, shop.id);
+  mark("mint.core");
   // The canonical demo's two packages, for a visitor's demo too, before the
   // schedule whose regular holds a card. A private test shop mints `lean`
   // and starts with nothing on sale, which is the state
   // `e2e/package-purchase.spec.ts` begins from.
   if (shapeHas(shape, "history")) await seedPackages(db, shop.id);
-  await seedDemoSchedule(db, shop.id, shape, { initialStaffRota: true });
+  mark("mint.packages");
+  await seedDemoSchedule(db, shop.id, shape, {
+    initialStaffRota: true,
+    onTiming: opts.onTiming,
+  });
+  mark("mint.schedule");
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }

@@ -5,7 +5,11 @@ import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import { seatsOpen } from "../features/availability/rules";
 import { publicAvailabilityTrips } from "../features/availability/store";
-import { nextDiveForBooking } from "../features/next-dive/store";
+import {
+  bookedDepartures,
+  NEXT_DIVE_CANDIDATE_WINDOW,
+  nextDiveForBooking,
+} from "../features/next-dive/store";
 import { markBookingNoShow, undoBookingNoShow } from "../features/no-show/store";
 import { cancelBooking, createBooking, createBookingParty, restoreBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -452,23 +456,74 @@ describe("every reader counts seats against the certificate", () => {
   it("the recap's next-dive card says the seats left under the certificate", async () => {
     const { db, shop } = ctx;
     const trip = await overLimitWithOneSeated(db, shop.id);
-    const [diver] = await db
-      .select({ id: people.id })
-      .from(people)
-      .where(eq(people.shopId, shop.id))
-      .limit(1);
-    if (!diver) throw new Error("seeded person missing");
-    const pick = await nextDiveForBooking(db, {
+    const alternate = await createTrip(db, {
       shopId: shop.id,
-      personId: diver.id,
+      title: "Another departure",
+      startsAt: at("2030-06-02T12:00:00.000Z"),
+      endsAt: at("2030-06-02T16:00:00.000Z"),
+      capacity: STATED,
+    });
+    if (!alternate) throw new Error("alternate trip missing");
+    const [booked] = await db
+      .select({ id: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), eq(bookings.tripId, trip.id)))
+      .limit(1);
+    if (!booked) throw new Error("booked passenger missing");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Recap candidate" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("recap candidate missing");
+    const input = {
+      shopId: shop.id,
       justDivedTripId: "00000000-0000-0000-0000-0000000000ff",
       dayCourseId: null,
       dayShoutout: null,
       daySiteNames: [],
       dayLensId: null,
       now: SOON,
+    };
+    // A booked person must not be offered the same seat again. The candidate
+    // for the certificate assertion is a different, unbooked person.
+    const bookedTrips = await bookedDepartures(db, {
+      shopId: shop.id,
+      personId: booked.id,
+      now: SOON,
     });
-    expect(pick).toMatchObject({ tripId: trip.id, seatsLeft: LIMIT - 1 });
+    expect(bookedTrips).toEqual(
+      expect.arrayContaining([expect.objectContaining({ tripId: trip.id })]),
+    );
+    expect(await nextDiveForBooking(db, { ...input, personId: booked.id })).toMatchObject({
+      tripId: alternate.id,
+    });
+    const pick = await nextDiveForBooking(db, { ...input, personId: diver.id });
+    let diagnostic: object | undefined;
+    if (pick?.tripId !== trip.id || pick.seatsLeft !== LIMIT - 1) {
+      const candidateBookings = await bookedDepartures(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        now: SOON,
+      });
+      const candidates = await pagedUpcomingTripsWithCounts(db, shop.id, {
+        publicOnly: true,
+        hasSpace: true,
+        limit: NEXT_DIVE_CANDIDATE_WINDOW,
+        now: SOON,
+      });
+      diagnostic = {
+        bookedCount: candidateBookings.length,
+        targetAlreadyBooked: candidateBookings.some((row) => row.tripId === trip.id),
+        targetInCandidateWindow: candidates.trips.some((row) => row.id === trip.id),
+        candidateCount: candidates.trips.length,
+        pick: !pick ? "none" : pick.tripId === trip.id ? "target" : "other",
+        seatsLeft: pick?.seatsLeft ?? null,
+      };
+    }
+    expect(pick, `recap candidate state: ${JSON.stringify(diagnostic)}`).toMatchObject({
+      tripId: trip.id,
+      seatsLeft: LIMIT - 1,
+    });
   });
 
   it("a dive site's page counts its departures' seats against the certificate", async () => {

@@ -38,6 +38,7 @@ import { runtimeMode } from "@/lib/runtime-mode";
 // A plain module, deliberately not a second server action — see its own file
 // comment: exporting it from here would publish it as an unauthenticated
 // endpoint taking a caller-supplied shop slug.
+import { createDemoEntryTiming } from "./demo-entry-timing";
 import { announceDemoEntry } from "./demo-instrumentation";
 
 const ENTERABLE_DEMO_ROLES: ReadonlySet<string> = new Set(DEMO_ROLE_IDS);
@@ -128,6 +129,9 @@ function requestedDemoRole(formData?: FormData): DemoRoleId {
  * nothing to that role.
  */
 export async function enterDemoAction(formData?: FormData) {
+  // E2E servers use synthetic data and pipe stderr into CI. Phase labels and
+  // durations contain no shop, account, request or person identifiers.
+  const timing = createDemoEntryTiming(runtimeMode().e2eHarness);
   const role = requestedDemoRole(formData);
   const source = eventSource(formData?.get("source"));
   const landing = demoLandingFrom(formData?.get("landing"));
@@ -140,6 +144,7 @@ export async function enterDemoAction(formData?: FormData) {
   }
 
   const db = await getDb();
+  timing?.mark("entry.preflight");
   // Retry once on the astronomically-rare generated-slug/email collision
   // (23505) so it degrades to a fresh identity rather than a 500 (security
   // review, minor). createDemoShop never redirects, so nothing here swallows a
@@ -147,7 +152,9 @@ export async function enterDemoAction(formData?: FormData) {
   let minted: { slug: string; ownerEmail: string } | null = null;
   for (let attempt = 0; attempt < 2 && !minted; attempt++) {
     try {
-      minted = await db.transaction(async (tx) => createDemoShop(tx, { brand: true }));
+      minted = await db.transaction(async (tx) =>
+        createDemoShop(tx, { brand: true, onTiming: timing?.record }),
+      );
     } catch (err) {
       const isUniqueViolation = (err as { code?: string } | null)?.code === "23505";
       if (attempt === 0 && isUniqueViolation) continue;
@@ -155,6 +162,7 @@ export async function enterDemoAction(formData?: FormData) {
     }
   }
   if (!minted) redirect(DEMO_UNAVAILABLE_PATH);
+  timing?.mark("entry.mint-transaction");
   const { slug, ownerEmail } = minted;
 
   // Only now is the demo *entered*: the mint succeeded and this visitor has a
@@ -176,6 +184,7 @@ export async function enterDemoAction(formData?: FormData) {
     await takeDemoSeat(shop.id);
   }
 
+  timing?.mark("entry.shop-and-seat");
   // The diver pick previews the customer view — the public schedule needs no
   // sign-in at all, so it skips straight there instead of minting a session.
   if (role === "diver") {
@@ -202,6 +211,7 @@ export async function enterDemoAction(formData?: FormData) {
     if (error instanceof APIError) redirect(DEMO_UNAVAILABLE_PATH);
     throw error; // unexpected errors propagate
   }
+  timing?.mark("entry.sign-in");
   if (pendingSignIn) redirect("/sign-in?error=two-factor");
   redirect(demoLandingPath(slug, role, landing));
 }
