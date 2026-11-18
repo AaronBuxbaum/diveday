@@ -154,19 +154,19 @@ export function WaiverSigningFallback({
             <p className="mt-3 flex items-baseline gap-2 text-xs">
               {filling ? (
                 <span className="relative inline-flex">
-                  <span data-walk-gone="" style={{ "--late-delay": "3300ms" } as CSSProperties}>
+                  <span data-walk-gone="" style={{ "--late-delay": "2600ms" } as CSSProperties}>
                     <StatusMarkColumn variant="pending" className="text-muted" />
                   </span>
                   <span
                     aria-hidden="true"
                     data-walk-late=""
-                    style={{ "--late-delay": "3300ms" } as CSSProperties}
+                    style={{ "--late-delay": "2600ms" } as CSSProperties}
                     className="absolute inset-0"
                   >
                     <StatusMarkColumn variant="checked" className="text-primary" />
                   </span>
                   {/* Her fingertip ticks the agreement 3.3 s in, after her name is typed. */}
-                  <WalkCursor at={3300} />
+                  <WalkCursor at={2600} />
                 </span>
               ) : (
                 <StatusMarkColumn variant="checked" className="text-primary" />
