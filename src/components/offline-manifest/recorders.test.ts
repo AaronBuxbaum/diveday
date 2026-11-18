@@ -91,6 +91,18 @@ describe("offlineRecorders' roll-call tap", () => {
     expect(spies.setNoteDrafts).not.toHaveBeenCalled();
     expect(busyAfterTap(spies.setBusyBooking, "b-priya")).toBeNull();
   });
+
+  it("does not report a conflicting tap saved or clear its note draft", async () => {
+    append.mockRejectedValue(new OfflineManifestError("unavailable"));
+    const { taps, spies } = recorders();
+    expect(await taps.record({ bookingId: "b-priya" }, { status: "not_boarded" })).toBe(false);
+    expect(spies.setMessage).toHaveBeenCalledWith(
+      t("shared.offlineManifest.single.record.unavailable"),
+    );
+    expect(spies.setNoteDrafts).not.toHaveBeenCalled();
+    expect(spies.dispatchSaved).not.toHaveBeenCalled();
+    expect(spies.reconcile).not.toHaveBeenCalled();
+  });
 });
 
 /**
