@@ -5,7 +5,7 @@ import {
   recordScratchReceipt,
   type ScratchIntent,
 } from "@/test/boarding-receipt-prototype/ledger";
-import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 
 // Scratch-only experiment. These tables, synthetic identities and hooks do not
 // implement authenticated intake, a production receipt, or a reset fix.
@@ -238,6 +238,53 @@ describePostgres("scratch receipt key reservation", () => {
     } finally {
       release();
     }
+  });
+
+  it("rolls back a new key when the matching observation is locked", async () => {
+    const pg = await postgresTestDb();
+    await createScratchLedger(pg.db);
+    const first = await recordScratchReceipt(pg.connect(), original);
+    if (!first.ok) throw new Error("first tap not recorded");
+    const lock = await holdRowLock(
+      pg,
+      sql`select id from scratch_observation where id = ${first.observationId} for update`,
+    );
+    const second = { ...original, eventId: "event-b", actorId: "staff-b" };
+    const contender = recordScratchReceipt(pg.connect(), second);
+    const settled = contender.then(
+      (value) => ({ value }),
+      (error: unknown) => ({ error }),
+    );
+    onTestFinished(async () => {
+      await lock.release();
+      await Promise.allSettled([contender]);
+    });
+    const waiting = waitForLockWaiters(pg.db, 1);
+    try {
+      await Promise.race([
+        waiting,
+        settled.then(() => {
+          throw new Error("contender finished without waiting for the observation");
+        }),
+      ]);
+    } finally {
+      await waiting.catch(() => undefined);
+    }
+    // This scratch database has one contender and no foreign keys, so its only
+    // possible lock waiter is the attempted join of the held observation.
+    expect(await settled).toMatchObject({ error: { cause: { code: "55P03" } } });
+    expect((await pg.db.execute(sql`select event_id from scratch_receipt`)).rows).toEqual([
+      { event_id: original.eventId },
+    ]);
+    expect((await pg.db.execute(sql`select id, state from scratch_observation`)).rows).toEqual([
+      { id: first.observationId, state: "open" },
+    ]);
+    await lock.release();
+    expect(await recordScratchReceipt(pg.connect(), second)).toEqual({
+      ok: true,
+      replay: false,
+      observationId: first.observationId,
+    });
   });
 
   it.each(["afterReservation", "afterLink"] as const)(
