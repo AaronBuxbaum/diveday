@@ -21,8 +21,8 @@ for (const scheme of ["light", "dark"] as const) {
         test.use({ locale });
         test("SSI guide distinguishes LogTRAK sharing from DiveDay import", async ({ page }) => {
           const words = staffTranslator(locale);
-          await page.goto("/shop/blue-mantis/divers?q=Priya");
-          await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+          await page.goto("/shop/blue-mantis/divers?q=Amara");
+          await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
           await page.getByRole("link", { name: words("computerDives.title"), exact: true }).click();
           await page
             .getByLabel(words("computerDives.provider"), { exact: true })
@@ -43,8 +43,8 @@ for (const scheme of ["light", "dark"] as const) {
       });
     }
     test("Garmin FIT profile with an unknown local clock", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/divers?q=Priya");
-      await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+      await page.goto("/shop/blue-mantis/divers?q=Amara");
+      await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
       await page.getByRole("link", { name: staffCopy("computerDives.title"), exact: true }).click();
       await page
         .getByLabel(staffCopy("computerDives.files"), { exact: true })
@@ -69,15 +69,19 @@ for (const scheme of ["light", "dark"] as const) {
         .getByRole("button", { name: staffCopy("computerDives.importMore"), exact: true })
         .click();
       const history = page.getByRole("region", { name: staffCopy("computerDives.history") });
-      await history.locator("summary").click();
+      const imported = history.locator("details").filter({
+        has: page.locator("summary").filter({ hasText: "2000-01-01T00:00:00.000Z" }),
+      });
+      await expect(imported).toHaveCount(1);
+      await imported.locator("summary").click();
       await expect(
-        history.getByRole("img", { name: staffCopy("computerDives.profile") }),
+        imported.getByRole("img", { name: staffCopy("computerDives.profile") }),
       ).toBeVisible();
       await capture(page, "computer-dives-fit-profile", scheme);
     });
     test("online logbook beta mapping, date-only and archive review", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/divers?q=Priya");
-      await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+      await page.goto("/shop/blue-mantis/divers?q=Amara");
+      await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
       await page.getByRole("link", { name: staffCopy("computerDives.title"), exact: true }).click();
       await page
         .getByLabel(staffCopy("computerDives.provider"), { exact: true })
@@ -146,11 +150,14 @@ for (const scheme of ["light", "dark"] as const) {
       await capture(page, "computer-dives-beta-zip-preview", scheme);
     });
     test("computer import review", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/divers?q=Priya");
-      await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+      await page.goto("/shop/blue-mantis/divers?q=Amara");
+      await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
       await page.getByRole("link", { name: staffCopy("computerDives.title"), exact: true }).click();
       await expect(
         page.getByRole("heading", { level: 1, name: staffCopy("computerDives.title") }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: staffCopy("computerDives.empty"), exact: true }),
       ).toBeVisible();
       await capture(page, "computer-dives-empty", scheme);
       const csv =
@@ -192,9 +199,13 @@ for (const scheme of ["light", "dark"] as const) {
         .getByRole("button", { name: staffCopy("computerDives.importMore"), exact: true })
         .click();
       const history = page.getByRole("region", { name: staffCopy("computerDives.history") });
-      await history.locator("summary").click();
+      const imported = history.locator("details").filter({
+        has: page.locator("summary").filter({ hasText: "2026-11-01T23:50:00" }),
+      });
+      await expect(imported).toHaveCount(1);
+      await imported.locator("summary").click();
       await expect(
-        history.getByRole("img", { name: staffCopy("computerDives.profile") }),
+        imported.getByRole("img", { name: staffCopy("computerDives.profile") }),
       ).toBeVisible();
       await capture(page, "computer-dives-profile", scheme);
     });

@@ -149,7 +149,7 @@ test("largest settings pane gives the actual rail and editor a readable measure"
 }) => {
   await exposeDeviceBody(page, 53);
   await page.goto("/shop/blue-mantis/settings/profile");
-  const field = page.getByRole("textbox", { name: "Tagline", exact: true });
+  const field = page.getByRole("textbox", { name: "Tagline (optional)", exact: true });
   await field.click();
   await expect(field).toBeFocused();
   await field.fill("Large type check");

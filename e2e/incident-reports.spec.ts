@@ -29,8 +29,8 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await expect(filing.getByRole("button", { name: "File report" })).toBeDisabled();
 
   // The account, in the shop's own zone.
-  await page.getByLabel("Date", { exact: true }).fill(daysFromNow(0));
-  await page.getByLabel("Time", { exact: true }).fill("09:10");
+  await page.getByLabel("Date (optional)", { exact: true }).fill(daysFromNow(0));
+  await page.getByLabel("Time (optional)", { exact: true }).fill("09:10");
   await page.getByLabel("Where, in words").fill("Boat deck, at the ladder");
   await page
     .getByLabel("What happened")

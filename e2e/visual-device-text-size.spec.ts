@@ -462,7 +462,7 @@ test.describe("light mode largest device body checklist editor", () => {
     await field.fill("Large type check");
     await capture(page, "checklist-editor-device-body-53", "light");
     await page.goto("/shop/blue-mantis/settings/profile");
-    const tagline = page.getByRole("textbox", { name: "Tagline", exact: true });
+    const tagline = page.getByRole("textbox", { name: "Tagline (optional)", exact: true });
     // Focus the loaded native field before selecting its text, as the readability flow does.
     // Filling during hydration can collapse the selection and prepend to the saved tagline.
     await tagline.click();
@@ -514,7 +514,9 @@ test.describe("light mode unchanged device body", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await capture(page, "logbook-device-body-default", "light");
     await page.goto("/shop/blue-mantis/settings/profile");
-    await expect(page.getByRole("textbox", { name: "Tagline", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: "Tagline (optional)", exact: true }),
+    ).toBeVisible();
     await capture(page, "settings-editor-device-body-default", "light");
   });
 });

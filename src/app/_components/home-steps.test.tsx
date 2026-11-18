@@ -22,16 +22,13 @@ describe("the homepage's walk", () => {
   it.each(DIVER_LOCALES)("gives every slide its own copy in %s", (locale) => {
     const t = diverTranslator(locale);
     for (const step of STEPS) {
-      for (const key of ["when", "title"] as const) {
-        expect(t(`marketing.home.steps.${step.id}.${key}`).length).toBeGreaterThan(3);
-      }
-      expect(t(`marketing.home.walk.captions.${step.id}`).length).toBeGreaterThan(10);
+      expect(t(`marketing.home.steps.${step.id}.title`).length).toBeGreaterThan(10);
       expect(t(step.label).length).toBeGreaterThan(10);
-      for (const note of step.notes) expect(t(note).length).toBeGreaterThan(10);
+      expect(t(step.note).length).toBeGreaterThan(10);
     }
   });
 
-  it("walks picking a boat from the page, paying, and the money landing, in that order", () => {
+  it("walks picking a boat from the page through to Pay, then the payment, and the money landing, in that order", () => {
     expect(STEPS.slice(0, 3).map((step) => step.id)).toEqual(["browse", "pay", "money"]);
   });
 
@@ -43,8 +40,9 @@ describe("the homepage's walk", () => {
     expect(ids).not.toContain("computer");
   });
 
-  it("gives the slides she types into a longer beat", () => {
-    expect(STEPS.filter((step) => step.typed).map((step) => step.id)).toEqual([
+  it("gives the slides with something to do before the tap a longer first phase", () => {
+    expect(STEPS.filter((step) => (step.lead ?? 0) > 0).map((step) => step.id)).toEqual([
+      "browse",
       "pay",
       "onboard",
       "sign",

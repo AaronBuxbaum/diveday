@@ -19,7 +19,7 @@ test.describe("DESK-11 local ancillary amount due", () => {
     await expect(page.getByText("Local regulator rental", { exact: false })).toBeVisible();
     await expect(page.getByText(t("orders.localDue.help"), { exact: true })).toBeVisible();
     await page
-      .getByLabel(t("orders.localDue.reference"), { exact: true })
+      .getByLabel(`${t("orders.localDue.reference")} (optional)`, { exact: true })
       .fill("Terminal receipt 77");
     await page.getByRole("button", { name: t("orders.localDue.record"), exact: true }).click();
     await expect(page.getByText("Terminal receipt 77", { exact: false })).toBeVisible();

@@ -73,9 +73,11 @@ test("the emergency reference saves on its own page, and the save lands back on 
   const SHOP = privateShop.slug;
   await page.goto(`/shop/${SHOP}/settings/emergency-reference`);
   await expect(page.getByRole("heading", { level: 1, name: "Emergency reference" })).toBeVisible();
-  await expect(page.getByLabel("Vessel", { exact: true })).not.toBeVisible();
+  await expect(page.getByLabel("Vessel (optional)", { exact: true })).not.toBeVisible();
   await openEditor(page, "emergency-response");
-  await page.getByLabel("Vessel", { exact: true }).fill("Second Wind, white hull, blue canopy");
+  await page
+    .getByLabel("Vessel (optional)", { exact: true })
+    .fill("Second Wind, white hull, blue canopy");
   await page.getByRole("button", { name: "Save emergency reference" }).click();
 
   // Asserted on the banner and the heading, not the URL, for the reason the
@@ -249,13 +251,13 @@ test("editing one emergency contact preserves the closed contacts and response p
   await page.locator('#emergency-contact-new input[name^="emergencyPhone-"]').fill("+13055550181");
   await openEditor(page, "emergency-response");
   await page
-    .getByLabel(staff("settings.main.emergency.vesselLabel"), { exact: true })
+    .getByLabel(`${staff("settings.main.emergency.vesselLabel")} (optional)`, { exact: true })
     .fill("Second Wind, white hull");
   await page
-    .getByLabel(staff("settings.main.emergency.shoreContactLabel"), { exact: true })
+    .getByLabel(`${staff("settings.main.emergency.shoreContactLabel")} (optional)`, { exact: true })
     .fill("Mara at the dock, +13055550183");
   await page
-    .getByLabel(staff("settings.main.emergency.planLabel"), { exact: true })
+    .getByLabel(`${staff("settings.main.emergency.planLabel")} (optional)`, { exact: true })
     .fill("Call rescue; return to north dock.");
   await page.getByRole("button", { name: staff("settings.main.emergency.submit") }).click();
   await expect(page.locator("#emergency-contact-0 summary")).toContainText("Chamber");

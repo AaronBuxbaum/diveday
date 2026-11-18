@@ -318,7 +318,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Dives included").fill(String(dives));
         await page.getByLabel("Price", { exact: true }).fill(price);
         await page.getByLabel("Covers", { exact: true }).selectOption(scope);
-        if (validUntil) await page.getByLabel("Usable through", { exact: true }).fill(validUntil);
+        if (validUntil)
+          await page.getByLabel("Usable through (optional)", { exact: true }).fill(validUntil);
         await page.getByRole("button", { name: "Add package", exact: true }).click();
         await expect(page.getByText(name, { exact: true })).toBeVisible();
         await expect(page.getByText("Package added", { exact: true })).toBeVisible();
