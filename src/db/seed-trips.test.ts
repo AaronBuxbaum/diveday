@@ -285,7 +285,24 @@ describe("public print fixture identity", () => {
           .where(and(eq(trips.shopId, shopId), eq(trips.title, DEMO_TODAY_TRIP_TITLE)))
       ).map((row) => row.id);
     expect(await reefIds(shop.id)).toContain(DEMO_TODAY_TRIP_ID);
-    const minted = await createDemoShop(db, { shape: "lean" });
+    const timings: { phase: string; durationMs: number }[] = [];
+    const minted = await createDemoShop(db, {
+      shape: "lean",
+      onTiming: (phase, durationMs) => timings.push({ phase, durationMs }),
+    });
+    expect(timings.map((timing) => timing.phase)).toEqual(
+      expect.arrayContaining([
+        "mint.cap",
+        "mint.core",
+        "mint.packages",
+        "schedule.board",
+        "mint.schedule",
+      ]),
+    );
+    expect(timings.some((timing) => /^schedule\.step\.\d+$/.test(timing.phase))).toBe(true);
+    expect(
+      timings.every((timing) => Number.isFinite(timing.durationMs) && timing.durationMs >= 0),
+    ).toBe(true);
     const [otherShop] = await db
       .select({ id: shops.id })
       .from(shops)

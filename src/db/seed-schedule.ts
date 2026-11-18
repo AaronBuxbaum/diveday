@@ -781,10 +781,18 @@ export async function seedDemoSchedule(
   db: DbExecutor,
   shopId: string,
   shape: SeedShape,
-  options: { initialStaffRota?: boolean } = {},
+  options: {
+    initialStaffRota?: boolean;
+    onTiming?: (phase: string, durationMs: number) => void;
+  } = {},
 ): Promise<void> {
+  const boardStart = options.onTiming ? performance.now() : 0;
   const context = await seedTheBoard(db, shopId, shape, options.initialStaffRota === true);
-  for (const step of THE_DAY) {
-    if (shapeHas(shape, step.set)) await step.run(db, context);
+  options.onTiming?.("schedule.board", performance.now() - boardStart);
+  for (const [index, step] of THE_DAY.entries()) {
+    if (!shapeHas(shape, step.set)) continue;
+    const start = options.onTiming ? performance.now() : 0;
+    await step.run(db, context);
+    options.onTiming?.(`schedule.step.${index}`, performance.now() - start);
   }
 }
