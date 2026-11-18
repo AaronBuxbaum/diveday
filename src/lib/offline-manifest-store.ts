@@ -731,41 +731,34 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
     const record = await readStoredRecord(db, tripId);
     if (!record) return null;
     const key = await encryptionKey(db);
+    // A failed read leaves the unknown ciphertext in place, even after expiry.
     let envelope: OfflineManifestEnvelope;
-    try {
-      const plaintext = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: record.iv, additionalData: additionalData(tripId) },
-        key,
-        record.ciphertext,
-      );
-      const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
-      // Decrypting proves the bytes are ours, not that their shape is current:
-      // a record written by an older build can drift. Reject it into the same
-      // cleanup path as an unreadable one instead of returning a lying cast.
-      if (
-        typeof parsed !== "object" ||
-        parsed === null ||
-        !Array.isArray((parsed as { snapshot?: { manifests?: unknown } }).snapshot?.manifests)
-      ) {
-        throw new Error("Stored offline-manifest envelope has an unrecognized shape");
-      }
-      envelope = parsed as OfflineManifestEnvelope;
-      // A record written before a queue existed has no array for it, and the
-      // pending counts below (and every reader downstream) would throw reading
-      // `.filter` off `undefined` — on the one surface a crew has with no
-      // signal, about the copy that holds their unsynced roll call. There is
-      // no deploy that reaches a phone in a dry bag on a boat, so the shape a
-      // device already wrote is the shape this has to accept.
-      envelope.events ??= [];
-      envelope.checklistEvents ??= [];
-      envelope.arrivalEvents ??= [];
-    } catch (error) {
-      // Nothing recoverable from ciphertext this key can't open — if it's
-      // also past its retention window, clean it up now rather than leaving
-      // unreadable bytes behind forever with no delete button to clear them.
-      if (isOfflineManifestExpired(record)) await deleteOfflineManifest(tripId, db);
-      throw error;
+    const plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: record.iv, additionalData: additionalData(tripId) },
+      key,
+      record.ciphertext,
+    );
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
+    // Decrypting proves the bytes are ours, not that their shape is current:
+    // a record written by an older build can drift. Reject it without deleting
+    // the unknown record instead of returning a lying cast.
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !Array.isArray((parsed as { snapshot?: { manifests?: unknown } }).snapshot?.manifests)
+    ) {
+      throw new Error("Stored offline-manifest envelope has an unrecognized shape");
     }
+    envelope = parsed as OfflineManifestEnvelope;
+    // A record written before a queue existed has no array for it, and the
+    // pending counts below (and every reader downstream) would throw reading
+    // `.filter` off `undefined` — on the one surface a crew has with no
+    // signal, about the copy that holds their unsynced roll call. There is
+    // no deploy that reaches a phone in a dry bag on a boat, so the shape a
+    // device already wrote is the shape this has to accept.
+    envelope.events ??= [];
+    envelope.checklistEvents ??= [];
+    envelope.arrivalEvents ??= [];
     if (isOfflineManifestExpired(record)) {
       // A record still holding a roll-call event that never reached the
       // server is the only copy of that evidence — keep serving it (as
@@ -1041,11 +1034,9 @@ export async function saveOfflineManifest(
   const trip = payload.manifests[0]?.trip;
   if (!trip || payload.manifests.length === 0) throw new Error("Manifest payload is empty");
   return withManifestLock(trip.id, async () => {
-    // A corrupt or undecryptable existing record (storage corruption, a stale
-    // key, a version/AAD mismatch) must not abort the save — there's no delete
-    // button anymore, so failing here would brick this device's offline copy
-    // for good instead of just losing that record's own queued events.
-    const existing = await loadOfflineManifest(trip.id).catch(() => null);
+    // A failed read is not an empty queue. Refuse to replace an unreadable
+    // record, which may contain the only copy of an unsent observation.
+    const existing = await loadOfflineManifest(trip.id);
     const savedAt = nowDate();
     // Snapshot tokens carry a server-authenticated epoch. This local comparison
     // only removes retained text from this device; every sync writer still
