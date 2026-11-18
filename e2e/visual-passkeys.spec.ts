@@ -46,7 +46,16 @@ test.describe("light mode", () => {
     await expect(
       page.getByText(t("settings.security.passkeys.empty"), { exact: true }),
     ).toBeVisible();
-    await capture(page, "staff-passkeys-empty", "light");
+    await capture(page, "staff-passkeys-empty", "light", {
+      beforeScreenshot: async () => {
+        await expect(
+          page.getByRole("textbox", { name: t("settings.security.passkeys.name"), exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.getByText(t("settings.security.passkeys.unavailable"), { exact: true }),
+        ).toHaveCount(0);
+      },
+    });
     // The pixel probe detaches its own CDP session, which resets WebAuthn on the target.
     // Keep real ceremonies between captures and carry the test key across that reset.
     const cdp = await page.context().newCDPSession(page);

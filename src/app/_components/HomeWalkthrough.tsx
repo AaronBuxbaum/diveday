@@ -24,6 +24,8 @@ export type WalkBeat = {
   caption: string;
   /** How long the screen plays on its own before the tap, in ms; the default is a beat with nothing to do first. */
   lead?: number;
+  /** How long the tap lasts, in ms; none (0) where the screen's own pointer has just pressed the last control. */
+  tapMs?: number;
   /** How long its finished screen stays, in ms; the default is for a screen with a line to read. */
   hold?: number;
 };
@@ -182,10 +184,11 @@ export function HomeWalkthrough({
   useEffect(() => {
     if (!running) return;
     const lead = beats[index]?.lead ?? DEFAULT_LEAD_MS;
-    const beatMs = lead + TAP_MS + (beats[index]?.hold ?? HOLD_AFTER_MS);
+    const tapMs = beats[index]?.tapMs ?? TAP_MS;
+    const beatMs = lead + tapMs + (beats[index]?.hold ?? HOLD_AFTER_MS);
     const tapAt = lead / beatMs;
-    const afterAt = (lead + TAP_MS) / beatMs;
-    listEl()?.style.setProperty("--walk-tap-ms", `${TAP_MS}ms`);
+    const afterAt = (lead + tapMs) / beatMs;
+    listEl()?.style.setProperty("--walk-tap-ms", `${tapMs}ms`);
     let last = performance.now();
     let frame = 0;
     const tick = (now: number) => {

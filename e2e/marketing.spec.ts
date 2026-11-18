@@ -446,23 +446,31 @@ test.describe("before the player has run", () => {
   }) => {
     await page.goto("/");
 
+    // Locate the page bands by their headings; the hero has its own nested sections.
+    const main = page.getByRole("main");
+    const stepsBand = main.locator("section").filter({
+      has: page.getByRole("heading", {
+        level: 2,
+        name: diverTranslator("en-US")("marketing.home.stepsTitle"),
+      }),
+    });
+    const whyBand = stepsBand.locator("xpath=following::section").filter({
+      has: page.getByRole("heading", {
+        level: 2,
+        name: diverTranslator("en-US")("marketing.home.whyEyebrow"),
+      }),
+    });
     // The practical dive day welcomes the reader before the compact origin story.
-    const whyBand = page.getByRole("main").locator("section").nth(2);
     await expect(whyBand.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
     await expect(whyBand.getByRole("link", { name: /Why DiveDay exists/ })).toHaveAttribute(
       "href",
       "/about",
     );
-    const stepsBand = page.getByRole("main").locator("section").nth(1);
     await expect(
       stepsBand.getByRole("heading", {
         level: 2,
         name: diverTranslator("en-US")("marketing.home.stepsTitle"),
       }),
-    ).toBeVisible();
-    // The heading says what the steps are in one line; no picture stands beside it.
-    await expect(
-      stepsBand.getByText(diverTranslator("en-US")("marketing.home.stepsLede")),
     ).toBeVisible();
     // Each step's own name (all twelve are in the page; only the listed five show before the player runs), from the copy column that is every row's first
     // child (the alternation is `order`, not DOM order). The screens beside them

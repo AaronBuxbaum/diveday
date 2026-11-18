@@ -114,6 +114,7 @@ function useBoatCanvas({
     let lastFrame: number | null = null;
     let width = 0;
     let height = 0;
+    let dpr = 1;
     let time = 0;
     let voyage = 0;
     let transfer = 0;
@@ -157,6 +158,15 @@ function useBoatCanvas({
         schedule();
         return;
       }
+      // Changing a canvas dimension clears its bitmap. Defer that clear until
+      // the same frame that repaints it, including after an offscreen resize.
+      const pixelWidth = Math.round(width * dpr);
+      const pixelHeight = Math.round(height * dpr);
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const elapsed = lastFrame === null ? 0 : Math.min((now - lastFrame) / 1000, 0.08);
       lastFrame = animate ? now : null;
       if (animate) time += elapsed;
@@ -231,10 +241,7 @@ function useBoatCanvas({
       if (!canvas || !ctx) return;
       width = canvas.clientWidth;
       height = canvas.clientHeight;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
       schedule();
     }
 

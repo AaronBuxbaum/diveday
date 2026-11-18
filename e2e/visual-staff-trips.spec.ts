@@ -898,7 +898,31 @@ for (const scheme of ["light", "dark"] as const) {
             .filter({ visible: true })
             .first(),
         ).toBeVisible();
-        await capture(page, "prep-assignments-need-care", scheme);
+        await capture(page, "prep-assignments-need-care", scheme, {
+          beforeScreenshot: async () => {
+            // The server-raised option and hydrated sliding pill are different
+            // paint paths. Capture the measured control at every viewport.
+            const grouping = page.getByRole("navigation", {
+              name: staffCopy("tripPrep.groupLabel"),
+              exact: true,
+            });
+            await expect(
+              grouping.getByRole("link", { name: staffCopy("tripPrep.groupByItem"), exact: true }),
+            ).toHaveAttribute("aria-current", "true");
+            await expect
+              .poll(() =>
+                grouping.evaluate((nav) => {
+                  const pill = nav.querySelector<HTMLElement>(":scope > span[aria-hidden='true']");
+                  return Boolean(
+                    pill &&
+                      getComputedStyle(pill).opacity === "1" &&
+                      pill.getBoundingClientRect().width > 0,
+                  );
+                }),
+              )
+              .toBe(true);
+          },
+        });
       });
 
       /**
