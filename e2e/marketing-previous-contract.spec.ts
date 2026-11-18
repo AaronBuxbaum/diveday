@@ -1,16 +1,15 @@
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 
-// Retain f10's live-page assertions alongside main's newer marketing tests.
-// The expected copy below is from f10's English bundle, not a replacement fixture.
-test("the earlier homepage catalogue and guides links retain their labels and destinations", async ({
+// Check the current live-page contracts after the marketing redesign.
+test("the homepage catalogue and guides links retain their labels and destinations", async ({
   page,
 }) => {
   await page.goto("/");
   await expect
     .soft(
       page.getByRole("main").getByRole("link", {
-        name: diverTranslator("en-US")("marketing.home.featuresLink"),
+        name: `${diverTranslator("en-US")("marketing.home.featuresLink")} →`,
         exact: true,
       }),
     )
@@ -18,50 +17,79 @@ test("the earlier homepage catalogue and guides links retain their labels and de
   await expect
     .soft(
       page.getByRole("main").getByRole("link", {
-        name: diverTranslator("en-US")("marketing.home.guidesLink"),
+        name: `${diverTranslator("en-US")("marketing.home.guidesLink")} →`,
         exact: true,
       }),
     )
     .toHaveAttribute("href", "/switching?from=home-records");
+  await expect(
+    page.getByRole("main").getByRole("link", {
+      name: `${diverTranslator("en-US")("marketing.home.spreadsheetLink")} →`,
+      exact: true,
+    }),
+  ).toHaveAttribute("href", "/switching/spreadsheet?from=home-records-arriving#columns");
 });
 
-test("the earlier product catalogue description remains visible", async ({ page }) => {
+test("the product catalogue description remains visible", async ({ page }) => {
   await page.goto("/product");
   await expect(
-    page.getByText(/^Before the dive day, on the day and across the season are all in one plan\.$/),
+    page.getByText(diverTranslator("en-US")("marketing.product.heroDescription"), { exact: true }),
   ).toBeVisible();
 });
 
-test("the earlier catalogue headings remain in order", async ({ page }) => {
+test("the catalogue headings remain in order", async ({ page }) => {
   await page.goto("/product#full-list");
   await expect(page.locator("#full-list").getByRole("heading", { level: 2 })).toHaveText([
-    "Before the dive day",
-    "On the day",
-    "Across the season",
-    "Also in the plan",
+    diverTranslator("en-US")("marketing.featureChrome.phases.before"),
+    diverTranslator("en-US")("marketing.featureChrome.phases.day"),
+    diverTranslator("en-US")("marketing.featureChrome.phases.season"),
+    diverTranslator("en-US")("marketing.product.runningTheShop"),
   ]);
 });
 
-test("the earlier product spreadsheet door retains its attribution", async ({ page }) => {
+test("the product switching-guide door retains its attribution", async ({ page }) => {
   await page.goto("/product");
   await expect(
-    page.getByRole("main").getByRole("link", { name: /See how DiveDay reads your spreadsheet/ }),
-  ).toHaveAttribute("href", "/switching/spreadsheet?from=product-spreadsheet");
+    page.getByRole("main").getByRole("link", {
+      name: `${diverTranslator("en-US")("marketing.product.oneList.movingLink")} →`,
+      exact: true,
+    }),
+  ).toHaveAttribute("href", "/switching?from=product-one-list");
 });
 
-test("the earlier pricing and provider terms remain visible", async ({ page }) => {
+test("pricing shows the comparison and its provider terms", async ({ page }) => {
   await page.goto("/pricing");
   await expect
-    .soft(page.getByRole("heading", { name: "What a shop pays, line by line" }))
+    .soft(
+      page.getByRole("heading", {
+        name: diverTranslator("en-US")("marketing.pricing.heroTitle"),
+        level: 1,
+      }),
+    )
     .toBeVisible();
   await expect
-    .soft(page.getByRole("heading", { name: "Compare the fees your shop pays" }))
+    .soft(
+      page.getByRole("heading", {
+        name: diverTranslator("en-US")("marketing.pricing.compare.title"),
+      }),
+    )
     .toBeVisible();
-  await expect.soft(page.getByText(/plan, market, and booking channel matter/)).toBeVisible();
-  await expect.soft(page.getByText(/sets fees in its provider agreement/)).toBeVisible();
+  await page
+    .getByText(diverTranslator("en-US")("marketing.pricing.compare.assumptionsTitle"), {
+      exact: true,
+    })
+    .click();
+  await expect.soft(page.getByText(/estimates, not quotes/)).toBeVisible();
+  await expect.soft(page.getByText(/contract is negotiated shop by shop/)).toBeVisible();
   await expect
-    .soft(page.getByRole("link", { name: /What moving off Rezdy looks like/ }))
-    .toHaveAttribute("href", "/switching/rezdy");
+    .soft(page.getByRole("link", { name: /What moving off FareHarbor looks like/ }))
+    .toHaveAttribute("href", "/switching/fareharbor");
+  await page.goto("/switching/rezdy");
+  await expect(
+    page.getByText(diverTranslator("en-US")("marketing.guides.rezdy.context.item3"), {
+      exact: true,
+    }),
+  ).toBeVisible();
 });
 
 test("pricing carries no unfounded savings claim", async ({ page }) => {
@@ -73,20 +101,45 @@ test("pricing carries no unfounded savings claim", async ({ page }) => {
   }
 });
 
-test("the earlier pricing examples remain visible", async ({ page }) => {
+test("the pricing comparison is interactive", async ({ page }) => {
   await page.goto("/pricing");
-  const examples = page.getByRole("region", { name: "What a month could cost" });
-  await expect(examples).toBeVisible();
-  for (const name of [
-    "A month with no money received",
-    "A month for a one-boat shop",
-    "A month for a three-boat shop",
-  ]) {
-    await expect(examples.getByRole("heading", { name })).toBeVisible();
-  }
+  const comparison = page.getByRole("region", {
+    name: diverTranslator("en-US")("marketing.pricing.compare.title"),
+  });
+  await expect(comparison).toBeVisible();
+  await expect(
+    comparison.getByRole("slider", {
+      name: diverTranslator("en-US")("marketing.pricing.compare.sliderLabel"),
+    }),
+  ).toBeVisible();
+  await expect(comparison.locator("table").getByText("FareHarbor", { exact: true })).toBeVisible();
+  await expect(comparison.locator("table").getByText("DiveDay", { exact: true })).toBeVisible();
+  const totals = comparison.locator("tfoot");
+  // $30,000 in direct sales: 6% plus 2.9% and 200 fixed card fees.
+  await expect(totals.locator("td").first()).toContainText("$2,730");
+  const before = await totals.innerText();
+  const slider = comparison.getByRole("slider", {
+    name: diverTranslator("en-US")("marketing.pricing.compare.sliderLabel"),
+  });
+  await slider.focus();
+  await slider.press("Home");
+  await expect(totals.locator("td").first()).toContainText("$0");
+  await slider.press("End");
+  await expect(totals).not.toHaveText(before);
+  await comparison
+    .getByText(diverTranslator("en-US")("marketing.pricing.compare.marketplaceToggle"), {
+      exact: true,
+    })
+    .click();
+  await expect(comparison.getByText(/Every sale you move from those sites/)).toBeVisible();
+  await expect(
+    comparison.getByRole("slider", {
+      name: diverTranslator("en-US")("marketing.pricing.compare.marketplaceShareLabel"),
+    }),
+  ).toBeVisible();
 });
 
-test.describe("the earlier Spanish pricing title", () => {
+test.describe("the Spanish pricing title", () => {
   test.use({ locale: "es-ES" });
 
   const pages = [
@@ -99,11 +152,14 @@ test.describe("the earlier Spanish pricing title", () => {
   ] as const;
 
   for (const [path, heading] of pages) {
-    test(`${path} never paints the earlier English pricing title`, async ({ page }) => {
+    test(`${path} never paints the English pricing title as its main heading`, async ({ page }) => {
       await page.addInitScript(() => {
         const recorder = window as unknown as { __oldEnglishPricingSeen?: boolean };
         const look = () => {
-          if (document.body?.textContent?.includes("What a shop pays, line by line")) {
+          if (
+            document.querySelector("main h1")?.textContent?.trim() === "Pricing" ||
+            document.body?.textContent?.includes("What a shop pays, line by line")
+          ) {
             recorder.__oldEnglishPricingSeen = true;
           }
         };
@@ -126,10 +182,13 @@ test.describe("the earlier Spanish pricing title", () => {
     });
   }
 
-  test("shows the earlier Spanish pricing title", async ({ page }) => {
+  test("shows the Spanish pricing title", async ({ page }) => {
     await page.goto("/pricing");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Lo que paga un centro, línea por línea" }),
+      page.getByRole("heading", {
+        level: 1,
+        name: diverTranslator("es-ES")("marketing.pricing.heroTitle"),
+      }),
     ).toBeVisible();
   });
 });
