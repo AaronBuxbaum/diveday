@@ -77,14 +77,14 @@ export const STEPS: readonly {
     // the week's list, the seat page opens, and she taps Book and pay, which loads the checkout
     // the next slide fills in (Aaron, 2026-11-17 and 2026-11-18).
     id: "browse",
-    lead: 2300,
-    hold: 1200,
+    lead: 4400,
+    hold: 1600,
     feature: "online-booking",
     note: "marketing.home.steps.browse.note",
     label: "marketing.home.steps.browse.mockupLabel",
     before: (locale) => (
       <WalkSwap
-        at={1150}
+        at={1750}
         from={<StorefrontFallback locale={locale} tapBoat />}
         to={<SeatPickFallback locale={locale} tapPay />}
       />
@@ -126,7 +126,7 @@ export const STEPS: readonly {
   },
   {
     id: "sign",
-    lead: 3400,
+    lead: 4800,
     listed: true,
     feature: "waivers",
     note: "marketing.home.steps.sign.note",
@@ -186,7 +186,7 @@ export const STEPS: readonly {
   },
   {
     id: "review",
-    lead: 5800,
+    lead: 5300,
     feature: "messages",
     note: "marketing.home.steps.review.note",
     label: "marketing.home.steps.review.mockupLabel",
