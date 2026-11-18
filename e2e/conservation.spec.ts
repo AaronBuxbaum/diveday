@@ -10,9 +10,7 @@ signedInAsOwner();
 const t = staffTranslator("en-US");
 const d = diverTranslator("en-US");
 
-test("staff record and correct measured conservation actions after a departure", async ({
-  page,
-}) => {
+test("a finished departure keeps planning fields read-only", async ({ page }) => {
   const title = "Recorded cleanup departure";
   await createTrip(page, {
     title,
@@ -27,8 +25,19 @@ test("staff record and correct measured conservation actions after a departure",
   await expect(page.locator("#about #plan form")).toHaveCount(0);
   await expect(page.locator("#about #conditions form")).toHaveCount(0);
   await expect(page.locator('#about #about-crew [name="boatId"]')).toHaveCount(0);
+});
+
+test("staff record and correct measured conservation actions after a departure", async ({
+  page,
+  request,
+}) => {
+  const { returnedConservationRecap } = (await seedFacts(request, [
+    "returnedConservationRecap",
+  ])) as { returnedConservationRecap: { tripId: string } };
   // The record is kept under Wrapped up's More, which its own hash opens.
-  await page.goto(`${path}?phase=wrapped#conservation`);
+  await page.goto(
+    `/shop/blue-mantis/trips/${returnedConservationRecap.tripId}?phase=wrapped#conservation`,
+  );
   await expect(
     page
       .locator("#wrapped-more #conservation")
