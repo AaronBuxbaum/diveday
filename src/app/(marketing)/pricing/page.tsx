@@ -88,16 +88,14 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
   const fareHarborGuide = getMigrationGuide("fareharbor");
   const comparison = {
     sliderLabel: t("marketing.pricing.compare.sliderLabel"),
-    marketplaceToggle: t("marketing.pricing.compare.marketplaceToggle"),
-    marketplaceShareLabel: t("marketing.pricing.compare.marketplaceShareLabel"),
     subscription: t("marketing.pricing.compare.lines.subscription"),
     free: t("marketing.pricing.compare.lines.free"),
     bookingFee: t("marketing.pricing.compare.lines.bookingFee"),
     otaFee: t("marketing.pricing.compare.lines.otaFee"),
     processing: t("marketing.pricing.compare.lines.processing"),
-    marketplace: t("marketing.pricing.compare.lines.marketplace"),
     total: t("marketing.pricing.compare.lines.total"),
-    range: t("marketing.pricing.compare.range", { low: "{low}", high: "{high}" }),
+    otaFootnote: t("marketing.pricing.compare.otaFootnote", { share: "{share}" }),
+    otaSource: t("marketing.pricing.compare.otaSource"),
     totalNote: t("marketing.pricing.compare.totalNote", { percent: "{percent}" }),
     systems: {
       fareharbor: {
