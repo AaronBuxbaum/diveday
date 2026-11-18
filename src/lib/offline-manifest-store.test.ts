@@ -205,12 +205,11 @@ afterEach(
 );
 
 describe("saveOfflineManifest", () => {
-  it("still saves a fresh snapshot when the existing device record is corrupt or undecryptable", async () => {
+  it("refuses to replace a corrupt or undecryptable device record", async () => {
     // Simulate storage corruption (a bad key, a version/AAD mismatch, flipped
     // bytes) by writing a record straight into IndexedDB that this module's
-    // own AES-GCM key can never decrypt. There's no delete button on this
-    // surface anymore, so a save must self-heal past this rather than
-    // permanently failing every future save on the device.
+    // own AES-GCM key can never decrypt. Unknown ciphertext may contain the
+    // only copy of queued evidence, so a fresh save cannot replace it.
     const tripId = payload.manifests[0].trip.id;
     await new Promise<void>((resolve, reject) => {
       const request = indexedDB.open("diveday-offline-manifests", 1);
@@ -239,11 +238,10 @@ describe("saveOfflineManifest", () => {
       request.onerror = () => reject(request.error);
     });
 
-    const envelope = await saveOfflineManifest(payload);
-    expect(envelope.events).toEqual([]);
-
-    const reloaded = await loadOfflineManifest(tripId);
-    expect(reloaded?.snapshot.snapshotId).toBe(envelope.snapshot.snapshotId);
+    const before = await rawStoredRecord(tripId);
+    expect(before).toBeDefined();
+    await expect(saveOfflineManifest(payload)).rejects.toThrow();
+    expect(await rawStoredRecord(tripId)).toEqual(before);
   });
 });
 
