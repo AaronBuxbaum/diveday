@@ -2116,12 +2116,12 @@ select:not([multiple]):not([size]):dir(rtl) {
    and lifts between the two. */
 @keyframes walk-scroll {
   0%,
-  14% {
+  33% {
     transform: translateY(0);
     animation-timing-function: cubic-bezier(0.15, 0.6, 0.25, 1);
   }
-  52%,
-  58% {
+  63%,
+  68% {
     transform: translateY(calc((28rem - 100%) * 0.62));
     animation-timing-function: cubic-bezier(0.2, 0.65, 0.3, 1);
   }
@@ -2132,30 +2132,30 @@ select:not([multiple]):not([size]):dir(rtl) {
 
 @keyframes walk-swipe {
   0%,
-  13% {
+  32% {
     opacity: 0;
     transform: translateY(0);
     animation-timing-function: cubic-bezier(0.15, 0.6, 0.25, 1);
   }
-  15% {
+  34% {
     opacity: 1;
     transform: translateY(0);
   }
-  51% {
+  62% {
     opacity: 1;
     transform: translateY(-9rem);
   }
-  53%,
-  57% {
+  64%,
+  67% {
     opacity: 0;
     transform: translateY(-9rem);
   }
-  58% {
+  68% {
     opacity: 0;
     transform: translateY(0);
     animation-timing-function: cubic-bezier(0.2, 0.65, 0.3, 1);
   }
-  60% {
+  70% {
     opacity: 1;
     transform: translateY(0);
   }
