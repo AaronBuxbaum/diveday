@@ -37,6 +37,7 @@ export const DEMO_LANDINGS = [
   "diveSites",
   "waivers",
   "inbox",
+  "reviews",
 ] as const satisfies readonly StaffDestinationId[];
 
 export type DemoLanding = (typeof DEMO_LANDINGS)[number];

@@ -208,7 +208,7 @@ test.describe("before the player has run", () => {
       .getByRole("link")
       .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
     expect(stepPages).toEqual(
-      (["payments", "waivers", "certifications", "boat-manifest"] as const).map((slug) =>
+      (["payments", "waivers", "certifications", "boat-manifest", "recap"] as const).map((slug) =>
         featurePagePath(slug),
       ),
     );
