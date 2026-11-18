@@ -205,6 +205,28 @@ afterEach(
 );
 
 describe("saveOfflineManifest", () => {
+  it("does not overwrite an unreadable saved record while the device key exists", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    const previous = (await rawStoredRecord(tripId)) as Record<string, unknown>;
+    const unreadable = { ...previous, ciphertext: new Uint8Array([1, 2, 3, 4]).buffer };
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("manifests", "readwrite");
+        tx.objectStore("manifests").put(unreadable);
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+    await expect(saveOfflineManifest(payload)).rejects.toThrow();
+    expect(await rawStoredRecord(tripId)).toEqual(unreadable);
+  });
   it("retains an unreadable record that may contain pending evidence when saving a snapshot", async () => {
     // Simulate storage corruption (a bad key, a version/AAD mismatch, flipped
     // bytes) by writing a record straight into IndexedDB that this module's

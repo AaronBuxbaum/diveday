@@ -188,3 +188,66 @@ it("does not create a replacement key while an unreadable saved record remains",
   expect(after.key).toBeUndefined();
   expect(after.record).toEqual(original);
 });
+
+it.each(["invalid key", "wrong algorithm", "preserved archive"] as const)(
+  "does not replace uncertain key material when only an %s remains",
+  async (caseName) => {
+    const id =
+      caseName === "preserved archive" ? "unreadable-preservation-v1:test" : "manifest-aes-gcm-v1";
+    const value =
+      caseName === "wrong algorithm"
+        ? await crypto.subtle.generateKey({ name: "AES-CBC", length: 256 }, false, [
+            "encrypt",
+            "decrypt",
+          ])
+        : { unknown: "retain" };
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore("keys");
+        request.result.createObjectStore("manifests", { keyPath: "tripId" });
+      };
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("keys", "readwrite");
+        tx.objectStore("keys").put(value, id);
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+    await expect(saveOfflineManifest(payload("fresh-trip"))).rejects.toMatchObject({
+      code: "unavailable",
+    });
+    const stored = await new Promise<unknown>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("keys", "readonly");
+        const read = tx.objectStore("keys").get(id);
+        tx.oncomplete = () => {
+          db.close();
+          resolve(read.result);
+        };
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+    if (value instanceof CryptoKey) {
+      expect(stored).toBeInstanceOf(CryptoKey);
+      if (!(stored instanceof CryptoKey)) throw new Error("stored key missing");
+      const iv = new Uint8Array(16);
+      const bytes = new TextEncoder().encode("preserve key");
+      const ciphertext = await crypto.subtle.encrypt({ name: "AES-CBC", iv }, value, bytes);
+      expect(
+        new Uint8Array(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, stored, ciphertext)),
+      ).toEqual(bytes);
+    } else {
+      expect(stored).toEqual(value);
+    }
+    expect(await rawStoredRecord("fresh-trip")).toBeUndefined();
+  },
+);

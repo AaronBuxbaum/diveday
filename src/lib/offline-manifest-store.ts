@@ -402,21 +402,83 @@ function withKeyLock<T>(fn: () => Promise<T>): Promise<T> {
   return navigator.locks.request("diveday-offline-manifest-key", fn);
 }
 
+function isManifestEncryptionKey(value: unknown): value is CryptoKey {
+  return (
+    value instanceof CryptoKey &&
+    value.type === "secret" &&
+    value.algorithm.name === "AES-GCM" &&
+    (value.algorithm as AesKeyAlgorithm).length === 256 &&
+    value.usages.includes("encrypt") &&
+    value.usages.includes("decrypt")
+  );
+}
+
 async function encryptionKey(db: IDBDatabase): Promise<CryptoKey> {
   return withKeyLock(async () => {
     const read = db.transaction(KEY_STORE, "readonly");
     const existing = await requestResult(read.objectStore(KEY_STORE).get(KEY_ID));
     await transactionDone(read);
-    if (existing instanceof CryptoKey) return existing;
+    if (isManifestEncryptionKey(existing)) return existing;
+    if (existing !== undefined) throw new OfflineManifestError("unavailable");
 
     const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
       "encrypt",
       "decrypt",
     ]);
-    const write = db.transaction(KEY_STORE, "readwrite");
-    write.objectStore(KEY_STORE).put(key, KEY_ID);
-    await transactionDone(write);
-    return key;
+    // The key decision and the check for existing ciphertext share a single
+    // transaction. A second first-save must use the winner, and a missing or
+    // invalid key must never be silently replaced over an existing record.
+    const write = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
+    const done = transactionDone(write);
+    const keys = write.objectStore(KEY_STORE);
+    let winner: unknown;
+    let count = 0;
+    let keyReady = false;
+    let countReady = false;
+    let archiveReady = false;
+    let archiveKeys: IDBValidKey[] = [];
+    let selected: CryptoKey | undefined;
+    let refused = false;
+    const choose = () => {
+      if (!keyReady || !countReady || !archiveReady) return;
+      if (isManifestEncryptionKey(winner)) selected = winner;
+      else if (
+        winner === undefined &&
+        count === 0 &&
+        !archiveKeys.some(
+          (entry) => typeof entry === "string" && entry.startsWith("unreadable-preservation-v1:"),
+        )
+      ) {
+        keys.put(key, KEY_ID);
+        selected = key;
+      } else {
+        refused = true;
+        write.abort();
+      }
+    };
+    keys.get(KEY_ID).onsuccess = (event) => {
+      winner = (event.target as IDBRequest<unknown>).result;
+      keyReady = true;
+      choose();
+    };
+    write.objectStore(MANIFEST_STORE).count().onsuccess = (event) => {
+      count = (event.target as IDBRequest<number>).result;
+      countReady = true;
+      choose();
+    };
+    keys.getAllKeys().onsuccess = (event) => {
+      archiveKeys = (event.target as IDBRequest<IDBValidKey[]>).result;
+      archiveReady = true;
+      choose();
+    };
+    try {
+      await done;
+    } catch (error) {
+      if (refused) throw new OfflineManifestError("unavailable");
+      throw error;
+    }
+    if (!selected) throw new OfflineManifestError("unavailable");
+    return selected;
   });
 }
 
