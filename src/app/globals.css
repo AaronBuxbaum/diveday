@@ -1930,7 +1930,8 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 [data-walk-phase="before"] [data-walk-before] [data-walk-type] {
-  animation: walk-type calc(var(--type-chars, 10) * 70ms) steps(var(--type-chars, 10)) both;
+  animation: walk-type calc(var(--type-chars, 10) * var(--type-ms, 185ms))
+    steps(var(--type-chars, 10)) both;
   animation-delay: var(--type-delay, 0ms);
 }
 

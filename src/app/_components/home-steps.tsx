@@ -93,7 +93,7 @@ export const STEPS: readonly {
   },
   {
     id: "pay",
-    lead: 3400,
+    lead: 6900,
     listed: true,
     feature: "payments",
     note: "marketing.home.steps.pay.note",
@@ -110,7 +110,7 @@ export const STEPS: readonly {
   },
   {
     id: "onboard",
-    lead: 5300,
+    lead: 9000,
     note: "marketing.home.steps.onboard.note",
     label: "marketing.home.steps.onboard.mockupLabel",
     before: (locale) => <RegisterFallback locale={locale} state="filling" />,
@@ -126,7 +126,7 @@ export const STEPS: readonly {
   },
   {
     id: "sign",
-    lead: 4800,
+    lead: 5700,
     listed: true,
     feature: "waivers",
     note: "marketing.home.steps.sign.note",
@@ -186,7 +186,7 @@ export const STEPS: readonly {
   },
   {
     id: "review",
-    lead: 5300,
+    lead: 10800,
     feature: "messages",
     note: "marketing.home.steps.review.note",
     label: "marketing.home.steps.review.mockupLabel",
