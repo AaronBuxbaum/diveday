@@ -223,13 +223,24 @@ function samePurgeRecord(expected: StoredRecord, actual: StoredRecord): boolean 
     "iv",
     "ciphertext",
   ]);
+  const isBuffer = (value: unknown) => {
+    try {
+      const byteLength = Object.getOwnPropertyDescriptor(ArrayBuffer.prototype, "byteLength")?.get;
+      if (!byteLength) return false;
+      byteLength.call(value);
+      new Uint8Array(value as ArrayBuffer);
+      return true;
+    } catch {
+      return false;
+    }
+  };
   if (
     Object.keys(expected).some((key) => !supported.has(key)) ||
     Object.keys(actual).some((key) => !supported.has(key)) ||
-    !(expected.iv instanceof ArrayBuffer) ||
-    !(actual.iv instanceof ArrayBuffer) ||
-    !(expected.ciphertext instanceof ArrayBuffer) ||
-    !(actual.ciphertext instanceof ArrayBuffer)
+    !isBuffer(expected.iv) ||
+    !isBuffer(actual.iv) ||
+    !isBuffer(expected.ciphertext) ||
+    !isBuffer(actual.ciphertext)
   )
     return false;
   const sameBytes = (a: ArrayBuffer, b: ArrayBuffer) => {
