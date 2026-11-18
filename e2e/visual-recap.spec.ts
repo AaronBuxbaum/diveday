@@ -4,6 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+import type { Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/(token)/ready/[token]/_components/after-state-test-ids";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { diverTranslator } from "../src/i18n/messages";
@@ -20,6 +21,35 @@ import {
   SURFACE_TIMEOUT_MS,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
+
+async function expectProfileLabelsInsideChart(page: Page, stopLabel: string) {
+  const chart = page.getByTestId(AFTER_STATE_TEST_IDS.computerDives).locator("svg");
+  await expect(chart).toHaveCount(1);
+  await expect(chart.locator("text").filter({ hasText: stopLabel })).toHaveCount(1);
+  const labels = await chart.locator("text").evaluateAll((elements) =>
+    elements.map((element) => {
+      const text = element as SVGTextElement;
+      const bounds = text.getBBox();
+      const viewport = text.ownerSVGElement?.viewBox.baseVal;
+      if (!viewport) throw new Error("Profile label has no chart viewport");
+      return {
+        label: text.textContent,
+        left: bounds.x,
+        right: bounds.x + bounds.width,
+        min: viewport.x,
+        max: viewport.x + viewport.width,
+      };
+    }),
+  );
+  for (const label of labels) {
+    expect(label.left, `${label.label} fits the chart's left edge`).toBeGreaterThanOrEqual(
+      label.min,
+    );
+    expect(label.right, `${label.label} fits the chart's right edge`).toBeLessThanOrEqual(
+      label.max,
+    );
+  }
+}
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
@@ -44,7 +74,11 @@ for (const scheme of ["light", "dark"] as const) {
               .getByTestId(AFTER_STATE_TEST_IDS.record)
               .getByTestId(AFTER_STATE_TEST_IDS.computerDives),
           ).toHaveCount(0);
-          await capture(page, "recap", scheme, { locale: SPANISH });
+          await capture(page, "recap", scheme, {
+            locale: SPANISH,
+            beforeScreenshot: () =>
+              expectProfileLabelsInsideChart(page, t("recap.profile.stop", { minutes: 4 })),
+          });
         });
       });
       /**
@@ -118,7 +152,10 @@ for (const scheme of ["light", "dark"] as const) {
         // that is what the seed-stripe-account write above buys — so waiting on
         // it is what proves the whole run of doors is in the frame.
         await page.getByText("Tip the crew", { exact: true }).waitFor();
-        await capture(page, "recap", scheme);
+        await capture(page, "recap", scheme, {
+          beforeScreenshot: () =>
+            expectProfileLabelsInsideChart(page, diverCopy("recap.profile.stop", { minutes: 4 })),
+        });
       });
 
       /**
