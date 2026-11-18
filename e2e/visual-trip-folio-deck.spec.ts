@@ -69,36 +69,42 @@ for (const scheme of ["light", "dark"] as const) {
         await afterRecord;
         await capture(page, "trip-deck-receipt", scheme);
       });
-      test(`offline Deck keeps the named local receipt visible (${scheme})`, async ({
-        page,
-        context,
-        request,
-        privateShop,
-      }) => {
-        const { operationalTrust: ready } = await seedFacts(
+      test.describe(() => {
+        test.use({
+          storageState: { cookies: [], origins: [] },
+          privateShopSlug: "deck-offline-receipt",
+        });
+        test(`offline Deck keeps the named local receipt visible (${scheme})`, async ({
+          page,
+          context,
           request,
-          [{ name: "operationalTrust", state: "capacity" }],
-          { slug: privateShop.slug },
-        );
-        const name = ready.seats[0].fullName;
-        await page.goto(
-          `/shop/${privateShop.slug}/trips/${ready.tripId}/manifest?checkpoint=after_dive_1`,
-        );
-        await offlineCopySaved(page);
-        await settleOfflineShellWorker(page);
-        await page.goto(`/offline-manifest?trip=${ready.tripId}&checkpoint=after_dive_1`);
-        await expect(page).toHaveURL(/offline-manifest/);
-        await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
-        await context.setOffline(true);
-        await openDeckPerson(page, name);
-        await page
-          .getByRole("button", {
-            name: t("manifest.deck.record", { name }),
-            exact: true,
-          })
-          .click();
-        await expect(page.locator('[data-deck-screen="receipt"]')).toBeVisible();
-        await capture(page, "trip-deck-offline-receipt", scheme);
+          privateShop,
+        }) => {
+          const { operationalTrust: ready } = await seedFacts(
+            request,
+            [{ name: "operationalTrust", state: "capacity" }],
+            { slug: privateShop.slug },
+          );
+          const name = ready.seats[0].fullName;
+          await page.goto(
+            `/shop/${privateShop.slug}/trips/${ready.tripId}/manifest?checkpoint=after_dive_1`,
+          );
+          await offlineCopySaved(page);
+          await settleOfflineShellWorker(page);
+          await page.goto(`/offline-manifest?trip=${ready.tripId}&checkpoint=after_dive_1`);
+          await expect(page).toHaveURL(/offline-manifest/);
+          await expect(page.locator('[data-deck-screen="home"]')).toBeVisible();
+          await context.setOffline(true);
+          await openDeckPerson(page, name);
+          await page
+            .getByRole("button", {
+              name: t("manifest.deck.record", { name }),
+              exact: true,
+            })
+            .click();
+          await expect(page.locator('[data-deck-screen="receipt"]')).toBeVisible();
+          await capture(page, "trip-deck-offline-receipt", scheme);
+        });
       });
     });
   });

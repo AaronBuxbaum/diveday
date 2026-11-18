@@ -226,25 +226,31 @@ for (const scheme of ["light", "dark"] as const) {
        * of the page — a second full-page shot of the same screen would cost two
        * baselines to photograph one block twice.
        */
-      test(`the manifest's plan-change fields render true to the design (${scheme})`, async ({
-        page,
-        request,
-        privateShop,
-      }) => {
-        // The dive log lives on the Trip page, On the water (ADR
-        // 20261117-trip-page-clock): a boat out with dive 1 counted.
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        const { boatOnTheWater } = (await seedFacts(
+      test.describe(() => {
+        test.use({
+          storageState: { cookies: [], origins: [] },
+          privateShopSlug: "manifest-plan-change",
+        });
+        test(`the manifest's plan-change fields render true to the design (${scheme})`, async ({
+          page,
           request,
-          [{ name: "boatOnTheWater", state: "outstanding" }],
-          { slug: privateShop.slug },
-        )) as { boatOnTheWater: { tripId: string } };
-        await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}`);
-        const log = await openDiveLog(page, boatOnTheWater.tripId, 1);
-        // Waits on a control the open form renders and the closed one does not.
-        await log.getByLabel("Why the plan changed").waitFor();
-        await page.mouse.move(0, 0);
-        await capture(page, "manifest-plan-change", scheme);
+          privateShop,
+        }) => {
+          // The dive log lives on the Trip page, On the water (ADR
+          // 20261117-trip-page-clock): a boat out with dive 1 counted.
+          test.setTimeout(FLOW_TIMEOUT_MS);
+          const { boatOnTheWater } = (await seedFacts(
+            request,
+            [{ name: "boatOnTheWater", state: "outstanding" }],
+            { slug: privateShop.slug },
+          )) as { boatOnTheWater: { tripId: string } };
+          await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}`);
+          const log = await openDiveLog(page, boatOnTheWater.tripId, 1);
+          // Waits on a control the open form renders and the closed one does not.
+          await log.getByLabel("Why the plan changed").waitFor();
+          await page.mouse.move(0, 0);
+          await capture(page, "manifest-plan-change", scheme);
+        });
       });
 
       /**

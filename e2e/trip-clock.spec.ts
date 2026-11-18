@@ -44,51 +44,59 @@ test("every phase of a departure opens from the strip, and Edit trip beside them
  * out, On the water says who is not recorded back, and its roll call door opens
  * the count for the dive that just ended, not the dock's.
  */
-test("On the water opens the roll call for the dive that just ended in one tap", async ({
-  page,
-  request,
-  privateShop,
-}) => {
-  const { boatOnTheWater } = (await seedFacts(
+test.describe(() => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+  test("On the water opens the roll call for the dive that just ended in one tap", async ({
+    page,
     request,
-    [{ name: "boatOnTheWater", state: "outstanding" }],
-    { slug: privateShop.slug },
-  )) as { boatOnTheWater: { tripId: string } };
-  await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}`);
-  const water = page.locator('[data-phase-panel="water"]');
-  await expect(water).toBeVisible();
-  await water.getByRole("link", { name: t("trips.clock.water.openRollCall"), exact: true }).click();
-  await page.waitForURL(/\/manifest\?checkpoint=after_dive_1$/);
+    privateShop,
+  }) => {
+    const { boatOnTheWater } = (await seedFacts(
+      request,
+      [{ name: "boatOnTheWater", state: "outstanding" }],
+      { slug: privateShop.slug },
+    )) as { boatOnTheWater: { tripId: string } };
+    await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}`);
+    const water = page.locator('[data-phase-panel="water"]');
+    await expect(water).toBeVisible();
+    await water
+      .getByRole("link", { name: t("trips.clock.water.openRollCall"), exact: true })
+      .click();
+    await page.waitForURL(/\/manifest\?checkpoint=after_dive_1$/);
+  });
 });
 
 /**
  * **Close out a wrapped trip.** Wrapped up lists what is left (a dive with no
  * log), each with its fix; logging the dive takes it off the list.
  */
-test("Wrapped up lists what is left, and logging the dive closes it", async ({
-  page,
-  request,
-  privateShop,
-}) => {
-  const { boatOnTheWater } = (await seedFacts(
+test.describe(() => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+  test("Wrapped up lists what is left, and logging the dive closes it", async ({
+    page,
     request,
-    [{ name: "boatOnTheWater", state: "unfinished" }],
-    { slug: privateShop.slug },
-  )) as { boatOnTheWater: { tripId: string } };
-  await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
-  const wrapped = page.locator('[data-phase-panel="wrapped"]');
-  const noLog = wrapped.getByText(t("trips.clock.wrapped.noLog", { dive: 2 }), { exact: true });
-  await expect(noLog).toBeVisible();
-  await wrapped
-    .getByRole("link", { name: t("trips.clock.wrapped.logDive", { dive: 2 }), exact: true })
-    .click();
-  const log = page.locator("form").filter({ hasText: "Dive 2" });
-  await log.getByLabel(/Maximum depth/).fill("12");
-  await log.getByRole("button", { name: "Save dive record" }).click();
-  await expect(log.getByText("Dive record saved")).toBeVisible();
-  await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
-  await expect(wrapped).toBeVisible();
-  await expect(noLog).toHaveCount(0);
+    privateShop,
+  }) => {
+    const { boatOnTheWater } = (await seedFacts(
+      request,
+      [{ name: "boatOnTheWater", state: "unfinished" }],
+      { slug: privateShop.slug },
+    )) as { boatOnTheWater: { tripId: string } };
+    await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
+    const wrapped = page.locator('[data-phase-panel="wrapped"]');
+    const noLog = wrapped.getByText(t("trips.clock.wrapped.noLog", { dive: 2 }), { exact: true });
+    await expect(noLog).toBeVisible();
+    await wrapped
+      .getByRole("link", { name: t("trips.clock.wrapped.logDive", { dive: 2 }), exact: true })
+      .click();
+    const log = page.locator("form").filter({ hasText: "Dive 2" });
+    await log.getByLabel(/Maximum depth/).fill("12");
+    await log.getByRole("button", { name: "Save dive record" }).click();
+    await expect(log.getByText("Dive record saved")).toBeVisible();
+    await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
+    await expect(wrapped).toBeVisible();
+    await expect(noLog).toHaveCount(0);
+  });
 });
 
 /**
