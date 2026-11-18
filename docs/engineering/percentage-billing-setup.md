@@ -5,7 +5,7 @@ This guide configures Stripe; source defaults alone do not enable collections.
 
 ```text
 Enable percentage billing
-    when     before accepting subscriptions on the default $0/month plus 3% offer; test mode first
+    when     before accepting subscriptions on the default $0/month plus 1% offer; test mode first
     why      DiveDay computes the fee in cents from money recorded received by any payment method, net of linked reversals, excluding separately recorded tax, tips, pass-through fees and imported history. Stripe collects that fee via a Billing Meter, not a Connect application fee.
     run      Finish [10], retaining BILLING_STRIPE_PRICE_ID as the original $99 monthly price for flat subscriptions. It is still required even when the new offer has no monthly charge.
              In DiveDay's Stripe account, create a Billing Meter with sum aggregation, event name diveday_percent_fee, customer mapping stripe_customer_id and value field value.
