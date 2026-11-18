@@ -1,5 +1,6 @@
 import { getTableName, type SQL, sql } from "drizzle-orm";
 import type { AppDb, DbExecutor } from "../../db/client";
+import { DemoSightingCleanupBlocked } from "../../db/demo-sighting-guard";
 import { clearDemoSchedule, resetDemoSchedule } from "../../db/seed";
 import { nowMs } from "../../lib/clock";
 import { log } from "../../lib/log";
@@ -112,6 +113,7 @@ export async function resetDemoFromSnapshot(db: AppDb, shopId: string): Promise<
         wrote: [...new Set([...inserts, ...updates].map((step) => step.table))].sort(),
       };
     } catch (error) {
+      if (error instanceof DemoSightingCleanupBlocked) throw error;
       // Rolled back whole; fall through to a real reset and a fresh capture.
       log("e2e_reset.snapshot_replay_failed", "warn", { message: errorMessage(error) });
       captures.delete(db);
