@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { FeeComparison, type FeeComparisonLabels } from "./FeeComparison";
 
@@ -16,11 +16,9 @@ const labels: FeeComparisonLabels = {
   total: "Each month",
   range: "{low} to {high}",
   totalNote: "{percent} of the month",
-  saving: "Moving a sale keeps {low} to {high}",
-  directNote: "Fees apply to {amount}; {rest} goes through marketplaces.",
   systems: {
-    fareharbor: { name: "FareHarbor", note: "note" },
-    diveday: { name: "DiveDay", note: "note" },
+    fareharbor: { name: "FareHarbor", estimated: "(estimated)" },
+    diveday: { name: "DiveDay" },
   },
 };
 
@@ -30,13 +28,38 @@ const renderIt = () =>
       labels={labels}
       locale="en-US"
       diveDay={{ monthlyCents: 0, basisPoints: 200 }}
-      saving={{ low: 0.099, high: 0.249 }}
     />,
   );
 
 afterEach(cleanup);
 
 describe("FeeComparison", () => {
+  it("updates DiveDay's displayed rate and fee when the supplied offer changes", () => {
+    const { rerender } = render(
+      <FeeComparison
+        labels={labels}
+        locale="en-US"
+        diveDay={{ monthlyCents: 0, basisPoints: 200 }}
+      />,
+    );
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers).toHaveLength(2);
+    expect(headers[0]?.textContent).toContain("FareHarbor");
+    expect(headers[1]?.textContent).toBe("DiveDay");
+    const diveDayFee = () =>
+      within(screen.getByRole("row", { name: /Booking fee/ })).getAllByRole("cell")[1];
+    expect(diveDayFee()?.textContent).toContain("2% ($600)");
+    rerender(
+      <FeeComparison
+        labels={labels}
+        locale="en-US"
+        diveDay={{ monthlyCents: 0, basisPoints: 300 }}
+      />,
+    );
+    expect(diveDayFee()?.textContent).toContain("3% ($900)");
+    expect(diveDayFee()?.textContent).not.toContain("2% ($600)");
+  });
+
   it("shows a single total per column and Free for a zero subscription", () => {
     renderIt();
     expect(screen.getAllByText("Free").length).toBe(2);
@@ -59,6 +82,6 @@ describe("FeeComparison", () => {
     expect(marketplace.textContent).toContain("15% to 30% ($900 to $1,800)");
     const ota = screen.getByRole("row", { name: /OTA booking fee/ });
     expect(ota.textContent).toContain("2% ($120)");
-    expect(screen.getByText("Moving a sale keeps 9.9% to 24.9%")).toBeTruthy();
+    expect(screen.getByText("(estimated)")).toBeTruthy();
   });
 });

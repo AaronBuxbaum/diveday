@@ -419,7 +419,13 @@ describe("the fee anchor compares contractual terms without inventing a rival ra
  */
 describe("the fee comparison labels its figures as sourced estimates", () => {
   for (const locale of DIVER_LOCALES) {
-    it(`names the sources and the date, and spells no DiveDay rate, in ${locale}`, () => {
+    it(`spells no DiveDay rate in the flat-rate comparison note in ${locale}`, () => {
+      const diveDayNote =
+        marketingMessages(locale)["marketing.pricing.compare.systems.diveday.noteFlat"];
+      expect(diveDayNote).not.toMatch(/\d+\s?%/);
+    });
+
+    it(`names the sources and the date, and marks FareHarbor estimated, in ${locale}`, () => {
       const assumptions = marketingMessages(locale)["marketing.pricing.compare.assumptions"];
       expect(assumptions).toMatch(/CaptainBook/);
       expect(assumptions).toMatch(/Levy/);
@@ -427,9 +433,9 @@ describe("the fee comparison labels its figures as sourced estimates", () => {
       expect(assumptions).toMatch(
         locale === "en-US" ? /estimates, not quotes/ : /estimaciones, no presupuestos/,
       );
-      const diveDayNote =
-        marketingMessages(locale)["marketing.pricing.compare.systems.diveday.noteFlat"];
-      expect(diveDayNote).not.toMatch(/\d+\s?%/);
+      expect(
+        marketingMessages(locale)["marketing.pricing.compare.systems.fareharbor.estimated"],
+      ).toMatch(locale === "en-US" ? /estimated/ : /estimado/);
     });
   }
 });
