@@ -19,7 +19,7 @@ this covers what happens to it after you merge.
 `node scripts/check-env.mjs`, then `node scripts/check-migrations.mjs`, then
 `node scripts/check-migration-graph.mjs`, then `pnpm db:migrate`; then, always, run `pnpm build`.
 `check-env.mjs` refuses the build when a `config/env-registry.mjs` row marked `requiredInProduction`
-is unset on the Vercel project (today the Upstash pair and `SECRET_ENCRYPTION_KEY`), or a sealing key
+is unset on the Vercel project (today `SECRET_ENCRYPTION_KEY`), or a sealing key
 does not decode to 32 bytes, naming the
 keys and what each one switches off, so a missing security-relevant value fails the deploy loudly instead of the feature failing
 quietly in production (decided 2026-10-07, issue #2244). Previews are not asked.

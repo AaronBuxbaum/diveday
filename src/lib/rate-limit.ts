@@ -1,8 +1,6 @@
 import { createHash } from "node:crypto";
-import { z } from "zod";
 import { nowMs } from "./clock";
 import { log } from "./log";
-import { runtimeMode } from "./runtime-mode";
 
 /**
  * A shared per-source abuse-control seam for public write boundaries
@@ -16,9 +14,9 @@ import { runtimeMode } from "./runtime-mode";
  * overview.md): `RateLimitStore` is the swappable interface, `checkRateLimit`
  * is the only call sites should use, and a store is never allowed to turn
  * into an outage for legitimate traffic — see the fail-open policy below.
- * `RateLimitStore.take` may answer synchronously (the in-memory default) or
- * over the network (the distributed Upstash store below, ADR
- * 20260801-distributed-rate-limit-store) — `checkRateLimit` always awaits it.
+ * `RateLimitStore.take` may answer synchronously (the in-memory store dev and tests use) or
+ * from the database (the Postgres store a deployment uses, ADR
+ * 20261118-rate-limits-in-postgres) — `checkRateLimit` always awaits it.
  */
 
 export type RateLimitConfig = {
@@ -63,8 +61,7 @@ const MAX_BUCKETS = 50_000;
  * this state, so it bounds abuse per instance rather than globally; that is
  * an accepted, documented gap (see
  * docs/architecture/decisions/20260724-rate-limiting.md), not a silent one.
- * Swap in a distributed store (Redis/Upstash) behind the same
- * `RateLimitStore` interface if a global ceiling is ever required.
+ * A deployment uses `postgresRateLimitStore` instead.
  */
 export function inMemoryRateLimitStore(): RateLimitStore {
   const buckets = new Map<string, Bucket>();
@@ -103,231 +100,26 @@ export function inMemoryRateLimitStore(): RateLimitStore {
   };
 }
 
-type Fetch = typeof fetch;
-
-/** Keep the full Upstash request, including response-body parsing, bounded. */
-const UPSTASH_REQUEST_TIMEOUT_MS = 2_000;
-type RateLimitEnvironment = Readonly<Record<string, string | undefined>>;
-
-const upstashConfigSchema = z.object({
-  url: z.string().trim().url(),
-  token: z.string().trim().min(1),
-});
-
 /**
- * Executed atomically by Redis via `EVAL` — the whole read/refill/decide/write
- * cycle happens server-side in one round trip, so two "instances" racing on
- * the same key can never both read a stale token count and both decide
- * "allowed" (the bug an unsynchronized read-then-write over HTTP would have).
- * `KEYS[1]` is the bucket key; `ARGV` is `capacity, refillPerMs, now`. Returns
- * `{allowed (0/1), tokensAfter}` — `tokensAfter` lets the caller compute
- * `retryAfterMs` without a second round trip.
+ * The store the module's own checks use. In-process until a deployment installs the shared
+ * Postgres one (`src/instrumentation.ts`, once per server instance, for the same reason
+ * `setLogSink` is installed there: `src/lib` takes no value import from `src/db`). Dev, the e2e
+ * fleet and unit tests have no other instances to coordinate with, so they keep this default.
  */
-const TOKEN_BUCKET_SCRIPT = `
-local key = KEYS[1]
-local capacity = tonumber(ARGV[1])
-local refillPerMs = tonumber(ARGV[2])
-local now = tonumber(ARGV[3])
+let defaultStore: RateLimitStore = inMemoryRateLimitStore();
+let defaultStoreKind: "postgres" | "memory" = "memory";
 
-local existing = redis.call("HMGET", key, "tokens", "updatedAt")
-local tokens = capacity
-local updatedAt = now
-if existing[1] then
-  tokens = tonumber(existing[1])
-  updatedAt = tonumber(existing[2])
-end
-
-local elapsed = now - updatedAt
-if elapsed < 0 then elapsed = 0 end
-tokens = tokens + elapsed * refillPerMs
-if tokens > capacity then tokens = capacity end
-
-local allowed = 0
-if tokens >= 1 then
-  allowed = 1
-  tokens = tokens - 1
-end
-
-redis.call("HSET", key, "tokens", tostring(tokens), "updatedAt", tostring(now))
--- Idle buckets expire instead of living forever — generous relative to every
--- configured window (15min-1hr), so this only ever resets a bucket to full
--- after it would legitimately have refilled anyway.
-redis.call("PEXPIRE", key, 86400000)
-
-return {allowed, tostring(tokens)}
-`;
-
-/** {@link TOKEN_BUCKET_SCRIPT}'s inverse: one token back, refilled first, never past capacity. */
-const REFUND_SCRIPT = `
-local key = KEYS[1]
-local capacity = tonumber(ARGV[1])
-local refillPerMs = tonumber(ARGV[2])
-local now = tonumber(ARGV[3])
-
-local existing = redis.call("HMGET", key, "tokens", "updatedAt")
-if not existing[1] then return {1, "0"} end
-
-local elapsed = now - tonumber(existing[2])
-if elapsed < 0 then elapsed = 0 end
-local tokens = tonumber(existing[1]) + elapsed * refillPerMs + 1
-if tokens > capacity then tokens = capacity end
-
-redis.call("HSET", key, "tokens", tostring(tokens), "updatedAt", tostring(now))
-redis.call("PEXPIRE", key, 86400000)
-
-return {1, tostring(tokens)}
-`;
-
-const upstashEvalResponseSchema = z.object({
-  result: z.tuple([z.number(), z.string()]),
-});
-
-/**
- * Distributed token bucket over Upstash Redis's REST API — no SDK dependency,
- * matching this codebase's existing hand-rolled-fetch precedent for Stripe
- * webhooks and Vercel Blob (ADR 20260801-distributed-rate-limit-store). A
- * malformed/erroring response throws, which `checkRateLimit`'s fail-open
- * wrapper turns into `{ allowed: true }` rather than an outage.
- */
-export function upstashRateLimitStore(
-  config: { url: string; token: string },
-  fetchImpl: Fetch = fetch,
-): RateLimitStore {
-  /** One bounded EVAL round trip; the response is the script's `{flag, tokensAfter}` pair. */
-  async function evalScript(
-    script: string,
-    key: string,
-    rateLimitConfig: RateLimitConfig,
-    now: number,
-  ): Promise<[number, string]> {
-    const controller = new AbortController();
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        controller.abort();
-        reject(new Error("Upstash Redis request timed out"));
-      }, UPSTASH_REQUEST_TIMEOUT_MS);
-    });
-    const request = (async () => {
-      const response = await fetchImpl(config.url, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${config.token}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify([
-          "EVAL",
-          script,
-          1,
-          key,
-          String(rateLimitConfig.capacity),
-          String(rateLimitConfig.refillPerMs),
-          String(now),
-        ]),
-        signal: controller.signal,
-      });
-      if (!response.ok) throw new Error(`Upstash Redis responded ${response.status}`);
-      return upstashEvalResponseSchema.parse(await response.json()).result;
-    })();
-
-    // Promise.race observes rejection from either branch, including a fetch
-    // that rejects after the timeout has already returned to its caller.
-    void request.catch(() => {});
-    try {
-      return await Promise.race([request, timeout]);
-    } finally {
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
-    }
-  }
-
-  return {
-    async take(key, rateLimitConfig, now) {
-      const [allowed, tokensAfterRaw] = await evalScript(
-        TOKEN_BUCKET_SCRIPT,
-        key,
-        rateLimitConfig,
-        now,
-      );
-      if (allowed === 1) return { allowed: true, retryAfterMs: 0 };
-      const deficit = 1 - Number(tokensAfterRaw);
-      const retryAfterMs =
-        rateLimitConfig.refillPerMs > 0
-          ? Math.ceil(deficit / rateLimitConfig.refillPerMs)
-          : Number.POSITIVE_INFINITY;
-      return { allowed: false, retryAfterMs };
-    },
-    async refund(key, rateLimitConfig, now) {
-      await evalScript(REFUND_SCRIPT, key, rateLimitConfig, now);
-    },
-  };
-}
-
-/**
- * `KV_REST_API_URL` + `KV_REST_API_TOKEN` absent (the default —
- * every deployment until one is provisioned) falls back to the in-memory
- * store, so dev/e2e/an unconfigured deployment stay zero-setup (ADR
- * 20260801-distributed-rate-limit-store).
- */
-export function rateLimitStoreFromEnvironment(
-  env: RateLimitEnvironment = process.env,
-  fetchImpl: Fetch = fetch,
-): RateLimitStore {
-  const config = upstashConfigSchema.safeParse({
-    url: env.KV_REST_API_URL,
-    token: env.KV_REST_API_TOKEN,
-  });
-  return config.success ? upstashRateLimitStore(config.data, fetchImpl) : inMemoryRateLimitStore();
-}
-
-const defaultStore = rateLimitStoreFromEnvironment();
-
-/**
- * Which store the default is, decided once at module load from the same env
- * vars `rateLimitStoreFromEnvironment` reads. Only ever used as a log/Sentry
- * tag: "the distributed store is failing" and "the in-process store is
- * failing" are entirely different operator errands (one is an Upstash/network
- * incident, the other is a bug in this file), and without the tag a store
- * error reads the same either way.
- */
-const defaultStoreKind: "upstash" | "memory" = upstashConfigSchema.safeParse({
-  url: process.env.KV_REST_API_URL,
-  token: process.env.KV_REST_API_TOKEN,
-}).success
-  ? "upstash"
-  : "memory";
-
-/**
- * Whether the module's own default store has already said it is the in-process
- * one. Per process, so per serverless instance: one line per cold start.
- */
-let memoryStoreAnnounced = false;
-
-/**
- * The in-memory fallback is a supported state everywhere except a production
- * deployment, where it quietly multiplies every limit by the number of warm
- * instances (ADR 20260801-distributed-rate-limit-store). It stays fail-open --
- * refusing traffic because a store is unprovisioned would be the outage this
- * module exists not to cause -- but it is never *silent*: the first check on an
- * instance logs `rate_limit.memory_store_in_production`, and `pnpm check:env`
- * fails a production run missing the Upstash pair (config/env-registry.mjs).
- *
- * The e2e fleet serves a production build (`NODE_ENV=production`) on purpose
- * with no Upstash, so `DIVEDAY_E2E=1` is not production for this question --
- * the same split `src/lib/auth.ts` makes for secure cookies.
- */
-function announceMemoryStoreInProduction(store: RateLimitStore): void {
-  if (memoryStoreAnnounced || store !== defaultStore || defaultStoreKind !== "memory") return;
-  memoryStoreAnnounced = true;
-  if (!runtimeMode().warnMemoryRateLimit) return;
-  log("rate_limit.memory_store_in_production", "warn", { store: "memory" });
+export function setDefaultRateLimitStore(store: RateLimitStore, kind: "postgres"): void {
+  defaultStore = store;
+  defaultStoreKind = kind;
 }
 
 /**
  * Minimum gap between two store-failure reports from one process.
  *
  * Every public write boundary in the app funnels through `checkRateLimit`, so
- * whatever breaks a store (Upstash down, a network partition, a bad response
- * shape) breaks it for *every* request at once — an undamped report would send
+ * whatever breaks a store (the database down, a network partition, a bad
+ * response shape) breaks it for *every* request at once — an undamped report would send
  * one Sentry event and one log line per request for as long as the incident
  * lasts, which buries the signal in its own volume and burns the Sentry quota
  * that everything else in the app shares. One report per minute per instance
@@ -405,10 +197,10 @@ function rateLimitDisabled(): boolean {
 /**
  * Checks and consumes one token for `key` under `config`. Never throws — a
  * rate limiter that can 500 a legitimate request is worse than no limiter
- * (fail-open policy). Any store (in-memory or distributed) must uphold the
+ * (fail-open policy). Any store (in-memory or Postgres) must uphold the
  * same contract: an internal store error returns `{ allowed: true, ... }`,
  * never a thrown error that would take down the caller. Async because the
- * distributed store above does a real network round trip; every call site is
+ * Postgres store above does a real database round trip; every call site is
  * already inside an async server action, route handler, or auth callback.
  *
  * Fail-open, but never *silent* (OPS-7): a store that is down means every
@@ -424,7 +216,6 @@ export async function checkRateLimit(
   store: RateLimitStore = defaultStore,
 ): Promise<RateLimitResult> {
   if (rateLimitDisabled()) return { allowed: true, retryAfterMs: 0 };
-  announceMemoryStoreInProduction(store);
   try {
     return await store.take(key, config, now);
   } catch (error) {
@@ -466,7 +257,6 @@ export async function checkRateLimitFailClosed(
   store: RateLimitStore = defaultStore,
 ): Promise<RateLimitResult> {
   if (rateLimitDisabled()) return { allowed: true, retryAfterMs: 0 };
-  announceMemoryStoreInProduction(store);
   try {
     return await store.take(key, config, now);
   } catch (error) {
@@ -589,8 +379,7 @@ export const RATE_LIMITS = {
   setupRequestByIp: perHour(5),
   /**
    * Set-up requests from every IP together, as a cheap first filter. Like
-   * every bucket here it is per server instance unless the distributed store is
-   * configured (ADR 20260801-distributed-rate-limit-store), so it is not the
+   * every bucket here it is only a throttle, so it is not the
    * cap: the cap is `SETUP_REQUESTS_PER_HOUR`, counted in `setup_requests`
    * itself before each insert (ADR 20261007-setup-request-form). An empty
    * bucket refuses the request with the rate-limit sentence, never silently.
@@ -809,10 +598,7 @@ export const RATE_LIMITS = {
    * a per-IP bucket already (`lastMinuteListJoin`, `waitlistJoin`, 10/hour
    * each), and a rotating set of addresses is exactly what a per-IP bucket
    * cannot see: somebody who knows a diver's name and email could otherwise
-   * spray claims onto that diver's record. The default store is in-process per
-   * instance unless Upstash is provisioned, and fails open on a store error, so
-   * the effective per-IP ceiling across a serverless fleet is well above ten an
-   * hour.
+   * spray claims onto that diver's record. It fails open on a store error.
    *
    * **The key is the person written to, not the person submitting.** Keying on
    * the joiner would be no protection at all — a party names up to six people,

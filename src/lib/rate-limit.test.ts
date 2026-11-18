@@ -9,9 +9,7 @@ import {
   type RateLimitConfig,
   type RateLimitStore,
   rateLimitKey,
-  rateLimitStoreFromEnvironment,
   refundRateLimit,
-  upstashRateLimitStore,
 } from "./rate-limit";
 
 /**
@@ -220,24 +218,17 @@ describe("checkRateLimit — fail-open is observable", () => {
     expect(sentry.captureException).toHaveBeenCalledTimes(2);
   });
 
-  it("tags which store failed, so an Upstash incident is not confused with a bug in this file", async () => {
-    vi.stubEnv("KV_REST_API_URL", "https://example.upstash.io");
-    vi.stubEnv("KV_REST_API_TOKEN", "test-token");
-    // Stubbed *before* the re-import, because the module picks its default
-    // store — and that store captures its `fetch` — at load. A unit test must
-    // not depend on a real DNS failure to produce the outage it is asserting
-    // about: that would be a network round trip in `pnpm test`, and it would
-    // pass for a reason (an unreachable host) other than the one under test.
-    vi.stubGlobal("fetch", () => Promise.reject(new TypeError("fetch failed")));
-    vi.resetModules();
-    const { checkRateLimit: check } = await import("./rate-limit");
-    // No `store` argument: this exercises the module's *own* default store,
-    // which is the only way the `upstash` tag can be reached at all.
+  it("tags which store failed, so a database incident is not confused with a bug in this file", async () => {
+    // A deployment installs the Postgres store at boot; its outage is tagged apart from this file's own.
+    const check = await freshLimiter();
+    const { setDefaultRateLimitStore } = await import("./rate-limit");
+    setDefaultRateLimitStore(alwaysThrows, "postgres");
+    // No `store` argument: this exercises the module's *own* default store.
     await check("k", config, 2_000);
 
-    expect(loggedEvents()[0]).toMatchObject({ store: "upstash" });
+    expect(loggedEvents()[0]).toMatchObject({ store: "postgres" });
     expect(sentry.captureException.mock.calls[0]?.[1]).toMatchObject({
-      tags: { rate_limit_store: "upstash" },
+      tags: { rate_limit_store: "postgres" },
     });
   });
 
@@ -252,96 +243,6 @@ describe("checkRateLimit — fail-open is observable", () => {
       allowed: true,
       retryAfterMs: 0,
     });
-  });
-});
-
-/**
- * Without the Upstash pair a production deployment rate-limits per serverless
- * instance, which multiplies every limit by however many are warm. Still
- * fail-open, never silent: the first check on an instance says which store it
- * is using. Each case re-imports the module so its env is read afresh and the
- * once-per-process latch starts clear.
- */
-describe("checkRateLimit — the in-memory store announces itself in production", () => {
-  let warned: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    warned = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubEnv("KV_REST_API_URL", "");
-    vi.stubEnv("KV_REST_API_TOKEN", "");
-    vi.stubEnv("DIVEDAY_RATE_LIMIT_DISABLED", "");
-    vi.stubEnv("DIVEDAY_E2E", "");
-  });
-
-  afterEach(() => {
-    warned.mockRestore();
-  });
-
-  async function freshLimiter() {
-    vi.resetModules();
-    const { checkRateLimit: check } = await import("./rate-limit");
-    return check;
-  }
-
-  function warnedEvents(): Array<Record<string, unknown>> {
-    return warned.mock.calls.map((call: unknown[]) => JSON.parse(String(call[0])));
-  }
-
-  it("logs a warning once per instance, naming the store, and still allows the request", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    const check = await freshLimiter();
-
-    await expect(check("k", config, 1_000)).resolves.toEqual({ allowed: true, retryAfterMs: 0 });
-    await check("k", config, 1_001);
-    await check("other", config, 1_002);
-
-    expect(warnedEvents()).toEqual([
-      expect.objectContaining({
-        event: "rate_limit.memory_store_in_production",
-        level: "warn",
-        store: "memory",
-      }),
-    ]);
-  });
-
-  it("stays quiet outside production", async () => {
-    vi.stubEnv("NODE_ENV", "development");
-    const check = await freshLimiter();
-
-    await check("k", config, 1_000);
-
-    expect(warned).not.toHaveBeenCalled();
-  });
-
-  it("stays quiet in the e2e build, which is a production build without Upstash on purpose", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("DIVEDAY_E2E", "1");
-    const check = await freshLimiter();
-
-    await check("k", config, 1_000);
-
-    expect(warned).not.toHaveBeenCalled();
-  });
-
-  it("stays quiet in production when the distributed store is configured", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("KV_REST_API_URL", "https://example.upstash.io");
-    vi.stubEnv("KV_REST_API_TOKEN", "test-token");
-    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ result: [1, "2"] })));
-    const check = await freshLimiter();
-
-    await check("k", config, 1_000);
-
-    expect(warned).not.toHaveBeenCalled();
-  });
-
-  it("stays quiet for an injected store, which is a caller's choice rather than a deployment gap", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    const check = await freshLimiter();
-
-    await check("k", config, 1_000, inMemoryRateLimitStore());
-
-    expect(warned).not.toHaveBeenCalled();
   });
 });
 
@@ -448,193 +349,6 @@ describe("rateLimitKey", () => {
   });
 });
 
-/**
- * ADR 20260801-distributed-rate-limit-store. A fake `fetch` stands in for
- * Upstash's REST API, simulating the same server-side Lua token bucket the
- * real EVAL script runs, so these tests exercise the HTTP request shape and
- * response parsing without a live Redis.
- */
-function fakeUpstash() {
-  const buckets = new Map<string, { tokens: number; updatedAt: number }>();
-  const requests: Array<{ url: string; body: unknown[]; authorization: string | null }> = [];
-  const fetchImpl = (async (url: string | URL, init?: RequestInit) => {
-    const body = JSON.parse(String(init?.body));
-    requests.push({
-      url: String(url),
-      body,
-      authorization: (init?.headers as Record<string, string> | undefined)?.authorization ?? null,
-    });
-    const [, , , key, capacityStr, refillStr, nowStr] = body as string[];
-    const capacity = Number(capacityStr);
-    const refillPerMs = Number(refillStr);
-    const now = Number(nowStr);
-    const existing = buckets.get(key);
-    let tokens = existing ? existing.tokens : capacity;
-    const updatedAt = existing ? existing.updatedAt : now;
-    tokens = Math.min(capacity, tokens + Math.max(0, now - updatedAt) * refillPerMs);
-    const allowed = tokens >= 1;
-    if (allowed) tokens -= 1;
-    buckets.set(key, { tokens, updatedAt: now });
-    return {
-      ok: true,
-      json: async () => ({ result: [allowed ? 1 : 0, String(tokens)] }),
-    };
-  }) as unknown as typeof fetch;
-  return { fetchImpl, requests, buckets };
-}
-
-describe("upstashRateLimitStore", () => {
-  it("sends an EVAL request authorized with the configured token", async () => {
-    const { fetchImpl, requests } = fakeUpstash();
-    const store = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchImpl,
-    );
-    await store.take("k", config, 0);
-    expect(requests).toHaveLength(1);
-    expect(requests[0]?.url).toBe("https://example.upstash.io");
-    expect(requests[0]?.authorization).toBe("Bearer test-token");
-    expect(requests[0]?.body[0]).toBe("EVAL");
-  });
-
-  it("enforces burst capacity the same as the in-memory store", async () => {
-    const { fetchImpl } = fakeUpstash();
-    const store = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchImpl,
-    );
-    expect((await store.take("k", config, 0)).allowed).toBe(true);
-    expect((await store.take("k", config, 0)).allowed).toBe(true);
-    expect((await store.take("k", config, 0)).allowed).toBe(true);
-    const fourth = await store.take("k", config, 0);
-    expect(fourth.allowed).toBe(false);
-    expect(fourth.retryAfterMs).toBeGreaterThan(0);
-  });
-
-  it("shares state across two independently-constructed stores hitting the same backend — the whole point of a distributed store", async () => {
-    const { fetchImpl } = fakeUpstash();
-    const instanceA = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchImpl,
-    );
-    const instanceB = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchImpl,
-    );
-    await instanceA.take("shared-key", config, 0);
-    await instanceB.take("shared-key", config, 0);
-    await instanceA.take("shared-key", config, 0);
-    // Capacity 3 consumed across both "instances" — the fourth take anywhere fails.
-    expect((await instanceB.take("shared-key", config, 0)).allowed).toBe(false);
-  });
-
-  it("throws (fail-open via checkRateLimit) when Upstash responds with an error status", async () => {
-    const fetchImpl = (async () => ({ ok: false, status: 500 })) as unknown as typeof fetch;
-    const store = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchImpl,
-    );
-    const result = await checkRateLimit("k", config, 0, store);
-    expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
-  });
-
-  it("throws (fail-open via checkRateLimit) on a malformed response body", async () => {
-    const fetchImpl = (async () => ({
-      ok: true,
-      json: async () => ({ unexpected: "shape" }),
-    })) as unknown as typeof fetch;
-    const store = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchImpl,
-    );
-    const result = await checkRateLimit("k", config, 0, store);
-    expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
-  });
-
-  it("bounds a request that never returns headers, aborts it, and preserves fail-open", async () => {
-    vi.useFakeTimers();
-    const fetchMock = vi.fn((_url: string | URL | Request, init?: RequestInit) => {
-      return new Promise<Response>(() => {
-        // This transport ignores AbortSignal, so the limiter must still return
-        // when its own deadline wins the race.
-        void init?.signal;
-      });
-    });
-    const fetchImpl = fetchMock as unknown as typeof fetch;
-    const store = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchImpl,
-    );
-    const result = checkRateLimit("k", config, 0, store);
-
-    await vi.advanceTimersByTimeAsync(2_000);
-
-    expect(await Promise.race([result, Promise.resolve("still pending")])).toEqual({
-      allowed: true,
-      retryAfterMs: 0,
-    });
-    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("bounds a response body that never finishes and preserves fail-closed", async () => {
-    vi.useFakeTimers();
-    const fetchImpl = (async () => ({
-      ok: true,
-      json: () => new Promise<unknown>(() => {}),
-    })) as unknown as typeof fetch;
-    const store = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchImpl,
-    );
-    const result = checkRateLimitFailClosed("k", config, 0, store);
-
-    await vi.advanceTimersByTimeAsync(2_000);
-
-    expect(await Promise.race([result, Promise.resolve("still pending")])).toMatchObject({
-      allowed: false,
-    });
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("clears its deadline after an allow response", async () => {
-    vi.useFakeTimers();
-    const store = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      (async () => ({
-        ok: true,
-        json: async () => ({ result: [1, "2"] }),
-      })) as unknown as typeof fetch,
-    );
-
-    await expect(store.take("k", config, 0)).resolves.toEqual({
-      allowed: true,
-      retryAfterMs: 0,
-    });
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("clears its deadline after a deny response or a transport error", async () => {
-    vi.useFakeTimers();
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ result: [0, "0"] }),
-      })
-      .mockResolvedValueOnce({ ok: false, status: 500 });
-    const store = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchMock as unknown as typeof fetch,
-    );
-
-    await expect(store.take("k", config, 0)).resolves.toMatchObject({ allowed: false });
-    expect(vi.getTimerCount()).toBe(0);
-    await expect(store.take("k", config, 0)).rejects.toThrow("Upstash Redis responded 500");
-    expect(vi.getTimerCount()).toBe(0);
-  });
-});
-
 describe("refundRateLimit", () => {
   it("gives back one spent token, never past capacity, and ignores a key it never saw", async () => {
     const store = inMemoryRateLimitStore();
@@ -661,50 +375,5 @@ describe("refundRateLimit", () => {
       },
     };
     await expect(refundRateLimit("k", config, 0, store)).resolves.toBeUndefined();
-  });
-
-  it("sends the Upstash store's refund as its own script", async () => {
-    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ result: [1, "3"] }) }));
-    const store = upstashRateLimitStore(
-      { url: "https://example.upstash.io", token: "test-token" },
-      fetchMock as unknown as typeof fetch,
-    );
-    await store.refund("k", config, 0);
-    const body = JSON.parse(
-      (fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body,
-    );
-    expect(body[0]).toBe("EVAL");
-    expect(body[1]).toContain("elapsed * refillPerMs + 1");
-  });
-});
-
-describe("rateLimitStoreFromEnvironment", () => {
-  it("falls back to the in-memory store when Upstash env vars are absent", async () => {
-    const store = rateLimitStoreFromEnvironment({});
-    // In-memory store enforces burst capacity synchronously with no network call.
-    expect((await store.take("k", config, 0)).allowed).toBe(true);
-  });
-
-  it("uses the distributed store when both Upstash env vars are set", async () => {
-    const { fetchImpl, requests } = fakeUpstash();
-    const store = rateLimitStoreFromEnvironment(
-      {
-        KV_REST_API_URL: "https://example.upstash.io",
-        KV_REST_API_TOKEN: "test-token",
-      },
-      fetchImpl,
-    );
-    await store.take("k", config, 0);
-    expect(requests).toHaveLength(1);
-  });
-
-  it("falls back to in-memory when only one of the two Upstash env vars is set", async () => {
-    const { fetchImpl, requests } = fakeUpstash();
-    const store = rateLimitStoreFromEnvironment(
-      { KV_REST_API_URL: "https://example.upstash.io" },
-      fetchImpl,
-    );
-    await store.take("k", config, 0);
-    expect(requests).toHaveLength(0);
   });
 });

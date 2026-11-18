@@ -194,6 +194,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
   "notification_rate_limit_state",
+  "rate_limit_buckets", // idle buckets are swept by the limiter itself
   "claude_demo_spend",
   "shop_milestones",
   "integration_sync_records",

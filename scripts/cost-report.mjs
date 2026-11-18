@@ -58,7 +58,7 @@ export const SOURCE_TOPOLOGY = {
   externalMonitoring: "Route 53 health checks and SNS alarms defined in infra/lib/global-stack.ts",
   media: "S3 provider implemented",
   rateLimiting:
-    "Upstash credentials required by production environment registry; runtime fallback is not deployment evidence",
+    "Postgres buckets (rate_limit_buckets) on a real database; in-memory in dev and tests",
 };
 
 /** Read combined manual and local environment variables. */
