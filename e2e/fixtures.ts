@@ -122,14 +122,32 @@ export const SETTINGS_RAIL_PROBE = "[data-settings-rail-scroller]";
  * purpose. `pnpm check:e2e-hygiene`'s `pre-hydration-click` refuses a click
  * straight after that opt-out.
  */
-export async function settleStaffHydration(page: Page): Promise<void> {
-  let pathname: string;
+export async function settleStaffHydration(
+  page: Page,
+  options: { requireTripBody?: boolean } = {},
+): Promise<void> {
+  let url: URL;
   try {
-    pathname = new URL(page.url()).pathname;
+    url = new URL(page.url());
   } catch {
     return;
   }
+  const { pathname, searchParams } = url;
   if (!pathname.startsWith("/shop/")) return;
+  // Only the ordinary Trip page renders PageBodyHydrated. The pass, packet,
+  // and blowout replace it; a missing trip instead renders the staff 404.
+  const tripPage = /^\/shop\/[^/]+\/trips\/[^/]+\/?$/.test(pathname);
+  const alternate = ["pass", "print", "blowout"].some((key) => searchParams.has(key));
+  if (tripPage && !alternate && options.requireTripBody !== false) {
+    await expect(
+      page.locator(`${PAGE_BODY_PROBE}:visible, main#staff-session-content:visible`).first(),
+      `${pathname} loaded, but neither its Trip body nor its not-found page appeared`,
+    ).toBeVisible();
+    await expect(
+      page.locator(`${PAGE_BODY_PROBE}:not([data-hydrated="true"]):visible`),
+      `${pathname} loaded, but React never took over its page body`,
+    ).toHaveCount(0);
+  }
   const triggers = page.locator(STAFF_HYDRATION_PROBE);
   if ((await triggers.count()) === 0) return;
   await expect(
@@ -191,7 +209,10 @@ function settleStaffHydrationAfterNavigation(page: Page): void {
     const original = (page[method] as (...args: unknown[]) => Promise<unknown>).bind(page);
     (page as unknown as Record<string, unknown>)[method] = async (...args: unknown[]) => {
       const result = await original(...args);
-      await settleStaffHydration(page);
+      const options = args[method === "goto" || method === "waitForURL" ? 1 : 0] as
+        | { waitUntil?: string }
+        | undefined;
+      await settleStaffHydration(page, { requireTripBody: options?.waitUntil !== "commit" });
       return result;
     };
   }
