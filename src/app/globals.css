@@ -2040,29 +2040,132 @@ select:not([multiple]):not([size]):dir(rtl) {
     walk-cursor-out 250ms ease-in calc(var(--cursor-at, 900ms) + 300ms) forwards;
 }
 
+/* One fingertip that moves between controls (`WalkPointer`): it arrives at the first press from the
+   side, then travels from where it last pressed to the next, a click at each (`--t0`..`--t2` are
+   the presses, `--p0x`..`--p2y` the controls' centres, measured). It is drawn in the walk's first
+   phase only, and one at a time. */
+[data-walk-trail] {
+  position: absolute;
+  z-index: 3;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -1.125rem 0 0 -1.125rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-primary);
+  background: color-mix(in oklab, var(--color-primary) 22%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes walk-trail-enter {
+  from {
+    opacity: 0;
+    translate: calc(var(--p0x) + 3.5rem) calc(var(--p0y) + 3rem);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    translate: var(--p0x) var(--p0y);
+  }
+}
+
+@keyframes walk-trail-first {
+  from {
+    translate: var(--p0x) var(--p0y);
+  }
+  to {
+    translate: var(--p1x) var(--p1y);
+  }
+}
+
+@keyframes walk-trail-second {
+  from {
+    translate: var(--p1x) var(--p1y);
+  }
+  to {
+    translate: var(--p2x) var(--p2y);
+  }
+}
+
+@keyframes walk-trail-press {
+  50% {
+    scale: 0.75;
+  }
+}
+
+[data-walk-phase="before"] [data-walk-before] [data-walk-trail] {
+  animation:
+    walk-trail-enter var(--trail-in, 650ms) var(--ease-out-soft) max(0ms, calc(var(--t0) - 800ms))
+    both,
+    walk-trail-first 600ms ease-in-out calc(var(--t1) - 750ms) forwards,
+    walk-trail-second 600ms ease-in-out calc(var(--t2) - 750ms) forwards,
+    walk-trail-press 300ms ease-in-out calc(var(--t0) - 150ms),
+    walk-trail-press 300ms ease-in-out calc(var(--t1) - 150ms),
+    walk-trail-press 300ms ease-in-out calc(var(--t2) - 150ms);
+}
+
 /* A page she scrolls (`WalkScroll`): inside a walk it is a window of fixed height; in the first phase
    the page slides up to its end over `--scroll-ms` while a fingertip ring drifts down the side,
    and every other phase rests at the end. Outside a walk it is the whole page. */
+/* A page she scrolls reads before it moves, then goes the way a thumb sends it: a flick that
+   eases out, a breath, a shorter second flick. The fingertip drags the page, so it rises with it,
+   and lifts between the two. */
 @keyframes walk-scroll {
-  from {
+  0%,
+  14% {
     transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.15, 0.6, 0.25, 1);
+  }
+  52%,
+  58% {
+    transform: translateY(calc((28rem - 100%) * 0.62));
+    animation-timing-function: cubic-bezier(0.2, 0.65, 0.3, 1);
+  }
+  100% {
+    transform: translateY(calc(28rem - 100%));
   }
 }
 
 @keyframes walk-swipe {
-  0% {
+  0%,
+  13% {
     opacity: 0;
     transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.15, 0.6, 0.25, 1);
   }
-  10% {
+  15% {
     opacity: 1;
+    transform: translateY(0);
   }
-  90% {
+  51% {
     opacity: 1;
+    transform: translateY(-9rem);
+  }
+  53%,
+  57% {
+    opacity: 0;
+    transform: translateY(-9rem);
+  }
+  58% {
+    opacity: 0;
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.2, 0.65, 0.3, 1);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  99% {
+    opacity: 1;
+    transform: translateY(-7rem);
   }
   100% {
     opacity: 0;
-    transform: translateY(11rem);
+    transform: translateY(-7rem);
   }
 }
 
@@ -2077,7 +2180,7 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 [data-walk-phase="before"] [data-walk-before] [data-walk-scroll] {
-  animation: walk-scroll var(--scroll-ms, 3s) ease-in-out both;
+  animation: walk-scroll var(--scroll-ms, 3s) linear both;
 }
 
 [data-walk-swipe] {
@@ -2088,7 +2191,7 @@ select:not([multiple]):not([size]):dir(rtl) {
   display: block;
   position: absolute;
   z-index: 3;
-  inset-block-start: 4rem;
+  inset-block-start: 17rem;
   inset-inline-end: 2.5rem;
   width: 2.25rem;
   height: 2.25rem;
@@ -2100,7 +2203,7 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 [data-walk-phase="before"] [data-walk-before] [data-walk-swipe] {
-  animation: walk-swipe var(--scroll-ms, 3s) ease-in-out both;
+  animation: walk-swipe var(--scroll-ms, 3s) linear both;
 }
 
 /* A star she rates: it springs in from small, overshoots, and settles. */

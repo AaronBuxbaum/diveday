@@ -650,6 +650,9 @@ for (const scheme of ["light", "dark"] as const) {
         // Both cleared the same way a staffer does, so neither row wears a
         // blocker that would compete with the one chip under test.
         await page.goto(counterPath("blue-mantis", tripId));
+        // The empty roster shell precedes the guest masthead. Its presence
+        // prevents rosterRow from taking its absent-person fallback too early.
+        await expect(page.locator("[data-guest-folios]").filter({ visible: true })).toBeVisible();
         for (const name of ["Odile Marchand", "Hana Kobayashi"]) {
           const row = await rosterRow(page, name);
           await openRosterDetails(row);
@@ -898,7 +901,31 @@ for (const scheme of ["light", "dark"] as const) {
             .filter({ visible: true })
             .first(),
         ).toBeVisible();
-        await capture(page, "prep-assignments-need-care", scheme);
+        await capture(page, "prep-assignments-need-care", scheme, {
+          beforeScreenshot: async () => {
+            // The server-raised option and hydrated sliding pill are different
+            // paint paths. Capture the measured control at every viewport.
+            const grouping = page.getByRole("navigation", {
+              name: staffCopy("tripPrep.groupLabel"),
+              exact: true,
+            });
+            await expect(
+              grouping.getByRole("link", { name: staffCopy("tripPrep.groupByItem"), exact: true }),
+            ).toHaveAttribute("aria-current", "true");
+            await expect
+              .poll(() =>
+                grouping.evaluate((nav) => {
+                  const pill = nav.querySelector<HTMLElement>(":scope > span[aria-hidden='true']");
+                  return Boolean(
+                    pill &&
+                      getComputedStyle(pill).opacity === "1" &&
+                      pill.getBoundingClientRect().width > 0,
+                  );
+                }),
+              )
+              .toBe(true);
+          },
+        });
       });
 
       /**

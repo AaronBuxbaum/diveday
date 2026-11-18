@@ -188,9 +188,10 @@ describe("seat offers", () => {
 
   it("refuses a shop interest for an erased or merged person", async () => {
     const { db, shop, author, firstTrip } = await invitationContext({ fresh: true });
-    const [candidate, other] = await listBookableDivers(db, shop.id, firstTrip.id, {
+    const bookable = await listBookableDivers(db, shop.id, firstTrip.id, {
       query: "mail.example",
     });
+    const [candidate, other] = bookable.filter(({ person }) => person.id !== author.id);
     if (!candidate || !other) throw new Error("expected two bookable seeded divers");
     const now = nowDate();
     await db

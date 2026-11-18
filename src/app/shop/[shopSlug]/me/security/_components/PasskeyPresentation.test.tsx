@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderToString } from "react-dom/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { FactorManagementSection } from "./FactorManagementSection";
 import { PasskeySection } from "./PasskeySection";
@@ -18,7 +19,9 @@ vi.mock("@/app/actions/passkeys", () => ({
 vi.mock("@/app/_components/PasskeyAuthentication", () => ({
   PasskeyAuthentication: ({ label }: { label: string }) => <button type="button">{label}</button>,
 }));
-vi.mock("@/features/passkeys", () => ({ browserSupportsPasskeys: () => true }));
+const { supportsPasskeys } = vi.hoisted(() => ({ supportsPasskeys: vi.fn(() => true) }));
+vi.mock("@/features/passkeys", () => ({ browserSupportsPasskeys: supportsPasskeys }));
+beforeEach(() => supportsPasskeys.mockReturnValue(true));
 
 afterEach(cleanup);
 
@@ -28,6 +31,40 @@ for (const locale of ["en-US", "es-ES"] as const) {
   const codeWord = locale === "en-US" ? /authenticator/i : /autenticador/i;
 
   describe(`staff passkey presentation ${locale}`, () => {
+    it("does not call the browser unsupported before checking its capability", () => {
+      const initial = document.createElement("div");
+      initial.innerHTML = renderToString(
+        <PasskeySection
+          shopSlug="blue-mantis"
+          locked={false}
+          passkeys={[]}
+          locale={locale}
+          timeZone="America/New_York"
+          t={t}
+        />,
+      );
+      expect(initial.textContent).toContain(t("settings.security.passkeys.empty"));
+      expect(initial.textContent).not.toContain(t("settings.security.passkeys.unavailable"));
+    });
+
+    it("keeps the password fallback when the browser capability check fails", () => {
+      supportsPasskeys.mockReturnValue(false);
+      render(
+        <PasskeySection
+          shopSlug="blue-mantis"
+          locked={false}
+          passkeys={[]}
+          locale={locale}
+          timeZone="America/New_York"
+          t={t}
+        />,
+      );
+      expect(screen.getByText(t("settings.security.passkeys.unavailable"))).toBeVisible();
+      expect(
+        screen.queryByRole("button", { name: t("settings.security.passkeys.add") }),
+      ).toBeNull();
+    });
+
     it("names only the available passkey and password when TOTP is off", () => {
       const { container } = render(
         <FactorManagementSection

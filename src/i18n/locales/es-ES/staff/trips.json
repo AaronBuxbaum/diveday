@@ -1207,6 +1207,8 @@
     "wrapped": {
       "everyoneBack": "Todos constan de vuelta.",
       "homeSaid": "La tripulación marcó En casa a las {time}.",
+      "lookBackWarning": "Revisar Terminada",
+      "lookBackOpen": "{count, plural, one {# cosa pendiente en Terminada} other {# cosas pendientes en Terminada}}",
       "closeOut": "{count, plural, one {Queda # cosa} other {Quedan # cosas}} por cerrar.",
       "things": "{count, plural, one {# cosa} other {# cosas}}",
       "allClosed": "No queda nada por cerrar.",

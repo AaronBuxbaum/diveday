@@ -221,5 +221,14 @@
   },
   "src/app/(token)/ready/[token]/_components/DiveRecordExtras.tsx :: (min-width: 640px) 176px, 34vw": {
     "exempt": "Derived, not yet measured in a browser: one third of the 526px card width above 640px, a third of the viewport below; the two side cells of the three-column cover."
+  },
+  "src/app/_components/HomeHeroBoat.tsx :: (min-width: 1200px) 512px, (min-width: 1024px) 44vw, (min-width: 496px) 448px, calc(100vw - 48px)": {
+    "measured": "2026-11-17, home page roll-call illustration",
+    "rendered": {
+      "390": 340,
+      "768": 446,
+      "1280": 510,
+      "1920": 510
+    }
   }
 }

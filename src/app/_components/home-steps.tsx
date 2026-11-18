@@ -59,6 +59,8 @@ export const STEPS: readonly {
   listed?: true;
   /** How long the screen plays before the tap (ms): her typing, her pointer, a page giving way to the next. */
   lead?: number;
+  /** How long the tap lasts (ms); none where the drawing's own pointer has just pressed the last control. */
+  tapMs?: number;
   /** How long the finished screen stays (ms); a screen that only leads into the next needs little. */
   hold?: number;
   /** The feature page the slide ends in; none where there is no page to send a reader to. */
@@ -126,7 +128,8 @@ export const STEPS: readonly {
   },
   {
     id: "sign",
-    lead: 3700,
+    lead: 4150,
+    tapMs: 0,
     listed: true,
     feature: "waivers",
     note: "marketing.home.steps.sign.note",
@@ -173,13 +176,14 @@ export const STEPS: readonly {
     screen: (locale) => <CaptainRollCallFallback locale={locale} state="afterDive" />,
   },
   {
-    // The report goes out by itself a few hours after the boat is due back, which is why it is the
-    // messages page this slide opens. Its drawing carries the label `RecapPageFallback` names.
+    // The report goes out by itself a few hours after the boat is due back. She scrolls it for the whole slide (`lead`), so the page
+    // reaches its end as the slide does. Its drawing carries the label `RecapPageFallback` names.
     id: "recap",
-    lead: 3600,
-    hold: 2400,
+    lead: 7000,
+    tapMs: 0,
+    hold: 600,
     listed: true,
-    feature: "messages",
+    feature: "recap",
     note: "marketing.home.steps.recap.note",
     label: "marketing.home.steps.recap.mockupLabel",
     before: (locale) => <RecapPageFallback locale={locale} view="report" scroll />,
@@ -188,7 +192,7 @@ export const STEPS: readonly {
   {
     id: "review",
     lead: 4500,
-    feature: "messages",
+    feature: "reviews",
     note: "marketing.home.steps.review.note",
     label: "marketing.home.steps.review.mockupLabel",
     before: (locale) => <RecapPageFallback locale={locale} view="review" state="writing" />,

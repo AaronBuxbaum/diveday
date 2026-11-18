@@ -4,7 +4,8 @@ import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { AppBar, MOCK_BODY, MOCK_PRIMARY_BUTTON } from "./MarketingScreenFallbacks";
-import { WalkCursor, WalkTyped } from "./WalkTyped";
+import { WalkPointer } from "./WalkPointer";
+import { WalkTyped } from "./WalkTyped";
 
 /** The selected pill's radio and its label, as the medical question draws a chosen answer. */
 function NoSelected({ label }: { label: string }) {
@@ -58,7 +59,7 @@ export function WaiverSigningFallback({
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.waiverSigning.label")} />
-      <div className={`@container ${MOCK_BODY}`}>
+      <div className={`@container relative ${MOCK_BODY}`}>
         <h3 className={SUB_TITLE_CLASS}>{t("fallback.waiverSigning.title")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.waiverSigning.description")}</p>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-y border-border py-2">
@@ -115,7 +116,7 @@ export function WaiverSigningFallback({
                   {t("waiver.answerYes")}
                 </span>
                 {filling ? (
-                  <span className="relative inline-flex">
+                  <span data-walk-point="no" className="relative inline-flex">
                     <span
                       data-walk-gone=""
                       style={{ "--late-delay": "900ms" } as CSSProperties}
@@ -133,7 +134,6 @@ export function WaiverSigningFallback({
                     >
                       <NoSelected label={t("waiver.answerNo")} />
                     </span>
-                    <WalkCursor at={900} />
                   </span>
                 ) : (
                   <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-primary bg-primary-tint px-3 text-xs font-medium text-primary">
@@ -153,20 +153,18 @@ export function WaiverSigningFallback({
             </div>
             <p className="mt-3 flex items-baseline gap-2 text-xs">
               {filling ? (
-                <span className="relative inline-flex">
-                  <span data-walk-gone="" style={{ "--late-delay": "2600ms" } as CSSProperties}>
+                <span data-walk-point="agree" className="relative inline-flex">
+                  <span data-walk-gone="" style={{ "--late-delay": "3000ms" } as CSSProperties}>
                     <StatusMarkColumn variant="pending" className="text-muted" />
                   </span>
                   <span
                     aria-hidden="true"
                     data-walk-late=""
-                    style={{ "--late-delay": "2600ms" } as CSSProperties}
+                    style={{ "--late-delay": "3000ms" } as CSSProperties}
                     className="absolute inset-0"
                   >
                     <StatusMarkColumn variant="checked" className="text-primary" />
                   </span>
-                  {/* Her fingertip ticks the agreement 3.3 s in, after her name is typed. */}
-                  <WalkCursor at={2600} />
                 </span>
               ) : (
                 <StatusMarkColumn variant="checked" className="text-primary" />
@@ -185,7 +183,8 @@ export function WaiverSigningFallback({
               <button
                 type="button"
                 disabled
-                data-tap-target={state === "open" || filling ? "" : undefined}
+                data-walk-point="sign"
+                data-tap-target={state === "open" ? "" : undefined}
                 className={`mt-3 w-full ${MOCK_PRIMARY_BUTTON}`}
               >
                 {t("fallback.waiverSigning.signButton")}
@@ -193,6 +192,16 @@ export function WaiverSigningFallback({
             )}
           </div>
         </div>
+        {/* One fingertip: it presses No, then the agreement, then Sign, moving from control to control. */}
+        {filling ? (
+          <WalkPointer
+            presses={[
+              { target: "no", at: 900 },
+              { target: "agree", at: 3000 },
+              { target: "sign", at: 3900 },
+            ]}
+          />
+        ) : null}
       </div>
     </div>
   );

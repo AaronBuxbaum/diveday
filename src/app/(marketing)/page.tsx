@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { DiverDoor } from "@/app/_components/DiverDoor";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
-import { HomeHeroDesk } from "@/app/_components/HomeHeroDesk";
+import { HomeHeroBoat } from "@/app/_components/HomeHeroBoat";
 import { HomeWalkthrough, type WalkBeat } from "@/app/_components/HomeWalkthrough";
 import { HomeWalkthroughDoors } from "@/app/_components/HomeWalkthroughDoors";
 import { HomeWhyBand } from "@/app/_components/HomeWhyBand";
@@ -134,7 +134,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <FunnelCtas locale={locale} source="home-hero" hero footnotes={{}} className="mt-6" />
             <DiverDoor t={t} />
           </div>
-          <HomeHeroDesk locale={locale} />
+          <HomeHeroBoat locale={locale} />
         </div>
       </section>
 
@@ -147,9 +147,6 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.home.stepsTitle")}
             </h2>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
-              {t("marketing.home.stepsLede")}
-            </p>
           </div>
 
           {/* 96px between steps at every width, against 20px inside one below
@@ -163,6 +160,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 caption: t(`marketing.home.steps.${step.id}.title`),
                 lead: step.lead,
                 hold: step.hold,
+                tapMs: step.tapMs,
               }),
             )}
             labels={{

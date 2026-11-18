@@ -20,6 +20,7 @@ import {
   capture,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   openReefTrip,
   SPANISH,
   SURFACE_TIMEOUT_MS,
@@ -313,12 +314,25 @@ for (const scheme of ["light", "dark"] as const) {
           await page.goto(`${new URL(page.url()).pathname}/manifest`);
           await offlineCopySaved(page, SPANISH);
           await openDeckDetails(page, SPANISH);
+          const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\/manifest/)?.[1];
+          if (!tripId) throw new Error("The reef trip manifest must identify its trip");
+          const checkpointConfirmed = liveRosterConfirmation(
+            page,
+            { tripId, checkpoint: "after_dive_1" },
+            SPANISH,
+          );
           await page
             .getByRole("link", { name: "Después de la inmersión 1" })
             .evaluate((link: HTMLElement) => link.click());
           await page.waitForURL(/checkpoint=after_dive_1/);
           const copy = staffTranslator(SPANISH);
+          await checkpointConfirmed;
           await openDeckPerson(page, "Tom Okafor", SPANISH);
+          const tomConfirmed = liveRosterConfirmation(
+            page,
+            { tripId, checkpoint: "after_dive_1" },
+            SPANISH,
+          );
           await page
             .getByRole("button", {
               name: copy("manifest.deck.record", { name: "Tom Okafor" }),
@@ -328,18 +342,35 @@ for (const scheme of ["light", "dark"] as const) {
           await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
             copy("manifest.deck.savedAboard"),
           );
+          await tomConfirmed;
           await openManifestPerson(await manifestRow(page, "Lena Fischer", SPANISH));
           const dialog = page.getByRole("dialog");
           const lenaNotBack = dialog.getByRole("button", { name: "Marcar sin regresar a bordo" });
           await lenaNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
+          const lenaConfirmed = liveRosterConfirmation(
+            page,
+            { tripId, checkpoint: "after_dive_1" },
+            SPANISH,
+          );
           await lenaNotBack.click();
           await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
             copy("manifest.deck.savedMissing"),
           );
+          await lenaConfirmed;
           const tomRow = await manifestRow(page, "Tom Okafor", SPANISH);
           await expect(tomRow.getByText("Lena sin regresar a bordo")).toBeVisible();
           await page.mouse.move(0, 0);
-          await capture(page, "manifest-buddy-divergence", scheme, { locale: SPANISH });
+          await capture(page, "manifest-buddy-divergence", scheme, {
+            locale: SPANISH,
+            beforeScreenshot: async () => {
+              await expect(
+                page.getByText(copy("manifest.rosterUnconfirmed"), { exact: true }),
+              ).toHaveCount(0);
+              await expect(
+                tomRow.getByText("Lena sin regresar a bordo", { exact: true }),
+              ).toBeVisible();
+            },
+          });
         });
 
         /**

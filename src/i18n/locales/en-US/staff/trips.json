@@ -1207,6 +1207,8 @@
     "wrapped": {
       "everyoneBack": "Everyone is recorded back.",
       "homeSaid": "The crew said Home at {time}.",
+      "lookBackWarning": "Review Wrapped up",
+      "lookBackOpen": "{count, plural, one {# thing open in Wrapped up} other {# things open in Wrapped up}}",
       "closeOut": "{count, plural, one {# thing} other {# things}} to close out.",
       "things": "{count, plural, one {# thing} other {# things}}",
       "allClosed": "Nothing left to close out.",

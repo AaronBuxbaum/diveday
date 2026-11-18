@@ -1,9 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { AppDb } from "../../db/client";
 import { upsertExecutedDive } from "../../db/executed-dives";
 import { recordCrewRollCall, recordRollCall } from "../../db/manifests";
-import { tripAssignments, trips } from "../../db/schema/index";
+import { people, tripAssignments, trips } from "../../db/schema/index";
 import { MINUTE_MS } from "../../lib/clock";
 import { seedOperationalTrust } from "./operational-trust";
 import { sendADepartureOut } from "./send-a-departure-out";
@@ -57,7 +57,15 @@ export async function putABoatOnTheWater(
   const crew = await db
     .select({ personId: tripAssignments.personId })
     .from(tripAssignments)
-    .where(eq(tripAssignments.tripId, tripId));
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .where(and(eq(tripAssignments.tripId, tripId), eq(people.shopId, shop.id)))
+    // The fixture's captain records the count; physical assignment order
+    // must not change the named actor or the crew's observation order.
+    .orderBy(
+      sql`case when ${tripAssignments.tripRole} = 'captain' then 0 else 1 end`,
+      asc(people.fullName),
+      asc(people.id),
+    );
   const recorder = crew[0]?.personId;
   if (!recorder) throw new Error("boat on the water fixture has no crew");
 

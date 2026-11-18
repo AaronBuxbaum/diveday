@@ -1,0 +1,117 @@
+.scene {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  aspect-ratio: 3 / 2;
+  background-color: var(--primary);
+}
+
+.water {
+  position: absolute;
+  inset: -2.5%;
+  background: center / cover no-repeat url("/marketing/underwater-reef.webp");
+  animation: drift 16s ease-in-out infinite alternate;
+}
+
+.animal {
+  position: absolute;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 24%;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.swimmer {
+  position: absolute;
+  inset: 0;
+  background: center / contain no-repeat var(--animal-art);
+  animation: swim var(--swim-time) ease-in-out infinite alternate;
+}
+
+.ray {
+  --animal-art: url("/marketing/reef-ray.webp");
+  --swim-time: 6.4s;
+  --travel: -9%;
+  --rise: 12%;
+  --tilt: -4deg;
+  width: 51%;
+  height: 34%;
+  inset-inline-start: 10%;
+  top: 9%;
+}
+
+.turtle {
+  --animal-art: url("/marketing/reef-turtle.webp");
+  --swim-time: 5.2s;
+  --travel: 6%;
+  --rise: -7%;
+  --tilt: 3deg;
+  width: 41%;
+  height: 36%;
+  inset-inline-end: 4%;
+  top: 40%;
+}
+
+.tang {
+  --animal-art: url("/marketing/reef-tang.webp");
+  --swim-time: 3.6s;
+  --travel: -12%;
+  --rise: -9%;
+  --tilt: 3deg;
+  width: 23%;
+  height: 23%;
+  inset-inline-start: 16%;
+  top: 64%;
+}
+
+.label {
+  position: absolute;
+  z-index: 1;
+  inset-inline-start: 50%;
+  bottom: 0;
+  white-space: nowrap;
+  transform: translate(-50%, 55%);
+  opacity: 0;
+}
+
+.animal[aria-pressed="true"] .label,
+.animal:focus-visible .label {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .animal:hover .label {
+    opacity: 1;
+  }
+}
+
+.scene[data-paused="true"] .swimmer,
+.scene[data-paused="true"] .water {
+  animation-play-state: paused;
+}
+
+@keyframes swim {
+  from {
+    transform: translate(0, 0) rotate(0);
+  }
+  to {
+    transform: translate(var(--travel), var(--rise)) rotate(var(--tilt));
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translate(-0.7%, -0.4%) scale(1);
+  }
+  to {
+    transform: translate(0.7%, 0.4%) scale(1.025);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .water,
+  .swimmer {
+    animation: none;
+  }
+}

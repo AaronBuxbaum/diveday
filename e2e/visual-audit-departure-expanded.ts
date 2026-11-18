@@ -37,10 +37,18 @@ async function reefRoster(page: Page): Promise<Locator> {
   return openRosterRow(page, "Priya Sharma");
 }
 
-async function reefManifest(page: Page): Promise<void> {
-  await page.goto(await tripPathByTitle(page, "blue-mantis", REEF));
+async function reefManifest(page: Page, confirmRoster = false): Promise<void> {
+  const path = await tripPathByTitle(page, "blue-mantis", REEF);
+  const confirmed = confirmRoster
+    ? liveRosterConfirmation(page, {
+        tripId: path.slice(path.lastIndexOf("/") + 1),
+        checkpoint: "departure",
+      })
+    : null;
+  await page.goto(path);
   await openTripTab(page, "Manifest");
   await openDeckDetails(page);
+  await confirmed;
 }
 
 /** The innermost disclosure containing a field, rather than its open roster ancestor. */
@@ -108,7 +116,7 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     });
 
     test("a boat check opens the problem note beside its equipment item", async ({ page }) => {
-      await reefManifest(page);
+      await reefManifest(page, true);
       await openBoatCheck(page);
       // The checklist button names its item and its screen-reader state instruction.
       await expect(
@@ -137,7 +145,16 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
           exact: true,
         }),
       ).toBeVisible();
-      await capture(page, "manifest-boat-snag-note-editor", "light");
+      await capture(page, "manifest-boat-snag-note-editor", "light", {
+        beforeScreenshot: async () => {
+          await expect(
+            page.getByText(staff("manifest.rosterUnconfirmed"), { exact: true }),
+          ).toHaveCount(0);
+          await expect(editor.getByLabel(staff("trips.preDepartureCheck.noteLabel"))).toHaveValue(
+            "VHF crackles on 16",
+          );
+        },
+      });
     });
 
     test("a crew roll-call row opens the crew-specific person sheet", async ({ page }) => {
