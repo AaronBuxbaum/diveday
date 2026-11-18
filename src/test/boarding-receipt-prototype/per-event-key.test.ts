@@ -82,6 +82,9 @@ describe("isolated per-event key experiment", () => {
       expect(await j.append("tenant-a", "id-1", "original")).toBe("committed");
       expect(await j.append("tenant-a", "id-1", "original")).toBe("conflict");
       expect(await j.append("tenant-a", "id-1", "changed")).toBe("conflict");
+      expect(await j.observeRetryForTest("tenant-a", "id-1", "original")).toBe("observed_match");
+      expect(await j.observeRetryForTest("tenant-a", "id-1", "changed")).toBe("observed_mismatch");
+      expect(await j.observeRetryForTest("tenant-b", "id-1", "original")).toBe("missing");
       expect(await j.readForTest("tenant-a", "id-1")).toEqual({
         status: "readable",
         text: "original",
@@ -148,6 +151,7 @@ describe("isolated per-event key experiment", () => {
         get.onsuccess = () => store.put({ ...get.result, key: null }, ["tenant-a", "id-1"]);
       });
       expect(await j.readForTest("tenant-a", "id-1")).toEqual({ status: "unavailable" });
+      expect(await j.observeRetryForTest("tenant-a", "id-1", "original")).toBe("unavailable");
       expect(await j.append("tenant-a", "id-1", "replacement")).toBe("conflict");
       expect(await j.readForTest("tenant-a", "id-1")).toEqual({ status: "unavailable" });
     } finally {
@@ -180,6 +184,42 @@ describe("isolated per-event key experiment", () => {
       expect(await j.append("tenant-a", "id-1", "\ud800")).toBe("unavailable");
       expect(await j.readForTest("tenant-a", "id-1")).toEqual({ status: "missing" });
     } finally {
+      j.close();
+    }
+  });
+
+  it("labels a match as an observation even if the record is deleted after the read", async () => {
+    const db = name();
+    const j = await openPerEventKeyExperiment(db);
+    let release!: () => void;
+    let started!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const decrypt = crypto.subtle.decrypt.bind(crypto.subtle);
+    const spy = vi.spyOn(crypto.subtle, "decrypt").mockImplementationOnce(async (...args) => {
+      started();
+      await gate;
+      return decrypt(...args);
+    });
+    let observation: Promise<string> | undefined;
+    try {
+      expect(await j.append("tenant-a", "id-1", "original")).toBe("committed");
+      observation = j.observeRetryForTest("tenant-a", "id-1", "original");
+      await blocked;
+      await updateRecord(db, (store) => {
+        store.delete(["tenant-a", "id-1"]);
+      });
+      release();
+      expect(await observation).toBe("observed_match");
+      spy.mockRestore();
+      expect(await j.readForTest("tenant-a", "id-1")).toEqual({ status: "missing" });
+    } finally {
+      release();
+      await observation;
       j.close();
     }
   });
