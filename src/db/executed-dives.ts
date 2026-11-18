@@ -41,6 +41,7 @@ export type ExecutedDiveInput = {
    * the check for why an ornament may not cost the dive record.
    */
   observedSpeciesSlug?: string | null;
+  observedSpeciesEntries?: { slug: string | null; name: string | null }[];
   /**
    * Leave the stored species exactly as it is, whatever `observedSpeciesSlug`
    * says: the form drew no species picker (sightings were off when it loaded,
@@ -514,6 +515,13 @@ export async function upsertExecutedDive(
         : null,
       notRecorded: [...new Set(input.notRecorded ?? [])].filter((value) => value === "depth"),
       observedSpeciesSlug: input.keepObservedSpecies ? null : (observedSpeciesSlug ?? null),
+      observedSpeciesEntries: (input.observedSpeciesEntries ?? [])
+        .slice(0, 30)
+        .flatMap<{ slug: string | null; name: string | null }>((entry) => {
+          if (entry.slug && isMarineLifeSlug(entry.slug)) return [{ slug: entry.slug, name: null }];
+          const name = entry.name?.trim();
+          return name && name.length <= 80 ? [{ slug: null, name }] : [];
+        }),
       planChangeReason: planChangeReasonCode,
       // A note cannot outlive the reason it explains: clearing the reason
       // clears it, which is the same rule the table's own check states.
@@ -560,9 +568,9 @@ export async function upsertExecutedDive(
 }
 
 /** An upsert's values minus the species, for a save that must leave it alone. */
-function withoutObservedSpecies<T extends { observedSpeciesSlug: unknown }>(
-  values: T,
-): Omit<T, "observedSpeciesSlug"> {
-  const { observedSpeciesSlug: _kept, ...rest } = values;
+function withoutObservedSpecies<
+  T extends { observedSpeciesSlug: unknown; observedSpeciesEntries: unknown },
+>(values: T): Omit<T, "observedSpeciesSlug" | "observedSpeciesEntries"> {
+  const { observedSpeciesSlug: _kept, observedSpeciesEntries: _entries, ...rest } = values;
   return rest;
 }

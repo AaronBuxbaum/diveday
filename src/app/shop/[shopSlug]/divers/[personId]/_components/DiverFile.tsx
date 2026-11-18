@@ -1,4 +1,6 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { buttonClass } from "@/components/ui/button";
 import type { personThread } from "@/db/inbound-messages";
 import type { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import type { loadDiverGear } from "@/features/diver-record";
@@ -188,8 +190,14 @@ export function DiverFile({
               ? t("divers.file.computerDiveCount", { count: computerDiveCount })
               : t("divers.file.noneOnFile")
           }
-          href={`/shop/${shopSlug}/divers/${personId}/computer-dives`}
-        />
+        >
+          <Link
+            href={`/shop/${shopSlug}/divers/${personId}/computer-dives`}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("computerDives.title")}
+          </Link>
+        </DiverFileGroupDisclosure>
       ) : null}
       <DiverNotesSection
         notes={notes}

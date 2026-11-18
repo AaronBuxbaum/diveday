@@ -138,6 +138,7 @@ function ResolvedShopPageHeader({
   eyebrow,
   returnTo,
   title,
+  titlePrefix,
   description,
   descriptionIsCaption = false,
   meta,
@@ -164,6 +165,7 @@ function ResolvedShopPageHeader({
    */
   returnTo?: string | null;
   title: string;
+  titlePrefix?: React.ReactNode;
   description?: string;
   /**
    * The description explains the page rather than naming its subject
@@ -242,18 +244,21 @@ function ResolvedShopPageHeader({
               `text-balance` because the titles that do wrap here are boat
               names ("Two-Tank Reef — Molasses & French"), and an even two
               lines reads better than a full line plus one orphaned word. */}
-          <h1
-            // The heading fades as it passes under the bar, so it and the
-            // folded label are never the same word twice on one screen (ADR
-            // 20260907-nothing-from-nowhere, decision 5). Marked on every
-            // shell; the CSS only acts where a bar has a filled title slot,
-            // which is the staff shell alone.
-            data-chrome-fold-title
-            lang={titleLang}
-            className={`font-brand-display ${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}${titleClassName ? ` ${titleClassName}` : ""}`}
-          >
-            {bindTitleDash(title)}
-          </h1>
+          <div className={titlePrefix ? "flex items-center gap-3" : undefined}>
+            {titlePrefix}
+            <h1
+              // The heading fades as it passes under the bar, so it and the
+              // folded label are never the same word twice on one screen (ADR
+              // 20260907-nothing-from-nowhere, decision 5). Marked on every
+              // shell; the CSS only acts where a bar has a filled title slot,
+              // which is the staff shell alone.
+              data-chrome-fold-title
+              lang={titleLang}
+              className={`font-brand-display ${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}${titleClassName ? ` ${titleClassName}` : ""}`}
+            >
+              {bindTitleDash(title)}
+            </h1>
+          </div>
           {/* The same words, delivered into the staff shell's bar so they can
               fold into it as the page scrolls (ADR
               20260907-nothing-from-nowhere, decision 5). Renders nothing at all

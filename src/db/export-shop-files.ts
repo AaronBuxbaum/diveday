@@ -1546,6 +1546,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // DiveDay's copy in the reader's language and a CSV has no reader
       // to resolve them for — the slug is the durable fact.
       "observed_species_slug",
+      "observed_species_entries",
       // Why the boat did not dive the plan, and the shop's own note about
       // it (issue #1184). The reason is a code for the same reason the
       // species slug above is; the note is the shop's own words and
@@ -1571,6 +1572,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         JSON.stringify(row.observedConditions),
         JSON.stringify(row.notRecorded),
         row.observedSpeciesSlug,
+        JSON.stringify(row.observedSpeciesEntries),
         row.planChangeReason,
         row.planChangeNote,
         row.recordedByPersonId,

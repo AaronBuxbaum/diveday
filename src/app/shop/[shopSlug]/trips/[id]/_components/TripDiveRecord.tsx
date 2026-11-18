@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { DAY_MS } from "@/lib/clock";
 import { scopedHash } from "@/lib/element-id";
+import { utcToWallTime } from "@/lib/zoned";
 import { ExecutedDiveLog } from "../manifest/_components/ExecutedDiveLog";
 import { executedDiveLogView } from "../manifest/_components/executed-dive-copy";
 import { manifestSpecies } from "../manifest/_components/manifest-species";
@@ -71,6 +74,16 @@ function diveLogs({ view, dives, shop, tripId, locale, t }: LogInput) {
           headed={false}
           row={row}
           idPrefix={prefix(dive)}
+          tripDate={calendarDateInTimezone(view.departureManifest.trip.startsAt, shop.timezone)}
+          tripStartTime={(() => {
+            const wall = utcToWallTime(view.departureManifest.trip.startsAt, shop.timezone);
+            return `${String(wall.hour).padStart(2, "0")}:${String(wall.minute).padStart(2, "0")}`;
+          })()}
+          multiDay={
+            view.departureManifest.trip.endsAt.getTime() -
+              view.departureManifest.trip.startsAt.getTime() >
+            DAY_MS
+          }
           checkpoint={manifest.checkpoint}
           action={saveExecutedDiveAction.bind(null, {
             shopSlug: shop.slug,

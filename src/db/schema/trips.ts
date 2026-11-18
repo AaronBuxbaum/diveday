@@ -903,28 +903,13 @@ export const executedDives = pgTable(
       .default(null),
     /** Explicit field-level omissions, e.g. `max_depth`, rather than fake zeroes. */
     notRecorded: jsonb("not_recorded").$type<string[]>().notNull().default([]),
-    /**
-     * **One species the crew actually saw on this dive** (issue #1190, delight
-     * report D30). A `MARINE_LIFE_CATALOG` slug, so what a diver reads is
-     * DiveDay's copy in their own language (ADR
-     * 20260813-marine-life-is-diveday-copy).
-     *
-     * The whole point is the verb. `dive_site_creatures` says what a site
-     * *might* show you and is the shop's standing claim about a reef; this says
-     * what somebody *did* see, once, on one dive. They draw from the same
-     * catalog and they must never be the same column, because publishing the
-     * first as the second would be inventing a sighting — the one thing D30's
-     * boundary rules out.
-     *
-     * Null is the ordinary state and stays silent. It is deliberately not in
-     * `not_recorded` beside `depth`: a depth nobody wrote down is a hole in a
-     * record that should have one, and a dive where nothing stood out is just a
-     * dive. There is nothing to declare.
-     *
-     * One, not many. A list would turn a moment into an inventory, and the
-     * surface it reaches is a logbook card, not a species checklist.
-     */
+    /** The first catalog sighting, retained for existing records and integrations. */
     observedSpeciesSlug: text("observed_species_slug"),
+    /** Catalog selections and shop-written sightings, in the order recorded. */
+    observedSpeciesEntries: jsonb("observed_species_entries")
+      .$type<{ slug: string | null; name: string | null }[]>()
+      .notNull()
+      .default([]),
     /**
      * **Why the actual site is not the planned one** (issue #1184, D24). A code
      * so it can be worded in the diver's own language; null is the ordinary

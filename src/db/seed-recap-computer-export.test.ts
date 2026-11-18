@@ -4,7 +4,15 @@ import { SAMPLE_PROFILE } from "@/lib/dive-profile-sample";
 import { seededShopContext } from "@/test/db";
 import { loadShopExportBundleInput } from "./export";
 import { table } from "./export-bundle-table.test-support";
-import { bookings, computerDiveProfiles, computerDives, computerImportBatches } from "./schema";
+import {
+  bookings,
+  computerDiveProfiles,
+  computerDives,
+  computerImportBatches,
+  executedDives,
+  tripConservation,
+  tripRecapPhotos,
+} from "./schema";
 import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 
 it("exports the demo recap diver's seeded computer import and profile", async () => {
@@ -21,12 +29,23 @@ it("exports the demo recap diver's seeded computer import and profile", async ()
     .select()
     .from(computerDiveProfiles)
     .where(eq(computerDiveProfiles.shopId, shop.id));
-  expect(batches).toHaveLength(1);
-  expect(dives).toHaveLength(1);
-  expect(profiles).toHaveLength(1);
-  const [batch] = batches;
-  const [dive] = dives;
-  const [profile] = profiles;
+  const batch = batches.find((row) => row.requestKey === "demo-recap-computer");
+  const dive = dives.find((row) => row.fingerprint === "demo-recap-computer-dive");
+  const profile = profiles.find((row) => row.diveId === dive?.id);
+  expect(batches.length).toBeGreaterThan(1);
+  expect(dives.length).toBeGreaterThan(1);
+  expect(profiles.length).toBeGreaterThan(1);
+  const photos = await db.select().from(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shop.id));
+  const logs = await db.select().from(executedDives).where(eq(executedDives.shopId, shop.id));
+  const conservation = await db
+    .select()
+    .from(tripConservation)
+    .where(eq(tripConservation.shopId, shop.id));
+  expect(photos.length).toBeGreaterThanOrEqual(3);
+  expect(
+    logs.filter((row) => row.observedSpeciesEntries.length >= 3 && row.observedConditions),
+  ).toHaveLength(12);
+  expect(conservation.length).toBeGreaterThanOrEqual(3);
   expect(batch).toMatchObject({
     personId: booking.personId,
     requestKey: "demo-recap-computer",
@@ -54,13 +73,14 @@ it("exports the demo recap diver's seeded computer import and profile", async ()
   const batchFile = table(input, "computer_import_batches.csv");
   const diveFile = table(input, "computer_dives.csv");
   const profileFile = table(input, "computer_dive_profiles.csv");
-  expect(batchFile.rows).toHaveLength(1);
-  expect(diveFile.rows).toHaveLength(1);
-  expect(profileFile.rows).toHaveLength(1);
-  expect(batchFile.rows[0]?.[batchFile.header.indexOf("id")]).toBe(batch.id);
-  expect(diveFile.rows[0]?.[diveFile.header.indexOf("batch_id")]).toBe(batch.id);
-  expect(profileFile.rows[0]?.[profileFile.header.indexOf("dive_id")]).toBe(dive.id);
-  expect(profileFile.rows[0]?.[profileFile.header.indexOf("samples")]).toBe(
+  expect(batchFile.rows.some((row) => row[batchFile.header.indexOf("id")] === batch.id)).toBe(true);
+  expect(diveFile.rows.some((row) => row[diveFile.header.indexOf("batch_id")] === batch.id)).toBe(
+    true,
+  );
+  const exportedProfile = profileFile.rows.find(
+    (row) => row[profileFile.header.indexOf("dive_id")] === dive.id,
+  );
+  expect(exportedProfile?.[profileFile.header.indexOf("samples")]).toBe(
     JSON.stringify(profile.samples),
   );
 });

@@ -251,6 +251,10 @@
     "photoAdd": "Add a photo",
     "photoChange": "Change photo",
     "photoRemove": "Remove photo",
+    "photoSaved": "Photo saved.",
+    "photoError": "Could not save the photo. Try again.",
+    "photoConfirm": "Remove this photo?",
+    "photoRemoved": "Photo removed.",
     "photoAdding": "Adding photo…"
   },
   "bookActivity": {

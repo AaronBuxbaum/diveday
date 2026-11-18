@@ -51,10 +51,10 @@ export function RecordFacts({
   // `fieldGuideCards` drops a slug the catalog no longer carries, the same way
   // the guide below does: a species DiveDay has retired has no words, and a
   // sighting rendered as a raw slug is worse than one not rendered at all.
-  const seenNames = fieldGuideCards(
-    observedSpecies.map((slug, index) => ({ id: String(index), catalogSlug: slug })),
-    t,
-  ).map((card) => card.name);
+  const seenNames = observedSpecies.flatMap((item, index) => {
+    if (item.startsWith("custom:")) return [item.slice(7)];
+    return fieldGuideCards([{ id: String(index), catalogSlug: item }], t).map((card) => card.name);
+  });
 
   return (
     <dl
