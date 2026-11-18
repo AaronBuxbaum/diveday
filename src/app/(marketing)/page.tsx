@@ -163,6 +163,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 caption: t(`marketing.home.steps.${step.id}.title`),
                 lead: step.lead,
                 hold: step.hold,
+                tapMs: step.tapMs,
               }),
             )}
             labels={{

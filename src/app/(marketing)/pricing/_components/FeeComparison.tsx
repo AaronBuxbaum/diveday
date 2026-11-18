@@ -15,7 +15,7 @@ import { formatMoneyScanned } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { MoneySlider } from "./MoneySlider";
 
-/** Words resolved on the server; `range` holds `{low}` and `{high}`, `totalNote` and `saving` hold percents. */
+/** Words resolved on the server; `range` holds `{low}` and `{high}`, `totalNote` holds a percent. */
 export type FeeComparisonLabels = {
   sliderLabel: string;
   marketplaceToggle: string;
@@ -29,9 +29,9 @@ export type FeeComparisonLabels = {
   total: string;
   range: string;
   totalNote: string;
-  saving: string;
-  directNote: string;
-  systems: Record<ComparedSystem, { name: string; note: string }>;
+  /** Said beside a system whose rates are reported, not published. */
+  estimated: string;
+  systems: Record<ComparedSystem, { name: string }>;
 };
 
 const MAX_CENTS = 10_000_000;
@@ -50,13 +50,10 @@ export function FeeComparison({
   labels,
   locale,
   diveDay,
-  saving,
 }: {
   labels: FeeComparisonLabels;
   locale: string;
   diveDay: DiveDayTerms;
-  /** What a sale moved off a marketplace keeps, at each end of their range, as fractions of the sale. */
-  saving: { low: number; high: number };
 }) {
   const [received, setReceived] = useState(START_CENTS);
   const [withMarketplace, setWithMarketplace] = useState(false);
@@ -170,14 +167,6 @@ export function FeeComparison({
         </div>
       </div>
 
-      {withMarketplace ? (
-        <p className="mt-8 max-w-3xl text-sm leading-6 text-muted">
-          {labels.directNote
-            .replace("{amount}", money(received - Math.round(received * (share / 100))))
-            .replace("{rest}", money(Math.round(received * (share / 100))))}
-        </p>
-      ) : null}
-
       <table className="mt-6 w-full table-fixed border-collapse text-start text-sm sm:text-base">
         <thead>
           <tr className="align-top">
@@ -188,9 +177,13 @@ export function FeeComparison({
                 scope="col"
                 className={`px-3 pb-4 text-start font-normal ${system === "diveday" ? "rounded-t-panel bg-surface" : ""}`}
               >
-                <span className={`block ${ITEM_TITLE_CLASS}`}>{labels.systems[system].name}</span>
-                <span className="mt-1 hidden text-sm leading-6 text-muted sm:block">
-                  {labels.systems[system].note}
+                <span className={`block ${ITEM_TITLE_CLASS}`}>
+                  {labels.systems[system].name}
+                  {system === "fareharbor" ? (
+                    <span className="ms-1.5 text-sm font-normal text-muted">
+                      {labels.estimated}
+                    </span>
+                  ) : null}
                 </span>
               </th>
             ))}
@@ -250,23 +243,6 @@ export function FeeComparison({
           </tr>
         </tfoot>
       </table>
-
-      <dl className="mt-6 space-y-3 text-sm leading-6 text-muted sm:hidden">
-        {COMPARED_SYSTEMS.map((system) => (
-          <div key={system}>
-            <dt className="font-medium text-foreground">{labels.systems[system].name}</dt>
-            <dd>{labels.systems[system].note}</dd>
-          </div>
-        ))}
-      </dl>
-
-      {withMarketplace ? (
-        <p className="mt-6 max-w-2xl border-l-2 border-primary ps-5 text-lg leading-8">
-          {labels.saving
-            .replace("{low}", percent(saving.low))
-            .replace("{high}", percent(saving.high))}
-        </p>
-      ) : null}
     </div>
   );
 }

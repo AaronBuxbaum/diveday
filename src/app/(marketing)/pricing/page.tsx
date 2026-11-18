@@ -9,7 +9,7 @@ import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
-import { directSavingBasisPoints, FEE_ASSUMPTIONS } from "@/features/fee-comparison";
+import { FEE_ASSUMPTIONS } from "@/features/fee-comparison";
 import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -17,7 +17,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { formatMoneyScanned } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { earlyAccessPrice, marketingFee } from "@/lib/marketing";
+import { earlyAccessPrice } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { FeeComparison } from "./_components/FeeComparison";
@@ -99,18 +99,13 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
     total: t("marketing.pricing.compare.lines.total"),
     range: t("marketing.pricing.compare.range", { low: "{low}", high: "{high}" }),
     totalNote: t("marketing.pricing.compare.totalNote", { percent: "{percent}" }),
-    saving: t("marketing.pricing.compare.saving", { low: "{low}", high: "{high}" }),
-    directNote: t("marketing.pricing.compare.directNote", { amount: "{amount}", rest: "{rest}" }),
+    estimated: t("marketing.pricing.compare.estimated"),
     systems: {
       fareharbor: {
         name: fareHarborGuide?.competitor ?? "FareHarbor", // i18n-exempt: a product name
-        note: t("marketing.pricing.compare.systems.fareharbor.note"),
       },
       diveday: {
         name: "DiveDay", // i18n-exempt: our product name
-        note: percentArm
-          ? t(marketingFee.summaryKey, params)
-          : t("marketing.pricing.compare.systems.diveday.noteFlat", params),
       },
     },
   };
@@ -254,15 +249,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
             <p className="mt-4 max-w-2xl leading-7 text-muted">
               {t("marketing.pricing.compare.lede")}
             </p>
-            <FeeComparison
-              locale={locale}
-              diveDay={offer}
-              labels={comparison}
-              saving={{
-                low: directSavingBasisPoints(offer).low / 10_000,
-                high: directSavingBasisPoints(offer).high / 10_000,
-              }}
-            />
+            <FeeComparison locale={locale} diveDay={offer} labels={comparison} />
             <details className="mt-8 max-w-3xl">
               <summary className="cursor-pointer font-medium">
                 {t("marketing.pricing.compare.assumptionsTitle")}

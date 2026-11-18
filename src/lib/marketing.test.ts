@@ -404,9 +404,6 @@ describe("the fee comparison labels its figures as sourced estimates", () => {
       expect(assumptions).toMatch(
         locale === "en-US" ? /estimates, not quotes/ : /estimaciones, no presupuestos/,
       );
-      const diveDayNote =
-        marketingMessages(locale)["marketing.pricing.compare.systems.diveday.noteFlat"];
-      expect(diveDayNote).not.toMatch(/\d+\s?%/);
     });
   }
 });
