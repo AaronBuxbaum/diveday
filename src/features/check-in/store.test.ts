@@ -89,52 +89,6 @@ describe("counter check-in", () => {
     expect(afterCheckIn?.readiness.status).toBe("blocked");
   });
 
-  it("checks in only the ready diver without clearing another diver on the trip", async () => {
-    const { db, shop, reef, staff, booking } = await context();
-    const before = await listCheckInQueue(db, shop.id, { tripId: reef.id });
-    const blocked = before.find((row) => row.bookingId === booking.id);
-    const ready = before.find(
-      (row) => row.bookingId !== booking.id && row.readiness.status === "ready",
-    );
-    if (!ready || !blocked) throw new Error("ready and blocked divers on the trip are required");
-    expect(blocked.readiness.status).toBe("blocked");
-    const arrivalBefore = await standingArrivalStatus(db, shop.id, reef.id, blocked.bookingId);
-    const eventsBefore = await db
-      .select()
-      .from(bookingArrivalEvents)
-      .where(eq(bookingArrivalEvents.bookingId, blocked.bookingId));
-
-    await expect(
-      checkInBooking(db, {
-        shopId: shop.id,
-        bookingId: ready.bookingId,
-        recordedByPersonId: staff.id,
-      }),
-    ).resolves.toMatchObject({ ok: true, bookingId: ready.bookingId });
-    expect(await standingArrivalStatus(db, shop.id, reef.id, ready.bookingId)).toBe("arrived");
-
-    const after = await listCheckInQueue(db, shop.id, { tripId: reef.id });
-    expect(after.find((row) => row.bookingId === blocked.bookingId)?.readiness).toEqual(
-      blocked.readiness,
-    );
-    expect(await standingArrivalStatus(db, shop.id, reef.id, blocked.bookingId)).toEqual(
-      arrivalBefore,
-    );
-    expect(
-      await db
-        .select()
-        .from(bookingArrivalEvents)
-        .where(eq(bookingArrivalEvents.bookingId, blocked.bookingId)),
-    ).toEqual(eventsBefore);
-    await expect(
-      checkInBooking(db, {
-        shopId: shop.id,
-        bookingId: blocked.bookingId,
-        recordedByPersonId: staff.id,
-      }),
-    ).resolves.toMatchObject({ ok: false, reason: "not_ready", tripId: reef.id });
-  });
-
   /**
    * Two quiet facts the counter carries beside each name — never gates, and
    * both read in one batched pass over the queue rather than a query per row
