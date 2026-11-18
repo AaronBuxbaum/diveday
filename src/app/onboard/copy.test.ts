@@ -3,7 +3,7 @@ import { DIVER_MESSAGES } from "@/i18n/messages";
 
 /**
  * **The door's reassurance is one sentence** (ADR 20260827-first-light,
- * decision 1; the sentence itself is the day-22 answer from
+ * decision 1; the sentence itself is the day-15 answer from
  * docs/product/marketing-review-20260827.md).
  *
  * The line under the primary used to be four strings joined with a space —
@@ -25,18 +25,18 @@ describe("the /onboard trial note", () => {
     // One terminator, and it is the last character — which is the difference
     // between one sentence and several joined into a paragraph. An em dash is
     // deliberately not a terminator: the English and the Spanish both use one
-    // to hang the day-22 clause off the first half, and that is still one
+    // to hang the day-15 clause off the first half, and that is still one
     // sentence.
     expect(note.match(/[.!?]/g)).toHaveLength(1);
     expect(note.trimEnd().endsWith(".")).toBe(true);
   });
 
-  it.each(LOCALES)("answers day 22 rather than stopping at the window in %s", (_l, messages) => {
-    // The half the review found missing: "free for 3 weeks" with no word about
-    // what happens on the 22nd day reads, to a burned buyer, as a card wall.
+  it.each(LOCALES)("answers day 15 rather than stopping at the window in %s", (_l, messages) => {
+    // The half the review found missing: "free for 2 weeks" with no word about
+    // what happens on the 15th day reads, to a burned buyer, as a card wall.
     // Soft expiry is real (src/features/trial/rules.ts switches nothing off), so the door
     // is allowed to say it.
-    expect(messages.account.onboard.trialNote).toMatch(/3/);
+    expect(messages.account.onboard.trialNote).toMatch(/2/);
     expect(messages.account.onboard.trialNote.length).toBeGreaterThan(40);
   });
 

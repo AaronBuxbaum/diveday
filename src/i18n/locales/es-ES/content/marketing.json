@@ -1005,8 +1005,8 @@
   },
   "pricing": {
     "heroTitle": "Precios",
-    "lockNote": "El precio de hoy, congelado dos años para los centros fundadores.",
-    "trialNote": "Prueba un centro propio gratis durante 3 semanas, sin tarjeta. Tu centro sigue funcionando después de la prueba mientras acuerdas el paso a un plan de pago con {email}.",
+    "lockNote": "El precio de hoy, congelado un año para los centros fundadores.",
+    "trialNote": "Prueba un centro propio gratis durante 2 semanas, sin tarjeta. Tu centro sigue funcionando después de la prueba mientras acuerdas el paso a un plan de pago con {email}.",
     "earlyAccessBadge": "Acceso anticipado",
     "invoice": {
       "title": "La factura",
@@ -1084,7 +1084,7 @@
       },
       "whyFounding": {
         "question": "¿Por qué ser un centro fundador?",
-        "answer": "Los centros fundadores conservan el precio de hoy durante dos años. Aquello con lo que se topa tu tripulación esta temporada es lo siguiente que se construye, y cada función llega al único plan que hay."
+        "answer": "Los centros fundadores conservan el precio de hoy durante un año. Aquello con lo que se topa tu tripulación esta temporada es lo siguiente que se construye, y cada función llega al único plan que hay."
       },
       "multipleLocations": {
         "question": "¿Qué pasa con varias ubicaciones?",

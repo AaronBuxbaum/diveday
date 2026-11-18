@@ -39,7 +39,7 @@ export type StripeSubscriptionStatus = (typeof STRIPE_SUBSCRIPTION_STATUSES)[num
 /**
  * What the Billing page says, as a code (the page picks the words).
  *
- * - `trialing` — inside the three-week trial, card or not.
+ * - `trialing` — inside the two-week trial, card or not.
  * - `free_term` — inside a free term DiveDay granted by hand, card or not.
  * - `active` — paying, and the last charge went through.
  * - `past_due` — Stripe could not collect the last charge.

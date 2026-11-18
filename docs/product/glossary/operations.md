@@ -2304,7 +2304,7 @@
   demo's spend still counts; Blue Mantis keeps a real shop's cap (Aaron, 2026-10-23). Onboarding a **trial** at `/onboard` — which only the owner's setup link opens, since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand) — creates a real shop that is *not* demo mode and is
   **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
   20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed). A trial runs
-  **3 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/features/trial/rules.ts`), shown to the
+  **2 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/features/trial/rules.ts`), shown to the
   owner on Settings > Billing as days left / trial ended. Expiry is **soft**: the shop keeps working
   exactly as before past the window, and nothing gates on **billing standing**. Once billing is
   turned on, the owner moves to paid by adding a card on that page (see **Subscription** under

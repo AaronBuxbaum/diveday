@@ -3,9 +3,9 @@ import { DEFAULT_PRICING_CONFIG } from "../../lib/billing/pricing-plans";
 import { pricingConfig, readPricingFlags } from "./rules";
 
 describe("readPricingFlags", () => {
-  it("uses zero monthly and two percent when neither component is configured", () => {
+  it("uses zero monthly and one percent when neither component is configured", () => {
     expect(readPricingFlags({})).toEqual({
-      config: { monthlyCents: 0, basisPoints: 200 },
+      config: { monthlyCents: 0, basisPoints: 100 },
       invalid: [],
     });
     expect(

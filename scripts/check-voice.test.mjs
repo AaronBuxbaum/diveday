@@ -84,7 +84,7 @@ describe("the word rules", () => {
   });
 
   it("does not catch a price locked in today’s number", () => {
-    expect(rules("Founding shops lock in today’s price for two years.")).toEqual([]);
+    expect(rules("Founding shops lock in today’s price for one year.")).toEqual([]);
   });
 
   it("reads a contraction spelled either way, so the sweep did not retire a rule", () => {

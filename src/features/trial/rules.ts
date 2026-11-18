@@ -18,7 +18,7 @@
 
 import { DAY_MS } from "../../lib/clock";
 
-export const TRIAL_DURATION_DAYS = 21;
+export const TRIAL_DURATION_DAYS = 14;
 
 /** The instant a trial started at `createdAt` stops being "in trial." */
 export function trialEndsAt(createdAt: Date): Date {

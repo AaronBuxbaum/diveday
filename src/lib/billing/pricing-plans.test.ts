@@ -27,8 +27,8 @@ describe("configured pricing", () => {
     });
   });
 
-  it("defaults new subscriptions to no monthly fee and two percent", () => {
-    expect(DEFAULT_PRICING_CONFIG).toEqual({ monthlyCents: 0, basisPoints: 200 });
+  it("defaults new subscriptions to no monthly fee and one percent", () => {
+    expect(DEFAULT_PRICING_CONFIG).toEqual({ monthlyCents: 0, basisPoints: 100 });
     expect(isTodaysPrice(configuredPricing(DEFAULT_PRICING_CONFIG))).toBe(false);
     expect(isTodaysPrice(configuredPricing({ monthlyCents: 9900, basisPoints: 300 }))).toBe(false);
     expect(PRICING_PLANS).toEqual(["flat_monthly", "percent_of_volume"]);

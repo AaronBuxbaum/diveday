@@ -1005,8 +1005,8 @@
   },
   "pricing": {
     "heroTitle": "Pricing",
-    "lockNote": "Today’s price, locked for two years for founding shops.",
-    "trialNote": "Try a shop of your own free for 3 weeks, with no card. Your shop keeps working after the trial while you arrange the move to a paid plan with {email}.",
+    "lockNote": "Today’s price, locked for one year for founding shops.",
+    "trialNote": "Try a shop of your own free for 2 weeks, with no card. Your shop keeps working after the trial while you arrange the move to a paid plan with {email}.",
     "earlyAccessBadge": "Early access",
     "invoice": {
       "title": "The invoice",
@@ -1084,7 +1084,7 @@
       },
       "whyFounding": {
         "question": "Why be a founding shop?",
-        "answer": "Founding shops keep today’s price for two years. What your crew runs into this season is what gets built next, and every feature lands in the one plan."
+        "answer": "Founding shops keep today’s price for one year. What your crew runs into this season is what gets built next, and every feature lands in the one plan."
       },
       "multipleLocations": {
         "question": "What about multiple locations?",

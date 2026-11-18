@@ -14,7 +14,7 @@ with copy matching the configured components, instead of a pricing experiment.
 - Publish one offer for everyone. Remove randomized assignment, pricing cookies, visitor headers,
   experiment switches and split settings.
 - Read `PRICING_MONTHLY_CENTS` (0–100000) and `PRICING_BASIS_POINTS` (0–1000; 300 means 3%).
-  Setting either makes the omitted component zero. Both unset or blank use $0/month plus 2% (3% until 2026-11-18, when Aaron set the offer to 2%). Explicit zeroes mean free. Invalid input rejects the entire configuration and
+  Setting either makes the omitted component zero. Both unset or blank use $0/month plus 1% (3% until 2026-11-18, then 2%, then 1% the same day). Explicit zeroes mean free. Invalid input rejects the entire configuration and
   restores the default, logging variable names only.
 - Derive the internal billing plan from the percentage: a positive percentage uses the metered
   plan; otherwise use monthly billing. Existing Stripe meter, monthly statements, fee arithmetic

@@ -64,7 +64,7 @@ and run the command again.
 | H-20260724-one-person-per-email | Implemented | 2026-11-06 | CR-008 made (shop_id, lower(email)) a hard uniqueness constraint for active people and, per the… |
 | H-20260724-payment-deposit-cancellation-refund | In progress | 2026-08-26 | What payment/deposit, cancellation, refund, tax, and provider policy should the first paid booking support? |
 | H-20260724-product-now-uses-explicit | Implemented | 2026-07-26 | The product now uses explicit encrypted device snapshots rather than a live-only pilot. |
-| H-20260724-public-founding-shop-price | Chosen | 2026-10-14 | Is the public founding-shop price, commercial term, support promise, and multi-location policy correct? |
+| H-20260724-public-founding-shop-price | Chosen | 2026-11-18 | Is the public founding-shop price, commercial term, support promise, and multi-location policy correct? |
 | H-20260724-revocable-capabilities | Implemented | 2026-07-24 | The codebase review's "Human-owned decisions" item 3: CR-001–CR-003 replaced permanent readiness/confirmation authority with revocable… |
 | H-20260724-staff-disable-latency | Implemented | 2026-07-24 | The codebase review's "Human-owned decisions" item 2: most staff mutations trust role-bearing JWT state… |
 | H-20260724-staff-role-reach | Implemented | 2026-09-16 | The codebase review's "Human-owned decisions" item 1: current ADRs let every staff role reach… |

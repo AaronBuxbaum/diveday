@@ -26,7 +26,7 @@ export type PricingConfig = { monthlyCents: number; basisPoints: number };
 
 export const DEFAULT_PRICING_CONFIG: PricingConfig = {
   monthlyCents: 0,
-  basisPoints: 200,
+  basisPoints: 100,
 };
 
 /** What one shop pays: a monthly fee, and a share of its volume (0 on the flat plan). */

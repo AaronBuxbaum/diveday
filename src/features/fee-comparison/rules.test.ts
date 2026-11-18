@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compareMonth } from "./rules";
 
-const OFFER = { monthlyCents: 0, basisPoints: 200 };
+const OFFER = { monthlyCents: 0, basisPoints: 100 };
 
 const byName = (rows: ReturnType<typeof compareMonth>) =>
   Object.fromEntries(rows.map((row) => [row.system, row]));
@@ -20,10 +20,10 @@ describe("compareMonth", () => {
     });
     expect(rows.diveday).toMatchObject({
       subscriptionCents: 0,
-      bookingFeeCents: 75_600, // the offer's 2% of the direct money
+      bookingFeeCents: 37_800, // the offer's 1% of the direct money
       otaFeeCents: 0,
       processingCents: processing,
-      totalCents: 75_600 + processing,
+      totalCents: 37_800 + processing,
     });
   });
 
@@ -46,7 +46,7 @@ describe("compareMonth", () => {
     const rows = byName(compareMonth(1_000_000, OFFER));
     expect(rows.fareharbor?.bookingFeeCents).toBe(37_800);
     expect(rows.fareharbor?.otaFeeCents).toBe(7_400);
-    expect(rows.diveday?.bookingFeeCents).toBe(12_600);
+    expect(rows.diveday?.bookingFeeCents).toBe(6_300);
     expect(rows.diveday?.processingCents).toBe(18_270 + 42 * 30);
   });
 });

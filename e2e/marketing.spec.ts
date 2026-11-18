@@ -877,7 +877,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // subject — the price, not the reader — because this is the fine-print slot
   // a burned buyer scans for the catch.
   await expect(
-    page.getByText("Today’s price, locked for two years for founding shops."),
+    page.getByText("Today’s price, locked for one year for founding shops."),
   ).toBeVisible();
   // The trial's own terms, once, in the notes beside the price — free, three
   // weeks, no card, and the soft expiry that src/features/trial/rules.ts actually
@@ -890,7 +890,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     { exact: true },
   );
   await expect(trialTerms).toHaveCount(1);
-  await expect(page.getByText("3 weeks, no card", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("2 weeks, no card", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Stripe’s fee, paid to Stripe", { exact: true })).toHaveCount(1);
   await expect(page.getByText(/Card fees are Stripe’s|Payment-processing fees/)).toHaveCount(0);
   // The offline row is gone from this page's FAQ, deliberately — the claim
@@ -1133,11 +1133,11 @@ test("the setup link opens the form, which answers the hesitation it creates", a
   // Asking for a password is the moment of maximum hesitation, so the door
   // answers it — in one sentence, not the four claims this line used to join
   // together (ADR 20260827-first-light, decision 1). The half that earns it is
-  // the second: "free for 3 weeks" alone never says what happens on day 22,
+  // the second: "free for 2 weeks" alone never says what happens on day 22,
   // and a buyer who has been burned reads an unanswered window as a card wall
   // (docs/product/marketing-review-20260827.md).
   await expect(
-    page.getByText("Free for 3 weeks, no card, and nothing switches off when the window ends."),
+    page.getByText("Free for 2 weeks, no card, and nothing switches off when the window ends."),
   ).toBeVisible();
   await expect(page.getByText("No card, no setup fee.")).toHaveCount(0);
   await expect(page.getByText("Your records are ready from day one.")).toHaveCount(0);

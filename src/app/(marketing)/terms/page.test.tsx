@@ -54,7 +54,7 @@ describe("/terms percent-plan clause", () => {
   it("states the fee, what counts, refunds, the statement, who pays and the notice", async () => {
     const text = await legalText();
     expect(text).toContain("Plans priced as a percentage of recorded collections");
-    expect(text).toContain("2% of the money your shop records as received in DiveDay");
+    expect(text).toContain("1% of the money your shop records as received in DiveDay");
     expect(text).toContain("Your subscription keeps the rate and monthly fee you agreed to.");
     for (const excluded of ["tips", "tax", "pass-through charges", "cash", "imported"]) {
       expect(text).toContain(excluded);
@@ -93,7 +93,7 @@ describe("/terms percent-plan clause", () => {
   it("says the same in es-ES", async () => {
     const text = await legalText("es-ES");
     expect(text).toContain("Planes con precio en un porcentaje de los cobros registrados");
-    expect(text).toMatch(/el 2\s?% del dinero que tu centro registra como recibido/);
+    expect(text).toMatch(/el 1\s?% del dinero que tu centro registra como recibido/);
     expect(text).toContain("nunca el buceador");
     expect(text).toContain("incluidos el efectivo y los pagos externos");
     expect(text).toContain("El cobro automático admite solo USD por ahora");

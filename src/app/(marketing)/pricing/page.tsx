@@ -150,7 +150,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               {figure}
             </p>
             <p className="mt-4 text-base text-muted">{cadence}</p>
-            {/* The two-year lock, under the figure it is about (H-20260724-public-founding-shop-price). It
+            {/* The one-year lock, under the figure it is about (H-20260724-public-founding-shop-price). It
                 names its subject so a burned reader cannot read "I am" into
                 it. */}
             <p className="mt-2 text-sm leading-6 text-pretty text-muted">

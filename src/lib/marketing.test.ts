@@ -133,8 +133,8 @@ describe("the mid-season answer is one shared key", () => {
 describe("the trial's terms stand at the pricing doors", () => {
   /** What the note must name, in each locale's own words. */
   const trialTerms = {
-    "en-US": [/free/i, /3 weeks/, /no card/i, /keeps working/i],
-    "es-ES": [/gratis/i, /3 semanas/, /sin tarjeta/i, /sigue funcionando/i],
+    "en-US": [/free/i, /2 weeks/, /no card/i, /keeps working/i],
+    "es-ES": [/gratis/i, /2 semanas/, /sin tarjeta/i, /sigue funcionando/i],
   } as const;
 
   /**
@@ -192,16 +192,16 @@ describe("the trial's terms stand at the pricing doors", () => {
 
     /**
      * The lock moved under the figure, so the included list stops inventorying
-     * it — the silence is the point. `item5` carried "locked for two years"
+     * it — the silence is the point. `item5` carried "locked for one year"
      * while `lockNote` and `faq.whyFounding` said it too; three renderings of
      * one binding commercial commitment is three places to drift. The stub
      * `item5` was left behind ("no surprise increases…") went entirely on
      * 2026-08-28, so this now sweeps the whole rendered list rather than the
      * one key that used to carry the claim.
      */
-    it(`states the two-year lock under the figure and not in the included list in ${locale}`, () => {
+    it(`states the one-year lock under the figure and not in the included list in ${locale}`, () => {
       const messages = marketingMessages(locale);
-      const lock = locale === "en-US" ? /two years/i : /dos años/i;
+      const lock = locale === "en-US" ? /one year/i : /un año/i;
       expect(messages["marketing.pricing.lockNote"]).toMatch(lock);
       for (const key of earlyAccessPrice.includedKeys) {
         expect(messages[key], key).not.toMatch(lock);
