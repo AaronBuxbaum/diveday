@@ -1,6 +1,6 @@
 import { getTableName, type SQL, sql } from "drizzle-orm";
 import type { AppDb, DbExecutor } from "../../db/client";
-import { DemoSightingCleanupBlocked } from "../../db/demo-sighting-guard";
+import { DemoSightingCleanupBlocked, refuseLateDockSightings } from "../../db/demo-sighting-guard";
 import { clearDemoSchedule, resetDemoSchedule } from "../../db/seed";
 import { nowMs } from "../../lib/clock";
 import { log } from "../../lib/log";
@@ -170,6 +170,7 @@ function planFits(plan: DemoResetPlan, shopId: string): boolean {
 async function clearAndReplay(tx: DbExecutor, shopId: string, plan: DemoResetPlan): Promise<void> {
   await clearWithoutTriggers(tx, shopId, plan.foreignKeys, plan.settles);
   await replayRows(tx, plan);
+  await refuseLateDockSightings(tx, shopId);
 }
 
 /**
@@ -460,6 +461,7 @@ async function capturePlan(db: AppDb, shopId: string): Promise<DemoResetPlan> {
         throw new Error(`a replay does not reproduce ${table.name}`);
       }
     }
+    await refuseLateDockSightings(tx, shopId);
     return plan;
   });
 }

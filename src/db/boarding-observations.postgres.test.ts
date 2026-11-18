@@ -157,11 +157,20 @@ async function timed<T>(work: Promise<T>): Promise<{ value: T; ms: number }> {
 
 describePostgres("a dock sighting is never held behind a schedule edit", () => {
   it("keeps a replay tied to its original departure after a real booking move", async () => {
-    const ctx = await releasedSeat();
+    const shop = await shopFixture();
+    const trip = await departure(shop.pg.db, shop.shopId);
+    const [late] = await seats(shop.pg.db, shop.shopId, trip.id, ["Late solo diver"]);
+    if (!late) throw new Error("seat missing");
+    const ctx = {
+      ...shop,
+      trip,
+      late,
+      now: new Date(trip.startsAt.getTime() - 10 * MINUTE_MS),
+    };
     const target = await departure(ctx.pg.db, ctx.shopId, 24);
     await ctx.pg.db
       .update(bookings)
-      .set({ turnedAwayAt: ctx.now, turnedAwayReason: "waiver" })
+      .set({ status: "no_show", turnedAwayAt: ctx.now, turnedAwayReason: "waiver" })
       .where(eq(bookings.id, ctx.late));
     const input = {
       shopId: ctx.shopId,

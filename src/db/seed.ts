@@ -11,7 +11,7 @@ import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
-import { refuseEncounteredDockSightings } from "./demo-sighting-guard";
+import { refuseEncounteredDockSightings, refuseLateDockSightings } from "./demo-sighting-guard";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { deleteDemoSafetyTrail } from "./incident-reports";
@@ -877,6 +877,7 @@ export async function resetDemoSchedule(
   }
   const cleared = await clearDemoSchedule(db, shopId);
   await reseedClearedDemoSchedule(db, shopId, cleared, shape);
+  await refuseLateDockSightings(db, shopId);
 }
 
 /** What {@link clearDemoSchedule} read before it deleted, for the re-seed to put back. */
@@ -1370,6 +1371,7 @@ export async function clearDemoSchedule(
   // test minted is not seeded state and correctly does not come back.
   await db.delete(deals).where(and(eq(deals.shopId, shopId), isNull(deals.tripId)));
 
+  await refuseLateDockSightings(db, shopId);
   return { waiverTitle: existingWaiver?.title ?? DEFAULT_WAIVER_TITLE };
 }
 
