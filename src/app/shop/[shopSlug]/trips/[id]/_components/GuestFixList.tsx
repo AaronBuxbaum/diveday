@@ -299,7 +299,9 @@ function FixRow({
       data-guest-row={id}
       className={`scroll-mt-24 ${open ? "bg-primary-tint" : ""}`}
     >
-      <div className="flex items-center gap-3 px-4 py-2 sm:px-6">
+      <div
+        className={`flex items-center gap-3 px-4 py-2 sm:px-6 ${row.arrivalControl && !open ? "flex-wrap sm:flex-nowrap" : ""}`}
+      >
         <button
           type="button"
           data-guest-open={id}
@@ -322,7 +324,9 @@ function FixRow({
             ) : null}
           </span>
         </button>
-        <div className="flex shrink-0 items-center gap-2">
+        <div
+          className={`flex shrink-0 items-center gap-2 ${row.arrivalControl && !open ? "basis-full justify-end sm:basis-auto" : ""}`}
+        >
           {!open ? row.arrivalControl : null}
           {open ? (
             <button
