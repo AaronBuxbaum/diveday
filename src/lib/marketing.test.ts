@@ -374,20 +374,24 @@ describe("the manifest's offline answer lives on the boat manifest page alone", 
   }
 });
 
-/** Rival fees belong to the operator's actual plan and agreement, not a guessed rate. */
-describe("the fee anchor compares contractual terms without inventing a rival rate", () => {
+/**
+ * The fee comparison (Aaron, 2026-11-18) states a rival's number only as an estimate
+ * with its source and the date it was checked, and writes DiveDay's own percent from
+ * the configured offer, never into the bundle.
+ */
+describe("the fee comparison labels its figures as sourced estimates", () => {
   for (const locale of DIVER_LOCALES) {
-    it(`keeps FareHarbor's agreement and Rezdy's plan in view in ${locale}`, () => {
-      const messages = marketingMessages(locale);
-      expect(messages["marketing.pricing.feeAnchor.fareharbor"]).toMatch(
-        locale === "en-US" ? /provider agreement/ : /contrato con el proveedor/,
+    it(`names the sources and the date, and spells no DiveDay rate, in ${locale}`, () => {
+      const assumptions = marketingMessages(locale)["marketing.pricing.compare.assumptions"];
+      expect(assumptions).toMatch(/hamzaliaqat\.com/);
+      expect(assumptions).toMatch(/SiteMinder/);
+      expect(assumptions).toMatch(/2026/);
+      expect(assumptions).toMatch(
+        locale === "en-US" ? /estimates, not quotes/ : /estimaciones, no presupuestos/,
       );
-      expect(messages["marketing.pricing.feeAnchor.rezdy"]).toMatch(
-        locale === "en-US" ? /plan, market, and booking channel/ : /plan, el mercado y el canal/,
-      );
-      for (const rival of ["fareharbor", "rezdy"] as const) {
-        expect(messages[`marketing.pricing.feeAnchor.${rival}`]).not.toMatch(/\d+%/);
-      }
+      const diveDayNote =
+        marketingMessages(locale)["marketing.pricing.compare.systems.diveday.noteFlat"];
+      expect(diveDayNote).not.toMatch(/\d+\s?%/);
     });
   }
 });

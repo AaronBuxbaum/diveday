@@ -6,7 +6,7 @@
 
 ## Context
 
-Aaron chose 3% when money is recorded received, regardless of payment method, and confirmed there
+Aaron chose a percentage (3% then, 2% since 2026-11-18; `DEFAULT_PRICING_CONFIG` is the one source) when money is recorded received, regardless of payment method, and confirmed there
 are no existing customers. The old fee base excluded cash and external payments, reread mutable
 balances, and displayed every amount as USD. Those behaviors cannot describe the new offer.
 

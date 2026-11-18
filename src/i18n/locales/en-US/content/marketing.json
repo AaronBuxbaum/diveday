@@ -178,7 +178,9 @@
       "item6": "A diver cancels their own booking from their link, paid or not, until the boat leaves",
       "item7": "A calendar file and a share link on every departure, and the meeting point with a maps link once booked",
       "item8": "A conditions hold that pauses new bookings without canceling a seat",
-      "item9": "A private charter kept off the public schedule and booked from its own link"
+      "item9": "A private charter kept off the public schedule and booked from its own link",
+      "item10": "A booking link for each hotel or partner, with every seat they send credited to them on Reports",
+      "item11": "Past divers suggested for a boat with empty seats"
     },
     "website": {
       "item1": "A storefront in your own brand: your color, your typeface, your cover photo, up to eight shop photos, your badges, the year you opened",
@@ -191,7 +193,8 @@
       "item8": "Structured data and real titles on the schedule, trip, course, and dive site pages",
       "item9": "Public pages in English or Spanish, switchable in the header, and each diver’s own links in the language they chose",
       "item10": "Whether the shop appears in search results is the shop’s own switch",
-      "item11": "The next fourteen days of open seats, published in a form AI assistants can read"
+      "item11": "The next fourteen days of open seats, published in a form AI assistants can read",
+      "item12": "Crew introductions each staff member writes and chooses to share on the public pages"
     },
     "waivers": {
       "item1": "Waivers signed from home on an expiring link, with drafts saved as they go",
@@ -212,7 +215,9 @@
       "item5": "Nitrox as a per-booking request, re-checked against the card every time it’s read",
       "item6": "Nitrox and specialty cards brought in from another system, held until a staff member confirms each one",
       "item7": "A seat sold to a diver whose course brings them to the level first, with boarding held for the card",
-      "item8": "Payment folded into readiness on the departures you choose"
+      "item8": "Payment folded into readiness on the departures you choose",
+      "item9": "A one-click card check with the DiveDay browser extension: it looks the card up on the agency’s own page, in your browser, and certifies a match. PADI checks are a beta you turn on",
+      "item10": "A course student’s PADI eLearning checked the same way, with the course materials ticked once it shows finished"
     },
     "messages": {
       "item1": "Booking confirmations, waiver links, and wait-list invites by email",
@@ -222,7 +227,9 @@
       "item5": "Divers’ email replies in one Inbox and on their record, answered by email from their page",
       "item6": "A failed email listed on Today with a Resend button",
       "item7": "Eight seconds to undo a batch of waiver links, a last-minute deal or a wait-list invite",
-      "item8": "WhatsApp from the shop’s own number, connected in Settings, with replies in the Inbox"
+      "item8": "WhatsApp from the shop’s own number, connected in Settings, with replies in the Inbox",
+      "item9": "Cleanup actions recorded on a departure, shown with their measured facts on divers’ recaps",
+      "item10": "An hourly email to owners and managers while seats are selling, with the count for each departure"
     },
     "checkIn": {
       "item1": "Check-in on the departure’s page: one tap per diver, each with an undo",
@@ -232,7 +239,9 @@
       "item5": "Not here? once the boat’s time has passed: the seat frees up and the wait list shows beside it, with no money moved",
       "item6": "Walk-ins seated at the desk, with their own details filled in on their phone from the code on the counter",
       "item7": "A printed pass for a diver without a phone: the boat, the dock time, and a code the counter scans",
-      "item8": "A returning-diver search that carries cards, waivers, fit, and history onto a new booking"
+      "item8": "A returning-diver search that carries cards, waivers, fit, and history onto a new booking",
+      "item9": "A departure pass in Apple and Google Wallet that follows changes to the plan",
+      "item10": "A question from the diver’s ready page that lands on Today as a request for help"
     },
     "boatManifest": {
       "item1": "A roll call by name before departure and after every dive, crew included, with a history nothing overwrites",
@@ -244,7 +253,9 @@
       "item7": "Stage taps from boarding to home, shown on each diver’s own trip link",
       "item8": "A pre-departure checklist in the crew’s own words",
       "item9": "A printed trip packet: the dive plan, the manifest with its roll call and the emergency card you fill in, and the packing list",
-      "item10": "A departure log of the day’s recorded facts, with a code to check a printout against the record"
+      "item10": "A departure log of the day’s recorded facts, with a code to check a printout against the record",
+      "item11": "A hotel pickup list: divers say where they’re staying and the manifest names who to collect",
+      "item12": "A lost-and-found list kept on the departure until each item goes home"
     },
     "diveSites": {
       "item1": "One to four dives per departure, each with its own site briefing",
@@ -301,7 +312,8 @@
       "item9": "Learning materials and eLearning links sent with the booking and the week-out reminder, ticked done on the roster, with the eLearning fee on its own order line",
       "item10": "Referral students marked on the roster, with the referral form and the other instructor’s training record each stamped when collected",
       "item11": "Each student’s next step on the roster, a Certify that records the new card, and the cards still to send to the agency, oldest first",
-      "item12": "Instructor and assistant ratings on file, in Today’s list from thirty days before each renewal"
+      "item12": "Instructor and assistant ratings on file, in Today’s list from thirty days before each renewal",
+      "item13": "A student preparation summary and a private teaching note for each assigned instructor on a course departure"
     },
     "payments": {
       "item1": "Card payments through the shop’s own Stripe account",
@@ -322,10 +334,11 @@
       "item2": "Private staff notes no diver-facing page ever reads",
       "item3": "A diver list that narrows to who’s diving today, who needs attention, or who’s missing contact details",
       "item4": "One diver’s record downloaded from their page to answer a data request",
-      "item5": "A diver’s personal data erased on request, with the trips and payments kept on file"
+      "item5": "A diver’s personal data erased on request, with the trips and payments kept on file",
+      "item6": "Dive computer logs uploaded to a diver’s record, with their dives kept beside their file"
     },
     "shop": {
-      "title": "Running the shop",
+      "title": "Your day and your team",
       "item1": "Today: the day’s departures in clock order, then a Needs you list of what to fix first",
       "item2": "Needs you rows for each role, so a captain sees the boat’s jobs and an owner sees the desk’s",
       "item3": "An evening view: every boat home, who closed its last roll call, and what the day made",
@@ -334,7 +347,10 @@
       "item6": "Your own timezone, currency, depth, and water-temperature units",
       "item7": "Two-factor sign-in and a list of active sessions for every staff account",
       "item8": "With two-factor on, a fresh code before an invoice, a refund or an export",
-      "item9": "A year view of trips and divers, and a printable card of the year"
+      "item9": "A year view of trips and divers, and a printable card of the year",
+      "item10": "Optional AI drafts and sorting your staff can edit or ignore, and a recap highlight written from the sightings your crew logged",
+      "item11": "A record of who did what, kept for three years",
+      "item12": "Features you can switch off, so staff see only what your shop uses"
     },
     "records": {
       "title": "Your records, and what they connect to",
@@ -856,11 +872,8 @@
     "eyebrow": "Features",
     "heroTitle": "From the first booking to the roll call after the last dive",
     "heroDescription": "Keep bookings, diver records, and trip preparation together, from the front desk to the captain’s phone.",
-    "boxDescription": "Before the dive day, on the day and across the season are all in one plan.",
     "whatsInIt": "What’s in it",
     "closingTitle": "Try a morning at the demo shop",
-    "spreadsheetLink": "See how DiveDay reads your spreadsheet →",
-    "alsoInPlan": "Also in the plan",
     "oneList": {
       "eyebrow": "One list",
       "title": "The booking, the waiver, and the manifest on one list",
@@ -930,7 +943,7 @@
         },
         "card": {
           "record": "Certification card",
-          "who": "The diver adds it, and staff check it with the agency once",
+          "who": "The diver adds it, and staff check it with the agency once, with the extension doing the lookup",
           "sees": "On the diver’s file for every later trip"
         },
         "sizes": {
@@ -946,10 +959,11 @@
       },
       "movingTitle": "Coming from another system?",
       "movingLink": "Find the guide for your system →"
-    }
+    },
+    "runningTheShop": "Running the shop"
   },
   "pricing": {
-    "heroTitle": "What a shop pays, line by line",
+    "heroTitle": "Pricing",
     "lockNote": "Today’s price, locked for two years for founding shops.",
     "trialNote": "Try a shop of your own free for 3 weeks, with no card. Your shop keeps working after the trial while you arrange the move to a paid plan with {email}.",
     "earlyAccessBadge": "Early access",
@@ -991,14 +1005,6 @@
       "note2": "Waivers, medical review, and the cert gate are in the price. None of it is an add-on."
     },
     "seeFullList": "The full list is on the product page →",
-    "feeAnchor": {
-      "title": "Compare the fees your shop pays",
-      "rezdy": "{competitor} publishes monthly plans with online-booking fees. The plan, market, and booking channel matter, so compare the terms for your shop.",
-      "fareharbor": "{competitor} sets fees in its provider agreement. Check your booking, payment, distribution, and website terms rather than relying on a single advertised percentage.",
-      "ours": "DiveDay takes no cut of a booking. What you pay is the number above, in August and in January.",
-      "sourcesNote": "The switching guides link to the providers’ pricing or terms. Keep your current agreement beside the comparison.",
-      "guideLink": "What moving off {competitor} looks like →"
-    },
     "dataExit": {
       "eyebrow": "Your records",
       "title": "Your records stay yours",
@@ -1029,7 +1035,7 @@
       },
       "agency": {
         "question": "Does DiveDay connect to PADI or SSI?",
-        "answer": "DiveDay connects to no agency. Certification evidence goes on the diver’s profile once, staff check it with the agency and confirm it, and it stays with them for good. Courses arrive as your shop’s copy of the agency catalog, and you set prices and visibility."
+        "answer": "DiveDay has no agency account of its own. What it has is a browser extension for Chrome and Edge: press Check with SSI, or another agency, on a card, and the extension looks the card up on that agency’s own lookup page, in your browser, and brings the answer back. A card that matches is marked certified, and anything else is left for your staff to look at. PADI checks run under your shop’s own PADI sign-in and are a beta you turn on in Settings. A certified card stays on the diver’s profile for good. Courses arrive as your shop’s copy of the agency catalog, and you set prices and visibility."
       },
       "pos": {
         "question": "Does DiveDay replace my POS?",
@@ -1045,7 +1051,7 @@
       },
       "shopSize": {
         "question": "What would a shop my size pay?",
-        "answer": "The worked months above show how the same plan applies at different amounts received. Boat count and staff logins do not change the rate."
+        "answer": "The slider above shows how the same plan applies at different amounts received. Boat count and staff logins do not change the rate."
       },
       "diverApp": {
         "question": "Do divers need an app or an account?",
@@ -1072,14 +1078,39 @@
       "whatCountsQuestion": "What counts toward the {percent}?",
       "whatCountsAnswer": "Money recorded as received in DiveDay, whether paid online, in cash, by bank transfer, on your own card machine or another method. Deposits count when received; an unpaid booking does not. Packages count when sold, never again when redeemed. Separately recorded tips, tax and pass-through fees, and imported history, are excluded. An amount without a separate tax breakdown counts in full. Refunds receive a credit at the original rate."
     },
-    "examples": {
+    "calculator": {
       "title": "What a month could cost",
       "note": "Illustrative months in USD, before refund credits and Stripe’s card fees. The amounts received exclude separately recorded tips, tax and pass-through charges.",
-      "none": "A month with no money received",
-      "oneBoat": "A month for a one-boat shop",
-      "threeBoats": "A month for a three-boat shop",
+      "sliderLabel": "Money received in a month",
       "received": "{amount} received",
-      "fee": "{amount} DiveDay fee"
+      "feeLabel": "DiveDay fee"
+    },
+    "compare": {
+      "title": "The same month on FareHarbor and on DiveDay",
+      "lede": "Move the slider to the money your shop takes in. Each column adds the software’s fee to card processing, so you see what leaves your account.",
+      "sliderLabel": "Money received in a month",
+      "bookingToggle": "Include Booking.com commission",
+      "bookingShareLabel": "Share of that money that comes through Booking.com",
+      "systems": {
+        "fareharbor": {
+          "note": "About 6% of each booking, card processing included. A reported figure, not a published one, and negotiated shop by shop."
+        },
+        "diveday": {
+          "noteFlat": "{price} a month, then card processing."
+        }
+      },
+      "lines": {
+        "software": "Software fee",
+        "processing": "Card processing",
+        "bookingCom": "Booking.com commission",
+        "total": "Each month",
+        "included": "Included"
+      },
+      "totalNote": "{percent} of the month’s money",
+      "saving": "Every sale you move from Booking.com to your own booking page keeps about {percent} more of it.",
+      "assumptionsTitle": "How we counted",
+      "assumptions": "These are estimates, not quotes. Every sale is counted as a card payment averaging {sale}, at Stripe’s published rate of 2.9% plus 30¢. FareHarbor publishes no rates: its 6% is a third-party report (hamzaliaqat.com, April 29, 2026), and its contract is negotiated shop by shop. Booking.com publishes no rate we could confirm for dive activities, so we assume 15%, inside the 10% to 25% it charges hotels (SiteMinder, updated February 2025), the same in both columns. DiveDay’s percent counts every booking you record, so it is counted on Booking.com sales too. Checked November 18, 2026.",
+      "guideLink": "What moving off {competitor} looks like →"
     }
   },
   "privacy": {
@@ -1386,7 +1417,7 @@
       "step1Title": "The departure sets the bar",
       "step1Body": "Pick the level a departure needs and any Deep, Wreck, Night, or Drysuit card, on the departure or on its sites. A departure can also require a nitrox card.",
       "step2Title": "Cards come in with the diver",
-      "step2Body": "Divers add their agency, level and number from their trip link after they book, and staff mark a card certified once they’ve checked it with the agency.",
+      "step2Body": "Divers add their agency, level and number from their trip link after they book, and staff mark a card certified once they’ve checked it with the agency, in one click with the extension.",
       "step3Title": "Desk and dock read the same answer",
       "step3Body": "Each diver reads Ready or Blocked everywhere they appear, and at the dock the roll call won’t mark a diver aboard until they’re cleared.",
       "faq1Q": "Can I bring my divers’ cards over from my current system?",

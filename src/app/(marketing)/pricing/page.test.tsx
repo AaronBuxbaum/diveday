@@ -73,7 +73,6 @@ describe("/pricing with the original monthly-only pricing", () => {
     expect(offer).toEqual({ plan: "flat_monthly", monthlyCents: 9_900, basisPoints: 0 });
     expect(text).toContain("$99");
     expect(text).toContain("Cut of your bookings");
-    expect(text).toContain("DiveDay takes no cut of a booking.");
     expect(text).not.toContain("card money");
   });
 
@@ -97,35 +96,39 @@ describe("/pricing with default percentage pricing", () => {
     vi.stubEnv("PRICING_BASIS_POINTS", "");
   });
 
-  it("shows three illustrative months computed from the configured offer", async () => {
-    const { text } = await pricingBody(null);
-    expect(text).toContain("A month with no money received");
-    expect(text).toContain("$10,000");
-    expect(text).toContain("$300");
-    expect(text).toContain("$60,000");
-    expect(text).toContain("$1,800");
+  it("hands the calculator and the comparison the configured offer", async () => {
+    const { offer, text } = await pricingBody(null);
+    expect(offer).toEqual({ plan: "percent_of_volume", monthlyCents: 0, basisPoints: 200 });
+    expect(text).toContain("What a month could cost");
     expect(text).toContain("Illustrative months");
+    expect(text).toContain("The same month on FareHarbor and on DiveDay");
+    expect(text).toContain("estimates, not quotes");
+    // The DiveDay column's words come from the offer, so a changed rate is a changed column.
+    expect(text).toContain("2% of money recorded as received in DiveDay");
     vi.stubEnv("PRICING_BASIS_POINTS", "250");
     vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
-    const changed = (await pricingBody(null)).text;
-    expect(changed).toContain("$279");
-    expect(changed).toContain("$1,529");
-    expect(changed).toContain("$29");
+    const changed = await pricingBody(null);
+    expect(changed.offer).toEqual({
+      plan: "percent_of_volume",
+      monthlyCents: 2_900,
+      basisPoints: 250,
+    });
+    expect(changed.text).toContain("2.5% of money recorded as received in DiveDay");
+    expect(changed.text).not.toContain("2% of money recorded as received in DiveDay");
   });
 
   it("shows the percentage offer its own lines, and none of the monthly-only offer’s", async () => {
     const { text } = await pricingBody("percent_of_volume");
-    expect(text).toContain("3%");
+    expect(text).toContain("2%");
     expect(text).toContain("of money recorded as received in DiveDay, with no monthly fee");
     expect(text).toContain("DiveDay’s fee");
-    expect(text).toContain("What counts toward the 3%?");
+    expect(text).toContain("What counts toward the 2%?");
     expect(text).toContain(
       "whether paid online, in cash, by bank transfer, on your own card machine or another method",
     );
     expect(text).toContain("Packages count when sold, never again when redeemed");
     expect(text).toContain("Refunds receive a credit at the original rate");
     expect(text).not.toContain("card money taken through DiveDay");
-    expect(text).toContain("cash included, with no monthly fee.");
     expect(text).not.toContain("Cut of your bookings");
     expect(text).not.toContain("no cut");
     const metadata = await generateMetadata();
@@ -135,7 +138,7 @@ describe("/pricing with default percentage pricing", () => {
   it("promises the percentage offer no cut anywhere, its FAQ JSON-LD included (issue 2947)", async () => {
     for (const locale of ["en-US", "es-ES"] as const) {
       const t = diverTranslator(locale);
-      const offer = { plan: "percent_of_volume", monthlyCents: 0, basisPoints: 300 } as const;
+      const offer = { plan: "percent_of_volume", monthlyCents: 0, basisPoints: 200 } as const;
       const faq = JSON.stringify(pricingFaq(t, "Rezdy and FareHarbor", offer, locale));
       expect(faq).not.toMatch(/no cut|sin comisión|ninguna comisión/i);
       const { text } = await pricingBody("percent_of_volume", locale);
@@ -170,7 +173,7 @@ describe("/pricing with default percentage pricing", () => {
 
   it("shows the percentage offer in es-ES", async () => {
     const { text } = await pricingBody("percent_of_volume", "es-ES");
-    expect(text).toMatch(/3\s?%/);
+    expect(text).toMatch(/2\s?%/);
     expect(text).toContain("del dinero registrado como recibido en DiveDay, sin cuota mensual");
     expect(text).toContain("La tarifa de DiveDay");
     expect(text).not.toContain("Comisión por reserva");
@@ -201,7 +204,7 @@ describe("configured offer components", () => {
       const { offer, text } = await pricingBody("percent_of_volume", locale);
       expect(offer).toEqual({ plan: "flat_monthly", monthlyCents: 0, basisPoints: 0 });
       expect(text).toContain(locale === "en-US" ? "$0" : "0\u00a0US$");
-      expect(text).not.toMatch(/0\s?%/);
+      expect(text).not.toMatch(/(?<![\d.])0\s?%/);
     }
   });
 });

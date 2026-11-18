@@ -151,13 +151,6 @@ export default function ProductLoading() {
               </ul>
             </div>
           </div>
-          <div className="mt-12 max-w-2xl">
-            <SkeletonLineBars
-              lines={{ base: 2, sm: 1 }}
-              height="h-lh text-lg leading-8"
-              width="w-full"
-            />
-          </div>
         </section>
       </Pending>
       <MarketingFooterFallback />

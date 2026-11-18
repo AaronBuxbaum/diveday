@@ -9,17 +9,21 @@ import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
+import { directSavingBasisPoints, FEE_ASSUMPTIONS } from "@/features/fee-comparison";
 import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
-import { cachedListFormat } from "@/lib/intl-cache";
+import { formatMoneyScanned } from "@/lib/format";
+import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, marketingFee } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
+import { FeeComparison } from "./_components/FeeComparison";
+import { PricingCalculator } from "./_components/PricingCalculator";
 import { PricingExportBand } from "./_components/PricingExportBand";
-import { offerFigure, pricingExamples, pricingFaq } from "./faq";
+import { offerFigure, pricingFaq } from "./faq";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
 // read this page makes (`requestLocale()`) sits behind this segment's
@@ -74,34 +78,44 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
   );
 
   /**
-   * The anchor a flat price needs: the other pricing model a dive shop is
-   * actually offered. Both rows restate what the incumbent itself publishes —
-   * or, for FareHarbor, that it publishes nothing and the figure is a
-   * third-party report — and each links to the switching guide that carries the
-   * citations (docs/product/marketing.md: competitor statements are documented
-   * fact, and an unpublished fee is never stated as a published price).
-   *
-   * Deliberately absent: any figure for what a shop pays in practice, any
-   * per-booking volume, and any arithmetic comparing the two. We have no
-   * customers, so we have no basis for either, and inventing one to make the
-   * flat price look better is the exact failure the claims policy exists to
-   * stop. Rows are derived from the guide registry, so a de-registered guide
-   * drops its row rather than leaving a dead link on the pricing page.
+   * The comparison against FareHarbor (Aaron, 2026-11-18, replacing the old "no figure
+   * for what a shop pays in practice" rule), counted the same way, software fee plus card processing, off `src/lib/fee-comparison.ts`.
+   * Every figure is labelled an estimate beside its source and the date it was
+   * checked, and each links to the switching guide that carries the citations
+   * (docs/product/marketing.md: competitor statements are documented fact, an
+   * unpublished fee is never stated as a published price). Rows come from the
+   * guide registry, so a de-registered guide drops its link.
    */
-  const rezdyGuide = getMigrationGuide("rezdy");
   const fareHarborGuide = getMigrationGuide("fareharbor");
-  const channelFees = [
-    rezdyGuide && {
-      guide: rezdyGuide,
-      claim: t("marketing.pricing.feeAnchor.rezdy", { competitor: rezdyGuide.competitor }),
+  const percentOf = (fraction: number) =>
+    cachedFormatter("num", Intl.NumberFormat, locale, {
+      style: "percent",
+      maximumFractionDigits: 1,
+    }).format(fraction);
+  const comparison = {
+    sliderLabel: t("marketing.pricing.compare.sliderLabel"),
+    bookingToggle: t("marketing.pricing.compare.bookingToggle"),
+    bookingShareLabel: t("marketing.pricing.compare.bookingShareLabel"),
+    software: t("marketing.pricing.compare.lines.software"),
+    processing: t("marketing.pricing.compare.lines.processing"),
+    bookingCom: t("marketing.pricing.compare.lines.bookingCom"),
+    total: t("marketing.pricing.compare.lines.total"),
+    included: t("marketing.pricing.compare.lines.included"),
+    totalNote: t("marketing.pricing.compare.totalNote", { percent: "{percent}" }),
+    saving: t("marketing.pricing.compare.saving", { percent: "{percent}" }),
+    systems: {
+      fareharbor: {
+        name: fareHarborGuide?.competitor ?? "FareHarbor", // i18n-exempt: a product name
+        note: t("marketing.pricing.compare.systems.fareharbor.note"),
+      },
+      diveday: {
+        name: "DiveDay", // i18n-exempt: our product name
+        note: percentArm
+          ? t(marketingFee.summaryKey, params)
+          : t("marketing.pricing.compare.systems.diveday.noteFlat", params),
+      },
     },
-    fareHarborGuide && {
-      guide: fareHarborGuide,
-      claim: t("marketing.pricing.feeAnchor.fareharbor", {
-        competitor: fareHarborGuide.competitor,
-      }),
-    },
-  ].flatMap((row) => (row ? [row] : []));
+  };
 
   const faq = pricingFaq(t, competitors, offer, locale);
 
@@ -229,67 +243,64 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
         <section className="border-b border-border" aria-labelledby="worked-months">
           <div className={`${CONTAINER} py-16 lg:py-24`}>
             <h2 id="worked-months" className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.pricing.examples.title")}
+              {t("marketing.pricing.calculator.title")}
             </h2>
             <p className="mt-4 max-w-2xl leading-7 text-muted">
-              {t("marketing.pricing.examples.note")}
+              {t("marketing.pricing.calculator.note")}
             </p>
-            <div className="mt-8 divide-y divide-border border-y border-border">
-              {pricingExamples(offer, locale).map((example) => (
-                <div
-                  key={example.id}
-                  className="grid gap-3 py-6 sm:grid-cols-[1.4fr_1fr_1fr] sm:items-baseline"
-                >
-                  <h3 className="font-semibold">{t(`marketing.pricing.examples.${example.id}`)}</h3>
-                  <p className="text-muted">
-                    {t("marketing.pricing.examples.received", { amount: example.received })}
-                  </p>
-                  <p className="font-medium">
-                    {t("marketing.pricing.examples.fee", { amount: example.fee })}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <PricingCalculator
+              locale={locale}
+              terms={offer}
+              labels={{
+                sliderLabel: t("marketing.pricing.calculator.sliderLabel"),
+                received: t("marketing.pricing.calculator.received", { amount: "{amount}" }),
+                feeLabel: t("marketing.pricing.calculator.feeLabel"),
+              }}
+            />
           </div>
         </section>
 
-        {/* The flat price is only meaningful next to the model it replaces.
-            Quiet rows: the incumbents' terms are evidence, and our answer is
-            the one line that gets full ink. The "both rows are the channels'
-            own terms" disclaimer is said once, under the rows (B11). */}
-        <section className="border-b border-border">
+        {/* The comparison: one slider, two columns counted the same way, and the
+            sources and assumptions written beside the figures (docs/product/marketing.md,
+            claims policy). DiveDay's column is the only one in full ink. */}
+        <section className="border-b border-border" aria-labelledby="compare-fees">
           <div className={`${CONTAINER} py-16 lg:py-24`}>
-            <div className="max-w-3xl">
-              <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
-                {t("marketing.pricing.feeAnchor.title")}
-              </h2>
-              <ul className="mt-10 space-y-8">
-                {channelFees.map(({ guide, claim }) => (
-                  <li key={guide.slug}>
-                    <h3 className="font-semibold leading-6">{guide.competitor}</h3>
-                    <p className="mt-1 leading-7 text-muted">{claim}</p>
-                    <Link
-                      href={`/switching/${guide.slug}`}
-                      className={buttonClass({
-                        variant: "link",
-                        flush: true,
-                        className: "mt-1 text-start",
-                      })}
-                    >
-                      {t("marketing.pricing.feeAnchor.guideLink", { competitor: guide.competitor })}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-5 text-sm leading-6 text-muted">
-                {t("marketing.pricing.feeAnchor.sourcesNote")}
+            <h2 id="compare-fees" className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
+              {t("marketing.pricing.compare.title")}
+            </h2>
+            <p className="mt-4 max-w-2xl leading-7 text-muted">
+              {t("marketing.pricing.compare.lede")}
+            </p>
+            <FeeComparison
+              locale={locale}
+              diveDay={offer}
+              labels={comparison}
+              savingPercent={percentOf(directSavingBasisPoints(offer) / 10_000)}
+            />
+            <details className="mt-8 max-w-3xl">
+              <summary className="cursor-pointer font-medium">
+                {t("marketing.pricing.compare.assumptionsTitle")}
+              </summary>
+              <p className="mt-3 text-sm leading-6 text-muted">
+                {t("marketing.pricing.compare.assumptions", {
+                  sale: formatMoneyScanned(FEE_ASSUMPTIONS.averageSaleCents, "usd", locale),
+                })}
               </p>
-              <p className="mt-10 border-l-2 border-primary pl-5 text-lg leading-8">
-                {percentArm
-                  ? t(marketingFee.summaryKey, params)
-                  : t("marketing.pricing.feeAnchor.ours")}
-              </p>
-            </div>
+            </details>
+            {fareHarborGuide ? (
+              <Link
+                href={`/switching/${fareHarborGuide.slug}`}
+                className={buttonClass({
+                  variant: "link",
+                  flush: true,
+                  className: "mt-6 text-start",
+                })}
+              >
+                {t("marketing.pricing.compare.guideLink", {
+                  competitor: fareHarborGuide.competitor,
+                })}
+              </Link>
+            ) : null}
           </div>
         </section>
 

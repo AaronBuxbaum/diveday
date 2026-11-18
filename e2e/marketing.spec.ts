@@ -392,13 +392,6 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       name: "From the first booking to the roll call after the last dive",
     }),
   ).toBeVisible();
-  // The full capability index lives in the directory's rows since
-  // 2026-10-05; the sentence under them names the sections, never a count of
-  // the rows (visual review 2026-10-24, B44).
-  await expect(
-    page.getByText(diverTranslator("en-US")("marketing.product.boxDescription")),
-  ).toBeVisible();
-
   // The hub is the directory of the feature pages (H-20261005-public-pages-sell), and the offline
   // claim lives on the one it is about, beside its screen, and nowhere else.
   // /pricing carried a second copy of it as a FAQ row until 2026-08-28 — a
@@ -568,37 +561,24 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByRole("heading", { name: "What do I have to do to get set up?" }),
   ).toBeVisible();
 
-  // The guides cite current provider terms, not a universal rate or a savings claim.
+  // The comparison counts FareHarbor and DiveDay the same way, with its sources written beside
+  // the figures (Aaron, 2026-11-18), and the calculator is one slider of money received.
+  const pricingCopy = diverTranslator("en-US");
   await expect(
-    page.getByRole("heading", {
-      name: diverTranslator("en-US")("marketing.pricing.feeAnchor.title"),
-    }),
+    page.getByRole("heading", { name: pricingCopy("marketing.pricing.compare.title") }),
   ).toBeVisible();
-  await expect(page.getByText(/plan, market, and booking channel matter/)).toBeVisible();
-  await expect(page.getByText(/sets fees in its provider agreement/)).toBeVisible();
-  await expect(page.getByText(/third parties report that fee/)).toHaveCount(0);
-  await expect(
-    page.getByRole("link", { name: /What moving off Rezdy looks like/ }),
-  ).toHaveAttribute("href", "/switching/rezdy");
   await expect(
     page.getByRole("link", { name: /What moving off FareHarbor looks like/ }),
   ).toHaveAttribute("href", "/switching/fareharbor");
-  // The claims-policy guard for this section: no savings promise, no invented
-  // figure for what shops actually pay.
-  const pricingBody = await page.locator("body").innerText();
-  for (const pattern of [/\bsave[sd]? (you )?\$?\d/i, /shops (pay|save) (around|about|roughly)/i]) {
-    expect(pricingBody, `unfounded savings claim matching ${pattern}`).not.toMatch(pattern);
-  }
-  const pricingCopy = diverTranslator("en-US");
-  const examples = page.getByRole("region", {
-    name: pricingCopy("marketing.pricing.examples.title"),
+  const calculator = page.getByRole("region", {
+    name: pricingCopy("marketing.pricing.calculator.title"),
   });
-  await expect(examples).toBeVisible();
-  for (const id of ["none", "oneBoat", "threeBoats"] as const) {
-    await expect(
-      examples.getByRole("heading", { name: pricingCopy(`marketing.pricing.examples.${id}`) }),
-    ).toBeVisible();
-  }
+  await expect(calculator).toBeVisible();
+  await expect(
+    calculator.getByRole("slider", {
+      name: pricingCopy("marketing.pricing.calculator.sliderLabel"),
+    }),
+  ).toBeVisible();
   for (const key of ["shopSize", "diverApp", "printedManifest", "devices", "currency"] as const) {
     await expect(
       page.getByRole("heading", { name: pricingCopy(`marketing.pricing.faq.${key}.question`) }),
