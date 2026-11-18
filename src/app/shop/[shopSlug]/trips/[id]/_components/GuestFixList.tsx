@@ -29,6 +29,9 @@ export type FixListRow = {
   openLabel: string | null;
   /** The opened guest already offers the control (its waiver block sends it). */
   panelHoldsControl?: boolean;
+  /** Undo arrival alongside a separate remedy, when this guest is already here. */
+  arrivalControl?: ReactNode;
+  panelHoldsArrival?: boolean;
   /** The list's first fix: the one primary button on it. */
   primary: boolean;
 };
@@ -319,7 +322,8 @@ function FixRow({
             ) : null}
           </span>
         </button>
-        <div className="shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
+          {!open ? row.arrivalControl : null}
           {open ? (
             <button
               type="button"
@@ -348,6 +352,9 @@ function FixRow({
       {open ? (
         <div id={`guest-panel-${id}`} className="border-t border-border px-4 pt-4 pb-5 sm:px-6">
           {row.control && !row.panelHoldsControl ? <div className="mb-4">{row.control}</div> : null}
+          {row.arrivalControl && !row.panelHoldsArrival ? (
+            <div className="mb-4">{row.arrivalControl}</div>
+          ) : null}
           {guest.panel}
         </div>
       ) : null}

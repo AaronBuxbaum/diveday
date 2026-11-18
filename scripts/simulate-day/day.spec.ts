@@ -17,6 +17,7 @@ import {
   openDeckPerson,
   openManifestPerson,
   openThreadStep,
+  rosterRow,
   STAFF_DAY_HEADING,
   signInAs,
   threadStatus,
@@ -25,6 +26,7 @@ import {
 import { E2E_CRON_SECRET, E2E_TEST_ROUTE_SECRET } from "../../e2e/servers";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "../../src/db/seed-clock";
 import { diverTranslator } from "../../src/i18n/messages";
+import { staffTranslator } from "../../src/i18n/staff-messages";
 import { DAY_STATES, dayTimeline, renderTranscript, screenshotName } from "./lib.mjs";
 import {
   SIMULATION_BASE_URL,
@@ -64,6 +66,7 @@ const SEEDED_DEPARTURE_TITLE = "Two-Tank Reef — Molasses & French";
 const DIVER_NAME = "Sam Simulation";
 const CARD_NUMBER = "SIM-2026-0721";
 const diverCopy = diverTranslator("en-US");
+const staffCopy = staffTranslator("en-US");
 
 type StateResult = {
   id: string;
@@ -304,11 +307,8 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       // The departure's own Divers tab is the counter for this boat once its
       // arrivals open: the count leads, and a cleared row ends in its tap.
       await staff.goto(`${shopPath()}/trips/${day.tripId}`);
-      await expect(staff.getByText(/^\d+ of \d+ here$/)).toBeVisible();
-      const roster = staff.locator("#roster");
-      await roster.getByRole("button", { name: DIVER_NAME, exact: true }).click();
-      await expect(roster.getByRole("heading", { name: DIVER_NAME, exact: true })).toBeVisible();
-      const card = roster.locator('li[id^="booking-"]').filter({ visible: true });
+      await expect(staff.getByText(/^\d+ of \d+ here\b/)).toBeVisible();
+      const card = await rosterRow(staff, DIVER_NAME);
       await expect(card).toHaveCount(1);
       const checkIn = card.getByRole("button", { name: `Check in ${DIVER_NAME}` });
       if ((await checkIn.count()) === 0) {
@@ -505,7 +505,7 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
  * Record everybody at one checkpoint on the Deck, the way the crew does: each
  * diver with a record control is recorded aboard; at departure a diver
  * *without* one (blocked, still on the dock) is recorded not boarded from
- * their own panel under "Not aboard / details" — the two-step the manifest
+ * their own panel under "Not aboard…" — the two-step the manifest
  * insists on; then every crew member is recorded aboard. After a dive only the
  * divers who boarded are counted — a straggler who never got on the boat is
  * not "back aboard" because somebody's thumb slipped.
@@ -549,7 +549,9 @@ async function countEveryone(
       continue;
     }
     if (options.checkpoint === "departure") {
-      await page.getByRole("button", { name: "Not aboard / details", exact: true }).click();
+      await page
+        .getByRole("button", { name: staffCopy("manifest.deck.exception"), exact: true })
+        .click();
       const row = page
         .locator("#roll-call-list > ul > li")
         .filter({ has: page.locator('button[aria-haspopup="dialog"]', { hasText: name }) })
