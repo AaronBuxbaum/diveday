@@ -307,6 +307,35 @@ describe("saveOfflineManifest", () => {
 });
 
 describe("loadOfflineManifest", () => {
+  it("retains and acknowledges an existing discard notice from an older shell", async () => {
+    await saveOfflineManifest(payload);
+    const notice = {
+      noticeId: "previous-loss",
+      tripId: payload.manifests[0].trip.id,
+      tripTitle: payload.manifests[0].trip.title,
+      shopName: payload.shop.name,
+      shopSlug: payload.shop.slug,
+      pendingEvents: 1,
+      discardedAt: new Date(FROZEN_MS).toISOString(),
+    };
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("keys", "readwrite");
+        tx.objectStore("keys").put([notice], "discarded-pending-roll-call-v1");
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+    expect(await readDiscardedOfflineRecords()).toEqual([notice]);
+    await acknowledgeDiscardedOfflineRecords([notice]);
+    expect(await readDiscardedOfflineRecords()).toEqual([]);
+  });
   it("retains expired unreadable ciphertext whose pending evidence is unknown", async () => {
     const tripId = payload.manifests[0].trip.id;
     await saveOfflineManifest(payload);
