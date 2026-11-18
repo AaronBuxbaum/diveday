@@ -226,6 +226,121 @@ describePostgres("unrouted draft receipt claims", () => {
     });
   });
 
+  it("lets a waiting claimant acquire the key after the first transaction rolls back", async () => {
+    const { pg, first } = await fixture();
+    const before = await pg.db
+      .select()
+      .from(boardingObservations)
+      .where(eq(boardingObservations.id, first.observationId));
+    const beforeBooking = await pg.db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, first.bookingId));
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    let heldPid = 0;
+    const connection = pg.connect();
+    const aborting = new Proxy(connection, {
+      get(target, property, receiver) {
+        if (property === "transaction")
+          return (work: Parameters<AppDb["transaction"]>[0]) =>
+            target.transaction(async (tx) => {
+              const pid = await tx.execute(sql`select pg_backend_pid() as pid`);
+              heldPid = Number((pid.rows[0] as { pid: number }).pid);
+              await work(tx);
+              ready();
+              await gate;
+              throw new Error("abort the first draft claim");
+            });
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    let identify!: (pid: number) => void;
+    const contenderPid = new Promise<number>((resolve) => {
+      identify = resolve;
+    });
+    const contenderConnection = pg.connect();
+    const contender = new Proxy(contenderConnection, {
+      get(target, property, receiver) {
+        if (property === "transaction")
+          return (work: Parameters<AppDb["transaction"]>[0]) =>
+            target.transaction(async (tx) => {
+              const pid = await tx.execute(sql`select pg_backend_pid() as pid`);
+              identify(Number((pid.rows[0] as { pid: number }).pid));
+              return work(tx);
+            });
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const aborted = claimDraftReceipt(aborting, first);
+    void aborted.catch(() => undefined);
+    let waiting: ReturnType<typeof claimDraftReceipt> | undefined;
+    onTestFinished(async () => {
+      release();
+      await Promise.allSettled([aborted, ...(waiting ? [waiting] : [])]);
+    });
+    try {
+      const reachedGate = await Promise.race([held.then(() => true), aborted.then(() => false)]);
+      if (!reachedGate) throw new Error("first claim finished before rollback gate");
+      waiting = claimDraftReceipt(contender, first);
+      void waiting.catch(() => undefined);
+      const pid = await Promise.race([
+        contenderPid,
+        waiting.then(() => {
+          throw new Error("contender not identified");
+        }),
+      ]);
+      let finished = false;
+      void waiting.then(
+        () => {
+          finished = true;
+        },
+        () => {
+          finished = true;
+        },
+      );
+      const deadline = performance.now() + 4_000;
+      let blocked = false;
+      while (performance.now() < deadline && !finished) {
+        const active = await pg.db.execute(sql`select count(*)::int as count from pg_stat_activity
+          where datname = current_database() and pid = ${pid} and wait_event_type = 'Lock'
+            and ${heldPid} = any(pg_blocking_pids(pid)) and query like '%draft_boarding_receipt_claims%'`);
+        if (Number((active.rows[0] as { count: number }).count) > 0) {
+          blocked = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(blocked, "contender did not wait for the aborting claim").toBe(true);
+    } finally {
+      release();
+    }
+    await expect(aborted).rejects.toThrow("abort the first draft claim");
+    if (!waiting) throw new Error("contender missing");
+    expect(await waiting).toEqual({ kind: "inserted", observationId: first.observationId });
+    const rows = await pg.db.execute(
+      sql`select * from draft_boarding_receipt_claims where shop_id = ${first.shopId} and client_key = ${first.clientKey}`,
+    );
+    expect(rows.rows).toHaveLength(1);
+    expect(
+      await pg.db
+        .select()
+        .from(boardingObservations)
+        .where(eq(boardingObservations.id, first.observationId)),
+    ).toEqual(before);
+    expect(await pg.db.select().from(bookings).where(eq(bookings.id, first.bookingId))).toEqual(
+      beforeBooking,
+    );
+  });
+
   it("refuses unknown context and keys already present in the legacy namespace", async () => {
     const { pg, first, second, firstLegacy } = await fixture();
     expect(
