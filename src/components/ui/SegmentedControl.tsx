@@ -204,9 +204,15 @@ export function SegmentedControl({
     document.fonts?.ready.then(() => {
       if (live) place(false);
     });
+    // The track can move when the viewport changes while its own size stays
+    // fixed. ResizeObserver then has nothing to report, but viewport pixel
+    // snapping must use the option's new position.
+    const onViewportResize = () => place(false);
+    window.addEventListener("resize", onViewportResize);
     if (typeof ResizeObserver === "undefined") {
       return () => {
         live = false;
+        window.removeEventListener("resize", onViewportResize);
       };
     }
     // A wrap or a font swap moves the options; the pill follows without
@@ -218,6 +224,7 @@ export function SegmentedControl({
     for (const option of nav.querySelectorAll<HTMLElement>("[data-key]")) observer.observe(option);
     return () => {
       live = false;
+      window.removeEventListener("resize", onViewportResize);
       observer.disconnect();
     };
   }, [currentKey]);

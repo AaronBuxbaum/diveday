@@ -61,6 +61,46 @@ async function expectPrepGroupingReady(page: Page, label: string) {
       }),
     )
     .toBe(true);
+  await expect
+    .poll(() =>
+      grouping.evaluate((nav) => {
+        const pill = nav.querySelector<HTMLElement>(":scope > span[aria-hidden='true']");
+        const selected = nav.querySelector<HTMLElement>('[aria-current="true"]');
+        if (!pill || !selected) return false;
+        const box = selected.getBoundingClientRect();
+        const raised = pill.getBoundingClientRect();
+        const snap = (value: number) => Math.round(value * devicePixelRatio) / devicePixelRatio;
+        return (
+          Math.abs(raised.top - snap(box.top)) < 0.05 &&
+          Math.abs(raised.bottom - snap(box.bottom)) < 0.05
+        );
+      }),
+    )
+    .toBe(true);
+  // Record only control geometry, not page content, to diagnose a future
+  // comparison without altering the UI or the screenshot.
+  const geometry = await grouping.evaluate((nav) => {
+    const pill = nav.querySelector<HTMLElement>(":scope > span[aria-hidden='true']");
+    const selected = nav.querySelector<HTMLElement>('[aria-current="true"]');
+    if (!pill || !selected) throw new Error("Prep grouping disappeared before capture");
+    const rect = (element: Element) => {
+      const box = element.getBoundingClientRect();
+      return { x: box.x, y: box.y, width: box.width, height: box.height };
+    };
+    const style = getComputedStyle(pill);
+    return {
+      viewport: { width: innerWidth, height: innerHeight, scrollX, scrollY, dpr: devicePixelRatio },
+      nav: rect(nav),
+      selected: rect(selected),
+      pill: rect(pill),
+      pillTop: pill.style.top,
+      pillHeight: pill.style.height,
+      opacity: style.opacity,
+      transform: style.transform,
+      animations: pill.getAnimations().map((animation) => animation.playState),
+    };
+  });
+  console.log("diveday-prep-grouping-geometry", JSON.stringify({ label, ...geometry }));
 }
 
 installVisualBuildGuard();
