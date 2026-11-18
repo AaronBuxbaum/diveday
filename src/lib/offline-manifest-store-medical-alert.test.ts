@@ -3,6 +3,7 @@
 import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it } from "vitest";
 import { forgetThisDevice } from "@/components/forget-device";
+import { rawStoredRecord } from "@/test/offline-raw-record";
 import {
   appendOfflineRollCall,
   listOfflineManifests,
@@ -199,6 +200,43 @@ describe("the medical alerts' words on a device copy", () => {
     }
     const tripCopy = copies.find((copy) => copy.snapshot.manifests[0]?.trip.id === TRIP);
     expect(tripCopy?.events.map((event) => event.status)).toEqual(["boarded"]);
+  });
+
+  it("cleans readable copies and reports incomplete cleanup when another copy is unreadable", async () => {
+    await saveOfflineManifest(payloadFor(TRIP));
+    await saveOfflineManifest(payloadFor(OTHER_TRIP));
+    await saveOfflineMedicalAlerts(TRIP, { [ALERTED]: ALERT }, DIVEMASTER);
+    await saveOfflineMedicalAlerts(OTHER_TRIP, { [ALERTED]: ALERT }, DIVEMASTER);
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("diveday-offline-manifests", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("manifests", "readwrite");
+        const store = tx.objectStore("manifests");
+        const get = store.get(TRIP);
+        get.onsuccess = () => {
+          const record = get.result;
+          const iv = new Uint8Array(record.iv);
+          iv[0] ^= 1;
+          record.iv = iv.buffer;
+          store.put(record);
+        };
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+    });
+    const unreadable = await rawStoredRecord(TRIP);
+    await expect(wipeOfflineMedicalAlerts()).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(TRIP)).toEqual(unreadable);
+    expect(words(await loadOfflineManifest(OTHER_TRIP))).toEqual([{}, undefined]);
+    expect((await loadOfflineManifest(OTHER_TRIP))?.medicalAlertsSavedBy).toBeUndefined();
   });
 
   it("wipes another person's words when someone else signs in, and keeps the signed-in person's own", async () => {
