@@ -102,20 +102,21 @@ their enclosing transactions are checked.
 
 | Path | Current order or behavior | Consequence |
 | --- | --- | --- |
-| Preview first-open and manual demo reset (`src/app/actions/demo.ts`) | Outer transaction takes the demo shop identity gate (shop, owner/captain roles and accounts), then reset takes the exclusive boarding-evidence fence. | Inverts a prospective fence-first staff writer. |
+| Preview first-open and manual demo reset (`src/app/actions/demo.ts`) | This experiment takes the exclusive evidence fence before the shop identity gate; preview has already written its preview-open record. | The preview row's order needs audit; other writers retain incompatible orders. |
 | Direct reset and clear (`src/db/seed.ts`) | Exclusive evidence fence via the photo-obligation guard, then destructive child and parent deletes. | A held reset can block current intake on staff/shop foreign keys; it deletes original bookings and trips. |
 | Demo reap, eviction and cap (`src/db/seed-demo-lifecycle.ts`) | Cascade begins with the same exclusive fence; cap may act on multiple shops in a caller's transaction. | Multiple-shop order, revalidation and old transactions need proof. |
 | E2E snapshot replay (`src/features/demo-reset-snapshot/store.ts`) | Replica mode, then clear and the exclusive fence; a replay failure falls back to reset. | Advisory locks still apply, but replica mode disables trigger/FK enforcement; fallback must not bypass preservation. |
 | Current dock intake (`src/db/boarding-observations.ts`) | Reads live staff and booking, inserts a row with shop/person references; no receipt fence or immutable original generation/day. | A held reset can time out the insert; a joined tap's second event key is not durably reserved. |
-| Role/status/removal (`src/features/staff-accounts/store.ts`) | Shop identity lock, followed by person/account/role/session writes; no evidence fence. | A role revocation can race a future receipt. Adding only a fence before the shop lock creates the reset inversion. |
+| Invite/role/status/removal (`src/features/staff-accounts/store.ts`) | This experiment takes the exclusive evidence fence before the shop identity lock and person/account/role/session writes. | Other writers and old servers do not all participate; an unrelated holder can delay urgent staff changes. |
 | Password and session revocation (`src/db/user-accounts.ts`, `src/db/account-security.ts`) | Account/session operations do not participate in the evidence fence. | A fresh role read alone does not establish session validity at commit. |
 | Erasure and merge (`src/features/anonymize/store.ts`, `src/db/diver-merge.ts`) | Exclusive evidence fence precedes the person and booking locks. | Coordinated receipt must check live authority and erasure after acquiring its own fence; the rest of the writers still need audit. |
 | Single and party moves (`src/db/bookings.ts`) | The single-move helper acquires trip and booking locks; party moves prelock trips before invoking that helper. | A fence added only inside the shared helper violates fence-first ordering for party moves. A shop-wide fence alone also starves intake behind a long move. |
 
-`lockDemoResetEvidenceFirst` is an uncalled WIP helper that takes the evidence
-fence before the existing demo identity gate in one READ COMMITTED transaction.
-It cannot tell whether its caller already holds another lock; it does not
-preserve a booking, accept an observation, or change the old paths. Its
+In this experiment `lockDemoResetEvidenceFirst` is called by the named preview,
+manual reset and refresh paths; it takes the evidence fence before the existing
+demo identity gate in one READ COMMITTED transaction. It cannot tell whether
+its caller already holds another lock, preserve a booking, or accept an observation.
+The experiment does not coordinate every writer or change old servers. Its
 PostgreSQL tests have not established a rollout or passed the held-reset
 acceptance tests. An exclusive fence still makes a simultaneous receipt try
 return unavailable, so device retention and a separate durable intake path are
