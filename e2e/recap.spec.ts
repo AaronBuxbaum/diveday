@@ -297,10 +297,11 @@ test("the day's facts render once, inside the one record a diver keeps", async (
   // "Recorded by {shop}", never "Verified log entry from {shop}": this card
   // prints, under a divemaster signature rule, and DiveDay verifies nothing
   // about the dive itself. For the same reason it states no dive count and no
-  // depth — both were numbers nobody observed (review, 2026-08-28).
+  // depth — both were numbers nobody observed (review, 2026-08-28). The one depth on the card is
+  // the diver's own computer's, drawn as its chart.
   await expect(page.getByText(/Recorded by/i).filter({ visible: true })).toBeVisible();
   await expect(page.getByText(/dives? logged/i)).toHaveCount(0);
-  await expect(record.getByText(/Max depth/i)).toHaveCount(0);
+  await expect(record.getByText(/Max depth/i)).toHaveCount(1);
 
   // The one rule this surface exists to keep (ADR 20260827-the-divers-thread,
   // decision 4): the page it replaced said the day's conditions and its sites

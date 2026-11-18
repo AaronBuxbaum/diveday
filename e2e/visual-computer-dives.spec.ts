@@ -21,8 +21,8 @@ for (const scheme of ["light", "dark"] as const) {
         test.use({ locale });
         test("SSI guide distinguishes LogTRAK sharing from DiveDay import", async ({ page }) => {
           const words = staffTranslator(locale);
-          await page.goto("/shop/blue-mantis/divers?q=Priya");
-          await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+          await page.goto("/shop/blue-mantis/divers?q=Amara");
+          await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
           await page.getByRole("link", { name: words("computerDives.title"), exact: true }).click();
           await page
             .getByLabel(words("computerDives.provider"), { exact: true })
@@ -43,8 +43,8 @@ for (const scheme of ["light", "dark"] as const) {
       });
     }
     test("Garmin FIT profile with an unknown local clock", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/divers?q=Priya");
-      await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+      await page.goto("/shop/blue-mantis/divers?q=Amara");
+      await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
       await page.getByRole("link", { name: staffCopy("computerDives.title"), exact: true }).click();
       await page
         .getByLabel(staffCopy("computerDives.files"), { exact: true })
@@ -76,8 +76,8 @@ for (const scheme of ["light", "dark"] as const) {
       await capture(page, "computer-dives-fit-profile", scheme);
     });
     test("online logbook beta mapping, date-only and archive review", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/divers?q=Priya");
-      await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+      await page.goto("/shop/blue-mantis/divers?q=Amara");
+      await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
       await page.getByRole("link", { name: staffCopy("computerDives.title"), exact: true }).click();
       await page
         .getByLabel(staffCopy("computerDives.provider"), { exact: true })
@@ -146,8 +146,8 @@ for (const scheme of ["light", "dark"] as const) {
       await capture(page, "computer-dives-beta-zip-preview", scheme);
     });
     test("computer import review", async ({ page }) => {
-      await page.goto("/shop/blue-mantis/divers?q=Priya");
-      await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+      await page.goto("/shop/blue-mantis/divers?q=Amara");
+      await page.getByRole("link", { name: "Amara Osei", exact: true }).click();
       await page.getByRole("link", { name: staffCopy("computerDives.title"), exact: true }).click();
       await expect(
         page.getByRole("heading", { level: 1, name: staffCopy("computerDives.title") }),

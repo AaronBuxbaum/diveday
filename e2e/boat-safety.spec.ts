@@ -89,16 +89,15 @@ test("an MMSI refusal reopens the existing boat editor", async ({ page, privateS
   await page.goto(`${shop}/boats`);
   const row = boatRow(page, BOAT);
   await row.locator("summary").click();
-  await row.getByLabel(t("boats.mmsiLabel"), { exact: true }).fill("123");
+  await row.getByLabel(`${t("boats.mmsiLabel")} (optional)`, { exact: true }).fill("123");
   await row.getByRole("button", { name: t("boats.submit"), exact: true }).click();
-  await expect(row.getByLabel(t("boats.mmsiLabel"), { exact: true })).toHaveAccessibleDescription(
-    literalPattern(t("boats.boatRadioInvalid")),
-  );
+  await expect(
+    row.getByLabel(`${t("boats.mmsiLabel")} (optional)`, { exact: true }),
+  ).toHaveAccessibleDescription(literalPattern(t("boats.boatRadioInvalid")));
   await expect(row).toHaveAttribute("open");
-  await expect(row.getByLabel(t("boats.mmsiLabel"), { exact: true })).toHaveAttribute(
-    "aria-invalid",
-    "true",
-  );
+  await expect(
+    row.getByLabel(`${t("boats.mmsiLabel")} (optional)`, { exact: true }),
+  ).toHaveAttribute("aria-invalid", "true");
   await expect(page.locator("#boat-new")).not.toHaveAttribute("open");
 });
 

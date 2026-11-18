@@ -26,7 +26,9 @@ test.describe("recorded money", () => {
       .locator('[name="description-0"]')
       .fill("Alquiler de regulador para la salida de mañana");
     await form.locator('[name="unitAmount-0"]').fill("25");
-    await form.getByLabel(t("orders.purchase.reference"), { exact: true }).fill("TERMINAL-ES-42");
+    await form
+      .getByLabel(`${t("orders.purchase.reference")} (opcional)`, { exact: true })
+      .fill("TERMINAL-ES-42");
     await form.getByRole("radio", { name: t("orders.localDue.open"), exact: true }).check();
     await expect(form.getByText(`${t("orders.localDue.gross")}:`, { exact: false })).toBeVisible();
     await expect(
@@ -34,9 +36,9 @@ test.describe("recorded money", () => {
     ).toBeDisabled();
     await photograph(page, "operations-due-draft");
     await form.getByRole("radio", { name: t("orders.purchase.received"), exact: true }).check();
-    await expect(form.getByLabel(t("orders.purchase.reference"), { exact: true })).toHaveValue(
-      "TERMINAL-ES-42",
-    );
+    await expect(
+      form.getByLabel(`${t("orders.purchase.reference")} (opcional)`, { exact: true }),
+    ).toHaveValue("TERMINAL-ES-42");
     await expect(form.locator('[name="description-0"]')).toHaveValue(
       "Alquiler de regulador para la salida de mañana",
     );

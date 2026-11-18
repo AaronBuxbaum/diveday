@@ -1416,11 +1416,10 @@ test("writes a FAQ pair through two boxes and shows it to a diver", async ({
     .last()
     .fill("Do I need my own gear?");
 
-  // Half a pair is refused, and says which half — the old textarea dropped an
-  // unanswered question silently, so the writer saved, saw it gone, and had no
-  // way to tell whether it had ever been there.
+  // Half a pair is refused, and says which half: the browser stops the save and points at the
+  // unanswered box (the answer is required once its question has words).
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Every question needs an answer")).toBeVisible();
+  await expect(page.getByLabel("Answer").last()).toHaveJSProperty("validity.valueMissing", true);
   await expect(page.getByLabel(/^Question \d+$/).last()).toHaveValue("Do I need my own gear?");
 
   await page.getByLabel("Answer").last().fill("No — every rental is part of the fee.");

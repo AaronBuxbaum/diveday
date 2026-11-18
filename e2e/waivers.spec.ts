@@ -1288,7 +1288,7 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   // A letter written before the answers it would clear cannot stand for them.
   await page.getByRole("radio", { name: "Cleared to dive" }).check();
   await page.getByLabel("Date of the physician’s evaluation").fill("2020-01-01");
-  await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
+  await page.getByLabel("Physician (optional)", { exact: true }).fill("Dr. Imani Reyes");
   await page.getByRole("button", { name: "Record the answer" }).click();
   await expect(
     page.getByText(staffTranslator("en-US")("divers.notices.medicalClearanceDateTooEarly")),
@@ -1296,7 +1296,7 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
 
   await page.getByRole("radio", { name: "Cleared to dive" }).check();
   await page.getByLabel("Date of the physician’s evaluation").fill(EVALUATED_ON);
-  await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
+  await page.getByLabel("Physician (optional)", { exact: true }).fill("Dr. Imani Reyes");
   await page.getByRole("button", { name: "Record the answer" }).click();
   // The clearance was the last thing waiting on this diver, so the record's own
   // masthead moment fires rather than the waiver group's notice (`successUrl`
@@ -1363,7 +1363,7 @@ test("a refused physician evaluation stops the chase without lifting the hold", 
 
   await page.getByRole("radio", { name: "Not cleared" }).check();
   await page.getByLabel("Date of the physician’s evaluation").fill("2026-07-21");
-  await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
+  await page.getByLabel("Physician (optional)", { exact: true }).fill("Dr. Imani Reyes");
   await confirm.click();
   await expect(
     page.getByRole("alert").filter({ hasText: "The physician did not clear this diver" }),
