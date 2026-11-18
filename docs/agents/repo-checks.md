@@ -264,8 +264,9 @@ branches, and the reasoning is at `SHAPE_SCOPES` in the script.
 
 The **exclamation mark** is a hit in `diver.json` and its `content/` sections alone, `¡` and `!` both: four diver strings
 ended in one ("See you on the boat!") against a bundle that otherwise keeps a plain voice (fifth-loop
-ideas, item 24). The one exemption is `notifications.whatsappTemplate.body`, the template Meta
-reviews for each shop at sign-up; the list is `EXCLAMATION_ALLOWLIST` in the script.
+ideas, item 24). Two are exempt: `notifications.whatsappTemplate.body`, the template Meta
+reviews for each shop at sign-up, and `fallback.recap.reviewText`, the review a sample diver types in the
+homepage walkthrough (her words, not ours); the list is `EXCLAMATION_ALLOWLIST` in the script.
 
 It holds the **house quotation marks** the same way: `“ ”` everywhere a person reads them, and a straight `"` is a hit. Same collision as the apostrophe at a fifth of the volume — 24 strings carrying 54 straight characters against 238 spelling them curly when this was swept (issue #1664), and colliding one scroll apart: `marketing.guides.fareharbor.coexist.intro` read *everything between "booked" and "back at the dock"* while `…eve.coexist.intro` made the same move in `“ ”`. On a page whose whole purpose is to be believed that reads as a typographic slip rather than a choice.
 
