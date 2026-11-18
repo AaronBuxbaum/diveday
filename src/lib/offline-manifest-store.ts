@@ -214,7 +214,7 @@ type StoredRecord = {
 
 const loadedRecords = new WeakMap<OfflineManifestEnvelope, StoredRecord>();
 
-function samePurgeRecord(expected: StoredRecord, actual: StoredRecord): boolean {
+function sameSupportedRecord(expected: StoredRecord, actual: StoredRecord): boolean {
   const supported = new Set([
     "tripId",
     "expiresAt",
@@ -721,7 +721,9 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
         throw new OfflineManifestError("unavailable");
       }
       if (pendingEvents === 0) {
-        await deleteOfflineManifest(tripId, db);
+        if (!(await deleteExpiredRecordIfUnchanged(record, db))) {
+          throw new OfflineManifestError("unavailable");
+        }
         return null;
       }
     }
@@ -918,7 +920,7 @@ async function deletePurgeCandidate(
     const maybeDelete = () => {
       if (!roundReady || !recordReady || (isCurrent && !isCurrent())) return;
       if (latestRound !== tenantRound || !record) return;
-      if (!samePurgeRecord(expected, record)) return;
+      if (!sameSupportedRecord(expected, record)) return;
       if (typeof record.shopSlug !== "string" || record.shopSlug.length === 0) return;
       if (record.shopSlug === currentShopSlug) return;
       if (
@@ -1155,26 +1157,23 @@ export async function wipeOfflineMedicalAlerts(
   );
 }
 
-async function deleteOfflineManifest(
-  tripId: string,
-  existingDb?: IDBDatabase,
-  isCurrent?: () => boolean,
+async function deleteExpiredRecordIfUnchanged(
+  expected: StoredRecord,
+  db: IDBDatabase,
 ): Promise<boolean> {
-  const ownsDb = existingDb === undefined;
-  const db = existingDb ?? (await openDatabase());
-  try {
-    // The purge may have waited for openDatabase after its locked record
-    // reread. Recheck at the last synchronous point before queuing the delete
-    // request so a newer tenant round cannot be crossed by that await.
-    if (isCurrent && !isCurrent()) return false;
-    const transaction = db.transaction(MANIFEST_STORE, "readwrite");
-    transaction.objectStore(MANIFEST_STORE).delete(tripId);
-    await transactionDone(transaction);
-    announceManifestChange(tripId, "delete");
-    return true;
-  } finally {
-    if (ownsDb) db.close();
-  }
+  const transaction = db.transaction(MANIFEST_STORE, "readwrite");
+  const done = transactionDone(transaction);
+  const store = transaction.objectStore(MANIFEST_STORE);
+  let deleted = false;
+  store.get(expected.tripId).onsuccess = (event) => {
+    const current = (event.target as IDBRequest<StoredRecord | undefined>).result;
+    if (!current || !sameSupportedRecord(expected, current)) return;
+    store.delete(expected.tripId);
+    deleted = true;
+  };
+  await done;
+  if (deleted) announceManifestChange(expected.tripId, "delete");
+  return deleted;
 }
 
 /**
