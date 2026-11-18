@@ -87,33 +87,46 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   await expect(heroSection.getByText(/^One flat price of/)).toHaveCount(0);
 });
 
-test("the homepage sample closes the roll call for Priya and can be replayed", async ({ page }) => {
+test("each diver on the sample boat needs an individual roll-call confirmation", async ({
+  page,
+}) => {
   const t = diverTranslator("en-US");
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
   const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
-  const markAboard = boat.getByRole("button", { name: t("marketing.home.boat.markAboard") });
-  await expect(boat.getByText(t("marketing.home.boat.open"), { exact: true })).toBeVisible();
-  await expect(
-    boat.getByText(t("marketing.home.boat.count", { aboard: 10 }), { exact: true }),
-  ).toBeVisible();
-
+  const status = boat.getByRole("status");
+  const canvas = boat.locator("canvas[data-boat-yaw]");
+  const inspect = (name: string) =>
+    boat.getByRole("button", { name: t("marketing.home.boat.select", { name }) });
+  const markAboard = (name: string) =>
+    boat.getByRole("button", { name: t("marketing.home.boat.markAboard", { name }) });
+  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 9 }));
   await boat.getByRole("button", { name: t("marketing.home.boat.pause") }).click();
   await boat.getByRole("button", { name: t("marketing.home.boat.resume") }).click();
-  await expect(boat.locator("figcaption").getByText("Priya Sharma", { exact: true })).toBeVisible();
-  await markAboard.focus();
-  await markAboard.press("Enter");
-  await expect(boat.getByText(t("marketing.home.boat.closed"), { exact: true })).toBeVisible();
-  await expect(
-    boat.getByText(t("marketing.home.boat.count", { aboard: 11 }), { exact: true }),
-  ).toBeVisible();
 
-  await expect(boat.getByText(t("marketing.home.boat.aboard"), { exact: true })).toBeVisible();
+  await inspect("Priya Sharma").press("Enter");
+  await expect(canvas).toHaveAttribute("data-boat-focus", "priya");
+  await expect(boat.getByText(t("marketing.home.boat.priyaGear"), { exact: true })).toBeVisible();
+  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 9 }));
+  await markAboard("Priya").press("Enter");
+  await expect(status).toContainText(t("marketing.home.boat.open"));
+  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 10 }));
+  await expect(markAboard("Priya")).toHaveCount(0);
+
+  await inspect("Tom Okafor").click();
+  await expect(canvas).toHaveAttribute("data-boat-focus", "tom");
+  await expect(boat.getByText(t("marketing.home.boat.tomGear"), { exact: true })).toBeVisible();
+  await markAboard("Tom").click();
+  await expect(status).toContainText(t("marketing.home.boat.closed"));
+  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 11 }));
+
+  await boat.getByText(t("marketing.home.boat.record"), { exact: true }).click();
+  await expect(boat.locator("details ol > li")).toHaveText(["Priya Sharma", "Tom Okafor"]);
   await boat.getByRole("button", { name: t("marketing.home.boat.restart") }).click();
-  await expect(markAboard).toBeVisible();
-  await expect(
-    boat.getByText(t("marketing.home.boat.count", { aboard: 10 }), { exact: true }),
-  ).toBeVisible();
+  await expect(status).toContainText(t("marketing.home.boat.count", { aboard: 9 }));
+  await expect(canvas).toHaveAttribute("data-boat-focus", "overview");
+  await expect(boat.locator("details")).toHaveCount(0);
+  await expect(inspect("Priya Sharma")).toHaveAttribute("aria-pressed", "false");
 });
 
 test("the 3D boat can be turned by dragging or keyboard with reduced motion", async ({ page }) => {
@@ -143,12 +156,55 @@ test("the 3D boat can be turned by dragging or keyboard with reduced motion", as
   await page.mouse.up();
   await expect.poll(() => canvas.getAttribute("data-boat-yaw")).not.toBe(keyboardYaw);
 
-  await boat.getByRole("button", { name: t("marketing.home.boat.markerOpen") }).click();
-  await expect(boat.getByText(t("marketing.home.boat.closed"), { exact: true })).toBeVisible();
-  await boat.getByRole("button", { name: t("marketing.home.boat.restart") }).click();
+  const marker = (name: string) =>
+    boat.getByRole("button", { name: t("marketing.home.boat.marker", { name }) });
+  await marker("Tom Okafor").click();
+  await expect(canvas).toHaveAttribute("data-boat-focus", "tom");
+  await boat.getByRole("button", { name: t("marketing.home.boat.overview") }).click();
+  await expect(canvas).toHaveAttribute("data-boat-focus", "overview");
+  await marker("Tom Okafor").click();
+  await boat
+    .getByRole("button", { name: t("marketing.home.boat.markAboard", { name: "Tom" }) })
+    .click();
+  await expect(boat.getByRole("status")).toContainText(
+    t("marketing.home.boat.count", { aboard: 10 }),
+  );
+  await boat.getByRole("button", { name: t("marketing.home.boat.overview") }).click();
+  await marker("Priya Sharma").click();
+  await expect(canvas).toHaveAttribute("data-boat-focus", "priya");
+  await boat
+    .getByRole("button", { name: t("marketing.home.boat.markAboard", { name: "Priya" }) })
+    .click();
+  await expect(boat.getByRole("status")).toContainText(t("marketing.home.boat.closed"));
+  await boat.getByText(t("marketing.home.boat.record"), { exact: true }).click();
+  await expect(boat.locator("details ol > li")).toHaveText(["Tom Okafor", "Priya Sharma"]);
+});
+
+test("the boat roster still works without canvas support", async ({ page }) => {
+  await page.addInitScript(() => {
+    HTMLCanvasElement.prototype.getContext = new Proxy(HTMLCanvasElement.prototype.getContext, {
+      apply(getContext, canvas, args) {
+        if (canvas.closest("[data-boat-scene]") && args[0] === "2d") return null;
+        return Reflect.apply(getContext, canvas, args);
+      },
+    });
+  });
+  await page.goto("/");
+  const t = diverTranslator("en-US");
+  const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
   await expect(
-    boat.getByRole("button", { name: t("marketing.home.boat.markerOpen") }),
+    boat.getByRole("img", { name: t("marketing.home.boat.illustration") }),
   ).toBeVisible();
+  for (const [name, firstName] of [
+    ["Tom Okafor", "Tom"],
+    ["Priya Sharma", "Priya"],
+  ]) {
+    await boat.getByRole("button", { name: t("marketing.home.boat.select", { name }) }).click();
+    await boat
+      .getByRole("button", { name: t("marketing.home.boat.markAboard", { name: firstName }) })
+      .click();
+  }
+  await expect(boat.getByRole("status")).toContainText(t("marketing.home.boat.closed"));
 });
 
 test("the homepage offers a way to ask before the footer", async ({ page }) => {

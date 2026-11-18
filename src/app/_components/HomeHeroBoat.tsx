@@ -6,9 +6,20 @@ import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
-/** The final named response on a sample trip with nine divers and two crew. */
+/** The last two names on a sample trip with nine divers and two crew. */
 export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
+  function diver(name: string, shortName: string, place: string, gear: string) {
+    return {
+      name,
+      shortName,
+      place,
+      gear,
+      select: t("marketing.home.boat.select", { name }),
+      marker: t("marketing.home.boat.marker", { name }),
+      confirm: t("marketing.home.boat.markAboard", { name: shortName }),
+    };
+  }
   return (
     <MarketingHeroMotion>
       <figure
@@ -40,18 +51,36 @@ export function HomeHeroBoat({ locale }: { locale: DiverLocale }) {
             pause: t("marketing.home.boat.pause"),
             resume: t("marketing.home.boat.resume"),
             dragHint: t("marketing.home.boat.dragHint"),
-            markerOpen: t("marketing.home.boat.markerOpen"),
-            markerClosed: t("marketing.home.boat.markerClosed"),
+            overview: t("marketing.home.boat.overview"),
+            choose: t("marketing.home.boat.choose"),
             open: t("marketing.home.boat.open"),
             closed: t("marketing.home.boat.closed"),
-            countOpen: t("marketing.home.boat.count", { aboard: 10 }),
-            countClosed: t("marketing.home.boat.count", { aboard: 11 }),
-            // i18n-exempt: sample diver name shared with the booking walkthrough
-            name: "Priya Sharma",
-            answered: t("marketing.home.boat.answered"),
+            counts: [
+              t("marketing.home.boat.count", { aboard: 9 }),
+              t("marketing.home.boat.count", { aboard: 10 }),
+              t("marketing.home.boat.count", { aboard: 11 }),
+            ],
+            divers: [
+              // i18n-exempt: sample diver names shared with the booking walkthrough
+              diver(
+                "Priya Sharma",
+                "Priya",
+                t("marketing.home.boat.stern"),
+                t("marketing.home.boat.priyaGear"),
+              ),
+              // i18n-exempt: sample diver names shared with the booking walkthrough
+              diver(
+                "Tom Okafor",
+                "Tom",
+                t("marketing.home.boat.amidships"),
+                t("marketing.home.boat.tomGear"),
+              ),
+            ],
             aboard: t("marketing.home.boat.aboard"),
-            markAboard: t("marketing.home.boat.markAboard"),
             restart: t("marketing.home.boat.restart"),
+            record: t("marketing.home.boat.record"),
+            previously: t("marketing.home.boat.previously"),
+            checkpoint: t("marketing.home.boat.checkpoint"),
           }}
         />
       </figure>
