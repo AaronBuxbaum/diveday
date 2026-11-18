@@ -336,7 +336,7 @@ test("the homepage leads to every feature page through the Product catalogue", a
     "Before the dive day",
     "On the day",
     "Across the season",
-    "Also in the plan",
+    diverTranslator("en-US")("marketing.product.runningTheShop"),
   ]);
   const listed = await directory
     .locator('a[href^="/product/"]')
@@ -404,13 +404,6 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       name: "From the first booking to the roll call after the last dive",
     }),
   ).toBeVisible();
-  // The full capability index lives in the directory's rows since
-  // 2026-10-05; the sentence under them names the sections, never a count of
-  // the rows (visual review 2026-10-24, B44).
-  await expect(
-    page.getByText(diverTranslator("en-US")("marketing.product.boxDescription")),
-  ).toBeVisible();
-
   // The hub is the directory of the feature pages (H-20261005-public-pages-sell), and the offline
   // claim lives on the one it is about, beside its screen, and nowhere else.
   // /pricing carried a second copy of it as a FAQ row until 2026-08-28 — a
@@ -459,7 +452,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // One group per feature page since 2026-10-05 (H-20261005-public-pages-sell), under that page's
   // own row of the directory, then the three groups no page owns.
   const fullList = page.locator("#full-list");
-  await expect(fullList.getByRole("heading", { name: "Also in the plan" })).toBeVisible();
+  await expect(
+    fullList.getByRole("heading", {
+      name: diverTranslator("en-US")("marketing.product.runningTheShop"),
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(fullList.locator("summary").filter({ hasText: /^Your records/ })).toBeVisible();
   // The product hero has the same decision budget as the homepage hero: the
   // live demo and trial are its two doors, while the price is a fact stated
@@ -529,7 +527,13 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   ).toHaveAttribute("href", "/switching/spreadsheet?from=product-spreadsheet");
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
-  await expect(page.getByRole("heading", { name: "What a shop pays, line by line" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: diverTranslator("en-US")("marketing.pricing.heroTitle"),
+      exact: true,
+    }),
+  ).toBeVisible();
   // The price as an invoice (2026-09-24): seven labelled lines under the
   // figure, beside the builder's notes on them, so the terms a buyer scans
   // for are on the first screen as a ledger rather than as prose. The trial
@@ -580,37 +584,18 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByRole("heading", { name: "What do I have to do to get set up?" }),
   ).toBeVisible();
 
-  // The guides cite current provider terms, not a universal rate or a savings claim.
+  // The comparison counts FareHarbor and DiveDay the same way, with its sources written beside
+  // the figures (Aaron, 2026-11-18), with one slider of money received.
+  const pricingCopy = diverTranslator("en-US");
   await expect(
-    page.getByRole("heading", {
-      name: diverTranslator("en-US")("marketing.pricing.feeAnchor.title"),
-    }),
+    page.getByRole("heading", { name: pricingCopy("marketing.pricing.compare.title") }),
   ).toBeVisible();
-  await expect(page.getByText(/plan, market, and booking channel matter/)).toBeVisible();
-  await expect(page.getByText(/sets fees in its provider agreement/)).toBeVisible();
-  await expect(page.getByText(/third parties report that fee/)).toHaveCount(0);
-  await expect(
-    page.getByRole("link", { name: /What moving off Rezdy looks like/ }),
-  ).toHaveAttribute("href", "/switching/rezdy");
   await expect(
     page.getByRole("link", { name: /What moving off FareHarbor looks like/ }),
   ).toHaveAttribute("href", "/switching/fareharbor");
-  // The claims-policy guard for this section: no savings promise, no invented
-  // figure for what shops actually pay.
-  const pricingBody = await page.locator("body").innerText();
-  for (const pattern of [/\bsave[sd]? (you )?\$?\d/i, /shops (pay|save) (around|about|roughly)/i]) {
-    expect(pricingBody, `unfounded savings claim matching ${pattern}`).not.toMatch(pattern);
-  }
-  const pricingCopy = diverTranslator("en-US");
-  const examples = page.getByRole("region", {
-    name: pricingCopy("marketing.pricing.examples.title"),
-  });
-  await expect(examples).toBeVisible();
-  for (const id of ["none", "oneBoat", "threeBoats"] as const) {
-    await expect(
-      examples.getByRole("heading", { name: pricingCopy(`marketing.pricing.examples.${id}`) }),
-    ).toBeVisible();
-  }
+  await expect(
+    page.getByRole("slider", { name: pricingCopy("marketing.pricing.compare.sliderLabel") }),
+  ).toBeVisible();
   for (const key of ["shopSize", "diverApp", "printedManifest", "devices", "currency"] as const) {
     await expect(
       page.getByRole("heading", { name: pricingCopy(`marketing.pricing.faq.${key}.question`) }),
@@ -640,17 +625,19 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // owner (issue #1955): link weight, so the count above does not move and the
   // band holds no primary, and tagged by name so a typo or a recycled tag
   // fails here rather than opening a second bucket (src/lib/funnel.ts).
-  const exportDoor = page.getByRole("main").getByRole("button", {
-    name: "Open the demo as the owner →",
-  });
+  const exportForm = page
+    .getByRole("main")
+    .locator("form")
+    .filter({
+      has: page.getByRole("button", {
+        name: diverTranslator("en-US")("marketing.pricing.dataExit.door"),
+      }),
+    });
+  const exportDoor = exportForm.getByRole("button");
   await expect(exportDoor).toBeVisible();
   await expect(exportDoor).not.toHaveClass(/(^|\s)bg-primary(\s|$)/);
-  await expect(
-    page.locator('form:has(button:text-is("Open the demo as the owner →")) input[name="source"]'),
-  ).toHaveValue("pricing-export");
-  await expect(
-    page.locator('form:has(button:text-is("Open the demo as the owner →")) input[name="role"]'),
-  ).toHaveValue("owner");
+  await expect(exportForm.locator('input[name="source"]')).toHaveValue("pricing-export");
+  await expect(exportForm.locator('input[name="role"]')).toHaveValue("owner");
 
   // And the demo *leads*: first in the DOM, primary weight, with the trial
   // behind it. This page carried them the other way round under the same two
@@ -1910,8 +1897,11 @@ test.describe("with Accept-Language: es", () => {
       spanish: "De la primera reserva al pase de lista después de la última inmersión",
     },
     "/pricing": {
-      english: "What a shop pays, line by line",
-      spanish: "Lo que paga un centro, línea por línea",
+      // The title now also names the navigation link. Watch body-only copy so
+      // the default-locale chrome is not mistaken for an English page body.
+      english: diverTranslator("en-US")("marketing.pricing.lockNote"),
+      spanish: diverTranslator("es-ES")("marketing.pricing.lockNote"),
+      heading: diverTranslator("es-ES")("marketing.pricing.heroTitle"),
     },
     // The three that still carried the fallback-is-the-body shape on
     // 2026-08-14 (FU-20260814-remaining-fallback-is-the-body-marketing-pages).

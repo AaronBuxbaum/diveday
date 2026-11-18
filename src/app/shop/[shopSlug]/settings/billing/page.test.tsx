@@ -187,7 +187,7 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
   it("states the default percentage offer, whatever plan is stored", async () => {
     configure();
     const { lines } = await render(percentShop);
-    expect(lines).toContain("DiveDay, 3% of money recorded as received");
+    expect(lines).toContain("DiveDay, 2% of money recorded as received");
   });
 
   it("states the percent plan, this month's volume and fee, in en-US", async () => {

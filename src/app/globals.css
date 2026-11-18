@@ -1930,7 +1930,8 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 [data-walk-phase="before"] [data-walk-before] [data-walk-type] {
-  animation: walk-type calc(var(--type-chars, 10) * 70ms) steps(var(--type-chars, 10)) both;
+  animation: walk-type calc(var(--type-chars, 10) * var(--type-ms, 40ms))
+    steps(var(--type-chars, 10)) both;
   animation-delay: var(--type-delay, 0ms);
 }
 
@@ -1977,19 +1978,22 @@ select:not([multiple]):not([size]):dir(rtl) {
   animation-play-state: paused;
 }
 
-/* A pointer the walk moves (`data-walk-cursor`, drawn in the control it goes to): in the first
-   phase it travels in, presses at `--cursor-at`, and is gone. The control's own change
+/* The fingertip the walk moves (`data-walk-cursor`, the same ring as the tap, drawn in the control
+   it goes to): in the first phase it travels in, presses at `--cursor-at`, and is gone. The control's own change
    (`data-walk-late`, `data-walk-star`) lands on the same beat. */
 [data-walk-cursor] {
   position: absolute;
   z-index: 3;
-  inset-block-start: 55%;
-  inset-inline-start: 60%;
-  width: 1.5rem;
-  height: 1.5rem;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -1.125rem 0 0 -1.125rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-primary);
+  background: color-mix(in oklab, var(--color-primary) 22%, transparent);
   opacity: 0;
   pointer-events: none;
-  filter: drop-shadow(0 1px 2px color-mix(in oklab, var(--color-foreground) 35%, transparent));
 }
 
 @keyframes walk-cursor-in {

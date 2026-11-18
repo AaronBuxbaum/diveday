@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Eyebrow } from "@/app/_components/Eyebrow";
+import { ARROW_LINK_CLASS } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**
@@ -25,10 +26,9 @@ export function HomeWhyBand({ t }: { t: DiverTranslator }) {
           <p className="mt-4">
             <Link
               href="/about"
-              className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline"
+              className={`inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline ${ARROW_LINK_CLASS}`}
             >
               {t("marketing.home.whyLink")}
-              <span aria-hidden="true">&nbsp;→</span>
             </Link>
           </p>
         </div>

@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
+/** One typing rate for every field in the walk: 40 ms a character is about 300 words a minute. */
+export const WALK_TYPE_CHAR_MS = 40;
+
 /**
  * Text Priya types into a drawn field. In the homepage walkthrough's first phase the characters
  * arrive left to right (`data-walk-type`, `globals.css`), starting `delay` ms into the beat; in
@@ -11,7 +14,13 @@ export function WalkTyped({ text, delay = 0 }: { text: string; delay?: number })
     <span
       data-walk-type=""
       className="inline-block align-bottom"
-      style={{ "--type-chars": text.length, "--type-delay": `${delay}ms` } as CSSProperties}
+      style={
+        {
+          "--type-chars": text.length,
+          "--type-delay": `${delay}ms`,
+          "--type-ms": `${WALK_TYPE_CHAR_MS}ms`,
+        } as CSSProperties
+      }
     >
       {text}
     </span>
@@ -39,8 +48,9 @@ export function WalkField({
 }
 
 /**
- * The pointer the homepage walkthrough moves: it travels to the control that holds it (which is
- * `relative`), presses `at` ms into the beat, and goes. Only the walk's first phase draws it
+ * The fingertip the homepage walkthrough moves (the same ring as the tap that ends a beat, never an
+ * arrow): it travels to the control that holds it (which is `relative`), presses `at` ms into the
+ * beat, and goes. Only the walk's first phase draws it
  * (`data-walk-cursor`, `globals.css`); the control's own change is timed by the caller to the same `at`.
  */
 export function WalkCursor({ at }: { at: number }) {
@@ -49,16 +59,7 @@ export function WalkCursor({ at }: { at: number }) {
       aria-hidden="true"
       data-walk-cursor=""
       style={{ "--cursor-at": `${at}ms` } as CSSProperties}
-    >
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6" focusable="false">
-        <path
-          d="M5 3l14 8-6.2 1.6L9.6 19 5 3z"
-          className="fill-surface stroke-foreground"
-          strokeWidth={1.5}
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
+    ></span>
   );
 }
 

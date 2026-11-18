@@ -252,7 +252,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                 </Link>
                 <Link
                   href={switchingHref("/switching", "about-switching")}
-                  className={buttonClass({ variant: "link", flush: true })}
+                  className={buttonClass({ variant: "link", arrow: true, flush: true })}
                 >
                   {t("marketing.about.switchingLink")}
                 </Link>
@@ -270,7 +270,12 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                   <p>{t("marketing.about.whereLiveValue")}</p>
                   <Link
                     href="/pricing#export"
-                    className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
+                    className={buttonClass({
+                      variant: "link",
+                      arrow: true,
+                      flush: true,
+                      className: "mt-2",
+                    })}
                   >
                     {t("marketing.common.recordsLink")}
                   </Link>

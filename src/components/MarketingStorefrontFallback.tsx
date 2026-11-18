@@ -89,7 +89,7 @@ export function StorefrontFallback({
         </div>
         <ul className="mt-1">
           <li className="relative flex flex-col gap-1 border-b border-border py-2.5 @md:flex-row @md:items-center @md:gap-4">
-            {tapBoat ? <WalkCursor at={1000} /> : null}
+            {tapBoat ? <WalkCursor at={1600} /> : null}
             <p className="text-sm font-semibold whitespace-nowrap tabular-nums @md:w-36 @md:shrink-0">
               {t("fallback.storefront.reefTime")}
             </p>

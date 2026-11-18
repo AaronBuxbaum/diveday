@@ -65,13 +65,6 @@ export const marketingFee = {
   summaryKey: "marketing.price.receivedMoneyFee",
 } as const satisfies { summaryKey: DiverMessageKey };
 
-/** Illustrative eligible receipts, not customer results or forecasts. Amounts are USD cents. */
-export const pricingExampleMonths = [
-  { id: "none", receivedCents: 0 },
-  { id: "oneBoat", receivedCents: 1_000_000 },
-  { id: "threeBoats", receivedCents: 6_000_000 },
-] as const;
-
 /**
  * The bare amount inside `earlyAccessPrice.price`, for structured data that
  * needs a number (JSON-LD offers). Derived here so the figure still has exactly
@@ -118,8 +111,8 @@ export const midSeasonCutover = {
 /**
  * The groups of the index that belong to no single feature page: the diver
  * record, running the shop, and the records a shop takes with it. The hub
- * lists them, in this order, after the directory's phases ("Also in the
- * plan"), and its skeleton draws a row for each off this same list.
+ * lists them, in this order, after the directory's phases ("Running the
+ * shop"), and its skeleton draws a row for each off this same list.
  */
 export const hubOnlyCapabilityGroups = ["divers", "shop", "records"] as const;
 
@@ -171,6 +164,8 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.onlineBooking.item7",
       "marketing.capabilities.onlineBooking.item8",
       "marketing.capabilities.onlineBooking.item9",
+      "marketing.capabilities.onlineBooking.item10",
+      "marketing.capabilities.onlineBooking.item11",
     ],
   },
   {
@@ -188,6 +183,7 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.website.item9",
       "marketing.capabilities.website.item10",
       "marketing.capabilities.website.item11",
+      "marketing.capabilities.website.item12",
     ],
   },
   {
@@ -217,6 +213,8 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.certifications.item6",
       "marketing.capabilities.certifications.item7",
       "marketing.capabilities.certifications.item8",
+      "marketing.capabilities.certifications.item9",
+      "marketing.capabilities.certifications.item10",
     ],
   },
   {
@@ -231,6 +229,8 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.messages.item6",
       "marketing.capabilities.messages.item7",
       "marketing.capabilities.messages.item8",
+      "marketing.capabilities.messages.item9",
+      "marketing.capabilities.messages.item10",
     ],
   },
   {
@@ -245,6 +245,8 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.checkIn.item6",
       "marketing.capabilities.checkIn.item7",
       "marketing.capabilities.checkIn.item8",
+      "marketing.capabilities.checkIn.item9",
+      "marketing.capabilities.checkIn.item10",
     ],
   },
   {
@@ -261,6 +263,8 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.boatManifest.item8",
       "marketing.capabilities.boatManifest.item9",
       "marketing.capabilities.boatManifest.item10",
+      "marketing.capabilities.boatManifest.item11",
+      "marketing.capabilities.boatManifest.item12",
     ],
   },
   {
@@ -334,6 +338,7 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.courses.item10",
       "marketing.capabilities.courses.item11",
       "marketing.capabilities.courses.item12",
+      "marketing.capabilities.courses.item13",
     ],
   },
   {
@@ -362,6 +367,7 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.divers.item3",
       "marketing.capabilities.divers.item4",
       "marketing.capabilities.divers.item5",
+      "marketing.capabilities.divers.item6",
     ],
   },
   {
@@ -377,6 +383,9 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.shop.item7",
       "marketing.capabilities.shop.item8",
       "marketing.capabilities.shop.item9",
+      "marketing.capabilities.shop.item10",
+      "marketing.capabilities.shop.item11",
+      "marketing.capabilities.shop.item12",
     ],
   },
   {

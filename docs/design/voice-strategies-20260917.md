@@ -179,7 +179,7 @@ Not included
 
 - A retail register.
 - Repair work orders.
-- A live connection to PADI or SSI. No agency allows one. Staff confirm cards by hand.
+- A live roster connection to PADI or SSI. No agency offers one. Staff check one card at a time, with the browser extension or by hand.
 - A second location on one shop. Email us if you run two.
 
 Leaving: Settings has a Data export button. One ZIP of CSV files: divers, bookings, waivers, payment history, photos. Works on the first day of a trial. No fee.
@@ -224,7 +224,7 @@ He gets another phone and signs in. The manifest lives in your shop, not on the 
 
 Does it talk to PADI
 
-No, and neither does anything else, whatever the brochure says. No agency lets software check a card. Your staff look at the card, tap confirm, and it's on the diver's record from then on.
+Not behind the scenes, and nothing else does either, whatever the brochure says. What DiveDay has is a browser extension: your staff press Check with PADI on a card, it looks the card up on PADI's own page in their browser, and the answer lands on the diver's record.
 
 The bit I'd show you first
 
