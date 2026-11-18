@@ -5,12 +5,12 @@ import { HomeBodySkeleton } from "./HomeBodySkeleton";
 
 afterEach(cleanup);
 
-/** The hero's two columns: the claim, then the arrival desk. */
+/** The hero's two columns: the claim, then the boat roll call. */
 function heroColumns(container: HTMLElement) {
   const grid = container.querySelector("section > div");
-  const [claim, phone] = [...(grid?.children ?? [])];
-  if (!claim || !phone) throw new Error("no hero columns");
-  return { claim, phone };
+  const [claim, boat] = [...(grid?.children ?? [])];
+  if (!claim || !boat) throw new Error("no hero columns");
+  return { claim, boat };
 }
 
 /** The booking band follows the hero, before the later origin account. */
@@ -53,10 +53,10 @@ describe("the landing's skeleton", () => {
     expect(heroColumns(container).claim.querySelector(".rounded-panel")).toBeNull();
   });
 
-  it("draws the desk at the height it renders at: 574px from lg, 610px on a phone", () => {
+  it("reserves the boat illustration's aspect ratio while the hero loads", () => {
     const { container } = render(<HomeBodySkeleton />);
-    const desk = heroColumns(container).phone.firstElementChild;
-    expect(desk).toHaveClass("h-[610px]", "lg:h-[574px]");
+    const { boat } = heroColumns(container);
+    expect(boat.getElementsByClassName("aspect-[3/2]")).toHaveLength(1);
   });
 
   it("reserves the longer Spanish title: five phone lines and four from sm", () => {

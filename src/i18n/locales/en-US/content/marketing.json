@@ -99,12 +99,17 @@
     "tryTitle": "Come run a dive day in the demo shop",
     "stepLink": "{name}",
     "percentArm": {},
-    "try": {
-      "hint": "A sample morning list. Tap a button to see what the desk does.",
-      "region": "A sample of the arrival desk for the 7:30 two-tank trip.",
-      "hereOf": "{here} of {expected} here",
-      "allHere": "Everyone is here and cleared",
-      "done": "All nine are cleared for the 7:30.",
+    "boat": {
+      "region": "Try the roll call on the 7:30 boat.",
+      "title": "The 7:30 boat",
+      "checkpoint": "After dive one",
+      "illustration": "Illustration of a dive boat seen from above, with tank racks and a stern ladder.",
+      "open": "Roll call open",
+      "closed": "Roll call complete",
+      "count": "{aboard} of 11 aboard",
+      "answered": "Answers from the deck",
+      "aboard": "Back aboard",
+      "markAboard": "Mark Priya back aboard",
       "restart": "Start over"
     }
   },

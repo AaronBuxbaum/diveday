@@ -99,12 +99,17 @@
     "tryTitle": "Ven a organizar un día de buceo en el centro de demostración",
     "stepLink": "{name}",
     "percentArm": {},
-    "try": {
-      "hint": "Una lista de ejemplo de la mañana. Toca un botón para ver lo que hace el mostrador.",
-      "region": "Una muestra del mostrador de llegadas para la salida de dos tanques de las 7:30.",
-      "hereOf": "{here} de {expected} aquí",
-      "allHere": "Todos están aquí y autorizados",
-      "done": "Los nueve están listos para las 7:30.",
+    "boat": {
+      "region": "Prueba a pasar lista en la salida de las 7:30.",
+      "title": "El barco de las 7:30",
+      "checkpoint": "Tras la primera inmersión",
+      "illustration": "Ilustración del barco visto desde arriba, con tanques y una escalera en la popa.",
+      "open": "Pase de lista abierto",
+      "closed": "Pase de lista completo",
+      "count": "{aboard} de 11 a bordo",
+      "answered": "Responde desde cubierta",
+      "aboard": "De vuelta a bordo",
+      "markAboard": "Confirmar a Priya a bordo",
       "restart": "Empezar de nuevo"
     }
   },

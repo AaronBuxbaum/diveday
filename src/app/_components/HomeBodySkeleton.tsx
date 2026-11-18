@@ -1,4 +1,5 @@
 import { SkeletonLineBars } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { homeDiverDoorEnabled } from "@/features/home-diver-door";
 
@@ -40,9 +41,7 @@ const TITLE_LINES = [
  *   - the demo note (`mt-3`): 20px lines, two on a phone and one from `sm`;
  *   - the diver's line (`mt-6`): one 20px line, "Booked a dive? Find your
  *     booking" (fourth review, item 50), only while `HOME_DIVER_DOOR` is on;
- *   - the desk, `MarketingTryDesk`: a hint line above it, the sample at 486px
- *     (502 on a phone), and a 56px line below it for the finished note and
- *     "Start over"; 574px from `lg`, 610px on a phone (the hint wraps to two lines).
+ *   - the boat: a trip header, a 3:2 illustration, and a named roll-call row.
  *
  * **The first step is drawn at its height**, the same way: the band's title
  * (three lines on a phone, two from `sm`), then the row — the marker, the
@@ -91,9 +90,24 @@ export function HomeBodySkeleton() {
               </div>
             ) : null}
           </div>
-          {/* The arrival desk: its hint, the sample, and the line under it. */}
           <div className="mx-auto w-full max-w-md lg:max-w-lg">
-            <div className="h-[610px] rounded-3xl border border-border bg-surface lg:h-[574px]" />
+            <div className={sectionCardClass({ padding: "none" })}>
+              <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-3 px-4 sm:px-5">
+                <div className="h-5 w-28 rounded bg-surface-sunken" />
+                <div className="h-4 w-24 rounded bg-surface-sunken" />
+              </div>
+              <div className="aspect-[3/2] w-full bg-surface-sunken" />
+              <div className="px-4 py-4 sm:px-5">
+                <div className="flex min-h-7 flex-wrap items-center justify-between gap-x-3">
+                  <div className="h-6 w-32 rounded bg-surface-sunken" />
+                  <div className="h-4 w-24 rounded bg-surface-sunken" />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+                  <div className="h-10 w-28 rounded bg-surface-sunken" />
+                  <div className="h-11 w-36 rounded-lg bg-surface-sunken" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

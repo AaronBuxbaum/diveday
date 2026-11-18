@@ -68,10 +68,8 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   // once offered ~9 (a five-chip role picker, the diver preview, demo, trial),
   // and every retired destination moved rather than disappeared — the roles
   // into the in-demo switcher, the preview onto the online booking page's own
-  // door. The mockup's "Mark boarded" buttons are `disabled` scenery, not
-  // doors, so the count is of things a visitor can actually act on.
+  // door. The boat’s local roll-call button stays within the sample.
   const heroSection = page.getByRole("main").locator("section").first();
-  // The sample desk's own taps (`data-try-tap`) are the sample's, not doors.
   await expect(heroSection.locator("button:not([disabled]):not([data-try-tap])")).toHaveCount(1);
   // The shop's budget is counted without the one line for a diver (fourth
   // review, item 50): a sentence for the reader who landed here by mistake,
@@ -89,24 +87,30 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   await expect(heroSection.getByText(/^One flat price of/)).toHaveCount(0);
 });
 
-test("the homepage hero's sample desk clears all nine in three taps and starts over", async ({
-  page,
-}) => {
+test("the homepage sample closes the roll call for Priya and can be replayed", async ({ page }) => {
+  const t = diverTranslator("en-US");
   await page.goto("/");
-  const desk = page.getByRole("figure", { name: /A sample of the arrival desk/ });
-  await expect(desk.getByText("of 9 here")).toBeVisible();
-  await expect(desk.getByText("7", { exact: true })).toBeVisible();
+  const boat = page.getByRole("figure", { name: t("marketing.home.boat.region") });
+  const markAboard = boat.getByRole("button", { name: t("marketing.home.boat.markAboard") });
+  await expect(boat.getByText(t("marketing.home.boat.open"), { exact: true })).toBeVisible();
+  await expect(
+    boat.getByText(t("marketing.home.boat.count", { aboard: 10 }), { exact: true }),
+  ).toBeVisible();
 
-  await desk.getByRole("button", { name: "Same person" }).click();
-  await desk.getByRole("button", { name: "Check in" }).first().click();
-  await desk.getByRole("button", { name: "Check in" }).click();
-  await expect(desk.getByText("9", { exact: true })).toBeVisible();
-  await expect(desk.getByText("Everyone is here and cleared")).toBeVisible();
-  await expect(page.getByText("All nine are cleared for the 7:30.")).toBeVisible();
+  await expect(boat.getByText(t("marketing.home.boat.name"), { exact: true })).toBeVisible();
+  await markAboard.focus();
+  await markAboard.press("Enter");
+  await expect(boat.getByText(t("marketing.home.boat.closed"), { exact: true })).toBeVisible();
+  await expect(
+    boat.getByText(t("marketing.home.boat.count", { aboard: 11 }), { exact: true }),
+  ).toBeVisible();
 
-  await page.getByRole("button", { name: "Start over" }).click();
-  await expect(desk.getByRole("button", { name: "Same person" })).toBeVisible();
-  await expect(page.getByText("All nine are cleared for the 7:30.")).toHaveCount(0);
+  await expect(boat.getByText(t("marketing.home.boat.aboard"), { exact: true })).toBeVisible();
+  await boat.getByRole("button", { name: t("marketing.home.boat.restart") }).click();
+  await expect(markAboard).toBeVisible();
+  await expect(
+    boat.getByText(t("marketing.home.boat.count", { aboard: 10 }), { exact: true }),
+  ).toBeVisible();
 });
 
 test("the homepage offers a way to ask before the footer", async ({ page }) => {
