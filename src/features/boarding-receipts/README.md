@@ -21,6 +21,11 @@ exercises atomic draft-table claims and rollback but does not authenticate a cal
 verify a meeting, exclude old writers or create a device receipt. Production
 sources must not import it; the architecture check rejects direct imports.
 
+The existing offline erasure token authenticates a shop, trip ID, snapshot ID,
+erasure epoch and snapshot revision. It does not bind a booking, meeting day,
+trip generation or actor. Demo reset can reuse the trip ID and restart its
+revision, so a valid old token alone cannot identify the original meeting.
+
 ## Cutover requirements — not implemented
 
 1. Preserve pending device evidence and establish a recovery path before
