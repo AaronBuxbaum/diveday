@@ -1043,7 +1043,11 @@
       "title": "Lo que podría costar un mes",
       "lede": "Mueve el control hasta el dinero que entra en tu centro. Cada columna suma la cuota del programa y el procesamiento de tarjetas, para que veas lo que sale de tu cuenta.",
       "sliderLabel": "Dinero recibido en un mes",
-      "estimated": "(estimado)",
+      "systems": {
+        "fareharbor": {
+          "estimated": "(estimado)"
+        }
+      },
       "lines": {
         "subscription": "Suscripción",
         "free": "Gratis",

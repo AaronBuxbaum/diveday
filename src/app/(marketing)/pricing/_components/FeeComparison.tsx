@@ -29,9 +29,7 @@ export type FeeComparisonLabels = {
   total: string;
   range: string;
   totalNote: string;
-  /** Said beside a system whose rates are reported, not published. */
-  estimated: string;
-  systems: Record<ComparedSystem, { name: string }>;
+  systems: { fareharbor: { name: string; estimated: string }; diveday: { name: string } };
 };
 
 const MAX_CENTS = 10_000_000;
@@ -167,7 +165,7 @@ export function FeeComparison({
         </div>
       </div>
 
-      <table className="mt-6 w-full table-fixed border-collapse text-start text-sm sm:text-base">
+      <table className="mt-10 w-full table-fixed border-collapse text-start text-sm sm:text-base">
         <thead>
           <tr className="align-top">
             <td className="w-[34%]" />
@@ -177,14 +175,12 @@ export function FeeComparison({
                 scope="col"
                 className={`px-3 pb-4 text-start font-normal ${system === "diveday" ? "rounded-t-panel bg-surface" : ""}`}
               >
-                <span className={`block ${ITEM_TITLE_CLASS}`}>
-                  {labels.systems[system].name}
-                  {system === "fareharbor" ? (
-                    <span className="ms-1.5 text-sm font-normal text-muted">
-                      {labels.estimated}
-                    </span>
-                  ) : null}
-                </span>
+                <span className={ITEM_TITLE_CLASS}>{labels.systems[system].name}</span>
+                {system === "fareharbor" ? (
+                  <span className="ms-2 text-sm font-normal text-muted">
+                    {labels.systems.fareharbor.estimated}
+                  </span>
+                ) : null}
               </th>
             ))}
           </tr>

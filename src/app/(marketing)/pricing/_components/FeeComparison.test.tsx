@@ -16,9 +16,8 @@ const labels: FeeComparisonLabels = {
   total: "Each month",
   range: "{low} to {high}",
   totalNote: "{percent} of the month",
-  estimated: "(estimated)",
   systems: {
-    fareharbor: { name: "FareHarbor" },
+    fareharbor: { name: "FareHarbor", estimated: "(estimated)" },
     diveday: { name: "DiveDay" },
   },
 };
@@ -57,7 +56,6 @@ describe("FeeComparison", () => {
     expect(marketplace.textContent).toContain("15% to 30% ($900 to $1,800)");
     const ota = screen.getByRole("row", { name: /OTA booking fee/ });
     expect(ota.textContent).toContain("2% ($120)");
-    // Only FareHarbor's rates are reported rather than published, so only its heading says so.
-    expect(screen.getAllByText("(estimated)").length).toBe(1);
+    expect(screen.getByText("(estimated)")).toBeTruthy();
   });
 });

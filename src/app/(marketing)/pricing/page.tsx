@@ -99,10 +99,10 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
     total: t("marketing.pricing.compare.lines.total"),
     range: t("marketing.pricing.compare.range", { low: "{low}", high: "{high}" }),
     totalNote: t("marketing.pricing.compare.totalNote", { percent: "{percent}" }),
-    estimated: t("marketing.pricing.compare.estimated"),
     systems: {
       fareharbor: {
         name: fareHarborGuide?.competitor ?? "FareHarbor", // i18n-exempt: a product name
+        estimated: t("marketing.pricing.compare.systems.fareharbor.estimated"),
       },
       diveday: {
         name: "DiveDay", // i18n-exempt: our product name

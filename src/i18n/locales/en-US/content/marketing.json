@@ -1043,7 +1043,11 @@
       "title": "What a month could cost",
       "lede": "Move the slider to the money your shop takes in. Each column adds the software’s fee to card processing, so you see what leaves your account.",
       "sliderLabel": "Money received in a month",
-      "estimated": "(estimated)",
+      "systems": {
+        "fareharbor": {
+          "estimated": "(estimated)"
+        }
+      },
       "lines": {
         "subscription": "Subscription fee",
         "free": "Free",
