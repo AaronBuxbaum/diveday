@@ -575,13 +575,16 @@ export async function beginOfflineTenantVerificationRound(): Promise<number> {
 async function readStoredRecord(
   db: IDBDatabase,
   tripId: string,
-): Promise<StoredRecord | undefined> {
-  const transaction = db.transaction(MANIFEST_STORE, "readonly");
-  const record = (await requestResult(transaction.objectStore(MANIFEST_STORE).get(tripId))) as
-    | StoredRecord
-    | undefined;
+): Promise<{ record: StoredRecord | undefined; tenantRound: unknown }> {
+  const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readonly");
+  const [record, tenantRound] = await Promise.all([
+    requestResult(transaction.objectStore(MANIFEST_STORE).get(tripId)) as Promise<
+      StoredRecord | undefined
+    >,
+    requestResult(transaction.objectStore(KEY_STORE).get(TENANT_ROUND_KEY)) as Promise<unknown>,
+  ]);
   await transactionDone(transaction);
-  return record;
+  return { record, tenantRound };
 }
 
 /**
@@ -682,7 +685,7 @@ function isPastPendingGrace(
 export async function loadOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
   const db = await openDatabase();
   try {
-    const record = await readStoredRecord(db, tripId);
+    const { record, tenantRound } = await readStoredRecord(db, tripId);
     if (!record) return null;
     const key = await encryptionKey(db);
     // A failed read leaves the unknown ciphertext in place, even after expiry.
@@ -721,7 +724,7 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
         throw new OfflineManifestError("unavailable");
       }
       if (pendingEvents === 0) {
-        if (!(await deleteExpiredRecordIfUnchanged(record, db))) {
+        if (!(await deleteExpiredRecordIfUnchanged(record, tenantRound, db))) {
           throw new OfflineManifestError("unavailable");
         }
         return null;
@@ -1159,17 +1162,40 @@ export async function wipeOfflineMedicalAlerts(
 
 async function deleteExpiredRecordIfUnchanged(
   expected: StoredRecord,
+  expectedRound: unknown,
   db: IDBDatabase,
 ): Promise<boolean> {
-  const transaction = db.transaction(MANIFEST_STORE, "readwrite");
+  // Expiry cleanup currently also runs before any tenant verification. An
+  // unchanged missing or zero round preserves that behavior; it is not proof
+  // that a tenant was authenticated. Older shells can bypass this fence.
+  if (
+    expectedRound !== undefined &&
+    (typeof expectedRound !== "number" || !Number.isSafeInteger(expectedRound) || expectedRound < 0)
+  )
+    return false;
+  const transaction = db.transaction([KEY_STORE, MANIFEST_STORE], "readwrite");
   const done = transactionDone(transaction);
   const store = transaction.objectStore(MANIFEST_STORE);
   let deleted = false;
-  store.get(expected.tripId).onsuccess = (event) => {
-    const current = (event.target as IDBRequest<StoredRecord | undefined>).result;
+  let recordReady = false;
+  let roundReady = false;
+  let current: StoredRecord | undefined;
+  let currentRound: unknown;
+  const maybeDelete = () => {
+    if (!recordReady || !roundReady || currentRound !== expectedRound) return;
     if (!current || !sameSupportedRecord(expected, current)) return;
     store.delete(expected.tripId);
     deleted = true;
+  };
+  store.get(expected.tripId).onsuccess = (event) => {
+    current = (event.target as IDBRequest<StoredRecord | undefined>).result;
+    recordReady = true;
+    maybeDelete();
+  };
+  transaction.objectStore(KEY_STORE).get(TENANT_ROUND_KEY).onsuccess = (event) => {
+    currentRound = (event.target as IDBRequest<unknown>).result;
+    roundReady = true;
+    maybeDelete();
   };
   await done;
   if (deleted) announceManifestChange(expected.tripId, "delete");

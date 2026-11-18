@@ -183,6 +183,56 @@ it("does not expire a replacement that arrived while an empty copy was being rea
   }
 });
 
+it("does not expire a copy after the device begins a newer tenant verification", async () => {
+  const tripId = "tenant-round-expiry";
+  await saveOfflineManifest(payload(tripId));
+  const original = (await rawStoredRecord(tripId)) as Record<string, unknown>;
+  const expired = { ...original, expiresAt: "2020-01-01T00:00:00.000Z" };
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("diveday-offline-manifests", 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction("manifests", "readwrite");
+      tx.objectStore("manifests").put(expired);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+  await beginOfflineTenantVerificationRound();
+  const decrypt = crypto.subtle.decrypt.bind(crypto.subtle);
+  let entered!: () => void;
+  let release!: () => void;
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const barrier = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const spy = vi.spyOn(crypto.subtle, "decrypt").mockImplementation((async (
+    ...args: Parameters<typeof crypto.subtle.decrypt>
+  ) => {
+    const plaintext = await decrypt(...args);
+    entered();
+    await barrier;
+    return plaintext;
+  }) as typeof crypto.subtle.decrypt);
+  try {
+    const loading = loadOfflineManifest(tripId);
+    await started;
+    await beginOfflineTenantVerificationRound();
+    release();
+    await expect(loading).rejects.toMatchObject({ code: "unavailable" });
+    expect(await rawStoredRecord(tripId)).toEqual(expired);
+  } finally {
+    release();
+    spy.mockRestore();
+  }
+});
+
 it("uses the winning encryption key when two first saves generate keys without Web Locks", async () => {
   const prior = Object.getOwnPropertyDescriptor(navigator, "locks");
   Object.defineProperty(navigator, "locks", { configurable: true, value: undefined });
