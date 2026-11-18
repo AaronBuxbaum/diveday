@@ -14,7 +14,7 @@ const trip = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}`;
 const deck = `${trip}/manifest?checkpoint=after_dive_1`;
 signedInAsOwner();
 
-test.describe(() => {
+test.describe("isolated operational fixture", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
   test("offline Deck records a named person on one small phone screen", async ({
     page,

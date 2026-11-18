@@ -69,7 +69,7 @@ for (const scheme of ["light", "dark"] as const) {
         await afterRecord;
         await capture(page, "trip-deck-receipt", scheme);
       });
-      test.describe(() => {
+      test.describe("isolated operational fixture", () => {
         test.use({
           storageState: { cookies: [], origins: [] },
           privateShopSlug: "deck-offline-receipt",

@@ -226,7 +226,7 @@ for (const scheme of ["light", "dark"] as const) {
        * of the page — a second full-page shot of the same screen would cost two
        * baselines to photograph one block twice.
        */
-      test.describe(() => {
+      test.describe("isolated operational fixture", () => {
         test.use({
           storageState: { cookies: [], origins: [] },
           privateShopSlug: "manifest-plan-change",

@@ -44,7 +44,7 @@ test("every phase of a departure opens from the strip, and Edit trip beside them
  * out, On the water says who is not recorded back, and its roll call door opens
  * the count for the dive that just ended, not the dock's.
  */
-test.describe(() => {
+test.describe("isolated on-water fixture", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
   test("On the water opens the roll call for the dive that just ended in one tap", async ({
     page,
@@ -70,7 +70,7 @@ test.describe(() => {
  * **Close out a wrapped trip.** Wrapped up lists what is left (a dive with no
  * log), each with its fix; logging the dive takes it off the list.
  */
-test.describe(() => {
+test.describe("isolated wrapped fixture", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
   test("Wrapped up lists what is left, and logging the dive closes it", async ({
     page,
