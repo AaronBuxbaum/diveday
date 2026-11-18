@@ -14,89 +14,65 @@
     "stepsLede": "Priya reserva una inmersión. Cada paso es la pantalla que ve tu centro en ese momento.",
     "steps": {
       "browse": {
-        "when": "Días antes",
-        "title": "Elige un barco en tu página",
-        "note1": "Es tu página, con tu foto, tu nombre y tu semana de barcos, así que sabe de quién es el barco que mira.",
-        "note2": "Toca el que le encaja esta semana. No crea una cuenta ni descarga una aplicación.",
-        "mockupLabel": "La página de Blue Mantis: los barcos de la semana, Priya toca el Arrecife de dos tanques y su tarjeta de reserva muestra tres plazas libres y un botón Reservar y pagar."
+        "title": "Un buceador encuentra su barco en tu página",
+        "note": "Ve la semana y toca una salida, sin crear una cuenta ni descargar una aplicación.",
+        "mockupLabel": "La página de Blue Mantis: los barcos de la semana, Priya hace clic en el Arrecife de dos tanques, se abre la página de plazas y toca Reservar y pagar para llegar al pago."
       },
       "pay": {
-        "when": "En cuanto reserva",
         "title": "Paga con tarjeta y queda reservada",
-        "note1": "Una página corta y un solo pago. El enlace a su salida llega a su correo antes de que cierre la pestaña.",
-        "note2": "Sin depósitos que perseguir ni llamadas que atender. Un buceador reservado es un buceador que ya pagó.",
+        "note": "Su enlace del viaje llega a su correo antes de que cierre la pestaña.",
         "mockupLabel": "La página de pago: Priya escribe el número de su tarjeta, la caducidad y el código, toca Pagar y el pedido dice Pagado."
       },
       "money": {
-        "when": "Un momento después",
-        "title": "El dinero ya está en Pedidos, contado",
-        "note1": "Su reserva está arriba en la lista de hoy, pagada, y nadie tuvo que anotarla.",
-        "note2": "Solo un pedido que te necesita lleva una etiqueta, así que de un vistazo sabes si hay algo abierto.",
+        "title": "El pago aparece en Pedidos",
+        "note": "Ya contado, y nadie escribe nada.",
         "mockupLabel": "La página de Pedidos de un centro de ejemplo: la reserva de Priya Sharma llega arriba en la lista de hoy, pagada."
       },
       "onboard": {
-        "when": "Ese mismo día",
-        "title": "Le cuenta al centro quién es en un minuto",
-        "note1": "Su nombre, su contacto y su número de PADI salen de ella, desde su teléfono, en un minuto.",
-        "note2": "Cuando llega al mostrador, el centro ya tiene lo necesario para subirla al barco.",
-        "mockupLabel": "La página de registro del centro: Priya escribe su nombre, su correo, PADI Advanced Open Water y el número de su tarjeta, lo envía y lee Ya estás archivado."
+        "title": "Te cuenta quién es",
+        "note": "Nombre, agencia y nivel desde su teléfono, así que en el mostrador no queda nada por preguntar.",
+        "mockupLabel": "La página de registro completa del centro: Priya escribe su nombre y correo, elige PADI y Advanced Open Water en los menús, agrega el número de su tarjeta y envía la primera parte; la página dice Ya estás archivado."
       },
       "unsigned": {
-        "when": "A la mañana siguiente",
-        "title": "Ves quién no está listo, y por qué",
-        "note1": "Cada fila dice qué falta y para qué barco, así que lo resuelves hoy y no en el muelle.",
-        "note2": "Un recordatorio le vuelve a enviar la exención, y tú no escribiste ni una palabra.",
+        "title": "Quien aún no puede embarcar está en tu lista",
+        "note": "Ves el motivo, y un toque le envía un recordatorio.",
         "mockupLabel": "Un día en un centro de ejemplo: una salida con 7 de 9 buceadores listos, y la exención abierta de Priya Sharma con un botón Recordar exención."
       },
       "sign": {
-        "when": "Antes de que llegue",
-        "title": "Hace su papeleo en su propio teléfono",
-        "note1": "Responde la pregunta médica y escribe su nombre, mucho antes de que esté cerca del muelle.",
-        "note2": "Sin portapapeles, sin bolígrafo y sin una hoja que escanear después. Una respuesta que necesita otra mirada llega a la tripulación antes de que salga el barco.",
+        "title": "Hace su papeleo en su teléfono",
+        "note": "La respuesta médica y su firma, listas antes de que llegue.",
         "mockupLabel": "La página de la exención en un teléfono: Priya toca No en la pregunta médica, escribe su nombre, toca Firmar exención y lee Firmado."
       },
       "check": {
-        "when": "Cada mañana, para la semana que viene",
-        "title": "En cuanto firma, sale de tu lista",
-        "note1": "La lista solo guarda a quien necesita algo de ti. Cuando la aprueban, deja de estar en ella.",
-        "note2": "No hay botón de “marcar a todos como listos”. Lo dejamos fuera a propósito.",
+        "title": "Cuando firma, sale de tu lista",
+        "note": "Solo quedan las personas que todavía te necesitan.",
         "mockupLabel": "Hoy en el centro de demostración: una salida con 7 de 9 buceadores listos y dos filas en Pendiente.",
         "readyLabel": "Hoy en un centro de ejemplo después de que Priya firma: 8 de 9 buceadores listos y una fila en Pendiente."
       },
       "card": {
-        "when": "Antes del barco",
-        "title": "Su tarjeta se verifica con PADI antes de contar",
-        "note1": "Le dio al centro su número de PADI al registrarse. Con un clic, la extensión de DiveDay lo busca en PADI desde tu propio navegador.",
-        "note2": "Ves la respuesta de PADI en su ficha, y nadie tiene que adivinar en el muelle.",
+        "title": "Su tarjeta se verifica con PADI",
+        "note": "Un clic y la extensión la busca, así que nadie adivina en el muelle.",
         "mockupLabel": "La ficha de Priya Sharma: su tarjeta PADI Advanced Open Water con el número que dio, y la extensión de DiveDay verificándolo en PADI y marcándola como certificada."
       },
       "desk": {
-        "when": "En el mostrador",
         "title": "En el mostrador, registrarse es un toque",
-        "note1": "Su nombre, su exención y su tarjeta ya están resueltos, así que no queda nada que preguntarle.",
-        "note2": "El número de arriba sube con ella. Quien aún no tiene la tarjeta verificada sigue en la lista con su nombre, así que nadie sube a bordo por error.",
+        "note": "Quien aún no tiene la tarjeta verificada sigue en la lista.",
         "mockupLabel": "El mostrador de llegadas, 8 de 9 aquí: Priya Sharma acaba de registrarse y un buceador aún no puede subir porque su tarjeta no está verificada."
       },
       "aboard": {
-        "when": "En el muelle, y después de cada inmersión",
-        "title": "La tripulación pasa lista nombre por nombre, con señal o sin ella",
-        "note1": "Se nombra a cada persona antes de que salga el barco y después de cada inmersión, así que nadie es solo un número.",
-        "note2": "Fuera de cobertura, el teléfono sigue pasando lista desde su copia guardada. La misma lista se imprime para la tripulación que prefiere papel.",
+        "title": "La tripulación llama a cada buceador por su nombre",
+        "note": "Antes de que salga el barco y después de cada inmersión, incluso sin señal.",
         "boatLabel": "La cubierta tras la inmersión 1: 9 de 9 buceadores a bordo, con Priya Sharma y Tom Okafor marcados de vuelta."
       },
       "recap": {
-        "when": "Después de que vuelva el barco",
         "title": "Se lleva el día a casa",
-        "note1": "Esa tarde le llega su página con las cifras de su inmersión, su propio perfil de profundidad, fotos del viaje y los animales que vio.",
-        "note2": "Lleva el nombre de tu centro, así que tu nombre vuelve a casa con ella.",
+        "note": "Su registro de inmersión, fotos del viaje y los animales que vio, con el nombre de tu centro.",
         "mockupLabel": "La página del informe de un buceador: el registro de la inmersión con sus cifras y un gráfico de profundidad a lo largo del tiempo, y después fotos del viaje y tres especies vistas."
       },
       "review": {
-        "when": "Esa tarde",
-        "title": "Después le preguntan cómo fue",
-        "note1": "Primero va la nota de la propia tripulación y después una sola pregunta. Es fácil pedírselo a quien acaba de tener un gran día.",
-        "note2": "La escribe con el día fresco, y tú la lees antes de que se publique.",
-        "mockupLabel": "El resto del informe de un buceador: una nota de la tripulación, y Priya llena cinco estrellas, escribe una reseña entusiasta y toca Enviar mi opinión."
+        "title": "Te deja una reseña entusiasta",
+        "note": "La escribe con el día fresco, y tú la lees antes de que se publique.",
+        "mockupLabel": "El resto del informe de un buceador: una nota de la tripulación, y Priya hace clic en cinco estrellas, escribe una reseña entusiasta y toca Enviar mi opinión."
       }
     },
     "walk": {
@@ -108,20 +84,6 @@
       "next": "Paso siguiente",
       "goTo": "Ir al paso {n}",
       "hint": "Toca la pantalla, desliza o usa las flechas del teclado.",
-      "captions": {
-        "browse": "Priya mira la página del centro, toca el Arrecife de dos tanques y elige su plaza.",
-        "pay": "Escribe su tarjeta, paga y queda reservada.",
-        "money": "Su pago llega a Pedidos, ya pagado.",
-        "onboard": "Rellena sus datos, con su número de PADI.",
-        "unsigned": "A la mañana siguiente su exención sigue abierta, y la lista ofrece un recordatorio.",
-        "sign": "En su teléfono toca No en la pregunta médica, escribe su nombre y firma.",
-        "check": "Su fila sale de la lista y el número de listos sube en uno.",
-        "card": "Con un clic, la extensión verifica su número de PADI en PADI.",
-        "desk": "En el mostrador, un toque la registra.",
-        "aboard": "Después de la inmersión 1 la tripulación la llama por su nombre. Los nueve están de vuelta a bordo.",
-        "recap": "Por la tarde llega su informe, con su inmersión, fotos del viaje y los animales que vio.",
-        "review": "Lee la nota de la tripulación y escribe una reseña entusiasta de cinco estrellas."
-      },
       "doorsTitle": "Ahora prueba la parte que es tuya",
       "doorDesk": "Llevo el mostrador",
       "doorDeskNote": "Mira quién está listo y registra a los buceadores.",

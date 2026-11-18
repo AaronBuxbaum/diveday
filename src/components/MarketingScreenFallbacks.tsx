@@ -9,7 +9,7 @@ import { LedgerRow } from "@/components/ui/ledger";
 import { ReadinessBar } from "@/components/ui/ProgressBar";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
-import { WalkTyped } from "@/components/WalkTyped";
+import { WalkCursor, WalkTyped } from "@/components/WalkTyped";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -293,18 +293,17 @@ export function FrontDeskReadinessFallback({
   // the same key, so the picture cannot drift from the product (#2402).
   const stageWord = staffTranslator(locale)(STAGE_WORD_KEYS.boarding);
   const rows = [
-    ...(unsigned
-      ? [
-          {
-            kind: t("fallback.kindWaiver"),
-            // i18n-exempt: sample diver name used only in marketing mockups
-            name: "Priya Sharma",
-            detail: t("fallback.waiverPending"),
-            action: t("fallback.nudgeWaiver"),
-            nudged,
-          },
-        ]
-      : []),
+    // Her row is the one the finished screen drops: drawn collapsed (`walk-shrink`) it closes in the
+    // walk's last phase, and it takes no room anywhere else.
+    {
+      kind: t("fallback.kindWaiver"),
+      // i18n-exempt: sample diver name used only in marketing mockups
+      name: "Priya Sharma",
+      detail: t("fallback.waiverPending"),
+      action: unsigned ? t("fallback.nudgeWaiver") : null,
+      nudged,
+      gone: !unsigned,
+    },
     {
       kind: t("fallback.kindCertifications"),
       // i18n-exempt: sample diver name used only in marketing mockups
@@ -312,6 +311,7 @@ export function FrontDeskReadinessFallback({
       detail: t("fallback.certPending"),
       action: null,
       nudged: false,
+      gone: false,
     },
   ];
   return (
@@ -352,6 +352,7 @@ export function FrontDeskReadinessFallback({
             <LedgerRow
               key={row.name}
               stacked
+              className={row.gone ? "walk-shrink" : ""}
               leading={<StatusMark variant="warning" size="md" className="text-warning-strong" />}
               kind={{ word: row.kind, tone: "warning" }}
               trailing={
@@ -761,18 +762,20 @@ export function RecapPageFallback({
                 {[0, 1, 2, 3, 4].map((star) => (
                   <span key={star} className="relative inline-flex">
                     <ReviewStar filled={false} />
+                    {/* Her pointer presses the fifth star 900 ms in; the stars fill one by one from it. */}
                     <span
-                      data-walk-late=""
-                      style={{ "--late-delay": `${200 + star * 150}ms` } as CSSProperties}
+                      data-walk-star=""
+                      style={{ "--late-delay": `${950 + star * 110}ms` } as CSSProperties}
                       className="absolute inset-0"
                     >
                       <ReviewStar filled />
                     </span>
+                    {star === 4 && writing ? <WalkCursor at={900} /> : null}
                   </span>
                 ))}
               </div>
               <div className="mt-3 flex min-h-16 items-start rounded-lg border border-border bg-surface px-3 py-2 text-sm">
-                <WalkTyped text={t("fallback.recap.reviewText")} delay={1200} />
+                <WalkTyped text={t("fallback.recap.reviewText")} delay={1700} />
               </div>
               {posted ? (
                 <p

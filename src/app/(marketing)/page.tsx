@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
-import { type ReactNode, Suspense } from "react";
+import { Suspense } from "react";
 import { DiverDoor } from "@/app/_components/DiverDoor";
 import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
@@ -15,7 +15,7 @@ import { STEPS, WALK_CLASSES } from "@/app/_components/home-steps";
 import { JsonLd } from "@/components/JsonLd";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingReveal } from "@/components/MarketingReveal";
-import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
+import { MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { requestPricingOffer } from "@/features/pricing-offer";
@@ -100,37 +100,6 @@ async function LocalizedHomeBody() {
 }
 
 /**
- * The one kicker for a *part of a section*: a short marker with a hairline rule
- * running out to the edge of its column. The booking's steps use it for when
- * each one happens, the portability diptych for which direction a record is
- * travelling. One atom, several compositions around it — inventing a new
- * treatment per band is what made the old page read as six renders of one
- * template.
- *
- * It is deliberately *not* the page's only small-caps-ish label: the hero's
- * category line and the directory's phase labels are uppercase, and they stay
- * that way because they name a whole thing (the product category, a part of a
- * shop's year) rather than locate a part within a section.
- *
- * Page-local until a second marketing page wants the same marker — at which
- * point it belongs in `src/components/MarketingSections.tsx` with the other
- * shared visual atoms, not copied.
- *
- * `as="h3"` where the marker is the *only* label its column has (the diptych),
- * so the section's two halves are named in the document outline; the step
- * rows leave it a `<p>`, because the `<h3>` they already carry is their name
- * and a marker heading above it would be a second, emptier one.
- */
-function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: "p" | "h3" }) {
-  return (
-    <div className="flex items-center gap-4">
-      <Eyebrow as={Tag}>{children}</Eyebrow>
-      <span aria-hidden="true" className="h-px flex-1 bg-border" />
-    </div>
-  );
-}
-
-/**
  * The whole home page body, cached per negotiated locale (DIVER_LOCALES —
  * two entries). Everything here is deterministic given `locale`:
  * message-bundle copy and the feature registry. Nothing
@@ -193,8 +162,9 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               (step): WalkBeat => ({
                 step: step.id,
                 frame: step.id,
-                caption: t(`marketing.home.walk.captions.${step.id}`),
-                typed: step.typed,
+                caption: t(`marketing.home.steps.${step.id}.title`),
+                lead: step.lead,
+                hold: step.hold,
               }),
             )}
             labels={{
@@ -233,16 +203,12 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                     <div
                       className={`contents lg:col-span-5 lg:flex lg:flex-col ${index % 2 === 1 ? "lg:order-last" : ""}`}
                     >
-                      <div>
-                        <SectionMarker>{t(`marketing.home.steps.${step.id}.when`)}</SectionMarker>
-                        <h3 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
-                          {t(`marketing.home.steps.${step.id}.title`)}
-                        </h3>
-                      </div>
-                      <MarginNotes
-                        notes={step.notes.map((key) => t(key))}
-                        className="order-2 max-w-lg lg:order-none lg:mt-5"
-                      />
+                      <h3 className={`${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
+                        {t(`marketing.home.steps.${step.id}.title`)}
+                      </h3>
+                      <p className="order-2 mt-3 max-w-lg text-lg leading-7 text-muted lg:order-none">
+                        {t(step.note)}
+                      </p>
                       {/* The page's own name is the link's words: the reader
                         has just read what the step does, and the name says
                         where the rest of it is. Its arrow is the "→" glyph

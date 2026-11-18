@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
 /**
  * Text Priya types into a drawn field. In the homepage walkthrough's first phase the characters
@@ -32,6 +33,89 @@ export function WalkField({
       <p className="text-xs font-medium text-muted">{label}</p>
       <div className="mt-1 flex min-h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm">
         {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The fingertip the homepage walkthrough moves (the same ring as the tap that ends a beat, never an
+ * arrow): it travels to the control that holds it (which is `relative`), presses `at` ms into the
+ * beat, and goes. Only the walk's first phase draws it
+ * (`data-walk-cursor`, `globals.css`); the control's own change is timed by the caller to the same `at`.
+ */
+export function WalkCursor({ at }: { at: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-walk-cursor=""
+      style={{ "--cursor-at": `${at}ms` } as CSSProperties}
+    ></span>
+  );
+}
+
+/**
+ * A drawn dropdown: its caption over a box with the caret at its end. In the walk's first phase
+ * the placeholder is replaced by her choice `at` ms in; everywhere else the choice shows.
+ */
+export function WalkSelect({
+  label,
+  placeholder,
+  value,
+  at,
+  className,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  at: number;
+  className?: string;
+}) {
+  const delay = { "--late-delay": `${at}ms` } as CSSProperties;
+  return (
+    <div className={className}>
+      <p className="text-xs font-medium text-muted">{label}</p>
+      <div className="relative mt-1 flex min-h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm">
+        <span data-walk-gone="" style={delay} className="text-muted">
+          {placeholder}
+        </span>
+        <span
+          data-walk-late=""
+          style={delay}
+          className="absolute inset-y-0 start-3 flex items-center"
+        >
+          {value}
+        </span>
+        <span aria-hidden="true" className="ms-auto text-muted">
+          <DisclosureCaret direction="down" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One screen giving way to the next inside the walk's first phase, `at` ms in (a tap that opens
+ * another page): both are drawn in one cell, the first goes and the second arrives. The second
+ * is what the tap phase and everything after show.
+ */
+export function WalkSwap({
+  at,
+  from,
+  to,
+}: {
+  at: number;
+  from: React.ReactNode;
+  to: React.ReactNode;
+}) {
+  const delay = { "--late-delay": `${at}ms` } as CSSProperties;
+  return (
+    <div className="grid">
+      <div data-walk-gone="" style={delay} className="col-start-1 row-start-1">
+        {from}
+      </div>
+      <div data-walk-late="" style={delay} className="col-start-1 row-start-1">
+        {to}
       </div>
     </div>
   );

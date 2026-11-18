@@ -201,7 +201,7 @@ test.describe("before the player has run", () => {
     // The owner who still carries paper learns it on the roll-call step, whose
     // link is the page that lists the packet (issue #4322).
     await expect(
-      stepsBand.getByText(diverTranslator("en-US")("marketing.home.steps.aboard.note2")),
+      stepsBand.getByText(diverTranslator("en-US")("marketing.home.steps.aboard.note")),
     ).toBeVisible();
 
     // Each step ends in its feature page, in the booking's order, and none of
@@ -230,7 +230,9 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
 
   // Reduced motion: it waits on the first beat, paused.
-  await expect(walk.getByText(t("marketing.home.walk.captions.browse"))).toBeVisible();
+  await expect(
+    walk.getByRole("heading", { name: t("marketing.home.steps.browse.title") }),
+  ).toBeVisible();
   await expect(walk.getByRole("button", { name: t("marketing.home.walk.play") })).toBeVisible();
   await expect(walk.getByRole("img")).toHaveCount(1);
 
@@ -250,7 +252,9 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
   ] as const;
   for (const beat of beats) {
     await walk.getByRole("button", { name: t("marketing.home.walk.next") }).press("ArrowRight");
-    await expect(walk.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
+    await expect(
+      walk.getByRole("heading", { name: t(`marketing.home.steps.${beat}.title`) }),
+    ).toBeVisible();
     await expect(walk.getByRole("img")).toHaveCount(1);
   }
   await expect(
@@ -259,9 +263,13 @@ test("the homepage walkthrough follows one diver, by hand and by itself", async 
 
   // Every segment of the bar is a door to its step.
   await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 4 }) }).click();
-  await expect(walk.getByText(t("marketing.home.walk.captions.onboard"))).toBeVisible();
+  await expect(
+    walk.getByRole("heading", { name: t("marketing.home.steps.onboard.title") }),
+  ).toBeVisible();
   await walk.getByRole("button", { name: t("marketing.home.walk.goTo", { n: 1 }) }).click();
-  await expect(walk.getByText(t("marketing.home.walk.captions.browse"))).toBeVisible();
+  await expect(
+    walk.getByRole("heading", { name: t("marketing.home.steps.browse.title") }),
+  ).toBeVisible();
 });
 
 test("the walkthrough's bar fills as the clock, and holding the screen freezes it", async ({

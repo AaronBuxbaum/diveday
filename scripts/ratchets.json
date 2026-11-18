@@ -686,7 +686,7 @@
     "e2e/inbox.spec.ts": 1,
     "e2e/incident-reports.spec.ts": 2,
     "e2e/integrations.spec.ts": 1,
-    "e2e/invoicing.spec.ts": 2,
+    "e2e/invoicing.spec.ts": 1,
     "e2e/manifest.spec.ts": 2,
     "e2e/marketing.spec.ts": 7,
     "e2e/nitrox.spec.ts": 1,

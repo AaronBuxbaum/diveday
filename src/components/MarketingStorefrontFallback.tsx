@@ -3,6 +3,7 @@ import { StarRating } from "@/components/StarRating";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { DoorChevron } from "@/components/ui/ledger";
 import { FIGURE_CLASS, ITEM_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { WalkCursor } from "@/components/WalkTyped";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { AppBar, MOCK_BODY, MOCK_PRIMARY_BUTTON } from "./MarketingScreenFallbacks";
@@ -25,7 +26,7 @@ export function StorefrontFallback({
   tapBoat = false,
 }: {
   locale: DiverLocale;
-  /** The homepage walkthrough taps the Two-Tank Reef in the week's list (`data-tap-target`); no other caller does. */
+  /** The homepage walkthrough's pointer clicks the Two-Tank Reef in the week's list; no other caller does. */
   tapBoat?: boolean;
 }) {
   const t = diverTranslator(locale);
@@ -34,7 +35,7 @@ export function StorefrontFallback({
     <div className="bg-background">
       <AppBar label={t("fallback.storefront.label")} />
       <div className={`@container ${MOCK_BODY}`}>
-        <MarketingStorefrontPhoto />
+        {tapBoat ? null : <MarketingStorefrontPhoto />}
         <div className="grid gap-4 @md:grid-cols-[minmax(0,1fr)_minmax(0,13rem)] @md:items-start">
           <div>
             {/* i18n-exempt: sample shop name used only in marketing mockups */}
@@ -87,10 +88,8 @@ export function StorefrontFallback({
           <span aria-hidden="true" className="h-px flex-1 bg-border" />
         </div>
         <ul className="mt-1">
-          <li
-            data-tap-target={tapBoat ? "" : undefined}
-            className="flex flex-col gap-1 border-b border-border py-2.5 @md:flex-row @md:items-center @md:gap-4"
-          >
+          <li className="relative flex flex-col gap-1 border-b border-border py-2.5 @md:flex-row @md:items-center @md:gap-4">
+            {tapBoat ? <WalkCursor at={1600} /> : null}
             <p className="text-sm font-semibold whitespace-nowrap tabular-nums @md:w-36 @md:shrink-0">
               {t("fallback.storefront.reefTime")}
             </p>

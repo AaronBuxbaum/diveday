@@ -361,7 +361,9 @@ for (const scheme of ["light", "dark"] as const) {
             "recap",
             "review",
           ] as const) {
-            await expect(page.getByText(t(`marketing.home.walk.captions.${beat}`))).toBeVisible();
+            await expect(
+              page.getByRole("heading", { name: t(`marketing.home.steps.${beat}.title`) }),
+            ).toBeVisible();
             await capture(page, `landing-walk-${beat}`, scheme);
             if (beat !== "review") await next.click();
           }
