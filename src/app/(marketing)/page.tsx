@@ -210,8 +210,8 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                       </p>
                       {/* The page's own name is the link's words: the reader
                         has just read what the step does, and the name says
-                        where the rest of it is. Its arrow is the "→" glyph
-                        every other link on the page carries, not an icon.
+                        where the rest of it is. Its arrow is drawn by the link
+                        style (`arrow`), not typed into the words.
                         `self-start` keeps the link its own width in the `lg`
                         flex column, `justify-self-start` in the phone's grid. */}
                       {page ? (
@@ -219,6 +219,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                           href={featurePagePath(page.slug)}
                           className={buttonClass({
                             variant: "link",
+                            arrow: true,
                             flush: true,
                             className:
                               "order-3 self-start justify-self-start text-start lg:order-none lg:mt-4",
@@ -255,7 +256,10 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
 
       {/* The product directory holds the full feature list. */}
       <div className="mx-auto w-full max-w-7xl px-6 pb-12">
-        <Link href="/product#full-list" className={buttonClass({ variant: "link", flush: true })}>
+        <Link
+          href="/product#full-list"
+          className={buttonClass({ variant: "link", arrow: true, flush: true })}
+        >
           {t("marketing.home.featuresLink")}
         </Link>
       </div>
@@ -279,19 +283,34 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
             <Link
               href={switchingHref("/switching", "home-records")}
-              className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+              className={buttonClass({
+                variant: "link",
+                arrow: true,
+                flush: true,
+                className: "text-start",
+              })}
             >
               {t("marketing.home.guidesLink")}
             </Link>
             <Link
               href={switchingHref("/switching/spreadsheet", "home-records-arriving", "columns")}
-              className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+              className={buttonClass({
+                variant: "link",
+                arrow: true,
+                flush: true,
+                className: "text-start",
+              })}
             >
               {t("marketing.home.spreadsheetLink")}
             </Link>
             <Link
               href="/pricing#export"
-              className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+              className={buttonClass({
+                variant: "link",
+                arrow: true,
+                flush: true,
+                className: "text-start",
+              })}
             >
               {t("marketing.common.recordsLink")}
             </Link>

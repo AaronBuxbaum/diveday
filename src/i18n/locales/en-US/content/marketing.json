@@ -95,10 +95,10 @@
     "featuresLink": "Explore the features",
     "exportTitle": "Get your records ready for the next dive day",
     "exportDescription1": "Bring a sample of your diver list. Upload a spreadsheet and review the column matches and skipped rows before saving, or email it to us and work through the import with a person, free.",
-    "spreadsheetLink": "Your spreadsheet, column by column →",
+    "spreadsheetLink": "Your spreadsheet, column by column",
     "guidesLink": "Find the guide for your current system",
     "tryTitle": "Come run a dive day in the demo shop",
-    "stepLink": "{name} →",
+    "stepLink": "{name}",
     "percentArm": {},
     "try": {
       "hint": "A sample morning list. Tap a button to see what the desk does.",
@@ -920,7 +920,7 @@
         }
       },
       "movingTitle": "Coming from another system?",
-      "movingLink": "Find the guide for your system →"
+      "movingLink": "Find the guide for your system"
     },
     "runningTheShop": "Running the shop"
   },
@@ -966,11 +966,11 @@
       "note1": "Every staff login is in the price, front desk to captain. Nothing is counted per seat.",
       "note2": "Waivers, medical review, and the cert gate are in the price. None of it is an add-on."
     },
-    "seeFullList": "The full list is on the product page →",
+    "seeFullList": "The full list is on the product page",
     "dataExit": {
       "eyebrow": "Your records",
       "title": "Your records stay yours",
-      "door": "Open the demo as the owner →",
+      "door": "Open the demo as the owner",
       "mockupLabel": "The Data export screen in DiveDay, listing the bundle’s files with a row count for each and the account credentials that stay protected"
     },
     "faqTitle": "The questions owners ask first",
@@ -993,7 +993,7 @@
       "switching": {
         "question": "What does switching to DiveDay involve?",
         "answer": "Export a spreadsheet of customers from your current system. DiveDay’s importer brings in your divers, certification records and rental sizes, and shows what will happen before anything is saved. Guides cover {competitors}.",
-        "guidesLink": "Browse the switching guides →"
+        "guidesLink": "Browse the switching guides"
       },
       "agency": {
         "question": "Does DiveDay connect to PADI or SSI?",
@@ -1066,7 +1066,7 @@
       "directNote": "The booking fee and card processing apply to the {amount} your shop takes itself. The other {rest} goes through the marketplaces.",
       "assumptionsTitle": "How we counted",
       "assumptions": "These are estimates, not quotes. Card processing is counted in both columns on the money you take yourself, with every sale a card payment averaging {sale}, at Stripe’s published rate of 2.9% plus 30¢. FareHarbor publishes no rates and charges no subscription. Its 6% of a booking you take yourself, with card processing charged on top, is what three industry write-ups report (CaptainBook, April 9, 2026; TrekkSoft, June 30, 2026; Levy, 2026), and a fourth (hamzaliaqat.com, April 29, 2026) says processing is included, so we use the reading that is more common. It adds a 2% OTA booking fee on sales from other sites, and its contract is negotiated shop by shop. Booking.com, Viator, and GetYourGuide take 15% to 30% of a sale, so with that switch on every total is a range, and the commission is the same in both columns. DiveDay’s percent is counted only on money you take yourself, and on nothing sold through those sites. Every percent is taken off the full sale, never off what is left after another fee. Checked November 18, 2026.",
-      "guideLink": "What moving off {competitor} looks like →",
+      "guideLink": "What moving off {competitor} looks like",
       "marketplaceToggle": "Include Booking.com, Viator, and GetYourGuide",
       "marketplaceShareLabel": "Share of that money that comes through them",
       "range": "{low} to {high}"

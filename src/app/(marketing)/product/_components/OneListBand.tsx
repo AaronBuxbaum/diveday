@@ -139,7 +139,12 @@ export function OneListBand({ t }: { t: DiverTranslator }) {
           <p className={ITEM_TITLE_CLASS}>{t(k("movingTitle"))}</p>
           <Link
             href={switchingHref("/switching", "product-one-list")}
-            className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+            className={buttonClass({
+              variant: "link",
+              arrow: true,
+              flush: true,
+              className: "text-start",
+            })}
           >
             {t(k("movingLink"))}
           </Link>

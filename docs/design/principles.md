@@ -479,6 +479,11 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   in a section wears the section's name, the name goes in `STAFF_DESTINATION_TITLE_KEYS` so ⌘K
   finds the page by what it says on screen: a staffer who typed the headline used to get nothing
   back (issue #824).
+- **A text link to another page wears an arrow, and the style draws it.** `buttonClass({ variant:
+  "link", arrow: true })`, or `ARROW_LINK_CLASS` on a hand-classed link; never a "→" typed into the
+  words (`src/i18n/link-arrows.test.ts` refuses a bundle string that ends in one). No arrow on a
+  button, an in-page `#` jump, a `mailto:`, an external link (its "↗" is in the label) or a back
+  link (its "←" leads).
 - **A surface below depth 1 names its parent and links to it.** Through the page's eyebrow where it
   has one — `ShopPageHeader`'s eyebrow, or `EyebrowWayUp` for a header that is not that
   component — and through an explicit "← Parent" link only where the page has no eyebrow to spend

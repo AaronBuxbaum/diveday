@@ -19,7 +19,7 @@
     "scopeTableTitle": "What comes across, and what does not",
     "scopeTableDescription": "These are the fields DiveDay accepts when supplied. Your source file may contain only some of them.",
     "comesAcross": "Comes across",
-    "seePricing": "See what DiveDay costs →",
+    "seePricing": "See what DiveDay costs",
     "staysBehind": "Stays behind",
     "bothWaysTitle": "Keep control of your records",
     "bothWaysBody": "You can inspect the import before confirming it, and export your DiveDay records if you leave. {claim}",
@@ -32,7 +32,7 @@
     "importReadyTitle": "Review the records before the first trip",
     "importReadyBody": "Check imported identities, certification status and any accepted-waiver evidence. Historical visits do not create future bookings; prepare the departure and check each diver’s requirements separately.",
     "openImportCta": "Open Import in your shop",
-    "previewLink": "The preview screen, with our notes →",
+    "previewLink": "The preview screen, with our notes",
     "proofLink": "See the dive-day workflow",
     "proof": {
       "eyebrow": "Try the work your crew does next",
@@ -43,10 +43,10 @@
       "note2": "Diego’s pending certification stays visible under the departure.",
       "certTitle": "Check the card against the planned dive",
       "certBody": "Review certification and specialty requirements for the trip and site.",
-      "certLink": "See certification checks →",
+      "certLink": "See certification checks",
       "boatTitle": "Call each person aboard after every dive",
       "boatBody": "Save the manifest on the crew’s phone before leaving service to keep roll call available.",
-      "boatLink": "See the boat manifest →"
+      "boatLink": "See the boat manifest"
     }
   },
   "hub": {
@@ -62,7 +62,7 @@
     "previewNote2": "“Not recognized, so ignored” names the two columns it drops rather than guessing at them.",
     "previewNote3": "One row is marked skipped: it has no name. A name is the only thing a row needs.",
     "previewNote4": "“Nothing saves until you say so” is the screen’s title. In the demo: Settings → Import contacts.",
-    "previewDoor": "Open the demo as the owner →",
+    "previewDoor": "Open the demo as the owner",
     "previewMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
     "dontSeeSystem": "Not listed here",
     "dontSeeSystemBody": "Email {email} with what you use and what you want to improve. We can review a sample export with you before you decide to move.",
@@ -80,7 +80,7 @@
     "runTheDay": "Try your crew’s next trip in DiveDay",
     "readyToMove": "See how the next departure works in DiveDay",
     "walkDemoFirst": "Walk the sample shop with your crew. When you are ready, we will review your files and the handover with you.",
-    "otherGuides": "Other switching guides →",
+    "otherGuides": "Other switching guides",
     "sources": "Sources"
   },
   "spreadsheet": {
@@ -175,7 +175,7 @@
     "parallelRunNote": "Keep the sheet going as long as you like. A re-import matches divers by email and updates them instead of duplicating, so the day you stop keeping it is yours to pick.",
     "closingTitle": "The demo is the shop your sheet would land in",
     "closingDescription": "Open it as the owner, the captain or a diver. No sign-up, and nothing in it is yours to break.",
-    "otherSystems": "Switching from other software →"
+    "otherSystems": "Switching from other software"
   },
   "concierge": {
     "eyebrow": "A person does the import with you",

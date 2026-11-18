@@ -227,7 +227,12 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                 />
                 <Link
                   href="/product"
-                  className={buttonClass({ variant: "link", flush: true, className: "mt-4" })}
+                  className={buttonClass({
+                    variant: "link",
+                    arrow: true,
+                    flush: true,
+                    className: "mt-4",
+                  })}
                 >
                   {t("marketing.pricing.seeFullList")}
                 </Link>
@@ -273,6 +278,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                 href={`/switching/${fareHarborGuide.slug}`}
                 className={buttonClass({
                   variant: "link",
+                  arrow: true,
                   flush: true,
                   className: "mt-6 text-start",
                 })}
@@ -302,6 +308,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                     href={item.link.href}
                     className={buttonClass({
                       variant: "link",
+                      arrow: true,
                       flush: true,
                       className: "mt-1 text-start",
                     })}
