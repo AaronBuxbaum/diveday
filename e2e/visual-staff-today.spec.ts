@@ -752,7 +752,12 @@ for (const scheme of ["light", "dark"] as const) {
         await depart(10);
 
         await page.goto(counterPath("blue-mantis", tripId));
-        const deskRow = () => rosterRow(page, "Odile Marchand");
+        const deskRow = async () => {
+          // Wait for the real guest masthead, not the initially empty roster.
+          // Otherwise rosterRow can return before it unfolds and opens Odile.
+          await expect(page.locator("[data-guest-folios]").filter({ visible: true })).toBeVisible();
+          return rosterRow(page, "Odile Marchand");
+        };
         const row = await deskRow();
         await openRosterDetails(row);
         await openPaperWaiverForm(row);
