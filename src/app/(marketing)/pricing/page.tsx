@@ -100,7 +100,6 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
     processing: t("marketing.pricing.compare.lines.processing"),
     bookingCom: t("marketing.pricing.compare.lines.bookingCom"),
     total: t("marketing.pricing.compare.lines.total"),
-    included: t("marketing.pricing.compare.lines.included"),
     totalNote: t("marketing.pricing.compare.totalNote", { percent: "{percent}" }),
     saving: t("marketing.pricing.compare.saving", { percent: "{percent}" }),
     systems: {

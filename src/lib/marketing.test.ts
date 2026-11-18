@@ -383,7 +383,7 @@ describe("the fee comparison labels its figures as sourced estimates", () => {
   for (const locale of DIVER_LOCALES) {
     it(`names the sources and the date, and spells no DiveDay rate, in ${locale}`, () => {
       const assumptions = marketingMessages(locale)["marketing.pricing.compare.assumptions"];
-      expect(assumptions).toMatch(/hamzaliaqat\.com/);
+      expect(assumptions).toMatch(/CaptainBook/);
       expect(assumptions).toMatch(/SiteMinder/);
       expect(assumptions).toMatch(/2026/);
       expect(assumptions).toMatch(

@@ -6,10 +6,11 @@ import { percentFeeCents } from "../../lib/billing/pricing-plans";
  * estimate for a reader to move, never a quote: the assumptions below are named
  * on the page beside the sources and the date each was checked.
  *
- * Software fee and card processing are counted together, because FareHarbor's
- * reported ~6% already includes processing while DiveDay's percent does
- * not; comparing the percents alone would flatter DiveDay by about three
- * points. Amounts are USD cents.
+ * Software fee and card processing are counted together and the same way:
+ * three of four write-ups say FareHarbor's percent is charged with card
+ * processing on top (CaptainBook 2026-04-09, TrekkSoft 2026-06-30, Levy 2026),
+ * one says it is included (hamzaliaqat.com 2026-04-29), and Aaron says on top, so
+ * both columns add processing to their percent. Amounts are USD cents.
  */
 export const FEE_ASSUMPTIONS = {
   /** An average sale, which only the card processor's fixed part depends on. */
@@ -17,8 +18,10 @@ export const FEE_ASSUMPTIONS = {
   /** Stripe's published US rate for a domestic card: 2.9% + 30¢ (stripe.com/pricing, 2026-11-18). */
   cardBasisPoints: 290,
   cardFixedCents: 30,
-  /** FareHarbor: no published schedule; a third-party report of ~6% including processing (2026-04-29). */
+  /** FareHarbor: no published schedule; third-party reports of ~6% of a direct booking (2026). */
   fareHarborBasisPoints: 600,
+  /** One write-up (Levy, 2026) puts a third-party or API booking at 2%; the others give 6% on every channel. */
+  fareHarborThirdPartyBasisPoints: 200,
   /** Booking.com publishes no rate we could confirm for dive activities; hotels pay 10 to 25%. */
   bookingComBasisPoints: 1_500,
 } as const;
@@ -28,9 +31,9 @@ export type ComparedSystem = (typeof COMPARED_SYSTEMS)[number];
 
 export type SystemCost = {
   system: ComparedSystem;
-  /** The system's own fee, which for FareHarbor includes card processing. */
+  /** The system's own percent (and monthly fee), before card processing. */
   softwareCents: number;
-  /** Card processing paid on top of the software fee; 0 where the software fee already includes it. */
+  /** Card processing paid on top of the software fee. */
   processingCents: number;
   /** Booking.com's commission on the share of money that comes through it; the same in every column. */
   bookingComCents: number;
@@ -42,9 +45,9 @@ export type DiveDayTerms = { monthlyCents: number; basisPoints: number };
 /**
  * `bookingComShare` is the fraction (0 to 1) of the month's money that comes
  * through Booking.com, or 0 with the toggle off. Money through Booking.com
- * pays no card processing to the shop, and is charged the percent by FareHarbor
- * (its reported 6% is on every channel) and by DiveDay (which counts money
- * recorded as received): the choice that leans toward the competitor.
+ * pays no card processing to the shop. FareHarbor charges its lower third-party
+ * percent on it (the sources disagree; this leans toward the competitor), and
+ * DiveDay its percent, because it counts money recorded as received.
  */
 export function compareMonth(
   receivedCents: number,
@@ -72,7 +75,12 @@ export function compareMonth(
     totalCents: softwareCents + processingCents + bookingCom,
   });
   return [
-    row("fareharbor", percentFeeCents(received, FEE_ASSUMPTIONS.fareHarborBasisPoints), 0),
+    row(
+      "fareharbor",
+      percentFeeCents(direct, FEE_ASSUMPTIONS.fareHarborBasisPoints) +
+        percentFeeCents(viaBookingCom, FEE_ASSUMPTIONS.fareHarborThirdPartyBasisPoints),
+      processing,
+    ),
     row(
       "diveday",
       diveDay.monthlyCents + percentFeeCents(received, diveDay.basisPoints),

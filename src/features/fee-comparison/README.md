@@ -12,4 +12,4 @@ DiveDay's own rate: it is the configured offer (`PRICING_*`, `src/features/prici
 
 ## Invariants
 
-Amounts are USD cents and integer math (`percentFeeCents`). FareHarbor's reported 6% already includes card processing, so every column counts processing the same way. Each choice about Booking.com money leans toward the competitor.
+Amounts are USD cents and integer math (`percentFeeCents`). Both columns add the same card processing to their percent (sources disagree on whether FareHarbor includes it; the page says which reading it uses). Each choice about Booking.com money leans toward the competitor.

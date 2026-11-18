@@ -22,7 +22,6 @@ export type FeeComparisonLabels = {
   processing: string;
   bookingCom: string;
   total: string;
-  included: string;
   totalNote: string;
   saving: string;
   systems: Record<ComparedSystem, { name: string; note: string }>;
@@ -111,9 +110,7 @@ export function FeeComparison({
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted">{labels.processing}</dt>
-                  <dd className="tabular-nums">
-                    {system === "fareharbor" ? labels.included : money(row.processingCents)}
-                  </dd>
+                  <dd className="tabular-nums">{money(row.processingCents)}</dd>
                 </div>
                 {withBooking ? (
                   <div className="flex justify-between gap-4">
