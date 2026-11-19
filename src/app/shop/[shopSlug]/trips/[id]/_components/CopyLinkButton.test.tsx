@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { rendersFlush } from "@/test/button-flush";
 import { CopyLinkButton } from "./CopyLinkButton";
@@ -41,7 +41,8 @@ it("shows the link, selected, when the clipboard refuses", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
   const field = await screen.findByRole("textbox", { name: "Copy failed" });
   expect((field as HTMLInputElement).value).toBe("http://localhost:3000/s/blue-mantis/trips/t1");
-  expect(document.activeElement).toBe(field);
+  // Focus is set in a passive effect after the field commits, so wait for it.
+  await waitFor(() => expect(document.activeElement).toBe(field));
 });
 
 it("says nothing more when the copy works", async () => {
