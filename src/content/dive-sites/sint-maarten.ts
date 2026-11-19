@@ -445,7 +445,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
         "A freighter sunk on a ledge in 1993 slid off in a storm and now lies as wreckage on the bottom. Reef structures nearby carry an old fiber-optic cable across the seafloor, with a swim-through to the east that is overhead; stay out.",
       marineLife: "French grunts · bluestriped grunts · yellow goatfish · green turtles",
       marineLifeDescription:
-        "Grunts and goatfish school over the wreckage. Moray eels, green and hawksbill turtles, spotted eagle rays and reef sharks pass.",
+        "Grunts and goatfish school over the wreckage. Moray eels, green and hawksbill turtles, spotted eagle rays, and reef sharks pass.",
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "intermediate",

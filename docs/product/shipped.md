@@ -228,7 +228,7 @@ listado*; `check:shop-word` refuses *listado del barco* (#1957).
 
 The homepage now follows one booking in five steps (book, sign, the morning check, the roll call
 after the dive, the recap), each a screen, two builder's notes and a link to its feature page, and its
-title says what the shop gets ("Every diver booked, signed, checked and accounted for"). Under the
+title says what the shop gets ("Every diver booked, signed, checked, and accounted for"). Under the
 steps, `FeatureDirectory` lists every feature page by the part of a shop's year it serves; the same
 directory is the body of `/product`, which became the hub: hero, the directory with each page's
 full checklist folded under its row, what DiveDay doesn't do, the close. The hub's six-chapter tour, its chapter strip and its payment band

@@ -1,7 +1,7 @@
 {
   "title": "Computer dives",
   "intro": "Import a file into this diver’s personal computer history.",
-  "formats": "Garmin dive FIT (one Descent/Connect export verified), UDDF, Subsurface XML, labeled CSV and ZIPs containing these files.",
+  "formats": "Garmin dive FIT (one Descent/Connect export verified), UDDF, Subsurface XML, labeled CSV, and ZIPs containing these files.",
   "files": "Dive files",
   "preview": "Preview files",
   "previewHeading": "Review dives",

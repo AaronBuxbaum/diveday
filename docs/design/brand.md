@@ -407,7 +407,7 @@ briefing is plain sentences in the order the day happens, and the confidence is 
   list that skips it reads as two writers. It applies to English only; Spanish takes no comma
   before "y", "e", "o" or "u". `pnpm check:voice` refuses the missing comma in the en-US bundles,
   route metadata, and every prose literal under `src/`. It is conservative on purpose: it names a
-  list only when the parts look like one, and leaves a pair ("signal or not"), two verbs ("edited
+  list only when the parts look like one (three participles are a list: "booked, signed, checked, and accounted for"), and leaves a pair ("signal or not"), two verbs ("edited
   and rolled forward"), and a name ("Turks and Caicos") alone. The few phrases that are not lists
   sit in `OXFORD_PHRASES` and `OXFORD_ALLOWLIST` in `scripts/check-voice.mjs`, each with a reason.
 - **A colon introduces a list, not a punchline.** "A file, not a project: the importer shows…" is a
