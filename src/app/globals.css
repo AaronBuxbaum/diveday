@@ -2367,10 +2367,10 @@ select:not([multiple]):not([size]):dir(rtl) {
 @keyframes marketing-chat-nudge {
   0%,
   100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 35%, transparent);
+    transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-primary) 0%, transparent);
+    transform: scale(1.05);
   }
 }
 
@@ -2385,7 +2385,7 @@ select:not([multiple]):not([size]):dir(rtl) {
 
 .marketing-chat-in {
   transform-origin: bottom left;
-  animation: marketing-chat-in 260ms var(--ease-out-soft) both;
+  animation: marketing-chat-in var(--motion-unfold) var(--ease-out-soft) both;
 }
 
 .marketing-chat-in.items-end {
@@ -2409,7 +2409,7 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 .marketing-chat-flash {
-  animation: marketing-chat-flash 420ms var(--ease-spring) both;
+  animation: marketing-chat-flash var(--motion-unfold) var(--ease-spring) both;
 }
 
 .marketing-chat-scroll {

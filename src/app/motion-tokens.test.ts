@@ -82,14 +82,18 @@ describe("the motion tokens", () => {
     // The homepage walkthrough's drawn changes (a star landing, a row growing or closing) are paced
     // to be seen across a room, not felt under a thumb, so the 600ms ceiling does not apply to them.
     const WALK_MOMENTS = ["walk-star", "walk-grow", "walk-shrink"];
+    // The homepage group chat's two loops (typing dots, the nudge waiting for a tap) state a period,
+    // not a speed: nothing arrives or leaves on them, so neither a rung nor the ceiling describes one.
+    const LOOPS = ["marketing-chat-dot", "marketing-chat-nudge"];
+    const PACED = [...WALK_MOMENTS, ...LOOPS];
     const literals = [...CSS.matchAll(/animation:\s*([\w-]+)\s+(\d+)ms/g)];
     expect(
       literals
-        .filter(([, name]) => !MOMENTS.includes(name) && !WALK_MOMENTS.includes(name))
+        .filter(([, name]) => !MOMENTS.includes(name) && !PACED.includes(name))
         .map(([, n, ms]) => `${n} ${ms}ms`),
       "a duration in milliseconds where a rung belongs",
     ).toEqual([]);
-    for (const [, name, ms] of literals.filter(([, name]) => !WALK_MOMENTS.includes(name))) {
+    for (const [, name, ms] of literals.filter(([, name]) => !PACED.includes(name))) {
       expect(
         Number(ms),
         `${name} is a drawn moment and sits under the ceiling`,
