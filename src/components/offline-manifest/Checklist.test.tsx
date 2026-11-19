@@ -45,6 +45,37 @@ describe("OfflineChecklist", () => {
     );
   });
 
+  it("shows an unresolved checklist observation for review without treating it as a live check", () => {
+    const envelope = savedCopy();
+    envelope.snapshot.checklist = {
+      items: [{ id: "oxygen", label: "Emergency oxygen kit aboard" }],
+    };
+    envelope.checklistEvents = [
+      {
+        clientEventId: "held-check",
+        snapshotId: "snapshot-1",
+        snapshotSavedAt: "2026-08-01T09:00:00.000Z",
+        tripId: "trip-1",
+        checklistItemId: "oxygen",
+        status: "checked",
+        note: null,
+        occurredAt: "2026-08-01T09:10:00.000Z",
+        syncStatus: "pending",
+        reviewRequired: true,
+      },
+    ];
+    const found = offlineTripView(envelope, "departure");
+    if (!found) throw new Error("missing manifest");
+    render(<OfflineChecklist view={found} controls={controls()} />);
+    expect(
+      screen.getByText(/Emergency oxygen kit aboard: this offline change remains on this device/),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /Emergency oxygen kit aboard/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
   it("still identifies a rejected change when the checklist item is no longer in the copy", () => {
     const envelope = savedCopy();
     envelope.snapshot.checklist = undefined;

@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { recordRollCall } from "@/db/manifests";
 import { listTripReadiness } from "@/db/readiness";
-import { bookings as bookingsTable, trips as tripsTable } from "@/db/schema";
+import { bookings as bookingsTable, rollCallEvents, trips as tripsTable } from "@/db/schema";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -337,6 +337,37 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
         expect(rowsFor(work, trip.id)).toEqual([]);
         expect(work.outTripIds).toContain(trip.id);
+      });
+
+      it("keeps the aboard warning when an offline final return no longer matches the meeting", async () => {
+        const { db, shop } = ctx;
+        const { trip, boarded, staffId } = await sailedNinetyMinutesAgo();
+        const result = await recordRollCall(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId: boarded,
+          recordedByPersonId: staffId,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        });
+        if (!result.ok) throw new Error("return mark missing");
+        await db
+          .update(rollCallEvents)
+          .set({ source: "offline", offlineMeetingGeneration: 0, offlineAssignmentGeneration: 0 })
+          .where(eq(rollCallEvents.id, result.eventId));
+        vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "1");
+        try {
+          let work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
+          expect(rowsFor(work, trip.id)).toEqual([]);
+          await db
+            .update(tripsTable)
+            .set({ offlineMeetingGeneration: 1 })
+            .where(eq(tripsTable.id, trip.id));
+          work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
+          expect(rowsFor(work, trip.id).map((row) => row.kind)).toContain("blocked_aboard");
+        } finally {
+          vi.unstubAllEnvs();
+        }
       });
 
       it("keeps the row while a dive is still to come", async () => {

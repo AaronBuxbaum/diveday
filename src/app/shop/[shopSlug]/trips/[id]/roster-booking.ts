@@ -69,7 +69,11 @@ export async function removeSeat(
   const cancelled = await cancelBooking(db, shopId, bookingId, { trail: { actorPersonId } });
   if (!cancelled.ok && cancelled.reason === "aboard_at_sea") {
     const notice =
-      cancelled.hold === "uncounted" ? "booking-remove-uncounted" : "booking-remove-aboard";
+      cancelled.hold === "uncertain"
+        ? "booking-remove-presence-uncertain"
+        : cancelled.hold === "uncounted"
+          ? "booking-remove-uncounted"
+          : "booking-remove-aboard";
     revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
   }
   return cancelled.ok ? cancelled.booking.previousStatus : "cancelled";

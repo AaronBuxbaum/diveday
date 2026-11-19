@@ -28,6 +28,7 @@ beforeEach(() => {
   vi.mocked(getShopOfflineErasureEpoch).mockResolvedValue(0);
   vi.mocked(nextOfflineManifestSnapshotWithWindows).mockResolvedValue({
     revision: 1,
+    meetingGeneration: 0,
     meetingWindows: [],
   });
   vi.mocked(getTripManifests).mockResolvedValue(null);

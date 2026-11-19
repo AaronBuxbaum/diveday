@@ -9,7 +9,14 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { PERSON_COLUMNS } from "./person-columns";
 import * as schema from "./schema";
-import { accountSessions, mediaDeletionAttempts, people, shops, userAccounts } from "./schema";
+import {
+  accountSessions,
+  mediaDeletionAttempts,
+  offlineReviewRefusals,
+  people,
+  shops,
+  userAccounts,
+} from "./schema";
 import {
   clearDemoSchedule,
   createDemoShop,
@@ -301,6 +308,8 @@ const RESET_KEEPS: Record<string, string> = {
   crew_away_acknowledgements: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   offline_manifest_snapshot_revisions: "ON DELETE CASCADE from trips clears it",
+  offline_review_refusals:
+    "refused confirmation IDs survive schedule resets so an old request cannot later write",
   today_read_mark_events: "ON DELETE CASCADE from marks or desk lines clears it",
   date_request_offer_bookings: "ON DELETE CASCADE from its interest or booking clears it",
   interest_replies: "ON DELETE CASCADE from its interest clears it",
@@ -367,6 +376,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   crew_away_acknowledgements: "ON DELETE CASCADE from shops, people and trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   offline_manifest_snapshot_revisions: "ON DELETE CASCADE from trips clears it",
+  offline_review_refusals: "ON DELETE CASCADE from shops clears its confirmation-ID fence",
   today_read_marks: "ON DELETE CASCADE from shops or staff clears it",
   today_read_mark_events: "ON DELETE CASCADE from marks or desk lines clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
@@ -554,6 +564,29 @@ async function rowCounts(db: DbExecutor, tables: string[]): Promise<Map<string, 
  * state and loses nothing.
  */
 describe("the reset and the trouble states", () => {
+  it("keeps a refusal through a schedule reset and removes it with its shop", async () => {
+    const db = await seededTestDb();
+    const { slug } = await createDemoShop(db, { shape: "lean" });
+    const [shop] = await db.select().from(shops).where(eq(shops.slug, slug));
+    if (!shop) throw new Error("expected the demo shop");
+    const clientEventId = crypto.randomUUID();
+    await db.insert(offlineReviewRefusals).values({ shopId: shop.id, clientEventId });
+    await resetDemoSchedule(db, shop.id, "lean");
+    expect(
+      await db
+        .select()
+        .from(offlineReviewRefusals)
+        .where(eq(offlineReviewRefusals.shopId, shop.id)),
+    ).toHaveLength(1);
+    await deleteDemoShopCascade(db, shop.id);
+    expect(
+      await db
+        .select()
+        .from(offlineReviewRefusals)
+        .where(eq(offlineReviewRefusals.shopId, shop.id)),
+    ).toHaveLength(0);
+  });
+
   it("clears a stale media deletion, so it cannot leak into the next spec", async () => {
     const db = await seededTestDb();
     const [shop] = await db.select().from(shops).limit(1);

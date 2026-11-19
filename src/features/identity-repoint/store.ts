@@ -388,6 +388,7 @@ async function repointInTransaction(
     .update(bookings)
     .set({
       personId: input.toPersonId,
+      offlineAssignmentGeneration: sql`case when ${bookings.personId} is distinct from ${input.toPersonId}::uuid then ${bookings.offlineAssignmentGeneration} + 1 else ${bookings.offlineAssignmentGeneration} end`,
       // A queued offline arrival saved before this was about another person
       // (issue #3830).
       seatReopenedAt: now,

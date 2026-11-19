@@ -664,6 +664,7 @@
     "removeBooking": "Cancel booking",
     "removeAboard": "{name} sailed on this departure, so the booking stays. To give money back, refund their order.",
     "removeUncounted": "Nobody counted {name} at the dock, so the boat may have carried them. If they didn’t come, mark them Not boarded on the manifest, then remove the booking.",
+    "removePresenceUncertain": "An offline observation involving {name} needs review. Contact the boat before removing this booking.",
     "moveSeat": "Move to another trip",
     "moveSeatTo": "Departure",
     "moveSeatSubmit": "Move",

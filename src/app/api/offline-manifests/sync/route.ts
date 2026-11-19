@@ -20,9 +20,10 @@ import { isStaff } from "@/lib/authz";
 import { log } from "@/lib/log";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import type { OfflineManifestUpcomingResponse } from "@/lib/offline-manifests";
+import { offlineRollCallWitnessEnabled } from "@/lib/offline-roll-call-witness";
 import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 import { clientRollCallEvidenceId, rollCallEvidenceIdPattern } from "@/lib/roll-call-causality";
-import { supportsRollCallReview } from "@/lib/roll-call-protocol";
+import { supportsRollCallReview, supportsRollCallWitness } from "@/lib/roll-call-protocol";
 
 /**
  * One event carries **exactly one** subject: a `bookingId` (a diver's paid
@@ -43,6 +44,7 @@ import { supportsRollCallReview } from "@/lib/roll-call-protocol";
 const eventSchema = z
   .object({
     clientEventId: z.string().uuid(),
+    rollCallWitness: z.string().max(16000).optional(),
     observedEvidenceIds: z.array(z.string().regex(rollCallEvidenceIdPattern)).max(200).optional(),
     reconcilesEvidence: z.boolean().optional(),
     meetingDay: z.number().int().min(0).optional(),
@@ -260,7 +262,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "authentication_required" }, { status: 401 });
   }
 
-  if (!supportsRollCallReview(request))
+  if (
+    !(offlineRollCallWitnessEnabled()
+      ? supportsRollCallWitness(request)
+      : supportsRollCallReview(request))
+  )
     return Response.json(
       { error: "offline_update_required" },
       { status: 426, headers: { "Cache-Control": "no-store" } },
@@ -379,6 +385,7 @@ export async function POST(request: Request) {
       meetingDay: event.meetingDay,
       offlineSnapshotId: event.snapshotId,
       offlineErasureEpochToken: event.erasureEpochToken,
+      rollCallWitness: event.rollCallWitness,
       retractsClientEventId: event.retractsClientEventId,
       note: event.note,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
@@ -411,7 +418,8 @@ export async function POST(request: Request) {
       );
     if (
       !outcome.ok &&
-      (outcome.reason === "booking_unavailable" ||
+      (outcome.reason === "review_required" ||
+        outcome.reason === "booking_unavailable" ||
         outcome.reason === "trip_unavailable" ||
         outcome.reason === "crew_not_assigned")
     ) {

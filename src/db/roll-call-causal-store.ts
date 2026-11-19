@@ -1,10 +1,15 @@
-import { and, asc, count, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import {
+  effectiveRollCallKey,
+  foldEffectiveRollCallEvidence,
+  projectEffectiveRollCalls,
+} from "@/lib/effective-roll-call";
+import { offlineRollCallWitnessEnabled } from "@/lib/offline-roll-call-witness";
 import { compareMarkOrder, type RollCallRecord } from "@/lib/roll-call";
 import {
   canonicalRollCallEvidenceId,
   causalScopeAllowsObservation,
-  foldRollCallEvidence,
   type RollCallCausalContext,
   type RollCallEvidence,
 } from "@/lib/roll-call-causality";
@@ -12,13 +17,142 @@ import { carriedMissing, manifestRollCallView, standingByDay } from "@/lib/roll-
 import { rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
 import type { DbExecutor } from "./client";
 import { crewMarks, seatMarks } from "./roll-call-subject";
-import { people, rollCallEvents, tripScheduleDays } from "./schema";
+import { bookings, people, rollCallEvents, tripScheduleDays, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export type RollCallCausalSubject = {
   shopId: string;
   tripId: string;
   checkpoint: string;
 } & ({ bookingId: string } | { personId: string });
+
+type CausalEvent = typeof rollCallEvents.$inferSelect;
+
+/** Recompute each subject/checkpoint/day once from its original statements. */
+export function projectCausalEvents(
+  rows: readonly CausalEvent[],
+  fallbackDayFor: (row: CausalEvent) => number,
+  isEligible: (row: CausalEvent) => boolean,
+) {
+  const scopes = new Map<string, CausalEvent[]>();
+  for (const row of rows) {
+    if (!isEligible(row)) continue;
+    const key = JSON.stringify([
+      row.shopId,
+      row.tripId,
+      row.subjectKind,
+      row.bookingId,
+      row.crewPersonId,
+      row.checkpoint,
+    ]);
+    const scope = scopes.get(key) ?? [];
+    scope.push(row);
+    scopes.set(key, scope);
+  }
+  const projected = new Map<string, CausalEvent>();
+  for (const scope of scopes.values()) {
+    const first = scope[0];
+    if (!first) continue;
+    const fallbackDay = fallbackDayFor(first);
+    const evidence = scopedCausalEvidence(scope, first.checkpoint, fallbackDay);
+    const projections = projectEffectiveRollCalls(
+      evidence.map((item, index) => {
+        const row = scope[index];
+        if (!row) throw new Error("roll-call evidence row missing");
+        return {
+          ...item,
+          subject: "current",
+          checkpoint: first.checkpoint,
+          day: row.meetingDay ?? fallbackDay,
+        };
+      }),
+      () => true,
+    );
+    const latest = new Map<number, CausalEvent>();
+    for (const row of scope) {
+      const day = row.meetingDay ?? fallbackDay;
+      if ((latest.get(day)?.seq ?? -1) < row.seq) latest.set(day, row);
+    }
+    for (const [day, row] of latest) {
+      const projection = projections.get(effectiveRollCallKey("current", first.checkpoint, day));
+      if (!projection) throw new Error("roll-call projection missing");
+      projected.set(row.id, {
+        ...row,
+        status: projection.status ?? "cleared",
+        causalFrontier: projection.frontier,
+        evidenceConflict: projection.conflict,
+        evidenceOrderingUnknown: projection.orderingUnknown,
+      });
+    }
+  }
+  return projected;
+}
+
+/** Keep only eligible rows, replacing each day's latest row with the effective fold. */
+export function effectiveCausalRows<T extends { event: CausalEvent; day: number }>(
+  rows: readonly T[],
+  isEligible: (event: CausalEvent) => boolean,
+): T[] {
+  const eligible = rows.filter(({ event }) => isEligible(event));
+  const fallbackDays = new Map(
+    eligible
+      .filter(({ event }) => event.meetingDay === null)
+      .map(({ event, day }) => [event.tripId, day]),
+  );
+  const projections = projectCausalEvents(
+    eligible.map(({ event }) => event),
+    (event) => fallbackDays.get(event.tripId) ?? 0,
+    () => true,
+  );
+  return eligible.map((row) => ({ ...row, event: projections.get(row.event.id) ?? row.event }));
+}
+
+/** Compare verified offline capture generations to the current seat and meeting in one batched read. */
+export async function effectiveCausalRowsForDb<T extends { event: CausalEvent; day: number }>(
+  db: DbExecutor,
+  rows: readonly T[],
+): Promise<T[]> {
+  const bound = rows.filter(
+    ({ event }) =>
+      event.source === "offline" &&
+      (offlineRollCallWitnessEnabled() ||
+        event.offlineMeetingGeneration !== null ||
+        event.offlineAssignmentGeneration !== null),
+  );
+  if (bound.length === 0) return effectiveCausalRows(rows, () => true);
+  const ids = [
+    ...new Set(bound.flatMap(({ event }) => (event.bookingId ? [event.bookingId] : []))),
+  ];
+  const current =
+    ids.length === 0
+      ? []
+      : await db
+          .select({
+            id: bookings.id,
+            shopId: bookings.shopId,
+            tripId: bookings.tripId,
+            assignment: bookings.offlineAssignmentGeneration,
+            meeting: trips.offlineMeetingGeneration,
+          })
+          .from(bookings)
+          .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+          .where(and(inArray(bookings.id, ids), liveTrip()));
+  const byId = new Map(current.map((row) => [row.id, row]));
+  return effectiveCausalRows(rows, (event) => {
+    if (event.source !== "offline") return true;
+    if (event.offlineMeetingGeneration === null && event.offlineAssignmentGeneration === null)
+      return !offlineRollCallWitnessEnabled();
+    if (!event.bookingId || event.subjectKind !== "seat") return false;
+    const seat = byId.get(event.bookingId);
+    return (
+      seat !== undefined &&
+      seat.shopId === event.shopId &&
+      seat.tripId === event.tripId &&
+      event.offlineMeetingGeneration === seat.meeting &&
+      event.offlineAssignmentGeneration === seat.assignment
+    );
+  });
+}
 
 /** Unknown historical meeting days are never reconstructed from a device clock. */
 export async function causalMeetingDay(db: DbExecutor, tripId: string, captured?: number) {
@@ -40,7 +174,7 @@ export async function causalMeetingDay(db: DbExecutor, tripId: string, captured?
  * projection revisions; it does not establish observation between statements.
  */
 export async function refreshCausalRollCall(db: DbExecutor, subject: RollCallCausalSubject) {
-  const rows = await db
+  const loaded = await db
     .select()
     .from(rollCallEvents)
     .where(
@@ -55,13 +189,26 @@ export async function refreshCausalRollCall(db: DbExecutor, subject: RollCallCau
       ),
     );
   const fallbackDay = await causalMeetingDay(db, subject.tripId);
-  const evidence = scopedCausalEvidence(rows, subject.checkpoint, fallbackDay);
-  const unknownWithdrawals = rows
-    .filter(
-      (row) =>
-        (row.meetingDay ?? fallbackDay) < 0 && (row.statementStatus ?? row.status) === "cleared",
+  const rows = (
+    await effectiveCausalRowsForDb(
+      db,
+      loaded.map((event) => ({ event, day: event.meetingDay ?? fallbackDay })),
     )
-    .map((row) => canonicalRollCallEvidenceId(row));
+  ).map(({ event }) => event);
+  const evidence = scopedCausalEvidence(rows, subject.checkpoint, fallbackDay);
+  const projections = projectEffectiveRollCalls(
+    evidence.map((item, index) => {
+      const row = rows[index];
+      if (!row) throw new Error("roll-call evidence row missing");
+      return {
+        ...item,
+        subject: "current",
+        checkpoint: subject.checkpoint,
+        day: row.meetingDay ?? fallbackDay,
+      };
+    }),
+    () => true,
+  );
   const groups = new Map<number, typeof rows>();
   for (const row of rows) {
     const day = row.meetingDay ?? fallbackDay;
@@ -71,11 +218,8 @@ export async function refreshCausalRollCall(db: DbExecutor, subject: RollCallCau
   }
   for (const [day, group] of groups) {
     const latest = group.reduce((a, b) => (a.seq > b.seq ? a : b));
-    const eligible = new Set([
-      ...group.map((row) => canonicalRollCallEvidenceId(row)),
-      ...unknownWithdrawals,
-    ]);
-    const projection = foldRollCallEvidence(evidence, subject.checkpoint, eligible);
+    const projection = projections.get(effectiveRollCallKey("current", subject.checkpoint, day));
+    if (!projection) throw new Error("roll-call projection missing");
     // Retain original intent before changing a previously uninitialized row.
     await db
       .update(rollCallEvents)
@@ -118,7 +262,7 @@ export async function manifestCausalContexts(db: DbExecutor, shopId: string, tri
  * the context-only reader above retains its existing transport shape.
  */
 export async function manifestRollCallReads(db: DbExecutor, shopId: string, tripId: string) {
-  const rows = await db
+  const loaded = await db
     .select({ event: rollCallEvents, recorder: people.fullName })
     // diveday:roll-call-both-subjects: keys include kind; context is for the complete manifest.
     .from(rollCallEvents)
@@ -129,6 +273,13 @@ export async function manifestRollCallReads(db: DbExecutor, shopId: string, trip
     .from(tripScheduleDays)
     .where(eq(tripScheduleDays.tripId, tripId))
     .orderBy(asc(tripScheduleDays.startsAt));
+  const rows = await effectiveCausalRowsForDb(
+    db,
+    loaded.map((row) => ({
+      ...row,
+      day: row.event.meetingDay ?? (windows.length > 1 ? -1 : 0),
+    })),
+  );
   const meetingDay = rollCallDayOf(rollCallDayStarts(windows), nowDate());
   const latest = new Map<string, (typeof rows)[number]>();
   for (const row of rows) {
@@ -282,7 +433,7 @@ export async function causalRetractionTarget(
     meetingDay?: number;
   },
 ): Promise<string | undefined> {
-  const rows = await db
+  const loaded = await db
     .select()
     .from(rollCallEvents)
     .where(
@@ -296,6 +447,13 @@ export async function causalRetractionTarget(
           : eq(rollCallEvents.crewPersonId, subject.personId),
       ),
     );
+  const fallbackDay = await causalMeetingDay(db, subject.tripId);
+  const rows = (
+    await effectiveCausalRowsForDb(
+      db,
+      loaded.map((event) => ({ event, day: event.meetingDay ?? fallbackDay })),
+    )
+  ).map(({ event }) => event);
   const target = rows.find(
     (row) =>
       row.id === input.retractsEventId?.toLowerCase() ||
@@ -320,7 +478,7 @@ export async function causalRetractionTarget(
   )
     return undefined;
   const ids = new Map(rows.map((row) => [row.id, canonicalRollCallEvidenceId(row)]));
-  const projection = foldRollCallEvidence(
+  const projection = foldEffectiveRollCallEvidence(
     rows.map((row) => ({
       id: canonicalRollCallEvidenceId(row),
       status: row.statementStatus ?? row.status,
@@ -329,6 +487,7 @@ export async function causalRetractionTarget(
       retracts: row.retractsEventId ? ids.get(row.retractsEventId) : undefined,
     })),
     subject.checkpoint,
+    () => true,
   );
   return projection.frontier.includes(canonicalRollCallEvidenceId(target)) ? target.id : undefined;
 }
@@ -392,7 +551,7 @@ export async function prepareCausalRollCall(
   const identity = canonicalRollCallEvidenceId({ id, clientEventId: input.clientEventId });
   const day = await causalMeetingDay(db, subject.tripId, input.meetingDay);
   const fallbackDay = await causalMeetingDay(db, subject.tripId);
-  const rows = await db
+  const loaded = await db
     .select()
     .from(rollCallEvents)
     .where(
@@ -406,6 +565,12 @@ export async function prepareCausalRollCall(
           : eq(rollCallEvents.crewPersonId, subject.personId),
       ),
     );
+  const rows = (
+    await effectiveCausalRowsForDb(
+      db,
+      loaded.map((event) => ({ event, day: event.meetingDay ?? fallbackDay })),
+    )
+  ).map(({ event }) => event);
   const known = new Map(rows.map((row) => [canonicalRollCallEvidenceId(row), row]));
   const raw = scopedCausalEvidence(rows, subject.checkpoint, fallbackDay);
   const target = rows.find((row) => row.id === input.retractsEventId);
@@ -428,18 +593,23 @@ export async function prepareCausalRollCall(
     }),
     retracts: target ? canonicalRollCallEvidenceId(target) : undefined,
   };
-  const eligible = new Set([
-    identity,
-    ...rows
-      .filter(
-        (row) =>
-          (row.meetingDay ?? fallbackDay) === day ||
-          ((row.meetingDay ?? fallbackDay) < 0 &&
-            (row.statementStatus ?? row.status) === "cleared"),
-      )
-      .map((row) => canonicalRollCallEvidenceId(row)),
-  ]);
-  const projection = foldRollCallEvidence([...raw, next], subject.checkpoint, eligible);
+  const projection = projectEffectiveRollCalls(
+    [
+      ...raw.map((item, index) => {
+        const row = rows[index];
+        if (!row) throw new Error("roll-call evidence row missing");
+        return {
+          ...item,
+          subject: "current",
+          checkpoint: subject.checkpoint,
+          day: row.meetingDay ?? fallbackDay,
+        };
+      }),
+      { ...next, subject: "current", checkpoint: subject.checkpoint, day },
+    ],
+    () => true,
+  ).get(effectiveRollCallKey("current", subject.checkpoint, day));
+  if (!projection) throw new Error("roll-call projection missing");
   return {
     id,
     meetingDay: day,

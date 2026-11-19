@@ -664,6 +664,7 @@
     "removeBooking": "Cancelar reserva",
     "removeAboard": "{name} zarpó en esta salida, así que la reserva se mantiene. Para devolver el dinero, reembolsa su pedido.",
     "removeUncounted": "Nadie registró a {name} en el muelle, así que puede que haya ido en el barco. Si no vino, marca No embarcado en el manifiesto y luego elimina la reserva.",
+    "removePresenceUncertain": "Hay una observación sin conexión sobre {name} que se debe revisar. Contacta al barco antes de eliminar esta reserva.",
     "moveSeat": "Mover a otra salida",
     "moveSeatTo": "Salida",
     "moveSeatSubmit": "Mover",

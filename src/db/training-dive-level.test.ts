@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -27,6 +27,7 @@ import {
   seatWithinRoom,
   trainingDiveReachOn,
   trainingDiveRoom,
+  trustedCrewOfTrips,
 } from "./training-mark-resolve";
 import { trainingMarksForRoster } from "./training-marks";
 
@@ -417,6 +418,43 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     });
     expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
     expect(await rosterWarning(ctx)).toBe(false);
+  });
+
+  it("does not count an excluded offline crew mark over a live ashore mark", async () => {
+    const ctx = await advancedCharter();
+    await teachesAndAboard(ctx);
+    await seedRollCallEvidence(ctx.db, {
+      shopId: ctx.shop.id,
+      tripId: ctx.charter.id,
+      ...crewSubject(ctx.instructor),
+      recordedByPersonId: ctx.owner,
+      status: "not_boarded",
+      checkpoint: "departure",
+      source: "live",
+      occurredAt: ctx.now,
+    });
+    await seedRollCallEvidence(
+      ctx.db,
+      {
+        shopId: ctx.shop.id,
+        tripId: ctx.charter.id,
+        ...crewSubject(ctx.instructor),
+        recordedByPersonId: ctx.owner,
+        status: "boarded",
+        checkpoint: "departure",
+        source: "offline",
+        occurredAt: new Date(ctx.now.getTime() + 1000),
+      },
+      { observesPrevious: true },
+    );
+    vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "1");
+    try {
+      const crew =
+        (await trustedCrewOfTrips(ctx.db, ctx.shop.id, [ctx.charter.id])).get(ctx.charter.id) ?? [];
+      expect(crew.some((member) => member.personId === ctx.instructor)).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("has room for a marked dive only where the course has a known ratio and an instructor is aboard", async () => {
