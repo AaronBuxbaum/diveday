@@ -305,7 +305,12 @@ async function storedCheckEvent(
       ),
     )
     .limit(1);
-  return existing && { id: existing.id, subject: checkSubject(existing.tripId, existing.checklistItemId, existing.status) };
+  return (
+    existing && {
+      id: existing.id,
+      subject: checkSubject(existing.tripId, existing.checklistItemId, existing.status),
+    }
+  );
 }
 
 export type RecordPreDepartureCheckOutcome =
