@@ -2332,22 +2332,31 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 /*
- * The homepage group chat (`MarketingGroupChat`). A line lands by growing into
- * its place, so the lines above it are pushed up rather than jumped; the
- * typing dots, the waiting nudge and the count's one flash are the only other
- * motion. The reduced-motion kill-switch below covers all four, and a reader
- * who asked for it is sent the finished chat and never the dots.
+ * The homepage group chat (`MarketingGroupChat`). A row fades up into its
+ * place while the rows above it slide to make room (the component slides them,
+ * from where they were drawn), and a line takes over its own typing dots'
+ * bubble, so nothing jumps. The typing dots, the waiting nudge and the count's
+ * one flash are the only other motion. The reduced-motion kill-switch below
+ * covers them all, and a reader who asked for it is sent the finished chat and
+ * never the dots.
  */
 @keyframes marketing-chat-in {
   from {
-    max-height: 0;
     opacity: 0;
-    transform: translateY(8px) scale(0.96);
+    transform: translateY(6px) scale(0.97);
   }
   to {
-    max-height: 20rem;
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes marketing-chat-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -2391,6 +2400,10 @@ select:not([multiple]):not([size]):dir(rtl) {
 
 .marketing-chat-in.items-end {
   transform-origin: bottom right;
+}
+
+.marketing-chat-reveal {
+  animation: marketing-chat-reveal var(--motion-base) var(--ease-out-soft) both;
 }
 
 .marketing-chat-dot {
