@@ -28,6 +28,11 @@ for (const viewport of [
     test("local amount due and original-receipt day summary", async ({ page, privateShop }) => {
       await page.goto(`/shop/${privateShop.slug}/orders?purchase=1`);
       const form = page.getByRole("form", { name: t("orders.purchase.title"), exact: true });
+      // This streamed panel can appear after the navigation-wide hydration check.
+      await expect(form.locator("xpath=ancestor::section[@data-add-panel]")).toHaveAttribute(
+        "data-add-panel-settled",
+        "",
+      );
       await form.getByRole("radio", { name: t("orders.localDue.open"), exact: true }).check();
       await form.locator('[name="description-0"]').fill("Regulator rental");
       await form.locator('[name="unitAmount-0"]').fill("25");
