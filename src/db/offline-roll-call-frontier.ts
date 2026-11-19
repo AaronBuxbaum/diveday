@@ -42,14 +42,28 @@ export async function offlineFrontierMatches(
           : eq(rollCallEvents.crewPersonId, input.subject.personId),
         sql`lower(${rollCallEvents.captureContext}->>'offlineSnapshotId') = ${input.snapshotId.toLowerCase()}`,
       ),
-    );
+    )
+    .limit(10001);
+  if (rows.length > 10000) return false;
   const byId = new Map(rows.map((row) => [canonicalRollCallEvidenceId(row), row]));
   const reached = new Set<string>();
   const visiting = new Set<string>();
-  const visit = (id: string): boolean => {
+  const completed = new Set<string>();
+  const stack = descendants.map((id) => ({ id, exiting: false }));
+  let edges = 0;
+  while (stack.length) {
+    const item = stack.pop();
+    if (!item) break;
+    const { id } = item;
+    if (item.exiting) {
+      visiting.delete(id);
+      completed.add(id);
+      continue;
+    }
+    if (completed.has(id)) continue;
     if (captured.has(id)) {
       reached.add(id);
-      return true;
+      continue;
     }
     if (visiting.has(id)) return false;
     const row = byId.get(id);
@@ -59,12 +73,12 @@ export async function offlineFrontierMatches(
         JSON.stringify([...captured].sort())
     )
       return false;
+    const predecessors = row.observedEvidenceIds ?? [];
+    edges += predecessors.length;
+    if (edges > 200000) return false;
     visiting.add(id);
-    const valid = (row.observedEvidenceIds ?? []).every((prior) => visit(prior.toLowerCase()));
-    visiting.delete(id);
-    return valid;
-  };
-  return (
-    descendants.every(visit) && [...captured].every((id) => reached.has(id) || current.includes(id))
-  );
+    stack.push({ id, exiting: true });
+    for (const prior of predecessors) stack.push({ id: prior.toLowerCase(), exiting: false });
+  }
+  return [...captured].every((id) => reached.has(id) || current.includes(id));
 }
