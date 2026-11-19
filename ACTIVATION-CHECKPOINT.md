@@ -1,6 +1,6 @@
 # Offline activation checkpoint
 
-This branch is incomplete and must not be merged or deployed. Production activation has not been requested or performed. It preserves local work and executable regressions for the follow-up.
+This branch is incomplete and must not be merged or deployed. Production activation is requested as a code change, but has not been performed. It preserves local work and executable regressions for the follow-up.
 
 The working tree enables witnessed sync in normal runtimes, refuses sync protocol 2 while retaining protocol 1 for current snapshot readers, and advances generation on diver merge, actual boat change, trip cancellation/reinstatement, and seat cancellation/restoration/rebooking. The disposable PostgreSQL suite in `/tmp/4787-checkpoint-pg.log` passed eight tests, including gated merge transactions, both boat-change and trip/seat cancellation orders, unchanged and stale retries, and live mark preservation. These tests do not prove all rollout invariants.
 
