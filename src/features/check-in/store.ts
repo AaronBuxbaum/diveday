@@ -476,13 +476,17 @@ async function newestOnWholeTrail(
  * Shop-scoped, matching the unique index the device's `crypto.randomUUID()`
  * keys are stored under.
  */
-async function appliedArrivalEventId(
+async function appliedArrivalEvent(
   tx: DbExecutor,
   shopId: string,
   clientEventId: string,
-): Promise<string | undefined> {
+): Promise<{ id: string; bookingId: string; status: "arrived" | "cleared" } | undefined> {
   const [existing] = await tx
-    .select({ id: bookingArrivalEvents.id })
+    .select({
+      id: bookingArrivalEvents.id,
+      bookingId: bookingArrivalEvents.bookingId,
+      status: bookingArrivalEvents.status,
+    })
     .from(bookingArrivalEvents)
     .where(
       and(
@@ -491,7 +495,21 @@ async function appliedArrivalEventId(
       ),
     )
     .limit(1);
-  return existing?.id;
+  return existing;
+}
+
+/**
+ * Whether a stored event with this `clientEventId` is the very operation being
+ * replayed. A duplicate acknowledgement is a promise that the device's tap is
+ * on the trail, so an id reused for another seat or for the opposite statement
+ * (an undo carrying its arrival's id) is a conflict, never a duplicate.
+ */
+function sameArrivalOperation(
+  applied: { bookingId: string; status: "arrived" | "cleared" },
+  bookingId: string,
+  status: "arrived" | "cleared",
+): boolean {
+  return applied.bookingId === bookingId && applied.status === status;
 }
 
 /**
@@ -649,8 +667,11 @@ export async function checkInBooking(
     // must not re-run readiness, re-stamp the trail, or tell the crew a second
     // person arrived.
     if (source === "offline" && input.clientEventId) {
-      const applied = await appliedArrivalEventId(tx, input.shopId, input.clientEventId);
+      const applied = await appliedArrivalEvent(tx, input.shopId, input.clientEventId);
       if (applied) {
+        if (!sameArrivalOperation(applied, booking.id, "arrived")) {
+          return { ok: false, reason: "snapshot_invalid" };
+        }
         return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
       }
     }
@@ -835,8 +856,11 @@ export async function undoCheckInBooking(
       .for("update", { of: [bookings, people] });
     if (!booking) return { ok: false, reason: "not_found" };
     if (source === "offline" && input.clientEventId) {
-      const applied = await appliedArrivalEventId(tx, input.shopId, input.clientEventId);
+      const applied = await appliedArrivalEvent(tx, input.shopId, input.clientEventId);
       if (applied) {
+        if (!sameArrivalOperation(applied, booking.id, "cleared")) {
+          return { ok: false, reason: "snapshot_invalid" };
+        }
         return { ok: true, bookingId: booking.id, personName: booking.personName, duplicate: true };
       }
     }
