@@ -163,7 +163,7 @@ const blockedDiverPayload: OfflineManifestPayload = {
 /** Backdates a stored record's plaintext expiry without touching its ciphertext. */
 function patchStoredExpiresAt(tripId: string, expiresAt: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("diveday-offline-manifests", 1);
+    const request = indexedDB.open("diveday-offline-manifests");
     request.onsuccess = () => {
       const db = request.result;
       const getRequest = db
@@ -213,7 +213,7 @@ describe("saveOfflineManifest", () => {
     // permanently failing every future save on the device.
     const tripId = payload.manifests[0].trip.id;
     await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open("diveday-offline-manifests", 1);
+      const request = indexedDB.open("diveday-offline-manifests");
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains("keys")) db.createObjectStore("keys");

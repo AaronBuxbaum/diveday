@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
+import {
+  recordCrewRollCall,
+  recordRollCall,
+  withheldOfflineRollCallNoteDisposition,
+} from "@/db/manifests";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
 import { getShopById } from "@/db/shops";
 import { offlineSyncTripsBelongToShop } from "@/db/trips";
@@ -17,8 +21,8 @@ import { log } from "@/lib/log";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import type { OfflineManifestUpcomingResponse } from "@/lib/offline-manifests";
 import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
-import { causalReplayOrder, rollCallEvidenceIdPattern } from "@/lib/roll-call-causality";
-import { supportsCausalRollCall } from "@/lib/roll-call-protocol";
+import { clientRollCallEvidenceId, rollCallEvidenceIdPattern } from "@/lib/roll-call-causality";
+import { supportsRollCallReview } from "@/lib/roll-call-protocol";
 
 /**
  * One event carries **exactly one** subject: a `bookingId` (a diver's paid
@@ -163,6 +167,7 @@ const bodySchema = z
     includeCausalSnapshots: z.literal(true).optional(),
     refreshTripId: z.string().uuid().optional(),
     events: z.array(eventSchema).max(200),
+    reviewEvents: z.array(eventSchema).max(200).optional(),
     checklistEvents: z.array(checklistEventSchema).max(200).optional(),
     arrivalEvents: z.array(arrivalEventSchema).max(200).optional(),
   })
@@ -170,7 +175,10 @@ const bodySchema = z
   // request needs queued evidence; snapshot refresh cannot mix other trips.
   .refine(
     (body) =>
-      body.events.length + (body.checklistEvents?.length ?? 0) + (body.arrivalEvents?.length ?? 0) >
+      body.events.length +
+        (body.reviewEvents?.length ?? 0) +
+        (body.checklistEvents?.length ?? 0) +
+        (body.arrivalEvents?.length ?? 0) >
         0 ||
       (body.includeCausalSnapshots === true && body.refreshTripId !== undefined),
   )
@@ -178,10 +186,24 @@ const bodySchema = z
     (body) =>
       !body.includeCausalSnapshots ||
       (body.refreshTripId !== undefined &&
-        [...body.events, ...(body.checklistEvents ?? []), ...(body.arrivalEvents ?? [])].every(
-          (event) => event.tripId === body.refreshTripId,
-        )),
-  );
+        [
+          ...body.events,
+          ...(body.reviewEvents ?? []),
+          ...(body.checklistEvents ?? []),
+          ...(body.arrivalEvents ?? []),
+        ].every((event) => event.tripId === body.refreshTripId)),
+  )
+  .refine((body) => {
+    const activeIds = new Set(
+      [...body.events, ...(body.checklistEvents ?? []), ...(body.arrivalEvents ?? [])].map(
+        (event) => event.clientEventId.toLowerCase(),
+      ),
+    );
+    const reviewIds = (body.reviewEvents ?? []).map((event) => event.clientEventId.toLowerCase());
+    return (
+      new Set(reviewIds).size === reviewIds.length && reviewIds.every((id) => !activeIds.has(id))
+    );
+  });
 
 /**
  * Apply roll-call events a boat tablet recorded while it was offline.
@@ -238,7 +260,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "authentication_required" }, { status: 401 });
   }
 
-  if (!supportsCausalRollCall(request))
+  if (!supportsRollCallReview(request))
     return Response.json(
       { error: "offline_update_required" },
       { status: 426, headers: { "Cache-Control": "no-store" } },
@@ -262,6 +284,7 @@ export async function POST(request: Request) {
     ...new Set([
       ...(parsed.data.refreshTripId ? [parsed.data.refreshTripId] : []),
       ...parsed.data.events.map((event) => event.tripId),
+      ...(parsed.data.reviewEvents ?? []).map((event) => event.tripId),
       ...(parsed.data.checklistEvents ?? []).map((event) => event.tripId),
       ...(parsed.data.arrivalEvents ?? []).map((event) => event.tripId),
     ]),
@@ -274,9 +297,69 @@ export async function POST(request: Request) {
 
   // Captured predecessors precede their observers, independently of clocks
   // and payload order. Unobserved compatible facts merge; opposition persists.
-  const sorted = causalReplayOrder(parsed.data.events);
+  const remaining = [...parsed.data.events];
+  const sorted: typeof remaining = [];
+  const dependencies = (event: (typeof remaining)[number]) => [
+    ...(event.observedEvidenceIds ?? []),
+    ...(event.retractsClientEventId ? [clientRollCallEvidenceId(event.retractsClientEventId)] : []),
+  ];
+  while (remaining.length) {
+    const pendingIds = new Set(
+      remaining.map((event) => clientRollCallEvidenceId(event.clientEventId)),
+    );
+    const index = remaining.findIndex(
+      (event) => !dependencies(event).some((id) => pendingIds.has(id.toLowerCase())),
+    );
+    // Cycles cannot prove their ordering. Leave the cycle and its observers
+    // pending while independent observations continue.
+    if (index < 0) break;
+    const [event] = remaining.splice(index, 1);
+    if (event) sorted.push(event);
+  }
+  const unavailable = new Set(
+    remaining.map((event) => clientRollCallEvidenceId(event.clientEventId)),
+  );
   const results = [];
-  for (const event of sorted) {
+  const checkWithheld = async (event: (typeof remaining)[number]) => {
+    const disposition = await withheldOfflineRollCallNoteDisposition(db, {
+      shopId: session.user.shopId,
+      tripId: event.tripId,
+      recordedByPersonId: session.user.personId,
+      snapshotId: event.snapshotId,
+      token: event.erasureEpochToken,
+      note: event.note,
+      bookingId: event.bookingId,
+      crewPersonId: event.crewPersonId,
+    });
+    if (!disposition.ok) return false;
+    results.push({
+      clientEventId: event.clientEventId,
+      status: "rejected",
+      reason: "causal_dependency_unresolved",
+      ...(disposition.noteDisposition ? { noteDisposition: disposition.noteDisposition } : {}),
+    });
+    return true;
+  };
+  for (const event of parsed.data.reviewEvents ?? []) {
+    if (!(await checkWithheld(event)))
+      return Response.json(
+        { error: "authentication_required" },
+        { status: 401, headers: { "Cache-Control": "private, no-store" } },
+      );
+  }
+  for (const event of [...sorted, ...remaining]) {
+    const dependsOnUnavailable =
+      unavailable.has(clientRollCallEvidenceId(event.clientEventId)) ||
+      dependencies(event).some((id) => unavailable.has(id.toLowerCase()));
+    if (dependsOnUnavailable) {
+      unavailable.add(clientRollCallEvidenceId(event.clientEventId));
+      if (!(await checkWithheld(event)))
+        return Response.json(
+          { error: "authentication_required" },
+          { status: 401, headers: { "Cache-Control": "private, no-store" } },
+        );
+      continue;
+    }
     // Everything except the subject column is identical, and both recorders
     // apply the same causal contract (stable identity, captured basis and
     // exact named targets) — so the dispatch is the only thing that
@@ -326,6 +409,14 @@ export async function POST(request: Request) {
           headers: { "Cache-Control": "private, no-store" },
         },
       );
+    if (
+      !outcome.ok &&
+      (outcome.reason === "booking_unavailable" ||
+        outcome.reason === "trip_unavailable" ||
+        outcome.reason === "crew_not_assigned")
+    ) {
+      unavailable.add(clientRollCallEvidenceId(event.clientEventId));
+    }
     results.push({
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",

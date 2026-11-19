@@ -1,0 +1,26 @@
+# 20261119-offline-roll-call-review — Hold unavailable offline observations for review
+
+- **Status:** Accepted
+- **Date:** 2026-11-19
+
+## Context
+
+An offline observation can return after its subject is unavailable. A per-event rejection is treated as settled by the device, allowing the only copy to expire. The reconnect batch can also contain independent observations and causal descendants. See #4787.
+
+## Decision
+
+Sync protocol 2 keeps an unavailable roll-call observation pending with a review marker. Its causal descendants are held for review; independent observations may sync. Held notes still receive the existing server erasure and unverified-snapshot dispositions. Staff are told to use manual roll call and review the observation; this is not an automatic reconciliation or a server receipt.
+
+IndexedDB version 2 preserves existing stores but prevents a cached version-1 shell from rewriting review state. A blocked upgrade fails rather than continuing later. Protocol 1 sync is refused on updated servers; protocol 2 is refused by old servers. Cached old shells require an update before they can use upgraded storage. This does not fence old deployments or already-running requests.
+
+Existing expiry and its 28-day pending grace remain. At the ceiling the device deletes the envelope and records a loss notice, not the original observation. Review does not guarantee indefinite retention.
+
+## Alternatives considered
+
+- **Settle the rejection** — may discard the only offline evidence.
+- **Refuse the whole batch** — blocks unrelated observations and can hide note-erasure dispositions.
+- **Retain the whole roster indefinitely** — retains shared-device contact and medical data beyond its privacy boundary.
+
+## Consequences
+
+The current device can display unresolved observations without reporting them as accepted; a separate device or old deployment is not fenced by its local marker. The current schedule can still differ after an edit and revert, and recovery across restore, older provider writers, and rare erasure races are not solved. Use manual roll call; keep the restore cutover stop. Revisit when a durable review receipt, meeting generation, minimized retention and provider writer drain are available; migrating devices then requires an explicit protocol and storage transition.

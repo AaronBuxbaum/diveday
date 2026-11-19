@@ -5,7 +5,12 @@ import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
-import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
+import {
+  getTripManifest,
+  recordCrewRollCall,
+  recordRollCall,
+  withheldOfflineRollCallNoteDisposition,
+} from "./manifests";
 import { people, rollCallEvents, shops } from "./schema";
 import { getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
@@ -96,6 +101,77 @@ async function fixture() {
  * that person's own: their roll-call note, or their own crew row (issue #3569).
  */
 describe("offline roll-call notes after erasure", () => {
+  it("refuses a withheld-note check by an inactive actor and needs no token for an empty note", async () => {
+    const f = await fixture();
+    const input = {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      snapshotId: randomUUID(),
+      recordedByPersonId: f.owner.id,
+      bookingId: f.other.booking.id,
+    };
+    expect(await withheldOfflineRollCallNoteDisposition(f.db, { ...input, note: null })).toEqual({
+      ok: true,
+    });
+    expect(
+      await withheldOfflineRollCallNoteDisposition(f.db, {
+        ...input,
+        recordedByPersonId: f.other.booking.personId,
+        note: "synthetic note",
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  it("keeps a withheld note for an unaffected subject after another person's erasure", async () => {
+    const f = await fixture();
+    const snapshot = f.staleSnapshot();
+    await f.eraseDiver();
+    expect(
+      await withheldOfflineRollCallNoteDisposition(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        recordedByPersonId: f.owner.id,
+        snapshotId: snapshot.offlineSnapshotId,
+        token: snapshot.offlineErasureEpochToken,
+        bookingId: f.other.booking.id,
+        note: "synthetic note",
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      await withheldOfflineRollCallNoteDisposition(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        recordedByPersonId: f.owner.id,
+        snapshotId: snapshot.offlineSnapshotId,
+        token: snapshot.offlineErasureEpochToken,
+        note: "synthetic note",
+      }),
+    ).toEqual({ ok: true, noteDisposition: "discarded_erasure_cutoff" });
+  });
+
+  it("discards a withheld note for an erased crew member after an epoch change", async () => {
+    const f = await fixture();
+    const snapshot = f.staleSnapshot();
+    await f.db
+      .update(people)
+      .set({ anonymizedAt: nowDate(), deletedAt: nowDate() })
+      .where(eq(people.id, f.crew.id));
+    await f.db
+      .update(shops)
+      .set({ offlineErasureEpoch: f.shop.offlineErasureEpoch + 1 })
+      .where(eq(shops.id, f.shop.id));
+    expect(
+      await withheldOfflineRollCallNoteDisposition(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        recordedByPersonId: f.owner.id,
+        snapshotId: snapshot.offlineSnapshotId,
+        token: snapshot.offlineErasureEpochToken,
+        crewPersonId: f.crew.id,
+        note: "synthetic note",
+      }),
+    ).toEqual({ ok: true, noteDisposition: "discarded_erasure_cutoff" });
+  });
   it("drops a pre-erasure note on the erased diver's own booking and keeps the mark", async () => {
     const f = await fixture();
     await f.eraseDiver();

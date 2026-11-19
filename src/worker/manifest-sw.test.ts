@@ -200,6 +200,20 @@ beforeEach(() => {
 });
 
 describe("flushPendingRollCall (the sync event)", () => {
+  it("rechecks held notes without replaying note-free review items", async () => {
+    const event = { ...pendingEvent("trip-mine"), reviewRequired: true };
+    vi.mocked(listOfflineManifests).mockResolvedValue([
+      envelope("trip-mine", "blue-mantis", [event]),
+    ]);
+    await fireSync();
+    expect(syncOfflineManifest).not.toHaveBeenCalled();
+    vi.mocked(listOfflineManifests).mockResolvedValue([
+      envelope("trip-mine", "blue-mantis", [{ ...event, note: "synthetic note" }]),
+    ]);
+    routeFetch({ identity: () => identityResponse("blue-mantis") });
+    await fireSync();
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis", 1);
+  });
   // Security review, 2026-08-06. This loop used to submit *every* envelope on
   // the device under whatever session the tablet currently holds. Traced
   // through: the sync route scopes to `session.user.shopId`, so a foreign
@@ -220,7 +234,6 @@ describe("flushPendingRollCall (the sync event)", () => {
     expect(syncOfflineManifest).toHaveBeenCalledTimes(1);
     expect(syncOfflineManifest).toHaveBeenCalledWith("trip-mine", "blue-mantis", 1);
   });
-
   it("keeps the background sync retry when the sync request is refused", async () => {
     const pending = envelope("trip-mine", "blue-mantis", [pendingEvent("trip-mine")]);
     vi.mocked(listOfflineManifests).mockResolvedValue([pending]);
@@ -251,7 +264,6 @@ describe("flushPendingRollCall (the sync event)", () => {
     // happen. Guessing the tenant instead is what destroys the record.
     expect(settled.map((result) => result.status)).toEqual(["rejected"]);
   });
-
   it("reconciles nothing while the device has no signal", async () => {
     installGlobals(false);
     vi.mocked(listOfflineManifests).mockResolvedValue([
@@ -264,7 +276,6 @@ describe("flushPendingRollCall (the sync event)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(syncOfflineManifest).not.toHaveBeenCalled();
   });
-
   it("asks the identity endpoint for the tenant and never pulls the roster to get it", async () => {
     vi.mocked(listOfflineManifests).mockResolvedValue([
       envelope("trip-mine", "blue-mantis", [pendingEvent("trip-mine")]),
@@ -276,7 +287,6 @@ describe("flushPendingRollCall (the sync event)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0][0])).toBe("/api/offline-manifests/identity");
   });
-
   it("spends no request at all when this device has nothing queued", async () => {
     vi.mocked(listOfflineManifests).mockResolvedValue([envelope("trip-mine", "blue-mantis")]);
     routeFetch({});
@@ -286,7 +296,6 @@ describe("flushPendingRollCall (the sync event)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(syncOfflineManifest).not.toHaveBeenCalled();
   });
-
   it("ignores a sync event for somebody else's tag", async () => {
     vi.mocked(listOfflineManifests).mockResolvedValue([
       envelope("trip-mine", "blue-mantis", [pendingEvent("trip-mine")]),
@@ -327,7 +336,6 @@ describe("refreshSavedManifests (the push event)", () => {
       vi.mocked(saveOfflineManifest).mock.invocationCallOrder[0],
     );
   });
-
   it("drops saved words on a departure the body does not say this viewer may hold (security review 2, L3)", async () => {
     routeFetch({
       upcoming: () => upcomingResponse("blue-mantis", [tripPayload("trip-1", "blue-mantis")]),
@@ -394,13 +402,11 @@ describe("refreshSavedManifests (the push event)", () => {
       vi.useRealTimers();
     }
   });
-
   it("still shows a notification when the push carries no title", async () => {
     await firePush();
     expect(showNotification).toHaveBeenCalledTimes(1);
     expect(showNotification).toHaveBeenCalledWith("DiveDay", expect.anything());
   });
-
   it("writes nothing when the purge itself fails", async () => {
     // Fail closed, the same order the page-side auto-save keeps: writing the
     // board anyway would leave both shops' rosters readable side by side.
@@ -544,7 +550,6 @@ describe("a navigation on a network that never answers", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-
   it("lands the captain on the saved roll call within four seconds, checkpoint and all", async () => {
     const response = navigate(
       `https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest?checkpoint=after_dive_1`,
@@ -557,14 +562,12 @@ describe("a navigation on a network that never answers", () => {
       `https://dive.day/offline-manifest?trip=${TRIP}&checkpoint=after_dive_1&fallback=slow`,
     );
   });
-
   it("asks the network to stop once it has given up on it", async () => {
     const response = navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}/manifest`);
     await settledAfter(response, 4_000);
     const init = fetchMock.mock.calls[0]?.[1] as { signal?: AbortSignal } | undefined;
     expect(init?.signal?.aborted).toBe(true);
   });
-
   it("lands the counter on its saved copy within four seconds", async () => {
     const landed = await settledAfter(
       navigate(`https://dive.day/shop/blue-mantis/trips/${TRIP}`),
@@ -575,19 +578,16 @@ describe("a navigation on a network that never answers", () => {
       `https://dive.day/offline-manifest?trip=${TRIP}&fallback=slow`,
     );
   });
-
   it("lands the bare address on the saved copy within four seconds", async () => {
     const landed = await settledAfter(navigate("https://dive.day/"), 4_000);
     if (landed === "still waiting") throw new Error("still waiting at four seconds");
     expect(landed.headers.get("location")).toBe("https://dive.day/offline-manifest?fallback=slow");
   });
-
   it("serves the saved offline shell itself within four seconds", async () => {
     const landed = await settledAfter(navigate("https://dive.day/offline-manifest"), 4_000);
     if (landed === "still waiting") throw new Error("still waiting at four seconds");
     expect(await landed.text()).toBe("offline shell");
   });
-
   it("says a request that failed outright was a failure, not a slow answer", async () => {
     fetchMock.mockImplementation(async () => {
       throw new TypeError("Failed to fetch");

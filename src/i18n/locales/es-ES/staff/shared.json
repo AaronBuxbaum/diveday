@@ -470,6 +470,7 @@
       "markedElsewhere": "Registrado en otro dispositivo o en el manifiesto en vivo. Deshazlo allí, no aquí.",
       "openLiveManifest": "Abrir manifiesto en vivo",
       "refusedMissingRollCall": "El cambio del pase de lista para la referencia {reference} en {checkpoint} no fue aceptado. Revísalo con la tripulación.",
+      "reviewPendingRollCall": "El cambio del pase de lista para la referencia {reference} en {checkpoint} permanece en este dispositivo; no se pudo confirmar su aceptación. Usa el pase de lista manual y revísalo con la tripulación.",
       "record": {
         "expiredCannotRecord": "Esta copia guardada ha caducado. Abre el manifiesto en vivo para registrar el pase de lista.",
         "expiredRecordOnLive": "Caducado — regístralo en el manifiesto en vivo",

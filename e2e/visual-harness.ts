@@ -2457,6 +2457,8 @@ export async function rewriteSavedOfflineRecord(
     savedAt?: string;
     /** Roll-call events to queue as never-sent, one per diver on the roster. */
     pendingRollCalls?: number;
+    /** Mark queued observations as awaiting staff review. */
+    reviewRollCalls?: boolean;
   },
 ) {
   await page.evaluate(
@@ -2523,6 +2525,9 @@ export async function rewriteSavedOfflineRecord(
             note: null,
             occurredAt: envelope.snapshot.savedAt,
             syncStatus: "pending",
+            ...(change.reviewRollCalls
+              ? { reviewRequired: true, rejectionReason: "booking_unavailable" }
+              : {}),
           });
         }
 

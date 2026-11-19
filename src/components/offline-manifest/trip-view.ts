@@ -22,9 +22,9 @@ import {
   offlineCounterIsOver,
   offlineManifestFreshness,
   offlineTrainingReadinessStale,
-  pendingOfflineEventCount,
   refusedOfflineArrival,
   rejectedOfflineEventCount,
+  sendableOfflineEventCount,
 } from "@/lib/offline-manifests";
 import { counterIsDone, isSettledAtCounter } from "../../lib/check-in";
 import { offlinePreviousGaps } from "./checkpoint-gap-inputs";
@@ -131,7 +131,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   // it as not a boarding source, so no new roll call can be recorded here.
   const expired = isOfflineManifestExpired(envelope.snapshot);
   const freshness = offlineManifestFreshness(new Date(envelope.snapshot.savedAt));
-  const pending = pendingOfflineEventCount(envelope);
+  const pending = sendableOfflineEventCount(envelope);
   const rejected = rejectedOfflineEventCount(envelope);
   const localStates = manifest.divers.map((diver) =>
     latestOfflineRollCall(envelope.snapshot, envelope.events, diver.bookingId, checkpoint),

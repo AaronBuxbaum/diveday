@@ -88,6 +88,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "offline-manifest-trip-pending-warning", scheme);
       });
 
+      test(`the saved trip identifies observations awaiting review (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await savedOfflineRecordFor(page);
+        await rewriteSavedOfflineRecord(page, tripId, {
+          pendingRollCalls: 1,
+          reviewRollCalls: true,
+        });
+        await page.goto(`/offline-manifest?trip=${tripId}`);
+        await page.getByRole("button", { name: "Needs attention" }).click();
+        await expect(page.getByText(/acceptance could not be confirmed/i)).toBeVisible();
+        await capture(page, "offline-manifest-trip-review", scheme);
+      });
+
       test(`the saved list says when DiveDay did not answer (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);

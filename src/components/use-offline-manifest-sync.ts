@@ -23,8 +23,8 @@ import {
   OFFLINE_MANIFEST_STALE_READ,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
-  pendingOfflineEventCount,
   rejectedOfflineEventCount,
+  sendableOfflineEventCount,
 } from "@/lib/offline-manifests";
 import { useOfflineManifestSaved } from "./use-offline-manifest-saved";
 
@@ -95,7 +95,7 @@ function recordReload(
   refresh: () => void,
   externalSync: boolean,
 ) {
-  const pending = envelope ? pendingOfflineEventCount(envelope) : 0;
+  const pending = envelope ? sendableOfflineEventCount(envelope) : 0;
   const before = counters.pending.current;
   counters.pending.current = pending;
   counters.rejected.current = envelope ? rejectedOfflineEventCount(envelope) : 0;
@@ -213,7 +213,7 @@ export function useOfflineManifestSync(
           return;
         }
         const rejected = rejectedOfflineEventCount(envelope);
-        const pending = pendingOfflineEventCount(envelope);
+        const pending = sendableOfflineEventCount(envelope);
         const cutoffNotes = noteDispositionCount(envelope, "discarded_erasure_cutoff");
         const unverifiedNotes = noteDispositionCount(envelope, "discarded_unverified_snapshot");
         const noteWasDiscarded =
@@ -372,7 +372,7 @@ export function useOfflineManifestSync(
         const envelope = await saveOfflineManifest(claimed, { tenantRound });
         if (readKey) savedReads.add(readKey);
         if (!setSaved(envelope, savedAtStart)) return;
-        counters.pending.current = pendingOfflineEventCount(envelope);
+        counters.pending.current = sendableOfflineEventCount(envelope);
         counters.rejected.current = rejectedOfflineEventCount(envelope);
         counters.cutoff.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
         counters.unverified.current = noteDispositionCount(
@@ -453,7 +453,7 @@ export function useOfflineManifestSync(
       // just resolve/newly reject" check compares against a stale 0 once
       // connectivity returns, on a device that already had events from before.
       if (accepted) {
-        counters.pending.current = envelope ? pendingOfflineEventCount(envelope) : 0;
+        counters.pending.current = envelope ? sendableOfflineEventCount(envelope) : 0;
         counters.rejected.current = envelope ? rejectedOfflineEventCount(envelope) : 0;
         counters.cutoff.current = noteDispositionCount(envelope, "discarded_erasure_cutoff");
         counters.unverified.current = noteDispositionCount(

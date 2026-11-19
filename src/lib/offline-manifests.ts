@@ -90,7 +90,7 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  * so unlike the snapshot version above, this bump is *worth* the purge: there
  * is no queued roll call inside an app shell to lose, only stale bundles.
  */
-export const OFFLINE_MANIFEST_SHELL_VERSION = "v5";
+export const OFFLINE_MANIFEST_SHELL_VERSION = "v6";
 
 /**
  * The query parameter the service worker puts on its own redirect to the
@@ -717,6 +717,8 @@ export type OfflineRollCallEvent = {
   /** Committed server time; raw occurredAt still orders this device's queue. */
   storedOccurredAt?: string;
   syncStatus: "pending" | "applied" | "rejected";
+  /** The server could not place this observation; keep it pending for manual review. */
+  reviewRequired?: boolean;
   rejectionReason?: string;
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
   /**
@@ -976,6 +978,73 @@ export function pendingOfflineEventCount(
   return countOfflineEvents(envelope, "pending");
 }
 
+/** A review item and every observation depending on it must stay unresolved. */
+export function heldOfflineRollCallIds(events: readonly OfflineRollCallEvent[]): Set<string> {
+  const held = new Set(
+    events
+      .filter((event) => event.reviewRequired)
+      .map((event) => event.clientEventId.toLowerCase()),
+  );
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const event of events) {
+      const id = event.clientEventId.toLowerCase();
+      if (held.has(id)) continue;
+      const dependencies = [
+        ...(event.observedEvidenceIds ?? [])
+          .filter((item) => item.toLowerCase().startsWith("client:"))
+          .map((item) => item.slice(7).toLowerCase()),
+        ...(event.retractsClientEventId ? [event.retractsClientEventId.toLowerCase()] : []),
+      ];
+      if (dependencies.some((dependency) => held.has(dependency))) {
+        held.add(id);
+        changed = true;
+      }
+    }
+  }
+  return held;
+}
+
+/** Pending observations whose predecessors do not need manual review. */
+export function sendableOfflineRollCallEvents(
+  events: readonly OfflineRollCallEvent[],
+): OfflineRollCallEvent[] {
+  const held = heldOfflineRollCallIds(events);
+  return events.filter(
+    (event) => event.syncStatus === "pending" && !held.has(event.clientEventId.toLowerCase()),
+  );
+}
+
+export function sendableOfflineEventCount(
+  envelope: Pick<OfflineManifestEnvelope, "events" | "checklistEvents" | "arrivalEvents">,
+): number {
+  return (
+    sendableOfflineRollCallEvents(envelope.events).length +
+    envelope.checklistEvents.filter((event) => event.syncStatus === "pending").length +
+    offlineArrivalEvents(envelope).filter((event) => event.syncStatus === "pending").length
+  );
+}
+
+/** Held notes still need the normal server-side erasure check on reconnect. */
+export function heldOfflineRollCallNotes(
+  events: readonly OfflineRollCallEvent[],
+): OfflineRollCallEvent[] {
+  const held = heldOfflineRollCallIds(events);
+  return events.filter(
+    (event) =>
+      event.syncStatus === "pending" &&
+      held.has(event.clientEventId.toLowerCase()) &&
+      Boolean(event.note?.trim()),
+  );
+}
+
+export function offlineNetworkWorkCount(
+  envelope: Pick<OfflineManifestEnvelope, "events" | "checklistEvents" | "arrivalEvents">,
+): number {
+  return sendableOfflineEventCount(envelope) + heldOfflineRollCallNotes(envelope.events).length;
+}
+
 /**
  * The refusals waiting to be read, counted the same way across all three
  * queues — the number the shell turns into "a correction needs attention".
@@ -983,7 +1052,10 @@ export function pendingOfflineEventCount(
 export function rejectedOfflineEventCount(
   envelope: Pick<OfflineManifestEnvelope, "events" | "checklistEvents" | "arrivalEvents">,
 ): number {
-  return countOfflineEvents(envelope, "rejected");
+  return (
+    countOfflineEvents(envelope, "rejected") +
+    envelope.events.filter((event) => event.syncStatus === "pending" && event.reviewRequired).length
+  );
 }
 
 function countOfflineEvents(

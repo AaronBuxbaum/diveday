@@ -1651,6 +1651,54 @@ async function offlineNoteSubjectErased(
   return !row || row.anonymizedAt !== null;
 }
 
+/** Apply the existing offline note privacy gate without accepting a withheld observation. */
+export async function withheldOfflineRollCallNoteDisposition(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    recordedByPersonId: string;
+    snapshotId: string;
+    token?: string;
+    note?: string | null;
+    bookingId?: string;
+    crewPersonId?: string;
+  },
+): Promise<
+  | { ok: false }
+  | { ok: true; noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot" }
+> {
+  return db.transaction(async (tx) => {
+    if (!(await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId)))
+      return { ok: false as const };
+    if (!input.note?.trim()) return { ok: true as const };
+    await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
+    const issuedEpoch = verifyOfflineErasureEpoch({
+      token: input.token,
+      shopId: input.shopId,
+      tripId: input.tripId,
+      snapshotId: input.snapshotId,
+    });
+    if (issuedEpoch === null)
+      return { ok: true as const, noteDisposition: "discarded_unverified_snapshot" as const };
+    const [shop] = await tx
+      .select({ epoch: shops.offlineErasureEpoch })
+      .from(shops)
+      .where(eq(shops.id, input.shopId))
+      .limit(1);
+    if (!shop || shop.epoch !== issuedEpoch) {
+      const subject = input.bookingId
+        ? { bookingId: input.bookingId }
+        : input.crewPersonId
+          ? { personId: input.crewPersonId }
+          : null;
+      if (!subject || (await offlineNoteSubjectErased(tx, input.shopId, subject)))
+        return { ok: true as const, noteDisposition: "discarded_erasure_cutoff" as const };
+    }
+    return { ok: true as const };
+  });
+}
+
 /**
  * Free text queued before a completed erasure of **this** diver is never
  * inserted, even when the booking remains as the roll-call subject. Erasure

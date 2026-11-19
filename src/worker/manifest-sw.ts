@@ -18,7 +18,7 @@ import {
   offlineManifestPayloads,
   offlineManifestShopSlug,
   offlineManifestViewerPersonId,
-  pendingOfflineEventCount,
+  offlineNetworkWorkCount,
 } from "@/lib/offline-manifests";
 import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { cacheOfflineShell as cacheShell } from "./offline-shell-cache";
@@ -575,7 +575,7 @@ async function flushPendingRollCall(): Promise<void> {
   // the counter's queue joined the envelope on 2026-09-07, and a flush that
   // could not see one of the three would leave that evidence sitting on the
   // device until the purge that cannot see it either deletes the record.
-  const pending = envelopes.filter((envelope) => pendingOfflineEventCount(envelope) > 0);
+  const pending = envelopes.filter((envelope) => offlineNetworkWorkCount(envelope) > 0);
   if (pending.length === 0) return;
 
   // **Whose events are these?** Resolved once, from the server, before
