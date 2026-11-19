@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { liveTrip, pagedUpcomingTripsWithCounts, seatHeld } from "@/db/trips";
 import { loadActiveStaffRoles } from "../../db/authz";
 import {
@@ -201,7 +201,10 @@ export async function markBookingNoShow(
 
     const [updated] = await tx
       .update(bookings)
-      .set({ status: "no_show" })
+      .set({
+        status: "no_show",
+        offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
+      })
       .where(and(eq(bookings.id, seat.id), seatHeld))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "already_marked" };
