@@ -112,9 +112,10 @@ test("the crew's group chat plays to nine of nine ready, and the visitor can sen
   };
 
   // The crew goes round on which Tom until the owner's answer brings the list, one diver short.
-  // The nudge is the visitor's to send.
+  // The nudge is the visitor's to send. Each line takes its own number of moments, so the
+  // clock steps until the list is up rather than counting them.
   const nudge = chat.getByRole("button", { name: t("marketing.home.chat.card.nudge") });
-  for (let line = 2; line <= 17; line += 1) await step();
+  while (!(await ready(8).isVisible())) await step();
   await expect(ready(8)).toBeVisible();
   await nudge.click();
   await expect(chat.getByText(t("marketing.home.chat.card.sent"), { exact: true })).toBeVisible();
@@ -123,8 +124,7 @@ test("the crew's group chat plays to nine of nine ready, and the visitor can sen
   await expect(chat.getByText(t("marketing.home.chat.card.signed"), { exact: true })).toBeVisible();
 
   // It ends on the crew's last line, and can be played again from the first.
-  for (let line = 18; line <= 20; line += 1) await step();
-  await expect(frame).toHaveAttribute("data-chat-end", "");
+  while ((await frame.getAttribute("data-chat-end")) === null) await step();
   await expect(chat.getByText(t("marketing.home.chat.lines.20"), { exact: true })).toBeVisible();
   await chat.getByRole("button", { name: t("marketing.home.chat.replay") }).click();
   await expect(frame).toHaveAttribute("data-chat-frame", "0");
