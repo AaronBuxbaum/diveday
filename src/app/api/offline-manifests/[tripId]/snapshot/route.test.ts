@@ -145,6 +145,21 @@ describe("POST /api/offline-manifests/[tripId]/snapshot (issue #4391)", () => {
     expect(await revisions(tripId)).toEqual([{ revision: newer }]);
   });
 
+  for (const changed of ["start", "end", "windows"] as const) {
+    it(`refuses a page whose ${changed} no longer matches without issuing a revision`, async () => {
+      const { tripId, readAt } = await departure();
+      const before = await revisions(tripId);
+      const schedule = structuredClone(readAt.schedule);
+      if (changed === "start") schedule.startsAt = "2035-01-01T00:00:00.000Z";
+      if (changed === "end") schedule.endsAt = "2035-01-01T01:00:00.000Z";
+      if (changed === "windows") schedule.meetingWindows = [];
+      const response = await request(tripId, { ...readAt, schedule });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({ error: "snapshot_superseded" });
+      expect(await revisions(tripId)).toEqual(before);
+    });
+  }
+
   it("refuses a request from another site before reading anything", async () => {
     const { tripId, readAt } = await departure();
     const response = await request(tripId, readAt, {
