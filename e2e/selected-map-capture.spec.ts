@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import {
   mapIsReady,
+  mapPaintDiagnostics,
   waitForMapTilesToSettle,
   waitForSelectedMapToSettle,
 } from "./selected-map-capture";
@@ -13,8 +14,8 @@ async function renderSelectedMap(page: Page) {
     <div class="leaflet-container"><div class="leaflet-map-pane">
       <div class="leaflet-site-marker"><button class="ring-4">Site</button></div>
       <div class="leaflet-popup">Selected site</div>
-      <img class="leaflet-tile leaflet-tile-loaded" style="opacity:0"
-        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'/%3E">
+      <div class="leaflet-tile-pane"><img class="leaflet-tile leaflet-tile-loaded" style="opacity:0"
+        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'/%3E"></div>
     </div></div>`);
   await page.locator("img").evaluate((tile: HTMLImageElement) => tile.decode());
 }
@@ -52,6 +53,48 @@ test("map readiness rejects zooming on the pane Leaflet actually animates", asyn
     pane.classList.add("leaflet-zoom-anim");
   });
   expect(await readiness(page)).toBe(false);
+});
+
+test("map readiness rejects a tile pane that cannot paint opaque tiles", async ({ page }) => {
+  await renderSelectedMap(page);
+  await page.locator("img").evaluate((tile) => {
+    tile.style.opacity = "1";
+  });
+  const pane = page.locator(".leaflet-tile-pane");
+  for (const [property, value] of [
+    ["opacity", "0"],
+    ["opacity", "0.5"],
+    ["visibility", "hidden"],
+    ["display", "none"],
+  ] as const) {
+    await pane.evaluate(
+      (element, [name, setting]) => {
+        element.style.setProperty(name, setting);
+      },
+      [property, value],
+    );
+    expect(await readiness(page), `${property}: ${value} must not be ready`).toBe(false);
+    await pane.evaluate((element, name) => element.style.removeProperty(name), property);
+  }
+  expect(await readiness(page)).toBe(true);
+});
+
+test("map paint diagnostics bound the sample and report ancestor visibility", async ({ page }) => {
+  await renderSelectedMap(page);
+  await page.locator(".leaflet-tile-pane").evaluate((pane) => {
+    pane.style.opacity = "0";
+    const tile = pane.querySelector("img");
+    if (!tile) throw new Error("Tile fixture is missing");
+    for (let index = 0; index < 10; index++) pane.append(tile.cloneNode());
+  });
+  const sample = await page.evaluate(mapPaintDiagnostics);
+  expect(sample.tileCount).toBe(11);
+  expect(sample.tiles).toHaveLength(8);
+  expect(sample.tiles?.[0]?.ancestors).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ className: "leaflet-tile-pane", opacity: "0" }),
+    ]),
+  );
 });
 
 for (const [name, wait] of [
