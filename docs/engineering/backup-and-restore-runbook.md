@@ -69,9 +69,22 @@ branch overrides is a trap.
 
 ### Restore procedure — branch from a timestamp
 
-Neon restores by **branching**, not by rewinding in place. This is the property that makes it safe
-to use during an incident: the live database is untouched until you deliberately repoint at the new
-branch.
+> **Offline boarding recovery: stop before cutover.** A restored database can rewind
+> staff access, erasure history, meeting context and the receipt IDs used to retry
+> offline roll call. The current procedure does not establish a non-rewinding
+> recovery authority or prove that older servers and in-flight writers are stopped.
+> Production cutover and reopening remain blocked until a supported external fence,
+> exclusion and draining of all old writers, and reconciliation of post-snapshot
+> evidence, revocations and erasures have been verified. A redeploy or new database
+> URL does not establish these guarantees. Preserve the original branch when it is
+> available and preserve device evidence; an unreadable device copy is not proof
+> that it contains no unsent evidence. Use the shop's manual roll-call process while
+> this safety condition is unresolved. This stop also applies to full-dump recovery
+> and partial restores affecting authorization, erasure or safety evidence; isolated
+> scratch-only drills that do not promote data or admit production writers may continue.
+
+Neon restores by **branching**, not by rewinding in place. The live database remains untouched
+until it is repointed; creating a branch does not make a production cutover safe.
 
 1. **Pick the target instant.** The last moment you believe the data was good — from the Sentry
    event, the deploy time, or the `cron_reminders.scan_complete` log line. Err earlier; you can
@@ -83,19 +96,21 @@ branch.
    the incident is about — count the table that lost rows, read back a specific `waiver_records`
    row's `integrity_hash`, confirm `SELECT max(created_at)` sits before the bad event. A branch that
    was cut a minute too late looks identical from the outside.
-4. **Cut over** by updating `DATABASE_URL` and `DATABASE_URL_UNPOOLED` in the Vercel project
+4. **Cut over only after the stop above is resolved** by updating `DATABASE_URL` and `DATABASE_URL_UNPOOLED` in the Vercel project
    (Production scope) to the restored branch's pooled/direct strings, then redeploy. `src/db/client.ts`
    picks the connection up at boot; there is no in-app switch.
-5. **Reconcile what happened after the target instant.** Everything written between the branch point
-   and the cutover is on the old branch only — bookings taken, waivers signed, Stripe webhooks
-   received. Stripe is authoritative for money and can be replayed; waivers cannot. Read the old
-   branch (it still exists) and re-enter by hand what matters.
+5. **Complete any remaining reconciliation.** Everything written between the branch point and
+   the cutover may be on the old branch only — bookings taken, waivers signed, Stripe webhooks
+   received. The safety, revocation and erasure reconciliation named in the stop above must be
+   verified before reopening. Stripe is authoritative for money and can be replayed; waivers
+   cannot. Read the old branch when available and re-enter by hand what matters.
 6. **Keep the old branch** until the incident is closed and written up. It is the only record of the
    window you just discarded.
 
 Partial restore — pulling three rows back without moving the whole database — is the same first
-three steps, then `INSERT ... SELECT` across a connection to the restore branch. Prefer this
-whenever the damage is scoped, because it costs no reconciliation.
+three steps, then `INSERT ... SELECT` across a connection to the restore branch. The stop above
+also applies when the rows affect authorization, erasure or safety evidence; a partial restore can
+still reintroduce stale state and may require reconciliation.
 
 ## 2. Scheduled logical export
 
@@ -426,6 +441,9 @@ What that means in practice, stated plainly because it is the one consequence:
   ```
 
 ### Restore procedure — accounts and everything else
+
+Before promoting a full-dump restore or admitting production writers, resolve the
+[offline boarding recovery stop](#restore-procedure--branch-from-a-timestamp) above.
 
 A full recovery is two parts, in this order, and the order matters: the dump is the base and the
 bundles are what happened after it.
