@@ -83,6 +83,8 @@ branch overrides is a trap.
 > and partial restores affecting authorization, erasure or safety evidence; isolated
 > scratch-only drills that do not promote data or admit production writers may continue.
 
+During ordinary reconnect, an unavailable roll-call subject can leave a change on the device for manual review. Use the shop's manual roll-call process and review the indicated reference and checkpoint with the crew; the device's review marker is not proof the server accepted the observation. Independent observations can sync. Keep the device and original shop context available. The existing expiry and pending grace still apply: after that ceiling, the device removes the saved envelope and displays a loss notice, which cannot reconstruct the original observation. A cached older shell must update before it can open version-2 storage or use the updated sync endpoint. This reconnect behavior does not establish meeting identity after an edit and revert, eliminate every erasure race, fence old deployments or make a restore safe ([ADR 20261119](../architecture/decisions/20261119-offline-roll-call-review.md)).
+
 Neon restores by **branching**, not by rewinding in place. The live database remains untouched
 until it is repointed; creating a branch does not make a production cutover safe.
 

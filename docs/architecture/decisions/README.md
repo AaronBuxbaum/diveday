@@ -480,5 +480,6 @@ script again.
 | 20261116-promotional-trip-credit-ledger | Settle plain booking fares with… |
 | 20261117-trip-page-clock | Show a trip as five… |
 | 20261118-rate-limits-in-postgres | Shared rate-limit buckets live in… |
+| 20261119-offline-roll-call-review | Hold unavailable offline observations for… |
 
 <!-- adr-index:end -->

@@ -6,7 +6,7 @@ import { getTripRoster } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
-import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
+import { ROLL_CALL_REVIEW_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
@@ -24,7 +24,7 @@ const { POST } = await import("./route");
 function postRequest(body: unknown) {
   return new Request("http://localhost/api/offline-manifests/sync", {
     method: "POST",
-    headers: { ...ROLL_CALL_CAUSAL_HEADERS, "content-type": "application/json" },
+    headers: { ...ROLL_CALL_REVIEW_HEADERS, "content-type": "application/json" },
     body: JSON.stringify(body),
   });
 }
@@ -62,6 +62,114 @@ it("requires the causal protocol without reading or settling an older request bo
   expect(response.status).toBe(426);
   expect(request.bodyUsed).toBe(false);
   expect(await response.json()).toEqual({ error: "offline_update_required" });
+});
+
+it("refuses protocol 1 without reading the old client's queue", async () => {
+  const { db, shop, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const request = postRequest({ events: [] });
+  request.headers.set("x-diveday-roll-call-protocol", "1");
+  const response = await POST(request);
+  expect(response.status).toBe(426);
+  expect(request.bodyUsed).toBe(false);
+});
+
+it("holds descendants of an unavailable subject while applying an independent observation", async () => {
+  const { db, shop, trip, booking, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const missingId = crypto.randomUUID();
+  const dependentId = crypto.randomUUID();
+  const independentId = crypto.randomUUID();
+  const common = {
+    tripId: trip.id,
+    checkpoint: "after_dive_1",
+    snapshotId: crypto.randomUUID(),
+    snapshotSavedAt: nowDate().toISOString(),
+    occurredAt: nowDate().toISOString(),
+    status: "not_boarded",
+  };
+  const response = await POST(
+    postRequest({
+      events: [
+        { ...common, clientEventId: missingId, bookingId: crypto.randomUUID() },
+        {
+          ...common,
+          clientEventId: dependentId,
+          bookingId: booking.id,
+          observedEvidenceIds: [`client:${missingId}`],
+          note: "Synthetic note",
+          erasureEpochToken: "invalid",
+        },
+        { ...common, clientEventId: independentId, bookingId: booking.id },
+      ],
+    }),
+  );
+  expect(response.status).toBe(200);
+  const body = await response.json();
+  expect(body.results).toContainEqual({
+    clientEventId: missingId,
+    status: "rejected",
+    reason: "booking_unavailable",
+  });
+  expect(body.results).toContainEqual({ clientEventId: independentId, status: "applied" });
+  expect(body.results).toContainEqual({
+    clientEventId: dependentId,
+    status: "rejected",
+    reason: "causal_dependency_unresolved",
+    noteDisposition: "discarded_unverified_snapshot",
+  });
+  const rows = await db
+    .select()
+    .from(rollCallEvents)
+    .where(eq(rollCallEvents.clientEventId, dependentId));
+  expect(rows).toHaveLength(0);
+});
+
+it("leaves cyclic predecessor claims pending and still applies an independent observation", async () => {
+  const { db, shop, trip, booking, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const a = crypto.randomUUID(),
+    b = crypto.randomUUID(),
+    independent = crypto.randomUUID();
+  const common = {
+    tripId: trip.id,
+    bookingId: booking.id,
+    checkpoint: "after_dive_1",
+    snapshotId: crypto.randomUUID(),
+    snapshotSavedAt: nowDate().toISOString(),
+    occurredAt: nowDate().toISOString(),
+    status: "not_boarded",
+  };
+  const response = await POST(
+    postRequest({
+      events: [
+        { ...common, clientEventId: a, observedEvidenceIds: [`client:${b}`] },
+        { ...common, clientEventId: b, observedEvidenceIds: [`client:${a}`] },
+        { ...common, clientEventId: independent },
+      ],
+    }),
+  );
+  const body = await response.json();
+  expect(body.results).toContainEqual({ clientEventId: independent, status: "applied" });
+  expect(body.results).toContainEqual({
+    clientEventId: a,
+    status: "rejected",
+    reason: "causal_dependency_unresolved",
+  });
+  expect(body.results).toContainEqual({
+    clientEventId: b,
+    status: "rejected",
+    reason: "causal_dependency_unresolved",
+  });
+  expect(
+    await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, a)),
+  ).toHaveLength(0);
+  expect(
+    await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, b)),
+  ).toHaveLength(0);
 });
 
 it("accepts older opaque queued diver and crew evidence through the updated protocol", async () => {

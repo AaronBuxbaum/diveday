@@ -6,6 +6,28 @@ import { controls, view } from "./section-fixtures";
 
 afterEach(cleanup);
 
+it("identifies an unsent observation requiring manual review", () => {
+  const trip = view();
+  trip.envelope.events = [
+    {
+      clientEventId: "mark-review",
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: "2026-08-01T12:00:00.000Z",
+      tripId: "trip-1",
+      bookingId: "removed-booking",
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      occurredAt: "2026-08-01T13:00:00.000Z",
+      syncStatus: "pending",
+      reviewRequired: true,
+      rejectionReason: "booking_unavailable",
+    },
+  ];
+  render(<MissingRollCallRefusals view={trip} controls={controls()} />);
+  expect(screen.getByRole("status")).toHaveTextContent("remains on this device");
+  expect(screen.getByRole("status")).toHaveTextContent("manual roll call");
+});
+
 it("shows a refused mark for a person no longer on the roster", () => {
   const trip = view();
   trip.envelope.events = [

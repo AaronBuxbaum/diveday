@@ -1,4 +1,5 @@
 import {
+  heldOfflineRollCallIds,
   type OfflineManifestSnapshot,
   type OfflineRollCallEvent,
   type OfflineRollCallResult,
@@ -34,6 +35,9 @@ function contextAt(
   checkpoint: Checkpoint,
   includeCarried: boolean,
 ): { context: RollCallCausalContext; projection: RollCallProjection } {
+  const held = heldOfflineRollCallIds(events);
+  const refused = (event: OfflineRollCallEvent) =>
+    event.syncStatus === "rejected" || held.has(event.clientEventId.toLowerCase());
   const manifest = snapshot.manifests.find((item) => item.checkpoint === checkpoint);
   const row =
     "bookingId" in subject
@@ -73,7 +77,7 @@ function contextAt(
       (event) =>
         sameSubject(event) &&
         event.checkpoint === checkpoint &&
-        event.syncStatus === "rejected" &&
+        refused(event) &&
         ((event.meetingDay ?? (multiDay ? -1 : 0)) === meetingDay ||
           (event.meetingDay ?? (multiDay ? -1 : 0)) === -1),
     );
@@ -83,8 +87,7 @@ function contextAt(
       event.checkpoint === checkpoint &&
       // Retained clock/auth-refused alarms remain crew evidence. A refused
       // positive correction or dock exemption cannot suppress an alarm.
-      (event.syncStatus !== "rejected" ||
-        (checkpoint !== "departure" && event.status === "not_boarded")) &&
+      (!refused(event) || (checkpoint !== "departure" && event.status === "not_boarded")) &&
       !offlineEventInCopy(snapshot, event) &&
       sameSubject(event),
   );
@@ -97,7 +100,7 @@ function contextAt(
               (event) =>
                 sameSubject(event) &&
                 event.checkpoint === "departure" &&
-                event.syncStatus === "rejected" &&
+                refused(event) &&
                 (event.retractsClientEventId
                   ? clientRollCallEvidenceId(event.retractsClientEventId) === item.id
                   : event.observedEvidenceIds?.includes(item.id)),
@@ -111,7 +114,7 @@ function contextAt(
       occurredAt: event.storedOccurredAt ?? event.occurredAt,
       note: event.note ?? null,
       meetingDay: event.meetingDay ?? (multiDay ? -1 : 0),
-      observedEvidenceIds: event.syncStatus === "rejected" ? undefined : event.observedEvidenceIds,
+      observedEvidenceIds: refused(event) ? undefined : event.observedEvidenceIds,
       reconcilesEvidence: event.reconcilesEvidence,
       retracts: event.retractsClientEventId
         ? clientRollCallEvidenceId(event.retractsClientEventId)
@@ -298,12 +301,15 @@ export function causalOfflineResult(
   const item = context.evidence.find((evidence) => evidence.status === projection.status);
   if (!item) return undefined;
   const local = events.find((event) => clientRollCallEvidenceId(event.clientEventId) === item.id);
+  const held = heldOfflineRollCallIds(events);
+  const refused = (event: OfflineRollCallEvent) =>
+    event.syncStatus === "rejected" || held.has(event.clientEventId.toLowerCase());
   const ownRetractable =
     local &&
-    local.syncStatus !== "rejected" &&
+    !refused(local) &&
     !events.some(
       (event) =>
-        event.syncStatus === "rejected" &&
+        refused(event) &&
         event.status === "cleared" &&
         event.retractsClientEventId === local.clientEventId,
     );

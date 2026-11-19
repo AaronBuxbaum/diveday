@@ -17,8 +17,8 @@ import {
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
   offlineManifestFreshness,
-  pendingOfflineEventCount,
   rejectedOfflineEventCount,
+  sendableOfflineEventCount,
 } from "@/lib/offline-manifests";
 import { type OfflineManifestSyncCopy, useOfflineManifestSync } from "./use-offline-manifest-sync";
 
@@ -120,7 +120,7 @@ export function OfflineManifestManager({
     return () => clearTimeout(timer);
   }, [expiresAt]);
 
-  const pending = saved ? pendingOfflineEventCount(saved) : 0;
+  const pending = saved ? sendableOfflineEventCount(saved) : 0;
   const rejected = saved ? rejectedOfflineEventCount(saved) : 0;
   const noteEvents = saved ? [...saved.events, ...saved.checklistEvents] : [];
   const cutoffNoteEvents = noteEvents.filter(
@@ -148,7 +148,7 @@ export function OfflineManifestManager({
             })
         : copy.reconcileChecklistLocation;
     const result =
-      event.syncStatus === "rejected"
+      event.syncStatus === "rejected" || ("reviewRequired" in event && event.reviewRequired)
         ? copy.reconcileNoteMarkNeedsReview
         : copy.reconcileNoteMarkKept;
     return fill(copy.reconcileNoteEntry, { subject, checkpoint, result });

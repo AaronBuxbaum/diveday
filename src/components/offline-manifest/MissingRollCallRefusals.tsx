@@ -9,7 +9,9 @@ export function MissingRollCallRefusals({
   view: OfflineTripView;
   controls: OfflineTripControls;
 }) {
-  const missing = view.envelope.events.filter((event) => event.syncStatus === "rejected");
+  const missing = view.envelope.events.filter(
+    (event) => event.syncStatus === "rejected" || event.reviewRequired,
+  );
   if (!missing.length) return null;
   return (
     <div role="status" className="mt-6 text-sm font-medium text-danger">
@@ -23,10 +25,17 @@ export function MissingRollCallRefusals({
                 });
           return (
             <li key={event.clientEventId}>
-              {controls.t("shared.offlineManifest.single.refusedMissingRollCall", {
-                reference: (event.bookingId ?? event.crewPersonId ?? event.clientEventId).slice(-8),
-                checkpoint,
-              })}
+              {controls.t(
+                event.reviewRequired
+                  ? "shared.offlineManifest.single.reviewPendingRollCall"
+                  : "shared.offlineManifest.single.refusedMissingRollCall",
+                {
+                  reference: (event.bookingId ?? event.crewPersonId ?? event.clientEventId).slice(
+                    -8,
+                  ),
+                  checkpoint,
+                },
+              )}
             </li>
           );
         })}

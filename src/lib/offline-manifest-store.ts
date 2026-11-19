@@ -6,6 +6,8 @@ import {
   canRecordOfflineChecklistCheck,
   canRecordOfflineCrewStatus,
   canRecordOfflineStatus,
+  heldOfflineRollCallIds,
+  heldOfflineRollCallNotes,
   isOfflineManifestExpired,
   medicalAlertWordsOf,
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
@@ -23,15 +25,17 @@ import {
   offlineManifestPayloads,
   offlineManifestShopSlug,
   offlineManifestViewerPersonId,
+  offlineNetworkWorkCount,
   offlineRollCallSubject,
   offlineSnapshotTokenClaims,
   pendingOfflineEventCount,
+  sendableOfflineRollCallEvents,
   withMedicalAlertWords,
 } from "./offline-manifests";
-import { ROLL_CALL_CAUSAL_HEADERS } from "./roll-call-protocol";
+import { ROLL_CALL_REVIEW_HEADERS } from "./roll-call-protocol";
 
 const DB_NAME = "diveday-offline-manifests";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const KEY_STORE = "keys";
 const MANIFEST_STORE = "manifests";
 const KEY_ID = "manifest-aes-gcm-v1";
@@ -234,13 +238,10 @@ export type DiscardedOfflineRecord = {
 };
 
 /**
- * Stored beside the encryption key rather than in an object store of its own,
- * which would mean bumping `DB_VERSION`. That bump is not free here: an older
- * offline shell held in a device's service-worker cache (the whole reason
- * `OFFLINE_MANIFEST_SHELL_VERSION` exists) opens this database at version 1, and
- * `indexedDB.open(name, 1)` against a version-2 database fails outright with a
- * `VersionError` — so a schema bump would take a stale-but-working dock copy and
- * brick its storage entirely, on the surface that exists for having no signal.
+ * Stored beside the encryption key rather than in an object store of its own.
+ * Version 2 deliberately fences cached version-1 shells from rewriting the
+ * review marker; the upgrade keeps both stores and their records. An older
+ * shell cannot open this database after upgrade and needs the updated shell.
  * `KEY_STORE` is an out-of-line-keyed store, so an entry under a different key is
  * invisible to every version of this module that only ever reads `KEY_ID`.
  */
@@ -318,15 +319,38 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
   });
 }
 
+class OfflineStorageUpgradeBlocked extends Error {
+  constructor() {
+    super("Offline storage upgrade is blocked by an older tab");
+  }
+}
+
 async function openDatabase(): Promise<IDBDatabase> {
   const request = indexedDB.open(DB_NAME, DB_VERSION);
+  let blocked = false;
   request.onupgradeneeded = () => {
+    if (blocked) {
+      request.transaction?.abort();
+      return;
+    }
     const db = request.result;
     if (!db.objectStoreNames.contains(KEY_STORE)) db.createObjectStore(KEY_STORE);
     if (!db.objectStoreNames.contains(MANIFEST_STORE))
       db.createObjectStore(MANIFEST_STORE, { keyPath: "tripId" });
   };
-  return requestResult(request);
+  return new Promise((resolve, reject) => {
+    request.onblocked = () => {
+      blocked = true;
+      reject(new OfflineStorageUpgradeBlocked());
+    };
+    request.onsuccess = () => {
+      if (blocked) request.result.close();
+      else resolve(request.result);
+    };
+    request.onerror = () => {
+      if (!blocked) reject(request.error ?? new Error("IndexedDB request failed"));
+    };
+  });
 }
 
 /**
@@ -983,7 +1007,10 @@ export async function saveOfflineManifest(
     // key, a version/AAD mismatch) must not abort the save — there's no delete
     // button anymore, so failing here would brick this device's offline copy
     // for good instead of just losing that record's own queued events.
-    const existing = await loadOfflineManifest(trip.id).catch(() => null);
+    const existing = await loadOfflineManifest(trip.id).catch((error: unknown) => {
+      if (error instanceof OfflineStorageUpgradeBlocked) throw error;
+      return null;
+    });
     const savedAt = nowDate();
     // Snapshot tokens carry a server-authenticated epoch. This local comparison
     // only removes retained text from this device; every sync writer still
@@ -1423,6 +1450,7 @@ async function postPendingEvents(batch: {
   /** Client's server-verified tenant at sync start; comparison only, never authority. */
   expectedShopSlug?: string;
   events: OfflineRollCallEvent[];
+  reviewEvents: OfflineRollCallEvent[];
   checklistEvents: OfflineChecklistEvent[];
   arrivalEvents: OfflineArrivalEvent[];
   refreshTripId: string;
@@ -1438,7 +1466,7 @@ async function postPendingEvents(batch: {
   const roundTrip = (async () => {
     const response = await fetch("/api/offline-manifests/sync", {
       method: "POST",
-      headers: { ...ROLL_CALL_CAUSAL_HEADERS, "content-type": "application/json" },
+      headers: { ...ROLL_CALL_REVIEW_HEADERS, "content-type": "application/json" },
       body: JSON.stringify({ ...batch, includeStoredInstants: true, includeCausalSnapshots: true }),
       signal: controller.signal,
     });
@@ -1510,19 +1538,21 @@ export async function syncOfflineManifest(
 ): Promise<OfflineManifestEnvelope | null> {
   const envelope = await loadOfflineManifest(tripId);
   if (!envelope) return null;
-  const pending = envelope.events.filter((event) => event.syncStatus === "pending");
+  const pending = sendableOfflineRollCallEvents(envelope.events);
+  const reviewEvents = heldOfflineRollCallNotes(envelope.events);
   const pendingChecklist = envelope.checklistEvents.filter(
     (event) => event.syncStatus === "pending",
   );
   const pendingArrivals = offlineArrivalEvents(envelope).filter(
     (event) => event.syncStatus === "pending",
   );
-  if ((!options.refreshWhenQuiet && pendingOfflineEventCount(envelope) === 0) || !navigator.onLine)
+  if ((!options.refreshWhenQuiet && offlineNetworkWorkCount(envelope) === 0) || !navigator.onLine)
     return envelope;
   const tenantRound = requestTenantRound ?? (await beginOfflineTenantVerificationRound());
   const body = await postPendingEvents({
     ...(expectedShopSlug ? { expectedShopSlug } : {}),
     events: pending,
+    reviewEvents,
     checklistEvents: pendingChecklist,
     arrivalEvents: pendingArrivals,
     refreshTripId: tripId,
@@ -1532,7 +1562,9 @@ export async function syncOfflineManifest(
     envelope.snapshot.shop.slug,
     tenantRound,
     new Set(
-      [...pending, ...pendingChecklist, ...pendingArrivals].map((event) => event.clientEventId),
+      [...pending, ...reviewEvents, ...pendingChecklist, ...pendingArrivals].map(
+        (event) => event.clientEventId,
+      ),
     ),
     body.results,
   );
@@ -1572,7 +1604,16 @@ export async function syncOfflineManifest(
   // One map for both arrays: a roll-call event id and a checklist event id are
   // both `crypto.randomUUID()`, so they never collide, and the sync route
   // returns one flat `results` list naming whichever kind each id belongs to.
-  const byId = new Map(body.results.map((result) => [result.clientEventId, result]));
+  const postedIds = new Set(
+    [...pending, ...reviewEvents, ...pendingChecklist, ...pendingArrivals].map(
+      (event) => event.clientEventId,
+    ),
+  );
+  const byId = new Map(
+    body.results
+      .filter((result) => postedIds.has(result.clientEventId))
+      .map((result) => [result.clientEventId, result]),
+  );
   // Re-read and merge under the lock instead of writing back the envelope
   // read before the network round-trip: a concurrent appendOfflineRollCall
   // (this tab or another) could have recorded a new pending event while the
@@ -1585,30 +1626,68 @@ export async function syncOfflineManifest(
       typeof revision === "number" && Number.isSafeInteger(revision) && revision >= 0
         ? revision
         : undefined;
-    const applyResult = <T extends { clientEventId: string; syncedAtRevision?: number }>(
+    const applyResult = <
+      T extends {
+        clientEventId: string;
+        syncedAtRevision?: number;
+        reviewRequired?: boolean;
+        rejectionReason?: string;
+        syncStatus: "pending" | "applied" | "rejected";
+      },
+    >(
       event: T,
+      rollCall = false,
     ) => {
+      if (rollCall && event.syncStatus !== "pending") return event;
       const result = byId.get(event.clientEventId);
-      if (!result) return event;
+      if (!result)
+        return rollCall && postedIds.has(event.clientEventId)
+          ? { ...event, reviewRequired: true, rejectionReason: "unanswered_observation" }
+          : event;
+      if (
+        result.status !== "applied" &&
+        result.status !== "duplicate" &&
+        result.status !== "rejected"
+      )
+        return rollCall
+          ? { ...event, reviewRequired: true, rejectionReason: "unrecognized_observation" }
+          : event;
+      const review =
+        rollCall &&
+        (event.reviewRequired ||
+          (result.status === "rejected" &&
+            [
+              "booking_unavailable",
+              "trip_unavailable",
+              "crew_not_assigned",
+              "causal_dependency_unresolved",
+            ].includes(result.reason ?? "")));
       return {
         ...event,
         ...(result.noteDisposition ? { note: null } : {}),
-        syncStatus: result.status === "rejected" ? "rejected" : "applied",
-        rejectionReason: result.reason,
-        ...(result.status !== "rejected" && result.storedOccurredAt
+        syncStatus: review ? "pending" : result.status === "rejected" ? "rejected" : "applied",
+        ...(review ? { reviewRequired: true } : {}),
+        rejectionReason: event.reviewRequired ? event.rejectionReason : result.reason,
+        ...(!review && result.status !== "rejected" && result.storedOccurredAt
           ? { storedOccurredAt: result.storedOccurredAt }
           : {}),
         // The revision DiveDay held this event by (`offlineEventInCopy`). A
         // replayed answer keeps the first one, which was already true.
-        ...(result.status !== "rejected" && syncedAtRevision !== undefined
+        ...(!review && result.status !== "rejected" && syncedAtRevision !== undefined
           ? { syncedAtRevision: event.syncedAtRevision ?? syncedAtRevision }
           : {}),
         ...(result.noteDisposition ? { noteDisposition: result.noteDisposition } : {}),
       };
     };
-    current.events = current.events.map(applyResult);
-    current.checklistEvents = current.checklistEvents.map(applyResult);
-    current.arrivalEvents = offlineArrivalEvents(current).map(applyResult);
+    current.events = current.events.map((event) => applyResult(event, true));
+    const held = heldOfflineRollCallIds(current.events);
+    current.events = current.events.map((event) =>
+      event.syncStatus === "pending" && held.has(event.clientEventId) && !event.reviewRequired
+        ? { ...event, reviewRequired: true, rejectionReason: "causal_dependency_unresolved" }
+        : event,
+    );
+    current.checklistEvents = current.checklistEvents.map((event) => applyResult(event));
+    current.arrivalEvents = offlineArrivalEvents(current).map((event) => applyResult(event));
     const db = await openDatabase();
     try {
       const persisted = await persistEnvelope(db, current, tenantRound, "sync");

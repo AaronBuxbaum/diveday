@@ -5,7 +5,11 @@ import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { anonymizeDiver } from "../features/anonymize/store";
-import { recordCrewRollCall, recordRollCall } from "./manifests";
+import {
+  recordCrewRollCall,
+  recordRollCall,
+  withheldOfflineRollCallNoteDisposition,
+} from "./manifests";
 import { recordPreDepartureCheck } from "./pre-departure-check";
 import {
   bookings,
@@ -198,6 +202,8 @@ async function fixture() {
   return {
     pg,
     shop,
+    owner,
+    trip,
     diver,
     booking,
     writeNote,
@@ -212,6 +218,44 @@ async function fixture() {
 }
 
 describePostgres("crew note writes ordered with erasure", () => {
+  it("checks a withheld observation's note after a competing erasure commits", async () => {
+    const f = await fixture();
+    const snapshotId = randomUUID();
+    const token = signOfflineErasureEpoch({
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      snapshotId,
+      epoch: f.shop.offlineErasureEpoch,
+      snapshotRevision: 1,
+    });
+    await f.pg.db.execute(
+      sql`create function test_hold_withheld_erasure() returns trigger language plpgsql as $$ begin if new.anonymized_at is not null and old.anonymized_at is null then perform pg_advisory_xact_lock(281039); end if; return new; end $$`,
+    );
+    await f.pg.db.execute(
+      sql`create trigger test_hold_withheld_erasure before update on people for each row execute function test_hold_withheld_erasure()`,
+    );
+    const gate = await holdRowLock(f.pg, sql`select pg_advisory_xact_lock(281039)`);
+    const erasure = f.erase();
+    let disposition: ReturnType<typeof withheldOfflineRollCallNoteDisposition> | undefined;
+    try {
+      await waitForLockWaiters(f.pg.db, 1);
+      disposition = withheldOfflineRollCallNoteDisposition(f.pg.connect(), {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        recordedByPersonId: f.owner.id,
+        snapshotId,
+        token,
+        bookingId: f.booking.id,
+        note: "Synthetic note",
+      });
+      await waitForLockWaiters(f.pg.db, 2);
+    } finally {
+      await gate.release();
+    }
+    expect(await erasure).toMatchObject({ ok: true });
+    expect(await disposition).toEqual({ ok: true, noteDisposition: "discarded_erasure_cutoff" });
+    expect(await f.diverNotes()).toEqual([]);
+  });
   it("erasure waits for an in-flight note write, then leaves its text, staff prose that mentions the diver", async () => {
     const f = await fixture();
     await f.pg.db.execute(
