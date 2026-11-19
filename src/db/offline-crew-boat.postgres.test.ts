@@ -38,6 +38,10 @@ describePostgres("offline crew count after a boat replacement", () => {
       if (!crew || !saved?.snapshotId) throw new Error("crew or snapshot missing");
       const witness = saved.rollCallWitnesses?.[`crew:${crew.id}:departure`];
       if (!witness) throw new Error("crew witness missing");
+      const otherSaved = (await buildOfflineManifestCopies(pg.db, shop, owner.person.id, [trip.id]))
+        .payloads[0];
+      const otherWitness = otherSaved?.rollCallWitnesses?.[`crew:${crew.id}:departure`];
+      if (!otherSaved?.snapshotId || !otherWitness) throw new Error("other witness missing");
       const sameCrew = await getTripCrewIds(pg.db, shop.id, trip.id);
       expect(await setTripCrew(pg.db, shop.id, trip.id, sameCrew)).toBe(true);
       const [replacement] = await pg.db
@@ -64,6 +68,24 @@ describePostgres("offline crew count after a boat replacement", () => {
       if (order === "intake first") {
         expect(await recordCrewRollCall(pg.db, input)).toMatchObject({ ok: true });
         expect(await recordCrewRollCall(pg.db, input)).toMatchObject({ ok: true, duplicate: true });
+        expect(
+          await recordCrewRollCall(pg.db, {
+            ...input,
+            clientEventId: crypto.randomUUID(),
+            status: "not_boarded",
+          }),
+        ).toMatchObject({ ok: false, reason: "review_required" });
+        expect(
+          await recordCrewRollCall(pg.db, {
+            ...input,
+            clientEventId: crypto.randomUUID(),
+            status: "not_boarded",
+            offlineSnapshotId: otherSaved.snapshotId,
+            offlineErasureEpochToken: otherSaved.erasureEpochToken,
+            rollCallWitness: otherWitness,
+            observedEvidenceIds: [clientRollCallEvidenceId(input.clientEventId)],
+          }),
+        ).toMatchObject({ ok: false, reason: "review_required" });
         const correction = {
           ...input,
           clientEventId: crypto.randomUUID(),

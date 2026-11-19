@@ -104,6 +104,7 @@ export const rollCallEvents = pgTable(
     captureContext: jsonb("capture_context").$type<{
       /** Set only after a signed offline witness was verified. */
       offlineSnapshotId?: string;
+      offlineWitnessFrontier?: string[];
       occurredAt?: string;
       meetingDay?: number;
       retractsEventId?: string;

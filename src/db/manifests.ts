@@ -2494,7 +2494,10 @@ async function writeRollCall(
       captureContext: {
         ...rawRollCallCapture(input),
         ...(source === "offline" && verifiedWitness && input.offlineSnapshotId
-          ? { offlineSnapshotId: input.offlineSnapshotId }
+          ? {
+              offlineSnapshotId: input.offlineSnapshotId,
+              offlineWitnessFrontier: verifiedWitness.frontier,
+            }
           : {}),
         // Personal blocker reasons live only in readinessBlockers, whose
         // erasure sweep removes them. Capture context keeps retry intent.
@@ -3078,7 +3081,10 @@ export async function recordCrewRollCall(
             captureContext: {
               ...rawRollCallCapture(input),
               ...(source === "offline" && crewWitness && input.offlineSnapshotId
-                ? { offlineSnapshotId: input.offlineSnapshotId }
+                ? {
+                    offlineSnapshotId: input.offlineSnapshotId,
+                    offlineWitnessFrontier: crewWitness.frontier,
+                  }
                 : {}),
             },
             observedEvidenceIds: input.observedEvidenceIds ?? null,
