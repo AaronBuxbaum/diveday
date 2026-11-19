@@ -219,10 +219,24 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
       frame = requestAnimationFrame(update);
     };
     update();
+    // A resize, a text-size change or the cue arriving can move a focused tab
+    // past the rail's edge after its own focus scrolled it in (#4788). Only a
+    // size change does this, so a swipe through the rail is never pulled back.
+    const keepFocusedTabWhole = () => {
+      const focused = document.activeElement;
+      if (focused instanceof HTMLElement && focused !== rail && rail.contains(focused)) {
+        focused.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
+    };
     rail.addEventListener("scroll", scheduleUpdate, { passive: true });
     window.addEventListener("resize", scheduleUpdate);
     const resizeObserver =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleUpdate);
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => {
+            keepFocusedTabWhole();
+            scheduleUpdate();
+          });
     resizeObserver?.observe(rail);
     for (const item of rail.querySelectorAll<HTMLElement>("a, a > span")) {
       resizeObserver?.observe(item);

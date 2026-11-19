@@ -121,6 +121,54 @@ test.describe("owner", () => {
       expect(cueBounds?.x).toBe(scrolledCueBounds?.x);
       expect((cueBounds?.x ?? 0) + (cueBounds?.width ?? 0)).toBeLessThanOrEqual(moreBounds?.x ?? 0);
     });
+
+    // #4788: the bar measures its scroll cue in an animation frame after a
+    // resize. A tab focused before that frame was scrolled into the wider,
+    // cue-less rail, and the cue then took its last 1.5rem.
+    test("keeps a focused tab whole when the scroll cue arrives after it", async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto("/shop/blue-mantis/safety-checklist");
+      await expect(
+        page.getByRole("navigation", { name: "Principal", exact: true }),
+      ).toHaveAttribute("data-hydrated", "true");
+      type HeldFrames = { held: FrameRequestCallback[]; release: () => void };
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "200%";
+        const original = window.requestAnimationFrame.bind(window);
+        const held: FrameRequestCallback[] = [];
+        window.requestAnimationFrame = (callback) => held.push(callback);
+        (window as unknown as { heldFrames: HeldFrames }).heldFrames = {
+          held,
+          release: () => {
+            window.requestAnimationFrame = original;
+            for (const callback of held.splice(0)) callback(performance.now());
+          },
+        };
+      });
+      await page.setViewportSize({ width: 390, height: 844 });
+      const rail = page.locator("[data-staff-tab-scroll]");
+      const inbox = rail.getByRole("link", { name: "Mensajes", exact: true });
+      await inbox.focus();
+      const tabbar = page.locator("[data-staff-tabbar]");
+      await expect(tabbar).toHaveAttribute("data-staff-tab-scroll-state", "none");
+      await page.evaluate(() =>
+        (window as unknown as { heldFrames: HeldFrames }).heldFrames.release(),
+      );
+      await expect(tabbar).not.toHaveAttribute("data-staff-tab-scroll-state", "none");
+      await expect(inbox).toBeFocused();
+      await expect
+        .poll(() =>
+          inbox.evaluate((tab) => {
+            const box = tab.getBoundingClientRect();
+            const bounds = tab.closest("[data-staff-tab-scroll]")?.getBoundingClientRect();
+            if (!bounds) return "no rail";
+            return box.left >= bounds.left - 0.5 && box.right <= bounds.right + 0.5
+              ? "whole"
+              : `tab ${box.left}-${box.right} outside rail ${bounds.left}-${bounds.right}`;
+          }),
+        )
+        .toBe("whole");
+    });
   });
 
   test("removes the scroll cue when large-text tabs fit after a tablet resize", async ({
