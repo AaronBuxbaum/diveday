@@ -13,6 +13,7 @@ import { readManifestPage } from "./manifest-reads";
 const latch = vi.hoisted(() => ({
   reached: undefined as (() => void) | undefined,
   wait: undefined as Promise<void> | undefined,
+  reads: 0,
 }));
 vi.mock("@/db/buddy-teams", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/buddy-teams")>();
@@ -20,8 +21,13 @@ vi.mock("@/db/buddy-teams", async (importOriginal) => {
     ...actual,
     listTripBuddyTeams: async (...args: Parameters<typeof actual.listTripBuddyTeams>) => {
       const result = await actual.listTripBuddyTeams(...args);
-      latch.reached?.();
-      await latch.wait;
+      // The roster now reads buddy teams inside its snapshot. Pause the later
+      // page read, after that transaction has released this PGlite connection.
+      latch.reads += 1;
+      if (latch.reads === 2) {
+        latch.reached?.();
+        await latch.wait;
+      }
       return result;
     },
   };
@@ -42,6 +48,7 @@ it("refuses to confirm a manifest assembled across an erasure", async () => {
     reached = resolve;
   });
   latch.reached = reached;
+  latch.reads = 0;
   latch.wait = new Promise<void>((resolve) => {
     release = resolve;
   });
