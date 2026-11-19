@@ -32,7 +32,9 @@ it("identifies an unsent observation requiring manual review", () => {
   );
   expect(screen.getByRole("status").parentElement).toHaveTextContent("Recorded: Not back aboard");
   expect(screen.getByRole("status").parentElement).toHaveTextContent("Original meeting day: 2");
-  expect(screen.getByRole("status").parentElement).toHaveTextContent("Two-Tank Reef");
+  expect(screen.getByRole("status").parentElement).toHaveTextContent(
+    "Original trip title unavailable. Trip reference: trip-1",
+  );
 });
 
 it("shows a refused mark for a person no longer on the roster", () => {
