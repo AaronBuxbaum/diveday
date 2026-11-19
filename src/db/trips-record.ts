@@ -640,22 +640,42 @@ async function replaceScheduleDays(
   after: readonly { startsAt: Date; endsAt: Date }[],
 ): Promise<boolean> {
   const before = await tx
-    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .select({
+      dayNumber: tripScheduleDays.dayNumber,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+      startsAtMicros: sql<string>`((extract(epoch from ${tripScheduleDays.startsAt}) * 1000000)::bigint)::text`,
+      endsAtMicros: sql<string>`((extract(epoch from ${tripScheduleDays.endsAt}) * 1000000)::bigint)::text`,
+    })
     .from(tripScheduleDays)
     .where(eq(tripScheduleDays.tripId, tripId))
-    .orderBy(asc(tripScheduleDays.dayNumber));
-  await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
-  await tx
-    .insert(tripScheduleDays)
-    .values(after.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
-  return (
+    .orderBy(asc(tripScheduleDays.dayNumber))
+    .for("update");
+  const changed =
     before.length !== after.length ||
     before.some(
       (day, index) =>
         day.startsAt.getTime() !== after[index]?.startsAt.getTime() ||
         day.endsAt.getTime() !== after[index]?.endsAt.getTime(),
+    );
+  // Keep the existing normalization of any non-consecutive stored day numbers.
+  if (
+    after.length > 0 &&
+    !changed &&
+    before.every(
+      (day, index) =>
+        day.dayNumber === index + 1 &&
+        day.startsAtMicros === String(BigInt(after[index].startsAt.getTime()) * 1000n) &&
+        day.endsAtMicros === String(BigInt(after[index].endsAt.getTime()) * 1000n),
     )
-  );
+  ) {
+    return false;
+  }
+  await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
+  await tx
+    .insert(tripScheduleDays)
+    .values(after.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
+  return changed;
 }
 
 /** {@link movedCountedMeetingDay} against the stored days, as `editTrip`'s refusal. */
