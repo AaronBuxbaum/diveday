@@ -11,6 +11,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, test } from "./fixtures";
 import { openSettingsRow } from "./helpers";
+import { stabilizeRecapPhoto } from "./recap-photo-fixture";
 import { seedFacts } from "./shop-facts";
 import {
   capture,
@@ -62,6 +63,10 @@ for (const scheme of ["light", "dark"] as const) {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
     test.describe("public", () => {
+      test.beforeEach(async ({ page }) => {
+        await stabilizeRecapPhoto(page);
+      });
+
       test.describe("Spanish personal recordings", () => {
         test.use({ locale: SPANISH });
         test("personal computer recordings remain separate and unlinked", async ({ page }) => {
